@@ -1,0 +1,40 @@
+#ifndef OPTIONS_H
+#define OPTIONS_H
+
+#ifndef LOG_LEVEL
+#define LOG_LEVEL               (LOG_LEVEL_@LOG_LEVEL@)
+#endif
+
+#ifndef PF_ETH_LOG
+#define PF_ETH_LOG      		(LOG_STATE_@PF_ETH_LOG@)
+#endif
+
+#ifndef PF_CPM_LOG
+#define PF_CPM_LOG      		(LOG_STATE_@PF_CPM_LOG@)
+#endif
+
+#ifndef PF_PPM_LOG
+#define PF_PPM_LOG      		(LOG_STATE_@PF_PPM_LOG@)
+#endif
+
+#ifndef PF_DCP_LOG
+#define PF_DCP_LOG      		(LOG_STATE_@PF_DCP_LOG@)
+#endif
+
+#ifndef PF_RPC_LOG
+#define PF_RPC_LOG      		(LOG_STATE_@PF_RPC_LOG@)
+#endif
+
+#ifndef PF_ALARM_LOG
+#define PF_ALARM_LOG      		(LOG_STATE_@PF_ALARM_LOG@)
+#endif
+
+#ifndef PF_AL_BUF_LOG
+#define PF_AL_BUF_LOG      		(LOG_STATE_@PF_AL_BUF_LOG@)
+#endif
+
+#ifndef PNET_LOG
+#define PNET_LOG      			(LOG_STATE_@PNET_LOG@)
+#endif
+
+#endif  /* OPTIONS_H */
