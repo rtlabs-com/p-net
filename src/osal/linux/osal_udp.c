@@ -42,6 +42,7 @@ int os_udp_open(os_ipaddr_t addr, os_ipport_t port)
          .sin_family = AF_INET,
          .sin_addr.s_addr = htonl(addr),
          .sin_port = htons(port),
+         .sin_zero = { 0 },
       };
       ret = bind(id, (struct sockaddr *)&local, sizeof(local));
       if(ret != 0)
@@ -71,6 +72,7 @@ int os_udp_sendto(uint32_t id,
       .sin_family = AF_INET,
       .sin_addr.s_addr = htonl(dst_addr),
       .sin_port = htons(dst_port),
+      .sin_zero = { 0 },
    };
    len = sendto(id, data, size, 0, (struct sockaddr *)&remote, sizeof(remote));
 
