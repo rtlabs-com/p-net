@@ -11,7 +11,7 @@ if(CMAKE_VERSION VERSION_LESS 3.11)
 
   include(DownloadProject)
   download_project(PROJ googletest
-    GIT_REPOSITORY      https://github.com/hefloryd/googletest.git
+    GIT_REPOSITORY      https://github.com/rtlabs-com/googletest.git
     GIT_TAG             cc602bd729c3acd610c3de5d65d1f1d598c41522
     UPDATE_DISCONNECTED 1
     QUIET
@@ -24,7 +24,7 @@ if(CMAKE_VERSION VERSION_LESS 3.11)
 else()
   include(FetchContent)
   FetchContent_Declare(googletest
-    GIT_REPOSITORY      https://github.com/hefloryd/googletest.git
+    GIT_REPOSITORY      https://github.com/rtlabs-com/googletest.git
     GIT_TAG             cc602bd729c3acd610c3de5d65d1f1d598c41522)
   FetchContent_GetProperties(googletest)
   if(NOT googletest_POPULATED)
