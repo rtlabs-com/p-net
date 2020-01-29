@@ -910,17 +910,7 @@ static void pf_cmrpc_rm_connect_rsp(
    uint16_t                ix;
    uint16_t                hdr_pos;
    uint16_t                start_pos;
-   uint16_t                res_len;
-
-   /* Limit our response to what the client can handle. */
-   if (*p_res_pos + p_sess->ndr_data.args_maximum < res_size)
-   {
-      res_len = *p_res_pos + p_sess->ndr_data.args_maximum;
-   }
-   else
-   {
-      res_len = res_size;
-   }
+   uint16_t                res_len = res_size;
 
    pf_put_pnet_status(p_sess->get_info.is_big_endian, &p_sess->rpc_result.pnio_status, res_len, p_res, p_res_pos);
 
@@ -930,6 +920,12 @@ static void pf_cmrpc_rm_connect_rsp(
    pf_put_uint32(p_sess->get_info.is_big_endian, p_sess->ndr_data.array.maximum_count, res_len, p_res, p_res_pos);
    pf_put_uint32(p_sess->get_info.is_big_endian, p_sess->ndr_data.array.offset, res_len, p_res, p_res_pos);
    pf_put_uint32(p_sess->get_info.is_big_endian, p_sess->ndr_data.array.actual_count, res_len, p_res, p_res_pos);
+
+   /* Limit our response to what the client can handle. */
+   if (*p_res_pos + p_sess->ndr_data.args_maximum < res_size)
+   {
+      res_len = *p_res_pos + p_sess->ndr_data.args_maximum;
+   }
 
    start_pos = *p_res_pos;    /* Start of blocks - save for last */
 
@@ -1181,17 +1177,7 @@ static void pf_cmrpc_rm_release_rsp(
 {
    uint16_t                hdr_pos;
    uint16_t                start_pos;
-   uint16_t                res_len;
-
-   /* Limit our response to what the client can handle. */
-   if (*p_res_pos + p_sess->ndr_data.args_maximum < res_size)
-   {
-      res_len = *p_res_pos + p_sess->ndr_data.args_maximum;
-   }
-   else
-   {
-      res_len = res_size;
-   }
+   uint16_t                res_len = res_size;
 
    *p_status_pos = *p_res_pos;
    pf_put_pnet_status(p_sess->get_info.is_big_endian, &p_sess->rpc_result.pnio_status, res_len, p_res, p_res_pos);
@@ -1202,6 +1188,12 @@ static void pf_cmrpc_rm_release_rsp(
    pf_put_uint32(p_sess->get_info.is_big_endian, p_sess->ndr_data.array.maximum_count, res_len, p_res, p_res_pos);
    pf_put_uint32(p_sess->get_info.is_big_endian, p_sess->ndr_data.array.offset, res_len, p_res, p_res_pos);
    pf_put_uint32(p_sess->get_info.is_big_endian, p_sess->ndr_data.array.actual_count, res_len, p_res, p_res_pos);
+
+   /* Limit our response to what the client can handle. */
+   if (*p_res_pos + p_sess->ndr_data.args_maximum < res_size)
+   {
+      res_len = *p_res_pos + p_sess->ndr_data.args_maximum;
+   }
 
    start_pos = *p_res_pos;    /* Start of blocks - save for last */
 
@@ -1384,17 +1376,7 @@ static void pf_cmrpc_rm_dcontrol_rsp(
 {
    uint16_t                hdr_pos;
    uint16_t                start_pos;
-   uint16_t                res_len;
-
-   /* Limit our response to what the client can handle. */
-   if (*p_res_pos + p_sess->ndr_data.args_maximum < res_size)
-   {
-      res_len = *p_res_pos + p_sess->ndr_data.args_maximum;
-   }
-   else
-   {
-      res_len = res_size;
-   }
+   uint16_t                res_len = res_size;
 
    pf_put_pnet_status(p_sess->get_info.is_big_endian, &p_sess->rpc_result.pnio_status, res_len, p_res, p_res_pos);
 
@@ -1404,6 +1386,12 @@ static void pf_cmrpc_rm_dcontrol_rsp(
    pf_put_uint32(p_sess->get_info.is_big_endian, p_sess->ndr_data.array.maximum_count, res_len, p_res, p_res_pos);
    pf_put_uint32(p_sess->get_info.is_big_endian, p_sess->ndr_data.array.offset, res_len, p_res, p_res_pos);
    pf_put_uint32(p_sess->get_info.is_big_endian, p_sess->ndr_data.array.actual_count, res_len, p_res, p_res_pos);
+
+   /* Limit our response to what the client can handle. */
+   if (*p_res_pos + p_sess->ndr_data.args_maximum < res_size)
+   {
+      res_len = *p_res_pos + p_sess->ndr_data.args_maximum;
+   }
 
    start_pos = *p_res_pos;    /* Start of blocks - save for last */
 
@@ -1576,7 +1564,7 @@ static int pf_cmrpc_rm_read_ind(
    int                     ret = -1;
    pf_iod_read_request_t   read_request;
    pf_ar_t                 *p_ar = NULL;  /* Assume the implicit AR */
-   uint16_t                res_len;
+   uint16_t                res_len = res_size;
    uint16_t                status_pos;
    uint16_t                hdr_pos;
    uint16_t                start_pos;
@@ -1623,10 +1611,7 @@ static int pf_cmrpc_rm_read_ind(
          {
             res_len = *p_res_pos + p_sess->ndr_data.args_maximum;
          }
-         else
-         {
-            res_len = res_size;
-         }
+
          status_pos = *p_res_pos; /* Save for last. */
          pf_put_pnet_status(p_sess->get_info.is_big_endian, &p_sess->rpc_result.pnio_status, res_len, p_res, p_res_pos);
 
@@ -1810,7 +1795,7 @@ static int pf_cmrpc_rm_write_ind(
    pf_iod_write_request_t  write_request_multi;
    pf_iod_write_result_t   write_result_multi;
    pnet_result_t           write_stat_multi;
-   uint16_t                res_len;
+   uint16_t                res_len = res_size;
    uint16_t                req_start_pos;
    uint16_t                res_hdr_pos;
    uint16_t                res_start_pos;
@@ -1835,16 +1820,6 @@ static int pf_cmrpc_rm_write_ind(
     * This allows us to insert the actual values later.
     */
 
-   /* Limit our response to what the client can handle. */
-   if (req_pos + p_sess->ndr_data.args_maximum < res_size)
-   {
-      res_len = req_pos + p_sess->ndr_data.args_maximum;
-   }
-   else
-   {
-      res_len = res_size;
-   }
-
    res_status_pos = *p_res_pos;   /* Save for last. */
    pf_put_pnet_status(p_sess->get_info.is_big_endian, &p_sess->rpc_result.pnio_status, res_len, p_res, p_res_pos);
 
@@ -1854,6 +1829,12 @@ static int pf_cmrpc_rm_write_ind(
    pf_put_uint32(p_sess->get_info.is_big_endian, p_sess->ndr_data.array.maximum_count, res_len, p_res, p_res_pos);
    pf_put_uint32(p_sess->get_info.is_big_endian, p_sess->ndr_data.array.offset, res_len, p_res, p_res_pos);
    pf_put_uint32(p_sess->get_info.is_big_endian, p_sess->ndr_data.array.actual_count, res_len, p_res, p_res_pos);
+
+   /* Limit our response to what the client can handle. */
+   if (req_pos + p_sess->ndr_data.args_maximum < res_size)
+   {
+      res_len = req_pos + p_sess->ndr_data.args_maximum;
+   }
 
    write_result.sequence_number = write_request.sequence_number;
    write_result.ar_uuid = write_request.ar_uuid;
