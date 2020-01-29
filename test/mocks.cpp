@@ -24,6 +24,9 @@ uint8_t     mock_os_eth_send_copy[1500];
 uint16_t    mock_os_eth_send_len;
 uint16_t    mock_os_eth_send_count;
 
+uint16_t    mock_os_udp_sendto_len;
+uint16_t    mock_os_udp_sendto_count;
+
 uint16_t    mock_os_set_led_count;
 bool        mock_os_set_led_on;
 
@@ -38,6 +41,9 @@ void mock_clear(void)
    memset(mock_os_eth_send_copy, 0, sizeof(mock_os_eth_send_copy));
    mock_os_eth_send_len = 0;
    mock_os_eth_send_count = 0;
+
+   mock_os_udp_sendto_len = 0;
+   mock_os_udp_sendto_count = 0;
 
    mock_os_set_led_count = 0;
    mock_os_set_led_on = false;
@@ -110,7 +116,8 @@ int mock_os_udp_sendto(
    int                     size)
 {
    int                     len = size;
-
+   mock_os_udp_sendto_len = len;
+   mock_os_udp_sendto_count++;
    return len;
 }
 
