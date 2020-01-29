@@ -150,7 +150,7 @@ static pnet_cfg_t                pnet_default_cfg =
       {  /* OEM device id: vendor_id_hi, vendor_id_lo, device_id_hi, device_id_lo */
          0xc0, 0xff, 0xee, 0x01,
       },
-      .station_name = "rt-labs1",
+      .station_name = "rt-labs-dev",
       .device_vendor = "rt-labs",
       .manufacturer_specific_string = "PNET demo",
 

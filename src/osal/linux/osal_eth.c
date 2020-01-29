@@ -54,7 +54,7 @@ static void os_eth_task(void * arg)
    ssize_t readlen;
 
    os_buf_t * p = os_buf_alloc (1522);
-   assert(p == NULL);
+   assert(p != NULL);
 
    while (1)
    {
@@ -67,7 +67,7 @@ static void os_eth_task(void * arg)
          printf("r");
          fflush(stdout);
          p = os_buf_alloc (1522);
-         assert(p == NULL);
+         assert(p != NULL);
       }
    }
 }
