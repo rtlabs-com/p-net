@@ -32,6 +32,9 @@ extern uint8_t     mock_os_eth_send_copy[1500];
 extern uint16_t    mock_os_eth_send_len;
 extern uint16_t    mock_os_eth_send_count;
 
+extern uint16_t    mock_os_udp_sendto_len;
+extern uint16_t    mock_os_udp_sendto_count;
+
 extern uint16_t    mock_os_set_led_count;
 extern bool        mock_os_set_led_on;
 
