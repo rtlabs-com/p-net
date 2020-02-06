@@ -30,8 +30,8 @@
 #define PF_FRAME_ID_ALARM_HIGH      0xfc01
 #define PF_FRAME_ID_ALARM_LOW       0xfe01
 
-#define ALARM_VLAN_PRIO_LOW         (5>>12)
-#define ALARM_VLAN_PRIO_HIGH        (6>>12)
+#define ALARM_VLAN_PRIO_LOW         (5<<12)
+#define ALARM_VLAN_PRIO_HIGH        (6<<12)
 
 /* The scheduler identifier */
 static const char *apmx_sync_name = "apmx";
