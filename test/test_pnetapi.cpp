@@ -13,6 +13,17 @@
  * full license information.
  ********************************************************************/
 
+/**
+ * @file
+ * @brief Integration tests of API functions
+  *
+ * For example
+ *   pnet_output_get_data_and_iops()
+ *   pnet_input_get_iocs()
+ *   pnet_output_set_iocs()
+ *   pnet_create_log_book_entry()
+ *   pnet_show()
+ */
 
 #include "pf_includes.h"
 

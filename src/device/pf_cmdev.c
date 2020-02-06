@@ -949,6 +949,7 @@ static int pf_cmdev_cfg_subslot_show(
    printf("      direction       = %s\n", pf_cmdev_direction_to_string(p_subslot->direction));
    printf("      length_input    = %u\n", (unsigned)p_subslot->length_input);
    printf("      length_output   = %u\n", (unsigned)p_subslot->length_output);
+   printf("      .                   \n");
 
    return 0;
 }
