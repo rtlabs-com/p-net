@@ -54,7 +54,7 @@ static void os_eth_task(void * arg)
    ssize_t readlen;
 
    os_buf_t * p = os_buf_alloc (1522);
-   assert(p == NULL);
+   assert(p != NULL);
 
    while (1)
    {
@@ -64,10 +64,9 @@ static void os_eth_task(void * arg)
       p->len = readlen;
       if (os_eth_recv (OS_ETHTYPE_PROFINET, p) == 1)
       {
-         printf("r");
          fflush(stdout);
          p = os_buf_alloc (1522);
-         assert(p == NULL);
+         assert(p != NULL);
       }
    }
 }
@@ -130,7 +129,6 @@ int os_eth_send(uint32_t id, os_buf_t * buf)
    if (ret<0)
       printf("os_eth_send sent length: %d errno %d\n", ret, errno);
 
-   printf("t");
    fflush(stdout);
 
    return ret;
