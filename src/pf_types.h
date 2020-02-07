@@ -1195,6 +1195,7 @@ typedef struct pf_iodata_object
 struct pf_ar;
 struct pf_alpmx;
 
+/* IOCR = IO Communication Relation */
 typedef struct pf_iocr
 {
    struct pf_ar            *p_ar;

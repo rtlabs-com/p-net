@@ -389,7 +389,7 @@ extern "C"
 typedef enum pnet_event_values
 {
    PNET_EVENT_ABORT,          /**< The AR has been closed. */
-   PNET_EVENT_STARTUP,        /**< A connect ion has been initiated. */
+   PNET_EVENT_STARTUP,        /**< A connection has been initiated. */
    PNET_EVENT_PRMEND,         /**< Controller has sent all write records. */
    PNET_EVENT_APPLRDY,        /**< Controller has acknowledged the APPL_RDY message */
    PNET_EVENT_DATA
@@ -748,7 +748,9 @@ typedef int (*pnet_new_data_status_ind)(
  * @param api              In:   The AP identifier.
  * @param slot             In:   The slot number.
  * @param subslot          In:   The sub-slot number.
- * @param p_result         Out:  Detailed error information.
+ * @param data_len         TODO
+ * @param data_usi
+ * @param p_data
  * @return  0  on success.
  *          -1 if an error occurred.
  */
@@ -779,7 +781,7 @@ typedef int (*pnet_alarm_cnf)(
  *
  * @param arep             In:   The AREP.
  * @param res              In:   0  if ACK was received by the remote side.
- *                               -1 if ACk was not received by the remote side.
+ *                               -1 if ACK was not received by the remote side.
  * @return  0  on success.
  *          -1 if an error occurred.
  */
@@ -1013,7 +1015,7 @@ PNET_EXPORT int pnet_init(
  * This function should be called periodically by the application.
  * The period is specified by the application in the tick_us argument
  * to pnet_init.
- * The period should match the expected I/O data rate to from the device.
+ * The period should match the expected I/O data rate to and from the device.
  */
 PNET_EXPORT void pnet_handle_periodic(void);
 

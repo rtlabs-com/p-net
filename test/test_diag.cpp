@@ -13,6 +13,17 @@
  * full license information.
  ********************************************************************/
 
+/**
+ * @file
+ * @brief Integration testing of diagnostics.
+ *
+ * For example:
+ *   pnet_diag_add()
+ *   pnet_diag_update()
+ *   pnet_diag_remove()
+ *
+ */
+
 #include "pf_includes.h"
 
 #include <gtest/gtest.h>

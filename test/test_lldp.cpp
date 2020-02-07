@@ -13,6 +13,12 @@
  * full license information.
  ********************************************************************/
 
+/**
+ * @file
+ * @brief Integration test that a LLDP frame is sent at init.
+ *
+ */
+
 #include "pf_includes.h"
 
 #include <gtest/gtest.h>

@@ -25,7 +25,7 @@ extern "C"
 
 /**
  * @internal
- * Return a byte bytes from a buffer.
+ * Return a byte from a buffer.
  * @param p_info           In:   The parser state.
  * @param p_pos            InOut:Position in the buffer.
  * @return
@@ -45,7 +45,7 @@ uint16_t pf_get_uint16(
    uint16_t                *p_pos);
 
 /**
- * Extract an NDR header from a buffer.
+ * Extract a NDR header from a buffer.
  * @param p_info           In:   The parser state.
  * @param p_pos            InOut:Position in the buffer.
  * @param p_ndr            Out:  Destination buffer.
