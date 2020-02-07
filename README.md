@@ -35,7 +35,7 @@ The stack includes a comprehensive set of unit-tests.
 Prerequisites for all platforms
 ===============================
 
- * CMake 3.11 or later
+ * CMake 3.13 or later
 
 Out-of-tree builds are recommended. Create a build directory and run
 the following commands from that directory. In the following

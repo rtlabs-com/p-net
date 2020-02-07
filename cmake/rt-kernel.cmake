@@ -13,20 +13,53 @@
 # full license information.
 #*******************************************************************/
 
-set(APP_SOURCES
-  ${PROFINET_SOURCE_DIR}/sample_app/main_rtk.c)
-set(OSAL_SOURCES
-  ${PROFINET_SOURCE_DIR}/src/osal/rt-kernel/stubs.c
-  ${PROFINET_SOURCE_DIR}/src/osal/rt-kernel/osal.c
-  ${PROFINET_SOURCE_DIR}/src/osal/rt-kernel/osal_eth.c
-  ${PROFINET_SOURCE_DIR}/src/osal/rt-kernel/osal_udp.c
-  ${PROFINET_SOURCE_DIR}/src/osal/rt-kernel/dwmac1000.c
+# Fix inclusion order of assert.h and log.h by including our
+# definition before anything else. FIXME: these files should be
+# renamed.
+include_directories(BEFORE
+  src/osal/rt-kernel/
+  src
   )
-set(OSAL_INCLUDES
-  ${PROFINET_SOURCE_DIR}/src/osal/rt-kernel
-  ${RTK}/include
-  ${RTK}/include/kern
-  ${RTK}/include/arch/${ARCH}
-  ${RTK}/include/drivers
-  ${RTK}/lwip/src/include
+
+target_include_directories(profinet
+  PRIVATE
+  src/osal/rt-kernel
   )
+
+target_sources(profinet
+  PRIVATE
+  src/osal/rt-kernel/osal.c
+  src/osal/rt-kernel/osal_eth.c
+  src/osal/rt-kernel/osal_udp.c
+  src/osal/rt-kernel/dwmac1000.c
+  )
+
+target_compile_options(profinet
+  PRIVATE
+  -Wall
+  -Wextra
+  -Werror
+  -Wno-unused-parameter
+  )
+
+target_include_directories(pn_dev
+  PRIVATE
+  src/osal/rt-kernel
+  )
+
+target_sources(pn_dev
+  PRIVATE
+  sample_app/main_rtk.c
+  )
+
+if (BUILD_TESTING)
+  target_sources(pf_test
+    PRIVATE
+    ${PROFINET_SOURCE_DIR}/src/osal/rt-kernel/osal.c
+    ${PROFINET_SOURCE_DIR}/src/osal/rt-kernel/stubs.c
+    )
+  target_include_directories(pf_test
+    PRIVATE
+    src/osal/rt-kernel
+    )
+endif()

@@ -4,8 +4,8 @@
 #include <shell.h>
 #include <pnet_api.h>
 
-#include "main_osal.h"
-#include "main_log.h"
+#include "osal.h"
+#include "log.h"
 
 /* The following constant must match the GSDML file. */
 #define APP_PARAM_IDX_1          123
@@ -193,7 +193,7 @@ static int app_connect_ind(
    uint32_t                arep,
    pnet_result_t           *p_result)
 {
-   MAIN_LOG_INFO(PNET_MAIN_LOG, "APP: connect call-back %d %d %d %d\n",
+   LOG_INFO(PNET_LOG, "APP: connect call-back %d %d %d %d\n",
          p_result->pnio_status.error_code,p_result->pnio_status.error_decode,
          p_result->pnio_status.error_code_1,p_result->pnio_status.error_code_2);
 
@@ -209,7 +209,7 @@ static int app_release_ind(
    uint32_t                arep,
    pnet_result_t           *p_result)
 {
-   MAIN_LOG_INFO(PNET_MAIN_LOG, "APP: release call-back %d %d %d %d\n",
+   LOG_INFO(PNET_LOG, "APP: release call-back %d %d %d %d\n",
          p_result->pnio_status.error_code,p_result->pnio_status.error_decode,
          p_result->pnio_status.error_code_1,p_result->pnio_status.error_code_2);
 
@@ -221,7 +221,7 @@ static int app_dcontrol_ind(
    pnet_control_command_t  control_command,
    pnet_result_t           *p_result)
 {
-   MAIN_LOG_INFO(PNET_MAIN_LOG, "APP: dcontrol call-back (cmd:%d) %d %d %d %d\n",
+   LOG_INFO(PNET_LOG, "APP: dcontrol call-back (cmd:%d) %d %d %d %d\n",
          control_command,
          p_result->pnio_status.error_code,p_result->pnio_status.error_decode,
          p_result->pnio_status.error_code_1,p_result->pnio_status.error_code_2);
@@ -233,7 +233,7 @@ static int app_ccontrol_cnf(
    uint32_t                arep,
    pnet_result_t           *p_result)
 {
-   MAIN_LOG_INFO(PNET_MAIN_LOG, "APP: ccontrol confirmation call-back %d %d %d %d\n",
+   LOG_INFO(PNET_LOG, "APP: ccontrol confirmation call-back %d %d %d %d\n",
          p_result->pnio_status.error_code,p_result->pnio_status.error_decode,
          p_result->pnio_status.error_code_1,p_result->pnio_status.error_code_2);
 
@@ -251,7 +251,7 @@ static int app_write_ind(
    uint8_t                 *p_write_data,
    pnet_result_t           *p_result)
 {
-   MAIN_LOG_INFO(PNET_MAIN_LOG, "APP: write call-back: idx %u\n", (unsigned)idx);
+   LOG_INFO(PNET_LOG, "APP: write call-back: idx %u\n", (unsigned)idx);
    if (idx == APP_PARAM_IDX_1)
    {
       if (write_length == sizeof(app_param_1))
@@ -260,7 +260,7 @@ static int app_write_ind(
       }
       else
       {
-          MAIN_LOG_INFO(PNET_MAIN_LOG, "APP: write call-back: idx %u  length %u - expected length %u\n",
+          LOG_INFO(PNET_LOG, "APP: write call-back: idx %u  length %u - expected length %u\n",
                 (unsigned)idx, (unsigned)write_length, (unsigned)sizeof(app_param_1));
       }
    }
@@ -272,13 +272,13 @@ static int app_write_ind(
       }
       else
       {
-          MAIN_LOG_INFO(PNET_MAIN_LOG, "APP: write call-back: idx %u  length %u - expected length %u\n",
+          LOG_INFO(PNET_LOG, "APP: write call-back: idx %u  length %u - expected length %u\n",
                 (unsigned)idx, (unsigned)write_length, (unsigned)sizeof(app_param_2));
       }
    }
    else
    {
-      MAIN_LOG_INFO(PNET_MAIN_LOG, "APP: write call-back: unknown idx %u\n", (unsigned)idx);
+      LOG_INFO(PNET_LOG, "APP: write call-back: unknown idx %u\n", (unsigned)idx);
    }
    return 0;
 }
@@ -294,7 +294,7 @@ static int app_read_ind(
    uint16_t                *p_read_length,
    pnet_result_t           *p_result)
 {
-   MAIN_LOG_INFO(PNET_MAIN_LOG, "APP: read call-back: idx %u  length %u\n",
+   LOG_INFO(PNET_LOG, "APP: read call-back: idx %u  length %u\n",
          (unsigned)idx, (unsigned)*p_read_length);
 
    if ((idx == APP_PARAM_IDX_1) &&
@@ -321,7 +321,7 @@ static int app_state_ind(
    uint16_t                err_cls = 0;
    uint16_t                err_code = 0;
 
-   MAIN_LOG_DEBUG(PNET_MAIN_LOG, "APP: state call-back %d\n", state);
+   LOG_DEBUG(PNET_LOG, "APP: state call-back %d\n", state);
 
    if (state == PNET_EVENT_ABORT)
    {
@@ -378,13 +378,13 @@ static int app_exp_module_ind(
    {
       if (pnet_pull_module(api, slot) != 0)
       {
-         MAIN_LOG_DEBUG(PNET_MAIN_LOG, "APP: Pull module failed\n");
+         LOG_DEBUG(PNET_LOG, "APP: Pull module failed\n");
       }
       /* For now support any module in any slot */
       ret = pnet_plug_module(api, slot, module_ident);
    }
 
-   MAIN_LOG_DEBUG(PNET_MAIN_LOG, "APP: ret %d expected module call-back 0x%08x\n", ret, (unsigned)module_ident);
+   LOG_DEBUG(PNET_LOG, "APP: ret %d expected module call-back 0x%08x\n", ret, (unsigned)module_ident);
 
    return ret;
 }
@@ -411,14 +411,14 @@ static int app_exp_submodule_ind(
    {
       if (pnet_pull_submodule(api, slot, subslot) != 0)
       {
-         MAIN_LOG_DEBUG(PNET_MAIN_LOG, "APP: Pull sub-module failed\n");
+         LOG_DEBUG(PNET_LOG, "APP: Pull sub-module failed\n");
       }
       ret = pnet_plug_submodule(api, slot, subslot, module_ident, submodule_ident,
          submodule_cfg[ix].data_dir,
          submodule_cfg[ix].insize, submodule_cfg[ix].outsize);
    }
 
-   MAIN_LOG_DEBUG(PNET_MAIN_LOG, "APP: ret %d expected submodule call-back module ident 0x%08x, submodule ident 0x%08x\n", ret, (unsigned)module_ident, (unsigned)submodule_ident);
+   LOG_DEBUG(PNET_LOG, "APP: ret %d expected submodule call-back module ident 0x%08x, submodule ident 0x%08x\n", ret, (unsigned)module_ident, (unsigned)submodule_ident);
 
    return ret;
 }
@@ -428,7 +428,7 @@ static int app_new_data_status_ind(
    uint32_t                crep,
    uint8_t                 changes)
 {
-   MAIN_LOG_DEBUG(PNET_MAIN_LOG, "APP: New data status 0x%02x\n", changes);
+   LOG_DEBUG(PNET_LOG, "APP: New data status 0x%02x\n", changes);
 
    return 0;
 }
@@ -442,7 +442,7 @@ static int app_alarm_ind(
    uint16_t                data_usi,
    uint8_t                 *p_data)
 {
-   MAIN_LOG_DEBUG(PNET_MAIN_LOG, "APP: Alarm indicated\n");
+   LOG_DEBUG(PNET_LOG, "APP: Alarm indicated\n");
 
    os_event_set(main_events, EVENT_ALARM);
 
@@ -453,7 +453,7 @@ static int app_alarm_cnf(
    uint32_t                arep,
    pnet_pnio_status_t      *p_pnio_status)
 {
-   MAIN_LOG_DEBUG(PNET_MAIN_LOG, "APP: Alarm confirmed: %u, %u, %u, %u\n",
+   LOG_DEBUG(PNET_LOG, "APP: Alarm confirmed: %u, %u, %u, %u\n",
       p_pnio_status->error_code, p_pnio_status->error_decode,
       p_pnio_status->error_code_1, p_pnio_status->error_code_2);
 
@@ -466,7 +466,7 @@ static int app_alarm_ack_cnf(
    uint32_t                arep,
    int                     res)
 {
-   MAIN_LOG_DEBUG(PNET_MAIN_LOG, "APP: Alarm ACK confirmed: %d\n", res);
+   LOG_DEBUG(PNET_LOG, "APP: Alarm ACK confirmed: %d\n", res);
 
    return 0;
 }
@@ -487,16 +487,16 @@ static int _cmd_pnio_alarm_ack(
       ret = pnet_alarm_send_ack(main_arep, &pnio_status);
       if (ret != 0)
       {
-         MAIN_LOG_ERROR(PNET_MAIN_LOG, "APP: Alarm ACK error %d\n", ret);
+         LOG_ERROR(PNET_LOG, "APP: Alarm ACK error %d\n", ret);
       }
       else
       {
-         MAIN_LOG_INFO(PNET_MAIN_LOG, "APP: Alarm ACK sent\n");
+         LOG_INFO(PNET_LOG, "APP: Alarm ACK sent\n");
       }
    }
    else
    {
-      MAIN_LOG_INFO(PNET_MAIN_LOG, "APP: No AREP\n");
+      LOG_INFO(PNET_LOG, "APP: No AREP\n");
    }
 #endif
    return 0;
@@ -522,7 +522,7 @@ static int _cmd_pnio_run(
 
    if (pnet_init("en1", TICK_INTERVAL_US, &pnet_default_cfg) == 0)
    {
-      MAIN_LOG_DEBUG(PNET_MAIN_LOG, "APP: Call-backs connected\n");
+      LOG_DEBUG(PNET_LOG, "APP: Call-backs connected\n");
       for (ix = 0; ix < NELEMENTS(submodule_cfg); ix++)
       {
          /* Plug all submodules - modules are plugged automatically */
@@ -530,7 +530,7 @@ static int _cmd_pnio_run(
             submodule_cfg[ix].module_ident_nbr, submodule_cfg[ix].submodule_ident_nbr,
             submodule_cfg[ix].data_dir, submodule_cfg[ix].insize, submodule_cfg[ix].outsize) != 0)
          {
-            MAIN_LOG_ERROR(PNET_MAIN_LOG, "APP: Could not plug %u, %u, %u\n",
+            LOG_ERROR(PNET_LOG, "APP: Could not plug %u, %u, %u\n",
                (unsigned)submodule_cfg[ix].api, (unsigned)submodule_cfg[ix].slot_nbr, (unsigned)submodule_cfg[ix].subslot_nbr);
          }
       }
@@ -544,7 +544,7 @@ static int _cmd_pnio_run(
    }
    else
    {
-      MAIN_LOG_DEBUG(PNET_MAIN_LOG, "APP: Could not connect application call-backs\n");
+      LOG_DEBUG(PNET_LOG, "APP: Could not connect application call-backs\n");
    }
    return 0;
 }
@@ -610,7 +610,7 @@ int main(void)
     0x00,
    };
 
-   MAIN_LOG_INFO(PNET_MAIN_LOG, "APP: Hello world\n");
+   LOG_INFO(PNET_LOG, "APP: Hello world\n");
    main_events = os_event_create();
    main_timer  = os_timer_create(TICK_INTERVAL_US, main_timer_tick, NULL, false);
 
@@ -624,7 +624,7 @@ int main(void)
 
          /* Send appl ready to profinet stack. */
          ret = pnet_application_ready(main_arep);
-         MAIN_LOG_DEBUG(PNET_MAIN_LOG, "APP: Return from apprdy: %d\n", ret);
+         LOG_DEBUG(PNET_LOG, "APP: Return from apprdy: %d\n", ret);
          /*
           * cm_ccontrol_cnf(+/-) is indicated later (app_state_ind(DATA)), when the
           * confirmation arrives from the controller.
@@ -639,11 +639,11 @@ int main(void)
          ret = pnet_alarm_send_ack(main_arep, &pnio_status);
          if (ret != 0)
          {
-            MAIN_LOG_ERROR(PNET_MAIN_LOG, "APP: Alarm ACK error %d\n", ret);
+            LOG_ERROR(PNET_LOG, "APP: Alarm ACK error %d\n", ret);
          }
          else
          {
-            MAIN_LOG_INFO(PNET_MAIN_LOG, "APP: Alarm ACK sent\n");
+            LOG_INFO(PNET_LOG, "APP: Alarm ACK sent\n");
          }
       }
       else if (flags & EVENT_TIMER)
@@ -657,7 +657,7 @@ int main(void)
             tick_ctr = 0;
             data[0] = data_ctr++;
             ret = pnet_input_set_data_and_iops(0, 1, 1, data, sizeof(data), PNET_IOXS_GOOD);
-            //MAIN_LOG_DEBUG(PNET_MAIN_LOG, "APP: Return from send  : %d\n", ret);
+            //LOG_DEBUG(PNET_LOG, "APP: Return from send  : %d\n", ret);
          }
 #endif
 #if 1
@@ -669,7 +669,7 @@ int main(void)
          {
             if ((pressed == true) && (old_1_pressed == false))
             {
-               MAIN_LOG_DEBUG(PNET_MAIN_LOG, "APP: New input\n");
+               LOG_DEBUG(PNET_LOG, "APP: New input\n");
                data[0] = data_ctr++;
                ret = pnet_input_set_data_and_iops(0, 1, 1, data, sizeof(data), PNET_IOXS_GOOD);
             }
@@ -685,7 +685,7 @@ int main(void)
          {
             if ((pressed == true) && (old_2_pressed == false) && (alarm_allowed == true))
             {
-               MAIN_LOG_DEBUG(PNET_MAIN_LOG, "APP: Send ALARM\n");
+               LOG_DEBUG(PNET_LOG, "APP: Send ALARM\n");
                alarm[0]++;
                alarm_allowed = true;
                ret = pnet_alarm_send_process_alarm(main_arep, 0, 1, 1, sizeof(alarm), 1, alarm);
@@ -704,12 +704,12 @@ int main(void)
          old_2_pressed = false;
 
          os_event_clr(main_events, EVENT_ABORT); /* Re-arm */
-         MAIN_LOG_DEBUG(PNET_MAIN_LOG, "APP: abort\n");
+         LOG_DEBUG(PNET_LOG, "APP: abort\n");
       }
    }
    os_timer_destroy(main_timer);
    os_event_destroy(main_events);
 
-   MAIN_LOG_INFO(PNET_MAIN_LOG, "APP: End of the world\n");
+   LOG_INFO(PNET_LOG, "APP: End of the world\n");
    return 0;
 }
