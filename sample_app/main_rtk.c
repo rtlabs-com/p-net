@@ -1,29 +1,17 @@
-
 #include <string.h>
+
 #include <kern.h>
 #include <shell.h>
-#include <pnet_api.h>
 
+#include <pnet_api.h>
 #include "osal.h"
 #include "log.h"
 
-/* The following constant must match the GSDML file. */
-#define APP_PARAM_IDX_1          123
-#define APP_PARAM_IDX_2          124
+/********************* Call-back function declarations ************************/
 
-
-#define EVENT_READY_FOR_DATA     BIT(0)
-#define EVENT_TIMER              BIT(1)
-#define EVENT_ALARM              BIT(2)
-#define EVENT_ABORT              BIT(15)
-
-#define TICK_INTERVAL_US         1000 /* 1 ms */
-
-/* Declare call-back functions */
 static int app_exp_module_ind(uint16_t api, uint16_t slot, uint32_t module_ident_number);
 static int app_exp_submodule_ind(uint16_t api, uint16_t slot, uint16_t subslot, uint32_t module_ident_number, uint32_t submodule_ident_number);
 static int app_new_data_status_ind(uint32_t arep, uint32_t crep, uint8_t changes);
-
 static int app_connect_ind(uint32_t arep, pnet_result_t *p_result);
 static int app_state_ind(uint32_t arep, pnet_event_values_t state);
 static int app_release_ind(uint32_t arep, pnet_result_t *p_result);
@@ -35,21 +23,37 @@ static int app_alarm_cnf(uint32_t arep, pnet_pnio_status_t *p_pnio_status);
 static int app_alarm_ind(uint32_t arep, uint32_t api, uint16_t slot, uint16_t subslot, uint16_t data_len, uint16_t data_usi, uint8_t *p_data);
 static int app_alarm_ack_cnf(uint32_t arep, int res);
 
+
+/********************** Settings **********************************************/
+
+#define EVENT_READY_FOR_DATA     BIT(0)
+#define EVENT_TIMER              BIT(1)
+#define EVENT_ALARM              BIT(2)
+#define EVENT_ABORT              BIT(15)
+
+#define TICK_INTERVAL_US         1000 /* 1 ms */
+
 /* From the GSDML file */
+
+/* The following constant must match the GSDML file. */
+#define APP_PARAM_IDX_1          123
+#define APP_PARAM_IDX_2          124
+
+#define APP_API                  0
 
 /*
  * Module ident number for the DAP module.
  * The DAP module must be plugged by the application after the call to pnet_init.
  */
-#define PNET_DAP_IDENT           0x00000001     /* Slot 0 */
+#define PNET_MOD_DAP_IDENT       0x00000001     /* Slot 0 */
 
 /*
  * Sub-module ident numbers for the DAP sub-slots.
  * The DAP submodules must be plugged by the application after the call to pnet_init.
  */
-#define PNET_DAP_DAP_IDENT       0x00000001     /* Subslot 1 */
-#define PNET_DAP_INTERFACE_IDENT 0x00008000     /* Subslot 0x8000 */
-#define PNET_DAP_PORT_0_IDENT    0x00008001     /* Subslot 0x8001 */
+#define PNET_SUBMOD_DAP_IDENT           0x00000001     /* Subslot 1 */
+#define PNET_SUBMOD_DAP_INTERFACE_IDENT 0x00008000     /* Subslot 0x8000 */
+#define PNET_SUBMOD_DAP_PORT_0_IDENT    0x00008001     /* Subslot 0x8001 */
 
 /*
  * I/O Modules. These modules and their sub-modules must be plugged by the application after the call to pnet_init.
@@ -66,10 +70,10 @@ static int app_alarm_ack_cnf(uint32_t arep, int res);
  */
 static uint32_t            cfg_module_ident_numbers[] =
 {
-    PNET_DAP_IDENT,
-    PNET_MOD_8_0_IDENT,
-    PNET_MOD_0_8_IDENT,
-    PNET_MOD_8_8_IDENT
+   PNET_MOD_DAP_IDENT,
+   PNET_MOD_8_0_IDENT,
+   PNET_MOD_0_8_IDENT,
+   PNET_MOD_8_8_IDENT
 };
 
 static const struct
@@ -84,10 +88,10 @@ static const struct
    uint16_t                outsize;
 } submodule_cfg[] =
 {
- {0, 0, 1, PNET_DAP_IDENT, PNET_DAP_DAP_IDENT, PNET_DIR_NO_IO, 0, 0},
- {0, 0, 32768, PNET_DAP_IDENT, PNET_DAP_INTERFACE_IDENT, PNET_DIR_NO_IO, 0, 0},
- {0, 0, 32769, PNET_DAP_IDENT, PNET_DAP_PORT_0_IDENT, PNET_DIR_NO_IO, 0, 0},
- {0, 1, 1, PNET_MOD_8_8_IDENT, PNET_SUBMOD_IDENT, PNET_DIR_IO, 1, 1},
+   {APP_API, 0, 1, PNET_MOD_DAP_IDENT, PNET_SUBMOD_DAP_IDENT, PNET_DIR_NO_IO, 0, 0},
+   {APP_API, 0, 32768, PNET_MOD_DAP_IDENT, PNET_SUBMOD_DAP_INTERFACE_IDENT, PNET_DIR_NO_IO, 0, 0},
+   {APP_API, 0, 32769, PNET_MOD_DAP_IDENT, PNET_SUBMOD_DAP_PORT_0_IDENT, PNET_DIR_NO_IO, 0, 0},
+   {APP_API, 1, 1, PNET_MOD_8_8_IDENT, PNET_SUBMOD_IDENT, PNET_DIR_IO, 1, 1},
 };
 
 static pnet_cfg_t                pnet_default_cfg =
@@ -146,13 +150,13 @@ static pnet_cfg_t                pnet_default_cfg =
       /* Device configuration */
       .device_id =
       {  /* device id: vendor_id_hi, vendor_id_lo, device_id_hi, device_id_lo */
-         0xfe, 0xed, 0xbe, 0xef
+         0xfe, 0xed, 0xbe, 0xef,
       },
       .oem_device_id =
       {  /* OEM device id: vendor_id_hi, vendor_id_lo, device_id_hi, device_id_lo */
          0xc0, 0xff, 0xee, 0x01,
       },
-      .station_name = "rt-labs1",
+      .station_name = "rt-labs-dev",
       .device_vendor = "rt-labs",
       .manufacturer_specific_string = "PNET demo",
 
@@ -171,23 +175,29 @@ static pnet_cfg_t                pnet_default_cfg =
       /* Network configuration */
       .send_hello = 1,                /* Send HELLO */
       .dhcp_enable = 0,
-      .ip_addr = { 192, 168, 1, 171 },
+      .ip_addr = { 192, 168, 137, 4 },
       .ip_mask = { 255, 255, 255, 0 },
-      .ip_gateway = { 192, 168, 1, 1 },
+      .ip_gateway = { 192, 168, 137, 1 },
 };
+
+
+/********************************** Globals ***********************************/
 
 static os_timer_t                *main_timer = NULL;
 static os_event_t                *main_events = NULL;
-
 static uint8_t                   data_ctr = 0;
-
 static uint32_t                  main_arep = UINT32_MAX;
 static bool                      alarm_allowed = true;
-
 static uint32_t                  app_param_1 = 0x0;
 static uint32_t                  app_param_2 = 0x0;
-
 static bool                      init_done = false;
+uint8_t                          inputdata[] =
+{
+   0x00,       /* Slot 1, subslot 1 input data (digital inputs) */
+};
+
+
+/*********************************** Callbacks ********************************/
 
 static int app_connect_ind(
    uint32_t                arep,
@@ -202,6 +212,7 @@ static int app_connect_ind(
     *  This is a very simple application which does not need to handle anything.
     *  All the needed information is in the AR data structure.
     */
+
    return 0;
 }
 
@@ -280,6 +291,7 @@ static int app_write_ind(
    {
       LOG_INFO(PNET_LOG, "APP: write call-back: unknown idx %u\n", (unsigned)idx);
    }
+
    return 0;
 }
 
@@ -317,7 +329,6 @@ static int app_state_ind(
    uint32_t                arep,
    pnet_event_values_t     state)
 {
-   uint8_t                 data[1] = {0};
    uint16_t                err_cls = 0;
    uint16_t                err_code = 0;
 
@@ -341,14 +352,14 @@ static int app_state_ind(
       /* Save the arep for later use */
       main_arep = arep;
       os_event_set(main_events, EVENT_READY_FOR_DATA);
-      (void)pnet_input_set_data_and_iops(0, 0, 1, NULL, 0, PNET_IOXS_GOOD);
-      (void)pnet_input_set_data_and_iops(0, 0, 0x8000, NULL, 0, PNET_IOXS_GOOD);
-      (void)pnet_input_set_data_and_iops(0, 0, 0x8001, NULL, 0, PNET_IOXS_GOOD);
-      (void)pnet_input_set_data_and_iops(0, 1, 1, data, sizeof(data), PNET_IOXS_GOOD);
-      (void)pnet_output_set_iocs(0, 0, 1, PNET_IOXS_GOOD);
-      (void)pnet_output_set_iocs(0, 0, 0x8000, PNET_IOXS_GOOD);
-      (void)pnet_output_set_iocs(0, 0, 0x8001, PNET_IOXS_GOOD);
-      (void)pnet_output_set_iocs(0, 1, 1, PNET_IOXS_GOOD);
+      (void)pnet_input_set_data_and_iops(APP_API, 0, 1, NULL, 0, PNET_IOXS_GOOD);
+      (void)pnet_input_set_data_and_iops(APP_API, 0, 0x8000, NULL, 0, PNET_IOXS_GOOD);
+      (void)pnet_input_set_data_and_iops(APP_API, 0, 0x8001, NULL, 0, PNET_IOXS_GOOD);
+      (void)pnet_input_set_data_and_iops(APP_API, 1, 1, inputdata, sizeof(inputdata), PNET_IOXS_GOOD);
+      (void)pnet_output_set_iocs(APP_API, 0, 1, PNET_IOXS_GOOD);
+      (void)pnet_output_set_iocs(APP_API, 0, 0x8000, PNET_IOXS_GOOD);
+      (void)pnet_output_set_iocs(APP_API, 0, 0x8001, PNET_IOXS_GOOD);
+      (void)pnet_output_set_iocs(APP_API, 1, 1, PNET_IOXS_GOOD);
       (void)pnet_set_provider_state(true);
    }
    else if (state == PNET_EVENT_DATA)
@@ -407,6 +418,7 @@ static int app_exp_submodule_ind(
    {
       ix++;
    }
+
    if (ix < NELEMENTS(submodule_cfg))
    {
       if (pnet_pull_submodule(api, slot, subslot) != 0)
@@ -470,6 +482,8 @@ static int app_alarm_ack_cnf(
 
    return 0;
 }
+
+/************************* Utilities ******************************************/
 
 static int _cmd_pnio_alarm_ack(
       int                  argc,
@@ -546,6 +560,7 @@ static int _cmd_pnio_run(
    {
       LOG_DEBUG(PNET_LOG, "APP: Could not connect application call-backs\n");
    }
+
    return 0;
 }
 
@@ -592,6 +607,9 @@ static void main_timer_tick(
    os_event_set(main_events, EVENT_TIMER);
 }
 
+
+/****************************** Main ******************************************/
+
 int main(void)
 {
    int         ret = -1;
@@ -601,10 +619,6 @@ int main(void)
    uint32_t    mask = EVENT_READY_FOR_DATA | EVENT_TIMER | EVENT_ALARM | EVENT_ABORT;
    uint32_t    flags = 0;
    uint32_t    tick_ctr = 0;
-   uint8_t     data[] =
-   {
-    0x00,       /* Slot 1, subslot 1 Data */
-   };
    uint8_t  alarm[] =
    {
     0x00,
@@ -655,8 +669,8 @@ int main(void)
          if ((main_arep != UINT32_MAX) && (tick_ctr > 10))
          {
             tick_ctr = 0;
-            data[0] = data_ctr++;
-            ret = pnet_input_set_data_and_iops(0, 1, 1, data, sizeof(data), PNET_IOXS_GOOD);
+            inputdata[0] = data_ctr++;
+            ret = pnet_input_set_data_and_iops(0, 1, 1, inputdata, sizeof(inputdata), PNET_IOXS_GOOD);
             //LOG_DEBUG(PNET_LOG, "APP: Return from send  : %d\n", ret);
          }
 #endif
@@ -670,8 +684,8 @@ int main(void)
             if ((pressed == true) && (old_1_pressed == false))
             {
                LOG_DEBUG(PNET_LOG, "APP: New input\n");
-               data[0] = data_ctr++;
-               ret = pnet_input_set_data_and_iops(0, 1, 1, data, sizeof(data), PNET_IOXS_GOOD);
+               inputdata[0] = data_ctr++;
+               ret = pnet_input_set_data_and_iops(0, 1, 1, inputdata, sizeof(inputdata), PNET_IOXS_GOOD);
             }
          }
          old_1_pressed = pressed;
@@ -711,5 +725,6 @@ int main(void)
    os_event_destroy(main_events);
 
    LOG_INFO(PNET_LOG, "APP: End of the world\n");
+
    return 0;
 }
