@@ -41,6 +41,11 @@ int pnet_init(
    /* Initialize everything (and the DCP protocol) */
    /* First initialize the network interface */
    if_id = os_eth_init(netif);
+   if (if_id == -1)
+   {
+       return -1;
+   }
+
    pf_eth_init();
    pf_scheduler_init(tick_us);
    pf_cmina_init();  /* Read from permanent pool */
