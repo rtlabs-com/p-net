@@ -476,7 +476,7 @@ int pf_ppm_set_iocs(
          else if (p_iodata->iocs_length == 0)
          {
             /* ToDo: What does the spec say about this case? */
-            LOG_ERROR(PF_PPM_LOG, "PPM(%d): iocs_len is zero\n", __LINE__);
+            LOG_DEBUG(PF_PPM_LOG, "PPM(%d): iocs_len is zero\n", __LINE__);
             ret = 0;
          }
          else
