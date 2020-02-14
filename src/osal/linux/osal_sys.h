@@ -21,14 +21,12 @@ extern "C"
 {
 #endif
 
-#include <cc.h>
 #include <pthread.h>
 #include <time.h>
 #include <netinet/in.h>
 
 #define OS_THREAD
 #define OS_MUTEX
-#define OS_CHANNEL
 #define OS_SEM
 #define OS_EVENT
 #define OS_MBOX
@@ -36,28 +34,24 @@ extern "C"
 
 #define OS_BUF_MAX_SIZE 1522
 
-typedef struct
-{
-   int handle;
-   void (*callback) (void * arg);
-   void * arg;
-} os_channel_t;
+typedef pthread_t os_thread_t;
+typedef pthread_mutex_t os_mutex_t;
 
-struct os_sem
+typedef struct os_sem
 {
    pthread_cond_t cond;
    pthread_mutex_t mutex;
    size_t count;
-};
+} os_sem_t;
 
-struct os_event
+typedef struct os_event
 {
    pthread_cond_t cond;
    pthread_mutex_t mutex;
    uint32_t flags;
-};
+} os_event_t;
 
-struct os_mbox
+typedef struct os_mbox
 {
    pthread_cond_t cond;
    pthread_mutex_t mutex;
@@ -66,30 +60,25 @@ struct os_mbox
    size_t count;
    size_t size;
    void * msg[];
-};
+} os_mbox_t;
 
-struct os_timer
+typedef struct os_timer
 {
    timer_t timerid;
+   os_thread_t * thread;
+   pid_t thread_id;
+   bool exit;
    void(*fn) (struct os_timer *, void * arg);
    void * arg;
    uint32_t us;
    bool oneshot;
-};
+} os_timer_t;
 
-struct os_buf
+typedef struct os_buf
 {
    void * payload;
    uint16_t len;
-};
-
-typedef pthread_mutex_t os_mutex_t;
-typedef pthread_t os_thread_t;
-typedef struct os_sem os_sem_t;
-typedef struct os_event os_event_t;
-typedef struct os_mbox os_mbox_t;
-typedef struct os_timer os_timer_t;
-typedef struct os_buf os_buf_t;
+} os_buf_t;
 
 #ifdef __cplusplus
 }
