@@ -5,6 +5,7 @@
 
 #include <arpa/inet.h>
 #include <net/if.h>
+#include <sys/ioctl.h>
 #include <sys/stat.h>
 
 #include <pnet_api.h>
@@ -28,6 +29,7 @@ static int app_read_ind(uint32_t arep, uint16_t api, uint16_t slot, uint16_t sub
 static int app_alarm_cnf(uint32_t arep, pnet_pnio_status_t *p_pnio_status);
 static int app_alarm_ind(uint32_t arep, uint32_t api, uint16_t slot, uint16_t subslot, uint16_t data_len, uint16_t data_usi, uint8_t *p_data);
 static int app_alarm_ack_cnf(uint32_t arep, int res);
+void print_bytes(uint8_t *bytes, int32_t len);
 
 
 /********************** Settings **********************************************/
@@ -38,8 +40,9 @@ static int app_alarm_ack_cnf(uint32_t arep, int res);
 #define EVENT_ABORT              BIT(15)
 
 #define EXIT_CODE_ERROR          1
-
-#define TICK_INTERVAL_US         1000 /* 1 ms */
+#define TICK_INTERVAL_US               1000 /* 1 ms */
+#define APP_DEFAULT_ETHERNET_INTERFACE "eth0"
+#define APP_DEFAULT_STATION_NAME       "rt-labs-dev"
 
 /* From the GSDML file */
 
@@ -48,6 +51,7 @@ static int app_alarm_ack_cnf(uint32_t arep, int res);
 #define APP_PARAM_IDX_2          124
 
 #define APP_API                  0
+
 
 /*
  * Module ident number for the DAP module.
@@ -164,7 +168,7 @@ static pnet_cfg_t                pnet_default_cfg =
       {  /* OEM device id: vendor_id_hi, vendor_id_lo, device_id_hi, device_id_lo */
          0xc0, 0xff, 0xee, 0x01,
       },
-      .station_name = "rt-labs-dev",
+      .station_name = "",              /* Set by command line argument */
       .device_vendor = "rt-labs",
       .manufacturer_specific_string = "PNET demo",
 
@@ -181,11 +185,11 @@ static pnet_cfg_t                pnet_default_cfg =
       },
 
       /* Network configuration */
-      .send_hello = 1,                /* Send HELLO */
+      .send_hello = 1,                    /* Send HELLO */
       .dhcp_enable = 0,
-      .ip_addr = { 0, 0, 0, 0 },
-      .ip_mask = { 255, 255, 255, 0 },
-      .ip_gateway = { 0, 0, 0, 0 },
+      .ip_addr = { 0, 0, 0, 0 },          /* Read from Linux kernel */
+      .ip_mask = { 255, 255, 255, 0 },    /* Read from Linux kernel */
+      .ip_gateway = { 0, 0, 0, 0 },       /* Read from Linux kernel */
 };
 
 
@@ -304,6 +308,10 @@ static int app_write_ind(
       if (write_length == sizeof(app_param_1))
       {
          memcpy(&app_param_1, p_write_data, sizeof(app_param_1));
+         if (verbosity > 0)
+         {
+            print_bytes(p_write_data, sizeof(app_param_1));
+         }
       }
       else
       {
@@ -318,6 +326,10 @@ static int app_write_ind(
       if (write_length == sizeof(app_param_2))
       {
          memcpy(&app_param_2, p_write_data, sizeof(app_param_2));
+         if (verbosity > 0)
+         {
+            print_bytes(p_write_data, sizeof(app_param_2));
+         }
       }
       else
       {
@@ -652,26 +664,26 @@ void show_usage()
    printf("If no hardware-controlling files in /sys are available, you can\n");
    printf("still try the functionality by using plain text files.\n");
    printf("\n");
+   printf("Assumes the default gateway is found on .1 on same subnet as the IP address.\n");
+   printf("\n");
    printf("Optional arguments:\n");
    printf("   --help       Show this help text and exit\n");
    printf("   -h           Show this help text and exit\n");
    printf("   -v           Incresase verbosity\n");
-   printf("   -i INTERF    Set Ethernet interface name. Defaults to eth0\n");
-   printf("   -p IP        Device (this machine) IP address. Defaults to 192.168.1.1\n");
-   printf("   -g IP        Gateway IP address. Defaults to .1 in same subnet as -p\n");
-   printf("   -l file      Path to control LED. Defaults to not control any LED.\n");
-   printf("   -b file      Path to read button1. Defaults to not read button1.\n");
-    printf("   -d file      Path to read button2. Defaults to not read button2.\n");
+   printf("   -i INTERF    Set Ethernet interface name. Defaults to %s\n", APP_DEFAULT_ETHERNET_INTERFACE);
+   printf("   -s NAME      Set station name. Defaults to %s\n", APP_DEFAULT_STATION_NAME);
+   printf("   -l FILE      Path to control LED. Defaults to not control any LED.\n");
+   printf("   -b FILE      Path to read button1. Defaults to not read button1.\n");
+   printf("   -d FILE      Path to read button2. Defaults to not read button2.\n");
 }
 
 struct cmd_args {
    char path_led[256];
    char path_button1[256];
    char path_button2[256];
+   char station_name[64];
    char eth_interface[64];
-   char ip_address_str[64];
-   char gateway_ip_address_str[64];
-   int verbosity;
+   int  verbosity;
 };
 
 /**
@@ -698,13 +710,12 @@ struct cmd_args parse_commandline_arguments(int argc, char *argv[])
    strcpy(output_arguments.path_led, "");
    strcpy(output_arguments.path_button1, "");
    strcpy(output_arguments.path_button2, "");
-   strcpy(output_arguments.eth_interface, "eth0");
-   strcpy(output_arguments.ip_address_str, "192.168.1.1");
-   strcpy(output_arguments.gateway_ip_address_str, "");
+   strcpy(output_arguments.station_name, APP_DEFAULT_STATION_NAME);
+   strcpy(output_arguments.eth_interface, APP_DEFAULT_ETHERNET_INTERFACE);
    output_arguments.verbosity = 0;
 
    int option;
-   while ((option = getopt(argc, argv, "hvi:p:g:l:b:d:")) != -1) {
+   while ((option = getopt(argc, argv, "hvi:s:l:b:d:")) != -1) {
       switch (option) {
       case 'v':
          output_arguments.verbosity++;
@@ -712,11 +723,8 @@ struct cmd_args parse_commandline_arguments(int argc, char *argv[])
       case 'i':
          strcpy(output_arguments.eth_interface, optarg);
          break;
-      case 'p':
-         strcpy(output_arguments.ip_address_str, optarg);
-         break;
-      case 'g':
-         strcpy(output_arguments.gateway_ip_address_str, optarg);
+      case 's':
+         strcpy(output_arguments.station_name, optarg);
          break;
       case 'l':
          strcpy(output_arguments.path_led, optarg);
@@ -736,46 +744,6 @@ struct cmd_args parse_commandline_arguments(int argc, char *argv[])
    }
 
    return output_arguments;
-}
-
-/**
- * Convert IPv4 address string to an integer
- *
- * @param ip_str      In: IPv4 address
- * @return IP address on success
- *         0 on failure
-*/
-uint32_t ip_str_to_int(const char* ip_str)
-{
-   struct in_addr addr;
-   int res = inet_aton(ip_str, &addr);
-   if (res != 1)
-   {
-      return IP_INVALID;
-   }
-
-   return addr.s_addr;
-}
-
-/**
- * Convert gateway IPv4 address string to an integer
- *
- * If no gateway IP address is given, use the IP main address but replace
- * last digit with .1
- *
- * @param gateway_ip_str      In: IPv4 gateway address
- * @param ip_int              In: Already parsed IP address
- * @return Gateway IP address on success
- *         0 on failure
-*/
-uint32_t calculate_gateway_ip(const char* gateway_ip_str, uint32_t ip_int)
-{
-   if (gateway_ip_str[0] != '\0')
-   {
-      return ip_str_to_int(gateway_ip_str);
-   }
-
-   return (ip_int & 0x00FFFFFF) | 0x01000000;
 }
 
 /**
@@ -814,6 +782,7 @@ bool read_bool_from_file(const char*  filepath)
 {
    FILE *fp;
    char ch;
+   int eof_indicator;
 
    fp = fopen(filepath, "r");
    if (fp == NULL)
@@ -822,11 +791,13 @@ bool read_bool_from_file(const char*  filepath)
    }
 
    ch = fgetc(fp);
-   if (feof(fp))
+   eof_indicator = feof(fp);
+   fclose (fp);
+
+   if (eof_indicator)
    {
       return false;
    }
-
    return ch == '1';
 }
 
@@ -856,6 +827,118 @@ int write_bool_to_file(const char*  filepath, bool value)
    }
    return 0;
 }
+
+/**
+ * Print contents of a buffer
+ *
+ * @param bytes      In: inputbuffer
+ * @param len        In: Number of bytes to print
+*/
+void print_bytes(uint8_t *bytes, int32_t len)
+{
+   printf("  Bytes: ");
+   for (int i = 0; i < len; i++)
+   {
+      printf("%02X ", bytes[i]);
+   }
+   printf("\n");
+}
+
+/**
+ * Copy an IP address (as an integer) to a struct
+ *
+ * @param destination_struct  Out: destination
+ * @param ip                  In: IP address
+*/
+void copy_ip_to_struct(pnet_cfg_ip_addr_t* destination_struct, uint32_t ip)
+{
+   destination_struct->a = (ip & 0xFF);
+   destination_struct->b = ((ip >> 8) & 0xFF);
+   destination_struct->c = ((ip >> 16) & 0xFF);
+   destination_struct->d = ((ip >> 24) & 0xFF);
+}
+
+/**
+ * Print an IPv4 address (without newline)
+ *
+ * @param ip      In: IP address
+*/
+void print_ip_address(uint32_t ip){
+   printf("%d.%d.%d.%d",
+      (ip & 0xFF),
+      ((ip >> 8) & 0xFF),
+      ((ip >> 16) & 0xFF),
+      ((ip >> 24) & 0xFF)
+   );
+}
+
+/**
+ * Read the IP address as an integer. For IPv4.
+ *
+ * @param interface_name      In: Name of network interface
+ * @return IP address on success and
+ *         0 if an error occured
+*/
+uint32_t read_ip_address(char* interface_name)
+{
+   int fd;
+   struct ifreq ifr;
+   uint32_t ip;
+
+   fd = socket (AF_INET, SOCK_DGRAM, 0);
+   ifr.ifr_addr.sa_family = AF_INET;
+   strncpy (ifr.ifr_name, interface_name, IFNAMSIZ - 1);
+   ioctl (fd, SIOCGIFADDR, &ifr);
+   ip = ((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr.s_addr;
+   close (fd);
+   return ip;
+}
+
+/**
+ * Read the netmask as an integer. For IPv4.
+ *
+ * @param interface_name      In: Name of network interface
+ * @return netmask
+*/
+uint32_t read_netmask(char* interface_name)
+{
+
+   int fd;
+   struct ifreq ifr;
+   uint32_t netmask;
+
+   fd = socket (AF_INET, SOCK_DGRAM, 0);
+
+   ifr.ifr_addr.sa_family = AF_INET;
+   strncpy (ifr.ifr_name, interface_name, IFNAMSIZ - 1);
+   ioctl (fd, SIOCGIFNETMASK, &ifr);
+   netmask = ((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr.s_addr;
+   close (fd);
+
+   return netmask;
+}
+
+/**
+ * Read the default gateway address as an integer. For IPv4.
+ *
+ * Assumes the default gateway is found on .1 on same subnet as the IP address.
+ *
+ * @param interface_name      In: Name of network interface
+ * @return netmask
+*/
+uint32_t read_default_gateway(char* interface_name)
+{
+   // TODO Read the actual default gateway (somewhat complicated)
+
+   uint32_t ip;
+   uint32_t gateway;
+
+   ip = read_ip_address(interface_name);
+   gateway = (ip & 0x00FFFFFF) | 0x01000000;
+
+   return gateway;
+}
+
 
 void pn_main (void * arg)
 {
@@ -973,7 +1056,10 @@ void pn_main (void * arg)
                      {
                         printf("Changing LED state: %d\n", led_state);
                      }
-                     write_bool_to_file(arguments.path_led, led_state);
+                     if (write_bool_to_file(arguments.path_led, led_state) != 0)
+                     {
+                        printf("Failed to write to LED file: %s\n", arguments.path_led);
+                     };
                   }
                }
             }
@@ -1020,46 +1106,64 @@ int main(int argc, char *argv[])
    printf("\n** Starting Profinet demo application **\n");
    if (verbosity > 0)
    {
-      printf("Verbosity level: %u\n", verbosity);
+      uint8_t macbuffer[6];
+      os_cpy_mac_addr(macbuffer);
+      printf("Verbosity level:    %u\n", verbosity);
       printf("Ethernet interface: %s\n", arguments.eth_interface);
-      printf("IP address: %s\n", arguments.ip_address_str);
-      printf("Gateway: %s\n", arguments.gateway_ip_address_str);
-      printf("LED file: %s\n", arguments.path_led);
-      printf("Button1 file: %s\n", arguments.path_button1);
-      printf("Button2 file: %s\n\n", arguments.path_button2);
+      printf("MAC address:        %02X:%02X:%02X:%02X:%02X:%02X\n",
+         macbuffer[0],
+         macbuffer[1],
+         macbuffer[2],
+         macbuffer[3],
+         macbuffer[4],
+         macbuffer[5]);
+      printf("Station name:       %s\n", arguments.station_name);
+      printf("LED file:           %s\n", arguments.path_led);
+      printf("Button1 file:       %s\n", arguments.path_button1);
+      printf("Button2 file:       %s\n", arguments.path_button2);
    }
 
-   /* Set IP and gateway, and check network interface */
-   uint32_t ip_int = ip_str_to_int(arguments.ip_address_str);
-   if (ip_int == IP_INVALID)
-   {
-      printf("Error: Invalid IP address: %s\n", arguments.ip_address_str);
-      exit(EXIT_CODE_ERROR);
-   }
-
-   uint32_t gateway_ip_int = calculate_gateway_ip(arguments.gateway_ip_address_str, ip_int);
-   if (gateway_ip_int == IP_INVALID)
-   {
-      printf("Error: Invalid gateway IP address: %s\n", arguments.gateway_ip_address_str);
-      exit(EXIT_CODE_ERROR);
-   }
-
-   strcpy(pnet_default_cfg.im_0_data.order_id, "12345");
-   strcpy(pnet_default_cfg.im_0_data.im_serial_number, "00001");
-   pnet_default_cfg.ip_addr.a = (ip_int&0xFF);
-   pnet_default_cfg.ip_addr.b = ((ip_int>>8)&0xFF);
-   pnet_default_cfg.ip_addr.c = ((ip_int>>16)&0xFF);
-   pnet_default_cfg.ip_addr.d = ((ip_int>>24)&0xFF);
-   pnet_default_cfg.ip_gateway.a = (gateway_ip_int&0xFF);
-   pnet_default_cfg.ip_gateway.b = ((gateway_ip_int>>8)&0xFF);
-   pnet_default_cfg.ip_gateway.c = ((gateway_ip_int>>16)&0xFF);
-   pnet_default_cfg.ip_gateway.d = ((gateway_ip_int>>24)&0xFF);
-
+   /* Read IP, netmask and gateway from operating system */
    if (!does_network_interface_exist(arguments.eth_interface))
    {
       printf("Error: The given Ethernet interface does not exist: %s\n", arguments.eth_interface);
       exit(EXIT_CODE_ERROR);
    }
+
+   uint32_t ip_int = read_ip_address(arguments.eth_interface);
+   if (ip_int == IP_INVALID)
+   {
+      printf("Error: Invalid IP address.\n");
+      exit(EXIT_CODE_ERROR);
+   }
+
+   uint32_t netmask_int = read_netmask(arguments.eth_interface);
+
+   uint32_t gateway_ip_int = read_default_gateway(arguments.eth_interface);
+   if (gateway_ip_int == IP_INVALID)
+   {
+      printf("Error: Invalid gateway IP address.\n");
+      exit(EXIT_CODE_ERROR);
+   }
+
+   if (verbosity > 0)
+   {
+      printf("IP address:         ");
+      print_ip_address(ip_int);
+      printf("\nNetmask:            ");
+      print_ip_address(netmask_int);
+      printf("\nGateway:            ");
+      print_ip_address(gateway_ip_int);
+      printf("\n\n");
+   }
+
+   /* Set IP and gateway */
+   strcpy(pnet_default_cfg.im_0_data.order_id, "12345");
+   strcpy(pnet_default_cfg.im_0_data.im_serial_number, "00001");
+   copy_ip_to_struct(&pnet_default_cfg.ip_addr, ip_int);
+   copy_ip_to_struct(&pnet_default_cfg.ip_gateway, gateway_ip_int);
+   copy_ip_to_struct(&pnet_default_cfg.ip_mask, netmask_int);
+   strcpy(pnet_default_cfg.station_name, arguments.station_name);
 
    /* Paths for LED and button control files */
    if (arguments.path_led[0] != '\0')
