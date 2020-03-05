@@ -13,6 +13,12 @@
  * full license information.
  ********************************************************************/
 
+/**
+ * @file
+ * @brief Unit tests of features from osal; timer, mbox, sem
+ *
+ */
+
 #include "osal.h"
 #include <gtest/gtest.h>
 

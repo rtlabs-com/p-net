@@ -442,7 +442,7 @@ static int my_exp_module_ind(
    if (ix < NELEMENTS(cfg_module_ident_numbers))
    {
       /* For now support any module in any slot */
-      printf("  Plug module.    API: %u Slot: %u Module ID: %u Index in list of supported modules: %u\n", api, slot, module_ident, ix);
+      printf("  Plug module.    API: %u Slot: %u Module ID: %" PRIu32 " Index in list of supported modules: %u\n", api, slot, module_ident, ix);
       ret = pnet_plug_module(api, slot, module_ident);
    }
    else
@@ -474,7 +474,7 @@ static int my_exp_submodule_ind(
    }
    if (ix < NELEMENTS(cfg_submodules))
    {
-      printf("  Plug submodule. API: %u Slot: %u Subslot: %u Module ID: %u Submodule ID: %u (Index in available submodules: %u) Direction: %u Len in: %u out: %u\n",
+      printf("  Plug submodule. API: %u Slot: %u Subslot: %u Module ID: %" PRIu32 " Submodule ID: %" PRIu32 " (Index in available submodules: %u) Direction: %u Len in: %u out: %u\n",
         api, slot, subslot, module_ident, submodule_ident, ix,
         cfg_submodules[ix].direction,
         cfg_submodules[ix].input_length,

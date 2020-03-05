@@ -13,6 +13,22 @@
  * full license information.
  ********************************************************************/
 
+/**
+ * @file
+ * @brief Integration testing of DCP aspects.
+ *
+ * For example
+ *   Sending hello frame
+ *   Handling of get name request
+ *   Read station name
+ *   Set station name
+ *   Set IP address
+ *   Do factory reset
+ *
+ * Checks only function return codes. No checking of the sent Ethernet frames is done.
+ *
+ */
+
 #include "pf_includes.h"
 
 #include <gtest/gtest.h>

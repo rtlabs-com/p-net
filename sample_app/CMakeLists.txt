@@ -10,8 +10,12 @@
 # See LICENSE file in the project root for full license information.
 #*******************************************************************/
 
-include_directories(${OSAL_INCLUDES})
-add_executable (pn_dev ${APP_SOURCES})
-target_link_libraries (pn_dev LINK_PUBLIC profinet)
+target_include_directories(pn_dev
+  PRIVATE
+  ${PROFINET_SOURCE_DIR}/src
+  ${PROFINET_BINARY_DIR}/src
+  )
+
+target_link_libraries (pn_dev PUBLIC profinet)
 
 install (TARGETS pn_dev DESTINATION bin)

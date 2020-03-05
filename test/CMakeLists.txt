@@ -13,29 +13,42 @@
 # full license information.
 #*******************************************************************/
 
-if (MSVC)
-  set(OSAL_UUT ${PROFINET_SOURCE_DIR}/src/osal/windows/osal.c)
-endif()
+target_sources(pf_test PRIVATE
+  # Unit tests
+  test_diag.cpp
+  test_cmdev.cpp
+  test_cmdmc.cpp
+  test_cmina.cpp
+  test_cmio.cpp
+  test_cmpbe.cpp
+  test_cmrdr.cpp
+  test_cmrpc.cpp
+  test_cmrs.cpp
+  test_cmsm.cpp
+  test_cmsu.cpp
+  test_cmwdr.cpp
+  test_alarm.cpp
+  test_cpm.cpp
+  test_dcp.cpp
+  test_lldp.cpp
+  test_pnetapi.cpp
+  test_ppm.cpp
+  test_ptcp.cpp
+  test_scheduler.cpp
+  test_eth.cpp
+  test_osal.cpp
 
-if (UNIX)
-  set(OSAL_UUT ${PROFINET_SOURCE_DIR}/src/osal/linux/osal.c)
-endif()
+  # Mocks
+  mocks.h
+  mocks.cpp
 
-if (${CMAKE_SYSTEM_NAME} STREQUAL "rt-kernel")
-  set(OSAL_UUT
-    ${PROFINET_SOURCE_DIR}/src/osal/rt-kernel/osal.c
-    ${PROFINET_SOURCE_DIR}/src/osal/rt-kernel/stubs.c
-    )
-endif()
-
-include(AddGoogleTest)
-
-add_definitions(
-  -DUNIT_TEST
-  -DPF_SOMESERVICE_LOG=LOG_STATE_OFF
+  # Testrunner
+  pf_test.cpp
   )
 
-add_executable(pf_test
+# Rebuild units to be tested with UNIT_TEST flag set. This is used to
+# mock external dependencies.
+target_sources(pf_test PRIVATE
   # Units to be tested
   ${PROFINET_SOURCE_DIR}/src/device/pf_block_reader.c
   ${PROFINET_SOURCE_DIR}/src/device/pf_block_writer.c
@@ -61,40 +74,25 @@ add_executable(pf_test
   ${PROFINET_SOURCE_DIR}/src/common/pf_scheduler.c
   ${PROFINET_SOURCE_DIR}/src/common/pf_eth.c
   ${PROFINET_SOURCE_DIR}/src/common/pf_lldp.c
-  ${OSAL_UUT}
-
-  # Unit tests
-  test_osal.cpp
-  test_diag.cpp
-  test_cmdev.cpp
-  test_cmdmc.cpp
-  test_cmina.cpp
-  test_cmio.cpp
-  test_cmpbe.cpp
-  test_cmrdr.cpp
-  test_cmrpc.cpp
-  test_cmrs.cpp
-  test_cmsm.cpp
-  test_cmsu.cpp
-  test_cmwdr.cpp
-  test_alarm.cpp
-  test_cpm.cpp
-  test_dcp.cpp
-  test_lldp.cpp
-  test_pnetapi.cpp
-  test_ppm.cpp
-  test_ptcp.cpp
-  test_scheduler.cpp
-  test_eth.cpp
-
-  # Mocks
-  mocks.h
-  mocks.cpp
-
-  # Testrunner
-  pf_test.cpp
   )
 
-include_directories(${OSAL_INCLUDES} .)
-target_link_libraries(pf_test PUBLIC ${OSAL_LIBS})
-add_gtest(pf_test)
+get_target_property(PROFINET_OPTIONS profinet COMPILE_OPTIONS)
+target_compile_options(pf_test PRIVATE
+  -DUNIT_TEST
+  ${PROFINET_OPTIONS}
+  )
+
+target_include_directories(pf_test
+  PRIVATE
+  ${PROFINET_SOURCE_DIR}/src
+  ${PROFINET_SOURCE_DIR}/src/common
+  ${PROFINET_SOURCE_DIR}/src/device
+  ${PROFINET_BINARY_DIR}/src
+  )
+
+# Link against profinet target to get the cmake properties for that
+# target, such as include paths and libraries.
+target_link_libraries(pf_test
+  PRIVATE
+  profinet
+  )

@@ -13,6 +13,21 @@
  * full license information.
  ********************************************************************/
 
+/**
+ * @file
+ * @brief Integration testing of CMRDR.
+ *
+ * Using for example:
+ *  pnet_application_ready()
+ *  pnet_output_get_data_and_iops()
+ *  pnet_input_get_iocs()
+ *  pnet_input_set_data_and_iops()
+ *  pnet_output_set_iocs()
+ *  pnet_create_log_book_entry()
+ *  pnet_diag_add()
+ *
+ */
+
 #include "pf_includes.h"
 
 #include <gtest/gtest.h>
@@ -870,4 +885,3 @@ TEST_F (CmrdrTest, CmrdrModDiffTest)
    EXPECT_EQ(cmdev_state, PNET_EVENT_ABORT);
    printf("Line %d\n", __LINE__);
 }
-

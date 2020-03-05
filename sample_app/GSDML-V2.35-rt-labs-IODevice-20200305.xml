@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- This example shows how to describe a device with predefined module configuration (compact device) -->
-<ISO15745Profile xmlns="http://www.profibus.com/GSDML/2003/11/DeviceProfile" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.profibus.com/GSDML/2003/11/DeviceProfile ..\xsd\GSDML-DeviceProfile-V2.33.xsd">
+<ISO15745Profile xmlns="http://www.profibus.com/GSDML/2003/11/DeviceProfile" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.profibus.com/GSDML/2003/11/DeviceProfile ..\xsd\GSDML-DeviceProfile-V2.35.xsd">
    <!-- ProfileHeader definition as defined in ISO 15745-1. Please do not change the content. -->
    <ProfileHeader>
       <ProfileIdentification>PROFINET Device Profile</ProfileIdentification>
@@ -24,7 +23,7 @@
       </DeviceFunction>
       <ApplicationProcess>
          <DeviceAccessPointList>
-            <DeviceAccessPointItem ID="IDD_1" PNIO_Version="V2.32" PhysicalSlots="0..1" ModuleIdentNumber="0x00000001" MinDeviceInterval="32" DNS_CompatibleName="rt-labs-dev" FixedInSlots="0" ObjectUUID_LocalIndex="1" DeviceAccessSupported="true" NumberOfDeviceAccessAR="1" MultipleWriteSupported="true" CheckDeviceID_Allowed="true" NameOfStationNotTransferable="false" LLDP_NoD_Supported="true" ResetToFactoryModes="2">
+            <DeviceAccessPointItem ID="IDD_1" PNIO_Version="V2.35" PhysicalSlots="0..1" ModuleIdentNumber="0x00000001" MinDeviceInterval="32" DNS_CompatibleName="rt-labs-dev" FixedInSlots="0" ObjectUUID_LocalIndex="1" DeviceAccessSupported="true" NumberOfDeviceAccessAR="1" MultipleWriteSupported="true" CheckDeviceID_Allowed="true" NameOfStationNotTransferable="false" LLDP_NoD_Supported="true" ResetToFactoryModes="2">
                <ModuleInfo>
                   <Name TextId="IDT_MODULE_NAME_DAP1"/>
                   <InfoText TextId="IDT_INFO_DAP1"/>
@@ -100,7 +99,7 @@
                   <InfoText TextId="TOK_InfoTextId_Module_O8"/>
                   <HardwareRelease Value="1.0"/>
                   <SoftwareRelease Value="1.0"/>
-               </ModuleInfo>            
+               </ModuleInfo>
                <VirtualSubmoduleList>
                   <VirtualSubmoduleItem ID="12" SubmoduleIdentNumber="0x0001" API="0" MayIssueProcessAlarm="false">
                      <IOData>
@@ -179,7 +178,7 @@
          </ModuleList>
          <ExternalTextList>
             <PrimaryLanguage>
-               <Text TextId="IDT_INFO_Device" Value="PNO GSDML V2.33 Examples"/>
+               <Text TextId="IDT_INFO_Device" Value="PNO GSDML V2.35 Examples"/>
                <Text TextId="IDT_MODULE_NAME_DAP1" Value="rt-labs DEMO device, for PNIO controller with PDev"/>
                <Text TextId="IDT_INFO_DAP1" Value="Example for a ProfinetIO device"/>
                <Text TextId="IDT_NAME_IS" Value="I"/>
@@ -213,7 +212,7 @@
                <Text TextId="TOK_Output_DataItem_Bit5" Value="Output Bit 5"/>
                <Text TextId="TOK_Output_DataItem_Bit6" Value="Output Bit 6"/>
                <Text TextId="TOK_Output_DataItem_Bit7" Value="Output Bit 7"/>
-                
+
                <Text TextId="RT-Labs_demo_parameter_1" Value="Parameter 1" />
                <Text TextId="RT-Labs_demo_parameter_2" Value="Parameter 2" />
 
@@ -222,7 +221,7 @@
 
                <!-- record data item name  -->
                <Text TextId="IDT_RECORD_NAME_rec1" Value="Record Data Item1"/>
-               <Text TextId="IDT_RECORD_NAME_rec2" Value="Record Data Item2"/>          
+               <Text TextId="IDT_RECORD_NAME_rec2" Value="Record Data Item2"/>
             </PrimaryLanguage>
          </ExternalTextList>
       </ApplicationProcess>

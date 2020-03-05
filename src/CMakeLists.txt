@@ -13,98 +13,56 @@
 # full license information.
 #*******************************************************************/
 
-include(GenerateExportHeader)
-
-message (STATUS "Building for ${CMAKE_SYSTEM_NAME}")
-
 # NOTE: add headers to make them show up in an IDE
-add_library (profinet
+target_sources (profinet PRIVATE
   ${PROFINET_SOURCE_DIR}/include/pnet_api.h
   pf_includes.h
   pf_types.h
-  ${PROFINET_SOURCE_DIR}/src/device/pnet_api.c
-  ${PROFINET_SOURCE_DIR}/src/device/pf_block_reader.c
-  ${PROFINET_SOURCE_DIR}/src/device/pf_block_writer.c
-  ${PROFINET_SOURCE_DIR}/src/device/pf_fspm.c
-  ${PROFINET_SOURCE_DIR}/src/device/pf_diag.c
-  ${PROFINET_SOURCE_DIR}/src/device/pf_cmdev.c
-  ${PROFINET_SOURCE_DIR}/src/device/pf_cmdmc.c
-  ${PROFINET_SOURCE_DIR}/src/device/pf_cmina.c
-  ${PROFINET_SOURCE_DIR}/src/device/pf_cmio.c
-  ${PROFINET_SOURCE_DIR}/src/device/pf_cmpbe.c
-  ${PROFINET_SOURCE_DIR}/src/device/pf_cmrdr.c
-  ${PROFINET_SOURCE_DIR}/src/device/pf_cmrpc.c
-  ${PROFINET_SOURCE_DIR}/src/device/pf_cmrs.c
-  ${PROFINET_SOURCE_DIR}/src/device/pf_cmsm.c
-  ${PROFINET_SOURCE_DIR}/src/device/pf_cmsu.c
-  ${PROFINET_SOURCE_DIR}/src/device/pf_cmwrr.c
-  ${PROFINET_SOURCE_DIR}/src/device/pf_block_reader.h
-  ${PROFINET_SOURCE_DIR}/src/device/pf_block_writer.h
-  ${PROFINET_SOURCE_DIR}/src/device/pf_fspm.h
-  ${PROFINET_SOURCE_DIR}/src/device/pf_diag.h
-  ${PROFINET_SOURCE_DIR}/src/device/pf_cmdev.h
-  ${PROFINET_SOURCE_DIR}/src/device/pf_cmdmc.h
-  ${PROFINET_SOURCE_DIR}/src/device/pf_cmina.h
-  ${PROFINET_SOURCE_DIR}/src/device/pf_cmio.h
-  ${PROFINET_SOURCE_DIR}/src/device/pf_cmpbe.h
-  ${PROFINET_SOURCE_DIR}/src/device/pf_cmrdr.h
-  ${PROFINET_SOURCE_DIR}/src/device/pf_cmrpc.h
-  ${PROFINET_SOURCE_DIR}/src/device/pf_cmrs.h
-  ${PROFINET_SOURCE_DIR}/src/device/pf_cmsm.h
-  ${PROFINET_SOURCE_DIR}/src/device/pf_cmsu.h
-  ${PROFINET_SOURCE_DIR}/src/device/pf_cmwrr.h
-  ${PROFINET_SOURCE_DIR}/src/common/pf_alarm.c
-  ${PROFINET_SOURCE_DIR}/src/common/pf_cpm.c
-  ${PROFINET_SOURCE_DIR}/src/common/pf_dcp.c
-  ${PROFINET_SOURCE_DIR}/src/common/pf_ppm.c
-  ${PROFINET_SOURCE_DIR}/src/common/pf_ptcp.c
-  ${PROFINET_SOURCE_DIR}/src/common/pf_scheduler.c
-  ${PROFINET_SOURCE_DIR}/src/common/pf_eth.c
-  ${PROFINET_SOURCE_DIR}/src/common/pf_lldp.c
-  ${PROFINET_SOURCE_DIR}/src/common/pf_alarm.h
-  ${PROFINET_SOURCE_DIR}/src/common/pf_cpm.h
-  ${PROFINET_SOURCE_DIR}/src/common/pf_dcp.h
-  ${PROFINET_SOURCE_DIR}/src/common/pf_ppm.h
-  ${PROFINET_SOURCE_DIR}/src/common/pf_ptcp.h
-  ${PROFINET_SOURCE_DIR}/src/common/pf_scheduler.h
-  ${PROFINET_SOURCE_DIR}/src/common/pf_eth.h
-  ${PROFINET_SOURCE_DIR}/src/common/pf_lldp.h
-  ${OSAL_SOURCES}
+  device/pnet_api.c
+  device/pf_block_reader.c
+  device/pf_block_writer.c
+  device/pf_fspm.c
+  device/pf_diag.c
+  device/pf_cmdev.c
+  device/pf_cmdmc.c
+  device/pf_cmina.c
+  device/pf_cmio.c
+  device/pf_cmpbe.c
+  device/pf_cmrdr.c
+  device/pf_cmrpc.c
+  device/pf_cmrs.c
+  device/pf_cmsm.c
+  device/pf_cmsu.c
+  device/pf_cmwrr.c
+  device/pf_block_reader.h
+  device/pf_block_writer.h
+  device/pf_fspm.h
+  device/pf_diag.h
+  device/pf_cmdev.h
+  device/pf_cmdmc.h
+  device/pf_cmina.h
+  device/pf_cmio.h
+  device/pf_cmpbe.h
+  device/pf_cmrdr.h
+  device/pf_cmrpc.h
+  device/pf_cmrs.h
+  device/pf_cmsm.h
+  device/pf_cmsu.h
+  device/pf_cmwrr.h
+  common/pf_alarm.c
+  common/pf_cpm.c
+  common/pf_dcp.c
+  common/pf_ppm.c
+  common/pf_ptcp.c
+  common/pf_scheduler.c
+  common/pf_eth.c
+  common/pf_lldp.c
+  common/pf_alarm.h
+  common/pf_cpm.h
+  common/pf_dcp.h
+  common/pf_ppm.h
+  common/pf_ptcp.h
+  common/pf_scheduler.h
+  common/pf_eth.h
+  common/pf_lldp.h
   )
-generate_export_header(profinet
-  BASE_NAME pnet
-  EXPORT_FILE_NAME ${PROFINET_BINARY_DIR}/include/pnet_export.h
-  )
-
-include_directories(${OSAL_INCLUDES})
-
-target_link_libraries(profinet ${OSAL_LIBS})
-
-install (TARGETS profinet DESTINATION bin)
-install (FILES
-  ${PROFINET_SOURCE_DIR}/include/pnet_api.h
-  ${PROFINET_BINARY_DIR}/include/pnet_export.h
-  DESTINATION include)
-
-# Doxygen configuration
-cmake_policy(SET CMP0057 NEW)
-find_package(Doxygen)
-if (DOXYGEN_FOUND)
-  set(DOXYGEN_OPTIMIZE_OUTPUT_FOR_C YES)
-  set(DOXYGEN_TYPEDEF_HIDES_STRUCT YES)
-  set(DOXYGEN_STRIP_CODE_COMMENTS NO)
-  set(DOXYGEN_MACRO_EXPANSION YES)
-  set(DOXYGEN_EXPAND_ONLY_PREDEF YES)
-  set(DOXYGEN_PREDEFINED PNET_EXPORT)
-  set(DOXYGEN_EXPAND_AS_DEFINED PNET_EXPORT)
-  set(DOXYGEN_COLLABORATION_GRAPH NO)
-  set(DOXYGEN_INCLUDE_GRAPH NO)
-  set(DOXYGEN_INCLUDED_BY_GRAPH NO)
-  set(DOXYGEN_RECURSIVE NO)
-  set(DOXYGEN_USE_MDFILE_AS_MAINPAGE README.md)
-  doxygen_add_docs(docs
-    ${PROFINET_SOURCE_DIR}/README.md
-    ${PROFINET_SOURCE_DIR}/include
-    ${PROFINET_SOURCE_DIR}/src
-    )
-endif (DOXYGEN_FOUND)

@@ -1,13 +1,22 @@
 language: c
 
+dist: bionic
+
 addons:
   apt:
     packages:
       - doxygen
 
+# Add latest cmake
+before_install:
+  - wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | sudo apt-key add -
+  - sudo apt-add-repository -y 'deb https://apt.kitware.com/ubuntu/ bionic main'
+  - sudo apt-get -q update
+  - sudo apt-get -y install cmake
+
 script:
   - mkdir build
   - pushd build
-  - cmake .. -DCMAKE_BUILD_TYPE=Debug
+  - /usr/bin/cmake .. -DCMAKE_BUILD_TYPE=Debug
   - scan-build make -j4 all check docs install
   - popd

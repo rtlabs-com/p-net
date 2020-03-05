@@ -8,7 +8,7 @@ is especially well suited for embedded systems where resources are
 limited and efficiency is crucial.
 
 It is written in C and can be run on bare-metal hardware, an RTOS such
-as rt-kernel, or on Linux or Windows. The main requirement is that the
+as rt-kernel, or on Linux. The main requirement is that the
 platform can send and receive RAW Ethernet Layer 2 frames. The
 p-net stack is supplied with full sources including a porting
 layer.
@@ -35,7 +35,7 @@ The stack includes a comprehensive set of unit-tests.
 Prerequisites for all platforms
 ===============================
 
- * CMake 3.11 or later
+ * CMake 3.13 or later
 
 Out-of-tree builds are recommended. Create a build directory and run
 the following commands from that directory. In the following
@@ -45,25 +45,6 @@ absolute or relative path in an environment variable named *repo*.
 The cmake executable is assumed to be in your path. After running
 cmake you can run ccmake or cmake-gui to change settings.
 
-Windows
-=======
-
- * Visual Studio 2013 or later
-
-Start a developer command prompt, then:
-
-```
-C:\build> cmake %repo%
-C:\build> msbuild ALL_BUILD.vcxproj
-C:\build> msbuild RUN_TESTS.vcxproj
-```
-
-To build NSIS installer:
-
-```
-C:\build> set PATH=%PATH%;\path\to\nsis
-C:\build> msbuild PACKAGE.vcxproj
-```
 
 Linux
 =====

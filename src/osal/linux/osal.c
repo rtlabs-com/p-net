@@ -13,6 +13,8 @@
  * full license information.
  ********************************************************************/
 
+#define _GNU_SOURCE
+
 #include <osal.h>
 #include <options.h>
 #include <log.h>
@@ -22,26 +24,22 @@
 #include <stdlib.h>
 #include <time.h>
 #include <signal.h>
+#include <limits.h>
 
 #include <pthread.h>
 
 #include <assert.h>
 #include <errno.h>
 #include <string.h>
+#include <unistd.h>
+
+#include <sys/syscall.h>
+
+/* Priority of timer callback thread (if USE_SCHED_FIFO is set) */
+#define TIMER_PRIO        5
 
 #define USECS_PER_SEC     (1 * 1000 * 1000)
 #define NSECS_PER_SEC     (1 * 1000 * 1000 * 1000)
-
-int os_snprintf(char * str, size_t size, const char * fmt, ...)
-{
-   int ret;
-   va_list list;
-
-   va_start (list, fmt);
-   ret = snprintf (str, size, fmt, list);
-   va_end (list);
-   return ret;
-}
 
 void os_log (int type, const char * fmt, ...)
 {
@@ -75,12 +73,21 @@ os_thread_t * os_thread_create (const char * name, int priority,
    pthread_attr_t attr;
 
    pthread_attr_init (&attr);
-   pthread_attr_setstacksize (&attr, stacksize);
+   pthread_attr_setstacksize (&attr, PTHREAD_STACK_MIN + stacksize);
 
-   result = pthread_create (thread, NULL, (void *)entry, arg);
-   (void)result;
-   assert (result == 0);
+#if defined (USE_SCHED_FIFO)
+   CC_STATIC_ASSERT (_POSIX_THREAD_PRIORITY_SCHEDULING > 0);
+   struct sched_param param = { .sched_priority = priority };
+   pthread_attr_setinheritsched (&attr, PTHREAD_EXPLICIT_SCHED);
+   pthread_attr_setschedpolicy (&attr, SCHED_FIFO);
+   pthread_attr_setschedparam (&attr, &param);
+#endif
 
+   result = pthread_create (thread, &attr, (void *)entry, arg);
+   if (result != 0)
+      return NULL;
+
+   pthread_setname_np (*thread, name);
    return thread;
 }
 
@@ -88,57 +95,49 @@ os_mutex_t * os_mutex_create (void)
 {
    int result;
    pthread_mutex_t * mutex = malloc (sizeof(*mutex));
+   pthread_mutexattr_t attr;
 
-   result = pthread_mutex_init (mutex, NULL);
+   CC_STATIC_ASSERT (_POSIX_THREAD_PRIO_INHERIT > 0);
+   pthread_mutexattr_init (&attr);
+   pthread_mutexattr_setprotocol (&attr, PTHREAD_PRIO_INHERIT);
 
-   (void)result;
-   assert (result == 0);
+   result = pthread_mutex_init (mutex, &attr);
+   if (result != 0)
+      return NULL;
 
    return mutex;
 }
 
 void os_mutex_lock (os_mutex_t * _mutex)
 {
-   int result;
    pthread_mutex_t * mutex = _mutex;
-
-   result = pthread_mutex_lock (mutex);
-
-   (void)result;
-   assert (result == 0);
+   pthread_mutex_lock (mutex);
 }
 
 void os_mutex_unlock (os_mutex_t * _mutex)
 {
-   int result;
    pthread_mutex_t * mutex = _mutex;
-
-   result = pthread_mutex_unlock (mutex);
-
-   (void)result;
-   assert (result == 0);
+   pthread_mutex_unlock (mutex);
 }
 
 void os_mutex_destroy (os_mutex_t * _mutex)
 {
-   int result;
    pthread_mutex_t * mutex = _mutex;
-
-   result = pthread_mutex_destroy (mutex);
+   pthread_mutex_destroy (mutex);
    free (mutex);
-
-   (void)result;
-   assert (result == 0);
 }
 
 os_sem_t * os_sem_create (size_t count)
 {
    os_sem_t * sem;
+   pthread_mutexattr_t attr;
 
    sem = (os_sem_t *)malloc (sizeof(*sem));
 
    pthread_cond_init (&sem->cond, NULL);
-   pthread_mutex_init (&sem->mutex, NULL);
+   pthread_mutexattr_init (&attr);
+   pthread_mutexattr_setprotocol (&attr, PTHREAD_PRIO_INHERIT);
+   pthread_mutex_init (&sem->mutex, &attr);
    sem->count = count;
 
    return sem;
@@ -150,7 +149,7 @@ int os_sem_wait (os_sem_t * sem, uint32_t time)
    int error = 0;
    uint64_t nsec = (uint64_t)time * 1000 * 1000;
 
-   clock_gettime (CLOCK_REALTIME, &ts);
+   clock_gettime (CLOCK_MONOTONIC, &ts);
    nsec += ts.tv_nsec;
    if (nsec > NSECS_PER_SEC)
    {
@@ -204,9 +203,10 @@ void os_usleep (uint32_t usec)
 {
    struct timespec ts;
    struct timespec remain;
+
    ts.tv_sec = usec / USECS_PER_SEC;
    ts.tv_nsec = (usec % USECS_PER_SEC) * 1000;
-   while (nanosleep (&ts, &remain) == -1)
+   while (clock_nanosleep (CLOCK_MONOTONIC, 0, &ts, &remain) == -1)
    {
       ts = remain;
    }
@@ -216,18 +216,21 @@ uint32_t os_get_current_time_us (void)
 {
    struct timespec ts;
 
-   clock_gettime (CLOCK_REALTIME, &ts);
+   clock_gettime (CLOCK_MONOTONIC, &ts);
    return ts.tv_sec * 1000 * 1000 + ts.tv_nsec / 1000;
 }
 
 os_event_t * os_event_create (void)
 {
    os_event_t * event;
+   pthread_mutexattr_t attr;
 
    event = (os_event_t *)malloc (sizeof(*event));
 
    pthread_cond_init (&event->cond, NULL);
-   pthread_mutex_init (&event->mutex, NULL);
+   pthread_mutexattr_init (&attr);
+   pthread_mutexattr_setprotocol (&attr, PTHREAD_PRIO_INHERIT);
+   pthread_mutex_init (&event->mutex, &attr);
    event->flags = 0;
 
    return event;
@@ -241,7 +244,7 @@ int os_event_wait (os_event_t * event, uint32_t mask, uint32_t * value, uint32_t
 
    if (time != OS_WAIT_FOREVER)
    {
-      clock_gettime (CLOCK_REALTIME, &ts);
+      clock_gettime (CLOCK_MONOTONIC, &ts);
       nsec += ts.tv_nsec;
 
       ts.tv_sec += nsec / NSECS_PER_SEC;
@@ -300,11 +303,14 @@ void os_event_destroy (os_event_t * event)
 os_mbox_t * os_mbox_create (size_t size)
 {
    os_mbox_t * mbox;
+   pthread_mutexattr_t attr;
 
    mbox = (os_mbox_t *)malloc (sizeof(*mbox) + size * sizeof(void *));
 
    pthread_cond_init (&mbox->cond, NULL);
-   pthread_mutex_init (&mbox->mutex, NULL);
+   pthread_mutexattr_init (&attr);
+   pthread_mutexattr_setprotocol (&attr, PTHREAD_PRIO_INHERIT);
+   pthread_mutex_init (&mbox->mutex, &attr);
 
    mbox->r     = 0;
    mbox->w     = 0;
@@ -322,7 +328,7 @@ int os_mbox_fetch (os_mbox_t * mbox, void ** msg, uint32_t time)
 
    if (time != OS_WAIT_FOREVER)
    {
-      clock_gettime (CLOCK_REALTIME, &ts);
+      clock_gettime (CLOCK_MONOTONIC, &ts);
       nsec += ts.tv_nsec;
 
       ts.tv_sec += nsec / NSECS_PER_SEC;
@@ -370,7 +376,7 @@ int os_mbox_post (os_mbox_t * mbox, void * msg, uint32_t time)
 
    if (time != OS_WAIT_FOREVER)
    {
-      clock_gettime (CLOCK_REALTIME, &ts);
+      clock_gettime (CLOCK_MONOTONIC, &ts);
       nsec += ts.tv_nsec;
 
       ts.tv_sec += nsec / NSECS_PER_SEC;
@@ -417,12 +423,32 @@ void os_mbox_destroy (os_mbox_t * mbox)
    free (mbox);
 }
 
-static void os_timer_callback (union sigval sv)
+static void os_timer_thread (void * arg)
 {
-   os_timer_t * timer = sv.sival_ptr;
+   os_timer_t * timer = arg;
+   sigset_t sigset;
+   siginfo_t si;
+   struct timespec tmo;
 
-   if (timer->fn)
-      timer->fn (timer, timer->arg);
+   timer->thread_id = (pid_t)syscall (SYS_gettid);
+
+   /* Add SIGALRM */
+   sigemptyset (&sigset);
+   sigprocmask (SIG_BLOCK, &sigset, NULL);
+   sigaddset(&sigset, SIGALRM);
+
+   tmo.tv_sec = 0;
+   tmo.tv_nsec = 500 * 1000 * 1000;
+
+   while (!timer->exit)
+   {
+      int sig = sigtimedwait (&sigset, &si, &tmo);
+      if (sig == SIGALRM)
+      {
+         if (timer->fn)
+            timer->fn (timer, timer->arg);
+      }
+   }
 }
 
 os_timer_t * os_timer_create (uint32_t us, void (*fn) (os_timer_t *, void * arg),
@@ -430,18 +456,39 @@ os_timer_t * os_timer_create (uint32_t us, void (*fn) (os_timer_t *, void * arg)
 {
    os_timer_t * timer;
    struct sigevent sev;
+   sigset_t sigset;
+
+   /* Block SIGALRM in calling thread */
+   sigemptyset (&sigset);
+   sigaddset (&sigset, SIGALRM);
+   sigprocmask (SIG_BLOCK, &sigset, NULL);
 
    timer = (os_timer_t *)malloc (sizeof(*timer));
 
-   timer->fn = fn;
-   timer->arg = arg;
-   timer->us = us;
-   timer->oneshot = oneshot;
+   timer->exit      = false;
+   timer->thread_id = 0;
+   timer->fn        = fn;
+   timer->arg       = arg;
+   timer->us        = us;
+   timer->oneshot   = oneshot;
+
+   /* Create timer thread */
+   timer->thread = os_thread_create ("os_timer", TIMER_PRIO, 1024,
+                                     os_timer_thread,timer);
+   if (timer->thread == NULL)
+      return NULL;
+
+   /* Wait until timer thread sets its (kernel) thread id */
+   do
+   {
+      sched_yield();
+   } while (timer->thread_id == 0);
 
    /* Create timer */
-   sev.sigev_notify = SIGEV_THREAD;
+   sev.sigev_notify = SIGEV_THREAD_ID;
    sev.sigev_value.sival_ptr = timer;
-   sev.sigev_notify_function = os_timer_callback;
+   sev._sigev_un._tid = timer->thread_id;
+   sev.sigev_signo = SIGALRM;
    sev.sigev_notify_attributes = NULL;
 
    if (timer_create (CLOCK_MONOTONIC, &sev, &timer->timerid) == -1)
@@ -481,6 +528,8 @@ void os_timer_stop (os_timer_t * timer)
 
 void os_timer_destroy (os_timer_t * timer)
 {
+   timer->exit = true;
+   pthread_join (*timer->thread, NULL);
    timer_delete (timer->timerid);
    free (timer);
 }
