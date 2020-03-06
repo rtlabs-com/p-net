@@ -217,7 +217,8 @@ static int app_connect_ind(
 {
    if (verbosity > 0)
    {
-      printf("Connect call-back. Status codes: %d %d %d %d\n",
+      printf("Connect call-back. AREP: %u  Status codes: %d %d %d %d\n",
+         arep,
          p_result->pnio_status.error_code,
          p_result->pnio_status.error_decode,
          p_result->pnio_status.error_code_1,
@@ -238,7 +239,8 @@ static int app_release_ind(
 {
    if (verbosity > 0)
    {
-      printf("Release (disconnect) call-back. Status codes: %d %d %d %d\n",
+      printf("Release (disconnect) call-back. AREP: %u  Status codes: %d %d %d %d\n",
+         arep,
          p_result->pnio_status.error_code,
          p_result->pnio_status.error_decode,
          p_result->pnio_status.error_code_1,
@@ -255,7 +257,8 @@ static int app_dcontrol_ind(
 {
    if (verbosity > 0)
    {
-      printf("Dcontrol call-back. Command: %d  Status codes: %d %d %d %d\n",
+      printf("Dcontrol call-back. AREP: %u  Command: %d  Status codes: %d %d %d %d\n",
+         arep,
          control_command,
          p_result->pnio_status.error_code,
          p_result->pnio_status.error_decode,
@@ -272,7 +275,8 @@ static int app_ccontrol_cnf(
 {
    if (verbosity > 0)
    {
-      printf("Ccontrol confirmation call-back. Status codes: %d %d %d %d\n",
+      printf("Ccontrol confirmation call-back. AREP: %u  Status codes: %d %d %d %d\n",
+         arep,
          p_result->pnio_status.error_code,
          p_result->pnio_status.error_decode,
          p_result->pnio_status.error_code_1,
@@ -295,7 +299,8 @@ static int app_write_ind(
 {
    if (verbosity > 0)
    {
-      printf("Write call-back. API: %u Slot: %u Subslot: %u Index: %u Sequence: %u Length: %u\n",
+      printf("Parameter write call-back. AREP: %u API: %u Slot: %u Subslot: %u Index: %u Sequence: %u Length: %u\n",
+         arep,
          api,
          slot,
          subslot,
@@ -360,7 +365,8 @@ static int app_read_ind(
 {
    if (verbosity > 0)
    {
-      printf("Read call-back. API: %u Slot: %u Subslot: %u Index: %u Sequence: %u Length: %u\n",
+      printf("Parameter read call-back. AREP: %u API: %u Slot: %u Subslot: %u Index: %u Sequence: %u  Max length: %u\n",
+         arep,
          api,
          slot,
          subslot,
@@ -369,16 +375,24 @@ static int app_read_ind(
          (unsigned)*p_read_length);
    }
    if ((idx == APP_PARAM_IDX_1) &&
-       (*p_read_length == sizeof(app_param_1)))
+       (*p_read_length >= sizeof(app_param_1)))
    {
       *pp_read_data = (uint8_t*)&app_param_1;
       *p_read_length = sizeof(app_param_1);
+      if (verbosity > 0)
+      {
+         print_bytes(*pp_read_data, *p_read_length);
+      }
    }
    if ((idx == APP_PARAM_IDX_2) &&
-       (*p_read_length == sizeof(app_param_2)))
+       (*p_read_length >= sizeof(app_param_2)))
    {
       *pp_read_data = (uint8_t*)&app_param_2;
       *p_read_length = sizeof(app_param_2);
+      if (verbosity > 0)
+      {
+         print_bytes(*pp_read_data, *p_read_length);
+      }
    }
 
    return 0;
@@ -579,7 +593,7 @@ static int app_new_data_status_ind(
 {
    if (verbosity > 0)
    {
-      printf("New data callback. Status: 0x%02x\n", changes);
+      printf("New data callback. AREP: %u  Status: 0x%02x\n", arep, changes);
    }
 
    return 0;
@@ -596,11 +610,13 @@ static int app_alarm_ind(
 {
    if (verbosity > 0)
    {
-      printf("Alarm indicated callback. API: %d Slot: %d Subslot: %d Length: %d",
+      printf("Alarm indicated callback. AREP: %u  API: %d  Slot: %d  Subslot: %d  Length: %d  USI: %d",
+         arep,
          api,
          slot,
          subslot,
-         data_len);
+         data_len,
+         data_usi);
    }
    os_event_set(main_events, EVENT_ALARM);
 
@@ -613,7 +629,8 @@ static int app_alarm_cnf(
 {
    if (verbosity > 0)
    {
-      printf("Alarm confirmed (by controller) callback. Status code %u, %u, %u, %u\n",
+      printf("Alarm confirmed (by controller) callback. AREP: %u  Status code %u, %u, %u, %u\n",
+         arep,
          p_pnio_status->error_code,
          p_pnio_status->error_decode,
          p_pnio_status->error_code_1,
@@ -630,7 +647,7 @@ static int app_alarm_ack_cnf(
 {
    if (verbosity > 0)
    {
-      printf("Alarm ACK confirmation (from controller) callback. Result: %d\n", res);
+      printf("Alarm ACK confirmation (from controller) callback. AREP: %u  Result: %d\n", arep, res);
    }
 
    return 0;
