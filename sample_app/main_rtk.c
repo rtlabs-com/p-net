@@ -306,17 +306,17 @@ static int app_read_ind(
    uint16_t                *p_read_length,
    pnet_result_t           *p_result)
 {
-   LOG_INFO(PNET_LOG, "APP: read call-back: idx %u  length %u\n",
+   LOG_INFO(PNET_LOG, "APP: read call-back: idx %u  Max length %u\n",
          (unsigned)idx, (unsigned)*p_read_length);
 
    if ((idx == APP_PARAM_IDX_1) &&
-       (*p_read_length == sizeof(app_param_1)))
+       (*p_read_length >= sizeof(app_param_1)))
    {
       *pp_read_data = (uint8_t*)&app_param_1;
       *p_read_length = sizeof(app_param_1);
    }
    if ((idx == APP_PARAM_IDX_2) &&
-       (*p_read_length == sizeof(app_param_2)))
+       (*p_read_length >= sizeof(app_param_2)))
    {
       *pp_read_data = (uint8_t*)&app_param_2;
       *p_read_length = sizeof(app_param_2);
