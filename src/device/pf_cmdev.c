@@ -557,11 +557,11 @@ int pf_cmdev_pull_submodule(
    }
    else if (pf_cmdev_get_slot(p_api, slot_nbr, &p_slot) != 0)
    {
-      LOG_ERROR(PNET_LOG, "CMDEV(%d): No module in slot %u\n", __LINE__, (unsigned)slot_nbr);
+      LOG_DEBUG(PNET_LOG, "CMDEV(%d): No module in slot %u\n", __LINE__, (unsigned)slot_nbr);
    }
    else if (pf_cmdev_get_subslot(p_slot, subslot_nbr, &p_subslot) != 0)
    {
-      LOG_ERROR(PNET_LOG, "CMDEV(%d): No submodule in api_id %u slot %u subslot %u\n", __LINE__, (unsigned)api_id, (unsigned)slot_nbr, (unsigned)subslot_nbr);
+      LOG_DEBUG(PNET_LOG, "CMDEV(%d): No submodule in api_id %u slot %u subslot %u\n", __LINE__, (unsigned)api_id, (unsigned)slot_nbr, (unsigned)subslot_nbr);
    }
    else
    {
@@ -702,7 +702,7 @@ int pf_cmdev_pull_module(
    }
    else if (pf_cmdev_get_slot(p_api, slot_nbr, &p_slot) != 0)
    {
-      LOG_ERROR(PNET_LOG, "CMDEV(%d): No module in slot %u\n", __LINE__, (unsigned)slot_nbr);
+      LOG_DEBUG(PNET_LOG, "CMDEV(%d): No module in slot %u\n", __LINE__, (unsigned)slot_nbr);
    }
    else
    {
