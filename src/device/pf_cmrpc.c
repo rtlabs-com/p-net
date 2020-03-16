@@ -13,6 +13,17 @@
  * full license information.
  ********************************************************************/
 
+/**
+ * @file
+ * @brief Implements the Context Management RPC Device Protocol Machine (CMRPC)
+ *
+ * This handles RPC communication; for example connect, release, dcontrol,
+ * ccontrol and parameter read and write.
+ *
+ * CMRPC has only one state - IDLE. I.e., it is state-less.
+ *
+ */
+
 #ifdef UNIT_TEST
 #define os_udp_socket mock_os_udp_socket
 #define os_udp_sendto mock_os_udp_sendto
@@ -31,16 +42,6 @@
 #include "pf_includes.h"
 #include "pf_block_reader.h"
 #include "pf_block_writer.h"
-
-/* ====================================================================== */
-
-/*
- * CMRPC has only one state - IDLE. I.e., it is state-less.
- */
-
-/* ====================================================================== */
-
-/* ====================================================================== */
 
 #define PF_MAX_SESSION     (2*(PNET_MAX_AR) + 1)               /* 2/ar and one spare. */
 
@@ -139,7 +140,7 @@ static const char *pf_iocr_type_to_string(
  * @internal
  * Return a string representation of the AR type.
  * @param type             In:   The AR type.
- * @return  A string representing the AR tpe.
+ * @return  A string representing the AR type.
  */
 static const char *pf_ar_type_to_string(
    pf_ar_type_values_t     type)
@@ -1873,7 +1874,6 @@ static int pf_cmrpc_rm_write_ind(
             {
                ret = pf_cmrpc_perform_one_write(&p_sess->get_info, &write_request_multi,
                   &write_result_multi, &write_stat_multi, &req_pos);
-
                pf_put_write_result(p_sess->get_info.is_big_endian, &write_result_multi, res_len, p_res, p_res_pos);
 
                /* Align on 32-bits to point to next write request */
@@ -1893,8 +1893,7 @@ static int pf_cmrpc_rm_write_ind(
          {
             ret = pf_cmrpc_perform_one_write(&p_sess->get_info, &write_request,
                &write_result, &p_sess->rpc_result, &req_pos);
-
-            pf_put_write_result(p_sess->get_info.is_big_endian, &write_result, res_len, p_res, &res_start_pos);
+            pf_put_write_result(p_sess->get_info.is_big_endian, &write_result, res_len, p_res, p_res_pos);
          }
       }
 
