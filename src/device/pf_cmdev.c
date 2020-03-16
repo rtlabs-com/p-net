@@ -14,6 +14,21 @@
  * See LICENSE file in the project root for full license information.
  ********************************************************************/
 
+/**
+ * @file
+ * @brief Implements the Context Management Protocol Machine Device (CMDEV)
+ *
+ * This handles connection establishment for IO-Devices.
+ *
+ * For example pulling and plugging modules and submodules in slots and
+ * subslots are done in this file. Also implements handling connect, release,
+ * ccontrol and dcontrol.
+ *
+ * Collect IOCS and IOPS information.
+ *
+ */
+
+
 #ifdef UNIT_TEST
 
 #endif
@@ -31,7 +46,8 @@
 static bool                cmdev_initialized = false;
 static pf_device_t         device;
 
-/* This function is needed everywhere */
+/* Forward declaration */
+
 static int pf_cmdev_get_exp_sub(
    pf_ar_t                 *p_ar,
    uint32_t                api_id,
@@ -101,6 +117,8 @@ int pf_cmdev_cfg_traverse(
 
    return ret;
 }
+
+/**************************** Getters *************************************/
 
 int pf_cmdev_get_device(
    pf_device_t             **pp_device)
@@ -295,6 +313,8 @@ int pf_cmdev_get_diag_item(
    return ret;
 }
 
+/*************** Diagnostics **********************************************/
+
 int pf_cmdev_new_diag(
    uint16_t                *p_item_ix)
 {
@@ -382,6 +402,8 @@ static int pf_cmdev_new_api(
 
    return ret;
 }
+
+/******************* Slots, subslots, modules and submodules *****************/
 
 /**
  * @internal
@@ -767,6 +789,8 @@ static void pf_device_clear(
    }
 }
 
+/*************** Diagnostic strings ****************************************/
+
 const char *pf_cmdev_state_to_string(
    pf_cmdev_state_values_t state)
 {
@@ -896,7 +920,9 @@ void pf_cmdev_show(
 static int pf_cmdev_cfg_dev_show(
    pf_device_t             *p_dev)
 {
-   /* Nothing to show */
+   printf("The device can use max %u APIs, and %u diag items.\n", (unsigned)PNET_MAX_API, (unsigned)PNET_MAX_DIAG_ITEMS);
+   printf("The device has %u diag_items_free.\n", (unsigned)p_dev->diag_items_free);
+
    return 0;
 }
 
@@ -910,6 +936,7 @@ static int pf_cmdev_cfg_api_show(
    pf_api_t                *p_api)
 {
    printf("device api_id         = %u\n", (unsigned)p_api->api_id);
+   printf("   Each API can use max %u slots (each with max %u subslots).\n", (unsigned)PNET_MAX_MODULES, (unsigned)PNET_MAX_SUBMODULES);
 
    return 0;
 }
@@ -924,6 +951,7 @@ static int pf_cmdev_cfg_slot_show(
    pf_slot_t                *p_slot)
 {
    printf("   slot_nbr           = %u\n", (unsigned)p_slot->slot_nbr);
+   printf("   in_use             = %u\n", (unsigned)p_slot->in_use);
    printf("   plug_state         = %s\n", pf_cmdev_mod_plug_state_to_string(p_slot->plug_state));
    printf("   AR                 = %p\n", p_slot->p_ar);
    printf("   module_ident       = %u\n", (unsigned)p_slot->module_ident_number);
@@ -942,6 +970,7 @@ static int pf_cmdev_cfg_subslot_show(
    pf_subslot_t            *p_subslot)
 {
    printf("      subslot_nbr     = %u\n", (unsigned)p_subslot->subslot_nbr);
+   printf("      in_use          = %u\n", (unsigned)p_subslot->in_use);
    printf("      plug_state      = %s\n", pf_cmdev_submod_plug_state_to_string(p_subslot->submodule_state.ident_info));
    printf("      AR              = %p\n", p_subslot->p_ar);
    printf("      submod_ident    = %u\n", (unsigned)p_subslot->submodule_ident_number);
@@ -962,6 +991,8 @@ void pf_cmdev_show_device(void)
       pf_cmdev_cfg_slot_show,
       pf_cmdev_cfg_subslot_show);
 }
+
+/********************** CMDEV init, exit and state ****************************/
 
 void pf_cmdev_exit(void)
 {
@@ -1404,7 +1435,7 @@ static int pf_cmdev_get_exp_api(
 
 /**
  * @internal
- * Fins the expected sub-module struct indicated by the API identifier and the slot and sub-slot numbers.
+ * Find the expected sub-module struct indicated by the API identifier and the slot and sub-slot numbers.
  * @param p_ar             In:   The AR instance.
  * @param api_id           In:   The API identifier.
  * @param slot_nbr         In:   The slot number.
@@ -1463,9 +1494,72 @@ static int pf_cmdev_get_exp_sub(
 
 /**
  * @internal
+ * Calculate which data direction we should use when looking for a data descriptor.
+ *
+ * For example an output module has only a single data descriptor, which has
+ * an output data direction. The IOPS is sent in the output CR, and the IOCS
+ * is sent in the input CR.
+ *
+ * An input + output module has two data descriptors.
+ *
+ * A module with no cyclic data (PNET_DIR_NO_IO) is implemented an input module.
+ *
+ * @param submodule_dir       In:   Whether the submodule is IN, IN+OUT etc
+ * @param data_dir            In:   The data direction for the IOCR we are working on (input CR or output CR)
+ * @param status_type         In:   Whether we are interested in IOCS or IOPS
+ * @param resulting_data_dir  Out:  The resulting data direction for use in the search.
+ * @return  0  if the direction could be calculated.
+ *          -1 for illegal input combinations.
+ */
+int pf_cmdev_calculate_exp_sub_data_descriptor_direction(
+   pnet_submodule_dir_t       submodule_dir,
+   pf_data_direction_values_t data_dir,
+   pf_dev_status_type_t       status_type,
+   pf_data_direction_values_t *resulting_data_dir)
+{
+   int                        ret = -1;
+
+   if (submodule_dir == PNET_DIR_NO_IO || submodule_dir == PNET_DIR_INPUT)
+   {
+      if ((data_dir == PF_DIRECTION_INPUT && status_type == PF_DEV_STATUS_TYPE_IOPS) ||
+          (data_dir == PF_DIRECTION_OUTPUT && status_type == PF_DEV_STATUS_TYPE_IOCS))
+      {
+         *resulting_data_dir = PF_DIRECTION_INPUT;
+         ret = 0;
+      }
+   }
+   else if (submodule_dir == PNET_DIR_IO)
+   {
+      if ((data_dir == PF_DIRECTION_INPUT && status_type == PF_DEV_STATUS_TYPE_IOPS) ||
+          (data_dir == PF_DIRECTION_OUTPUT && status_type == PF_DEV_STATUS_TYPE_IOCS))
+      {
+         *resulting_data_dir = PF_DIRECTION_INPUT;
+         ret = 0;
+      }
+      else
+      {
+         *resulting_data_dir = PF_DIRECTION_OUTPUT;
+         ret = 0;
+      }
+   }
+   else if (submodule_dir == PNET_DIR_OUTPUT)
+   {
+      if ((data_dir == PF_DIRECTION_INPUT && status_type == PF_DEV_STATUS_TYPE_IOCS) ||
+          (data_dir == PF_DIRECTION_OUTPUT && status_type == PF_DEV_STATUS_TYPE_IOPS))
+      {
+         *resulting_data_dir = PF_DIRECTION_OUTPUT;
+         ret = 0;
+      }
+   }
+   return ret;
+}
+
+/**
+ * @internal
  * Find the data descriptor within the submodule with specified direction.
  * @param p_exp_sub           In:   The expected sub-module instance.
  * @param dir                 In:   The data direction.
+ * @param status_type         In:   Whether we are interested in IOCS or IOPS
  * @param pp_desc             Out:  The data descriptor.
  * @return  0  if the data descriptor was found.
  *          -1 if the data descriptor was not found.
@@ -1473,79 +1567,27 @@ static int pf_cmdev_get_exp_sub(
 static int pf_cmdev_get_exp_sub_data_descriptor(
    pf_exp_submodule_t         *p_exp_sub,
    pf_data_direction_values_t dir,
+   pf_dev_status_type_t       status_type,
    pf_data_descriptor_t       **pp_desc)
 {
    int                        ret = -1;
-   uint16_t                   ix;
-   bool                       found = false;
+   uint16_t                   ix = 0;
+   pf_data_direction_values_t data_direction_to_look_for = PF_DIRECTION_INPUT;
 
    if (p_exp_sub != NULL)
    {
-      ix = 0;
-      while ((found == false) && (ix < p_exp_sub->nbr_data_descriptors))
+      if (pf_cmdev_calculate_exp_sub_data_descriptor_direction(p_exp_sub->submodule_properties.type, dir, status_type, &data_direction_to_look_for) == 0)
       {
-         /*
-          * For input CR and exp_sub.prop.type == NO_IO find INPUT
-          * For input CR and exp_sub.prop.type == Input find INPUT
-          * For input CR and exp_sub.prop.type == InOut find INPUT
-          * For input CR and exp_sub.prop.type == Out   find nothing    (ERROR)
-          *
-          * For output CR and exp_sub.prop.type == NO_IO find INPUT
-          * For output CR and exp_sub.prop.type == Input find nothing   (ERROR)
-          * For output CR and exp_sub.prop.type == InOut find OUTPUT
-          * For output CR and exp_sub.prop.type == Output find OUTPUT
-          *
-          */
-         if (dir == PF_DIRECTION_INPUT)
+         for (ix = 0; ix < p_exp_sub->nbr_data_descriptors; ix++)
          {
-            switch (p_exp_sub->submodule_properties.type)
+            if (p_exp_sub->data_descriptor[ix].data_direction == data_direction_to_look_for)
             {
-            case PNET_DIR_NO_IO:
-            case PNET_DIR_INPUT:
-            case PNET_DIR_IO:
-               if (p_exp_sub->data_descriptor[ix].data_direction == PF_DIRECTION_INPUT)
-               {
-                  found = true;
-               }
-               break;
-            default:
+               *pp_desc = &p_exp_sub->data_descriptor[ix];
+               ret = 0;
                break;
             }
          }
-         else
-         {
-            switch (p_exp_sub->submodule_properties.type)
-            {
-            case PNET_DIR_NO_IO:
-               if (p_exp_sub->data_descriptor[ix].data_direction == PF_DIRECTION_INPUT)
-               {
-                  found = true;
-               }
-               break;
-            case PNET_DIR_IO:
-            case PNET_DIR_OUTPUT:
-               if (p_exp_sub->data_descriptor[ix].data_direction == PF_DIRECTION_OUTPUT)
-               {
-                  found = true;
-               }
-               break;
-            default:
-               break;
-            }
-         }
-
-         if (found == false)
-         {
-            ix++;
-         }
       }
-      if (found == true)
-      {
-         *pp_desc = &p_exp_sub->data_descriptor[ix];
-
-         ret = 0;
-      }
-
    }
 
    return ret;
@@ -1554,10 +1596,10 @@ static int pf_cmdev_get_exp_sub_data_descriptor(
 /**
  * @internal
  * Collect iodata object IOCS information from IOCR param and expected (sub-)modules.
- * @param p_ar                   In:   The AR instance.
- * @param p_iocr                 In:   The IOCR instance.
- * @param dir                    In:   The data direction to consider.
- * @param p_stat                 Out:  Detailed error information.
+ * @param p_ar                   In:      The AR instance.
+ * @param p_iocr                 InOut:   The IOCR instance.
+ * @param dir                    In:      The data direction to consider.
+ * @param p_stat                 Out:     Detailed error information.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -1600,7 +1642,7 @@ static int pf_cmdev_iocr_setup_iocs(
             LOG_ERROR(PNET_LOG, "CMDEV(%d): api %u exp slot %u subslot %u not found\n", __LINE__, (unsigned)api_id, (unsigned)slot_nbr, (unsigned)subslot_nbr);
             ret = -1;
          }
-         else if (pf_cmdev_get_exp_sub_data_descriptor(p_exp_sub, dir, &p_desc) != 0)
+         else if (pf_cmdev_get_exp_sub_data_descriptor(p_exp_sub, dir, PF_DEV_STATUS_TYPE_IOCS, &p_desc) != 0)
          {
             LOG_ERROR(PNET_LOG, "CMDEV(%d): api %u exp slot %u subslot %u and dir %u not found\n", __LINE__, (unsigned)api_id, (unsigned)slot_nbr, (unsigned)subslot_nbr, (unsigned)dir);
          }
@@ -1674,10 +1716,10 @@ static int pf_cmdev_iocr_setup_iocs(
 /**
  * @internal
  * Collect iodata object data and IOPS information from IOCR param and expected (sub-)modules.
- * @param p_ar                   In:   The AR instance.
- * @param p_iocr                 In:   The IOCR instance.
- * @param dir                    In:   The data direction to consider.
- * @param p_stat                 Out:  Detailed error information.
+ * @param p_ar                   In:      The AR instance.
+ * @param p_iocr                 InOut:   The IOCR instance.
+ * @param dir                    In:      The data direction to consider.
+ * @param p_stat                 Out:     Detailed error information.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -1721,7 +1763,7 @@ static int pf_cmdev_iocr_setup_data_iops(
          {
             LOG_ERROR(PNET_LOG, "CMDEV(%d): api %u exp slot %u subslot %u not found\n", __LINE__, (unsigned)api_id, (unsigned)slot_nbr, (unsigned)subslot_nbr);
          }
-         else if (pf_cmdev_get_exp_sub_data_descriptor(p_exp_sub, dir, &p_desc) != 0)
+         else if (pf_cmdev_get_exp_sub_data_descriptor(p_exp_sub, dir, PF_DEV_STATUS_TYPE_IOPS, &p_desc) != 0)
          {
             LOG_ERROR(PNET_LOG, "CMDEV(%d): api %u exp slot %u subslot %u and dir %u not found\n", __LINE__, (unsigned)api_id, (unsigned)slot_nbr, (unsigned)subslot_nbr, (unsigned)dir);
          }
@@ -1813,7 +1855,7 @@ static int pf_cmdev_iocr_setup_data_iops(
 /**
  * @internal
  * Collect iodata object IOCS, data and IOPS information from IOCR param and expected (sub-)modules.
- * @param p_ar             In:   The AR instance.
+ * @param p_ar             InOut:The AR instance.
  * @param crep             In:   The IOCR index.
  * @param p_stat           Out:  Detailed error information.
  * @return  0  if the operation succeeded.
@@ -3611,7 +3653,7 @@ int pf_cmdev_cm_ccontrol_req(
       switch (p_ar->cmdev_state)
       {
       case PF_CMDEV_STATE_W_ARDY:
-         /* Verify that appl has created data for all PPM */
+         /* Verify that appl has created input data for all PPM */
          for (ix = 0; ix < p_ar->nbr_iocrs; ix++)
          {
             if ((p_ar->iocrs[ix].param.iocr_type == PF_IOCR_TYPE_INPUT) ||
@@ -3619,8 +3661,8 @@ int pf_cmdev_cm_ccontrol_req(
             {
                for (iy = 0; iy < p_ar->iocrs[ix].nbr_data_desc; iy++)
                {
-                  /* Member data_avail is set directly by the PPM. */
-                  if (p_ar->iocrs[ix].data_desc[iy].data_avail == false)
+                  /* Member data_avail is set directly by the PPM. The value is true also if only the IOPS is set.*/
+                  if ((p_ar->iocrs[ix].data_desc[iy].iops_length > 0) && (p_ar->iocrs[ix].data_desc[iy].data_avail == false))
                   {
                      data_avail = false;
                   }

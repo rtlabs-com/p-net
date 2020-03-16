@@ -354,6 +354,17 @@ int pf_cmdev_rm_ccontrol_cnf(
    pf_control_block_t      *p_control_io,
    pnet_result_t           *p_ccontrol_result);
 
+
+
+/************ Internal functions, made available for unit testing ************/
+
+int pf_cmdev_calculate_exp_sub_data_descriptor_direction(
+   pnet_submodule_dir_t       submodule_dir,
+   pf_data_direction_values_t data_dir,
+   pf_dev_status_type_t       status_type,
+   pf_data_direction_values_t *resulting_data_dir);
+
+
 #ifdef __cplusplus
 }
 #endif
