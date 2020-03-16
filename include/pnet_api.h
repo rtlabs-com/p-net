@@ -81,7 +81,7 @@ extern "C"
 #define PNET_MAX_AR                                            1     /**< Number of connections. Must be > 0. */
 #define PNET_MAX_API                                           1     /**< Number of Application Processes. Must be > 0. */
 #define PNET_MAX_CR                                            2     /**< Per AR. 1 input and 1 output. */
-#define PNET_MAX_MODULES                                       3     /**< Per API. Should be > 1 to allow at least one I/O module. */
+#define PNET_MAX_MODULES                                       5     /**< Per API. Should be > 1 to allow at least one I/O module. */
 #define PNET_MAX_SUBMODULES                                    3     /**< Per module (3 needed for DAP). */
 #define PNET_MAX_CHANNELS                                      1     /**< Per sub-slot. Used for diagnosis. */
 #define PNET_MAX_DFP_IOCR                                      2     /**< Allowed values are 0 (zero) or 2. */

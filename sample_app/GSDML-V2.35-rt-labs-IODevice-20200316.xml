@@ -23,7 +23,7 @@
       </DeviceFunction>
       <ApplicationProcess>
          <DeviceAccessPointList>
-            <DeviceAccessPointItem ID="IDD_1" PNIO_Version="V2.35" PhysicalSlots="0..1" ModuleIdentNumber="0x00000001" MinDeviceInterval="32" DNS_CompatibleName="rt-labs-dev" FixedInSlots="0" ObjectUUID_LocalIndex="1" DeviceAccessSupported="true" NumberOfDeviceAccessAR="1" MultipleWriteSupported="true" CheckDeviceID_Allowed="true" NameOfStationNotTransferable="false" LLDP_NoD_Supported="true" ResetToFactoryModes="2">
+            <DeviceAccessPointItem ID="IDD_1" PNIO_Version="V2.35" PhysicalSlots="0..4" ModuleIdentNumber="0x00000001" MinDeviceInterval="32" DNS_CompatibleName="rt-labs-dev" FixedInSlots="0" ObjectUUID_LocalIndex="1" DeviceAccessSupported="true" NumberOfDeviceAccessAR="1" MultipleWriteSupported="true" CheckDeviceID_Allowed="true" NameOfStationNotTransferable="false" LLDP_NoD_Supported="true" ResetToFactoryModes="2">
                <ModuleInfo>
                   <Name TextId="IDT_MODULE_NAME_DAP1"/>
                   <InfoText TextId="IDT_INFO_DAP1"/>
@@ -35,9 +35,9 @@
                <CertificationInfo ConformanceClass="A" ApplicationClass="" NetloadClass="I"/>
                <IOConfigData MaxInputLength="244" MaxOutputLength="244"/>
                <UseableModules>
-                  <ModuleItemRef ModuleItemTarget="IDM_11" AllowedInSlots="1"/>
-                  <ModuleItemRef ModuleItemTarget="IDM_12" AllowedInSlots="1"/>
-                  <ModuleItemRef ModuleItemTarget="IDM_13" AllowedInSlots="1"/>
+                  <ModuleItemRef ModuleItemTarget="IDM_11" AllowedInSlots="1..4"/>
+                  <ModuleItemRef ModuleItemTarget="IDM_12" AllowedInSlots="1..4"/>
+                  <ModuleItemRef ModuleItemTarget="IDM_13" AllowedInSlots="1..4"/>
                </UseableModules>
                <VirtualSubmoduleList>
                   <VirtualSubmoduleItem ID="IDS_1" SubmoduleIdentNumber="0x00000001" Writeable_IM_Records="1 2 3" MayIssueProcessAlarm="false">
@@ -213,15 +213,11 @@
                <Text TextId="TOK_Output_DataItem_Bit6" Value="Output Bit 6"/>
                <Text TextId="TOK_Output_DataItem_Bit7" Value="Output Bit 7"/>
 
+               <!--ParameterRecordDataItem name-->
                <Text TextId="RT-Labs_demo_parameter_1" Value="Parameter 1" />
                <Text TextId="RT-Labs_demo_parameter_2" Value="Parameter 2" />
-
                <Text TextId="DEMO_1" Value="DEMO_1" />
                <Text TextId="DEMO_2" Value="DEMO_2" />
-
-               <!-- record data item name  -->
-               <Text TextId="IDT_RECORD_NAME_rec1" Value="Record Data Item1"/>
-               <Text TextId="IDT_RECORD_NAME_rec2" Value="Record Data Item2"/>
             </PrimaryLanguage>
          </ExternalTextList>
       </ApplicationProcess>

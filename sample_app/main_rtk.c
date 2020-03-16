@@ -7,6 +7,7 @@
 #include "osal.h"
 #include "log.h"
 
+
 /********************* Call-back function declarations ************************/
 
 static int app_exp_module_ind(uint16_t api, uint16_t slot, uint32_t module_ident_number);
@@ -26,49 +27,54 @@ static int app_alarm_ack_cnf(uint32_t arep, int res);
 
 /********************** Settings **********************************************/
 
-#define EVENT_READY_FOR_DATA     BIT(0)
-#define EVENT_TIMER              BIT(1)
-#define EVENT_ALARM              BIT(2)
-#define EVENT_ABORT              BIT(15)
+#define EVENT_READY_FOR_DATA           BIT(0)
+#define EVENT_TIMER                    BIT(1)
+#define EVENT_ALARM                    BIT(2)
+#define EVENT_ABORT                    BIT(15)
 
-#define TICK_INTERVAL_US         1000 /* 1 ms */
+#define EXIT_CODE_ERROR                1
+#define TICK_INTERVAL_US               1000     /* 1 ms */
+#define APP_DEFAULT_ETHERNET_INTERFACE "en1"
+#define APP_ALARM_USI                  1
+#define APP_LED_ID                     0        /* "LED1" on circuit board */
 
-/* From the GSDML file */
 
-/* The following constant must match the GSDML file. */
+/**************** From the GSDML file ****************************************/
+
+#define APP_DEFAULT_STATION_NAME "rt-labs-dev"
 #define APP_PARAM_IDX_1          123
 #define APP_PARAM_IDX_2          124
-
 #define APP_API                  0
 
 /*
- * Module ident number for the DAP module.
- * The DAP module must be plugged by the application after the call to pnet_init.
+ * Module and submodule ident number for the DAP module.
+ * The DAP module and submodules must be plugged by the application after the call to pnet_init.
  */
-#define PNET_MOD_DAP_IDENT       0x00000001     /* Slot 0 */
+#define PNET_SLOT_DAP_IDENT                        0x00000000
+#define PNET_MOD_DAP_IDENT                         0x00000001     /* For use in slot 0 */
+#define PNET_SUBMOD_DAP_IDENT                      0x00000001     /* For use in subslot 1 */
+#define PNET_SUBMOD_DAP_INTERFACE_1_IDENT          0x00008000     /* For use in subslot 0x8000 */
+#define PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT   0x00008001     /* For use in subslot 0x8001 */
 
 /*
- * Sub-module ident numbers for the DAP sub-slots.
- * The DAP submodules must be plugged by the application after the call to pnet_init.
+ * I/O Modules. These modules and their sub-modules must be plugged by the
+ * application after the call to pnet_init.
+ *
+ * Assume that all modules only have a single submodule, with same number.
  */
-#define PNET_SUBMOD_DAP_IDENT           0x00000001     /* Subslot 1 */
-#define PNET_SUBMOD_DAP_INTERFACE_IDENT 0x00008000     /* Subslot 0x8000 */
-#define PNET_SUBMOD_DAP_PORT_0_IDENT    0x00008001     /* Subslot 0x8001 */
+#define PNET_MOD_8_0_IDENT          0x00000030     /* 8 bit input */
+#define PNET_MOD_0_8_IDENT          0x00000031     /* 8 bit output */
+#define PNET_MOD_8_8_IDENT          0x00000032     /* 8 bit input, 8 bit output */
+#define PNET_SUBMOD_CUSTOM_IDENT    0x00000001
 
-/*
- * I/O Modules. These modules and their sub-modules must be plugged by the application after the call to pnet_init.
- * The sub-module ident numbers are all 0x00000001 for these modules.
- */
-#define PNET_MOD_8_0_IDENT       0x00000030     /* 8 bit input */
-#define PNET_MOD_0_8_IDENT       0x00000031     /* 8 bit output */
-#define PNET_MOD_8_8_IDENT       0x00000032     /* 8 bit input, 8 bit output */
+#define APP_DATASIZE_INPUT       1     /* bytes, for digital inputs data */
+#define APP_DATASIZE_OUTPUT      1     /* bytes, for digital outputs data */
+#define APP_ALARM_PAYLOAD_SIZE   1     /* bytes */
 
-#define PNET_SUBMOD_IDENT        0x00000001
 
-/**
- * This is just a simple example on how the application can maintain its list of supported APIs, modules and submodules.
- */
-static uint32_t            cfg_module_ident_numbers[] =
+/*** Example on how to keep lists of supported modules and submodules ********/
+
+static uint32_t            cfg_available_module_types[] =
 {
    PNET_MOD_DAP_IDENT,
    PNET_MOD_8_0_IDENT,
@@ -79,20 +85,23 @@ static uint32_t            cfg_module_ident_numbers[] =
 static const struct
 {
    uint32_t                api;
-   uint16_t                slot_nbr;
-   uint16_t                subslot_nbr;
    uint32_t                module_ident_nbr;
    uint32_t                submodule_ident_nbr;
    pnet_submodule_dir_t    data_dir;
-   uint16_t                insize;
-   uint16_t                outsize;
-} submodule_cfg[] =
+   uint16_t                insize;     /* bytes */
+   uint16_t                outsize;    /* bytes */
+} cfg_available_submodule_types[] =
 {
-   {APP_API, 0, 1, PNET_MOD_DAP_IDENT, PNET_SUBMOD_DAP_IDENT, PNET_DIR_NO_IO, 0, 0},
-   {APP_API, 0, 32768, PNET_MOD_DAP_IDENT, PNET_SUBMOD_DAP_INTERFACE_IDENT, PNET_DIR_NO_IO, 0, 0},
-   {APP_API, 0, 32769, PNET_MOD_DAP_IDENT, PNET_SUBMOD_DAP_PORT_0_IDENT, PNET_DIR_NO_IO, 0, 0},
-   {APP_API, 1, 1, PNET_MOD_8_8_IDENT, PNET_SUBMOD_IDENT, PNET_DIR_IO, 1, 1},
+   {APP_API, PNET_MOD_DAP_IDENT, PNET_SUBMOD_DAP_IDENT,                    PNET_DIR_NO_IO,  0,                  0},
+   {APP_API, PNET_MOD_DAP_IDENT, PNET_SUBMOD_DAP_INTERFACE_1_IDENT,        PNET_DIR_NO_IO,  0,                  0},
+   {APP_API, PNET_MOD_DAP_IDENT, PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT, PNET_DIR_NO_IO,  0,                  0},
+   {APP_API, PNET_MOD_8_0_IDENT, PNET_SUBMOD_CUSTOM_IDENT,                 PNET_DIR_INPUT,  APP_DATASIZE_INPUT, 0},
+   {APP_API, PNET_MOD_0_8_IDENT, PNET_SUBMOD_CUSTOM_IDENT,                 PNET_DIR_OUTPUT, 0,                  APP_DATASIZE_OUTPUT},
+   {APP_API, PNET_MOD_8_8_IDENT, PNET_SUBMOD_CUSTOM_IDENT,                 PNET_DIR_IO,     APP_DATASIZE_INPUT, APP_DATASIZE_OUTPUT},
 };
+
+
+/************ Configuration of product ID, software version etc **************/
 
 static pnet_cfg_t                pnet_default_cfg =
 {
@@ -156,7 +165,7 @@ static pnet_cfg_t                pnet_default_cfg =
       {  /* OEM device id: vendor_id_hi, vendor_id_lo, device_id_hi, device_id_lo */
          0xc0, 0xff, 0xee, 0x01,
       },
-      .station_name = "rt-labs-dev",
+      .station_name = APP_DEFAULT_STATION_NAME,
       .device_vendor = "rt-labs",
       .manufacturer_specific_string = "PNET demo",
 
@@ -191,10 +200,11 @@ static bool                      alarm_allowed = true;
 static uint32_t                  app_param_1 = 0x0;
 static uint32_t                  app_param_2 = 0x0;
 static bool                      init_done = false;
-uint8_t                          inputdata[] =
-{
-   0x00,       /* Slot 1, subslot 1 input data (digital inputs) */
-};
+static uint8_t                   inputdata[APP_DATASIZE_INPUT] = { 0 };
+static uint8_t                   custom_input_slots[PNET_MAX_MODULES] = { 0 };
+static uint8_t                   custom_output_slots[PNET_MAX_MODULES] = { 0 };
+
+static int                       verbosity = 0;
 
 
 /*********************************** Callbacks ********************************/
@@ -331,6 +341,7 @@ static int app_state_ind(
 {
    uint16_t                err_cls = 0;
    uint16_t                err_code = 0;
+   uint16_t                slot = 0;
 
    LOG_DEBUG(PNET_LOG, "APP: state call-back %d\n", state);
 
@@ -349,21 +360,45 @@ static int app_state_ind(
    }
    else if (state == PNET_EVENT_PRMEND)
    {
+      LOG_DEBUG(PNET_LOG, "APP: Callback on event PNET_EVENT_PRMEND\n");
+
       /* Save the arep for later use */
       main_arep = arep;
       os_event_set(main_events, EVENT_READY_FOR_DATA);
-      (void)pnet_input_set_data_and_iops(APP_API, 0, 1, NULL, 0, PNET_IOXS_GOOD);
-      (void)pnet_input_set_data_and_iops(APP_API, 0, 0x8000, NULL, 0, PNET_IOXS_GOOD);
-      (void)pnet_input_set_data_and_iops(APP_API, 0, 0x8001, NULL, 0, PNET_IOXS_GOOD);
-      (void)pnet_input_set_data_and_iops(APP_API, 1, 1, inputdata, sizeof(inputdata), PNET_IOXS_GOOD);
-      (void)pnet_output_set_iocs(APP_API, 0, 1, PNET_IOXS_GOOD);
-      (void)pnet_output_set_iocs(APP_API, 0, 0x8000, PNET_IOXS_GOOD);
-      (void)pnet_output_set_iocs(APP_API, 0, 0x8001, PNET_IOXS_GOOD);
-      (void)pnet_output_set_iocs(APP_API, 1, 1, PNET_IOXS_GOOD);
+
+      /* Set IOPS for DAP slot (has same numbering as the module identifiers) */
+      (void)pnet_input_set_data_and_iops(APP_API, PNET_SLOT_DAP_IDENT, PNET_SUBMOD_DAP_IDENT,                    NULL, 0, PNET_IOXS_GOOD);
+      (void)pnet_input_set_data_and_iops(APP_API, PNET_SLOT_DAP_IDENT, PNET_SUBMOD_DAP_INTERFACE_1_IDENT,        NULL, 0, PNET_IOXS_GOOD);
+      (void)pnet_input_set_data_and_iops(APP_API, PNET_SLOT_DAP_IDENT, PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT, NULL, 0, PNET_IOXS_GOOD);
+
+      /* Set initial data and IOPS for custom input modules, and IOCS for custom output modules */
+      for (slot = 0; slot < PNET_MAX_MODULES; slot++)
+      {
+         if (custom_input_slots[slot] == true)
+         {
+            LOG_DEBUG(PNET_LOG, "APP:   Setting input data and IOPS for slot %u subslot %u\n", slot, PNET_SUBMOD_CUSTOM_IDENT);
+            (void)pnet_input_set_data_and_iops(APP_API, slot, PNET_SUBMOD_CUSTOM_IDENT, inputdata,  sizeof(inputdata), PNET_IOXS_GOOD);
+         }
+         if (custom_output_slots[slot] == true)
+         {
+            LOG_DEBUG(PNET_LOG, "APP:   Setting output IOCS for slot %u subslot %u\n", slot, PNET_SUBMOD_CUSTOM_IDENT);
+            (void)pnet_output_set_iocs(APP_API, slot, PNET_SUBMOD_CUSTOM_IDENT, PNET_IOXS_GOOD);
+         }
+      }
+
       (void)pnet_set_provider_state(true);
    }
    else if (state == PNET_EVENT_DATA)
    {
+      LOG_DEBUG(PNET_LOG, "APP: Callback on event PNET_EVENT_DATA\n");
+   }
+   else if (state == PNET_EVENT_STARTUP)
+   {
+      LOG_DEBUG(PNET_LOG, "APP: Callback on event PNET_EVENT_STARTUP\n");
+   }
+   else if (state == PNET_EVENT_APPLRDY)
+   {
+      LOG_DEBUG(PNET_LOG, "APP: Callback on event PNET_EVENT_APPLRDY\n");
    }
 
    return 0;
@@ -379,13 +414,13 @@ static int app_exp_module_ind(
 
    /* Find it in the list of supported modules */
    ix = 0;
-   while ((ix < NELEMENTS(cfg_module_ident_numbers)) &&
-          (cfg_module_ident_numbers[ix] != module_ident))
+   while ((ix < NELEMENTS(cfg_available_module_types)) &&
+          (cfg_available_module_types[ix] != module_ident))
    {
       ix++;
    }
 
-   if (ix < NELEMENTS(cfg_module_ident_numbers))
+   if (ix < NELEMENTS(cfg_available_module_types))
    {
       if (pnet_pull_module(api, slot) != 0)
       {
@@ -393,6 +428,30 @@ static int app_exp_module_ind(
       }
       /* For now support any module in any slot */
       ret = pnet_plug_module(api, slot, module_ident);
+
+      if (ret != 0)
+      {
+         LOG_DEBUG(PNET_LOG, "APP: Plug module failed. Ret: %u API: %u Slot: %u Module ID: 0x%x Index in list of supported modules: %u\n", ret, api, slot, (unsigned)module_ident, ix);
+      }
+      else
+      {
+         /* Remember what is plugged in each slot */
+         if (slot < PNET_MAX_MODULES)
+         {
+            if (module_ident == PNET_MOD_8_0_IDENT || module_ident == PNET_MOD_8_8_IDENT)
+            {
+               custom_input_slots[slot] = true;
+            }
+            if (module_ident == PNET_MOD_8_8_IDENT || module_ident == PNET_MOD_0_8_IDENT)
+            {
+               custom_output_slots[slot] = true;
+            }
+         }
+         else
+         {
+            LOG_DEBUG(PNET_LOG, "APP: Wrong slot number recieved: %u  It should be less than %u\n", slot, PNET_MAX_MODULES);
+         }
+      }
    }
 
    LOG_DEBUG(PNET_LOG, "APP: ret %d expected module call-back 0x%08x\n", ret, (unsigned)module_ident);
@@ -412,22 +471,22 @@ static int app_exp_submodule_ind(
 
    /* Find it in the list of supported submodules */
    ix = 0;
-   while ((ix < NELEMENTS(submodule_cfg)) &&
-          ((submodule_cfg[ix].module_ident_nbr != module_ident) ||
-           (submodule_cfg[ix].submodule_ident_nbr != submodule_ident)))
+   while ((ix < NELEMENTS(cfg_available_submodule_types)) &&
+          ((cfg_available_submodule_types[ix].module_ident_nbr != module_ident) ||
+           (cfg_available_submodule_types[ix].submodule_ident_nbr != submodule_ident)))
    {
       ix++;
    }
 
-   if (ix < NELEMENTS(submodule_cfg))
+   if (ix < NELEMENTS(cfg_available_submodule_types))
    {
       if (pnet_pull_submodule(api, slot, subslot) != 0)
       {
          LOG_DEBUG(PNET_LOG, "APP: Pull sub-module failed\n");
       }
       ret = pnet_plug_submodule(api, slot, subslot, module_ident, submodule_ident,
-         submodule_cfg[ix].data_dir,
-         submodule_cfg[ix].insize, submodule_cfg[ix].outsize);
+         cfg_available_submodule_types[ix].data_dir,
+         cfg_available_submodule_types[ix].insize, cfg_available_submodule_types[ix].outsize);
    }
 
    LOG_DEBUG(PNET_LOG, "APP: ret %d expected submodule call-back module ident 0x%08x, submodule ident 0x%08x\n", ret, (unsigned)module_ident, (unsigned)submodule_ident);
@@ -534,20 +593,9 @@ static int _cmd_pnio_run(
    strcpy(pnet_default_cfg.im_0_data.order_id, "12345");
    strcpy(pnet_default_cfg.im_0_data.im_serial_number, "00001");
 
-   if (pnet_init("en1", TICK_INTERVAL_US, &pnet_default_cfg) == 0)
+   if (pnet_init(APP_DEFAULT_ETHERNET_INTERFACE, TICK_INTERVAL_US, &pnet_default_cfg) == 0)
    {
       LOG_DEBUG(PNET_LOG, "APP: Call-backs connected\n");
-      for (ix = 0; ix < NELEMENTS(submodule_cfg); ix++)
-      {
-         /* Plug all submodules - modules are plugged automatically */
-         if (pnet_plug_submodule(submodule_cfg[ix].api, submodule_cfg[ix].slot_nbr, submodule_cfg[ix].subslot_nbr,
-            submodule_cfg[ix].module_ident_nbr, submodule_cfg[ix].submodule_ident_nbr,
-            submodule_cfg[ix].data_dir, submodule_cfg[ix].insize, submodule_cfg[ix].outsize) != 0)
-         {
-            LOG_ERROR(PNET_LOG, "APP: Could not plug %u, %u, %u\n",
-               (unsigned)submodule_cfg[ix].api, (unsigned)submodule_cfg[ix].slot_nbr, (unsigned)submodule_cfg[ix].subslot_nbr);
-         }
-      }
 
       if (init_done == true)
       {
@@ -612,19 +660,25 @@ static void main_timer_tick(
 
 int main(void)
 {
-   int         ret = -1;
-   bool        old_1_pressed = false;
-   bool        old_2_pressed = false;
-   bool        pressed = false;
-   uint32_t    mask = EVENT_READY_FOR_DATA | EVENT_TIMER | EVENT_ALARM | EVENT_ABORT;
-   uint32_t    flags = 0;
-   uint32_t    tick_ctr = 0;
-   uint8_t  alarm[] =
-   {
-    0x00,
-   };
+   int            ret = -1;
+   uint32_t       mask = EVENT_READY_FOR_DATA | EVENT_TIMER | EVENT_ALARM | EVENT_ABORT;
+   uint32_t       flags = 0;
+   bool           button1_pressed = false;
+   bool           button2_pressed = false;
+   bool           button2_pressed_previous = false;
+   bool           led_state = false;
+   bool           received_led_state = false;
+   uint32_t       tick_ctr_buttons = 0;
+   uint32_t       tick_ctr_update_data = 0;
+   static uint8_t data_ctr = 0;
+   uint16_t       slot = 0;
+   uint8_t        outputdata[64];
+   uint8_t        outputdata_iops;
+   uint16_t       outputdata_length;
+   bool           outputdata_is_updated = false;
+   uint8_t        alarm_payload[APP_ALARM_PAYLOAD_SIZE] = { 0 };
 
-   LOG_INFO(PNET_LOG, "APP: Hello world\n");
+   LOG_INFO(PNET_LOG, "APP: Starting\n");
    main_events = os_event_create();
    main_timer  = os_timer_create(TICK_INTERVAL_US, main_timer_tick, NULL, false);
 
@@ -635,10 +689,13 @@ int main(void)
       if (flags & EVENT_READY_FOR_DATA)
       {
          os_event_clr(main_events, EVENT_READY_FOR_DATA); /* Re-arm */
-
-         /* Send appl ready to profinet stack. */
+         LOG_DEBUG(PNET_LOG, "APP: Send appl ready to profinet stack.\n");
          ret = pnet_application_ready(main_arep);
-         LOG_DEBUG(PNET_LOG, "APP: Return from apprdy: %d\n", ret);
+         if (ret != 0)
+         {
+            LOG_ERROR(PNET_LOG, "APP: Error returned when application telling that it is ready for data. Have you set IOCS or IOPS for all subslots?\n");
+         }
+
          /*
           * cm_ccontrol_cnf(+/-) is indicated later (app_state_ind(DATA)), when the
           * confirmation arrives from the controller.
@@ -663,50 +720,99 @@ int main(void)
       else if (flags & EVENT_TIMER)
       {
          os_event_clr(main_events, EVENT_TIMER); /* Re-arm */
-         tick_ctr++;
-#if 0
-         /* Set output data every 10ms */
-         if ((main_arep != UINT32_MAX) && (tick_ctr > 10))
+         tick_ctr_buttons++;
+         tick_ctr_update_data++;
+
+         /* Read buttons every 100 ms */
+         if ((main_arep != UINT32_MAX) && (tick_ctr_buttons > 100))
          {
-            tick_ctr = 0;
+            tick_ctr_buttons = 0;
+
+            os_get_button(0, &button1_pressed);
+            os_get_button(1, &button2_pressed);
+         }
+
+         /* Set input and output data every 10ms */
+         if ((main_arep != UINT32_MAX) && (tick_ctr_update_data > 10))
+         {
+            tick_ctr_update_data = 0;
+
+            /* Input data (for sending to IO-controller) */
+            // Lowest 7 bits: Counter    Most significant bit: Button1
             inputdata[0] = data_ctr++;
-            ret = pnet_input_set_data_and_iops(0, 1, 1, inputdata, sizeof(inputdata), PNET_IOXS_GOOD);
-            //LOG_DEBUG(PNET_LOG, "APP: Return from send  : %d\n", ret);
-         }
-#endif
-#if 1
-         /* Set new output when button 1 is pressed/released */
-         pressed = false;
-         os_get_button(0, &pressed);
-
-         if (main_arep != UINT32_MAX)
-         {
-            if ((pressed == true) && (old_1_pressed == false))
+            if (button1_pressed)
             {
-               LOG_DEBUG(PNET_LOG, "APP: New input\n");
-               inputdata[0] = data_ctr++;
-               ret = pnet_input_set_data_and_iops(0, 1, 1, inputdata, sizeof(inputdata), PNET_IOXS_GOOD);
+               inputdata[0] |= 0x80;
+            }
+            else
+            {
+               inputdata[0] &= 0x7F;
+            }
+
+            /* Set data for custom input modules, if any */
+            for (slot = 0; slot < PNET_MAX_MODULES; slot++)
+            {
+               if (custom_input_slots[slot] == true)
+               {
+                  (void)pnet_input_set_data_and_iops(APP_API, slot, PNET_SUBMOD_CUSTOM_IDENT, inputdata,  sizeof(inputdata), PNET_IOXS_GOOD);
+               }
+            }
+
+            /* Read data from first of the custom output modules, if any */
+            for (slot = 0; slot < PNET_MAX_MODULES; slot++)
+            {
+               if (custom_output_slots[slot] == true)
+               {
+                  outputdata_length = sizeof(outputdata);
+                  pnet_output_get_data_and_iops(APP_API, slot, PNET_SUBMOD_CUSTOM_IDENT, &outputdata_is_updated, outputdata, &outputdata_length, &outputdata_iops);
+                  break;
+               }
+            }
+
+            /* Set LED state */
+            if (outputdata_is_updated == true && outputdata_iops == PNET_IOXS_GOOD)
+            {
+               if (outputdata_length == APP_DATASIZE_OUTPUT)
+               {
+                  received_led_state = (outputdata[0] & 0x80) > 0;  /* Use most significant bit */
+                  os_set_led(APP_LED_ID, received_led_state);
+               }
+               else
+               {
+                  LOG_INFO(PNET_LOG, "APP: Wrong outputdata length: %u\n", outputdata_length);
+               }
             }
          }
-         old_1_pressed = pressed;
-#endif
-#if 1
-         /* Create an alarm when button 2 is pressed/released */
-         pressed = false;
-         os_get_button(1, &pressed);
 
+         /* Create an alarm on first input slot (if any) when button 2 is pressed/released */
          if (main_arep != UINT32_MAX)
          {
-            if ((pressed == true) && (old_2_pressed == false) && (alarm_allowed == true))
+            if ((button2_pressed == true) && (button2_pressed_previous == false) && (alarm_allowed == true))
             {
-               LOG_DEBUG(PNET_LOG, "APP: Send ALARM\n");
-               alarm[0]++;
-               alarm_allowed = true;
-               ret = pnet_alarm_send_process_alarm(main_arep, 0, 1, 1, sizeof(alarm), 1, alarm);
+               alarm_payload[0]++;
+               for (slot = 0; slot < PNET_MAX_MODULES; slot++)
+               {
+                  if (custom_input_slots[slot] == true)
+                  {
+                     printf("Sending process alarm from slot %u subslot %u to IO-controller. Payload: 0x%x\n",
+                        slot,
+                        PNET_SUBMOD_CUSTOM_IDENT,
+                        alarm_payload[0]);
+                     pnet_alarm_send_process_alarm(
+                        main_arep,
+                        APP_API,
+                        slot,
+                        PNET_SUBMOD_CUSTOM_IDENT,
+                        APP_ALARM_USI,
+                        sizeof(alarm_payload),
+                        alarm_payload);
+                     break;
+                  }
+               }
             }
+            button2_pressed_previous = button2_pressed;
          }
-         old_2_pressed = pressed;
-#endif
+
          pnet_handle_periodic();
       }
       else if (flags & EVENT_ABORT)
@@ -714,8 +820,8 @@ int main(void)
          /* Reset main */
          main_arep = UINT32_MAX;
          alarm_allowed = true;
-         old_1_pressed = false;
-         old_2_pressed = false;
+         button1_pressed = false;
+         button2_pressed = false;
 
          os_event_clr(main_events, EVENT_ABORT); /* Re-arm */
          LOG_DEBUG(PNET_LOG, "APP: abort\n");
@@ -724,7 +830,7 @@ int main(void)
    os_timer_destroy(main_timer);
    os_event_destroy(main_events);
 
-   LOG_INFO(PNET_LOG, "APP: End of the world\n");
+   LOG_INFO(PNET_LOG, "APP: Exiting\n");
 
    return 0;
 }
