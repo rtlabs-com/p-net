@@ -1113,7 +1113,7 @@ typedef struct pf_ppm
    uint16_t                cycle;
    uint8_t                 transfer_status;
    uint8_t                 data_status;
-   uint8_t                 buffer_length;
+   uint16_t                buffer_length;
    uint16_t                buffer_pos;          /* Start of PROFINET data in frame */
    uint16_t                cycle_counter_offset;
    uint16_t                data_status_offset;
