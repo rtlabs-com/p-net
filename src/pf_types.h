@@ -54,7 +54,7 @@ static inline uint32_t atomic_fetch_sub(atomic_int *p, uint32_t v)
 }
 #endif
 
-/* ============================> RPC header */
+/*********************** RPC header ******************************************/
 
 /** Magic UUID values */
 #define PNET_UUID_NIL_OBJECT              "00000000-0000-0000-0000-000000000000"
@@ -172,9 +172,8 @@ typedef struct pf_rpc_header
    uint8_t           serial_low;
 } pf_rpc_header_t;
 
-/* <============================ RPC header */
 
-/* ============================> Block header */
+/************************** Block header *************************************/
 
 typedef enum pf_block_type_values
 {
@@ -698,6 +697,12 @@ typedef enum pf_data_direction_values
    PF_DIRECTION_INPUT = 1,
    PF_DIRECTION_OUTPUT = 2,
 } pf_data_direction_values_t;
+
+typedef enum pf_dev_status_type
+{
+   PF_DEV_STATUS_TYPE_IOCS,
+   PF_DEV_STATUS_TYPE_IOPS,
+} pf_dev_status_type_t;
 
 typedef enum pf_end_point_1_values
 {
