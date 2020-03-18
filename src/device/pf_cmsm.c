@@ -17,7 +17,11 @@
 
 #endif
 
+
 /**
+ * @file
+ * @brief Implements the Context Management Surveillance Protocol Machine Device (CMSM)
+ *
  * The CMSM component monitors the establishment of a connection.
  * Once the device enters the DATA state this component is done.
  */

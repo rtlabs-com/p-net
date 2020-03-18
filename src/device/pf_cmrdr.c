@@ -20,7 +20,14 @@
 #include "pf_includes.h"
 #include "pf_block_writer.h"
 
-/*
+
+/**
+ * @file
+ * @brief Implements the Context Management Read Record Responder protocol machine device (CMRDR)
+ *
+ * Contains a single function \a pf_cmrdr_rm_read_ind(),
+ * that handles a RPC parameter read request.
+ *
  * This implementation of CMRDR has no internal state.
  * Every call to pf_cmrdr_rm_read_ind finishes by returning the result.
  * Since there are no internal static variables there is also no need
@@ -432,7 +439,7 @@ int pf_cmrdr_rm_read_ind(
           *                        [PDPortStatistic], [PDPortMrpIcDataReal] }
           * a There shall be no FiberOpticManufacturerSpecific information
           * b The fields SlotNumber and SubslotNumber shall be ignored
-          * c Each submodule’s data (for example interface or port) need its own MultipleBlockHeader
+          * c Each submodule's data (for example interface or port) need its own MultipleBlockHeader
           * d If MAUTypeExtension is used, both blocks shall be provided
           */
          ret = -1;
@@ -447,7 +454,7 @@ int pf_cmrdr_rm_read_ind(
           *                        [PDInterface-FSUDataAdjust], [PDInterfaceAdjust],
           *                        [PDPortMrpIcDataAdjust], [PDPortMrpIcDataCheck] }
           * a The fields SlotNumber and SubslotNumber shall be ignored
-          * b Each submodule’s data (for example interface or port) need its own MultipleBlockHeader
+          * b Each submodule's data (for example interface or port) need its own MultipleBlockHeader
           */
          ret = -1;
          break;

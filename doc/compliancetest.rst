@@ -72,6 +72,20 @@ To remove from a slot or subslot, mark it (in the right column) and press the
 <- arrow.
 
 
+Adjust settings
+---------------
+You might need to adjust the device MAC address, station name, IP address and
+subnet mask. This is done via the menu Tools > Options > DUT, and you might need to
+click the "Show expert settings". Use the "Setting" tab to adjust enter the
+existing host IP address.
+
+
 Run tests
 ---------
-Select the tests (in the left side menu) to run. Use the menu Project > Run.
+Select the tests (in the left side menu) to run. Failing tests are time
+consuming, so start with a single test to verify the communication. Disable all
+tests by the left side menu. Press the "Deselect all" icon. Then open "Automated
+test cases" > "Standard Setup" > DCP, and enable "DCP - DCP_IDN". Use the menu
+Project > Run.
+
+When communication is verified, enable all tests.

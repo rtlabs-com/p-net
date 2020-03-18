@@ -137,6 +137,9 @@ int pf_fspm_cm_dcontrol_ind(
 
 /**
  * Call user call-back to indicate a new event within the profinet stack.
+ *
+ * This uses the \a pnet_state_ind() callback.
+ *
  * @param p_ar             In:   The AR instance.
  * @param event            In:   The CMDEV event.
  * @return  0  if operation succeeded.

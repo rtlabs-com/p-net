@@ -57,11 +57,26 @@ The current GSD version (as of writing) is 2.35.
 
 The file name is specified in section 5.1 of the GSD specification. For example
 ``GSDML-V2.35-Vendor-Device-20171231.xml``. You can give it an optional timestamp
-in the filename: "-20171231-235900.xml”.
+in the filename: ``-20171231-235900.xml``.
 
 Note that version for example 2.3 is newer than version 2.25. From the GSDML
 specification: "V2.2 < V2.25 < V2.3 < V2.31"
 
+
+In-file comments
+----------------
+
+.. highlight:: xml
+
+XML comments are written::
+
+   <!-- Comment text -->
+
+   <!-- Multi-line
+   comment
+   text -->
+
+.. highlight:: none
 
 File structure
 --------------

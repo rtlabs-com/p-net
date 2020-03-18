@@ -258,6 +258,9 @@ void pf_cmdev_show_device(void);
 
 /**
  * Indicate a new state transition of the CMDEV component.
+ *
+ * Among other actions, it calls the \a pnet_state_ind() user callback.
+ *
  * @param p_ar             In:   The AR instance.
  * @param state            In:   The new CMDEV state.
  * @return  0  if operation succeeded.
@@ -317,6 +320,10 @@ int pf_cmdev_rm_release_ind(
 
 /**
  * Handle an RPC dcontrol request.
+ *
+ * This triggers the user callbacks \a pnet_dcontrol_ind() and
+ * \a pnet_state_ind() with PNET_EVENT_PRMEND.
+ *
  * @param p_ar             In:   The AR instance.
  * @param p_control_io     In:   The control block.
  * @param p_release_result Out:  Detailed result of the connect operation.
@@ -334,6 +341,9 @@ int pf_cmdev_rm_dcontrol_ind(
  * For this reason alone it does not have an opcode parameter.
  * If this function does not see all PPM data areas are set (by the app) then it returns
  * error and the application must try again - otherwise the startup will hang.
+ *
+ * Triggers the \a pnet_state_ind() user callback with PNET_EVENT_APPLRDY.
+ *
  * @param p_ar             In:   The AR instance.
  * @return  0  if a ccontrol request was sent.
  *          -1 if a ccontrol request was not sent.

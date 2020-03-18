@@ -13,6 +13,18 @@
  * full license information.
  ********************************************************************/
 
+/**
+ * @file
+ * @brief Implements the Cyclic Provider Protocol Machine (PPM)
+ *
+ * This handles cyclic sending of data (and IOPS). Initalizes transmit buffers.
+ *
+ * There are functions used by the application (via pnet_api.c) to set and get
+ * data, IOCS and IOPS.
+ *
+ */
+
+
 #ifdef UNIT_TEST
 #define os_eth_send mock_os_eth_send
 #endif
@@ -78,7 +90,7 @@ static void pf_ppm_set_state(
  * @param p_ppm            In:   The PPM instance.
  * @param p_buf            InOut:The buffer.
  * @param frame_id         In:   The frame_id.
- * @param p_header         In:   The VLAN tag header IOCR parameter..
+ * @param p_header         In:   The VLAN tag header IOCR parameter.
  */
 static void pf_ppm_init_buf(
    pf_ppm_t                *p_ppm,
@@ -383,6 +395,8 @@ static int pf_ppm_get_ar_iocr_desc(
    return ret;
 }
 
+/**************** Set and get data, IOPS and IOCS ****************************/
+
 int pf_ppm_set_data_and_iops(
    uint32_t                api_id,
    uint16_t                slot_nbr,
@@ -614,6 +628,7 @@ int pf_ppm_get_iocs(
    return ret;
 }
 
+/*****************************************************************************/
 
 int pf_ppm_set_data_status_state(
    pf_ar_t                 *p_ar,
@@ -708,6 +723,9 @@ void pf_ppm_set_problem_indicator(
       }
    }
 }
+
+
+/**************** Diagnostic strings *****************************************/
 
 /**
  * @internal

@@ -589,7 +589,8 @@ typedef int (*pnet_state_ind)(
  * value of \a idx (0x0000 - 0x7fff). All other values of \a idx are handled internally
  * by the Profinet stack.
  *
- * The application must verify the values of \a idx and \a write_length and provide a
+ * The application must verify the value of \a idx, and that \a p_read_length is
+ * large enough. Further, the application must provide a
  * pointer to the binary value in \a pp_read_data and the size, in bytes, of the
  * binary value in \a p_read_length.
  *
@@ -604,7 +605,7 @@ typedef int (*pnet_state_ind)(
  * @param idx              In:   The data record index.
  * @param sequence_number  In:   The sequence number.
  * @param pp_read_data     Out:  A pointer to the binary value.
- * @param p_read_length    Out:  The length in bytes of the binary value.
+ * @param p_read_length    InOut: The maximum (in) and actual (out) length in bytes of the binary value.
  * @param p_result         Out:  Detailed error information.
  * @return  0  on success.
  *          -1 if an error occurred.
@@ -1022,12 +1023,16 @@ PNET_EXPORT void pnet_handle_periodic(void);
 /**
  * Application signals ready to exchange data.
  *
+ * Sends a ccontrol request to the IO-controller.
+ *
  * This function must be called _after_ the application has received
  * state_cb(PNET_EVENT_PRMEND) in order for a connection to be established.
  *
  * If this function does not see all PPM data and IOPS areas are set (by the app)
  * then it returns error and the application must try again - otherwise the
  * startup will hang.
+ *
+ * Triggers the \a pnet_state_ind() user callback with PNET_EVENT_APPLRDY.
  *
  * @param arep             In:   The AREP
  * @return  0  if the operation succeeded.

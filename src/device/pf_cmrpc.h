@@ -101,6 +101,9 @@ int pf_cmrpc_rm_ccontrol_req(
 
 /**
  * Show AR and session information.
+ *
+ * Use level 0xFFFF to show everything.
+ *
  * @param level            In: Level of detail.
  */
 void pf_cmrpc_show(
