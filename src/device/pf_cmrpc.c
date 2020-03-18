@@ -20,6 +20,8 @@
  * This handles RPC communication; for example connect, release, dcontrol,
  * ccontrol and parameter read and write.
  *
+ * It opens a UDP socket and listens for connections.
+ *
  * CMRPC has only one state - IDLE. I.e., it is state-less.
  *
  */
@@ -43,7 +45,7 @@
 #include "pf_block_reader.h"
 #include "pf_block_writer.h"
 
-#define PF_MAX_SESSION     (2*(PNET_MAX_AR) + 1)               /* 2/ar and one spare. */
+#define PF_MAX_SESSION     (2*(PNET_MAX_AR) + 1)               /* 2 per ar, and one spare. */
 
 static os_mutex_t          *p_rpc_mutex;
 static uint32_t            pf_session_number = 0x12345678;     /* Starting number */
@@ -69,7 +71,7 @@ static uint8_t             dcerpc_rsp_frame[1500];
 
 static const pf_uuid_t     implicit_ar = {0,0,0,{0,0,0,0,0,0,0,0}};
 
-/* ====================================================================== */
+/**************** Diagnostic strings *****************************************/
 
 /**
  * @internal
@@ -273,6 +275,8 @@ void pf_cmrpc_show(
    }
 }
 
+/*********************** Sessions and ARs ************************************/
+
 /**
  * @internal
  * Allocate a new session instance.
@@ -433,7 +437,6 @@ static int pf_ar_allocate(
 {
    int                     ret = -1;
    uint16_t                ix = 0;
-
    os_mutex_lock(p_rpc_mutex);
    while ((ix < NELEMENTS(ar)) &&
          (ar[ix].in_use == true))
@@ -553,7 +556,7 @@ int pf_ar_find_by_arep(
    return ret;
 }
 
-/* ====================================================================== */
+/******************** Error handling *****************************************/
 
 void pf_set_error(
    pnet_result_t           *p_stat,
@@ -569,9 +572,7 @@ void pf_set_error(
    p_stat->pnio_status.error_code_2 = code_2;
 }
 
-/* ================================================
- *       RPC parsers.
- */
+/******************** RPC parsers *******************************************/
 
 /**
  * @internal
@@ -1002,6 +1003,14 @@ static void pf_cmrpc_rm_connect_rsp(
 /**
  * @internal
  * Take a DCE RPC connect request and create a DCE RPC connect response.
+ *
+ * This will trigger these user callbacks:
+ *
+ *  * pnet_exp_module_ind()
+ *  * pnet_exp_submodule_ind()
+ *  * pnet_connect_ind()
+ *  * pnet_state_ind() with PNET_EVENT_STARTUP
+ *
  * @param p_sess           In:   The session instance.
  * @param req_pos          In:   Position in the request buffer.
  * @param res_size         In:   The size of the response buffer.
@@ -1545,6 +1554,9 @@ static int pf_cmrpc_rm_read_interpret_ind(
 /**
  * @internal
  * Take a DCE RPC IODRead request and create a DCE RPC IODRead response.
+ *
+ * This will trigger the \a pnet_read_ind() user callback for certain parameters.
+ *
  * @param is_big_endian    In:   true if the message is big endian.
  * @param opnum            In:   The RPC operation number.
  * @param req_pos          In:   Position in the request buffer.
@@ -1775,6 +1787,9 @@ static int pf_cmrpc_perform_one_write(
 /**
  * @internal
  * Take a DCE RPC IODWrite request and create a DCE RPC IODWrite response.
+ *
+ * This will trigger the \a pnet_write_ind() user callback for certain parameters.
+ *
  * @param p_sess           In:   The RPC session instance.
  * @param req_pos          In:   Position in the request buffer.
  * @param res_size         In:   The size of the response buffer.
@@ -2263,6 +2278,9 @@ static int pf_cmrpc_rm_ccontrol_cnf(
    return ret;
 }
 
+
+/******************** State machine and DCE RPC protocol *********************/
+
 /**
  * @internal
  * Handle one DCE RPC response type message.
@@ -2589,9 +2607,7 @@ void pf_cmrpc_exit(void)
    }
 }
 
-/* ================================================
- *       Local primitives
- */
+/*********************** Local primitives ************************************/
 
 int pf_cmrpc_cmdev_state_ind(
    pf_ar_t                 *p_ar,

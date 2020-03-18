@@ -148,3 +148,47 @@ IP address, and a PN-DCP packet to ask for the IO-device with the name
 Running the application
 -----------------------
 See the "Tutorial" page.
+
+
+Writing and reading IO-device parameters
+----------------------------------------
+The parameters for different submodules are written as part of normal startup.
+
+To manually trigger parameter sending via Codesys, double-click the
+_8_bits_I_8_bits_O device in the left menu. Use the General tab, and the
+Settings part of the page. Right-click the parameter you would like to send,
+and select "Write to device".
+
+It is also possible to read a parameter similarly.
+
+When clicking the "Write All Values" icon, one write request is sent per
+parameter.
+
+In order to change a parameter value in the Codesys GUI, you need to first go
+offline.
+
+
+Setting output producer status (IOPS)
+-------------------------------------
+Normally Codesys will set the Output PS to GOOD (0x80 = 128) when running.
+Clicking the "Output PS" checkbox on the "IOxS" tab on the Profinet IO-device
+sets the value to BAD (0).
+
+
+Displaying alarms
+-----------------
+Alarms are displayed on the "Status" tabs for modules. Also the IO-device
+itself has a "Status" tab with alarms related to built-in (DAP) modules.
+
+
+Connection status
+-----------------
+Go to the Profinet IO-device page, and see the "PNIO IEC objects" tab. Expand
+the topmost row. The states of these boolean fields are shown:
+
+* xRunning: Periodic data is sent
+* xBusy: The controller is trying to connect to the IO-device
+* xError: Failure to connect to the IO-device
+
+If there is no connection at all to the IO-device, the state will shift to
+xBusy from xError once every 5 seconds.

@@ -3,6 +3,7 @@ Avahi
 BaseTXFD
 Bonjour
 Bool
+boolean
 booleans
 Buildroot
 ccmake
@@ -43,6 +44,7 @@ nmap
 ns
 Nutzerorganisation
 Parameterization
+picocom
 Profibus
 Profinet
 Raspbian
@@ -60,11 +62,15 @@ subnet
 subslot
 subslots
 subtab
+sudo
 tcpdump
 toolchain
 uint
 Unmount
 Wireshark
+xBusy
+xError
 xml
+xRunning
 Yocto
 Zabbix

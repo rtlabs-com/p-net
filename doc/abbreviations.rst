@@ -19,12 +19,18 @@ API
     Application Programming Identifier (uint32). Used to differentiate between for example user profiles. Sometimes named "Profile ID".
 API
     Application Programming Interface. Application implementers use the API of the p-net Profinet stack.
+APMR
+    Acyclic Protocol Machine Receiver
+APMS
+    Acyclic Protocol Machine Sender
+APMX
+    General term for APMR and APMS
 AR
     Application Relation
 ARP
     Address Resolution Protocol
 AREP
-    Application Relationship End Point (uint32)
+    Application Relationship End Point (uint32), pretty much an index into an array of AR.
 ASE
     Application Service Element
 CC
@@ -33,22 +39,28 @@ CiR
     Configuration in Run
 CM
     Context Management
+CMDEV
+    Context Management Protocol Machine Device
 CMI
-    ?
+    CM Initiator
 CMRDR
-    Context Management Read Record Responder protocol machine device
+    Context Management Read Record Responder protocol machine device, responds to parameter read from the IO-controller
 CMRPC
     Context Management RPC device protocol machine
+CMSM
+   Context Management Surveillance protocol Machine device, monitors the establishment of a connection. Also written as CM Server Protocol machine.
 CP
     Communication profile. For example Profinet conformance class B is also known as CP 3/5.
 CPF
     Communication Profile Family. Profinet and Profibus is CPF = 3, Ethercat is CPF = 12.
 CPM
-    Consumer Protocol Machine for cyclic transmitted data
+    Consumer Protocol Machine, for receiving cyclic data
 CPU
     Central Processing Unit
 CR
     Communication Relation (Part of AR).
+CREP
+   Communication Relationship EndPoint (uint32), pretty much an index into an array of input and output CR.
 DAP
     Device Access Point
 DCE
@@ -73,6 +85,8 @@ ES
     Engineering System
 FAL
     Fieldbus Application Layer
+FSPM
+    FAL Service Protocol Machines
 FSU
     Fast Start Up (Store communication parameters in IO devices)
 GAP

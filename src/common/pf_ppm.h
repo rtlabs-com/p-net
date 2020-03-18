@@ -51,6 +51,7 @@ int pf_ppm_close_req(
  * @param p_data           In:   The application data.
  * @param data_len         In:   The length of the application data.
  * @param iops             In:   The IOPS of the application data.
+ * @param iops_len         In:   The length of the IOPS.
  * @return  0  if the input data and IOPS was set.
  *          -1 if an error occurred.
  */

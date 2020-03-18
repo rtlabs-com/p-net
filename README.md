@@ -44,7 +44,7 @@ Features:
 Limitations:
 
 * IPv4 only
-* Only a single Ethernet interface
+* Only a single Ethernet interface (no media redundancy)
 * Only one stack instance
 
 This software is dual-licensed, with GPL version 3 and a commercial license.
