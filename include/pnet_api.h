@@ -465,8 +465,8 @@ typedef struct pnet_result
    uint16_t                add_data_2;    /**< Application-specific error information. */
 } pnet_result_t;
 
-/**
- * # Application call-back functions
+/*
+ * Application call-back functions
  *
  * The application should define call-back functions which are called by
  * the stack when specific events occurs within the stack.
@@ -789,8 +789,8 @@ typedef int (*pnet_alarm_ack_cnf)(
    uint32_t                arep,
    int                     res);
 
-/**
- * # Network and device configuration.
+/*
+ * Network and device configuration.
  *
  * Configuration of the stack is performed by transferring a structure
  * in the call to pnet_init().
@@ -985,8 +985,8 @@ typedef struct pnet_alarm_spec
    bool                    ar_diagnosis;
 } pnet_alarm_spec_t;
 
-/**
-* # API function return values
+/*
+* API function return values
 *
 * All functions return either (zero) 0 for a successful call or
 * -1 for an unsuccessful call.
