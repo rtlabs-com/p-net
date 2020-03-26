@@ -577,12 +577,6 @@ int os_set_ip_suite(
    return 0;
 }
 
-void os_cpy_mac_addr(uint8_t * mac_addr)
-{
-   uint8_t _mac[6] = {0x08, 0x00, 0x27, 0x6e, 0x99, 0x77};
-   memcpy(mac_addr, _mac, sizeof(_mac));
-}
-
 void os_get_button(uint16_t id, bool *p_pressed)
 {
 

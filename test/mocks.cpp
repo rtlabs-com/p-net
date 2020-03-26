@@ -150,12 +150,6 @@ int mock_os_udp_recvfrom(
    return len;
 }
 
-void mock_os_cpy_mac_addr(
-   uint8_t                 *p_mac_addr)
-{
-   memset(p_mac_addr, 1, sizeof(os_ethaddr_t));
-}
-
 void mock_os_udp_close(
    uint32_t                id)
 {

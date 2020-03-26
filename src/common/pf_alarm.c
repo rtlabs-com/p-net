@@ -796,6 +796,9 @@ static int pf_alarm_apms_a_data_req(
    os_buf_t                *p_rta;
    uint8_t                 *p_buf = NULL;
    uint16_t                pos = 0;
+   const pnet_cfg_t        *p_cfg = NULL;
+
+   pf_fspm_get_default_cfg(&p_cfg);
 
    if (p_apmx->p_ar->alarm_cr_request.alarm_cr_properties.transport_udp == true)
    {
@@ -820,8 +823,8 @@ static int pf_alarm_apms_a_data_req(
          {
             /* Add Ethernet header */
             pf_put_mem(&p_apmx->da, sizeof(p_apmx->da), 1500, p_buf, &pos);
-            os_cpy_mac_addr(&p_buf[pos]);       /* Interface MAC address */
-            pos += sizeof(os_ethaddr_t);
+            memcpy(&p_buf[pos], p_cfg->eth_addr.addr, sizeof(pnet_ethaddr_t)); /* Interface MAC address */
+            pos += sizeof(pnet_ethaddr_t);
 
             /* Add VLAN */
             pf_put_uint16(true, OS_ETHTYPE_VLAN, 1500, p_buf, &pos);       /* VLAN LT */

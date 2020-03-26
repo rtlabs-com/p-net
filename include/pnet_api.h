@@ -972,6 +972,7 @@ typedef struct pnet_cfg
    pnet_cfg_ip_addr_t      ip_addr;
    pnet_cfg_ip_addr_t      ip_mask;
    pnet_cfg_ip_addr_t      ip_gateway;
+   pnet_ethaddr_t          eth_addr;
 } pnet_cfg_t;
 
 /**

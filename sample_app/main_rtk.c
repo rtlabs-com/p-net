@@ -8,6 +8,8 @@
 #include "log.h"
 
 
+#include <lwip/netif.h>
+
 /********************* Call-back function declarations ************************/
 
 static int app_exp_module_ind(uint16_t api, uint16_t slot, uint32_t module_ident_number);
@@ -184,9 +186,10 @@ static pnet_cfg_t                pnet_default_cfg =
       /* Network configuration */
       .send_hello = 1,                /* Send HELLO */
       .dhcp_enable = 0,
-      .ip_addr = { 192, 168, 137, 4 },
-      .ip_mask = { 255, 255, 255, 0 },
-      .ip_gateway = { 192, 168, 137, 1 },
+      .ip_addr = { 0 },                   /* Read from lwip */
+      .ip_mask = { 0 },                   /* Read from lwip */
+      .ip_gateway = { 0 },                /* Read from lwip */
+      .eth_addr = { 0 },                  /* Read from lwip */
 };
 
 
@@ -592,6 +595,19 @@ static int _cmd_pnio_run(
 
    strcpy(pnet_default_cfg.im_0_data.order_id, "12345");
    strcpy(pnet_default_cfg.im_0_data.im_serial_number, "00001");
+   pnet_default_cfg.ip_addr.a = ip4_addr1 (&netif_default->ip_addr);
+   pnet_default_cfg.ip_addr.b = ip4_addr2 (&netif_default->ip_addr);
+   pnet_default_cfg.ip_addr.c = ip4_addr3 (&netif_default->ip_addr);
+   pnet_default_cfg.ip_addr.d = ip4_addr4 (&netif_default->ip_addr);
+   pnet_default_cfg.ip_mask.a = ip4_addr1 (&netif_default->netmask);
+   pnet_default_cfg.ip_mask.b = ip4_addr2 (&netif_default->netmask);
+   pnet_default_cfg.ip_mask.c = ip4_addr3 (&netif_default->netmask);
+   pnet_default_cfg.ip_mask.d = ip4_addr4 (&netif_default->netmask);
+   pnet_default_cfg.ip_gateway.a = pnet_default_cfg.ip_addr.a;
+   pnet_default_cfg.ip_gateway.b = pnet_default_cfg.ip_addr.b;
+   pnet_default_cfg.ip_gateway.c = pnet_default_cfg.ip_addr.c;
+   pnet_default_cfg.ip_gateway.d = 1;
+   memcpy (pnet_default_cfg.eth_addr.addr, netif_default->hwaddr, sizeof(pnet_ethaddr_t));
 
    if (pnet_init(APP_DEFAULT_ETHERNET_INTERFACE, TICK_INTERVAL_US, &pnet_default_cfg) == 0)
    {
