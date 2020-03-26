@@ -57,7 +57,7 @@ typedef struct pf_cmina_dcp_ase
    char                    port_name[14 + 1];         /* Terminated */
 
    char                    manufacturer_specific_string[240 + 1];
-   os_ethaddr_t            mac_address;
+   pnet_ethaddr_t          mac_address;
    uint16_t                standard_gw_value;
 
    bool                    dhcp_enable;
@@ -138,7 +138,7 @@ int pf_cmina_set_default_cfg(
       perm_dcp_ase.device_initiative = p_cfg->send_hello?1:0;
       perm_dcp_ase.device_role = 1;            /* Means: PNIO Device */
 
-      os_cpy_mac_addr(perm_dcp_ase.mac_address.addr);
+      memcpy(perm_dcp_ase.mac_address.addr, p_cfg->eth_addr.addr, sizeof(pnet_ethaddr_t));
 
       strcpy(perm_dcp_ase.port_name, "");      /* Terminated */
       strncpy(perm_dcp_ase.manufacturer_specific_string, p_cfg->manufacturer_specific_string, sizeof(perm_dcp_ase.manufacturer_specific_string));
@@ -778,7 +778,6 @@ static const char *pf_cmina_state_to_string(void)
 void pf_cmina_show(void)
 {
    const pnet_cfg_t        *p_cfg = NULL;
-   os_ethaddr_t            mac;
 
    pf_fspm_get_default_cfg(&p_cfg);
 
@@ -800,7 +799,11 @@ void pf_cmina_show(void)
       (unsigned)perm_dcp_ase.full_ip_suite.ip_suite.ip_addr, (unsigned)perm_dcp_ase.full_ip_suite.ip_suite.ip_mask, (unsigned)perm_dcp_ase.full_ip_suite.ip_suite.ip_gateway);
    printf("Temp IP                        : %08x/%08x   gateway : %08x\n",
       (unsigned)temp_dcp_ase.full_ip_suite.ip_suite.ip_addr, (unsigned)temp_dcp_ase.full_ip_suite.ip_suite.ip_mask, (unsigned)temp_dcp_ase.full_ip_suite.ip_suite.ip_gateway);
-   os_cpy_mac_addr(mac.addr);
    printf("MAC                            : %02x:%02x:%02x:%02x:%02x:%02x\n",
-      mac.addr[0], mac.addr[1], mac.addr[2], mac.addr[3], mac.addr[4], mac.addr[5]);
+          p_cfg->eth_addr.addr[0],
+          p_cfg->eth_addr.addr[1],
+          p_cfg->eth_addr.addr[2],
+          p_cfg->eth_addr.addr[3],
+          p_cfg->eth_addr.addr[4],
+          p_cfg->eth_addr.addr[5]);
 }

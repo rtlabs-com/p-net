@@ -62,7 +62,7 @@ int pf_eth_recv(
    size_t                  len)
 {
    int         ret = 0;       /* Means: "Not handled" */
-   uint16_t    type_pos = 2*sizeof(os_ethaddr_t);
+   uint16_t    type_pos = 2*sizeof(pnet_ethaddr_t);
    uint16_t    type;
    uint16_t    frame_id;
    uint16_t    *p_data;

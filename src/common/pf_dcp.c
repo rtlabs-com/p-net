@@ -46,6 +46,15 @@
 #define PF_DCP_ID_RES_FRAME_ID                  0xfeff
 
 CC_PACKED_BEGIN
+typedef struct CC_PACKED pf_ethhdr
+{
+  pnet_ethaddr_t dest;
+  pnet_ethaddr_t src;
+  uint16_t  type;
+} pf_ethhdr_t;
+CC_PACKED_END
+
+CC_PACKED_BEGIN
 typedef struct CC_PACKED pf_dcp_header
 {
    uint8_t                 service_id;
@@ -70,14 +79,14 @@ CC_STATIC_ASSERT(PF_DCP_BLOCK_HDR_SIZE == sizeof(pf_dcp_block_hdr_t));
 /*
  * This is the standard DCP HELLO broadcast address (MAC).
  */
-static const os_ethaddr_t  dcp_mc_addr_hello =
+static const pnet_ethaddr_t dcp_mc_addr_hello =
 {
    {0x01, 0x0e, 0xcf, 0x00, 0x00, 0x01 }
 };
 
 #define PF_MAC_NIL         {{0, 0, 0, 0, 0, 0}}
 
-static const os_ethaddr_t  mac_nil = PF_MAC_NIL;
+static const pnet_ethaddr_t mac_nil = PF_MAC_NIL;
 
 /*
  * A list of options that we can get/set/filter.
@@ -124,7 +133,7 @@ static const pf_dcp_opt_sub_t device_options[] =
 };
 
 static uint16_t               global_block_qualifier = 0;
-static os_ethaddr_t           sam = PF_MAC_NIL;
+static pnet_ethaddr_t         sam = PF_MAC_NIL;
 
 static bool                   delayed_response_waiting = false;
 static uint32_t               pf_dcp_timeout = 0;
@@ -628,22 +637,25 @@ static int pf_dcp_get_set(
    uint16_t                src_dcplen;
    uint16_t                src_block_len;
    uint16_t                src_block_qualifier;
-   os_ethhdr_t             *p_src_ethhdr;
+   pf_ethhdr_t             *p_src_ethhdr;
    pf_dcp_header_t         *p_src_dcphdr;
    pf_dcp_block_hdr_t      *p_src_block_hdr;
    os_buf_t                *p_rsp = NULL;
    uint8_t                 *p_dst;
    uint16_t                dst_pos;
    uint16_t                dst_start;
-   os_ethhdr_t             *p_dst_ethhdr;
+   pf_ethhdr_t             *p_dst_ethhdr;
    pf_dcp_header_t         *p_dst_dcphdr;
+   const pnet_cfg_t        *p_cfg = NULL;
+
+   pf_fspm_get_default_cfg(&p_cfg);
 
    if (p_buf != NULL)
    {
       /* Extract info from the request */
       p_src = (uint8_t*)p_buf->payload;
       src_pos = 0;
-      p_src_ethhdr = (os_ethhdr_t *)&p_src[src_pos];
+      p_src_ethhdr = (pf_ethhdr_t *)&p_src[src_pos];
       src_pos = frame_id_pos;
       src_pos += sizeof(uint16_t);        /* FrameId */
       p_src_dcphdr = (pf_dcp_header_t *)&p_src[src_pos];
@@ -659,8 +671,8 @@ static int pf_dcp_get_set(
          /* Prepare the response */
          p_dst = (uint8_t *)p_rsp->payload;
          dst_pos = 0;
-         p_dst_ethhdr = (os_ethhdr_t *)&p_dst[dst_pos];
-         dst_pos += sizeof(os_ethhdr_t);
+         p_dst_ethhdr = (pf_ethhdr_t *)&p_dst[dst_pos];
+         dst_pos += sizeof(pf_ethhdr_t);
 
          /* frame ID */
          p_dst[dst_pos++] = ((PF_DCP_GET_SET_FRAME_ID & 0xff00) >> 8);
@@ -673,8 +685,8 @@ static int pf_dcp_get_set(
          dst_start = dst_pos;
 
          /* Set eth header in the response */
-         memcpy(p_dst_ethhdr->dest.addr, p_src_ethhdr->src.addr, sizeof(p_dst_ethhdr->dest.addr));
-         os_cpy_mac_addr(p_dst_ethhdr->src.addr);
+         memcpy(p_dst_ethhdr->dest.addr, p_src_ethhdr->src.addr, sizeof(pnet_ethaddr_t));
+         memcpy (p_dst_ethhdr->src.addr, &p_cfg->eth_addr.addr, sizeof(pnet_ethaddr_t));
          p_dst_ethhdr->type = htons(OS_ETHTYPE_PROFINET);
 
          /* Start with the DCP request header and modify what is needed. */
@@ -785,7 +797,7 @@ static int pf_dcp_hello_ind(
    uint16_t                frame_id_pos,
    void                    *p_arg)           /* Not used */
 {
-   os_ethhdr_t             *p_eth_hdr = p_buf->payload;
+   pf_ethhdr_t             *p_eth_hdr = p_buf->payload;
 
    if (memcmp(p_eth_hdr->dest.addr, dcp_mc_addr_hello.addr, sizeof(dcp_mc_addr_hello.addr)) != 0)
    {
@@ -839,13 +851,16 @@ int pf_dcp_hello_req(void)
    uint8_t                 *p_dst;
    uint16_t                dst_pos;
    uint16_t                dst_start_pos;
-   os_ethhdr_t             *p_ethhdr;
+   pf_ethhdr_t             *p_ethhdr;
    pf_dcp_header_t         *p_dcphdr;
    uint16_t                value_length;
    uint8_t                 *p_value;
    uint8_t                 block_error;
    uint16_t                temp16;
    pf_ip_suite_t           ip_suite;
+   const pnet_cfg_t        *p_cfg = NULL;
+
+   pf_fspm_get_default_cfg(&p_cfg);
 
    if (p_buf != NULL)
    {
@@ -853,11 +868,12 @@ int pf_dcp_hello_req(void)
       if (p_dst != NULL)
       {
          dst_pos = 0;
-         p_ethhdr = (os_ethhdr_t *)&p_dst[dst_pos];
+         p_ethhdr = (pf_ethhdr_t *)&p_dst[dst_pos];
          memcpy(p_ethhdr->dest.addr, dcp_mc_addr_hello.addr, sizeof(p_ethhdr->dest.addr));
-         os_cpy_mac_addr(p_ethhdr->src.addr);
+         memcpy(p_ethhdr->src.addr, p_cfg->eth_addr.addr, sizeof(pnet_ethaddr_t));
+
          p_ethhdr->type = htons(OS_ETHTYPE_PROFINET);
-         dst_pos += sizeof(os_ethhdr_t);
+         dst_pos += sizeof(pf_ethhdr_t);
 
          /* Insert FrameId */
          p_dst[dst_pos++] = (PF_DCP_HELLO_FRAME_ID & 0xff00) >> 8;
@@ -958,7 +974,7 @@ static int pf_dcp_identify_req(
 
    uint8_t                 *p_src;
    uint16_t                src_pos = 0;
-   os_ethhdr_t             *p_src_ethhdr;
+   pf_ethhdr_t             *p_src_ethhdr;
    pf_dcp_header_t         *p_src_dcphdr;
    uint16_t                src_dcplen = 0;
    pf_dcp_block_hdr_t      *p_src_block_hdr;
@@ -968,14 +984,16 @@ static int pf_dcp_identify_req(
    uint8_t                 *p_dst;
    uint16_t                dst_pos = 0;
    uint16_t                dst_start = 0;
-   os_ethhdr_t             *p_dst_ethhdr;
+   pf_ethhdr_t             *p_dst_ethhdr;
    pf_dcp_header_t         *p_dst_dcphdr;
 
    uint32_t                response_delay;
    uint16_t                value_length;
    uint8_t                 *p_value;
    uint8_t                 block_error;
-   os_ethaddr_t            mac_address;
+   const pnet_cfg_t        *p_cfg = NULL;
+
+   pf_fspm_get_default_cfg(&p_cfg);
 
    LOG_DEBUG(PF_DCP_LOG,"DCP(%d): Ident req\n", __LINE__);
    /*
@@ -988,7 +1006,7 @@ static int pf_dcp_identify_req(
    {
       /* Setup access to the request */
       p_src = (uint8_t *)p_buf->payload;
-      p_src_ethhdr = (os_ethhdr_t *)p_src;
+      p_src_ethhdr = (pf_ethhdr_t *)p_src;
       src_pos = frame_id_pos;
       src_pos += sizeof(uint16_t);        /* FrameId */
       p_src_dcphdr = (pf_dcp_header_t *)&p_src[src_pos];
@@ -998,8 +1016,8 @@ static int pf_dcp_identify_req(
       /* Prepare the response */
       p_dst = (uint8_t *)p_rsp->payload;
       dst_pos = 0;
-      p_dst_ethhdr = (os_ethhdr_t *)p_dst;
-      dst_pos += sizeof(os_ethhdr_t);
+      p_dst_ethhdr = (pf_ethhdr_t *)p_dst;
+      dst_pos += sizeof(pf_ethhdr_t);
       /* frame ID */
       p_dst[dst_pos++] = ((PF_DCP_ID_RES_FRAME_ID & 0xff00) >> 8);
       p_dst[dst_pos++] = PF_DCP_ID_RES_FRAME_ID & 0xff;
@@ -1010,8 +1028,8 @@ static int pf_dcp_identify_req(
       /* Save position for later */
       dst_start = dst_pos;
 
-      memcpy(p_dst_ethhdr->dest.addr, p_src_ethhdr->src.addr, sizeof(p_dst_ethhdr->dest.addr));
-      os_cpy_mac_addr(p_dst_ethhdr->src.addr);
+      memcpy(p_dst_ethhdr->dest.addr, p_src_ethhdr->src.addr, sizeof(pnet_ethaddr_t));
+      memcpy(p_dst_ethhdr->src.addr, p_cfg->eth_addr.addr, sizeof(pnet_ethaddr_t));
       p_dst_ethhdr->type = htons(OS_ETHTYPE_PROFINET);
 
       /* Start with the request header and modify what is needed. */
@@ -1306,8 +1324,7 @@ static int pf_dcp_identify_req(
          p_rsp->len = dst_pos;
 
          delayed_response_waiting = true;
-         os_cpy_mac_addr(mac_address.addr);
-         response_delay = ((mac_address.addr[4] * 256 + mac_address.addr[5]) % ntohs(p_src_dcphdr->response_delay_factor)) * 10;
+         response_delay = ((p_cfg->eth_addr.addr[4] * 256 + p_cfg->eth_addr.addr[5]) % ntohs(p_src_dcphdr->response_delay_factor)) * 10;
          pf_scheduler_add(response_delay*1000,
             "dcp", pf_dcp_responder, p_rsp, &pf_dcp_timeout);
       }

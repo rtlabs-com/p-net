@@ -278,7 +278,7 @@ static int pf_cpm_check_src_addr(
 
    /* Payload contains [da], [sa], <etc> */
    if (memcmp(&p_cpm->sa,
-      &((uint8_t*)p_buf->payload)[sizeof(os_ethaddr_t)],
+      &((uint8_t*)p_buf->payload)[sizeof(pnet_ethaddr_t)],
       sizeof(p_cpm->sa)) == 0)
    {
       ret = 0;
@@ -411,7 +411,7 @@ static int pf_cpm_c_data_ind(
 
       /* Compute length of p_buf without VLAN tags */
       len = p_buf->len - frame_id_pos;
-      len += 2*sizeof(os_ethaddr_t) + sizeof(uint16_t);
+      len += 2*sizeof(pnet_ethaddr_t) + sizeof(uint16_t);
 
       frame_structure = ((transfer_status == 0) &&
             (pf_cpm_check_src_addr(p_cpm, p_buf) == 0) &&
@@ -525,7 +525,7 @@ int pf_cpm_activate_req(
 
       memcpy(&p_cpm->sa, &p_ar->ar_param.cm_initiator_mac_add, sizeof(p_cpm->sa));
 
-      p_cpm->buffer_pos = 2*sizeof(os_ethaddr_t) +                /* ETH src and dest addr */
+      p_cpm->buffer_pos = 2*sizeof(pnet_ethaddr_t) +              /* ETH src and dest addr */
             sizeof(uint16_t) +                                    /* LT */
             sizeof(uint16_t);                                     /* FrameId */
       p_cpm->data_status = 0;

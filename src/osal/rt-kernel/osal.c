@@ -284,11 +284,6 @@ uint8_t os_buf_header(os_buf_t *p, int16_t header_size_increment)
    return pbuf_header(p, header_size_increment);
 }
 
-void os_cpy_mac_addr(uint8_t * mac_addr)
-{
-   memcpy(mac_addr,netif_default->hwaddr, netif_default->hwaddr_len);
-}
-
 void os_get_button(uint16_t id, bool *p_pressed)
 {
    if (id == 0)

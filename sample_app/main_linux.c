@@ -193,9 +193,10 @@ static pnet_cfg_t                pnet_default_cfg =
       /* Network configuration */
       .send_hello = 1,                    /* Send HELLO */
       .dhcp_enable = 0,
-      .ip_addr = { 0, 0, 0, 0 },          /* Read from Linux kernel */
-      .ip_mask = { 255, 255, 255, 0 },    /* Read from Linux kernel */
-      .ip_gateway = { 0, 0, 0, 0 },       /* Read from Linux kernel */
+      .ip_addr = { 0 },                   /* Read from Linux kernel */
+      .ip_mask = { 0 },                   /* Read from Linux kernel */
+      .ip_gateway = { 0 },                /* Read from Linux kernel */
+      .eth_addr = { 0 },                  /* Read from Linux kernel */
 };
 
 
@@ -981,6 +982,34 @@ uint32_t read_ip_address(char* interface_name)
 }
 
 /**
+ * Read the MAC address.
+ *
+ * @param interface_name      In: Name of network interface
+ * @param mac_addr            Out: MAC address
+ *
+ * @return 0 on success and
+ *         -1 if an error occured
+*/
+int read_mac_address(char *interface_name, pnet_ethaddr_t *mac_addr)
+{
+   int fd;
+   int ret = 0;
+   struct ifreq ifr;
+
+   fd = socket (AF_INET, SOCK_DGRAM, 0);
+
+   ifr.ifr_addr.sa_family = AF_INET;
+   strncpy (ifr.ifr_name, interface_name, IFNAMSIZ - 1);
+
+   ret = ioctl(fd, SIOCGIFHWADDR, &ifr);
+   if (ret == 0){
+      memcpy(mac_addr->addr, ifr.ifr_hwaddr.sa_data, 6);
+   }
+   close (fd);
+   return ret;
+ }
+
+/**
  * Read the netmask as an integer. For IPv4.
  *
  * @param interface_name      In: Name of network interface
@@ -1237,25 +1266,16 @@ int main(int argc, char *argv[])
    printf("\n** Starting Profinet demo application **\n");
    if (verbosity > 0)
    {
-      uint8_t macbuffer[6];
-      os_cpy_mac_addr(macbuffer);
       printf("Number of slots:     %u (incl slot for DAP module)\n", PNET_MAX_MODULES);
       printf("Verbosity level:     %u\n", verbosity);
       printf("Ethernet interface:  %s\n", arguments.eth_interface);
-      printf("MAC address:         %02X:%02X:%02X:%02X:%02X:%02X\n",
-         macbuffer[0],
-         macbuffer[1],
-         macbuffer[2],
-         macbuffer[3],
-         macbuffer[4],
-         macbuffer[5]);
       printf("Station name:        %s\n", arguments.station_name);
       printf("LED file:            %s\n", arguments.path_led);
       printf("Button1 file:        %s\n", arguments.path_button1);
       printf("Button2 file:        %s\n", arguments.path_button2);
    }
 
-   /* Read IP, netmask and gateway from operating system */
+   /* Read IP, netmask, gateway and MAC address from operating system */
    if (!does_network_interface_exist(arguments.eth_interface))
    {
       printf("Error: The given Ethernet interface does not exist: %s\n", arguments.eth_interface);
@@ -1278,8 +1298,23 @@ int main(int argc, char *argv[])
       exit(EXIT_CODE_ERROR);
    }
 
+   pnet_ethaddr_t macbuffer;
+   int ret = read_mac_address(arguments.eth_interface, &macbuffer);
+   if (ret != 0)
+   {
+      printf("Error: Can not read MAC address for Ethernet interface %s\n", arguments.eth_interface);
+      exit(EXIT_CODE_ERROR);
+   }
+
    if (verbosity > 0)
    {
+      printf("MAC address:        %02x:%02x:%02x:%02x:%02x:%02x\n",
+         macbuffer.addr[0],
+         macbuffer.addr[1],
+         macbuffer.addr[2],
+         macbuffer.addr[3],
+         macbuffer.addr[4],
+         macbuffer.addr[5]);
       printf("IP address:         ");
       print_ip_address(ip_int);
       printf("\nNetmask:            ");
@@ -1296,6 +1331,7 @@ int main(int argc, char *argv[])
    copy_ip_to_struct(&pnet_default_cfg.ip_gateway, gateway_ip_int);
    copy_ip_to_struct(&pnet_default_cfg.ip_mask, netmask_int);
    strcpy(pnet_default_cfg.station_name, arguments.station_name);
+   memcpy (pnet_default_cfg.eth_addr.addr, macbuffer.addr, sizeof(pnet_ethaddr_t));
 
    /* Paths for LED and button control files */
    if (arguments.path_led[0] != '\0')

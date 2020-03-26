@@ -238,7 +238,7 @@ int pf_ppm_activate_req(
       {
          vlan_size = 4;
       }
-      p_ppm->buffer_pos = 2*sizeof(os_ethaddr_t) + vlan_size + sizeof(uint16_t) + sizeof(uint16_t);
+      p_ppm->buffer_pos = 2*sizeof(pnet_ethaddr_t) + vlan_size + sizeof(uint16_t) + sizeof(uint16_t);
 
       p_ppm->cycle = 0;
       p_ppm->transfer_status = 0;
