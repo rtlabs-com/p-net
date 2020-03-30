@@ -57,6 +57,8 @@ static uint32_t            data_ctr = 0;
 static os_timer_t          *periodic_timer = NULL;
 static pnet_event_values_t cmdev_state;
 
+static pnet_t              *g_pnet;
+
 /**
  * This is just a simple example on how the application can maintain its list of supported APIs, modules and submodules.
  * If modules are supported in all slots > 0, then this is clearly overkill.
@@ -80,22 +82,34 @@ typedef struct cfg_submodules
 static cfg_submodules_t    cfg_submodules[1];
 
 static int my_connect_ind(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    pnet_result_t *p_result);
 static int my_release_ind(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    pnet_result_t *p_result);
 static int my_dcontrol_ind(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    pnet_control_command_t control_command,
    pnet_result_t *p_result);
 static int my_ccontrol_cnf(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    pnet_result_t *p_result);
 static int my_state_ind(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    pnet_event_values_t state);
 static int my_read_ind(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    uint16_t api,
    uint16_t slot,
@@ -106,6 +120,8 @@ static int my_read_ind(
    uint16_t *p_read_length, /* Out: Size of data */
    pnet_result_t *p_result); /* Error status if returning != 0 */
 static int my_write_ind(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    uint16_t api,
    uint16_t slot,
@@ -116,19 +132,41 @@ static int my_write_ind(
    uint8_t *p_write_data,
    pnet_result_t *p_result);
 static int my_exp_module_ind(
+   pnet_t *net,
+   void *arg,
    uint16_t api,
    uint16_t slot,
    uint32_t module_ident);
 static int my_exp_submodule_ind(
+   pnet_t *net,
+   void *arg,
    uint16_t api,
    uint16_t slot,
    uint16_t subslot,
    uint32_t module_ident,
    uint32_t submodule_ident);
 static int my_new_data_status_ind(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    uint32_t crep,
-   uint8_t changes);
+   uint8_t changes,
+   uint8_t data_status);
+static int my_alarm_ind(
+   pnet_t *net,
+   void *arg,
+   uint32_t arep,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
+   uint16_t data_len,
+   uint16_t data_usi,
+   uint8_t *p_data);
+static int my_alarm_cnf(
+   pnet_t *net,
+   void *arg,
+   uint32_t arep,
+   pnet_pnio_status_t *p_pnio_status);
 
 static void test_periodic(os_timer_t *p_timer, void *p_arg)
 {
@@ -138,10 +176,10 @@ static void test_periodic(os_timer_t *p_timer, void *p_arg)
    {
       tick_ctr = 0;
       data[0] = data_ctr++;
-      pnet_input_set_data_and_iops(0, 1, 1, data, sizeof(data), PNET_IOXS_GOOD);
+      pnet_input_set_data_and_iops(g_pnet, 0, 1, 1, data, sizeof(data), PNET_IOXS_GOOD);
    }
 
-   pnet_handle_periodic();
+   pnet_handle_periodic(g_pnet);
 }
 
 class DcpTest : public ::testing::Test
@@ -153,7 +191,7 @@ protected:
       init_cfg();
       counter_reset();
 
-      pnet_init("en1", TICK_INTERVAL_US, &pnet_default_cfg);
+      g_pnet = pnet_init("en1", TICK_INTERVAL_US, &pnet_default_cfg);
       mock_clear();        /* lldp send a frame at init */
 
       periodic_timer = os_timer_create(TICK_INTERVAL_US, test_periodic, NULL, false);
@@ -191,6 +229,9 @@ protected:
       pnet_default_cfg.exp_module_cb = my_exp_module_ind;
       pnet_default_cfg.exp_submodule_cb = my_exp_submodule_ind;
       pnet_default_cfg.new_data_status_cb = my_new_data_status_ind;
+      pnet_default_cfg.alarm_ind_cb = my_alarm_ind;
+      pnet_default_cfg.alarm_cnf_cb = my_alarm_cnf;
+      pnet_default_cfg.cb_arg = NULL;
 
       /* Device configuration */
       pnet_default_cfg.device_id.vendor_id_hi = 0xfe;
@@ -255,6 +296,8 @@ protected:
 };
 
 static int my_connect_ind(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    pnet_result_t *p_result)
 {
@@ -263,6 +306,8 @@ static int my_connect_ind(
 }
 
 static int my_release_ind(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    pnet_result_t *p_result)
 {
@@ -271,6 +316,8 @@ static int my_release_ind(
 }
 
 static int my_dcontrol_ind(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    pnet_control_command_t control_command,
    pnet_result_t *p_result)
@@ -280,6 +327,8 @@ static int my_dcontrol_ind(
 }
 
 static int my_ccontrol_cnf(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    pnet_result_t *p_result)
 {
@@ -288,6 +337,8 @@ static int my_ccontrol_cnf(
 }
 
 static int my_state_ind(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    pnet_event_values_t state)
 {
@@ -298,6 +349,8 @@ static int my_state_ind(
 }
 
 static int my_read_ind(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    uint16_t api,
    uint16_t slot,
@@ -312,6 +365,8 @@ static int my_read_ind(
    return 0;
 }
 static int my_write_ind(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    uint16_t api,
    uint16_t slot,
@@ -327,6 +382,8 @@ static int my_write_ind(
 }
 
 static int my_exp_module_ind(
+   pnet_t *net,
+   void *arg,
    uint16_t api,
    uint16_t slot,
    uint32_t module_ident)
@@ -347,7 +404,7 @@ static int my_exp_module_ind(
       if (ix < NELEMENTS(cfg_module_ident_numbers))
       {
          /* For now support any module in any slot */
-         ret = pnet_plug_module(api, slot, module_ident);
+         ret = pnet_plug_module(net, api, slot, module_ident);
       }
    }
    else
@@ -360,6 +417,8 @@ static int my_exp_module_ind(
 }
 
 static int my_exp_submodule_ind(
+   pnet_t *net,
+   void *arg,
    uint16_t api,
    uint16_t slot,
    uint16_t subslot,
@@ -379,7 +438,7 @@ static int my_exp_submodule_ind(
    }
    if (ix < NELEMENTS(cfg_submodules))
    {
-      ret = pnet_plug_submodule(api, slot, subslot, module_ident, submodule_ident,
+      ret = pnet_plug_submodule(net, api, slot, subslot, module_ident, submodule_ident,
          cfg_submodules[ix].direction,
          cfg_submodules[ix].input_length, cfg_submodules[ix].output_length);
    }
@@ -388,10 +447,39 @@ static int my_exp_submodule_ind(
 }
 
 static int my_new_data_status_ind(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    uint32_t crep,
-   uint8_t changes)
+   uint8_t changes,
+   uint8_t data_status)
 {
+   printf("Callback on new data\n");
+   return 0;
+}
+
+static int my_alarm_ind(
+   pnet_t *net,
+   void *arg,
+   uint32_t arep,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
+   uint16_t data_len,
+   uint16_t data_usi,
+   uint8_t *p_data)
+{
+   printf("Callback on alarm\n");
+   return 0;
+}
+
+static int my_alarm_cnf(
+   pnet_t *net,
+   void *arg,
+   uint32_t arep,
+   pnet_pnio_status_t *p_pnio_status)
+{
+   printf("Callback on alarm confirmation\n");
    return 0;
 }
 
@@ -452,14 +540,14 @@ TEST_F (DcpTest, DcpHelloTest)
 
    mock_clear();
 
-   ret = pf_dcp_hello_req();
+   ret = pf_dcp_hello_req(g_pnet);
    EXPECT_EQ(ret, 0);
 
    mock_clear();
 
    p_buf = os_buf_alloc(1500);
    memcpy(p_buf->payload, get_name_req, sizeof(get_name_req));
-   ret = pf_eth_recv(p_buf, sizeof(get_name_req));
+   ret = pf_eth_recv(g_pnet, p_buf);
 
    EXPECT_EQ(ret, 1);
    EXPECT_EQ(mock_os_eth_send_count, 1);
@@ -480,27 +568,27 @@ TEST_F (DcpTest, DcpRunTest)
 
    p_buf = os_buf_alloc(1500);
    memcpy(p_buf->payload, set_name_req, sizeof(set_name_req));
-   ret = pf_eth_recv(p_buf, sizeof(set_name_req));
+   ret = pf_eth_recv(g_pnet, p_buf);
    EXPECT_EQ(ret, 1);
 
    p_buf = os_buf_alloc(1500);
    memcpy(p_buf->payload, set_ip_req, sizeof(set_ip_req));
-   ret = pf_eth_recv(p_buf, sizeof(set_ip_req));
+   ret = pf_eth_recv(g_pnet, p_buf);
    EXPECT_EQ(ret, 1);
 
    p_buf = os_buf_alloc(1500);
    memcpy(p_buf->payload, ident_req, sizeof(ident_req));
-   ret = pf_eth_recv(p_buf, sizeof(ident_req));
+   ret = pf_eth_recv(g_pnet, p_buf);
    EXPECT_EQ(ret, 1);
 
    p_buf = os_buf_alloc(1500);
    memcpy(p_buf->payload, factory_reset_req, sizeof(factory_reset_req));
-   ret = pf_eth_recv(p_buf, sizeof(factory_reset_req));
+   ret = pf_eth_recv(g_pnet, p_buf);
    EXPECT_EQ(ret, 1);
 
    p_buf = os_buf_alloc(1500);
    memcpy(p_buf->payload, signal_req, sizeof(signal_req));
-   ret = pf_eth_recv(p_buf, sizeof(signal_req));
+   ret = pf_eth_recv(g_pnet, p_buf);
    EXPECT_EQ(ret, 1);
 
    /* 3,5s should be enough, but on Windows even 5s is not enough :-( */

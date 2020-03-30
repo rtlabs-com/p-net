@@ -43,9 +43,6 @@
 #include "pf_block_reader.h"
 #include "pf_block_writer.h"
 
-static bool                cmdev_initialized = false;
-static pf_device_t         device;
-
 /* Forward declaration */
 
 static int pf_cmdev_get_exp_sub(
@@ -58,6 +55,7 @@ static int pf_cmdev_get_exp_sub(
 /* ====================================================================== */
 
 int pf_cmdev_cfg_traverse(
+   pnet_t                  *net,
    pf_ftn_device_t         p_ftn_dev,
    pf_ftn_api_t            p_ftn_api,
    pf_ftn_slot_t           p_ftn_slot,
@@ -68,39 +66,41 @@ int pf_cmdev_cfg_traverse(
    uint16_t                slot_ix;
    uint16_t                subslot_ix;
 
+
+
    if (p_ftn_dev != NULL)
    {
-      if (p_ftn_dev(&device) != 0)
+      if (p_ftn_dev(&net->cmdev_device) != 0)
       {
          ret = -1;
       }
       else if (p_ftn_api != NULL)
       {
-         for (api_ix = 0; api_ix < NELEMENTS(device.apis); api_ix++)
+         for (api_ix = 0; api_ix < NELEMENTS(net->cmdev_device.apis); api_ix++)
          {
-            if (device.apis[api_ix].in_use == true)
+            if (net->cmdev_device.apis[api_ix].in_use == true)
             {
-               if (p_ftn_api(&device.apis[api_ix]) != 0)
+               if (p_ftn_api(&net->cmdev_device.apis[api_ix]) != 0)
                {
                   ret = -1;
                }
                else if (p_ftn_slot != NULL)
                {
-                  for (slot_ix = 0; slot_ix < NELEMENTS(device.apis[api_ix].slots); slot_ix++)
+                  for (slot_ix = 0; slot_ix < NELEMENTS(net->cmdev_device.apis[api_ix].slots); slot_ix++)
                   {
-                     if (device.apis[api_ix].slots[slot_ix].in_use == true)
+                     if (net->cmdev_device.apis[api_ix].slots[slot_ix].in_use == true)
                      {
-                        if (p_ftn_slot(&device.apis[api_ix].slots[slot_ix]) != 0)
+                        if (p_ftn_slot(&net->cmdev_device.apis[api_ix].slots[slot_ix]) != 0)
                         {
                            ret = -1;
                         }
                         else if (p_ftn_sub != NULL)
                         {
-                           for (subslot_ix = 0; subslot_ix < NELEMENTS(device.apis[api_ix].slots[slot_ix].subslots); subslot_ix++)
+                           for (subslot_ix = 0; subslot_ix < NELEMENTS(net->cmdev_device.apis[api_ix].slots[slot_ix].subslots); subslot_ix++)
                            {
-                              if (device.apis[api_ix].slots[slot_ix].subslots[subslot_ix].in_use == true)
+                              if (net->cmdev_device.apis[api_ix].slots[slot_ix].subslots[subslot_ix].in_use == true)
                               {
-                                 if (p_ftn_sub(&device.apis[api_ix].slots[slot_ix].subslots[subslot_ix]) != 0)
+                                 if (p_ftn_sub(&net->cmdev_device.apis[api_ix].slots[slot_ix].subslots[subslot_ix]) != 0)
                                  {
                                     ret = -1;
                                  }
@@ -121,14 +121,16 @@ int pf_cmdev_cfg_traverse(
 /**************************** Getters *************************************/
 
 int pf_cmdev_get_device(
+   pnet_t                  *net,
    pf_device_t             **pp_device)
 {
-   *pp_device = &device;
+   *pp_device = &net->cmdev_device;
 
    return 0;
 }
 
 int pf_cmdev_get_api(
+   pnet_t                  *net,
    uint32_t                api_id,
    pf_api_t                **pp_api)
 {
@@ -143,16 +145,16 @@ int pf_cmdev_get_api(
    else
    {
       while ((ix < PNET_MAX_API) &&
-             ((device.apis[ix].in_use == false) ||
-              (api_id != device.apis[ix].api_id)))
+             ((net->cmdev_device.apis[ix].in_use == false) ||
+              (api_id != net->cmdev_device.apis[ix].api_id)))
       {
          ix++;
       }
 
       if ((ix < PNET_MAX_API) &&
-          (device.apis[ix].in_use == true))
+          (net->cmdev_device.apis[ix].in_use == true))
       {
-         p_api = &device.apis[ix];
+         p_api = &net->cmdev_device.apis[ix];
          ret = 0;
       }
 
@@ -251,6 +253,7 @@ static int pf_cmdev_get_subslot(
 }
 
 int pf_cmdev_get_subslot_full(
+   pnet_t                  *net,
    uint16_t                api_id,
    uint16_t                slot_nbr,
    uint16_t                subslot_nbr,
@@ -260,7 +263,7 @@ int pf_cmdev_get_subslot_full(
    pf_api_t                *p_api = NULL;
    pf_slot_t               *p_slot = NULL;
 
-   if (pf_cmdev_get_api(api_id, &p_api) == 0)
+   if (pf_cmdev_get_api(net, api_id, &p_api) == 0)
    {
       if (pf_cmdev_get_slot(p_api, slot_nbr, &p_slot) == 0)
       {
@@ -275,6 +278,7 @@ int pf_cmdev_get_subslot_full(
 }
 
 int pf_cmdev_get_slot_full(
+   pnet_t                  *net,
    uint16_t                api_id,
    uint16_t                slot_nbr,
    pf_slot_t               **pp_slot)
@@ -282,7 +286,7 @@ int pf_cmdev_get_slot_full(
    int                     ret = -1;
    pf_api_t                *p_api = NULL;
 
-   if (pf_cmdev_get_api(api_id, &p_api) == 0)
+   if (pf_cmdev_get_api(net, api_id, &p_api) == 0)
    {
       if (pf_cmdev_get_slot(p_api, slot_nbr, pp_slot) == 0)
       {
@@ -294,14 +298,15 @@ int pf_cmdev_get_slot_full(
 }
 
 int pf_cmdev_get_diag_item(
+   pnet_t                  *net,
    uint16_t                item_ix,
    pf_diag_item_t          **pp_item)
 {
    int                     ret = -1;
 
-   if (item_ix < NELEMENTS(device.diag_items))
+   if (item_ix < NELEMENTS(net->cmdev_device.diag_items))
    {
-      *pp_item = &device.diag_items[item_ix];
+      *pp_item = &net->cmdev_device.diag_items[item_ix];
 
       ret = 0;
    }
@@ -316,19 +321,20 @@ int pf_cmdev_get_diag_item(
 /*************** Diagnostics **********************************************/
 
 int pf_cmdev_new_diag(
+   pnet_t                  *net,
    uint16_t                *p_item_ix)
 {
    int                     ret = -1;
 
    /* Return an item from the free list (after removing it). */
-   *p_item_ix = device.diag_items_free;
+   *p_item_ix = net->cmdev_device.diag_items_free;
    if (*p_item_ix != PF_DIAG_IX_NULL)
    {
-      device.diag_items_free = device.diag_items[*p_item_ix].next;
+      net->cmdev_device.diag_items_free = net->cmdev_device.diag_items[*p_item_ix].next;
 
       /* Clear the entry */
-      memset(&device.diag_items[*p_item_ix], 0, sizeof(device.diag_items[*p_item_ix]));
-      device.diag_items[*p_item_ix].in_use = true;
+      memset(&net->cmdev_device.diag_items[*p_item_ix], 0, sizeof(net->cmdev_device.diag_items[*p_item_ix]));
+      net->cmdev_device.diag_items[*p_item_ix].in_use = true;
 
       ret = 0;
    }
@@ -337,14 +343,15 @@ int pf_cmdev_new_diag(
 }
 
 void pf_cmdev_free_diag(
+   pnet_t                  *net,
    uint16_t                item_ix)
 {
-   if (item_ix < NELEMENTS(device.diag_items))
+   if (item_ix < NELEMENTS(net->cmdev_device.diag_items))
    {
       /* Put it first in the free list. */
-      device.diag_items[item_ix].in_use = false;
-      device.diag_items[item_ix].next = device.diag_items_free;
-      device.diag_items_free = item_ix;
+      net->cmdev_device.diag_items[item_ix].in_use = false;
+      net->cmdev_device.diag_items[item_ix].next = net->cmdev_device.diag_items_free;
+      net->cmdev_device.diag_items_free = item_ix;
    }
    else
    {
@@ -356,12 +363,14 @@ void pf_cmdev_free_diag(
  * @internal
  * Instantiate a new API structure.
  * If the API identifier already exists the the operation fails.
+ * @param net              InOut: The p-net stack instance
  * @param api_id           In:   The API identifier.
  * @param pp_api           Out:  The new API instance.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
 static int pf_cmdev_new_api(
+   pnet_t                  *net,
    uint32_t                api_id,
    pf_api_t                **pp_api)
 {
@@ -373,7 +382,7 @@ static int pf_cmdev_new_api(
    {
       LOG_ERROR(PNET_LOG, "CMDEV(%d): NULL pointer(s)\n", __LINE__);
    }
-   else if (pf_cmdev_get_api(api_id, &p_api) == 0)
+   else if (pf_cmdev_get_api(net, api_id, &p_api) == 0)
    {
       LOG_ERROR(PNET_LOG, "CMDEV(%d): API %u already exists\n", __LINE__, (unsigned)api_id);
    }
@@ -381,14 +390,14 @@ static int pf_cmdev_new_api(
    {
       ix = 0;
       while ((ix < PNET_MAX_API) &&
-             (device.apis[ix].in_use == true))
+             (net->cmdev_device.apis[ix].in_use == true))
       {
          ix++;
       }
 
       if (ix < PNET_MAX_API)
       {
-         p_api = &device.apis[ix];
+         p_api = &net->cmdev_device.apis[ix];
 
          memset(p_api, 0, sizeof(*p_api));
          p_api->api_id = api_id;
@@ -515,6 +524,7 @@ static int pf_cmdev_new_subslot(
 }
 
 int pf_cmdev_plug_module(
+   pnet_t                  *net,
    uint32_t                api_id,
    uint16_t                slot_nbr,
    uint32_t                module_ident_nbr)
@@ -523,7 +533,7 @@ int pf_cmdev_plug_module(
    pf_api_t                *p_api = NULL;
    pf_slot_t               *p_slot = NULL;
 
-   if (pf_cmdev_get_api(api_id, &p_api) != 0)
+   if (pf_cmdev_get_api(net, api_id, &p_api) != 0)
    {
       LOG_ERROR(PNET_LOG, "CMDEV(%d): API %u does not exist\n", __LINE__, (unsigned)api_id);
    }
@@ -564,6 +574,7 @@ int pf_cmdev_plug_module(
 }
 
 int pf_cmdev_pull_submodule(
+   pnet_t                  *net,
    uint32_t                api_id,
    uint16_t                slot_nbr,
    uint16_t                subslot_nbr)
@@ -573,7 +584,7 @@ int pf_cmdev_pull_submodule(
    pf_slot_t               *p_slot = NULL;
    pf_subslot_t            *p_subslot = NULL;
 
-   if (pf_cmdev_get_api(api_id, &p_api) != 0)
+   if (pf_cmdev_get_api(net, api_id, &p_api) != 0)
    {
       LOG_ERROR(PNET_LOG, "CMDEV(%d): API %u does not exist\n", __LINE__, (unsigned)api_id);
    }
@@ -590,13 +601,14 @@ int pf_cmdev_pull_submodule(
       p_subslot->in_use = false;
       p_subslot->submodule_state.ident_info = PF_SUBMOD_PLUG_NO;
 
-      ret = pf_alarm_send_pull(p_subslot->p_ar, api_id, slot_nbr, subslot_nbr);
+      ret = pf_alarm_send_pull(net, p_subslot->p_ar, api_id, slot_nbr, subslot_nbr);
    }
 
    return ret;
 }
 
 int pf_cmdev_plug_submodule(
+   pnet_t                  *net,
    uint32_t                api_id,
    uint16_t                slot_nbr,
    uint16_t                subslot_nbr,
@@ -614,14 +626,14 @@ int pf_cmdev_plug_submodule(
    pf_exp_submodule_t      *p_exp_sub = NULL;
    bool                    already_plugged = false;
 
-   if (pf_cmdev_get_api(api_id, &p_api) != 0)
+   if (pf_cmdev_get_api(net, api_id, &p_api) != 0)
    {
       LOG_ERROR(PNET_LOG, "CMDEV(%d): API %u does not exist\n", __LINE__, (unsigned)api_id);
    }
    else if (pf_cmdev_get_slot(p_api, slot_nbr, &p_slot) != 0)
    {
       /* Auto-plug the module */
-      if (pf_cmdev_plug_module(api_id, slot_nbr, module_ident_nbr) != 0)
+      if (pf_cmdev_plug_module(net, api_id, slot_nbr, module_ident_nbr) != 0)
       {
          LOG_ERROR(PNET_LOG, "CMDEV(%d): Out of slot resources for api %u\n", __LINE__, (unsigned)api_id);
       }
@@ -630,7 +642,7 @@ int pf_cmdev_plug_submodule(
    {
       if (update == true)
       {
-         if (pf_cmdev_pull_submodule(api_id, slot_nbr, subslot_nbr) != 0)
+         if (pf_cmdev_pull_submodule(net, api_id, slot_nbr, subslot_nbr) != 0)
          {
             LOG_ERROR(PNET_LOG, "CMDEV(%d): Could not pull submodule in api %u slot %u subslot %u\n", __LINE__, (unsigned)api_id, (unsigned)slot_nbr, (unsigned)subslot_nbr);
          }
@@ -681,13 +693,13 @@ int pf_cmdev_plug_submodule(
          {
             p_subslot->submodule_state.ident_info = PF_SUBMOD_PLUG_OK;
 
-            ret = pf_alarm_send_plug(p_slot->p_ar, api_id, slot_nbr, subslot_nbr, module_ident_nbr, submod_ident_nbr);
+            ret = pf_alarm_send_plug(net, p_slot->p_ar, api_id, slot_nbr, subslot_nbr, module_ident_nbr, submod_ident_nbr);
          }
          else
          {
             p_subslot->submodule_state.ident_info = PF_SUBMOD_PLUG_SUBSTITUTE;
 
-            ret = pf_alarm_send_plug_wrong(p_slot->p_ar, api_id, slot_nbr, subslot_nbr, module_ident_nbr, submod_ident_nbr);
+            ret = pf_alarm_send_plug_wrong(net, p_slot->p_ar, api_id, slot_nbr, subslot_nbr, module_ident_nbr, submod_ident_nbr);
          }
       }
       p_subslot->submodule_state.format_indicator = 1;
@@ -709,6 +721,7 @@ int pf_cmdev_plug_submodule(
 }
 
 int pf_cmdev_pull_module(
+   pnet_t                  *net,
    uint32_t                api_id,
    uint16_t                slot_nbr)
 {
@@ -718,7 +731,7 @@ int pf_cmdev_pull_module(
    uint16_t                ix;
 
    /* Pull all submodules. Then pull the module */
-   if (pf_cmdev_get_api(api_id, &p_api) != 0)
+   if (pf_cmdev_get_api(net, api_id, &p_api) != 0)
    {
       LOG_ERROR(PNET_LOG, "CMDEV(%d): API %u does not exist\n", __LINE__, (unsigned)api_id);
    }
@@ -733,7 +746,7 @@ int pf_cmdev_pull_module(
       while ((ix < PNET_MAX_SUBMODULES) && (ret == 0))
       {
          if ((p_slot->subslots[ix].in_use == true) &&
-             (pf_cmdev_pull_submodule(api_id, slot_nbr, p_slot->subslots[ix].subslot_nbr) != 0))
+             (pf_cmdev_pull_submodule(net, api_id, slot_nbr, p_slot->subslots[ix].subslot_nbr) != 0))
          {
             ret = -1;
          }
@@ -757,34 +770,36 @@ int pf_cmdev_pull_module(
 /**
  * @internal
  * Remove all entries that refer to the AR.
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR entries to remove.
  */
 static void pf_device_clear(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar)
 {
    uint16_t                api_ix;
    uint16_t                slot_ix;
    uint16_t                sub_ix;
 
-   for (api_ix = 0; api_ix < NELEMENTS(device.apis); api_ix++)
+   for (api_ix = 0; api_ix < NELEMENTS(net->cmdev_device.apis); api_ix++)
    {
-      for (slot_ix = 0; slot_ix < NELEMENTS(device.apis[api_ix].slots); slot_ix++)
+      for (slot_ix = 0; slot_ix < NELEMENTS(net->cmdev_device.apis[api_ix].slots); slot_ix++)
       {
-         for (sub_ix = 0; sub_ix < NELEMENTS(device.apis[api_ix].slots[slot_ix].subslots); sub_ix++)
+         for (sub_ix = 0; sub_ix < NELEMENTS(net->cmdev_device.apis[api_ix].slots[slot_ix].subslots); sub_ix++)
          {
-            if (device.apis[api_ix].slots[slot_ix].subslots[sub_ix].p_ar == p_ar)
+            if (net->cmdev_device.apis[api_ix].slots[slot_ix].subslots[sub_ix].p_ar == p_ar)
             {
-               device.apis[api_ix].slots[slot_ix].subslots[sub_ix].p_ar = NULL;
+               net->cmdev_device.apis[api_ix].slots[slot_ix].subslots[sub_ix].p_ar = NULL;
             }
          }
-         if (device.apis[api_ix].slots[slot_ix].p_ar == p_ar)
+         if (net->cmdev_device.apis[api_ix].slots[slot_ix].p_ar == p_ar)
          {
-            device.apis[api_ix].slots[slot_ix].p_ar = NULL;
+            net->cmdev_device.apis[api_ix].slots[slot_ix].p_ar = NULL;
          }
       }
-      if (device.apis[api_ix].p_ar == p_ar)
+      if (net->cmdev_device.apis[api_ix].p_ar == p_ar)
       {
-         device.apis[api_ix].p_ar = NULL;
+         net->cmdev_device.apis[api_ix].p_ar = NULL;
       }
    }
 }
@@ -983,9 +998,11 @@ static int pf_cmdev_cfg_subslot_show(
    return 0;
 }
 
-void pf_cmdev_show_device(void)
+void pf_cmdev_show_device(
+   pnet_t                  *net)
 {
    (void)pf_cmdev_cfg_traverse(
+      net,
       pf_cmdev_cfg_dev_show,
       pf_cmdev_cfg_api_show,
       pf_cmdev_cfg_slot_show,
@@ -994,41 +1011,43 @@ void pf_cmdev_show_device(void)
 
 /********************** CMDEV init, exit and state ****************************/
 
-void pf_cmdev_exit(void)
+void pf_cmdev_exit(
+   pnet_t                  *net)
 {
-   if (cmdev_initialized == true)
+   if (net->cmdev_initialized == true)
    {
       (void)pf_diag_exit();
-      os_mutex_destroy(device.diag_mutex);
-      memset(&device, 0, sizeof(device));
-      cmdev_initialized = false;
+      os_mutex_destroy(net->cmdev_device.diag_mutex);
+      memset(&net->cmdev_device, 0, sizeof(net->cmdev_device));
+      net->cmdev_initialized = false;
    }
 }
 
-void pf_cmdev_init(void)
+void pf_cmdev_init(
+   pnet_t                  *net)
 {
    uint16_t                ix;
    pf_api_t                *p_api = NULL;
 
-   if (cmdev_initialized == false)
+   if (net->cmdev_initialized == false)
    {
-      cmdev_initialized = true;
+      net->cmdev_initialized = true;
 
-      memset(&device, 0, sizeof(device));
-      device.diag_mutex = os_mutex_create();
+      memset(&net->cmdev_device, 0, sizeof(net->cmdev_device));
+      net->cmdev_device.diag_mutex = os_mutex_create();
 
       /* Create a list of free diag items. */
-      device.diag_items_free = 0;
-      for (ix = 0; ix < NELEMENTS(device.diag_items) - 1; ix++)
+      net->cmdev_device.diag_items_free = 0;
+      for (ix = 0; ix < NELEMENTS(net->cmdev_device.diag_items) - 1; ix++)
       {
-         device.diag_items[ix].next = ix + 1;
+         net->cmdev_device.diag_items[ix].next = ix + 1;
       }
-      device.diag_items[NELEMENTS(device.diag_items) - 1].next = PF_DIAG_IX_NULL;
+      net->cmdev_device.diag_items[NELEMENTS(net->cmdev_device.diag_items) - 1].next = PF_DIAG_IX_NULL;
 
       (void)pf_diag_init();
 
       /* Create the default API */
-      pf_cmdev_new_api(0, &p_api);
+      pf_cmdev_new_api(net, 0, &p_api);
    }
 }
 
@@ -1050,12 +1069,14 @@ int pf_cmdev_get_state(
 /**
  * @internal
  * Request a state transition of the specified AR.
+ * @param net              InOut: The p-net stack instance
  * @param p_ar
  * @param state
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
 static int pf_cmdev_set_state(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pf_cmdev_state_values_t state)
 {
@@ -1065,10 +1086,10 @@ static int pf_cmdev_set_state(
    switch (state)
    {
    case PF_CMDEV_STATE_ABORT:
-      pf_cmdev_state_ind(p_ar, PNET_EVENT_ABORT);
+      pf_cmdev_state_ind(net, p_ar, PNET_EVENT_ABORT);
       LOG_DEBUG(PNET_LOG, "CMDEV(%d): New state: %s\n", __LINE__, pf_cmdev_state_to_string(PF_CMDEV_STATE_W_CIND));
 
-      pf_device_clear(p_ar);
+      pf_device_clear(net, p_ar);
       break;
    default:
       /* Nothing (yet) */
@@ -1083,18 +1104,19 @@ static int pf_cmdev_set_state(
  */
 
 int pf_cmdev_state_ind(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pnet_event_values_t     state)
 {
    if (p_ar != NULL)
    {
-      pf_fspm_state_ind(p_ar, state);
-      pf_cmsu_cmdev_state_ind(p_ar, state);
-      pf_cmio_cmdev_state_ind(p_ar, state);
-      pf_cmwrr_cmdev_state_ind(p_ar, state);
-      pf_cmsm_cmdev_state_ind(p_ar, state);
+      pf_fspm_state_ind(net, p_ar, state);
+      pf_cmsu_cmdev_state_ind(net, p_ar, state);
+      pf_cmio_cmdev_state_ind(net, p_ar, state);
+      pf_cmwrr_cmdev_state_ind(net, p_ar, state);
+      pf_cmsm_cmdev_state_ind(net, p_ar, state);
       pf_cmpbe_cmdev_state_ind(p_ar, state);
-      pf_cmrpc_cmdev_state_ind(p_ar, state);
+      pf_cmrpc_cmdev_state_ind(net, p_ar, state);
    }
    else
    {
@@ -1105,6 +1127,7 @@ int pf_cmdev_state_ind(
 }
 
 int pf_cmdev_cmio_info_ind(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    bool                    data_possible)
 {
@@ -1122,8 +1145,8 @@ int pf_cmdev_cmio_info_ind(
       p_ar->ready_4_data = data_possible;
       if (data_possible == true)
       {
-         pf_cmdev_state_ind(p_ar, PNET_EVENT_DATA);
-         pf_cmdev_set_state(p_ar, PF_CMDEV_STATE_DATA);
+         pf_cmdev_state_ind(net, p_ar, PNET_EVENT_DATA);
+         pf_cmdev_set_state(net, p_ar, PF_CMDEV_STATE_DATA);
       }
       break;
    default:
@@ -1135,6 +1158,7 @@ int pf_cmdev_cmio_info_ind(
 }
 
 int pf_cmdev_cm_abort(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar)
 {
    int            res = -1;
@@ -1146,11 +1170,11 @@ int pf_cmdev_cm_abort(
          switch (p_ar->cmdev_state)
          {
          case PF_CMDEV_STATE_W_CRES:
-            pf_cmdev_set_state(p_ar, PNET_EVENT_ABORT);
+            pf_cmdev_set_state(net, p_ar, PNET_EVENT_ABORT);
             res = 0;
             break;
          case PF_CMDEV_STATE_DATA:
-            pf_cmdev_set_state(p_ar, PNET_EVENT_ABORT);
+            pf_cmdev_set_state(net, p_ar, PNET_EVENT_ABORT);
             res = 0;
             break;
          default:
@@ -1161,7 +1185,7 @@ int pf_cmdev_cm_abort(
       else  /* CMDEV */
       {
          /* Any state */
-         pf_cmdev_set_state(p_ar, PNET_EVENT_ABORT);
+         pf_cmdev_set_state(net, p_ar, PNET_EVENT_ABORT);
          res = 0;
       }
    }
@@ -1175,6 +1199,7 @@ int pf_cmdev_cm_abort(
 }
 
 int pf_cmdev_cm_init_req(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar)
 {
    int res = -1;
@@ -1183,7 +1208,7 @@ int pf_cmdev_cm_init_req(
    {
       if (p_ar->cmdev_state == PF_CMDEV_STATE_POWER_ON)
       {
-         pf_cmdev_set_state(p_ar, PF_CMDEV_STATE_W_CIND);
+         pf_cmdev_set_state(net, p_ar, PF_CMDEV_STATE_W_CIND);
          res = 0;
       }
    }
@@ -2512,6 +2537,7 @@ static int pf_cmdev_check_iocr_param(
  *
  * This function configures an expected sub-module.
  * Perform final checks of parameters and let the application plug the sub-module if needed.
+ * @param net              InOut: The p-net stack instance
  * @param p_exp_api        In:   The expected API instance.
  * @param p_exp_mod        In:   The expected sub-module instance.
  * @param p_cfg_api        In:   The configured API instance.
@@ -2521,6 +2547,7 @@ static int pf_cmdev_check_iocr_param(
  *          -1 if an error occurred.
  */
 static int pf_cmdev_exp_submodule_configure(
+   pnet_t                  *net,
    pf_exp_api_t            *p_exp_api,
    pf_exp_module_t         *p_exp_mod,
    pf_api_t                *p_cfg_api,
@@ -2550,6 +2577,7 @@ static int pf_cmdev_exp_submodule_configure(
           * Return code is not interesting here.
           */
          (void)pf_fspm_exp_submodule_ind(
+            net,
             p_exp_api->api,
             p_exp_mod->slot_number,
             p_exp_sub->subslot_number,
@@ -2759,6 +2787,7 @@ static int pf_cmdev_exp_submodule_configure(
  *
  * This function configures an expected module.
  * Perform final checks of parameters and let the application plug the module if needed.
+ * @param net              InOut: The p-net stack instance
  * @param p_exp_api        In:   The expected API instance.
  * @param p_exp_mod        In:   The expected sub-module instance.
  * @param p_cfg_api        In:   The configured API instance.
@@ -2768,6 +2797,7 @@ static int pf_cmdev_exp_submodule_configure(
  *          -1 if an error occurred.
  */
 static int pf_cmdev_exp_modules_configure(
+   pnet_t                  *net,
    pf_exp_api_t            *p_exp_api,
    pf_api_t                *p_cfg_api,
    pnet_result_t           *p_stat)
@@ -2810,6 +2840,7 @@ static int pf_cmdev_exp_modules_configure(
              * Return code is not interesting here.
              */
             (void)pf_fspm_exp_module_ind(
+               net,
                p_exp_api->api,
                p_exp_mod->slot_number,
                p_exp_mod->module_ident_number);
@@ -2868,7 +2899,7 @@ static int pf_cmdev_exp_modules_configure(
             }
 
             p_cfg_slot->exp_module_ident_number = p_exp_mod->module_ident_number;
-            ret = pf_cmdev_exp_submodule_configure(p_exp_api, p_exp_mod, p_cfg_api, p_cfg_slot, p_stat);
+            ret = pf_cmdev_exp_submodule_configure(net, p_exp_api, p_exp_mod, p_cfg_api, p_cfg_slot, p_stat);
          }
       }
    }
@@ -2882,12 +2913,14 @@ static int pf_cmdev_exp_modules_configure(
  *
  * This function configures an expected API.
  * Perform final checks of parameters and let the application plug the (sub-)modules when needed.
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param p_stat           Out:  Detailed error information.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
 static int pf_cmdev_exp_apis_configure(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pnet_result_t           *p_stat)
 {
@@ -2910,12 +2943,12 @@ static int pf_cmdev_exp_apis_configure(
          {
             p_exp_api = &p_ar->exp_apis[api_ix];
             /* If it does not exist then create it */
-            if ((pf_cmdev_get_api(p_exp_api->api, &p_cfg_api) == 0) ||
-                (pf_cmdev_new_api(p_exp_api->api, &p_cfg_api) == 0))
+            if ((pf_cmdev_get_api(net, p_exp_api->api, &p_cfg_api) == 0) ||
+                (pf_cmdev_new_api(net, p_exp_api->api, &p_cfg_api) == 0))
             {
                p_cfg_api->p_ar = p_ar;
 
-               ret = pf_cmdev_exp_modules_configure(p_exp_api, p_cfg_api, p_stat);
+               ret = pf_cmdev_exp_modules_configure(net, p_exp_api, p_cfg_api, p_stat);
                p_exp_api->valid = (ret == 0);
             }
          }
@@ -3037,12 +3070,14 @@ static int pf_cmdev_check_ar_rpc(
  * Check the AR for errors.
  *
  * This function implements the APDUCheck function in the Profinet spec.
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param p_stat           Out:  Detailed error information.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
 static int pf_cmdev_check_apdu(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pnet_result_t           *p_stat)
 {
@@ -3064,7 +3099,7 @@ static int pf_cmdev_check_apdu(
       if (ret == 0)
       {
          /* Let the application plug expected configuration */
-         ret = pf_cmdev_exp_apis_configure(p_ar, p_stat);
+         ret = pf_cmdev_exp_apis_configure(net, p_ar, p_stat);
       }
 
       if (ret == 0)
@@ -3133,12 +3168,14 @@ static int pf_cmdev_check_apdu(
 /**
  * @internal
  * Generate module diffs, when needed, for the specified AR.
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param p_stat           Out:  Detailed result of the operation.
  * @return  0  if no diff was detected.
  *          -1 if a diff was detected.
  */
 static int pf_cmdev_generate_submodule_diff(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pnet_result_t           *p_stat)
 {
@@ -3163,7 +3200,7 @@ static int pf_cmdev_generate_submodule_diff(
    {
       p_ar->api_diffs[nbr_api_diffs].api = p_ar->exp_apis[exp_api_ix].api;
 
-      if (pf_cmdev_get_api(p_ar->exp_apis[exp_api_ix].api, &p_cfg_api) != 0)
+      if (pf_cmdev_get_api(net, p_ar->exp_apis[exp_api_ix].api, &p_cfg_api) != 0)
       {
          /* API not found in CFG */
          has_api_diff = true;
@@ -3352,23 +3389,25 @@ static void pf_cmdev_fix_frame_id(
 /**
  * @internal
  * Handle a negative result to a connect request.
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param p_stat           Out:  Detailed error information.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
 static int pf_cmdev_cm_connect_rsp_neg(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pnet_result_t           *p_stat)
 {
    if (p_ar->ar_param.ar_properties.device_access == false)
    {
-      pnet_create_log_book_entry(p_ar->arep, &p_stat->pnio_status,
+      pnet_create_log_book_entry(net, p_ar->arep, &p_stat->pnio_status,
          (p_stat->add_data_1<<16) + (p_stat->add_data_2));
       LOG_ERROR(PNET_LOG, "CMDEV(%d): Connect failed\n", __LINE__);
    }
 
-   pf_cmdev_set_state(p_ar, PF_CMDEV_STATE_W_CIND);
+   pf_cmdev_set_state(net, p_ar, PF_CMDEV_STATE_W_CIND);
 
    return 0;
 }
@@ -3376,12 +3415,14 @@ static int pf_cmdev_cm_connect_rsp_neg(
 /**
  * @internal
  * Handle a positive answer to a connect request.
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param p_stat           Out:  Detailed error information.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
 static int pf_cmdev_cm_connect_rsp_pos(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pnet_result_t           *p_stat)
 {
@@ -3391,21 +3432,21 @@ static int pf_cmdev_cm_connect_rsp_pos(
    {
       if (p_ar->cmdev_state == PF_CMDEV_STATE_W_CRES)
       {
-         ret = pf_cmsu_start_req(p_ar, p_stat);    /* Start all required protocol machines. */
+         ret = pf_cmsu_start_req(net, p_ar, p_stat);    /* Start all required protocol machines. */
 
-         pf_cmdev_set_state(p_ar, PF_CMDEV_STATE_W_SUCNF);
+         pf_cmdev_set_state(net, p_ar, PF_CMDEV_STATE_W_SUCNF);
          if (ret == 0)
          {
             /* pf_cmdev_cmsu_start_cnf_pos */
-            pf_cmdev_state_ind(p_ar, PNET_EVENT_STARTUP);
-            pf_cmdev_set_state(p_ar, PF_CMDEV_STATE_W_PEIND);
+            pf_cmdev_state_ind(net, p_ar, PNET_EVENT_STARTUP);
+            pf_cmdev_set_state(net, p_ar, PF_CMDEV_STATE_W_PEIND);
             /* pf_cmdev_rm_connect_rsp_pos handled by caller. */
          }
          else
          {
             /* pf_cmdev_cmsu_start_cnf_neg */
             pf_set_error(p_stat, PNET_ERROR_CODE_CONNECT, PNET_ERROR_DECODE_PNIO, PNET_ERROR_CODE_1_CMDEV, PNET_ERROR_CODE_2_CMDEV_STATE_CONFLICT);
-            pnet_create_log_book_entry(p_ar->arep, &p_stat->pnio_status,
+            pnet_create_log_book_entry(net, p_ar->arep, &p_stat->pnio_status,
                (p_stat->add_data_1<<16) + (p_stat->add_data_2));
             /* pf_cmdev_rm_connect_rsp_neg handled by caller. */
          }
@@ -3415,14 +3456,14 @@ static int pf_cmdev_cm_connect_rsp_pos(
    {
       if (p_ar->cmdev_state == PF_CMDEV_STATE_W_CRES)
       {
-         pf_cmdev_state_ind(p_ar, PNET_EVENT_STARTUP);
-         pf_cmdev_set_state(p_ar, PF_CMDEV_STATE_DATA);
+         pf_cmdev_state_ind(net, p_ar, PNET_EVENT_STARTUP);
+         pf_cmdev_set_state(net, p_ar, PF_CMDEV_STATE_DATA);
          /* pf_cmdev_rm_connect_rsp_pos handled by caller. */
          ret = 0;
       }
       else
       {
-         pf_cmdev_set_state(p_ar, PF_CMDEV_STATE_W_CIND);
+         pf_cmdev_set_state(net, p_ar, PF_CMDEV_STATE_W_CIND);
          /* pf_cmdev_rm_connect_rsp_neg handled by caller. */
          ret = -1;
       }
@@ -3436,6 +3477,7 @@ static int pf_cmdev_cm_connect_rsp_pos(
  */
 
 int pf_cmdev_rm_connect_ind(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pnet_result_t           *p_connect_result)
 {
@@ -3444,11 +3486,11 @@ int pf_cmdev_rm_connect_ind(
    const char              *p_station_name = NULL;
    const pnet_cfg_t        *p_cfg = NULL;
 
-   pf_fspm_get_default_cfg(&p_cfg);
+   pf_fspm_get_default_cfg(net, &p_cfg);
 
    /* RM_Connect.ind */
-   if ((pf_cmdev_check_apdu(p_ar, p_connect_result) == 0) &&
-       (pf_cmdev_generate_submodule_diff(p_ar, p_connect_result) == 0))
+   if ((pf_cmdev_check_apdu(net, p_ar, p_connect_result) == 0) &&
+       (pf_cmdev_generate_submodule_diff(net, p_ar, p_connect_result) == 0))
    {
       /* Start building the response to the connect request. */
       memcpy(p_ar->ar_result.cm_responder_mac_add.addr, p_cfg->eth_addr.addr, sizeof(pnet_ethaddr_t));
@@ -3467,25 +3509,25 @@ int pf_cmdev_rm_connect_ind(
       p_ar->alarm_cr_result.max_alarm_data_length = 200; /* ToDo: Add a define for this value */
 
       /* Get the name from cfg! */
-      (void)pf_cmina_get_station_name(&p_station_name);
+      (void)pf_cmina_get_station_name(net, &p_station_name);
       strncpy(p_ar->ar_server.cm_responder_station_name, p_station_name, sizeof(p_ar->ar_server.cm_responder_station_name));
       p_ar->ar_server.cm_responder_station_name[sizeof(p_ar->ar_server.cm_responder_station_name) - 1] = '\0';
       p_ar->ar_server.length_cm_responder_station_name = (uint16_t)strlen(p_station_name);
 
       p_ar->ready_4_data = false;
 
-      ret = pf_fspm_cm_connect_ind(p_ar, p_connect_result);
+      ret = pf_fspm_cm_connect_ind(net, p_ar, p_connect_result);
    }
 
    if (ret == 0)
    {
-      pf_cmdev_set_state(p_ar, PF_CMDEV_STATE_W_CRES);
+      pf_cmdev_set_state(net, p_ar, PF_CMDEV_STATE_W_CRES);
 
-      ret = pf_cmdev_cm_connect_rsp_pos(p_ar, p_connect_result);
+      ret = pf_cmdev_cm_connect_rsp_pos(net, p_ar, p_connect_result);
    }
    else
    {
-      ret = pf_cmdev_cm_connect_rsp_neg(p_ar, p_connect_result);
+      ret = pf_cmdev_cm_connect_rsp_neg(net, p_ar, p_connect_result);
    }
 
    /* rm_connect.rsp handled by caller */
@@ -3493,6 +3535,7 @@ int pf_cmdev_rm_connect_ind(
 }
 
 int pf_cmdev_rm_release_ind(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pnet_result_t           *p_release_result)
 {
@@ -3508,11 +3551,11 @@ int pf_cmdev_rm_release_ind(
       case PF_CMDEV_STATE_WDATA:
       case PF_CMDEV_STATE_DATA:
          p_ar->err_code = PNET_ERROR_CODE_2_ABORT_AR_RELEASE_IND_RECEIVED;
-         if (pf_fspm_cm_release_ind(p_ar, p_release_result) != 0)
+         if (pf_fspm_cm_release_ind(net, p_ar, p_release_result) != 0)
          {
             p_ar->err_code = p_release_result->pnio_status.error_code_2;
          }
-         ret = pf_cmdev_set_state(p_ar, PF_CMDEV_STATE_ABORT);
+         ret = pf_cmdev_set_state(net, p_ar, PF_CMDEV_STATE_ABORT);
          break;
       default:
          /* Ignore and stay in all other states. */
@@ -3525,7 +3568,7 @@ int pf_cmdev_rm_release_ind(
       if (p_ar->cmdev_state == PF_CMDEV_STATE_DATA)
       {
          p_ar->err_code = PNET_ERROR_CODE_2_ABORT_AR_RELEASE_IND_RECEIVED;
-         ret = pf_cmdev_state_ind(p_ar, PNET_EVENT_ABORT);
+         ret = pf_cmdev_state_ind(net, p_ar, PNET_EVENT_ABORT);
       }
       else
       {
@@ -3538,6 +3581,7 @@ int pf_cmdev_rm_release_ind(
 }
 
 int pf_cmdev_rm_dcontrol_ind(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pf_control_block_t      *p_control_io,
    pnet_result_t           *p_dcontrol_result)
@@ -3551,13 +3595,13 @@ int pf_cmdev_rm_dcontrol_ind(
       case PF_CMDEV_STATE_W_PEIND:
          if (p_control_io->control_command == BIT(PF_CONTROL_COMMAND_BIT_PRM_END))
          {
-            pf_cmdev_set_state(p_ar, PF_CMDEV_STATE_W_PERES);
-            if (pf_fspm_cm_dcontrol_ind(p_ar, PNET_CONTROL_COMMAND_PRM_END, p_dcontrol_result) == 0)
+            pf_cmdev_set_state(net, p_ar, PF_CMDEV_STATE_W_PERES);
+            if (pf_fspm_cm_dcontrol_ind(net, p_ar, PNET_CONTROL_COMMAND_PRM_END, p_dcontrol_result) == 0)
             {
-               pf_cmdev_set_state(p_ar, PF_CMDEV_STATE_W_ARDY);
+               pf_cmdev_set_state(net, p_ar, PF_CMDEV_STATE_W_ARDY);
                if (pf_cmdev_check_pdev() == 0)
                {
-                  pf_cmdev_state_ind(p_ar, PNET_EVENT_PRMEND);
+                  pf_cmdev_state_ind(net, p_ar, PNET_EVENT_PRMEND);
                   /**
                    * The application must issue the applicationReady call _AFTER_
                    * returning from the pf_fspm_cm_dcontrol_ind_cb() call-back.
@@ -3583,13 +3627,14 @@ int pf_cmdev_rm_dcontrol_ind(
 
    if (ret != 0)
    {
-      ret = pf_cmdev_state_ind(p_ar, PNET_EVENT_ABORT);
+      ret = pf_cmdev_state_ind(net, p_ar, PNET_EVENT_ABORT);
    }
 
    return ret;
 }
 
 int pf_cmdev_rm_ccontrol_cnf(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pf_control_block_t      *p_control_io,
    pnet_result_t           *p_ccontrol_result)
@@ -3611,15 +3656,15 @@ int pf_cmdev_rm_ccontrol_cnf(
          {
             if (p_ar->ready_4_data == true)
             {
-               (void)pf_cmdev_state_ind(p_ar, PNET_EVENT_DATA);
-               ret = pf_cmdev_set_state(p_ar, PF_CMDEV_STATE_DATA);
+               (void)pf_cmdev_state_ind(net, p_ar, PNET_EVENT_DATA);
+               ret = pf_cmdev_set_state(net, p_ar, PF_CMDEV_STATE_DATA);
             }
             else
             {
-               ret = pf_cmdev_set_state(p_ar, PF_CMDEV_STATE_WDATA);
+               ret = pf_cmdev_set_state(net, p_ar, PF_CMDEV_STATE_WDATA);
             }
             /* Send result to application */
-            (void)pf_fspm_ccontrol_cnf(p_ar, p_ccontrol_result);
+            (void)pf_fspm_ccontrol_cnf(net, p_ar, p_ccontrol_result);
          }
          else
          {
@@ -3628,11 +3673,11 @@ int pf_cmdev_rm_ccontrol_cnf(
       }
       else
       {
-         pnet_create_log_book_entry(p_ar->arep, &p_ccontrol_result->pnio_status,
+         pnet_create_log_book_entry(net, p_ar->arep, &p_ccontrol_result->pnio_status,
             (p_ccontrol_result->add_data_1<<16) + (p_ccontrol_result->add_data_2));
          /* Send result to application */
-         (void)pf_fspm_ccontrol_cnf(p_ar, p_ccontrol_result);
-         (void)pf_cmdev_set_state(p_ar, PF_CMDEV_STATE_ABORT);
+         (void)pf_fspm_ccontrol_cnf(net, p_ar, p_ccontrol_result);
+         (void)pf_cmdev_set_state(net, p_ar, PF_CMDEV_STATE_ABORT);
       }
    }
    else
@@ -3644,6 +3689,7 @@ int pf_cmdev_rm_ccontrol_cnf(
 }
 
 int pf_cmdev_cm_ccontrol_req(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar)
 {
    int                     ret = -1;
@@ -3674,10 +3720,10 @@ int pf_cmdev_cm_ccontrol_req(
          }
          if (data_avail == true)
          {
-            pf_cmdev_state_ind(p_ar, PNET_EVENT_APPLRDY);
-            if (pf_cmrpc_rm_ccontrol_req(p_ar) == 0)
+            pf_cmdev_state_ind(net, p_ar, PNET_EVENT_APPLRDY);
+            if (pf_cmrpc_rm_ccontrol_req(net, p_ar) == 0)
             {
-               ret = pf_cmdev_set_state(p_ar, PF_CMDEV_STATE_W_ARDYCNF);
+               ret = pf_cmdev_set_state(net, p_ar, PF_CMDEV_STATE_W_ARDYCNF);
             }
          }
          break;
@@ -3689,7 +3735,7 @@ int pf_cmdev_cm_ccontrol_req(
    }
    else
    {
-      (void)pf_cmdev_state_ind(p_ar, PNET_EVENT_ABORT);
+      (void)pf_cmdev_state_ind(net, p_ar, PNET_EVENT_ABORT);
    }
 
    return ret;

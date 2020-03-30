@@ -59,17 +59,22 @@ typedef int (*pf_ftn_subslot_t)(
 
 /**
  * Initialize the cmdev component. Plugs the DAP (sub-)modules.
+ * @param net              InOut: The p-net stack instance
  */
-void pf_cmdev_init(void);
+void pf_cmdev_init(
+   pnet_t                  *net);
 
 /**
  * Un-initialize the cmdev component.
  * Delete all modules and sub-modules.
+ * @param net              InOut: The p-net stack instance
  */
-void pf_cmdev_exit(void);
+void pf_cmdev_exit(
+   pnet_t                  *net);
 
 /**
  * Traverse the device tree.
+ * @param net              InOut: The p-net stack instance
  * @param p_ftn_dev        In:   Call this function for every device.
  * @param p_ftn_api        In:   Call this function for each api.
  * @param p_ftn_slot       In:   Call this function for each slot.
@@ -78,6 +83,7 @@ void pf_cmdev_exit(void);
  *          -1 If any function called returns an error (!= 0)..
  */
 int pf_cmdev_cfg_traverse(
+   pnet_t                  *net,
    pf_ftn_device_t         p_ftn_dev,
    pf_ftn_api_t            p_ftn_api,
    pf_ftn_slot_t           p_ftn_slot,
@@ -85,6 +91,7 @@ int pf_cmdev_cfg_traverse(
 
 /**
  * Plug a module into a slot.
+ * @param net              InOut: The p-net stack instance
  * @param api_id           In:   The API identifier.
  * @param slot_nbr         In:   The slot number.
  * @param module_ident_nbr In:   The module ident number.
@@ -92,12 +99,14 @@ int pf_cmdev_cfg_traverse(
  *          -1 if an error occurred.
  */
 int pf_cmdev_plug_module(
+   pnet_t                  *net,
    uint32_t                api_id,
    uint16_t                slot_nbr,
    uint32_t                module_ident_nbr);
 
 /**
  * Plug a sub-module into a sub-slot.
+ * @param net              InOut: The p-net stack instance
  * @param api_id           In:   The API identifier.
  * @param slot_nbr         In:   The slot number.
  * @param subslot_nbr      In:   The sub-slot number.
@@ -111,6 +120,7 @@ int pf_cmdev_plug_module(
  *          -1 if an error occurred.
  */
 int pf_cmdev_plug_submodule(
+   pnet_t                  *net,
    uint32_t                api_id,
    uint16_t                slot_nbr,
    uint16_t                subslot_nbr,
@@ -123,6 +133,7 @@ int pf_cmdev_plug_submodule(
 
 /**
  * Pull a sub-module from a sub-slot.
+ * @param net              InOut: The p-net stack instance
  * @param api_id           In:   The API identifier.
  * @param slot_nbr         In:   The slot number.
  * @param subslot_nbr      In:   The sub-slot number.
@@ -130,51 +141,61 @@ int pf_cmdev_plug_submodule(
  *          -1 if an error occurred.
  */
 int pf_cmdev_pull_submodule(
+   pnet_t                  *net,
    uint32_t                api_id,
    uint16_t                slot_nbr,
    uint16_t                subslot_nbr);
 
 /**
  * Pull a module from a slot.
+ * @param net              InOut: The p-net stack instance
  * @param api_id           In:   The API identifier.
  * @param slot_nbr         In:   The slot number.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
 int pf_cmdev_pull_module(
+   pnet_t                  *net,
    uint32_t                api_id,
    uint16_t                slot_nbr);
 
 /**
  * Abort request from the application.
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
 int pf_cmdev_cm_abort(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar);
 
 /**
  * Get a pointer to the device configuration.
+ * @param net              InOut: The p-net stack instance
  * @param pp_device        Out:  The device configuration.
  * @return  0  Always.
  */
 int pf_cmdev_get_device(
+   pnet_t                  *net,
    pf_device_t             **pp_device);
 
 /**
  * Get an API instance by its API id.
+ * @param net              InOut: The p-net stack instance
  * @param api_id        In:  The API id.
  * @param pp_api        Out: The API instance.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
 int pf_cmdev_get_api(
+   pnet_t                  *net,
    uint32_t                api_id,
    pf_api_t                **pp_api);
 
 /**
  * Get a sub-slot instance from the api ID, the slot number and the sub-slot number.
+ * @param net              InOut: The p-net stack instance
  * @param api_id           In:   The API identifier.
  * @param slot_nbr         In:   The slot number.
  * @param subslot_nbr      In:   The sub-slot number.
@@ -183,13 +204,17 @@ int pf_cmdev_get_api(
  *          -1 if an error occurred.
  */
 int pf_cmdev_get_subslot_full(
+   pnet_t                  *net,
    uint16_t                api_id,
    uint16_t                slot_nbr,
    uint16_t                subslot_nbr,
    pf_subslot_t            **pp_subslot);
 
+
+/* Not used */
 /**
  * Get a slot instance from the api ID and the slot number.
+ * @param net              InOut: The p-net stack instance
  * @param api_id           In:   The API identifier.
  * @param slot_nbr         In:   The slot number.
  * @param pp_slot          Out:  The slot instance.
@@ -197,35 +222,42 @@ int pf_cmdev_get_subslot_full(
  *          -1 if an error occurred.
  */
 int pf_cmdev_get_slot_full(
+   pnet_t                  *net,
    uint16_t                api_id,
    uint16_t                slot_nbr,
    pf_slot_t               **pp_slot);
 
 /**
  * Get a diag item.
+ * @param net              InOut: The p-net stack instance
  * @param item_ix          In:   The diag item index.
  * @param pp_item          Out:  The diag item.
  * @return  0  If item_ix is valid.
  *          -1 If item_ix is invalid.
  */
 int pf_cmdev_get_diag_item(
+   pnet_t                  *net,
    uint16_t                item_ix,
    pf_diag_item_t          **pp_item);
 
 /**
  * Allocate a new diag item entry from the free list.
+ * @param net              InOut: The p-net stack instance
  * @param p_item_ix        Out:  Index of the allocated item.
  * @return  0  If an item was allocated.
  *          -1 If out of diag items.
  */
 int pf_cmdev_new_diag(
+   pnet_t                  *net,
    uint16_t                *p_item_ix);
 
 /**
  * Return a diag item to the free list.
+ * @param net              InOut: The p-net stack instance
  * @param item_ix          In:   Index of the item to return.
  */
 void pf_cmdev_free_diag(
+   pnet_t                  *net,
    uint16_t                item_ix);
 
 /**
@@ -253,20 +285,24 @@ void pf_cmdev_show(
 
 /**
  * Show the plugged modules and sub-modules.
+ * @param net              InOut: The p-net stack instance
  */
-void pf_cmdev_show_device(void);
+void pf_cmdev_show_device(
+   pnet_t                  *net);
 
 /**
  * Indicate a new state transition of the CMDEV component.
  *
  * Among other actions, it calls the \a pnet_state_ind() user callback.
  *
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param state            In:   The new CMDEV state.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
 int pf_cmdev_state_ind(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pnet_event_values_t     state);
 
@@ -283,12 +319,14 @@ int pf_cmdev_get_state(
 
 /**
  * Handle CMIO "data_possibile" indications.
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param data_possible    In:   true if data exchange is possible.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
 int pf_cmdev_cmio_info_ind(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    bool                    data_possible);
 
@@ -298,23 +336,27 @@ int pf_cmdev_cmio_info_ind(
 
 /**
  * Handle an RPC connect request.
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param p_connect_result Out:  Detailed result of the connect operation.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
 int pf_cmdev_rm_connect_ind(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pnet_result_t           *p_connect_result);
 
 /**
  * Handle an RPC release request.
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param p_release_result Out:  Detailed result of the connect operation.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
 int pf_cmdev_rm_release_ind(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pnet_result_t           *p_release_result);
 
@@ -324,6 +366,7 @@ int pf_cmdev_rm_release_ind(
  * This triggers the user callbacks \a pnet_dcontrol_ind() and
  * \a pnet_state_ind() with PNET_EVENT_PRMEND.
  *
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param p_control_io     In:   The control block.
  * @param p_release_result Out:  Detailed result of the connect operation.
@@ -331,6 +374,7 @@ int pf_cmdev_rm_release_ind(
  *          -1 if an error occurred.
  */
 int pf_cmdev_rm_dcontrol_ind(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pf_control_block_t      *p_control_io,
    pnet_result_t           *p_release_result);
@@ -344,15 +388,18 @@ int pf_cmdev_rm_dcontrol_ind(
  *
  * Triggers the \a pnet_state_ind() user callback with PNET_EVENT_APPLRDY.
  *
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @return  0  if a ccontrol request was sent.
  *          -1 if a ccontrol request was not sent.
  */
 int pf_cmdev_cm_ccontrol_req(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar);
 
 /**
  * Handle the confirmation of the ccontrol request.
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param p_control_io     In:   The control block.
  * @param p_ccontrol_result Out:  Detailed result of the connect operation.
@@ -360,6 +407,7 @@ int pf_cmdev_cm_ccontrol_req(
  *          -1 if an error occurred.
  */
 int pf_cmdev_rm_ccontrol_cnf(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pf_control_block_t      *p_control_io,
    pnet_result_t           *p_ccontrol_result);

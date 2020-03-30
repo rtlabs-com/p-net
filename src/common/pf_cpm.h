@@ -22,18 +22,28 @@ extern "C"
 #endif
 
 /**
+ * Initialize the CPM component.
+ * @param net              InOut: The p-net stack instance
+ */
+void pf_cpm_init(
+   pnet_t                  *net);
+
+
+/**
  * Create a CPM for a specific IOCR instance.
  *
  * This function creates a CPM instance for the specified IOCR instance.
  * Set the CPM state to W_START.
  * Allocate the buffer mutex on first call.
  *
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param crep             In:   The IOCR index.
  * @return  0  if the CPM instance was created.
  *          -1 if an error occurred.
  */
 int pf_cpm_create(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    uint32_t                crep);
 
@@ -43,23 +53,27 @@ int pf_cpm_create(
  * This function terminates the specified CPM instance.
  * The buffer mutex is destroyed on the last call.
  *
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param crep             In:   The IOCR index.
  * @return  0  if the CPM instance was closed.
  *          -1 if an error occurred.
  */
 int pf_cpm_close_req(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    uint32_t                crep);
 
 /**
  * Activate a CPM instance and of the specified CR instance.
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param crep             In:   The IOCR index.
  * @return  0  if the CPM instance could be activated.
  *          -1 if an error occurred.
  */
 int pf_cpm_activate_req(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    uint32_t                crep);
 
@@ -67,6 +81,7 @@ int pf_cpm_activate_req(
  * Retrieve the specified sub-slot IOCS sent from the controller.
  * User must supply a buffer large enough to hold the received IOCS.
  * Maximum buffer size is 256 bytes.
+ * @param net           InOut: The p-net stack instance
  * @param api_id        In:   The API identifier.
  * @param slot_nbr      In:   The slot number.
  * @param subslot_nbr   In:   The sub-slot number.
@@ -76,6 +91,7 @@ int pf_cpm_activate_req(
  * @return
  */
 int pf_cpm_get_iocs(
+   pnet_t                  *net,
    uint32_t                api_id,
    uint16_t                slot_nbr,
    uint16_t                subslot_nbr,
@@ -88,6 +104,8 @@ int pf_cpm_get_iocs(
  * Maximum buffer size is 1500 bytes.
  * User must supply a buffer large enough to hold the received IOPS.
  * Maximum buffer size is 256 bytes.
+ *
+ * @param net              InOut: The p-net stack instance
  * @param api_id        In:   The API identifier.
  * @param slot_nbr      In:   The slot number.
  * @param subslot_nbr   In:   The sub-slot number.
@@ -102,6 +120,7 @@ int pf_cpm_get_iocs(
  *          -1 if an error occurred.
  */
 int pf_cpm_get_data_and_iops(
+   pnet_t                  *net,
    uint32_t                api_id,
    uint16_t                slot_nbr,
    uint16_t                subslot_nbr,
@@ -138,9 +157,11 @@ int pf_cpm_get_data_status(
 
 /**
  * Show information about a CPM instance.
+ * @param net              InOut: The p-net stack instance
  * @param p_cpm            In:   The CPM instance.
  */
 void pf_cpm_show(
+   pnet_t                  *net,
    pf_cpm_t                *p_cpm);
 
 #ifdef __cplusplus

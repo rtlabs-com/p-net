@@ -33,11 +33,9 @@
 #define ALARM_VLAN_PRIO_LOW         (5<<12)
 #define ALARM_VLAN_PRIO_HIGH        (6<<12)
 
+
 /* The scheduler identifier */
 static const char *apmx_sync_name = "apmx";
-
-/* Enable alarms from the start */
-static bool global_alarm_enable = true;
 
 /**
  * @internal
@@ -151,14 +149,23 @@ void pf_alarm_show(
    printf("\n");
 }
 
+void pf_alarm_init(
+   pnet_t                  *net)
+{
+   /* Enable alarms from the start */
+   net->global_alarm_enable = true;
+}
+
 /**
  * @internal
  * Send an ALARM error indication to CMSU.
+ * @param net              InOut: The p-net stack instance
  * @param p_apmx           In:   The APMX instance.
  * @param err_cls          In:   The ERRCLS variable.
  * @param err_code         In:   The ERRCODE variable.
  */
 static void pf_alarm_error_ind(
+   pnet_t                  *net,
    pf_apmx_t               *p_apmx,
    uint8_t                 err_cls,
    uint8_t                 err_code)
@@ -172,7 +179,7 @@ static void pf_alarm_error_ind(
     * APMR:  PNET_ERROR_CODE_2_CMSU_AR_ALARM_IND
     */
    LOG_INFO(PF_ALARM_LOG, "Alarm(%d): err_cls 0x%02x  err_code 0x%02x\n", __LINE__, err_cls, err_code);
-   (void)pf_cmsu_alarm_error_ind(p_apmx->p_ar, err_cls, err_code);
+   (void)pf_cmsu_alarm_error_ind(net, p_apmx->p_ar, err_cls, err_code);
 }
 
 /* ===== ALPMI - Alarm initiator ===== */
@@ -255,7 +262,7 @@ static int pf_alarm_alpmx_close(
           */
 
          p_ar->alpmx[ix].alpmr_state = PF_ALPMR_STATE_W_START;
-         /* pf_alarm_error_ind(&p_ar->apmx[ix], p_ar->err_cls, PNET_ERROR_CODE_2_CMSU_AR_ALARM_IND); */
+         /* pf_alarm_error_ind(net, &p_ar->apmx[ix], p_ar->err_cls, PNET_ERROR_CODE_2_CMSU_AR_ALARM_IND); */
          break;
       }
    }
@@ -267,11 +274,13 @@ static int pf_alarm_alpmx_close(
  * @internal
  * ALPMI: APMS_Data.cnf(+/-)
  *
+ * @param net              InOut: The p-net stack instance
  * @param p_apmx           In:   The APMS instance sending the confirmation.
  * @param res              In:   The positive (true) or negative (false) confirmation.
  */
 static void pf_alarm_alpmi_apms_a_data_cnf(
-   pf_apmx_t              *p_apmx,
+   pnet_t                  *net,
+   pf_apmx_t               *p_apmx,
    int                     res)
 {
    switch (p_apmx->p_alpmx->alpmi_state)
@@ -284,7 +293,7 @@ static void pf_alarm_alpmi_apms_a_data_cnf(
          /* Handle neg cnf */
          p_apmx->p_ar->err_cls = PNET_ERROR_CODE_1_ALPMI;
          p_apmx->p_ar->err_code = PNET_ERROR_CODE_2_ALPMI_INVALID;
-         pf_alarm_error_ind(p_apmx, p_apmx->p_ar->err_cls, p_apmx->p_ar->err_code);
+         pf_alarm_error_ind(net, p_apmx, p_apmx->p_ar->err_cls, p_apmx->p_ar->err_code);
       }
       break;
    }
@@ -294,6 +303,7 @@ static void pf_alarm_alpmi_apms_a_data_cnf(
  * @internal
  * ALPMI: APMR_Data.cnf(+/-)
  *
+ * @param net              InOut: The p-net stack instance
  * @param p_apmx           In:   The APMS instance sending the confirmation.
  * @param p_pnio_status    In:   The positive (true) or negative (false) confirmation.
  * @return  0  if the operation succeeded.
@@ -301,6 +311,7 @@ static void pf_alarm_alpmi_apms_a_data_cnf(
  */
 
 static int pf_alarm_alpmi_apmr_a_data_ind(
+   pnet_t                  *net,
    pf_apmx_t               *p_apmx,
    pnet_pnio_status_t      *p_pnio_status)
 {
@@ -317,7 +328,7 @@ static int pf_alarm_alpmi_apmr_a_data_ind(
    case PF_ALPMI_STATE_W_ACK:
       /* This function is only called for DATA = ACK */
       p_apmx->p_alpmx->alpmi_state = PF_ALPMI_STATE_W_ALARM;
-      (void)pf_fspm_aplmi_alarm_cnf(p_apmx->p_ar, p_pnio_status);
+      (void)pf_fspm_aplmi_alarm_cnf(net, p_apmx->p_ar, p_pnio_status);
       ret = 0;
       break;
    }
@@ -329,10 +340,12 @@ static int pf_alarm_alpmi_apmr_a_data_ind(
  * @internal
  * ALPMR: APMS_Data.cnf(+/-)
  *
+ * @param net              InOut: The p-net stack instance
  * @param p_apmx           In:   The APMS instance sending the confirmation.
  * @param res              In:   The positive (true) or negative (false) confirmation.
  */
 static void pf_alarm_alpmr_apms_a_data_cnf(
+   pnet_t                  *net,
    pf_apmx_t              *p_apmx,
    int                     res)
 {
@@ -348,7 +361,7 @@ static void pf_alarm_alpmr_apms_a_data_cnf(
          /* Handle neg cnf */
          p_apmx->p_ar->err_cls = PNET_ERROR_CODE_1_ALPMR;
          p_apmx->p_ar->err_code = PNET_ERROR_CODE_2_ALPMR_INVALID;
-         pf_alarm_error_ind(p_apmx, p_apmx->p_ar->err_cls, p_apmx->p_ar->err_code);
+         pf_alarm_error_ind(net, p_apmx, p_apmx->p_ar->err_cls, p_apmx->p_ar->err_code);
       }
       else
       {
@@ -361,12 +374,12 @@ static void pf_alarm_alpmr_apms_a_data_cnf(
          /* Handle neg cnf */
          p_apmx->p_ar->err_cls = PNET_ERROR_CODE_1_ALPMR;
          p_apmx->p_ar->err_code = PNET_ERROR_CODE_2_ALPMR_INVALID;
-         pf_alarm_error_ind(p_apmx, p_apmx->p_ar->err_cls, p_apmx->p_ar->err_code);
+         pf_alarm_error_ind(net, p_apmx, p_apmx->p_ar->err_cls, p_apmx->p_ar->err_code);
       }
       else
       {
          /* ALPMR_Alarm_Ack.cnf(+) */
-         (void)pf_fspm_aplmr_alarm_ack_cnf(p_apmx->p_ar, res);
+         (void)pf_fspm_aplmr_alarm_ack_cnf(net, p_apmx->p_ar, res);
          p_apmx->p_alpmx->alpmr_state = PF_ALPMR_STATE_W_NOTIFY;
       }
       break;
@@ -377,6 +390,7 @@ static void pf_alarm_alpmr_apms_a_data_cnf(
  * @internal
  * Handle APMR DATA messages in ALPMR.
  *
+ * @param net              InOut: The p-net stack instance
  * @param p_apmx           In:   The APMR instance that received the message.
  * @param p_fixed          In:   The Fixed part of the RTA-PDU.
  * @param p_alarm_data     In:   The AlarmData from the RTA-PDU.
@@ -386,6 +400,7 @@ static void pf_alarm_alpmr_apms_a_data_cnf(
  * @return
  */
 static int pf_alarm_alpmr_apmr_a_data_ind(
+   pnet_t                  *net,
    pf_apmx_t               *p_apmx,
    pf_alarm_fixed_t        *p_fixed,
    pf_alarm_data_t         *p_alarm_data,
@@ -403,7 +418,7 @@ static int pf_alarm_alpmr_apmr_a_data_ind(
       break;
    case PF_ALPMR_STATE_W_NOTIFY:
       /* Only DATA: AlarmNotifications are sent to this function */
-      ret = pf_fspm_aplmr_alarm_ind(p_apmx->p_ar,
+      ret = pf_fspm_aplmr_alarm_ind(net, p_apmx->p_ar,
          p_alarm_data->api_id, p_alarm_data->slot_nbr, p_alarm_data->subslot_nbr,
          data_usi, data_len, p_data);
 
@@ -416,7 +431,7 @@ static int pf_alarm_alpmr_apmr_a_data_ind(
    case PF_ALPMR_STATE_W_TACK:
       p_apmx->p_ar->err_cls = PNET_ERROR_CODE_1_RTA_ERR_CLS_PROTOCOL;
       p_apmx->p_ar->err_code = PNET_ERROR_CODE_2_ABORT_AR_PROTOCOL_VIOLATION;
-      pf_alarm_error_ind(p_apmx, p_apmx->p_ar->err_cls, p_apmx->p_ar->err_code);
+      pf_alarm_error_ind(net, p_apmx, p_apmx->p_ar->err_cls, p_apmx->p_ar->err_code);
       break;
    }
 
@@ -429,6 +444,9 @@ static int pf_alarm_alpmr_apmr_a_data_ind(
  * @internal
  * Handle high-priority alarm PDUs from the controller.
  *
+ * This is a callback for the frame handler. Arguments should fulfill pf_eth_frame_handler_t
+ *
+ * @param net              InOut: The p-net stack instance
  * @param frame_id         In:   The Ethernet frame id.
  * @param p_buf            In:   The Ethernet frame buffer.
  * @param frame_id_pos     In:   Position in the buffer of the frame id.
@@ -437,6 +455,7 @@ static int pf_alarm_alpmr_apmr_a_data_ind(
  *          -1 if an error occurred.
  */
 static int pf_alarm_apmr_high_handler(
+   pnet_t                  *net,
    uint16_t                frame_id,
    os_buf_t                *p_buf,
    uint16_t                frame_id_pos,
@@ -473,6 +492,9 @@ static int pf_alarm_apmr_high_handler(
  * @internal
  * Handle low-priority alarm PDUs from the controller.
  *
+ * This is a callback for the frame handler. Arguments should fulfill pf_eth_frame_handler_t
+ *
+ * @param net              InOut: The p-net stack instance
  * @param frame_id         In:   The Ethernet frame id.
  * @param p_buf            In:   The Ethernet frame buffer.
  * @param frame_id_pos     In:   Position in the buffer of the frame id.
@@ -481,6 +503,7 @@ static int pf_alarm_apmr_high_handler(
  *          -1 if an error occurred.
  */
 static int pf_alarm_apmr_low_handler(
+   pnet_t                  *net,
    uint16_t                frame_id,
    os_buf_t                *p_buf,
    uint16_t                frame_id_pos,
@@ -521,10 +544,14 @@ static int pf_alarm_apmr_low_handler(
  * If an ACK is received then the APMS state is no longer WTACK and the
  * frame is not re-sent (and the timer stops).
  *
+ * This is a callback for the scheduler. Arguments should fulfill pf_scheduler_timeout_ftn_t
+ *
+ * @param net              InOut: The p-net stack instance
  * @param arg
  * @param current_time
  */
 static void pf_alarm_apms_timeout(
+   pnet_t                  *net,
    void                    *arg,
    uint32_t                current_time)
 {
@@ -545,13 +572,13 @@ static void pf_alarm_apms_timeout(
          }
          else
          {
-            if (os_eth_send(p_apmx->p_ar->p_sess->if_id, p_apmx->p_rta) <= 0)
+            if (os_eth_send(p_apmx->p_ar->p_sess->eth_handle, p_apmx->p_rta) <= 0)
             {
                LOG_ERROR(PF_ALARM_LOG, "pf_alarm(%d): Error from os_eth_send(rta)\n", __LINE__);
             }
          }
 
-         if (pf_scheduler_add(p_apmx->timeout_us,
+         if (pf_scheduler_add(net, p_apmx->timeout_us,
             apmx_sync_name, pf_alarm_apms_timeout, p_apmx, &p_apmx->timeout_id) != 0)
          {
             LOG_ERROR(PF_ALARM_LOG, "pf_alarm(%d): Error from pf_scheduler_add\n", __LINE__);
@@ -578,15 +605,15 @@ static void pf_alarm_apms_timeout(
             os_buf_free(p_rta);
          }
 
-         pf_alarm_alpmi_apms_a_data_cnf(p_apmx, -1);
-         pf_alarm_alpmr_apms_a_data_cnf(p_apmx, -1);
+         pf_alarm_alpmi_apms_a_data_cnf(net, p_apmx, -1);
+         pf_alarm_alpmr_apms_a_data_cnf(net, p_apmx, -1);
 
 #endif
          p_apmx->apms_state = PF_APMS_STATE_OPEN;
 
          p_apmx->p_ar->err_cls = PNET_ERROR_CODE_1_APMS;
          p_apmx->p_ar->err_code = PNET_ERROR_CODE_2_APMS_TIMEOUT;
-         pf_alarm_error_ind(p_apmx, p_apmx->p_ar->err_cls, p_apmx->p_ar->err_code);
+         pf_alarm_error_ind(net, p_apmx, p_apmx->p_ar->err_cls, p_apmx->p_ar->err_code);
       }
    }
    else
@@ -607,11 +634,13 @@ static void pf_alarm_apms_timeout(
  * Initialize and start an AMPX instance.
  *
  * This function activates and starts an APMS/APMR pair.
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
 static int pf_alarm_apmx_activate(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar)
 {
    int                     ret = 0; /* Assume all goes well */
@@ -682,8 +711,8 @@ static int pf_alarm_apmx_activate(
       }
    }
 
-   pf_eth_frame_id_map_add(PF_FRAME_ID_ALARM_LOW, pf_alarm_apmr_low_handler, &p_ar->apmx[0]);
-   pf_eth_frame_id_map_add(PF_FRAME_ID_ALARM_HIGH, pf_alarm_apmr_high_handler, &p_ar->apmx[1]);
+   pf_eth_frame_id_map_add(net, PF_FRAME_ID_ALARM_LOW, pf_alarm_apmr_low_handler, &p_ar->apmx[0]);
+   pf_eth_frame_id_map_add(net, PF_FRAME_ID_ALARM_HIGH, pf_alarm_apmr_high_handler, &p_ar->apmx[1]);
 
    return ret;
 }
@@ -691,12 +720,14 @@ static int pf_alarm_apmx_activate(
 /**
  * @internal
  * APMS: a_data_ind
+ * @param net              InOut: The p-net stack instance
  * @param p_apmx           In:   The APMX instance.
  * @param p_fixed          In:   The fixed part of the ALARM message.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
 static int pf_alarm_apms_a_data_ind(
+   pnet_t                  *net,
    pf_apmx_t               *p_apmx,
    pf_alarm_fixed_t        *p_fixed)
 {
@@ -722,8 +753,8 @@ static int pf_alarm_apms_a_data_ind(
                os_buf_free(p_rta);
             }
 
-            pf_alarm_alpmi_apms_a_data_cnf(p_apmx, 0);
-            pf_alarm_alpmr_apms_a_data_cnf(p_apmx, 0);
+            pf_alarm_alpmi_apms_a_data_cnf(net, p_apmx, 0);
+            pf_alarm_alpmr_apms_a_data_cnf(net, p_apmx, 0);
 
             ret = 0;
 
@@ -768,6 +799,7 @@ static int pf_alarm_apms_a_data_ind(
  * Messages with TACK == true are saved in the APMX instance in order
  * to handle re-transmissions.
  *
+ * @param net              InOut: The p-net stack instance
  * @param p_apmx           In:   The APMX instance.
  * @param p_fixed          In:   The fixed part of the RTA-PDU.
  * @param p_alarm_data     In:   More fixed data for DATA messages.
@@ -781,6 +813,7 @@ static int pf_alarm_apms_a_data_ind(
  *          -1 if an error occurred.
  */
 static int pf_alarm_apms_a_data_req(
+   pnet_t                  *net,
    pf_apmx_t               *p_apmx,
    pf_alarm_fixed_t        *p_fixed,
    pf_alarm_data_t         *p_alarm_data,
@@ -798,7 +831,7 @@ static int pf_alarm_apms_a_data_req(
    uint16_t                pos = 0;
    const pnet_cfg_t        *p_cfg = NULL;
 
-   pf_fspm_get_default_cfg(&p_cfg);
+   pf_fspm_get_default_cfg(net, &p_cfg);
 
    if (p_apmx->p_ar->alarm_cr_request.alarm_cr_properties.transport_udp == true)
    {
@@ -872,7 +905,7 @@ static int pf_alarm_apms_a_data_req(
             pf_put_uint16(true, var_part_len, 1500, p_buf, &var_part_len_pos);
 
             p_rta->len = pos;
-            if (os_eth_send(p_apmx->p_ar->p_sess->if_id, p_rta) <= 0)
+            if (os_eth_send(p_apmx->p_ar->p_sess->eth_handle, p_rta) <= 0)
             {
                LOG_ERROR(PF_ALARM_LOG, "pf_alarm(%d): Error from os_eth_send(rta)\n", __LINE__);
             }
@@ -913,6 +946,7 @@ static int pf_alarm_apms_a_data_req(
  *
  * This function creates and sends an RTA-PDU.
  *
+ * @param net              InOut: The p-net stack instance
  * @param p_apmx           In:   The APMS instance.
  * @param pdu_type         In:   Mandatory. The PDU type.
  * @param tack             In:   Mandatory. TACK.
@@ -925,6 +959,7 @@ static int pf_alarm_apms_a_data_req(
  * @return
  */
 static int pf_alarm_apms_apms_a_data_req(
+   pnet_t                  *net,
    pf_apmx_t               *p_apmx,
    pf_alarm_pdu_type_values_t pdu_type,
    bool                    tack,
@@ -942,8 +977,8 @@ static int pf_alarm_apms_apms_a_data_req(
    {
       p_pnio_status->error_code_1 = PNET_ERROR_CODE_1_APMS;
       p_pnio_status->error_code_2 = PNET_ERROR_CODE_2_APMS_INVALID_STATE;
-      pf_alarm_alpmi_apms_a_data_cnf(p_apmx, -1);
-      pf_alarm_alpmr_apms_a_data_cnf(p_apmx, -1);
+      pf_alarm_alpmi_apms_a_data_cnf(net, p_apmx, -1);
+      pf_alarm_alpmr_apms_a_data_cnf(net, p_apmx, -1);
    }
    else
    {
@@ -958,14 +993,14 @@ static int pf_alarm_apms_apms_a_data_req(
 
       p_apmx->retry = p_apmx->p_ar->alarm_cr_request.rta_retries;
 
-      ret = pf_alarm_apms_a_data_req(p_apmx, &fixed,
+      ret = pf_alarm_apms_a_data_req(net, p_apmx, &fixed,
          p_alarm_data, maint_status,
          payload_usi, payload_len, p_payload, p_pnio_status);
 
       p_apmx->apms_state = PF_APMS_STATE_WTACK;
 
       /* APMS: a_data_cnf */
-      ret = pf_scheduler_add(p_apmx->timeout_us, apmx_sync_name,
+      ret = pf_scheduler_add(net, p_apmx->timeout_us, apmx_sync_name,
          pf_alarm_apms_timeout, p_apmx, &p_apmx->timeout_id);
       if (ret != 0)
       {
@@ -978,6 +1013,7 @@ static int pf_alarm_apms_apms_a_data_req(
 }
 
 static int pf_alarm_apmx_close(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    uint8_t                 err_code)
 {
@@ -993,7 +1029,7 @@ static int pf_alarm_apmx_close(
       pnio_status.error_code_1 = PNET_ERROR_CODE_1_RTA_ERR_CLS_PROTOCOL;
       pnio_status.error_code_2 = err_code;
 
-      if (pf_alarm_apms_apms_a_data_req(&p_ar->apmx[0], PF_RTA_PDU_TYPE_ERR, false,
+      if (pf_alarm_apms_apms_a_data_req(net, &p_ar->apmx[0], PF_RTA_PDU_TYPE_ERR, false,
          NULL,
          0,
          0, 0, NULL,
@@ -1003,8 +1039,8 @@ static int pf_alarm_apmx_close(
       }
    }
 
-   pf_eth_frame_id_map_remove(PF_FRAME_ID_ALARM_HIGH);
-   pf_eth_frame_id_map_remove(PF_FRAME_ID_ALARM_LOW);
+   pf_eth_frame_id_map_remove(net, PF_FRAME_ID_ALARM_HIGH);
+   pf_eth_frame_id_map_remove(net, PF_FRAME_ID_ALARM_LOW);
 
    for (ix = 0; ix < NELEMENTS(p_ar->apmx); ix++)
    {
@@ -1014,7 +1050,7 @@ static int pf_alarm_apmx_close(
          /* StopTimer */
          if (p_ar->apmx[ix].timeout_id != UINT32_MAX)
          {
-            pf_scheduler_remove(apmx_sync_name, p_ar->apmx[ix].timeout_id);
+            pf_scheduler_remove(net, apmx_sync_name, p_ar->apmx[ix].timeout_id);
             p_ar->apmx[ix].timeout_id = UINT32_MAX;
          }
 
@@ -1044,6 +1080,7 @@ static int pf_alarm_apmx_close(
 }
 
 static int pf_alarm_apmr_send_ack(
+   pnet_t                  *net,
    pf_apmx_t               *p_apmx)
 {
    int                     ret = -1;
@@ -1059,7 +1096,7 @@ static int pf_alarm_apmr_send_ack(
    fixed.send_seq_num = p_apmx->send_seq_count_o;
    fixed.ack_seq_nbr = p_apmx->exp_seq_count_o;
 
-   ret = pf_alarm_apms_a_data_req(p_apmx, &fixed,
+   ret = pf_alarm_apms_a_data_req(net, p_apmx, &fixed,
       NULL,
       0,
       0, 0, NULL,
@@ -1069,6 +1106,7 @@ static int pf_alarm_apmr_send_ack(
 }
 
 static int pf_alarm_apmr_send_nack(
+   pnet_t                  *net,
    pf_apmx_t               *p_apmx)
 {
    int                     ret = -1;
@@ -1084,7 +1122,7 @@ static int pf_alarm_apmr_send_nack(
    fixed.send_seq_num = p_apmx->send_seq_count_o;
    fixed.ack_seq_nbr = p_apmx->exp_seq_count_o;
 
-   ret = pf_alarm_apms_a_data_req(p_apmx, &fixed,
+   ret = pf_alarm_apms_a_data_req(net, p_apmx, &fixed,
       NULL,
       0,
       0, 0, NULL,
@@ -1098,6 +1136,7 @@ static int pf_alarm_apmr_send_nack(
  *
  * This function handles reception of an RTA-DATA-PDU in APMR.
  *
+ * @param net              InOut: The p-net stack instance
  * @param p_apmx           In:   The APMX instance.
  * @param p_fixed          In:   The fixed part of the RTA-DPU.
  * @param data_len         In:   Length of the variable part of the RTA-PDU.
@@ -1106,6 +1145,7 @@ static int pf_alarm_apmr_send_nack(
  *          -1 if an error occurred.
  */
 static int pf_alarm_apmr_a_data_ind(
+   pnet_t                  *net,
    pf_apmx_t               *p_apmx,
    pf_alarm_fixed_t        *p_fixed,
    uint16_t                data_len,
@@ -1142,12 +1182,12 @@ static int pf_alarm_apmr_a_data_ind(
             if (block_header.block_type == p_apmx->block_type_alarm_ack)
             {
                /* Tell APMS to handle ack_seq_num in message */
-               (void)pf_alarm_apms_a_data_ind(p_apmx, p_fixed);
+               (void)pf_alarm_apms_a_data_ind(net, p_apmx, p_fixed);
 
                p_apmx->exp_seq_count_o = p_apmx->exp_seq_count;
                p_apmx->exp_seq_count = (p_apmx->exp_seq_count + 1) & 0x7fff;
 
-               ret = pf_alarm_apmr_send_ack(p_apmx);
+               ret = pf_alarm_apmr_send_ack(net, p_apmx);
                if (ret == 0)
                {
                   p_apmx->apmr_state = PF_APMR_STATE_WCNF;
@@ -1158,7 +1198,7 @@ static int pf_alarm_apmr_a_data_ind(
                   pf_get_alarm_ack(p_get_info, &pos, &alarm_data);
                   pf_get_pnio_status(p_get_info, &pos, &pnio_status);
 
-                  ret = pf_alarm_alpmi_apmr_a_data_ind(p_apmx, &pnio_status);
+                  ret = pf_alarm_alpmi_apmr_a_data_ind(net, p_apmx, &pnio_status);
                   if (ret == 0)
                   {
                      p_apmx->apmr_state = PF_APMR_STATE_OPEN;
@@ -1168,12 +1208,12 @@ static int pf_alarm_apmr_a_data_ind(
             else if (block_header.block_type == p_apmx->block_type_alarm_notify)
             {
                /* Tell APMS to handle ack_seq_num in message */
-               (void)pf_alarm_apms_a_data_ind(p_apmx, p_fixed);
+               (void)pf_alarm_apms_a_data_ind(net, p_apmx, p_fixed);
 
                p_apmx->exp_seq_count_o = p_apmx->exp_seq_count;
                p_apmx->exp_seq_count = (p_apmx->exp_seq_count + 1) & 0x7fff;
 
-               ret = pf_alarm_apmr_send_ack(p_apmx);
+               ret = pf_alarm_apmr_send_ack(net, p_apmx);
                if (ret == 0)
                {
                   p_apmx->apmr_state = PF_APMR_STATE_WCNF;
@@ -1188,7 +1228,7 @@ static int pf_alarm_apmr_a_data_ind(
                   {
                      data_len -= (pos - start_pos);
                      p_data = &p_get_info->p_buf[pos];
-                     ret = pf_alarm_alpmr_apmr_a_data_ind(p_apmx, p_fixed, &alarm_data, data_len, data_usi, p_data);
+                     ret = pf_alarm_alpmr_apmr_a_data_ind(net, p_apmx, p_fixed, &alarm_data, data_len, data_usi, p_data);
                   }
                   else
                   {
@@ -1207,17 +1247,17 @@ static int pf_alarm_apmr_a_data_ind(
                LOG_ERROR(PF_ALARM_LOG, "Alarm(%d): Unhandled block type %#x\n", __LINE__, block_header.block_type);
                p_apmx->p_ar->err_cls = PNET_ERROR_CODE_1_ALPMR;
                p_apmx->p_ar->err_code = PNET_ERROR_CODE_2_ALPMR_WRONG_ALARM_PDU;
-               pf_alarm_error_ind(p_apmx, p_apmx->p_ar->err_cls, p_apmx->p_ar->err_code);
+               pf_alarm_error_ind(net, p_apmx, p_apmx->p_ar->err_cls, p_apmx->p_ar->err_code);
                ret = -1;
             }
          }
          else if (p_fixed->send_seq_num == p_apmx->exp_seq_count_o)
          {
             /* Tell APMS to handle ack_seq_num in message */
-            (void)pf_alarm_apms_a_data_ind(p_apmx, p_fixed);
+            (void)pf_alarm_apms_a_data_ind(net, p_apmx, p_fixed);
 
             /* Re-send the ACK */
-            (void)pf_alarm_apmr_send_ack(p_apmx);
+            (void)pf_alarm_apmr_send_ack(net, p_apmx);
             ret = 0;
          }
          else
@@ -1228,9 +1268,9 @@ static int pf_alarm_apmr_a_data_ind(
             pnio_status.error_decode = PNET_ERROR_DECODE_PNIO;
             pnio_status.error_code_1 = p_apmx->p_ar->err_cls;
             pnio_status.error_code_2 = p_apmx->p_ar->err_code;
-            pf_fspm_create_log_book_entry(p_apmx->p_ar->arep, &pnio_status, __LINE__);
+            pf_fspm_create_log_book_entry(net, p_apmx->p_ar->arep, &pnio_status, __LINE__);
 
-            (void)pf_alarm_apmr_send_nack(p_apmx);
+            (void)pf_alarm_apmr_send_nack(net, p_apmx);
             ret = 0;
          }
       }
@@ -1255,11 +1295,13 @@ static int pf_alarm_apmr_a_data_ind(
  * The message is processed in APMR/ALPMR and indications may be sent to the
  * application.
  *
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
 static int pf_alarm_apmr_periodic(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar)
 {
    int                     ret = 0;
@@ -1312,7 +1354,7 @@ static int pf_alarm_apmr_periodic(
                   if (var_part_len == 0)
                   {
                      /* Tell APMS to check for and handle ACK */
-                     (void)pf_alarm_apms_a_data_ind(p_apmx, &fixed);
+                     (void)pf_alarm_apms_a_data_ind(net, p_apmx, &fixed);
                   }
                   else
                   {
@@ -1336,7 +1378,7 @@ static int pf_alarm_apmr_periodic(
                   break;
                case PF_RTA_PDU_TYPE_DATA:
                   LOG_DEBUG(PF_ALARM_LOG, "Alarm(%d): DATA received\n", __LINE__);
-                  ret = pf_alarm_apmr_a_data_ind(p_apmx, &fixed, var_part_len, &get_info, pos);
+                  ret = pf_alarm_apmr_a_data_ind(net, p_apmx, &fixed, var_part_len, &get_info, pos);
                   break;
                case PF_RTA_PDU_TYPE_ERR:
                   if (var_part_len == 4)     /* sizeof(pf_pnio_status_t) */
@@ -1346,10 +1388,10 @@ static int pf_alarm_apmr_periodic(
                      switch (p_apmx->apmr_state)
                      {
                      case PF_APMR_STATE_OPEN:
-                        pf_alarm_error_ind(p_apmx, pnio_status.error_code_1, pnio_status.error_code_2);
+                        pf_alarm_error_ind(net, p_apmx, pnio_status.error_code_1, pnio_status.error_code_2);
                         break;
                      default:
-                        pf_alarm_error_ind(p_apmx, PNET_ERROR_CODE_1_APMR, PNET_ERROR_CODE_2_APMR_INVALID_STATE);
+                        pf_alarm_error_ind(net, p_apmx, PNET_ERROR_CODE_1_APMR, PNET_ERROR_CODE_2_APMR_INVALID_STATE);
                         break;
                      }
 
@@ -1392,7 +1434,6 @@ static int pf_alarm_apmr_periodic(
 }
 
 /* ===== Common alarm functions ===== */
-
 void pf_alarm_enable(
    pf_ar_t                 *p_ar)
 {
@@ -1412,7 +1453,9 @@ bool pf_alarm_pending(
    return false;
 }
 
+
 int pf_alarm_activate(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar)
 {
    int                     ret = 0; /* Assume all goes well */
@@ -1422,7 +1465,7 @@ int pf_alarm_activate(
       ret = -1;
    }
 
-   if (pf_alarm_apmx_activate(p_ar) != 0)
+   if (pf_alarm_apmx_activate(net, p_ar) != 0)
    {
       ret = -1;
    }
@@ -1431,6 +1474,7 @@ int pf_alarm_activate(
 }
 
 int pf_alarm_close(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar)
 {
    int                     ret = 0;
@@ -1440,7 +1484,7 @@ int pf_alarm_close(
       ret = -1;
    }
 
-   if (pf_alarm_apmx_close(p_ar, p_ar->err_code) != 0)
+   if (pf_alarm_apmx_close(net, p_ar, p_ar->err_code) != 0)
    {
       ret = -1;
    }
@@ -1496,6 +1540,7 @@ static void pf_alarm_add_item_to_digest(
 /**
  * @internal
  * Return the alarm specifier for a specific sub-slot.
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param api_id           In:   The API identifier.
  * @param slot_nbr         In:   The slot number.
@@ -1507,6 +1552,7 @@ static void pf_alarm_add_item_to_digest(
  *          -1 if an error occurred.
  */
 static int pf_alarm_get_diag_digest(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    uint32_t                api_id,
    uint16_t                slot_nbr,
@@ -1520,13 +1566,13 @@ static int pf_alarm_get_diag_digest(
    uint16_t                item_ix;
    pf_diag_item_t          *p_item = NULL;
 
-   if (pf_cmdev_get_device(&p_dev) == 0)
+   if (pf_cmdev_get_device(net, &p_dev) == 0)
    {
       memset(p_alarm_spec, 0, sizeof(*p_alarm_spec));
       *p_maint_status = 0;
 
       /* Consider only alarms on this sub-slot. */
-      if (pf_cmdev_get_subslot_full(api_id, slot_nbr, subslot_nbr, &p_subslot) == 0)
+      if (pf_cmdev_get_subslot_full(net, api_id, slot_nbr, subslot_nbr, &p_subslot) == 0)
       {
          /* Collect all diags into maintenanceStatus*/
 
@@ -1538,14 +1584,14 @@ static int pf_alarm_get_diag_digest(
 
          /* Now handle all the already reported diag items. */
          item_ix = p_subslot->diag_list;
-         pf_cmdev_get_diag_item(item_ix, &p_item);
+         pf_cmdev_get_diag_item(net, item_ix, &p_item);
          while (p_item != NULL)
          {
             /* Collect all diags into maintenanceStatus*/
             pf_alarm_add_item_to_digest(p_ar, p_subslot, p_item, p_alarm_spec, p_maint_status);
 
             item_ix = p_item->next;
-            pf_cmdev_get_diag_item(item_ix, &p_item);
+            pf_cmdev_get_diag_item(net, item_ix, &p_item);
          }
       }
    }
@@ -1553,19 +1599,20 @@ static int pf_alarm_get_diag_digest(
    return 0;
 }
 
-int pf_alarm_periodic(void)
+int pf_alarm_periodic(
+   pnet_t                  *net)
 {
    uint16_t                ix;
    pf_ar_t                 *p_ar;
 
-   if (global_alarm_enable == true)
+   if (net->global_alarm_enable == true)
    {
       for (ix = 0; ix < PNET_MAX_AR; ix++)
       {
-         p_ar = pf_ar_find_by_index(ix);
+         p_ar = pf_ar_find_by_index(net, ix);
          if ((p_ar != NULL) && (p_ar->in_use == true))
          {
-            (void)pf_alarm_apmr_periodic(p_ar);
+            (void)pf_alarm_apmr_periodic(net, p_ar);
          }
       }
    }
@@ -1574,6 +1621,7 @@ int pf_alarm_periodic(void)
 }
 
 int pf_alarm_alpmr_alarm_ack(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pnet_pnio_status_t      *p_pnio_status)
 {
@@ -1595,7 +1643,7 @@ int pf_alarm_alpmr_alarm_ack(
       fixed.send_seq_num = p_apmx->send_seq_count;
       fixed.ack_seq_nbr = p_apmx->exp_seq_count_o;
 
-      ret = pf_alarm_apms_a_data_req(p_apmx, &fixed,
+      ret = pf_alarm_apms_a_data_req(net, p_apmx, &fixed,
          NULL,
          0,
          0, 0, NULL,
@@ -1606,7 +1654,7 @@ int pf_alarm_alpmr_alarm_ack(
       {
          p_ar->err_cls = PNET_ERROR_CODE_1_ALPMI;
          p_ar->err_code = PNET_ERROR_CODE_2_ALPMI_INVALID;
-         pf_alarm_error_ind(p_apmx, p_ar->err_cls, p_ar->err_code);
+         pf_alarm_error_ind(net, p_apmx, p_ar->err_cls, p_ar->err_code);
       }
       p_alpmx->alpmr_state = PF_ALPMR_STATE_W_NOTIFY;
       break;
@@ -1626,6 +1674,7 @@ int pf_alarm_alpmr_alarm_ack(
  *
  * This function sends an alarm to the controller using an RTA DATA PDU.
  *
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param alarm_type       In:   The alarm type.
  * @param high_prio        In:   true => use high prio alarm.
@@ -1644,6 +1693,7 @@ int pf_alarm_alpmr_alarm_ack(
  *          -1 if an error occurred (or waiting for ACK from controller: re-try later).
  */
 static int pf_alarm_send_alarm(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pf_alarm_type_values_t  alarm_type,
    bool                    high_prio,
@@ -1665,7 +1715,7 @@ static int pf_alarm_send_alarm(
    pf_apmx_t               *p_apmx = &p_ar->apmx[high_prio ? 1 : 0];
    pf_alpmx_t              *p_alpmx = &p_ar->alpmx[high_prio ? 1 : 0];
 
-   if (global_alarm_enable == true)
+   if (net->global_alarm_enable == true)
    {
       if (p_alpmx->alpmi_state == PF_ALPMI_STATE_W_ALARM)
       {
@@ -1677,7 +1727,7 @@ static int pf_alarm_send_alarm(
          alarm_data.subslot_nbr = subslot_nbr;
          alarm_data.module_ident = module_ident;
          alarm_data.submodule_ident = submodule_ident;
-         (void)pf_alarm_get_diag_digest(p_ar, api_id, slot_nbr, subslot_nbr,
+         (void)pf_alarm_get_diag_digest(net, p_ar, api_id, slot_nbr, subslot_nbr,
             p_diag_item, &alarm_data.alarm_specifier, &maint_status);
 
          alarm_data.sequence_number = p_alpmx->sequence_number;
@@ -1685,7 +1735,7 @@ static int pf_alarm_send_alarm(
          p_alpmx->sequence_number++;
          p_alpmx->sequence_number %= 0x0800;
 
-         ret = pf_alarm_apms_apms_a_data_req(p_apmx, PF_RTA_PDU_TYPE_DATA, tack,
+         ret = pf_alarm_apms_apms_a_data_req(net, p_apmx, PF_RTA_PDU_TYPE_DATA, tack,
             &alarm_data,
             maint_status,
             payload_usi, payload_len, p_payload,
@@ -1708,6 +1758,7 @@ static int pf_alarm_send_alarm(
 }
 
 int pf_alarm_send_process(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    uint32_t                api_id,
    uint16_t                slot_nbr,
@@ -1719,7 +1770,7 @@ int pf_alarm_send_process(
    LOG_INFO(PF_ALARM_LOG, "Alarm(%d): process alarm\n", __LINE__);
 
    /* High prio, require TACK */
-   return pf_alarm_send_alarm(p_ar, PF_ALARM_TYPE_PROCESS, true, true,
+   return pf_alarm_send_alarm(net, p_ar, PF_ALARM_TYPE_PROCESS, true, true,
       api_id, slot_nbr, subslot_nbr,
       NULL,       /* p_diag_item */
       0, 0,       /* module_ident, submodule_ident */
@@ -1728,6 +1779,7 @@ int pf_alarm_send_process(
 }
 
 int pf_alarm_send_diagnosis(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    uint32_t                api_id,
    uint16_t                slot_nbr,
@@ -1740,7 +1792,7 @@ int pf_alarm_send_diagnosis(
    if (p_diag_item != NULL)
    {
       /* Low prio, require TACK */
-      ret = pf_alarm_send_alarm(p_ar, PF_ALARM_TYPE_DIAGNOSIS, false, true,
+      ret = pf_alarm_send_alarm(net, p_ar, PF_ALARM_TYPE_DIAGNOSIS, false, true,
          api_id, slot_nbr, subslot_nbr,
          p_diag_item,
          0, 0,       /* module_ident, submodule_ident */
@@ -1752,6 +1804,7 @@ int pf_alarm_send_diagnosis(
 }
 
 int pf_alarm_send_pull(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    uint32_t                api_id,
    uint16_t                slot_nbr,
@@ -1777,7 +1830,7 @@ int pf_alarm_send_pull(
    }
 
    /* High prio, no TACK */
-   (void)pf_alarm_send_alarm(p_ar, alarm_type, false, false,
+   (void)pf_alarm_send_alarm(net, p_ar, alarm_type, false, false,
       api_id, slot_nbr, subslot_nbr,
       NULL,       /* p_diag_item */
       0, 0,       /* module_ident, submodule_ident */
@@ -1788,6 +1841,7 @@ int pf_alarm_send_pull(
 }
 
 int pf_alarm_send_plug(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    uint32_t                api_id,
    uint16_t                slot_nbr,
@@ -1798,7 +1852,7 @@ int pf_alarm_send_plug(
    LOG_INFO(PF_ALARM_LOG, "Alarm(%d): plug alarm\n", __LINE__);
 
    /* High prio, no TACK */
-   (void)pf_alarm_send_alarm(p_ar, PF_ALARM_TYPE_PLUG, false, false,
+   (void)pf_alarm_send_alarm(net, p_ar, PF_ALARM_TYPE_PLUG, false, false,
       api_id, slot_nbr, subslot_nbr,
       NULL,       /* p_diag_item */
       module_ident, submodule_ident,
@@ -1809,6 +1863,7 @@ int pf_alarm_send_plug(
 }
 
 int pf_alarm_send_plug_wrong(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    uint32_t                api_id,
    uint16_t                slot_nbr,
@@ -1819,7 +1874,7 @@ int pf_alarm_send_plug_wrong(
    LOG_INFO(PF_ALARM_LOG, "Alarm(%d): plug wrong alarm\n", __LINE__);
 
    /* High prio, no TACK */
-   (void)pf_alarm_send_alarm(p_ar, PF_ALARM_TYPE_PLUG_WRONG_MODULE, false, false,
+   (void)pf_alarm_send_alarm(net, p_ar, PF_ALARM_TYPE_PLUG_WRONG_MODULE, false, false,
       api_id, slot_nbr, subslot_nbr,
       NULL,       /* p_diag_item */
       module_ident, submodule_ident,

@@ -16,6 +16,7 @@
 #include "pf_includes.h"
 #include <lwip/netif.h>
 #include <dev.h>
+#include <uassert.h>
 
 #define MAX_NUMBER_OF_IF   1
 #define NET_DRIVER_NAME    "/net"
@@ -23,20 +24,29 @@
 static struct netif * interface[MAX_NUMBER_OF_IF];
 static int nic_index = 0;
 
-static int os_eth_recv(uint16_t type, struct pbuf *p, struct netif *inp);
 
-int os_eth_init(const char * if_name)
+os_eth_handle_t* os_eth_init(
+   const char              *if_name,
+   os_eth_callback_t       *callback,
+   void                    *arg)
 {
-   int id = -1;
-   struct netif * found_if;
-   drv_t * drv;
+   os_eth_handle_t         *handle;
+   struct netif            *found_if;
+   drv_t                   *drv;
+
+   handle = malloc(sizeof(os_eth_handle_t));
+   UASSERT (handle != NULL, EMEM);
+
+   handle->arg = arg;
+   handle->callback = callback;
+   handle->if_id = -1;
 
    if (nic_index < MAX_NUMBER_OF_IF)
    {
       drv = dev_find_driver (NET_DRIVER_NAME);
       if (drv != NULL)
       {
-         eth_ioctl(drv, NULL, IOCTL_NET_SET_RX_HOOK, os_eth_recv);
+         eth_ioctl(drv, arg, IOCTL_NET_SET_RX_HOOK, callback);
 
          found_if = netif_find(if_name);
          if (found_if == NULL)
@@ -47,18 +57,28 @@ int os_eth_init(const char * if_name)
          {
             interface[nic_index] = found_if;
          }
-         id = nic_index++;
+         handle->if_id = nic_index++;
       }
       else
       {
-         printf("Driver \"%s\" not found!\n", NET_DRIVER_NAME);
+         os_log(LOG_LEVEL_ERROR, "Driver \"%s\" not found!\n", NET_DRIVER_NAME);
       }
    }
 
-   return id;
+   if (handle->if_id > -1)
+   {
+      return handle;
+   }
+   else
+   {
+      free(handle);
+      return NULL;
+   }
 }
 
-int os_eth_send(uint32_t id, os_buf_t * buf)
+int os_eth_send(
+   os_eth_handle_t   *handle,
+   os_buf_t          *buf)
 {
    int ret = -1;
 
@@ -67,37 +87,11 @@ int os_eth_send(uint32_t id, os_buf_t * buf)
       /* TODO: remove tot_len from os_buff */
       buf->tot_len = buf->len;
 
-      if (interface[id]->linkoutput != NULL)
+      if (interface[handle->if_id]->linkoutput != NULL)
       {
-         interface[id]->linkoutput(interface[id], buf);
+         interface[handle->if_id]->linkoutput(interface[handle->if_id], buf);
          ret = buf->len;
       }
    }
    return ret;
 }
-
-static int os_eth_recv(uint16_t type, struct pbuf *p, struct netif *inp)
-{
-
-   int handled = 0;
-
-   switch (type)
-   {
-   case OS_ETHTYPE_PROFINET:
-   case OS_ETHTYPE_LLDP:
-   case OS_ETHTYPE_VLAN:
-      handled = pf_eth_recv(p, p->len);
-      break;
-   case OS_ETHTYPE_ETHERCAT:
-      rprintf("Handle ECAT type\n");
-      handled = 1;
-      break;
-
-   default:
-      break;
-   }
-
-   return handled;
-}
-
-

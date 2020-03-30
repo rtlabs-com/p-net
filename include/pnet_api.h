@@ -444,6 +444,9 @@ typedef enum pnet_data_status_bits
    PNET_DATA_STATUS_BIT_IGNORE
 } pnet_data_status_bits_t;
 
+ /** Network handle */
+typedef struct pnet pnet_t;
+
 /**
  * Profinet stack detailed error information.
  */
@@ -492,12 +495,16 @@ typedef struct pnet_result
  * refused by the device.
  * In case of error the application should provide error information in \a p_result.
  *
+ * @param net              InOut: The p-net stack instance
+ * @param arg              InOut: User-defined data (not used by p-net)
  * @param arep             In:   The AREP.
  * @param p_result         Out:  Detailed error information.
  * @return  0  on success.
  *          -1 if an error occurred.
  */
 typedef int (*pnet_connect_ind)(
+   pnet_t                  *net,
+   void                    *arg,
    uint32_t                arep,
    pnet_result_t           *p_result);
 
@@ -510,12 +517,16 @@ typedef int (*pnet_connect_ind)(
  * The connection will be closed regardless of the return value from this function.
  * In case of error the application should provide error information in \a p_result.
  *
+ * @param net              InOut: The p-net stack instance
+ * @param arg              InOut: User-defined data (not used by p-net)
  * @param arep             In:   The AREP.
  * @param p_result         Out:  Detailed error information.
  * @return  0  on success.
  *          -1 if an error occurred.
  */
 typedef int (*pnet_release_ind)(
+   pnet_t                  *net,
+   void                    *arg,
    uint32_t                arep,
    pnet_result_t           *p_result);
 
@@ -531,6 +542,8 @@ typedef int (*pnet_release_ind)(
  * refused by the device.
  * In case of error the application should provide error information in \a p_result.
  *
+ * @param net              InOut: The p-net stack instance
+ * @param arg              InOut: User-defined data (not used by p-net)
  * @param arep             In:   The AREP.
  * @param control_command  In:   The DControl command code.
  * @param p_result         Out:  Detailed error information.
@@ -538,6 +551,8 @@ typedef int (*pnet_release_ind)(
  *          -1 if an error occurred.
  */
 typedef int (*pnet_dcontrol_ind)(
+   pnet_t                  *net,
+   void                    *arg,
    uint32_t                arep,
    pnet_control_command_t  control_command,
    pnet_result_t           *p_result);
@@ -551,12 +566,16 @@ typedef int (*pnet_dcontrol_ind)(
  * The application is not required to take any action.
  * In case of error the application should provide error information in \a p_result.
  *
+ * @param net              InOut: The p-net stack instance
+ * @param arg              InOut: User-defined data (not used by p-net)
  * @param arep             In:   The AREP.
  * @param p_result         Out:  Detailed error information.
  * @return  0  on success.
  *          -1 if an error occurred.
  */
 typedef int (*pnet_ccontrol_cnf)(
+   pnet_t                  *net,
+   void                    *arg,
    uint32_t                arep,
    pnet_result_t           *p_result);
 
@@ -572,12 +591,16 @@ typedef int (*pnet_ccontrol_cnf)(
  *
  * The return value from this call-back function is ignored by the Profinet stack.
  *
+ * @param net              InOut: The p-net stack instance
+ * @param arg              InOut: User-defined data (not used by p-net)
  * @param arep             In:   The AREP.
  * @param state            In:   The state transition event. See pnet_event_values_t.
  * @return  0  on success.
  *          Other values are ignored.
  */
 typedef int (*pnet_state_ind)(
+   pnet_t                  *net,
+   void                    *arg,
    uint32_t                arep,
    pnet_event_values_t     state);
 
@@ -598,6 +621,8 @@ typedef int (*pnet_state_ind)(
  *
  * In case of error the application should provide error information in \a p_result.
  *
+ * @param net              InOut: The p-net stack instance
+ * @param arg              InOut: User-defined data (not used by p-net)
  * @param arep             In:   The AREP.
  * @param api              In:   The AP identifier.
  * @param slot             In:   The slot number.
@@ -611,6 +636,8 @@ typedef int (*pnet_state_ind)(
  *          -1 if an error occurred.
  */
 typedef int (*pnet_read_ind)(
+   pnet_t                  *net,
+   void                    *arg,
    uint32_t                arep,
    uint16_t                api,
    uint16_t                slot,
@@ -637,6 +664,8 @@ typedef int (*pnet_read_ind)(
  *
  * In case of error the application should provide error information in \a p_result.
  *
+ * @param net              InOut: The p-net stack instance
+ * @param arg              InOut: User-defined data (not used by p-net)
  * @param arep             In:   The AREP.
  * @param api              In:   The AP identifier.
  * @param slot             In:   The slot number.
@@ -650,6 +679,8 @@ typedef int (*pnet_read_ind)(
  *          -1 if an error occurred.
  */
 typedef int (*pnet_write_ind)(
+   pnet_t                  *net,
+   void                    *arg,
    uint32_t                arep,
    uint16_t                api,
    uint16_t                slot,
@@ -676,6 +707,8 @@ typedef int (*pnet_write_ind)(
  * This function should return 0 (zero) if a valid module was plugged. Or return -1 if the
  * application cannot handle this request.
  *
+ * @param net              InOut: The p-net stack instance
+ * @param arg              InOut: User-defined data (not used by p-net)
  * @param api              In:   The AP identifier.
  * @param slot             In:   The slot number.
  * @param module_ident     In:   The module ident number.
@@ -683,6 +716,8 @@ typedef int (*pnet_write_ind)(
  *          -1 if an error occurred.
  */
 typedef int (*pnet_exp_module_ind)(
+   pnet_t                  *net,
+   void                    *arg,
    uint16_t                api,
    uint16_t                slot,
    uint32_t                module_ident);
@@ -707,6 +742,8 @@ typedef int (*pnet_exp_module_ind)(
  * This function should return 0 (zero) if a valid sub-module was plugged. Or return -1 if the
  * application cannot handle this request.
  *
+ * @param net              InOut: The p-net stack instance
+ * @param arg              InOut: User-defined data (not used by p-net)
  * @param api              In:   The AP identifier.
  * @param slot             In:   The slot number.
  * @param subslot          In:   The sub-slot number.
@@ -716,6 +753,8 @@ typedef int (*pnet_exp_module_ind)(
  *          -1 if an error occurred.
  */
 typedef int (*pnet_exp_submodule_ind)(
+   pnet_t                  *net,
+   void                    *arg,
    uint16_t                api,
    uint16_t                slot,
    uint16_t                subslot,
@@ -731,31 +770,41 @@ typedef int (*pnet_exp_submodule_ind)(
  * The application is not required by the Profinet stack to take any action. It may
  * use this information as it wishes.
  *
+ * @param net              InOut: The p-net stack instance
+ * @param arg              InOut: User-defined data (not used by p-net)
  * @param arep             In:   The AREP.
  * @param crep             In:   The CREP.
  * @param changes          In:   The changed bits in the received data status.
+ * @param data_status      In:   Current received data status (after changes).
  * @return  0  on success.
  *          -1 if an error occurred.
  */
 typedef int (*pnet_new_data_status_ind)(
+   pnet_t                  *net,
+   void                    *arg,
    uint32_t                arep,
    uint32_t                crep,
-   uint8_t                 changes);   /**< Only modified bits from pnet_data_status_bits_t */
+   uint8_t                 changes, /**< Only modified bits from pnet_data_status_bits_t */
+   uint8_t                 data_status);
 
 /**
  * The controller has sent an alarm to the device.
  *
+ * @param net              InOut: The p-net stack instance
+ * @param arg              InOut: User-defined data (not used by p-net)
  * @param arep             In:   The AREP.
  * @param api              In:   The AP identifier.
  * @param slot             In:   The slot number.
  * @param subslot          In:   The sub-slot number.
- * @param data_len         TODO
- * @param data_usi
- * @param p_data
+ * @param data_len         In:   Data length
+ * @param data_usi         In:   Alarm USI
+ * @param p_data           InOut: Alarm data
  * @return  0  on success.
  *          -1 if an error occurred.
  */
 typedef int (*pnet_alarm_ind)(
+   pnet_t                  *net,
+   void                    *arg,
    uint32_t                arep,
    uint32_t                api,
    uint16_t                slot,
@@ -768,18 +817,24 @@ typedef int (*pnet_alarm_ind)(
  * The controller acknowledges the alarm sent previously.
  * It is now possible to send another alarm.
  *
+ * @param net              InOut: The p-net stack instance
+ * @param arg              InOut: User-defined data (not used by p-net)
  * @param arep             In:   The AREP.
  * @param p_pnio_status    In:   Detailed ACK information.
  * @return  0  on success.
  *          -1 if an error occurred.
  */
 typedef int (*pnet_alarm_cnf)(
+   pnet_t                  *net,
+   void                    *arg,
    uint32_t                arep,
    pnet_pnio_status_t      *p_pnio_status);
 
 /**
  * The controller acknowledges the alarm ACK sent previously.
  *
+ * @param net              InOut: The p-net stack instance
+ * @param arg              InOut: User-defined data (not used by p-net)
  * @param arep             In:   The AREP.
  * @param res              In:   0  if ACK was received by the remote side.
  *                               -1 if ACK was not received by the remote side.
@@ -787,6 +842,8 @@ typedef int (*pnet_alarm_cnf)(
  *          -1 if an error occurred.
  */
 typedef int (*pnet_alarm_ack_cnf)(
+   pnet_t                  *net,
+   void                    *arg,
    uint32_t                arep,
    int                     res);
 
@@ -946,6 +1003,7 @@ typedef struct pnet_cfg
    pnet_alarm_ind          alarm_ind_cb;
    pnet_alarm_cnf          alarm_cnf_cb;
    pnet_alarm_ack_cnf      alarm_ack_cnf_cb;
+   void                    *cb_arg;    /* Userdata passed to callbacks, not used by stack */
 
    /** I&M initial data */
    pnet_im_0_t             im_0_data;
@@ -1002,11 +1060,10 @@ typedef struct pnet_alarm_spec
  * @param netif            In:   Name of the network interface.
  * @param tick_us          In:   Periodic interval in us. Specify the interval
  *                               between calls to pnet_handle_periodic().
- * @param cfg              In:   Profinet configuration.
- * @return  0 if all went well.
- *          -1 if an error occurred.
+ * @param p_cfg            In:   Profinet configuration.
+ * @return a handle to the stack instance, or NULL if an error occured.
  */
-PNET_EXPORT int pnet_init(
+PNET_EXPORT pnet_t* pnet_init(
    const char              *netif,
    uint32_t                tick_us,
    const pnet_cfg_t        *p_cfg);
@@ -1018,8 +1075,10 @@ PNET_EXPORT int pnet_init(
  * The period is specified by the application in the tick_us argument
  * to pnet_init.
  * The period should match the expected I/O data rate to and from the device.
+ * @param net              InOut: The p-net stack instance
  */
-PNET_EXPORT void pnet_handle_periodic(void);
+PNET_EXPORT void pnet_handle_periodic(
+   pnet_t                  *net);
 
 /**
  * Application signals ready to exchange data.
@@ -1035,11 +1094,13 @@ PNET_EXPORT void pnet_handle_periodic(void);
  *
  * Triggers the \a pnet_state_ind() user callback with PNET_EVENT_APPLRDY.
  *
+ * @param net              InOut: The p-net stack instance
  * @param arep             In:   The AREP
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
 PNET_EXPORT int pnet_application_ready(
+   pnet_t                  *net,
    uint32_t                arep);
 
 /**
@@ -1050,6 +1111,7 @@ PNET_EXPORT int pnet_application_ready(
  * This function may be called from the exp_module_cb call-back function
  * of the application.
  *
+ * @param net              InOut: The p-net stack instance
  * @param api              In:   The API identifier.
  * @param slot             In:   The slot number.
  * @param module_ident     In:   The module ident number.
@@ -1057,6 +1119,7 @@ PNET_EXPORT int pnet_application_ready(
  *          -1 if an error occurred.
  */
 PNET_EXPORT int pnet_plug_module(
+   pnet_t                  *net,
    uint32_t                api,
    uint16_t                slot,
    uint32_t                module_ident);
@@ -1072,6 +1135,7 @@ PNET_EXPORT int pnet_plug_module(
  * If a module has not been plugged into the designated slot then it will be
  * plugged automatically by this function.
  *
+ * @param net              InOut: The p-net stack instance
  * @param api              In:   The API identifier.
  * @param slot             In:   The slot number.
  * @param subslot          In:   The sub-slot number.
@@ -1084,6 +1148,7 @@ PNET_EXPORT int pnet_plug_module(
  *          -1 if an error occurred.
  */
 PNET_EXPORT int pnet_plug_submodule(
+   pnet_t                  *net,
    uint32_t                api,
    uint16_t                slot,
    uint16_t                subslot,
@@ -1101,12 +1166,14 @@ PNET_EXPORT int pnet_plug_submodule(
  * This function internally calls pnet_pull_submodule() on any plugged
  * sub-modules before pulling the module itself.
  *
+ * @param net              InOut: The p-net stack instance
  * @param api              In:   The API identifier.
  * @param slot             In:   The slot number.
  * @return  0  if a module could be pulled from the slot.
  *          -1 if an error occurred.
  */
 PNET_EXPORT int pnet_pull_module(
+   pnet_t                  *net,
    uint32_t                api,
    uint16_t                slot);
 
@@ -1115,6 +1182,7 @@ PNET_EXPORT int pnet_pull_module(
  *
  * This function may be used to unplug a sub-module from a specific sub-slot.
  *
+ * @param net              InOut: The p-net stack instance
  * @param api              In:   The API identifier.
  * @param slot             In:   The slot number.
  * @param subslot          In:   The sub-slot number.
@@ -1122,6 +1190,7 @@ PNET_EXPORT int pnet_pull_module(
  *          -1 if an error occurred.
  */
 PNET_EXPORT int pnet_pull_submodule(
+   pnet_t                  *net,
    uint32_t                api,
    uint16_t                slot,
    uint16_t                subslot);
@@ -1132,6 +1201,7 @@ PNET_EXPORT int pnet_pull_submodule(
  * This function may be called to set new data and IOPS values of a sub-slot to
  * send to the controller.
  *
+ * @param net              InOut: The p-net stack instance
  * @param api              In:  The API.
  * @param slot             In:  The slot.
  * @param subslot          In:  The sub-slot.
@@ -1142,6 +1212,7 @@ PNET_EXPORT int pnet_pull_submodule(
  *          -1 if an error occurred.
  */
 PNET_EXPORT int pnet_input_set_data_and_iops(
+   pnet_t                  *net,
    uint32_t                api,
    uint16_t                slot,
    uint16_t                subslot,
@@ -1155,6 +1226,7 @@ PNET_EXPORT int pnet_input_set_data_and_iops(
  * This function may be called to retrieve the IOCS value of a sub-slot
  * sent from the controller.
  *
+ * @param net              InOut: The p-net stack instance
  * @param api              In:  The API.
  * @param slot             In:  The slot.
  * @param subslot          In:  The sub-slot.
@@ -1163,6 +1235,7 @@ PNET_EXPORT int pnet_input_set_data_and_iops(
  *          -1 if an error occurred.
  */
 PNET_EXPORT int pnet_input_get_iocs(
+   pnet_t                  *net,
    uint32_t                api,
    uint16_t                slot,
    uint16_t                subslot,
@@ -1180,6 +1253,7 @@ PNET_EXPORT int pnet_input_get_iocs(
  * Note that the latest data and IOPS values are copied to the application
  * buffers regardless of the value of \a p_new_flag.
  *
+ * @param net              InOut: The p-net stack instance
  * @param api              In:  The API.
  * @param slot             In:  The slot.
  * @param subslot          In:  The sub-slot.
@@ -1192,6 +1266,7 @@ PNET_EXPORT int pnet_input_get_iocs(
  *          -1 if an error occurred.
  */
 PNET_EXPORT int pnet_output_get_data_and_iops(
+   pnet_t                  *net,
    uint32_t                api,
    uint16_t                slot,
    uint16_t                subslot,
@@ -1206,6 +1281,7 @@ PNET_EXPORT int pnet_output_get_data_and_iops(
  * This function is use to set the device consumer status (IOCS)
  * of a specific sub-slot.
  *
+ * @param net              InOut: The p-net stack instance
  * @param api              In:  The API.
  * @param slot             In:  The slot.
  * @param subslot          In:  The sub-slot.
@@ -1214,6 +1290,7 @@ PNET_EXPORT int pnet_output_get_data_and_iops(
  *          -1 if an error occurred.
  */
 PNET_EXPORT int pnet_output_set_iocs(
+   pnet_t                  *net,
    uint32_t                api,
    uint16_t                slot,
    uint16_t                subslot,
@@ -1222,20 +1299,25 @@ PNET_EXPORT int pnet_output_set_iocs(
 /**
  * Implements the "Local Set State" primitive.
  *
+ * @param net              InOut: The p-net stack instance
  * @param primary          In:   true to set state to "primary".
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
 PNET_EXPORT int pnet_set_state(
+   pnet_t                  *net,
    bool                    primary);
 
 /**
  * Implements the "Local Set Redundancy State" primitive.
+ *
+ * @param net              InOut: The p-net stack instance
  * @param redundant        In:   true to set state to "redundant".
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
 PNET_EXPORT int pnet_set_redundancy_state(
+   pnet_t                  *net,
    bool                    redundant);
 
 /**
@@ -1249,25 +1331,31 @@ PNET_EXPORT int pnet_set_redundancy_state(
  *
  * Its effect is similar to setting IOPS to PNET_IOXS_BAD for all sub-slots.
  *
+ * @param net              InOut: The p-net stack instance
  * @param run              In:   true to set state to "run".
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
 PNET_EXPORT int pnet_set_provider_state(
+   pnet_t                  *net,
    bool                    run);
 
 /**
  * Application requests abortion of the connection.
  *
+ * @param net              InOut: The p-net stack instance
  * @param arep             In:   The AREP
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
 PNET_EXPORT int pnet_ar_abort(
+   pnet_t                  *net,
    uint32_t                arep);
 
 /**
  * Fetch error information from the AREP.
+ *
+ * @param net              InOut: The p-net stack instance
  * @param arep             In:   The AREP.
  * @param p_err_cls        Out:  The error class.
  * @param p_err_code       Out:  The Error code.
@@ -1275,6 +1363,7 @@ PNET_EXPORT int pnet_ar_abort(
  *          -1 if the AREP is not valid.
  */
 PNET_EXPORT int pnet_get_ar_error_codes(
+   pnet_t                  *net,
    uint32_t                arep,
    uint16_t                *p_err_cls,
    uint16_t                *p_err_code);
@@ -1285,11 +1374,13 @@ PNET_EXPORT int pnet_get_ar_error_codes(
  * This function is used to insert an entry into the Profinet log-book.
  * Controllers may read the log-book using IODRead requests.
  *
+ * @param net              InOut: The p-net stack instance
  * @param arep             In:   The AREP.
  * @param p_pnio_status    In:   The PNIO status.
  * @param entry_detail     In:   Additional application information.
  */
 PNET_EXPORT void pnet_create_log_book_entry(
+   pnet_t                  *net,
    uint32_t                 arep,
    const pnet_pnio_status_t *p_pnio_status,
    uint32_t                 entry_detail);
@@ -1306,6 +1397,7 @@ PNET_EXPORT void pnet_create_log_book_entry(
  * This function fails if the application does not wait for the alarm_cnf_cb
  * between sending two alarms.
  *
+ * @param net              InOut: The p-net stack instance
  * @param arep             In:   The AREP.
  * @param api              In:   The API.
  * @param slot             In:   The slot.
@@ -1317,6 +1409,7 @@ PNET_EXPORT void pnet_create_log_book_entry(
  *          -1 if an error occurred (or waiting for ACK from controller: re-try later).
  */
 PNET_EXPORT int pnet_alarm_send_process_alarm(
+   pnet_t                  *net,
    uint32_t                arep,
    uint32_t                api,
    uint16_t                slot,
@@ -1334,12 +1427,14 @@ PNET_EXPORT int pnet_alarm_send_process_alarm(
  * specified in the connect of the controller will make the controller
  * re-send the alarm.
  *
+ * @param net              InOut: The p-net stack instance
  * @param arep             In:   The AREP.
  * @param p_pnio_status    In:   Detailed ACK status.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
 PNET_EXPORT int pnet_alarm_send_ack(
+   pnet_t                  *net,
    uint32_t                arep,
    pnet_pnio_status_t      *p_pnio_status);
 
@@ -1413,6 +1508,8 @@ typedef enum pnet_diag_ch_prop_dir_values
 
 /**
  * Add a diagnosis entry.
+ *
+ * @param net              InOut: The p-net stack instance
  * @param arep             In:   The AREP.
  * @param api              In:   The API.
  * @param slot             In:   The slot.
@@ -1432,6 +1529,7 @@ typedef enum pnet_diag_ch_prop_dir_values
  *          -1 if an error occurred.
  */
 PNET_EXPORT int pnet_diag_add(
+   pnet_t                  *net,
    uint32_t                arep,
    uint32_t                api,
    uint16_t                slot,
@@ -1462,6 +1560,7 @@ PNET_EXPORT int pnet_diag_add(
  * USI in manufacturer-specific range) or the extended channel additional
  * value is updated.
  *
+ * @param net              InOut: The p-net stack instance
  * @param arep             In:   The AREP.
  * @param api              In:   The API.
  * @param slot             In:   The slot.
@@ -1479,6 +1578,7 @@ PNET_EXPORT int pnet_diag_add(
  *          -1 if an error occurred.
  */
 PNET_EXPORT int pnet_diag_update(
+   pnet_t                  *net,
    uint32_t                arep,
    uint32_t                api,
    uint16_t                slot,
@@ -1503,6 +1603,7 @@ PNET_EXPORT int pnet_diag_update(
  * - Channel properties (the channel direction part only).
  * - Channel error type.
  *
+ * @param net              InOut: The p-net stack instance
  * @param arep             In:   The AREP.
  * @param api              In:   The API.
  * @param slot             In:   The slot.
@@ -1517,6 +1618,7 @@ PNET_EXPORT int pnet_diag_update(
  *          -1 if an error occurred.
  */
 PNET_EXPORT int pnet_diag_remove(
+   pnet_t                  *net,
    uint32_t                arep,
    uint32_t                api,
    uint16_t                slot,
@@ -1529,6 +1631,7 @@ PNET_EXPORT int pnet_diag_remove(
 /**
  * Show information from the Profinet stack.
  *
+ * @param net              InOut: The p-net stack instance
  * @param level            In:   The amount of detail to show.
  *     0x0800              | Show all sessions.
  *     0x1000              | Show all ARs.
@@ -1540,6 +1643,7 @@ PNET_EXPORT int pnet_diag_remove(
  *     0x8000              | Show I&M data.
  */
 PNET_EXPORT void pnet_show(
+   pnet_t                  *net,
    unsigned                level);
 
 #ifdef __cplusplus

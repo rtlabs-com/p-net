@@ -69,7 +69,6 @@ static inline uint32_t atomic_fetch_sub(atomic_int *p, uint32_t v)
 #define PNET_UUID_IO_SUPERVISOR_INTERFACE "DEA00003-6C97-11D1-8271-00A02442DF7D" /* RPC interface version 1.0 */
 #define PNET_UUID_IO_PRM_SERVER_INTERFACE "DEA00004-6C97-11D1-8271-00A02442DF7D" /* RPC interface version 1.0 */
 
-
 typedef enum pf_rpc_packet_type_values
 {
    PF_RPC_PT_REQUEST = 0,
@@ -627,6 +626,143 @@ typedef struct pf_alarm_err
     */
 } pf_alarm_err_t;
 
+#define PF_MAX_SESSION                    (2*(PNET_MAX_AR) + 1)               /* 2 per ar, and one spare. */
+
+/*
+ * Keep this value small as it define the number of entries in the
+ * frame id map and all entries are probed until a match is found.
+ *
+ * Each input CR may have 2 frameIds (for RTC3)
+ * Add space for DCP:     0xfefc..0xfeff.
+ * Add space for alarms:  0xfc01, 0xfe01.
+ */
+#define PF_ETH_MAX_MAP                    ((PNET_MAX_API) * (PNET_MAX_AR) * (PNET_MAX_CR) * 2 + 4 + 2)
+
+/**
+ * The scheduler is used by both the CPM and PPM machines.
+ * The DCP uses the scheduler for responding to multi-cast messages.
+ * pf_cmsm uses it to supervise the startup sequence.
+ */
+#define PF_MAX_TIMEOUTS                   (2 * (PNET_MAX_AR) * (PNET_MAX_CR) + 10)
+
+#define PF_CMINA_FS_HELLO_RETRY           3
+#define PF_CMINA_FS_HELLO_INTERVAL        (3*1000)     /* ms => 3s. Default is 30ms */
+
+typedef enum pf_cmina_state_values
+{
+   PF_CMINA_STATE_SETUP,
+   PF_CMINA_STATE_SET_NAME,
+   PF_CMINA_STATE_SET_IP,
+   PF_CMINA_STATE_W_CONNECT,
+} pf_cmina_state_values_t;
+
+typedef enum pf_cmsu_state_values
+{
+   PF_CMSU_STATE_IDLE = 0,
+   PF_CMSU_STATE_STARTUP,
+   PF_CMSU_STATE_RUN,
+   PF_CMSU_STATE_ABORT
+} pf_cmsu_state_values_t;
+
+typedef enum pf_cmwrr_state_values
+{
+   PF_CMWRR_STATE_IDLE,
+   PF_CMWRR_STATE_STARTUP,
+   PF_CMWRR_STATE_PRMEND,
+   PF_CMWRR_STATE_DATA,
+} pf_cmwrr_state_values_t;
+
+
+/**
+ * The prototype of the externally supplied call-back functions.
+ * @param net              InOut: The p-net stack instance
+ * @param arg              In:   User-defined (may be NULL).
+ * @param current_time     In:   The current system time.
+ */
+typedef void (*pf_scheduler_timeout_ftn_t)(
+   pnet_t                     *net,
+   void                       *arg,
+   uint32_t                   current_time);
+
+
+typedef struct pf_scheduler_timeouts
+{
+   const char                    *p_name; /* For debugging only */
+   bool                          in_use;  /* For debugging only */
+
+   uint32_t                      when;    /* absolute time of timeout */
+   uint32_t                      next;    /* Next in list */
+   uint32_t                      prev;    /* Previous in list */
+
+   pf_scheduler_timeout_ftn_t    cb;      /* Call-back to call on timeout */
+   void                          *arg;    /* call-back argument */
+} pf_scheduler_timeouts_t;
+
+/**
+ * This is the prototype for the Profinet frame handler.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param frame_id         In:   The frame ID.
+ * @param p_buf            In:   The Ethernet frame.
+ * @param frame_id_pos     In:   The position of the frame ID.
+ * @param p_arg            In:   User-defined argument.
+ */
+typedef int (*pf_eth_frame_handler_t)(
+   pnet_t                   *net,
+   uint16_t                frame_id,
+   os_buf_t                *p_buf,
+   uint16_t                frame_id_pos,
+   void                    *p_arg);
+
+
+typedef struct pf_eth_frame_id_map
+{
+   bool                    in_use;
+   uint16_t                frame_id;
+   pf_eth_frame_handler_t  frame_handler;
+   void                    *p_arg;
+} pf_eth_frame_id_map_t;
+
+
+/*
+ * Each struct in pf_cmina_dcp_ase_t is carefully laid out in order to use
+ * strncmp/memcmp in the DCP identity request and strncpy/memcpy in the
+ * get/set requests.
+ */
+typedef struct pf_cmina_dcp_ase
+{
+   char                    name_of_station[240 + 1];  /* Terminated */
+   char                    device_vendor[20+1];       /* Terminated */
+   uint8_t                 device_role;               /* Only value "1" supported */
+   uint16_t                device_initiative;
+
+   struct
+   {
+      /* Order is important!! */
+      uint8_t              high;
+      uint8_t              low;
+   } instance_id;
+
+   pnet_cfg_device_id_t    device_id;
+   pnet_cfg_device_id_t    oem_device_id;
+
+   char                    port_name[14 + 1];         /* Terminated */
+
+   char                    manufacturer_specific_string[240 + 1];
+   pnet_ethaddr_t          mac_address;
+   uint16_t                standard_gw_value;
+
+   bool                    dhcp_enable;
+   pf_full_ip_suite_t      full_ip_suite;
+
+   struct
+   {
+      /* Nothing much yet */
+      char                 hostname[240+1];
+   } dhcp_info;
+} pf_cmina_dcp_ase_t;
+
+
 /* ====== AR typedefs ============== */
 
 typedef enum pf_ppm_state_values
@@ -1108,8 +1244,6 @@ typedef struct pf_ppm
    pnet_ethaddr_t          sa;
    pnet_ethaddr_t          da;
 
-   int                     if_id;
-
    bool                    first_transmit;
 
    void                    *p_send_buffer;
@@ -1375,7 +1509,7 @@ typedef struct pf_session_info
    bool                    in_use;
    bool                    release_in_progress;
    uint32_t                socket;
-   int                     if_id;
+   os_eth_handle_t         *eth_handle;
    struct pf_ar            *p_ar;
    bool                    from_me;
    pf_uuid_t               activity_uuid;
@@ -1811,6 +1945,53 @@ typedef struct pf_log_book
    uint16_t                put;        /* Points to oldest entry if wrap */
    bool                    wrap;       /* All entries valid */
 } pf_log_book_t;
+
+
+struct pnet
+{
+   uint32_t                            os_buf_alloc_cnt;
+   bool                                global_alarm_enable;
+   os_mutex_t                          *cpm_buf_lock;
+   atomic_int                          cpm_instance_cnt;
+   os_mutex_t                          *ppm_buf_lock;
+   atomic_int                          ppm_instance_cnt;
+   uint16_t                            dcp_global_block_qualifier;
+   pnet_ethaddr_t                      dcp_sam;
+   bool                                dcp_delayed_response_waiting;
+   uint32_t                            dcp_timeout;
+   uint32_t                            dcp_sam_timeout;
+   os_eth_handle_t                     *eth_handle;
+   pf_eth_frame_id_map_t               eth_id_map[PF_ETH_MAX_MAP];
+   volatile pf_scheduler_timeouts_t    scheduler_timeouts[PF_MAX_TIMEOUTS];
+   volatile uint32_t                   scheduler_timeout_first;
+   volatile uint32_t                   scheduler_timeout_free;
+   os_mutex_t                          *scheduler_timeout_mutex;
+   uint32_t                            scheduler_tick_interval;
+   bool                                cmdev_initialized;
+   pf_device_t                         cmdev_device;
+   pf_cmina_dcp_ase_t                  cmina_perm_dcp_ase;
+   pf_cmina_dcp_ase_t                  cmina_temp_dcp_ase;
+   pf_cmina_state_values_t             cmina_state;
+   uint8_t                             cmina_error_decode;
+   uint8_t                             cmina_error_code_1;
+   uint16_t                            cmina_hello_count;
+   uint32_t                            cmina_hello_timeout;
+   bool                                cmina_commit_ip_suite;
+   os_mutex_t                          *p_cmrpc_rpc_mutex;
+   uint32_t                            cmrpc_session_number;
+   pf_ar_t                             cmrpc_ar[PNET_MAX_AR];
+   pf_session_info_t                   cmrpc_session_info[PF_MAX_SESSION];
+   int                                 cmrpc_rpcreq_socket;
+   uint8_t                             cmrpc_dcerpc_req_frame[1500];
+   uint8_t                             cmrpc_dcerpc_rsp_frame[1500];
+   pf_cmsu_state_values_t              cmsu_state;
+   pf_cmwrr_state_values_t             cmwrr_state;
+   const pnet_cfg_t                    *p_fspm_default_cfg;
+   pnet_cfg_t                          fspm_cfg;
+   pf_log_book_t                       fspm_log_book;
+   os_mutex_t                          *fspm_log_book_mutex;
+};
+
 
 #ifdef __cplusplus
 }

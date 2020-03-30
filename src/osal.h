@@ -159,8 +159,30 @@ os_buf_t * os_buf_alloc(uint16_t length);
 void os_buf_free(os_buf_t *p);
 uint8_t os_buf_header(os_buf_t *p, int16_t header_size_increment);
 
-int os_eth_send(uint32_t id, os_buf_t * buf);
-int os_eth_init(const char * if_name);
+/**
+ * Send raw Ethernet data
+ *
+ * @param handle        In: Ethernet handle
+ * @param buf           In: Buffer with data to be sent
+ * @return  The number of bytes sent, or -1 if an error occurred.
+ */
+int os_eth_send(
+   os_eth_handle_t         *handle,
+   os_buf_t                *buf);
+
+/**
+ * Initialize receiving of raw Ethernet frames (in separate thread)
+ *
+ * @param if_name       In: Ethernet interface name
+ * @param callback      In: Callback for received raw Ethernet frames
+ * @param arg           InOut: User argument passed to the callback
+ *
+ * @return  the Ethernet handle, or NULL if an error occurred.
+ */
+os_eth_handle_t* os_eth_init(
+   const char              *if_name,
+   os_eth_callback_t       *callback,
+   void                    *arg);
 
 int os_udp_socket(void);
 int os_udp_open(os_ipaddr_t addr, os_ipport_t port);

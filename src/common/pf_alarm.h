@@ -21,22 +21,34 @@ extern "C"
 {
 #endif
 
+
+/**
+ * Initialize the alarm component.
+ * @param net              InOut: The p-net stack instance
+ */
+void pf_alarm_init(
+   pnet_t                  *net);
+
 /**
  * Create and activate an alarm instance for the specified AR.
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
 int pf_alarm_activate(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar);
 
 /**
  * Close an alarm instance for the specified AR.
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
 int pf_alarm_close(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar);
 
 /**
@@ -67,10 +79,12 @@ bool pf_alarm_pending(
 /**
  * Perform periodic tasks in the alarm component.
  * Check for controller inputs.
+ * @param net              InOut: The p-net stack instance
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_alarm_periodic(void);
+int pf_alarm_periodic(
+   pnet_t                  *net);
 
 /**
  * Send a PULL alarm.
@@ -79,6 +93,7 @@ int pf_alarm_periodic(void);
  * If subslot_nbr == 0 and PULL_MODULE alarms are allowed by the controller (in the CONNECT)
  * then a PULL_MODULE alarm is send.
  * Otherwise a PULL alarm is sent.
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param api_id           In:   The API identifier.
  * @param slot_nbr         In:   The slot number.
@@ -87,6 +102,7 @@ int pf_alarm_periodic(void);
  *          -1 if an error occurred (or waiting for ACK from controller: re-try later).
  */
 int pf_alarm_send_pull(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    uint32_t                api_id,
    uint16_t                slot_nbr,
@@ -94,7 +110,7 @@ int pf_alarm_send_pull(
 
 /**
  * Send a PLUG OK alarm.
- *
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param api_id           In:   The API identifier.
  * @param slot_nbr         In:   The slot number.
@@ -105,6 +121,7 @@ int pf_alarm_send_pull(
  *          -1 if an error occurred (or waiting for ACK from controller: re-try later).
  */
 int pf_alarm_send_plug(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    uint32_t                api_id,
    uint16_t                slot_nbr,
@@ -115,6 +132,7 @@ int pf_alarm_send_plug(
 /**
  * Send a PLUG_WRONG alarm.
  *
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param api_id           In:   The API identifier.
  * @param slot_nbr         In:   The slot number.
@@ -125,6 +143,7 @@ int pf_alarm_send_plug(
  *          -1 if an error occurred (or waiting for ACK from controller: re-try later).
  */
 int pf_alarm_send_plug_wrong(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    uint32_t                api_id,
    uint16_t                slot_nbr,
@@ -138,6 +157,7 @@ int pf_alarm_send_plug_wrong(
  * This function sends a process alarm to a controller.
  * These alarms are always sent as high priority alarms.
  *
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param api_id           In:   The API identifier.
  * @param slot_nbr         In:   The slot number.
@@ -149,6 +169,7 @@ int pf_alarm_send_plug_wrong(
  *          -1 if an error occurred (or waiting for ACK from controller: re-try later).
  */
 int pf_alarm_send_process(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    uint32_t                api_id,
    uint16_t                slot_nbr,
@@ -163,6 +184,7 @@ int pf_alarm_send_process(
  * This function sends a diagnosis alarm to a controller.
  * These alarms are always sent as low priority alarms.
  *
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param api_id           In:   The API identifier.
  * @param slot_nbr         In:   The slot number.
@@ -172,6 +194,7 @@ int pf_alarm_send_process(
  *          -1 if an error occurred (or waiting for ACK from controller: re-try later).
  */
 int pf_alarm_send_diagnosis(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    uint32_t                api_id,
    uint16_t                slot_nbr,
@@ -181,12 +204,14 @@ int pf_alarm_send_diagnosis(
 /**
  * Send Alarm ACK.
  *
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param p_pnio_status    In:   Detailed ACK information.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred (or waiting for ACK from controller: re-try later).
  */
 int pf_alarm_alpmr_alarm_ack(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pnet_pnio_status_t      *p_pnio_status);
 

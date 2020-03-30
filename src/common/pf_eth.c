@@ -13,6 +13,17 @@
  * full license information.
  ********************************************************************/
 
+/**
+ * @file
+ * @brief Map incoming cyclic Profinet data Ethernet frames to frame handlers
+ *
+ * The frame id map is used to quickly find the function responsible for
+ * handling a frame with a specific frame id.
+ * Clients may add or remove entries on the fly, but there is no locking of the table.
+ * ToDo: This may be a problem in the future.
+ * Note that frames may arrive at any time.
+ */
+
 #ifdef UNIT_TEST
 #define os_eth_init mock_os_eth_init
 #endif
@@ -21,45 +32,19 @@
 #include "pf_includes.h"
 
 
-/*
- * Keep this value small as it define the number of entries in the
- * frame id map and all entries are probed until a match is found.
- *
- * Each input CR may have 2 frameIds (for RTC3)
- * Add space for DCP:     0xfefc..0xfeff.
- * Add space for alarms:  0xfc01, 0xfe01.
- */
-#define PF_ETH_MAX_MAP     ((PNET_MAX_API) * (PNET_MAX_AR) * (PNET_MAX_CR) * 2 + 4 + 2)
-
-typedef struct pf_eth_frame_id_map
-{
-   bool                    in_use;
-   uint16_t                frame_id;
-   pf_eth_frame_handler_t  frame_handler;
-   void                    *p_arg;
-} pf_eth_frame_id_map_t;
-
-/*
- * The frame id map is used to quickly find the function responsible for
- * handling a frame with a specific frame id.
- * Clients may add or remove entries on the fly, but there is no locking of the table.
- * ToDo: This may be a problem in the future.
- * Note that frames may arrive at any time.
- */
-static pf_eth_frame_id_map_t  id_map[PF_ETH_MAX_MAP];
-
-int pf_eth_init(void)
+int pf_eth_init(
+   pnet_t                  *net)
 {
    int ret = 0;
 
-   memset(id_map, 0, sizeof(id_map));
+   memset(net->eth_id_map, 0, sizeof(net->eth_id_map));
 
    return ret;
 }
 
 int pf_eth_recv(
-   os_buf_t                *p_buf,
-   size_t                  len)
+   void                    *arg,
+   os_buf_t                *p_buf)
 {
    int         ret = 0;       /* Means: "Not handled" */
    uint16_t    type_pos = 2*sizeof(pnet_ethaddr_t);
@@ -67,6 +52,7 @@ int pf_eth_recv(
    uint16_t    frame_id;
    uint16_t    *p_data;
    uint16_t    ix = 0;
+   pnet_t      *net = (pnet_t*)arg;
 
    /* Skip ALL VLAN tags */
    p_data = (uint16_t *)(&((uint8_t *)p_buf->payload)[type_pos]);
@@ -85,16 +71,17 @@ int pf_eth_recv(
    case OS_ETHTYPE_PROFINET:
       /* Find the associated frame handler */
       ix = 0;
-      while ((ix < NELEMENTS(id_map)) &&
-             ((id_map[ix].in_use == false) ||
-              (id_map[ix].frame_id != frame_id)))
+      while ((ix < NELEMENTS(net->eth_id_map)) &&
+             ((net->eth_id_map[ix].in_use == false) ||
+              (net->eth_id_map[ix].frame_id != frame_id)))
       {
          ix++;
       }
-      if (ix < NELEMENTS(id_map))
+      if (ix < NELEMENTS(net->eth_id_map))
       {
-         ret = id_map[ix].frame_handler(frame_id, p_buf,
-            type_pos + sizeof(uint16_t), id_map[ix].p_arg);
+         /* Call the frame handler */
+         ret = net->eth_id_map[ix].frame_handler(net, frame_id, p_buf,
+            type_pos + sizeof(uint16_t), net->eth_id_map[ix].p_arg);
       }
       break;
    case OS_ETHTYPE_LLDP:
@@ -110,26 +97,27 @@ int pf_eth_recv(
 }
 
 void pf_eth_frame_id_map_add(
+   pnet_t                  *net,
    uint16_t                frame_id,
    pf_eth_frame_handler_t  frame_handler,
    void                    *p_arg)
 {
    uint16_t                ix = 0;
 
-   while ((ix < NELEMENTS(id_map)) &&
-          (id_map[ix].in_use == true))
+   while ((ix < NELEMENTS(net->eth_id_map)) &&
+          (net->eth_id_map[ix].in_use == true))
    {
       ix++;
    }
 
-   if (ix < NELEMENTS(id_map))
+   if (ix < NELEMENTS(net->eth_id_map))
    {
       LOG_DEBUG(PF_ETH_LOG, "ETH(%d): Add FrameIds %#x at index %u\n", __LINE__,
          (unsigned)frame_id, (unsigned)ix);
-      id_map[ix].frame_id = frame_id;
-      id_map[ix].frame_handler = frame_handler;
-      id_map[ix].p_arg = p_arg;
-      id_map[ix].in_use = true;
+      net->eth_id_map[ix].frame_id = frame_id;
+      net->eth_id_map[ix].frame_handler = frame_handler;
+      net->eth_id_map[ix].p_arg = p_arg;
+      net->eth_id_map[ix].in_use = true;
    }
    else
    {
@@ -138,20 +126,21 @@ void pf_eth_frame_id_map_add(
 }
 
 void pf_eth_frame_id_map_remove(
+   pnet_t                  *net,
    uint16_t                frame_id)
 {
    uint16_t                ix = 0;
 
-   while ((ix < NELEMENTS(id_map)) &&
-          ((id_map[ix].in_use == false) ||
-           (id_map[ix].frame_id != frame_id)))
+   while ((ix < NELEMENTS(net->eth_id_map)) &&
+          ((net->eth_id_map[ix].in_use == false) ||
+           (net->eth_id_map[ix].frame_id != frame_id)))
    {
       ix++;
    }
 
-   if (ix < NELEMENTS(id_map))
+   if (ix < NELEMENTS(net->eth_id_map))
    {
-      id_map[ix].in_use = false;
+      net->eth_id_map[ix].in_use = false;
       LOG_DEBUG(PF_ETH_LOG, "ETH(%d): Free room for FrameIds %#x at index %u\n", __LINE__,
          (unsigned)frame_id, (unsigned)ix);
    }

@@ -22,6 +22,7 @@
 #include "pf_includes.h"
 #include "pf_block_writer.h"
 
+
 /**
  * @internal
  * Insert a block header into a buffer.
@@ -694,7 +695,7 @@ static void pf_put_one_ar(
              StationNameLength, CMInitiatorStationName, [Padding*] (d), StationNameLength (c), [ParameterServerStationName],
              [Padding*] (d), NumberOfIOCRs, [Padding*] (d), (IOCRProperties, IOCRType, FrameID, APDU_Status (a))*,
              NumberOfAPIs, [Padding*] (d), API*, ARDataInfo)*
-Special case: “IOSAR with ARProperties.DeviceAccess=1”:
+Special case: IOSAR with ARProperties.DeviceAccess=1:
 NumberOfIOCRs := 0
 AlarmCRType := 0
 NumberOfAPIs := 0
@@ -841,6 +842,7 @@ d The number of padding octets shall be adapted to make the following field Unsi
 }
 
 void pf_put_ar_data(
+   pnet_t                  *net,
    bool                    is_big_endian,
    pf_ar_t                 *p_ar,
    uint32_t                api_id,
@@ -866,7 +868,7 @@ void pf_put_ar_data(
 
    data_pos = *p_pos;
 
-   if (pf_cmdev_get_device(&p_device) == 0)
+   if (pf_cmdev_get_device(net, &p_device) == 0)
    {
       cnt = 0;
       if (p_ar == NULL)
@@ -874,7 +876,7 @@ void pf_put_ar_data(
          /* Count the number of ARs */
          for (ix = 0; ix < PNET_MAX_AR; ix++)
          {
-            if (pf_ar_find_by_index(ix) != NULL)
+            if (pf_ar_find_by_index(net, ix) != NULL)
             {
                cnt++;
             }
@@ -900,7 +902,7 @@ void pf_put_ar_data(
          /* Insert the ARs */
          for (ix = 0; ix < PNET_MAX_AR; ix++)
          {
-            p_ar_tmp = pf_ar_find_by_index(ix);
+            p_ar_tmp = pf_ar_find_by_index(net, ix);
             if (p_ar_tmp != NULL)
             {
                pf_put_one_ar(is_big_endian, p_ar_tmp, false, 0, res_len, p_bytes, p_pos);
@@ -1419,6 +1421,7 @@ static void pf_put_ident_device(
 }
 
 void pf_put_ident_data(
+   pnet_t                  *net,
    bool                    is_big_endian,
    uint8_t                 block_version_low,
    pf_block_type_values_t  block_type,
@@ -1444,7 +1447,7 @@ void pf_put_ident_data(
       res_len, p_bytes, p_pos);
 
    data_pos = *p_pos;
-   if (pf_cmdev_get_device(&p_device) == 0)
+   if (pf_cmdev_get_device(net, &p_device) == 0)
    {
       pf_put_ident_device(is_big_endian, block_type, filter_level, stop_level,
          p_ar, p_device, api_id, slot_nbr, subslot_nbr, res_len, p_bytes, p_pos);
@@ -1465,6 +1468,7 @@ void pf_put_ident_data(
 }
 
 void pf_put_im_0_filter_data(
+   pnet_t                  *net,
    bool                    is_big_endian,
    uint16_t                res_len,
    uint8_t                 *p_bytes,
@@ -1481,7 +1485,7 @@ void pf_put_im_0_filter_data(
       PNET_BLOCK_VERSION_HIGH, PNET_BLOCK_VERSION_LOW,
       res_len, p_bytes, p_pos);
 
-   pf_cmdev_get_device(&p_device);
+   pf_cmdev_get_device(net, &p_device);
    /*
     * ToDo: Walk the device tree:
     * If we encounter a sub-slot that contains I&M data then add it here.
@@ -1801,6 +1805,7 @@ static void pf_put_diag_item(
 /**
  * @internal
  * Insert a diagnosis item list into a buffer.
+ * @param net              InOut: The p-net stack instance
  * @param is_big_endian    In:   true if buffer is big-endian.
  * @param diag_filter      In:   Type of diag items to insert.
  * @param slot_nbr         In:   The slot number.
@@ -1811,6 +1816,7 @@ static void pf_put_diag_item(
  * @param p_pos            InOut:Position in destination buffer.
  */
 static void pf_put_diag_list(
+   pnet_t                  *net,
    bool                    is_big_endian,
    pf_diag_filter_level_t  diag_filter,
    uint16_t                slot_nbr,
@@ -1825,7 +1831,7 @@ static void pf_put_diag_list(
    bool                    insert;
 
    /* Walk the list to insert all items */
-   pf_cmdev_get_diag_item(list_head, &p_item);
+   pf_cmdev_get_diag_item(net, list_head, &p_item);
    if (p_item != NULL)
    {
       pf_put_uint16(is_big_endian, slot_nbr, res_len, p_bytes, p_pos);
@@ -1879,7 +1885,7 @@ static void pf_put_diag_list(
             pf_put_diag_item(is_big_endian, p_item, res_len, p_bytes, p_pos);
          }
 
-         pf_cmdev_get_diag_item(p_item->next, &p_item);
+         pf_cmdev_get_diag_item(net, p_item->next, &p_item);
       }
    }
 }
@@ -1887,6 +1893,7 @@ static void pf_put_diag_list(
 /**
  * @internal
  * Insert diagnosis items of a slot into a buffer.
+ * @param net              InOut: The p-net stack instance
  * @param is_big_endian    In:   true if buffer is big-endian.
  * @param filter_level     In:   The filter ending level.
  * @param diag_filter      In:   The types of diag to insert.
@@ -1899,6 +1906,7 @@ static void pf_put_diag_list(
  * @param p_pos            InOut:Position in destination buffer.
  */
 static void pf_put_diag_slot(
+   pnet_t                  *net,
    bool                    is_big_endian,
    pf_dev_filter_level_t   filter_level,
    pf_diag_filter_level_t  diag_filter,
@@ -1926,13 +1934,13 @@ static void pf_put_diag_slot(
                if (p_subslot->subslot_nbr == subslot_nbr)
                {
                   /* Call only for the matching subslot_nbr */
-                  pf_put_diag_list(is_big_endian, diag_filter, slot_nbr, subslot_nbr, p_subslot->diag_list, res_len, p_bytes, p_pos);
+                  pf_put_diag_list(net, is_big_endian, diag_filter, slot_nbr, subslot_nbr, p_subslot->diag_list, res_len, p_bytes, p_pos);
                }
             }
             else
             {
                /* No filter: Call for all sub-slots that are in use */
-               pf_put_diag_list(is_big_endian, diag_filter, slot_nbr, subslot_nbr, p_subslot->diag_list, res_len, p_bytes, p_pos);
+               pf_put_diag_list(net, is_big_endian, diag_filter, slot_nbr, subslot_nbr, p_subslot->diag_list, res_len, p_bytes, p_pos);
             }
          }
       }
@@ -1942,6 +1950,7 @@ static void pf_put_diag_slot(
 /**
  * @internal
  * Insert diagnosis items of an API into a buffer.
+ * @param net              InOut: The p-net stack instance
  * @param is_big_endian    In:   true if buffer is big-endian.
  * @param filter_level     In:   The filter ending level.
  * @param diag_filter      In:   The types of diag to insert.
@@ -1954,6 +1963,7 @@ static void pf_put_diag_slot(
  * @param p_pos            InOut:Position in destination buffer.
  */
 static void pf_put_diag_api(
+   pnet_t                  *net,
    bool                    is_big_endian,
    pf_dev_filter_level_t   filter_level,
    pf_diag_filter_level_t  diag_filter,
@@ -1981,14 +1991,14 @@ static void pf_put_diag_api(
                if (p_slot->slot_nbr == slot_nbr)
                {
                   /* Call only for the matching slot_nbr */
-                  pf_put_diag_slot(is_big_endian, filter_level,diag_filter,
+                  pf_put_diag_slot(net, is_big_endian, filter_level,diag_filter,
                      p_ar, p_slot, slot_nbr, subslot_nbr, res_len, p_bytes, p_pos);
                }
             }
             else
             {
                /* No filter: Call for all slots that are in use */
-               pf_put_diag_slot(is_big_endian, filter_level, diag_filter,
+               pf_put_diag_slot(net, is_big_endian, filter_level, diag_filter,
                   p_ar, p_slot, slot_nbr, subslot_nbr, res_len, p_bytes, p_pos);
             }
          }
@@ -1999,6 +2009,7 @@ static void pf_put_diag_api(
 /**
  * @internal
  * Insert diagnosis items of a device into a buffer.
+ * @param net              InOut: The p-net stack instance
  * @param is_big_endian    In:   true if buffer is big-endian.
  * @param filter_level     In:   The filter ending level.
  * @param diag_filter      In:   The types of diag to insert.
@@ -2012,6 +2023,7 @@ static void pf_put_diag_api(
  * @param p_pos            InOut:Position in destination buffer.
  */
 static void pf_put_diag_device(
+   pnet_t                  *net,
    bool                    is_big_endian,
    pf_dev_filter_level_t   filter_level,
    pf_diag_filter_level_t  diag_filter,
@@ -2040,14 +2052,14 @@ static void pf_put_diag_device(
                if (p_api->api_id == api_id)
                {
                   /* Call only for the matching API_id */
-                  pf_put_diag_api(is_big_endian, filter_level, diag_filter,
+                  pf_put_diag_api(net, is_big_endian, filter_level, diag_filter,
                      p_ar, p_api, slot_nbr, subslot_nbr, res_len, p_bytes, p_pos);
                }
             }
             else
             {
                /* No filter: Call for all APIs that are in use */
-               pf_put_diag_api(is_big_endian, filter_level, diag_filter,
+               pf_put_diag_api(net, is_big_endian, filter_level, diag_filter,
                   p_ar, p_api, slot_nbr, subslot_nbr, res_len, p_bytes, p_pos);
             }
          }
@@ -2056,6 +2068,7 @@ static void pf_put_diag_device(
 }
 
 void pf_put_diag_data(
+   pnet_t                  *net,
    bool                    is_big_endian,
    pf_dev_filter_level_t   filter_level,
    pf_diag_filter_level_t  diag_filter,
@@ -2081,9 +2094,9 @@ void pf_put_diag_data(
    pf_put_uint32(is_big_endian, api_id, res_len, p_bytes, p_pos);
 
    data_pos = *p_pos;
-   if (pf_cmdev_get_device(&p_device) == 0)
+   if (pf_cmdev_get_device(net, &p_device) == 0)
    {
-      pf_put_diag_device(is_big_endian, filter_level, diag_filter,
+      pf_put_diag_device(net, is_big_endian, filter_level, diag_filter,
          p_ar, p_device, api_id, slot_nbr, subslot_nbr, res_len, p_bytes, p_pos);
    }
 
@@ -2337,4 +2350,3 @@ void pf_put_input_data(
    block_pos += offsetof(pf_block_header_t, block_length);   /* Point to correct place */
    pf_put_uint16(is_big_endian, block_len, res_len, p_bytes, &block_pos);
 }
-

@@ -21,26 +21,15 @@ extern "C"
 {
 #endif
 
-/**
- * This is the prototype for the frame handler.
- *
- * @param frame_id         In:   The frame ID.
- * @param p_buf            In:   The Ethernet frame.
- * @param frame_id_pos     In:   The position of the frame ID.
- * @param p_arg            In:   User-defined argument.
- */
-typedef int (*pf_eth_frame_handler_t)(
-   uint16_t                frame_id,
-   os_buf_t                *p_buf,
-   uint16_t                frame_id_pos,
-   void                    *p_arg);
 
 /**
  * Initialize the ETH component.
+ * @param net              InOut: The p-net stack instance
  * @return  0  if the ETH component could be initialized.
  *          -1 if an error occurred.
  */
-int pf_eth_init(void);
+int pf_eth_init(
+   pnet_t                  *net);
 
 /**
  * Add a frame_id entry to the frame id filter map.
@@ -49,20 +38,25 @@ int pf_eth_init(void);
  * This table is used to map incoming frames to the right handler functions,
  * based on the frame id.
  *
+ * @param net              InOut: The p-net stack instance
  * @param frame_id         In:   The frame ID to look for.
  * @param frame_handler    In:   The handler function to call.
  * @param p_arg            In:   Argument to handler function.
  */
 void pf_eth_frame_id_map_add(
+   pnet_t                  *net,
    uint16_t                frame_id,
    pf_eth_frame_handler_t  frame_handler,
    void                    *p_arg);
 
 /**
- * Remove an entry from the frame id filter map.
+ * Remove an entry from the frame id filter map (if it exists).
+ *
+ * @param net              InOut: The p-net stack instance
  * @param frame_id         In:   The frame ID to remove.
  */
 void pf_eth_frame_id_map_remove(
+   pnet_t                  *net,
    uint16_t                frame_id);
 
 /**
@@ -73,14 +67,17 @@ void pf_eth_frame_id_map_remove(
  * The frame_id is located right after the packet type.
  * Take care of handling the VLAN tag!!
  *
+ * Note that this itself is a callback, and its arguments should fulfill the
+ * prototype os_raw_frame_handler_t
+ *
+ * @param arg              InOut: User argument, will be converted to pnet_t
  * @param p_buf            In:   The Ethernet frame.
- * @param len              In:   The length of the frame.
  * @return  0  If the frame was NOT handled by this function.
  *          1  If the frame was handled and the buffer freed.
  */
 int pf_eth_recv(
-   os_buf_t                *buf,
-   size_t                  len);
+   void                    *arg,
+   os_buf_t                *p_buf);
 
 #ifdef __cplusplus
 }

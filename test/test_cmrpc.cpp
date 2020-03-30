@@ -56,6 +56,7 @@ static os_timer_t          *periodic_timer = NULL;
 static pnet_event_values_t cmdev_state;
 static uint16_t            data_cycle_ctr = 0x0;
 
+static pnet_t              *g_pnet;
 
 /**
  * This is just a simple example on how the application can maintain its list of supported APIs, modules and submodules.
@@ -86,22 +87,34 @@ typedef struct cfg_submodules
 static cfg_submodules_t    cfg_submodules[5];
 
 static int my_connect_ind(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    pnet_result_t *p_result);
 static int my_release_ind(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    pnet_result_t *p_result);
 static int my_dcontrol_ind(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    pnet_control_command_t control_command,
    pnet_result_t *p_result);
 static int my_ccontrol_cnf(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    pnet_result_t *p_result);
 static int my_state_ind(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    pnet_event_values_t state);
 static int my_read_ind(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    uint16_t api,
    uint16_t slot,
@@ -112,6 +125,8 @@ static int my_read_ind(
    uint16_t *p_read_length, /* Out: Size of data */
    pnet_result_t *p_result); /* Error status if returning != 0 */
 static int my_write_ind(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    uint16_t api,
    uint16_t slot,
@@ -122,20 +137,29 @@ static int my_write_ind(
    uint8_t *p_write_data,
    pnet_result_t *p_result);
 static int my_exp_module_ind(
+   pnet_t *net,
+   void *arg,
    uint16_t api,
    uint16_t slot,
    uint32_t module_ident);
 static int my_exp_submodule_ind(
+   pnet_t *net,
+   void *arg,
    uint16_t api,
    uint16_t slot,
    uint16_t subslot,
    uint32_t module_ident,
    uint32_t submodule_ident);
 static int my_new_data_status_ind(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    uint32_t crep,
-   uint8_t changes);
+   uint8_t changes,
+   uint8_t data_status);
 static int my_alarm_ind(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    uint32_t api,
    uint16_t slot,
@@ -144,6 +168,8 @@ static int my_alarm_ind(
    uint16_t data_usi,
    uint8_t *p_data);
 static int my_alarm_cnf(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    pnet_pnio_status_t *p_pnio_status);
 
@@ -155,10 +181,10 @@ static void test_periodic(os_timer_t *p_timer, void *p_arg)
    {
       tick_ctr = 0;
       data[0] = data_ctr++;
-      pnet_input_set_data_and_iops(0, 1, 1, data, sizeof(data), PNET_IOXS_GOOD);
+      pnet_input_set_data_and_iops(g_pnet, 0, 1, 1, data, sizeof(data), PNET_IOXS_GOOD);
    }
 
-   pnet_handle_periodic();
+   pnet_handle_periodic(g_pnet);
 }
 
 class CmrpcTest : public ::testing::Test
@@ -170,7 +196,7 @@ protected:
       init_cfg();
       counter_reset();
 
-      pnet_init("en1", TICK_INTERVAL_US, &pnet_default_cfg);
+      g_pnet = pnet_init("en1", TICK_INTERVAL_US, &pnet_default_cfg);
       mock_clear();        /* lldp send a frame at init */
 
       periodic_timer = os_timer_create(TICK_INTERVAL_US, test_periodic, NULL, false);
@@ -234,6 +260,7 @@ protected:
       pnet_default_cfg.new_data_status_cb = my_new_data_status_ind;
       pnet_default_cfg.alarm_ind_cb = my_alarm_ind;
       pnet_default_cfg.alarm_cnf_cb = my_alarm_cnf;
+      pnet_default_cfg.cb_arg = NULL;
 
       /* Device configuration */
       pnet_default_cfg.device_id.vendor_id_hi = 0xfe;
@@ -298,39 +325,42 @@ protected:
 };
 
 static int my_connect_ind(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    pnet_result_t *p_result)
 {
-   printf("Callback on connect\n");
    connect_calls++;
    return 0;
 }
 
 static int my_release_ind(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    pnet_result_t *p_result)
 {
-   printf("Callback on release (disconnect)\n");
    release_calls++;
    return 0;
 }
 
 static int my_dcontrol_ind(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    pnet_control_command_t control_command,
    pnet_result_t *p_result)
 {
-   printf("Callback on dcontrol\n");
-   printf("   Dcontrol command: %u\n", control_command);
    dcontrol_calls++;
    return 0;
 }
 
 static int my_ccontrol_cnf(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    pnet_result_t *p_result)
 {
-   printf("Callback on ccontrol\n");
    ccontrol_calls++;
    return 0;
 }
@@ -339,6 +369,8 @@ static int my_ccontrol_cnf(
  * Callback for stack state change
  */
 static int my_state_ind(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    pnet_event_values_t state)
 {
@@ -351,45 +383,32 @@ static int my_state_ind(
    cmdev_state = state;
    if (state == PNET_EVENT_PRMEND)
    {
-      printf("Callback on event PNET_EVENT_PRMEND\n");
-      ret = pnet_input_set_data_and_iops(0, 0, 1, NULL, 0, PNET_IOXS_GOOD);
+      ret = pnet_input_set_data_and_iops(net, 0, 0, 1, NULL, 0, PNET_IOXS_GOOD);
       EXPECT_EQ(ret, 0);
-      ret = pnet_input_set_data_and_iops(0, 0, 0x8000, NULL, 0, PNET_IOXS_GOOD);
+      ret = pnet_input_set_data_and_iops(net, 0, 0, 0x8000, NULL, 0, PNET_IOXS_GOOD);
       EXPECT_EQ(ret, 0);
-      ret = pnet_input_set_data_and_iops(0, 0, 0x8001, NULL, 0, PNET_IOXS_GOOD);
+      ret = pnet_input_set_data_and_iops(net, 0, 0, 0x8001, NULL, 0, PNET_IOXS_GOOD);
       EXPECT_EQ(ret, 0);
-      ret = pnet_input_set_data_and_iops(0, 1, 1, data, sizeof(data), PNET_IOXS_GOOD);
+      ret = pnet_input_set_data_and_iops(net, 0, 1, 1, data, sizeof(data), PNET_IOXS_GOOD);
       EXPECT_EQ(ret, 0);
-      ret = pnet_output_set_iocs(0, 1, 1, PNET_IOXS_GOOD);
+      ret = pnet_output_set_iocs(net, 0, 1, 1, PNET_IOXS_GOOD);
       EXPECT_EQ(ret, 0);
-      ret = pnet_set_provider_state(true);
+      ret = pnet_set_provider_state(net, true);
       EXPECT_EQ(ret, 0);
    }
    else if (state == PNET_EVENT_ABORT)
    {
-      printf("Callback on event PNET_EVENT_ABORT\n");
-      ret = pnet_get_ar_error_codes(arep, &err_cls, &err_code);
+      ret = pnet_get_ar_error_codes(net, arep, &err_cls, &err_code);
       EXPECT_EQ(ret, 0);
       printf("ABORT err_cls 0x%02x  err_code 0x%02x\n", (unsigned)err_cls, (unsigned)err_code);
    }
-   else if (state == PNET_EVENT_STARTUP)
-   {
-      printf("Callback on event PNET_EVENT_STARTUP\n");
-   }
-   else if (state == PNET_EVENT_APPLRDY)
-   {
-      printf("Callback on event PNET_EVENT_APPLRDY\n");
-   }
-   else
-   {
-       printf("Callback on event type: %u\n", state);
-   }
-
 
    return 0;
 }
 
 static int my_read_ind(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    uint16_t api,
    uint16_t slot,
@@ -406,6 +425,8 @@ static int my_read_ind(
    return 0;
 }
 static int my_write_ind(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    uint16_t api,
    uint16_t slot,
@@ -423,6 +444,8 @@ static int my_write_ind(
 }
 
 static int my_exp_module_ind(
+   pnet_t *net,
+   void *arg,
    uint16_t api,
    uint16_t slot,
    uint32_t module_ident)
@@ -443,7 +466,7 @@ static int my_exp_module_ind(
    {
       /* For now support any module in any slot */
       printf("  Plug module.    API: %u Slot: %u Module ID: %" PRIu32 " Index in list of supported modules: %u\n", api, slot, module_ident, ix);
-      ret = pnet_plug_module(api, slot, module_ident);
+      ret = pnet_plug_module(net, api, slot, module_ident);
    }
    else
    {
@@ -454,6 +477,8 @@ static int my_exp_module_ind(
 }
 
 static int my_exp_submodule_ind(
+   pnet_t *net,
+   void *arg,
    uint16_t api,
    uint16_t slot,
    uint16_t subslot,
@@ -479,7 +504,7 @@ static int my_exp_submodule_ind(
         cfg_submodules[ix].direction,
         cfg_submodules[ix].input_length,
         cfg_submodules[ix].output_length);
-      ret = pnet_plug_submodule(api, slot, subslot, module_ident, submodule_ident,
+      ret = pnet_plug_submodule(net, api, slot, subslot, module_ident, submodule_ident,
          cfg_submodules[ix].direction,
          cfg_submodules[ix].input_length, cfg_submodules[ix].output_length);
       printf("  Result: %u\n", ret);
@@ -493,15 +518,20 @@ static int my_exp_submodule_ind(
 }
 
 static int my_new_data_status_ind(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    uint32_t crep,
-   uint8_t changes)
+   uint8_t changes,
+   uint8_t data_status)
 {
    printf("Callback on new data\n");
    return 0;
 }
 
 static int my_alarm_ind(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    uint32_t api,
    uint16_t slot,
@@ -515,6 +545,8 @@ static int my_alarm_ind(
 }
 
 static int my_alarm_cnf(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    pnet_pnio_status_t *p_pnio_status)
 {
@@ -820,7 +852,10 @@ static uint8_t prm_end_req_siemens[] =
 };
 
 
-static void send_data(uint8_t *data_packet, uint16_t len)
+static void send_data(
+   pnet_t                  *net,
+   uint8_t                 *data_packet,
+   uint16_t                len)
 {
    int                     ret;
    os_buf_t                *p_buf;
@@ -843,7 +878,7 @@ static void send_data(uint8_t *data_packet, uint16_t len)
       *(p_ctr + 1) = data_cycle_ctr & 0xff;
 
       p_buf->len = len;
-      ret = pf_eth_recv(p_buf, len);
+      ret = pf_eth_recv(net, p_buf);
       EXPECT_EQ(ret, 1);
       if (ret == 0)
       {
@@ -892,7 +927,7 @@ TEST_F (CmrpcTest, CmrpcConnectReleaseTest)
    EXPECT_EQ(mock_os_udp_sendto_len, 132);
 
    printf("\nSimulate application calling APPL_RDY\n");
-   ret = pnet_application_ready(main_arep);
+   ret = pnet_application_ready(g_pnet, main_arep);
    EXPECT_EQ(ret, 0);
    EXPECT_EQ(state_calls, 3);
    EXPECT_EQ(cmdev_state, PNET_EVENT_APPLRDY);
@@ -917,7 +952,7 @@ TEST_F (CmrpcTest, CmrpcConnectReleaseTest)
    printf("\nSending data\n");
    for (ix = 0; ix < 100; ix++)
    {
-      send_data(data_packet, sizeof(data_packet));
+      send_data(g_pnet, data_packet, sizeof(data_packet));
    }
    EXPECT_EQ(mock_os_udp_sendto_count, 5);
    EXPECT_EQ(state_calls, 4);
@@ -971,7 +1006,7 @@ TEST_F(CmrpcTest, CmrpcConnectionTimeoutTest)
 
    printf("Line %d\n", __LINE__);
    /* Simulate application calling APPL_RDY */
-   ret = pnet_application_ready(main_arep);
+   ret = pnet_application_ready(g_pnet, main_arep);
    EXPECT_EQ(ret, 0);
    EXPECT_EQ(state_calls, 3);
    EXPECT_EQ(cmdev_state, PNET_EVENT_APPLRDY);
@@ -986,7 +1021,7 @@ TEST_F(CmrpcTest, CmrpcConnectionTimeoutTest)
    /* Send a couple of data packets to move pf_cpm to RUN state */
    for (ix = 0; ix < 100; ix++)
    {
-      send_data(data_packet, sizeof(data_packet));
+      send_data(g_pnet, data_packet, sizeof(data_packet));
    }
 
    EXPECT_EQ(state_calls, 4);
@@ -995,7 +1030,7 @@ TEST_F(CmrpcTest, CmrpcConnectionTimeoutTest)
    printf("Line %d\n", __LINE__);
    /* Read data just to see that it works */
    in_len = sizeof(in_data);
-   ret = pnet_output_get_data_and_iops(0, 1, 1, &new_flag, in_data, &in_len, &iops);
+   ret = pnet_output_get_data_and_iops(g_pnet, 0, 1, 1, &new_flag, in_data, &in_len, &iops);
    EXPECT_EQ(ret, 0);
    EXPECT_EQ(new_flag, true);
    EXPECT_EQ(in_len, 1);
@@ -1003,7 +1038,7 @@ TEST_F(CmrpcTest, CmrpcConnectionTimeoutTest)
 
    printf("Line %d\n", __LINE__);
    /* Send new data to move PPM to RUN state */
-   ret = pnet_input_set_data_and_iops(0, 1, 1, out_data, sizeof(out_data), PNET_IOXS_GOOD);
+   ret = pnet_input_set_data_and_iops(g_pnet, 0, 1, 1, out_data, sizeof(out_data), PNET_IOXS_GOOD);
    EXPECT_EQ(ret, 0);
 
    /* Wait for timeout in CPM */
@@ -1111,7 +1146,7 @@ TEST_F (CmrpcTest, CmrpcConnectFragmentTest)
 
    printf("Line %d\n", __LINE__);
    /* Simulate application calling APPL_RDY */
-   ret = pnet_application_ready(main_arep);
+   ret = pnet_application_ready(g_pnet, main_arep);
    EXPECT_EQ(ret, 0);
    EXPECT_EQ(state_calls, 3);
    EXPECT_EQ(cmdev_state, PNET_EVENT_APPLRDY);
@@ -1132,7 +1167,7 @@ TEST_F (CmrpcTest, CmrpcConnectFragmentTest)
    printf("Line %d\n", __LINE__);
    for (ix = 0; ix < 100; ix++)
    {
-      send_data(data_packet, sizeof(data_packet));
+      send_data(g_pnet, data_packet, sizeof(data_packet));
    }
 
    EXPECT_EQ(state_calls, 4);
