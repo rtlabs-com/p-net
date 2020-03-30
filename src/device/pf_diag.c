@@ -28,6 +28,7 @@
 #include "pf_block_reader.h"
 #include "pf_block_writer.h"
 
+
 int pf_diag_init(void)
 {
    return 0;
@@ -41,10 +42,12 @@ int pf_diag_exit(void)
 /**
  * @internal
  * Update the problem indicator for all input/producer CRs of a sub-slot.
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param p_subslot        In:   The sub-slot instance.
  */
 static void pf_diag_update_station_problem_indicator(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pf_subslot_t            *p_subslot)
 {
@@ -53,11 +56,11 @@ static void pf_diag_update_station_problem_indicator(
    uint16_t                ix;
    pf_diag_item_t          *p_item;
 
-   if (pf_cmdev_get_device(&p_dev) == 0)
+   if (pf_cmdev_get_device(net, &p_dev) == 0)
    {
       /* A problem is indicated if at least one FAULT diagnosis exists. */
       ix = p_subslot->diag_list;
-      pf_cmdev_get_diag_item(ix, &p_item);
+      pf_cmdev_get_diag_item(net, ix, &p_item);
       while (p_item != NULL)
       {
          if ((p_item->in_use == true) &&
@@ -68,7 +71,7 @@ static void pf_diag_update_station_problem_indicator(
          }
 
          ix = p_item->next;
-         pf_cmdev_get_diag_item(ix, &p_item);
+         pf_cmdev_get_diag_item(net, ix, &p_item);
       }
    }
 
@@ -87,6 +90,8 @@ static void pf_diag_update_station_problem_indicator(
  * - Channel number.
  * - Channel properties.
  * - Channel error type.
+ *
+ * @param net              InOut: The p-net stack instance
  * @param api_id           In:   The API id.
  * @param slot_nbr         In:   The slot number.
  * @param subslot_nbr      In:   The sub-slot number.
@@ -98,6 +103,7 @@ static void pf_diag_update_station_problem_indicator(
  * @param p_diag_ix        Out:  The diag item index.
  */
 static void pf_diag_find_entry(
+   pnet_t                  *net,
    uint32_t                api_id,
    uint16_t                slot_nbr,
    uint16_t                subslot_nbr,
@@ -116,7 +122,7 @@ static void pf_diag_find_entry(
 
    *p_diag_ix = PF_DIAG_IX_NULL;
    *pp_subslot = NULL;
-   if (pf_cmdev_get_subslot_full(api_id, slot_nbr, subslot_nbr, pp_subslot) == 0)
+   if (pf_cmdev_get_subslot_full(net, api_id, slot_nbr, subslot_nbr, pp_subslot) == 0)
    {
       /* Only search valid sub-modules */
       if ((((*pp_subslot)->submodule_state.ident_info == PF_SUBMOD_PLUG_OK) ||
@@ -126,7 +132,7 @@ static void pf_diag_find_entry(
       {
          prev_ix = PF_DIAG_IX_NULL;
          item_ix = (*pp_subslot)->diag_list;
-         pf_cmdev_get_diag_item(item_ix, &p_item);
+         pf_cmdev_get_diag_item(net, item_ix, &p_item);
          while ((p_item != NULL) && (*p_diag_ix == PF_DIAG_IX_NULL))
          {
             /* Found a match if all of:
@@ -148,7 +154,7 @@ static void pf_diag_find_entry(
                   if (prev_ix != PF_DIAG_IX_NULL)
                   {
                      /* Not first in list */
-                     pf_cmdev_get_diag_item(prev_ix, &p_prev);
+                     pf_cmdev_get_diag_item(net, prev_ix, &p_prev);
                      p_prev->next = p_item->next;
                   }
                   else
@@ -166,7 +172,7 @@ static void pf_diag_find_entry(
                if (prev_ix != PF_DIAG_IX_NULL)
                {
                   /* Not first in list */
-                  pf_cmdev_get_diag_item(prev_ix, &p_prev);
+                  pf_cmdev_get_diag_item(net, prev_ix, &p_prev);
                   p_prev->next = p_item->next;
                }
                else
@@ -178,7 +184,7 @@ static void pf_diag_find_entry(
 
             prev_ix = item_ix;
             item_ix = p_item->next;
-            pf_cmdev_get_diag_item(item_ix, &p_item);
+            pf_cmdev_get_diag_item(net, item_ix, &p_item);
          }
       }
       else
@@ -190,6 +196,7 @@ static void pf_diag_find_entry(
 }
 
 int pf_diag_add(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    uint32_t                api_id,
    uint16_t                slot_nbr,
@@ -218,20 +225,20 @@ int pf_diag_add(
    {
       LOG_ERROR(PNET_LOG, "DIAG(%d): Bad USI\n", __LINE__);
    }
-   else if (pf_cmdev_get_device(&p_dev) == 0)
+   else if (pf_cmdev_get_device(net, &p_dev) == 0)
    {
       os_mutex_lock(p_dev->diag_mutex);
 
-      pf_diag_find_entry(api_id, slot_nbr, subslot_nbr, ch_nbr, ch_properties, ch_error_type, usi,
+      pf_diag_find_entry(net, api_id, slot_nbr, subslot_nbr, ch_nbr, ch_properties, ch_error_type, usi,
          &p_subslot, &item_ix);
       if (p_subslot != NULL)
       {
          if (item_ix == PF_DIAG_IX_NULL)
          {
             /* Allocate a new entry and determine format */
-            if (pf_cmdev_new_diag(&item_ix) == 0)
+            if (pf_cmdev_new_diag(net, &item_ix) == 0)
             {
-               (void)pf_cmdev_get_diag_item(item_ix, &p_item);
+               (void)pf_cmdev_get_diag_item(net, item_ix, &p_item);
             }
             else
             {
@@ -243,7 +250,7 @@ int pf_diag_add(
          else
          {
             /* Re-use the old entry */
-            (void)pf_cmdev_get_diag_item(item_ix, &p_item);
+            (void)pf_cmdev_get_diag_item(net, item_ix, &p_item);
             overwrite = true;
          }
 
@@ -270,9 +277,9 @@ int pf_diag_add(
                p_item->fmt.std.qual_ch_qualifier = qual_ch_qualifier;
             }
 
-            ret = pf_alarm_send_diagnosis(p_ar, api_id, slot_nbr, subslot_nbr, p_item);
+            ret = pf_alarm_send_diagnosis(net, p_ar, api_id, slot_nbr, subslot_nbr, p_item);
 
-            pf_diag_update_station_problem_indicator(p_ar, p_subslot);
+            pf_diag_update_station_problem_indicator(net, p_ar, p_subslot);
 
             if (ret == 0)
             {
@@ -288,7 +295,7 @@ int pf_diag_add(
                   {
                      PNET_DIAG_CH_PROP_SPEC_SET(old_item.fmt.std.ch_properties, PNET_DIAG_CH_PROP_SPEC_DIS_OTHERS_REMAIN);
                   }
-                  ret = pf_alarm_send_diagnosis(p_ar, api_id, slot_nbr, subslot_nbr, &old_item);
+                  ret = pf_alarm_send_diagnosis(net, p_ar, api_id, slot_nbr, subslot_nbr, &old_item);
                }
             }
          }
@@ -305,6 +312,7 @@ int pf_diag_add(
 }
 
 int pf_diag_update(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    uint32_t                api_id,
    uint16_t                slot_nbr,
@@ -327,15 +335,15 @@ int pf_diag_update(
    {
       LOG_ERROR(PNET_LOG, "DIAG(%d): Bad USI\n", __LINE__);
    }
-   else if (pf_cmdev_get_device(&p_dev) == 0)
+   else if (pf_cmdev_get_device(net, &p_dev) == 0)
    {
       os_mutex_lock(p_dev->diag_mutex);
 
-      pf_diag_find_entry(api_id, slot_nbr, subslot_nbr, ch_nbr, ch_properties, ch_error_code, usi,
+      pf_diag_find_entry(net, api_id, slot_nbr, subslot_nbr, ch_nbr, ch_properties, ch_error_code, usi,
          &p_subslot, &item_ix);
       if (p_subslot != NULL)
       {
-         if (pf_cmdev_get_diag_item(item_ix, &p_item) == 0)
+         if (pf_cmdev_get_diag_item(net, item_ix, &p_item) == 0)
          {
             /* Make a copy of it so it can be remove after inserting the new entry */
             old_item = *p_item;
@@ -351,7 +359,7 @@ int pf_diag_update(
                p_item->fmt.std.ext_ch_add_value = ext_ch_add_value;
             }
 
-            ret = pf_alarm_send_diagnosis(p_ar, api_id, slot_nbr, subslot_nbr, p_item);
+            ret = pf_alarm_send_diagnosis(net, p_ar, api_id, slot_nbr, subslot_nbr, p_item);
             if (ret == 0)
             {
                /* Link it into the sub-slot diag list */
@@ -363,10 +371,10 @@ int pf_diag_update(
                   PNET_DIAG_CH_PROP_SPEC_SET(old_item.fmt.std.ch_properties, PNET_DIAG_CH_PROP_SPEC_DIS_OTHERS_REMAIN);
                }
                /* Remove the old diag by sending a disappear alarm */
-               ret = pf_alarm_send_diagnosis(p_ar, api_id, slot_nbr, subslot_nbr, &old_item);
+               ret = pf_alarm_send_diagnosis(net, p_ar, api_id, slot_nbr, subslot_nbr, &old_item);
             }
 
-            pf_diag_update_station_problem_indicator(p_ar, p_subslot);
+            pf_diag_update_station_problem_indicator(net, p_ar, p_subslot);
          }
          else
          {
@@ -386,6 +394,7 @@ int pf_diag_update(
 }
 
 int pf_diag_remove(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    uint32_t                api_id,
    uint16_t                slot_nbr,
@@ -405,18 +414,18 @@ int pf_diag_remove(
    {
       LOG_ERROR(PNET_LOG, "DIAG(%d): Bad USI\n", __LINE__);
    }
-   else if (pf_cmdev_get_device(&p_dev) == 0)
+   else if (pf_cmdev_get_device(net, &p_dev) == 0)
    {
       os_mutex_lock(p_dev->diag_mutex);
 
-      pf_diag_find_entry(api_id, slot_nbr, subslot_nbr, ch_nbr, ch_properties, ch_error_type, usi,
+      pf_diag_find_entry(net, api_id, slot_nbr, subslot_nbr, ch_nbr, ch_properties, ch_error_type, usi,
          &p_subslot, &item_ix);
 
       os_mutex_unlock(p_dev->diag_mutex);
 
       if ((p_subslot != NULL) && (item_ix != PF_DIAG_IX_NULL))
       {
-         if (pf_cmdev_get_diag_item(item_ix, &p_item) == 0)
+         if (pf_cmdev_get_diag_item(net, item_ix, &p_item) == 0)
          {
             if (p_subslot->diag_list != PF_DIAG_IX_NULL)
             {
@@ -429,7 +438,7 @@ int pf_diag_remove(
                {
                   PNET_DIAG_CH_PROP_SPEC_SET(p_item->fmt.std.ch_properties, PNET_DIAG_CH_PROP_SPEC_DISAPPEARS);
                }
-               ret = pf_alarm_send_diagnosis(p_ar, api_id, slot_nbr, subslot_nbr, p_item);
+               ret = pf_alarm_send_diagnosis(net, p_ar, api_id, slot_nbr, subslot_nbr, p_item);
             }
             else
             {
@@ -439,14 +448,14 @@ int pf_diag_remove(
                PNET_DIAG_CH_PROP_MAINT_SET(p_item->fmt.std.ch_properties, PNET_DIAG_CH_PROP_MAINT_FAULT);
                PNET_DIAG_CH_PROP_SPEC_SET(p_item->fmt.std.ch_properties, PNET_DIAG_CH_PROP_SPEC_ALL_DISAPPEARS);
 
-               ret = pf_alarm_send_diagnosis(p_ar, api_id, slot_nbr, subslot_nbr, p_item);
+               ret = pf_alarm_send_diagnosis(net, p_ar, api_id, slot_nbr, subslot_nbr, p_item);
             }
          }
 
          /* Free diag entry */
-         pf_cmdev_free_diag(item_ix);
+         pf_cmdev_free_diag(net, item_ix);
 
-         pf_diag_update_station_problem_indicator(p_ar, p_subslot);
+         pf_diag_update_station_problem_indicator(net, p_ar, p_subslot);
       }
       else
       {

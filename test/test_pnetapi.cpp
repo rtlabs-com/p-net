@@ -55,6 +55,8 @@ static os_timer_t          *periodic_timer = NULL;
 static pnet_event_values_t cmdev_state;
 static uint16_t            data_cycle_ctr = 0x0;
 
+static pnet_t              *g_pnet;
+
 /**
  * This is just a simple example on how the application can maintain its list of supported APIs, modules and submodules.
  * If modules are supported in all slots > 0, then this is clearly overkill.
@@ -79,22 +81,34 @@ typedef struct cfg_submodules
 static cfg_submodules_t    cfg_submodules[4];
 
 static int my_connect_ind(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    pnet_result_t *p_result);
 static int my_release_ind(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    pnet_result_t *p_result);
 static int my_dcontrol_ind(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    pnet_control_command_t control_command,
    pnet_result_t *p_result);
 static int my_ccontrol_cnf(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    pnet_result_t *p_result);
 static int my_state_ind(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    pnet_event_values_t state);
 static int my_read_ind(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    uint16_t api,
    uint16_t slot,
@@ -105,6 +119,8 @@ static int my_read_ind(
    uint16_t *p_read_length, /* Out: Size of data */
    pnet_result_t *p_result); /* Error status if returning != 0 */
 static int my_write_ind(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    uint16_t api,
    uint16_t slot,
@@ -115,19 +131,41 @@ static int my_write_ind(
    uint8_t *p_write_data,
    pnet_result_t *p_result);
 static int my_exp_module_ind(
+   pnet_t *net,
+   void *arg,
    uint16_t api,
    uint16_t slot,
    uint32_t module_ident);
 static int my_exp_submodule_ind(
+   pnet_t *net,
+   void *arg,
    uint16_t api,
    uint16_t slot,
    uint16_t subslot,
    uint32_t module_ident,
    uint32_t submodule_ident);
 static int my_new_data_status_ind(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    uint32_t crep,
-   uint8_t changes);
+   uint8_t changes,
+   uint8_t data_status);
+static int my_alarm_ind(
+   pnet_t *net,
+   void *arg,
+   uint32_t arep,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
+   uint16_t data_len,
+   uint16_t data_usi,
+   uint8_t *p_data);
+static int my_alarm_cnf(
+   pnet_t *net,
+   void *arg,
+   uint32_t arep,
+   pnet_pnio_status_t *p_pnio_status);
 
 static void test_periodic(os_timer_t *p_timer, void *p_arg)
 {
@@ -137,10 +175,10 @@ static void test_periodic(os_timer_t *p_timer, void *p_arg)
    {
       tick_ctr = 0;
       data[0] = data_ctr++;
-      pnet_input_set_data_and_iops(0, 1, 1, data, sizeof(data), PNET_IOXS_GOOD);
+      pnet_input_set_data_and_iops(g_pnet, 0, 1, 1, data, sizeof(data), PNET_IOXS_GOOD);
    }
 
-   pnet_handle_periodic();
+   pnet_handle_periodic(g_pnet);
 }
 
 class PnetapiTest : public ::testing::Test
@@ -152,7 +190,7 @@ protected:
       init_cfg();
       counter_reset();
 
-      pnet_init("en1", TICK_INTERVAL_US, &pnet_default_cfg);
+      g_pnet = pnet_init("en1", TICK_INTERVAL_US, &pnet_default_cfg);
       mock_clear();        /* lldp send a frame at init */
 
       periodic_timer = os_timer_create(TICK_INTERVAL_US, test_periodic, NULL, false);
@@ -208,6 +246,9 @@ protected:
       pnet_default_cfg.exp_module_cb = my_exp_module_ind;
       pnet_default_cfg.exp_submodule_cb = my_exp_submodule_ind;
       pnet_default_cfg.new_data_status_cb = my_new_data_status_ind;
+      pnet_default_cfg.alarm_ind_cb = my_alarm_ind;
+      pnet_default_cfg.alarm_cnf_cb = my_alarm_cnf;
+      pnet_default_cfg.cb_arg = NULL;
 
       /* Device configuration */
       pnet_default_cfg.device_id.vendor_id_hi = 0xfe;
@@ -272,6 +313,8 @@ protected:
 };
 
 static int my_connect_ind(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    pnet_result_t *p_result)
 {
@@ -280,6 +323,8 @@ static int my_connect_ind(
 }
 
 static int my_release_ind(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    pnet_result_t *p_result)
 {
@@ -288,6 +333,8 @@ static int my_release_ind(
 }
 
 static int my_dcontrol_ind(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    pnet_control_command_t control_command,
    pnet_result_t *p_result)
@@ -297,6 +344,8 @@ static int my_dcontrol_ind(
 }
 
 static int my_ccontrol_cnf(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    pnet_result_t *p_result)
 {
@@ -304,7 +353,10 @@ static int my_ccontrol_cnf(
    return 0;
 }
 
+
 static int my_state_ind(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    pnet_event_values_t state)
 {
@@ -318,22 +370,22 @@ static int my_state_ind(
    cmdev_state = state;
    if (state == PNET_EVENT_PRMEND)
    {
-      ret = pnet_input_set_data_and_iops(0, 0, 1, NULL, 0, PNET_IOXS_GOOD);
+      ret = pnet_input_set_data_and_iops(net, 0, 0, 1, NULL, 0, PNET_IOXS_GOOD);
       EXPECT_EQ(ret, 0);
-      ret = pnet_input_set_data_and_iops(0, 0, 0x8000, NULL, 0, PNET_IOXS_GOOD);
+      ret = pnet_input_set_data_and_iops(net, 0, 0, 0x8000, NULL, 0, PNET_IOXS_GOOD);
       EXPECT_EQ(ret, 0);
-      ret = pnet_input_set_data_and_iops(0, 0, 0x8001, NULL, 0, PNET_IOXS_GOOD);
+      ret = pnet_input_set_data_and_iops(net, 0, 0, 0x8001, NULL, 0, PNET_IOXS_GOOD);
       EXPECT_EQ(ret, 0);
-      ret = pnet_input_set_data_and_iops(0, 1, 1, data, sizeof(data), PNET_IOXS_GOOD);
+      ret = pnet_input_set_data_and_iops(net, 0, 1, 1, data, sizeof(data), PNET_IOXS_GOOD);
       EXPECT_EQ(ret, 0);
-      ret = pnet_output_set_iocs(0, 1, 1, PNET_IOXS_GOOD);
+      ret = pnet_output_set_iocs(net, 0, 1, 1, PNET_IOXS_GOOD);
       EXPECT_EQ(ret, 0);
-      ret = pnet_set_provider_state(true);
+      ret = pnet_set_provider_state(net, true);
       EXPECT_EQ(ret, 0);
    }
    else if (state == PNET_EVENT_ABORT)
    {
-      ret = pnet_get_ar_error_codes(arep, &err_cls, &err_code);
+      ret = pnet_get_ar_error_codes(net, arep, &err_cls, &err_code);
       EXPECT_EQ(ret, 0);
       printf("ABORT err_cls 0x%02x  err_code 0x%02x\n", (unsigned)err_cls, (unsigned)err_code);
    }
@@ -342,6 +394,8 @@ static int my_state_ind(
 }
 
 static int my_read_ind(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    uint16_t api,
    uint16_t slot,
@@ -356,6 +410,8 @@ static int my_read_ind(
    return 0;
 }
 static int my_write_ind(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    uint16_t api,
    uint16_t slot,
@@ -371,6 +427,8 @@ static int my_write_ind(
 }
 
 static int my_exp_module_ind(
+   pnet_t *net,
+   void *arg,
    uint16_t api,
    uint16_t slot,
    uint32_t module_ident)
@@ -389,13 +447,15 @@ static int my_exp_module_ind(
    if (ix < NELEMENTS(cfg_module_ident_numbers))
    {
       /* For now support any module in any slot */
-      ret = pnet_plug_module(api, slot, module_ident);
+      ret = pnet_plug_module(net, api, slot, module_ident);
    }
 
    return ret;
 }
 
 static int my_exp_submodule_ind(
+   pnet_t *net,
+   void *arg,
    uint16_t api,
    uint16_t slot,
    uint16_t subslot,
@@ -415,7 +475,7 @@ static int my_exp_submodule_ind(
    }
    if (ix < NELEMENTS(cfg_submodules))
    {
-      ret = pnet_plug_submodule(api, slot, subslot, module_ident, submodule_ident,
+      ret = pnet_plug_submodule(net, api, slot, subslot, module_ident, submodule_ident,
          cfg_submodules[ix].direction,
          cfg_submodules[ix].input_length, cfg_submodules[ix].output_length);
    }
@@ -424,13 +484,41 @@ static int my_exp_submodule_ind(
 }
 
 static int my_new_data_status_ind(
+   pnet_t *net,
+   void *arg,
    uint32_t arep,
    uint32_t crep,
-   uint8_t changes)
+   uint8_t changes,
+   uint8_t data_status)
 {
+   printf("Callback on new data\n");
    return 0;
 }
 
+static int my_alarm_ind(
+   pnet_t *net,
+   void *arg,
+   uint32_t arep,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
+   uint16_t data_len,
+   uint16_t data_usi,
+   uint8_t *p_data)
+{
+   printf("Callback on alarm\n");
+   return 0;
+}
+
+static int my_alarm_cnf(
+   pnet_t *net,
+   void *arg,
+   uint32_t arep,
+   pnet_pnio_status_t *p_pnio_status)
+{
+   printf("Callback on alarm confirmation\n");
+   return 0;
+}
 // Tests
 
 static uint8_t connect_req[] =
@@ -554,7 +642,10 @@ static uint8_t data_packet4_good_iops_good_iocs[] =
  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf6, 0x35, 0x00
 };
 
-static void send_data(uint8_t *data_packet, uint16_t len)
+static void send_data(
+   pnet_t                  *net,
+   uint8_t                 *data_packet,
+   uint16_t                len)
 {
    int                     ret;
    os_buf_t                *p_buf;
@@ -577,7 +668,7 @@ static void send_data(uint8_t *data_packet, uint16_t len)
       *(p_ctr + 1) = data_cycle_ctr & 0xff;
 
       p_buf->len = len;
-      ret = pf_eth_recv(p_buf, len);
+      ret = pf_eth_recv(net, p_buf);
       EXPECT_EQ(ret, 1);
       if (ret == 0)
       {
@@ -629,7 +720,7 @@ TEST_F (PnetapiTest, PnetapiRunTest)
 
    /* Simulate application calling APPL_RDY */
    printf("Line %d\n", __LINE__);
-   ret = pnet_application_ready(main_arep);
+   ret = pnet_application_ready(g_pnet, main_arep);
    EXPECT_EQ(ret, 0);
    EXPECT_EQ(state_calls, 3);
    EXPECT_EQ(cmdev_state, PNET_EVENT_APPLRDY);
@@ -644,7 +735,7 @@ TEST_F (PnetapiTest, PnetapiRunTest)
 
    /* Try receiving data before any received */
    in_len = sizeof(in_data);
-   ret = pnet_output_get_data_and_iops(0, 1, 1, &new_flag, in_data, &in_len, &iops);
+   ret = pnet_output_get_data_and_iops(g_pnet, 0, 1, 1, &new_flag, in_data, &in_len, &iops);
    EXPECT_EQ(ret, -1);
    EXPECT_EQ(new_flag, false);
    EXPECT_EQ(in_len, 0);
@@ -654,20 +745,20 @@ TEST_F (PnetapiTest, PnetapiRunTest)
    printf("Line %d\n", __LINE__);
    for (ix = 0; ix < 100; ix++)
    {
-      send_data(data_packet1_bad_iops_bad_iocs, sizeof(data_packet1_bad_iops_bad_iocs));
+      send_data(g_pnet, data_packet1_bad_iops_bad_iocs, sizeof(data_packet1_bad_iops_bad_iocs));
    }
 
    printf("Line %d\n", __LINE__);
    iops = 88;     /* Something non-valid */
    in_len = sizeof(in_data);
-   ret = pnet_output_get_data_and_iops(0, 1, 1, &new_flag, in_data, &in_len, &iops);
+   ret = pnet_output_get_data_and_iops(g_pnet, 0, 1, 1, &new_flag, in_data, &in_len, &iops);
    EXPECT_EQ(ret, 0);
    EXPECT_EQ(new_flag, true);
    EXPECT_EQ(in_len, 1);
    EXPECT_EQ(in_data[0], 0x20);
    EXPECT_EQ(iops, 0x05);
    iocs = 77;     /* Something non-valid */
-   ret = pnet_input_get_iocs(0, 1, 1, &iocs);
+   ret = pnet_input_get_iocs(g_pnet, 0, 1, 1, &iocs);
    EXPECT_EQ(ret, 0);
    EXPECT_EQ(in_len, 1);
    EXPECT_EQ(iocs, 0x04);
@@ -675,20 +766,20 @@ TEST_F (PnetapiTest, PnetapiRunTest)
    printf("Line %d\n", __LINE__);
    for (ix = 0; ix < 100; ix++)
    {
-      send_data(data_packet2_bad_iops_good_iocs, sizeof(data_packet2_bad_iops_good_iocs));
+      send_data(g_pnet, data_packet2_bad_iops_good_iocs, sizeof(data_packet2_bad_iops_good_iocs));
    }
 
    printf("Line %d\n", __LINE__);
    iops = 88;     /* Something non-valid */
    in_len = sizeof(in_data);
-   ret = pnet_output_get_data_and_iops(0, 1, 1, &new_flag, in_data, &in_len, &iops);
+   ret = pnet_output_get_data_and_iops(g_pnet, 0, 1, 1, &new_flag, in_data, &in_len, &iops);
    EXPECT_EQ(ret, 0);
    EXPECT_EQ(new_flag, true);
    EXPECT_EQ(in_len, 1);
    EXPECT_EQ(in_data[0], 0x21);
    EXPECT_EQ(iops, 0x05);
    iocs = 77;     /* Something non-valid */
-   ret = pnet_input_get_iocs(0, 1, 1, &iocs);
+   ret = pnet_input_get_iocs(g_pnet, 0, 1, 1, &iocs);
    EXPECT_EQ(ret, 0);
    EXPECT_EQ(in_len, 1);
    EXPECT_EQ(iocs, PNET_IOXS_GOOD);
@@ -696,20 +787,20 @@ TEST_F (PnetapiTest, PnetapiRunTest)
    printf("Line %d\n", __LINE__);
    for (ix = 0; ix < 100; ix++)
    {
-      send_data(data_packet3_good_iops_bad_iocs, sizeof(data_packet3_good_iops_bad_iocs));
+      send_data(g_pnet, data_packet3_good_iops_bad_iocs, sizeof(data_packet3_good_iops_bad_iocs));
    }
 
    printf("Line %d\n", __LINE__);
    iops = 88;     /* Something non-valid */
    in_len = sizeof(in_data);
-   ret = pnet_output_get_data_and_iops(0, 1, 1, &new_flag, in_data, &in_len, &iops);
+   ret = pnet_output_get_data_and_iops(g_pnet, 0, 1, 1, &new_flag, in_data, &in_len, &iops);
    EXPECT_EQ(ret, 0);
    EXPECT_EQ(new_flag, true);
    EXPECT_EQ(in_len, 1);
    EXPECT_EQ(in_data[0], 0x22);
    EXPECT_EQ(iops, PNET_IOXS_GOOD);
    iocs = 77;     /* Something non-valid */
-   ret = pnet_input_get_iocs(0, 1, 1, &iocs);
+   ret = pnet_input_get_iocs(g_pnet, 0, 1, 1, &iocs);
    EXPECT_EQ(ret, 0);
    EXPECT_EQ(new_flag, true);
    EXPECT_EQ(in_len, 1);
@@ -718,20 +809,20 @@ TEST_F (PnetapiTest, PnetapiRunTest)
    printf("Line %d\n", __LINE__);
    for (ix = 0; ix < 100; ix++)
    {
-      send_data(data_packet4_good_iops_good_iocs, sizeof(data_packet4_good_iops_good_iocs));
+      send_data(g_pnet, data_packet4_good_iops_good_iocs, sizeof(data_packet4_good_iops_good_iocs));
    }
 
    printf("Line %d\n", __LINE__);
    iops = 88;     /* Something non-valid */
    in_len = sizeof(in_data);
-   ret = pnet_output_get_data_and_iops(0, 1, 1, &new_flag, in_data, &in_len, &iops);
+   ret = pnet_output_get_data_and_iops(g_pnet, 0, 1, 1, &new_flag, in_data, &in_len, &iops);
    EXPECT_EQ(ret, 0);
    EXPECT_EQ(new_flag, true);
    EXPECT_EQ(in_len, 1);
    EXPECT_EQ(in_data[0], 0x23);
    EXPECT_EQ(iops, PNET_IOXS_GOOD);
    iocs = 77;     /* Something non-valid */
-   ret = pnet_input_get_iocs(0, 1, 1, &iocs);
+   ret = pnet_input_get_iocs(g_pnet, 0, 1, 1, &iocs);
    EXPECT_EQ(ret, 0);
    EXPECT_EQ(new_flag, true);
    EXPECT_EQ(in_len, 1);
@@ -746,7 +837,7 @@ TEST_F (PnetapiTest, PnetapiRunTest)
    in_len = sizeof(in_data);
    in_data[0] = 0;
    new_flag = (bool)0x33;
-   ret = pnet_output_get_data_and_iops(0, 1, 1, &new_flag, in_data, &in_len, &iops);
+   ret = pnet_output_get_data_and_iops(g_pnet, 0, 1, 1, &new_flag, in_data, &in_len, &iops);
    EXPECT_EQ(ret, 0);
    EXPECT_EQ(new_flag, false);
    EXPECT_EQ(in_len, 1);            /* Received one byte (same as before) */
@@ -755,11 +846,11 @@ TEST_F (PnetapiTest, PnetapiRunTest)
 
    /* Send some data to the controller */
    printf("Line %d\n", __LINE__);
-   ret = pnet_input_set_data_and_iops(0, 1, 1, out_data, sizeof(out_data), PNET_IOXS_GOOD);
+   ret = pnet_input_set_data_and_iops(g_pnet, 0, 1, 1, out_data, sizeof(out_data), PNET_IOXS_GOOD);
    EXPECT_EQ(ret, 0);
 
    /* Acknowledge the reception of controller data */
-   ret = pnet_output_set_iocs(0, 1, 1, PNET_IOXS_GOOD);
+   ret = pnet_output_set_iocs(g_pnet, 0, 1, 1, PNET_IOXS_GOOD);
    EXPECT_EQ(ret, 0);
 
    EXPECT_EQ(state_calls, 4);
@@ -767,7 +858,7 @@ TEST_F (PnetapiTest, PnetapiRunTest)
 
    printf("Line %d\n", __LINE__);
    /* Create a logbook entry */
-   pnet_create_log_book_entry(main_arep, &pnio_status, 0x13245768);
+   pnet_create_log_book_entry(g_pnet, main_arep, &pnio_status, 0x13245768);
 
    printf("Line %d\n", __LINE__);
    mock_set_os_udp_recvfrom_buffer(release_req, sizeof(release_req));
@@ -789,7 +880,7 @@ TEST_F(PnetapiTest, PnetapiShowTest)
    EXPECT_EQ(connect_calls, 1);
    EXPECT_GT(mock_os_eth_send_count, 0);
 
-   pnet_show(0x7fffffff);
+   pnet_show(g_pnet, 0x7fffffff);
 
    mock_set_os_udp_recvfrom_buffer(release_req, sizeof(release_req));
    os_usleep(TEST_UDP_DELAY);

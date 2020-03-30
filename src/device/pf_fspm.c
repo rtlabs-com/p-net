@@ -27,33 +27,29 @@
 #include "pf_includes.h"
 #include "pf_block_reader.h"
 
-/* Local variables */
-static const pnet_cfg_t          *p_default_cfg = NULL;
-static pnet_cfg_t                cfg;
-
-static pf_log_book_t             pnet_log_book;
-static os_mutex_t                *pnet_log_book_mutex = NULL;
-
 int pf_fspm_init(
+   pnet_t                  *net,
    const pnet_cfg_t        *p_cfg)
 {
    /*
     * Save a copy before doing anything else.
     * Some init functions may ask for it.
     */
-   cfg = *p_cfg;
-   /* Also save the default settings */
-   p_default_cfg = p_cfg;
+   net->fspm_cfg = *p_cfg;
 
-   if (pnet_log_book_mutex == NULL)
+   /* Also save the default settings */
+   net->p_fspm_default_cfg = p_cfg;
+
+   if (net->fspm_log_book_mutex == NULL)
    {
-      pnet_log_book_mutex = os_mutex_create();
+      net->fspm_log_book_mutex = os_mutex_create();
    }
 
    return 0;
 }
 
 void pf_fspm_create_log_book_entry(
+   pnet_t                     *net,
    uint32_t                   arep,
    const pnet_pnio_status_t   *p_pnio_status,
    uint32_t                   entry_detail)
@@ -63,47 +59,51 @@ void pf_fspm_create_log_book_entry(
    pf_ar_t     *p_ar = NULL;
    pf_uuid_t   *p_ar_uuid = NULL;
 
-   if (pf_ar_find_by_arep(arep, &p_ar) == 0)
+   if (pf_ar_find_by_arep(net, arep, &p_ar) == 0)
    {
       p_ar_uuid = &p_ar->ar_param.ar_uuid;
-      os_mutex_lock(pnet_log_book_mutex);
-      put = pnet_log_book.put;
-      pnet_log_book.put++;
-      if (pnet_log_book.put >= NELEMENTS(pnet_log_book.entries))
+      os_mutex_lock(net->fspm_log_book_mutex);
+      put = net->fspm_log_book.put;
+      net->fspm_log_book.put++;
+      if (net->fspm_log_book.put >= NELEMENTS(net->fspm_log_book.entries))
       {
-         pnet_log_book.put = 0;
-         pnet_log_book.wrap = true;
+         net->fspm_log_book.put = 0;
+         net->fspm_log_book.wrap = true;
       }
 
       time = os_get_current_time_us();
-      pnet_log_book.entries[put].time_ts.status = PF_TS_STATUS_LOCAL_ARB;
-      pnet_log_book.entries[put].time_ts.sec_hi = 0;
-      pnet_log_book.entries[put].time_ts.sec_lo = time/1000000;
-      pnet_log_book.entries[put].time_ts.nano_sec = (time%1000000)*1000;
+      net->fspm_log_book.entries[put].time_ts.status = PF_TS_STATUS_LOCAL_ARB;
+      net->fspm_log_book.entries[put].time_ts.sec_hi = 0;
+      net->fspm_log_book.entries[put].time_ts.sec_lo = time/1000000;
+      net->fspm_log_book.entries[put].time_ts.nano_sec = (time%1000000)*1000;
 
-      pnet_log_book.entries[put].ar_uuid = *p_ar_uuid;
-      pnet_log_book.entries[put].pnio_status = *p_pnio_status;
-      pnet_log_book.entries[put].entry_detail = entry_detail;
-      os_mutex_unlock(pnet_log_book_mutex);
+      net->fspm_log_book.entries[put].ar_uuid = *p_ar_uuid;
+      net->fspm_log_book.entries[put].pnio_status = *p_pnio_status;
+      net->fspm_log_book.entries[put].entry_detail = entry_detail;
+      os_mutex_unlock(net->fspm_log_book_mutex);
    }
 }
 
+/******************* Execute user callbacks *********************************/
+
 int pf_fspm_exp_module_ind(
+   pnet_t                  *net,
    uint32_t                api,
    uint16_t                slot,
    uint32_t                module_ident)
 {
    int ret = -1;
 
-   if (cfg.exp_module_cb != NULL)
+   if (net->fspm_cfg.exp_module_cb != NULL)
    {
-      ret = cfg.exp_module_cb(api, slot, module_ident);
+      ret = net->fspm_cfg.exp_module_cb(net, net->fspm_cfg.cb_arg, api, slot, module_ident);
    }
 
    return ret;
 }
 
 int pf_fspm_exp_submodule_ind(
+   pnet_t                  *net,
    uint32_t                api,
    uint16_t                slot,
    uint16_t                subslot,
@@ -112,44 +112,48 @@ int pf_fspm_exp_submodule_ind(
 {
    int ret = -1;
 
-   if (cfg.exp_submodule_cb != NULL)
+   if (net->fspm_cfg.exp_submodule_cb != NULL)
    {
-      ret = cfg.exp_submodule_cb(api, slot, subslot, module_ident, submodule_ident);
+      ret = net->fspm_cfg.exp_submodule_cb(net, net->fspm_cfg.cb_arg, api, slot, subslot, module_ident, submodule_ident);
    }
 
    return ret;
 }
 
 int pf_fspm_data_status_changed(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pf_iocr_t               *p_iocr,
-   uint8_t                 changes)
+   uint8_t                 changes,
+   uint8_t                 data_status)
 {
    int ret = -1;
 
-   if (cfg.new_data_status_cb != NULL)
+   if (net->fspm_cfg.new_data_status_cb != NULL)
    {
-      ret = cfg.new_data_status_cb(p_ar->arep, p_iocr->crep, changes);
+      ret = net->fspm_cfg.new_data_status_cb(net, net->fspm_cfg.cb_arg, p_ar->arep, p_iocr->crep, changes, data_status);
    }
 
    return ret;
 }
 
 int pf_fspm_ccontrol_cnf(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pnet_result_t           *p_result)
 {
    int ret = 0;
 
-   if (cfg.ccontrol_cb != NULL)
+   if (net->fspm_cfg.ccontrol_cb != NULL)
    {
-      ret = cfg.ccontrol_cb(p_ar->arep, p_result);
+      ret = net->fspm_cfg.ccontrol_cb(net, net->fspm_cfg.cb_arg, p_ar->arep, p_result);
    }
 
    return ret;
 }
 
 int pf_fspm_cm_read_ind(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pf_iod_read_request_t   *p_read_request,
    uint8_t                 **pp_read_data,
@@ -161,9 +165,10 @@ int pf_fspm_cm_read_ind(
    if (p_read_request->index <= PF_IDX_USER_MAX)
    {
       /* Application-specific data records */
-      if (cfg.read_cb != NULL)
+      if (net->fspm_cfg.read_cb != NULL)
       {
-         ret = cfg.read_cb(p_ar->arep, p_read_request->api,
+         ret = net->fspm_cfg.read_cb(net, net->fspm_cfg.cb_arg,
+            p_ar->arep, p_read_request->api,
             p_read_request->slot_number, p_read_request->subslot_number,
             p_read_request->index, p_read_request->sequence_number,
             pp_read_data, p_read_length, p_read_status);
@@ -182,10 +187,10 @@ int pf_fspm_cm_read_ind(
       switch (p_read_request->index)
       {
       case PF_IDX_SUB_IM_0:
-         if (*p_read_length >= sizeof(cfg.im_0_data))
+         if (*p_read_length >= sizeof(net->fspm_cfg.im_0_data))
          {
-            *pp_read_data = (uint8_t *)&cfg.im_0_data;
-            *p_read_length = sizeof(cfg.im_0_data);
+            *pp_read_data = (uint8_t *)&net->fspm_cfg.im_0_data;
+            *p_read_length = sizeof(net->fspm_cfg.im_0_data);
             ret = 0;
          }
          else
@@ -197,23 +202,23 @@ int pf_fspm_cm_read_ind(
          }
          break;
       case PF_IDX_SUB_IM_1:
-         *pp_read_data = (uint8_t *)&cfg.im_1_data;
-         *p_read_length = sizeof(cfg.im_1_data);
+         *pp_read_data = (uint8_t *)&net->fspm_cfg.im_1_data;
+         *p_read_length = sizeof(net->fspm_cfg.im_1_data);
          ret = 0;
          break;
       case PF_IDX_SUB_IM_2:
-         *pp_read_data = (uint8_t *)&cfg.im_2_data;
-         *p_read_length = sizeof(cfg.im_2_data);
+         *pp_read_data = (uint8_t *)&net->fspm_cfg.im_2_data;
+         *p_read_length = sizeof(net->fspm_cfg.im_2_data);
          ret = 0;
          break;
       case PF_IDX_SUB_IM_3:
-         *pp_read_data = (uint8_t *)&cfg.im_3_data;
-         *p_read_length = sizeof(cfg.im_3_data);
+         *pp_read_data = (uint8_t *)&net->fspm_cfg.im_3_data;
+         *p_read_length = sizeof(net->fspm_cfg.im_3_data);
          ret = 0;
          break;
       case PF_IDX_SUB_IM_4:
-         *pp_read_data = (uint8_t *)&cfg.im_4_data;
-         *p_read_length = sizeof(cfg.im_4_data);
+         *pp_read_data = (uint8_t *)&net->fspm_cfg.im_4_data;
+         *p_read_length = sizeof(net->fspm_cfg.im_4_data);
          ret = 0;
          break;
       default:
@@ -223,8 +228,8 @@ int pf_fspm_cm_read_ind(
    }
    else if (p_read_request->index == PF_IDX_DEV_LOGBOOK_DATA)
    {
-      *pp_read_data = (uint8_t *)&pnet_log_book;
-      *p_read_length = sizeof(pnet_log_book);
+      *pp_read_data = (uint8_t *)&net->fspm_log_book;
+      *p_read_length = sizeof(net->fspm_log_book);
       ret = 0;
    }
    else
@@ -236,6 +241,7 @@ int pf_fspm_cm_read_ind(
 }
 
 int pf_fspm_cm_write_ind(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pf_iod_write_request_t  *p_write_request,
    uint16_t                write_length,
@@ -248,9 +254,10 @@ int pf_fspm_cm_write_ind(
 
    if (p_write_request->index <= PF_IDX_USER_MAX)
    {
-      if (cfg.write_cb != NULL)
+      if (net->fspm_cfg.write_cb != NULL)
       {
-         ret = cfg.write_cb(p_ar->arep, p_write_request->api,
+         ret = net->fspm_cfg.write_cb(net, net->fspm_cfg.cb_arg,
+            p_ar->arep, p_write_request->api,
             p_write_request->slot_number, p_write_request->subslot_number,
             p_write_request->index, p_write_request->sequence_number,
             write_length, p_write_data, p_write_status);
@@ -281,7 +288,7 @@ int pf_fspm_cm_write_ind(
          get_info.is_big_endian = true;
          get_info.len = write_length;      /* Bytes in input buffer */
 
-         pf_get_im_1(&get_info, &pos, &cfg.im_1_data);
+         pf_get_im_1(&get_info, &pos, &net->fspm_cfg.im_1_data);
          if ((get_info.result == PF_PARSE_OK) && (pos == write_length))
          {
             ret = 0;
@@ -296,10 +303,10 @@ int pf_fspm_cm_write_ind(
          break;
       case PF_IDX_SUB_IM_2:
          /* Do not count the terminator byte */
-         if (write_length == (sizeof(cfg.im_2_data) - 1))
+         if (write_length == (sizeof(net->fspm_cfg.im_2_data) - 1))
          {
-            memcpy(&cfg.im_2_data, p_write_data, sizeof(cfg.im_2_data) - 1);
-            cfg.im_2_data.im_date[sizeof(cfg.im_2_data) - 1] = '\0';
+            memcpy(&net->fspm_cfg.im_2_data, p_write_data, sizeof(net->fspm_cfg.im_2_data) - 1);
+            net->fspm_cfg.im_2_data.im_date[sizeof(net->fspm_cfg.im_2_data) - 1] = '\0';
             ret = 0;
          }
          else
@@ -312,10 +319,10 @@ int pf_fspm_cm_write_ind(
          break;
       case PF_IDX_SUB_IM_3:
          /* Do not count the terminator byte */
-         if (write_length == (sizeof(cfg.im_3_data) - 1))
+         if (write_length == (sizeof(net->fspm_cfg.im_3_data) - 1))
          {
-            memcpy(&cfg.im_3_data, p_write_data, sizeof(cfg.im_3_data) - 1);
-            cfg.im_3_data.im_descriptor[sizeof(cfg.im_3_data) - 1] = '\0';
+            memcpy(&net->fspm_cfg.im_3_data, p_write_data, sizeof(net->fspm_cfg.im_3_data) - 1);
+            net->fspm_cfg.im_3_data.im_descriptor[sizeof(net->fspm_cfg.im_3_data) - 1] = '\0';
             ret = 0;
          }
          else
@@ -327,9 +334,9 @@ int pf_fspm_cm_write_ind(
          }
          break;
       case PF_IDX_SUB_IM_4:
-         if (write_length == sizeof(cfg.im_4_data))
+         if (write_length == sizeof(net->fspm_cfg.im_4_data))
          {
-            memcpy(&cfg.im_4_data, p_write_data, sizeof(cfg.im_4_data));
+            memcpy(&net->fspm_cfg.im_4_data, p_write_data, sizeof(net->fspm_cfg.im_4_data));
             ret = 0;
          }
          else
@@ -356,81 +363,90 @@ int pf_fspm_cm_write_ind(
    return ret;
 }
 
-int pf_fspm_clear_im_data(void)
+int pf_fspm_clear_im_data(
+   pnet_t                  *net)
 {
-   memset(cfg.im_1_data.im_tag_function, ' ', sizeof(cfg.im_1_data.im_tag_function));
-   cfg.im_1_data.im_tag_function[sizeof(cfg.im_1_data.im_tag_function) - 1] = '\0';
-   memset(cfg.im_1_data.im_tag_location, ' ', sizeof(cfg.im_1_data.im_tag_location));
-   cfg.im_1_data.im_tag_location[sizeof(cfg.im_1_data.im_tag_location) - 1] = '\0';
-   memset(cfg.im_2_data.im_date, ' ', sizeof(cfg.im_2_data.im_date));
-   cfg.im_2_data.im_date[sizeof(cfg.im_2_data.im_date) - 1] = '\0';
-   memset(cfg.im_3_data.im_descriptor, ' ', sizeof(cfg.im_3_data.im_descriptor));
-   cfg.im_3_data.im_descriptor[sizeof(cfg.im_3_data.im_descriptor) - 1] = '\0';
-   memset(cfg.im_4_data.im_signature, 0, sizeof(cfg.im_4_data.im_signature));
+   memset(net->fspm_cfg.im_1_data.im_tag_function, ' ', sizeof(net->fspm_cfg.im_1_data.im_tag_function));
+   net->fspm_cfg.im_1_data.im_tag_function[sizeof(net->fspm_cfg.im_1_data.im_tag_function) - 1] = '\0';
+   memset(net->fspm_cfg.im_1_data.im_tag_location, ' ', sizeof(net->fspm_cfg.im_1_data.im_tag_location));
+   net->fspm_cfg.im_1_data.im_tag_location[sizeof(net->fspm_cfg.im_1_data.im_tag_location) - 1] = '\0';
+   memset(net->fspm_cfg.im_2_data.im_date, ' ', sizeof(net->fspm_cfg.im_2_data.im_date));
+   net->fspm_cfg.im_2_data.im_date[sizeof(net->fspm_cfg.im_2_data.im_date) - 1] = '\0';
+   memset(net->fspm_cfg.im_3_data.im_descriptor, ' ', sizeof(net->fspm_cfg.im_3_data.im_descriptor));
+   net->fspm_cfg.im_3_data.im_descriptor[sizeof(net->fspm_cfg.im_3_data.im_descriptor) - 1] = '\0';
+   memset(net->fspm_cfg.im_4_data.im_signature, 0, sizeof(net->fspm_cfg.im_4_data.im_signature));
 
    return 0;
 }
 
-void pf_fspm_get_cfg(pnet_cfg_t **pp_cfg)
+void pf_fspm_get_cfg(
+   pnet_t                  *net,
+   pnet_cfg_t              **pp_cfg)
 {
    if (pp_cfg != NULL)
    {
-      *pp_cfg = &cfg;
+      *pp_cfg = &net->fspm_cfg;
    }
 }
 
-void pf_fspm_get_default_cfg(const pnet_cfg_t **pp_cfg)
+void pf_fspm_get_default_cfg(
+   pnet_t                  *net,
+   const pnet_cfg_t        **pp_cfg)
 {
    if (pp_cfg != NULL)
    {
-      *pp_cfg = p_default_cfg;
+      *pp_cfg = net->p_fspm_default_cfg;
    }
 }
 
 int pf_fspm_cm_connect_ind(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pnet_result_t           *p_result)
 {
    int ret = 0;
 
-   if (cfg.connect_cb != NULL)
+   if (net->fspm_cfg.connect_cb != NULL)
    {
-      ret = cfg.connect_cb(p_ar->arep, p_result);
+      ret = net->fspm_cfg.connect_cb(net, net->fspm_cfg.cb_arg, p_ar->arep, p_result);
    }
 
    return ret;
 }
 
 int pf_fspm_cm_release_ind(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pnet_result_t           *p_result)
 {
    int ret = 0;
 
-   if (cfg.release_cb != NULL)
+   if (net->fspm_cfg.release_cb != NULL)
    {
-      ret = cfg.release_cb(p_ar->arep, p_result);
+      ret = net->fspm_cfg.release_cb(net, net->fspm_cfg.cb_arg, p_ar->arep, p_result);
    }
 
    return ret;
 }
 
 int pf_fspm_cm_dcontrol_ind(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pnet_control_command_t  control_command,
    pnet_result_t           *p_result)
 {
    int ret = 0;
 
-   if (cfg.dcontrol_cb != NULL)
+   if (net->fspm_cfg.dcontrol_cb != NULL)
    {
-      ret = cfg.dcontrol_cb(p_ar->arep, control_command, p_result);
+      ret = net->fspm_cfg.dcontrol_cb(net, net->fspm_cfg.cb_arg, p_ar->arep, control_command, p_result);
    }
 
    return ret;
 }
 
 int pf_fspm_state_ind(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pnet_event_values_t     event)
 {
@@ -444,15 +460,16 @@ int pf_fspm_state_ind(
    case    PNET_EVENT_APPLRDY:   LOG_INFO(PNET_LOG, "CMDEV event APPLRDY\n"); break;
    case    PNET_EVENT_DATA:      LOG_INFO(PNET_LOG, "CMDEV event DATA\n"); break;
    }
-   if (cfg.state_cb != NULL)
+   if (net->fspm_cfg.state_cb != NULL)
    {
-      ret = cfg.state_cb(p_ar->arep, event);
+      ret = net->fspm_cfg.state_cb(net, net->fspm_cfg.cb_arg, p_ar->arep, event);
    }
 
    return ret;
 }
 
 int pf_fspm_aplmr_alarm_ind(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    uint32_t                api,
    uint16_t                slot,
@@ -463,37 +480,39 @@ int pf_fspm_aplmr_alarm_ind(
 {
    int ret = 0;
 
-   if (cfg.alarm_ind_cb != NULL)
+   if (net->fspm_cfg.alarm_ind_cb != NULL)
    {
-      ret = cfg.alarm_ind_cb(p_ar->arep, api, slot, subslot, data_len, data_usi, p_data);
+      ret = net->fspm_cfg.alarm_ind_cb(net, net->fspm_cfg.cb_arg, p_ar->arep, api, slot, subslot, data_len, data_usi, p_data);
    }
 
    return ret;
 }
 
 int pf_fspm_aplmi_alarm_cnf(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pnet_pnio_status_t      *p_pnio_status)
 {
    int ret = 0;
 
-   if (cfg.alarm_cnf_cb != NULL)
+   if (net->fspm_cfg.alarm_cnf_cb != NULL)
    {
-      ret = cfg.alarm_cnf_cb(p_ar->arep, p_pnio_status);
+      ret = net->fspm_cfg.alarm_cnf_cb(net, net->fspm_cfg.cb_arg, p_ar->arep, p_pnio_status);
    }
 
    return ret;
 }
 
 int pf_fspm_aplmr_alarm_ack_cnf(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    int                     res)
 {
    int ret = 0;
 
-   if (cfg.alarm_ack_cnf_cb != NULL)
+   if (net->fspm_cfg.alarm_ack_cnf_cb != NULL)
    {
-      ret = cfg.alarm_ack_cnf_cb(p_ar->arep, res);
+      ret = net->fspm_cfg.alarm_ack_cnf_cb(net, net->fspm_cfg.cb_arg, p_ar->arep, res);
    }
 
    return ret;

@@ -22,6 +22,13 @@
  * There are functions used by the application (via pnet_api.c) to set and get
  * data, IOCS and IOPS.
  *
+ * A global mutex is used instead of a per-instance mutex.
+ * The locking time is very low so it should not be very congested.
+ * The mutex is created on the first call to pf_ppm_create and deleted on
+ * the last call to pf_ppm_close.
+ * Keep track of how many instances exist and delete the mutex when the
+ * number reaches 0 (zero).
+ *
  */
 
 
@@ -29,33 +36,29 @@
 #define os_eth_send mock_os_eth_send
 #endif
 
-
 #include <string.h>
 #include "pf_includes.h"
 
-/**
- * @internal
- * A global mutex is used instead of a per-instance mutex.
- * The locking time is very low so it should not be very congested.
- * The mutex is created on the first call to pf_ppm_create and deleted on
- * the last call to pf_ppm_close.
- * Keep track of how many instances exist and delete the mutex when the
- * number reaches 0 (zero).
- */
-static os_mutex_t          *buf_lock;
-static atomic_int          instance_cnt = ATOMIC_VAR_INIT(0);
 
 static const char          *ppm_sync_name = "ppm";
+
+void pf_ppm_init(
+   pnet_t                  *net)
+{
+   net->ppm_instance_cnt = ATOMIC_VAR_INIT(0);
+}
 
 /**
  * @internal
  * Send error indications to other components.
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param p_ppm            In:   The PPM instance.
  * @param error            In:   An error flag.
  * @return  0  always.
  */
 static int pf_ppm_state_ind(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pf_ppm_t                *p_ppm,
    bool                    error)
@@ -64,7 +67,7 @@ static int pf_ppm_state_ind(
    {
       p_ar->err_cls = PNET_ERROR_CODE_1_PPM;
       p_ar->err_code = PNET_ERROR_CODE_2_PPM_INVALID;
-      pf_cmsu_ppm_error_ind(p_ar, p_ar->err_cls, p_ar->err_code);
+      pf_cmsu_ppm_error_ind(net, p_ar, p_ar->err_cls, p_ar->err_code);
    }
 
    return 0;
@@ -129,10 +132,12 @@ static void pf_ppm_init_buf(
 /**
  * @internal
  * Finalize a PPM transmit message.
+ * @param net              InOut: The p-net stack instance
  * @param p_ppm            In:   The PPM instance.
  * @param data_length      In:   The length of the message.
  */
 static void pf_ppm_finish_buffer(
+   pnet_t                  *net,
    pf_ppm_t                *p_ppm,
    uint16_t                data_length)
 {
@@ -143,9 +148,9 @@ static void pf_ppm_finish_buffer(
    p_ppm->cycle = cycle_tmp/125;           /* Get 4/125 = 31.25us tics */
    u16 = htons(p_ppm->cycle);
 
-   os_mutex_lock(buf_lock);
+   os_mutex_lock(net->ppm_buf_lock);
    memcpy(&p_payload[p_ppm->buffer_pos], p_ppm->buffer_data, data_length);
-   os_mutex_unlock(buf_lock);
+   os_mutex_unlock(net->ppm_buf_lock);
 
    memcpy(&p_payload[p_ppm->cycle_counter_offset], &u16, sizeof(u16));
    memcpy(&p_payload[p_ppm->data_status_offset], &p_ppm->data_status, sizeof(p_ppm->data_status));
@@ -156,14 +161,17 @@ static void pf_ppm_finish_buffer(
  * @internal
  * Send the PPM data message to the controller.
  *
- * This is a scheduler call-back function.
+ * This is a callback for the scheduler. Arguments should fulfill pf_scheduler_timeout_ftn_t
+ *
  * If the PPM has not been stopped during the wait then a data message
  * is sent and the function is rescheduled.
  *
+ * @param net              InOut: The p-net stack instance
  * @param arg              In:   The IOCR instance.
  * @param current_time     In:   The current time.
  */
 static void pf_ppm_send(
+   pnet_t                  *net,
    void                    *arg,
    uint32_t                current_time)
 {
@@ -174,29 +182,29 @@ static void pf_ppm_send(
    if (p_arg->ppm.ci_running == true)
    {
       /* in_length is size of input to the controller */
-      pf_ppm_finish_buffer(&p_arg->ppm, p_arg->in_length);
+      pf_ppm_finish_buffer(net, &p_arg->ppm, p_arg->in_length);
       /* Now send it */
       /* ToDo: Handle RT_CLASS_UDP */
-      if (os_eth_send(p_arg->p_ar->p_sess->if_id, p_arg->ppm.p_send_buffer) <= 0)
+      if (os_eth_send(p_arg->p_ar->p_sess->eth_handle, p_arg->ppm.p_send_buffer) <= 0)
       {
          LOG_ERROR(PF_PPM_LOG, "PPM(%d): Error from os_eth_send(ppm)\n", __LINE__);
       }
       else
       {
          /* Compensate for the execution delay variations */
-         if (pf_scheduler_add(p_arg->ppm.control_interval, ppm_sync_name, pf_ppm_send, arg, &p_arg->ppm.ci_timer) == 0)
+         if (pf_scheduler_add(net, p_arg->ppm.control_interval, ppm_sync_name, pf_ppm_send, arg, &p_arg->ppm.ci_timer) == 0)
          {
             p_arg->ppm.trx_cnt++;
             if (p_arg->ppm.first_transmit == false)
             {
-               pf_ppm_state_ind(p_arg->p_ar, &p_arg->ppm, false);   /* No error */
+               pf_ppm_state_ind(net, p_arg->p_ar, &p_arg->ppm, false);   /* No error */
                p_arg->ppm.first_transmit = true;
             }
          }
          else
          {
             p_arg->ppm.ci_timer = UINT32_MAX;
-            pf_ppm_state_ind(p_arg->p_ar, &p_arg->ppm, true);       /* Error */
+            pf_ppm_state_ind(net, p_arg->p_ar, &p_arg->ppm, true);       /* Error */
          }
       }
    }
@@ -204,6 +212,7 @@ static void pf_ppm_send(
 }
 
 int pf_ppm_activate_req(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    uint32_t                crep)
 {
@@ -213,10 +222,10 @@ int pf_ppm_activate_req(
    pf_ppm_t                *p_ppm;
    uint32_t                cnt;
 
-   cnt = atomic_fetch_add(&instance_cnt, 1);
+   cnt = atomic_fetch_add(&net->ppm_instance_cnt, 1);
    if (cnt == 0)
    {
-      buf_lock = os_mutex_create();
+      net->ppm_buf_lock = os_mutex_create();
    }
 
    p_ppm = &p_iocr->ppm;
@@ -231,7 +240,6 @@ int pf_ppm_activate_req(
 
       memcpy(&p_ppm->sa, &p_ar->ar_result.cm_responder_mac_add, sizeof(p_ppm->sa));
       memcpy(&p_ppm->da, &p_ar->ar_param.cm_initiator_mac_add, sizeof(p_ppm->da));
-      p_ppm->if_id = p_ar->p_sess->if_id;
 
       vlan_size = 0;
       if (p_iocr->param.iocr_tag_header.vlan_id != 0)
@@ -278,12 +286,12 @@ int pf_ppm_activate_req(
       pf_ppm_set_state(p_ppm, PF_PPM_STATE_RUN);
 
       p_ppm->ci_running = true;
-      ret = pf_scheduler_add(p_ppm->control_interval,
+      ret = pf_scheduler_add(net, p_ppm->control_interval,
          ppm_sync_name, pf_ppm_send, p_iocr, &p_ppm->ci_timer);
       if (ret != 0)
       {
          p_ppm->ci_timer = UINT32_MAX;
-         pf_ppm_state_ind(p_ar, p_ppm, true);          /* Error */
+         pf_ppm_state_ind(net, p_ar, p_ppm, true);          /* Error */
       }
    }
 
@@ -291,6 +299,7 @@ int pf_ppm_activate_req(
 }
 
 int pf_ppm_close_req(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    uint32_t                crep)
 {
@@ -302,18 +311,18 @@ int pf_ppm_close_req(
    p_ppm->ci_running = false;
    if (p_ppm->ci_timer != UINT32_MAX)
    {
-      pf_scheduler_remove(ppm_sync_name, p_ppm->ci_timer);
+      pf_scheduler_remove(net, ppm_sync_name, p_ppm->ci_timer);
       p_ppm->ci_timer = UINT32_MAX;
    }
 
    os_buf_free(p_ppm->p_send_buffer);
    pf_ppm_set_state(p_ppm, PF_PPM_STATE_W_START);
 
-   cnt = atomic_fetch_sub(&instance_cnt, 1);
+   cnt = atomic_fetch_sub(&net->ppm_instance_cnt, 1);
    if (cnt == 1)
    {
-      os_mutex_destroy(buf_lock);
-      buf_lock = NULL;
+      os_mutex_destroy(net->ppm_buf_lock);
+      net->ppm_buf_lock = NULL;
 
       p_ppm->data_status = 0;
    }
@@ -324,6 +333,7 @@ int pf_ppm_close_req(
 /**
  * @internal
  * Find the AR, input IOCR and IODATA object instances for the specified sub-slot.
+ * @param net              InOut: The p-net stack instance
  * @param api_id           In:   The API id.
  * @param slot_nbr         In:   The slot number.
  * @param subslot_nbr      In:   The sub-slot number.
@@ -334,6 +344,7 @@ int pf_ppm_close_req(
  *          -1 If the information was not found.
  */
 static int pf_ppm_get_ar_iocr_desc(
+   pnet_t                  *net,
    uint32_t                api_id,
    uint16_t                slot_nbr,
    uint16_t                subslot_nbr,
@@ -349,7 +360,7 @@ static int pf_ppm_get_ar_iocr_desc(
    pf_iocr_t               *p_iocr = NULL;
    bool                    found = false;
 
-   if (pf_cmdev_get_subslot_full(api_id, slot_nbr, subslot_nbr, &p_subslot) == 0)
+   if (pf_cmdev_get_subslot_full(net, api_id, slot_nbr, subslot_nbr, &p_subslot) == 0)
    {
       p_ar = p_subslot->p_ar;
    }
@@ -398,6 +409,7 @@ static int pf_ppm_get_ar_iocr_desc(
 /**************** Set and get data, IOPS and IOCS ****************************/
 
 int pf_ppm_set_data_and_iops(
+   pnet_t                  *net,
    uint32_t                api_id,
    uint16_t                slot_nbr,
    uint16_t                subslot_nbr,
@@ -411,7 +423,7 @@ int pf_ppm_set_data_and_iops(
    pf_iodata_object_t      *p_iodata = NULL;
    pf_ar_t                 *p_ar = NULL;
 
-   if (pf_ppm_get_ar_iocr_desc(api_id, slot_nbr, subslot_nbr, &p_ar, &p_iocr, &p_iodata) == 0)
+   if (pf_ppm_get_ar_iocr_desc(net, api_id, slot_nbr, subslot_nbr, &p_ar, &p_iocr, &p_iodata) == 0)
    {
       switch (p_iocr->ppm.state)
       {
@@ -423,7 +435,7 @@ int pf_ppm_set_data_and_iops(
       case PF_PPM_STATE_RUN:
          if ((data_len == p_iodata->data_length) && (iops_len == p_iodata->iops_length))
          {
-            os_mutex_lock(buf_lock);
+            os_mutex_lock(net->ppm_buf_lock);
             if (data_len > 0)
             {
                memcpy(&p_iocr->ppm.buffer_data[p_iodata->data_offset], p_data, data_len);
@@ -432,7 +444,7 @@ int pf_ppm_set_data_and_iops(
             {
                memcpy(&p_iocr->ppm.buffer_data[p_iodata->iops_offset], p_iops, iops_len);
             }
-            os_mutex_unlock(buf_lock);
+            os_mutex_unlock(net->ppm_buf_lock);
 
             p_iodata->data_avail = true;
             ret = 0;
@@ -458,6 +470,7 @@ int pf_ppm_set_data_and_iops(
 }
 
 int pf_ppm_set_iocs(
+   pnet_t                  *net,
    uint32_t                api_id,
    uint16_t                slot_nbr,
    uint16_t                subslot_nbr,
@@ -469,7 +482,7 @@ int pf_ppm_set_iocs(
    pf_iodata_object_t      *p_iodata = NULL;
    pf_ar_t                 *p_ar = NULL;
 
-   if (pf_ppm_get_ar_iocr_desc(api_id, slot_nbr, subslot_nbr, &p_ar, &p_iocr, &p_iodata) == 0)
+   if (pf_ppm_get_ar_iocr_desc(net, api_id, slot_nbr, subslot_nbr, &p_ar, &p_iocr, &p_iodata) == 0)
    {
       switch (p_iocr->ppm.state)
       {
@@ -481,9 +494,9 @@ int pf_ppm_set_iocs(
       case PF_PPM_STATE_RUN:
          if (iocs_len == p_iodata->iocs_length)
          {
-            os_mutex_lock(buf_lock);
+            os_mutex_lock(net->ppm_buf_lock);
             memcpy(&p_iocr->ppm.buffer_data[p_iodata->iocs_offset], p_iocs, iocs_len);
-            os_mutex_unlock(buf_lock);
+            os_mutex_unlock(net->ppm_buf_lock);
 
             ret = 0;
          }
@@ -513,6 +526,7 @@ int pf_ppm_set_iocs(
 }
 
 int pf_ppm_get_data_and_iops(
+   pnet_t                  *net,
    uint32_t                api_id,
    uint16_t                slot_nbr,
    uint16_t                subslot_nbr,
@@ -526,7 +540,7 @@ int pf_ppm_get_data_and_iops(
    pf_iodata_object_t      *p_iodata = NULL;
    pf_ar_t                 *p_ar = NULL;
 
-   if (pf_ppm_get_ar_iocr_desc(api_id, slot_nbr, subslot_nbr, &p_ar, &p_iocr, &p_iodata) == 0)
+   if (pf_ppm_get_ar_iocr_desc(net, api_id, slot_nbr, subslot_nbr, &p_ar, &p_iocr, &p_iodata) == 0)
    {
       switch (p_iocr->ppm.state)
       {
@@ -538,10 +552,10 @@ int pf_ppm_get_data_and_iops(
       case PF_PPM_STATE_RUN:
          if ((*p_data_len >= p_iodata->data_length) && (*p_iops_len >= p_iodata->iops_length))
          {
-            os_mutex_lock(buf_lock);
+            os_mutex_lock(net->ppm_buf_lock);
             memcpy(p_data, &p_iocr->ppm.buffer_data[p_iodata->data_offset], p_iodata->data_length);
             memcpy(p_iops, &p_iocr->ppm.buffer_data[p_iodata->iops_offset], p_iodata->iops_length);
-            os_mutex_unlock(buf_lock);
+            os_mutex_unlock(net->ppm_buf_lock);
 
             *p_data_len = p_iodata->data_length;
             *p_iops_len = (uint8_t)p_iodata->iops_length;
@@ -569,6 +583,7 @@ int pf_ppm_get_data_and_iops(
 
 /**
  * Retrieve IOCS for a sub-module.
+ * @param net              InOut: The p-net stack instance
  * @param api_id           In:   The API id.
  * @param slot_nbr         In:   The slot number.
  * @param subslot_nbr      In:   The sub-slot number.
@@ -579,6 +594,7 @@ int pf_ppm_get_data_and_iops(
  *          -1 if an error occurred.
  */
 int pf_ppm_get_iocs(
+   pnet_t                  *net,
    uint32_t                api_id,
    uint16_t                slot_nbr,
    uint16_t                subslot_nbr,
@@ -590,7 +606,7 @@ int pf_ppm_get_iocs(
    pf_iodata_object_t      *p_iodata = NULL;
    pf_ar_t                 *p_ar = NULL;
 
-   if (pf_ppm_get_ar_iocr_desc(api_id, slot_nbr, subslot_nbr, &p_ar, &p_iocr, &p_iodata) == 0)
+   if (pf_ppm_get_ar_iocr_desc(net, api_id, slot_nbr, subslot_nbr, &p_ar, &p_iocr, &p_iodata) == 0)
    {
       switch (p_iocr->ppm.state)
       {
@@ -602,9 +618,9 @@ int pf_ppm_get_iocs(
       case PF_PPM_STATE_RUN:
          if (*p_iocs_len >= p_iodata->iocs_length)
          {
-            os_mutex_lock(buf_lock);
+            os_mutex_lock(net->ppm_buf_lock);
             memcpy(p_iocs, &p_iocr->ppm.buffer_data[p_iodata->iocs_offset], p_iodata->iocs_length);
-            os_mutex_unlock(buf_lock);
+            os_mutex_unlock(net->ppm_buf_lock);
 
             *p_iocs_len = (uint8_t)p_iodata->iocs_length;
             ret = 0;

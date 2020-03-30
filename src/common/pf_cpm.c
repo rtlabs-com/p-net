@@ -13,6 +13,20 @@
  * full license information.
  ********************************************************************/
 
+/**
+ * @file
+ * @brief Implements the Cyclic Consumer Provider Protocol Machine (CPM)
+ *
+ * A global mutex is used instead of a per-instance mutex.
+ * The locking time is very low so it should not be very congested.
+ * The mutex is created on the first call to pf_cpm_create and deleted on
+ * the last call to pf_cpm_close.
+ * Keep track of how many instances exist and delete the mutex when the
+ * number reaches 0 (zero).
+ *
+ */
+
+
 #ifdef UNIT_TEST
 
 #endif
@@ -20,18 +34,6 @@
 #include <string.h>
 #include "pf_includes.h"
 #include "pf_block_reader.h"
-
-/**
- * @internal
- * A global mutex is used instead of a per-instance mutex.
- * The locking time is very low so it should not be very congested.
- * The mutex is created on the first call to pf_cpm_create and deleted on
- * the last call to pf_cpm_close.
- * Keep track of how many instances exist and delete the mutex when the
- * number reaches 0 (zero).
- */
-static os_mutex_t          *buf_lock;
-static atomic_int          instance_cnt = ATOMIC_VAR_INIT(0);
 
 static const char          *cpm_sync_name = "cpm";
 
@@ -56,6 +58,12 @@ static const char *pf_cpm_state_to_string(
    return s;
 }
 
+void pf_cpm_init(
+   pnet_t                  *net)
+{
+   net->cpm_instance_cnt = ATOMIC_VAR_INIT(0);
+}
+
 /**
  * @internal
  * Change the CPM state.
@@ -76,26 +84,33 @@ static void pf_cpm_set_state(
 /**
  * @internal
  * Notify other components about CPM events.
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param crep             In:   The IOCR index
  * @param start            In:   Start/Stop indicator
  */
 static void pf_cpm_state_ind(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    uint32_t                crep,
    bool                    start)
 {
-   pf_cmio_cpm_state_ind(p_ar, crep, start);
+   pf_cmio_cpm_state_ind(net, p_ar, crep, start);
    pf_cmdmc_cpm_state_ind(p_ar, crep, start);
 }
 
 /**
  * @internal
  * The control_interval timer has expired.
+ *
+ * This is a callback for the scheduler. Arguments should fulfill pf_scheduler_timeout_ftn_t
+ *
+ * @param net              InOut: The p-net stack instance
  * @param arg              In:   The IOCR instance.
  * @param current_time     In:   The current device time.
  */
 static void pf_cpm_control_interval_expired(
+   pnet_t                  *net,
    void                    *arg,
    uint32_t                current_time)
 {
@@ -119,7 +134,7 @@ static void pf_cpm_control_interval_expired(
 
             p_iocr->cpm.dht = 0;
             p_iocr->cpm.ci_running = false;    /* Stop timer */
-            pf_cpm_state_ind(p_iocr->p_ar, p_iocr->crep, false);   /* stop */
+            pf_cpm_state_ind(net, p_iocr->p_ar, p_iocr->crep, false);   /* stop */
 
             pf_cpm_set_state(&p_iocr->cpm, PF_CPM_STATE_W_START);
          }
@@ -133,7 +148,7 @@ static void pf_cpm_control_interval_expired(
       if (p_iocr->cpm.ci_running == true)
       {
          /* Timer auto-reload */
-         if (pf_scheduler_add(p_iocr->cpm.control_interval, cpm_sync_name,
+         if (pf_scheduler_add(net, p_iocr->cpm.control_interval, cpm_sync_name,
             pf_cpm_control_interval_expired, arg, &p_iocr->cpm.ci_timer) != 0)
          {
             p_iocr->cpm.ci_timer = UINT32_MAX;
@@ -141,7 +156,7 @@ static void pf_cpm_control_interval_expired(
             LOG_ERROR(PNET_LOG, "CPM(%d): Timeout not started\n", __LINE__);
             p_iocr->p_ar->err_cls = PNET_ERROR_CODE_1_CPM;
             p_iocr->p_ar->err_code = PNET_ERROR_CODE_2_CPM_INVALID;
-            pf_cmsu_cpm_error_ind(p_iocr->p_ar, p_iocr->p_ar->err_cls, p_iocr->p_ar->err_code);
+            pf_cmsu_cpm_error_ind(net, p_iocr->p_ar, p_iocr->p_ar->err_cls, p_iocr->p_ar->err_code);
          }
       }
    }
@@ -179,15 +194,16 @@ void pf_cpm_mrwdt_expired(       /* ToDo: Make static later */
 #endif
 
 int pf_cpm_create(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    uint32_t                crep)
 {
    uint32_t                cnt;
 
-   cnt = atomic_fetch_add(&instance_cnt, 1);
+   cnt = atomic_fetch_add(&net->cpm_instance_cnt, 1);
    if (cnt == 0)
    {
-      buf_lock = os_mutex_create();
+      net->cpm_buf_lock = os_mutex_create();
    }
 
    pf_cpm_set_state(&p_ar->iocrs[crep].cpm, PF_CPM_STATE_W_START);
@@ -196,6 +212,7 @@ int pf_cpm_create(
 }
 
 int pf_cpm_close_req(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    uint32_t                crep)
 {
@@ -206,15 +223,15 @@ int pf_cpm_close_req(
    p_cpm->ci_running = false;    /* StopTimer */
    if (p_cpm->ci_timer != UINT32_MAX)
    {
-      pf_scheduler_remove(cpm_sync_name, p_cpm->ci_timer);
+      pf_scheduler_remove(net, cpm_sync_name, p_cpm->ci_timer);
       p_cpm->ci_timer = UINT32_MAX;
    }
    pf_cpm_set_state(p_cpm, PF_CPM_STATE_W_START);
 
-   pf_eth_frame_id_map_remove(p_cpm->frame_id[0]);
+   pf_eth_frame_id_map_remove(net, p_cpm->frame_id[0]);
    if (p_cpm->nbr_frame_id == 2)
    {
-      pf_eth_frame_id_map_remove(p_cpm->frame_id[1]);
+      pf_eth_frame_id_map_remove(net, p_cpm->frame_id[1]);
    }
    if (p_cpm->p_buffer_cpm != NULL)
    {
@@ -225,11 +242,11 @@ int pf_cpm_close_req(
       os_buf_free(p_cpm->p_buffer_app);
    }
 
-   cnt = atomic_fetch_sub(&instance_cnt, 1);
+   cnt = atomic_fetch_sub(&net->cpm_instance_cnt, 1);
    if (cnt == 1)
    {
-      os_mutex_destroy(buf_lock);
-      buf_lock = NULL;
+      os_mutex_destroy(net->cpm_buf_lock);
+      net->cpm_buf_lock = NULL;
    }
 
    return 0;
@@ -290,39 +307,43 @@ static int pf_cpm_check_src_addr(
 /**
  * @internal
  * Replace the current buffer with a newer one and set the new_buf flag.
+ * @param net              InOut: The p-net stack instance
  * @param p_cpm            In:   The CPM instance.
  * @param pp_buf           In:   The new buffer.
  *                         Out:  The previous buffer.
  */
 static void pf_cpm_put_buf(
+   pnet_t                  *net,
    pf_cpm_t                *p_cpm,
    os_buf_t                **pp_buf)
 {
    void *p;
 
-   os_mutex_lock(buf_lock);
+   os_mutex_lock(net->cpm_buf_lock);
    p = p_cpm->p_buffer_cpm;
    p_cpm->p_buffer_cpm = *pp_buf;
    *pp_buf = p;
    p_cpm->new_buf = true;
-   os_mutex_unlock(buf_lock);
+   os_mutex_unlock(net->cpm_buf_lock);
 }
 
 /**
  * @internal
  * Make sure that p_buffer_app points to the newest received buffer.
+ * @param net              InOut: The p-net stack instance
  * @param p_cpm            In:  The CPM instance.
  * @param p_new_flag       Out: true if new data has been received.
  * @param pp_buffer        Out: A pointer to the latest received data (or NULL).
  */
 static void pf_cpm_get_buf(
+   pnet_t                  *net,
    pf_cpm_t                *p_cpm,
    bool                    *p_new_flag,
    uint8_t                 **pp_buffer)
 {
    void *p;
 
-   os_mutex_lock(buf_lock);
+   os_mutex_lock(net->cpm_buf_lock);
    if (p_cpm->new_buf == true)
    {
       *p_new_flag = true;
@@ -335,7 +356,7 @@ static void pf_cpm_get_buf(
    {
       *p_new_flag = false;
    }
-   os_mutex_unlock(buf_lock);
+   os_mutex_unlock(net->cpm_buf_lock);
 
    if (p_cpm->p_buffer_app != NULL)
    {
@@ -350,6 +371,10 @@ static void pf_cpm_get_buf(
 /**
  * @internal
  * Handle new frames on Ethernet.
+ *
+ * This is a callback for the frame handler. Arguments should fulfill pf_eth_frame_handler_t
+ *
+ * @param net              InOut: The p-net stack instance
  * @param frame_id         In:   The frame id of the frame.
  * @param p_buf            In:   The received data.
  * @param frame_id_pos     In:   Position of the frame id in the buffer.
@@ -358,6 +383,7 @@ static void pf_cpm_get_buf(
  *          1     If the frame was handled and the buffer freed.
  */
 static int pf_cpm_c_data_ind(
+   pnet_t                  *net,
    uint16_t                frame_id,
    os_buf_t                *p_buf,
    uint16_t                frame_id_pos,
@@ -432,13 +458,13 @@ static int pf_cpm_c_data_ind(
       {
          if (p_cpm->state == PF_CPM_STATE_FRUN)
          {
-            pf_cpm_state_ind(p_iocr->p_ar, p_iocr->crep, true);   /* start */
+            pf_cpm_state_ind(net, p_iocr->p_ar, p_iocr->crep, true);   /* start */
          }
 
          if (update_data)
          {
             /* 20 */
-            pf_cpm_put_buf(p_cpm, &p_buf);
+            pf_cpm_put_buf(net, p_cpm, &p_buf);
             p_cpm->frame_id_pos = frame_id_pos; /* Save for consumer */
             p_cpm->buffer_pos = p_cpm->frame_id_pos + sizeof(uint16_t);
             (void)pf_cmio_cpm_new_data_ind(p_iocr->p_ar, p_iocr->crep, true);
@@ -459,7 +485,7 @@ static int pf_cpm_c_data_ind(
          if (changes != 0)
          {
             /* Notify the application about changes in the data_status */
-            (void)pf_fspm_data_status_changed(p_iocr->p_ar, p_iocr, changes);
+            (void)pf_fspm_data_status_changed(net, p_iocr->p_ar, p_iocr, changes, data_status);
          }
          pf_cpm_set_state(p_cpm, PF_CPM_STATE_RUN);
       }
@@ -494,6 +520,7 @@ int pf_cpm_udp_c_data_ind(
 }
 
 int pf_cpm_activate_req(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    uint32_t                crep)
 {
@@ -538,18 +565,18 @@ int pf_cpm_activate_req(
       p_cpm->nbr_frame_id = 1;   /* ToDo: For now. More for RTC_3 */
 
       p_cpm->frame_id[0] = p_iocr->param.frame_id;
-      pf_eth_frame_id_map_add(p_cpm->frame_id[0], pf_cpm_c_data_ind, p_iocr);
+      pf_eth_frame_id_map_add(net, p_cpm->frame_id[0], pf_cpm_c_data_ind, p_iocr);
 
       if (p_cpm->nbr_frame_id == 2)
       {
          p_cpm->frame_id[1] = p_cpm->frame_id[0] + 1;
-         pf_eth_frame_id_map_add(p_cpm->frame_id[1], pf_cpm_c_data_ind, &p_iocr);
+         pf_eth_frame_id_map_add(net, p_cpm->frame_id[1], pf_cpm_c_data_ind, &p_iocr);
       }
 
       /* ToDo: Shall be aligned with local send clock or PTCP (Does it matter for RTClass1/2?) */
       pf_cpm_set_state(p_cpm, PF_CPM_STATE_FRUN);
       p_cpm->ci_running = true;
-      ret = pf_scheduler_add(p_cpm->control_interval, cpm_sync_name,
+      ret = pf_scheduler_add(net, p_cpm->control_interval, cpm_sync_name,
          pf_cpm_control_interval_expired, p_iocr, &p_cpm->ci_timer);
       if (ret != 0)
       {
@@ -558,7 +585,7 @@ int pf_cpm_activate_req(
          LOG_ERROR(PNET_LOG, "CPM(%d): Timeout not started\n", __LINE__);
          p_ar->err_cls = PNET_ERROR_CODE_1_CPM;
          p_ar->err_code = PNET_ERROR_CODE_2_CPM_INVALID;
-         pf_cmsu_cpm_error_ind(p_ar, p_ar->err_cls, p_ar->err_code);
+         pf_cmsu_cpm_error_ind(net, p_ar, p_ar->err_cls, p_ar->err_code);
       }
       /* pf_cpm_activate_cnf */
       break;
@@ -580,6 +607,7 @@ int pf_cpm_activate_req(
 /**
  * @internal
  * Find the AR, input IOCR and IODATA object instances for the specified sub-slot.
+ * @param net              InOut: The p-net stack instance
  * @param api_id           In:   The API id.
  * @param slot_nbr         In:   The slot number.
  * @param subslot_nbr      In:   The sub-slot number.
@@ -590,6 +618,7 @@ int pf_cpm_activate_req(
  *          -1 If the information was not found.
  */
 static int pf_cpm_get_ar_iocr_desc(
+   pnet_t                  *net,
    uint32_t                api_id,
    uint16_t                slot_nbr,
    uint16_t                subslot_nbr,
@@ -605,7 +634,7 @@ static int pf_cpm_get_ar_iocr_desc(
    pf_iocr_t               *p_iocr = NULL;
    bool                    found = false;
 
-   if (pf_cmdev_get_subslot_full(api_id, slot_nbr, subslot_nbr, &p_subslot) == 0)
+   if (pf_cmdev_get_subslot_full(net, api_id, slot_nbr, subslot_nbr, &p_subslot) == 0)
    {
       p_ar = p_subslot->p_ar;
    }
@@ -652,6 +681,7 @@ static int pf_cpm_get_ar_iocr_desc(
 }
 
 int pf_cpm_get_data_and_iops(
+   pnet_t                  *net,
    uint32_t                api_id,
    uint16_t                slot_nbr,
    uint16_t                subslot_nbr,
@@ -667,7 +697,7 @@ int pf_cpm_get_data_and_iops(
    pf_ar_t                 *p_ar = NULL;
    uint8_t                 *p_buffer = NULL;
 
-   if (pf_cpm_get_ar_iocr_desc(api_id, slot_nbr, subslot_nbr, &p_ar, &p_iocr, &p_iodata) == 0)
+   if (pf_cpm_get_ar_iocr_desc(net, api_id, slot_nbr, subslot_nbr, &p_ar, &p_iocr, &p_iodata) == 0)
    {
       switch (p_iocr->cpm.state)
       {
@@ -686,11 +716,11 @@ int pf_cpm_get_data_and_iops(
          }
          else
          {
-            pf_cpm_get_buf(&p_iocr->cpm, p_new_flag, &p_buffer);
+            pf_cpm_get_buf(net, &p_iocr->cpm, p_new_flag, &p_buffer);
 
             if (p_buffer != NULL)
             {
-               os_mutex_lock(buf_lock);
+               os_mutex_lock(net->cpm_buf_lock);
                if (p_iodata->data_length > 0)
                {
                   memcpy(p_data, &p_buffer[p_iodata->data_offset], p_iodata->data_length);
@@ -699,7 +729,7 @@ int pf_cpm_get_data_and_iops(
                {
                   memcpy(p_iops, &p_buffer[p_iodata->data_offset + p_iodata->data_length], p_iodata->iops_length);
                }
-               os_mutex_unlock(buf_lock);
+               os_mutex_unlock(net->cpm_buf_lock);
 
                *p_data_len = p_iodata->data_length;
                *p_iops_len = (uint8_t)p_iodata->iops_length,
@@ -728,6 +758,7 @@ int pf_cpm_get_data_and_iops(
 }
 
 int pf_cpm_get_iocs(
+   pnet_t                  *net,
    uint32_t                api_id,
    uint16_t                slot_nbr,
    uint16_t                subslot_nbr,
@@ -741,7 +772,7 @@ int pf_cpm_get_iocs(
    uint8_t                 *p_buffer = NULL;
    bool                    new_flag = false;
 
-   if (pf_cpm_get_ar_iocr_desc(api_id, slot_nbr, subslot_nbr, &p_ar, &p_iocr, &p_iodata) == 0)
+   if (pf_cpm_get_ar_iocr_desc(net, api_id, slot_nbr, subslot_nbr, &p_ar, &p_iocr, &p_iodata) == 0)
    {
       switch (p_iocr->cpm.state)
       {
@@ -758,13 +789,13 @@ int pf_cpm_get_iocs(
          }
          else
          {
-            pf_cpm_get_buf(&p_iocr->cpm, &new_flag, &p_buffer);
+            pf_cpm_get_buf(net, &p_iocr->cpm, &new_flag, &p_buffer);
 
             if (p_buffer != NULL)
             {
-               os_mutex_lock(buf_lock);
+               os_mutex_lock(net->cpm_buf_lock);
                memcpy(p_iocs, &p_buffer[p_iodata->iocs_offset], p_iodata->iocs_length);
-               os_mutex_unlock(buf_lock);
+               os_mutex_unlock(net->cpm_buf_lock);
 
                *p_iocs_len = (uint8_t)p_iodata->iocs_length,
                ret = 0;
@@ -799,10 +830,11 @@ int pf_cpm_get_data_status(
 }
 
 void pf_cpm_show(
+   pnet_t                  *net,
    pf_cpm_t                *p_cpm)
 {
    printf("cpm:\n");
-   printf("   instance_cnt       = %u\n", (unsigned)instance_cnt);
+   printf("   instance_cnt       = %u\n", (unsigned)net->cpm_instance_cnt);
    printf("   state              = %s\n", pf_cpm_state_to_string(p_cpm->state));
    printf("   max_exec           = %u\n", (unsigned)p_cpm->max_exec);
    printf("   errline            = %u\n", (unsigned)p_cpm->errline);

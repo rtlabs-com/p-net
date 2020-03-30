@@ -80,6 +80,27 @@ typedef struct os_buf
    uint16_t len;
 } os_buf_t;
 
+/**
+ * The prototype of raw Ethernet reception call-back functions.
+ * *
+ * @param arg              In:   User-defined (may be NULL).
+ * @param p_buf            In:   The incoming Ethernet frame
+ *
+ * @return  0  If the frame was NOT handled by this function.
+ *          1  If the frame was handled and the buffer freed.
+ */
+typedef int (os_eth_callback_t)(
+   void                    *arg,
+   os_buf_t                *p_buf);
+
+typedef struct os_eth_handle
+{
+   os_eth_callback_t       *callback;
+   void                    *arg;
+   int                     socket;
+   os_thread_t             *thread;
+} os_eth_handle_t;
+
 #ifdef __cplusplus
 }
 #endif

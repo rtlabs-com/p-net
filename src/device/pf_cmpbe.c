@@ -115,6 +115,7 @@ int pf_cmpbe_cmdev_state_ind(
 }
 
 int pf_cmpbe_rm_dcontrol_ind(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pf_control_block_t      *p_control_io,
    pnet_result_t           *p_result)
@@ -143,7 +144,7 @@ int pf_cmpbe_rm_dcontrol_ind(
          p_ar->cmpbe_stored_command = 0;
 
          /* Only stored command is PNET_CONTROL_COMMAND_PRM_BEGIN */
-         if (pf_fspm_cm_dcontrol_ind(p_ar, PNET_CONTROL_COMMAND_PRM_BEGIN, p_result) == 0)
+         if (pf_fspm_cm_dcontrol_ind(net, p_ar, PNET_CONTROL_COMMAND_PRM_BEGIN, p_result) == 0)
          {
             pf_cmpbe_set_state(p_ar, PF_CMPBE_STATE_WFRSP);
             /* cm_dcontrol_rsp() */
@@ -156,14 +157,14 @@ int pf_cmpbe_rm_dcontrol_ind(
       else if (p_control_io->control_command == BIT(PF_CONTROL_COMMAND_BIT_PRM_BEGIN))
       {
          pf_alarm_disable(p_ar);
-         ret = pf_fspm_cm_dcontrol_ind(p_ar, PNET_CONTROL_COMMAND_PRM_BEGIN, p_result);
+         ret = pf_fspm_cm_dcontrol_ind(net, p_ar, PNET_CONTROL_COMMAND_PRM_BEGIN, p_result);
          pf_cmpbe_set_state(p_ar, PF_CMPBE_STATE_WFRSP);
       }
       break;
    case PF_CMPBE_STATE_WFPEI:
       if (p_control_io->control_command == BIT(PF_CONTROL_COMMAND_BIT_PRM_END))
       {
-         pf_fspm_cm_dcontrol_ind(p_ar, PNET_CONTROL_COMMAND_PRM_END, p_result);
+         pf_fspm_cm_dcontrol_ind(net, p_ar, PNET_CONTROL_COMMAND_PRM_END, p_result);
          pf_cmpbe_set_state(p_ar, PF_CMPBE_STATE_WFPER);
          /* cm_dcontrol_rsp() */
          ret = 0;
@@ -181,7 +182,7 @@ int pf_cmpbe_rm_dcontrol_ind(
       if (p_control_io->control_command == BIT(PF_CONTROL_COMMAND_BIT_PRM_BEGIN))
       {
          /* Note: PrmEnd is handled by CMRPC as re-run. */
-         (void)pf_cmdev_state_ind(p_ar, PNET_EVENT_ABORT);
+         (void)pf_cmdev_state_ind(net, p_ar, PNET_EVENT_ABORT);
          pf_cmpbe_set_state(p_ar, PF_CMPBE_STATE_IDLE);
       }
       break;
@@ -224,7 +225,9 @@ int pf_cmpbe_rm_ccontrol_cnf(
    return ret;
 }
 
+/* Not used */
 int pf_cmpbe_cm_ccontrol_req(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar)
 {
    int                     ret = -1;
@@ -236,7 +239,7 @@ int pf_cmpbe_cm_ccontrol_req(
       /* Control block is always APPLRDY here */
       if (pf_alarm_pending(p_ar) == false)
       {
-         ret = pf_cmrpc_rm_ccontrol_req(p_ar);
+         ret = pf_cmrpc_rm_ccontrol_req(net, p_ar);
          pf_cmpbe_set_state(p_ar, PF_CMPBE_STATE_WFCNF);
       }
    }

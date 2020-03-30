@@ -27,40 +27,48 @@ extern "C"
 
 /**
  * Initialize the CMRPC component.
- * @param if_id            The interface id to os_eth_send().
+ * @param net              InOut: The p-net stack instance
  */
 void pf_cmrpc_init(
-   int                     if_id);
+   pnet_t                  *net);
 
 /**
  * Cleanup the CMRPC component.
+ * @param net              InOut: The p-net stack instance
  */
-void pf_cmrpc_exit(void);
+void pf_cmrpc_exit(
+   pnet_t                  *net);
 
 /**
  * Handle periodic RPC tasks.
  * Check for DCE RPC requests.
  * Check for DCE RPC confirmations.
+ * @param net              InOut: The p-net stack instance
  */
-void pf_cmrpc_periodic(void);
+void pf_cmrpc_periodic(
+   pnet_t                  *net);
 
 /**
  * Find an AR by its AREP.
+ * @param net              InOut: The p-net stack instance
  * @param arep             In:  The AREP.
  * @param pp_ar            Out: The AR (or NULL).
  * @return  0              if AR is found and valid.
  *         -1              if AREP is invalid.
  */
 int pf_ar_find_by_arep(
+   pnet_t                  *net,
    uint32_t                arep,
    pf_ar_t                 **pp_ar);
 
 /**
  * Return pointer to specific AR.
+ * @param net              InOut: The p-net stack instance
  * @param ix               In:   The AR array index.
  * @return                 The AR instance.
  */
 pf_ar_t *pf_ar_find_by_index(
+   pnet_t                  *net,
    uint16_t                ix);
 
 /**
@@ -80,23 +88,27 @@ void pf_set_error(
 
 /**
  * Handle CMDEV events.
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param event            In:   The CMDEV event.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
 int pf_cmrpc_cmdev_state_ind(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pnet_event_values_t     event);
 
 /**
  * Send a DCE RPC request to the controller.
  * The only request handled is the APPL_RDY request.
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
 int pf_cmrpc_rm_ccontrol_req(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar);
 
 /**
@@ -104,9 +116,11 @@ int pf_cmrpc_rm_ccontrol_req(
  *
  * Use level 0xFFFF to show everything.
  *
+ * @param net              InOut: The p-net stack instance
  * @param level            In: Level of detail.
  */
 void pf_cmrpc_show(
+   pnet_t                  *net,
    unsigned                level);
 
 #ifdef __cplusplus

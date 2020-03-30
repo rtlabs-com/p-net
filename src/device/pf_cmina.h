@@ -23,36 +23,45 @@ extern "C"
 
 /**
  * Initialize the CMINA component.
+ * @param net              InOut: The p-net stack instance
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_cmina_init(void);
+int pf_cmina_init(
+   pnet_t                  *net);
 
 /**
  * Show the CMINA status.
+ * @param net              InOut: The p-net stack instance
  */
-void pf_cmina_show(void);
+void pf_cmina_show(
+   pnet_t                  *net);
 
 /**
  * Retrieve the configured station name of the device.
+ * @param net              InOut: The p-net stack instance
  * @param pp_station_name  Out:  The station name.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
 int pf_cmina_get_station_name(
+   pnet_t                  *net,
    const char              **pp_station_name);
 
 /**
  * Retrieve the configured IP address of the device.
+ * @param net              InOut: The p-net stack instance
  * @param p_ipaddr         Out:  The ip_address.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
 int pf_cmina_get_ipaddr(
+   pnet_t                  *net,
    os_ipaddr_t             *p_ipaddr);
 
 /**
  * Handle the DCP set command.
+ * @param net              InOut: The p-net stack instance
  * @param opt              In:   The option key.
  * @param sub              In:   The sub-option key.
  * @param block_qualifier  In:   The block qualifier.
@@ -63,6 +72,7 @@ int pf_cmina_get_ipaddr(
  *          -1 if an error occurred.
  */
 int pf_cmina_dcp_set_ind(
+   pnet_t                  *net,
    uint8_t                 opt,
    uint8_t                 sub,
    uint16_t                block_qualifier,
@@ -74,11 +84,14 @@ int pf_cmina_dcp_set_ind(
  * Commit changes to the IP-suite.
  *
  * This shall be done _after_ the answer to DCP set has been sent.
+ * @param net              InOut: The p-net stack instance
  */
-void pf_cmina_dcp_set_commit(void);
+void pf_cmina_dcp_set_commit(
+   pnet_t                  *net);
 
 /**
  * Handle the DCP get command.
+ * @param net              InOut: The p-net stack instance
  * @param opt              In:   The option key.
  * @param sub              In:   The sub-option key.
  * @param value_length     In:   The length of the pp_value buffer.
@@ -89,6 +102,7 @@ void pf_cmina_dcp_set_commit(void);
  *          -1 if an error occurred.
  */
 int pf_cmina_dcp_get_req(
+   pnet_t                  *net,
    uint8_t                 opt,
    uint8_t                 sub,
    uint16_t                *p_value_length,

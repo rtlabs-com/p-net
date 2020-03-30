@@ -31,14 +31,17 @@ extern "C"
  *
  * This function initializes the LLDP component and
  * sends the initial LLDP message.
+ * @param net               InOut: The p-net stack instance
  */
 void pf_lldp_init(
-   int                     if_id);
+   pnet_t                  *net);
 
 /**
  * Send an LLDP message.
+ * @param net              InOut: The p-net stack instance
  */
-void pf_lldp_send(void);
+void pf_lldp_send(
+   pnet_t                  *net);
 
 #ifdef __cplusplus
 }

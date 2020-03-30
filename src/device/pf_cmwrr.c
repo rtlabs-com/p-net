@@ -21,15 +21,12 @@
 #include "pf_block_reader.h"
 #include "pf_block_writer.h"
 
-typedef enum pf_cmwrr_state_values
-{
-   PF_CMWRR_STATE_IDLE,
-   PF_CMWRR_STATE_STARTUP,
-   PF_CMWRR_STATE_PRMEND,
-   PF_CMWRR_STATE_DATA,
-} pf_cmwrr_state_values_t;
 
-static pf_cmwrr_state_values_t   pf_cmwrr_state = PF_CMWRR_STATE_IDLE;
+void pf_cmwrr_init(
+   pnet_t                  *net)
+{
+   net->cmwrr_state = PF_CMWRR_STATE_IDLE;
+}
 
 /**
  * @internal
@@ -62,54 +59,56 @@ static const char *pf_cmwrr_state_to_string(
 }
 
 void pf_cmwrr_show(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar)
 {
-   const char *s = pf_cmwrr_state_to_string(pf_cmwrr_state);
+   const char *s = pf_cmwrr_state_to_string(net->cmwrr_state);
 
    printf("CMWRR state           = %s\n", s);
    (void)s;
 }
 
 int pf_cmwrr_cmdev_state_ind(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pnet_event_values_t     event)
 {
-   switch (pf_cmwrr_state)
+   switch (net->cmwrr_state)
    {
    case PF_CMWRR_STATE_IDLE:
       if (event == PNET_EVENT_STARTUP)
       {
-         pf_cmwrr_state = PF_CMWRR_STATE_STARTUP;
+         net->cmwrr_state = PF_CMWRR_STATE_STARTUP;
       }
       break;
    case PF_CMWRR_STATE_STARTUP:
       if (event == PNET_EVENT_PRMEND)
       {
-         pf_cmwrr_state = PF_CMWRR_STATE_PRMEND;
+         net->cmwrr_state = PF_CMWRR_STATE_PRMEND;
       }
       else if (event == PNET_EVENT_ABORT)
       {
-         pf_cmwrr_state = PF_CMWRR_STATE_IDLE;
+         net->cmwrr_state = PF_CMWRR_STATE_IDLE;
       }
       break;
    case PF_CMWRR_STATE_PRMEND:
       if (event == PNET_EVENT_ABORT)
       {
-         pf_cmwrr_state = PF_CMWRR_STATE_IDLE;
+         net->cmwrr_state = PF_CMWRR_STATE_IDLE;
       }
       else if (event == PNET_EVENT_APPLRDY)
       {
-         pf_cmwrr_state = PF_CMWRR_STATE_DATA;
+         net->cmwrr_state = PF_CMWRR_STATE_DATA;
       }
       break;
    case PF_CMWRR_STATE_DATA:
       if (event == PNET_EVENT_ABORT)
       {
-         pf_cmwrr_state = PF_CMWRR_STATE_IDLE;
+         net->cmwrr_state = PF_CMWRR_STATE_IDLE;
       }
       break;
    default:
-      LOG_ERROR(PNET_LOG,"CMWRR(%d): BAD state in cmwrr %u\n", __LINE__, (unsigned)pf_cmwrr_state);
+      LOG_ERROR(PNET_LOG,"CMWRR(%d): BAD state in cmwrr %u\n", __LINE__, (unsigned)net->cmwrr_state);
       break;
    }
 
@@ -123,6 +122,7 @@ int pf_cmwrr_cmdev_state_ind(
  * This function performs a write of one data record.
  * The index in the IODWrite request selects the item to write to.
  *
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param p_write_request  In:   The IODWrite request.
  * @param p_req_buf        In:   The request buffer.
@@ -133,6 +133,7 @@ int pf_cmwrr_cmdev_state_ind(
  *          -1 if an error occurred.
  */
 static int pf_cmwrr_write(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pf_iod_write_request_t  *p_write_request,
    uint8_t                 *p_req_buf,
@@ -144,12 +145,12 @@ static int pf_cmwrr_write(
 
    if (p_write_request->index < 0x7fff)
    {
-      ret = pf_fspm_cm_write_ind(p_ar, p_write_request,
+      ret = pf_fspm_cm_write_ind(net, p_ar, p_write_request,
          data_length, &p_req_buf[*p_req_pos], p_result);
    }
    else if ((PF_IDX_SUB_IM_0 <= p_write_request->index) && (p_write_request->index <= PF_IDX_SUB_IM_15))
    {
-      ret = pf_fspm_cm_write_ind(p_ar, p_write_request,
+      ret = pf_fspm_cm_write_ind(net, p_ar, p_write_request,
          data_length, &p_req_buf[*p_req_pos], p_result);
    }
    else
@@ -193,6 +194,7 @@ static int pf_cmwrr_write(
 }
 
 int pf_cmwrr_rm_write_ind(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pf_iod_write_request_t  *p_write_request,
    pf_iod_write_result_t   *p_write_result,
@@ -211,7 +213,7 @@ int pf_cmwrr_rm_write_ind(
    p_write_result->index = p_write_request->index;
    p_write_result->record_data_length = 0;
 
-   switch (pf_cmwrr_state)
+   switch (net->cmwrr_state)
    {
    case PF_CMWRR_STATE_IDLE:
       p_result->pnio_status.error_code = PNET_ERROR_CODE_PNIO;
@@ -227,7 +229,7 @@ int pf_cmwrr_rm_write_ind(
       }
       else
       {
-         ret = pf_cmwrr_write(p_ar, p_write_request, p_req_buf,
+         ret = pf_cmwrr_write(net, p_ar, p_write_request, p_req_buf,
             data_length, p_req_pos, p_result);
       }
       break;
@@ -245,7 +247,7 @@ int pf_cmwrr_rm_write_ind(
       }
       else
       {
-         ret = pf_cmwrr_write(p_ar, p_write_request, p_req_buf,
+         ret = pf_cmwrr_write(net, p_ar, p_write_request, p_req_buf,
             data_length, p_req_pos, p_result);
       }
       break;
@@ -254,7 +256,7 @@ int pf_cmwrr_rm_write_ind(
    p_write_result->add_data_1 = p_result->add_data_1;
    p_write_result->add_data_2 = p_result->add_data_2;
 
-   ret = pf_cmsm_cm_write_ind(p_ar, p_write_request);
+   ret = pf_cmsm_cm_write_ind(net, p_ar, p_write_request);
 
    return ret;
 }

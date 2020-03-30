@@ -24,6 +24,16 @@
  *
  * CMRPC has only one state - IDLE. I.e., it is state-less.
  *
+ * An AR is created on each connect.
+ * The ar:s are allocated from the array net->cmrpc_ar
+ * ToDo: Move to CMDEV device structure.
+ *
+ * Sessions are used for sending notifications to the controller, when a
+ * response is expected.
+ * Each session uses one entry in net->cmrpc_session_info
+ *
+ * The socket net->cmrpc_rpcreq_socket is used for RPC requests (connects etc)
+ *
  */
 
 #ifdef UNIT_TEST
@@ -44,30 +54,6 @@
 #include "pf_includes.h"
 #include "pf_block_reader.h"
 #include "pf_block_writer.h"
-
-#define PF_MAX_SESSION     (2*(PNET_MAX_AR) + 1)               /* 2 per ar, and one spare. */
-
-static os_mutex_t          *p_rpc_mutex;
-static uint32_t            pf_session_number = 0x12345678;     /* Starting number */
-static int                 pf_rpc_if_id = -1;
-/**
- * The ar:s are allocated from this array.
- * An AR is created on each connect.
- * ToDo: Move to CMDEV device structure.
- */
-static pf_ar_t             ar[PNET_MAX_AR];
-
-/**
- * Each session uses one entry.
- * Sessions are used for sending notifications to the controller, when a
- * response is expected.
- */
-static pf_session_info_t   session_info[PF_MAX_SESSION];
-
-/* Local variables */
-static int                 rpcreq_socket;    /* RPC requests - for connects, etc */
-static uint8_t             dcerpc_req_frame[1500];
-static uint8_t             dcerpc_rsp_frame[1500];
 
 static const pf_uuid_t     implicit_ar = {0,0,0,{0,0,0,0,0,0,0,0}};
 
@@ -161,6 +147,7 @@ static const char *pf_ar_type_to_string(
 }
 
 void pf_cmrpc_show(
+   pnet_t                  *net,
    unsigned                level)
 {
    uint16_t                ix;
@@ -171,17 +158,18 @@ void pf_cmrpc_show(
    pf_session_info_t       *p_sess = NULL;
    pf_iodata_object_t      *p_desc;
 
+
+
    if (level & 0x0800)
    {
       for (ix = 0; ix < PF_MAX_SESSION; ix++)
       {
-         p_sess = &session_info[ix];
+         p_sess = &net->cmrpc_session_info[ix];
          printf("Session ID            = %u\n", (unsigned)p_sess->ix);
          printf("   in use             = %s\n", p_sess->in_use ? "YES" : "NO");
          printf("   release in progress= %s\n", p_sess->release_in_progress ? "YES" : "NO");
 
          printf("   socket             = %u\n", (unsigned)p_sess->socket);
-         printf("   IF id              = %u\n", (unsigned)p_sess->if_id);
          printf("   @AR                = %p\n", p_sess->p_ar);
          printf("   from me            = %s\n", p_sess->from_me ? "YES" : "NO");
          printf("   ip_addr            = %u.%u.%u.%u\n",
@@ -205,7 +193,7 @@ void pf_cmrpc_show(
    {
       for (ar_ix = 0; ar_ix < PNET_MAX_AR; ar_ix++)
       {
-         p_ar = pf_ar_find_by_index(ar_ix);
+         p_ar = pf_ar_find_by_index(net, ar_ix);
          printf("AR in use             = %s\n", p_ar->in_use ? "YES" : "NO");
          printf("AR arep               = %u\n", (unsigned)p_ar->arep);
          printf("AR state              = %s\n", pf_ar_state_to_string(p_ar->ar_state));
@@ -215,7 +203,7 @@ void pf_cmrpc_show(
          pf_cmpbe_show(p_ar);
          pf_cmio_show(p_ar);
          pf_cmsm_show(p_ar);
-         pf_cmwrr_show(p_ar);
+         pf_cmwrr_show(net, p_ar);
          printf("AR param valid        = %u\n", (unsigned)p_ar->ar_param.valid);
          printf("         type         = %s\n", pf_ar_type_to_string(p_ar->ar_param.ar_type));
          printf("         session key  = %u\n", (unsigned)p_ar->ar_param.session_key);
@@ -266,7 +254,7 @@ void pf_cmrpc_show(
                   }
                   else
                   {
-                     pf_cpm_show(&p_iocr->cpm);
+                     pf_cpm_show(net, &p_iocr->cpm);
                   }
                }
             }
@@ -280,36 +268,38 @@ void pf_cmrpc_show(
 /**
  * @internal
  * Allocate a new session instance.
+ * @param net              InOut: The p-net stack instance
  * @param pp_sess          Out:  A pointer to the new session instance.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
 static int pf_session_allocate(
+   pnet_t                  *net,
    pf_session_info_t       **pp_sess)
 {
    int                     ret = -1;
    uint16_t                ix = 0;
    pf_session_info_t       *p_sess = NULL;
 
-   os_mutex_lock(p_rpc_mutex);
-   while ((ix < NELEMENTS(session_info)) &&
-         (session_info[ix].in_use == true))
+   os_mutex_lock(net->p_cmrpc_rpc_mutex);
+   while ((ix < NELEMENTS(net->cmrpc_session_info)) &&
+         (net->cmrpc_session_info[ix].in_use == true))
    {
       ix++;
    }
 
-   if (ix < NELEMENTS(session_info))
+   if (ix < NELEMENTS(net->cmrpc_session_info))
    {
-      p_sess = &session_info[ix];
+      p_sess = &net->cmrpc_session_info[ix];
       memset(p_sess, 0, sizeof(*p_sess));
       p_sess->in_use = true;
-      p_sess->if_id = pf_rpc_if_id;
+      p_sess->eth_handle = net->eth_handle;
       p_sess->p_ar = NULL;
       p_sess->sequence_nmb_send = 0;
       p_sess->dcontrol_sequence_nmb = UINT32_MAX;
 
       p_sess->from_me = true;
-      p_sess->activity_uuid.data1 = pf_session_number++;
+      p_sess->activity_uuid.data1 = net->cmrpc_session_number++;
       p_sess->activity_uuid.data2 = 0x1234;
       p_sess->activity_uuid.data3 = 0x5678;
       p_sess->activity_uuid.data4[0] = 0x01;
@@ -328,7 +318,7 @@ static int pf_session_allocate(
 
       ret = 0;
    }
-   os_mutex_unlock(p_rpc_mutex);
+   os_mutex_unlock(net->p_cmrpc_rpc_mutex);
 
    return ret;
 }
@@ -363,12 +353,14 @@ static void pf_session_release(
 /**
  * @internal
  * Find a session by its activity UUID.
+ * @param net              InOut: The p-net stack instance
  * @param p_uuid           In:   The UUID to look for.
  * @param pp_sess          Out:  The session instance.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
 static int pf_session_locate_by_uuid(
+   pnet_t                  *net,
    pf_uuid_t               *p_uuid,
    pf_session_info_t       **pp_sess)
 {
@@ -376,15 +368,15 @@ static int pf_session_locate_by_uuid(
    uint16_t ix;
 
    ix = 0;
-   while ((ix < NELEMENTS(session_info)) &&
-          ((session_info[ix].in_use == false) ||
-           (memcmp(p_uuid, &session_info[ix].activity_uuid, sizeof(*p_uuid)) != 0)))
+   while ((ix < NELEMENTS(net->cmrpc_session_info)) &&
+          ((net->cmrpc_session_info[ix].in_use == false) ||
+           (memcmp(p_uuid, &net->cmrpc_session_info[ix].activity_uuid, sizeof(*p_uuid)) != 0)))
    {
       ix++;
    }
-   if (ix < NELEMENTS(session_info))
+   if (ix < NELEMENTS(net->cmrpc_session_info))
    {
-      *pp_sess = &session_info[ix];
+      *pp_sess = &net->cmrpc_session_info[ix];
       ret = 0;
    }
 
@@ -396,12 +388,14 @@ static int pf_session_locate_by_uuid(
  * Find a session by its AR.
  * Only find sessions that originate from the device.
  *
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param pp_sess          Out:  The session instance.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
 static int pf_session_locate_by_ar(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pf_session_info_t       **pp_sess)
 {
@@ -409,16 +403,16 @@ static int pf_session_locate_by_ar(
    uint16_t ix;
 
    ix = 0;
-   while ((ix < NELEMENTS(session_info)) &&
-          ((session_info[ix].in_use == false) ||
-           (session_info[ix].from_me == false) ||
-           (session_info[ix].p_ar != p_ar)))
+   while ((ix < NELEMENTS(net->cmrpc_session_info)) &&
+          ((net->cmrpc_session_info[ix].in_use == false) ||
+           (net->cmrpc_session_info[ix].from_me == false) ||
+           (net->cmrpc_session_info[ix].p_ar != p_ar)))
    {
       ix++;
    }
-   if (ix < NELEMENTS(session_info))
+   if (ix < NELEMENTS(net->cmrpc_session_info))
    {
-      *pp_sess = &session_info[ix];
+      *pp_sess = &net->cmrpc_session_info[ix];
       ret = 0;
    }
 
@@ -428,36 +422,38 @@ static int pf_session_locate_by_ar(
 /**
  * @internal
  * Allocate and clear a new AR.
+ * @param net              InOut: The p-net stack instance
  * @param pp_ar            Out:  The new AR instance.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
 static int pf_ar_allocate(
+   pnet_t                  *net,
    pf_ar_t                 **pp_ar)
 {
    int                     ret = -1;
    uint16_t                ix = 0;
-   os_mutex_lock(p_rpc_mutex);
-   while ((ix < NELEMENTS(ar)) &&
-         (ar[ix].in_use == true))
+   os_mutex_lock(net->p_cmrpc_rpc_mutex);
+   while ((ix < NELEMENTS(net->cmrpc_ar)) &&
+         (net->cmrpc_ar[ix].in_use == true))
    {
       ix++;
    }
 
-   if (ix < NELEMENTS(ar))
+   if (ix < NELEMENTS(net->cmrpc_ar))
    {
-      memset(&ar[ix], 0, sizeof(ar[ix]));
-      ar[ix].in_use = true;
+      memset(&net->cmrpc_ar[ix], 0, sizeof(net->cmrpc_ar[ix]));
+      net->cmrpc_ar[ix].in_use = true;
 
-      *pp_ar = &ar[ix];
+      *pp_ar = &net->cmrpc_ar[ix];
 
       ret = 0;
    }
-   os_mutex_unlock(p_rpc_mutex);
+   os_mutex_unlock(net->p_cmrpc_rpc_mutex);
 
    if (ix < PNET_MAX_AR)
    {
-      ar[ix].arep = ix + 1;      /* Avoid AREP == 0 */
+      net->cmrpc_ar[ix].arep = ix + 1;      /* Avoid AREP == 0 */
       LOG_INFO(PF_RPC_LOG, "RPC(%d): Allocate AR %u\n", __LINE__, ix);
    }
 
@@ -493,12 +489,14 @@ static void pf_ar_release(
 /**
  * @internal
  * Find an AR by its UUID. The AR must be in a "used" state (not POWER_ON).
+ * @param net              InOut: The p-net stack instance
  * @param p_uuid           In:  The AR_UUID.
  * @param pp_ar            Out: The AR (or NULL).
  * @return  0  if AR is found and in "used" state.
  *         -1  if the AR_UUID is invalid.
  */
 static int pf_ar_find_by_uuid(
+   pnet_t                  *net,
    pf_uuid_t               *p_uuid,
    pf_ar_t                 **pp_ar)
 {
@@ -507,17 +505,17 @@ static int pf_ar_find_by_uuid(
    pf_cmdev_state_values_t cmdev_state;
 
    ix = 0;
-   while ((ix < NELEMENTS(ar)) &&
-          ((ar[ix].in_use == false) ||
-           ((pf_cmdev_get_state(&ar[ix], &cmdev_state) == 0) &&
+   while ((ix < NELEMENTS(net->cmrpc_ar)) &&
+          ((net->cmrpc_ar[ix].in_use == false) ||
+           ((pf_cmdev_get_state(&net->cmrpc_ar[ix], &cmdev_state) == 0) &&
             (cmdev_state == PF_CMDEV_STATE_POWER_ON)) ||
-           (memcmp(p_uuid, &ar[ix].ar_param.ar_uuid, sizeof(*p_uuid)) != 0)))
+           (memcmp(p_uuid, &net->cmrpc_ar[ix].ar_param.ar_uuid, sizeof(*p_uuid)) != 0)))
    {
       ix++;
    }
-   if (ix < NELEMENTS(ar))
+   if (ix < NELEMENTS(net->cmrpc_ar))
    {
-      *pp_ar = &ar[ix];
+      *pp_ar = &net->cmrpc_ar[ix];
       ret = 0;
    }
 
@@ -525,17 +523,19 @@ static int pf_ar_find_by_uuid(
 }
 
 pf_ar_t *pf_ar_find_by_index(
+   pnet_t                  *net,
    uint16_t                ix)
 {
-   if (ix < NELEMENTS(ar))
+   if (ix < NELEMENTS(net->cmrpc_ar))
    {
-      return &ar[ix];
+      return &net->cmrpc_ar[ix];
    }
 
    return NULL;
 }
 
 int pf_ar_find_by_arep(
+   pnet_t                  *net,
    uint32_t                arep,
    pf_ar_t                 **pp_ar)
 {
@@ -545,10 +545,10 @@ int pf_ar_find_by_arep(
    if (arep > 0)
    {
       ix = arep - 1;    /* Convert to index */
-      if ((ix < NELEMENTS(ar)) &&
-          (ar[ix].in_use == true))
+      if ((ix < NELEMENTS(net->cmrpc_ar)) &&
+          (net->cmrpc_ar[ix].in_use == true))
       {
-         *pp_ar = &ar[ix];
+         *pp_ar = &net->cmrpc_ar[ix];
          ret = 0;
       }
    }
@@ -1011,6 +1011,7 @@ static void pf_cmrpc_rm_connect_rsp(
  *  * pnet_connect_ind()
  *  * pnet_state_ind() with PNET_EVENT_STARTUP
  *
+ * @param net              InOut: The p-net stack instance
  * @param p_sess           In:   The session instance.
  * @param req_pos          In:   Position in the request buffer.
  * @param res_size         In:   The size of the response buffer.
@@ -1020,6 +1021,7 @@ static void pf_cmrpc_rm_connect_rsp(
  *          -1 if an error occurred.
  */
 static int pf_cmrpc_rm_connect_ind(
+   pnet_t                  *net,
    pf_session_info_t       *p_sess,
    uint16_t                req_pos,
    uint16_t                res_size,
@@ -1036,7 +1038,7 @@ static int pf_cmrpc_rm_connect_ind(
       pf_set_error(&p_sess->rpc_result, PNET_ERROR_CODE_CONNECT, PNET_ERROR_DECODE_PNIO, PNET_ERROR_CODE_1_CMRPC, PNET_ERROR_CODE_2_CMRPC_STATE_CONFLICT);
    }
    /* CheckResource */
-   else if (pf_ar_allocate(&p_ar) == 0)
+   else if (pf_ar_allocate(net, &p_ar) == 0)
    {
       /* Cross-reference */
       p_ar->p_sess = p_sess;
@@ -1045,19 +1047,19 @@ static int pf_cmrpc_rm_connect_ind(
       /* Check_RPC - No support for ArSet (yet) */
       if (pf_cmrpc_rm_connect_interpret_ind(p_sess, &req_pos, p_ar) == 0)
       {
-         if (pf_ar_find_by_uuid(&p_ar->ar_param.ar_uuid, &p_ar_2) != 0)
+         if (pf_ar_find_by_uuid(net, &p_ar->ar_param.ar_uuid, &p_ar_2) != 0)
          {
             /* Valid, unknown AR, NoArSet */
             p_ar->ar_state = PF_AR_STATE_PRIMARY;
             p_ar->sync_state = PF_SYNC_STATE_NOT_AVAILABLE;
 
-            ret = pf_cmdev_rm_connect_ind(p_ar, &p_sess->rpc_result);
+            ret = pf_cmdev_rm_connect_ind(net, p_ar, &p_sess->rpc_result);
          }
          else
          {
             /* Valid, explicit AR - This could be a re-connect */
             pf_set_error(&p_sess->rpc_result, PNET_ERROR_CODE_CONNECT, PNET_ERROR_DECODE_PNIO, PNET_ERROR_CODE_1_CMRPC, PNET_ERROR_CODE_2_CMRPC_STATE_CONFLICT);
-            (void)pf_cmdev_state_ind(p_ar, PNET_EVENT_ABORT);
+            (void)pf_cmdev_state_ind(net, p_ar, PNET_EVENT_ABORT);
          }
       }
       else
@@ -1227,6 +1229,7 @@ static void pf_cmrpc_rm_release_rsp(
 /**
  * @internal
  * Take a DCE RPC release request and create a DCE RPC release response.
+ * @param net              InOut: The p-net stack instance
  * @param p_sess           In:   The RPC session instance.
  * @param req_pos          In:   Position in the request buffer.
  * @param res_size         In:   The size of the response buffer.
@@ -1236,6 +1239,7 @@ static void pf_cmrpc_rm_release_rsp(
  *          -1 if an error occurred.
  */
 static int pf_cmrpc_rm_release_ind(
+   pnet_t                  *net,
    pf_session_info_t       *p_sess,
    uint16_t                req_pos,
    uint16_t                res_size,
@@ -1272,10 +1276,10 @@ static int pf_cmrpc_rm_release_ind(
    if (ret == 0)
    {
       /* Check_RPC */
-      if ((pf_ar_find_by_uuid(&release_io.ar_uuid, &p_ar) == 0) &&
+      if ((pf_ar_find_by_uuid(net, &release_io.ar_uuid, &p_ar) == 0) &&
          (release_io.session_key == p_ar->ar_param.session_key))
       {
-         (void)pf_cmdev_rm_release_ind(p_ar, &rpc_result);
+         (void)pf_cmdev_rm_release_ind(net, p_ar, &rpc_result);
       }
       else
       {
@@ -1425,6 +1429,7 @@ static void pf_cmrpc_rm_dcontrol_rsp(
 /**
  * @internal
  * Take a DCE RPC DControl request and create a DCE RPC DControl response.
+ * @param net              InOut: The p-net stack instance
  * @param p_sess           In:   The RPC session instance.
  * @param req_pos          In:   Position in the request buffer.
  * @param res_size         In:   The size of the response buffer.
@@ -1434,6 +1439,7 @@ static void pf_cmrpc_rm_dcontrol_rsp(
  *          -1 if an error occurred.
  */
 static int pf_cmrpc_rm_dcontrol_ind(
+   pnet_t                  *net,
    pf_session_info_t       *p_sess,
    pf_rpc_header_t         *p_rpc,
    uint16_t                req_pos,
@@ -1452,11 +1458,11 @@ static int pf_cmrpc_rm_dcontrol_ind(
       /* Detect re-run */
       if (p_sess->dcontrol_sequence_nmb != p_rpc->sequence_nmb)
       {
-         if (pf_ar_find_by_uuid(&control_io.ar_uuid, &p_ar) == 0)
+         if (pf_ar_find_by_uuid(net, &control_io.ar_uuid, &p_ar) == 0)
          {
-            if (pf_cmdev_rm_dcontrol_ind(p_ar, &control_io, &p_sess->rpc_result) == 0)
+            if (pf_cmdev_rm_dcontrol_ind(net, p_ar, &control_io, &p_sess->rpc_result) == 0)
             {
-               ret = pf_cmpbe_rm_dcontrol_ind(p_ar, &control_io, &p_sess->rpc_result);
+               ret = pf_cmpbe_rm_dcontrol_ind(net, p_ar, &control_io, &p_sess->rpc_result);
             }
          }
          else
@@ -1557,16 +1563,18 @@ static int pf_cmrpc_rm_read_interpret_ind(
  *
  * This will trigger the \a pnet_read_ind() user callback for certain parameters.
  *
- * @param is_big_endian    In:   true if the message is big endian.
+ * @param net              InOut: The p-net stack instance
+ * @param p_sess           In:   The session instance.
  * @param opnum            In:   The RPC operation number.
  * @param req_pos          In:   Position in the request buffer.
  * @param res_size         In:   The size of the response buffer.
  * @param p_res            Out:  The response buffer.
- * @param p_pos            InOut:Position within the response buffer.
+ * @param p_res_pos        InOut:Position within the response buffer.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
 static int pf_cmrpc_rm_read_ind(
+   pnet_t                  *net,
    pf_session_info_t       *p_sess,
    uint16_t                opnum,
    uint16_t                req_pos,
@@ -1597,13 +1605,13 @@ static int pf_cmrpc_rm_read_ind(
       {
          pf_set_error(&p_sess->rpc_result, PNET_ERROR_CODE_READ, PNET_ERROR_DECODE_PNIO, PNET_ERROR_CODE_1_CONN_FAULTY_FAULTY_RECORD, PNET_ERROR_CODE_2_CMRPC_AR_UUID_UNKNOWN);
       }
-      else if ((pf_ar_find_by_uuid(&read_request.ar_uuid, &p_ar) == 0) &&
+      else if ((pf_ar_find_by_uuid(net, &read_request.ar_uuid, &p_ar) == 0) &&
             (opnum != PF_RPC_DEV_OPNUM_READ))
       {
          pf_set_error(&p_sess->rpc_result, PNET_ERROR_CODE_READ, PNET_ERROR_DECODE_PNIO, PNET_ERROR_CODE_1_CMRPC, PNET_ERROR_CODE_2_CMRPC_AR_UUID_UNKNOWN);
       }
       else if ((read_request.api != 0) &&
-               (pf_cmdev_get_api(read_request.api, &p_api) != 0))
+               (pf_cmdev_get_api(net, read_request.api, &p_api) != 0))
       {
          pf_set_error(&p_sess->rpc_result, PNET_ERROR_CODE_READ, PNET_ERROR_DECODE_PNIORW, PNET_ERROR_CODE_1_ACC_INVALID_AREA_API, 6);
       }
@@ -1612,7 +1620,7 @@ static int pf_cmrpc_rm_read_ind(
          if ((p_ar == NULL) && (opnum != PF_RPC_DEV_OPNUM_READ_IMPLICIT))
          {
             /* In case an AR is needed try to get the target AR */
-            pf_ar_find_by_uuid(&read_request.target_ar_uuid, &p_ar);
+            pf_ar_find_by_uuid(net, &read_request.target_ar_uuid, &p_ar);
          }
          /*
           * Read requests are special: There are so many different formats that
@@ -1637,9 +1645,9 @@ static int pf_cmrpc_rm_read_ind(
 
          start_pos = *p_res_pos;    /* Start of blocks - save for last */
 
-         if (pf_cmrdr_rm_read_ind(p_ar, &read_request, &p_sess->rpc_result, res_size, p_res, p_res_pos) == 0)
+         if (pf_cmrdr_rm_read_ind(net, p_ar, &read_request, &p_sess->rpc_result, res_size, p_res, p_res_pos) == 0)
          {
-            ret = pf_cmsm_rm_read_ind(p_ar, &read_request);
+            ret = pf_cmsm_rm_read_ind(net, p_ar, &read_request);
          }
          else
          {
@@ -1709,6 +1717,7 @@ static int pf_cmrpc_rm_write_interpret_ind(
 /**
  * @internal
  * Perform write of one data record.
+ * @param net              InOut: The p-net stack instance
  * @param p_get_info       In:   Parser data for the input buffer.
  * @param p_write_request  In:   The IODWrite request block.
  * @param p_write_result   Out:  The IODWrite result block.
@@ -1718,6 +1727,7 @@ static int pf_cmrpc_rm_write_interpret_ind(
  *          -1 if an error occurred.
  */
 static int pf_cmrpc_perform_one_write(
+   pnet_t                  *net,
    pf_get_info_t           *p_get_info,
    pf_iod_write_request_t  *p_write_request,
    pf_iod_write_result_t   *p_write_result,
@@ -1729,12 +1739,12 @@ static int pf_cmrpc_perform_one_write(
    pf_block_header_t       block_header;
    pf_api_t                *p_api = NULL;
 
-   if (pf_ar_find_by_uuid(&p_write_request->ar_uuid, &p_ar) != 0)
+   if (pf_ar_find_by_uuid(net, &p_write_request->ar_uuid, &p_ar) != 0)
    {
       pf_set_error(p_stat, PNET_ERROR_CODE_READ, PNET_ERROR_DECODE_PNIO, PNET_ERROR_CODE_1_CMRPC, PNET_ERROR_CODE_2_CMRPC_AR_UUID_UNKNOWN);
    }
    else if ((p_write_request->api != 0) &&
-            (pf_cmdev_get_api(p_write_request->api, &p_api) != 0))
+            (pf_cmdev_get_api(net, p_write_request->api, &p_api) != 0))
    {
       pf_set_error(p_stat, PNET_ERROR_CODE_WRITE, PNET_ERROR_DECODE_PNIORW, PNET_ERROR_CODE_1_ACC_INVALID_AREA_API, 1);
    }
@@ -1743,7 +1753,7 @@ static int pf_cmrpc_perform_one_write(
       if (p_write_request->index < 0x8000)
       {
          /* This is a write of a GSDML param. No block header in this case. */
-         if (pf_cmwrr_rm_write_ind(p_ar, p_write_request, p_write_result, p_stat,
+         if (pf_cmwrr_rm_write_ind(net, p_ar, p_write_request, p_write_result, p_stat,
             p_get_info->p_buf, p_write_request->record_data_length, p_req_pos) == 0)
          {
             ret = 0;
@@ -1763,7 +1773,7 @@ static int pf_cmrpc_perform_one_write(
           * Skip the block header - it is not needed in the stack.
           */
          pf_get_block_header(p_get_info, p_req_pos, &block_header);  /* Not needed by code!! */
-         if (pf_cmwrr_rm_write_ind(p_ar, p_write_request, p_write_result, p_stat,
+         if (pf_cmwrr_rm_write_ind(net, p_ar, p_write_request, p_write_result, p_stat,
             p_get_info->p_buf, p_write_request->record_data_length - sizeof(pf_block_header_t), p_req_pos) == 0)
          {
             ret = 0;
@@ -1790,6 +1800,7 @@ static int pf_cmrpc_perform_one_write(
  *
  * This will trigger the \a pnet_write_ind() user callback for certain parameters.
  *
+ * @param net              InOut: The p-net stack instance
  * @param p_sess           In:   The RPC session instance.
  * @param req_pos          In:   Position in the request buffer.
  * @param res_size         In:   The size of the response buffer.
@@ -1799,6 +1810,7 @@ static int pf_cmrpc_perform_one_write(
  *          -1 if an error occurred.
  */
 static int pf_cmrpc_rm_write_ind(
+   pnet_t                  *net,
    pf_session_info_t       *p_sess,
    uint16_t                req_pos,
    uint16_t                res_size,
@@ -1887,7 +1899,7 @@ static int pf_cmrpc_rm_write_ind(
                    (pf_cmrpc_rm_write_interpret_ind(&p_sess->get_info,
                     &write_request_multi, &req_pos, &write_stat_multi) == 0))
             {
-               ret = pf_cmrpc_perform_one_write(&p_sess->get_info, &write_request_multi,
+               ret = pf_cmrpc_perform_one_write(net, &p_sess->get_info, &write_request_multi,
                   &write_result_multi, &write_stat_multi, &req_pos);
                pf_put_write_result(p_sess->get_info.is_big_endian, &write_result_multi, res_len, p_res, p_res_pos);
 
@@ -1906,7 +1918,7 @@ static int pf_cmrpc_rm_write_ind(
          }
          else     /* single write */
          {
-            ret = pf_cmrpc_perform_one_write(&p_sess->get_info, &write_request,
+            ret = pf_cmrpc_perform_one_write(net, &p_sess->get_info, &write_request,
                &write_result, &p_sess->rpc_result, &req_pos);
             pf_put_write_result(p_sess->get_info.is_big_endian, &write_result, res_len, p_res, p_res_pos);
          }
@@ -1952,6 +1964,7 @@ static int pf_cmrpc_rm_write_ind(
 /**
  * @internal
  * Take a DCE RPC request and create a DCE RPC response.
+ * @param net              InOut: The p-net stack instance
  * @param p_sess           In:   The session instance.
  * @param req_pos          In:   Position in the input buffer.
  * @param p_rpc            In:   The RPC header.
@@ -1962,6 +1975,7 @@ static int pf_cmrpc_rm_write_ind(
  *          -1 if an error occurred.
  */
 static int pf_cmrpc_rpc_request(
+   pnet_t                  *net,
    pf_session_info_t       *p_sess,
    uint16_t                req_pos,
    pf_rpc_header_t         *p_rpc,
@@ -1975,27 +1989,27 @@ static int pf_cmrpc_rpc_request(
    {
    case PF_RPC_DEV_OPNUM_CONNECT:
       LOG_INFO(PF_RPC_LOG, "CONNECT\n");
-      ret = pf_cmrpc_rm_connect_ind(p_sess, req_pos, res_size, p_res, p_res_pos);
+      ret = pf_cmrpc_rm_connect_ind(net, p_sess, req_pos, res_size, p_res, p_res_pos);
       break;
    case PF_RPC_DEV_OPNUM_RELEASE:
       LOG_INFO(PF_RPC_LOG, "RELEASE\n");
-      ret = pf_cmrpc_rm_release_ind(p_sess, req_pos, res_size, p_res, p_res_pos);
+      ret = pf_cmrpc_rm_release_ind(net, p_sess, req_pos, res_size, p_res, p_res_pos);
       break;
    case PF_RPC_DEV_OPNUM_READ:
       LOG_INFO(PF_RPC_LOG, "READ\n");
-      ret = pf_cmrpc_rm_read_ind(p_sess, p_rpc->opnum, req_pos, res_size, p_res, p_res_pos);
+      ret = pf_cmrpc_rm_read_ind(net, p_sess, p_rpc->opnum, req_pos, res_size, p_res, p_res_pos);
       break;
    case PF_RPC_DEV_OPNUM_WRITE:
       LOG_INFO(PF_RPC_LOG, "WRITE\n");
-      ret = pf_cmrpc_rm_write_ind(p_sess, req_pos, res_size, p_res, p_res_pos);
+      ret = pf_cmrpc_rm_write_ind(net, p_sess, req_pos, res_size, p_res, p_res_pos);
       break;
    case PF_RPC_DEV_OPNUM_CONTROL:
       LOG_INFO(PF_RPC_LOG, "CONTROL\n");
-      ret = pf_cmrpc_rm_dcontrol_ind(p_sess, p_rpc, req_pos, res_size, p_res, p_res_pos);
+      ret = pf_cmrpc_rm_dcontrol_ind(net, p_sess, p_rpc, req_pos, res_size, p_res, p_res_pos);
       break;
    case PF_RPC_DEV_OPNUM_READ_IMPLICIT:
       LOG_INFO(PF_RPC_LOG, "READ_IMPLICIT\n");
-      ret = pf_cmrpc_rm_read_ind(p_sess, p_rpc->opnum, req_pos, res_size, p_res, p_res_pos);
+      ret = pf_cmrpc_rm_read_ind(net, p_sess, p_rpc->opnum, req_pos, res_size, p_res, p_res_pos);
       break;
    default:
       LOG_ERROR(PNET_LOG, "CMRPC(%d): : Unknown opnum %" PRIu16 "\n", __LINE__, p_rpc->opnum);
@@ -2006,6 +2020,7 @@ static int pf_cmrpc_rpc_request(
 }
 
 int pf_cmrpc_rm_ccontrol_req(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar)
 {
    int                     ret = -1;
@@ -2024,8 +2039,8 @@ int pf_cmrpc_rm_ccontrol_req(
    memset(&ndr_data, 0, sizeof(ndr_data));
    memset(&control_io, 0, sizeof(control_io));
 
-   pf_fspm_get_cfg(&p_cfg);
-   if (pf_session_allocate(&p_sess) != 0)
+   pf_fspm_get_cfg(net, &p_cfg);
+   if (pf_session_allocate(net, &p_sess) != 0)
    {
       LOG_ERROR(PF_RPC_LOG, "RPC(%d): Out of session reaources\n", __LINE__);
    }
@@ -2224,12 +2239,14 @@ static int pf_cmrpc_rm_ccontrol_interpret_cnf(
 /**
  * @internal
  * Handle the response from a CControl request
+ * @param net              InOut: The p-net stack instance
  * @param p_sess           In:   The session instance.
  * @param req_pos          In:   Position in the input buffer.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
 static int pf_cmrpc_rm_ccontrol_cnf(
+   pnet_t                  *net,
    pf_session_info_t       *p_sess,
    uint16_t                req_pos)
 {
@@ -2247,7 +2264,7 @@ static int pf_cmrpc_rm_ccontrol_cnf(
       if (ccontrol_io.control_command == BIT(PF_CONTROL_COMMAND_BIT_DONE))
       {
          /* Send the result to CMDEV */
-         if (pf_cmdev_rm_ccontrol_cnf(p_ar, &ccontrol_io, &p_sess->rpc_result) == 0)
+         if (pf_cmdev_rm_ccontrol_cnf(net, p_ar, &ccontrol_io, &p_sess->rpc_result) == 0)
          {
             /* Only if result is OK */
             if (pf_cmpbe_rm_ccontrol_cnf(p_ar, &ccontrol_io, &p_sess->rpc_result) == 0)
@@ -2284,12 +2301,15 @@ static int pf_cmrpc_rm_ccontrol_cnf(
 /**
  * @internal
  * Handle one DCE RPC response type message.
- * @param p_rpc            In:   The RPC header.
+ * @param net              InOut: The p-net stack instance
+ * @param p_sess           In:   The session instance.
  * @param req_pos          In:   The response length
+ * @param p_rpc            In:   The RPC header.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
 static int pf_cmrpc_rpc_response(
+   pnet_t                  *net,
    pf_session_info_t       *p_sess,
    uint16_t                req_pos,
    pf_rpc_header_t         *p_rpc)
@@ -2299,7 +2319,7 @@ static int pf_cmrpc_rpc_response(
    switch (p_rpc->opnum)
    {
    case PF_RPC_DEV_OPNUM_CONTROL:
-      ret = pf_cmrpc_rm_ccontrol_cnf(p_sess, req_pos);
+      ret = pf_cmrpc_rm_ccontrol_cnf(net, p_sess, req_pos);
       break;
    default:
       LOG_ERROR(PF_RPC_LOG, "CMRPC(%d): Unknown opnum %" PRIu16 "\n", __LINE__, p_rpc->opnum);
@@ -2312,6 +2332,7 @@ static int pf_cmrpc_rpc_response(
 /**
  * @internal
  * Handle one DCE RPC message.
+ * @param net              InOut: The p-net stack instance
  * @param ip_addr          In:   The IP address of the originator
  * @param port             In:   The port of the originator.
  * @param p_req            In:   The input message buffer.
@@ -2324,6 +2345,7 @@ static int pf_cmrpc_rpc_response(
  *          -1 if an error occurred.
  */
 static int pf_cmrpc_dce_packet(
+   pnet_t                  *net,
    uint32_t                ip_addr,
    uint16_t                port,
    uint8_t                 *p_req,
@@ -2350,10 +2372,10 @@ static int pf_cmrpc_dce_packet(
    pf_get_dce_rpc_header(&get_info, &req_pos, &rpc_req);
 
    /* Find the session or allocate a new one */
-   pf_session_locate_by_uuid(&rpc_req.activity_uuid, &p_sess);
+   pf_session_locate_by_uuid(net, &rpc_req.activity_uuid, &p_sess);
    if (p_sess == NULL)
    {
-      (void)pf_session_allocate(&p_sess);
+      (void)pf_session_allocate(net, &p_sess);
    }
 
    if (p_sess == NULL)
@@ -2476,7 +2498,7 @@ static int pf_cmrpc_dce_packet(
                p_sess->release_in_progress = true; /* Tell everybody */
                *p_is_release = true;               /* Tell caller */
             }
-            ret = pf_cmrpc_rpc_request(p_sess, req_pos, &rpc_req, *p_res_len, p_res, &res_pos);
+            ret = pf_cmrpc_rpc_request(net, p_sess, req_pos, &rpc_req, *p_res_len, p_res, &res_pos);
             if (rpc_req.opnum == PF_RPC_DEV_OPNUM_RELEASE)
             {
                pf_session_release(p_sess);
@@ -2492,7 +2514,7 @@ static int pf_cmrpc_dce_packet(
             pf_put_uint16(rpc_res.is_big_endian, (uint16_t)(res_pos - start_pos), *p_res_len, p_res, &length_of_body_pos);
             break;
          case PF_RPC_PT_RESPONSE:
-            ret = pf_cmrpc_rpc_response(p_sess, req_pos, &rpc_req);
+            ret = pf_cmrpc_rpc_response(net, p_sess, req_pos, &rpc_req);
             break;
          default:
             LOG_ERROR(PF_RPC_LOG, "CMRPC(%d): Unknown packet_type %" PRIu8 "\n", __LINE__, rpc_req.packet_type);
@@ -2535,7 +2557,8 @@ static int pf_cmrpc_dce_packet(
    return ret;
 }
 
-void pf_cmrpc_periodic(void)
+void pf_cmrpc_periodic(
+   pnet_t                  *net)
 {
    uint32_t                dcerpc_addr;
    uint16_t                dcerpc_port;
@@ -2545,28 +2568,28 @@ void pf_cmrpc_periodic(void)
    bool                    is_release = false;
 
    /* Poll for RPC session confirmations */
-   for (ix = 0; ix < NELEMENTS(session_info); ix++)
+   for (ix = 0; ix < NELEMENTS(net->cmrpc_session_info); ix++)
    {
-      if ((session_info[ix].in_use == true) && (session_info[ix].from_me == true))
+      if ((net->cmrpc_session_info[ix].in_use == true) && (net->cmrpc_session_info[ix].from_me == true))
       {
-         dcerpc_req_len = os_udp_recvfrom(session_info[ix].socket, &dcerpc_addr, &dcerpc_port, dcerpc_req_frame, sizeof(dcerpc_req_frame));
+         dcerpc_req_len = os_udp_recvfrom(net->cmrpc_session_info[ix].socket, &dcerpc_addr, &dcerpc_port, net->cmrpc_dcerpc_req_frame, sizeof(net->cmrpc_dcerpc_req_frame));
          if (dcerpc_req_len > 0)
          {
-            dcerpc_resp_len = sizeof(dcerpc_rsp_frame);
-            (void)pf_cmrpc_dce_packet(dcerpc_addr, dcerpc_port, dcerpc_req_frame, dcerpc_req_len, dcerpc_rsp_frame, &dcerpc_resp_len, &is_release);
+            dcerpc_resp_len = sizeof(net->cmrpc_dcerpc_rsp_frame);
+            (void)pf_cmrpc_dce_packet(net, dcerpc_addr, dcerpc_port, net->cmrpc_dcerpc_req_frame, dcerpc_req_len, net->cmrpc_dcerpc_rsp_frame, &dcerpc_resp_len, &is_release);
          }
       }
    }
 
    /* Poll RPC requests */
-   dcerpc_req_len = os_udp_recvfrom(rpcreq_socket, &dcerpc_addr, &dcerpc_port, dcerpc_req_frame, sizeof(dcerpc_req_frame));
+   dcerpc_req_len = os_udp_recvfrom(net->cmrpc_rpcreq_socket, &dcerpc_addr, &dcerpc_port, net->cmrpc_dcerpc_req_frame, sizeof(net->cmrpc_dcerpc_req_frame));
    if (dcerpc_req_len > 0)
    {
-      dcerpc_resp_len = sizeof(dcerpc_rsp_frame);
-      (void)pf_cmrpc_dce_packet(dcerpc_addr, dcerpc_port, dcerpc_req_frame, dcerpc_req_len, dcerpc_rsp_frame, &dcerpc_resp_len, &is_release);
+      dcerpc_resp_len = sizeof(net->cmrpc_dcerpc_rsp_frame);
+      (void)pf_cmrpc_dce_packet(net, dcerpc_addr, dcerpc_port, net->cmrpc_dcerpc_req_frame, dcerpc_req_len, net->cmrpc_dcerpc_rsp_frame, &dcerpc_resp_len, &is_release);
       if (dcerpc_resp_len != 0)
       {
-         os_udp_sendto(rpcreq_socket, dcerpc_addr, dcerpc_port, dcerpc_rsp_frame, dcerpc_resp_len);
+         os_udp_sendto(net->cmrpc_rpcreq_socket, dcerpc_addr, dcerpc_port, net->cmrpc_dcerpc_rsp_frame, dcerpc_resp_len);
       }
       else
       {
@@ -2574,42 +2597,45 @@ void pf_cmrpc_periodic(void)
       }
       if (is_release == true)
       {
-         os_udp_close(rpcreq_socket);
-         rpcreq_socket = os_udp_open(OS_IPADDR_ANY, OS_PF_RPC_SERVER_PORT);
+         os_udp_close(net->cmrpc_rpcreq_socket);
+         net->cmrpc_rpcreq_socket = os_udp_open(OS_IPADDR_ANY, OS_PF_RPC_SERVER_PORT);
       }
    }
 }
 
 void pf_cmrpc_init(
-   int                  if_id)
+   pnet_t                  *net)
 {
-   if (p_rpc_mutex == NULL)
+   if (net->p_cmrpc_rpc_mutex == NULL)
    {
-      p_rpc_mutex = os_mutex_create();
-      memset(ar, 0, sizeof(ar));
-      memset(session_info, 0, sizeof(session_info));
+      net->p_cmrpc_rpc_mutex = os_mutex_create();
+      memset(net->cmrpc_ar, 0, sizeof(net->cmrpc_ar));
+      memset(net->cmrpc_session_info, 0, sizeof(net->cmrpc_session_info));
 
-      rpcreq_socket = os_udp_open(OS_IPADDR_ANY, OS_PF_RPC_SERVER_PORT);
+      net->cmrpc_rpcreq_socket = os_udp_open(OS_IPADDR_ANY, OS_PF_RPC_SERVER_PORT);
    }
 
    /* Save for later (put it into each session */
-   pf_rpc_if_id = if_id;
-   pf_session_number = 0x12345678;
+   net->cmrpc_session_number = 0x12345678;     /* Starting number */
 }
 
-void pf_cmrpc_exit(void)
+
+/* Not used */
+void pf_cmrpc_exit(
+   pnet_t                  *net)
 {
-   if (p_rpc_mutex != NULL)
+   if (net->p_cmrpc_rpc_mutex != NULL)
    {
-      os_mutex_destroy(p_rpc_mutex);
-      memset(ar, 0, sizeof(ar));
-      memset(session_info, 0, sizeof(session_info));
+      os_mutex_destroy(net->p_cmrpc_rpc_mutex);
+      memset(net->cmrpc_ar, 0, sizeof(net->cmrpc_ar));
+      memset(net->cmrpc_session_info, 0, sizeof(net->cmrpc_session_info));
    }
 }
 
 /*********************** Local primitives ************************************/
 
 int pf_cmrpc_cmdev_state_ind(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pnet_event_values_t     event)
 {
@@ -2620,7 +2646,7 @@ int pf_cmrpc_cmdev_state_ind(
    {
    case PNET_EVENT_ABORT:
       /* Close all RPC session (CCONTROL) sockets */
-      while (pf_session_locate_by_ar(p_ar, &p_sess) == 0)
+      while (pf_session_locate_by_ar(net, p_ar, &p_sess) == 0)
       {
          os_udp_close(p_sess->socket);
          pf_session_release(p_sess);
@@ -2635,8 +2661,8 @@ int pf_cmrpc_cmdev_state_ind(
                pf_session_release(p_ar->p_sess);
 
                /* Re-open the global RPC socket. */
-               os_udp_close(rpcreq_socket);
-               rpcreq_socket = os_udp_open(OS_IPADDR_ANY, OS_PF_RPC_SERVER_PORT);
+               os_udp_close(net->cmrpc_rpcreq_socket);
+               net->cmrpc_rpcreq_socket = os_udp_open(OS_IPADDR_ANY, OS_PF_RPC_SERVER_PORT);
             }
          }
          else
