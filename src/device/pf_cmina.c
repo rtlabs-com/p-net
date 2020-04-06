@@ -13,6 +13,17 @@
  * full license information.
  ********************************************************************/
 
+/**
+ * @file
+ * @brief Implements the Context Management Ip and Name Assignment protocol machine (CMINA)
+ *
+ * Handles assignment of station name and IP address.
+ * Manages sending DCP hello requests.
+ *
+ * Resets the communication stack and user application.
+ */
+
+
 #ifdef UNIT_TEST
 
 #endif
@@ -26,12 +37,11 @@ static const char             *hello_sync_name = "hello";
 
 /**
  * @internal
- * Send a LLDP HELLO message.
+ * Send a DCP HELLO message.
  *
  * This is a callback for the scheduler. Arguments should fulfill pf_scheduler_timeout_ftn_t
  *
  * If this was not the last requested HELLO message then re-schedule another call after 1s.
- * This is a scheduler call-back function. Do not change the argument list!
  *
  * @param net              InOut: The p-net stack instance
  * @param arg              In:   Not used.
@@ -62,15 +72,25 @@ static void pf_cmina_send_hello(
    }
 }
 
-/*
- * ToDo: Call-back to app to clear application parameters:
+/**
+ * @internal
+ * Reset the configuration to default values.
  *
- * 0  ==> power-on reset
- * 1  ==> Reset application parameters
- * 2  ==> Reset communication parameters
- * 99 ==> Reset application and communication parameters.
+ * Triggers the application callback \a pnet_reset_ind() for some \a reset_mode
+ * values.
+ *
+ * Reset modes:
+ *
+ * 0:  Power-on reset
+ * 1:  Reset application parameters
+ * 2:  Reset communication parameters
+ * 99: Reset application and communication parameters.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param reset_mode       In:   Reset mode.
+ * @return  0  if the operation succeeded.
+ *          -1 if an error occurred.
  */
-
 int pf_cmina_set_default_cfg(
    pnet_t                  *net,
    uint16_t                reset_mode)
@@ -78,6 +98,9 @@ int pf_cmina_set_default_cfg(
    int                     ret = -1;
    const pnet_cfg_t        *p_cfg = NULL;
    uint16_t                ix;
+   bool                    should_reset_user_application = false;
+
+   LOG_DEBUG(PF_DCP_LOG,"CMINA(%d): Setting default configuration. Reset mode: %u\n", __LINE__, reset_mode);
 
    pf_fspm_get_default_cfg(net, &p_cfg);
    if (p_cfg != NULL)
@@ -110,13 +133,14 @@ int pf_cmina_set_default_cfg(
          memcpy(net->cmina_perm_dcp_ase.name_of_station, p_cfg->station_name, sizeof(net->cmina_perm_dcp_ase.name_of_station));
          net->cmina_perm_dcp_ase.name_of_station[sizeof(net->cmina_perm_dcp_ase.name_of_station) - 1] = '\0';
       }
-      else if (reset_mode == 1)
+      if (reset_mode == 1 || reset_mode == 99)  /* Reset application parameters */
       {
-         /* Reset app data: ToDo: Callback to app */
+         should_reset_user_application = true;
+
          /* Reset I&M data */
          ret = pf_fspm_clear_im_data(net);
       }
-      else if (reset_mode == 2)
+      if (reset_mode == 2 || reset_mode == 99)  /* Reset communication parameters */
       {
          /* Reset IP suite */
          net->cmina_perm_dcp_ase.full_ip_suite.ip_suite.ip_addr = 0;
@@ -125,17 +149,12 @@ int pf_cmina_set_default_cfg(
          /* Clear name of station */
          memset(net->cmina_perm_dcp_ase.name_of_station, 0, sizeof(net->cmina_perm_dcp_ase.name_of_station));
       }
-      else if (reset_mode == 99)
+      if (reset_mode > 0)
       {
-         /* Reset I&M data */
-         ret = pf_fspm_clear_im_data(net);
-         /* Reset IP suite */
-         net->cmina_perm_dcp_ase.full_ip_suite.ip_suite.ip_addr = 0;
-         net->cmina_perm_dcp_ase.full_ip_suite.ip_suite.ip_mask = 0;
-         net->cmina_perm_dcp_ase.full_ip_suite.ip_suite.ip_gateway = 0;
-         /* Clear name of station */
-         memset(net->cmina_perm_dcp_ase.name_of_station, 0, sizeof(net->cmina_perm_dcp_ase.name_of_station));
+         /* User callback */
+         (void) pf_fspm_reset_ind(net, should_reset_user_application, reset_mode);
       }
+
       net->cmina_perm_dcp_ase.standard_gw_value = 0;         /* Means: OwnIP is treated as no gateway */
 
       net->cmina_perm_dcp_ase.instance_id.high = 0;
@@ -254,6 +273,7 @@ int pf_cmina_init(
       }
    }
 
+   /* Change IP address if necessary */
    pf_cmina_dcp_set_commit(net);
 
    return ret;
@@ -345,6 +365,7 @@ int pf_cmina_dcp_set_ind(
 
             strncpy(net->cmina_temp_dcp_ase.name_of_station, (char *)p_value, value_length);
             net->cmina_temp_dcp_ase.name_of_station[value_length] = '\0';
+            LOG_INFO(PF_DCP_LOG,"CMINA(%d): Change station name request. New name: %s\n", __LINE__, net->cmina_temp_dcp_ase.name_of_station);
             if (temp == false)
             {
                strcpy(net->cmina_perm_dcp_ase.name_of_station, net->cmina_temp_dcp_ase.name_of_station);   /* It always fits */
@@ -363,6 +384,7 @@ int pf_cmina_dcp_set_ind(
       }
       break;
    case PF_DCP_OPT_DHCP:
+      LOG_INFO(PF_DCP_LOG,"CMINA(%d): Trying to set DHCP\n", __LINE__);
       *p_block_error = PF_DCP_BLOCK_ERROR_OPTION_NOT_SUPPORTED;
       change_dhcp = true;
       break;

@@ -260,6 +260,7 @@ protected:
       pnet_default_cfg.new_data_status_cb = my_new_data_status_ind;
       pnet_default_cfg.alarm_ind_cb = my_alarm_ind;
       pnet_default_cfg.alarm_cnf_cb = my_alarm_cnf;
+      pnet_default_cfg.reset_cb = NULL;
       pnet_default_cfg.cb_arg = NULL;
 
       /* Device configuration */

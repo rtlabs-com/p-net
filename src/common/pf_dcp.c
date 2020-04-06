@@ -569,6 +569,7 @@ static int pf_dcp_set_req(
          break;
       case PF_DCP_SUB_CONTROL_SIGNAL:
          /* Schedule a state-machine that flashes "the LED" for 3s, 1Hz. */
+         LOG_INFO(PF_DCP_LOG, "DCP(%d): Received request to flash LED\n", __LINE__);
          pf_scheduler_add(net, 500*1000, "dcp",
             pf_dcp_control_signal, (void *)(2*3 - 1), &net->dcp_timeout);    /* 3 flashes */
          ret = 0;
@@ -696,6 +697,7 @@ static int pf_dcp_get_set(
 
          if (p_src_dcphdr->service_id == PF_DCP_SERVICE_SET)
          {
+            LOG_DEBUG(PF_DCP_LOG,"DCP(%d): Incoming DCP Set request\n", __LINE__);
             p_src_block_hdr = (pf_dcp_block_hdr_t *)&p_src[src_pos];
             src_pos += sizeof(*p_src_block_hdr);    /* Point to the block value */
             src_block_len = ntohs(p_src_block_hdr->block_length);
@@ -731,6 +733,7 @@ static int pf_dcp_get_set(
          }
          else if (p_src_dcphdr->service_id == PF_DCP_SERVICE_GET)
          {
+            LOG_DEBUG(PF_DCP_LOG,"DCP(%d): Incoming DCP Get request\n", __LINE__);
             while ((ret == 0) &&
                    (src_dcplen >= (src_pos + sizeof(uint8_t) + sizeof(uint8_t))))
             {
@@ -756,6 +759,10 @@ static int pf_dcp_get_set(
          if (os_eth_send(net->eth_handle, p_rsp) <= 0)
          {
             LOG_ERROR(PNET_LOG, "pf_dcp(%d): Error from os_eth_send(dcp)\n", __LINE__);
+         }
+         else
+         {
+            LOG_DEBUG(PF_DCP_LOG,"DCP(%d): Sent DCP Get/Set response\n", __LINE__);
          }
 
          /* Send LLDP _after_ the response in order to pass I/O-tester tests. */
@@ -864,6 +871,8 @@ int pf_dcp_hello_req(
    uint16_t                temp16;
    pf_ip_suite_t           ip_suite;
    const pnet_cfg_t        *p_cfg = NULL;
+
+   LOG_DEBUG(PF_DCP_LOG,"DCP(%d): Sending DCP Hello request\n", __LINE__);
 
    pf_fspm_get_default_cfg(net, &p_cfg);
 
@@ -1004,7 +1013,7 @@ static int pf_dcp_identify_req(
 
    pf_fspm_get_default_cfg(net, &p_cfg);
 
-   LOG_DEBUG(PF_DCP_LOG,"DCP(%d): Ident req\n", __LINE__);
+   LOG_DEBUG(PF_DCP_LOG,"DCP(%d): Incoming DCP identify request\n", __LINE__);
    /*
     * IdentifyReqBlock = DeviceRoleBlock ^ DeviceVendorBlock ^ DeviceIDBlock ^
     * DeviceOptionsBlock ^ OEMDeviceIDBlock ^ MACAddressBlock ^ IPParameterBlock ^

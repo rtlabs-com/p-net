@@ -75,6 +75,7 @@ to perform specific functionality.
 .. doxygentypedef:: pnet_dcontrol_ind
 .. doxygentypedef:: pnet_ccontrol_cnf
 .. doxygentypedef:: pnet_state_ind
+.. doxygentypedef:: pnet_reset_ind
 .. doxygentypedef:: pnet_read_ind
 .. doxygentypedef:: pnet_write_ind
 .. doxygentypedef:: pnet_exp_module_ind

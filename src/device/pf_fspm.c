@@ -517,3 +517,18 @@ int pf_fspm_aplmr_alarm_ack_cnf(
 
    return ret;
 }
+
+int pf_fspm_reset_ind(
+   pnet_t                  *net,
+   bool                    should_reset_application,
+   uint16_t                reset_mode)
+{
+   int ret = 0;
+
+   if (net->fspm_cfg.reset_cb != NULL)
+   {
+      ret = net->fspm_cfg.reset_cb(net, net->fspm_cfg.cb_arg, should_reset_application, reset_mode);
+   }
+
+   return ret;
+}
