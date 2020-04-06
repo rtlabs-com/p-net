@@ -25,6 +25,7 @@ static int app_read_ind(pnet_t *net, void *arg, uint32_t arep, uint16_t api, uin
 static int app_alarm_cnf(pnet_t *net, void *arg, uint32_t arep, pnet_pnio_status_t *p_pnio_status);
 static int app_alarm_ind(pnet_t *net, void *arg, uint32_t arep, uint32_t api, uint16_t slot, uint16_t subslot, uint16_t data_len, uint16_t data_usi, uint8_t *p_data);
 static int app_alarm_ack_cnf(pnet_t *net, void *arg, uint32_t arep, int res);
+static int app_reset_ind(pnet_t  *net, void *arg, bool should_reset_application, uint16_t reset_mode);
 void print_bytes(uint8_t *bytes, int32_t len);
 
 /********************** Settings **********************************************/
@@ -154,6 +155,7 @@ static pnet_cfg_t                pnet_default_cfg =
       .alarm_ind_cb = app_alarm_ind,
       .alarm_cnf_cb = app_alarm_cnf,
       .alarm_ack_cnf_cb = app_alarm_ack_cnf,
+      .reset_cb = app_reset_ind,
       .cb_arg = NULL,
 
       .im_0_data =
@@ -535,6 +537,24 @@ static int app_state_ind(
       {
          printf("Callback on event PNET_EVENT_APPLRDY\n");
       }
+   }
+
+   return 0;
+}
+
+static int app_reset_ind(
+   pnet_t                  *net,
+   void                    *arg,
+   bool                    should_reset_application,
+   uint16_t                reset_mode)
+{
+   app_data_t              *p_appdata = (app_data_t*)arg;
+
+   if (p_appdata->arguments.verbosity > 0)
+   {
+      printf("Reset call-back. Application reset mandatory: %u  Reset mode: %d\n",
+         should_reset_application,
+         reset_mode);
    }
 
    return 0;

@@ -238,6 +238,7 @@ protected:
       pnet_default_cfg.exp_module_cb = my_exp_module_ind;
       pnet_default_cfg.exp_submodule_cb = my_exp_submodule_ind;
       pnet_default_cfg.new_data_status_cb = my_new_data_status_ind;
+      pnet_default_cfg.reset_cb = NULL;
       pnet_default_cfg.cb_arg = NULL;
 
       /* Device configuration */

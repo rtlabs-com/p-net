@@ -270,6 +270,22 @@ int pf_fspm_data_status_changed(
    uint8_t                 data_status);
 
 /**
+ * Call user call-back when the controller requests a reset.
+ *
+ * This uses the \a pnet_reset_ind() callback.
+ *
+ * @param net                       InOut: The p-net stack instance
+ * @param should_reset_application  In:    True if the user should reset the application data.
+ * @param reset_mode                In:    Detailed reset information.
+ * @return  0  if operation succeeded.
+ *          -1 if an error occurred.
+ */
+int pf_fspm_reset_ind(
+   pnet_t                  *net,
+   bool                    should_reset_application,
+   uint16_t                reset_mode);
+
+/**
  * Retrieve a pointer to the current configuration data.
  * @param net              InOut: The p-net stack instance
  * @param pp_cfg           Out: The current configuration (or NULL).

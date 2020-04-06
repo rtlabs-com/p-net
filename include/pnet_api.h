@@ -847,6 +847,53 @@ typedef int (*pnet_alarm_ack_cnf)(
    uint32_t                arep,
    int                     res);
 
+/**
+ * Indication to the application that a reset request was received from the
+ * IO-controller.
+ *
+ * The IO-controller can ask for communication parameters or application
+ * data to be reset, or to do a factory reset.
+ *
+ * This application call-back function is called by the Profinet stack on every
+ * reset request (via the DCP "Set" command) from the Profinet controller.
+ *
+ * The application should reset the application data if
+ * \a should_reset_application is true. For other cases this callback is
+ * triggered for diagnostic reasons.
+ *
+ * The return value from this call-back function is ignored by the Profinet stack.
+ *
+ * It is optional to implement this callback (if you do not have any application
+ * data that could be reset).
+ *
+ * Reset modes:
+ *
+ * 0:  (Power-on reset, not from IO-controller. Will not trigger this callback.)
+ * 1:  Reset application data
+ * 2:  Reset communication parameters (done by the stack)
+ * 99: Reset all (factory reset).
+ *
+ * The reset modes 1-9 (out of which 1 and 2 are supported here) are defined
+ * by the Profinet standard. Value 99 is used here to indicate that the
+ * IO-controller has requested a factory reset via another mechanism.
+ *
+ * In order to remain responsive to DCP communication and Ethernet switching,
+ * the device should not do a hard or soft reset for reset mode 1 or 2. It is
+ * allowed for the factory reset case (but not mandatory).
+ *
+ * @param net                       InOut: The p-net stack instance
+ * @param arg                       InOut: User-defined data (not used by p-net)
+ * @param should_reset_application  In:    True if the user should reset the application data.
+ * @param reset_mode                In:    Detailed reset information.
+ * @return  0  on success.
+ *          -1 if an error occurred.
+ */
+typedef int (*pnet_reset_ind)(
+   pnet_t                  *net,
+   void                    *arg,
+   bool                    should_reset_application,
+   uint16_t                reset_mode);
+
 /*
  * Network and device configuration.
  *
@@ -1003,6 +1050,7 @@ typedef struct pnet_cfg
    pnet_alarm_ind          alarm_ind_cb;
    pnet_alarm_cnf          alarm_cnf_cb;
    pnet_alarm_ack_cnf      alarm_ack_cnf_cb;
+   pnet_reset_ind          reset_cb;
    void                    *cb_arg;    /* Userdata passed to callbacks, not used by stack */
 
    /** I&M initial data */
