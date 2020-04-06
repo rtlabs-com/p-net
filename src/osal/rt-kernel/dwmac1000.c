@@ -30,7 +30,7 @@
 
 #include <string.h>
 
-#include "osal_sys.h"
+#include "osal.h"
 
 /* Align DMA buffer with lwIP POOL buf size
  * One RX DMA buffer will fit in one POOL buf.
@@ -242,7 +242,8 @@ typedef struct dwmac1000
    uint32_t cr;
 } dwmac1000_t;
 
-static rx_hook_fn input_rx_hook = NULL;
+static os_eth_callback_t* input_rx_hook = NULL;
+static void* input_rx_arg = NULL;
 
 #ifdef DEBUG_DATA
 #include <ctype.h>
@@ -592,6 +593,7 @@ static struct pbuf *dwmac1000_hw_get_received_frame (dwmac1000_t *dwmac1000)
  */
 static void dwmac1000_input (dwmac1000_t *dwmac1000, struct netif *netif)
 {
+   int handled = 0;
    struct eth_hdr *ethhdr;
    struct pbuf *p;
 
@@ -609,7 +611,8 @@ static void dwmac1000_input (dwmac1000_t *dwmac1000, struct netif *netif)
    /* Pass pbuf to rx hook if set */
    if (input_rx_hook != NULL)
    {
-      if (input_rx_hook (htons (ethhdr->type), p, netif) != 0)
+      handled = input_rx_hook(input_rx_arg, p);
+      if (handled != 0)
       {
          return;
       }
@@ -714,7 +717,8 @@ int eth_ioctl (drv_t * drv, void * arg, int req, void * param)
 
    if (req == IOCTL_NET_SET_RX_HOOK)
    {
-      input_rx_hook = (rx_hook_fn)param;
+      input_rx_hook = (os_eth_callback_t*)param;
+      input_rx_arg = arg;
       return 0;
    }
    else
@@ -795,5 +799,3 @@ drv_t * dwmac1000_init (const char * name, const dwmac1000_cfg_t * cfg,
 
    return (drv_t *)dwmac1000;
 }
-
-

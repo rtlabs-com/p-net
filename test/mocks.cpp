@@ -59,11 +59,16 @@ void mock_init(void)
    mock_clear();
 }
 
-int mock_os_eth_init(
-   const char              *if_name)
+os_eth_handle_t* mock_os_eth_init(
+   const char *if_name,
+   os_eth_callback_t *callback,
+   void *arg)
 {
-   int id = 0;
-   return id;
+   os_eth_handle_t         *handle;
+
+   handle = (os_eth_handle_t*)calloc(1, sizeof(os_eth_handle_t));
+
+   return handle;
 }
 
 int mock_os_get_ip_suite(
@@ -85,7 +90,7 @@ int mock_os_set_ip_suite(
 }
 
 int mock_os_eth_send(
-   uint32_t                id,
+   os_eth_handle_t         *handle,
    os_buf_t                *p_buf)
 {
    memcpy(mock_os_eth_send_copy, p_buf->payload, p_buf->len);
@@ -148,12 +153,6 @@ int mock_os_udp_recvfrom(
    os_mutex_unlock(mock_mutex);
 
    return len;
-}
-
-void mock_os_cpy_mac_addr(
-   uint8_t                 *p_mac_addr)
-{
-   memset(p_mac_addr, 1, sizeof(os_ethaddr_t));
 }
 
 void mock_os_udp_close(

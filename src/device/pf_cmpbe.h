@@ -41,11 +41,13 @@ int pf_cmpbe_cmdev_state_ind(
 
 /**
  * Handle a CControl request for a specific AR.
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
 int pf_cmpbe_cm_ccontrol_req(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar);
 
 /**
@@ -63,6 +65,7 @@ int pf_cmpbe_rm_ccontrol_cnf(
 
 /**
  * Handle a DControl indication for a specific AR.
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param p_control_io     In:   The DControl block.
  * @param p_result         Out:  The result information.
@@ -70,6 +73,7 @@ int pf_cmpbe_rm_ccontrol_cnf(
  *          -1 if an error occurred.
  */
 int pf_cmpbe_rm_dcontrol_ind(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pf_control_block_t      *p_control_io,
    pnet_result_t           *p_result);

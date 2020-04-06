@@ -25,6 +25,7 @@ extern "C"
 
 /**
  * Handle a RPC read request.
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param p_read_request   In:   The read request.
  * @param p_read_result    Out:  The result information.
@@ -35,6 +36,7 @@ extern "C"
  *          -1 if an error occurred.
  */
 int pf_cmrdr_rm_read_ind(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pf_iod_read_request_t   *p_read_request,
    pnet_result_t           *p_read_result,

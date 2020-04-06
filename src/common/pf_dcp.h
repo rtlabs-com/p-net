@@ -105,22 +105,26 @@ typedef enum pf_dcp_block_error_values
 
 /**
  * Initialize the DCP component.
- * @param if_id            In:   The Ethernet interface id.
+ * @param net              InOut: The p-net stack instance
  */
 void pf_dcp_init(
-   int                     if_id);
+   pnet_t                  *net);
 
 /**
  * Stop the DCP component.
+ * @param net              InOut: The p-net stack instance
  */
-void pf_dcp_exit(void);
+void pf_dcp_exit(
+   pnet_t                  *net);
 
 /**
  * Send a DCP HELLO message.
+ * @param net              InOut: The p-net stack instance
  * @return  0  if a HELLO message was sent.
  *          -1 if an error occurred.
  */
-int pf_dcp_hello_req(void);
+int pf_dcp_hello_req(
+   pnet_t                  *net);
 
 #ifdef __cplusplus
 }

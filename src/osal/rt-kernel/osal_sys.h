@@ -59,8 +59,28 @@ typedef struct pbuf os_buf_t;
  * Local handling to enable the NIC drivers to support a RX hook
  */
 #define IOCTL_NET_SET_RX_HOOK      0x601
-typedef int (*rx_hook_fn)(uint16_t type, struct pbuf *p, struct netif *inp);
+
 int eth_ioctl (drv_t * drv, void * arg, int req, void * param);
+
+/**
+ * The prototype of raw Ethernet reception call-back functions.
+ * *
+ * @param arg              In:   User-defined (may be NULL).
+ * @param p_buf            In:   The incoming Ethernet frame
+ *
+ * @return  0  If the frame was NOT handled by this function.
+ *          1  If the frame was handled and the buffer freed.
+ */
+typedef int (os_eth_callback_t)(
+   void                    *arg,
+   os_buf_t                *p_buf);
+
+typedef struct os_eth_handle
+{
+   os_eth_callback_t * callback;
+   void * arg;
+   int if_id;
+} os_eth_handle_t;
 
 #ifdef __cplusplus
 }

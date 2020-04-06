@@ -17,7 +17,11 @@
 
 #endif
 
+
 /**
+ * @file
+ * @brief Implements the Context Management Surveillance Protocol Machine Device (CMSM)
+ *
  * The CMSM component monitors the establishment of a connection.
  * Once the device enters the DATA state this component is done.
  */
@@ -82,11 +86,14 @@ static void pf_cmsm_set_state(
  * @internal
  * Handle timeouts in the connection monitoring.
  *
- * This is a scheduler call-back function. Do not change the argument list!
+ * This is a callback for the scheduler. Arguments should fulfill pf_scheduler_timeout_ftn_t
+ *
+ * @param net              InOut: The p-net stack instance
  * @param arg              In:   The Ar instance.
  * @param current_time     In:   The current time.
  */
 static void pf_cmsm_timeout(
+   pnet_t                  *net,
    void                    *arg,
    uint32_t                current_time)
 {
@@ -100,13 +107,14 @@ static void pf_cmsm_timeout(
       break;
    case PF_CMSM_STATE_RUN:
       LOG_DEBUG(PNET_LOG, "CMSM(%d): TIMEOUT!!\n", __LINE__);
-      pf_cmdev_state_ind(p_ar, PNET_EVENT_ABORT);
+      pf_cmdev_state_ind(net, p_ar, PNET_EVENT_ABORT);
       pf_cmsm_set_state(p_ar, PF_CMSM_STATE_IDLE);
       break;
    }
 }
 
 int pf_cmsm_cmdev_state_ind(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pnet_event_values_t     event)
 {
@@ -125,10 +133,10 @@ int pf_cmsm_cmdev_state_ind(
                __LINE__, (unsigned)p_ar->ar_param.cm_initiator_activity_timeout_factor);
             if (p_ar->cmsm_timer != UINT32_MAX)
             {
-               pf_scheduler_remove(cmsm_sync_name, p_ar->cmsm_timer);
+               pf_scheduler_remove(net, cmsm_sync_name, p_ar->cmsm_timer);
                p_ar->cmsm_timer = UINT32_MAX;   /* unused */
             }
-            pf_scheduler_add(p_ar->ar_param.cm_initiator_activity_timeout_factor*100*1000,   /* time in us */
+            pf_scheduler_add(net, p_ar->ar_param.cm_initiator_activity_timeout_factor*100*1000,   /* time in us */
                cmsm_sync_name, pf_cmsm_timeout, (void *)p_ar, &p_ar->cmsm_timer);
          }
          ret = 0;
@@ -148,7 +156,7 @@ int pf_cmsm_cmdev_state_ind(
          {
             if (p_ar->cmsm_timer != UINT32_MAX)
             {
-               pf_scheduler_remove(cmsm_sync_name, p_ar->cmsm_timer);
+               pf_scheduler_remove(net, cmsm_sync_name, p_ar->cmsm_timer);
                p_ar->cmsm_timer = UINT32_MAX;   /* unused */
             }
          }
@@ -169,6 +177,7 @@ int pf_cmsm_cmdev_state_ind(
 /* =================================================================== */
 
 int pf_cmsm_rm_read_ind(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pf_iod_read_request_t   *p_read_request)
 {
@@ -188,10 +197,10 @@ int pf_cmsm_rm_read_ind(
             /* Restart timeout period */
             if (p_ar->cmsm_timer != UINT32_MAX)
             {
-               pf_scheduler_remove(cmsm_sync_name, p_ar->cmsm_timer);
+               pf_scheduler_remove(net, cmsm_sync_name, p_ar->cmsm_timer);
                p_ar->cmsm_timer = UINT32_MAX;   /* unused */
             }
-            if (pf_scheduler_add(p_ar->ar_param.cm_initiator_activity_timeout_factor*100*1000,   /* time in us */
+            if (pf_scheduler_add(net, p_ar->ar_param.cm_initiator_activity_timeout_factor*100*1000,   /* time in us */
                cmsm_sync_name, pf_cmsm_timeout, (void *)p_ar, &p_ar->cmsm_timer) != 0)
             {
                p_ar->cmsm_timer = UINT32_MAX;   /* unused */
@@ -210,6 +219,7 @@ int pf_cmsm_rm_read_ind(
 }
 
 int pf_cmsm_cm_read_ind(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pf_iod_read_request_t   *p_read_request)
 {
@@ -228,10 +238,10 @@ int pf_cmsm_cm_read_ind(
          {
             if (p_ar->cmsm_timer != UINT32_MAX)
             {
-               pf_scheduler_remove(cmsm_sync_name, p_ar->cmsm_timer);
+               pf_scheduler_remove(net, cmsm_sync_name, p_ar->cmsm_timer);
                p_ar->cmsm_timer = UINT32_MAX;   /* unused */
             }
-            if (pf_scheduler_add(p_ar->ar_param.cm_initiator_activity_timeout_factor*100*1000,   /* time in us */
+            if (pf_scheduler_add(net, p_ar->ar_param.cm_initiator_activity_timeout_factor*100*1000,   /* time in us */
                cmsm_sync_name, pf_cmsm_timeout, (void *)p_ar, &p_ar->cmsm_timer) != 0)
             {
                p_ar->cmsm_timer = UINT32_MAX;   /* unused */
@@ -248,6 +258,7 @@ int pf_cmsm_cm_read_ind(
 /* =================================================================== */
 
 int pf_cmsm_cm_write_ind(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pf_iod_write_request_t   *p_write_request)
 {
@@ -264,10 +275,10 @@ int pf_cmsm_cm_write_ind(
       {
          if (p_ar->cmsm_timer != UINT32_MAX)
          {
-            pf_scheduler_remove(cmsm_sync_name, p_ar->cmsm_timer);
+            pf_scheduler_remove(net, cmsm_sync_name, p_ar->cmsm_timer);
             p_ar->cmsm_timer = UINT32_MAX;   /* unused */
          }
-         if (pf_scheduler_add(p_ar->ar_param.cm_initiator_activity_timeout_factor*100*1000,   /* time in us */
+         if (pf_scheduler_add(net, p_ar->ar_param.cm_initiator_activity_timeout_factor*100*1000,   /* time in us */
             cmsm_sync_name, pf_cmsm_timeout, (void *)p_ar, &p_ar->cmsm_timer) != 0)
          {
             p_ar->cmsm_timer = UINT32_MAX;   /* unused */

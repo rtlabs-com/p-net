@@ -182,7 +182,7 @@ void pf_get_ir_info_request(
 #endif
 
 /**
- * Extract a DCE RPC header from a buffer.
+ * Extract a DCE RPC header from a raw UDP data buffer.
  * @param p_info           In:   The parser information.
  * @param p_pos            InOut:The current parsing position.
  * @param p_rpc            Out:  Destination struture.

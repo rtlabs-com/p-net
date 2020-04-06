@@ -30,17 +30,20 @@ void pf_cmio_show(
 
 /**
  * Handle CMDEV events.
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param event            In:   The CMDEV event.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
 int pf_cmio_cmdev_state_ind(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pnet_event_values_t     event);
 
 /**
  * Handle CPM start/stop events of a specific AR.
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param crep             In:   The IOCR instance.
  * @param start            In:   Start or Stop information.
@@ -48,6 +51,7 @@ int pf_cmio_cmdev_state_ind(
  *          -1 if an error occurred.
  */
 int pf_cmio_cpm_state_ind(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    uint16_t                crep,
    bool                    start);

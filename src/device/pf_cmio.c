@@ -81,15 +81,18 @@ static void pf_cmio_set_state(
  * @internal
  * Poll each output IOCR (CPM) if they have received data from the controller.
  *
- * This is a scheduler call-back function. Do not change its argument list!
+ * This is a callback for the scheduler. Arguments should fulfill pf_scheduler_timeout_ftn_t
+ *
  * When in state PF_CMIO_STATE_WDATA this function polls (every 100ms) all CPM
  * to see if data has arrived from the controller.
  * If CPM data has arrived in state PF_CMIO_STATE_WDATA then notify CMDEV, else
  * schedule another call in 100ms.
+ * @param net              InOut: The p-net stack instance
  * @param arg              In:   The AR instance.
  * @param current_time     In:   The current time.
  */
 static void pf_cmio_timer_expired(
+   pnet_t                  *net,
    void                    *arg,
    uint32_t                current_time)
 {
@@ -111,8 +114,8 @@ static void pf_cmio_timer_expired(
             }
          }
       }
-      pf_cmdev_cmio_info_ind(p_ar, data_possible);
-      pf_scheduler_add(PF_CMIO_TIMER_PERIOD,
+      pf_cmdev_cmio_info_ind(net, p_ar, data_possible);
+      pf_scheduler_add(net, PF_CMIO_TIMER_PERIOD,
          cmio_sched_name, pf_cmio_timer_expired, p_ar, &p_ar->cmio_timer);
    }
    else
@@ -123,6 +126,7 @@ static void pf_cmio_timer_expired(
 }
 
 int pf_cmio_cmdev_state_ind(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pnet_event_values_t     event)
 {
@@ -182,7 +186,7 @@ int pf_cmio_cmdev_state_ind(
       else if (event == PNET_EVENT_PRMEND)
       {
          p_ar->cmio_timer_run = true;
-         pf_scheduler_add(PF_CMIO_TIMER_PERIOD,
+         pf_scheduler_add(net, PF_CMIO_TIMER_PERIOD,
             cmio_sched_name, pf_cmio_timer_expired, p_ar, &p_ar->cmio_timer);
 
          pf_cmio_set_state(p_ar, PF_CMIO_STATE_WDATA);
@@ -219,6 +223,7 @@ int pf_cmio_cmdev_state_ind(
 }
 
 int pf_cmio_cpm_state_ind(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    uint16_t                crep,
    bool                    start)
@@ -251,7 +256,7 @@ int pf_cmio_cpm_state_ind(
          LOG_INFO(PNET_LOG, "CMIO(%d): CPM State Ind (crep=%u) start=%s\n", __LINE__, crep, start?"true":"false");
 
          /* if (crep != crep.mcpm) not possible - handled elsewhere */
-         (void)pf_cmdev_state_ind(p_ar, PNET_EVENT_ABORT);
+         (void)pf_cmdev_state_ind(net, p_ar, PNET_EVENT_ABORT);
       }
       break;
    }

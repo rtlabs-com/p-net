@@ -47,6 +47,7 @@ int pf_diag_exit(void);
 
 /**
  * Add a diagnosis entry.
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param api_id           In:   The API.
  * @param slot_nbr         In:   The slot.
@@ -64,6 +65,7 @@ int pf_diag_exit(void);
  *          -1 if an error occurred.
  */
 int pf_diag_add(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    uint32_t                api_id,
    uint16_t                slot_nbr,
@@ -94,6 +96,7 @@ int pf_diag_add(
  * USI in manufacturer-specific range) or the extended channel additional
  * value is updated.
  *
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param api_id           In:   The API.
  * @param slot_nbr         In:   The slot.
@@ -109,6 +112,7 @@ int pf_diag_add(
  *          -1 if an error occurred.
  */
 int pf_diag_update(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    uint32_t                api_id,
    uint16_t                slot_nbr,
@@ -133,6 +137,7 @@ int pf_diag_update(
  * - Channel properties (the channel direction part only).
  * - Channel error type.
  *
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param api_id           In:   The API.
  * @param slot_nbr         In:   The slot.
@@ -145,6 +150,7 @@ int pf_diag_update(
  *          -1 if an error occurred.
  */
 int pf_diag_remove(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    uint32_t                api_id,
    uint16_t                slot_nbr,

@@ -190,6 +190,7 @@ void pf_put_ar_vendor_result(
 
 /**
  * Insert an AR Data block into a buffer.
+ * @param net              InOut: The p-net stack instance
  * @param is_big_endian    In:   Endianness of the destination buffer.
  * @param p_ar             In:   Contains the AR to insert (NULL for "All ARs").
  * @param api_id           In:   Specific API to insert if p_ar != NULL.
@@ -198,6 +199,7 @@ void pf_put_ar_vendor_result(
  * @param p_pos            InOut:Position in destination buffer.
  */
 void pf_put_ar_data(
+   pnet_t                  *net,
    bool                    is_big_endian,
    pf_ar_t                 *p_ar,
    uint32_t                api_id,
@@ -263,12 +265,14 @@ void pf_put_record_data_read(
 
 /**
  * Insert I&M0 filter data into a buffer.
+ * @param net              InOut: The p-net stack instance
  * @param is_big_endian    In:   Endianness of the destination buffer.
  * @param res_len          In:   Size of destination buffer.
  * @param p_bytes          Out:  Destination buffer.
  * @param p_pos            InOut:Position in destination buffer.
  */
 void pf_put_im_0_filter_data(
+   pnet_t                  *net,
    bool                    is_big_endian,
    uint16_t                res_len,
    uint8_t                 *p_bytes,
@@ -343,11 +347,14 @@ void pf_put_im_3(
  *    PF_DEV_FILTER_LEVEL_SLOT means "Include all sub-slots of slot" specified by api_id and slot_nbr.
  *    PF_DEV_FILTER_LEVEL_API means "Include all slots and sub-slots of API id" specified by api_id.
  *    PF_DEV_FILTER_LEVEL_DEVICE essentially means "No filtering" on API id, slot_nbr or subslot_nbr.
- * stop_level specifies how much data is being included.
+ *
+ * stop_level specifies how much data is being included:
  *    PF_DEV_FILTER_LEVEL_SUBSLOT means "Include all levels".
  *    PF_DEV_FILTER_LEVEL_SLOT means "Do not include sub-slots".
  *    PF_DEV_FILTER_LEVEL_API means "Do not include slots or sub-slots".
  *    PF_DEV_FILTER_LEVEL_DEVICE means "Only include API count".
+ *
+ * @param net              InOut: The p-net stack instance
  * @param is_big_endian    In:   Endianness of the destination buffer.
  * @param block_version_low In:  The minor version number of the block to insert.
  * @param block_type       In:   Specifies REAL or EXP ident number to insert.
@@ -362,6 +369,7 @@ void pf_put_im_3(
  * @param p_pos            InOut:Position in destination buffer.
  */
 void pf_put_ident_data(
+   pnet_t                  *net,
    bool                    is_big_endian,
    uint8_t                 block_version_low,
    pf_block_type_values_t  block_type,
@@ -595,6 +603,7 @@ void pf_put_input_data(
  *    PF_DIAG_FILTER_M_REQ          : Only Maintenance required.
  *    PF_DIAG_FILTER_M_DEM          : Only Maintenance demanded.
  *
+ * @param net              InOut: The p-net stack instance
  * @param is_big_endian    In:   Endianness of the destination buffer.
  * @param filter_level     In:   The filter level.
  * @param diag_filter      In:   The diag type filter.
@@ -607,6 +616,7 @@ void pf_put_input_data(
  * @param p_pos            InOut:Position in destination buffer.
  */
 void pf_put_diag_data(
+   pnet_t                  *net,
    bool                    is_big_endian,
    pf_dev_filter_level_t   filter_level,
    pf_diag_filter_level_t  diag_filter,

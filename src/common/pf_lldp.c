@@ -55,10 +55,7 @@ typedef enum lldp_pnio_subtype_values
    /* 0x09..0xff reserved */
 } lldp_pnio_subtype_values_t;
 
-/* This is the 'id' argument to use in os_eth_send */
-static int                    pf_lldp_send_if_id = -1;
-
-static const os_ethaddr_t  lldp_dst_addr = {
+static const pnet_ethaddr_t   lldp_dst_addr = {
    { 0x01, 0x80, 0xc2, 0x00, 0x00, 0x0e }       /* LLDP Multicast */
 };
 
@@ -137,11 +134,11 @@ static void lldp_add_chassis_id_tlv(
    if (len == 0)
    {
       /* Use the MAC address */
-      pf_lldp_tlv_header(p_buf, p_pos, LLDP_TYPE_CHASSIS_ID, 1+sizeof(os_ethaddr_t));
+      pf_lldp_tlv_header(p_buf, p_pos, LLDP_TYPE_CHASSIS_ID, 1+sizeof(pnet_ethaddr_t));
 
       pf_put_byte(LLDP_SUBTYPE_CHASSIS_ID_MAC, 1500, p_buf, p_pos);
-      os_cpy_mac_addr(&p_buf[*p_pos]);    /* ToDo: Shall be device MAC */
-      (*p_pos) += sizeof(os_ethaddr_t);
+      memcpy(&p_buf[*p_pos], p_cfg->eth_addr.addr, sizeof(pnet_ethaddr_t)); /* ToDo: Shall be device MAC */
+      (*p_pos) += sizeof(pnet_ethaddr_t);
    }
    else
    {
@@ -226,11 +223,11 @@ static void lldp_add_chassis_mac(
    uint8_t                 *p_buf,
    uint16_t                *p_pos)
 {
-   pf_lldp_pnio_header(p_buf, p_pos, LLDP_TYPE_ORG_SPEC, 1+sizeof(os_ethaddr_t));
+   pf_lldp_pnio_header(p_buf, p_pos, LLDP_TYPE_ORG_SPEC, 1+sizeof(pnet_ethaddr_t));
 
    pf_put_byte(LLDP_PNIO_SUBTYPE_INTERFACE_MAC, 1500, p_buf, p_pos);
-   os_cpy_mac_addr(&p_buf[*p_pos]);       /* ToDo: Should be device MAC */
-   (*p_pos) += sizeof(os_ethaddr_t);
+   memcpy(&p_buf[*p_pos], p_cfg->eth_addr.addr, sizeof(pnet_ethaddr_t)); /* ToDo: Should be device MAC */
+   (*p_pos) += sizeof(pnet_ethaddr_t);
 }
 
 /**
@@ -258,18 +255,20 @@ static void lldp_add_ieee_mac_phy(
 /**
  * Insert the optional management data TLV into a buffer.
  * It is mandatory for ProfiNet.
+ * @param net              InOut: The p-net stack instance
  * @param p_cfg            In:   The Profinet configuration.
  * @param p_buf            InOut:The buffer.
  * @param p_pos            InOut:The position in the buffer.
  */
 static void lldp_add_management(
+   pnet_t                  *net,
    pnet_cfg_t              *p_cfg,
    uint8_t                 *p_buf,
    uint16_t                *p_pos)
 {
    os_ipaddr_t             ipaddr = 0;
 
-   pf_cmina_get_ipaddr(&ipaddr);
+   pf_cmina_get_ipaddr(net, &ipaddr);
 
    pf_lldp_tlv_header(p_buf, p_pos, LLDP_TYPE_MANAGEMENT, 12);
 
@@ -282,7 +281,8 @@ static void lldp_add_management(
    pf_put_byte(0, 1500, p_buf, p_pos);       /* OID string length: 0 => Not supported */
 }
 
-void pf_lldp_send(void)
+void pf_lldp_send(
+   pnet_t                  *net)
 {
    os_buf_t                *p_lldp_buffer = os_buf_alloc(1500);
    uint8_t                 *p_buf = NULL;
@@ -291,7 +291,7 @@ void pf_lldp_send(void)
 
    LOG_INFO(PF_ETH_LOG, "LLDP: Sending LLDP frame\n");
 
-   pf_fspm_get_cfg(&p_cfg);
+   pf_fspm_get_cfg(net, &p_cfg);
    /*
     * LLDP-PDU ::=  LLDPChassis, LLDPPort, LLDPTTL, LLDP-PNIO-PDU, LLDPEnd
     *
@@ -348,8 +348,8 @@ void pf_lldp_send(void)
       {
          pos = 0;
          pf_put_mem(&lldp_dst_addr, sizeof(lldp_dst_addr), 1500, p_buf, &pos);
-         os_cpy_mac_addr(&p_buf[pos]);       /* ToDo: Shall be port MAC address */
-         pos += sizeof(os_ethaddr_t);
+         memcpy(&p_buf[pos], p_cfg->eth_addr.addr, sizeof(pnet_ethaddr_t)); /* ToDo: Shall be port MAC address */
+         pos += sizeof(pnet_ethaddr_t);
 
          /* Add FrameID */
          pf_put_uint16(true, OS_ETHTYPE_LLDP, 1500, p_buf, &pos);
@@ -363,14 +363,14 @@ void pf_lldp_send(void)
          lldp_add_port_status(p_cfg, p_buf, &pos);
          lldp_add_chassis_mac(p_cfg, p_buf, &pos);
          lldp_add_ieee_mac_phy(p_cfg, p_buf, &pos);
-         lldp_add_management(p_cfg, p_buf, &pos);
+         lldp_add_management(net, p_cfg, p_buf, &pos);
 
          /* Add end of LLDP-PDU marker */
          pf_lldp_tlv_header(p_buf, &pos, LLDP_TYPE_END, 0);
 
          p_lldp_buffer->len = pos;
 
-        if (os_eth_send(pf_lldp_send_if_id, p_lldp_buffer) <= 0)
+        if (os_eth_send(net->eth_handle, p_lldp_buffer) <= 0)
          {
             LOG_ERROR(PNET_LOG, "LLDP(%d): Error from os_eth_send(lldp)\n", __LINE__);
          }
@@ -381,8 +381,7 @@ void pf_lldp_send(void)
 }
 
 void pf_lldp_init(
-      int                  if_id)
+   pnet_t                  *net)
 {
-   pf_lldp_send_if_id = if_id;
-   pf_lldp_send();
+   pf_lldp_send(net);
 }

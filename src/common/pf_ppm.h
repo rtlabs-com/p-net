@@ -21,40 +21,55 @@ extern "C"
 {
 #endif
 
+
+/**
+ * Initialize the PPM component.
+ * @param net              InOut: The p-net stack instance
+ */
+void pf_ppm_init(
+   pnet_t                  *net);
+
 /**
  * Instantiate and start a PPM instance.
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param crep             In:   The IOCR index.
  * @return  0  if the PPM instance was activated.
  *          -1 if an error occurred.
  */
 int pf_ppm_activate_req(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    uint32_t                crep);
 
 /**
  * Close and de-commission a PPM instance.
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param crep             In:   The IOCR index.
  * @return  0  if the PPM instance was closed.
  *          -1 if an error occurred.
  */
 int pf_ppm_close_req(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    uint32_t                crep);
 
 /**
  * Set the data and IOPS for a sub-module.
+ * @param net              InOut: The p-net stack instance
  * @param api_id           In:   The API id.
  * @param slot_nbr         In:   The slot number.
  * @param subslot_nbr      In:   The sub-slot number.
  * @param p_data           In:   The application data.
  * @param data_len         In:   The length of the application data.
  * @param iops             In:   The IOPS of the application data.
+ * @param iops_len         In:   The length of the IOPS.
  * @return  0  if the input data and IOPS was set.
  *          -1 if an error occurred.
  */
 int pf_ppm_set_data_and_iops(
+   pnet_t                  *net,
    uint32_t                api_id,
    uint16_t                slot_nbr,
    uint16_t                subslot_nbr,
@@ -65,6 +80,7 @@ int pf_ppm_set_data_and_iops(
 
 /**
  * Set IOCS for a sub-module.
+ * @param net              InOut: The p-net stack instance
  * @param api_id           In:   The API id.
  * @param slot_nbr         In:   The slot number.
  * @param subslot_nbr      In:   The sub-slot number.
@@ -74,6 +90,7 @@ int pf_ppm_set_data_and_iops(
  *          -1 if an error occurred.
  */
 int pf_ppm_set_iocs(
+   pnet_t                  *net,
    uint32_t                api_id,
    uint16_t                slot_nbr,
    uint16_t                subslot_nbr,
@@ -82,6 +99,7 @@ int pf_ppm_set_iocs(
 
 /**
  * Retrieve the data and IOPS for a sub-module.
+ * @param net              InOut: The p-net stack instance
  * @param api_id           In:   The API id.
  * @param slot_nbr         In:   The slot number.
  * @param subslot_nbr      In:   The sub-slot number.
@@ -95,6 +113,7 @@ int pf_ppm_set_iocs(
  *          -1 if an error occurred.
  */
 int pf_ppm_get_data_and_iops(
+   pnet_t                  *net,
    uint32_t                api_id,
    uint16_t                slot_nbr,
    uint16_t                subslot_nbr,
@@ -105,6 +124,7 @@ int pf_ppm_get_data_and_iops(
 
 /**
  * Retrieve IOCS for a sub-module.
+ * @param net              InOut: The p-net stack instance
  * @param api_id           In:   The API id.
  * @param slot_nbr         In:   The slot number.
  * @param subslot_nbr      In:   The sub-slot number.
@@ -115,6 +135,7 @@ int pf_ppm_get_data_and_iops(
  *          -1 if an error occurred.
  */
 int pf_ppm_get_iocs(
+   pnet_t                  *net,
    uint32_t                api_id,
    uint16_t                slot_nbr,
    uint16_t                subslot_nbr,

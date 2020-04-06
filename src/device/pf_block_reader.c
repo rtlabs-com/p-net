@@ -146,7 +146,7 @@ static uint32_t pf_get_uint32(
 
 /**
  * @internal
- * Extract a UUID frmo a buffer.
+ * Extract a UUID from a buffer.
  * @param p_info           In:   The parser state.
  * @param p_pos            InOut:Position in the buffer.
  * @param p_dest           Out:  Destination buffer.
