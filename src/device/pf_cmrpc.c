@@ -1617,6 +1617,7 @@ static int pf_cmrpc_rm_read_ind(
       }
       else
       {
+         /* Note that for "read implicit" we have no AR */
          if ((p_ar == NULL) && (opnum != PF_RPC_DEV_OPNUM_READ_IMPLICIT))
          {
             /* In case an AR is needed try to get the target AR */
