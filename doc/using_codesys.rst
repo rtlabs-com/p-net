@@ -19,6 +19,9 @@ Install it by double-clicking the ``.package`` file.
 
 Restart the program after the installation.
 
+If you use the trial version, you need to restart the Codesys runtime on the
+Raspberry Pi every two hours.
+
 
 Scan network to find Raspberry Pi, and install the Codesys runtime onto it
 --------------------------------------------------------------------------
@@ -63,12 +66,12 @@ Double-click the "Ethernet" node in the left menu. Select interface "eth0".
 The IP address will be updated accordingly.
 
 Double-click the "PN_controller" node in the left menu. Adjust the IP range
-using "First IP" and "Last IP" to both have the IP-addresses of your
+using "First IP" and "Last IP" to both have the existing IP-address of your
 IO-device (for example a Linux laptop or embedded Linux board running the
 sample_app).
 
 Double-click the "rt_labs_DEMO_device" node in the left menu. Set the
-IP-address to the address of your IO-device.
+IP-address to the existing address of your IO-device.
 
 
 Structured Text programming language for PLCs
@@ -150,6 +153,25 @@ Running the application
 See the "Tutorial" page.
 
 
+Adjust PLC timing settings
+--------------------------
+It is possible to adjust the cycle time that the IO-controller (PLC) is using
+for cyclic data communication with an IO-device.
+
+In the left menu, double-click the "rt_labs_DEMO_device", and open the "General"
+tab. The "Communication" section shows the send clock in milliseconds, as read
+from the GSDML file. By using the "Reduction ratio" you can slow down the
+communication, by multiplying the cycle time by the factor given in the
+dropdown.
+
+It is also possible to increase the watchdog time, after which the PLC will set
+an alarm for missing incoming cyclic data. The watchdog will also shut down the
+communication, and trigger a subsequent restart of communication.
+
+In case of problems, increase the reduction ratio (and timeout) value a lot,
+and then gradually reduce it to find the smallest usable value.
+
+
 Writing and reading IO-device parameters
 ----------------------------------------
 The parameters for different submodules are written as part of normal startup.
@@ -192,3 +214,62 @@ the topmost row. The states of these boolean fields are shown:
 
 If there is no connection at all to the IO-device, the state will shift to
 xBusy from xError once every 5 seconds.
+
+
+Change IP address of IO-device
+------------------------------
+Change the IP address by double-clicking the "rt_labs_DEMO_device" node
+in the left menu, using the "General" tab. Set the IP-address to new value.
+
+The IO-controller will send the new IP address in a "DCP Set" message to the
+IO-device having the given station name. Then it will use ARP messages to
+the IO-device to find its MAC address, and to detect IP address collisions.
+
+
+Scan for devices, assign IP address, reset devices and change station name
+--------------------------------------------------------------------------
+In the left side menu, right-click the PN_Controller and select "Scan for
+devices". The running IO-devices will show up, and it is possible to see which
+modules are plugged into which slot.
+
+This is implemented in Codesys by sending the "Ident request, all" DCP
+message from the IO-controller.
+It works also if there are no IO-devices loaded in the left side hierarchy menu.
+An IO-device will respond with the "Ident OK" DCP message. Then the IO-controller
+will do a "Read implicit request" for "APIData", on which the IO device
+responds with the APIs it supports. A similar request for
+"RealIdentificationData for one API" is done by the IO-controller, on which the
+IO-device responds which modules (and submodules) are plugged into which slots
+(and subslots).
+
+To factory reset a device, select it in the list of scanned devices and click
+the "reset" button.
+
+At a factory reset, the IO-controller sends a "Set request" DCP message
+with suboption "Reset factory settings". After sending a response, the
+IO-device will do the factory reset and also send a LLDP message with the
+new values. Then the IO-controller sends a "Ident request, all", to which
+the IO-device responds.
+
+To modify the station name or IP address, change the corresponding fields
+in the list of scanned devices, and the click "Set name and IP".
+
+The IO-controller sends a "Set request" DCP message
+with suboptions "Name of station" and "IP parameter". After sending a
+response, the IO-device will change IP address and station name. It will
+also send a LLDP message with the new values. Then the
+IO-controller sends a "Ident request, all", to which the IO-device responds.
+
+There is functionality to flash a LED on an IO-device. Select your device in
+the list of scanned devices, and click the "Blink LED" button. The button
+remains activated until you click it again.
+
+LED-blinking is done by sending the "Set request" DCP message with suboption
+"Signal" once every 5 seconds as long as the corresponding button is activated.
+
+In order the read Identification & Maintenance (I&M) data, the device needs to
+be present as an IO-device connected to the IO-controller in the left side menu.
+Select the device in the list of scanned devices, and click the "I&M" button.
+
+Reading I&M data is done by the IO-controller by sending four "Read implicit"
+request DCP messages, one for each of I&M0 to I&M3.

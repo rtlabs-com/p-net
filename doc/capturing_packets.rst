@@ -21,6 +21,18 @@ For details on how to add yourself to the ``wireshark`` user group, see
 https://linuxhint.com/install_wireshark_ubuntu/
 
 
+Parsing Profinet data with Wireshark
+------------------------------------
+It is possible to load a GSDML file into recent versions of Wireshark, for
+parsing the cyclic data.
+In the Wireshark menu, select Edit > Preferences > Protocols > PNIO.
+Enter the directory where you have your GSDML file.
+
+For this functionality to work, the Wireshark capture must include the start-up
+sequence. When a packet is interpreted according to a GSDML file, the name of
+the GSDML file is displayed in the detail view of the packet.
+
+
 tcpdump
 -------
 When running on an embedded Linux board, it can be convenient to run without

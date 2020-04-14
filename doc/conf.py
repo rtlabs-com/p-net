@@ -4,6 +4,8 @@
 # list see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
+import time
+
 # -- Path setup --------------------------------------------------------------
 
 # If extensions (or modules to document with autodoc) are in another directory,
@@ -30,6 +32,7 @@ author = 'rt-labs'
 extensions = [
     "breathe",
     "recommonmark",
+    "rst2pdf.pdfbuilder",
     "sphinx_rtd_theme",
     "sphinxcontrib.spelling",
 ]
@@ -60,10 +63,19 @@ html_theme = "sphinx_rtd_theme"
 html_static_path = ['static']
 
 html_last_updated_fmt = '%Y-%m-%d %H:%M'
-breathe_projects = { "p-net": "../build/xml/" }
-breathe_default_project = "p-net"
+breathe_projects = { project: "../build/xml/" }
+breathe_default_project = project
 
 html_css_files = [
     '../../css/custom_rtd.css',  # Requested by web developer
     'css/fix_table_width.css'
     ]
+
+
+# -- Options for PDF output -------------------------------------------------
+
+pdf_filename = "{}_{}".format(project.replace("-", ""), time.strftime("%Y-%m-%d"))
+pdf_title = "{} Profinet device stack".format(project)
+pdf_documents = [('index', pdf_filename, pdf_title, author),]
+
+pdf_break_level = 2

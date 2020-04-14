@@ -13,6 +13,19 @@
  * full license information.
  ********************************************************************/
 
+/**
+ * @file
+ * @brief Utility functions for interpreting data in buffers.
+ *
+ * For example uint16, protocol headers and protocol messages can be
+ * read from the buffers.
+ *
+ * Most functions have (at least) an input buffer and a position in the buffer
+ * as input arguments.
+ *
+ */
+
+
 #ifdef UNIT_TEST
 
 #endif
@@ -74,7 +87,7 @@ uint8_t pf_get_byte(
    else if (*p_pos >= p_info->len)
    {
       /* Reached end of buffer */
-      LOG_DEBUG(PNET_LOG, "BR(%d): End of buffer reached\n", __LINE__);
+      LOG_DEBUG(PNET_LOG, "BR(%d): End of buffer reached when looking for a byte\n", __LINE__);
       p_info->result = PF_PARSE_END_OF_INPUT;
    }
    else if (p_info->p_buf == NULL)

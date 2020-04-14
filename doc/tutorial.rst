@@ -12,8 +12,8 @@ The IO-device sample application can be running on:
 
 * Raspberry Pi
 * Some other embedded Linux board
-* A Linux laptop
-* An embedded board running the RT-kernel
+* A Linux laptop (or a Linux guest in Virtualbox)
+* An embedded board running RT-kernel
 
 A PLC (Programmable Logic Controller) is used as a Profinet IO-controller. It
 could be a Siemens Simatic PLC, or a Codesys soft PLC.
@@ -26,8 +26,8 @@ Raspberry Pi.
 Functionality
 -------------
 The LED on the IO-device is controlled by the IO-controller (PLC), and is
-normally flashing. With button1 on the IO-device it is possible to turn on
-and off the flashing of the LED. Button2 triggers sending an alarm from the
+normally flashing. With button 1 on the IO-device it is possible to turn on
+and off the flashing of the LED. Button 2 triggers sending an alarm from the
 IO-device.
 
 The resulting Ethernet traffic can be studied (see below).
@@ -54,30 +54,9 @@ The GSDML file for the sample app defines these modules:
 | 8 bit out            |                               | 1 byte                           |
 +----------------------+-------------------------------+----------------------------------+
 
-There are 4 slots for the sample app (except slot 0 which is used by the DAP
-module), and the modules fit in any of the slots 1 to 4. In this example we
-will use the "8 bit in + 8 bit out" module.
-
-
-Sample app data payload
------------------------
-The periodic data sent from the sample application IO-device to IO-controller
-is one byte:
-
-* Lowest 7 bits: A counter which has its value updated every 10 ms
-* Most significant bit: Button1
-
-When looking in Wireshark, look at the "Profinet IO Cyclic Service Data Unit",
-which is 40 bytes. The relevant byte it the fourth byte from left in this
-block.
-
-From the IO-controller to IO-device is one byte sent:
-
-* Most significant bit: LED
-
-When looking in Wireshark, look at the "Profinet IO Cyclic Service Data Unit",
-which is 40 bytes. The relevant byte it the fifth byte from left in this
-block. The value toggles between 0x80 and 0x00.
+There are 4 slots for the sample app (in addition to slot 0 which is used by the
+DAP module), and the modules fit in any of the slots 1 to 4. In this example we
+will use the "8 bit in + 8 bit out" module in slot 1.
 
 
 Set up the nodes
@@ -85,10 +64,24 @@ Set up the nodes
 To setup Raspbian on a Raspberry Pi, and connect buttons and a LED, see
 "Install Raspbian on the Raspberry Pi (by using a Linux laptop)"
 
-See "Getting started on Linux" and "Using Codesys soft PLC".
+See "Getting started on Linux" to set up the sample application as a Profinet
+IO-device (possibly on a Raspberry Pi). See "Using Codesys soft PLC" for how
+to setup another Raspberry Pi as an IO-controller (PLC).
 
 On the page "Capturing and analyzing Ethernet packets" is a description given
 on how to study the network traffic.
+
+For the sample application usage instructions, see the See "Getting started on
+Linux".
+
+The LED is controlled by the Linux IO-device by writing to a file, for example
+``/sys/class/gpio/gpio17/value``.
+
+If you do not have a physical LED, you can manually create a text file
+(for example ``my_LED.txt``), and give its path to the sample application.
+A ``0`` or ``1`` will be written to the file upon LED state changes.
+Also the button files can be plain text files. Manually write ``0`` or ``1``
+in a file to simulate the button state.
 
 
 Print-out from Linux sample application
@@ -138,55 +131,111 @@ This is the typical output from the Linux sample application at startup::
     Callback on event PNET_EVENT_DATA
 
 
+Timing issues
+-------------
+If running on a Linux machine whithout realtime patches, you might face timeout
+problems. It can look like::
+
+   Callback on event PNET_EVENT_ABORT. Error class: 253 Error code: 6
+
+where the error code most often is 5 or 6.
+See the "Real-time properties of Linux" page in this document for solutions, and
+the "Using Codesys soft PLC" page for workarounds.
+
+
+Sample app data payload
+-----------------------
+The periodic data sent from the sample application IO-device to IO-controller
+is one byte:
+
+* Lowest 7 bits: A counter which has its value updated every 10 ms
+* Most significant bit: Button1
+
+When looking in Wireshark, look at the "Profinet IO Cyclic Service Data Unit",
+which is 40 bytes. The relevant byte it the fourth byte from left in this
+block.
+
+Details of the 40 bytes from I0-device to IO-controller:
+
+* IOPS from slot 0, subslot 1
+* IOPS from slot 0, subslot 0x8000
+* IOPS from slot 0, subslot 0x8001
+* IO data from slot 1, subslot 1 (input part of the module)
+* IOPS from slot 1, subslot 1 (input part of the module)
+* IOCS from slot 1, subslot 1 (output part of the module)
+* (Then 34 bytes of padding, which is 0)
+
+From the IO-controller to IO-device is one data byte sent:
+
+* Most significant bit: LED
+
+When looking in Wireshark, look at the "Profinet IO Cyclic Service Data Unit",
+which is 40 bytes. The relevant byte is the fifth byte from left in this
+block. The value toggles between 0x80 and 0x00.
+
+Details of the 40 bytes from IO-controller to I0-device:
+
+* IOCS to slot 0, subslot 1
+* IOCS to slot 0, subslot 0x8000
+* IOCS to slot 0, subslot 0x8001
+* IOCS to slot 1, subslot 1 (input part of the module)
+* IO data to slot 1, subslot 1 (output part of the module)
+* IOPS to slot 1, subslot 1 (output part of the module)
+* (Then 34 bytes of padding, which is 0)
+
+Note that Wireshark can help parsing the cyclic data by using the GSDML file.
+See the Wireshark page in this document.
+
+
 Ethernet frames sent during start-up
 ------------------------------------
 For this example, the IO-controller is started first, and then the IO-device.
 
-+---------------------------+----------+------------------------------------------------------------------------------------------------------------+
-| Sender                    | Protocol | Content                                                                                                    |
-+===========================+==========+============================================================================================================+
-| IO-controller (broadcast) | LLDP     | Name, MAC, IP address, port name (sent every 5 seconds)                                                    |
-+---------------------------+----------+------------------------------------------------------------------------------------------------------------+
-| IO-controller (broadcast) | PN-DCP   | "Ident req". Looking for "rt-labs-dev" (sent every 2.5 seconds)                                            |
-+---------------------------+----------+------------------------------------------------------------------------------------------------------------+
-| IO-controller (broadcast) | ARP      | Is someone else using my IP?                                                                               |
-+---------------------------+----------+------------------------------------------------------------------------------------------------------------+
-| IO-device (broadcast)     | LLDP     | Name, MAC, IP address, port name (sent every 5 seconds??)                                                  |
-+---------------------------+----------+------------------------------------------------------------------------------------------------------------+
-| IO-device (broadcast)     | PN-DCP   | "Hello req". Station name "rt-labs-dev", IP address, gateway, vendor, device (sent every 3 seconds)        |
-+---------------------------+----------+------------------------------------------------------------------------------------------------------------+
-| IO-device                 | PN-DCP   | "Ident Ok" Identify response. Station name "rt-labs-dev", IP address, gateway, VendorID, DeviceID, options |
-+---------------------------+----------+------------------------------------------------------------------------------------------------------------+
-| IO-controller             | PN-DCP   | "Set Req" Set IP request. Use IP address and gateway.                                                      |
-+---------------------------+----------+------------------------------------------------------------------------------------------------------------+
-| IO-device                 | PN-DCP   | "Set Ok" Status.                                                                                           |
-+---------------------------+----------+------------------------------------------------------------------------------------------------------------+
-| IO-controller (broadcast) | ARP      | Who has <IO-device IP address>?                                                                            |
-+---------------------------+----------+------------------------------------------------------------------------------------------------------------+
-| IO-device                 | ARP      | IP <IO-device IP address> is at <IO-device MAC address>                                                    |
-+---------------------------+----------+------------------------------------------------------------------------------------------------------------+
-| IO-controller             | PNIO-CM  | "Connect request" Controller MAC, timeout, input + output data (CR), modules + submodules in slots         |
-+---------------------------+----------+------------------------------------------------------------------------------------------------------------+
-| IO-device                 | PNIO-CM  | "Connect response" MAC address, UDP port, input + output + alarm CR, station name                          |
-+---------------------------+----------+------------------------------------------------------------------------------------------------------------+
-| IO-device                 | PNIO-PS  | FrameID 0x8001. Cycle counter, provider stopped. 40 bytes data.                                            |
-+---------------------------+----------+------------------------------------------------------------------------------------------------------------+
-| IO-controller             | PNIO-PS  | FrameID 0x8000. Cycle counter, provider running. 40 bytes data.                                            |
-+---------------------------+----------+------------------------------------------------------------------------------------------------------------+
-| IO-controller             | PNIO-CM  | "Write request" API, slot, subslot, data.                                                                  |
-+---------------------------+----------+------------------------------------------------------------------------------------------------------------+
-| IO-device                 | PNIO-CM  | "Write response" API, slot, subslot, status.                                                               |
-+---------------------------+----------+------------------------------------------------------------------------------------------------------------+
-| IO-controller             | PNIO-CM  | "Control request" (DControl). Command: ParameterEnd.                                                       |
-+---------------------------+----------+------------------------------------------------------------------------------------------------------------+
-| IO-device                 | PNIO-CM  | "Control response" Command: Done                                                                           |
-+---------------------------+----------+------------------------------------------------------------------------------------------------------------+
-| IO-device                 | PNIO-PS  | FrameID 0x8001. Cycle counter, provider running. 40 bytes data.                                            |
-+---------------------------+----------+------------------------------------------------------------------------------------------------------------+
-| IO-device                 | PNIO-CM  | "Control request" (CControl). Command: ApplicationReady                                                    |
-+---------------------------+----------+------------------------------------------------------------------------------------------------------------+
-| IO-controller             | PNIO-CM  | "Control response" Command: ApplicationReadyDone                                                           |
-+---------------------------+----------+------------------------------------------------------------------------------------------------------------+
++---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
+| Sender                    | Protocol | Content                                                                                                              |
++===========================+==========+======================================================================================================================+
+| IO-controller (broadcast) | LLDP     | Name, MAC, IP address, port name (sent every 5 seconds)                                                              |
++---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
+| IO-controller (broadcast) | PN-DCP   | "Ident req". Looking for "rt-labs-dev" (sent every 2.5 seconds)                                                      |
++---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
+| IO-controller (broadcast) | ARP      | Is someone else using my IP?                                                                                         |
++---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
+| IO-device (broadcast)     | LLDP     | Name, MAC, IP address, port name (sent every 5 seconds??)                                                            |
++---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
+| IO-device (broadcast)     | PN-DCP   | "Hello req". Station name "rt-labs-dev", IP address, gateway, vendor, device (sent every 3 seconds)                  |
++---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
+| IO-device                 | PN-DCP   | "Ident Ok" Identify response. Station name "rt-labs-dev", IP address, netmask, gateway, VendorID, DeviceID, options  |
++---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
+| IO-controller             | PN-DCP   | "Set Req" Set IP request. Use IP address and gateway.                                                                |
++---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
+| IO-device                 | PN-DCP   | "Set Ok" Status.                                                                                                     |
++---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
+| IO-controller (broadcast) | ARP      | Who has <IO-device IP address>?                                                                                      |
++---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
+| IO-device                 | ARP      | IP <IO-device IP address> is at <IO-device MAC address>                                                              |
++---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
+| IO-controller             | PNIO-CM  | "Connect request" Controller MAC, timeout, input + output data (CR), modules + submodules in slots                   |
++---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
+| IO-device                 | PNIO-CM  | "Connect response" MAC address, UDP port, input + output + alarm CR, station name                                    |
++---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
+| IO-device                 | PNIO-PS  | FrameID 0x8001. Cycle counter, provider stopped. 40 bytes data.                                                      |
++---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
+| IO-controller             | PNIO-PS  | FrameID 0x8000. Cycle counter, provider running. 40 bytes data.                                                      |
++---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
+| IO-controller             | PNIO-CM  | "Write request" API, slot, subslot, data.                                                                            |
++---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
+| IO-device                 | PNIO-CM  | "Write response" API, slot, subslot, status.                                                                         |
++---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
+| IO-controller             | PNIO-CM  | "Control request" (DControl). Command: ParameterEnd.                                                                 |
++---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
+| IO-device                 | PNIO-CM  | "Control response" Command: Done                                                                                     |
++---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
+| IO-device                 | PNIO-PS  | FrameID 0x8001. Cycle counter, provider running. 40 bytes data.                                                      |
++---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
+| IO-device                 | PNIO-CM  | "Control request" (CControl). Command: ApplicationReady                                                              |
++---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
+| IO-controller             | PNIO-CM  | "Control response" Command: ApplicationReadyDone                                                                     |
++---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
 
 The order of the PNIO-PS frames is somewhat random in relation to PNIO-CM frames.
 
@@ -209,7 +258,7 @@ The order of the PNIO-PS frames is somewhat random in relation to PNIO-CM frames
 
 Ethernet frames sent at alarm
 -----------------------------
-Frames sent when pressing Button2
+Frames sent when pressing button 2.
 
 +---------------+----------+----------------------------------------------------------------------------------------+
 | Sender        | Protocol | Content                                                                                |
@@ -233,9 +282,13 @@ In the sample app, the input data is written to all input modules ("8 bit in +
 8 bit out" and "8 bit in"). The LED is controlled by the output module ("8 bit
 in + 8 bit out" or "8 bit out") with lowest slot number.
 
+The alarm triggered by button 2 is sent from the input module with lowest slot
+number (if any).
+
 
 Cyclic data for the different slots
 -----------------------------------
+This is an example if you populate slot 1 to 3 with different modules.
 
 +------+---------+--------------------------------------------+-----------------------------------------+--------------------------------------------+
 | Slot | Subslot | Description                                | | Contents of Input CR                  | | Contents of Output CR                    |
@@ -257,3 +310,10 @@ Cyclic data for the different slots
 +------+---------+--------------------------------------------+-----------------------------------------+--------------------------------------------+
 
 Note that the submodules (in subslots) in slot 0 do not send any cyclic data, but they behave as inputs (as they send cyclic IOPS).
+
+
+Create your own application
+---------------------------
+If you prefer not to implement some of the callbacks, set the corresponding
+fields in the configuration struct to NULL instead of a function pointer.
+See the API documentation on which callbacks that are optional.

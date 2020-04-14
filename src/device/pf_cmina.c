@@ -188,6 +188,13 @@ void pf_cmina_dcp_set_commit(
 
    if (net->cmina_commit_ip_suite == true)
    {
+      LOG_DEBUG(PF_DCP_LOG,"CMINA(%d): Setting IP address: %u.%u.%u.%u  Station name: %s\n",
+         __LINE__,
+         (unsigned)((net->cmina_temp_dcp_ase.full_ip_suite.ip_suite.ip_addr >> 24) & 0xFF),
+         (unsigned)((net->cmina_temp_dcp_ase.full_ip_suite.ip_suite.ip_addr >> 16) & 0xFF),
+         (unsigned)((net->cmina_temp_dcp_ase.full_ip_suite.ip_suite.ip_addr >> 8) & 0xFF),
+         (unsigned)(net->cmina_temp_dcp_ase.full_ip_suite.ip_suite.ip_addr & 0xFF),
+         net->cmina_temp_dcp_ase.name_of_station);
       net->cmina_commit_ip_suite = false;
       os_set_ip_suite(net->interface_name,
                       &net->cmina_temp_dcp_ase.full_ip_suite.ip_suite.ip_addr,
@@ -324,6 +331,7 @@ int pf_cmina_dcp_set_ind(
             change_ip = (memcmp(&net->cmina_temp_dcp_ase.full_ip_suite.ip_suite, p_value, value_length) != 0);
 
             memcpy(&net->cmina_temp_dcp_ase.full_ip_suite.ip_suite, p_value, sizeof(net->cmina_temp_dcp_ase.full_ip_suite.ip_suite));
+            LOG_INFO(PF_DCP_LOG,"CMINA(%d): Change IP request. PF_DCP_SUB_IP_PAR New IP: 0x%"PRIxLEAST32"\n", __LINE__, net->cmina_temp_dcp_ase.full_ip_suite.ip_suite.ip_addr);
             if (temp == false)
             {
                net->cmina_perm_dcp_ase.full_ip_suite.ip_suite = net->cmina_temp_dcp_ase.full_ip_suite.ip_suite;
@@ -339,6 +347,7 @@ int pf_cmina_dcp_set_ind(
       case PF_DCP_SUB_IP_SUITE:
          if (value_length < sizeof(net->cmina_temp_dcp_ase.full_ip_suite))
          {
+            LOG_INFO(PF_DCP_LOG,"CMINA(%d): Change IP request. PF_DCP_SUB_IP_SUITE\n", __LINE__);
             change_ip = (memcmp(&net->cmina_temp_dcp_ase.full_ip_suite, p_value, value_length) != 0);
 
             memcpy(&net->cmina_temp_dcp_ase.full_ip_suite, p_value, value_length);
@@ -762,6 +771,20 @@ static const char *pf_cmina_state_to_string(
    return s;
 }
 
+/**
+ * @internal
+ * Print an IPv4 address (without newline)
+ *
+ * @param ip      In: IP address
+*/
+void pf_ip_address_show(uint32_t ip){
+   printf("%u.%u.%u.%u",
+      (unsigned)((ip >> 24) & 0xFF),
+      (unsigned)((ip >> 16) & 0xFF),
+      (unsigned)((ip >> 8) & 0xFF),
+      (unsigned)(ip & 0xFF));
+}
+
 void pf_cmina_show(
    pnet_t                  *net)
 {
@@ -779,14 +802,25 @@ void pf_cmina_show(
    printf("Perm device_vendor             : <%s>\n", net->cmina_perm_dcp_ase.device_vendor);
    printf("Temp device_vendor             : <%s>\n", net->cmina_temp_dcp_ase.device_vendor);
    printf("\n");
-   printf("Default IP                     : %02x%02x%02x%02x/%02x%02x%02x%02x   gateway : %02x%02x%02x%02x\n",
-      (unsigned)p_cfg->ip_addr.a, (unsigned)p_cfg->ip_addr.b, (unsigned)p_cfg->ip_addr.c, (unsigned)p_cfg->ip_addr.d,
-      (unsigned)p_cfg->ip_mask.a, (unsigned)p_cfg->ip_mask.b, (unsigned)p_cfg->ip_mask.c, (unsigned)p_cfg->ip_mask.d,
+   printf("Default IP  Netmask  Gateway   : %u.%u.%u.%u  ",
+      (unsigned)p_cfg->ip_addr.a, (unsigned)p_cfg->ip_addr.b, (unsigned)p_cfg->ip_addr.c, (unsigned)p_cfg->ip_addr.d);
+   printf("%u.%u.%u.%u  ",
+      (unsigned)p_cfg->ip_mask.a, (unsigned)p_cfg->ip_mask.b, (unsigned)p_cfg->ip_mask.c, (unsigned)p_cfg->ip_mask.d);
+   printf("%u.%u.%u.%u\n",
       (unsigned)p_cfg->ip_gateway.a, (unsigned)p_cfg->ip_gateway.b, (unsigned)p_cfg->ip_gateway.c, (unsigned)p_cfg->ip_gateway.d);
-   printf("Perm IP                        : %08x/%08x   gateway : %08x\n",
-      (unsigned)net->cmina_perm_dcp_ase.full_ip_suite.ip_suite.ip_addr, (unsigned)net->cmina_perm_dcp_ase.full_ip_suite.ip_suite.ip_mask, (unsigned)net->cmina_perm_dcp_ase.full_ip_suite.ip_suite.ip_gateway);
-   printf("Temp IP                        : %08x/%08x   gateway : %08x\n",
-      (unsigned)net->cmina_temp_dcp_ase.full_ip_suite.ip_suite.ip_addr, (unsigned)net->cmina_temp_dcp_ase.full_ip_suite.ip_suite.ip_mask, (unsigned)net->cmina_temp_dcp_ase.full_ip_suite.ip_suite.ip_gateway);
+   printf("Perm    IP  Netmask  Gateway   : ");
+   pf_ip_address_show(net->cmina_perm_dcp_ase.full_ip_suite.ip_suite.ip_addr);
+   printf("  ");
+   pf_ip_address_show(net->cmina_perm_dcp_ase.full_ip_suite.ip_suite.ip_mask);
+   printf("  ");
+   pf_ip_address_show(net->cmina_perm_dcp_ase.full_ip_suite.ip_suite.ip_gateway);
+   printf("\nTemp    IP  Netmask  Gateway   : ");
+   pf_ip_address_show(net->cmina_temp_dcp_ase.full_ip_suite.ip_suite.ip_addr);
+   printf("  ");
+   pf_ip_address_show(net->cmina_temp_dcp_ase.full_ip_suite.ip_suite.ip_mask);
+   printf("  ");
+   pf_ip_address_show(net->cmina_temp_dcp_ase.full_ip_suite.ip_suite.ip_gateway);
+   printf("\n");
    printf("MAC                            : %02x:%02x:%02x:%02x:%02x:%02x\n",
           p_cfg->eth_addr.addr[0],
           p_cfg->eth_addr.addr[1],

@@ -174,7 +174,7 @@ extern "C"
 #define PNET_ERROR_CODE_1_PNIORW_RES                           0xc0
 
 /**
- * # List of error_code_1 values, bits 0..3, for PNET_ERROR_CODE_1_PNIORW_APP
+ * # List of error_code_1 values, for PNET_ERROR_CODE_1_PNIORW_APP
  */
 #define PNET_ERROR_CODE_1_APP_READ_ERROR                       (0x00 + PNET_ERROR_CODE_1_PNIORW_APP)
 #define PNET_ERROR_CODE_1_APP_WRITE_ERROR                      (0x01 + PNET_ERROR_CODE_1_PNIORW_APP)
@@ -184,7 +184,7 @@ extern "C"
 #define PNET_ERROR_CODE_1_APP_NOT_SUPPORTED                    (0x09 + PNET_ERROR_CODE_1_PNIORW_APP)
 
 /**
- * # List of error_code_1 values, bits 0..3, for PNET_ERROR_CODE_1_PNIORW_ACC
+ * # List of error_code_1 values, for PNET_ERROR_CODE_1_PNIORW_ACC
  */
 #define PNET_ERROR_CODE_1_ACC_INVALID_INDEX                    (0x00 + PNET_ERROR_CODE_1_PNIORW_ACC)
 #define PNET_ERROR_CODE_1_ACC_WRITE_LENGTH_ERROR               (0x01 + PNET_ERROR_CODE_1_PNIORW_ACC)
@@ -199,7 +199,7 @@ extern "C"
 #define PNET_ERROR_CODE_1_ACC_BACKUP                           (0x0a + PNET_ERROR_CODE_1_PNIORW_ACC)
 
 /**
- * # List of error_code_1 values, bits 0..3, for PNET_ERROR_CODE_1_PNIORW_RES
+ * # List of error_code_1 values, for PNET_ERROR_CODE_1_PNIORW_RES
  */
 #define PNET_ERROR_CODE_1_RES_READ_CONFLICT                    (0x00 + PNET_ERROR_CODE_1_PNIORW_RES)
 #define PNET_ERROR_CODE_1_RES_WRITE_CONFLICT                   (0x01 + PNET_ERROR_CODE_1_PNIORW_RES)
@@ -436,14 +436,14 @@ typedef enum pnet_control_command
  */
 typedef enum pnet_data_status_bits
 {
-   PNET_DATA_STATUS_BIT_STATE = 0,                   /**< 0 => BACKUP, 1 => PRIMARY */
-   PNET_DATA_STATUS_BIT_REDUNDANCY,
-   PNET_DATA_STATUS_BIT_DATA_VALID,
+   PNET_DATA_STATUS_BIT_STATE = 0,                   /** 0 => BACKUP, 1 => PRIMARY */
+   PNET_DATA_STATUS_BIT_REDUNDANCY,                  /** Meaning depends on STATE bit */
+   PNET_DATA_STATUS_BIT_DATA_VALID,                  /** 0 => INVALID, 1 => VALID */
    PNET_DATA_STATUS_BIT_RESERVED_1,
-   PNET_DATA_STATUS_BIT_PROVIDER_STATE,
-   PNET_DATA_STATUS_BIT_STATION_PROBLEM_INDICATOR,
+   PNET_DATA_STATUS_BIT_PROVIDER_STATE,              /** 0 => STOP, 1 => RUN */
+   PNET_DATA_STATUS_BIT_STATION_PROBLEM_INDICATOR,   /** 0 => Problem detected, 1 => Normal operation */
    PNET_DATA_STATUS_BIT_RESERVED_2,
-   PNET_DATA_STATUS_BIT_IGNORE
+   PNET_DATA_STATUS_BIT_IGNORE                       /** 0 => Evaluate data status, 1 => Ignore the data status (typically used on a frame with subframes) */
 } pnet_data_status_bits_t;
 
  /** Network handle */
@@ -497,6 +497,9 @@ typedef struct pnet_result
  * refused by the device.
  * In case of error the application should provide error information in \a p_result.
  *
+ * It is optional to implement this callback (assumes success if not
+ * implemented).
+ *
  * @param net              InOut: The p-net stack instance
  * @param arg              InOut: User-defined data (not used by p-net)
  * @param arep             In:   The AREP.
@@ -518,6 +521,8 @@ typedef int (*pnet_connect_ind)(
  *
  * The connection will be closed regardless of the return value from this function.
  * In case of error the application should provide error information in \a p_result.
+ *
+ * It is optional to implement this callback.
  *
  * @param net              InOut: The p-net stack instance
  * @param arg              InOut: User-defined data (not used by p-net)
@@ -544,6 +549,9 @@ typedef int (*pnet_release_ind)(
  * refused by the device.
  * In case of error the application should provide error information in \a p_result.
  *
+ * It is optional to implement this callback (assumes success if not
+ * implemented).
+ *
  * @param net              InOut: The p-net stack instance
  * @param arg              InOut: User-defined data (not used by p-net)
  * @param arep             In:   The AREP.
@@ -568,6 +576,8 @@ typedef int (*pnet_dcontrol_ind)(
  * The application is not required to take any action.
  * In case of error the application should provide error information in \a p_result.
  *
+ * It is optional to implement this callback.
+ *
  * @param net              InOut: The p-net stack instance
  * @param arg              InOut: User-defined data (not used by p-net)
  * @param arep             In:   The AREP.
@@ -588,10 +598,13 @@ typedef int (*pnet_ccontrol_cnf)(
  * state transitions within the Profinet stack.
  *
  * At the very least the application must react to the PNET_EVENT_PRMEND state transition.
- * After this event the application must call pnet_application_ready(), when it has finished
+ * After this event the application must call \a pnet_application_ready(), when it has finished
  * its setup and it is ready to exchange data.
  *
  * The return value from this call-back function is ignored by the Profinet stack.
+ *
+ * It is optional to implement this callback (but then it would be difficult
+ * to know when to call the \a pnet_application_ready() function).
  *
  * @param net              InOut: The p-net stack instance
  * @param arg              InOut: User-defined data (not used by p-net)
@@ -619,7 +632,7 @@ typedef int (*pnet_state_ind)(
  * pointer to the binary value in \a pp_read_data and the size, in bytes, of the
  * binary value in \a p_read_length.
  *
- * The Profinet stack does not perform any endianess conversion on the binary value.
+ * The Profinet stack does not perform any endianness conversion on the binary value.
  *
  * In case of error the application should provide error information in \a p_result.
  *
@@ -662,7 +675,7 @@ typedef int (*pnet_read_ind)(
  * the binary value in \a p_write_data. A future IODRead must return the latest written
  * value.
  *
- * The Profinet stack does not perform any endianess conversion on the binary value.
+ * The Profinet stack does not perform any endianness conversion on the binary value.
  *
  * In case of error the application should provide error information in \a p_result.
  *
@@ -776,7 +789,7 @@ typedef int (*pnet_exp_submodule_ind)(
  * @param arg              InOut: User-defined data (not used by p-net)
  * @param arep             In:   The AREP.
  * @param crep             In:   The CREP.
- * @param changes          In:   The changed bits in the received data status.
+ * @param changes          In:   The changed bits in the received data status. See pnet_data_status_bits_t
  * @param data_status      In:   Current received data status (after changes).
  * @return  0  on success.
  *          -1 if an error occurred.
@@ -791,6 +804,8 @@ typedef int (*pnet_new_data_status_ind)(
 
 /**
  * The controller has sent an alarm to the device.
+ *
+ * It is optional to implement this callback.
  *
  * @param net              InOut: The p-net stack instance
  * @param arg              InOut: User-defined data (not used by p-net)
@@ -819,6 +834,8 @@ typedef int (*pnet_alarm_ind)(
  * The controller acknowledges the alarm sent previously.
  * It is now possible to send another alarm.
  *
+ * It is optional to implement this callback.
+ *
  * @param net              InOut: The p-net stack instance
  * @param arg              InOut: User-defined data (not used by p-net)
  * @param arep             In:   The AREP.
@@ -834,6 +851,8 @@ typedef int (*pnet_alarm_cnf)(
 
 /**
  * The controller acknowledges the alarm ACK sent previously.
+ *
+ * It is optional to implement this callback.
  *
  * @param net              InOut: The p-net stack instance
  * @param arg              InOut: User-defined data (not used by p-net)
@@ -1107,15 +1126,15 @@ typedef struct pnet_alarm_spec
 */
 
 /**
- * Initialize the ProfiNet stack.
+ * Initialize the Profinet stack.
  *
- * This function must be called to initialize the profinet stack.
+ * This function must be called to initialize the Profinet stack.
  *
  * @param netif            In:   Name of the network interface.
  * @param tick_us          In:   Periodic interval in us. Specify the interval
  *                               between calls to pnet_handle_periodic().
  * @param p_cfg            In:   Profinet configuration.
- * @return a handle to the stack instance, or NULL if an error occured.
+ * @return a handle to the stack instance, or NULL if an error occurred.
  */
 PNET_EXPORT pnet_t* pnet_init(
    const char              *netif,
@@ -1411,8 +1430,8 @@ PNET_EXPORT int pnet_ar_abort(
  *
  * @param net              InOut: The p-net stack instance
  * @param arep             In:   The AREP.
- * @param p_err_cls        Out:  The error class.
- * @param p_err_code       Out:  The Error code.
+ * @param p_err_cls        Out:  The error class. See PNET_ERROR_CODE_1_*
+ * @param p_err_code       Out:  The error code. See PNET_ERROR_CODE_2_*
  * @return  0  If the AREP is valid.
  *          -1 if the AREP is not valid.
  */

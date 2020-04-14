@@ -3,16 +3,13 @@ Installing documentation toolchain
 
 Install Sphinx::
 
-    sudo apt install python3-pip
-    pip3 install -U sphinx
-    pip3 install -U recommonmark
-    pip3 install -U sphinx-rtd-theme
-    pip3 install -U breathe
-    pip3 install -U sphinxcontrib-spelling
+    doc$ sudo apt install python3-pip
+    doc$ pip3 install -r doc_requirements.txt
 
 Build documentation::
 
     doc$ make html
+    doc$ make pdf
 
 Run checks::
 

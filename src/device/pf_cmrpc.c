@@ -205,6 +205,7 @@ void pf_cmrpc_show(
       for (ar_ix = 0; ar_ix < PNET_MAX_AR; ar_ix++)
       {
          p_ar = pf_ar_find_by_index(net, ar_ix);
+         printf("AR index              = %u\n", (unsigned)ar_ix);
          printf("AR in use             = %s\n", p_ar->in_use ? "YES" : "NO");
          printf("AR arep               = %u\n", (unsigned)p_ar->arep);
          printf("AR state              = %s\n", pf_ar_state_to_string(p_ar->ar_state));
@@ -348,7 +349,7 @@ static void pf_session_release(
    {
       if (p_sess->in_use == true)
       {
-         LOG_INFO(PF_RPC_LOG, "RPC(%d): Released session ix %u\n", __LINE__, (unsigned)p_sess->ix);
+         LOG_INFO(PF_RPC_LOG, "RPC(%d): Released session %u\n", __LINE__, (unsigned)p_sess->ix);
          memset(p_sess, 0, sizeof(*p_sess));
          p_sess->in_use = false;
       }
@@ -1004,6 +1005,8 @@ static void pf_cmrpc_rm_connect_rsp(
    p_sess->ndr_data.args_length = *p_res_pos - start_pos;
    p_sess->ndr_data.array.actual_count = *p_res_pos - start_pos;
 
+   LOG_DEBUG(PF_RPC_LOG, "CMRPC(%d): Connect response args_length = %" PRIu32 "\n", __LINE__, p_sess->ndr_data.args_length);
+
    /* Over-write the response header with correct length and actual_count. */
    pf_put_uint32(p_sess->get_info.is_big_endian, p_sess->ndr_data.args_length, res_len, p_res, &hdr_pos);
    pf_put_uint32(p_sess->get_info.is_big_endian, p_sess->ndr_data.array.maximum_count, res_len, p_res, &hdr_pos);
@@ -1099,6 +1102,7 @@ static int pf_cmrpc_rm_connect_ind(
       pf_ar_release(p_ar);
    }
 
+   LOG_DEBUG(PF_RPC_LOG, "CMRPC(%d): Created connect response: ret %d\n", __LINE__, ret);
    /* RPC_connect_rsp */
    return ret;
 }
@@ -1439,6 +1443,12 @@ static void pf_cmrpc_rm_dcontrol_rsp(
 /**
  * @internal
  * Take a DCE RPC DControl request and create a DCE RPC DControl response.
+ *
+ * It triggers these user callbacks:
+ *
+ *  * pnet_dcontrol_ind() with PNET_CONTROL_COMMAND_PRM_END
+ *  * pnet_state_ind() with PNET_EVENT_PRMEND
+ *
  * @param net              InOut: The p-net stack instance
  * @param p_sess           In:   The RPC session instance.
  * @param req_pos          In:   Position in the request buffer.
@@ -1491,7 +1501,7 @@ static int pf_cmrpc_rm_dcontrol_ind(
       }
    }
 
-   LOG_DEBUG(PF_RPC_LOG, "CMRPC(%d): DCONTROL: ret = %d   error_code=%" PRIu8 "  error_decode=%" PRIu8  "error_code_1=%" PRIu8 "  error_code_2=%" PRIu8 "\n", __LINE__,
+   LOG_DEBUG(PF_RPC_LOG, "CMRPC(%d): Prepare DCONTROL response message: ret = %d   error_code=%" PRIu8 "  error_decode=%" PRIu8  "error_code_1=%" PRIu8 "  error_code_2=%" PRIu8 "\n", __LINE__,
       ret, p_sess->rpc_result.pnio_status.error_code, p_sess->rpc_result.pnio_status.error_decode, p_sess->rpc_result.pnio_status.error_code_1, p_sess->rpc_result.pnio_status.error_code_2);
 
    pf_cmrpc_rm_dcontrol_rsp(p_sess, ret, &control_io, res_size, p_res, p_res_pos);
@@ -1570,6 +1580,7 @@ static int pf_cmrpc_rm_read_interpret_ind(
 /**
  * @internal
  * Take a DCE RPC IODRead request and create a DCE RPC IODRead response.
+ * Also handles Read Implicit requests (and creates responses).
  *
  * This will trigger the \a pnet_read_ind() user callback for certain parameters.
  *
@@ -2003,29 +2014,29 @@ static int pf_cmrpc_rpc_request(
       ret = pf_cmrpc_rm_connect_ind(net, p_sess, req_pos, res_size, p_res, p_res_pos);  /* Might release p_sess */
       break;
    case PF_RPC_DEV_OPNUM_RELEASE:
-      LOG_INFO(PF_RPC_LOG, "RELEASE\n");
+      LOG_INFO(PF_RPC_LOG, "CMRPC(%d): Incoming RELEASE request via DCE RPC on UDP\n", __LINE__);
       ret = pf_cmrpc_rm_release_ind(net, p_sess, req_pos, res_size, p_res, p_res_pos);
       pf_session_release(p_sess);
       break;
    case PF_RPC_DEV_OPNUM_READ:
-      LOG_INFO(PF_RPC_LOG, "READ\n");
+      LOG_INFO(PF_RPC_LOG, "CMRPC(%d): Incoming READ request via DCE RPC on UDP\n", __LINE__);
       ret = pf_cmrpc_rm_read_ind(net, p_sess, p_rpc->opnum, req_pos, res_size, p_res, p_res_pos);
       break;
    case PF_RPC_DEV_OPNUM_WRITE:
-      LOG_INFO(PF_RPC_LOG, "WRITE\n");
+      LOG_INFO(PF_RPC_LOG, "CMRPC(%d): Incoming WRITE request via DCE RPC on UDP\n", __LINE__);
       ret = pf_cmrpc_rm_write_ind(net, p_sess, req_pos, res_size, p_res, p_res_pos);
       break;
    case PF_RPC_DEV_OPNUM_CONTROL:
-      LOG_INFO(PF_RPC_LOG, "CONTROL\n");
+      LOG_INFO(PF_RPC_LOG, "CMRPC(%d): Incoming DCONTROL request via DCE RPC on UDP\n", __LINE__);
       ret = pf_cmrpc_rm_dcontrol_ind(net, p_sess, p_rpc, req_pos, res_size, p_res, p_res_pos);
       break;
    case PF_RPC_DEV_OPNUM_READ_IMPLICIT:
-      LOG_INFO(PF_RPC_LOG, "READ_IMPLICIT\n");
+      LOG_INFO(PF_RPC_LOG, "CMRPC(%d): Incoming READ_IMPLICIT request via DCE RPC on UDP\n", __LINE__);
       ret = pf_cmrpc_rm_read_ind(net, p_sess, p_rpc->opnum, req_pos, res_size, p_res, p_res_pos);
       pf_session_release(p_sess);
       break;
    default:
-      LOG_ERROR(PNET_LOG, "CMRPC(%d): : Unknown opnum %" PRIu16 "\n", __LINE__, p_rpc->opnum);
+      LOG_ERROR(PNET_LOG, "CMRPC(%d): Unknown opnum %" PRIu16 "\n", __LINE__, p_rpc->opnum);
       break;
    }
 
@@ -2055,13 +2066,13 @@ int pf_cmrpc_rm_ccontrol_req(
    pf_fspm_get_cfg(net, &p_cfg);
    if (pf_session_allocate(net, &p_sess) != 0)
    {
-      LOG_ERROR(PF_RPC_LOG, "RPC(%d): Out of session reaources\n", __LINE__);
+      LOG_ERROR(PF_RPC_LOG, "RPC(%d): Out of session resources\n", __LINE__);
    }
    else
    {
       p_sess->p_ar = p_ar;
       p_sess->ip_addr = p_ar->p_sess->ip_addr;
-      p_sess->port = OS_PF_RPC_SERVER_PORT;
+      p_sess->port = OS_PF_RPC_SERVER_PORT;  /* Destination port on IO-controller */
 
       memset(&rpc_req, 0, sizeof(rpc_req));
       memset(&ndr_data, 0, sizeof(ndr_data));
@@ -2153,7 +2164,7 @@ int pf_cmrpc_rm_ccontrol_req(
       {
          if (os_udp_sendto(p_sess->socket, p_sess->ip_addr, p_sess->port, p_sess->buffer, pos) == pos)
          {
-            LOG_INFO(PF_RPC_LOG, "os_udp_sendto success!!\n");
+            LOG_INFO(PF_RPC_LOG, "Sent ccontrol request (with APPL_READY) to controller.\n");
             ret = 0;
          }
          else
@@ -2252,6 +2263,11 @@ static int pf_cmrpc_rm_ccontrol_interpret_cnf(
 /**
  * @internal
  * Handle the response from a CControl request
+ *
+ * Triggers these user callbacks:
+ * * \a pnet_state_ind() with PNET_EVENT_DATA.
+ * * \a pnet_ccontrol_cnf()
+ *
  * @param net              InOut: The p-net stack instance
  * @param p_sess           In:   The session instance.
  * @param req_pos          In:   Position in the input buffer.
@@ -2266,6 +2282,8 @@ static int pf_cmrpc_rm_ccontrol_cnf(
    int                     ret = -1;
    pf_control_block_t      ccontrol_io;
    pf_ar_t                 *p_ar = p_sess->p_ar;
+
+   LOG_INFO(PF_RPC_LOG, "Incoming CCONTROL response via DCE RPC on UDP\n");
 
    memset(&ccontrol_io, 0, sizeof(ccontrol_io));
 
@@ -2313,7 +2331,7 @@ static int pf_cmrpc_rm_ccontrol_cnf(
 
 /**
  * @internal
- * Handle one DCE RPC response type message.
+ * Handle one incoming DCE RPC response type message.
  * @param net              InOut: The p-net stack instance
  * @param p_sess           In:   The session instance.
  * @param req_pos          In:   The response length
@@ -2344,7 +2362,12 @@ static int pf_cmrpc_rpc_response(
 
 /**
  * @internal
- * Handle one DCE RPC message.
+ * Handle one incoming DCE RPC message, and prepare a response.
+ *
+ * Receives raw UDP data, and prepares the raw UDP response.
+ * Puts together incoming fragments, and handles the RPC request by using
+ * \a pf_cmrpc_rpc_request().
+ *
  * @param net              InOut: The p-net stack instance
  * @param ip_addr          In:   The IP address of the originator
  * @param port             In:   The port of the originator.
@@ -2403,13 +2426,13 @@ static int pf_cmrpc_dce_packet(
       p_sess->get_info = get_info;
       memset(&p_sess->rpc_result, 0, sizeof(p_sess->rpc_result));
 
-      /* Handle RPC fragments: */
+      /* Handle incoming RPC fragments: */
       if (rpc_req.flags.fragment == false)
       {
-         /* This is the normal path where the request is contained entirely in one frame */
+         /* This is the normal path where the incoming request is contained entirely in one frame */
          p_sess->buf_len = 0;
          p_sess->ip_addr = ip_addr;
-         p_sess->port = port;
+         p_sess->port = port;  /* Source port on incoming message */
 
          p_sess->from_me = false;
          p_sess->activity_uuid = rpc_req.activity_uuid;
@@ -2420,13 +2443,13 @@ static int pf_cmrpc_dce_packet(
       else
       {
          /*
-          * It is a fragment of a request.
+          * It is a fragment of an incoming request.
           * Collect all fragments into the session buffer and
           * proceed only when the last fragment has been received.
           */
          if (rpc_req.fragment_nmb == 0)
          {
-            /* This is the first fragment. */
+            /* This is the first incoming fragment. */
             /* Initialize the session */
             p_sess->buf_len = 0;
             p_sess->ip_addr = ip_addr;
@@ -2513,6 +2536,8 @@ static int pf_cmrpc_dce_packet(
                p_sess->release_in_progress = true; /* Tell everybody */
                *p_is_release = true;               /* Tell caller */
             }
+
+            /* Handle the RPC request */
             ret = pf_cmrpc_rpc_request(net, p_sess, req_pos, &rpc_req, *p_res_len, p_res, &res_pos);
 
             /*
@@ -2610,10 +2635,12 @@ void pf_cmrpc_periodic(
    {
       if ((net->cmrpc_session_info[ix].in_use == true) && (net->cmrpc_session_info[ix].from_me == true))
       {
+         /* We are waiting for a response from the IO-controller */
          dcerpc_req_len = os_udp_recvfrom(net->cmrpc_session_info[ix].socket, &dcerpc_addr, &dcerpc_port, net->cmrpc_dcerpc_req_frame, sizeof(net->cmrpc_dcerpc_req_frame));
          if (dcerpc_req_len > 0)
          {
             dcerpc_resp_len = sizeof(net->cmrpc_dcerpc_rsp_frame);
+            LOG_DEBUG(PF_RPC_LOG, "CMRPC(%d): Received %u bytes UDP from remote port %u, on a socket in session with index %u\n", __LINE__, dcerpc_req_len, dcerpc_port, ix);
             (void)pf_cmrpc_dce_packet(net, dcerpc_addr, dcerpc_port, net->cmrpc_dcerpc_req_frame, dcerpc_req_len, net->cmrpc_dcerpc_rsp_frame, &dcerpc_resp_len, &is_release);
          }
       }
@@ -2623,7 +2650,7 @@ void pf_cmrpc_periodic(
    dcerpc_req_len = os_udp_recvfrom(net->cmrpc_rpcreq_socket, &dcerpc_addr, &dcerpc_port, net->cmrpc_dcerpc_req_frame, sizeof(net->cmrpc_dcerpc_req_frame));
    if (dcerpc_req_len > 0)
    {
-      dcerpc_resp_len = sizeof(net->cmrpc_dcerpc_rsp_frame);
+      dcerpc_resp_len = sizeof(net->cmrpc_dcerpc_rsp_frame);  /* No response fragmentation supported */
       LOG_DEBUG(PF_RPC_LOG, "CMRPC(%d): Received %u bytes UDP from remote port %u, on the socket for incoming DCE RPC requests.\n", __LINE__, dcerpc_req_len, dcerpc_port);
       (void)pf_cmrpc_dce_packet(net, dcerpc_addr, dcerpc_port, net->cmrpc_dcerpc_req_frame, dcerpc_req_len, net->cmrpc_dcerpc_rsp_frame, &dcerpc_resp_len, &is_release);
       if (dcerpc_resp_len != 0)

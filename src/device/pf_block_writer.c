@@ -13,6 +13,18 @@
  * full license information.
  ********************************************************************/
 
+/**
+ * @file
+ * @brief Utility functions for writing data into buffers.
+ *
+ * For example uint16, time stamps and protocol headers can be written to the
+ * buffers.
+ *
+ * Most functions have (at least) a buffer and a position in the buffer
+ * as input arguments.
+ *
+ */
+
 #ifdef UNIT_TEST
 
 #endif
@@ -1707,6 +1719,11 @@ void pf_put_write_result(
    block_len = *p_pos - (block_pos + 4);
    block_pos += offsetof(pf_block_header_t, block_length);   /* Point to correct place */
    pf_put_uint16(is_big_endian, block_len, res_len, p_bytes, &block_pos);
+
+   if (*p_pos >= res_len)
+   {
+      LOG_ERROR(PNET_LOG, "BW(%d): Output buffer is filled, while preparing DCP Write response.\n", __LINE__);
+   }
 }
 
 void pf_put_log_book_data(

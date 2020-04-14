@@ -59,6 +59,9 @@ static const pnet_ethaddr_t   lldp_dst_addr = {
    { 0x01, 0x80, 0xc2, 0x00, 0x00, 0x0e }       /* LLDP Multicast */
 };
 
+
+/******************* Insert data into buffer ********************************/
+
 /**
  * @internal
  * Insert a TLV header into a buffer.
@@ -280,6 +283,8 @@ static void lldp_add_management(
    pf_put_uint32(true, 0, 1500, p_buf, p_pos);  /* Interface number: Unknown */
    pf_put_byte(0, 1500, p_buf, p_pos);       /* OID string length: 0 => Not supported */
 }
+
+/********************* Initialize and send **********************************/
 
 void pf_lldp_send(
    pnet_t                  *net)

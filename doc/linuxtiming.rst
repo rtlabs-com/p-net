@@ -12,7 +12,7 @@ a separate CPU core.
 
 Use USE_SCHED_FIFO option
 -------------------------
-Select the FIFO linux kernel scheduling option.  This is done by passing
+Select the FIFO Linux kernel scheduling option. This is done by passing
 ``-DUSE_SCHED_FIFO=ON`` command line argument to cmake.
 
 

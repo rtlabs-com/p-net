@@ -92,6 +92,7 @@ Selected enums
 .. doxygenenum:: pnet_ioxs_values_t
 .. doxygenenum:: pnet_submodule_dir_t
 .. doxygenenum:: pnet_control_command_t
+.. doxygenenum:: pnet_data_status_bits_t
 
 
 Selected typedefs

@@ -54,6 +54,9 @@ int pf_cmwrr_cmdev_state_ind(
 
 /**
  * Handle RPC write requests.
+ *
+ * Triggers the \a pnet_write_ind() user callback for some values.
+ *
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param p_write_request  In:   The write request block.

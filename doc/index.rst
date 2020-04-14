@@ -5,6 +5,9 @@
 
 Welcome to p-net's documentation!
 =================================
+Here you will find a tutorial, the API reference as well as other detailed
+documentation.
+
 
 .. toctree::
    :maxdepth: 1
@@ -27,6 +30,7 @@ Welcome to p-net's documentation!
    abbreviations.rst
    api_documentation.rst
    _copied/LICENSE.md
+   _copied/CHANGELOG.md
    implementation_details.rst
    writing_documentation.rst
 

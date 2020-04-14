@@ -38,7 +38,7 @@ The tool is available for Profinet members.
 
 The file is part of the conformance test tool download. Unzip the file
 PROFINET_GSD_Checker_2.34.zip, and double-click the "setup" file. After
-installation, enter "profinet" in the Windows search bar to start the program.
+installation, enter ``profinet`` in the Windows search bar to start the program.
 
 Use the menu File > Open and select your GSD file. An overview of the file
 is shown. In the left menu different parts of the file can be selected.

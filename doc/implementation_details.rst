@@ -1,24 +1,43 @@
 Implementation details
 ======================
 
+This software stack is written in C, version C99.
+
+For running the unit tests C++ (version C++11 or later) is required.
+
+The primary p-net usecase is to run in embedded devices, why there in general
+are no functions to shut down the stack.
+
+
 State machines
 --------------
 
-* APMR        Acyclic Protocol Machine Receiver
-* APMS        Acyclic Protocol Machine Sender
 * ALPMI       Alarm Protocol Machine Initiator
 * ALPMR       Alarm Protocol Machine Responder
-* CMDEV       Context Management Protocol Machine Device, handles connection establishment for IO-Devices.
-* CMRDR       Context Management Read Record Responder protocol machine device, responds to parameter read from the IO-controller
-* CMRPC       Context Management RPC Device Protocol Machine, handles RPC communication
-* CMSM        Context Management Surveillance Protocol Machine Device, monitors the establishment of a connection.
+* APMR        Acyclic Protocol Machine Receiver
+* APMS        Acyclic Protocol Machine Sender
+* CMDEV       Context Management protocol machine Device, handles connection establishment for IO-Devices.
+* CMINA       Context Management Ip and Name Assignment protocol machine
+* CMIO        Context Management Input Output protocol machine
+* CMPBE       Context Management Parameter Begin End protocol machine
+* CMRDR       Context Management Read Record Responder protocol machine, responds to parameter read from the IO-controller
+* CMRPC       Context Management RPC Protocol Machine, handles RPC communication
+* CMSM        Context Management Surveillance protocol Machine, monitors the establishment of a connection.
+* CMWRR       Context Management Write Record Responder protocol machine
 * CPM         Consumer Protocol Machine, for receiving cyclic data
-* PPM         Cyclic Provider Protocol Machine
+* FSPM        Fieldbus Application Layer Service Protocol Machine, calls user callbacks.
+* PPM         Provider Protocol Machine, for sending cyclic data
 
 
-CMRPC
------
-Handles the UDP communication in the start up phase, especially these
+FSPM - Fieldbus application layer Service Protocol Machine
+----------------------------------------------------------
+Stores the user-defined configuration, and calls the user-defined callbacks.
+Create logbook entries. Reads and writes identification & maintenance records.
+
+
+CMRPC - Context Management RPC device protocol machine
+------------------------------------------------------
+Handles the DCE/RPC UDP communication in the start up phase, especially these
 messages:
 
 * connect
@@ -46,26 +65,74 @@ write request messages, and it will trigger the ``pnet_write_ind()`` user
 callback for certain parameters.
 Other parameters are handled by the stack itself.
 
-Incoming control (dcontrol) requests are handled by
+Incoming control (DControl) requests are handled by
 ``pf_cmrpc_rm_dcontrol_ind()`` which typically triggers these user callbacks:
 
 * ``pnet_dcontrol_ind()`` with PNET_CONTROL_COMMAND_PRM_END
 * ``pnet_state_ind()`` with PNET_EVENT_PRMEND
-* (``pnet_state_ind()`` with PNET_EVENT_APPLRDY)
+
+When the IO-device is sending a request to an IO-Controller (and expects a
+response) a new separate session is started.
+
+Incoming CControl responses are handled by ``pf_cmrpc_rm_ccontrol_cnf()``,
+which will trigger these user callbacks:
+
+* ``pnet_state_ind()`` with PNET_EVENT_DATA.
+* ``pnet_ccontrol_cnf()``
 
 Show current details on the CMRPC state machine::
 
    pf_cmrpc_show(0xFFFF);
 
 
-CMRDR (used by CMRPC)
----------------------
-Contains a single function ``pf_cmrdr_rm_read_ind()``, that handles a
-RPC parameter read request.
+DCP
+---
+Handles these DCP messages:
+
+* Set
+* Get
+* Ident
+* Hello
+
+Flashes a LED on reception of the "Set request" DCP message with suboption
+"Signal".
 
 
-CMDEV
------
+CMINA - Context Management Ip and Name Assignment protocol machine
+------------------------------------------------------------------
+This state machine is responsible for assigning station name and IP address.
+Does factory reset when requested by IO-controller.
+
+States:
+
+* SETUP
+* SET_NAME
+* SET_IP
+* W_CONNECT
+
+Helps handling DCP Set and DCP Get requests.
+
+
+CMRDR - Context Management Read record Responder protocol machine
+-----------------------------------------------------------------
+Contains a single function ``pf_cmrdr_rm_read_ind()``, that handles
+RPC parameter read requests.
+
+Triggers the ``pnet_read_ind()`` user callback for some values.
+Other values, for example the Identification & Maintenance (I&M)
+values, are handled internally by the stack.
+
+This state machine is used by CMRPC.
+
+
+CMWRR - Context Management Write Record Responder protocol machine
+------------------------------------------------------------------
+Handles RPC parameter write requests.
+Triggers the ``pnet_write_ind()`` user callback for some values.
+
+
+CMDEV - Context Management protocol machine Device
+--------------------------------------------------
 This handles connection establishment for IO-Devices.
 
 For example pulling and plugging modules and submodules in slots and
@@ -74,17 +141,26 @@ CControl and DControl.
 
 States:
 
-* PF_CMDEV_STATE_POWER_ON, Data initialization. (Must be first)
-* PF_CMDEV_STATE_W_CIND, Wait for connect indication (in the connect UDP message)
-* PF_CMDEV_STATE_W_CRES, Wait for connect response from app and CMSU startup.
-* PF_CMDEV_STATE_W_SUCNF, Wait for CMSU confirmation.
-* PF_CMDEV_STATE_W_PEIND, Wait for PrmEnd indication (in the DControl UDP message)
-* PF_CMDEV_STATE_W_PERES, Wait for PrmEnd response from app.
-* PF_CMDEV_STATE_W_ARDY, Wait for app ready from app.
-* PF_CMDEV_STATE_W_ARDYCNF, Wait for app ready confirmation from controller.
-* PF_CMDEV_STATE_WDATA, Wait for established cyclic data exchange.
-* PF_CMDEV_STATE_DATA, Data exchange and connection monitoring.
-* PF_CMDEV_STATE_ABORT, Abort application relation.
+* POWER_ON, Data initialization. (Must be first)
+* W_CIND, Wait for connect indication (in the connect UDP message)
+* W_CRES, Wait for connect response from app and CMSU startup.
+* W_SUCNF, Wait for CMSU confirmation.
+* W_PEIND, Wait for PrmEnd indication (in the DControl UDP message)
+* W_PERES, Wait for PrmEnd response from app.
+* W_ARDY, Wait for app ready from app.
+* W_ARDYCNF, Wait for app ready confirmation from controller.
+* WDATA, Wait for established cyclic data exchange.
+* DATA, Data exchange and connection monitoring.
+* ABORT, Abort application relation.
+
+Implements these user functions (via ``pnet_api.c``):
+
+* ``pnet_plug_module()``
+* ``pnet_plug_submodule()``
+* ``pnet_pull_module()``
+* ``pnet_pull_submodule()``
+* ``pnet_application_ready()`` Triggers the ``pnet_state_ind()`` user callback with PNET_EVENT_APPLRDY.
+* ``pnet_ar_abort()``
 
 Show the plugged modules and sub-modules, and number of bytes sent and received
 for subslots::
@@ -96,14 +172,15 @@ Show current state for CMDEV state machine::
    pf_cmdev_show(p_ar);
 
 
-CMSM
-----
+CMSM - Context Management Surveillance protocol Machine
+-------------------------------------------------------
 The CMSM component monitors the establishment of a connection. Once the
 device enters the DATA state this component is done.
 
 This is basically a timer, which has two states; IDLE and RUN. If not stopped
 before it times out, the stack will enter PNET_EVENT_ABORT state.
-The timer returns to state IDLE at timeout.
+The timer returns to state IDLE at timeout. Typically the timeout setting is
+around 20 seconds (can be adjusted by the IO-Controller).
 
 The timer is started on PNET_EVENT_STARTUP (at the connect request message),
 and stopped at PNET_EVENT_DATA.
@@ -118,8 +195,142 @@ It starts the timer at sending the "response" message, and stops the timer
 when the "indication" message is received.
 
 
+CPM - Consumer Protocol Machine
+-------------------------------
+Receives cyclic data. Monitors that the incoming data fulfills the protocol,
+and that the timing of incoming frames is correct. Stores incoming data into a
+buffer.
+
+Several instances of CPM can be used in parallel.
+
+States:
+
+* W_START Wait for initialization
+* FRUN
+* RUN Running
+
+If there is a timeout in the RUN state, it will transition back to state
+W_START.
+
+Implements these user functions (via ``pnet_api.c``):
+
+* ``pnet_output_get_data_and_iops()``
+* ``pnet_input_get_iocs()``
+
+Triggers the ``pnet_new_data_status_ind()`` user callback on data status
+changes (not on changes in the data itself).
+
+
+PPM - Provider Protocol Machine
+-------------------------------
+Sends cyclic data.
+
+States:
+
+* W_START
+* RUN
+
+Implements these user functions (via ``pnet_api.c``):
+
+* ``pnet_input_set_data_and_iops()``
+* ``pnet_output_set_iocs()``
+* ``pnet_set_state()``
+* ``pnet_set_redundancy_state()``
+* ``pnet_set_provider_state()``
+
+
+Block reader and writer
+-----------------------
+The files ``pf_block_reader.c`` and ``pf_block_writer.c`` implement functions
+for parsing and writing data in buffers.
+
+
+ETH
+---
+Registers and invokes frame handlers for incoming raw Ethernet frames.
+
+
+Start up procedure
+------------------
+
++------------------+--------------------+-----------------------+--------------------------------------------+-------------------------------------+
+| | Incoming       | | Outgoing         | | CMDEV               |  Application                               | Other                               |
+| | message        | | message          | | state               |                                            |                                     |
++==================+====================+=======================+============================================+=====================================+
+| Connect req      |                    |                       |                                            |                                     |
++------------------+--------------------+-----------------------+--------------------------------------------+-------------------------------------+
+|                  |                    |                       | pnet_exp_module_ind()                      |                                     |
++------------------+--------------------+-----------------------+--------------------------------------------+-------------------------------------+
+|                  |                    |                       | pnet_exp_submodule_ind()                   |                                     |
++------------------+--------------------+-----------------------+--------------------------------------------+-------------------------------------+
+|                  |                    |                       | pnet_connect_ind()                         |                                     |
++------------------+--------------------+-----------------------+--------------------------------------------+-------------------------------------+
+|                  |                    | W_CRES                |                                            |                                     |
++------------------+--------------------+-----------------------+--------------------------------------------+-------------------------------------+
+|                  |                    |                       |                                            | PPM starts sending cyclic data      |
++------------------+--------------------+-----------------------+--------------------------------------------+-------------------------------------+
+|                  |                    |                       |                                            | PF_CPM_STATE_FRUN                   |
++------------------+--------------------+-----------------------+--------------------------------------------+-------------------------------------+
+|                  |                    | W_SUCNF               |                                            |                                     |
++------------------+--------------------+-----------------------+--------------------------------------------+-------------------------------------+
+|                  |                    |                       | pnet_connect_ind() with PNET_EVENT_STARTUP |                                     |
++------------------+--------------------+-----------------------+--------------------------------------------+-------------------------------------+
+|                  |                    |                       |                                            | CMSM timer started                  |
++------------------+--------------------+-----------------------+--------------------------------------------+-------------------------------------+
+|                  |                    |                       | pnet_new_data_status_ind()                 |                                     |
++------------------+--------------------+-----------------------+--------------------------------------------+-------------------------------------+
+|                  |                    |                       |                                            | PF_CPM_STATE_RUN                    |
++------------------+--------------------+-----------------------+--------------------------------------------+-------------------------------------+
+|                  |                    | W_PEIND               |                                            |                                     |
++------------------+--------------------+-----------------------+--------------------------------------------+-------------------------------------+
+|                  | Connect resp       |                       |                                            |                                     |
++------------------+--------------------+-----------------------+--------------------------------------------+-------------------------------------+
+| Write req        |                    |                       |                                            |                                     |
++------------------+--------------------+-----------------------+--------------------------------------------+-------------------------------------+
+|                  |                    |                       | pnet_write_ind()                           |                                     |
++------------------+--------------------+-----------------------+--------------------------------------------+-------------------------------------+
+|                  | Write resp         |                       |                                            |                                     |
++------------------+--------------------+-----------------------+--------------------------------------------+-------------------------------------+
+| DControl req     |                    |                       |                                            |                                     |
++------------------+--------------------+-----------------------+--------------------------------------------+-------------------------------------+
+|                  |                    | W_PERES               |                                            |                                     |
++------------------+--------------------+-----------------------+--------------------------------------------+-------------------------------------+
+|                  |                    |                       | pnet_dcontrol_ind()                        |                                     |
++------------------+--------------------+-----------------------+--------------------------------------------+-------------------------------------+
+|                  |                    | W_ARDY                |                                            |                                     |
++------------------+--------------------+-----------------------+--------------------------------------------+-------------------------------------+
+|                  |                    | (PRMEND)              |                                            |                                     |
++------------------+--------------------+-----------------------+--------------------------------------------+-------------------------------------+
+|                  |                    |                       | pnet_connect_ind() with PNET_EVENT_PRMEND  |                                     |
++------------------+--------------------+-----------------------+--------------------------------------------+-------------------------------------+
+|                  |                    |                       | Run pnet_input_set_data_and_iops()         |                                     |
++------------------+--------------------+-----------------------+--------------------------------------------+-------------------------------------+
+|                  | DControl resp      |                       |                                            |                                     |
++------------------+--------------------+-----------------------+--------------------------------------------+-------------------------------------+
+|                  |                    |                       | Run pnet_application_ready()               |                                     |
++------------------+--------------------+-----------------------+--------------------------------------------+-------------------------------------+
+|                  |                    | (APPLRDY)             |                                            |                                     |
++------------------+--------------------+-----------------------+--------------------------------------------+-------------------------------------+
+|                  |                    |                       | pnet_connect_ind() with PNET_EVENT_APPLRDY |                                     |
++------------------+--------------------+-----------------------+--------------------------------------------+-------------------------------------+
+|                  | CControl req       |                       |                                            |                                     |
++------------------+--------------------+-----------------------+--------------------------------------------+-------------------------------------+
+|                  |                    | W_ARDYCNF             |                                            |                                     |
++------------------+--------------------+-----------------------+--------------------------------------------+-------------------------------------+
+| CControl resp    |                    |                       |                                            |                                     |
++------------------+--------------------+-----------------------+--------------------------------------------+-------------------------------------+
+|                  |                    | WDATA                 |                                            |                                     |
++------------------+--------------------+-----------------------+--------------------------------------------+-------------------------------------+
+|                  |                    |                       | pnet_ccontrol_cnf()                        |                                     |
++------------------+--------------------+-----------------------+--------------------------------------------+-------------------------------------+
+|                  |                    |                       | pnet_connect_ind() with PNET_EVENT_DATA    |                                     |
++------------------+--------------------+-----------------------+--------------------------------------------+-------------------------------------+
+|                  |                    | DATA                  |                                            |                                     |
++------------------+--------------------+-----------------------+--------------------------------------------+-------------------------------------+
+
+
 Useful functions
 ----------------
 Show lots of details of the stack state::
 
-   pnet_show(0xFFFF);
+   pnet_show(net, 0xFFFF);

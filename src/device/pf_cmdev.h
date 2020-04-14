@@ -399,6 +399,11 @@ int pf_cmdev_cm_ccontrol_req(
 
 /**
  * Handle the confirmation of the ccontrol request.
+ *
+ * Triggers these user callbacks:
+ * * \a pnet_state_ind() with PNET_EVENT_DATA.
+ * * \a pnet_ccontrol_cnf()
+ *
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param p_control_io     In:   The control block.

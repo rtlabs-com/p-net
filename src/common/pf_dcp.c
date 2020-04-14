@@ -151,7 +151,11 @@ static void pf_dcp_responder(
       {
          if (os_eth_send(net->eth_handle, p_buf) <= 0)
          {
-            LOG_ERROR(PNET_LOG, "pf_dcp(%d): Error from os_eth_send(dcp)\n", __LINE__);
+            LOG_ERROR(PNET_LOG, "DCP(%d): Error from os_eth_send(dcp)\n", __LINE__);
+         }
+         else
+         {
+            LOG_DEBUG(PNET_LOG, "DCP(%d): Sent a DCP response.\n", __LINE__);
          }
          os_buf_free(p_buf);
          net->dcp_delayed_response_waiting = false;
@@ -440,6 +444,9 @@ static void pf_dcp_control_signal(
 /**
  * @internal
  * Handle a DCP set request.
+ *
+ * Triggers the application callback \a pnet_reset_ind() for some values.
+ *
  * @param net              InOut: The p-net stack instance
  * @param p_dst            In:   The destination buffer.
  * @param p_dst_pos        InOut:Position in the destination buffer.
@@ -615,6 +622,9 @@ static int pf_dcp_set_req(
  * @internal
  * Handle a DCP Set or Get request.
  *
+ * Triggers the application callback \a pnet_reset_ind() for some values.
+ * Might set the IP address.
+ *
  * This is a callback for the frame handler. Arguments should fulfill pf_eth_frame_handler_t
  *
  * @param net              InOut: The p-net stack instance
@@ -756,6 +766,7 @@ static int pf_dcp_get_set(
          /* Insert final response length and ship it! */
          p_dst_dcphdr->data_length = htons(dst_pos - dst_start);
          p_rsp->len = dst_pos;
+
          if (os_eth_send(net->eth_handle, p_rsp) <= 0)
          {
             LOG_ERROR(PNET_LOG, "pf_dcp(%d): Error from os_eth_send(dcp)\n", __LINE__);
