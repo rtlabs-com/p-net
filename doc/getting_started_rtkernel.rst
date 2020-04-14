@@ -106,7 +106,8 @@ Use the menu "File > Import". Select "General > Existing Projects". Click
 
 Run on target
 -------------
-First start Segger J-link GDB debug server::
+Install J-link from https://www.segger.com/
+Start Segger J-link GDB debug server::
 
     JLinkGDBServerExe
 
@@ -151,7 +152,12 @@ shell::
 
 Adjust log level
 ----------------
-See the "Getting started on Linux" page.
+In order to learn the Profinet communication model, it is very informative to
+adjust the log level to see the incoming and outgoing messages. See the
+"Getting started on Linux" page for details on how to adjust the log level.
+
+However note that printing out log strings is slow, so you probably need
+to decrease the cyclic data frequency (see PLC timing settings below).
 
 
 Standalone rt-kernel project
@@ -166,7 +172,42 @@ Use::
     user@host:~/build$ make all
 
 
+PLC timing settings
+-------------------
+The send clock is 1 ms in the GSDML file.
+
+If you do lots of printouts (which are slow) from the application on the
+XMC4800 board, you might need to increase the reduction ratio in the PLC
+settings to avoid timeout errors.
+
+In case of problems, increase the reduction ratio (and timeout) value a lot,
+and then gradually reduce it to find the smallest usable value.
+
+
 Memory requirements for the tests
 ---------------------------------
 Note that the tests require a stack of at least 6 kB. You may have to increase
 CFG_MAIN_STACK_SIZE in your BSP ``include/config.h`` file.
+
+
+IP-stack lwip
+-------------
+The rt-kernel uses the "lwip" IP stack.
+
+To enable logging in lwip, modify the file
+``rt-kernel-xmc4/lwip/src/include/lwip/lwipopts.h``.
+
+Make sure general logging is enabled::
+
+   #define LWIP_DEBUG 1
+   #define LWIP_DBG_MIN_LEVEL          LWIP_DBG_LEVEL_ALL
+   #define LWIP_DBG_TYPES_ON           LWIP_DBG_ON
+
+And enable debug logging of the modules you are interested in::
+
+   #define PBUF_DEBUG                  LWIP_DBG_OFF
+   #define IP_DEBUG                    LWIP_DBG_ON
+   #define IGMP_DEBUG                  LWIP_DBG_ON
+   #define TCPIP_DEBUG                 LWIP_DBG_ON
+
+Rebuild rt-kernel.

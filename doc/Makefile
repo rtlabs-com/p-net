@@ -16,6 +16,7 @@ help:
 
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
+# Note that we remove the build status badge image before PDF creation.
 %: Makefile
 
 	@echo  "Cleaning ..."
@@ -25,4 +26,6 @@ help:
 	@mkdir -p _copied
 	@cp ../README.md _copied/
 	@cp ../LICENSE.md _copied/
+	@cp ../CHANGELOG.md _copied/
+	@(test $@ != pdf) || sed -i '/Build Status/d' _copied/README.md
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)

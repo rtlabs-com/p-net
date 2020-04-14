@@ -43,14 +43,22 @@ CMDEV
     Context Management Protocol Machine Device
 CMI
     CM Initiator
+CMINA
+    Context Management Ip and Name Assignment protocol machine
+CMIO
+    Context Management Input Output protocol machine
+CMPBE
+    Context Management Parameter Begin End protocol machine
 CMRDR
-    Context Management Read Record Responder protocol machine device, responds to parameter read from the IO-controller
+    Context Management Read Record Responder protocol machine, responds to parameter read from the IO-controller
 CMRPC
-    Context Management RPC device protocol machine
+    Context Management RPC protocol machine
+CMWRR
+   Context Management Write Record Responder protocol machine
 CMSM
-   Context Management Surveillance protocol Machine device, monitors the establishment of a connection. Also written as CM Server Protocol machine.
+   Context Management Surveillance protocol Machine, monitors the establishment of a connection. Also written as CM Server Protocol machine.
 CP
-    Communication profile. For example Profinet conformance class B is also known as CP 3/5.
+    Communication Profile. For example Profinet conformance class B is also known as CP 3/5.
 CPF
     Communication Profile Family. Profinet and Profibus is CPF = 3, Ethercat is CPF = 12.
 CPM
@@ -66,7 +74,7 @@ DAP
 DCE
     Distributed Computing Environment. Used with RPC.
 DCP
-    Discovery and basic Configuration Protocol. Runs over UDP?
+    Discovery and basic Configuration Protocol. Runs over Ethernet layer 2 (not IP or UDP).
 DFP
     Dynamic Frame Packing. Used with IRT protocol.
 DHCP
@@ -80,7 +88,7 @@ DT
 DUT
     Device Under Test
 EMC
-    Electromagnetic Compatibility
+    ElectroMagnetic Compatibility
 ES
     Engineering System
 FAL
@@ -174,7 +182,7 @@ PS
 PTCP
     Precision Transparent Clock Protocol
 RPC
-    Remote Procedure Call
+    Remote Procedure Call. The protocol DCE/RPC runs on UDP.
 RTA
     RealTime Acyclic protocol
 RTC
@@ -183,6 +191,8 @@ RTE
     Real Time Ethernet
 RTOS
     Real Time Operating System
+SAM
+   Source Address of ?
 SCL
     Structured Control Language. Siemens name for the structured text (ST) programming language for PLCs.
 SNMP
@@ -203,5 +213,9 @@ USI
     User Structure Identifier (unit16)
 UUID
     Universally Unique Identifier
+VLAN
+   Virtual LAN
+WLAN
+   Wireless LAN
 XML
     eXtended Markup Language

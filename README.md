@@ -18,11 +18,13 @@ implementations. It is easy to use and provides a small footprint. It
 is especially well suited for embedded systems where resources are
 limited and efficiency is crucial.
 
-It is written in C and can be run on bare-metal hardware, an RTOS such
-as rt-kernel, or on Linux. The main requirement is that the
+It is written in C and can be run on bare-metal hardware, an RTOS such as
+rt-kernel, or on Linux. The main requirement is that the
 platform can send and receive raw Ethernet Layer 2 frames. The
 p-net stack is supplied with full sources including a porting
 layer.
+
+Also C++ (any version) is supported.
 
 rt-labs p-net is developed according to specification 2.3:
 
@@ -45,7 +47,6 @@ Limitations:
 
 * IPv4 only
 * Only a single Ethernet interface (no media redundancy)
-* Only one stack instance
 
 This software is dual-licensed, with GPL version 3 and a commercial license.
 See LICENSE.md for more details.
@@ -68,6 +69,12 @@ For Linux:
 For rt-kernel:
 
 * Workbench 2017.1 or later
+
+An example of microcontroller we have been using is the Infineon XMC4800,
+which has an ARM Cortex-M4 running at 144 MHz, with 2 MB Flash and 352 kB RAM.
+It runs rt-kernel, and we have tested it with 9 Profinet slots each
+having 8 digital inputs and 8 digital outputs (one bit each). The values are
+sent and received each millisecond (PLC watchdog setting 3 ms).
 
 
 Contributions

@@ -1448,6 +1448,7 @@ static int pf_alarm_apmr_periodic(
                      switch (p_apmx->apmr_state)
                      {
                      case PF_APMR_STATE_OPEN:
+                        LOG_DEBUG(PF_ALARM_LOG, "Alarm(%d): Alarm received from IO-controller\n", __LINE__);
                         pf_alarm_error_ind(net, p_apmx, pnio_status.error_code_1, pnio_status.error_code_2);
                         break;
                      default:

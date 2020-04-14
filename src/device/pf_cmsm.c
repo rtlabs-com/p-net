@@ -13,11 +13,6 @@
  * full license information.
  ********************************************************************/
 
-#ifdef UNIT_TEST
-
-#endif
-
-
 /**
  * @file
  * @brief Implements the Context Management Surveillance Protocol Machine Device (CMSM)
@@ -36,6 +31,11 @@
  * If there is no ongoing connection (p_ar == NULL), then the timer is not
  * affected by the rest of the stack.
  */
+
+#ifdef UNIT_TEST
+
+#endif
+
 
 #include "pf_includes.h"
 

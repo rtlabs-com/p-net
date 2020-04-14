@@ -981,7 +981,7 @@ bool read_bool_from_file(const char*  filepath)
  * @param filepath      In: Path to file
  * @param value         In: The value to write
  * @return 0 on success and
- *         -1 if an error occured
+ *         -1 if an error occurred
 */
 int write_bool_to_file(const char*  filepath, bool value)
 {
@@ -1049,7 +1049,7 @@ void print_ip_address(uint32_t ip){
  *
  * @param interface_name      In: Name of network interface
  * @return IP address on success and
- *         0 if an error occured
+ *         0 if an error occurred
 */
 uint32_t read_ip_address(char* interface_name)
 {
@@ -1073,7 +1073,7 @@ uint32_t read_ip_address(char* interface_name)
  * @param mac_addr            Out: MAC address
  *
  * @return 0 on success and
- *         -1 if an error occured
+ *         -1 if an error occurred
 */
 int read_mac_address(char *interface_name, pnet_ethaddr_t *mac_addr)
 {

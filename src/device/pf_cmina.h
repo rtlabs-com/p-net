@@ -23,6 +23,9 @@ extern "C"
 
 /**
  * Initialize the CMINA component.
+ *
+ * Sets the IP address if necessary.
+ *
  * @param net              InOut: The p-net stack instance
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.

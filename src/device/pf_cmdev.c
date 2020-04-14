@@ -1673,7 +1673,7 @@ static int pf_cmdev_iocr_setup_iocs(
          }
          else
          {
-            LOG_INFO(PNET_LOG, "CMDEV(%d) (%u,%u,%u) dir %u, dlen %u iopslen %u IOCSlen %u\n", __LINE__,
+            LOG_INFO(PNET_LOG, "CMDEV(%d) Read IOCS size from API %u slot %u subslot %u with data direction %u. Data %u bytes, IOPS %u bytes, IOCS %u bytes\n", __LINE__,
                (unsigned)api_id, (unsigned)slot_nbr, (unsigned)subslot_nbr,
                (unsigned)p_desc->data_direction, (unsigned)p_desc->submodule_data_length, (unsigned)p_desc->length_iops, p_desc->length_iocs);
 
@@ -1794,7 +1794,7 @@ static int pf_cmdev_iocr_setup_data_iops(
          }
          else
          {
-            LOG_INFO(PNET_LOG, "CMDEV(%d) (%u,%u,%u) dir %u, dlen %u iopslen %u IOCSlen %u\n", __LINE__,
+            LOG_INFO(PNET_LOG, "CMDEV(%d) Read data and IOPS size from API %u slot %u subslot %u with data direction %u. Data %u bytes, IOPS %u bytes, IOCS %u bytes\n", __LINE__,
                (unsigned)api_id, (unsigned)slot_nbr, (unsigned)subslot_nbr,
                (unsigned)p_desc->data_direction, (unsigned)p_desc->submodule_data_length, (unsigned)p_desc->length_iops, p_desc->length_iocs);
 

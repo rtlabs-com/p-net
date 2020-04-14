@@ -6,7 +6,6 @@ https://en.wikipedia.org/wiki/PROFINET
 
 
 
-
 Nodes classes and device details
 --------------------------------
 Profinet defines three node classes:
@@ -49,7 +48,7 @@ while for example Ethercat is CPF 12.
 
 Communication
 -------------
-It uses three protocol levels:
+Profinet uses three protocol levels:
 
 +-----------------------------+--------------------+-------------+---------------+----------------------------+
 | Protocol                    | | Typical          | Description | Ethertype     | | Supported by             |
@@ -62,15 +61,89 @@ It uses three protocol levels:
 | IRT (Isochronous Real-Time) | 1 ms               |             | 0x8892?       | No                         |
 +-----------------------------+--------------------+-------------+---------------+----------------------------+
 
-Also these protocols are used:
 
-* LLDP for link layer discovery. Ethertype 0x88CC
-* ARP for IP address lookup. Ethertype 0x0806
-* DHCP for IP address assignment. Runs over UDP on IP
-* SNMP for network topology questions. Runs over UDP on IP.
+Overview of all protocols used in a Profinet Application
+--------------------------------------------------------
+
+A typical Profinet application needs to handle a multitude of protocols.
+
++-------+----------+-------------+-----------------+-----------------------+---------------------------------+
+| Layer | Protocol | Addressing  | | Content       | Protocol              | Notes                           |
+|       |          |             | | description   |                       |                                 |
++=======+==========+=============+=================+=======================+=================================+
+| 4     | TCP      | Port                          | SSH = 22              | Remote login on Linux           |
+|       |          |                               +-----------------------+---------------------------------+
+|       |          |                               | HTTP = 80 + 443       | Web server for configuration    |
++-------+----------+-------------------------------+-----------------------+---------------------------------+
+| 4     | UDP      | Port                          | DHCP = 67 + 68        | IP address assignment           |
+|       |          |                               +-----------------------+---------------------------------+
+|       |          |                               | SNMP = 161 + 162      | Network topology query          |
+|       |          |                               +-----------------------+---------------------------------+
+|       |          |                               | ??                    | Profinet start-up, uses DCE/RPC |
++-------+----------+-------------+-----------------+-----------------------+---------------------------------+
+| 3     | IPv4     | IP address  | Protocol number | ICMP = 1              | Used by ping                    |
+|       |          |             |                 +-----------------------+---------------------------------+
+|       |          |             |                 | TCP = 6               | Transmission control protocol   |
+|       |          |             |                 +-----------------------+---------------------------------+
+|       |          |             |                 | UDP = 17              | User Datagram Protocol          |
++-------+----------+-------------+-----------------+-----------------------+---------------------------------+
+| 2     | Ethernet | MAC address | Ethertype       | LLDP = 0x88CC         | Link layer discovery            |
+|       |          |             |                 +-----------------------+---------------------------------+
+|       |          |             |                 | ARP = 0x0806          | IP address lookup               |
+|       |          |             |                 +-----------------------+---------------------------------+
+|       |          |             |                 | IPv4 = 0x0800         | Internet protocol               |
+|       |          |             |                 +-----------------------+---------------------------------+
+|       |          |             |                 | Profinet DCP = 0x8894 | Profinet start-up ??            |
+|       |          |             |                 +-----------------------+---------------------------------+
+|       |          |             |                 | Profinet RT = 0x8892  | PNIO = Cyclic IO realtime data  |
+|       |          |             |                 +-----------------------+---------------------------------+
+|       |          |             |                 | (VLAN = 0x8100)       | Not really a protocol           |
+|       |          |             |                 +-----------------------+---------------------------------+
+|       |          |             |                 | (VLAN = 0x9100)       | For double tagged frames        |
++-------+----------+-------------+-----------------+-----------------------+---------------------------------+
+
+Technical details on some of the protocols:
+
++---------------------------+--------------+----------------+--------------------------------------+----------------------------------------------------+
+| Layer                     | | Header     | | Footer       | Header contents                      | Footer contents                                    |
+|                           | | size       | | size         |                                      |                                                    |
++===========================+==============+================+======================================+====================================================+
+| Ethernet (layer 2)        | 14 or 18     |                | MAC 6+6, Ethertype 2 (VLAN 4)        |                                                    |
++---------------------------+--------------+----------------+--------------------------------------+----------------------------------------------------+
+| IPv4                      | 20           |                | IP addr 4+4, len 2, protocol 1, etc  |                                                    |
++---------------------------+--------------+----------------+--------------------------------------+----------------------------------------------------+
+| UDP                       | 8            |                | Port 2+2, len 2, checksum 2          |                                                    |
++---------------------------+--------------+----------------+--------------------------------------+----------------------------------------------------+
+| DCE/RPC                   | 80           |                | UUID 16+16+16, etc                   |                                                    |
++---------------------------+--------------+----------------+--------------------------------------+----------------------------------------------------+
+| Profinet cyclic realtime  | 2            | 4              | FrameId 2                            | Cycle counter 2, data status 1, transfer status 1  |
++---------------------------+--------------+----------------+--------------------------------------+----------------------------------------------------+
+
+Sizes are given in bytes.
+Note that "Profinet cyclic realtime" runs directly on Ethernet layer 2 (it does
+not use IP or UDP).
 
 
-Communication relations:
+UDP ports:
+
+* 0x8894 = 34964
+* 0xC001 = 49153
+
+
+Profinet frame IDs:
+
+* 0x8000  Output CR
+* 0x8001  Input CR
+* 0xfe01
+* 0xfc01
+* 0xfefc  DCP_HELLO
+* 0xfefd  DCP_GET_SET
+* 0xfefe  DCP_ID_REQ
+* 0xfeff  DCP_ID_RES
+
+
+Communication relations
+-----------------------
 
 +-----------------------------+----------------------------------------------------------------------------------------------+
 | Communication Relation (CR) | Description                                                                                  |
@@ -96,8 +169,8 @@ Messages from controller to device:
 
 Where:
 
-* CControl: Request from IO-device
-* DControl: Request from IO-controller
+* DControl: Request to IO-device
+* CControl: Request to IO-controller
 
 
 Real Time Class:
@@ -113,6 +186,27 @@ Net load class:
 * I
 * II
 * III
+
+
+
+
+DCP protocol, message "Ident OK" and message "Set Req".
+
++--------+-----------+-----------------+-------------------------------+
+| Option | Suboption | Description     | Contains                      |
++========+===========+=================+===============================+
+| 1      | 2         | IP parameter    | IP address, netmask, gateway  |
++--------+-----------+-----------------+-------------------------------+
+| 2      | 1         | Type of station | Device vendor                 |
++--------+-----------+-----------------+-------------------------------+
+| 2      | 2         | Name of station |                               |
++--------+-----------+-----------------+-------------------------------+
+| 2      | 3         | Device ID       | VendorID, DeviceID            |
++--------+-----------+-----------------+-------------------------------+
+| 2      | 4         | Device role     | ?                             |
++--------+-----------+-----------------+-------------------------------+
+| 2      | 5         | Device options  | Which options are available   |
++--------+-----------+-----------------+-------------------------------+
 
 
 Slots and modules
@@ -156,6 +250,15 @@ Also in the GSD file is description on the data exchange?
 | Modular field device | Change modules at configuration?    |
 +----------------------+-------------------------------------+
 
+Subslots in DAP module
+
+* 0x8000 (32768) First interface
+* 0x8001 (32762) First port of first interface
+* 0x8002 (32770) Second port of first interface
+* 0x8100 (33024) Second interface
+* 0x8101 (33025) First port of second interface
+* 0x8102 (33026) Second port of second interface
+
 
 I&M data records
 ----------------
@@ -193,17 +296,3 @@ Relevant standards
 * IEC 61784       Describes several fieldbuses, for example Foundation Fieldbus, Profibus and Profinet.
 * ISO 15745       ?
 * ISO 8859-1      ?
-
-
-
-Misc
-----
-
-Subslots in DAP module
-
-* 0x8000 (32768) First interface
-* 0x8001 (32762) First port of first interface
-* 0x8002 (32770) Second port of first interface
-* 0x8100 (33024) Second interface
-* 0x8101 (33025) First port of second interface
-* 0x8102 (33026) Second port of second interface

@@ -48,6 +48,8 @@ void pf_ppm_init(
    net->ppm_instance_cnt = ATOMIC_VAR_INIT(0);
 }
 
+/********************* Error handling ****************************************/
+
 /**
  * @internal
  * Send error indications to other components.
@@ -72,6 +74,9 @@ static int pf_ppm_state_ind(
 
    return 0;
 }
+
+
+/******************** Start, stop, send, state *******************************/
 
 /**
  * @internal
@@ -664,7 +669,7 @@ int pf_ppm_get_iocs(
    return ret;
 }
 
-/*****************************************************************************/
+/****************************** Data status **********************************/
 
 int pf_ppm_set_data_status_state(
    pf_ar_t                 *p_ar,

@@ -13,6 +13,17 @@
  * full license information.
  ********************************************************************/
 
+/**
+ * @file
+ * @brief Implements the Fieldbus Application Layer Service Protocol Machine (FSPM)
+ *
+ * Stores the user-defined configuration, and calls the user-defined callbacks.
+ * Create logbook entries.
+ * Reads and writes identification & maintenance records.
+ *
+ */
+
+
 #ifdef UNIT_TEST
 #define os_udp_recvfrom mock_os_udp_recvfrom
 #define os_udp_sendto mock_os_udp_sendto

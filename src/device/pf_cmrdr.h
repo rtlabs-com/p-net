@@ -25,6 +25,8 @@ extern "C"
 
 /**
  * Handle a RPC read request.
+ * Triggers the \a pnet_read_ind() user callback for some values.
+ *
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param p_read_request   In:   The read request.

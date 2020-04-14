@@ -17,6 +17,8 @@
  * @file
  * @brief Implements the Cyclic Consumer Provider Protocol Machine (CPM)
  *
+ * This handles receiving cyclic data.
+ *
  * A global mutex is used instead of a per-instance mutex.
  * The locking time is very low so it should not be very congested.
  * The mutex is created on the first call to pf_cpm_create and deleted on
@@ -370,9 +372,13 @@ static void pf_cpm_get_buf(
 
 /**
  * @internal
- * Handle new frames on Ethernet.
+ * Handle new incoming cyclic data frames on Ethernet.
  *
- * This is a callback for the frame handler. Arguments should fulfill pf_eth_frame_handler_t
+ * This is a callback for the frame handler, and is intended to be registered by
+ * \a pf_eth_frame_id_map_add(). Arguments should fulfill pf_eth_frame_handler_t
+ *
+ * Triggers the \a pnet_new_data_status_ind() user callback on data
+ * status changes.
  *
  * @param net              InOut: The p-net stack instance
  * @param frame_id         In:   The frame id of the frame.
