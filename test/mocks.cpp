@@ -81,10 +81,12 @@ int mock_os_get_ip_suite(
 }
 
 int mock_os_set_ip_suite(
+   const char              *interface_name,
    os_ipaddr_t             *p_ipaddr,
    os_ipaddr_t             *p_netmask,
    os_ipaddr_t             *p_gw,
-   const char              *hostname)
+   const char              *hostname,
+   bool                    permanent)
 {
    return 0;
 }

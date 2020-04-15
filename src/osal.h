@@ -204,11 +204,31 @@ int os_get_ip_suite(
    os_ipaddr_t             *p_gw,
    const char              **p_device_name);
 
+/**
+ * Set network parameters (IP address, netmask etc)
+ *
+ * For example:
+ *
+ * IP address        Represented by
+ * 1.0.0.0           0x01000000 = 16777216
+ * 0.0.0.1           0x00000001 = 1
+ *
+ * @param interface_name      In: Ethernet interface name, for example eth0
+ * @param p_ipaddr            In: IPv4 address
+ * @param p_netmask           In: Netmask
+ * @param p_gw                In: Default gateway
+ * @param hostname            In: Host name, for example my_laptop_4
+ * @param permanent           In: 1 if changes are permanent, or 0 if temportary
+ * @return  0  if the operation succeeded.
+ *          -1 if an error occurred.
+ */
 int os_set_ip_suite(
+   const char              *interface_name,
    os_ipaddr_t             *p_ipaddr,
    os_ipaddr_t             *p_netmask,
    os_ipaddr_t             *p_gw,
-   const char              *hostname);
+   const char              *hostname,
+   bool                    permanent);
 
 void os_set_led(
    uint16_t                id,         /* Starting from 0 */

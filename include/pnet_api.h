@@ -123,6 +123,8 @@ extern "C"
 /** Some blocks (e.g. logbook) uses the following lower version number. */
 #define PNET_BLOCK_VERSION_LOW_1                               1
 
+#define PNET_MAX_INTERFACE_NAME_LENGTH                         21       /** Including termination */
+
 /**
  * # Error Codes
  *
@@ -992,10 +994,14 @@ typedef struct pnet_cfg_device_id
 } pnet_cfg_device_id_t;
 
 /**
- * Used for assigning a static IP address to the device.
+ * Used for assigning a static IPv4 address to the device.
  *
  * The Profinet stack also supports assigning an IP address, mask and gateway address
  * via DCP Set commands based on the Ethernet MAC address.
+ *
+ * An IP address of 1.0.0.0 has the member a=1, and the rest of the members
+ * set to 0.
+ *
  */
 typedef struct pnet_ip_addr_t
 {

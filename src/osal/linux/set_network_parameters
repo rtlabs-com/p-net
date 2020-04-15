@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+
+############################################
+# Script for manipulating network settings #
+############################################
+#
+# This is useful for example on Ubuntu.
+#
+# You need to adapt this script to fit your Linux distribution.
+# Keep the script name, and use the same command line arguments.
+#
+# Make sure that the script path is available from your Profinet application.
+# In case of problems, try the script manually from the directory where your
+# application is located.
+
+if [ $# -ne 6 ]; then
+   echo "Usage: ${0} interfacename ip netmask gateway hostname permanent"
+   echo "   where:"
+   echo "       interfacename:   Network interface name, for example eth0"
+   echo "       ip:              IPv4 address, for example 192.168.137.4"
+   echo "       netmask:         Netmask"
+   echo "       gateway:         Default gateway"
+   echo "       hostname:        Host name, for example my_laptop_3"
+   echo "       permanent:       1 if changes are permanent, 0 if temporary"
+   exit 1
+fi
+
+INTERFACE=$1
+IP_ADDRESS=$2
+NETMASK=$3
+DEFAULT_GATEWAY=$4
+HOSTNAME=$5
+SET_VALUES_PERMANENTLY=$6
+
+echo "Network script for ${INTERFACE}: " \
+   "Set IP ${IP_ADDRESS}, " \
+   "Netmask ${NETMASK}, " \
+   "Gateway ${DEFAULT_GATEWAY}. " \
+   "Permanent: ${SET_VALUES_PERMANENTLY}. " \
+   "Hostname: ${HOSTNAME}"
+
+# TODO The changes are not yet permanent.
+
+if ! ip address flush label $INTERFACE; then
+   echo "Failed to flush network interface"
+   exit 1
+fi
+
+if ! ip address add $IP_ADDRESS/$NETMASK dev $INTERFACE; then
+   echo "Failed to set IP address and netmask"
+   exit 1
+fi
+
+if ! ip link set dev $INTERFACE up; then
+   echo "Failed to set network interface up"
+   exit 1
+fi
+
+if ! ip route add default via $DEFAULT_GATEWAY; then
+   echo "Failed to set default gateway"
+   exit 1
+fi
+
+if ! hostname $HOSTNAME; then
+   echo "Failed to set hostname"
+   exit 1
+fi
+
+exit 0

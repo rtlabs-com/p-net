@@ -183,13 +183,18 @@ int pf_cmina_set_default_cfg(
 void pf_cmina_dcp_set_commit(
    pnet_t                  *net)
 {
+   /* Assume permanent changes, possibly modify later on */
+   bool                    permanent = true;
+
    if (net->cmina_commit_ip_suite == true)
    {
       net->cmina_commit_ip_suite = false;
-      os_set_ip_suite(&net->cmina_temp_dcp_ase.full_ip_suite.ip_suite.ip_addr,
+      os_set_ip_suite(net->interface_name,
+                      &net->cmina_temp_dcp_ase.full_ip_suite.ip_suite.ip_addr,
                       &net->cmina_temp_dcp_ase.full_ip_suite.ip_suite.ip_mask,
                       &net->cmina_temp_dcp_ase.full_ip_suite.ip_suite.ip_gateway,
-                      net->cmina_temp_dcp_ase.name_of_station);
+                      net->cmina_temp_dcp_ase.name_of_station,
+                      permanent);
    }
 }
 
