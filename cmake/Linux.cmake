@@ -61,6 +61,12 @@ target_sources(pn_dev
   sample_app/main_linux.c
   )
 
+file(COPY
+  src/osal/linux/set_network_parameters
+  DESTINATION
+  ${PROFINET_BINARY_DIR}/
+  )
+
 if (BUILD_TESTING)
   set(GOOGLE_TEST_INDIVIDUAL TRUE)
   target_sources(pf_test

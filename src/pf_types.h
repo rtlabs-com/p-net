@@ -1949,6 +1949,7 @@ typedef struct pf_log_book
 
 struct pnet
 {
+   char                                interface_name[PNET_MAX_INTERFACE_NAME_LENGTH];  /** Terminated */
    uint32_t                            os_buf_alloc_cnt;
    bool                                global_alarm_enable;
    os_mutex_t                          *cpm_buf_lock;
