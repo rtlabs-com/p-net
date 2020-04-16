@@ -1241,8 +1241,8 @@ typedef struct pf_ppm
    int                     errline;
    uint32_t                errcnt;
 
-   pnet_ethaddr_t          sa;
-   pnet_ethaddr_t          da;
+   pnet_ethaddr_t          sa;                  /* Source MAC address */
+   pnet_ethaddr_t          da;                  /* Destination MAC address (IO-controller) */
 
    bool                    first_transmit;
 
