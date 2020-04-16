@@ -30,12 +30,14 @@
 #define PF_FRAME_ID_ALARM_HIGH      0xfc01
 #define PF_FRAME_ID_ALARM_LOW       0xfe01
 
-#define ALARM_VLAN_PRIO_LOW         (5<<12)
-#define ALARM_VLAN_PRIO_HIGH        (6<<12)
+#define ALARM_VLAN_PRIO_LOW         5
+#define ALARM_VLAN_PRIO_HIGH        6
 
 
 /* The scheduler identifier */
 static const char *apmx_sync_name = "apmx";
+
+/*************** Diagnostic strings *****************************************/
 
 /**
  * @internal
@@ -148,6 +150,8 @@ void pf_alarm_show(
    printf("  sequence_number     = %u\n", (unsigned)p_ar->alpmx[1].sequence_number);
    printf("\n");
 }
+
+/*****************************************************************************/
 
 void pf_alarm_init(
    pnet_t                  *net)
@@ -309,7 +313,6 @@ static void pf_alarm_alpmi_apms_a_data_cnf(
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
-
 static int pf_alarm_alpmi_apmr_a_data_ind(
    pnet_t                  *net,
    pf_apmx_t               *p_apmx,
@@ -446,6 +449,8 @@ static int pf_alarm_alpmr_apmr_a_data_ind(
  *
  * This is a callback for the frame handler. Arguments should fulfill pf_eth_frame_handler_t
  *
+ * All incoming Profinet frames with ID = PF_FRAME_ID_ALARM_HIGH end up here.
+ *
  * @param net              InOut: The p-net stack instance
  * @param frame_id         In:   The Ethernet frame id.
  * @param p_buf            In:   The Ethernet frame buffer.
@@ -493,6 +498,8 @@ static int pf_alarm_apmr_high_handler(
  * Handle low-priority alarm PDUs from the controller.
  *
  * This is a callback for the frame handler. Arguments should fulfill pf_eth_frame_handler_t
+ *
+ * All incoming Profinet frames with ID = PF_FRAME_ID_ALARM_LOW end up here.
  *
  * @param net              InOut: The p-net stack instance
  * @param frame_id         In:   The Ethernet frame id.
@@ -634,6 +641,9 @@ static void pf_alarm_apms_timeout(
  * Initialize and start an AMPX instance.
  *
  * This function activates and starts an APMS/APMR pair.
+ *
+ * It registers handlers for incoming alarm frames.
+ *
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @return  0  if the operation succeeded.
@@ -720,6 +730,9 @@ static int pf_alarm_apmx_activate(
 /**
  * @internal
  * APMS: a_data_ind
+ *
+ * Handle incoming alarm data
+ *
  * @param net              InOut: The p-net stack instance
  * @param p_apmx           In:   The APMX instance.
  * @param p_fixed          In:   The fixed part of the ALARM message.
@@ -794,8 +807,8 @@ static int pf_alarm_apms_a_data_ind(
  * @internal
  * APMS: A_Data_Req
  *
- * Given all its parameters this function creates and sends an RTA-PDU
- * to the controller (other side).
+ * Create and send a Profinet alarm frame to the IO-controller.
+ *
  * Messages with TACK == true are saved in the APMX instance in order
  * to handle re-transmissions.
  *
@@ -830,6 +843,7 @@ static int pf_alarm_apms_a_data_req(
    uint8_t                 *p_buf = NULL;
    uint16_t                pos = 0;
    const pnet_cfg_t        *p_cfg = NULL;
+   uint16_t                u16 = 0;
 
    pf_fspm_get_default_cfg(net, &p_cfg);
 
@@ -854,18 +868,27 @@ static int pf_alarm_apms_a_data_req(
          }
          else
          {
-            /* Add Ethernet header */
+            /* Insert destination MAC address */
             pf_put_mem(&p_apmx->da, sizeof(p_apmx->da), 1500, p_buf, &pos);
-            memcpy(&p_buf[pos], p_cfg->eth_addr.addr, sizeof(pnet_ethaddr_t)); /* Interface MAC address */
+
+            /* Insert source MAC address (our interface MAC address) */
+            memcpy(&p_buf[pos], p_cfg->eth_addr.addr, sizeof(pnet_ethaddr_t));
             pos += sizeof(pnet_ethaddr_t);
 
-            /* Add VLAN */
-            pf_put_uint16(true, OS_ETHTYPE_VLAN, 1500, p_buf, &pos);       /* VLAN LT */
-            pf_put_uint16(true, p_apmx->vlan_prio, 1500, p_buf, &pos);
+            /* Insert VLAN Tag protocol identifier (TPID) */
+            pf_put_uint16(true, OS_ETHTYPE_VLAN, 1500, p_buf, &pos);
 
-            pf_put_uint16(true, OS_ETHTYPE_PROFINET, 1500, p_buf, &pos);   /* Real LT */
-            pf_put_uint16(true, p_apmx->frame_id, 1500, p_buf, &pos); /* FrameID */
+            /* Insert VLAN prio (and VLAN ID=0) */
+            u16 = (p_apmx->vlan_prio & 0x0007) << 13;  /* Three leftmost bits */
+            pf_put_uint16(true, u16, 1500, p_buf, &pos);
 
+            /* Insert EtherType */
+            pf_put_uint16(true, OS_ETHTYPE_PROFINET, 1500, p_buf, &pos);
+
+            /* Insert Profinet frame ID (first part of Ethernet frame payload) */
+            pf_put_uint16(true, p_apmx->frame_id, 1500, p_buf, &pos);
+
+            /* Insert alarm specific data */
             pf_put_alarm_fixed(true, p_fixed, 1500, p_buf, &pos);
 
             var_part_len_pos = pos;
@@ -946,6 +969,8 @@ static int pf_alarm_apms_a_data_req(
  *
  * This function creates and sends an RTA-PDU.
  *
+ * It uses pf_alarm_apms_a_data_req() for the sending.
+ *
  * @param net              InOut: The p-net stack instance
  * @param p_apmx           In:   The APMS instance.
  * @param pdu_type         In:   Mandatory. The PDU type.
@@ -1012,6 +1037,15 @@ static int pf_alarm_apms_apms_a_data_req(
    return ret;
 }
 
+/**
+ * @internal
+ * Close APMX.
+ * @param net              InOut: The p-net stack instance
+ * @param p_ar             In:   The AR instance.
+ * @param err_code         In:   Error code
+ * @return  0  if operation succeeded.
+ *          -1 if an error occurred.
+ */
 static int pf_alarm_apmx_close(
    pnet_t                  *net,
    pf_ar_t                 *p_ar,
@@ -1079,6 +1113,18 @@ static int pf_alarm_apmx_close(
    return 0;
 }
 
+
+/**
+ * @internal
+ * Send APMR ACK
+ *
+ * It uses pf_alarm_apms_a_data_req() for the sending.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param p_apmx           In:   The APMX instance.
+ * @return  0  if operation succeeded.
+ *          -1 if an error occurred.
+ */
 static int pf_alarm_apmr_send_ack(
    pnet_t                  *net,
    pf_apmx_t               *p_apmx)
@@ -1105,6 +1151,18 @@ static int pf_alarm_apmr_send_ack(
    return ret;
 }
 
+
+/**
+ * @internal
+ * Send APMR NACK
+ *
+ * It uses pf_alarm_apms_a_data_req() for the sending.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param p_apmx           In:   The APMX instance.
+ * @return  0  if operation succeeded.
+ *          -1 if an error occurred.
+ */
 static int pf_alarm_apmr_send_nack(
    pnet_t                  *net,
    pf_apmx_t               *p_apmx)
@@ -1132,6 +1190,7 @@ static int pf_alarm_apmr_send_nack(
 }
 
 /**
+ * @internal
  * Handle reception of an RTA DATA PDU.
  *
  * This function handles reception of an RTA-DATA-PDU in APMR.
@@ -1289,6 +1348,7 @@ static int pf_alarm_apmr_a_data_ind(
 }
 
 /**
+ * @internal
  * Handle the reception of ALARM messages for one AR instance.
  *
  * When called this function reads max 1 alarm message from its input queue.
@@ -1452,7 +1512,6 @@ bool pf_alarm_pending(
    /* ToDo: Handle this call from cmpbe. */
    return false;
 }
-
 
 int pf_alarm_activate(
    pnet_t                  *net,
@@ -1670,6 +1729,7 @@ int pf_alarm_alpmr_alarm_ack(
 }
 
 /**
+ * @internal
  * Send an alarm.
  *
  * This function sends an alarm to the controller using an RTA DATA PDU.
