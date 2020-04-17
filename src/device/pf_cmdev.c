@@ -2768,7 +2768,7 @@ static int pf_cmdev_exp_submodule_configure(
                   pf_set_error(p_stat, PNET_ERROR_CODE_CONNECT, PNET_ERROR_DECODE_PNIO, PNET_ERROR_CODE_1_CONN_FAULTY_EXP_BLOCK_REQ, 15);
                   ret = -1;
                }
-               else if (p_exp_sub->data_descriptor[data_ix].length_iops != 1)
+               else if (p_exp_sub->data_descriptor[data_ix].length_iocs != 1)
                {
                   pf_set_error(p_stat, PNET_ERROR_CODE_CONNECT, PNET_ERROR_DECODE_PNIO, PNET_ERROR_CODE_1_CONN_FAULTY_EXP_BLOCK_REQ, 16);
                   ret = -1;
