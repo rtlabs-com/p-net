@@ -1742,7 +1742,7 @@ static int pf_cmrpc_perform_one_write(
 
    if (pf_ar_find_by_uuid(net, &p_write_request->ar_uuid, &p_ar) != 0)
    {
-      pf_set_error(p_stat, PNET_ERROR_CODE_READ, PNET_ERROR_DECODE_PNIO, PNET_ERROR_CODE_1_CMRPC, PNET_ERROR_CODE_2_CMRPC_AR_UUID_UNKNOWN);
+      pf_set_error(p_stat, PNET_ERROR_CODE_WRITE, PNET_ERROR_DECODE_PNIO, PNET_ERROR_CODE_1_CMRPC, PNET_ERROR_CODE_2_CMRPC_AR_UUID_UNKNOWN);
    }
    else if ((p_write_request->api != 0) &&
             (pf_cmdev_get_api(net, p_write_request->api, &p_api) != 0))
