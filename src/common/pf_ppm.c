@@ -90,6 +90,10 @@ static void pf_ppm_set_state(
 /**
  * @internal
  * Initialize a transmit buffer of a PPM instance.
+ *
+ * Insert destination and source MAC addresses, VLAN tag, Ethertype and
+ * Profinet frame ID.
+ *
  * @param p_ppm            In:   The PPM instance.
  * @param p_buf            InOut:The buffer.
  * @param frame_id         In:   The frame_id.
@@ -108,22 +112,35 @@ static void pf_ppm_init_buf(
    p_buf->len = p_ppm->buffer_length;
    memset(p_payload, 0, p_buf->len);
    pos = 0;
+
+   /* Insert destination MAC address */
    memcpy(&p_payload[pos], &p_ppm->da, sizeof(p_ppm->da));
    pos += sizeof(p_ppm->da);
+
+   /* Insert source MAC address */
    memcpy(&p_payload[pos], &p_ppm->sa, sizeof(p_ppm->sa));
    pos += sizeof(p_ppm->sa);
-   if (p_header->vlan_id != 0)
-   {
-      u16 = p_header->vlan_id & 0x0FFF;
-      u16 |= (p_header->iocr_user_priority & ((1u << 4) - 1)) << 12;
-      u16 = htons(u16);
-      memcpy(&p_payload[pos], &u16, sizeof(u16));
-      pos += sizeof(u16);
-   }
+
+   /* Insert VLAN Tag protocol identifier (TPID) */
+   u16 = OS_ETHTYPE_VLAN;
+   u16 = htons(u16);
+   memcpy(&p_payload[pos], &u16, sizeof(u16));
+   pos += sizeof(u16);
+
+   /* Insert VLAN ID (VID) and priority (Priority Code Point = PCP) */
+   u16 = p_header->vlan_id & 0x0FFF;
+   u16 |= (p_header->iocr_user_priority & 0x0007) << 13;  /* Three leftmost bits */
+   u16 = htons(u16);
+   memcpy(&p_payload[pos], &u16, sizeof(u16));
+   pos += sizeof(u16);
+
+   /* Insert EtherType */
    u16 = OS_ETHTYPE_PROFINET;
    u16 = htons(u16);
    memcpy(&p_payload[pos], &u16, sizeof(u16));
    pos += sizeof(u16);
+
+   /* Insert Profinet frame ID (first part of Ethernet frame payload) */
    u16 = htons(frame_id);
    memcpy(&p_payload[pos], &u16, sizeof(u16));
    pos += sizeof(u16);
@@ -132,6 +149,9 @@ static void pf_ppm_init_buf(
 /**
  * @internal
  * Finalize a PPM transmit message.
+ *
+ * Insert data, cycle counter, data status and transfer status.
+ *
  * @param net              InOut: The p-net stack instance
  * @param p_ppm            In:   The PPM instance.
  * @param data_length      In:   The length of the message.
@@ -145,15 +165,21 @@ static void pf_ppm_finish_buffer(
    uint16_t                u16;
    int32_t                 cycle_tmp = os_get_current_time_us()*4;
 
-   p_ppm->cycle = cycle_tmp/125;           /* Get 4/125 = 31.25us tics */
+   p_ppm->cycle = cycle_tmp/125;           /* Cycle counter. Get 4/125 = 31.25us tics */
    u16 = htons(p_ppm->cycle);
 
+   /* Insert data */
    os_mutex_lock(net->ppm_buf_lock);
    memcpy(&p_payload[p_ppm->buffer_pos], p_ppm->buffer_data, data_length);
    os_mutex_unlock(net->ppm_buf_lock);
 
+   /* Insert cycle counter */
    memcpy(&p_payload[p_ppm->cycle_counter_offset], &u16, sizeof(u16));
+
+   /* Insert data status */
    memcpy(&p_payload[p_ppm->data_status_offset], &p_ppm->data_status, sizeof(p_ppm->data_status));
+
+   /* Insert transfer status */
    memcpy(&p_payload[p_ppm->transfer_status_offset], &p_ppm->transfer_status, sizeof(p_ppm->transfer_status));
 }
 
@@ -217,7 +243,7 @@ int pf_ppm_activate_req(
    uint32_t                crep)
 {
    int                     ret = -1;
-   uint16_t                vlan_size = 0;
+   const uint16_t          vlan_size = 4;
    pf_iocr_t               *p_iocr = &p_ar->iocrs[crep];
    pf_ppm_t                *p_ppm;
    uint32_t                cnt;
@@ -241,13 +267,7 @@ int pf_ppm_activate_req(
       memcpy(&p_ppm->sa, &p_ar->ar_result.cm_responder_mac_add, sizeof(p_ppm->sa));
       memcpy(&p_ppm->da, &p_ar->ar_param.cm_initiator_mac_add, sizeof(p_ppm->da));
 
-      vlan_size = 0;
-      if (p_iocr->param.iocr_tag_header.vlan_id != 0)
-      {
-         vlan_size = 4;
-      }
       p_ppm->buffer_pos = 2*sizeof(pnet_ethaddr_t) + vlan_size + sizeof(uint16_t) + sizeof(uint16_t);
-
       p_ppm->cycle = 0;
       p_ppm->transfer_status = 0;
 

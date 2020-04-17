@@ -1241,8 +1241,8 @@ typedef struct pf_ppm
    int                     errline;
    uint32_t                errcnt;
 
-   pnet_ethaddr_t          sa;
-   pnet_ethaddr_t          da;
+   pnet_ethaddr_t          sa;                  /* Source MAC address */
+   pnet_ethaddr_t          da;                  /* Destination MAC address (IO-controller) */
 
    bool                    first_transmit;
 
@@ -1412,7 +1412,7 @@ typedef struct pf_apmx
    struct pf_ar            *p_ar;
    struct pf_alpmx         *p_alpmx;
 
-   pnet_ethaddr_t          da;
+   pnet_ethaddr_t          da;                           /* Destination MAC address (IO-controller) */
 
    uint16_t                src_ref;                      /* Our ref */
    uint16_t                dst_ref;                      /* controller local_alarm_reference */
@@ -1435,7 +1435,7 @@ typedef struct pf_apmx
    /* Latest sent alarm */
    os_buf_t                *p_rta;
 
-   uint16_t                vlan_prio;
+   uint16_t                vlan_prio;                    /* 5 or 6 */
    uint16_t                block_type_alarm_notify;
    uint16_t                block_type_alarm_ack;
    uint16_t                frame_id;
@@ -1466,7 +1466,7 @@ typedef enum pf_alpmi_state_values
  */
 typedef struct pf_alpmx
 {
-   pnet_ethaddr_t          da;
+   pnet_ethaddr_t          da;               /* Destination MAC address (IO-controller) */
 
    /*
     * The sequence number is used for PULL/PLUG requests.
