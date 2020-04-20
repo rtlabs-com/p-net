@@ -56,9 +56,13 @@ if ! ip link set dev $INTERFACE up; then
    exit 1
 fi
 
-if ! ip route add default via $DEFAULT_GATEWAY; then
-   echo "Failed to set default gateway"
-   exit 1
+if [ "${DEFAULT_GATEWAY}" != "0.0.0.0" ]; then
+   if ! ip route add default via $DEFAULT_GATEWAY; then
+      echo "Failed to set default gateway"
+      exit 1
+   fi
+else
+   echo "No valid default gateway given. Skipping."
 fi
 
 if ! hostname $HOSTNAME; then

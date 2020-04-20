@@ -46,6 +46,12 @@ uint16_t pf_get_uint16(
 
 /**
  * Extract a NDR header from a buffer.
+ *
+ * This is the first part of the payload of the incoming DCE/RPC message
+ * (which is sent via UDP).
+ *
+ * Reads args_maximum, args_length, maximum_count, offset and actual_count.
+ *
  * @param p_info           In:   The parser state.
  * @param p_pos            InOut:Position in the buffer.
  * @param p_ndr            Out:  Destination buffer.
@@ -183,7 +189,7 @@ void pf_get_ir_info_request(
 
 /**
  * Extract a DCE RPC header from a raw UDP data buffer.
- * @param p_info           In:   The parser information.
+ * @param p_info           InOut:The parser information. Sets p_info->is_big_endian
  * @param p_pos            InOut:The current parsing position.
  * @param p_rpc            Out:  Destination struture.
  */
