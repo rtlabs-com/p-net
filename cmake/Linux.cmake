@@ -58,6 +58,7 @@ target_include_directories(pn_dev
 
 target_sources(pn_dev
   PRIVATE
+  sample_app/sampleapp_common.c
   sample_app/main_linux.c
   )
 
