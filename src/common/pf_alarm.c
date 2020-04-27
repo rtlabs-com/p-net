@@ -33,7 +33,6 @@
 #define ALARM_VLAN_PRIO_LOW         5
 #define ALARM_VLAN_PRIO_HIGH        6
 
-
 /* The scheduler identifier */
 static const char *apmx_sync_name = "apmx";
 
@@ -854,7 +853,7 @@ static int pf_alarm_apms_a_data_req(
    else
    {
       LOG_DEBUG(PF_AL_BUF_LOG, "Alarm(%d): Allocate RTA buffer\n", __LINE__);
-      p_rta = os_buf_alloc(1500);
+      p_rta = os_buf_alloc(PF_FRAME_BUFFER_SIZE);
       if (p_rta == NULL)
       {
          LOG_ERROR(PF_ALARM_LOG, "Alarm(%d): No buffer for alarm notification\n", __LINE__);
@@ -869,30 +868,30 @@ static int pf_alarm_apms_a_data_req(
          else
          {
             /* Insert destination MAC address */
-            pf_put_mem(&p_apmx->da, sizeof(p_apmx->da), 1500, p_buf, &pos);
+            pf_put_mem(&p_apmx->da, sizeof(p_apmx->da), PF_FRAME_BUFFER_SIZE, p_buf, &pos);
 
             /* Insert source MAC address (our interface MAC address) */
             memcpy(&p_buf[pos], p_cfg->eth_addr.addr, sizeof(pnet_ethaddr_t));
             pos += sizeof(pnet_ethaddr_t);
 
             /* Insert VLAN Tag protocol identifier (TPID) */
-            pf_put_uint16(true, OS_ETHTYPE_VLAN, 1500, p_buf, &pos);
+            pf_put_uint16(true, OS_ETHTYPE_VLAN, PF_FRAME_BUFFER_SIZE, p_buf, &pos);
 
             /* Insert VLAN prio (and VLAN ID=0) */
             u16 = (p_apmx->vlan_prio & 0x0007) << 13;  /* Three leftmost bits */
-            pf_put_uint16(true, u16, 1500, p_buf, &pos);
+            pf_put_uint16(true, u16, PF_FRAME_BUFFER_SIZE, p_buf, &pos);
 
             /* Insert EtherType */
-            pf_put_uint16(true, OS_ETHTYPE_PROFINET, 1500, p_buf, &pos);
+            pf_put_uint16(true, OS_ETHTYPE_PROFINET, PF_FRAME_BUFFER_SIZE, p_buf, &pos);
 
             /* Insert Profinet frame ID (first part of Ethernet frame payload) */
-            pf_put_uint16(true, p_apmx->frame_id, 1500, p_buf, &pos);
+            pf_put_uint16(true, p_apmx->frame_id, PF_FRAME_BUFFER_SIZE, p_buf, &pos);
 
             /* Insert alarm specific data */
-            pf_put_alarm_fixed(true, p_fixed, 1500, p_buf, &pos);
+            pf_put_alarm_fixed(true, p_fixed, PF_FRAME_BUFFER_SIZE, p_buf, &pos);
 
             var_part_len_pos = pos;
-            pf_put_uint16(true, 0, 1500, p_buf, &pos);                     /* var_part_len is unknown here */
+            pf_put_uint16(true, 0, PF_FRAME_BUFFER_SIZE, p_buf, &pos);                     /* var_part_len is unknown here */
 
             if (p_fixed->pdu_type.type == PF_RTA_PDU_TYPE_DATA)
             {
@@ -901,22 +900,22 @@ static int pf_alarm_apms_a_data_req(
                   /* Send an AlarmAck DATA message */
                   pf_put_alarm_block(true, p_apmx->block_type_alarm_ack,
                      p_alarm_data, maint_status,
-                     0, 0, NULL, 1500, p_buf, &pos);
+                     0, 0, NULL, PF_FRAME_BUFFER_SIZE, p_buf, &pos);
 
                   /* Append the PNIO status */
-                  pf_put_pnet_status(true, p_pnio_status, 1500, p_buf, &pos);
+                  pf_put_pnet_status(true, p_pnio_status, PF_FRAME_BUFFER_SIZE, p_buf, &pos);
                }
                else
                {
                   /* Send an AlarmNotification DATA message */
                   pf_put_alarm_block(true, p_apmx->block_type_alarm_notify,
                      p_alarm_data, maint_status,
-                     payload_usi, payload_len, p_payload, 1500, p_buf, &pos);
+                     payload_usi, payload_len, p_payload, PF_FRAME_BUFFER_SIZE, p_buf, &pos);
                }
             }
             else if (p_fixed->pdu_type.type == PF_RTA_PDU_TYPE_ERR)
             {
-               pf_put_pnet_status(true, p_pnio_status, 1500, p_buf, &pos);
+               pf_put_pnet_status(true, p_pnio_status, PF_FRAME_BUFFER_SIZE, p_buf, &pos);
             }
             else
             {
@@ -925,7 +924,7 @@ static int pf_alarm_apms_a_data_req(
 
             /* Finally insert the correct VarPartLen */
             var_part_len = pos - (var_part_len_pos + sizeof(var_part_len));
-            pf_put_uint16(true, var_part_len, 1500, p_buf, &var_part_len_pos);
+            pf_put_uint16(true, var_part_len, PF_FRAME_BUFFER_SIZE, p_buf, &var_part_len_pos);
 
             p_rta->len = pos;
             if (os_eth_send(p_apmx->p_ar->p_sess->eth_handle, p_rta) <= 0)

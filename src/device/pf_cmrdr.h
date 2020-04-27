@@ -21,7 +21,6 @@ extern "C"
 {
 #endif
 
-#include "pnet_api.h"
 
 /**
  * Handle a RPC read request.

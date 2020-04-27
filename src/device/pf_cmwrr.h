@@ -21,7 +21,6 @@ extern "C"
 {
 #endif
 
-#include "pf_includes.h"
 
 /**
  * Initialize the CMWRR component.

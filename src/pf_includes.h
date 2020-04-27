@@ -38,14 +38,13 @@ extern "C"
 #include "pf_alarm.h"
 #include "pf_cpm.h"
 #include "pf_dcp.h"
-#include "pf_ppm.h"
-#include "pf_ptcp.h"
 #include "pf_eth.h"
 #include "pf_lldp.h"
+#include "pf_ppm.h"
+#include "pf_ptcp.h"
+#include "pf_scheduler.h"
 
 /* device */
-#include "pf_fspm.h"
-#include "pf_diag.h"
 #include "pf_cmdev.h"
 #include "pf_cmdmc.h"
 #include "pf_cmina.h"
@@ -57,11 +56,11 @@ extern "C"
 #include "pf_cmsm.h"
 #include "pf_cmsu.h"
 #include "pf_cmwrr.h"
-#include "pf_scheduler.h"
+#include "pf_diag.h"
+#include "pf_fspm.h"
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif /* PF_INCLUDES_H */
-

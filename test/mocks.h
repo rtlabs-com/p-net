@@ -28,7 +28,7 @@ extern "C"
 
 #include "osal.h"
 
-extern uint8_t     mock_os_eth_send_copy[1500];
+extern uint8_t     mock_os_eth_send_copy[PF_FRAME_BUFFER_SIZE];
 extern uint16_t    mock_os_eth_send_len;
 extern uint16_t    mock_os_eth_send_count;
 

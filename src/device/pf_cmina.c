@@ -29,7 +29,7 @@
 #endif
 
 #include <string.h>
-#include "osal.h"
+
 #include "pf_includes.h"
 
 static const char             *hello_sync_name = "hello";

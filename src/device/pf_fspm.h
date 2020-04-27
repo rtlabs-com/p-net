@@ -26,12 +26,6 @@ extern "C"
 {
 #endif
 
-#include <stdint.h>
-#include <stddef.h>
-#include <stdbool.h>
-#include <stdio.h>
-
-#include "pf_includes.h"
 
 /**
  * Initialize the FSPM component.

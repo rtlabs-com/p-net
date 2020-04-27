@@ -577,7 +577,7 @@ static void send_data(
    os_buf_t                *p_buf;
    uint8_t                 *p_ctr;
 
-   p_buf = os_buf_alloc(1500);
+   p_buf = os_buf_alloc(PF_FRAME_BUFFER_SIZE);
    if (p_buf == NULL)
    {
       printf("(%d): Out of memory in send_data\n", __LINE__);
@@ -669,7 +669,7 @@ static uint16_t                  seq_nbr = 0;
 void test_read(test_reads_t *p_the_test)
 {
    pf_ar_t                 *p_ar;
-   uint8_t                 buffer[1500];
+   uint8_t                 buffer[PF_FRAME_BUFFER_SIZE];
    uint16_t                pos = 0;
    uint16_t                idx = p_the_test->idx;
 
