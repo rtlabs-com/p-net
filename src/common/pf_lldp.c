@@ -76,7 +76,7 @@ static inline void pf_lldp_tlv_header(
    uint8_t                 typ,
    uint8_t                 len)
 {
-   pf_put_uint16(true, ((typ)<<9) + ((len) & 0x1ff), 1500, p_buf, p_pos); \
+   pf_put_uint16(true, ((typ)<<9) + ((len) & 0x1ff), PF_FRAME_BUFFER_SIZE, p_buf, p_pos); \
 }
 
 /**
@@ -94,9 +94,9 @@ static inline void pf_lldp_pnio_header(
    uint8_t                 len)
 {
    pf_lldp_tlv_header(p_buf,p_pos,typ,(len)+3);
-   pf_put_byte(0x00, 1500, p_buf, p_pos);
-   pf_put_byte(0x0e, 1500, p_buf, p_pos);
-   pf_put_byte(0xcf, 1500, p_buf, p_pos);
+   pf_put_byte(0x00, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
+   pf_put_byte(0x0e, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
+   pf_put_byte(0xcf, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
 }
 
 /**
@@ -114,9 +114,9 @@ static inline void pf_lldp_ieee_header(
    uint8_t                 len)
 {
    pf_lldp_tlv_header(p_buf, p_pos, typ, (len) + 3);
-   pf_put_byte(0x00, 1500, p_buf, p_pos);
-   pf_put_byte(0x12, 1500, p_buf, p_pos);
-   pf_put_byte(0x0f, 1500, p_buf, p_pos);
+   pf_put_byte(0x00, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
+   pf_put_byte(0x12, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
+   pf_put_byte(0x0f, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
 }
 
 /**
@@ -139,7 +139,7 @@ static void lldp_add_chassis_id_tlv(
       /* Use the MAC address */
       pf_lldp_tlv_header(p_buf, p_pos, LLDP_TYPE_CHASSIS_ID, 1+sizeof(pnet_ethaddr_t));
 
-      pf_put_byte(LLDP_SUBTYPE_CHASSIS_ID_MAC, 1500, p_buf, p_pos);
+      pf_put_byte(LLDP_SUBTYPE_CHASSIS_ID_MAC, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
       memcpy(&p_buf[*p_pos], p_cfg->eth_addr.addr, sizeof(pnet_ethaddr_t)); /* ToDo: Shall be device MAC */
       (*p_pos) += sizeof(pnet_ethaddr_t);
    }
@@ -148,8 +148,8 @@ static void lldp_add_chassis_id_tlv(
       /* Use the chassis_id from the cfg */
       pf_lldp_tlv_header(p_buf, p_pos, LLDP_TYPE_CHASSIS_ID, 1+len);
 
-      pf_put_byte(LLDP_SUBTYPE_CHASSIS_ID_NAME, 1500, p_buf, p_pos);
-      pf_put_mem(p_cfg->lldp_cfg.chassis_id, len, 1500, p_buf, p_pos);
+      pf_put_byte(LLDP_SUBTYPE_CHASSIS_ID_NAME, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
+      pf_put_mem(p_cfg->lldp_cfg.chassis_id, len, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
    }
 }
 
@@ -171,8 +171,8 @@ static void lldp_add_port_id_tlv(
 
    pf_lldp_tlv_header(p_buf, p_pos, LLDP_TYPE_PORT_ID, 1+len);
 
-   pf_put_byte(LLDP_SUBTYPE_PORT_ID_LOCAL, 1500, p_buf, p_pos);
-   pf_put_mem(p_cfg->lldp_cfg.port_id, len, 1500, p_buf, p_pos);
+   pf_put_byte(LLDP_SUBTYPE_PORT_ID_LOCAL, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
+   pf_put_mem(p_cfg->lldp_cfg.port_id, len, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
 }
 
 /**
@@ -188,7 +188,7 @@ static void lldp_add_ttl_tlv(
    uint16_t                *p_pos)
 {
    pf_lldp_tlv_header(p_buf, p_pos, LLDP_TYPE_TTL, 2);
-   pf_put_uint16(true, p_cfg->lldp_cfg.ttl, 1500, p_buf, p_pos);
+   pf_put_uint16(true, p_cfg->lldp_cfg.ttl, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
 }
 
 /**
@@ -207,9 +207,9 @@ static void lldp_add_port_status(
 {
    pf_lldp_pnio_header(p_buf, p_pos, LLDP_TYPE_ORG_SPEC, 5);
 
-   pf_put_byte(LLDP_PNIO_SUBTYPE_PORT_STATUS, 1500, p_buf, p_pos);
-   pf_put_uint16(true, p_cfg->lldp_cfg.rtclass_2_status, 1500, p_buf, p_pos);
-   pf_put_uint16(true, p_cfg->lldp_cfg.rtclass_3_status, 1500, p_buf, p_pos);
+   pf_put_byte(LLDP_PNIO_SUBTYPE_PORT_STATUS, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
+   pf_put_uint16(true, p_cfg->lldp_cfg.rtclass_2_status, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
+   pf_put_uint16(true, p_cfg->lldp_cfg.rtclass_3_status, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
 }
 
 /**
@@ -228,7 +228,7 @@ static void lldp_add_chassis_mac(
 {
    pf_lldp_pnio_header(p_buf, p_pos, LLDP_TYPE_ORG_SPEC, 1+sizeof(pnet_ethaddr_t));
 
-   pf_put_byte(LLDP_PNIO_SUBTYPE_INTERFACE_MAC, 1500, p_buf, p_pos);
+   pf_put_byte(LLDP_PNIO_SUBTYPE_INTERFACE_MAC, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
    memcpy(&p_buf[*p_pos], p_cfg->eth_addr.addr, sizeof(pnet_ethaddr_t)); /* ToDo: Should be device MAC */
    (*p_pos) += sizeof(pnet_ethaddr_t);
 }
@@ -249,10 +249,10 @@ static void lldp_add_ieee_mac_phy(
 {
    pf_lldp_ieee_header(p_buf, p_pos, LLDP_TYPE_ORG_SPEC, 6);
 
-   pf_put_byte(LLDP_IEEE_SUBTYPE_MAC_PHY, 1500, p_buf, p_pos);
-   pf_put_byte(p_cfg->lldp_cfg.cap_aneg, 1500, p_buf, p_pos);
-   pf_put_uint16(true, p_cfg->lldp_cfg.cap_phy, 1500, p_buf, p_pos);
-   pf_put_uint16(true, p_cfg->lldp_cfg.mau_type, 1500, p_buf, p_pos);
+   pf_put_byte(LLDP_IEEE_SUBTYPE_MAC_PHY, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
+   pf_put_byte(p_cfg->lldp_cfg.cap_aneg, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
+   pf_put_uint16(true, p_cfg->lldp_cfg.cap_phy, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
+   pf_put_uint16(true, p_cfg->lldp_cfg.mau_type, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
 }
 
 /**
@@ -276,12 +276,12 @@ static void lldp_add_management(
    pf_lldp_tlv_header(p_buf, p_pos, LLDP_TYPE_MANAGEMENT, 12);
 
    /* ToDo: What shall be moved to lldp_cfg? */
-   pf_put_byte(1+4, 1500, p_buf, p_pos);     /* Address string length (incl type) */
-   pf_put_byte(1, 1500, p_buf, p_pos);       /* Type IPV4 */
-   pf_put_uint32(true, ipaddr, 1500, p_buf, p_pos);
-   pf_put_byte(1, 1500, p_buf, p_pos);       /* Interface Subtype: Unknown */
-   pf_put_uint32(true, 0, 1500, p_buf, p_pos);  /* Interface number: Unknown */
-   pf_put_byte(0, 1500, p_buf, p_pos);       /* OID string length: 0 => Not supported */
+   pf_put_byte(1+4, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);     /* Address string length (incl type) */
+   pf_put_byte(1, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);       /* Type IPV4 */
+   pf_put_uint32(true, ipaddr, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
+   pf_put_byte(1, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);       /* Interface Subtype: Unknown */
+   pf_put_uint32(true, 0, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);  /* Interface number: Unknown */
+   pf_put_byte(0, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);       /* OID string length: 0 => Not supported */
 }
 
 /********************* Initialize and send **********************************/
@@ -289,7 +289,7 @@ static void lldp_add_management(
 void pf_lldp_send(
    pnet_t                  *net)
 {
-   os_buf_t                *p_lldp_buffer = os_buf_alloc(1500);
+   os_buf_t                *p_lldp_buffer = os_buf_alloc(PF_FRAME_BUFFER_SIZE);
    uint8_t                 *p_buf = NULL;
    uint16_t                pos = 0;
    pnet_cfg_t              *p_cfg = NULL;
@@ -352,12 +352,12 @@ void pf_lldp_send(
       if (p_buf != NULL)
       {
          pos = 0;
-         pf_put_mem(&lldp_dst_addr, sizeof(lldp_dst_addr), 1500, p_buf, &pos);
+         pf_put_mem(&lldp_dst_addr, sizeof(lldp_dst_addr), PF_FRAME_BUFFER_SIZE, p_buf, &pos);
          memcpy(&p_buf[pos], p_cfg->eth_addr.addr, sizeof(pnet_ethaddr_t)); /* ToDo: Shall be port MAC address */
          pos += sizeof(pnet_ethaddr_t);
 
          /* Add FrameID */
-         pf_put_uint16(true, OS_ETHTYPE_LLDP, 1500, p_buf, &pos);
+         pf_put_uint16(true, OS_ETHTYPE_LLDP, PF_FRAME_BUFFER_SIZE, p_buf, &pos);
 
          /* Add mandatory parts */
          lldp_add_chassis_id_tlv(p_cfg, p_buf, &pos);

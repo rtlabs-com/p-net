@@ -611,7 +611,7 @@ static void send_data(
    os_buf_t                *p_buf;
    uint8_t                 *p_ctr;
 
-   p_buf = os_buf_alloc(1500);
+   p_buf = os_buf_alloc(PF_FRAME_BUFFER_SIZE);
    if (p_buf == NULL)
    {
       printf("(%d): Out of memory in send_data\n", __LINE__);

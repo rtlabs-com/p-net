@@ -297,7 +297,7 @@ int pf_ppm_activate_req(
                       BIT(PNET_DATA_STATUS_BIT_STATION_PROBLEM_INDICATOR);   /* Normal */
 
       /* Get the buffer to store the outgoing data into. */
-      p_ppm->p_send_buffer = os_buf_alloc(1500);
+      p_ppm->p_send_buffer = os_buf_alloc(PF_FRAME_BUFFER_SIZE);
 
       /* Default_values: Set buffer to zero and IOxS to BAD (=0) */
       /* Default_status: Set cycle_counter to invalid, transfer_status = 0, data_status = 0 */

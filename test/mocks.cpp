@@ -20,7 +20,7 @@
 
 uint8_t pnet_log_level;
 
-uint8_t     mock_os_eth_send_copy[1500];
+uint8_t     mock_os_eth_send_copy[PF_FRAME_BUFFER_SIZE];
 uint16_t    mock_os_eth_send_len;
 uint16_t    mock_os_eth_send_count;
 
@@ -30,7 +30,7 @@ uint16_t    mock_os_udp_sendto_count;
 uint16_t    mock_os_set_led_count;
 bool        mock_os_set_led_on;
 
-uint8_t     mock_os_udp_recvfrom_buffer[1500];
+uint8_t     mock_os_udp_recvfrom_buffer[PF_FRAME_BUFFER_SIZE];
 uint16_t    mock_os_udp_recvfrom_length;
 uint16_t    mock_os_udp_recvfrom_count;
 

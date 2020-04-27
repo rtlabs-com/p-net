@@ -34,7 +34,7 @@
 #endif
 
 #include <string.h>
-#include "osal.h"
+
 #include "pf_includes.h"
 #include "pf_block_reader.h"
 

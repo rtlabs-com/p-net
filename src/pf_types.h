@@ -54,6 +54,8 @@ static inline uint32_t atomic_fetch_sub(atomic_int *p, uint32_t v)
 }
 #endif
 
+#define PF_FRAME_BUFFER_SIZE  1500
+
 /*********************** RPC header ******************************************/
 
 /** Magic UUID values */
@@ -1258,7 +1260,7 @@ typedef struct pf_ppm
    uint16_t                data_status_offset;
    uint16_t                transfer_status_offset;
 
-   uint8_t                 buffer_data[1500];   /* Max */
+   uint8_t                 buffer_data[PF_FRAME_BUFFER_SIZE];   /* Max */
 
    uint32_t                trx_cnt;
 
@@ -1983,8 +1985,8 @@ struct pnet
    pf_ar_t                             cmrpc_ar[PNET_MAX_AR];
    pf_session_info_t                   cmrpc_session_info[PF_MAX_SESSION];
    int                                 cmrpc_rpcreq_socket;
-   uint8_t                             cmrpc_dcerpc_req_frame[1500];
-   uint8_t                             cmrpc_dcerpc_rsp_frame[1500];
+   uint8_t                             cmrpc_dcerpc_req_frame[PF_FRAME_BUFFER_SIZE];
+   uint8_t                             cmrpc_dcerpc_rsp_frame[PF_FRAME_BUFFER_SIZE];
    pf_cmsu_state_values_t              cmsu_state;
    pf_cmwrr_state_values_t             cmwrr_state;
    const pnet_cfg_t                    *p_fspm_default_cfg;
