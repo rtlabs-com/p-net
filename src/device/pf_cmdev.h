@@ -418,7 +418,6 @@ int pf_cmdev_rm_ccontrol_cnf(
    pnet_result_t           *p_ccontrol_result);
 
 
-
 /************ Internal functions, made available for unit testing ************/
 
 int pf_cmdev_calculate_exp_sub_data_descriptor_direction(
@@ -427,6 +426,21 @@ int pf_cmdev_calculate_exp_sub_data_descriptor_direction(
    pf_dev_status_type_t       status_type,
    pf_data_direction_values_t *resulting_data_dir);
 
+int pf_cmdev_check_zero(
+   uint8_t                 *p_start,
+   uint16_t                len);
+
+int pf_cmdev_check_visible_string(
+   const char              *s);
+
+int pf_cmdev_check_no_straddle(
+   uint16_t                start_1,
+   uint16_t                length_1,
+   uint16_t                start_2,
+   uint16_t                length_2);
+
+int pf_cmdev_check_ar_type(
+   uint16_t                ar_type);
 
 #ifdef __cplusplus
 }

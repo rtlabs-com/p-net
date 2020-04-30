@@ -164,6 +164,13 @@ void pf_cpm_show(
    pnet_t                  *net,
    pf_cpm_t                *p_cpm);
 
+
+/************ Internal functions, made available for unit testing ************/
+
+int pf_cpm_check_cycle(
+  int32_t                  prev,
+  uint16_t                 now);
+
 #ifdef __cplusplus
 }
 #endif

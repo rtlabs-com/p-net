@@ -15,7 +15,8 @@
 
 target_sources(pf_test PRIVATE
   # Unit tests
-  test_diag.cpp
+  test_alarm.cpp
+  test_block_reader.cpp
   test_cmdev.cpp
   test_cmdmc.cpp
   test_cmina.cpp
@@ -27,16 +28,16 @@ target_sources(pf_test PRIVATE
   test_cmsm.cpp
   test_cmsu.cpp
   test_cmwdr.cpp
-  test_alarm.cpp
   test_cpm.cpp
   test_dcp.cpp
+  test_diag.cpp
+  test_eth.cpp
   test_lldp.cpp
+  test_osal.cpp
   test_pnetapi.cpp
   test_ppm.cpp
   test_ptcp.cpp
   test_scheduler.cpp
-  test_eth.cpp
-  test_osal.cpp
 
   # Mocks
   mocks.h

@@ -262,6 +262,14 @@ void pf_get_pnio_status(
    uint16_t                *p_pos,
    pnet_pnio_status_t      *p_status);
 
+
+/************ Internal functions, made available for unit testing ************/
+
+uint32_t pf_get_bits(
+   uint32_t                bits,
+   uint8_t                 pos,
+   uint8_t                 len);
+
 #ifdef __cplusplus
 }
 #endif
