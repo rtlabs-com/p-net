@@ -1230,7 +1230,7 @@ int pf_cmdev_cm_init_req(
  * @return  0  if all bytes are zero.
  *          -1 if at least one byte is non-zero.
  */
-static int pf_cmdev_check_zero(
+int pf_cmdev_check_zero(
    uint8_t                 *p_start,
    uint16_t                len)
 {
@@ -1297,11 +1297,14 @@ static int pf_cmdev_check_cm_initiator_object_uuid(
 /**
  * @internal
  * Check if the string contains only visible characters.
+ *
+ * A visible character has its ASCII value 0x20 <= x <= 0x7E.
+ *
  * @param s                In:   The string to check.
  * @return  0  if the string contains only visible characters.
- *          -1 if at least one character is invalid.
+ *          -1 if at least one character is invalid, or string length is zero.
  */
-static int pf_cmdev_check_visible_string(
+int pf_cmdev_check_visible_string(
    const char              *s)
 {
    int ret = -1;
@@ -1324,12 +1327,13 @@ static int pf_cmdev_check_visible_string(
 /**
  * @internal
  * Check if the Specified AR type is supported.
- * ToDo: Currently only IOCAR_SINGLE is supported.
+ *
+ * ToDo: Currently only IOCAR_SINGLE and PF_ART_IOSAR is supported.
  * @param ar_type          In:   The AR type to check.
  * @return  0  if the AR type is supported.
  *          -1 if the AR type is not supported.
  */
-static int pf_cmdev_check_ar_type(
+int pf_cmdev_check_ar_type(
    uint16_t                ar_type)
 {
    int ret = -1;
@@ -1932,7 +1936,20 @@ static int pf_cmdev_iocr_setup_desc(
 }
 
 /**
- * Check if two areas overlap.
+ * Check if two areas overlap (straddle).
+ *
+ *           x x x          Area 1 (Start = 4, Length = 3)
+ *   0 1 2 3 4 5 6 7 8 9
+ *   x x                    No overlap
+ *     x x                  No overlap
+ *       x x                No overlap
+ *         x x              Overlap
+ *           x x            Overlap
+ *             x x          Overlap
+ *               x x        Overlap
+ *                 x x      No overlap
+ *                   x x    No overlap
+ *
  * @param start_1          In:   The start of area 1.
  * @param length_1         In:   The length of area 1.
  * @param start_2          In:   The start of area 2.
@@ -1940,7 +1957,7 @@ static int pf_cmdev_iocr_setup_desc(
  * @return  0  If the areas do NOT straddle each other.
  *          -1 If the areas do overlap.
  */
-static int pf_cmdev_check_no_straddle(
+int pf_cmdev_check_no_straddle(
    uint16_t                start_1,
    uint16_t                length_1,
    uint16_t                start_2,

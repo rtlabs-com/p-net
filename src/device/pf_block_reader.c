@@ -173,12 +173,18 @@ static void pf_get_uuid(
  * @internal
  * Extract bits from a uint32_t.
  * The extracted bits are placed at bit 0 in the returned uint32_t.
+ *
+ *                               A  B  C                      Input. pos = 6, len = 3
+ *  Bit number  ... 12 11 10  9  8  7  6  5  4  3  2  1  0
+ *
+ *                  ... 0  0  0  0  0  0  0  0  0  A  B  C    Output
+ *
  * @param bits             In:   The bit field.
  * @param pos              In:   First bit to extract.
  * @param len              In:   Number of bits to extract.
- * @return
+ * @return The extracted bits
  */
-static uint32_t pf_get_bits(
+uint32_t pf_get_bits(
    uint32_t                bits,
    uint8_t                 pos,
    uint8_t                 len)
@@ -190,7 +196,7 @@ static uint32_t pf_get_bits(
    }
    else if ((pos + len) > 32)
    {
-      LOG_DEBUG(PNET_LOG, "BR(%d): pos %u + len %u > 32\n", __LINE__, pos, len);
+      LOG_ERROR(PNET_LOG, "BR(%d): pos %u + len %u > 32\n", __LINE__, pos, len);
       return 0;
    }
    else if ((pos == 0) && (len == 32))
