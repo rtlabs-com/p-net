@@ -45,6 +45,16 @@ uint16_t pf_get_uint16(
    uint16_t                *p_pos);
 
 /**
+ * @internal
+ * Return a uint32_t from a buffer.
+ * @param p_info           In:   The parser state.
+ * @param p_pos            InOut:Position in the buffer.
+ */
+uint32_t pf_get_uint32(
+   pf_get_info_t           *p_info,
+   uint16_t                *p_pos);
+
+/**
  * Extract a NDR header from a buffer.
  *
  * This is the first part of the payload of the incoming DCE/RPC message

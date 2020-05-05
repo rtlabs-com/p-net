@@ -160,7 +160,7 @@ int pf_cmdev_pull_module(
    uint16_t                slot_nbr);
 
 /**
- * Abort request from the application.
+ * Abort request from the application or from RPC.
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @return  0  if operation succeeded.

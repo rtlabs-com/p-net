@@ -127,13 +127,7 @@ uint16_t pf_get_uint16(
    return res;
 }
 
-/**
- * @internal
- * Return a uint16_t from a buffer.
- * @param p_info           In:   The parser state.
- * @param p_pos            InOut:Position in the buffer.
- */
-static uint32_t pf_get_uint32(
+uint32_t pf_get_uint32(
    pf_get_info_t           *p_info,
    uint16_t                *p_pos)
 {
@@ -627,6 +621,7 @@ void pf_get_dce_rpc_header(
 
    p_rpc->version = pf_get_byte(p_info, p_pos);
    p_rpc->packet_type = pf_get_byte(p_info, p_pos) & 0x1f;  /* Only 5 LSB according to spec */
+
    /* flags */
    temp_uint8 = pf_get_byte(p_info, p_pos);
    p_rpc->flags.last_fragment = pf_get_bits(temp_uint8, PF_RPC_F_LAST_FRAGMENT, 1);
@@ -635,15 +630,20 @@ void pf_get_dce_rpc_header(
    p_rpc->flags.maybe = pf_get_bits(temp_uint8, PF_RPC_F_MAYBE, 1);
    p_rpc->flags.idempotent = pf_get_bits(temp_uint8, PF_RPC_F_IDEMPOTENT, 1);
    p_rpc->flags.broadcast = pf_get_bits(temp_uint8, PF_RPC_F_BROADCAST, 1);
+
    /* flags2 */
    temp_uint8 = pf_get_byte(p_info, p_pos);
    p_rpc->flags2.cancel_pending = pf_get_bits(temp_uint8, PF_RPC_F2_CANCEL_PENDING, 1);
+
    /* Data repr */
    temp_uint8 = pf_get_byte(p_info, p_pos);
    p_rpc->is_big_endian = (pf_get_bits(temp_uint8, 4, 4) == 0);
    p_info->is_big_endian = p_rpc->is_big_endian;
+
    /* Float repr  - Assume IEEE */
    temp_uint8 = pf_get_byte(p_info, p_pos);
+   p_rpc->float_repr = 0;
+
    /* Reserved */
    p_rpc->reserved = pf_get_byte(p_info, p_pos);
 

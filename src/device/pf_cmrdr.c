@@ -51,7 +51,7 @@ int pf_cmrdr_rm_read_ind(
    uint16_t                start_pos = 0;
    uint8_t                 iocs[255];              /* Max possible array size */
    uint8_t                 iops[255];              /* Max possible array size */
-   uint8_t                 subslot_data[1500];     /* Max possible array size */
+   uint8_t                 subslot_data[PF_FRAME_BUFFER_SIZE];     /* Max possible array size */
    uint8_t                 iocs_len = 0;
    uint8_t                 iops_len = 0;
    uint16_t                data_len = 0;
