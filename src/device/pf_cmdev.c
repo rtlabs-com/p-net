@@ -1191,7 +1191,8 @@ int pf_cmdev_cm_abort(
    }
    else
    {
-      LOG_ERROR(PNET_LOG, "CMDEV(%d): pf_cmdev_cm_abort_req: p_ar is NULL\n", __LINE__);
+      /* p_ar may be NULL when handling controller induced aborts */
+      LOG_INFO(PNET_LOG, "CMDEV(%d): pf_cmdev_cm_abort_req: p_ar is NULL\n", __LINE__);
    }
 
    /* cm_abort_cnf */

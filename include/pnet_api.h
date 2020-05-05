@@ -101,6 +101,7 @@ extern "C"
 
 #define PNET_MAX_MAN_SPECIFIC_FAST_STARTUP_DATA_LENGTH         0     /**< or 512 (bytes) */
 
+#define PNET_MAX_SESSION_BUFFER_SIZE                           4500  /**< Max fragmented RPC request/response length */
 /**
  * # GSDML
  * The following values are application-specific and should match what
