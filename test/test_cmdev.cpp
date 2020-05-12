@@ -19,29 +19,18 @@
  *
  */
 
+#include "utils_for_testing.h"
+#include "mocks.h"
 
 #include "pf_includes.h"
 
 #include <gtest/gtest.h>
 
-#include "mocks.h"
-#include "test_util.h"
 
-// Test fixture
+class CmdevUnitTest : public PnetUnitTest {};
 
-class CmdevTest : public ::testing::Test
-{
-protected:
-   virtual void SetUp() {
-      memset (&net, 0, sizeof(net));
-   };
 
-   pnet_cfg_t net;
-};
-
-// Tests
-
-TEST_F (CmdevTest, CmdevCalculateDatadirectionInDescriptor)
+TEST_F (CmdevUnitTest, CmdevCalculateDatadirectionInDescriptor)
 {
    pf_data_direction_values_t resulting_direction;
    int ret;
@@ -173,7 +162,7 @@ TEST_F (CmdevTest, CmdevCalculateDatadirectionInDescriptor)
    EXPECT_EQ (PF_DIRECTION_OUTPUT, resulting_direction);
 }
 
-TEST_F (CmdevTest, CmdevCheckZero)
+TEST_F (CmdevUnitTest, CmdevCheckZero)
 {
    int ret;
    int ix;
@@ -223,7 +212,7 @@ TEST_F (CmdevTest, CmdevCheckZero)
 }
 
 
-TEST_F (CmdevTest, CmdevCheckVisibleString)
+TEST_F (CmdevUnitTest, CmdevCheckVisibleString)
 {
    int ix;
    int ret;
@@ -279,7 +268,7 @@ TEST_F (CmdevTest, CmdevCheckVisibleString)
    EXPECT_EQ (-1, ret);
 }
 
-TEST_F (CmdevTest, CmdevCheckNoStraddle)
+TEST_F (CmdevUnitTest, CmdevCheckNoStraddle)
 {
    uint16_t start_a;
    uint16_t length_a;
@@ -381,7 +370,7 @@ TEST_F (CmdevTest, CmdevCheckNoStraddle)
    EXPECT_EQ (0, pf_cmdev_check_no_straddle(0xFFFF , length_b, start_a, length_a));
 }
 
-TEST_F (CmdevTest, CmdevCheckArType)
+TEST_F (CmdevUnitTest, CmdevCheckArType)
 {
    int ret;
 
