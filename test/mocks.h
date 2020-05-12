@@ -28,15 +28,24 @@ extern "C"
 
 #include "osal.h"
 
-extern uint8_t     mock_os_eth_send_copy[PF_FRAME_BUFFER_SIZE];
-extern uint16_t    mock_os_eth_send_len;
-extern uint16_t    mock_os_eth_send_count;
+typedef struct mock_os_data_obj
+{
+   uint8_t     eth_send_copy[PF_FRAME_BUFFER_SIZE];
+   uint16_t    eth_send_len;
+   uint16_t    eth_send_count;
 
-extern uint16_t    mock_os_udp_sendto_len;
-extern uint16_t    mock_os_udp_sendto_count;
+   uint16_t    udp_sendto_len;
+   uint16_t    udp_sendto_count;
 
-extern uint16_t    mock_os_set_led_count;
-extern bool        mock_os_set_led_on;
+   uint16_t    set_led_count;
+   bool        set_led_on;
+
+   uint8_t     udp_recvfrom_buffer[PF_FRAME_BUFFER_SIZE];
+   uint16_t    udp_recvfrom_length;
+   uint16_t    udp_recvfrom_count;
+} mock_os_data_t;
+
+extern mock_os_data_t mock_os_data;
 
 void mock_init(void);
 void mock_clear(void);

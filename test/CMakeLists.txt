@@ -38,6 +38,8 @@ target_sources(pf_test PRIVATE
   test_ppm.cpp
   test_ptcp.cpp
   test_scheduler.cpp
+  utils_for_testing.h
+  utils_for_testing.cpp
 
   # Mocks
   mocks.h

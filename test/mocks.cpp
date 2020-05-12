@@ -20,37 +20,12 @@
 
 uint8_t pnet_log_level;
 
-uint8_t     mock_os_eth_send_copy[PF_FRAME_BUFFER_SIZE];
-uint16_t    mock_os_eth_send_len;
-uint16_t    mock_os_eth_send_count;
-
-uint16_t    mock_os_udp_sendto_len;
-uint16_t    mock_os_udp_sendto_count;
-
-uint16_t    mock_os_set_led_count;
-bool        mock_os_set_led_on;
-
-uint8_t     mock_os_udp_recvfrom_buffer[PF_FRAME_BUFFER_SIZE];
-uint16_t    mock_os_udp_recvfrom_length;
-uint16_t    mock_os_udp_recvfrom_count;
-
 os_mutex_t  *mock_mutex;
+mock_os_data_t mock_os_data;
 
 void mock_clear(void)
 {
-   memset(mock_os_eth_send_copy, 0, sizeof(mock_os_eth_send_copy));
-   mock_os_eth_send_len = 0;
-   mock_os_eth_send_count = 0;
-
-   mock_os_udp_sendto_len = 0;
-   mock_os_udp_sendto_count = 0;
-
-   mock_os_set_led_count = 0;
-   mock_os_set_led_on = false;
-
-   memset(mock_os_udp_recvfrom_buffer, 0, sizeof(mock_os_udp_recvfrom_buffer));
-   mock_os_udp_recvfrom_length = 0;
-   mock_os_udp_recvfrom_count = 0;
+   memset(&mock_os_data, 0, sizeof(mock_os_data));
 }
 
 void mock_init(void)
@@ -95,11 +70,13 @@ int mock_os_eth_send(
    os_eth_handle_t         *handle,
    os_buf_t                *p_buf)
 {
-   memcpy(mock_os_eth_send_copy, p_buf->payload, p_buf->len);
-   mock_os_eth_send_len = p_buf->len;
-   mock_os_eth_send_count++;
+   memcpy(mock_os_data.eth_send_copy, p_buf->payload, p_buf->len);
+   mock_os_data.eth_send_len = p_buf->len;
+   mock_os_data.eth_send_count++;
+
    return p_buf->len;
 }
+
 
 int mock_os_udp_socket(void)
 {
@@ -122,10 +99,10 @@ int mock_os_udp_sendto(
    const uint8_t           *data,
    int                     size)
 {
-   int                     len = size;
-   mock_os_udp_sendto_len = len;
-   mock_os_udp_sendto_count++;
-   return len;
+   mock_os_data.udp_sendto_len = size;
+   mock_os_data.udp_sendto_count++;
+
+   return size;
 }
 
 void mock_set_os_udp_recvfrom_buffer(
@@ -133,9 +110,11 @@ void mock_set_os_udp_recvfrom_buffer(
    uint16_t                len)
 {
    os_mutex_lock(mock_mutex);
-   memcpy(mock_os_udp_recvfrom_buffer, p_src, len);
-   mock_os_udp_recvfrom_length = len;
-   mock_os_udp_recvfrom_count++;
+
+   memcpy(mock_os_data.udp_recvfrom_buffer, p_src, len);
+   mock_os_data.udp_recvfrom_length = len;
+   mock_os_data.udp_recvfrom_count++;
+
    os_mutex_unlock(mock_mutex);
 }
 
@@ -149,9 +128,11 @@ int mock_os_udp_recvfrom(
    int                     len;
 
    os_mutex_lock(mock_mutex);
-   memcpy(data, mock_os_udp_recvfrom_buffer, mock_os_udp_recvfrom_length);
-   len = mock_os_udp_recvfrom_length;
-   mock_os_udp_recvfrom_length = 0;
+
+   memcpy(data, mock_os_data.udp_recvfrom_buffer, mock_os_data.udp_recvfrom_length);
+   len = mock_os_data.udp_recvfrom_length;
+   mock_os_data.udp_recvfrom_length = 0;
+
    os_mutex_unlock(mock_mutex);
 
    return len;
@@ -173,8 +154,8 @@ void mock_os_set_led(
    uint16_t                id,
    bool                    on)
 {
-   mock_os_set_led_count++;
-   mock_os_set_led_on = on;
+   mock_os_data.set_led_count++;
+   mock_os_data.set_led_on = on;
 }
 
 int mock_pf_alarm_send_diagnosis(

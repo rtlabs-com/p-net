@@ -13,32 +13,18 @@
  * full license information.
  ********************************************************************/
 
+#include "utils_for_testing.h"
+#include "mocks.h"
+
 #include "pf_includes.h"
 
 #include <gtest/gtest.h>
 
-#include "mocks.h"
-#include "test_util.h"
 
-// Test fixture
+class CpmUnitTest : public PnetUnitTest {};
 
-class CpmTest : public ::testing::Test
-{
-protected:
-   virtual void SetUp() {
-      memset (&net, 0, sizeof(net));
-   };
 
-   pnet_cfg_t net;
-};
-
-// Tests
-
-TEST_F (CpmTest, CpmRunTest)
-{
-}
-
-TEST_F (CpmTest, CpmCheckCycle)
+TEST_F (CpmUnitTest, CpmCheckCycle)
 {
    EXPECT_EQ (-1, pf_cpm_check_cycle(1 , 0xFFFF));
    EXPECT_EQ (-1, pf_cpm_check_cycle(1 , 0));
