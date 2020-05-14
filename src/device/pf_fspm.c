@@ -13,6 +13,17 @@
  * full license information.
  ********************************************************************/
 
+/**
+ * @file
+ * @brief Implements the Fieldbus Application Layer Service Protocol Machine (FSPM)
+ *
+ * Stores the user-defined configuration, and calls the user-defined callbacks.
+ * Create logbook entries.
+ * Reads and writes identification & maintenance records.
+ *
+ */
+
+
 #ifdef UNIT_TEST
 #define os_udp_recvfrom mock_os_udp_recvfrom
 #define os_udp_sendto mock_os_udp_sendto
@@ -23,7 +34,7 @@
 #endif
 
 #include <string.h>
-#include "osal.h"
+
 #include "pf_includes.h"
 #include "pf_block_reader.h"
 
@@ -513,6 +524,21 @@ int pf_fspm_aplmr_alarm_ack_cnf(
    if (net->fspm_cfg.alarm_ack_cnf_cb != NULL)
    {
       ret = net->fspm_cfg.alarm_ack_cnf_cb(net, net->fspm_cfg.cb_arg, p_ar->arep, res);
+   }
+
+   return ret;
+}
+
+int pf_fspm_reset_ind(
+   pnet_t                  *net,
+   bool                    should_reset_application,
+   uint16_t                reset_mode)
+{
+   int ret = 0;
+
+   if (net->fspm_cfg.reset_cb != NULL)
+   {
+      ret = net->fspm_cfg.reset_cb(net, net->fspm_cfg.cb_arg, should_reset_application, reset_mode);
    }
 
    return ret;

@@ -32,20 +32,13 @@
 #define GPIO_BUTTON1    GPIO_P15_13
 #define GPIO_BUTTON2    GPIO_P15_12
 
-/**
- * Set IP addr, mask and gateway.
- * Set hostname.
- * @param p_ipaddr
- * @param p_netmask
- * @param p_gw
- * @param hostname
- * @return
- */
 int os_set_ip_suite(
+   const char              *interface_name,
    os_ipaddr_t             *p_ipaddr,
    os_ipaddr_t             *p_netmask,
    os_ipaddr_t             *p_gw,
-   const char              *hostname)
+   const char              *hostname,
+   bool                    permanent)
 {
    ip_addr_t      ip_addr;
    ip_addr_t      ip_mask;

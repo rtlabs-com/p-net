@@ -13,6 +13,18 @@
  * full license information.
  ********************************************************************/
 
+/**
+ * @file
+ * @brief Utility functions for writing data into buffers.
+ *
+ * For example uint16, time stamps and protocol headers can be written to the
+ * buffers.
+ *
+ * Most functions have (at least) a buffer and a position in the buffer
+ * as input arguments.
+ *
+ */
+
 #ifdef UNIT_TEST
 
 #endif
@@ -1106,6 +1118,9 @@ void pf_put_read_result(
 /**
  * @internal
  * Insert the sub-slot information into a buffer.
+ *
+ * Inserts subslot number and submodule ID.
+ *
  * @param is_big_endian    In:   Endianness of the destination buffer.
  * @param block_type       In:   Specifies REAL or EXP ident number to insert.
  * @param p_subslot        In:   The sub-slot instance.
@@ -1135,6 +1150,10 @@ static void pf_put_ident_subslot(
 /**
  * @internal
  * Insert the slot information into a buffer, with filter.
+ *
+ * Inserts slot number, module ID, number of subslots and then uses
+ * \a pf_put_ident_subslot() to insert more info.
+ *
  * @param is_big_endian    In:   Endianness of the destination buffer.
  * @param block_type       In:   Specifies REAL or EXP ident number to insert.
  * @param filter_level     In:   The filter starting level.
@@ -1195,10 +1214,9 @@ static void pf_put_ident_slot(
          }
       }
    }
-   if (cnt > 0)
-   {
-      pf_put_uint16(is_big_endian, cnt, res_len, p_bytes, p_pos); /* NbrAPI */
-   }
+
+   /* Insert number of subslots in use, even if there are none */
+   pf_put_uint16(is_big_endian, cnt, res_len, p_bytes, p_pos);
 
    /* Now add the actual subslot info - if requested */
    if (stop_level > PF_DEV_FILTER_LEVEL_SLOT)
@@ -1233,7 +1251,11 @@ static void pf_put_ident_slot(
 
 /**
  * @internal
- * Insert the api information into a buffer, with filter.
+ * Insert the API information into a buffer, with filter.
+ *
+ * Inserts API ID, number of slots and then uses \a pf_put_ident_slot() to
+ * insert more info.
+ *
  * @param is_big_endian    In:   Endianness of the destination buffer.
  * @param block_type       In:   Specifies REAL or EXP ident number to insert.
  * @param filter_level     In:   The filter starting level.
@@ -1290,10 +1312,8 @@ static void pf_put_ident_api(
             }
          }
       }
-      if (cnt > 0)
-      {
-         pf_put_uint16(is_big_endian, cnt, res_len, p_bytes, p_pos); /* NbrAPI */
-      }
+      /* Insert number of slots in use, even if there are none */
+      pf_put_uint16(is_big_endian, cnt, res_len, p_bytes, p_pos);
 
       if (stop_level > PF_DEV_FILTER_LEVEL_API)
       {
@@ -1330,6 +1350,10 @@ static void pf_put_ident_api(
 /**
  * @internal
  * Put requested ident information into a buffer, with filter.
+ *
+ * Inserts number of APIs, and then uses \a pf_put_ident_api() to insert
+ * more info.
+ *
  * @param is_big_endian    In:   Endianness of the destination buffer.
  * @param block_type       In:   Specifies REAL or EXP ident number to insert.
  * @param filter_level     In:   The filter starting level.
@@ -1384,10 +1408,9 @@ static void pf_put_ident_device(
          }
       }
    }
-   if (cnt > 0)
-   {
-      pf_put_uint16(is_big_endian, cnt, res_len, p_bytes, p_pos); /* NbrAPI */
-   }
+
+   /* Insert number of APIs in use, even if there are none */
+   pf_put_uint16(is_big_endian, cnt, res_len, p_bytes, p_pos);
 
    if (stop_level > PF_DEV_FILTER_LEVEL_DEVICE)
    {
@@ -1696,6 +1719,11 @@ void pf_put_write_result(
    block_len = *p_pos - (block_pos + 4);
    block_pos += offsetof(pf_block_header_t, block_length);   /* Point to correct place */
    pf_put_uint16(is_big_endian, block_len, res_len, p_bytes, &block_pos);
+
+   if (*p_pos >= res_len)
+   {
+      LOG_ERROR(PNET_LOG, "BW(%d): Output buffer is filled, while preparing DCP Write response.\n", __LINE__);
+   }
 }
 
 void pf_put_log_book_data(

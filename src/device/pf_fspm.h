@@ -26,12 +26,6 @@ extern "C"
 {
 #endif
 
-#include <stdint.h>
-#include <stddef.h>
-#include <stdbool.h>
-#include <stdio.h>
-
-#include "pf_includes.h"
 
 /**
  * Initialize the FSPM component.
@@ -59,8 +53,10 @@ void pf_fspm_create_log_book_entry(
 
 /**
  * Process write record requests from the controller.
- * If index is user-defined then call application call-back (if defined).
  * If index indicates I&M data records then handle here.
+ *
+ * If index is user-defined then call application
+ * call-back \a pnet_write_ind() (if defined).
  *
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
@@ -81,6 +77,8 @@ int pf_fspm_cm_write_ind(
 
 /**
  * Process read record requests from the controller.
+ * Triggers the \a pnet_read_ind() user callback for some values.
+ *
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param p_read_request   In:   The read request record.
@@ -88,7 +86,7 @@ int pf_fspm_cm_write_ind(
  * @param p_read_length    Out:  Size of the source data.
  * @param p_result         Out:  The result information.
  * @return  0  if operation succeeded.
- *          -1 if an error occurred.
+ *          -1 if not handled or an error occurred.
  */
 int pf_fspm_cm_read_ind(
    pnet_t                  *net,
@@ -100,6 +98,7 @@ int pf_fspm_cm_read_ind(
 
 /**
  * Response from controller to appl_rdy request.
+ * Triggers the \a pnet_ccontrol_cnf() user callback.
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param p_result         Out:  The result information.
@@ -112,7 +111,7 @@ int pf_fspm_ccontrol_cnf(
    pnet_result_t           *p_result);
 
 /**
- * Call user call-back when a new connection is requested.
+ * Call user call-back \a pnet_connect_ind() when a new connection is requested.
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param p_result         Out:  The result information.
@@ -125,7 +124,7 @@ int pf_fspm_cm_connect_ind(
    pnet_result_t           *p_result);
 
 /**
- * Call user call-back when a connection is released.
+ * Call user call-back \a pnet_release_ind() when a connection is released.
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param p_result         Out:  The result information.
@@ -138,7 +137,8 @@ int pf_fspm_cm_release_ind(
    pnet_result_t           *p_result);
 
 /**
- * Call user call-back to indicate a control from the ProfiNet controller.
+ * Call user call-back \a pnet_dcontrol_ind() to indicate a control request
+ * from the ProfiNet controller.
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param control_command  In:   The control command.
@@ -153,9 +153,8 @@ int pf_fspm_cm_dcontrol_ind(
    pnet_result_t           *p_result);
 
 /**
- * Call user call-back to indicate a new event within the profinet stack.
- *
- * This uses the \a pnet_state_ind() callback.
+ * Call user call-back \a pnet_state_ind() to indicate a new event
+ * within the profinet stack.
  *
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
@@ -170,6 +169,7 @@ int pf_fspm_state_ind(
 
 /**
  * The remote side sends an alarm.
+ * Calls user call-back \a pnet_alarm_ind().
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param api              In:   The API id.
@@ -193,6 +193,7 @@ int pf_fspm_aplmr_alarm_ind(
 
 /**
  * The remote side acknowledges the alarm sent by this side by sending an AlarmAck.
+ * Calls user call-back \a pnet_alarm_cnf().
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param p_pnio_status    In:   Detailed ACK information.
@@ -206,6 +207,7 @@ int pf_fspm_aplmi_alarm_cnf(
 
 /**
  * Local side has successfully sent the AlarmAck to the remote side.
+ * Calls user call-back \a pnet_alarm_ack_cnf().
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param res              In:   0  ACk was received by remote side.
@@ -219,7 +221,8 @@ int pf_fspm_aplmr_alarm_ack_cnf(
    int                     res);
 
 /**
- * Call user call-back to indicate to application it needs a specific module in a specific slot.
+ * Call user call-back \a pnet_exp_module_ind() to indicate to application
+ * it needs a specific module in a specific slot.
  * @param net              InOut: The p-net stack instance
  * @param api_id           In:   The API id.
  * @param slot_nbr         In:   The slot number.
@@ -234,7 +237,8 @@ int pf_fspm_exp_module_ind(
    uint32_t                module_ident);
 
 /**
- * Call user call-back to indicate to application it needs a specific sub-module in a specific sub-slot.
+ * Call user call-back \a pnet_exp_submodule_ind() to indicate to application
+ * it needs a specific sub-module in a specific sub-slot.
  * @param net              InOut: The p-net stack instance
  * @param api_id           In:   The API id.
  * @param slot_nbr         In:   The slot number.
@@ -253,7 +257,8 @@ int pf_fspm_exp_submodule_ind(
    uint32_t                submodule_ident);
 
 /**
- * Notify application that the received data status has changed.
+ * Notify application that the received data status has changed,
+ * via the \a pnet_new_data_status_ind() user callback.
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:  The AR instance.
  * @param p_iocr           In:  The IOCR instance.
@@ -268,6 +273,22 @@ int pf_fspm_data_status_changed(
    pf_iocr_t               *p_iocr,
    uint8_t                 changes,
    uint8_t                 data_status);
+
+/**
+ * Call user call-back when the controller requests a reset.
+ *
+ * This uses the \a pnet_reset_ind() callback.
+ *
+ * @param net                       InOut: The p-net stack instance
+ * @param should_reset_application  In:    True if the user should reset the application data.
+ * @param reset_mode                In:    Detailed reset information.
+ * @return  0  if operation succeeded.
+ *          -1 if an error occurred.
+ */
+int pf_fspm_reset_ind(
+   pnet_t                  *net,
+   bool                    should_reset_application,
+   uint16_t                reset_mode);
 
 /**
  * Retrieve a pointer to the current configuration data.

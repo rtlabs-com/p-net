@@ -231,6 +231,7 @@ protected:
       pnet_default_cfg.new_data_status_cb = my_new_data_status_ind;
       pnet_default_cfg.alarm_ind_cb = my_alarm_ind;
       pnet_default_cfg.alarm_cnf_cb = my_alarm_cnf;
+      pnet_default_cfg.reset_cb = NULL;
       pnet_default_cfg.cb_arg = NULL;
 
       /* Device configuration */
@@ -545,7 +546,7 @@ TEST_F (DcpTest, DcpHelloTest)
 
    mock_clear();
 
-   p_buf = os_buf_alloc(1500);
+   p_buf = os_buf_alloc(PF_FRAME_BUFFER_SIZE);
    memcpy(p_buf->payload, get_name_req, sizeof(get_name_req));
    ret = pf_eth_recv(g_pnet, p_buf);
 
@@ -566,27 +567,27 @@ TEST_F (DcpTest, DcpRunTest)
    os_buf_t                *p_buf;
    int                     ret;
 
-   p_buf = os_buf_alloc(1500);
+   p_buf = os_buf_alloc(PF_FRAME_BUFFER_SIZE);
    memcpy(p_buf->payload, set_name_req, sizeof(set_name_req));
    ret = pf_eth_recv(g_pnet, p_buf);
    EXPECT_EQ(ret, 1);
 
-   p_buf = os_buf_alloc(1500);
+   p_buf = os_buf_alloc(PF_FRAME_BUFFER_SIZE);
    memcpy(p_buf->payload, set_ip_req, sizeof(set_ip_req));
    ret = pf_eth_recv(g_pnet, p_buf);
    EXPECT_EQ(ret, 1);
 
-   p_buf = os_buf_alloc(1500);
+   p_buf = os_buf_alloc(PF_FRAME_BUFFER_SIZE);
    memcpy(p_buf->payload, ident_req, sizeof(ident_req));
    ret = pf_eth_recv(g_pnet, p_buf);
    EXPECT_EQ(ret, 1);
 
-   p_buf = os_buf_alloc(1500);
+   p_buf = os_buf_alloc(PF_FRAME_BUFFER_SIZE);
    memcpy(p_buf->payload, factory_reset_req, sizeof(factory_reset_req));
    ret = pf_eth_recv(g_pnet, p_buf);
    EXPECT_EQ(ret, 1);
 
-   p_buf = os_buf_alloc(1500);
+   p_buf = os_buf_alloc(PF_FRAME_BUFFER_SIZE);
    memcpy(p_buf->payload, signal_req, sizeof(signal_req));
    ret = pf_eth_recv(g_pnet, p_buf);
    EXPECT_EQ(ret, 1);

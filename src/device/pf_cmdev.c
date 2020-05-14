@@ -1191,7 +1191,8 @@ int pf_cmdev_cm_abort(
    }
    else
    {
-      LOG_ERROR(PNET_LOG, "CMDEV(%d): pf_cmdev_cm_abort_req: p_ar is NULL\n", __LINE__);
+      /* p_ar may be NULL when handling controller induced aborts */
+      LOG_INFO(PNET_LOG, "CMDEV(%d): pf_cmdev_cm_abort_req: p_ar is NULL\n", __LINE__);
    }
 
    /* cm_abort_cnf */
@@ -1673,7 +1674,7 @@ static int pf_cmdev_iocr_setup_iocs(
          }
          else
          {
-            LOG_INFO(PNET_LOG, "CMDEV(%d) (%u,%u,%u) dir %u, dlen %u iopslen %u IOCSlen %u\n", __LINE__,
+            LOG_INFO(PNET_LOG, "CMDEV(%d) Read IOCS size from API %u slot %u subslot %u with data direction %u. Data %u bytes, IOPS %u bytes, IOCS %u bytes\n", __LINE__,
                (unsigned)api_id, (unsigned)slot_nbr, (unsigned)subslot_nbr,
                (unsigned)p_desc->data_direction, (unsigned)p_desc->submodule_data_length, (unsigned)p_desc->length_iops, p_desc->length_iocs);
 
@@ -1794,7 +1795,7 @@ static int pf_cmdev_iocr_setup_data_iops(
          }
          else
          {
-            LOG_INFO(PNET_LOG, "CMDEV(%d) (%u,%u,%u) dir %u, dlen %u iopslen %u IOCSlen %u\n", __LINE__,
+            LOG_INFO(PNET_LOG, "CMDEV(%d) Read data and IOPS size from API %u slot %u subslot %u with data direction %u. Data %u bytes, IOPS %u bytes, IOCS %u bytes\n", __LINE__,
                (unsigned)api_id, (unsigned)slot_nbr, (unsigned)subslot_nbr,
                (unsigned)p_desc->data_direction, (unsigned)p_desc->submodule_data_length, (unsigned)p_desc->length_iops, p_desc->length_iocs);
 
@@ -2768,7 +2769,7 @@ static int pf_cmdev_exp_submodule_configure(
                   pf_set_error(p_stat, PNET_ERROR_CODE_CONNECT, PNET_ERROR_DECODE_PNIO, PNET_ERROR_CODE_1_CONN_FAULTY_EXP_BLOCK_REQ, 15);
                   ret = -1;
                }
-               else if (p_exp_sub->data_descriptor[data_ix].length_iops != 1)
+               else if (p_exp_sub->data_descriptor[data_ix].length_iocs != 1)
                {
                   pf_set_error(p_stat, PNET_ERROR_CODE_CONNECT, PNET_ERROR_DECODE_PNIO, PNET_ERROR_CODE_1_CONN_FAULTY_EXP_BLOCK_REQ, 16);
                   ret = -1;

@@ -28,7 +28,7 @@ extern "C"
 
 #include "osal.h"
 
-extern uint8_t     mock_os_eth_send_copy[1500];
+extern uint8_t     mock_os_eth_send_copy[PF_FRAME_BUFFER_SIZE];
 extern uint16_t    mock_os_eth_send_len;
 extern uint16_t    mock_os_eth_send_count;
 
@@ -62,10 +62,12 @@ int mock_os_udp_recvfrom(uint32_t id,
       int size);
 void mock_os_udp_close(uint32_t id);
 int mock_os_set_ip_suite(
+   const char              *interface_name,
    os_ipaddr_t             *p_ipaddr,
    os_ipaddr_t             *p_netmask,
    os_ipaddr_t             *p_gw,
-   const char              *hostname);
+   const char              *hostname,
+   bool                    permanent);
 void mock_os_get_button(uint16_t id, bool *p_pressed);
 void mock_os_set_led(uint16_t id, bool on);
 int mock_pf_alarm_send_diagnosis(

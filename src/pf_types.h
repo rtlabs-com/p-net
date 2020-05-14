@@ -54,6 +54,13 @@ static inline uint32_t atomic_fetch_sub(atomic_int *p, uint32_t v)
 }
 #endif
 
+#define PF_FRAME_BUFFER_SIZE              1500
+
+/** This should be smaller than PF_FRAME_BUFFER_SIZE with the maximum size of
+ * IP- and UDP headers, and some margin. Linux will fragment frames if this is
+ * larger than 1464. */
+#define PF_MAX_UDP_PAYLOAD_SIZE           1440
+
 /*********************** RPC header ******************************************/
 
 /** Magic UUID values */
@@ -242,6 +249,8 @@ typedef enum pf_block_type_values
    PF_BT_XCONTROL_RDYRTC3_REQ          = 0x0117,
    PF_BT_PRMBEGIN_REQ                  = 0x0118,
    PF_BT_SUBMODULE_PRMBEGIN_REQ        = 0x0119,
+
+   PF_BT_INTERFACE_ADJUST              = 0x0250,
 
    PF_BT_MAINTENANCE_ITEM              = 0x0f00,
 
@@ -1241,8 +1250,8 @@ typedef struct pf_ppm
    int                     errline;
    uint32_t                errcnt;
 
-   pnet_ethaddr_t          sa;
-   pnet_ethaddr_t          da;
+   pnet_ethaddr_t          sa;                  /* Source MAC address */
+   pnet_ethaddr_t          da;                  /* Destination MAC address (IO-controller) */
 
    bool                    first_transmit;
 
@@ -1258,7 +1267,7 @@ typedef struct pf_ppm
    uint16_t                data_status_offset;
    uint16_t                transfer_status_offset;
 
-   uint8_t                 buffer_data[1500];   /* Max */
+   uint8_t                 buffer_data[PF_FRAME_BUFFER_SIZE];   /* Max */
 
    uint32_t                trx_cnt;
 
@@ -1412,7 +1421,7 @@ typedef struct pf_apmx
    struct pf_ar            *p_ar;
    struct pf_alpmx         *p_alpmx;
 
-   pnet_ethaddr_t          da;
+   pnet_ethaddr_t          da;                           /* Destination MAC address (IO-controller) */
 
    uint16_t                src_ref;                      /* Our ref */
    uint16_t                dst_ref;                      /* controller local_alarm_reference */
@@ -1435,7 +1444,7 @@ typedef struct pf_apmx
    /* Latest sent alarm */
    os_buf_t                *p_rta;
 
-   uint16_t                vlan_prio;
+   uint16_t                vlan_prio;                    /* 5 or 6 */
    uint16_t                block_type_alarm_notify;
    uint16_t                block_type_alarm_ack;
    uint16_t                frame_id;
@@ -1466,7 +1475,7 @@ typedef enum pf_alpmi_state_values
  */
 typedef struct pf_alpmx
 {
-   pnet_ethaddr_t          da;
+   pnet_ethaddr_t          da;               /* Destination MAC address (IO-controller) */
 
    /*
     * The sequence number is used for PULL/PLUG requests.
@@ -1499,7 +1508,7 @@ typedef struct pf_get_info
 
 /*
  * A session stores information used for supervision of connection activity.
- * A session is allocated for each connect in order to handle segmented RPC requests.
+ * A session is allocated for each connect in order to handle fragmented RPC requests.
  *   In order to find this session
  * A session is also needed for each CCONTROL request. Use pf_session_locate_by_uuid.
  */
@@ -1508,6 +1517,7 @@ typedef struct pf_session_info
    uint16_t                ix;
    bool                    in_use;
    bool                    release_in_progress;
+   bool                    kill_session;  /* E.g. on error or when done */
    uint32_t                socket;
    os_eth_handle_t         *eth_handle;
    struct pf_ar            *p_ar;
@@ -1518,22 +1528,28 @@ typedef struct pf_session_info
    uint32_t                sequence_nmb_send;      /* rm_ccontrol_req */
 
    /*
-    * According to the services spec the maximum supported write record data size is 4068 bytes.
-    * Allow for some overhead.
+    * Small devices should be able to cope with a single Ethernet frame.
+    * Large devices may however require considerable longer Connect Requests/responses,
+    * Reads responses and Write requests may also require longer buffers.
+    * These are sent/received via fragmented RPC requests/responses.
+    * Allocate buffers to handle these large request here.
     */
-   uint8_t                 buffer[4500];           /* Send/Receive buffer */
-   uint16_t                buf_len;
+   uint8_t                 in_buffer[PNET_MAX_SESSION_BUFFER_SIZE];        /* Request buffer */
+   uint16_t                in_buf_len;
+   uint16_t                in_fragment_nbr;
+
+   uint8_t                 out_buffer[PNET_MAX_SESSION_BUFFER_SIZE];       /* Response buffer */
+   uint16_t                out_buf_len;
+   uint16_t                out_buf_sent_len;
+   uint16_t                out_fragment_nbr;
 
    pf_get_info_t           get_info;
    bool                    is_big_endian;          /* From rpc_header_t in first fragment */
    pnet_result_t           rpc_result;
    pf_ndr_data_t           ndr_data;
 
-   /* These are used while collecting the fragments */
-   uint16_t                fragment_nbr;
-
    /* This item is used to handle dcontrol re-runs */
-   uint32_t                dcontrol_sequence_nmb;      /* From dcontrol request */
+   uint32_t                dcontrol_sequence_nmb;  /* From dcontrol request */
    pnet_result_t           dcontrol_result;
 } pf_session_info_t;
 
@@ -1949,6 +1965,7 @@ typedef struct pf_log_book
 
 struct pnet
 {
+   char                                interface_name[PNET_MAX_INTERFACE_NAME_LENGTH];  /** Terminated */
    uint32_t                            os_buf_alloc_cnt;
    bool                                global_alarm_enable;
    os_mutex_t                          *cpm_buf_lock;
@@ -1982,8 +1999,8 @@ struct pnet
    pf_ar_t                             cmrpc_ar[PNET_MAX_AR];
    pf_session_info_t                   cmrpc_session_info[PF_MAX_SESSION];
    int                                 cmrpc_rpcreq_socket;
-   uint8_t                             cmrpc_dcerpc_req_frame[1500];
-   uint8_t                             cmrpc_dcerpc_rsp_frame[1500];
+   uint8_t                             cmrpc_dcerpc_req_frame[PF_FRAME_BUFFER_SIZE];
+   uint8_t                             cmrpc_dcerpc_rsp_frame[PF_FRAME_BUFFER_SIZE];
    pf_cmsu_state_values_t              cmsu_state;
    pf_cmwrr_state_values_t             cmwrr_state;
    const pnet_cfg_t                    *p_fspm_default_cfg;

@@ -13,20 +13,14 @@
  * full license information.
  ********************************************************************/
 
-#include "options.h"
-#include "osal.h"
-#include "osal_sys.h"
-#include "pf_includes.h"
-#include "log.h"
-#include "cc.h"
 #include <stdlib.h>
-#include <errno.h>
-#include <net/if.h>
-#include <sys/socket.h>
 #include <string.h>
-#include <sys/ioctl.h>
-#include <netpacket/packet.h>
 
+#include <net/if.h>
+#include <netpacket/packet.h>
+#include <sys/ioctl.h>
+
+#include "osal.h"
 
 /**
  * @internal

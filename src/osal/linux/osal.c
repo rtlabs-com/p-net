@@ -27,13 +27,14 @@
 #include <limits.h>
 
 #include <pthread.h>
+#include <sys/syscall.h>
+#include <arpa/inet.h>
 
 #include <assert.h>
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
 
-#include <sys/syscall.h>
 
 /* Priority of timer callback thread (if USE_SCHED_FIFO is set) */
 #define TIMER_PRIO        5
@@ -568,12 +569,61 @@ uint8_t os_buf_header(os_buf_t *p, int16_t header_size_increment)
    return 255;
 }
 
+/**
+ * Convert IPv4 address to string
+ * @param ip               In: IP address
+ * @param outputstring     Out: Outputstring. Should have length INET_ADDRSTRLEN.
+ */
+static void ip_to_string(
+   uint32_t                ip,
+   char                    *outputstring)
+{
+   uint32_t                ip_network_endianness = htonl(ip);
+   inet_ntop(AF_INET, (struct in_addr*)&ip_network_endianness, outputstring, INET_ADDRSTRLEN);
+}
+
 int os_set_ip_suite(
+   const char              *interface_name,
    os_ipaddr_t             *p_ipaddr,
    os_ipaddr_t             *p_netmask,
    os_ipaddr_t             *p_gw,
-   const char              *hostname)
+   const char              *hostname,
+   bool                    permanent)
 {
+   char                    ip_string[INET_ADDRSTRLEN];
+   char                    netmask_string[INET_ADDRSTRLEN];
+   char                    gateway_string[INET_ADDRSTRLEN];
+   char                    *permanent_string;
+   char                    *outputcommand;
+   int                     textlen = -1;
+   int                     status = -1;
+
+   ip_to_string(*p_ipaddr, ip_string);
+   ip_to_string(*p_netmask, netmask_string);
+   ip_to_string(*p_gw, gateway_string);
+   permanent_string = permanent ? "1" : "0";
+
+   textlen = asprintf(&outputcommand, "./set_network_parameters %s %s %s %s %s %s",
+      interface_name,
+      ip_string,
+      netmask_string,
+      gateway_string,
+      hostname,
+      permanent_string);
+   if (textlen < 0)
+   {
+      return -1;
+   }
+
+   os_log(LOG_LEVEL_DEBUG, "Command for setting network parameters: %s\n", outputcommand);
+
+   status = system(outputcommand);
+   free(outputcommand);
+   if (status != 0)
+   {
+      os_log(LOG_LEVEL_ERROR, "Failed to set network parameters\n");
+      return -1;
+   }
    return 0;
 }
 

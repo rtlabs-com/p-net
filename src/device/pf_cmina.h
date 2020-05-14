@@ -23,6 +23,9 @@ extern "C"
 
 /**
  * Initialize the CMINA component.
+ *
+ * Sets the IP address if necessary.
+ *
  * @param net              InOut: The p-net stack instance
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
@@ -61,6 +64,9 @@ int pf_cmina_get_ipaddr(
 
 /**
  * Handle the DCP set command.
+ *
+ * Triggers the \a pnet_reset_ind() callback for some incoming DCP set commands.
+ *
  * @param net              InOut: The p-net stack instance
  * @param opt              In:   The option key.
  * @param sub              In:   The sub-option key.

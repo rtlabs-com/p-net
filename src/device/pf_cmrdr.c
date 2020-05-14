@@ -26,7 +26,7 @@
  * @brief Implements the Context Management Read Record Responder protocol machine device (CMRDR)
  *
  * Contains a single function \a pf_cmrdr_rm_read_ind(),
- * that handles a RPC parameter read request.
+ * that handles a RPC parameter read request (and read implicit request).
  *
  * This implementation of CMRDR has no internal state.
  * Every call to pf_cmrdr_rm_read_ind finishes by returning the result.
@@ -51,7 +51,7 @@ int pf_cmrdr_rm_read_ind(
    uint16_t                start_pos = 0;
    uint8_t                 iocs[255];              /* Max possible array size */
    uint8_t                 iops[255];              /* Max possible array size */
-   uint8_t                 subslot_data[1500];     /* Max possible array size */
+   uint8_t                 subslot_data[PF_FRAME_BUFFER_SIZE];     /* Max possible array size */
    uint8_t                 iocs_len = 0;
    uint8_t                 iops_len = 0;
    uint16_t                data_len = 0;
@@ -124,6 +124,7 @@ int pf_cmrdr_rm_read_ind(
        * Accept whatever it says (after verifying the data length).
        */
       case PF_IDX_SUB_IM_0:
+         LOG_INFO(PNET_LOG, "CMRDR(%d): Read I&M0 data\n", __LINE__);
          if ((data_len == sizeof(pnet_im_0_t)) && (*p_pos + data_len < res_size))
          {
             pf_put_im_0(true, (pnet_im_0_t *)p_data, res_size, p_res, p_pos);
@@ -131,6 +132,7 @@ int pf_cmrdr_rm_read_ind(
          }
          break;
       case PF_IDX_SUB_IM_1:
+         LOG_INFO(PNET_LOG, "CMRDR(%d): Read I&M1 data\n", __LINE__);
          if ((data_len == sizeof(pnet_im_1_t)) && (*p_pos + data_len < res_size))
          {
             pf_put_im_1(true, (pnet_im_1_t *)p_data, res_size, p_res, p_pos);
@@ -138,6 +140,7 @@ int pf_cmrdr_rm_read_ind(
          }
          break;
       case PF_IDX_SUB_IM_2:
+         LOG_INFO(PNET_LOG, "CMRDR(%d): Read I&M2 data\n", __LINE__);
          if ((data_len == sizeof(pnet_im_2_t)) && (*p_pos + data_len < res_size))
          {
             pf_put_im_2(true, (pnet_im_2_t *)p_data, res_size, p_res, p_pos);
@@ -145,6 +148,7 @@ int pf_cmrdr_rm_read_ind(
          }
          break;
       case PF_IDX_SUB_IM_3:
+         LOG_INFO(PNET_LOG, "CMRDR(%d): Read I&M3 data\n", __LINE__);
          if ((data_len == sizeof(pnet_im_3_t)) && (*p_pos + data_len < res_size))
          {
             pf_put_im_3(true, (pnet_im_3_t *)p_data, res_size, p_res, p_pos);
@@ -152,6 +156,7 @@ int pf_cmrdr_rm_read_ind(
          }
          break;
       case PF_IDX_SUB_IM_4:
+         LOG_INFO(PNET_LOG, "CMRDR(%d): Read I&M4 data\n", __LINE__);
          if ((data_len == sizeof(pnet_im_4_t)) && (*p_pos + data_len < res_size))
          {
             pf_put_record_data_read(true, PF_BT_IM_4, data_len, p_data, res_size, p_res, p_pos);
@@ -164,6 +169,7 @@ int pf_cmrdr_rm_read_ind(
        * Accept whatever it says (after verifying the data length).
        */
       case PF_IDX_DEV_LOGBOOK_DATA:
+         LOG_INFO(PNET_LOG, "CMRDR(%d): Read logbook data\n", __LINE__);
          /* Provided by FSPM. Accept whatever it says. */
          pf_put_log_book_data(true, (pf_log_book_t *)p_data, res_size, p_res, p_pos);
          ret = 0;
@@ -213,6 +219,7 @@ int pf_cmrdr_rm_read_ind(
          ret = 0;
          break;
       case PF_IDX_API_REAL_ID_DATA:
+         LOG_INFO(PNET_LOG, "CMRDR(%d): Read real ID data\n", __LINE__);
          pf_put_ident_data(net, true, PNET_BLOCK_VERSION_LOW_1, PF_BT_REAL_IDENTIFICATION_DATA,
             PF_DEV_FILTER_LEVEL_API, PF_DEV_FILTER_LEVEL_SUBSLOT,
             NULL, p_read_request->api,
@@ -221,6 +228,7 @@ int pf_cmrdr_rm_read_ind(
          break;
 
       case PF_IDX_DEV_API_DATA:
+         LOG_INFO(PNET_LOG, "CMRDR(%d): Read API data\n", __LINE__);
          pf_put_ident_data(net, true, PNET_BLOCK_VERSION_LOW, PF_BT_API_DATA,
             PF_DEV_FILTER_LEVEL_DEVICE, PF_DEV_FILTER_LEVEL_API_ID,
             NULL, 0, 0, 0, res_size, p_res, p_pos);

@@ -248,6 +248,7 @@ protected:
       pnet_default_cfg.new_data_status_cb = my_new_data_status_ind;
       pnet_default_cfg.alarm_ind_cb = my_alarm_ind;
       pnet_default_cfg.alarm_cnf_cb = my_alarm_cnf;
+      pnet_default_cfg.reset_cb = NULL;
       pnet_default_cfg.cb_arg = NULL;
 
       /* Device configuration */
@@ -651,7 +652,7 @@ static void send_data(
    os_buf_t                *p_buf;
    uint8_t                 *p_ctr;
 
-   p_buf = os_buf_alloc(1500);
+   p_buf = os_buf_alloc(PF_FRAME_BUFFER_SIZE);
    if (p_buf == NULL)
    {
       printf("(%d): Out of memory in send_data\n", __LINE__);

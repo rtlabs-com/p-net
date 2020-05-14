@@ -238,6 +238,7 @@ protected:
       pnet_default_cfg.exp_module_cb = my_exp_module_ind;
       pnet_default_cfg.exp_submodule_cb = my_exp_submodule_ind;
       pnet_default_cfg.new_data_status_cb = my_new_data_status_ind;
+      pnet_default_cfg.reset_cb = NULL;
       pnet_default_cfg.cb_arg = NULL;
 
       /* Device configuration */
@@ -576,7 +577,7 @@ static void send_data(
    os_buf_t                *p_buf;
    uint8_t                 *p_ctr;
 
-   p_buf = os_buf_alloc(1500);
+   p_buf = os_buf_alloc(PF_FRAME_BUFFER_SIZE);
    if (p_buf == NULL)
    {
       printf("(%d): Out of memory in send_data\n", __LINE__);
@@ -668,7 +669,7 @@ static uint16_t                  seq_nbr = 0;
 void test_read(test_reads_t *p_the_test)
 {
    pf_ar_t                 *p_ar;
-   uint8_t                 buffer[1500];
+   uint8_t                 buffer[PF_FRAME_BUFFER_SIZE];
    uint16_t                pos = 0;
    uint16_t                idx = p_the_test->idx;
 

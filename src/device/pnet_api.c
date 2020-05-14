@@ -24,7 +24,7 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include "osal.h"
+
 #include "pf_includes.h"
 #include "pf_block_reader.h"
 
@@ -40,6 +40,13 @@ pnet_t* pnet_init(
    {
       return NULL;
    }
+
+   if (strlen(netif) > PNET_MAX_INTERFACE_NAME_LENGTH)
+   {
+      LOG_ERROR(PNET_LOG, "Too long interface name\n");
+      return NULL;
+   }
+   strcpy(net->interface_name, netif);
 
    net->cmdev_initialized = false;  /* TODO How to handle that pf_cmdev_exit() is used before pf_cmdev_init()? */
    net->fspm_log_book_mutex = NULL;  /* TODO is this necessary? */
