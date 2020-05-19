@@ -386,7 +386,10 @@ void pn_main (void * arg)
          os_event_clr(p_appdata->main_events, EVENT_READY_FOR_DATA); /* Re-arm */
 
          /* Send appl ready to profinet stack. */
-         printf("Application will signal that it is ready for data.\n");
+         if (p_appdata->arguments.verbosity > 0)
+         {
+            printf("Application will signal that it is ready for data.\n");
+         }
          ret = pnet_application_ready(net, p_appdata->main_arep);
          if (ret != 0)
          {
