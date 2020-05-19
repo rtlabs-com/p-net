@@ -96,7 +96,7 @@ static void pf_cmsm_set_state(
    pf_ar_t                 *p_ar,
    pf_cmsm_state_values_t  state)
 {
-   assert(p_ar != NULL);
+   CC_ASSERT(p_ar != NULL);
 
    if (state != p_ar->cmsm_state)
    {
@@ -121,7 +121,7 @@ static void pf_cmsm_timeout(
    void                    *arg,
    uint32_t                current_time)
 {
-   assert(arg != NULL);
+   CC_ASSERT(arg != NULL);
    pf_ar_t                 *p_ar = (pf_ar_t *)arg;
 
    p_ar->cmsm_timer = UINT32_MAX;

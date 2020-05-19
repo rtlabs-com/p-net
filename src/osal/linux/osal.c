@@ -71,6 +71,11 @@ os_thread_t * os_thread_create (const char * name, int priority,
 {
    int result;
    pthread_t * thread = malloc (sizeof(*thread));
+   if (thread == NULL)
+   {
+      return NULL;
+   }
+
    pthread_attr_t attr;
 
    pthread_attr_init (&attr);
@@ -86,7 +91,10 @@ os_thread_t * os_thread_create (const char * name, int priority,
 
    result = pthread_create (thread, &attr, (void *)entry, arg);
    if (result != 0)
+   {
+      free(thread);
       return NULL;
+   }
 
    pthread_setname_np (*thread, name);
    return thread;
@@ -96,6 +104,11 @@ os_mutex_t * os_mutex_create (void)
 {
    int result;
    pthread_mutex_t * mutex = malloc (sizeof(*mutex));
+   if (mutex == NULL)
+   {
+      return NULL;
+   }
+
    pthread_mutexattr_t attr;
 
    CC_STATIC_ASSERT (_POSIX_THREAD_PRIO_INHERIT > 0);
@@ -104,7 +117,10 @@ os_mutex_t * os_mutex_create (void)
 
    result = pthread_mutex_init (mutex, &attr);
    if (result != 0)
+   {
+      free(mutex);
       return NULL;
+   }
 
    return mutex;
 }
@@ -134,6 +150,10 @@ os_sem_t * os_sem_create (size_t count)
    pthread_mutexattr_t attr;
 
    sem = (os_sem_t *)malloc (sizeof(*sem));
+   if (sem == NULL)
+   {
+      return NULL;
+   }
 
    pthread_cond_init (&sem->cond, NULL);
    pthread_mutexattr_init (&attr);
@@ -227,6 +247,10 @@ os_event_t * os_event_create (void)
    pthread_mutexattr_t attr;
 
    event = (os_event_t *)malloc (sizeof(*event));
+   if (event == NULL)
+   {
+      return NULL;
+   }
 
    pthread_cond_init (&event->cond, NULL);
    pthread_mutexattr_init (&attr);
@@ -307,6 +331,10 @@ os_mbox_t * os_mbox_create (size_t size)
    pthread_mutexattr_t attr;
 
    mbox = (os_mbox_t *)malloc (sizeof(*mbox) + size * sizeof(void *));
+   if (mbox == NULL)
+   {
+      return NULL;
+   }
 
    pthread_cond_init (&mbox->cond, NULL);
    pthread_mutexattr_init (&attr);
@@ -465,6 +493,10 @@ os_timer_t * os_timer_create (uint32_t us, void (*fn) (os_timer_t *, void * arg)
    sigprocmask (SIG_BLOCK, &sigset, NULL);
 
    timer = (os_timer_t *)malloc (sizeof(*timer));
+   if (timer == NULL)
+   {
+      return NULL;
+   }
 
    timer->exit      = false;
    timer->thread_id = 0;
@@ -477,7 +509,10 @@ os_timer_t * os_timer_create (uint32_t us, void (*fn) (os_timer_t *, void * arg)
    timer->thread = os_thread_create ("os_timer", TIMER_PRIO, 1024,
                                      os_timer_thread,timer);
    if (timer->thread == NULL)
+   {
+      free(timer);
       return NULL;
+   }
 
    /* Wait until timer thread sets its (kernel) thread id */
    do
@@ -493,7 +528,10 @@ os_timer_t * os_timer_create (uint32_t us, void (*fn) (os_timer_t *, void * arg)
    sev.sigev_notify_attributes = NULL;
 
    if (timer_create (CLOCK_MONOTONIC, &sev, &timer->timerid) == -1)
+   {
+      free(timer);
       return NULL;
+   }
 
    return timer;
 }

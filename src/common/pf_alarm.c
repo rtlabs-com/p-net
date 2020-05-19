@@ -915,11 +915,12 @@ static int pf_alarm_apms_a_data_req(
             }
             else if (p_fixed->pdu_type.type == PF_RTA_PDU_TYPE_ERR)
             {
+               CC_ASSERT(p_pnio_status != NULL);
                pf_put_pnet_status(true, p_pnio_status, PF_FRAME_BUFFER_SIZE, p_buf, &pos);
             }
             else
             {
-               /* NACK or ACk does not take any var part. */
+               /* NACK or ACK does not take any var part. */
             }
 
             /* Finally insert the correct VarPartLen */
@@ -979,7 +980,7 @@ static int pf_alarm_apms_a_data_req(
  * @param payload_usi      In:   May be 0.
  * @param payload_len      In:   Payload length. Mandatory id payload_usi != 0.
  * @param p_payload        In:   Mandatory if payload_len > 0.
- * @param p_pnio_status    Out:  Mandatory. Detailed error information.
+ * @param p_pnio_status    Out:  Optional. Detailed error information.
  * @return
  */
 static int pf_alarm_apms_apms_a_data_req(
@@ -999,8 +1000,6 @@ static int pf_alarm_apms_apms_a_data_req(
 
    if (p_apmx->apms_state != PF_APMS_STATE_OPEN)
    {
-      p_pnio_status->error_code_1 = PNET_ERROR_CODE_1_APMS;
-      p_pnio_status->error_code_2 = PNET_ERROR_CODE_2_APMS_INVALID_STATE;
       pf_alarm_alpmi_apms_a_data_cnf(net, p_apmx, -1);
       pf_alarm_alpmr_apms_a_data_cnf(net, p_apmx, -1);
    }
@@ -1748,7 +1747,6 @@ int pf_alarm_alpmr_alarm_ack(
  * @param payload_usi      In:   The USI of the payload.
  * @param payload_len      In:   The length of the payload (is usi < 0x8000).
  * @param p_payload        In:   The payload data (if usi < 0x8000).
- * @param p_result         Out:  Detailed error information (may be NULL).
  * @return  0  if operation succeeded.
  *          -1 if an error occurred (or waiting for ACK from controller: re-try later).
  */
@@ -1766,8 +1764,7 @@ static int pf_alarm_send_alarm(
    uint32_t                submodule_ident,
    uint16_t                payload_usi,
    uint16_t                payload_len,
-   uint8_t                 *p_payload,
-   pnet_result_t           *p_result)
+   uint8_t                 *p_payload)
 {
    int                     ret = -1;
    pf_alarm_data_t         alarm_data;
@@ -1799,7 +1796,7 @@ static int pf_alarm_send_alarm(
             &alarm_data,
             maint_status,
             payload_usi, payload_len, p_payload,
-            (p_result != NULL) ? &p_result->pnio_status : NULL);
+            NULL);
 
          p_alpmx->alpmi_state = PF_ALPMI_STATE_W_ACK;
       }
@@ -1834,8 +1831,7 @@ int pf_alarm_send_process(
       api_id, slot_nbr, subslot_nbr,
       NULL,       /* p_diag_item */
       0, 0,       /* module_ident, submodule_ident */
-      payload_usi, payload_len, p_payload,
-      NULL);      /* p_result */
+      payload_usi, payload_len, p_payload);
 }
 
 int pf_alarm_send_diagnosis(
@@ -1856,8 +1852,7 @@ int pf_alarm_send_diagnosis(
          api_id, slot_nbr, subslot_nbr,
          p_diag_item,
          0, 0,       /* module_ident, submodule_ident */
-         p_diag_item->usi, sizeof(*p_diag_item), (uint8_t *)p_diag_item,
-         NULL);      /* p_result */
+         p_diag_item->usi, sizeof(*p_diag_item), (uint8_t *)p_diag_item);
    }
 
    return ret;
@@ -1894,8 +1889,7 @@ int pf_alarm_send_pull(
       api_id, slot_nbr, subslot_nbr,
       NULL,       /* p_diag_item */
       0, 0,       /* module_ident, submodule_ident */
-      0, 0, NULL, /* payload_usi, payload_len, p_payload, */
-      NULL);      /* p_result */
+      0, 0, NULL); /* payload_usi, payload_len, p_payload */
 
    return 0;
 }
@@ -1916,8 +1910,7 @@ int pf_alarm_send_plug(
       api_id, slot_nbr, subslot_nbr,
       NULL,       /* p_diag_item */
       module_ident, submodule_ident,
-      0, 0, NULL, /* payload_usi, payload_len, p_payload, */
-      NULL);      /* p_result */
+      0, 0, NULL); /* payload_usi, payload_len, p_payload */
 
    return 0;
 }
@@ -1938,8 +1931,8 @@ int pf_alarm_send_plug_wrong(
       api_id, slot_nbr, subslot_nbr,
       NULL,       /* p_diag_item */
       module_ident, submodule_ident,
-      0, 0, NULL, /* payload_usi, payload_len, p_payload, */
-      NULL);      /* p_result */
+      0, 0, NULL); /* payload_usi, payload_len, p_payload */
+
 
    return 0;
 }
