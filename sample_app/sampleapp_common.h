@@ -140,6 +140,22 @@ typedef struct app_data_and_stack_obj
 int app_adjust_stack_configuration(
    pnet_cfg_t              *stack_config);
 
+/**
+ * Return a string representation of the given event.
+ * @param event            In:   The event.
+ * @return  A string representing the event.
+ */
+const char* event_value_to_string(
+   pnet_event_values_t event);
+
+/**
+ * Return a string representation of the submodule data direction.
+ * @param direction        In:   The direction.
+ * @return  A string representing the direction.
+ */
+const char* submodule_direction_to_string(
+   pnet_submodule_dir_t direction);
+
 
 #ifdef __cplusplus
 }

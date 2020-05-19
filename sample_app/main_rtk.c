@@ -243,7 +243,10 @@ int main(void)
       if (flags & EVENT_READY_FOR_DATA)
       {
          os_event_clr(appdata.main_events, EVENT_READY_FOR_DATA); /* Re-arm */
-         printf("Application will signal that it is ready for data.\n");
+         if (appdata.arguments.verbosity > 0)
+         {
+            printf("Application will signal that it is ready for data.\n");
+         }
          ret = pnet_application_ready(g_net, appdata.main_arep);
          if (ret != 0)
          {
