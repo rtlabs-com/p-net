@@ -72,6 +72,7 @@ os_eth_handle_t* mock_os_eth_init(
 }
 
 int mock_os_get_ip_suite(
+   const char              *interface_name,
    os_ipaddr_t             *p_ipaddr,
    os_ipaddr_t             *p_netmask,
    os_ipaddr_t             *p_gw,
@@ -190,7 +191,7 @@ int mock_pf_alarm_send_diagnosis(
 void mock_pf_generate_uuid(
    uint32_t                timestamp,
    uint32_t                session_number,
-   pnet_ethaddr_t          mac_address,
+   os_ethaddr_t            mac_address,
    pf_uuid_t               *p_uuid)
 {
    p_uuid->data1 = session_number;

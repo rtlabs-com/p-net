@@ -1220,7 +1220,7 @@ TEST_F (CmrpcUnitTest, CmrpcCheckGenerateUuid)
 {
    uint32_t                timestamp;
    uint32_t                session_number;
-   pnet_ethaddr_t          mac_address;
+   os_ethaddr_t            mac_address;
    pf_uuid_t               uuid;
 
    timestamp = 0xC1C2C3C4;

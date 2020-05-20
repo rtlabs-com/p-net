@@ -272,7 +272,7 @@ int pf_ppm_activate_req(
       memcpy(&p_ppm->sa, &p_ar->ar_result.cm_responder_mac_add, sizeof(p_ppm->sa));
       memcpy(&p_ppm->da, &p_ar->ar_param.cm_initiator_mac_add, sizeof(p_ppm->da));
 
-      p_ppm->buffer_pos = 2*sizeof(pnet_ethaddr_t) + vlan_size + sizeof(uint16_t) + sizeof(uint16_t);
+      p_ppm->buffer_pos = 2*sizeof(os_ethaddr_t) + vlan_size + sizeof(uint16_t) + sizeof(uint16_t);
       p_ppm->cycle = 0;
       p_ppm->transfer_status = 0;
 

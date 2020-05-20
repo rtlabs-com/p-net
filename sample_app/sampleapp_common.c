@@ -36,6 +36,30 @@ static void print_bytes(uint8_t *bytes, int32_t len)
    printf("\n");
 }
 
+void print_network_details(
+   const char              *interface_name)
+{
+   os_ethaddr_t            macbuffer;
+   char                    ip_string[OS_INET_ADDRSTRLEN];
+   char                    netmask_string[OS_INET_ADDRSTRLEN];
+   char                    gateway_string[OS_INET_ADDRSTRLEN];
+   char                    mac_string[OS_ETH_ADDRSTRLEN];
+   char                    hostname_string[OS_HOST_NAME_MAX];
+
+   os_get_macaddress(interface_name, &macbuffer);
+   os_mac_to_string(macbuffer, mac_string);
+   os_ip_to_string(os_get_ip_address(interface_name), ip_string);
+   os_ip_to_string(os_get_netmask(interface_name), netmask_string);
+   os_ip_to_string(os_get_gateway(interface_name), gateway_string);
+   os_get_hostname(hostname_string);
+
+   printf("Ethernet interface:  %s\n", interface_name);
+   printf("Current hostname:    %s\n", hostname_string);
+   printf("MAC address:         %s\n", mac_string);
+   printf("IP address:          %s\n", ip_string);
+   printf("Netmask:             %s\n", netmask_string);
+   printf("Gateway:             %s\n\n", gateway_string);
+}
 
 /*********************************** Callbacks ********************************/
 

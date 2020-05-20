@@ -3511,7 +3511,7 @@ int pf_cmdev_rm_connect_ind(
        (pf_cmdev_generate_submodule_diff(net, p_ar, p_connect_result) == 0))
    {
       /* Start building the response to the connect request. */
-      memcpy(p_ar->ar_result.cm_responder_mac_add.addr, p_cfg->eth_addr.addr, sizeof(pnet_ethaddr_t));
+      memcpy(p_ar->ar_result.cm_responder_mac_add.addr, p_cfg->eth_addr.addr, sizeof(os_ethaddr_t));
       p_ar->ar_result.responder_udp_rt_port = 0x8892;
 
       pf_cmdev_fix_frame_id(p_ar);

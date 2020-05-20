@@ -131,6 +131,16 @@ typedef struct app_data_and_stack_obj
 /********************* Helper function declarations ***************************/
 
 /**
+ * Print out current IP address, MAC address etc.
+ *
+ * @param interface_name     In: Ethernet interface name
+ * @return  0  if the operation succeeded.
+ *          -1 if an error occurred.
+*/
+void print_network_details(
+   const char              *interface_name);
+
+/**
  * Adjust some members of the p-net configuration object.
  *
  * @param stack_config     Out: Configuration for use by p-net

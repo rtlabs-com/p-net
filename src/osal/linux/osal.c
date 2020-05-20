@@ -16,23 +16,25 @@
 #define _GNU_SOURCE
 
 #include <osal.h>
+
 #include <options.h>
 #include <log.h>
 
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
-#include <signal.h>
-#include <limits.h>
-
-#include <pthread.h>
-#include <sys/syscall.h>
 #include <arpa/inet.h>
+#include <net/if.h>
+#include <pthread.h>
+#include <sys/ioctl.h>
+#include <sys/syscall.h>
 
 #include <assert.h>
 #include <errno.h>
+#include <limits.h>
+#include <signal.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 
@@ -607,18 +609,32 @@ uint8_t os_buf_header(os_buf_t *p, int16_t header_size_increment)
    return 255;
 }
 
-/**
- * Convert IPv4 address to string
- * @param ip               In: IP address
- * @param outputstring     Out: Outputstring. Should have length INET_ADDRSTRLEN.
- */
-static void ip_to_string(
-   uint32_t                ip,
+// TODO Move
+void os_mac_to_string(
+   os_ethaddr_t            mac,
    char                    *outputstring)
 {
-   uint32_t                ip_network_endianness = htonl(ip);
-   inet_ntop(AF_INET, (struct in_addr*)&ip_network_endianness, outputstring, INET_ADDRSTRLEN);
+   snprintf(outputstring, OS_ETH_ADDRSTRLEN, "%02X:%02X:%02X:%02X:%02X:%02X",
+      mac.addr[0],
+      mac.addr[1],
+      mac.addr[2],
+      mac.addr[3],
+      mac.addr[4],
+      mac.addr[5]);
 }
+
+// TODO Move
+void os_ip_to_string(
+   os_ipaddr_t             ip,
+   char                    *outputstring)
+{
+   snprintf(outputstring, OS_ETH_ADDRSTRLEN, "%u.%u.%u.%u",
+      (uint8_t)((ip >> 24) & 0xFF),
+      (uint8_t)((ip >> 16) & 0xFF),
+      (uint8_t)((ip >> 8) & 0xFF),
+      (uint8_t)(ip & 0xFF));
+}
+
 
 int os_set_ip_suite(
    const char              *interface_name,
@@ -628,17 +644,17 @@ int os_set_ip_suite(
    const char              *hostname,
    bool                    permanent)
 {
-   char                    ip_string[INET_ADDRSTRLEN];
-   char                    netmask_string[INET_ADDRSTRLEN];
-   char                    gateway_string[INET_ADDRSTRLEN];
+   char                    ip_string[OS_INET_ADDRSTRLEN];
+   char                    netmask_string[OS_INET_ADDRSTRLEN];
+   char                    gateway_string[OS_INET_ADDRSTRLEN];
    char                    *permanent_string;
    char                    *outputcommand;
    int                     textlen = -1;
    int                     status = -1;
 
-   ip_to_string(*p_ipaddr, ip_string);
-   ip_to_string(*p_netmask, netmask_string);
-   ip_to_string(*p_gw, gateway_string);
+   os_ip_to_string(*p_ipaddr, ip_string);
+   os_ip_to_string(*p_netmask, netmask_string);
+   os_ip_to_string(*p_gw, gateway_string);
    permanent_string = permanent ? "1" : "0";
 
    textlen = asprintf(&outputcommand, "./set_network_parameters %s %s %s %s %s %s",
@@ -663,6 +679,108 @@ int os_set_ip_suite(
       return -1;
    }
    return 0;
+}
+
+int os_get_macaddress(
+    const char              *interface_name,
+    os_ethaddr_t            *mac_addr
+)
+{
+   int fd;
+   int ret = 0;
+   struct ifreq ifr;
+
+   fd = socket (AF_INET, SOCK_DGRAM, 0);
+
+   ifr.ifr_addr.sa_family = AF_INET;
+   strncpy (ifr.ifr_name, interface_name, IFNAMSIZ - 1);
+
+   ret = ioctl(fd, SIOCGIFHWADDR, &ifr);
+   if (ret == 0){
+      memcpy(mac_addr->addr, ifr.ifr_hwaddr.sa_data, 6);
+   }
+   close (fd);
+   return ret;
+}
+
+os_ipaddr_t os_get_ip_address(
+    const char              *interface_name
+)
+{
+   int fd;
+   struct ifreq ifr;
+   os_ipaddr_t ip;
+
+   fd = socket (AF_INET, SOCK_DGRAM, 0);
+   ifr.ifr_addr.sa_family = AF_INET;
+   strncpy (ifr.ifr_name, interface_name, IFNAMSIZ - 1);
+   ioctl (fd, SIOCGIFADDR, &ifr);
+   ip = ntohl(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr.s_addr);
+   close (fd);
+
+   return ip;
+}
+
+os_ipaddr_t os_get_netmask(
+   const char              *interface_name)
+{
+   int fd;
+   struct ifreq ifr;
+   os_ipaddr_t netmask;
+
+   fd = socket (AF_INET, SOCK_DGRAM, 0);
+
+   ifr.ifr_addr.sa_family = AF_INET;
+   strncpy (ifr.ifr_name, interface_name, IFNAMSIZ - 1);
+   ioctl (fd, SIOCGIFNETMASK, &ifr);
+   netmask = ntohl(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr.s_addr);
+   close (fd);
+
+   return netmask;
+}
+
+os_ipaddr_t os_get_gateway(
+   const char              *interface_name)
+{
+   /* TODO Read the actual default gateway (somewhat complicated) */
+
+   os_ipaddr_t ip;
+   os_ipaddr_t gateway;
+
+   ip = os_get_ip_address(interface_name);
+   gateway = (ip & 0xFFFFFF00) | 0x00000001;
+
+   return gateway;
+}
+
+
+int os_get_hostname(
+   char              *hostname
+)
+{
+   int                     ret = -1;
+
+   ret = gethostname(hostname, OS_HOST_NAME_MAX);
+   hostname[OS_HOST_NAME_MAX - 1] = '\0';
+
+   return ret;
+}
+
+int os_get_ip_suite(
+   const char              *interface_name,
+   os_ipaddr_t             *p_ipaddr,
+   os_ipaddr_t             *p_netmask,
+   os_ipaddr_t             *p_gw,
+   char                    *hostname)
+{
+   int                     ret = -1;
+
+   *p_ipaddr = os_get_ip_address(interface_name);
+   *p_netmask = os_get_netmask(interface_name);
+   *p_gw = os_get_gateway(interface_name);
+   ret = os_get_hostname(hostname);
+
+   return ret;
 }
 
 void os_get_button(uint16_t id, bool *p_pressed)

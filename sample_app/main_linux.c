@@ -140,19 +140,6 @@ struct cmd_args parse_commandline_arguments(int argc, char *argv[])
 }
 
 /**
- * Check if network interface exists
- *
- * @param name      In: Name of network interface
- * @return true if interface exists
-*/
-bool does_network_interface_exist(const char* name)
-{
-   uint32_t index = if_nametoindex(name);
-
-   return index != 0;
-}
-
-/**
  * Check if file exists
  *
  * @param filepath      In: Path to file
@@ -221,127 +208,18 @@ int write_bool_to_file(const char*  filepath, bool value)
    return 0;
 }
 
-/**
+/**  TODO move
  * Copy an IP address (as an integer) to a struct
  *
  * @param destination_struct  Out: destination
  * @param ip                  In: IP address
 */
-void copy_ip_to_struct(pnet_cfg_ip_addr_t* destination_struct, uint32_t ip)
+static void copy_ip_to_struct(pnet_cfg_ip_addr_t* destination_struct, os_ipaddr_t ip)
 {
-   destination_struct->a = (ip & 0xFF);
-   destination_struct->b = ((ip >> 8) & 0xFF);
-   destination_struct->c = ((ip >> 16) & 0xFF);
-   destination_struct->d = ((ip >> 24) & 0xFF);
-}
-
-/**
- * Print an IPv4 address (without newline)
- *
- * @param ip      In: IP address
-*/
-void print_ip_address(uint32_t ip){
-   printf("%d.%d.%d.%d",
-      (ip & 0xFF),
-      ((ip >> 8) & 0xFF),
-      ((ip >> 16) & 0xFF),
-      ((ip >> 24) & 0xFF)
-   );
-}
-
-/**
- * Read the IP address as an integer. For IPv4.
- *
- * @param interface_name      In: Name of network interface
- * @return IP address on success and
- *         0 if an error occurred
-*/
-uint32_t read_ip_address(char* interface_name)
-{
-   int fd;
-   struct ifreq ifr;
-   uint32_t ip;
-
-   fd = socket (AF_INET, SOCK_DGRAM, 0);
-   ifr.ifr_addr.sa_family = AF_INET;
-   strncpy (ifr.ifr_name, interface_name, IFNAMSIZ - 1);
-   ioctl (fd, SIOCGIFADDR, &ifr);
-   ip = ((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr.s_addr;
-   close (fd);
-   return ip;
-}
-
-/**
- * Read the MAC address.
- *
- * @param interface_name      In: Name of network interface
- * @param mac_addr            Out: MAC address
- *
- * @return 0 on success and
- *         -1 if an error occurred
-*/
-int read_mac_address(char *interface_name, pnet_ethaddr_t *mac_addr)
-{
-   int fd;
-   int ret = 0;
-   struct ifreq ifr;
-
-   fd = socket (AF_INET, SOCK_DGRAM, 0);
-
-   ifr.ifr_addr.sa_family = AF_INET;
-   strncpy (ifr.ifr_name, interface_name, IFNAMSIZ - 1);
-
-   ret = ioctl(fd, SIOCGIFHWADDR, &ifr);
-   if (ret == 0){
-      memcpy(mac_addr->addr, ifr.ifr_hwaddr.sa_data, 6);
-   }
-   close (fd);
-   return ret;
- }
-
-/**
- * Read the netmask as an integer. For IPv4.
- *
- * @param interface_name      In: Name of network interface
- * @return netmask
-*/
-uint32_t read_netmask(char* interface_name)
-{
-
-   int fd;
-   struct ifreq ifr;
-   uint32_t netmask;
-
-   fd = socket (AF_INET, SOCK_DGRAM, 0);
-
-   ifr.ifr_addr.sa_family = AF_INET;
-   strncpy (ifr.ifr_name, interface_name, IFNAMSIZ - 1);
-   ioctl (fd, SIOCGIFNETMASK, &ifr);
-   netmask = ((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr.s_addr;
-   close (fd);
-
-   return netmask;
-}
-
-/**
- * Read the default gateway address as an integer. For IPv4.
- *
- * Assumes the default gateway is found on .1 on same subnet as the IP address.
- *
- * @param interface_name      In: Name of network interface
- * @return netmask
-*/
-uint32_t read_default_gateway(char* interface_name)
-{
-   /* TODO Read the actual default gateway (somewhat complicated) */
-
-   uint32_t ip;
-   uint32_t gateway;
-
-   ip = read_ip_address(interface_name);
-   gateway = (ip & 0x00FFFFFF) | 0x01000000;
-
-   return gateway;
+   destination_struct->a = ((ip >> 24) & 0xFF);
+   destination_struct->b = ((ip >> 16) & 0xFF);
+   destination_struct->c = ((ip >> 8) & 0xFF);
+   destination_struct->d = (ip & 0xFF);
 }
 
 void pn_main (void * arg)
@@ -565,6 +443,11 @@ int main(int argc, char *argv[])
    pnet_cfg_t              pnet_default_cfg;
    app_data_and_stack_t    appdata_and_stack;
    app_data_t              appdata;
+   os_ethaddr_t            macbuffer;
+   os_ipaddr_t             ip;
+   os_ipaddr_t             netmask;
+   os_ipaddr_t             gateway;
+   int                     ret = 0;
 
    memset(&appdata, 0, sizeof(appdata));
    appdata.alarm_allowed = true;
@@ -579,71 +462,49 @@ int main(int argc, char *argv[])
       printf("Number of slots:     %u (incl slot for DAP module)\n", PNET_MAX_MODULES);
       printf("P-net log level:     %u (DEBUG=0, ERROR=3)\n", LOG_LEVEL);
       printf("App verbosity level: %u\n", appdata.arguments.verbosity);
-      printf("Ethernet interface:  %s\n", appdata.arguments.eth_interface);
-      printf("Station name:        %s\n", appdata.arguments.station_name);
       printf("LED file:            %s\n", appdata.arguments.path_led);
       printf("Button1 file:        %s\n", appdata.arguments.path_button1);
       printf("Button2 file:        %s\n", appdata.arguments.path_button2);
+      printf("Station name:        %s\n", appdata.arguments.station_name);
    }
 
    /* Read IP, netmask, gateway and MAC address from operating system */
-   if (!does_network_interface_exist(appdata.arguments.eth_interface))
+   ret = os_get_macaddress(appdata.arguments.eth_interface, &macbuffer);
+   if (ret != 0)
    {
       printf("Error: The given Ethernet interface does not exist: %s\n", appdata.arguments.eth_interface);
       exit(EXIT_CODE_ERROR);
    }
 
-   uint32_t ip_int = read_ip_address(appdata.arguments.eth_interface);
-   if (ip_int == IP_INVALID)
+   ip = os_get_ip_address(appdata.arguments.eth_interface);
+   if (ip == IP_INVALID)
    {
-      printf("Error: Invalid IP address.\n");
+      printf("Error: Invalid IP address for Ethernet interface: %s\n", appdata.arguments.eth_interface);
       exit(EXIT_CODE_ERROR);
    }
 
-   uint32_t netmask_int = read_netmask(appdata.arguments.eth_interface);
-
-   uint32_t gateway_ip_int = read_default_gateway(appdata.arguments.eth_interface);
-   if (gateway_ip_int == IP_INVALID)
+   netmask = os_get_netmask(appdata.arguments.eth_interface);
+   gateway = os_get_gateway(appdata.arguments.eth_interface);
+   if (gateway == IP_INVALID)
    {
-      printf("Error: Invalid gateway IP address.\n");
-      exit(EXIT_CODE_ERROR);
-   }
-
-   pnet_ethaddr_t macbuffer;
-   int ret = read_mac_address(appdata.arguments.eth_interface, &macbuffer);
-   if (ret != 0)
-   {
-      printf("Error: Can not read MAC address for Ethernet interface %s\n", appdata.arguments.eth_interface);
+      printf("Error: Invalid gateway IP address for Ethernet interface: %s\n", appdata.arguments.eth_interface);
       exit(EXIT_CODE_ERROR);
    }
 
    if (appdata.arguments.verbosity > 0)
    {
-      printf("MAC address:        %02x:%02x:%02x:%02x:%02x:%02x\n",
-         macbuffer.addr[0],
-         macbuffer.addr[1],
-         macbuffer.addr[2],
-         macbuffer.addr[3],
-         macbuffer.addr[4],
-         macbuffer.addr[5]);
-      printf("IP address:         ");
-      print_ip_address(ip_int);
-      printf("\nNetmask:            ");
-      print_ip_address(netmask_int);
-      printf("\nGateway:            ");
-      print_ip_address(gateway_ip_int);
-      printf("\n\n");
+      print_network_details(appdata.arguments.eth_interface);
    }
 
    /* Prepare stack config with IP address, gateway, station name etc */
    app_adjust_stack_configuration(&pnet_default_cfg);
    strcpy(pnet_default_cfg.im_0_data.order_id, "12345");
    strcpy(pnet_default_cfg.im_0_data.im_serial_number, "00001");
-   copy_ip_to_struct(&pnet_default_cfg.ip_addr, ip_int);
-   copy_ip_to_struct(&pnet_default_cfg.ip_gateway, gateway_ip_int);
-   copy_ip_to_struct(&pnet_default_cfg.ip_mask, netmask_int);
+   copy_ip_to_struct(&pnet_default_cfg.ip_addr, ip);
+   copy_ip_to_struct(&pnet_default_cfg.ip_gateway, gateway);
+   copy_ip_to_struct(&pnet_default_cfg.ip_mask, netmask);
    strcpy(pnet_default_cfg.station_name, appdata.arguments.station_name);
-   memcpy(pnet_default_cfg.eth_addr.addr, macbuffer.addr, sizeof(pnet_ethaddr_t));
+   memcpy(pnet_default_cfg.eth_addr.addr, macbuffer.addr, sizeof(os_ethaddr_t));
    pnet_default_cfg.cb_arg = (void*) &appdata;
 
    /* Paths for LED and button control files */
