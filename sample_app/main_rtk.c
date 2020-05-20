@@ -42,6 +42,7 @@ static pnet_cfg_t                  pnet_default_cfg;
 
 /************************* Utilities ******************************************/
 
+
  int app_set_led(
    uint16_t                id,
    bool                    led_state)
@@ -158,24 +159,28 @@ SHELL_CMD (cmd_pnio_show);
 
 int main(void)
 {
-   int            ret = -1;
-   uint32_t       mask = EVENT_READY_FOR_DATA | EVENT_TIMER | EVENT_ALARM | EVENT_ABORT;
-   uint32_t       flags = 0;
-   bool           button1_pressed = false;
-   bool           button2_pressed = false;
-   bool           button2_pressed_previous = false;
-   bool           received_led_state = false;
-   uint32_t       tick_ctr_buttons = 0;
-   uint32_t       tick_ctr_update_data = 0;
-   static uint8_t data_ctr = 0;
-   uint16_t       slot = 0;
-   uint8_t        outputdata[64];
-   uint8_t        outputdata_iops;
-   uint16_t       outputdata_length;
-   bool           outputdata_is_updated = false;
-   uint8_t        alarm_payload[APP_ALARM_PAYLOAD_SIZE] = { 0 };
-   struct cmd_args cmdline_arguments;
-   app_data_t     appdata;
+   int                     ret = -1;
+   uint32_t                mask = EVENT_READY_FOR_DATA | EVENT_TIMER | EVENT_ALARM | EVENT_ABORT;
+   uint32_t                flags = 0;
+   bool                    button1_pressed = false;
+   bool                    button2_pressed = false;
+   bool                    button2_pressed_previous = false;
+   bool                    received_led_state = false;
+   uint32_t                tick_ctr_buttons = 0;
+   uint32_t                tick_ctr_update_data = 0;
+   static uint8_t          data_ctr = 0;
+   uint16_t                slot = 0;
+   uint8_t                 outputdata[64];
+   uint8_t                 outputdata_iops;
+   uint16_t                outputdata_length;
+   bool                    outputdata_is_updated = false;
+   uint8_t                 alarm_payload[APP_ALARM_PAYLOAD_SIZE] = { 0 };
+   struct cmd_args         cmdline_arguments;
+   app_data_t              appdata;
+   os_ethaddr_t            macbuffer;
+   os_ipaddr_t             ip;
+   os_ipaddr_t             netmask;
+   os_ipaddr_t             gateway;
 
    g_net = NULL;
 
@@ -196,30 +201,44 @@ int main(void)
    printf("\n** Profinet sample application **\n");
    if (appdata.arguments.verbosity > 0)
    {
-      printf("Number of slots:     %u (incl slot for DAP module)\n", PNET_MAX_MODULES);
-      printf("P-net log level:     %u (DEBUG=0, ERROR=3)\n", LOG_LEVEL);
-      printf("App verbosity level: %u\n", appdata.arguments.verbosity);
-      printf("Ethernet interface:  %s\n", appdata.arguments.eth_interface);
-      printf("Station name:        %s\n\n", appdata.arguments.station_name);
+      printf("Number of slots:      %u (incl slot for DAP module)\n", PNET_MAX_MODULES);
+      printf("P-net log level:      %u (DEBUG=0, ERROR=3)\n", LOG_LEVEL);
+      printf("App verbosity level:  %u\n", appdata.arguments.verbosity);
+      printf("Ethernet interface:   %s\n", appdata.arguments.eth_interface);
+      printf("Default station name: %s\n", appdata.arguments.station_name);
    }
 
+   /* Read IP, netmask, gateway and MAC address from operating system */
+   ret = os_get_macaddress(appdata.arguments.eth_interface, &macbuffer);
+   if (ret != 0)
+   {
+      printf("Error: The given Ethernet interface does not exist: %s\n", appdata.arguments.eth_interface);
+      return -1;
+   }
+
+   ip = os_get_ip_address(appdata.arguments.eth_interface);
+   netmask = os_get_netmask(appdata.arguments.eth_interface);
+   gateway = os_get_gateway(appdata.arguments.eth_interface);
+   if (gateway == IP_INVALID)
+   {
+      printf("Error: Invalid gateway IP address for Ethernet interface: %s\n", appdata.arguments.eth_interface);
+      return -1;
+   }
+
+   if (appdata.arguments.verbosity > 0)
+   {
+      print_network_details(&macbuffer, ip, netmask, gateway);
+   }
+
+   /* Prepare stack config with IP address, gateway, station name etc */
    app_adjust_stack_configuration(&pnet_default_cfg);
    strcpy(pnet_default_cfg.im_0_data.order_id, "12345");
    strcpy(pnet_default_cfg.im_0_data.im_serial_number, "00001");
-   pnet_default_cfg.ip_addr.a = ip4_addr1 (&netif_default->ip_addr);
-   pnet_default_cfg.ip_addr.b = ip4_addr2 (&netif_default->ip_addr);
-   pnet_default_cfg.ip_addr.c = ip4_addr3 (&netif_default->ip_addr);
-   pnet_default_cfg.ip_addr.d = ip4_addr4 (&netif_default->ip_addr);
-   pnet_default_cfg.ip_mask.a = ip4_addr1 (&netif_default->netmask);
-   pnet_default_cfg.ip_mask.b = ip4_addr2 (&netif_default->netmask);
-   pnet_default_cfg.ip_mask.c = ip4_addr3 (&netif_default->netmask);
-   pnet_default_cfg.ip_mask.d = ip4_addr4 (&netif_default->netmask);
-   pnet_default_cfg.ip_gateway.a = pnet_default_cfg.ip_addr.a;
-   pnet_default_cfg.ip_gateway.b = pnet_default_cfg.ip_addr.b;
-   pnet_default_cfg.ip_gateway.c = pnet_default_cfg.ip_addr.c;
-   pnet_default_cfg.ip_gateway.d = 1;
-   memcpy (pnet_default_cfg.eth_addr.addr, netif_default->hwaddr, sizeof(pnet_ethaddr_t));
+   copy_ip_to_struct(&pnet_default_cfg.ip_addr, ip);
+   copy_ip_to_struct(&pnet_default_cfg.ip_gateway, gateway);
+   copy_ip_to_struct(&pnet_default_cfg.ip_mask, netmask);
    strcpy(pnet_default_cfg.station_name, gp_appdata->arguments.station_name);
+   memcpy (pnet_default_cfg.eth_addr.addr, macbuffer.addr, sizeof(pnet_ethaddr_t));
    pnet_default_cfg.cb_arg = (void*)gp_appdata;
 
    g_net = pnet_init(gp_appdata->arguments.eth_interface, TICK_INTERVAL_US, &pnet_default_cfg);
@@ -229,6 +248,7 @@ int main(void)
       return -1;
    }
 
+   app_set_led(APP_DATA_LED_ID, false);
    app_plug_dap(g_net, gp_appdata);
    os_timer_start(gp_appdata->main_timer);
 

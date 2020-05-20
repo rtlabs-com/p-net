@@ -33,11 +33,12 @@ extern "C"
 {
 #endif
 
-#include <stdint.h>
-#include <stddef.h>
-#include <stdbool.h>
-#include <stdio.h>
 #include <pnet_export.h>
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
 
 /**
  * # Profinet Stack Options
@@ -394,7 +395,6 @@ typedef enum pnet_file_index
    PNET_FILE_INDEX_DIAGNOSTICS,
    PNET_FILE_INDEX_LOGBOOK,
 } pnet_file_index_t;
-
 
 /**
  * # List of error_code_2 values, for
@@ -1054,7 +1054,7 @@ typedef struct pnet_cfg_device_id
  * The Profinet stack also supports assigning an IP address, mask and gateway address
  * via DCP Set commands based on the Ethernet MAC address.
  *
- * An IP address of 1.0.0.0 has the member a=1, and the rest of the members
+ * An IP address of 0.0.0.1 has the member d=1, and the rest of the members
  * set to 0.
  *
  */

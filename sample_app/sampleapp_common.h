@@ -134,6 +134,22 @@ typedef struct app_data_and_stack_obj
 /********************* Helper function declarations ***************************/
 
 /**
+ * Print out current IP address, MAC address etc.
+ *
+ * @param p_macbuffer      In:    MAC address
+ * @param ip               In:    IP address
+ * @param netmask          In:    Netmask
+ * @param gateway          In:    Gateway
+ * @return  0  if the operation succeeded.
+ *          -1 if an error occurred.
+ */
+void print_network_details(
+   os_ethaddr_t            *p_macbuffer,
+   os_ipaddr_t             ip,
+   os_ipaddr_t             netmask,
+   os_ipaddr_t             gateway);
+
+/**
  * Adjust some members of the p-net configuration object.
  *
  * @param stack_config     Out: Configuration for use by p-net
@@ -168,6 +184,35 @@ const char* event_value_to_string(
  */
 const char* submodule_direction_to_string(
    pnet_submodule_dir_t direction);
+
+
+/**
+ * Convert MAC address to string
+ * @param mac              In: MAC address
+ * @param outputstring     Out: Resulting string. Should have length OS_ETH_ADDRSTRLEN.
+ */
+void mac_to_string(
+   os_ethaddr_t            mac,
+   char                    *outputstring);
+
+/**
+ * Convert IPv4 address to string
+ * @param ip               In: IP address
+ * @param outputstring     Out: Resulting string. Should have length OS_INET_ADDRSTRLEN.
+ */
+void ip_to_string(
+   os_ipaddr_t             ip,
+   char                    *outputstring);
+
+/**
+ * Copy an IP address (as an integer) to a struct
+ *
+ * @param destination_struct  Out: destination
+ * @param ip                  In: IP address
+*/
+void copy_ip_to_struct(
+   pnet_cfg_ip_addr_t      *destination_struct,
+   os_ipaddr_t             ip);
 
 
 /********************** Hardware interaction **********************************/
