@@ -49,6 +49,67 @@ int os_set_ip_suite(
    return 0;
 }
 
+int os_get_macaddress(
+    const char             *interface_name,
+    os_ethaddr_t         *mac_addr
+)
+{
+   memcpy(mac_addr, netif_default->hwaddr, sizeof(os_ethaddr_t));
+   return 0;
+}
+
+os_ipaddr_t os_get_ip_address(
+    const char             *interface_name
+)
+{
+   return htonl(netif_default->ip_addr.addr);
+}
+
+os_ipaddr_t os_get_netmask(
+   const char              *interface_name)
+{
+   return htonl(netif_default->netmask.addr);
+}
+
+os_ipaddr_t os_get_gateway(
+   const char              *interface_name)
+{
+   /* TODO Read the actual default gateway */
+
+   os_ipaddr_t ip;
+   os_ipaddr_t gateway;
+
+   ip = os_get_ip_address(interface_name);
+   gateway = (ip & 0xFFFFFF00) | 0x00000001;
+
+   return gateway;
+}
+
+int os_get_hostname(
+   char                    *hostname
+)
+{
+   strcpy(hostname, netif_default->hostname);
+   return 0;
+}
+
+int os_get_ip_suite(
+   const char              *interface_name,
+   os_ipaddr_t             *p_ipaddr,
+   os_ipaddr_t             *p_netmask,
+   os_ipaddr_t             *p_gw,
+   char                    *hostname)
+{
+   int                     ret = -1;
+
+   *p_ipaddr = os_get_ip_address(interface_name);
+   *p_netmask = os_get_netmask(interface_name);
+   *p_gw = os_get_gateway(interface_name);
+   ret = os_get_hostname(hostname);
+
+   return ret;
+}
+
 int os_snprintf(char * str, size_t size, const char * fmt, ...)
 {
    int ret;

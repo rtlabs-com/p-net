@@ -39,6 +39,54 @@ static void print_bytes(uint8_t *bytes, int32_t len)
    printf("\n");
 }
 
+void ip_to_string(
+   os_ipaddr_t             ip,
+   char                    *outputstring)
+{
+   snprintf(outputstring, OS_INET_ADDRSTRLEN, "%u.%u.%u.%u",
+      (uint8_t)((ip >> 24) & 0xFF),
+      (uint8_t)((ip >> 16) & 0xFF),
+      (uint8_t)((ip >> 8) & 0xFF),
+      (uint8_t)(ip & 0xFF));
+}
+
+void mac_to_string(
+   os_ethaddr_t            mac,
+   char                    *outputstring)
+{
+   snprintf(outputstring, OS_ETH_ADDRSTRLEN, "%02X:%02X:%02X:%02X:%02X:%02X",
+      mac.addr[0],
+      mac.addr[1],
+      mac.addr[2],
+      mac.addr[3],
+      mac.addr[4],
+      mac.addr[5]);
+}
+
+void print_network_details(
+   os_ethaddr_t            *p_macbuffer,
+   os_ipaddr_t             ip,
+   os_ipaddr_t             netmask,
+   os_ipaddr_t             gateway)
+{
+   char                    ip_string[OS_INET_ADDRSTRLEN];
+   char                    netmask_string[OS_INET_ADDRSTRLEN];
+   char                    gateway_string[OS_INET_ADDRSTRLEN];
+   char                    mac_string[OS_ETH_ADDRSTRLEN];
+   char                    hostname_string[OS_HOST_NAME_MAX];
+
+   mac_to_string(*p_macbuffer, mac_string);
+   ip_to_string(ip, ip_string);
+   ip_to_string(netmask, netmask_string);
+   ip_to_string(gateway, gateway_string);
+   os_get_hostname(hostname_string);
+
+   printf("MAC address:          %s\n", mac_string);
+   printf("Current hostname:     %s\n", hostname_string);
+   printf("Current IP address:   %s\n", ip_string);
+   printf("Current Netmask:      %s\n", netmask_string);
+   printf("Current Gateway:      %s\n\n", gateway_string);
+}
 
 /*********************************** Callbacks ********************************/
 
@@ -747,6 +795,17 @@ int app_adjust_stack_configuration(
 }
 
 /*************************** Helper functions ********************************/
+
+
+void copy_ip_to_struct(
+   pnet_cfg_ip_addr_t      *destination_struct,
+   os_ipaddr_t             ip)
+{
+   destination_struct->a = ((ip >> 24) & 0xFF);
+   destination_struct->b = ((ip >> 16) & 0xFF);
+   destination_struct->c = ((ip >> 8) & 0xFF);
+   destination_struct->d = (ip & 0xFF);
+}
 
 const char* event_value_to_string(
    pnet_event_values_t event)
