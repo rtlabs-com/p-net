@@ -96,7 +96,10 @@ void pf_cmina_dcp_set_commit(
    pnet_t                  *net);
 
 /**
- * Handle the DCP get command.
+ * Find data and its size for use in one block in response to a DCP get command.
+ *
+ * Also used in DCP Hello and DCP Identify.
+ *
  * @param net              InOut: The p-net stack instance
  * @param opt              In:   The option key.
  * @param sub              In:   The sub-option key.
