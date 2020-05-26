@@ -1179,7 +1179,7 @@ static int pf_cmrpc_rm_release_interpret_req(
  * @param p_sess           In:   The RPC session instance.
  * @param p_release_io     In:   The release control block.
  * @param res_size         In:   The size of the response buffer.
- * @param p_res            Out:  The response buffer.
+ * @param p_res            Out:  The response buffer. Already filled with DCE/RPC header.
  * @param p_res_pos        InOut:Position within the response buffer.
  * @param p_status_pos     Out:  Position of the status within the response buffer.
  * @return  0  if operation succeeded.
@@ -1232,7 +1232,7 @@ static void pf_cmrpc_rm_release_rsp(
  * @param p_sess           In:   The RPC session instance.
  * @param req_pos          In:   Position in the request buffer.
  * @param res_size         In:   The size of the response buffer.
- * @param p_res            Out:  The response buffer.
+ * @param p_res            Out:  The response buffer. Already filled with DCE/RPC header.
  * @param p_res_pos        InOut:Position within the response buffer.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
@@ -1249,6 +1249,7 @@ static int pf_cmrpc_rm_release_ind(
    pf_control_block_t      release_io;
    pf_ar_t                 *p_ar = NULL;
    uint16_t                status_pos;
+   uint16_t                start_pos;
    pnet_result_t           rpc_result;
    bool                    is_big_endian;
 
@@ -1257,9 +1258,10 @@ static int pf_cmrpc_rm_release_ind(
 
    /* Save things for creating the response (incl. status_pos, below...) */
    is_big_endian = p_sess->get_info.is_big_endian;
-   /* Create a positive response in case all goes well. */
-   pf_cmrpc_rm_release_rsp(p_sess, &release_io, res_size, p_res, p_res_pos, &status_pos);
 
+   /* Create a positive response in case all goes well. */
+   start_pos = *p_res_pos;
+   pf_cmrpc_rm_release_rsp(p_sess, &release_io, res_size, p_res, p_res_pos, &status_pos);
    if (p_sess->rpc_result.pnio_status.error_code != 0)
    {
       LOG_ERROR(PF_RPC_LOG, "CMRPC(%d): RPC request has error\n", __LINE__);
@@ -1278,6 +1280,9 @@ static int pf_cmrpc_rm_release_ind(
       if ((pf_ar_find_by_uuid(net, &release_io.ar_uuid, &p_ar) == 0) &&
          (release_io.session_key == p_ar->ar_param.session_key))
       {
+         /* Overwrite response with correct AR UUID etc */
+         pf_cmrpc_rm_release_rsp(p_sess, &release_io, res_size, p_res, &start_pos, &status_pos);
+
          (void)pf_cmdev_rm_release_ind(net, p_ar, &rpc_result);
       }
       else
@@ -1958,7 +1963,7 @@ static int pf_cmrpc_rm_write_ind(
  * @param req_pos          In:   Position in the input buffer.
  * @param p_rpc            In:   The RPC header.
  * @param res_size         In:   The size of the response buffer.
- * @param p_res            Out:  The response buffer.
+ * @param p_res            Out:  The response buffer. Already filled with a DCE/RPC header.
  * @param p_res_pos        InOut:Position in the response buffer.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
