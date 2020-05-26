@@ -3568,6 +3568,7 @@ int pf_cmdev_rm_release_ind(
       case PF_CMDEV_STATE_W_ARDYCNF:
       case PF_CMDEV_STATE_WDATA:
       case PF_CMDEV_STATE_DATA:
+         p_ar->err_cls = PNET_ERROR_CODE_1_RTA_ERR_CLS_PROTOCOL;
          p_ar->err_code = PNET_ERROR_CODE_2_ABORT_AR_RELEASE_IND_RECEIVED;
          if (pf_fspm_cm_release_ind(net, p_ar, p_release_result) != 0)
          {
@@ -3585,6 +3586,7 @@ int pf_cmdev_rm_release_ind(
    {
       if (p_ar->cmdev_state == PF_CMDEV_STATE_DATA)
       {
+         p_ar->err_cls = PNET_ERROR_CODE_1_RTA_ERR_CLS_PROTOCOL;
          p_ar->err_code = PNET_ERROR_CODE_2_ABORT_AR_RELEASE_IND_RECEIVED;
          ret = pf_cmdev_state_ind(net, p_ar, PNET_EVENT_ABORT);
       }
