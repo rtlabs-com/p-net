@@ -740,6 +740,8 @@ static int pf_dcp_get_set(
                src_block_len = ntohs(p_src_block_hdr->block_length);
             }
 
+            /* Make sure no other MAC address is used in the DCP communication for 3 seconds */
+            memcpy(&net->dcp_sam, &p_src_ethhdr->src, sizeof(net->dcp_sam));
             (void)pf_scheduler_add(net, 3*1000*1000,      /* 3s */
                dcp_sync_name, pf_dcp_clear_sam, NULL, &net->dcp_sam_timeout);
          }
@@ -756,6 +758,8 @@ static int pf_dcp_get_set(
                src_pos += sizeof(uint8_t) + sizeof(uint8_t);
             }
 
+            /* Make sure no other MAC address is used in the DCP communication for 3 seconds */
+            memcpy(&net->dcp_sam, &p_src_ethhdr->src, sizeof(net->dcp_sam));
             (void)pf_scheduler_add(net, 3*1000*1000,      /* 3s */
                dcp_sync_name, pf_dcp_clear_sam, NULL, &net->dcp_sam_timeout);
          }
