@@ -62,6 +62,7 @@ target_sources(pf_test PRIVATE
   ${PROFINET_SOURCE_DIR}/src/device/pf_cmpbe.c
   ${PROFINET_SOURCE_DIR}/src/device/pf_cmrdr.c
   ${PROFINET_SOURCE_DIR}/src/device/pf_cmrpc.c
+  ${PROFINET_SOURCE_DIR}/src/device/pf_cmrpc_helpers.c
   ${PROFINET_SOURCE_DIR}/src/device/pf_cmrs.c
   ${PROFINET_SOURCE_DIR}/src/device/pf_cmsm.c
   ${PROFINET_SOURCE_DIR}/src/device/pf_cmsu.c

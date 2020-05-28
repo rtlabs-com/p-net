@@ -30,6 +30,7 @@ target_sources (profinet PRIVATE
   device/pf_cmpbe.c
   device/pf_cmrdr.c
   device/pf_cmrpc.c
+  device/pf_cmrpc_helpers.c
   device/pf_cmrs.c
   device/pf_cmsm.c
   device/pf_cmsu.c
@@ -45,6 +46,7 @@ target_sources (profinet PRIVATE
   device/pf_cmpbe.h
   device/pf_cmrdr.h
   device/pf_cmrpc.h
+  device/pf_cmrpc_helpers.h
   device/pf_cmrs.h
   device/pf_cmsm.h
   device/pf_cmsu.h

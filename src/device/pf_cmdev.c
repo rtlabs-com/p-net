@@ -3660,6 +3660,7 @@ int pf_cmdev_rm_ccontrol_cnf(
    pnet_result_t           *p_ccontrol_result)
 {
    int                     ret = -1;
+   CC_ASSERT(p_ar != NULL);
 
    if (p_ar->cmdev_state == PF_CMDEV_STATE_W_ARDYCNF)
    {

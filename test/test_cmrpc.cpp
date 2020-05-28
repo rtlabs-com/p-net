@@ -187,6 +187,18 @@ static void test_periodic(os_timer_t *p_timer, void *p_arg)
    pnet_handle_periodic(g_pnet);
 }
 
+// Test fixture
+
+class CmrpcUnitTest : public ::testing::Test
+{
+protected:
+   virtual void SetUp() {
+      memset (&net, 0, sizeof(net));
+   };
+
+   pnet_cfg_t net;
+};
+
 class CmrpcTest : public ::testing::Test
 {
 protected:
@@ -1202,4 +1214,35 @@ TEST_F (CmrpcTest, CmrpcConnectReleaseIOSAR_DA)
    EXPECT_EQ(release_calls, 0);
    EXPECT_EQ(cmdev_state, PNET_EVENT_ABORT);
    printf("Line %d\n", __LINE__);
+}
+
+TEST_F (CmrpcUnitTest, CmrpcCheckGenerateUuid)
+{
+   uint32_t                timestamp;
+   uint32_t                session_number;
+   pnet_ethaddr_t          mac_address;
+   pf_uuid_t               uuid;
+
+   timestamp = 0xC1C2C3C4;
+   session_number = 0xB1B2B3B4;
+   mac_address.addr[0] = 0xA1;
+   mac_address.addr[1] = 0xA2;
+   mac_address.addr[2] = 0xA3;
+   mac_address.addr[3] = 0xA4;
+   mac_address.addr[4] = 0xA5;
+   mac_address.addr[5] = 0xA6;
+
+   pf_generate_uuid(timestamp, session_number, mac_address, &uuid);
+
+   EXPECT_EQ (uuid.data1, timestamp);
+   EXPECT_EQ (uuid.data2, 0xB1B2);
+   EXPECT_EQ (uuid.data3, 0x10B3);
+   EXPECT_EQ (uuid.data4[0], 0x80);
+   EXPECT_EQ (uuid.data4[1], 0xB4);
+   EXPECT_EQ (uuid.data4[2], 0xA1);
+   EXPECT_EQ (uuid.data4[3], 0xA2);
+   EXPECT_EQ (uuid.data4[4], 0xA3);
+   EXPECT_EQ (uuid.data4[5], 0xA4);
+   EXPECT_EQ (uuid.data4[6], 0xA5);
+   EXPECT_EQ (uuid.data4[7], 0xA6);
 }

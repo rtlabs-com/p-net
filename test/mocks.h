@@ -77,6 +77,12 @@ int mock_pf_alarm_send_diagnosis(
    uint16_t                subslot_nbr,
    pf_diag_item_t          *p_item);
 
+void mock_pf_generate_uuid(
+   uint32_t                timestamp,
+   uint32_t                session_number,
+   pnet_ethaddr_t          mac_address,
+   pf_uuid_t               *p_uuid);
+
 #ifdef __cplusplus
 }
 #endif
