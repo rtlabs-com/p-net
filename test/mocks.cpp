@@ -186,3 +186,22 @@ int mock_pf_alarm_send_diagnosis(
 {
    return 0;
 }
+
+void mock_pf_generate_uuid(
+   uint32_t                timestamp,
+   uint32_t                session_number,
+   pnet_ethaddr_t          mac_address,
+   pf_uuid_t               *p_uuid)
+{
+   p_uuid->data1 = session_number;
+   p_uuid->data2 = 0x1234;
+   p_uuid->data3 = 0x5678;
+   p_uuid->data4[0] = 0x01;
+   p_uuid->data4[1] = 0x02;
+   p_uuid->data4[2] = 0x03;
+   p_uuid->data4[3] = 0x04;
+   p_uuid->data4[4] = 0x05;
+   p_uuid->data4[5] = 0x06;
+   p_uuid->data4[6] = 0x07;
+   p_uuid->data4[7] = 0x08;
+}

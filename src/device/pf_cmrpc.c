@@ -42,6 +42,7 @@
 #define os_udp_open mock_os_udp_open
 #define os_udp_close mock_os_udp_close
 #define os_udp_recvfrom mock_os_udp_recvfrom
+#define pf_generate_uuid mock_pf_generate_uuid
 #endif
 
 #include <string.h>
@@ -52,6 +53,7 @@
 #include "pf_includes.h"
 #include "pf_block_reader.h"
 #include "pf_block_writer.h"
+
 
 static const pf_uuid_t     implicit_ar = {0,0,0,{0,0,0,0,0,0,0,0}};
 
@@ -307,26 +309,15 @@ static int pf_session_allocate(
       p_sess->p_ar = NULL;
       p_sess->sequence_nmb_send = 0;
       p_sess->dcontrol_sequence_nmb = UINT32_MAX;
-
       p_sess->from_me = true;
+      p_sess->ix = ix;
 
       /* Set activity UUID. Will be overwritten for incoming requests. */
-      p_sess->activity_uuid.data1 = net->cmrpc_session_number++;
-      p_sess->activity_uuid.data2 = 0x1234;
-      p_sess->activity_uuid.data3 = 0x5678;
-      p_sess->activity_uuid.data4[0] = 0x01;
-      p_sess->activity_uuid.data4[1] = 0x02;
-      p_sess->activity_uuid.data4[2] = 0x03;
-      p_sess->activity_uuid.data4[3] = 0x04;
-      p_sess->activity_uuid.data4[4] = 0x05;
-      p_sess->activity_uuid.data4[5] = 0x06;
-      p_sess->activity_uuid.data4[6] = 0x07;
-      p_sess->activity_uuid.data4[7] = 0x08;
+      pf_generate_uuid(os_get_current_time_us(), net->cmrpc_session_number, net->fspm_cfg.eth_addr, &p_sess->activity_uuid);
+      net->cmrpc_session_number++;
 
       *pp_sess = p_sess;
-
-      p_sess->ix = ix;
-      LOG_INFO(PF_RPC_LOG, "RPC(%d): Allocated session %u\n", __LINE__, (unsigned)p_sess->ix);
+      LOG_DEBUG(PF_RPC_LOG, "RPC(%d): Allocated session %u\n", __LINE__, (unsigned)p_sess->ix);
 
       ret = 0;
    }
@@ -2251,6 +2242,7 @@ static int pf_cmrpc_rm_ccontrol_cnf(
    pf_ar_t                 *p_ar = p_sess->p_ar;
 
    LOG_INFO(PF_RPC_LOG, "Incoming CCONTROL response via DCE RPC on UDP\n");
+   CC_ASSERT(p_ar != NULL);
 
    memset(&ccontrol_io, 0, sizeof(ccontrol_io));
 
@@ -2658,10 +2650,21 @@ static int pf_cmrpc_dce_packet(
             break;
          case PF_RPC_PT_RESPONSE:
             /* A response to a CCONTROL request */
-            pf_get_ndr_data(&p_sess->get_info, &req_pos, &p_sess->ndr_data);
-            p_sess->get_info.is_big_endian = true;  /* From now on all is big-endian */
+            if (is_new_session)
+            {
+               LOG_ERROR(PF_RPC_LOG, "CMRPC(%d): Responses should be part of existing sessions. Unknown incoming UUID.\n", __LINE__);
+               *p_is_release = true;  /* Tell caller */
+               p_sess->kill_session = true;
+               res_pos = 0;  /* Send nothing in response */
+               ret = 0;
+            }
+            else
+            {
+               pf_get_ndr_data(&p_sess->get_info, &req_pos, &p_sess->ndr_data);
+               p_sess->get_info.is_big_endian = true;  /* From now on all is big-endian */
 
-            ret = pf_cmrpc_rpc_response(net, p_sess, req_pos, &rpc_req);
+               ret = pf_cmrpc_rpc_response(net, p_sess, req_pos, &rpc_req);
+            }
             break;
          case PF_RPC_PT_CL_CANCEL:
             /*
