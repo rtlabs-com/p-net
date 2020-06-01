@@ -63,7 +63,7 @@ int pf_cmina_get_ipaddr(
    os_ipaddr_t             *p_ipaddr);
 
 /**
- * Handle the DCP set command.
+ * Save one block of data for incoming DCP set command.
  *
  * Triggers the \a pnet_reset_ind() callback for some incoming DCP set commands.
  *
@@ -139,6 +139,32 @@ int pf_cmina_dcp_get_req(
    uint16_t                *p_value_length,
    uint8_t                 **pp_value,
    uint8_t                 *p_block_error);
+
+
+/************ Internal functions, made available for unit testing ************/
+
+int pf_cmina_is_stationname_valid(
+   const char*             station_name,
+   uint16_t                len);
+
+int pf_cmina_is_netmask_valid(
+   os_ipaddr_t            netmask);
+
+int pf_cmina_is_ipaddress_valid(
+   os_ipaddr_t            netmask,
+   os_ipaddr_t            ip);
+
+int pf_cmina_is_gateway_valid(
+   os_ipaddr_t             ip,
+   os_ipaddr_t             netmask,
+   os_ipaddr_t             gateway);
+
+int pf_cmina_is_ipsuite_valid(
+   pf_ip_suite_t           *p_ipsuite);
+
+int pf_cmina_is_full_ipsuite_valid(
+   pf_full_ip_suite_t      *p_full_ipsuite);
+
 
 #ifdef __cplusplus
 }

@@ -309,16 +309,23 @@ int pf_cmina_dcp_set_ind(
       case PF_DCP_SUB_IP_PAR:
          if (value_length == sizeof(net->cmina_temp_dcp_ase.full_ip_suite.ip_suite))
          {
-            change_ip = (memcmp(&net->cmina_temp_dcp_ase.full_ip_suite.ip_suite, p_value, value_length) != 0);
-
-            memcpy(&net->cmina_temp_dcp_ase.full_ip_suite.ip_suite, p_value, sizeof(net->cmina_temp_dcp_ase.full_ip_suite.ip_suite));
-            LOG_INFO(PF_DCP_LOG,"CMINA(%d): The incoming set request is about changing IP. PF_DCP_SUB_IP_PAR New IP: 0x%"PRIxLEAST32"\n", __LINE__, net->cmina_temp_dcp_ase.full_ip_suite.ip_suite.ip_addr);
-            if (temp == false)
+            if (pf_cmina_is_ipsuite_valid((pf_ip_suite_t*)p_value) == 0)
             {
-               net->cmina_perm_dcp_ase.full_ip_suite.ip_suite = net->cmina_temp_dcp_ase.full_ip_suite.ip_suite;
-            }
+               change_ip = (memcmp(&net->cmina_temp_dcp_ase.full_ip_suite.ip_suite, p_value, value_length) != 0);
 
-            ret = 0;
+               memcpy(&net->cmina_temp_dcp_ase.full_ip_suite.ip_suite, p_value, sizeof(net->cmina_temp_dcp_ase.full_ip_suite.ip_suite));
+               LOG_INFO(PF_DCP_LOG,"CMINA(%d): The incoming set request is about changing IP. PF_DCP_SUB_IP_PAR New IP: 0x%"PRIxLEAST32"\n", __LINE__, net->cmina_temp_dcp_ase.full_ip_suite.ip_suite.ip_addr);
+               if (temp == false)
+               {
+                  net->cmina_perm_dcp_ase.full_ip_suite.ip_suite = net->cmina_temp_dcp_ase.full_ip_suite.ip_suite;
+               }
+               ret = 0;
+            }
+            else
+            {
+               LOG_INFO(PF_DCP_LOG,"CMINA(%d): Got incoming request to change IP suite to an illegal value.\n", __LINE__);
+               *p_block_error = PF_DCP_BLOCK_ERROR_SUBOPTION_NOT_SET;
+            }
          }
          else
          {
@@ -326,18 +333,25 @@ int pf_cmina_dcp_set_ind(
          }
          break;
       case PF_DCP_SUB_IP_SUITE:
-         if (value_length < sizeof(net->cmina_temp_dcp_ase.full_ip_suite))
+         if (value_length < sizeof(net->cmina_temp_dcp_ase.full_ip_suite))   /* Why less than? */
          {
-            LOG_INFO(PF_DCP_LOG,"CMINA(%d): The incoming set request is about changing IP. PF_DCP_SUB_IP_SUITE\n", __LINE__);
-            change_ip = (memcmp(&net->cmina_temp_dcp_ase.full_ip_suite, p_value, value_length) != 0);
-
-            memcpy(&net->cmina_temp_dcp_ase.full_ip_suite, p_value, value_length);
-            if (temp == false)
+            if (pf_cmina_is_full_ipsuite_valid((pf_full_ip_suite_t *)p_value) == 0)
             {
-               net->cmina_perm_dcp_ase.full_ip_suite = net->cmina_temp_dcp_ase.full_ip_suite;
-            }
+               LOG_INFO(PF_DCP_LOG,"CMINA(%d): The incoming set request is about changing IP. PF_DCP_SUB_IP_SUITE\n", __LINE__);
+               change_ip = (memcmp(&net->cmina_temp_dcp_ase.full_ip_suite, p_value, value_length) != 0);
 
-            ret = 0;
+               memcpy(&net->cmina_temp_dcp_ase.full_ip_suite, p_value, value_length);
+               if (temp == false)
+               {
+                  net->cmina_perm_dcp_ase.full_ip_suite = net->cmina_temp_dcp_ase.full_ip_suite;
+               }
+               ret = 0;
+            }
+            else
+            {
+               LOG_INFO(PF_DCP_LOG,"CMINA(%d): Got incoming request to change full IP suite to an illegal value.\n", __LINE__);
+               *p_block_error = PF_DCP_BLOCK_ERROR_SUBOPTION_NOT_SET;
+            }
          }
          else
          {
@@ -355,18 +369,26 @@ int pf_cmina_dcp_set_ind(
       case PF_DCP_SUB_DEV_PROP_NAME:
          if (value_length < sizeof(net->cmina_temp_dcp_ase.name_of_station))
          {
-            change_name = ((strncmp(net->cmina_temp_dcp_ase.name_of_station, (char *)p_value, value_length) != 0) &&
-                  (strlen(net->cmina_temp_dcp_ase.name_of_station) != value_length));
-
-            strncpy(net->cmina_temp_dcp_ase.name_of_station, (char *)p_value, value_length);
-            net->cmina_temp_dcp_ase.name_of_station[value_length] = '\0';
-            LOG_INFO(PF_DCP_LOG,"CMINA(%d): The incoming set request is about changing station name. New name: %s\n", __LINE__, net->cmina_temp_dcp_ase.name_of_station);
-            if (temp == false)
+            if (pf_cmina_is_stationname_valid((char *)p_value, value_length) == 0)
             {
-               strcpy(net->cmina_perm_dcp_ase.name_of_station, net->cmina_temp_dcp_ase.name_of_station);   /* It always fits */
-            }
+               change_name = ((strncmp(net->cmina_temp_dcp_ase.name_of_station, (char *)p_value, value_length) != 0) &&
+                     (strlen(net->cmina_temp_dcp_ase.name_of_station) != value_length));
 
-            ret = 0;
+               strncpy(net->cmina_temp_dcp_ase.name_of_station, (char *)p_value, value_length);
+               net->cmina_temp_dcp_ase.name_of_station[value_length] = '\0';
+               LOG_INFO(PF_DCP_LOG,"CMINA(%d): The incoming set request is about changing station name. New name: %s\n", __LINE__, net->cmina_temp_dcp_ase.name_of_station);
+
+               if (temp == false)
+               {
+                  strcpy(net->cmina_perm_dcp_ase.name_of_station, net->cmina_temp_dcp_ase.name_of_station);   /* It always fits */
+               }
+               ret = 0;
+            }
+            else
+            {
+               LOG_INFO(PF_DCP_LOG,"CMINA(%d): Got incoming request to change station name to an illegal value.\n", __LINE__);
+               *p_block_error = PF_DCP_BLOCK_ERROR_SUBOPTION_NOT_SET;
+            }
          }
          else
          {
@@ -812,4 +834,151 @@ void pf_cmina_show(
           p_cfg->eth_addr.addr[3],
           p_cfg->eth_addr.addr[4],
           p_cfg->eth_addr.addr[5]);
+}
+
+/************************* Validate incoming data ***************************/
+
+/**
+ * @internal
+ * Check if a station name is valid
+ *
+ * Defined in Profinet 2.4, section 4.3.1.4.16.2:
+ *
+ * - 1 or more labels, separated by [.]
+ * - Total length is 1 to 240
+ * - Label length is 1 to 63
+ * - Labels consist of [a-z0-9-]
+ * - Labels do not start with [-]
+ * - Labels do not end with [-]
+ * - Labels do not use multiple concatenated [-] except for IETF RFC 5890
+ * - The first label does not have the form “port-xyz” or “port-xyz-abcde”
+ *     with a, b, c, d, e, x, y, z = 0...9
+ * - Station-names do not have the form a.b.c.d with a, b, c, d = 0...999
+ *
+ * Also empty station name is valid here (indicating that no station name has been set).
+ *
+ * @param station_name     In: Station name
+ * @param len              In: Length of incoming string without terminator.
+ * @return  0  if the name is valid
+ *          -1 if the name is invalid
+ */
+int pf_cmina_is_stationname_valid(
+   const char*             station_name,
+   uint16_t                len)
+{
+   /* Todo: Implement */
+
+   return 0;
+}
+
+/**
+ * @internal
+ * Check if an IP suite is valid.
+ *
+ * Defined in Profinet 2.4, section 4.3.1.4.21.5
+ *
+ * @param ipsuite          In: IP suite with IP, netmask, gateway
+ * @return  0  if the IP suite is valid
+ *          -1 if the IP suite is invalid
+ */
+int pf_cmina_is_ipsuite_valid(
+   pf_ip_suite_t           *p_ipsuite)
+{
+   if (pf_cmina_is_netmask_valid(p_ipsuite->ip_mask) != 0)
+   {
+      return -1;
+   }
+   if (pf_cmina_is_ipaddress_valid(p_ipsuite->ip_mask, p_ipsuite->ip_addr) != 0)
+   {
+      return -1;
+   }
+   if (pf_cmina_is_gateway_valid(p_ipsuite->ip_addr, p_ipsuite->ip_mask, p_ipsuite->ip_gateway) != 0)
+   {
+      return -1;
+   }
+
+   return 0;
+}
+
+/**
+ * @internal
+ * Check if a full IP suite is valid.
+ *
+ * Defined in Profinet 2.4, section
+ *
+ * @param full_ipsuite     In: IP suite with IP, netmask, gateway and DNS adresses
+ * @return  0  if the IP suite is valid
+ *          -1 if the IP suite is invalid
+ */
+int pf_cmina_is_full_ipsuite_valid(
+   pf_full_ip_suite_t      *p_full_ipsuite)
+{
+   if (pf_cmina_is_ipsuite_valid(&p_full_ipsuite->ip_suite) != 0)
+   {
+      return -1;
+   }
+
+   /* TODO validate DNS addresses */
+
+   return 0;
+}
+
+/**
+ * @internal
+ * Check if an IP address is valid
+ *
+ * Defined in Profinet 2.4, section 4.3.1.4.21.2
+ *
+ * @param netmask          In: Netmask
+ * @param netmask          In: IP address
+ * @return  0  if the netmask is valid
+ *          -1 if the netmask is invalid
+ */
+int pf_cmina_is_ipaddress_valid(
+   os_ipaddr_t            netmask,
+   os_ipaddr_t            ip)
+{
+   /* Todo: Implement */
+
+   return 0;
+}
+
+/**
+ * @internal
+ * Check if a netmask is valid
+ *
+ * Defined in Profinet 2.4, section 4.3.1.4.21.3
+ *
+ * @param netmask          In: netmask
+ * @return  0  if the netmask is valid
+ *          -1 if the netmask is invalid
+ */
+int pf_cmina_is_netmask_valid(
+   os_ipaddr_t            netmask)
+{
+   /* Todo: Implement */
+
+   return 0;
+}
+
+/**
+ * @internal
+ * Check if a gateway address is valid
+ *
+ * Defined in Profinet 2.4, section 4.3.1.4.21.4
+ *
+ * @param ip               In: IP address
+ * @param netmask          In: Netmask
+ * @param gateway          In: Gateway address
+ * @return  0  if the gateway address is valid
+ *          -1 if the gateway address is invalid
+ */
+int pf_cmina_is_gateway_valid(
+   os_ipaddr_t             ip,
+   os_ipaddr_t             netmask,
+   os_ipaddr_t             gateway)
+{
+   /* Todo: Implement */
+
+   return 0;
 }
