@@ -147,7 +147,7 @@ static int app_write_ind(
 
    if (p_appdata->arguments.verbosity > 0)
    {
-      printf("Parameter write call-back. AREP: %u API: %u Slot: %u Subslot: %u Index: %u Sequence: %u Length: %u\n",
+      printf("Parameter write call-back. AREP: %u API: %u Slot: %2u Subslot: %u Index: %u Sequence: %2u Length: %u\n",
          arep,
          api,
          slot,
@@ -217,7 +217,7 @@ static int app_read_ind(
 
    if (p_appdata->arguments.verbosity > 0)
    {
-      printf("Parameter read call-back. AREP: %u API: %u Slot: %u Subslot: %u Index: %u Sequence: %u  Max length: %u\n",
+      printf("Parameter read call-back. AREP: %u API: %u Slot: %2u Subslot: %u Index: %u Sequence: %2u  Max length: %u\n",
          arep,
          api,
          slot,
@@ -261,13 +261,18 @@ static int app_state_ind(
    uint16_t                slot = 0;
    app_data_t              *p_appdata = (app_data_t*)arg;
 
+   if (p_appdata->arguments.verbosity > 0)
+   {
+      printf("Callback on event %s   AREP: %u\n", event_value_to_string(state), arep);
+   }
+
    if (state == PNET_EVENT_ABORT)
    {
       if (pnet_get_ar_error_codes(net, arep, &err_cls, &err_code) == 0)
       {
          if (p_appdata->arguments.verbosity > 0)
          {
-               printf("Callback on event PNET_EVENT_ABORT. Error class: %u Error code: %u\n",
+               printf("    Error class: %u Error code: %u\n",
                   (unsigned)err_cls, (unsigned)err_code);
          }
       }
@@ -275,7 +280,7 @@ static int app_state_ind(
       {
          if (p_appdata->arguments.verbosity > 0)
          {
-               printf("Callback on event PNET_EVENT_ABORT. No error status available\n");
+               printf("    No error status available\n");
          }
       }
       /* Only abort AR with correct session key */
@@ -283,11 +288,6 @@ static int app_state_ind(
    }
    else if (state == PNET_EVENT_PRMEND)
    {
-      if (p_appdata->arguments.verbosity > 0)
-      {
-         printf("Callback on event PNET_EVENT_PRMEND. AREP: %u\n", arep);
-      }
-
       /* Save the arep for later use */
       p_appdata->main_arep = arep;
       os_event_set(p_appdata->main_events, EVENT_READY_FOR_DATA);
@@ -304,7 +304,7 @@ static int app_state_ind(
          {
             if (p_appdata->arguments.verbosity > 0)
             {
-               printf("  Setting input data and IOPS for slot %u subslot %u\n", slot, PNET_SUBMOD_CUSTOM_IDENT);
+               printf("  Setting input data and IOPS for slot %2u subslot %u\n", slot, PNET_SUBMOD_CUSTOM_IDENT);
             }
             (void)pnet_input_set_data_and_iops(net, APP_API, slot, PNET_SUBMOD_CUSTOM_IDENT, p_appdata->inputdata,  sizeof(p_appdata->inputdata), PNET_IOXS_GOOD);
          }
@@ -312,34 +312,13 @@ static int app_state_ind(
          {
             if (p_appdata->arguments.verbosity > 0)
             {
-               printf("  Setting output IOCS for slot %u subslot %u\n", slot, PNET_SUBMOD_CUSTOM_IDENT);
+               printf("  Setting output IOCS         for slot %2u subslot %u\n", slot, PNET_SUBMOD_CUSTOM_IDENT);
             }
             (void)pnet_output_set_iocs(net, APP_API, slot, PNET_SUBMOD_CUSTOM_IDENT, PNET_IOXS_GOOD);
          }
       }
 
       (void)pnet_set_provider_state(net, true);
-   }
-   else if (state == PNET_EVENT_DATA)
-   {
-      if (p_appdata->arguments.verbosity > 0)
-      {
-         printf("Callback on event PNET_EVENT_DATA\n");
-      }
-   }
-   else if (state == PNET_EVENT_STARTUP)
-   {
-      if (p_appdata->arguments.verbosity > 0)
-      {
-         printf("Callback on event PNET_EVENT_STARTUP\n");
-      }
-   }
-   else if (state == PNET_EVENT_APPLRDY)
-   {
-      if (p_appdata->arguments.verbosity > 0)
-      {
-         printf("Callback on event PNET_EVENT_APPLRDY\n");
-      }
    }
 
    return 0;
@@ -371,6 +350,7 @@ static int app_exp_module_ind(
    uint32_t                module_ident)
 {
    int                     ret = -1;   /* Not supported in specified slot */
+   int                     result = 0;
    uint16_t                ix;
    app_data_t              *p_appdata = (app_data_t*)arg;
 
@@ -389,28 +369,32 @@ static int app_exp_module_ind(
 
    if (ix < NELEMENTS(cfg_available_module_types))
    {
-      printf("  Pull old module.    API: %u Slot: 0x%x",
-         api,
-         slot
-      );
-      if (pnet_pull_module(net, api, slot) != 0)
+      if (p_appdata->arguments.verbosity > 0)
       {
-         printf("    Slot was empty.\n");
+         printf("  Pull old module.    API: %u Slot: %2u",
+            api,
+            slot
+         );
       }
-      else
+      result = pnet_pull_module(net, api, slot);
+      if (p_appdata->arguments.verbosity > 0)
       {
+         if (result != 0)
+         {
+            printf("    Slot was empty.");
+         }
          printf("\n");
       }
 
       /* For now support any of the known modules in any slot */
       if (p_appdata->arguments.verbosity > 0)
       {
-         printf("  Plug module.        API: %u Slot: 0x%x Module ID: 0x%x Index in supported modules: %u\n", api, slot, (unsigned)module_ident, ix);
+         printf("  Plug module.        API: %u Slot: %2u Module ID: 0x%x Index in supported modules: %u\n", api, slot, (unsigned)module_ident, ix);
       }
       ret = pnet_plug_module(net, api, slot, module_ident);
       if (ret != 0)
       {
-         printf("Plug module failed. Ret: %u API: %u Slot: %u Module ID: 0x%x Index in list of supported modules: %u\n", ret, api, slot, (unsigned)module_ident, ix);
+         printf("Plug module failed. Ret: %u API: %u Slot: %2u Module ID: 0x%x Index in list of supported modules: %u\n", ret, api, slot, (unsigned)module_ident, ix);
       }
       else
       {
@@ -435,7 +419,7 @@ static int app_exp_module_ind(
    }
    else
    {
-      printf("  Module ID %08x not found. API: %u Slot: %u\n",
+      printf("  Module ID %08x not found. API: %u Slot: %2u\n",
          (unsigned)module_ident,
          api,
          slot);
@@ -454,6 +438,7 @@ static int app_exp_submodule_ind(
    uint32_t                submodule_ident)
 {
    int                     ret = -1;
+   int                     result = 0;
    uint16_t                ix = 0;
    app_data_t              *p_appdata = (app_data_t*)arg;
 
@@ -473,29 +458,34 @@ static int app_exp_submodule_ind(
 
    if (ix < NELEMENTS(cfg_available_submodule_types))
    {
-      printf("  Pull old submodule. API: %u Slot: 0x%x                   Subslot: 0x%x ",
-         api,
-         slot,
-         subslot
-      );
-
-      if (pnet_pull_submodule(net, api, slot, subslot) != 0)
+      if (p_appdata->arguments.verbosity > 0)
       {
-         printf("     Subslot was empty.\n");
-      } else {
+         printf("  Pull old submodule. API: %u Slot: %2u                   Subslot: %u ",
+            api,
+            slot,
+            subslot
+         );
+      }
+      result = pnet_pull_submodule(net, api, slot, subslot);
+      if (p_appdata->arguments.verbosity > 0)
+      {
+         if (result != 0)
+         {
+            printf("     Subslot was empty.");
+         }
          printf("\n");
       }
 
       if (p_appdata->arguments.verbosity > 0)
       {
-         printf("  Plug submodule.     API: %u Slot: 0x%x Module ID: 0x%-4x Subslot: 0x%x Submodule ID: 0x%x Index in supported submodules: %u Dir: %u In: %u Out: %u bytes\n",
+         printf("  Plug submodule.     API: %u Slot: %2u Module ID: 0x%-4x Subslot: %u Submodule ID: 0x%x Index in supported submodules: %u Dir: %s In: %u Out: %u bytes\n",
             api,
             slot,
             (unsigned)module_ident,
             subslot,
             (unsigned)submodule_ident,
             ix,
-            cfg_available_submodule_types[ix].data_dir,
+            submodule_direction_to_string(cfg_available_submodule_types[ix].data_dir),
             cfg_available_submodule_types[ix].insize,
             cfg_available_submodule_types[ix].outsize
             );
@@ -508,7 +498,7 @@ static int app_exp_submodule_ind(
          cfg_available_submodule_types[ix].outsize);
       if (ret != 0)
       {
-         printf("  Plug submodule failed. Ret: %u API: %u Slot: %u Subslot 0x%x Module ID: 0x%x Submodule ID: 0x%x Index in list of supported modules: %u\n",
+         printf("  Plug submodule failed. Ret: %u API: %u Slot: %2u Subslot %u Module ID: 0x%x Submodule ID: 0x%x Index in list of supported modules: %u\n",
             ret,
             api,
             slot,
@@ -520,7 +510,7 @@ static int app_exp_submodule_ind(
    }
    else
    {
-      printf("  Submodule ID 0x%x in module ID 0x%x not found. API: %u Slot: %u Subslot %u \n",
+      printf("  Submodule ID 0x%x in module ID 0x%x not found. API: %u Slot: %2u Subslot %u \n",
          (unsigned)submodule_ident,
          (unsigned)module_ident,
          api,
@@ -701,4 +691,39 @@ int app_adjust_stack_configuration(
    stack_config->dhcp_enable = 0;
 
    return 0;
+}
+
+/*************************** Helper functions ********************************/
+
+const char* event_value_to_string(
+   pnet_event_values_t event)
+{
+   const char *s = "<error>";
+
+   switch (event)
+   {
+   case PNET_EVENT_ABORT:   s = "PNET_EVENT_ABORT"; break;
+   case PNET_EVENT_STARTUP: s = "PNET_EVENT_STARTUP"; break;
+   case PNET_EVENT_PRMEND:  s = "PNET_EVENT_PRMEND"; break;
+   case PNET_EVENT_APPLRDY: s = "PNET_EVENT_APPLRDY"; break;
+   case PNET_EVENT_DATA:    s = "PNET_EVENT_DATA"; break;
+   }
+
+   return s;
+}
+
+const char* submodule_direction_to_string(
+   pnet_submodule_dir_t direction)
+{
+   const char *s = "<error>";
+
+   switch (direction)
+   {
+   case PNET_DIR_NO_IO:  s = "NO_IO"; break;
+   case PNET_DIR_INPUT:  s = "INPUT"; break;
+   case PNET_DIR_OUTPUT: s = "OUTPUT"; break;
+   case PNET_DIR_IO:     s = "INPUT_OUTPUT"; break;
+   }
+
+   return s;
 }

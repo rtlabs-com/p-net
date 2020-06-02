@@ -257,12 +257,21 @@ int pf_cpm_close_req(
 /**
  * @internal
  * Perform the cycle counter check of the received frame.
+ *
+ * Profinet 2.4, section 4.7.2.1.2
+ *
+ * In general, the current counter value should be larger than the
+ * previous counter value.
+ *
+ * However as we use cyclic counters, also allow it to be a lot less (not the
+ * same or slightly less).
+ *
  * @param prev             In:   The previous cycle counter.
  * @param now              In:   The current cycle counter.
  * @return  0  If the cycle check is OK.
  *          -1 if the cycle check fails.
  */
-static int pf_cpm_check_cycle(
+int pf_cpm_check_cycle(
   int32_t                  prev,
   uint16_t                 now)
 {
@@ -273,10 +282,6 @@ static int pf_cpm_check_cycle(
    if ((diff >= 1) && (diff <= 61440))
    {
       ret = 0;
-   }
-   else
-   {
-      ret = 1;
    }
 
    return ret;

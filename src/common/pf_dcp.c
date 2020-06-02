@@ -247,14 +247,15 @@ static int pf_dcp_put_block(
 
 /**
  * @internal
- * Handle a DCP get request.
+ * Handle one block in a DCP get request, by inserting it into the response.
  *
- * @param net              InOut: The p-net stack instance
- * @param p_dst            In:   The destination buffer.
- * @param p_dst_pos        InOut:Position in the destination buffer.
- * @param dst_max          In:   Size of destination buffer.
- * @param opt              In:   Option key.
- * @param sub              In:   Sub-option key.
+ * @param net                 InOut: The p-net stack instance
+ * @param p_dst               In:   The destination buffer.
+ * @param p_dst_pos           InOut:Position in the destination buffer.
+ * @param dst_max             In:   Size of destination buffer.
+ * @param opt                 In:   Option key.
+ * @param sub                 In:   Sub-option key.
+ * @param request_is_identify In:   Usage in response to Identify request (skips some blocks)
  * @return
  */
 static int pf_dcp_get_req(
@@ -263,7 +264,8 @@ static int pf_dcp_get_req(
    uint16_t                *p_dst_pos,
    uint16_t                dst_max,
    uint8_t                 opt,
-   uint8_t                 sub)
+   uint8_t                 sub,
+   bool                    request_is_identify)
 {
    int                     ret = 0;       /* Assume all OK */
    uint8_t                 block_error = PF_DCP_BLOCK_ERROR_NO_ERROR;
@@ -309,7 +311,7 @@ static int pf_dcp_get_req(
          /* ToDo: We do not yet report on "IP address conflict" (block_info, BIT(7)) */
          break;
       case PF_DCP_SUB_IP_MAC:
-         skip = true;
+         skip = request_is_identify;
          break;
       default:
          break;
@@ -669,9 +671,11 @@ static int pf_dcp_get_set(
       p_src = (uint8_t*)p_buf->payload;
       src_pos = 0;
       p_src_ethhdr = (pf_ethhdr_t *)&p_src[src_pos];
+
       src_pos = frame_id_pos;
       src_pos += sizeof(uint16_t);        /* FrameId */
       p_src_dcphdr = (pf_dcp_header_t *)&p_src[src_pos];
+
       src_pos += sizeof(pf_dcp_header_t);
       src_dcplen = (src_pos + ntohs(p_src_dcphdr->data_length));
 
@@ -687,7 +691,7 @@ static int pf_dcp_get_set(
          p_dst_ethhdr = (pf_ethhdr_t *)&p_dst[dst_pos];
          dst_pos += sizeof(pf_ethhdr_t);
 
-         /* frame ID */
+         /* Insert frame ID into reponse */
          p_dst[dst_pos++] = ((PF_DCP_GET_SET_FRAME_ID & 0xff00) >> 8);
          p_dst[dst_pos++] = PF_DCP_GET_SET_FRAME_ID & 0xff;
 
@@ -702,7 +706,7 @@ static int pf_dcp_get_set(
          memcpy (p_dst_ethhdr->src.addr, &p_cfg->eth_addr.addr, sizeof(pnet_ethaddr_t));
          p_dst_ethhdr->type = htons(OS_ETHTYPE_PROFINET);
 
-         /* Start with the DCP request header and modify what is needed. */
+         /* Copy DCP header from the request, and modify what is needed. */
          *p_dst_dcphdr = *p_src_dcphdr;
          p_dst_dcphdr->service_type = PF_DCP_SERVICE_TYPE_SUCCESS;
          p_dst_dcphdr->response_delay_factor = htons(0);
@@ -740,6 +744,8 @@ static int pf_dcp_get_set(
                src_block_len = ntohs(p_src_block_hdr->block_length);
             }
 
+            /* Make sure no other MAC address is used in the DCP communication for 3 seconds */
+            memcpy(&net->dcp_sam, &p_src_ethhdr->src, sizeof(net->dcp_sam));
             (void)pf_scheduler_add(net, 3*1000*1000,      /* 3s */
                dcp_sync_name, pf_dcp_clear_sam, NULL, &net->dcp_sam_timeout);
          }
@@ -750,12 +756,14 @@ static int pf_dcp_get_set(
                    (src_dcplen >= (src_pos + sizeof(uint8_t) + sizeof(uint8_t))))
             {
                ret = pf_dcp_get_req(net, p_dst, &dst_pos, PF_FRAME_BUFFER_SIZE,
-                  p_src[src_pos], p_src[src_pos + 1]);
+                  p_src[src_pos], p_src[src_pos + 1], false);
 
                /* Point to next block */
                src_pos += sizeof(uint8_t) + sizeof(uint8_t);
             }
 
+            /* Make sure no other MAC address is used in the DCP communication for 3 seconds */
+            memcpy(&net->dcp_sam, &p_src_ethhdr->src, sizeof(net->dcp_sam));
             (void)pf_scheduler_add(net, 3*1000*1000,      /* 3s */
                dcp_sync_name, pf_dcp_clear_sam, NULL, &net->dcp_sam_timeout);
          }
@@ -999,9 +1007,9 @@ static int pf_dcp_identify_req(
 {
    int                     ret = 0;          /* Assume all OK */
    uint16_t                ix;
-   bool                    first = true;
+   bool                    first = true;     /* First of the blocks */
    bool                    match = false;    /* Is it for us? */
-   bool                    filter = false;
+   bool                    filter = false;   /* Is it IdentifyFilter or IdentifyAll? */
 
    uint8_t                 *p_src;
    uint16_t                src_pos = 0;
@@ -1347,7 +1355,7 @@ static int pf_dcp_identify_req(
          for (ix = 0; ix < NELEMENTS(device_options); ix++)
          {
             pf_dcp_get_req(net, p_dst, &dst_pos, PF_FRAME_BUFFER_SIZE,
-               device_options[ix].opt, device_options[ix].sub);
+               device_options[ix].opt, device_options[ix].sub, true);
          }
 
          /* Insert final response length and ship it! */
