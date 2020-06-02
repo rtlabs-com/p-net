@@ -566,6 +566,8 @@ static int pf_dcp_set_req(
       {
       case PF_DCP_SUB_CONTROL_START:
          net->dcp_global_block_qualifier = block_qualifier;
+         response_data[2] = PF_DCP_BLOCK_ERROR_NO_ERROR;
+         ret = 0;
          break;
       case PF_DCP_SUB_CONTROL_STOP:
          if (block_qualifier == net->dcp_global_block_qualifier)
@@ -646,7 +648,6 @@ static int pf_dcp_get_set(
    uint16_t                frame_id_pos,
    void                    *p_arg)
 {
-   int                     ret = 0;       /* Means not handled */
    uint8_t                 *p_src;
    uint16_t                src_pos;
    uint16_t                src_dcplen;
@@ -718,15 +719,14 @@ static int pf_dcp_get_set(
             src_pos += sizeof(*p_src_block_hdr);    /* Point to the block value */
             src_block_len = ntohs(p_src_block_hdr->block_length);
 
-            while ((ret == 0) &&
-                   (src_dcplen >= (src_pos + src_block_len)))
+            while (src_dcplen >= (src_pos + src_block_len))
             {
                /* Extract block qualifier */
                src_block_qualifier = ntohs(*(uint16_t*)&p_src[src_pos]);
                src_pos += sizeof(uint16_t);
                src_block_len -= sizeof(uint16_t);
 
-               ret = pf_dcp_set_req(net, p_dst, &dst_pos, PF_FRAME_BUFFER_SIZE,
+               (void)pf_dcp_set_req(net, p_dst, &dst_pos, PF_FRAME_BUFFER_SIZE,
                   p_src_block_hdr->option, p_src_block_hdr->sub_option,
                   src_block_qualifier,
                   src_block_len, &p_src[src_pos]);
@@ -752,10 +752,9 @@ static int pf_dcp_get_set(
          else if (p_src_dcphdr->service_id == PF_DCP_SERVICE_GET)
          {
             LOG_DEBUG(PF_DCP_LOG,"DCP(%d): Incoming DCP Get request\n", __LINE__);
-            while ((ret == 0) &&
-                   (src_dcplen >= (src_pos + sizeof(uint8_t) + sizeof(uint8_t))))
+            while (src_dcplen >= (src_pos + sizeof(uint8_t) + sizeof(uint8_t)))
             {
-               ret = pf_dcp_get_req(net, p_dst, &dst_pos, PF_FRAME_BUFFER_SIZE,
+               (void)pf_dcp_get_req(net, p_dst, &dst_pos, PF_FRAME_BUFFER_SIZE,
                   p_src[src_pos], p_src[src_pos + 1], false);
 
                /* Point to next block */
