@@ -269,6 +269,7 @@ static int pf_dcp_get_req(
 {
    int                     ret = 0;       /* Assume all OK */
    uint8_t                 block_error = PF_DCP_BLOCK_ERROR_NO_ERROR;
+   uint8_t                 negative_response_data[3];  /* For negative get */
    uint16_t                block_info = 0;
    uint16_t                value_length = 0;
    uint8_t                 *p_value = NULL;
@@ -397,7 +398,17 @@ static int pf_dcp_get_req(
    {
       if (skip == false)
       {
-         ret = pf_dcp_put_block(p_dst, p_dst_pos, dst_max, opt, sub, true, 0, sizeof(block_error), &block_error);
+         /* GetNegResBlock consists of:
+            - option = Control                              1 byte
+            - suboption = Response                          1 byte
+            - block length                                  2 bytes
+            - type of option involved (option + suboption)  2 bytes
+            - block error                                   1 byte
+         */
+         negative_response_data[0] = opt;
+         negative_response_data[1] = sub;
+         negative_response_data[2] = block_error;
+         ret = pf_dcp_put_block(p_dst, p_dst_pos, dst_max, PF_DCP_OPT_CONTROL, PF_DCP_SUB_CONTROL_RESPONSE, false, 0, sizeof(negative_response_data), &negative_response_data);
       }
    }
 
@@ -459,7 +470,7 @@ static void pf_dcp_control_signal(
  * @param sub              In:   Sub-option key.
  * @param block_info       In:   The block info argument.
  * @param value_length     In:   The length in bytes of the p_value data.
- * @param p_value          In:   The source date.
+ * @param p_value          In:   The source data.
  * @return
  */
 static int pf_dcp_set_req(
@@ -474,13 +485,13 @@ static int pf_dcp_set_req(
    uint8_t                 *p_value)
 {
    int                     ret = -1;
-   uint8_t                 response_data[3]; /* For negative set */
+   uint8_t                 response_data[3];
    pf_full_ip_suite_t      full_ip_suite;
    uint16_t                ix;
 
    response_data[0] = opt;
    response_data[1] = sub;
-   response_data[2] = PF_DCP_BLOCK_ERROR_SUBOPTION_NOT_SUPPORTED;
+   response_data[2] = PF_DCP_BLOCK_ERROR_SUBOPTION_NOT_SUPPORTED;  /* Assume negative response initially */
 
    switch (opt)
    {
@@ -617,6 +628,13 @@ static int pf_dcp_set_req(
       response_data[2] = PF_DCP_BLOCK_ERROR_NO_ERROR;
    }
 
+   /* SetResBlock and SetNegResBlock consists of:
+      - option = Control                              1 byte
+      - suboption = Response                          1 byte
+      - block length                                  2 bytes
+      - type of option involved (option + suboption)  2 bytes
+      - block error                                   1 byte  (=0 when no error)
+   */
    (void)pf_dcp_put_block(p_dst, p_dst_pos, dst_max,
       PF_DCP_OPT_CONTROL, PF_DCP_SUB_CONTROL_RESPONSE,
       false, 0, sizeof(response_data), response_data);
