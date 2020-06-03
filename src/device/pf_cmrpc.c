@@ -338,6 +338,8 @@ static int pf_session_allocate(
 /**
  * @internal
  * Free the session_info.
+ * Close the corresponding UDP socket if necessary.
+ *
  * @param p_sess           In:   The session instance.
  */
 static void pf_session_release(
@@ -347,6 +349,10 @@ static void pf_session_release(
    {
       if (p_sess->in_use == true)
       {
+         if (p_sess->socket > 0)
+         {
+            os_udp_close(p_sess->socket);
+         }
          LOG_INFO(PF_RPC_LOG, "RPC(%d): Released session %u\n", __LINE__, (unsigned)p_sess->ix);
          memset(p_sess, 0, sizeof(*p_sess));
          p_sess->in_use = false;
@@ -2888,7 +2894,6 @@ int pf_cmrpc_cmdev_state_ind(
          /* Free other (CCONTROL) sessions and close all RPC sockets. */
          while (pf_session_locate_by_ar(net, p_ar, &p_sess) == 0)
          {
-            os_udp_close(p_sess->socket);
             pf_session_release(p_sess);
          }
 
