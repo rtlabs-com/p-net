@@ -175,7 +175,11 @@ extern "C"
 #define PNET_ERROR_CODE_1_PNIORW_RES                           0xc0
 
 /**
- * # List of error_code_1 values, for PNET_ERROR_CODE_1_PNIORW_APP
+ * # List of error_code_1 values, for PNET_ERROR_DECODE_PNIORW
+ *
+ * APP = application
+ * ACC = access
+ * RES = resource
  */
 #define PNET_ERROR_CODE_1_APP_READ_ERROR                       (0x00 + PNET_ERROR_CODE_1_PNIORW_APP)
 #define PNET_ERROR_CODE_1_APP_WRITE_ERROR                      (0x01 + PNET_ERROR_CODE_1_PNIORW_APP)
@@ -183,10 +187,6 @@ extern "C"
 #define PNET_ERROR_CODE_1_APP_BUSY                             (0x07 + PNET_ERROR_CODE_1_PNIORW_APP)
 #define PNET_ERROR_CODE_1_APP_VERSION_CONFLICT                 (0x08 + PNET_ERROR_CODE_1_PNIORW_APP)
 #define PNET_ERROR_CODE_1_APP_NOT_SUPPORTED                    (0x09 + PNET_ERROR_CODE_1_PNIORW_APP)
-
-/**
- * # List of error_code_1 values, for PNET_ERROR_CODE_1_PNIORW_ACC
- */
 #define PNET_ERROR_CODE_1_ACC_INVALID_INDEX                    (0x00 + PNET_ERROR_CODE_1_PNIORW_ACC)
 #define PNET_ERROR_CODE_1_ACC_WRITE_LENGTH_ERROR               (0x01 + PNET_ERROR_CODE_1_PNIORW_ACC)
 #define PNET_ERROR_CODE_1_ACC_INVALID_SLOT_SUBSLOT             (0x02 + PNET_ERROR_CODE_1_PNIORW_ACC)
@@ -198,10 +198,6 @@ extern "C"
 #define PNET_ERROR_CODE_1_ACC_INVALID_PARAMETER                (0x08 + PNET_ERROR_CODE_1_PNIORW_ACC)
 #define PNET_ERROR_CODE_1_ACC_INVALID_TYPE                     (0x09 + PNET_ERROR_CODE_1_PNIORW_ACC)
 #define PNET_ERROR_CODE_1_ACC_BACKUP                           (0x0a + PNET_ERROR_CODE_1_PNIORW_ACC)
-
-/**
- * # List of error_code_1 values, for PNET_ERROR_CODE_1_PNIORW_RES
- */
 #define PNET_ERROR_CODE_1_RES_READ_CONFLICT                    (0x00 + PNET_ERROR_CODE_1_PNIORW_RES)
 #define PNET_ERROR_CODE_1_RES_WRITE_CONFLICT                   (0x01 + PNET_ERROR_CODE_1_PNIORW_RES)
 #define PNET_ERROR_CODE_1_RES_RESOURCE_BUSY                    (0x02 + PNET_ERROR_CODE_1_PNIORW_RES)
@@ -683,7 +679,7 @@ typedef int (*pnet_read_ind)(
  * @param net              InOut: The p-net stack instance
  * @param arg              InOut: User-defined data (not used by p-net)
  * @param arep             In:   The AREP.
- * @param api              In:   The AP identifier.
+ * @param api              In:   The API identifier.
  * @param slot             In:   The slot number.
  * @param subslot          In:   The sub-slot number.
  * @param idx              In:   The data record index.
@@ -1074,12 +1070,12 @@ typedef struct pnet_lldp_cfg
    char                    chassis_id[240 + 1];    /**< Terminated string */
    char                    port_id[240 + 1];       /**< Terminated string */
    pnet_ethaddr_t          port_addr;
-   uint16_t                ttl;
+   uint16_t                ttl;                    /**< Time to live in seconds */
    uint16_t                rtclass_2_status;
    uint16_t                rtclass_3_status;
-   uint8_t                 cap_aneg;
-   uint16_t                cap_phy;
-   uint16_t                mau_type;
+   uint8_t                 cap_aneg;               /**< Autonegotiation supported and enabled */
+   uint16_t                cap_phy;                /**< Autonegotiation speeds */
+   uint16_t                mau_type;               /**< Cable MAU type */
 } pnet_lldp_cfg_t;
 
 /**
@@ -1348,8 +1344,11 @@ PNET_EXPORT int pnet_input_get_iocs(
  * This function may be called to retrieve the latest data and IOPS values
  * of a sub-slot sent from the controller.
  *
- * If new data and IOCS has arrived from the controller since the last call
+ * If a valid new data (and IOCS) frame has arrived from the IO-controller since
+ * your last call to this function (regardless of the slot/subslot arguments)
  * then the flag \a p_new_flag is set to true, else it is set to false.
+ * Note that this does not check whether the data content has changed from
+ * any previous frame.
  *
  * Note that the latest data and IOPS values are copied to the application
  * buffers regardless of the value of \a p_new_flag.

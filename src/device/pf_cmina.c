@@ -41,7 +41,7 @@ static const char             *hello_sync_name = "hello";
  *
  * This is a callback for the scheduler. Arguments should fulfill pf_scheduler_timeout_ftn_t
  *
- * If this was not the last requested HELLO message then re-schedule another call after 1s.
+ * If this was not the last requested HELLO message then re-schedule another call after 1 s.
  *
  * @param net              InOut: The p-net stack instance
  * @param arg              In:   Not used.
@@ -331,7 +331,7 @@ int pf_cmina_dcp_set_ind(
             change_ip = (memcmp(&net->cmina_temp_dcp_ase.full_ip_suite.ip_suite, p_value, value_length) != 0);
 
             memcpy(&net->cmina_temp_dcp_ase.full_ip_suite.ip_suite, p_value, sizeof(net->cmina_temp_dcp_ase.full_ip_suite.ip_suite));
-            LOG_INFO(PF_DCP_LOG,"CMINA(%d): Change IP request. PF_DCP_SUB_IP_PAR New IP: 0x%"PRIxLEAST32"\n", __LINE__, net->cmina_temp_dcp_ase.full_ip_suite.ip_suite.ip_addr);
+            LOG_INFO(PF_DCP_LOG,"CMINA(%d): The incoming set request is about changing IP. PF_DCP_SUB_IP_PAR New IP: 0x%"PRIxLEAST32"\n", __LINE__, net->cmina_temp_dcp_ase.full_ip_suite.ip_suite.ip_addr);
             if (temp == false)
             {
                net->cmina_perm_dcp_ase.full_ip_suite.ip_suite = net->cmina_temp_dcp_ase.full_ip_suite.ip_suite;
@@ -347,7 +347,7 @@ int pf_cmina_dcp_set_ind(
       case PF_DCP_SUB_IP_SUITE:
          if (value_length < sizeof(net->cmina_temp_dcp_ase.full_ip_suite))
          {
-            LOG_INFO(PF_DCP_LOG,"CMINA(%d): Change IP request. PF_DCP_SUB_IP_SUITE\n", __LINE__);
+            LOG_INFO(PF_DCP_LOG,"CMINA(%d): The incoming set request is about changing IP. PF_DCP_SUB_IP_SUITE\n", __LINE__);
             change_ip = (memcmp(&net->cmina_temp_dcp_ase.full_ip_suite, p_value, value_length) != 0);
 
             memcpy(&net->cmina_temp_dcp_ase.full_ip_suite, p_value, value_length);
@@ -379,7 +379,7 @@ int pf_cmina_dcp_set_ind(
 
             strncpy(net->cmina_temp_dcp_ase.name_of_station, (char *)p_value, value_length);
             net->cmina_temp_dcp_ase.name_of_station[value_length] = '\0';
-            LOG_INFO(PF_DCP_LOG,"CMINA(%d): Change station name request. New name: %s\n", __LINE__, net->cmina_temp_dcp_ase.name_of_station);
+            LOG_INFO(PF_DCP_LOG,"CMINA(%d): The incoming set request is about changing station name. New name: %s\n", __LINE__, net->cmina_temp_dcp_ase.name_of_station);
             if (temp == false)
             {
                strcpy(net->cmina_perm_dcp_ase.name_of_station, net->cmina_temp_dcp_ase.name_of_station);   /* It always fits */
@@ -749,6 +749,9 @@ int pf_cmina_get_ipaddr(
    *p_ipaddr = net->cmina_temp_dcp_ase.full_ip_suite.ip_suite.ip_addr;
    return 0;
 }
+
+
+/*************** Diagnostic strings *****************************************/
 
 /**
  * @internal

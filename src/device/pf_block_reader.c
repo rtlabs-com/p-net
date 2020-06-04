@@ -464,7 +464,7 @@ void pf_get_exp_api_module(
          {
             /* This error condition is reported by caller. */
             p_info->result = PF_PARSE_OUT_OF_EXP_SUBMODULE_RESOURCES;
-            LOG_DEBUG(PNET_LOG, "BR(%d): Out of expected module resources\n", __LINE__);
+            LOG_ERROR(PNET_LOG, "BR(%d): Too many modules used (not enough slots). Out of expected module resources.\n", __LINE__);
          }
       }
    }
@@ -647,7 +647,7 @@ void pf_get_dce_rpc_header(
    p_info->is_big_endian = p_rpc->is_big_endian;
 
    /* Float repr  - Assume IEEE */
-   temp_uint8 = pf_get_byte(p_info, p_pos);
+   (void)pf_get_byte(p_info, p_pos);
    p_rpc->float_repr = 0;
 
    /* Reserved */

@@ -259,6 +259,8 @@ static int app_state_ind(
    uint16_t                err_cls = 0;
    uint16_t                err_code = 0;
    uint16_t                slot = 0;
+   const char              *error_description = "";
+
    app_data_t              *p_appdata = (app_data_t*)arg;
 
    if (p_appdata->arguments.verbosity > 0)
@@ -272,8 +274,29 @@ static int app_state_ind(
       {
          if (p_appdata->arguments.verbosity > 0)
          {
-               printf("    Error class: %u Error code: %u\n",
-                  (unsigned)err_cls, (unsigned)err_code);
+               /* A few of the most common error codes */
+               switch (err_cls)
+               {
+               case 0:
+                  error_description = "Unknown error class";
+                  break;
+               case PNET_ERROR_CODE_1_RTA_ERR_CLS_PROTOCOL:
+                  switch (err_code)
+                  {
+                  case PNET_ERROR_CODE_2_ABORT_AR_CONSUMER_DHT_EXPIRED:
+                     error_description = "AR_CONSUMER_DHT_EXPIRED";
+                     break;
+                  case PNET_ERROR_CODE_2_ABORT_AR_CMI_TIMEOUT:
+                     error_description = "ABORT_AR_CMI_TIMEOUT";
+                     break;
+                  case PNET_ERROR_CODE_2_ABORT_AR_RELEASE_IND_RECEIVED:
+                     error_description = "Controller sent release request.";
+                     break;
+                  }
+                  break;
+               }
+               printf("    Error class: %u Error code: %u  %s\n",
+                  (unsigned)err_cls, (unsigned)err_code, error_description);
          }
       }
       else
@@ -650,7 +673,7 @@ int app_adjust_stack_configuration(
    stack_config->im_0_data.im_sw_revision_functional_enhancement = 0;
    stack_config->im_0_data.im_sw_revision_bug_fix = 0;
    stack_config->im_0_data.im_sw_revision_internal_change = 0;
-   stack_config->im_0_data.im_revision_counter = 0;
+   stack_config->im_0_data.im_revision_counter = 0;  /* Only 0 allowed according to standard */
    stack_config->im_0_data.im_profile_id = 0x1234;
    stack_config->im_0_data.im_profile_specific_type = 0x5678;
    stack_config->im_0_data.im_version_major = 1;
@@ -660,7 +683,7 @@ int app_adjust_stack_configuration(
    strcpy(stack_config->im_1_data.im_tag_location, "");
    strcpy(stack_config->im_2_data.im_date, "");
    strcpy(stack_config->im_3_data.im_descriptor, "");
-   strcpy(stack_config->im_4_data.im_signature, "");
+   strcpy(stack_config->im_4_data.im_signature, "");  /* For functional safety only */
 
    /* Device configuration */
    stack_config->device_id.vendor_id_hi = 0xfe;

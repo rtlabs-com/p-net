@@ -28,7 +28,7 @@ extern "C"
  * Return a byte from a buffer.
  * @param p_info           In:   The parser state.
  * @param p_pos            InOut:Position in the buffer.
- * @return
+ * @return The byte from the buffer
  */
 uint8_t pf_get_byte(
    pf_get_info_t           *p_info,
@@ -39,6 +39,7 @@ uint8_t pf_get_byte(
  * Return a uint16_t from a buffer.
  * @param p_info           In:   The parser state.
  * @param p_pos            InOut:Position in the buffer.
+ * @return The uint16_t from the buffer
  */
 uint16_t pf_get_uint16(
    pf_get_info_t           *p_info,

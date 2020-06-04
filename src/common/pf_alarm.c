@@ -1040,7 +1040,7 @@ static int pf_alarm_apms_apms_a_data_req(
  * Close APMX.
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
- * @param err_code         In:   Error code
+ * @param err_code         In:   Error code. See PNET_ERROR_CODE_2_*
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -1114,7 +1114,7 @@ static int pf_alarm_apmx_close(
 
 /**
  * @internal
- * Send APMR ACK
+ * Send alarm APMR ACK
  *
  * It uses pf_alarm_apms_a_data_req() for the sending.
  *
@@ -1152,7 +1152,7 @@ static int pf_alarm_apmr_send_ack(
 
 /**
  * @internal
- * Send APMR NACK
+ * Send alarm APMR NACK
  *
  * It uses pf_alarm_apms_a_data_req() for the sending.
  *

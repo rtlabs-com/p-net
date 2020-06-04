@@ -44,7 +44,7 @@ In order to compile p-net on Raspberry Pi, you need a recent version of cmake.
 In Raspbian the cmake is recent enough. Install it::
 
     sudo apt-get update
-    sudo apt-get install cmake
+    sudo apt-get install cmake cmake-curses-gui
 
 Verify the installed version::
 
@@ -53,47 +53,85 @@ Verify the installed version::
 Compare the installed version with the minimum version required for p-net (see first page).
 
 
-Connect LED and buttons to Raspberry Pi
----------------------------------------
+Connect a serial cable to Raspberry Pi
+--------------------------------------
+The p-net Profinet stack will change the IP-address of the Raspberry Pi when
+running it as an IO-Device (as requested by the PLC), why it can be
+inconvenient to connect to it via ssh. Using a serial cable to connect it to
+your laptop can then be helpful.
+
+Use a USB-to-serial adapter cable with 3.3 V logic levels. For example
+Adafruit sells a popular version of those cables.
+
+To enable the serial port console write the line ``enable_uart=1`` in the
+file ``/boot/config.txt``. The serial port within the Raspberry Pi will be
+named ``/dev/ttyS0``.
+
++-----+-----------+---------------------+-----------------------+
+| Pin | Name      | Terminal on cable   | Adafruit cable color  |
++=====+===========+=====================+=======================+
+| 6   | GND       | GND                 | Black                 |
++-----+-----------+---------------------+-----------------------+
+| 8   | UART0_TXD | RX                  | White                 |
++-----+-----------+---------------------+-----------------------+
+| 10  | UART0_RXD | TX                  | Green                 |
++-----+-----------+---------------------+-----------------------+
+
+Use a communication program with a baudrate of 115200.
+
+Before connecting the serial cable to your Raspberry Pi you can verify the
+functionality of the cable by connecting the USB connector to your Laptop,
+and connect the RX-terminal to the TX terminal of the cable. Use a communication
+program to verify that text that you enter is echoed back. When removing
+the RX-to-TX connection the echo should stop.
+
+
+Connect LEDs and buttons to Raspberry Pi
+----------------------------------------
 You need these components:
 
 +-----------------------+-----------------+
 | Component             | Number required |
 +=======================+=================+
-| LED                   | 1               |
+| LED                   | 2               |
 +-----------------------+-----------------+
-| Resistor 220 Ohm      | 3               |
+| Resistor 220 Ohm      | 4               |
 +-----------------------+-----------------+
 | Button switch         | 2               |
 +-----------------------+-----------------+
 
 Connect them like:
 
-+------+---------+-------------------------------------+
-| Pin  | Name    | Description                         |
-+======+=========+=====================================+
-| 9    | GND     |                                     |
-+------+---------+-------------------------------------+
-| 11   | GPIO17  | Connect LED to GND via 220 Ohm      |
-+------+---------+-------------------------------------+
-| 13   | GPIO27  | Connect button1 to 3.3V via 220 Ohm |
-+------+---------+-------------------------------------+
-| 15   | GPIO22  | Connect button2 to 3.3V via 220 Ohm |
-+------+---------+-------------------------------------+
-| 17   | 3.3V    |                                     |
-+------+---------+-------------------------------------+
++------+---------+-----------------------------------------------------+
+| Pin  | Name    | Description                                         |
++======+=========+=====================================================+
+| 9    | GND     |                                                     |
++------+---------+-----------------------------------------------------+
+| 11   | GPIO17  | Connect application data LED to GND via 220 Ohm     |
++------+---------+-----------------------------------------------------+
+| 13   | GPIO27  | Connect button1 to 3.3V via 220 Ohm                 |
++------+---------+-----------------------------------------------------+
+| 15   | GPIO22  | Connect button2 to 3.3V via 220 Ohm                 |
++------+---------+-----------------------------------------------------+
+| 16   | GPIO23  | Connect Profinet status LED to GND via 220 Ohm      |
++------+---------+-----------------------------------------------------+
+| 17   | 3.3V    |                                                     |
++------+---------+-----------------------------------------------------+
 
 The resistors for the buttons are to limit the consequences of connecting the
 wires to wrong pins.
 
 Set up the GPIO pins::
 
-    echo 17 > /sys/class/gpio/export
-    echo 27 > /sys/class/gpio/export
     echo 22 > /sys/class/gpio/export
-    echo out > /sys/class/gpio/gpio17/direction
+    echo 27 > /sys/class/gpio/export
 
-Turn on and off the LED::
+    echo 17 > /sys/class/gpio/export
+    echo 23 > /sys/class/gpio/export
+    echo out > /sys/class/gpio/gpio17/direction
+    echo out > /sys/class/gpio/gpio23/direction
+
+Turn on and off a LED::
 
     echo 1 > /sys/class/gpio/gpio17/value
     echo 0 > /sys/class/gpio/gpio17/value

@@ -655,7 +655,7 @@ typedef struct pf_alarm_err
 #define PF_MAX_TIMEOUTS                   (2 * (PNET_MAX_AR) * (PNET_MAX_CR) + 10)
 
 #define PF_CMINA_FS_HELLO_RETRY           3
-#define PF_CMINA_FS_HELLO_INTERVAL        (3*1000)     /* ms => 3s. Default is 30ms */
+#define PF_CMINA_FS_HELLO_INTERVAL        (3*1000)     /* milliseconds. Default is 30 ms */
 
 typedef enum pf_cmina_state_values
 {
@@ -1973,10 +1973,10 @@ struct pnet
    os_mutex_t                          *ppm_buf_lock;
    atomic_int                          ppm_instance_cnt;
    uint16_t                            dcp_global_block_qualifier;
-   pnet_ethaddr_t                      dcp_sam;
+   pnet_ethaddr_t                      dcp_sam; /* Source address (MAC) to current DCP remote peer */
    bool                                dcp_delayed_response_waiting;
    uint32_t                            dcp_timeout;
-   uint32_t                            dcp_sam_timeout;
+   uint32_t                            dcp_sam_timeout; /* Handle to the SAM timeout instance */
    os_eth_handle_t                     *eth_handle;
    pf_eth_frame_id_map_t               eth_id_map[PF_ETH_MAX_MAP];
    volatile pf_scheduler_timeouts_t    scheduler_timeouts[PF_MAX_TIMEOUTS];

@@ -250,6 +250,58 @@ ETH
 Registers and invokes frame handlers for incoming raw Ethernet frames.
 
 
+LLDP - Link Layer Discovery Protocol
+------------------------------------
+A protocol for neighborhood detection.
+An LLDP frame is sent at startup, to indicate the IO-Device IP address etc.
+
+The LLDP frame is a layer 2 Ethernet frame with the payload consting of a number
+of Type-Length-Value (TLV) blocks. The first 16 bits of each block contains info
+on the block type and block payload length. It is followed by the block payload
+data. Different TLV block types may have subtypes defined (within the payload).
+
+The frame is broadcasted to MAC address 01:80:c2:00:00:0e, and has an Ethertype
+of 0x88cc.
+
+TLV types:
+
+* 0: (End of LLDP frame indicator)
+* 1: Chassis ID. Subtypes 4: MAC address. 7: Name
+* 2: Port ID. Subtype 7: Local
+* 3: Time to live in seconds
+* 8: Management address (optional for LLDP, mandatory in Profinet). Includes IP
+  address and interface number.
+* 127: Organisation specific (optional for LLDP. See below.). Has an
+  organisation unique code, and a subtype.
+
+Organisation unique code 00:0e:cf belongs to Profibus Nutzerorganisation, and
+supports these subtypes:
+
+* 2: Port status. Contains RTClass2 and RTClass3 port status.
+* 5: Chassis MAC address
+
+Organisation unique code 00:12:0f belongs to the IEEE 802.3 organisation, and
+supports these subtypes:
+
+* 1: MAC/PHY configuration status. Shows autonegotiation support, and which
+  speeds are supported. Also MAU type.
+
+Autonegotiation:
+
+* Bit 0: Supported
+* Bit 1: Enabled
+
+Speed:
+
+* Bit 0: 1000BASE-T Full duplex
+* Bit 1: 1000BASE-T Half duplex
+* Bit 10: 100BASE‑TX Full duplex
+* Bit 11: 100BASE‑TX Half duplex
+* Bit 13: 10BASE‑T Full duplex
+* Bit 14: 10BASE‑T Half duplex
+* Bit 15: Unknown speed
+
+
 Start up procedure
 ------------------
 
@@ -334,3 +386,15 @@ Useful functions
 Show lots of details of the stack state::
 
    pnet_show(net, 0xFFFF);
+
+
+Coding rules
+------------
+In order to be platform independent, use ``CC_ASSERT()`` instead of ``assert()``.
+
+Include headers in sorted groups in this order:
+
+* Interface header (Corresponding to the .c file)
+* Headers from same project
+* Headers from the operating system
+* Standard C headers

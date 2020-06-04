@@ -19,6 +19,17 @@ A detailed description of the certification process can be downloaded from
 https://www.profibus.com/download/how-to-get-a-certificate-for-a-profinet-device/
 
 
+General requirements
+--------------------
+It should be possible to do a factory reset without an engineering tool. For
+example a hardware switch can be used. Routing of Ethernet frames must not be
+affected by a factory reset.
+
+A Profinet signal LED must be visible on the IO-Device. A callback is available
+from p-net to control the signal LED, so you can implement your board specific
+hardware.
+
+
 Tool for pretesting
 --------------------
 For Profinet members, the "Automated RT tester" tool is available for download.
@@ -74,10 +85,13 @@ To remove from a slot or subslot, mark it (in the right column) and press the
 
 Adjust settings
 ---------------
-You might need to adjust the device MAC address, station name, IP address and
-subnet mask. This is done via the menu Tools > Options > DUT, and you might need to
-click the "Show expert settings". Use the "Setting" tab to adjust enter the
-existing host IP address.
+You need to adjust the device MAC address. This is done via the menu
+Tools > Options > DUT. Enter the value and press OK.
+
+If the device does not have support for remote change of values, you might
+need to adjust the device station name, IP address and subnet mask.
+This is done via the menu Tools > Options > Setting. You might need to
+click the "Show expert settings".
 
 
 Run tests
@@ -89,3 +103,10 @@ test cases" > "Standard Setup" > DCP, and enable "DCP - DCP_IDN". Use the menu
 Project > Run.
 
 When communication is verified, enable all tests.
+
+Tips and ideas
+--------------
+If you end up with ``Pass with Hint "The device made a EPM Request from a
+not Profinet port"``, that means that wrong source port was used when sending
+UDP messages. See the page on Linux in this documentation on how to adjust the
+ephemeral port range.

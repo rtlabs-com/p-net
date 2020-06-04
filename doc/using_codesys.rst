@@ -197,6 +197,12 @@ Clicking the "Output PS" checkbox on the "IOxS" tab on the Profinet IO-device
 sets the value to BAD (0).
 
 
+Displaying errors
+-----------------
+Click on the IO-device in the tree structure in the left part of the screen.
+Use the "Log" tab to diplay errors.
+
+
 Displaying alarms
 -----------------
 Alarms are displayed on the "Status" tabs for modules. Also the IO-device

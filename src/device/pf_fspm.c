@@ -20,7 +20,6 @@
  * Stores the user-defined configuration, and calls the user-defined callbacks.
  * Create logbook entries.
  * Reads and writes identification & maintenance records.
- *
  */
 
 

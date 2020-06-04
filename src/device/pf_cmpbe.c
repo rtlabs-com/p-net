@@ -19,6 +19,9 @@
 
 #include "pf_includes.h"
 
+
+/*************** Diagnostic strings *****************************************/
+
 /**
  * @internal
  * Return a string representation of the CMPBE state.
@@ -65,6 +68,8 @@ void pf_cmpbe_show(
    printf("CMPBE state           = %s\n", s);
    printf("      stored command  = %#x\n", p_ar->cmpbe_stored_command);
 }
+
+/****************************************************************************/
 
 /**
  * @internal

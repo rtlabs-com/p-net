@@ -349,6 +349,10 @@ int pf_cmdev_rm_connect_ind(
 
 /**
  * Handle an RPC release request.
+ *
+ * This triggers the user callbacks \a pnet_release_ind() and
+ * \a pnet_state_ind() with PNET_EVENT_ABORT.
+ *
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param p_release_result Out:  Detailed result of the connect operation.
