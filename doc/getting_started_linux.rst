@@ -42,6 +42,7 @@ Compile::
     cd build
     cmake ..
     make all
+    make install
 
 or maybe ::
 
@@ -51,6 +52,9 @@ Use the ``-j`` flag to ``make`` to enable parallel build.
 
 Depending on how you installed cmake, you might need to run ``snap run cmake``
 instead of ``cmake``.
+
+The ``make install`` step is to install scripts for manipulating IP settings,
+control LEDs etc.
 
 
 Run the Linux demo application

@@ -912,6 +912,25 @@ typedef int (*pnet_reset_ind)(
    bool                    should_reset_application,
    uint16_t                reset_mode);
 
+/**
+ * Indication to the application that the Profinet signal LED should change state.
+ *
+ * Use this callback to implement control of the LED.
+ *
+ * It is optional to implement this callback (but a complianct Profinet device
+ * must have a signal LED)
+ *
+ * @param net                       InOut: The p-net stack instance
+ * @param arg                       InOut: User-defined data (not used by p-net)
+ * @param led_state                 In:    True if the signal LED should be on.
+ * @return  0  on success.
+ *          -1 if an error occurred.
+ */
+typedef int (*pnet_signal_led_ind)(
+   pnet_t                  *net,
+   void                    *arg,
+   bool                    led_state);
+
 /*
  * Network and device configuration.
  *
@@ -1100,6 +1119,7 @@ typedef struct pnet_cfg
    pnet_alarm_cnf          alarm_cnf_cb;
    pnet_alarm_ack_cnf      alarm_ack_cnf_cb;
    pnet_reset_ind          reset_cb;
+   pnet_signal_led_ind     signal_led_cb;
    void                    *cb_arg;    /* Userdata passed to callbacks, not used by stack */
 
    /** I&M initial data */

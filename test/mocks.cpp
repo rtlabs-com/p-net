@@ -63,6 +63,7 @@ int mock_os_set_ip_suite(
    const char              *hostname,
    bool                    permanent)
 {
+   mock_os_data.set_ip_suite_count++;
    return 0;
 }
 
@@ -141,21 +142,6 @@ int mock_os_udp_recvfrom(
 void mock_os_udp_close(
    uint32_t                id)
 {
-}
-
-void mock_os_get_button(
-   uint16_t                id,
-   bool                    *p_pressed)
-{
-   *p_pressed = 0;
-}
-
-void mock_os_set_led(
-   uint16_t                id,
-   bool                    on)
-{
-   mock_os_data.set_led_count++;
-   mock_os_data.set_led_on = on;
 }
 
 int mock_pf_alarm_send_diagnosis(

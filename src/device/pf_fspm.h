@@ -291,6 +291,20 @@ int pf_fspm_reset_ind(
    uint16_t                reset_mode);
 
 /**
+ * Call user call-back when the Profinet signal LED should change state.
+ *
+ * This uses the \a pnet_signal_led_ind() callback.
+ *
+ * @param net                       InOut: The p-net stack instance
+ * @param led_state                 In:    True if the signal LED should be on.
+ * @return  0  if operation succeeded.
+ *          -1 if an error occurred.
+ */
+int pf_fspm_signal_led_ind(
+   pnet_t                  *net,
+   bool                    led_state);
+
+/**
  * Retrieve a pointer to the current configuration data.
  * @param net              InOut: The p-net stack instance
  * @param pp_cfg           Out: The current configuration (or NULL).

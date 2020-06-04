@@ -230,14 +230,6 @@ int os_set_ip_suite(
    const char              *hostname,
    bool                    permanent);
 
-void os_set_led(
-   uint16_t                id,         /* Starting from 0 */
-   bool                    on);
-
-void os_get_button(
-   uint16_t                id,         /* Starting from 0 */
-   bool                    *p_pressed);
-
 #ifdef __cplusplus
 }
 #endif

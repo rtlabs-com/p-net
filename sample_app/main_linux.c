@@ -13,21 +13,22 @@
  * full license information.
  ********************************************************************/
 
+#define _GNU_SOURCE  /* For asprintf() */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
+#include "sampleapp_common.h"
+
+#include "log.h"
+#include "osal.h"
+#include <pnet_api.h>
 
 #include <net/if.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
 
-#include <pnet_api.h>
-#include "log.h"
-#include "osal.h"
-#include "sampleapp_common.h"
-
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 #define EXIT_CODE_ERROR                1
 #define APP_DEFAULT_ETHERNET_INTERFACE "eth0"
@@ -53,18 +54,16 @@ void show_usage()
    printf("\n");
    printf("Wait for connection from IO-controller.\n");
    printf("Then read buttons (input) and send to controller.\n");
-   printf("Listen for LED output (from controller) and set LED state.\n");
-   printf("It will also send a counter value (useful also without\n");
-   printf("buttons and LED).\n");
+   printf("Listen for application LED output (from controller) and set application LED state.\n");
+   printf("It will also send a counter value (useful also without buttons and LED).\n");
    printf("Button1 value is sent in the periodic data. Button2 triggers an alarm.\n");
    printf("\n");
-   printf("The LED is controlled by writing '1' or '0' to the control file,\n");
-   printf("for example /sys/class/gpio/gpio17/value\n");
-   printf("A pressed button should be indicated by that the first character in \n");
-   printf("the control file is '1'. \n");
-   printf("Make sure to activate the appropriate GPIO files by exporting them. \n");
-   printf("If no hardware-controlling files in /sys are available, you can\n");
-   printf("still try the functionality by using plain text files.\n");
+   printf("Also the mandatory Profinet signal LED is controlled by this application.\n");
+   printf("\n");
+   printf("The LEDs are controlled by the script set_profinet_leds_linux\n");
+   printf("located in the same directory as the application binary.\n");
+   printf("A version for Raspberry Pi is available, and also a version writing\n");
+   printf("to plain text files (useful for demo if no LEDs are available).\n");
    printf("\n");
    printf("Assumes the default gateway is found on .1 on same subnet as the IP address.\n");
    printf("\n");
@@ -74,7 +73,6 @@ void show_usage()
    printf("   -v           Incresase verbosity\n");
    printf("   -i INTERF    Set Ethernet interface name. Defaults to %s\n", APP_DEFAULT_ETHERNET_INTERFACE);
    printf("   -s NAME      Set station name. Defaults to %s\n", APP_DEFAULT_STATION_NAME);
-   printf("   -l FILE      Path to control LED. Defaults to not control any LED.\n");
    printf("   -b FILE      Path to read button1. Defaults to not read button1.\n");
    printf("   -d FILE      Path to read button2. Defaults to not read button2.\n");
 }
@@ -100,7 +98,6 @@ struct cmd_args parse_commandline_arguments(int argc, char *argv[])
 
    /* Default values */
    struct cmd_args output_arguments;
-   strcpy(output_arguments.path_led, "");
    strcpy(output_arguments.path_button1, "");
    strcpy(output_arguments.path_button2, "");
    strcpy(output_arguments.station_name, APP_DEFAULT_STATION_NAME);
@@ -108,7 +105,7 @@ struct cmd_args parse_commandline_arguments(int argc, char *argv[])
    output_arguments.verbosity = 0;
 
    int option;
-   while ((option = getopt(argc, argv, "hvi:s:l:b:d:")) != -1) {
+   while ((option = getopt(argc, argv, "hvi:s:b:d:")) != -1) {
       switch (option) {
       case 'v':
          output_arguments.verbosity++;
@@ -119,9 +116,6 @@ struct cmd_args parse_commandline_arguments(int argc, char *argv[])
       case 's':
          strcpy(output_arguments.station_name, optarg);
          break;
-      case 'l':
-         strcpy(output_arguments.path_led, optarg);
-         break;
       case 'b':
          strcpy(output_arguments.path_button1, optarg);
          break;
@@ -129,7 +123,9 @@ struct cmd_args parse_commandline_arguments(int argc, char *argv[])
          strcpy(output_arguments.path_button2, optarg);
          break;
       case 'h':
+         /* fallthrough */
       case '?':
+         /* fallthrough */
       default:
          show_usage();
          exit(EXIT_CODE_ERROR);
@@ -194,28 +190,26 @@ bool read_bool_from_file(const char*  filepath)
    return ch == '1';
 }
 
-/**
- * Write a bool to a file
- *
- * Writes 1 for true and 0 for false. Adds a newline.
- *
- * @param filepath      In: Path to file
- * @param value         In: The value to write
- * @return 0 on success and
- *         -1 if an error occurred
-*/
-int write_bool_to_file(const char*  filepath, bool value)
+int app_set_led(
+   uint16_t                id,
+   bool                    led_state)
 {
-   FILE *fp;
-   char* outputstring = value ? "1\n" : "0\n";
-   fp = fopen(filepath, "w");
-   if (fp == NULL)
+   char                    *outputcommand;
+   int                     textlen = -1;
+   int                     status = -1;
+
+   textlen = asprintf(&outputcommand, "./set_profinet_leds_linux %u %u", id, led_state);
+   if (textlen < 0)
    {
       return -1;
    }
-   int result = fputs(outputstring, fp);
-   fclose (fp);
-   if (result == EOF){
+   os_log(LOG_LEVEL_DEBUG, "Command for setting LED state: %s\n", outputcommand);
+
+   status = system(outputcommand);
+   free(outputcommand);
+   if (status != 0)
+   {
+      os_log(LOG_LEVEL_ERROR, "Failed to set LED state\n");
       return -1;
    }
    return 0;
@@ -463,45 +457,36 @@ void pn_main (void * arg)
                }
             }
 
-            /* Output data, for LED output */
-            if (p_appdata->arguments.path_led[0] != '\0')
+            /* Read data from first of the custom output modules, if any */
+            for (slot = 0; slot < PNET_MAX_MODULES; slot++)
             {
-
-               /* Read data from first of the custom output modules, if any */
-               for (slot = 0; slot < PNET_MAX_MODULES; slot++)
+               if (p_appdata->custom_output_slots[slot] == true)
                {
-                  if (p_appdata->custom_output_slots[slot] == true)
+                  outputdata_length = sizeof(outputdata);
+                  pnet_output_get_data_and_iops(net, APP_API, slot, PNET_SUBMOD_CUSTOM_IDENT, &outputdata_is_updated, outputdata, &outputdata_length, &outputdata_iops);
+                  break;
+               }
+            }
+
+            /* Set LED state */
+            if (outputdata_is_updated == true && outputdata_iops == PNET_IOXS_GOOD)
+            {
+               if (outputdata_length == APP_DATASIZE_OUTPUT)
+               {
+                  received_led_state = (outputdata[0] & 0x80) > 0;  /* Use most significant bit */
+                  if (received_led_state != led_state)
                   {
-                     outputdata_length = sizeof(outputdata);
-                     pnet_output_get_data_and_iops(net, APP_API, slot, PNET_SUBMOD_CUSTOM_IDENT, &outputdata_is_updated, outputdata, &outputdata_length, &outputdata_iops);
-                     break;
+                     led_state = received_led_state;
+                     if (p_appdata->arguments.verbosity > 0)
+                     {
+                        printf("Changing application LED state: %d\n", led_state);
+                     }
+                     (void)app_set_led(APP_DATA_LED_ID, led_state);
                   }
                }
-
-               /* Set LED state */
-               if (outputdata_is_updated == true && outputdata_iops == PNET_IOXS_GOOD)
+               else
                {
-                  if (outputdata_length == APP_DATASIZE_OUTPUT)
-                  {
-                     received_led_state = (outputdata[0] & 0x80) > 0;  /* Use most significant bit */
-                     if (received_led_state != led_state)
-                     {
-                        led_state = received_led_state;
-                        if (p_appdata->arguments.verbosity > 0)
-                        {
-                           printf("Changing LED state: %d\n", led_state);
-                        }
-                        if (write_bool_to_file(p_appdata->arguments.path_led, led_state) != 0)
-                        {
-                           printf("Failed to write to LED file: %s\n", p_appdata->arguments.path_led);
-                        };
-                     }
-                  }
-                  else
-                  {
-                     printf("Wrong outputdata length: %u\n", outputdata_length);
-                  }
-
+                  printf("Wrong outputdata length: %u\n", outputdata_length);
                }
             }
          }
@@ -581,7 +566,6 @@ int main(int argc, char *argv[])
       printf("App verbosity level: %u\n", appdata.arguments.verbosity);
       printf("Ethernet interface:  %s\n", appdata.arguments.eth_interface);
       printf("Station name:        %s\n", appdata.arguments.station_name);
-      printf("LED file:            %s\n", appdata.arguments.path_led);
       printf("Button1 file:        %s\n", appdata.arguments.path_button1);
       printf("Button2 file:        %s\n", appdata.arguments.path_button2);
    }
@@ -646,24 +630,7 @@ int main(int argc, char *argv[])
    memcpy(pnet_default_cfg.eth_addr.addr, macbuffer.addr, sizeof(pnet_ethaddr_t));
    pnet_default_cfg.cb_arg = (void*) &appdata;
 
-   /* Paths for LED and button control files */
-   if (appdata.arguments.path_led[0] != '\0')
-   {
-      if (!does_file_exist(appdata.arguments.path_led))
-      {
-         printf("Error: The given LED output file does not exist: %s\n",
-            appdata.arguments.path_led);
-         exit(EXIT_CODE_ERROR);
-      }
-
-      /* Turn off LED initially */
-      if (write_bool_to_file(appdata.arguments.path_led, false) != 0)
-      {
-         printf("Error: Could not write to LED output file: %s\n",
-            appdata.arguments.path_led);
-         exit(EXIT_CODE_ERROR);
-      }
-   }
+   app_set_led(APP_DATA_LED_ID, false);
 
    if (appdata.arguments.path_button1[0] != '\0')
    {

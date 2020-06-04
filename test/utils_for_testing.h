@@ -78,6 +78,8 @@ typedef struct call_counters_obj
    uint16_t                ccontrol_calls;
    uint16_t                read_calls;
    uint16_t                write_calls;
+   uint16_t                led_on_calls;
+   uint16_t                led_off_calls;
 } call_counters_t;
 
 typedef struct app_data_for_testing_obj
