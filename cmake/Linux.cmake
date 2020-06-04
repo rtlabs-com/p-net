@@ -64,6 +64,8 @@ target_sources(pn_dev
 
 file(COPY
   src/osal/linux/set_network_parameters
+  sample_app/set_profinet_leds_linux
+  sample_app/set_profinet_leds_linux.raspberrypi
   DESTINATION
   ${PROFINET_BINARY_DIR}/
   )

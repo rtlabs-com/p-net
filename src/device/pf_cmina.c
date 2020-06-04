@@ -25,7 +25,7 @@
 
 
 #ifdef UNIT_TEST
-
+#define os_set_ip_suite mock_os_set_ip_suite
 #endif
 
 #include <string.h>

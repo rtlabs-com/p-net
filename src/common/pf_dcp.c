@@ -15,7 +15,6 @@
 
 #ifdef UNIT_TEST
 #define os_eth_send mock_os_eth_send
-#define os_set_led mock_os_set_led
 #endif
 
 #include <string.h>
@@ -421,8 +420,8 @@ static int pf_dcp_get_req(
  * @internal
  * Execute DCP control states.
 
- * This functions blinks the system LED 3 times at 1Hz.
- * The system LED is accessed via the os_set_led() osal function.
+ * This functions blinks the Profinet signal LED 3 times at 1 Hz.
+ * The LED is accessed via the pnet_signal_led_ind() callback function.
  *
  * This is a callback for the scheduler. Arguments should fulfill pf_scheduler_timeout_ftn_t
  *
@@ -440,12 +439,16 @@ static void pf_dcp_control_signal(
    if ((state % 2) == 1)
    {
       /* Turn LED on */
-      os_set_led(0, 1);
+      if (pf_fspm_signal_led_ind(net, true) != 0){
+         LOG_ERROR(PF_DCP_LOG, "DCP(%d): Could not turn signal LED on\n", __LINE__);
+      }
    }
    else
    {
       /* Turn LED off */
-      os_set_led(0, 0);
+      if (pf_fspm_signal_led_ind(net, false) != 0){
+         LOG_ERROR(PF_DCP_LOG, "DCP(%d): Could not turn signal LED off\n", __LINE__);
+      }
    }
 
    if ((state > 0) && (state < 200))   /* Plausibility test */

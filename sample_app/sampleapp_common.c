@@ -13,12 +13,15 @@
  * full license information.
  ********************************************************************/
 
-#include <string.h>
-
-#include <pnet_api.h>
-#include "osal.h"
 #include "sampleapp_common.h"
 
+#include "log.h"
+#include "osal.h"
+#include <pnet_api.h>
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 /**
  * Print contents of a buffer
@@ -365,6 +368,21 @@ static int app_reset_ind(
    return 0;
 }
 
+static int app_signal_led_ind(
+   pnet_t                  *net,
+   void                    *arg,
+   bool                    led_state)
+{
+   app_data_t              *p_appdata = (app_data_t*)arg;
+
+   if (p_appdata->arguments.verbosity > 0)
+   {
+      printf("Profinet signal LED call-back. New state: %u\n",
+         led_state);
+   }
+   return app_set_led(APP_PROFINET_SIGNAL_LED_ID, led_state);
+}
+
 static int app_exp_module_ind(
    pnet_t                  *net,
    void                    *arg,
@@ -664,6 +682,7 @@ int app_adjust_stack_configuration(
    stack_config->alarm_cnf_cb = app_alarm_cnf;
    stack_config->alarm_ack_cnf_cb = app_alarm_ack_cnf;
    stack_config->reset_cb = app_reset_ind;
+   stack_config->signal_led_cb = app_signal_led_ind;
 
    /* Identification & Maintenance */
    stack_config->im_0_data.vendor_id_hi = 0xfe;

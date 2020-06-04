@@ -146,6 +146,26 @@ int my_ccontrol_cnf(
    return 0;
 }
 
+static int my_signal_led_ind(
+   pnet_t *net,
+   void *arg,
+   bool led_state)
+{
+   app_data_for_testing_t     *p_appdata = (app_data_for_testing_t*)arg;
+
+   printf("Callback on set LED state: %u\n", led_state);
+   if (led_state == 1)
+   {
+      p_appdata->call_counters.led_on_calls++;
+   }
+   else
+   {
+      p_appdata->call_counters.led_off_calls++;
+   }
+
+   return 0;
+}
+
 int my_read_ind(
    pnet_t *net,
    void *arg,
@@ -446,6 +466,7 @@ void PnetIntegrationTestBase::cfg_init()
    pnet_default_cfg.new_data_status_cb = my_new_data_status_ind;
    pnet_default_cfg.alarm_ind_cb = my_alarm_ind;
    pnet_default_cfg.alarm_cnf_cb = my_alarm_cnf;
+   pnet_default_cfg.signal_led_cb = my_signal_led_ind;
    pnet_default_cfg.reset_cb = NULL;
    pnet_default_cfg.cb_arg = &appdata;
 

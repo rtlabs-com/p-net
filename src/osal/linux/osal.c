@@ -16,23 +16,23 @@
 #define _GNU_SOURCE
 
 #include <osal.h>
-#include <options.h>
+
 #include <log.h>
+#include <options.h>
 
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
-#include <signal.h>
-#include <limits.h>
-
+#include <arpa/inet.h>
 #include <pthread.h>
 #include <sys/syscall.h>
-#include <arpa/inet.h>
 
 #include <assert.h>
 #include <errno.h>
+#include <limits.h>
+#include <signal.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 
@@ -663,14 +663,4 @@ int os_set_ip_suite(
       return -1;
    }
    return 0;
-}
-
-void os_get_button(uint16_t id, bool *p_pressed)
-{
-
-}
-
-void os_set_led(uint16_t id, bool on)
-{
-
 }

@@ -37,12 +37,11 @@ typedef struct mock_os_data_obj
    uint16_t    udp_sendto_len;
    uint16_t    udp_sendto_count;
 
-   uint16_t    set_led_count;
-   bool        set_led_on;
-
    uint8_t     udp_recvfrom_buffer[PF_FRAME_BUFFER_SIZE];
    uint16_t    udp_recvfrom_length;
    uint16_t    udp_recvfrom_count;
+
+   uint16_t    set_ip_suite_count;
 } mock_os_data_t;
 
 extern mock_os_data_t mock_os_data;
@@ -77,8 +76,6 @@ int mock_os_set_ip_suite(
    os_ipaddr_t             *p_gw,
    const char              *hostname,
    bool                    permanent);
-void mock_os_get_button(uint16_t id, bool *p_pressed);
-void mock_os_set_led(uint16_t id, bool on);
 int mock_pf_alarm_send_diagnosis(
    pf_ar_t                 *p_ar,
    uint32_t                api_id,
