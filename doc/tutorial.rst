@@ -75,11 +75,15 @@ For the sample application usage instructions, see the See "Getting started on
 Linux".
 
 The LED is controlled by the Linux IO-device by writing to a file, for example
-``/sys/class/gpio/gpio17/value``.
+``/sys/class/gpio/gpio17/value``. A ``0`` or ``1`` will be written to the
+file upon LED state changes. This is done by a script, for easy adaptation to
+your hardware.
 
-If you do not have a physical LED, you can manually create a text file
-(for example ``my_LED.txt``), and give its path to the sample application.
-A ``0`` or ``1`` will be written to the file upon LED state changes.
+If you do not have a physical LED, you can use an alternate script that
+writes to plain text files instead. To watch the output::
+
+    watch -n 0.1 cat profinet_led_0.txt
+
 Also the button files can be plain text files. Manually write ``0`` or ``1``
 in a file to simulate the button state.
 
@@ -285,6 +289,10 @@ in + 8 bit out" or "8 bit out") with lowest slot number.
 The alarm triggered by button 2 is sent from the input module with lowest slot
 number (if any).
 
+In order to handle larger incoming DCE/RPC messages (split in several frames),
+you might need to increase PNET_MAX_SESSION_BUFFER_SIZE. Note that this will
+increase the memory consumption.
+
 
 Cyclic data for the different slots
 -----------------------------------
@@ -317,3 +325,7 @@ Create your own application
 If you prefer not to implement some of the callbacks, set the corresponding
 fields in the configuration struct to NULL instead of a function pointer.
 See the API documentation on which callbacks that are optional.
+
+To read output data from the PLC, use ``pnet_output_get_data_and_iops()``.
+To write data to the PLC (= input data in Profinet naming), use
+``pnet_input_set_data_and_iops()``.

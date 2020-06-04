@@ -128,7 +128,7 @@ Run tests (if you told cmake to configure it)::
 Run a single test file::
 
     cd build
-    test/pf_test --gtest_filter=CmrpcTest.CmrpcConnectReleaseTest
+    ./pf_test --gtest_filter=CmrpcTest.CmrpcConnectReleaseTest
 
 Create Doxygen documentation::
 
@@ -142,3 +142,16 @@ build directory, run::
 
    scan-build cmake ..
    scan-build make
+
+
+Setting Linux ephemeral port range
+----------------------------------
+This is the range of random source ports used when sending UDP messages.
+Profinet requires that the UDP source port should be >= 0xC000, which is 49152
+in decimal numbers.
+
+To change the ephemeral port range::
+
+    echo "49152 60999" > /proc/sys/net/ipv4/ip_local_port_range
+
+This should typically be done at system start up.

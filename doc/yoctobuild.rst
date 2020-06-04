@@ -15,5 +15,7 @@ Buildroot
 It is possible to use Buildroot for including p-net in your embedded Linux
 product.
 
-We intend to publish a Buildroot recipe on https://github.com/rtlabs-com/
-(available on request).
+A Buildroot recipe for p-net is available as one of the packages in
+https://github.com/rtlabs-com/br2-rtlabs See the ``README.md`` file for usage
+instructions. You might need to adjust ``P_NET_VERSION`` in the ``p-net.mk``
+file to have the latest version.

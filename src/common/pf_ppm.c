@@ -54,7 +54,7 @@ void pf_ppm_init(
  * @internal
  * Send error indications to other components.
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:   The AR instance.
+ * @param p_ar             InOut: The AR instance.
  * @param p_ppm            In:   The PPM instance.
  * @param error            In:   An error flag.
  * @return  0  always.
@@ -81,7 +81,7 @@ static int pf_ppm_state_ind(
 /**
  * @internal
  * Handle state changes in the PPM instance.
- * @param p_ppm            In:   The PPM instance.
+ * @param p_ppm            InOut: The PPM instance.
  * @param state            In:   The new PPM state.
  */
 static void pf_ppm_set_state(
@@ -148,7 +148,7 @@ static void pf_ppm_init_buf(
    /* Insert Profinet frame ID (first part of Ethernet frame payload) */
    u16 = htons(frame_id);
    memcpy(&p_payload[pos], &u16, sizeof(u16));
-   pos += sizeof(u16);
+   /* No further pos advancement, to suppress clang warning */
 }
 
 /**

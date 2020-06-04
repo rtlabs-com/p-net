@@ -17,8 +17,8 @@
  * @file
  * @brief Implements the Context Management RPC Device Protocol Machine (CMRPC)
  *
- * This handles RPC communication; for example connect, release, dcontrol,
- * ccontrol and parameter read and write.
+ * This handles RPC communication via UDP; for example connect, release,
+ * dcontrol, ccontrol and parameter read and write.
  *
  * It opens a UDP socket and listens for connections.
  *
@@ -902,7 +902,7 @@ static int pf_cmrpc_rm_connect_interpret_ind(
 
 /**
  * @internal
- * Create all blocks in a connect RPC response.
+ * Create all blocks in a connect response (inside an existing DCE/RPC buffer).
  * @param p_sess           In:   The RPC session instance.
  * @param ret              In:   result of the connect request.
  * @param p_ar             In:   The AR instance.
@@ -2150,7 +2150,7 @@ int pf_cmrpc_rm_ccontrol_req(
  * Parse all blocks in a CControl RPC response message.
  * @param p_sess           In:   The session instance.
  * @param req_pos          In:   The position in the input buffer.
- * @param p_control_io     In:   The CControl control block.
+ * @param p_control_io     Out:  The CControl control block.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */

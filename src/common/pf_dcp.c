@@ -133,7 +133,7 @@ static const pf_dcp_opt_sub_t device_options[] =
 
 /**
  * @internal
- * Send a DCP response (to a GET).
+ * Send a DCP response (to a Identify request).
  *
  * This is a callback for the scheduler. Arguments should fulfill pf_scheduler_timeout_ftn_t
  *
@@ -195,7 +195,7 @@ static void pf_dcp_clear_sam(
  * @param with_block_info  In:   If true then add block_info argument.
  * @param block_info       In:   The block info argument.
  * @param value_length     In:   The length in bytes of the p_value data.
- * @param p_value          In:   The source date.
+ * @param p_value          In:   The source data.
  * @return
  */
 static int pf_dcp_put_block(
@@ -295,6 +295,7 @@ static int pf_dcp_get_req(
          p_value = (uint8_t *)&full_ip_suite.ip_suite;
 
          block_info = ((full_ip_suite.ip_suite.ip_addr == 0) && (full_ip_suite.ip_suite.ip_mask == 0) && (full_ip_suite.ip_suite.ip_gateway == 0)) ? 0: BIT(0);
+         /* ToDo: We do not yet support DHCP (block_info, BIT(1)) */
          /* ToDo: We do not yet report on "IP address conflict" (block_info, BIT(7)) */
          break;
       case PF_DCP_SUB_IP_SUITE:
@@ -309,6 +310,7 @@ static int pf_dcp_get_req(
          p_value = (uint8_t *)&full_ip_suite;
 
          block_info = ((full_ip_suite.ip_suite.ip_addr == 0) && (full_ip_suite.ip_suite.ip_mask == 0) && (full_ip_suite.ip_suite.ip_gateway == 0)) ? 0: BIT(0);
+         /* ToDo: We do not yet support DHCP (block_info, BIT(1)) */
          /* ToDo: We do not yet report on "IP address conflict" (block_info, BIT(7)) */
          break;
       case PF_DCP_SUB_IP_MAC:
@@ -910,8 +912,6 @@ int pf_dcp_hello_req(
    pf_ip_suite_t           ip_suite;
    const pnet_cfg_t        *p_cfg = NULL;
 
-   LOG_DEBUG(PF_DCP_LOG,"DCP(%d): Sending DCP Hello request\n", __LINE__);
-
    pf_fspm_get_default_cfg(net, &p_cfg);
 
    if (p_buf != NULL)
@@ -944,6 +944,7 @@ int pf_dcp_hello_req(
          if (pf_cmina_dcp_get_req(net, PF_DCP_OPT_DEVICE_PROPERTIES, PF_DCP_SUB_DEV_PROP_NAME,
             &value_length, &p_value, &block_error) == 0)
          {
+            LOG_DEBUG(PF_DCP_LOG,"DCP(%d): Sending DCP Hello request. Station name: %s\n", __LINE__, (char *)p_value);
             (void)pf_dcp_put_block(p_dst, &dst_pos, PF_FRAME_BUFFER_SIZE,
                PF_DCP_OPT_DEVICE_PROPERTIES, PF_DCP_SUB_DEV_PROP_NAME, true, 0,
 				(uint16_t)strlen((char *)p_value), p_value);
@@ -1368,6 +1369,8 @@ static int pf_dcp_identify_req(
 
       if ((ret == 0) && (match == true))
       {
+         LOG_DEBUG(PF_DCP_LOG,"DCP(%d):   Match for incoming DCP identify request. Sending response.\n", __LINE__);
+
          /* Build the response */
          for (ix = 0; ix < NELEMENTS(device_options); ix++)
          {
@@ -1386,6 +1389,7 @@ static int pf_dcp_identify_req(
       }
       else
       {
+         LOG_DEBUG(PF_DCP_LOG,"DCP(%d):   No match for incoming DCP identify request.\n", __LINE__);
          os_buf_free(p_rsp);
       }
    }

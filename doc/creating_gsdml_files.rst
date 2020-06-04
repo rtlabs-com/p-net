@@ -3,6 +3,10 @@ Creating GSD (GSDML) files
 A GSD (General Station Description) file is an XML file describing a Profinet
 IO-Device. The XML-based language is called GSDML (GSD Markup Language).
 
+Note that the GSD file is not used by the p-net stack or application. It is
+a machine readable file describing the capabilites, hardware- and software
+versions etc, and is used by the engineering tool to adjust the PLC settings.
+
 For Profinet members, the "Profinet GSD Checker" tool is available for
 download. It contains GSD example files showing different aspects of the file
 format.
@@ -77,6 +81,13 @@ XML comments are written::
    text -->
 
 .. highlight:: none
+
+
+Entering values
+---------------
+Values are written in double quotes. To enter several values (including a
+range of values), write ``"0..4 7 9"``.
+
 
 File structure
 --------------
@@ -198,7 +209,7 @@ The ``<DeviceAccessPointItem>`` element has the attributes:
 * ``CheckDeviceID_Allowed="true"``
 * ``NameOfStationNotTransferable="false"``
 * ``LLDP_NoD_Supported="true"`` (Should be "true" for recent Profinet versions)
-* ``ResetToFactoryModes="2"`` (Bits describing reset possibilities. At least "2" should be present)
+* ``ResetToFactoryModes="1..2"`` Bits describing reset possibilities. At least "2" should be present. Reset modes 1 and 2 are supported by p-net.
 * ``ParameterizationSpeedupSupported="true"`` For fast startup.
 * ``PowerOnToCommReady="700"`` For fast startup, time to first data exchange in milliseconds. Unsigned32.
 

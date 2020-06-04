@@ -339,7 +339,7 @@ static void pf_cpm_put_buf(
  * Make sure that p_buffer_app points to the newest received buffer.
  * @param net              InOut: The p-net stack instance
  * @param p_cpm            In:  The CPM instance.
- * @param p_new_flag       Out: true if new data has been received.
+ * @param p_new_flag       Out: true if a new valid data frame has been received.
  * @param pp_buffer        Out: A pointer to the latest received data (or NULL).
  */
 static void pf_cpm_get_buf(

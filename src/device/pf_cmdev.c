@@ -66,8 +66,6 @@ int pf_cmdev_cfg_traverse(
    uint16_t                slot_ix;
    uint16_t                subslot_ix;
 
-
-
    if (p_ftn_dev != NULL)
    {
       if (p_ftn_dev(&net->cmdev_device) != 0)

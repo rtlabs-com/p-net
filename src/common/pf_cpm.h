@@ -109,7 +109,7 @@ int pf_cpm_get_iocs(
  * @param api_id        In:   The API identifier.
  * @param slot_nbr      In:   The slot number.
  * @param subslot_nbr   In:   The sub-slot number.
- * @param p_new_flag    Out:  true means new data and IOPS available since last call.
+ * @param p_new_flag    Out:  true means new valid data (and IOPS) frame available since last call.
  * @param p_data        Out:  Copy of the received data.
  * @param p_data_len    In:   Buffer size.
  *                      Out:  Length of received data.

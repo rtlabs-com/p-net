@@ -37,7 +37,7 @@ void pf_lldp_init(
    pnet_t                  *net);
 
 /**
- * Send an LLDP message.
+ * Build and send an LLDP message.
  * @param net              InOut: The p-net stack instance
  */
 void pf_lldp_send(
