@@ -1170,11 +1170,11 @@ int pf_cmdev_cm_abort(
          switch (p_ar->cmdev_state)
          {
          case PF_CMDEV_STATE_W_CRES:
-            pf_cmdev_set_state(net, p_ar, PNET_EVENT_ABORT);
+            pf_cmdev_set_state(net, p_ar, PF_CMDEV_STATE_ABORT);
             res = 0;
             break;
          case PF_CMDEV_STATE_DATA:
-            pf_cmdev_set_state(net, p_ar, PNET_EVENT_ABORT);
+            pf_cmdev_set_state(net, p_ar, PF_CMDEV_STATE_ABORT);
             res = 0;
             break;
          default:
@@ -1185,7 +1185,7 @@ int pf_cmdev_cm_abort(
       else  /* CMDEV */
       {
          /* Any state */
-         pf_cmdev_set_state(net, p_ar, PNET_EVENT_ABORT);
+         pf_cmdev_set_state(net, p_ar, PF_CMDEV_STATE_ABORT);
          res = 0;
       }
    }
