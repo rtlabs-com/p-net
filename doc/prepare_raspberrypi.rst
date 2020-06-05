@@ -135,3 +135,33 @@ In order to use a static IP address instead of DHCP, modify the file
 
 You can still ping the <hostname>.local address to find it on the network.
 To re-enable HDCP, remove the lines again from ``/etc/dhcpcd.conf``.
+
+
+Autostart of sample application
+-------------------------------
+Use systemd to automatically start the p-net sample application on startup.
+Place a systemd unit file here: ``/lib/systemd/system/pnet-sampleapp.service``
+
+An example file is available in the ``sample_app/`` directory of this
+repository. It assumes that the code is checked out into
+``/home/pi/profinet/p-net/`` on your Raspberry Pi.
+Install the file::
+
+    sudo cp /home/pi/profinet/p-net/sample_app/pnet-sampleapp.service /lib/systemd/system/
+
+Adapt the contents to your paths and hardware.
+
+Enable automatic startup::
+
+    sudo systemctl daemon-reload
+    sudo systemctl enable pnet-sampleapp.service
+
+To see the status of the process, and the log output::
+
+    systemctl status pnet-sampleapp.service
+
+    journalctl -u pnet-sampleapp -b
+
+If using a serial cable, you might need to adjust the number of visible columns::
+
+    stty cols 150 rows 40

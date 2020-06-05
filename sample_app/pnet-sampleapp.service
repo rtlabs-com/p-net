@@ -1,0 +1,17 @@
+# For usage with the p-net sample application on Raspberry Pi
+# Adapt to your hardware and file paths
+
+[Unit]
+Description=p-net sample application
+After=multi-user.target
+
+[Service]
+Type=simple
+ExecStartPre=/bin/sh -c '/bin/echo "49152 60999" > /proc/sys/net/ipv4/ip_local_port_range'
+ExecStartPre=/usr/bin/gpio export 22 in
+ExecStartPre=/usr/bin/gpio export 27 in
+WorkingDirectory=/home/pi/profinet/p-net/build/
+ExecStart=/home/pi/profinet/p-net/build/pn_dev -v -b /sys/class/gpio/gpio22/value -d /sys/class/gpio/gpio27/value
+
+[Install]
+WantedBy=multi-user.target
