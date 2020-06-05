@@ -72,25 +72,6 @@ static void pf_cmina_send_hello(
    }
 }
 
-/**
- * @internal
- * Reset the configuration to default values.
- *
- * Triggers the application callback \a pnet_reset_ind() for some \a reset_mode
- * values.
- *
- * Reset modes:
- *
- * 0:  Power-on reset
- * 1:  Reset application parameters
- * 2:  Reset communication parameters
- * 99: Reset application and communication parameters.
- *
- * @param net              InOut: The p-net stack instance
- * @param reset_mode       In:   Reset mode.
- * @return  0  if the operation succeeded.
- *          -1 if an error occurred.
- */
 int pf_cmina_set_default_cfg(
    pnet_t                  *net,
    uint16_t                reset_mode)
@@ -106,7 +87,7 @@ int pf_cmina_set_default_cfg(
    if (p_cfg != NULL)
    {
 
-      net->cmina_perm_dcp_ase.device_initiative = p_cfg->send_hello?1:0;
+      net->cmina_perm_dcp_ase.device_initiative = p_cfg->send_hello ? 1 : 0;
       net->cmina_perm_dcp_ase.device_role = 1;            /* Means: PNIO Device */
 
       memcpy(net->cmina_perm_dcp_ase.mac_address.addr, p_cfg->eth_addr.addr, sizeof(pnet_ethaddr_t));

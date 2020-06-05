@@ -87,6 +87,28 @@ int pf_cmina_dcp_set_ind(
    uint8_t                 *p_block_error);
 
 /**
+ * Reset the configuration to default values.
+ *
+ * Triggers the application callback \a pnet_reset_ind() for some \a reset_mode
+ * values.
+ *
+ * Reset modes:
+ *
+ * 0:  Power-on reset
+ * 1:  Reset application parameters
+ * 2:  Reset communication parameters
+ * 99: Reset application and communication parameters.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param reset_mode       In:   Reset mode.
+ * @return  0  if the operation succeeded.
+ *          -1 if an error occurred.
+ */
+int pf_cmina_set_default_cfg(
+   pnet_t                  *net,
+   uint16_t                reset_mode);
+
+/**
  * Commit changes to the IP-suite.
  *
  * This shall be done _after_ the answer to DCP set has been sent.

@@ -1453,6 +1453,21 @@ PNET_EXPORT int pnet_ar_abort(
    uint32_t                arep);
 
 /**
+ * Application requests factory reset of the device.
+ *
+ * Use this when you detect for example that a local hardware switch is used
+ * to do a factory reset.
+ *
+ * Also closes any open connections.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @return  0  if the operation succeeded.
+ *          -1 if an error occurred.
+ */
+PNET_EXPORT int pnet_factory_reset(
+   pnet_t                  *net);
+
+/**
  * Fetch error information from the AREP.
  *
  * @param net              InOut: The p-net stack instance
