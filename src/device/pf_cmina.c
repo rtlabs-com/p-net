@@ -29,6 +29,7 @@
 #endif
 
 #include <string.h>
+#include <ctype.h>
 
 #include "pf_includes.h"
 
@@ -309,7 +310,7 @@ int pf_cmina_dcp_set_ind(
       case PF_DCP_SUB_IP_PAR:
          if (value_length == sizeof(net->cmina_temp_dcp_ase.full_ip_suite.ip_suite))
          {
-            if (pf_cmina_is_ipsuite_valid((pf_ip_suite_t*)p_value) == 0)
+            if (pf_cmina_is_ipsuite_valid((pf_ip_suite_t*)p_value))
             {
                change_ip = (memcmp(&net->cmina_temp_dcp_ase.full_ip_suite.ip_suite, p_value, value_length) != 0);
 
@@ -335,7 +336,7 @@ int pf_cmina_dcp_set_ind(
       case PF_DCP_SUB_IP_SUITE:
          if (value_length < sizeof(net->cmina_temp_dcp_ase.full_ip_suite))   /* Why less than? */
          {
-            if (pf_cmina_is_full_ipsuite_valid((pf_full_ip_suite_t *)p_value) == 0)
+            if (pf_cmina_is_full_ipsuite_valid((pf_full_ip_suite_t *)p_value))
             {
                LOG_INFO(PF_DCP_LOG,"CMINA(%d): The incoming set request is about changing IP. PF_DCP_SUB_IP_SUITE\n", __LINE__);
                change_ip = (memcmp(&net->cmina_temp_dcp_ase.full_ip_suite, p_value, value_length) != 0);
@@ -369,7 +370,7 @@ int pf_cmina_dcp_set_ind(
       case PF_DCP_SUB_DEV_PROP_NAME:
          if (value_length < sizeof(net->cmina_temp_dcp_ase.name_of_station))
          {
-            if (pf_cmina_is_stationname_valid((char *)p_value, value_length) == 0)
+            if (pf_cmina_is_stationname_valid((char *)p_value, value_length))
             {
                change_name = ((strncmp(net->cmina_temp_dcp_ase.name_of_station, (char *)p_value, value_length) != 0) &&
                      (strlen(net->cmina_temp_dcp_ase.name_of_station) != value_length));
@@ -381,6 +382,10 @@ int pf_cmina_dcp_set_ind(
                if (temp == false)
                {
                   strcpy(net->cmina_perm_dcp_ase.name_of_station, net->cmina_temp_dcp_ase.name_of_station);   /* It always fits */
+               }
+               else 
+               {
+                  memset(net->cmina_perm_dcp_ase.name_of_station, 0, sizeof(net->cmina_perm_dcp_ase.name_of_station));
                }
                ret = 0;
             }
@@ -862,13 +867,117 @@ void pf_cmina_show(
  * @return  0  if the name is valid
  *          -1 if the name is invalid
  */
-int pf_cmina_is_stationname_valid(
+
+bool pf_cmina_is_stationname_valid(
    const char*             station_name,
    uint16_t                len)
 {
-   /* Todo: Implement */
+   uint16_t i;
+   uint16_t label_offset = 0;
+   char prev = 'a';
+   uint16_t n_labels = 1;
+   uint16_t n_non_digit = 0;
 
-   return 0;
+   /* - Empty station name is valid here (indicating that no station name has been set) */
+   if (len == 0)
+   {
+      return true;
+   }
+
+   if (!station_name)
+   {
+      return false;
+   }
+
+   /* 
+    * - Labels do not start with [-]
+    * - Total length is 1 to 240
+    */
+   if ((station_name[0] == '-') || (len > 240))
+   {
+      return false;
+   }
+
+   /*
+    * - The first label does not have the form “port-xyz” or “port-xyz-abcde”
+    *   with a, b, c, d, e, x, y, z = 0...9 
+    */
+   if (strncmp(station_name, "port-", 5) == 0)
+   {
+      if ((len == 8) || (len == 14))
+      {
+         uint16_t n_char = 0;
+         for (i = 5; i < len; i++)
+         {
+            if ((!isdigit(station_name[i])) &&
+                !(station_name[i]== '-'))
+            {
+               n_char++;
+            }
+         }
+
+         if (n_char == 0)
+         {
+            return false;
+         }
+      }
+   }
+
+   for (i = 0; i < len; i++)
+   {      
+      char c = station_name[i];
+      if (c == '.')
+      {
+          n_labels++;
+          label_offset = 0;
+
+          /* - Labels do not end with [-] */
+          if (prev == '-')
+          {
+             return false;
+          }
+      }
+      /* - Labels consist of [a-z0-9-] */
+      else if (!((islower(c) || isdigit(c) || (c == '-'))))
+      {
+         return false;
+      }
+      else 
+      {
+         /* - Labels do not start with [-] */
+         if ((label_offset == 0) &&
+             (c == '-'))
+         {
+            return false;
+         } 
+
+         /* - Label length is 1 to 63 */
+         if (label_offset >= 63)
+         {
+            return false;
+         }
+
+         if (!isdigit(c))
+         {
+            n_non_digit++;
+         }
+         label_offset++;
+      }
+      prev = c;
+   }
+
+   /* - Station-names do not have the form a.b.c.d with a, b, c, d = 0...999 */
+   if ((n_labels == 4) && (n_non_digit == 0))
+   {
+      return false;
+   }
+
+   /* - Labels do not end with [-] */
+   if (prev == '-')
+   {
+      return false;
+   }
+   return true;
 }
 
 /**
@@ -881,23 +990,23 @@ int pf_cmina_is_stationname_valid(
  * @return  0  if the IP suite is valid
  *          -1 if the IP suite is invalid
  */
-int pf_cmina_is_ipsuite_valid(
+bool pf_cmina_is_ipsuite_valid(
    pf_ip_suite_t           *p_ipsuite)
 {
-   if (pf_cmina_is_netmask_valid(p_ipsuite->ip_mask) != 0)
+   if (!pf_cmina_is_netmask_valid(p_ipsuite->ip_mask))
    {
-      return -1;
+      return false;
    }
-   if (pf_cmina_is_ipaddress_valid(p_ipsuite->ip_mask, p_ipsuite->ip_addr) != 0)
+   if (!pf_cmina_is_ipaddress_valid(p_ipsuite->ip_mask, p_ipsuite->ip_addr))
    {
-      return -1;
+      return false;
    }
-   if (pf_cmina_is_gateway_valid(p_ipsuite->ip_addr, p_ipsuite->ip_mask, p_ipsuite->ip_gateway) != 0)
+   if (!pf_cmina_is_gateway_valid(p_ipsuite->ip_addr, p_ipsuite->ip_mask, p_ipsuite->ip_gateway))
    {
-      return -1;
+      return false;
    }
 
-   return 0;
+   return true;
 }
 
 /**
@@ -910,17 +1019,17 @@ int pf_cmina_is_ipsuite_valid(
  * @return  0  if the IP suite is valid
  *          -1 if the IP suite is invalid
  */
-int pf_cmina_is_full_ipsuite_valid(
+bool pf_cmina_is_full_ipsuite_valid(
    pf_full_ip_suite_t      *p_full_ipsuite)
 {
-   if (pf_cmina_is_ipsuite_valid(&p_full_ipsuite->ip_suite) != 0)
+   if (!pf_cmina_is_ipsuite_valid(&p_full_ipsuite->ip_suite))
    {
-      return -1;
+      return false;
    }
 
    /* TODO validate DNS addresses */
 
-   return 0;
+   return true;
 }
 
 /**
@@ -931,16 +1040,47 @@ int pf_cmina_is_full_ipsuite_valid(
  *
  * @param netmask          In: Netmask
  * @param netmask          In: IP address
- * @return  0  if the netmask is valid
- *          -1 if the netmask is invalid
+ * @return  0  if the IP address is valid
+ *          -1 if the IP address is invalid
  */
-int pf_cmina_is_ipaddress_valid(
+bool pf_cmina_is_ipaddress_valid(
    os_ipaddr_t            netmask,
    os_ipaddr_t            ip)
 {
-   /* Todo: Implement */
+   uint32_t host_part = ip & ~netmask; 
 
-   return 0;
+   if ((netmask == 0) && (ip == 0))
+   {
+      return true;
+   }
+   if (!pf_cmina_is_netmask_valid(netmask))
+   {
+      return false;
+   }
+   if ((host_part == 0) || (host_part == ~netmask))
+   {
+      return false;
+   }
+   if (ip <= OS_MAKEU32(0, 255, 255, 255))
+   {
+      return false;
+   }
+   else if ((ip >= OS_MAKEU32(127, 0, 0, 0)) &&
+            (ip <= OS_MAKEU32(127, 255, 255, 255)))
+   {
+      return false;
+   }
+   else if ((ip >=OS_MAKEU32(224, 0, 0, 0)) &&
+            (ip <= OS_MAKEU32(239, 255, 255, 255)))
+   {
+      return false;
+   }
+   else if ((ip >= OS_MAKEU32(240, 0, 0, 0)) &&
+            (ip <= OS_MAKEU32(255, 255, 255, 255)))
+   {
+      return false;
+   }
+   return true;
 }
 
 /**
@@ -953,12 +1093,17 @@ int pf_cmina_is_ipaddress_valid(
  * @return  0  if the netmask is valid
  *          -1 if the netmask is invalid
  */
-int pf_cmina_is_netmask_valid(
+bool pf_cmina_is_netmask_valid(
    os_ipaddr_t            netmask)
 {
-   /* Todo: Implement */
-
-   return 0;
+   if (!(netmask & (~netmask >> 1)))
+   {
+      return true;
+   }
+   else 
+   {
+      return false;
+   }
 }
 
 /**
@@ -973,12 +1118,15 @@ int pf_cmina_is_netmask_valid(
  * @return  0  if the gateway address is valid
  *          -1 if the gateway address is invalid
  */
-int pf_cmina_is_gateway_valid(
+bool pf_cmina_is_gateway_valid(
    os_ipaddr_t             ip,
    os_ipaddr_t             netmask,
    os_ipaddr_t             gateway)
 {
-   /* Todo: Implement */
-
-   return 0;
+   if ((gateway != 0) &&
+       ((ip & netmask) != (gateway & netmask)))
+   {
+      return false;
+   }
+   return true;
 }
