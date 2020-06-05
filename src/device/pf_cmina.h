@@ -143,26 +143,26 @@ int pf_cmina_dcp_get_req(
 
 /************ Internal functions, made available for unit testing ************/
 
-int pf_cmina_is_stationname_valid(
+bool pf_cmina_is_stationname_valid(
    const char*             station_name,
    uint16_t                len);
 
-int pf_cmina_is_netmask_valid(
+bool pf_cmina_is_netmask_valid(
    os_ipaddr_t            netmask);
 
-int pf_cmina_is_ipaddress_valid(
+bool pf_cmina_is_ipaddress_valid(
    os_ipaddr_t            netmask,
    os_ipaddr_t            ip);
 
-int pf_cmina_is_gateway_valid(
+bool pf_cmina_is_gateway_valid(
    os_ipaddr_t             ip,
    os_ipaddr_t             netmask,
    os_ipaddr_t             gateway);
 
-int pf_cmina_is_ipsuite_valid(
+bool pf_cmina_is_ipsuite_valid(
    pf_ip_suite_t           *p_ipsuite);
 
-int pf_cmina_is_full_ipsuite_valid(
+bool pf_cmina_is_full_ipsuite_valid(
    pf_full_ip_suite_t      *p_full_ipsuite);
 
 
