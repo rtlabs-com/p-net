@@ -641,7 +641,7 @@ int os_set_ip_suite(
    ip_to_string(*p_gw, gateway_string);
    permanent_string = permanent ? "1" : "0";
 
-   textlen = asprintf(&outputcommand, "./set_network_parameters %s %s %s %s %s %s",
+   textlen = asprintf(&outputcommand, "./set_network_parameters %s %s %s %s '%s' %s",
       interface_name,
       ip_string,
       netmask_string,
