@@ -25,6 +25,7 @@ Initialization and handling
 .. doxygenfunction:: pnet_handle_periodic
 .. doxygenfunction:: pnet_get_ar_error_codes
 .. doxygenfunction:: pnet_ar_abort
+.. doxygenfunction:: pnet_factory_reset
 .. doxygenfunction:: pnet_show
 
 

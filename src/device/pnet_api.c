@@ -349,6 +349,28 @@ int pnet_ar_abort(
    return ret;
 }
 
+int pnet_factory_reset(
+   pnet_t                  *net)
+{
+   uint16_t                ix;
+   pf_ar_t                 *p_ar = NULL;
+
+   /* Look for active connections */
+   for (ix = 0; ix < PNET_MAX_AR; ix++)
+   {
+      p_ar = pf_ar_find_by_index(net, ix);
+      if ((p_ar != NULL) && (p_ar->in_use == true))
+      {
+         (void) pf_cmdev_cm_abort(net, p_ar);
+      }
+   }
+
+   (void) pf_cmina_set_default_cfg(net, 99);
+   pf_cmina_dcp_set_commit(net);
+
+   return 0;
+}
+
 int pnet_get_ar_error_codes(
    pnet_t                  *net,
    uint32_t                arep,
