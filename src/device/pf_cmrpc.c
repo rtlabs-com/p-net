@@ -1671,7 +1671,7 @@ static int pf_cmrpc_rm_read_ind(
  * @internal
  * Parse one block in a IODWrite RPC request message.
  * @param p_get_info       In:   Parser data for the input buffer.
- * @param p_write_request  In:   The IODWrite request block.
+ * @param p_write_request  Out:  The IODWrite request block.
  * @param p_pos            InOut:Position in the input buffer.
  * @param p_stat           Out:  Detailed error information.
  * @return  0  if operation succeeded.
@@ -1715,6 +1715,9 @@ static int pf_cmrpc_rm_write_interpret_ind(
 /**
  * @internal
  * Perform write of one data record.
+ *
+ * Triggers the \a pnet_write_ind() user callback for some values.
+ *
  * @param net              InOut: The p-net stack instance
  * @param p_get_info       In:   Parser data for the input buffer.
  * @param p_write_request  In:   The IODWrite request block.
@@ -1865,7 +1868,6 @@ static int pf_cmrpc_rm_write_ind(
    write_result.pnio_status = p_sess->rpc_result.pnio_status;
 
    res_start_pos = *p_res_pos;   /* Save for last. */
-   pf_put_write_result(p_sess->get_info.is_big_endian, &write_result, res_size, p_res, p_res_pos);
 
    if (p_sess->get_info.result == PF_PARSE_OK)
    {
@@ -1884,6 +1886,10 @@ static int pf_cmrpc_rm_write_ind(
       {
          if (write_request.index == PF_IDX_AR_WRITE_MULTIPLE)     /* Handle multi-write */
          {
+            /* Store the first response block, that indicates that it is a multiple write */
+            pf_put_write_result(p_sess->get_info.is_big_endian, &write_result, res_size, p_res, p_res_pos);
+
+            /* Do each write, and store the corresponding response blocks */
             memset(&write_result_multi, 0, sizeof(write_result_multi));
             while (((req_pos + 58) < p_sess->get_info.len) &&      /* 58 == sizeof((PACKED)write_request)+2 */
                    (write_result_multi.pnio_status.error_code == 0) &&
@@ -1909,6 +1915,7 @@ static int pf_cmrpc_rm_write_ind(
          }
          else     /* single write */
          {
+            /* Do the write, and store the corresponding response block */
             ret = pf_cmrpc_perform_one_write(net, &p_sess->get_info, &write_request,
                &write_result, &p_sess->rpc_result, &req_pos);
             pf_put_write_result(p_sess->get_info.is_big_endian, &write_result, res_size, p_res, p_res_pos);
