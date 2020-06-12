@@ -137,7 +137,7 @@ static int app_write_ind(
    pnet_t                  *net,
    void                    *arg,
    uint32_t                arep,
-   uint16_t                api,
+   uint32_t                api,
    uint16_t                slot,
    uint16_t                subslot,
    uint16_t                idx,
@@ -207,7 +207,7 @@ static int app_read_ind(
    pnet_t                  *net,
    void                    *arg,
    uint32_t                arep,
-   uint16_t                api,
+   uint32_t                api,
    uint16_t                slot,
    uint16_t                subslot,
    uint16_t                idx,
@@ -386,7 +386,7 @@ static int app_signal_led_ind(
 static int app_exp_module_ind(
    pnet_t                  *net,
    void                    *arg,
-   uint16_t                api,
+   uint32_t                api,
    uint16_t                slot,
    uint32_t                module_ident)
 {
@@ -472,7 +472,7 @@ static int app_exp_module_ind(
 static int app_exp_submodule_ind(
    pnet_t                  *net,
    void                    *arg,
-   uint16_t                api,
+   uint32_t                api,
    uint16_t                slot,
    uint16_t                subslot,
    uint32_t                module_ident,

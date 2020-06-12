@@ -170,7 +170,7 @@ int my_read_ind(
    pnet_t *net,
    void *arg,
    uint32_t arep,
-   uint16_t api,
+   uint32_t api,
    uint16_t slot,
    uint16_t subslot,
    uint16_t idx,
@@ -191,7 +191,7 @@ int my_write_ind(
    pnet_t *net,
    void *arg,
    uint32_t arep,
-   uint16_t api,
+   uint32_t api,
    uint16_t slot,
    uint16_t subslot,
    uint16_t idx,
@@ -302,7 +302,7 @@ int my_state_ind(
 int my_exp_module_ind(
    pnet_t *net,
    void *arg,
-   uint16_t api,
+   uint32_t api,
    uint16_t slot,
    uint32_t module_ident)
 {
@@ -354,7 +354,7 @@ int my_exp_module_ind(
 int my_exp_submodule_ind(
    pnet_t *net,
    void *arg,
-   uint16_t api,
+   uint32_t api,
    uint16_t slot,
    uint16_t subslot,
    uint32_t module_ident,
