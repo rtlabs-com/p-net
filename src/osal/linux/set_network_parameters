@@ -62,11 +62,17 @@ if [ "${DEFAULT_GATEWAY}" != "0.0.0.0" ]; then
       exit 1
    fi
 else
-   echo "No valid default gateway given. Skipping."
+   echo "No valid default gateway given. Skipping setting default gateway."
 fi
 
 if ! hostname $HOSTNAME; then
-   echo "Failed to set hostname"
+   echo "Failed to set hostname to $HOSTNAME"
+   hostname_len=${#HOSTNAME}
+   if [ $hostname_len -gt 64 ]; then
+      echo "The given hostname length is ${hostname_len} characters." \
+      "Many Linux systems have a limit of 64 characters. The p-net stack uses" \
+      "a longer stationname internally."
+   fi
    exit 1
 fi
 
