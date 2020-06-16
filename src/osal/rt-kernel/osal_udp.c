@@ -16,10 +16,6 @@
 #include <string.h>
 #include "pf_includes.h"
 
-int os_udp_socket(void)
-{
-   return socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
-}
 
 int os_udp_open(os_ipaddr_t addr, os_ipport_t port)
 {
@@ -76,8 +72,8 @@ int os_udp_sendto(uint32_t id,
 }
 
 int os_udp_recvfrom(uint32_t id,
-      os_ipaddr_t *dst_addr,
-      os_ipport_t *dst_port,
+      os_ipaddr_t *src_addr,
+      os_ipport_t *src_port,
       uint8_t * data,
       int size)
 {
@@ -89,8 +85,8 @@ int os_udp_recvfrom(uint32_t id,
    len = recvfrom(id, data, size, MSG_DONTWAIT, (struct sockaddr *)&remote, &addr_len);
    if(len > 0)
    {
-      *dst_addr = ntohl(remote.sin_addr.s_addr);
-      *dst_port = ntohs(remote.sin_port);
+      *src_addr = ntohl(remote.sin_addr.s_addr);
+      *src_port = ntohs(remote.sin_port);
    }
 
    return len;
