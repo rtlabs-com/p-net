@@ -54,6 +54,9 @@ static inline uint32_t atomic_fetch_sub(atomic_int *p, uint32_t v)
 }
 #endif
 
+#define PF_RPC_SERVER_PORT                0x8894   /* PROFInet Context Manager */
+#define PF_RPC_CCONTROL_EPHEMERAL_PORT    0xc001
+
 #define PF_FRAME_BUFFER_SIZE              1500
 
 /** This should be smaller than PF_FRAME_BUFFER_SIZE with the maximum size of
@@ -1517,14 +1520,14 @@ typedef struct pf_session_info
    uint16_t                ix;
    bool                    in_use;
    bool                    release_in_progress;
-   bool                    kill_session;  /* E.g. on error or when done */
+   bool                    kill_session;           /* On error or when done. This will kill the session at the end of handling the incoming RPC frame. */
    uint32_t                socket;
    os_eth_handle_t         *eth_handle;
    struct pf_ar            *p_ar;
-   bool                    from_me;
+   bool                    from_me;                /* True if the session originates from the device. */
    pf_uuid_t               activity_uuid;
    uint32_t                ip_addr;
-   os_ipport_t             port;
+   os_ipport_t             port;                   /* Source port on incoming message, destination port on outgoing message */
    uint32_t                sequence_nmb_send;      /* rm_ccontrol_req */
 
    /*
@@ -1540,7 +1543,7 @@ typedef struct pf_session_info
 
    uint8_t                 out_buffer[PNET_MAX_SESSION_BUFFER_SIZE];       /* Response buffer */
    uint16_t                out_buf_len;
-   uint16_t                out_buf_sent_len;
+   uint16_t                out_buf_sent_len;                               /* Number of bytes sent so far */
    uint16_t                out_fragment_nbr;
 
    pf_get_info_t           get_info;

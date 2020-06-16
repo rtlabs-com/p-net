@@ -102,6 +102,9 @@ int pf_cmrpc_cmdev_state_ind(
 /**
  * Send a DCE RPC request to the controller.
  * The only request handled is the APPL_RDY request.
+ *
+ * Opens a new UDP socket for the session.
+ *
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @return  0  if operation succeeded.
