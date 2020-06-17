@@ -113,8 +113,9 @@ static void pf_cmsm_set_state(
  * This is a callback for the scheduler. Arguments should fulfill pf_scheduler_timeout_ftn_t
  *
  * @param net              InOut: The p-net stack instance
- * @param arg              In:   The AR instance (not NULL). Void pointer converted to pf_ar_t
- * @param current_time     In:   The current time.
+ * @param arg              In:    The AR instance (not NULL). Void pointer converted to pf_ar_t
+ * @param current_time     In:    The current system time, in microseconds,
+ *                                when the scheduler is started to execute stored tasks.
  */
 static void pf_cmsm_timeout(
    pnet_t                  *net,

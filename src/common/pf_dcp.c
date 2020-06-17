@@ -135,9 +135,10 @@ static const pf_dcp_opt_sub_t device_options[] =
  *
  * This is a callback for the scheduler. Arguments should fulfill pf_scheduler_timeout_ftn_t
  *
- * @param net                 InOut: The p-net stack instance
- * @param arg                 In:   DCP responder data.
- * @param current_time        In:   The current time.
+ * @param net              InOut: The p-net stack instance
+ * @param arg              In:    DCP responder data.
+ * @param current_time     In:    The current system time, in microseconds,
+ *                                when the scheduler is started to execute stored tasks.
  */
 static void pf_dcp_responder(
    pnet_t                  *net,
@@ -423,9 +424,10 @@ static int pf_dcp_get_req(
  *
  * This is a callback for the scheduler. Arguments should fulfill pf_scheduler_timeout_ftn_t
  *
- * @param net                 InOut: The p-net stack instance
- * @param arg                 In:   The current state.
- * @param current_time        In:   The current time.
+ * @param net              InOut: The p-net stack instance
+ * @param arg              In:    The current state.
+ * @param current_time     In:    The current system time, in microseconds,
+ *                                when the scheduler is started to execute stored tasks.
  */
 static void pf_dcp_control_signal(
    pnet_t                     *net,

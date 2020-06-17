@@ -111,8 +111,9 @@ static void pf_cpm_state_ind(
  * This is a callback for the scheduler. Arguments should fulfill pf_scheduler_timeout_ftn_t
  *
  * @param net              InOut: The p-net stack instance
- * @param arg              In:   The IOCR instance.
- * @param current_time     In:   The current device time.
+ * @param arg              In:    The IOCR instance.
+ * @param current_time     In:    The current system time, in microseconds,
+ *                                when the scheduler is started to execute stored tasks.
  */
 static void pf_cpm_control_interval_expired(
    pnet_t                  *net,

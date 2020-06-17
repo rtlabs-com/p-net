@@ -93,8 +93,9 @@ static void pf_cmio_set_state(
  * schedule another call in 100ms.
  *
  * @param net              InOut: The p-net stack instance
- * @param arg              In:   The AR instance.
- * @param current_time     In:   The current time.
+ * @param arg              In:    The AR instance.
+ * @param current_time     In:    The current system time, in microseconds,
+ *                                when the scheduler is started to execute stored tasks.
  */
 static void pf_cmio_timer_expired(
    pnet_t                  *net,

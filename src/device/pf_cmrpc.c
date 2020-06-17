@@ -708,7 +708,8 @@ static int pf_cmrpc_send_once(
  *
  * @param p_net            InOut: The p-net stack instance
  * @param arg              InOut: The session.
- * @param current_time     In:    Current time in microseconds.
+ * @param current_time     In:    The current system time, in microseconds,
+ *                                when the scheduler is started to execute stored tasks.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
