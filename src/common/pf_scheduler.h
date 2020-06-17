@@ -21,11 +21,12 @@ extern "C"
 {
 #endif
 
+#define PF_SCHEDULER_MAX_DELAY_US   100000000U  /* 100 seconds */
 
 /**
  * Initialize the scheduler.
  * @param net              InOut: The p-net stack instance
- * @param tick_interval    In:   System calls the tick function at these intervals (ms).
+ * @param tick_interval    In:    System calls the tick function at these intervals, in microseconds.
  */
 void pf_scheduler_init(
    pnet_t                     *net,
@@ -33,12 +34,14 @@ void pf_scheduler_init(
 
 /**
  * Schedule a call-back at a specific time.
- * @param net           InOut: The p-net stack instance
- * @param delay         In:    The delay until the function shall be called, in microseconds.
- * @param p_name        In:    Caller/owner (for debugging).
- * @param cb            In:    The call-back.
- * @param arg           In:    Argument to the call-back.
- * @param p_timeout     Out:   The timeout instance (used to remove if necessary).
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param delay            In:    The delay until the function shall be called,
+ *                                in microseconds. Max PF_SCHEDULER_MAX_DELAY_US.
+ * @param p_name           In:    Caller/owner (for debugging).
+ * @param cb               In:    The call-back.
+ * @param arg              In:    Argument to the call-back.
+ * @param p_timeout        Out:   The timeout instance (used to remove if necessary).
  * @return  0  if the call-back was scheduled.
  *          -1 if an error occurred.
  */
@@ -75,6 +78,15 @@ void pf_scheduler_tick(
  */
 void pf_scheduler_show(
    pnet_t                  *net);
+
+
+/************ Internal functions, made available for unit testing ************/
+
+uint32_t pf_scheduler_sanitize_delay(
+   uint32_t                wanted_delay,
+   uint32_t                stack_cycle_time,
+   bool                    schedule_half_tick_in_advance
+);
 
 #ifdef __cplusplus
 }

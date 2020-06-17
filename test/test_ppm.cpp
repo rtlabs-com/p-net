@@ -23,6 +23,8 @@
 
 class PpmTest : public PnetIntegrationTest {};
 
+class PpmUnitTest : public PnetUnitTest {};
+
 
 TEST_F (PpmTest, PpmTestCalculateCycle)
 {

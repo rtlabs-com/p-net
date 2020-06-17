@@ -571,7 +571,8 @@ static int pf_alarm_apmr_low_handler(
  *
  * @param net              InOut: The p-net stack instance
  * @param arg
- * @param current_time
+ * @param current_time     In:    The current system time, in microseconds,
+ *                                when the scheduler is started to execute stored tasks.
  */
 static void pf_alarm_apms_timeout(
    pnet_t                  *net,

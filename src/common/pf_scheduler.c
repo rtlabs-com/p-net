@@ -228,11 +228,7 @@ int pf_scheduler_add(
    uint32_t                ix_free;
    uint32_t                now = os_get_current_time_us();
 
-   if (delay > 0x80000000)  /* Make sure it is reasonable */
-   {
-      printf("CPM(%d): Adjusting %s from %u\n", __LINE__, p_name, (unsigned)delay);
-      delay = 1;
-   }
+   delay = pf_scheduler_sanitize_delay(delay, net->scheduler_tick_interval, true);
 
    os_mutex_lock(net->scheduler_timeout_mutex);
    /* Unlink from the free list */
@@ -325,7 +321,6 @@ void pf_scheduler_tick(
    pf_scheduler_timeout_ftn_t ftn;
    void                    *arg;
    uint32_t                pf_current_time = os_get_current_time_us();
-   uint32_t                cnt = 0x10000000;
 
    os_mutex_lock(net->scheduler_timeout_mutex);
 
@@ -348,8 +343,6 @@ void pf_scheduler_tick(
       os_mutex_unlock(net->scheduler_timeout_mutex);
       ftn(net, arg, pf_current_time);
       os_mutex_lock(net->scheduler_timeout_mutex);
-
-      cnt++;
    }
 
    os_mutex_unlock(net->scheduler_timeout_mutex);
@@ -401,4 +394,96 @@ void pf_scheduler_show(
    }
 
    printf("\n");
+}
+
+/**
+ * @internal
+ * Sanitize the delay to use with the scheduler, by taking the stack cycle time into account.
+ *
+ * If the requested delay is in the range 1.5 to 2.5 stack cycle times, this
+ * function will return a calculated delay giving a periodicity of 2 stack cycle
+ * times. If the requested time is less than 1.5 stack cycle times, the
+ * resulting periodicity is 1 stack cycle time.
+ *
+ *    Number of stack cycle times to wait
+ *
+ *     ^
+ *     |
+ *   4 +                                         +--------
+ *     |                                         |
+ *     |                                         |
+ *   3 +                             +-----------+
+ *     |                             |
+ *     |                             |
+ *   2 +                 +-----------+
+ *     |                 |
+ *     |                 |
+ *   1 +-----------------+
+ *     |
+ *     |                                                         Wanted delay
+ *   0 +-----------+-----------+-----------+-----------+--->   (in stack cycle times)
+ *
+ *     0           1           2           3           4
+ *
+ * Scheduling a delay close to a multiple of the stack cycle time is risky, and
+ * should be avoided. These measurements were made using a Ubuntu Laptop:
+ *
+ *    With a stack cycle time of 1 ms, a scheduled delay of 0-700 microseconds
+ *    will cause a nice periodicity of 1 ms. A scheduled delay of 1000
+ *    microseconds will sometimes fire at next cycle, sometimes not. This gives
+ *    an event spacing of 1 or 2 ms.
+ *
+ *    Similarly a scheduled delay of 1100 to 1700 microseconds causes
+ *    a nice periodicity of 2 ms, and a scheduled delay of 2100 to 2700
+ *    microseconds causes a nice periodicity of 3 ms.
+ *
+ * Thus calculate the number of stack cycles to wait, and calculate a delay
+ * corresponding to half a cycle less
+ * (by setting schedule_half_tick_in_advance = true). Some operating systems
+ * do not require this.
+ *
+ * This function calculates the delay time required to make the
+ * scheduler fire at a specific stack tick. However the time jitter in the
+ * firing is largely dependent on the underlaying operating system's ablitity to
+ * trigger the stack execution with a high time precision.
+ *
+ * @param wanted_delay                    In:    Delay in microseconds.
+ * @param stack_cycle_time                In:    Stack cycle time in microseconds. Must be larger than 0.
+ * @param schedule_half_tick_in_advance   In:    Schedule event slightly earlier, to not be missed.
+ * @return Number of microseconds of delay to use with the scheduler.
+ */
+uint32_t pf_scheduler_sanitize_delay(
+   uint32_t                wanted_delay,
+   uint32_t                stack_cycle_time,
+   bool                    schedule_half_tick_in_advance
+)
+{
+   uint32_t                number_of_stack_ticks = 1;  /* We must wait at least one tick */
+   uint32_t                resulting_delay = 0;
+
+   CC_ASSERT(stack_cycle_time > 0);
+
+   /* Protect against "negative" or unreasonable values.
+      This might happen when subtracting two timestamps, if a deadline has been missed. */
+   if (wanted_delay > PF_SCHEDULER_MAX_DELAY_US)
+   {
+      wanted_delay = 0;
+   }
+
+   /* Calculate integer number of ticks to wait. Use integer division for truncation */
+   if (wanted_delay > (stack_cycle_time + stack_cycle_time / 2))
+   {
+      number_of_stack_ticks = (wanted_delay + (stack_cycle_time / 2)) / stack_cycle_time;
+   }
+   CC_ASSERT(number_of_stack_ticks >= 1);
+   CC_ASSERT(number_of_stack_ticks < 0x80000000);  /* No rollover to 'negative' numbers */
+
+   /* Calculate delay value for the sheduler */
+   resulting_delay = number_of_stack_ticks * stack_cycle_time;
+   if (schedule_half_tick_in_advance == true)
+   {
+      resulting_delay -= (stack_cycle_time / 2);
+   }
+
+   return resulting_delay;
 }
