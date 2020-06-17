@@ -689,7 +689,7 @@ typedef enum pf_cmwrr_state_values
  * The prototype of the externally supplied call-back functions.
  * @param net              InOut: The p-net stack instance
  * @param arg              In:   User-defined (may be NULL).
- * @param current_time     In:   The current system time.
+ * @param current_time     In:   The current system time in microseconds.
  */
 typedef void (*pf_scheduler_timeout_ftn_t)(
    pnet_t                     *net,
@@ -1248,35 +1248,35 @@ typedef struct pf_ar_vendor_result_t
 typedef struct pf_ppm
 {
    pf_ppm_state_values_t   state;
-   uint32_t                exec;
 
-   int                     errline;
-   uint32_t                errcnt;
+   int                     errline;                      /* Not yet used */
+   uint32_t                errcnt;                       /* Not yet used */
 
-   pnet_ethaddr_t          sa;                  /* Source MAC address */
-   pnet_ethaddr_t          da;                  /* Destination MAC address (IO-controller) */
+   pnet_ethaddr_t          sa;                           /* Source MAC address */
+   pnet_ethaddr_t          da;                           /* Destination MAC address (IO-controller) */
 
-   bool                    first_transmit;
+   bool                    first_transmit;               /* True if first transmission has been done */
 
-   void                    *p_send_buffer;
-   bool                    new_buf;             /* New data to be sent */
+   void                    *p_send_buffer;               /* Output buffer with Ethernet header etc */
+   bool                    new_buf;                      /* Not yet used */
 
-   uint16_t                cycle;
+   uint16_t                cycle;                        /* Cycle counter, in tics each 31.25 us (thus 16 tics per ms). */
    uint8_t                 transfer_status;
-   uint8_t                 data_status;
+   uint8_t                 data_status;                  /* Valid or invalid, run or stop, redundancy, problem indicator etc */
    uint16_t                buffer_length;
-   uint16_t                buffer_pos;          /* Start of PROFINET data in frame */
-   uint16_t                cycle_counter_offset;
-   uint16_t                data_status_offset;
-   uint16_t                transfer_status_offset;
+   uint16_t                buffer_pos;                   /* Start position of data in frame */
+   uint16_t                cycle_counter_offset;         /* Start position of cycle counter in frame */
+   uint16_t                data_status_offset;           /* Start position of data status in frame */
+   uint16_t                transfer_status_offset;       /* Start position of transfer status in frame */
 
    uint8_t                 buffer_data[PF_FRAME_BUFFER_SIZE];   /* Max */
 
-   uint32_t                trx_cnt;
+   uint32_t                trx_cnt;                      /* Number of frames sent */
 
-   uint32_t                control_interval;
-   bool                    ci_running;
-   uint32_t                ci_timer;
+   uint32_t                control_interval;             /* Period in microseconds between frames */
+   uint32_t                compensated_control_interval; /* Period in microseconds between frames, adjusted for stack periodicity */
+   bool                    ci_running;                   /* True if the timer is running. Used for stopping transmission before next scheduled sending.  */
+   uint32_t                ci_timer;                     /* Scheduler timeout instance. UINT32_MAX when stopped */
 } pf_ppm_t;
 
 typedef struct pf_cpm
@@ -1986,7 +1986,7 @@ struct pnet
    volatile uint32_t                   scheduler_timeout_first;
    volatile uint32_t                   scheduler_timeout_free;
    os_mutex_t                          *scheduler_timeout_mutex;
-   uint32_t                            scheduler_tick_interval;
+   uint32_t                            scheduler_tick_interval;  /* microseconds */
    bool                                cmdev_initialized;
    pf_device_t                         cmdev_device;
    pf_cmina_dcp_ase_t                  cmina_perm_dcp_ase;

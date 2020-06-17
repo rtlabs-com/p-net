@@ -208,6 +208,15 @@ void pf_ppm_set_problem_indicator(
 void pf_ppm_show(
    pf_ppm_t                *p_ppm);
 
+
+/************ Internal functions, made available for unit testing ************/
+
+uint32_t pf_ppm_calculate_compensated_delay(
+   uint32_t                wanted_delay,
+   uint32_t                stack_cycle_time
+);
+
+
 #ifdef __cplusplus
 }
 #endif
