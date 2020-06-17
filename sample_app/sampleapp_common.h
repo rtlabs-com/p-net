@@ -144,6 +144,17 @@ typedef struct app_data_and_stack_obj
 int app_adjust_stack_configuration(
    pnet_cfg_t              *stack_config);
 
+
+/**
+ * Plug DAP (sub-)modules. This operation shall be called after p-net 
+ * stack initialization
+ *
+ * @param net     In: p-net stack instance
+ * @return  None
+*/
+void app_plug_dap(pnet_t *net);
+
+
 /**
  * Return a string representation of the given event.
  * @param event            In:   The event.
