@@ -383,7 +383,7 @@ int pf_cmina_dcp_set_ind(
                {
                   strcpy(net->cmina_perm_dcp_ase.name_of_station, net->cmina_temp_dcp_ase.name_of_station);   /* It always fits */
                }
-               else 
+               else
                {
                   memset(net->cmina_perm_dcp_ase.name_of_station, 0, sizeof(net->cmina_perm_dcp_ase.name_of_station));
                }
@@ -856,7 +856,7 @@ void pf_cmina_show(
  * - Labels do not start with [-]
  * - Labels do not end with [-]
  * - Labels do not use multiple concatenated [-] except for IETF RFC 5890
- * - The first label does not have the form “port-xyz” or “port-xyz-abcde”
+ * - The first label does not have the form "port-xyz" or "port-xyz-abcde"
  *     with a, b, c, d, e, x, y, z = 0...9
  * - Station-names do not have the form a.b.c.d with a, b, c, d = 0...999
  *
@@ -889,7 +889,7 @@ bool pf_cmina_is_stationname_valid(
       return false;
    }
 
-   /* 
+   /*
     * - Labels do not start with [-]
     * - Total length is 1 to 240
     */
@@ -899,8 +899,8 @@ bool pf_cmina_is_stationname_valid(
    }
 
    /*
-    * - The first label does not have the form “port-xyz” or “port-xyz-abcde”
-    *   with a, b, c, d, e, x, y, z = 0...9 
+    * - The first label does not have the form "port-xyz" or "port-xyz-abcde"
+    *   with a, b, c, d, e, x, y, z = 0...9
     */
    if (strncmp(station_name, "port-", 5) == 0)
    {
@@ -924,7 +924,7 @@ bool pf_cmina_is_stationname_valid(
    }
 
    for (i = 0; i < len; i++)
-   {      
+   {
       char c = station_name[i];
       if (c == '.')
       {
@@ -942,14 +942,14 @@ bool pf_cmina_is_stationname_valid(
       {
          return false;
       }
-      else 
+      else
       {
          /* - Labels do not start with [-] */
          if ((label_offset == 0) &&
              (c == '-'))
          {
             return false;
-         } 
+         }
 
          /* - Label length is 1 to 63 */
          if (label_offset >= 63)
@@ -1047,7 +1047,7 @@ bool pf_cmina_is_ipaddress_valid(
    os_ipaddr_t            netmask,
    os_ipaddr_t            ip)
 {
-   uint32_t host_part = ip & ~netmask; 
+   uint32_t host_part = ip & ~netmask;
 
    if ((netmask == 0) && (ip == 0))
    {
@@ -1100,7 +1100,7 @@ bool pf_cmina_is_netmask_valid(
    {
       return true;
    }
-   else 
+   else
    {
       return false;
    }
