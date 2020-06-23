@@ -519,7 +519,7 @@ int pf_cmina_dcp_set_ind(
                {
                   found = true;
                   /* 38 */
-                  pf_cmdev_state_ind(net, p_ar, PF_CMDEV_STATE_ABORT);
+                  pf_cmdev_state_ind(net, p_ar, PNET_EVENT_ABORT);
                }
             }
 
@@ -541,7 +541,7 @@ int pf_cmina_dcp_set_ind(
                {
                   found = true;
                   /* 40 */
-                  pf_cmdev_state_ind(net, p_ar, PF_CMDEV_STATE_ABORT);
+                  pf_cmdev_state_ind(net, p_ar, PNET_EVENT_ABORT);
                }
             }
 
@@ -638,7 +638,7 @@ int pf_cmina_dcp_get_req(
       {
       case PF_DCP_SUB_DEV_PROP_VENDOR:
          *p_value_length = sizeof(net->cmina_temp_dcp_ase.device_vendor) - 1;   /* Skip terminator */
-         *pp_value = (uint8_t *)&net->cmina_temp_dcp_ase.device_vendor;
+         *pp_value = (uint8_t *)net->cmina_temp_dcp_ase.device_vendor;
          break;
       case PF_DCP_SUB_DEV_PROP_NAME:
          *p_value_length = sizeof(net->cmina_temp_dcp_ase.name_of_station);
