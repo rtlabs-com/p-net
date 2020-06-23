@@ -78,7 +78,7 @@ extern "C"
  * Please note that some defines have minimum requirements.
  * These values are used as is by the stack. No validation is performed.
  */
-#define PNET_MAX_AR                                            1     /**< Number of connections. Must be > 0. */
+#define PNET_MAX_AR                                            2     /**< Number of connections. Must be > 0. "Automated RT Tester" uses 2 */
 #define PNET_MAX_API                                           1     /**< Number of Application Processes. Must be > 0. */
 #define PNET_MAX_CR                                            2     /**< Per AR. 1 input and 1 output. */
 #define PNET_MAX_MODULES                                       5     /**< Per API. Should be > 1 to allow at least one I/O module. */
@@ -381,6 +381,12 @@ extern "C"
 #define PNET_ERROR_CODE_2_ABORT_DCP_STATION_NAME_CHANGED       0x1f
 #define PNET_ERROR_CODE_2_ABORT_DCP_RESET_TO_FACTORY           0x20
 #define PNET_ERROR_CODE_2_ABORT_PDEV_CHECK_FAILED              0x24
+
+/**
+ * # List of error_code_2 values, for
+ * PNET_ERROR_CODE_1_DCTRL_FAULTY_CONNECT (not exhaustive).
+ */
+#define PNET_ERROR_CODE_2_DCTRL_FAULTY_CONNECT_CONTROLCOMMAND  0x08
 
 /**
  * The events are sent from CMDEV to the application using the state_cb call-back function.

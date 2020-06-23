@@ -1058,8 +1058,9 @@ static int pf_cmrpc_rm_connect_ind(
          else
          {
             /* Valid, explicit AR - This could be a re-connect */
-            pf_set_error(&p_sess->rpc_result, PNET_ERROR_CODE_CONNECT, PNET_ERROR_DECODE_PNIO, PNET_ERROR_CODE_1_CMRPC, PNET_ERROR_CODE_2_CMRPC_STATE_CONFLICT);
-            (void)pf_cmdev_state_ind(net, p_ar, PNET_EVENT_ABORT);
+            LOG_ERROR(PF_RPC_LOG, "CMRPC(%d): Duplicate Connect request received\n", __LINE__);
+            pf_set_error(&p_sess->rpc_result, PNET_ERROR_CODE_CONNECT, PNET_ERROR_DECODE_PNIO, PNET_ERROR_CODE_1_CMDEV, PNET_ERROR_CODE_2_CMDEV_STATE_CONFLICT);
+            (void)pf_cmdev_cm_abort(net, p_ar_2);
          }
       }
       else
@@ -1224,11 +1225,11 @@ static void pf_cmrpc_rm_release_rsp(
  * @internal
  * Take a DCE RPC release request and create a DCE RPC release response.
  * @param net              InOut: The p-net stack instance
- * @param p_sess           In:   The RPC session instance.
- * @param req_pos          In:   Position in the request buffer.
- * @param res_size         In:   The size of the response buffer.
- * @param p_res            Out:  The response buffer. Already filled with DCE/RPC header.
- * @param p_res_pos        InOut:Position within the response buffer.
+ * @param p_sess           InOut: The RPC session instance.
+ * @param req_pos          In:    Position in the request buffer.
+ * @param res_size         In:    The size of the response buffer.
+ * @param p_res            Out:   The response buffer. Already filled with DCE/RPC header.
+ * @param p_res_pos        InOut: Position within the response buffer.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -1283,6 +1284,7 @@ static int pf_cmrpc_rm_release_ind(
       else
       {
          pf_set_error(&rpc_result, PNET_ERROR_CODE_RELEASE, PNET_ERROR_DECODE_PNIO, PNET_ERROR_CODE_1_CMRPC, PNET_ERROR_CODE_2_CMRPC_AR_UUID_UNKNOWN);
+         p_sess->kill_session = true;
       }
    }
 
@@ -1295,9 +1297,9 @@ static int pf_cmrpc_rm_release_ind(
 /**
  * @internal
  * Parse all blocks in a DControl RPC request message.
- * @param p_sess           In:   The RPC session instance.
- * @param req_pos          In:   Position in the request buffer.
- * @param p_control_io     Out:  The DControl control block.
+ * @param p_sess           InOut: The RPC session instance.
+ * @param req_pos          In:    Position in the request buffer.
+ * @param p_control_io     Out:   The DControl control block.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -1309,6 +1311,8 @@ static int pf_cmrpc_rm_dcontrol_interpret_req(
    int                     ret = 0;
    uint16_t                start_pos;
    pf_block_header_t       block_header;
+
+   CC_ASSERT(p_sess != NULL);
 
    start_pos = req_pos;
    while (((req_pos + sizeof(block_header)) <= p_sess->get_info.len) &&
@@ -1352,8 +1356,8 @@ static int pf_cmrpc_rm_dcontrol_interpret_req(
          }
          else if (p_control_io->control_command != BIT(PF_CONTROL_COMMAND_BIT_PRM_END))
          {
-            LOG_DEBUG(PF_RPC_LOG, "CMRPC(%d): ControlCommand has more than one bit set: %04x\n", __LINE__, p_control_io->control_command);
-            pf_set_error(&p_sess->rpc_result, PNET_ERROR_CODE_CONTROL, PNET_ERROR_DECODE_PNIO, PNET_ERROR_CODE_1_CMRPC, PNET_ERROR_CODE_2_CMRPC_STATE_CONFLICT);
+            LOG_DEBUG(PF_RPC_LOG, "CMRPC(%d): DControl ControlCommand has wrong bit pattern: %04x\n", __LINE__, p_control_io->control_command);
+            pf_set_error(&p_sess->rpc_result, PNET_ERROR_CODE_CONTROL, PNET_ERROR_DECODE_PNIO, PNET_ERROR_CODE_1_DCTRL_FAULTY_CONNECT, PNET_ERROR_CODE_2_DCTRL_FAULTY_CONNECT_CONTROLCOMMAND);
             ret = -1;
          }
       }
@@ -1370,12 +1374,12 @@ static int pf_cmrpc_rm_dcontrol_interpret_req(
 /**
  * @internal
  * Create all blocks in a DControl RPC response.
- * @param p_sess           In:   The RPC session instance.
- * @param ret              In:   Result of the release operation.
- * @param p_control_io     In:   The DControl control block.
- * @param res_size         In:   The size of the response buffer.
- * @param p_res            Out:  The response buffer.
- * @param p_pos            InOut:Position within the response buffer.
+ * @param p_sess           InOut: The RPC session instance.
+ * @param ret              In:    Result of the release operation.
+ * @param p_control_io     In:    The DControl control block.
+ * @param res_size         In:    The size of the response buffer.
+ * @param p_res            Out:   The response buffer.
+ * @param p_pos            InOut: Position within the response buffer.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -1428,11 +1432,11 @@ static void pf_cmrpc_rm_dcontrol_rsp(
  *  * pnet_state_ind() with PNET_EVENT_PRMEND
  *
  * @param net              InOut: The p-net stack instance
- * @param p_sess           In:   The RPC session instance.
- * @param req_pos          In:   Position in the request buffer.
- * @param res_size         In:   The size of the response buffer.
- * @param p_res            Out:  The response buffer.
- * @param p_res_pos        InOut:Position within the response buffer.
+ * @param p_sess           InOut: The RPC session instance.
+ * @param req_pos          In:    Position in the request buffer.
+ * @param res_size         In:    The size of the response buffer.
+ * @param p_res            Out:   The response buffer.
+ * @param p_res_pos        InOut: Position within the response buffer.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -1466,6 +1470,7 @@ static int pf_cmrpc_rm_dcontrol_ind(
          else
          {
             pf_set_error(&p_sess->rpc_result, PNET_ERROR_CODE_CONTROL, PNET_ERROR_DECODE_PNIO, PNET_ERROR_CODE_1_CMRPC, PNET_ERROR_CODE_2_CMRPC_AR_UUID_UNKNOWN);
+            p_sess->kill_session = true;
          }
 
          /* Store dcontrol result in we later detect a re-run */
@@ -1563,12 +1568,12 @@ static int pf_cmrpc_rm_read_interpret_ind(
  * This will trigger the \a pnet_read_ind() user callback for certain parameters.
  *
  * @param net              InOut: The p-net stack instance
- * @param p_sess           In:   The session instance.
- * @param opnum            In:   The RPC operation number. PF_RPC_DEV_OPNUM_READ or PF_RPC_DEV_OPNUM_READ_IMPLICIT.
- * @param req_pos          In:   Position in the request buffer.
- * @param res_size         In:   The size of the response buffer.
- * @param p_res            Out:  The response buffer.
- * @param p_res_pos        InOut:Position within the response buffer.
+ * @param p_sess           InOut: The session instance.
+ * @param opnum            In:    The RPC operation number. PF_RPC_DEV_OPNUM_READ or PF_RPC_DEV_OPNUM_READ_IMPLICIT.
+ * @param req_pos          In:    Position in the request buffer.
+ * @param res_size         In:    The size of the response buffer.
+ * @param p_res            Out:   The response buffer.
+ * @param p_res_pos        InOut: Position within the response buffer.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -1602,11 +1607,13 @@ static int pf_cmrpc_rm_read_ind(
           (opnum != PF_RPC_DEV_OPNUM_READ_IMPLICIT))
       {
          pf_set_error(&p_sess->rpc_result, PNET_ERROR_CODE_READ, PNET_ERROR_DECODE_PNIO, PNET_ERROR_CODE_1_CONN_FAULTY_FAULTY_RECORD, PNET_ERROR_CODE_2_CMRPC_AR_UUID_UNKNOWN);
+         p_sess->kill_session = true;
       }
       else if ((pf_ar_find_by_uuid(net, &read_request.ar_uuid, &p_ar) == 0) &&
             (opnum != PF_RPC_DEV_OPNUM_READ))
       {
          pf_set_error(&p_sess->rpc_result, PNET_ERROR_CODE_READ, PNET_ERROR_DECODE_PNIO, PNET_ERROR_CODE_1_CMRPC, PNET_ERROR_CODE_2_CMRPC_AR_UUID_UNKNOWN);
+         p_sess->kill_session = true;
       }
       else if ((read_request.api != 0) &&
                (pf_cmdev_get_api(net, read_request.api, &p_api) != 0))
@@ -1717,17 +1724,17 @@ static int pf_cmrpc_rm_write_interpret_ind(
  * Triggers the \a pnet_write_ind() user callback for some values.
  *
  * @param net              InOut: The p-net stack instance
- * @param p_get_info       In:   Parser data for the input buffer.
- * @param p_write_request  In:   The IODWrite request block.
- * @param p_write_result   Out:  The IODWrite result block.
- * @param p_stat           Out:  Detailed error information.
- * @param p_req_pos        InOut:Position in the request buffer.
+ * @param p_sess           InOut: The session instance.
+ * @param p_write_request  In:    The IODWrite request block.
+ * @param p_write_result   Out:   The IODWrite result block.
+ * @param p_stat           Out:   Detailed error information.
+ * @param p_req_pos        InOut: Position in the request buffer.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
 static int pf_cmrpc_perform_one_write(
    pnet_t                  *net,
-   pf_get_info_t           *p_get_info,
+   pf_session_info_t       *p_sess,
    pf_iod_write_request_t  *p_write_request,
    pf_iod_write_result_t   *p_write_result,
    pnet_result_t           *p_stat,
@@ -1741,19 +1748,20 @@ static int pf_cmrpc_perform_one_write(
    if (pf_ar_find_by_uuid(net, &p_write_request->ar_uuid, &p_ar) != 0)
    {
       pf_set_error(p_stat, PNET_ERROR_CODE_WRITE, PNET_ERROR_DECODE_PNIO, PNET_ERROR_CODE_1_CMRPC, PNET_ERROR_CODE_2_CMRPC_AR_UUID_UNKNOWN);
+      p_sess->kill_session = true;
    }
    else if ((p_write_request->api != 0) &&
             (pf_cmdev_get_api(net, p_write_request->api, &p_api) != 0))
    {
       pf_set_error(p_stat, PNET_ERROR_CODE_WRITE, PNET_ERROR_DECODE_PNIORW, PNET_ERROR_CODE_1_ACC_INVALID_AREA_API, 1);
    }
-   else if ((*p_req_pos + p_write_request->record_data_length) <= p_get_info->len)
+   else if ((*p_req_pos + p_write_request->record_data_length) <= p_sess->get_info.len)
    {
       if (p_write_request->index < 0x8000)
       {
          /* This is a write of a GSDML param. No block header in this case. */
          if (pf_cmwrr_rm_write_ind(net, p_ar, p_write_request, p_write_result, p_stat,
-            p_get_info->p_buf, p_write_request->record_data_length, p_req_pos) == 0)
+            p_sess->get_info.p_buf, p_write_request->record_data_length, p_req_pos) == 0)
          {
             ret = 0;
          }
@@ -1771,9 +1779,9 @@ static int pf_cmrpc_perform_one_write(
           *
           * Skip the block header - it is not needed in the stack.
           */
-         pf_get_block_header(p_get_info, p_req_pos, &block_header);  /* Not needed by code!! */
+         pf_get_block_header(&p_sess->get_info, p_req_pos, &block_header);  /* Not needed by code!! */
          if (pf_cmwrr_rm_write_ind(net, p_ar, p_write_request, p_write_result, p_stat,
-            p_get_info->p_buf, p_write_request->record_data_length - sizeof(pf_block_header_t), p_req_pos) == 0)
+            p_sess->get_info.p_buf, p_write_request->record_data_length - sizeof(pf_block_header_t), p_req_pos) == 0)
          {
             ret = 0;
          }
@@ -1800,11 +1808,11 @@ static int pf_cmrpc_perform_one_write(
  * This will trigger the \a pnet_write_ind() user callback for certain parameters.
  *
  * @param net              InOut: The p-net stack instance
- * @param p_sess           In:   The RPC session instance.
- * @param req_pos          In:   Position in the request buffer.
- * @param res_size         In:   The size of the response buffer.
- * @param p_res            Out:  The response buffer.
- * @param p_res_pos        InOut:Position within the response buffer.
+ * @param p_sess           InOut  The RPC session instance.
+ * @param req_pos          In:    Position in the request buffer.
+ * @param res_size         In:    The size of the response buffer.
+ * @param p_res            Out:   The response buffer.
+ * @param p_res_pos        InOut: Position within the response buffer.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -1894,7 +1902,7 @@ static int pf_cmrpc_rm_write_ind(
                    (pf_cmrpc_rm_write_interpret_ind(&p_sess->get_info,
                     &write_request_multi, &req_pos, &write_stat_multi) == 0))
             {
-               ret = pf_cmrpc_perform_one_write(net, &p_sess->get_info, &write_request_multi,
+               ret = pf_cmrpc_perform_one_write(net, p_sess, &write_request_multi,
                   &write_result_multi, &write_stat_multi, &req_pos);
                pf_put_write_result(p_sess->get_info.is_big_endian, &write_result_multi, res_size, p_res, p_res_pos);
 
@@ -1914,7 +1922,7 @@ static int pf_cmrpc_rm_write_ind(
          else     /* single write */
          {
             /* Do the write, and store the corresponding response block */
-            ret = pf_cmrpc_perform_one_write(net, &p_sess->get_info, &write_request,
+            ret = pf_cmrpc_perform_one_write(net, p_sess, &write_request,
                &write_result, &p_sess->rpc_result, &req_pos);
             pf_put_write_result(p_sess->get_info.is_big_endian, &write_result, res_size, p_res, p_res_pos);
          }

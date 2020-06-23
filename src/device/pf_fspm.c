@@ -467,6 +467,8 @@ int pf_fspm_state_ind(
 {
    int ret = 0;
 
+   CC_ASSERT(p_ar != NULL);
+
    switch (event)
    {
    case    PNET_EVENT_ABORT:     LOG_INFO(PNET_LOG, "CMDEV event ABORT\n"); break;
