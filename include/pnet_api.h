@@ -58,7 +58,7 @@ extern "C"
 #define PNET_OPTION_AR_VENDOR_BLOCKS                           1
 #define PNET_OPTION_RS                                         1
 #define PNET_OPTION_MC_CR                                      1
-#define PNET_OPTION_SRL                                        1
+#define PNET_OPTION_SRL                                        0
 
 /**
  * Disable use of atomic operations (stdatomic.h).

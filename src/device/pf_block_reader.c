@@ -345,7 +345,7 @@ void pf_get_ar_param(
    {
       str_len = sizeof(p_ar->ar_param.cm_initiator_station_name) - 1;
    }
-   pf_get_mem(p_info, p_pos, str_len, &p_ar->ar_param.cm_initiator_station_name);
+   pf_get_mem(p_info, p_pos, str_len, p_ar->ar_param.cm_initiator_station_name);
    p_ar->ar_param.cm_initiator_station_name[str_len] = '\0';
 }
 
@@ -603,7 +603,7 @@ void pf_get_control(
 
    /* Command and properties are always Big-Endian on the wire!! */
    p_req->control_command = pf_get_uint16(p_info, p_pos);
-   p_req->control_block_properties = pf_get_uint16(p_info, p_pos);;
+   p_req->control_block_properties = pf_get_uint16(p_info, p_pos);
 }
 
 void pf_get_ndr_data(

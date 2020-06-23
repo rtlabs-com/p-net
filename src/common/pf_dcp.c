@@ -325,7 +325,7 @@ static int pf_dcp_get_req(
       case PF_DCP_SUB_DEV_PROP_OPTIONS:
          if (sizeof(device_options) > 0)
          {
-            p_value = (uint8_t *)&device_options;
+            p_value = (uint8_t *)device_options;
             value_length = sizeof(device_options);
             ret = 0;
          }
@@ -358,6 +358,7 @@ static int pf_dcp_get_req(
          break;
       case PF_DCP_SUB_DEV_PROP_ROLE:
          value_length += 1;
+         break;
       case PF_DCP_SUB_DEV_PROP_ID:
       case PF_DCP_SUB_DEV_PROP_INSTANCE:
       case PF_DCP_SUB_DEV_PROP_OEM_ID:
@@ -409,7 +410,7 @@ static int pf_dcp_get_req(
          negative_response_data[0] = opt;
          negative_response_data[1] = sub;
          negative_response_data[2] = block_error;
-         ret = pf_dcp_put_block(p_dst, p_dst_pos, dst_max, PF_DCP_OPT_CONTROL, PF_DCP_SUB_CONTROL_RESPONSE, false, 0, sizeof(negative_response_data), &negative_response_data);
+         ret = pf_dcp_put_block(p_dst, p_dst_pos, dst_max, PF_DCP_OPT_CONTROL, PF_DCP_SUB_CONTROL_RESPONSE, false, 0, sizeof(negative_response_data), negative_response_data);
       }
    }
 
@@ -727,7 +728,7 @@ static int pf_dcp_get_set(
 
          /* Set eth header in the response */
          memcpy(p_dst_ethhdr->dest.addr, p_src_ethhdr->src.addr, sizeof(pnet_ethaddr_t));
-         memcpy (p_dst_ethhdr->src.addr, &p_cfg->eth_addr.addr, sizeof(pnet_ethaddr_t));
+         memcpy (p_dst_ethhdr->src.addr, p_cfg->eth_addr.addr, sizeof(pnet_ethaddr_t));
          p_dst_ethhdr->type = htons(OS_ETHTYPE_PROFINET);
 
          /* Copy DCP header from the request, and modify what is needed. */
@@ -1297,8 +1298,8 @@ static int pf_dcp_identify_req(
                   {
                      match = false;
                   }
-   #endif
                   break;
+   #endif
                case PF_DCP_SUB_DEV_PROP_INSTANCE:
                   if (filter == true)
                   {

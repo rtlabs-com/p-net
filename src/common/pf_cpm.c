@@ -581,7 +581,7 @@ int pf_cpm_activate_req(
       if (p_cpm->nbr_frame_id == 2)
       {
          p_cpm->frame_id[1] = p_cpm->frame_id[0] + 1;
-         pf_eth_frame_id_map_add(net, p_cpm->frame_id[1], pf_cpm_c_data_ind, &p_iocr);
+         pf_eth_frame_id_map_add(net, p_cpm->frame_id[1], pf_cpm_c_data_ind, p_iocr);
       }
 
       /* ToDo: Shall be aligned with local send clock or PTCP (Does it matter for RTClass1/2?) */
@@ -738,12 +738,12 @@ int pf_cpm_get_data_and_iops(
                }
                if (p_iodata->iops_length > 0)
                {
-                  memcpy(p_iops, &p_buffer[p_iodata->data_offset + p_iodata->data_length], p_iodata->iops_length);
+                  memcpy(p_iops, &p_buffer[p_iodata->iops_offset], p_iodata->iops_length);
                }
                os_mutex_unlock(net->cpm_buf_lock);
 
                *p_data_len = p_iodata->data_length;
-               *p_iops_len = (uint8_t)p_iodata->iops_length,
+               *p_iops_len = (uint8_t)p_iodata->iops_length;
                ret = 0;
             }
             else
@@ -808,7 +808,7 @@ int pf_cpm_get_iocs(
                memcpy(p_iocs, &p_buffer[p_iodata->iocs_offset], p_iodata->iocs_length);
                os_mutex_unlock(net->cpm_buf_lock);
 
-               *p_iocs_len = (uint8_t)p_iodata->iocs_length,
+               *p_iocs_len = (uint8_t)p_iodata->iocs_length;
                ret = 0;
             }
             else

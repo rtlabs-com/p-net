@@ -707,7 +707,7 @@ int pf_cmdev_plug_submodule(
       p_subslot->length_output = length_output;
 
       /* Inherit AR from slot module */
-      p_subslot->p_ar = p_slot->p_ar;;
+      p_subslot->p_ar = p_slot->p_ar;
    }
    else
    {
@@ -1069,7 +1069,7 @@ int pf_cmdev_get_state(
  * Request a state transition of the specified AR.
  * @param net              InOut: The p-net stack instance
  * @param p_ar
- * @param state
+ * @param state            In:    New state. Use PF_CMDEV_STATE_...
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
