@@ -120,8 +120,6 @@ static int _cmd_pnio_run(
       int                  argc,
       char                 *argv[])
 {
-   uint16_t                ix;
-
    if (g_net != NULL)
    {
       printf("Already initialized p-net application.\n");
@@ -238,7 +236,6 @@ int main(void)
    bool           button1_pressed = false;
    bool           button2_pressed = false;
    bool           button2_pressed_previous = false;
-   bool           led_state = false;
    bool           received_led_state = false;
    uint32_t       tick_ctr_buttons = 0;
    uint32_t       tick_ctr_update_data = 0;
