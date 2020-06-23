@@ -460,6 +460,7 @@ int pf_ppm_set_data_and_iops(
       case PF_PPM_STATE_RUN:
          if ((data_len == p_iodata->data_length) && (iops_len == p_iodata->iops_length))
          {
+            CC_ASSERT(net->ppm_buf_lock != NULL);
             os_mutex_lock(net->ppm_buf_lock);
             if (data_len > 0)
             {
@@ -519,6 +520,7 @@ int pf_ppm_set_iocs(
       case PF_PPM_STATE_RUN:
          if (iocs_len == p_iodata->iocs_length)
          {
+            CC_ASSERT(net->ppm_buf_lock != NULL);
             os_mutex_lock(net->ppm_buf_lock);
             memcpy(&p_iocr->ppm.buffer_data[p_iodata->iocs_offset], p_iocs, iocs_len);
             os_mutex_unlock(net->ppm_buf_lock);
@@ -577,6 +579,7 @@ int pf_ppm_get_data_and_iops(
       case PF_PPM_STATE_RUN:
          if ((*p_data_len >= p_iodata->data_length) && (*p_iops_len >= p_iodata->iops_length))
          {
+            CC_ASSERT(net->ppm_buf_lock != NULL);
             os_mutex_lock(net->ppm_buf_lock);
             memcpy(p_data, &p_iocr->ppm.buffer_data[p_iodata->data_offset], p_iodata->data_length);
             memcpy(p_iops, &p_iocr->ppm.buffer_data[p_iodata->iops_offset], p_iodata->iops_length);
@@ -643,6 +646,7 @@ int pf_ppm_get_iocs(
       case PF_PPM_STATE_RUN:
          if (*p_iocs_len >= p_iodata->iocs_length)
          {
+            CC_ASSERT(net->ppm_buf_lock != NULL);
             os_mutex_lock(net->ppm_buf_lock);
             memcpy(p_iocs, &p_iocr->ppm.buffer_data[p_iodata->iocs_offset], p_iodata->iocs_length);
             os_mutex_unlock(net->ppm_buf_lock);
