@@ -44,14 +44,21 @@
 
 void os_log (int type, const char * fmt, ...)
 {
-   va_list list;
+   va_list                 list;
+   time_t                   rawtime;
+   struct tm                *timestruct;
+   char                     timestamp[10];
+
+   time(&rawtime);
+   timestruct = localtime(&rawtime);
+   strftime(timestamp, sizeof(timestamp), "%H:%M:%S", timestruct);
 
    switch(LOG_LEVEL_GET (type))
    {
-   case LOG_LEVEL_DEBUG:   printf ("[DEBUG] "); break;
-   case LOG_LEVEL_INFO:    printf ("[INFO ] "); break;
-   case LOG_LEVEL_WARNING: printf ("[WARN ] "); break;
-   case LOG_LEVEL_ERROR:   printf ("[ERROR] "); break;
+   case LOG_LEVEL_DEBUG:   printf ("[%s DEBUG] ", timestamp); break;
+   case LOG_LEVEL_INFO:    printf ("[%s INFO ] ", timestamp); break;
+   case LOG_LEVEL_WARNING: printf ("[%s WARN ] ", timestamp); break;
+   case LOG_LEVEL_ERROR:   printf ("[%s ERROR] ", timestamp); break;
    default: break;
    }
 
