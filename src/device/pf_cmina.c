@@ -371,10 +371,17 @@ int pf_cmina_dcp_set_ind(
                net->cmina_temp_dcp_ase.name_of_station[value_length] = '\0';
                LOG_INFO(PF_DCP_LOG,"CMINA(%d): The incoming set request is about changing station name. New name: %s\n", __LINE__, net->cmina_temp_dcp_ase.name_of_station);
 
-            strncpy(net->cmina_temp_dcp_ase.name_of_station, (char *)p_value, value_length);
-            net->cmina_temp_dcp_ase.name_of_station[value_length] = '\0';
-            LOG_INFO(PF_DCP_LOG,"CMINA(%d): The incoming set request is about changing station name. New name: %s\n", __LINE__, net->cmina_temp_dcp_ase.name_of_station);
-            if (temp == false)
+               if (temp == false)
+               {
+                  strcpy(net->cmina_perm_dcp_ase.name_of_station, net->cmina_temp_dcp_ase.name_of_station);   /* It always fits */
+               }
+               else
+               {
+                  memset(net->cmina_perm_dcp_ase.name_of_station, 0, sizeof(net->cmina_perm_dcp_ase.name_of_station));
+               }
+               ret = 0;
+            }
+            else
             {
                LOG_INFO(PF_DCP_LOG,"CMINA(%d): Got incoming request to change station name to an illegal value.\n", __LINE__);
                *p_block_error = PF_DCP_BLOCK_ERROR_SUBOPTION_NOT_SET;
