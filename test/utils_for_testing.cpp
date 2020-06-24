@@ -147,6 +147,9 @@ int my_ccontrol_cnf(
 }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> fcbd587ccd3902352b1b75e534b2a3965364cc1f
 static int my_signal_led_ind(
    pnet_t *net,
    void *arg,
@@ -167,8 +170,11 @@ static int my_signal_led_ind(
    return 0;
 }
 
+<<<<<<< HEAD
 =======
 >>>>>>> 3e70de9d4b3b77af8bb756b147213ffd1c989e1f
+=======
+>>>>>>> fcbd587ccd3902352b1b75e534b2a3965364cc1f
 int my_read_ind(
    pnet_t *net,
    void *arg,
@@ -486,9 +492,13 @@ void PnetIntegrationTestBase::cfg_init()
    pnet_default_cfg.alarm_ind_cb = my_alarm_ind;
    pnet_default_cfg.alarm_cnf_cb = my_alarm_cnf;
 <<<<<<< HEAD
+<<<<<<< HEAD
    pnet_default_cfg.signal_led_cb = my_signal_led_ind;
 =======
 >>>>>>> 3e70de9d4b3b77af8bb756b147213ffd1c989e1f
+=======
+   pnet_default_cfg.signal_led_cb = my_signal_led_ind;
+>>>>>>> fcbd587ccd3902352b1b75e534b2a3965364cc1f
    pnet_default_cfg.reset_cb = NULL;
    pnet_default_cfg.cb_arg = &appdata;
 

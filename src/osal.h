@@ -320,35 +320,6 @@ int os_set_ip_suite(
    const char              *hostname,
    bool                    permanent);
 
-
-void os_set_led(
-   uint16_t                id,         /* Starting from 0 */
-   bool                    on);
-
-void os_get_button(
-   uint16_t                id,         /* Starting from 0 */
-   bool                    *p_pressed);
-
-
-/**
- * Convert IPv4 address to string
- * @param ip               In: IP address
- * @param outputstring     Out: Resulting string. Should have length OS_INET_ADDRSTRLEN.
- */
-void os_ip_to_string(
-   os_ipaddr_t             ip,
-   char                    *outputstring);
-
-/**
- * Convert MAC address to string
- * @param mac              In: MAC address
- * @param outputstring     Out: Resulting string. Should have length OS_ETH_ADDRSTRLEN
- */
-void os_mac_to_string(
-   os_ethaddr_t            mac,
-   char                    *outputstring);
-
-
 #ifdef __cplusplus
 }
 #endif

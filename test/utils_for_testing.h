@@ -79,10 +79,15 @@ typedef struct call_counters_obj
    uint16_t                read_calls;
    uint16_t                write_calls;
 <<<<<<< HEAD
+<<<<<<< HEAD
    uint16_t                led_on_calls;
    uint16_t                led_off_calls;
 =======
 >>>>>>> 3e70de9d4b3b77af8bb756b147213ffd1c989e1f
+=======
+   uint16_t                led_on_calls;
+   uint16_t                led_off_calls;
+>>>>>>> fcbd587ccd3902352b1b75e534b2a3965364cc1f
 } call_counters_t;
 
 typedef struct app_data_for_testing_obj

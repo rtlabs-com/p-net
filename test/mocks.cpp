@@ -145,21 +145,6 @@ void mock_os_udp_close(
 {
 }
 
-void mock_os_get_button(
-   uint16_t                id,
-   bool                    *p_pressed)
-{
-   *p_pressed = 0;
-}
-
-void mock_os_set_led(
-   uint16_t                id,
-   bool                    on)
-{
-   mock_os_data.set_led_count++;
-   mock_os_data.set_led_on = on;
-}
-
 int mock_pf_alarm_send_diagnosis(
    pf_ar_t                 *p_ar,
    uint32_t                api_id,

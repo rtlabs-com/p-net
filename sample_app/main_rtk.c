@@ -42,20 +42,39 @@ static pnet_cfg_t                  pnet_default_cfg;
 
 /************************* Utilities ******************************************/
 
-
-/**  TODO move
- * Copy an IP address (as an integer) to a struct
- *
- * @param destination_struct  Out: destination
- * @param ip                  In: IP address
-*/
-static void copy_ip_to_struct(pnet_cfg_ip_addr_t* destination_struct, os_ipaddr_t ip)
+ int app_set_led(
+   uint16_t                id,
+   bool                    led_state)
 {
-   destination_struct->a = ((ip >> 24) & 0xFF);
-   destination_struct->b = ((ip >> 16) & 0xFF);
-   destination_struct->c = ((ip >> 8) & 0xFF);
-   destination_struct->d = (ip & 0xFF);
+   if (id == APP_DATA_LED_ID)
+   {
+      gpio_set(GPIO_LED1, led_state ? 1 : 0);  /* "LED1" on circuit board */
+   }
+   else if (id == APP_PROFINET_SIGNAL_LED_ID)
+   {
+      gpio_set(GPIO_LED2, led_state ? 1 : 0);  /* "LED2" on circuit board */
+   }
+
+   return 0;
 }
+
+
+static void app_get_button(uint16_t id, bool *p_pressed)
+{
+   if (id == 0)
+   {
+      *p_pressed = (gpio_get(GPIO_BUTTON1) == 0);
+   }
+   else if (id == 1)
+   {
+      *p_pressed = (gpio_get(GPIO_BUTTON2) == 0);
+   }
+   else
+   {
+      *p_pressed = false;
+   }
+}
+
 
 static int _cmd_pnio_alarm_ack(
       int                  argc,

@@ -17,11 +17,10 @@
 
 #include <osal.h>
 
-#include <options.h>
 #include <log.h>
+#include <options.h>
 
 #include <arpa/inet.h>
-#include <net/if.h>
 #include <pthread.h>
 #include <sys/ioctl.h>
 #include <sys/syscall.h>
@@ -679,116 +678,4 @@ int os_set_ip_suite(
       return -1;
    }
    return 0;
-}
-
-int os_get_macaddress(
-    const char              *interface_name,
-    os_ethaddr_t            *mac_addr
-)
-{
-   int fd;
-   int ret = 0;
-   struct ifreq ifr;
-
-   fd = socket (AF_INET, SOCK_DGRAM, 0);
-
-   ifr.ifr_addr.sa_family = AF_INET;
-   strncpy (ifr.ifr_name, interface_name, IFNAMSIZ - 1);
-
-   ret = ioctl(fd, SIOCGIFHWADDR, &ifr);
-   if (ret == 0){
-      memcpy(mac_addr->addr, ifr.ifr_hwaddr.sa_data, 6);
-   }
-   close (fd);
-   return ret;
-}
-
-os_ipaddr_t os_get_ip_address(
-    const char              *interface_name
-)
-{
-   int fd;
-   struct ifreq ifr;
-   os_ipaddr_t ip;
-
-   fd = socket (AF_INET, SOCK_DGRAM, 0);
-   ifr.ifr_addr.sa_family = AF_INET;
-   strncpy (ifr.ifr_name, interface_name, IFNAMSIZ - 1);
-   ioctl (fd, SIOCGIFADDR, &ifr);
-   ip = ntohl(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr.s_addr);
-   close (fd);
-
-   return ip;
-}
-
-os_ipaddr_t os_get_netmask(
-   const char              *interface_name)
-{
-   int fd;
-   struct ifreq ifr;
-   os_ipaddr_t netmask;
-
-   fd = socket (AF_INET, SOCK_DGRAM, 0);
-
-   ifr.ifr_addr.sa_family = AF_INET;
-   strncpy (ifr.ifr_name, interface_name, IFNAMSIZ - 1);
-   ioctl (fd, SIOCGIFNETMASK, &ifr);
-   netmask = ntohl(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr.s_addr);
-   close (fd);
-
-   return netmask;
-}
-
-os_ipaddr_t os_get_gateway(
-   const char              *interface_name)
-{
-   /* TODO Read the actual default gateway (somewhat complicated) */
-
-   os_ipaddr_t ip;
-   os_ipaddr_t gateway;
-
-   ip = os_get_ip_address(interface_name);
-   gateway = (ip & 0xFFFFFF00) | 0x00000001;
-
-   return gateway;
-}
-
-
-int os_get_hostname(
-   char              *hostname
-)
-{
-   int                     ret = -1;
-
-   ret = gethostname(hostname, OS_HOST_NAME_MAX);
-   hostname[OS_HOST_NAME_MAX - 1] = '\0';
-
-   return ret;
-}
-
-int os_get_ip_suite(
-   const char              *interface_name,
-   os_ipaddr_t             *p_ipaddr,
-   os_ipaddr_t             *p_netmask,
-   os_ipaddr_t             *p_gw,
-   char                    *hostname)
-{
-   int                     ret = -1;
-
-   *p_ipaddr = os_get_ip_address(interface_name);
-   *p_netmask = os_get_netmask(interface_name);
-   *p_gw = os_get_gateway(interface_name);
-   ret = os_get_hostname(hostname);
-
-   return ret;
-}
-
-void os_get_button(uint16_t id, bool *p_pressed)
-{
-
-}
-
-void os_set_led(uint16_t id, bool on)
-{
-
 }

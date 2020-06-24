@@ -447,7 +447,8 @@ int main(int argc, char *argv[])
       printf("Number of slots:     %u (incl slot for DAP module)\n", PNET_MAX_MODULES);
       printf("P-net log level:     %u (DEBUG=0, ERROR=3)\n", LOG_LEVEL);
       printf("App verbosity level: %u\n", appdata.arguments.verbosity);
-      printf("LED file:            %s\n", appdata.arguments.path_led);
+      printf("Ethernet interface:  %s\n", appdata.arguments.eth_interface);
+      printf("Station name:        %s\n", appdata.arguments.station_name);
       printf("Button1 file:        %s\n", appdata.arguments.path_button1);
       printf("Button2 file:        %s\n", appdata.arguments.path_button2);
       printf("Station name:        %s\n", appdata.arguments.station_name);
