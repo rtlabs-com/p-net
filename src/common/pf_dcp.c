@@ -410,7 +410,7 @@ static int pf_dcp_get_req(
          negative_response_data[0] = opt;
          negative_response_data[1] = sub;
          negative_response_data[2] = block_error;
-         ret = pf_dcp_put_block(p_dst, p_dst_pos, dst_max, PF_DCP_OPT_CONTROL, PF_DCP_SUB_CONTROL_RESPONSE, false, 0, sizeof(negative_response_data), negative_response_data);
+         ret = pf_dcp_put_block(p_dst, p_dst_pos, dst_max, PF_DCP_OPT_CONTROL, PF_DCP_SUB_CONTROL_RESPONSE, false, 0, sizeof(negative_response_data), &negative_response_data);
       }
    }
 
