@@ -180,10 +180,14 @@ int my_read_ind(
    void *arg,
    uint32_t arep,
 <<<<<<< HEAD
+<<<<<<< HEAD
    uint32_t api,
 =======
    uint16_t api,
 >>>>>>> 3e70de9d4b3b77af8bb756b147213ffd1c989e1f
+=======
+   uint32_t api,
+>>>>>>> 7fad69e9fcfbe2fdb2dfa6514bff268cf79a1a15
    uint16_t slot,
    uint16_t subslot,
    uint16_t idx,
@@ -205,10 +209,14 @@ int my_write_ind(
    void *arg,
    uint32_t arep,
 <<<<<<< HEAD
+<<<<<<< HEAD
    uint32_t api,
 =======
    uint16_t api,
 >>>>>>> 3e70de9d4b3b77af8bb756b147213ffd1c989e1f
+=======
+   uint32_t api,
+>>>>>>> 7fad69e9fcfbe2fdb2dfa6514bff268cf79a1a15
    uint16_t slot,
    uint16_t subslot,
    uint16_t idx,
@@ -320,10 +328,14 @@ int my_exp_module_ind(
    pnet_t *net,
    void *arg,
 <<<<<<< HEAD
+<<<<<<< HEAD
    uint32_t api,
 =======
    uint16_t api,
 >>>>>>> 3e70de9d4b3b77af8bb756b147213ffd1c989e1f
+=======
+   uint32_t api,
+>>>>>>> 7fad69e9fcfbe2fdb2dfa6514bff268cf79a1a15
    uint16_t slot,
    uint32_t module_ident)
 {
@@ -376,10 +388,14 @@ int my_exp_submodule_ind(
    pnet_t *net,
    void *arg,
 <<<<<<< HEAD
+<<<<<<< HEAD
    uint32_t api,
 =======
    uint16_t api,
 >>>>>>> 3e70de9d4b3b77af8bb756b147213ffd1c989e1f
+=======
+   uint32_t api,
+>>>>>>> 7fad69e9fcfbe2fdb2dfa6514bff268cf79a1a15
    uint16_t slot,
    uint16_t subslot,
    uint32_t module_ident,
