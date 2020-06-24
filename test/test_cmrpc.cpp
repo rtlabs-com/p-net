@@ -360,7 +360,7 @@ TEST_F (CmrpcTest, CmrpcConnectReleaseTest)
    EXPECT_EQ(appdata.call_counters.write_calls, 1);
    EXPECT_EQ(appdata.call_counters.connect_calls, 1);
    EXPECT_EQ(mock_os_data.udp_sendto_count, 2);
-   EXPECT_EQ(mock_os_data.udp_sendto_len, 228);
+   EXPECT_EQ(mock_os_data.udp_sendto_len, 164);
 
    printf("\nGenerating mock parameter end request\n");
    mock_set_os_udp_recvfrom_buffer(prm_end_req, sizeof(prm_end_req));
