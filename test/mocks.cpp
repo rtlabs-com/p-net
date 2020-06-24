@@ -78,6 +78,13 @@ int mock_os_eth_send(
    return p_buf->len;
 }
 
+
+int mock_os_udp_socket(void)
+{
+   int ret = 1;
+   return ret;
+}
+
 int mock_os_udp_open(
    os_ipaddr_t             addr,
    os_ipport_t             port)
@@ -135,6 +142,21 @@ int mock_os_udp_recvfrom(
 void mock_os_udp_close(
    uint32_t                id)
 {
+}
+
+void mock_os_get_button(
+   uint16_t                id,
+   bool                    *p_pressed)
+{
+   *p_pressed = 0;
+}
+
+void mock_os_set_led(
+   uint16_t                id,
+   bool                    on)
+{
+   mock_os_data.set_led_count++;
+   mock_os_data.set_led_on = on;
 }
 
 int mock_pf_alarm_send_diagnosis(

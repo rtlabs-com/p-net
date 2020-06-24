@@ -146,6 +146,7 @@ int my_ccontrol_cnf(
    return 0;
 }
 
+<<<<<<< HEAD
 static int my_signal_led_ind(
    pnet_t *net,
    void *arg,
@@ -166,11 +167,17 @@ static int my_signal_led_ind(
    return 0;
 }
 
+=======
+>>>>>>> 3e70de9d4b3b77af8bb756b147213ffd1c989e1f
 int my_read_ind(
    pnet_t *net,
    void *arg,
    uint32_t arep,
+<<<<<<< HEAD
    uint32_t api,
+=======
+   uint16_t api,
+>>>>>>> 3e70de9d4b3b77af8bb756b147213ffd1c989e1f
    uint16_t slot,
    uint16_t subslot,
    uint16_t idx,
@@ -191,7 +198,11 @@ int my_write_ind(
    pnet_t *net,
    void *arg,
    uint32_t arep,
+<<<<<<< HEAD
    uint32_t api,
+=======
+   uint16_t api,
+>>>>>>> 3e70de9d4b3b77af8bb756b147213ffd1c989e1f
    uint16_t slot,
    uint16_t subslot,
    uint16_t idx,
@@ -302,7 +313,11 @@ int my_state_ind(
 int my_exp_module_ind(
    pnet_t *net,
    void *arg,
+<<<<<<< HEAD
    uint32_t api,
+=======
+   uint16_t api,
+>>>>>>> 3e70de9d4b3b77af8bb756b147213ffd1c989e1f
    uint16_t slot,
    uint32_t module_ident)
 {
@@ -354,7 +369,11 @@ int my_exp_module_ind(
 int my_exp_submodule_ind(
    pnet_t *net,
    void *arg,
+<<<<<<< HEAD
    uint32_t api,
+=======
+   uint16_t api,
+>>>>>>> 3e70de9d4b3b77af8bb756b147213ffd1c989e1f
    uint16_t slot,
    uint16_t subslot,
    uint32_t module_ident,
@@ -466,7 +485,10 @@ void PnetIntegrationTestBase::cfg_init()
    pnet_default_cfg.new_data_status_cb = my_new_data_status_ind;
    pnet_default_cfg.alarm_ind_cb = my_alarm_ind;
    pnet_default_cfg.alarm_cnf_cb = my_alarm_cnf;
+<<<<<<< HEAD
    pnet_default_cfg.signal_led_cb = my_signal_led_ind;
+=======
+>>>>>>> 3e70de9d4b3b77af8bb756b147213ffd1c989e1f
    pnet_default_cfg.reset_cb = NULL;
    pnet_default_cfg.cb_arg = &appdata;
 

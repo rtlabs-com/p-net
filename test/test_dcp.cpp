@@ -107,8 +107,6 @@ TEST_F (DcpTest, DcpHelloTest)
    EXPECT_EQ(ret, 1);
    EXPECT_EQ(mock_os_data.eth_send_count, 1);
 
-   EXPECT_EQ(appdata.call_counters.led_off_calls, 1);
-   EXPECT_EQ(appdata.call_counters.led_on_calls, 0);
    EXPECT_EQ(appdata.call_counters.state_calls, 0);
    EXPECT_EQ(appdata.call_counters.connect_calls, 0);
    EXPECT_EQ(appdata.call_counters.release_calls, 0);
@@ -154,12 +152,9 @@ TEST_F (DcpTest, DcpRunTest)
    EXPECT_EQ(ret, 1);
    /* 3.5 s should be enough, but on Windows even 5 s is not enough :-( */
    os_usleep(10*1000*1000);
+   EXPECT_EQ(mock_os_data.set_led_count, 6);
+   EXPECT_EQ(mock_os_data.set_led_on, false);
 
-   EXPECT_EQ(mock_os_data.eth_send_count, 9);
-   EXPECT_EQ(mock_os_data.set_ip_suite_count, 2);
-
-   EXPECT_EQ(appdata.call_counters.led_on_calls, 3);
-   EXPECT_EQ(appdata.call_counters.led_off_calls, 4);
    EXPECT_EQ(appdata.call_counters.state_calls, 0);
    EXPECT_EQ(appdata.call_counters.connect_calls, 0);
    EXPECT_EQ(appdata.call_counters.release_calls, 0);
