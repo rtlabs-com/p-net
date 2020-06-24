@@ -314,15 +314,9 @@ int pf_cmina_dcp_set_ind(
             {
                change_ip = (memcmp(&net->cmina_temp_dcp_ase.full_ip_suite.ip_suite, p_value, value_length) != 0);
 
-               memcpy(&net->cmina_temp_dcp_ase.full_ip_suite.ip_suite, p_value, sizeof(net->cmina_temp_dcp_ase.full_ip_suite.ip_suite));
-               LOG_INFO(PF_DCP_LOG,"CMINA(%d): The incoming set request is about changing IP. PF_DCP_SUB_IP_PAR New IP: 0x%"PRIxLEAST32"\n", __LINE__, net->cmina_temp_dcp_ase.full_ip_suite.ip_suite.ip_addr);
-               if (temp == false)
-               {
-                  net->cmina_perm_dcp_ase.full_ip_suite.ip_suite = net->cmina_temp_dcp_ase.full_ip_suite.ip_suite;
-               }
-               ret = 0;
-            }
-            else
+            memcpy(&net->cmina_temp_dcp_ase.full_ip_suite.ip_suite, p_value, sizeof(net->cmina_temp_dcp_ase.full_ip_suite.ip_suite));
+            LOG_INFO(PF_DCP_LOG,"CMINA(%d): The incoming set request is about changing IP. PF_DCP_SUB_IP_PAR New IP: 0x%"PRIxLEAST32"\n", __LINE__, net->cmina_temp_dcp_ase.full_ip_suite.ip_suite.ip_addr);
+            if (temp == false)
             {
                LOG_INFO(PF_DCP_LOG,"CMINA(%d): Got incoming request to change IP suite to an illegal value.\n", __LINE__);
                *p_block_error = PF_DCP_BLOCK_ERROR_SUBOPTION_NOT_SET;
@@ -336,10 +330,8 @@ int pf_cmina_dcp_set_ind(
       case PF_DCP_SUB_IP_SUITE:
          if (value_length < sizeof(net->cmina_temp_dcp_ase.full_ip_suite))   /* Why less than? */
          {
-            if (pf_cmina_is_full_ipsuite_valid((pf_full_ip_suite_t *)p_value))
-            {
-               LOG_INFO(PF_DCP_LOG,"CMINA(%d): The incoming set request is about changing IP. PF_DCP_SUB_IP_SUITE\n", __LINE__);
-               change_ip = (memcmp(&net->cmina_temp_dcp_ase.full_ip_suite, p_value, value_length) != 0);
+            LOG_INFO(PF_DCP_LOG,"CMINA(%d): The incoming set request is about changing IP. PF_DCP_SUB_IP_SUITE\n", __LINE__);
+            change_ip = (memcmp(&net->cmina_temp_dcp_ase.full_ip_suite, p_value, value_length) != 0);
 
                memcpy(&net->cmina_temp_dcp_ase.full_ip_suite, p_value, value_length);
                if (temp == false)
@@ -379,17 +371,10 @@ int pf_cmina_dcp_set_ind(
                net->cmina_temp_dcp_ase.name_of_station[value_length] = '\0';
                LOG_INFO(PF_DCP_LOG,"CMINA(%d): The incoming set request is about changing station name. New name: %s\n", __LINE__, net->cmina_temp_dcp_ase.name_of_station);
 
-               if (temp == false)
-               {
-                  strcpy(net->cmina_perm_dcp_ase.name_of_station, net->cmina_temp_dcp_ase.name_of_station);   /* It always fits */
-               }
-               else
-               {
-                  memset(net->cmina_perm_dcp_ase.name_of_station, 0, sizeof(net->cmina_perm_dcp_ase.name_of_station));
-               }
-               ret = 0;
-            }
-            else
+            strncpy(net->cmina_temp_dcp_ase.name_of_station, (char *)p_value, value_length);
+            net->cmina_temp_dcp_ase.name_of_station[value_length] = '\0';
+            LOG_INFO(PF_DCP_LOG,"CMINA(%d): The incoming set request is about changing station name. New name: %s\n", __LINE__, net->cmina_temp_dcp_ase.name_of_station);
+            if (temp == false)
             {
                LOG_INFO(PF_DCP_LOG,"CMINA(%d): Got incoming request to change station name to an illegal value.\n", __LINE__);
                *p_block_error = PF_DCP_BLOCK_ERROR_SUBOPTION_NOT_SET;

@@ -1082,8 +1082,8 @@ typedef struct pnet_lldp_cfg
 {
    char                    chassis_id[240 + 1];    /**< Terminated string */
    char                    port_id[240 + 1];       /**< Terminated string */
-   os_ethaddr_t            port_addr;
-   uint16_t                ttl;
+   pnet_ethaddr_t          port_addr;
+   uint16_t                ttl;                    /**< Time to live in seconds */
    uint16_t                rtclass_2_status;
    uint16_t                rtclass_3_status;
    uint8_t                 cap_aneg;               /**< Autonegotiation supported and enabled */

@@ -1976,7 +1976,7 @@ struct pnet
    os_mutex_t                          *ppm_buf_lock;
    atomic_int                          ppm_instance_cnt;
    uint16_t                            dcp_global_block_qualifier;
-   os_ethaddr_t                        dcp_sam;
+   pnet_ethaddr_t                      dcp_sam; /* Source address (MAC) to current DCP remote peer */
    bool                                dcp_delayed_response_waiting;
    uint32_t                            dcp_timeout;
    uint32_t                            dcp_sam_timeout; /* Handle to the SAM timeout instance */
