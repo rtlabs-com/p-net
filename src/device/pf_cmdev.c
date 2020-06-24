@@ -2553,6 +2553,9 @@ static int pf_cmdev_check_iocr_param(
  *
  * This function configures an expected sub-module.
  * Perform final checks of parameters and let the application plug the sub-module if needed.
+ *
+ * Triggers user call-back \a pnet_exp_submodule_ind()
+ *
  * @param net              InOut: The p-net stack instance
  * @param p_exp_api        In:   The expected API instance.
  * @param p_exp_mod        In:   The expected sub-module instance.
@@ -2803,6 +2806,9 @@ static int pf_cmdev_exp_submodule_configure(
  *
  * This function configures an expected module.
  * Perform final checks of parameters and let the application plug the module if needed.
+ *
+ * Triggers the user call-back \a pnet_exp_module_ind() and \a pnet_exp_submodule_ind().
+ *
  * @param net              InOut: The p-net stack instance
  * @param p_exp_api        In:   The expected API instance.
  * @param p_exp_mod        In:   The expected sub-module instance.
@@ -2929,6 +2935,9 @@ static int pf_cmdev_exp_modules_configure(
  *
  * This function configures an expected API.
  * Perform final checks of parameters and let the application plug the (sub-)modules when needed.
+ *
+ * Triggers the user call-back \a pnet_exp_module_ind() and \a pnet_exp_submodule_ind().
+ *
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param p_stat           Out:  Detailed error information.
@@ -3086,6 +3095,9 @@ static int pf_cmdev_check_ar_rpc(
  * Check the AR for errors.
  *
  * This function implements the APDUCheck function in the Profinet spec.
+ *
+ * Triggers the user call-back \a pnet_exp_module_ind() and \a pnet_exp_submodule_ind().
+ *
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param p_stat           Out:  Detailed error information.
