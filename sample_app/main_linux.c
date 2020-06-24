@@ -525,6 +525,8 @@ int main(int argc, char *argv[])
    appdata_and_stack.appdata = &appdata;
    appdata_and_stack.net = net;
 
+   app_plug_dap(net);
+
    /* Initialize timer and Profinet stack */
    appdata.main_events = os_event_create();
    appdata.main_timer  = os_timer_create(TICK_INTERVAL_US, main_timer_tick, (void*)&appdata, false);

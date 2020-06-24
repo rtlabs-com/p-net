@@ -58,7 +58,7 @@ typedef int (*pf_ftn_subslot_t)(
       pf_subslot_t         *p_subslot);
 
 /**
- * Initialize the cmdev component. Plugs the DAP (sub-)modules.
+ * Initialize the cmdev component.
  * @param net              InOut: The p-net stack instance
  */
 void pf_cmdev_init(

@@ -120,13 +120,6 @@ static int _cmd_pnio_run(
       int                  argc,
       char                 *argv[])
 {
-   uint16_t                ix;
-   os_ethaddr_t            macbuffer;
-   os_ipaddr_t             ip;
-   os_ipaddr_t             netmask;
-   os_ipaddr_t             gateway;
-   int                     ret = 0;
-
    if (g_net != NULL)
    {
       printf("Already initialized p-net application.\n");
@@ -164,10 +157,11 @@ static int _cmd_pnio_run(
    g_net = pnet_init(gp_appdata->arguments.eth_interface, TICK_INTERVAL_US, &pnet_default_cfg);
    if (g_net != NULL)
    {
+      app_plug_dap(g_net);
+
       if (gp_appdata->arguments.verbosity > 0)
       {
-         print_network_details(gp_appdata->arguments.eth_interface);
-         printf("Station name:        %s\n\n", gp_appdata->arguments.station_name);
+         printf("\nStation name:        %s\n", gp_appdata->arguments.station_name);
          printf("Initialized p-net application.\n\n");
          printf("Waiting for connect request from IO-controller\n");
       }
@@ -243,7 +237,6 @@ int main(void)
    bool           button1_pressed = false;
    bool           button2_pressed = false;
    bool           button2_pressed_previous = false;
-   bool           led_state = false;
    bool           received_led_state = false;
    uint32_t       tick_ctr_buttons = 0;
    uint32_t       tick_ctr_update_data = 0;
