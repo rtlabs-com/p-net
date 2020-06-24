@@ -79,13 +79,6 @@ int mock_os_eth_send(
    return p_buf->len;
 }
 
-
-int mock_os_udp_socket(void)
-{
-   int ret = 1;
-   return ret;
-}
-
 int mock_os_udp_open(
    os_ipaddr_t             addr,
    os_ipport_t             port)
