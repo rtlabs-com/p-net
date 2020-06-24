@@ -19,6 +19,10 @@
  *
  * This handles cyclic sending of data (and IOPS). Initalizes transmit buffers.
  *
+ * One instance of PPM exist per CR (together with a CPM).
+ *
+ * The states are W_START and RUN.
+ *
  * There are functions used by the application (via pnet_api.c) to set and get
  * data, IOCS and IOPS.
  *
@@ -99,8 +103,10 @@ static void pf_ppm_set_state(
  * Insert destination and source MAC addresses, VLAN tag, Ethertype and
  * Profinet frame ID.
  *
+ * Initialize the rest of the buffer to zero.
+ *
  * @param p_ppm            In:   The PPM instance.
- * @param p_buf            InOut:The buffer.
+ * @param p_buf            InOut:The buffer to be initialized.
  * @param frame_id         In:   The frame_id.
  * @param p_header         In:   The VLAN tag header IOCR parameter.
  */
@@ -153,7 +159,7 @@ static void pf_ppm_init_buf(
 
 /**
  * @internal
- * Finalize a PPM transmit message.
+ * Finalize a PPM transmit message in the send buffer.
  *
  * Insert data, cycle counter, data status and transfer status.
  *
@@ -190,16 +196,65 @@ static void pf_ppm_finish_buffer(
 
 /**
  * @internal
+ * Calculate the delay to use with the scheduler, by taking the stack cycle time into account.
+ *
+ * With a stack cycle time of 1 ms, a scheduled delay of 0-700 microseconds will
+ * cause a nice periodicity of 1 ms. A scheduled delay of 1000 microseconds will
+ * sometimes fire at next cycle, sometimes not. This gives an event spacing of
+ * 1 or 2 ms.
+ *
+ * Similarly a scheduled delay of 1100 to 1700 microseconds causes
+ * a nice periodicity of 2 ms, and a scheduled delay of 2100 to 2700
+ * microseconds causes a nice periodicity of 3 ms. These measurements were
+ * made using a Ubuntu Laptop.
+ *
+ * Scheduling a delay close to a multiple of the stack cycle time is risky, and
+ * should be avoided. Calculate the number of stack cycles to wait, and
+ * calculate a delay corresponding to half a cycle less.
+ *
+ * If the requested delay is in the range 1.5 to 2.5 stack cycle times, this
+ * function will return a calculated delay giving a periodicity of 2 stack cycle
+ * times. If the requested time is less than 1.5 stack cycle times, the
+ * resulting periodicity is 1 stack cycle time.
+ *
+ * Note that this function calculates the delay time required to make the
+ * scheduler fire at a specific stack tick. However the time jitter in the
+ * firing is largely dependent on the underlaying operating system's ablitity to
+ * trigger the stack execution with a high time precision.
+ *
+ * @param wanted_delay     In:    Wanted delay in microseconds.
+ * @param stack_cycle_time In:    Stack cycle time in microseconds. Must be larger than 0.
+ * @return Number of microseconds of delay to use with the scheduler.
+ */
+uint32_t pf_ppm_calculate_compensated_delay(
+   uint32_t                wanted_delay,
+   uint32_t                stack_cycle_time
+)
+{
+   uint32_t                number_of_stack_tics = 1;  /* We must wait at least one tick */
+
+   if (wanted_delay > stack_cycle_time + stack_cycle_time / 2)
+   {
+      number_of_stack_tics = (wanted_delay + stack_cycle_time / 2) / stack_cycle_time;
+   }
+
+   CC_ASSERT(number_of_stack_tics >= 1);
+   CC_ASSERT(number_of_stack_tics < 0x80000000);  /* No rollover to 'negative' numbers */
+   return number_of_stack_tics * stack_cycle_time - stack_cycle_time / 2;
+}
+
+/**
+ * @internal
  * Send the PPM data message to the controller.
  *
  * This is a callback for the scheduler. Arguments should fulfill pf_scheduler_timeout_ftn_t
  *
- * If the PPM has not been stopped during the wait then a data message
+ * If the PPM has not been stopped during the wait, then a data message
  * is sent and the function is rescheduled.
  *
  * @param net              InOut: The p-net stack instance
- * @param arg              In:   The IOCR instance.
- * @param current_time     In:   The current time.
+ * @param arg              In:    The IOCR instance.
+ * @param current_time     In:    The current time (system time in microseconds).
  */
 static void pf_ppm_send(
    pnet_t                  *net,
@@ -207,14 +262,14 @@ static void pf_ppm_send(
    uint32_t                current_time)
 {
    pf_iocr_t               *p_arg = (pf_iocr_t *)arg;
-   uint32_t                start = os_get_current_time_us();
 
    p_arg->ppm.ci_timer = UINT32_MAX;
    if (p_arg->ppm.ci_running == true)
    {
-      /* in_length is size of input to the controller */
+      /* Insert data, status etc. The in_length is the size of input to the controller */
       pf_ppm_finish_buffer(net, &p_arg->ppm, p_arg->in_length);
-      /* Now send it */
+
+      /* Send the Ethernet frame */
       /* ToDo: Handle RT_CLASS_UDP */
       if (os_eth_send(p_arg->p_ar->p_sess->eth_handle, p_arg->ppm.p_send_buffer) <= 0)
       {
@@ -222,8 +277,8 @@ static void pf_ppm_send(
       }
       else
       {
-         /* Compensate for the execution delay variations */
-         if (pf_scheduler_add(net, p_arg->ppm.control_interval, ppm_sync_name, pf_ppm_send, arg, &p_arg->ppm.ci_timer) == 0)
+         /* Schedule next execution */
+         if (pf_scheduler_add(net, p_arg->ppm.compensated_control_interval, ppm_sync_name, pf_ppm_send, arg, &p_arg->ppm.ci_timer) == 0)
          {
             p_arg->ppm.trx_cnt++;
             if (p_arg->ppm.first_transmit == false)
@@ -239,7 +294,6 @@ static void pf_ppm_send(
          }
       }
    }
-   p_arg->ppm.exec = os_get_current_time_us() - start;
 }
 
 int pf_ppm_activate_req(
@@ -279,13 +333,16 @@ int pf_ppm_activate_req(
       /* Pre-compute some offsets into the send buffer */
       p_ppm->cycle_counter_offset = p_ppm->buffer_pos +           /* ETH frame header */
             p_iocr->param.c_sdu_length;                           /* Profinet data length */
+
       p_ppm->data_status_offset = p_ppm->buffer_pos +             /* ETH frame header */
             p_iocr->param.c_sdu_length +                          /* Profinet data length */
             sizeof(uint16_t);                                     /* cycle counter */
+
       p_ppm->transfer_status_offset = p_ppm->buffer_pos +         /* ETH frame header */
             p_iocr->param.c_sdu_length +                          /* Profinet data length */
             sizeof(uint16_t) +                                    /* cycle counter */
             1;                                                    /* data status */
+
       p_ppm->buffer_length = p_ppm->buffer_pos +                  /* ETH frame header */
             p_iocr->param.c_sdu_length +                          /* Profinet data length */
             sizeof(uint16_t) +                                    /* cycle counter */
@@ -296,7 +353,7 @@ int pf_ppm_activate_req(
                       BIT(PNET_DATA_STATUS_BIT_DATA_VALID) +
                       BIT(PNET_DATA_STATUS_BIT_STATION_PROBLEM_INDICATOR);   /* Normal */
 
-      /* Get the buffer to store the outgoing data into. */
+      /* Get the buffer to store the outgoing frame into. */
       p_ppm->p_send_buffer = os_buf_alloc(PF_FRAME_BUFFER_SIZE);
 
       /* Default_values: Set buffer to zero and IOxS to BAD (=0) */
@@ -308,10 +365,17 @@ int pf_ppm_activate_req(
       p_ppm->control_interval = ((uint32_t)p_iocr->param.send_clock_factor *
             (uint32_t)p_iocr->param.reduction_ratio * 1000U) / 32U;   /* us */
 
+      p_ppm->compensated_control_interval = pf_ppm_calculate_compensated_delay(
+         p_ppm->control_interval,
+         net->scheduler_tick_interval);
+
+      LOG_DEBUG(PF_PPM_LOG, "PPM(%d): Starting cyclic sending for CREP %u with period %u microseconds\n",
+         __LINE__, crep, p_ppm->control_interval);
+
       pf_ppm_set_state(p_ppm, PF_PPM_STATE_RUN);
 
       p_ppm->ci_running = true;
-      ret = pf_scheduler_add(net, p_ppm->control_interval,
+      ret = pf_scheduler_add(net, p_ppm->compensated_control_interval,
          ppm_sync_name, pf_ppm_send, p_iocr, &p_ppm->ci_timer);
       if (ret != 0)
       {
@@ -792,24 +856,24 @@ void pf_ppm_show(
    pf_ppm_t                *p_ppm)
 {
    printf("ppm:\n");
-   printf("   state              = %s\n", pf_ppm_state_to_string(p_ppm->state));
-   printf("   exec               = %u\n", (unsigned)p_ppm->exec);
-   printf("   errline            = %u\n", (unsigned)p_ppm->errline);
-   printf("   errcnt             = %u\n", (unsigned)p_ppm->errcnt);
-   printf("   first_transmit     = %u\n", (unsigned)p_ppm->first_transmit);
-   printf("   trx_cnt            = %u\n", (unsigned)p_ppm->trx_cnt);
-   printf("   p_send_buffer      = %p\n", p_ppm->p_send_buffer);
-   printf("   p_send_buffer->len = %u\n", p_ppm->p_send_buffer ? ((os_buf_t *)(p_ppm->p_send_buffer))->len : 0);
-   printf("   new_buf            = %u\n", (unsigned)p_ppm->new_buf);
-   printf("   control_interval   = %u\n", (unsigned)p_ppm->control_interval);
-   printf("   cycle              = %u\n", (unsigned)p_ppm->cycle);
-   printf("   cycle_counter_off  = %u\n", (unsigned)p_ppm->cycle_counter_offset);
-   printf("   data_status_offset = %u\n", (unsigned)p_ppm->data_status_offset);
-   printf("   transfer_status_of = %u\n", (unsigned)p_ppm->transfer_status_offset);
-   printf("   ci_running         = %u\n", (unsigned)p_ppm->ci_running);
-   printf("   ci_timer           = %u\n", (unsigned)p_ppm->ci_timer);
-   printf("   transfer_status    = %u\n", (unsigned)p_ppm->transfer_status);
-   printf("   data_status        = %x\n", (unsigned)p_ppm->data_status);
-   printf("   buffer_length      = %u\n", (unsigned)p_ppm->buffer_length);
-   printf("   buffer_pos         = %u\n", (unsigned)p_ppm->buffer_pos);
+   printf("   state                        = %s\n", pf_ppm_state_to_string(p_ppm->state));
+   printf("   errline                      = %u\n", (unsigned)p_ppm->errline);
+   printf("   errcnt                       = %u\n", (unsigned)p_ppm->errcnt);
+   printf("   first_transmit               = %u\n", (unsigned)p_ppm->first_transmit);
+   printf("   trx_cnt                      = %u\n", (unsigned)p_ppm->trx_cnt);
+   printf("   p_send_buffer                = %p\n", p_ppm->p_send_buffer);
+   printf("   p_send_buffer->len           = %u\n", p_ppm->p_send_buffer ? ((os_buf_t *)(p_ppm->p_send_buffer))->len : 0);
+   printf("   new_buf                      = %u\n", (unsigned)p_ppm->new_buf);
+   printf("   control_interval             = %u\n", (unsigned)p_ppm->control_interval);
+   printf("   compensated_control_interval = %u\n", (unsigned)p_ppm->compensated_control_interval);
+   printf("   cycle                        = %u\n", (unsigned)p_ppm->cycle);
+   printf("   cycle_counter_off            = %u\n", (unsigned)p_ppm->cycle_counter_offset);
+   printf("   data_status_offset           = %u\n", (unsigned)p_ppm->data_status_offset);
+   printf("   transfer_status_of           = %u\n", (unsigned)p_ppm->transfer_status_offset);
+   printf("   ci_running                   = %u\n", (unsigned)p_ppm->ci_running);
+   printf("   ci_timer                     = %u\n", (unsigned)p_ppm->ci_timer);
+   printf("   transfer_status              = %u\n", (unsigned)p_ppm->transfer_status);
+   printf("   data_status                  = %x\n", (unsigned)p_ppm->data_status);
+   printf("   buffer_length                = %u\n", (unsigned)p_ppm->buffer_length);
+   printf("   buffer_pos                   = %u\n", (unsigned)p_ppm->buffer_pos);
 }

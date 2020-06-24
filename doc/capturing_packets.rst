@@ -33,6 +33,38 @@ sequence. When a packet is interpreted according to a GSDML file, the name of
 the GSDML file is displayed in the detail view of the packet.
 
 
+Show transmission time periodicity using Wireshark
+--------------------------------------------------
+In order to study the periodicity of sent frames, in the filter heading on the
+main screen select the MAC address of the p-net IO-device, for example::
+
+    eth.src == 54:ee:75:ff:95:a6
+
+In the column header, right-click and select "Column Preferences ...". Press "+"
+to add a new column. Change "Title" to "Delta displayed" and "Type" to
+"Delta time displayed".
+
+
+Plot transmission time periodicity using Wireshark
+--------------------------------------------------
+To plot the periodicity of sent frames, use the menu "Statistics" -> "I/O Graph".
+
+* Display filter: ``eth.src == 54:ee:75:ff:95:a6 and pn_io``
+* Y Axis: AVG(Y Field)
+* Y Field: ``frame.time_delta_displayed``
+* SMA (sample moving average) Period: None
+
+Adapt the MAC address to your p-net IO-device.
+Use an "Interval" setting of 10 or 100 ms.
+You need to zoom the Y-axis to an interesting range, maybe 0-10 ms.
+
+It is also interesting to add a line "MAX(Y Field)" and a line "MIN(Y Field)"
+in the same graph as the first line.
+
+The lines should be interpreted as the average, minimum and maximum
+packet-to-packet times during the interval (for example 100 ms).
+
+
 tcpdump
 -------
 When running on an embedded Linux board, it can be convenient to run without

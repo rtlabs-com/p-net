@@ -25,7 +25,7 @@ extern "C"
 /**
  * Initialize the scheduler.
  * @param net              InOut: The p-net stack instance
- * @param tick_interval    In:   System calls the tick function at these intervals (ms).
+ * @param tick_interval    In:    System calls the tick function at these intervals, in microseconds.
  */
 void pf_scheduler_init(
    pnet_t                     *net,
@@ -33,12 +33,13 @@ void pf_scheduler_init(
 
 /**
  * Schedule a call-back at a specific time.
+ *
  * @param net              InOut: The p-net stack instance
- * @param delay         In:   The delay until the function shall be called.
- * @param p_name        In:   Caller/owner (for debugging).
- * @param cb            In:   The call-back.
- * @param arg           In:   Argument to the call-back.
- * @param p_timeout     Out:  The timeout instance (used to remove if necessary).
+ * @param delay            In:    The delay until the function shall be called, in microseconds.
+ * @param p_name           In:    Caller/owner (for debugging).
+ * @param cb               In:    The call-back.
+ * @param arg              In:    Argument to the call-back.
+ * @param p_timeout        Out:   The timeout instance (used to remove if necessary).
  * @return  0  if the call-back was scheduled.
  *          -1 if an error occurred.
  */
