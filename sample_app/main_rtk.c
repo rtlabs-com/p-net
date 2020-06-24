@@ -42,39 +42,20 @@ static pnet_cfg_t                  pnet_default_cfg;
 
 /************************* Utilities ******************************************/
 
- int app_set_led(
-   uint16_t                id,
-   bool                    led_state)
+
+/**  TODO move
+ * Copy an IP address (as an integer) to a struct
+ *
+ * @param destination_struct  Out: destination
+ * @param ip                  In: IP address
+*/
+static void copy_ip_to_struct(pnet_cfg_ip_addr_t* destination_struct, os_ipaddr_t ip)
 {
-   if (id == APP_DATA_LED_ID)
-   {
-      gpio_set(GPIO_LED1, led_state ? 1 : 0);  /* "LED1" on circuit board */
-   }
-   else if (id == APP_PROFINET_SIGNAL_LED_ID)
-   {
-      gpio_set(GPIO_LED2, led_state ? 1 : 0);  /* "LED2" on circuit board */
-   }
-
-   return 0;
+   destination_struct->a = ((ip >> 24) & 0xFF);
+   destination_struct->b = ((ip >> 16) & 0xFF);
+   destination_struct->c = ((ip >> 8) & 0xFF);
+   destination_struct->d = (ip & 0xFF);
 }
-
-
-static void app_get_button(uint16_t id, bool *p_pressed)
-{
-   if (id == 0)
-   {
-      *p_pressed = (gpio_get(GPIO_BUTTON1) == 0);
-   }
-   else if (id == 1)
-   {
-      *p_pressed = (gpio_get(GPIO_BUTTON2) == 0);
-   }
-   else
-   {
-      *p_pressed = false;
-   }
-}
-
 
 static int _cmd_pnio_alarm_ack(
       int                  argc,
@@ -121,6 +102,11 @@ static int _cmd_pnio_run(
       char                 *argv[])
 {
    uint16_t                ix;
+   os_ethaddr_t            macbuffer;
+   os_ipaddr_t             ip;
+   os_ipaddr_t             netmask;
+   os_ipaddr_t             gateway;
+   int                     ret = 0;
 
    if (g_net != NULL)
    {
@@ -136,22 +122,23 @@ static int _cmd_pnio_run(
       strcpy(gp_appdata->arguments.station_name, APP_DEFAULT_STATION_NAME);
    }
 
+   ret = os_get_macaddress(gp_appdata->arguments.eth_interface, &macbuffer);
+   if (ret != 0)
+   {
+      printf("Error: The given Ethernet interface does not exist: %s\n", gp_appdata->arguments.eth_interface);
+      return 0;
+   }
+   ip = os_get_ip_address(gp_appdata->arguments.eth_interface);
+   netmask = os_get_netmask(gp_appdata->arguments.eth_interface);
+   gateway = os_get_gateway(gp_appdata->arguments.eth_interface);
+
    app_adjust_stack_configuration(&pnet_default_cfg);
    strcpy(pnet_default_cfg.im_0_data.order_id, "12345");
    strcpy(pnet_default_cfg.im_0_data.im_serial_number, "00001");
-   pnet_default_cfg.ip_addr.a = ip4_addr1 (&netif_default->ip_addr);
-   pnet_default_cfg.ip_addr.b = ip4_addr2 (&netif_default->ip_addr);
-   pnet_default_cfg.ip_addr.c = ip4_addr3 (&netif_default->ip_addr);
-   pnet_default_cfg.ip_addr.d = ip4_addr4 (&netif_default->ip_addr);
-   pnet_default_cfg.ip_mask.a = ip4_addr1 (&netif_default->netmask);
-   pnet_default_cfg.ip_mask.b = ip4_addr2 (&netif_default->netmask);
-   pnet_default_cfg.ip_mask.c = ip4_addr3 (&netif_default->netmask);
-   pnet_default_cfg.ip_mask.d = ip4_addr4 (&netif_default->netmask);
-   pnet_default_cfg.ip_gateway.a = pnet_default_cfg.ip_addr.a;
-   pnet_default_cfg.ip_gateway.b = pnet_default_cfg.ip_addr.b;
-   pnet_default_cfg.ip_gateway.c = pnet_default_cfg.ip_addr.c;
-   pnet_default_cfg.ip_gateway.d = 1;
-   memcpy (pnet_default_cfg.eth_addr.addr, netif_default->hwaddr, sizeof(pnet_ethaddr_t));
+   copy_ip_to_struct(&pnet_default_cfg.ip_addr, ip);
+   copy_ip_to_struct(&pnet_default_cfg.ip_mask, netmask);
+   copy_ip_to_struct(&pnet_default_cfg.ip_gateway, gateway);
+   memcpy (pnet_default_cfg.eth_addr.addr, netif_default->hwaddr, sizeof(os_ethaddr_t));
    strcpy(pnet_default_cfg.station_name, gp_appdata->arguments.station_name);
    pnet_default_cfg.cb_arg = (void*)gp_appdata;
 
@@ -160,7 +147,8 @@ static int _cmd_pnio_run(
    {
       if (gp_appdata->arguments.verbosity > 0)
       {
-         printf("Station name:        %s\n", gp_appdata->arguments.station_name);
+         print_network_details(gp_appdata->arguments.eth_interface);
+         printf("Station name:        %s\n\n", gp_appdata->arguments.station_name);
          printf("Initialized p-net application.\n\n");
          printf("Waiting for connect request from IO-controller\n");
       }
@@ -271,7 +259,6 @@ int main(void)
       printf("Number of slots:     %u (incl slot for DAP module)\n", PNET_MAX_MODULES);
       printf("P-net log level:     %u (DEBUG=0, ERROR=3)\n", LOG_LEVEL);
       printf("App verbosity level: %u\n", appdata.arguments.verbosity);
-      printf("Ethernet interface:  %s\n", appdata.arguments.eth_interface);
    }
 
    /* Main loop */

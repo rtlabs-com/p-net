@@ -761,7 +761,7 @@ typedef struct pf_cmina_dcp_ase
    char                    port_name[14 + 1];         /* Terminated */
 
    char                    manufacturer_specific_string[240 + 1];
-   pnet_ethaddr_t          mac_address;
+   os_ethaddr_t            mac_address;
    uint16_t                standard_gw_value;
 
    bool                    dhcp_enable;
@@ -939,7 +939,7 @@ typedef struct pf_ar_param
    uint16_t                ar_type;                      /** pf_ar_type_values_t */
    pf_uuid_t               ar_uuid;
    uint16_t                session_key;
-   pnet_ethaddr_t          cm_initiator_mac_add;
+   os_ethaddr_t            cm_initiator_mac_add;
    pf_uuid_t               cm_initiator_object_uuid;
    pf_ar_properties_t      ar_properties;
    uint16_t                cm_initiator_activity_timeout_factor;        /** res: 100ms */
@@ -950,7 +950,7 @@ typedef struct pf_ar_param
 
 typedef struct pf_ar_result
 {
-   pnet_ethaddr_t          cm_responder_mac_add;
+   os_ethaddr_t          cm_responder_mac_add;
    uint16_t                responder_udp_rt_port;
 } pf_ar_result_t;
 
@@ -1003,7 +1003,7 @@ typedef struct pf_iocr_param
 
    pf_iocr_tag_header_t    iocr_tag_header;
 
-   pnet_ethaddr_t          iocr_multicast_mac_add;       /** See IEC61158-6-10 */
+   os_ethaddr_t            iocr_multicast_mac_add;       /** See IEC61158-6-10 */
 
    uint16_t                nbr_apis;
    pf_api_entry_t          apis[PNET_MAX_API];
@@ -1253,8 +1253,8 @@ typedef struct pf_ppm
    int                     errline;
    uint32_t                errcnt;
 
-   pnet_ethaddr_t          sa;                  /* Source MAC address */
-   pnet_ethaddr_t          da;                  /* Destination MAC address (IO-controller) */
+   os_ethaddr_t            sa;                  /* Source MAC address */
+   os_ethaddr_t            da;                  /* Destination MAC address (IO-controller) */
 
    bool                    first_transmit;
 
@@ -1290,7 +1290,7 @@ typedef struct pf_cpm
    uint32_t                recv_cnt;
    uint32_t                free_cnt;
 
-   pnet_ethaddr_t          sa;                  /* Mac of the controller */
+   os_ethaddr_t          sa;                  /* Mac of the controller */
 
    uint16_t                nbr_frame_id;        /* 1 or 2 */
    uint16_t                frame_id[2];         /* 2 needed for some instances of RT_CLASS_3 */
@@ -1424,7 +1424,7 @@ typedef struct pf_apmx
    struct pf_ar            *p_ar;
    struct pf_alpmx         *p_alpmx;
 
-   pnet_ethaddr_t          da;                           /* Destination MAC address (IO-controller) */
+   os_ethaddr_t            da;                           /* Destination MAC address (IO-controller) */
 
    uint16_t                src_ref;                      /* Our ref */
    uint16_t                dst_ref;                      /* controller local_alarm_reference */
@@ -1478,7 +1478,7 @@ typedef enum pf_alpmi_state_values
  */
 typedef struct pf_alpmx
 {
-   pnet_ethaddr_t          da;               /* Destination MAC address (IO-controller) */
+   os_ethaddr_t            da;               /* Destination MAC address (IO-controller) */
 
    /*
     * The sequence number is used for PULL/PLUG requests.
@@ -1564,7 +1564,7 @@ typedef struct pf_ar
    pf_session_info_t       *p_sess;
 
    pf_cmdev_state_values_t cmdev_state;                  /* pf_cmdev_state_values_t */
-   pnet_ethaddr_t          src_addr;                     /* Connect client address */
+   os_ethaddr_t            src_addr;                     /* Connect client address */
 
    uint16_t                nbr_ar_param;
    pf_ar_param_t           ar_param;                     /* From connect.req */
@@ -1976,7 +1976,7 @@ struct pnet
    os_mutex_t                          *ppm_buf_lock;
    atomic_int                          ppm_instance_cnt;
    uint16_t                            dcp_global_block_qualifier;
-   pnet_ethaddr_t                      dcp_sam; /* Source address (MAC) to current DCP remote peer */
+   os_ethaddr_t                        dcp_sam;
    bool                                dcp_delayed_response_waiting;
    uint32_t                            dcp_timeout;
    uint32_t                            dcp_sam_timeout; /* Handle to the SAM timeout instance */

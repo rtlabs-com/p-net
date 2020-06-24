@@ -82,6 +82,10 @@ typedef void os_channel_t;
                              ((uint32_t)((c) & 0xff) << 8)  | \
                              (uint32_t)((d) & 0xff))
 
+#define OS_INET_ADDRSTRLEN       16
+#define OS_ETH_ADDRSTRLEN        18
+#define OS_HOST_NAME_MAX         64     /* Value from Linux */
+
 /** Set an IP address given by the four byte-parts */
 #define OS_IP4_ADDR_TO_U32(ipaddr, a,b,c,d)  ipaddr = OS_MAKEU32(a,b,c,d)
 
@@ -113,6 +117,14 @@ enum os_eth_type {
 
 typedef uint32_t os_ipaddr_t;
 typedef uint16_t os_ipport_t;
+
+/**
+ * The Ethernet MAC address.
+ */
+typedef struct os_ethaddr
+{
+  uint8_t addr[6];
+} os_ethaddr_t;
 
 int os_snprintf (char * str, size_t size, const char * fmt, ...) CC_FORMAT (3,4);
 void os_log (int type, const char * fmt, ...) CC_FORMAT (2,3);
@@ -194,11 +206,93 @@ int os_udp_recvfrom(uint32_t id,
       int size);
 void os_udp_close(uint32_t id);
 
+/**
+ * Get network parameters (IP address, netmask etc)
+ *
+ * For example:
+ *
+ * IP address        Represented by
+ * 1.0.0.0           0x01000000 = 16777216
+ * 0.0.0.1           0x00000001 = 1
+ *
+ * @param interface_name      In: Ethernet interface name, for example eth0
+ * @param p_ipaddr            Out: IPv4 address
+ * @param p_netmask           Out: Netmask
+ * @param p_gw                Out: Default gateway
+ * @param hostname            Out: Host name, for example my_laptop_4
+ * @return  0  if the operation succeeded.
+ *          -1 if an error occurred.
+ */
 int os_get_ip_suite(
+   const char              *interface_name,
    os_ipaddr_t             *p_ipaddr,
    os_ipaddr_t             *p_netmask,
    os_ipaddr_t             *p_gw,
-   const char              **p_device_name);
+   char                    *hostname);
+
+/**
+ * Read the IP address as an integer. For IPv4.
+ *
+ * For example:
+ *
+ * IP address        Represented by
+ * 1.0.0.0           0x01000000 = 16777216
+ * 0.0.0.1           0x00000001 = 1
+ *
+ * @param interface_name      In: Name of network interface
+ * @return IP address on success and
+ *         0 if an error occurred
+*/
+os_ipaddr_t os_get_ip_address(
+    const char              *interface_name
+);
+
+/**
+ * Read the netmask as an integer. For IPv4.
+ *
+ * @param interface_name      In: Name of network interface
+ * @return netmask
+*/
+os_ipaddr_t os_get_netmask(
+    const char              *interface_name
+);
+
+/**
+ * Read the default gateway address as an integer. For IPv4.
+ *
+ * Assumes the default gateway is found on .1 on same subnet as the IP address.
+ *
+ * @param interface_name      In: Name of network interface
+ * @return netmask
+*/
+os_ipaddr_t os_get_gateway(
+   const char              *interface_name
+);
+
+/**
+ * Read the MAC address.
+ *
+ * @param interface_name      In: Name of network interface
+ * @param mac_addr            Out: MAC address
+ *
+ * @return 0 on success and
+ *         -1 if an error occurred
+*/
+int os_get_macaddress(
+   const char              *interface_name,
+   os_ethaddr_t            *p_mac
+);
+
+/**
+ * Read the current host name
+ *
+ * @param hostname            Out: Host name
+ * @return 0 on success and
+ *         -1 if an error occurred
+*/
+int os_get_hostname(
+   char              *hostname
+);
 
 /**
  * Set network parameters (IP address, netmask etc)
@@ -225,6 +319,35 @@ int os_set_ip_suite(
    os_ipaddr_t             *p_gw,
    const char              *hostname,
    bool                    permanent);
+
+
+void os_set_led(
+   uint16_t                id,         /* Starting from 0 */
+   bool                    on);
+
+void os_get_button(
+   uint16_t                id,         /* Starting from 0 */
+   bool                    *p_pressed);
+
+
+/**
+ * Convert IPv4 address to string
+ * @param ip               In: IP address
+ * @param outputstring     Out: Resulting string. Should have length OS_INET_ADDRSTRLEN.
+ */
+void os_ip_to_string(
+   os_ipaddr_t             ip,
+   char                    *outputstring);
+
+/**
+ * Convert MAC address to string
+ * @param mac              In: MAC address
+ * @param outputstring     Out: Resulting string. Should have length OS_ETH_ADDRSTRLEN
+ */
+void os_mac_to_string(
+   os_ethaddr_t            mac,
+   char                    *outputstring);
+
 
 #ifdef __cplusplus
 }

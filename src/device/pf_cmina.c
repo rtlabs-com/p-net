@@ -91,7 +91,7 @@ int pf_cmina_set_default_cfg(
       net->cmina_perm_dcp_ase.device_initiative = p_cfg->send_hello ? 1 : 0;
       net->cmina_perm_dcp_ase.device_role = 1;            /* Means: PNIO Device */
 
-      memcpy(net->cmina_perm_dcp_ase.mac_address.addr, p_cfg->eth_addr.addr, sizeof(pnet_ethaddr_t));
+      memcpy(net->cmina_perm_dcp_ase.mac_address.addr, p_cfg->eth_addr.addr, sizeof(os_ethaddr_t));
 
       strcpy(net->cmina_perm_dcp_ase.port_name, "");      /* Terminated */
       strncpy(net->cmina_perm_dcp_ase.manufacturer_specific_string, p_cfg->manufacturer_specific_string, sizeof(net->cmina_perm_dcp_ase.manufacturer_specific_string));

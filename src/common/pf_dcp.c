@@ -47,8 +47,8 @@
 CC_PACKED_BEGIN
 typedef struct CC_PACKED pf_ethhdr
 {
-  pnet_ethaddr_t dest;
-  pnet_ethaddr_t src;
+  os_ethaddr_t dest;
+  os_ethaddr_t src;
   uint16_t  type;
 } pf_ethhdr_t;
 CC_PACKED_END
@@ -78,14 +78,14 @@ CC_STATIC_ASSERT(PF_DCP_BLOCK_HDR_SIZE == sizeof(pf_dcp_block_hdr_t));
 /*
  * This is the standard DCP HELLO broadcast address (MAC).
  */
-static const pnet_ethaddr_t dcp_mc_addr_hello =
+static const os_ethaddr_t dcp_mc_addr_hello =
 {
    {0x01, 0x0e, 0xcf, 0x00, 0x00, 0x01 }
 };
 
 #define PF_MAC_NIL         {{0, 0, 0, 0, 0, 0}}
 
-static const pnet_ethaddr_t mac_nil = PF_MAC_NIL;
+static const os_ethaddr_t mac_nil = PF_MAC_NIL;
 
 static const char          *dcp_sync_name = "dcp";
 
@@ -727,8 +727,8 @@ static int pf_dcp_get_set(
          dst_start = dst_pos;
 
          /* Set eth header in the response */
-         memcpy(p_dst_ethhdr->dest.addr, p_src_ethhdr->src.addr, sizeof(pnet_ethaddr_t));
-         memcpy (p_dst_ethhdr->src.addr, p_cfg->eth_addr.addr, sizeof(pnet_ethaddr_t));
+         memcpy(p_dst_ethhdr->dest.addr, p_src_ethhdr->src.addr, sizeof(os_ethaddr_t));
+         memcpy (p_dst_ethhdr->src.addr, &p_cfg->eth_addr.addr, sizeof(os_ethaddr_t));
          p_dst_ethhdr->type = htons(OS_ETHTYPE_PROFINET);
 
          /* Copy DCP header from the request, and modify what is needed. */
@@ -926,7 +926,7 @@ int pf_dcp_hello_req(
          dst_pos = 0;
          p_ethhdr = (pf_ethhdr_t *)&p_dst[dst_pos];
          memcpy(p_ethhdr->dest.addr, dcp_mc_addr_hello.addr, sizeof(p_ethhdr->dest.addr));
-         memcpy(p_ethhdr->src.addr, p_cfg->eth_addr.addr, sizeof(pnet_ethaddr_t));
+         memcpy(p_ethhdr->src.addr, p_cfg->eth_addr.addr, sizeof(os_ethaddr_t));
 
          p_ethhdr->type = htons(OS_ETHTYPE_PROFINET);
          dst_pos += sizeof(pf_ethhdr_t);
@@ -1089,8 +1089,8 @@ static int pf_dcp_identify_req(
       /* Save position for later */
       dst_start = dst_pos;
 
-      memcpy(p_dst_ethhdr->dest.addr, p_src_ethhdr->src.addr, sizeof(pnet_ethaddr_t));
-      memcpy(p_dst_ethhdr->src.addr, p_cfg->eth_addr.addr, sizeof(pnet_ethaddr_t));
+      memcpy(p_dst_ethhdr->dest.addr, p_src_ethhdr->src.addr, sizeof(os_ethaddr_t));
+      memcpy(p_dst_ethhdr->src.addr, p_cfg->eth_addr.addr, sizeof(os_ethaddr_t));
       p_dst_ethhdr->type = htons(OS_ETHTYPE_PROFINET);
 
       /* Start with the request header and modify what is needed. */

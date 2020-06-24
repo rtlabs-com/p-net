@@ -49,6 +49,93 @@ int os_set_ip_suite(
    return 0;
 }
 
+// TODO Move
+void os_mac_to_string(
+   os_ethaddr_t            mac,
+   char                    *outputstring)
+{
+   snprintf(outputstring, OS_ETH_ADDRSTRLEN, "%02X:%02X:%02X:%02X:%02X:%02X",
+      mac.addr[0],
+      mac.addr[1],
+      mac.addr[2],
+      mac.addr[3],
+      mac.addr[4],
+      mac.addr[5]);
+}
+
+// TODO Move
+void os_ip_to_string(
+   os_ipaddr_t             ip,
+   char                    *outputstring)
+{
+   snprintf(outputstring, OS_ETH_ADDRSTRLEN, "%u.%u.%u.%u",
+      (uint8_t)((ip >> 24) & 0xFF),
+      (uint8_t)((ip >> 16) & 0xFF),
+      (uint8_t)((ip >> 8) & 0xFF),
+      (uint8_t)(ip & 0xFF));
+}
+
+int os_get_macaddress(
+    const char              *interface_name,
+    os_ethaddr_t            *mac_addr
+)
+{
+   memcpy(mac_addr, netif_default->hwaddr, sizeof(os_ethaddr_t));
+   return 0;
+}
+
+os_ipaddr_t os_get_ip_address(
+    const char              *interface_name
+)
+{
+   return netif_default->ip_addr.addr;
+}
+
+os_ipaddr_t os_get_netmask(
+   const char              *interface_name)
+{
+   return netif_default->netmask.addr;
+}
+
+os_ipaddr_t os_get_gateway(
+   const char              *interface_name)
+{
+   /* TODO Read the actual default gateway */
+
+   os_ipaddr_t ip;
+   os_ipaddr_t gateway;
+
+   ip = os_get_ip_address(interface_name);
+   gateway = (ip & 0xFFFFFF00) | 0x00000001;
+
+   return gateway;
+}
+
+int os_get_hostname(
+   char              *hostname
+)
+{
+   strcpy(hostname, netif_default->hostname);
+   return 0;
+}
+
+int os_get_ip_suite(
+   const char              *interface_name,
+   os_ipaddr_t             *p_ipaddr,
+   os_ipaddr_t             *p_netmask,
+   os_ipaddr_t             *p_gw,
+   char                    *hostname)
+{
+   int                     ret = -1;
+
+   *p_ipaddr = os_get_ip_address(interface_name);
+   *p_netmask = os_get_netmask(interface_name);
+   *p_gw = os_get_gateway(interface_name);
+   ret = os_get_hostname(hostname);
+
+   return ret;
+}
+
 int os_snprintf(char * str, size_t size, const char * fmt, ...)
 {
    int ret;

@@ -33,11 +33,13 @@ extern "C"
 {
 #endif
 
-#include <stdint.h>
-#include <stddef.h>
-#include <stdbool.h>
-#include <stdio.h>
 #include <pnet_export.h>
+#include "osal.h"
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
 
 /**
  * # Profinet Stack Options
@@ -1034,7 +1036,7 @@ typedef struct pnet_cfg_device_id
  * The Profinet stack also supports assigning an IP address, mask and gateway address
  * via DCP Set commands based on the Ethernet MAC address.
  *
- * An IP address of 1.0.0.0 has the member a=1, and the rest of the members
+ * An IP address of 0.0.0.1 has the member d=1, and the rest of the members
  * set to 0.
  *
  */
@@ -1045,14 +1047,6 @@ typedef struct pnet_ip_addr_t
    uint8_t                 c;
    uint8_t                 d;
 } pnet_cfg_ip_addr_t;
-
-/**
- * The Ethernet MAC address.
- */
-typedef struct pnet_ethaddr
-{
-  uint8_t addr[6];
-} pnet_ethaddr_t;
 
 /* LLDP Autonegotiation */
 #define PNET_LLDP_AUTONEG_SUPPORTED                            (1u << 0)
@@ -1088,8 +1082,8 @@ typedef struct pnet_lldp_cfg
 {
    char                    chassis_id[240 + 1];    /**< Terminated string */
    char                    port_id[240 + 1];       /**< Terminated string */
-   pnet_ethaddr_t          port_addr;
-   uint16_t                ttl;                    /**< Time to live in seconds */
+   os_ethaddr_t            port_addr;
+   uint16_t                ttl;
    uint16_t                rtclass_2_status;
    uint16_t                rtclass_3_status;
    uint8_t                 cap_aneg;               /**< Autonegotiation supported and enabled */
@@ -1147,7 +1141,7 @@ typedef struct pnet_cfg
    pnet_cfg_ip_addr_t      ip_addr;
    pnet_cfg_ip_addr_t      ip_mask;
    pnet_cfg_ip_addr_t      ip_gateway;
-   pnet_ethaddr_t          eth_addr;
+   os_ethaddr_t            eth_addr;
 } pnet_cfg_t;
 
 /**
