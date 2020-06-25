@@ -94,7 +94,8 @@ enum os_eth_type {
   OS_ETHTYPE_PROFINET  = 0x8892U,
   OS_ETHTYPE_ETHERCAT  = 0x88A4U,
   OS_ETHTYPE_LLDP      = 0x88CCU,
-};
+}OS_ETH_TYPE;
+
 
 /* 255.255.255.255 */
 #ifndef OS_IPADDR_NONE
@@ -206,6 +207,17 @@ uint8_t os_buf_header(os_buf_t *p, int16_t header_size_increment);
  * @return  The number of bytes sent, or -1 if an error occurred.
  */
 int os_eth_send(
+   os_eth_handle_t         *handle,
+   os_buf_t                *buf);
+
+/**
+ * Send LLDP data
+ *
+ * @param handle        In: Ethernet handle
+ * @param buf           In: Buffer with data to be sent
+ * @return  The number of bytes sent, or -1 if an error occurred.
+ */
+int os_eth_lldp_send(
    os_eth_handle_t         *handle,
    os_buf_t                *buf);
 

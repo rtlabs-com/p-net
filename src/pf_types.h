@@ -181,6 +181,17 @@ typedef struct pf_rpc_header
    uint8_t           serial_low;
 } pf_rpc_header_t;
 
+typedef enum pf_write_req_error_type_values
+{
+	PF_WRT_ERROR_REMOTE_MISMATCH = 0x8001
+}pf_write_req_error_type_t;
+
+typedef enum pf_write_req_ext_error_type_values
+{
+	PF_WRT_ERROR_PORTID_MISMATCH = 0x8000,
+	PF_WRT_ERROR_CHASSISID_MISMATCH = 0x8001
+}pf_write_req_ext_error_type_t;
+
 
 /************************** Block header *************************************/
 
@@ -253,6 +264,10 @@ typedef enum pf_block_type_values
    PF_BT_PRMBEGIN_REQ                  = 0x0118,
    PF_BT_SUBMODULE_PRMBEGIN_REQ        = 0x0119,
 
+   /* LLDP Peer*/
+   PF_BT_PDPORTCHECK              	   = 0x0200,
+   PF_BT_CHECKPEERS              	   = 0x020a,
+   
    PF_BT_INTERFACE_ADJUST              = 0x0250,
 
    PF_BT_MAINTENANCE_ITEM              = 0x0f00,
@@ -748,6 +763,7 @@ typedef struct pf_cmina_dcp_ase
    uint8_t                 device_role;               /* Only value "1" supported */
    uint16_t                device_initiative;         /* 1: Should send hello. 0: No sending of hello */
 
+   char                    alias_name[249 + 1];  		/* Terminated */
    struct
    {
       /* Order is important!! */

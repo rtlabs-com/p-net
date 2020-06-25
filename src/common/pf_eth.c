@@ -85,7 +85,9 @@ int pf_eth_recv(
       }
       break;
    case OS_ETHTYPE_LLDP:
-      /* ToDo: */
+	   LOG_INFO(PF_ETH_LOG, "LLDP: Recieved LLDP frame\n");
+	   /* eth_display_data(p_buf->payload,p_buf->len); */
+	   pf_lldp_recv(net,p_buf,frame_pos);
       break;
    default:
       /* Not a profinet packet. */

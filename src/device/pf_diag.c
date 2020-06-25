@@ -264,6 +264,27 @@ int pf_diag_add(
                p_item->usi = usi;
                memcpy(p_item->fmt.usi.manuf_data, p_manuf_data, sizeof(p_item->fmt.usi.manuf_data));
             }
+            else if (usi == PF_USI_EXTENDED_CHANNEL_DIAGNOSIS)
+            {
+                p_item->usi = usi;
+                PNET_DIAG_CH_PROP_SPEC_SET(p_item->fmt.std.ch_properties, PNET_DIAG_CH_PROP_SPEC_APPEARS);
+
+                p_item->fmt.std.ch_nbr = ch_nbr;
+                p_item->fmt.std.ch_properties = ch_properties;
+                p_item->fmt.std.ch_error_type = ch_error_type;
+                p_item->fmt.std.ext_ch_error_type = ext_ch_error_type;
+                p_item->fmt.std.ext_ch_add_value = ext_ch_add_value;
+                p_item->fmt.std.qual_ch_qualifier = qual_ch_qualifier;
+             
+                /* Link it into the sub-slot reported list */
+                p_item->next = p_subslot->diag_list;
+                p_subslot->diag_list = item_ix;
+                
+                /*ToDo: Write to NVRAM */
+                
+                os_mutex_unlock(p_dev->diag_mutex);
+            	return 0;
+            }
             else
             {
                p_item->usi = PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS;
