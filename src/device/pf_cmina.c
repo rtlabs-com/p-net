@@ -73,6 +73,25 @@ static void pf_cmina_send_hello(
    }
 }
 
+/**
+ * @internal
+ * Reset the configuration to default values.
+ *
+ * Triggers the application callback \a pnet_reset_ind() for some \a reset_mode
+ * values.
+ *
+ * Reset modes:
+ *
+ * 0:  Power-on reset
+ * 1:  Reset application parameters
+ * 2:  Reset communication parameters
+ * 99: Reset application and communication parameters.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param reset_mode       In:   Reset mode.
+ * @return  0  if the operation succeeded.
+ *          -1 if an error occurred.
+ */
 int pf_cmina_set_default_cfg(
    pnet_t                  *net,
    uint16_t                reset_mode)
@@ -165,9 +184,6 @@ int pf_cmina_set_default_cfg(
 void pf_cmina_dcp_set_commit(
    pnet_t                  *net)
 {
-   /* Assume permanent changes, possibly modify later on */
-   bool                    permanent = true;
-
    if (net->cmina_commit_ip_suite == true)
    {
       LOG_DEBUG(PF_DCP_LOG,"CMINA(%d): Setting IP address: %u.%u.%u.%u  Station name: %s\n",
@@ -179,11 +195,12 @@ void pf_cmina_dcp_set_commit(
          net->cmina_temp_dcp_ase.name_of_station);
       net->cmina_commit_ip_suite = false;
       os_set_ip_suite(net->interface_name,
+    		  	  	  net->cmina_temp_dcp_ase.dhcp_enable,
                       &net->cmina_temp_dcp_ase.full_ip_suite.ip_suite.ip_addr,
                       &net->cmina_temp_dcp_ase.full_ip_suite.ip_suite.ip_mask,
                       &net->cmina_temp_dcp_ase.full_ip_suite.ip_suite.ip_gateway,
                       net->cmina_temp_dcp_ase.name_of_station,
-                      permanent);
+                      net->dcp_global_block_qualifier);
    }
 }
 
@@ -314,9 +331,19 @@ int pf_cmina_dcp_set_ind(
             {
                change_ip = (memcmp(&net->cmina_temp_dcp_ase.full_ip_suite.ip_suite, p_value, value_length) != 0);
 
-            memcpy(&net->cmina_temp_dcp_ase.full_ip_suite.ip_suite, p_value, sizeof(net->cmina_temp_dcp_ase.full_ip_suite.ip_suite));
-            LOG_INFO(PF_DCP_LOG,"CMINA(%d): The incoming set request is about changing IP. PF_DCP_SUB_IP_PAR New IP: 0x%"PRIxLEAST32"\n", __LINE__, net->cmina_temp_dcp_ase.full_ip_suite.ip_suite.ip_addr);
-            if (temp == false)
+				memcpy(&net->cmina_temp_dcp_ase.full_ip_suite.ip_suite, p_value, sizeof(net->cmina_temp_dcp_ase.full_ip_suite.ip_suite));
+				LOG_INFO(PF_DCP_LOG,"CMINA(%d): The incoming set request is about to change IP. PF_DCP_SUB_IP_PAR New IP: 0x%"PRIxLEAST32"\n", __LINE__, net->cmina_temp_dcp_ase.full_ip_suite.ip_suite.ip_addr);
+				if (temp == false)
+				{
+				   net->cmina_perm_dcp_ase.full_ip_suite = net->cmina_temp_dcp_ase.full_ip_suite;
+				}
+				else
+				{
+					memset(&net->cmina_perm_dcp_ase.full_ip_suite,0,sizeof(net->cmina_perm_dcp_ase.full_ip_suite));
+		            change_ip =1;
+				}
+            }
+            else
             {
                LOG_INFO(PF_DCP_LOG,"CMINA(%d): Got incoming request to change IP suite to an illegal value.\n", __LINE__);
                *p_block_error = PF_DCP_BLOCK_ERROR_SUBOPTION_NOT_SET;
@@ -334,17 +361,18 @@ int pf_cmina_dcp_set_ind(
             change_ip = (memcmp(&net->cmina_temp_dcp_ase.full_ip_suite, p_value, value_length) != 0);
             /* -OCR- This always returend an PF_DCP_BLOCK_ERROR_SUBOPTION_NOT_SET error */
                memcpy(&net->cmina_temp_dcp_ase.full_ip_suite, p_value, value_length);
-               if (temp == false)
-               {
-                  net->cmina_perm_dcp_ase.full_ip_suite = net->cmina_temp_dcp_ase.full_ip_suite;
-               }
+				if (temp == false)
+				{
+				   net->cmina_perm_dcp_ase.full_ip_suite = net->cmina_temp_dcp_ase.full_ip_suite;
+				}
+				else
+				{
+					 /*Always NULL out the perm suite so the application layer knows this */
+					memset(&net->cmina_perm_dcp_ase.full_ip_suite,0,sizeof(net->cmina_perm_dcp_ase.full_ip_suite));
+		            /* Need to notify the app of change so it can save to NOVRAM*/
+					change_ip =1;
+				}
                ret = 0;
-            }
-            else
-            {
-               LOG_INFO(PF_DCP_LOG,"CMINA(%d): Got incoming request to change full IP suite to an illegal value.\n", __LINE__);
-               *p_block_error = PF_DCP_BLOCK_ERROR_SUBOPTION_NOT_SET;
-            }
          }
          else
          {
@@ -362,30 +390,41 @@ int pf_cmina_dcp_set_ind(
       case PF_DCP_SUB_DEV_PROP_NAME:
          if (value_length < sizeof(net->cmina_temp_dcp_ase.name_of_station))
          {
-            if (pf_cmina_is_stationname_valid((char *)p_value, value_length))
-            {
-               change_name = ((strncmp(net->cmina_temp_dcp_ase.name_of_station, (char *)p_value, value_length) != 0) &&
-                     (strlen(net->cmina_temp_dcp_ase.name_of_station) != value_length));
+             if (pf_cmina_is_stationname_valid((char*)p_value, value_length) == 0)
+             {
+                 /* Removed string company and length check.  This check would not
+                  * 	  push the update to the application level so always update the
+                  * 	  application so it is aware of the changes.*/
+                 strncpy(net->cmina_temp_dcp_ase.name_of_station, (char*)p_value, value_length);
+                 net->cmina_temp_dcp_ase.name_of_station[value_length] = '\0';
+				/* -OCR- DCP_NAME_1 Failure: Need to notify the app of change so it can save to NOVRAM*/
+				change_name =1;
+                 LOG_INFO(PF_DCP_LOG, "CMINA(%d): Change station name request. Change %s (%d,%d,%d) New name: %s\n", 
+                		 __LINE__, 
+                		 change_name ? "TRUE":"FALSE",
+                		strncmp(net->cmina_temp_dcp_ase.name_of_station, (char*)p_value, value_length) ,
+                		strlen(net->cmina_temp_dcp_ase.name_of_station),
+                		value_length,
+                		 net->cmina_temp_dcp_ase.name_of_station);
+                 
+                 /* This always returend an PF_DCP_BLOCK_ERROR_SUBOPTION_NOT_SET error
+                  * 		when it was not a temp update. The following resolves this error */
+                 if (temp == false)
+                 {
+                     strcpy(net->cmina_perm_dcp_ase.name_of_station, net->cmina_temp_dcp_ase.name_of_station);   /* It always fits */
+                 }
+ 				 else
+ 				 {
+ 					 memset(&net->cmina_perm_dcp_ase.name_of_station,0,sizeof(net->cmina_perm_dcp_ase.name_of_station));
 
-               strncpy(net->cmina_temp_dcp_ase.name_of_station, (char *)p_value, value_length);
-               net->cmina_temp_dcp_ase.name_of_station[value_length] = '\0';
-               LOG_INFO(PF_DCP_LOG,"CMINA(%d): The incoming set request is about changing station name. New name: %s\n", __LINE__, net->cmina_temp_dcp_ase.name_of_station);
-
-               if (temp == false)
-               {
-                  strcpy(net->cmina_perm_dcp_ase.name_of_station, net->cmina_temp_dcp_ase.name_of_station);   /* It always fits */
-               }
-               else
-               {
-                  memset(net->cmina_perm_dcp_ase.name_of_station, 0, sizeof(net->cmina_perm_dcp_ase.name_of_station));
-               }
-               ret = 0;
-            }
-            else
-            {
-               LOG_INFO(PF_DCP_LOG,"CMINA(%d): Got incoming request to change station name to an illegal value.\n", __LINE__);
-               *p_block_error = PF_DCP_BLOCK_ERROR_SUBOPTION_NOT_SET;
-            }
+ 				 }
+                 ret = 0;
+             }
+             else
+             {
+                 LOG_INFO(PF_DCP_LOG, "CMINA(%d): Got incoming request to change station name to an illegal value.\n", __LINE__);
+                 *p_block_error = PF_DCP_BLOCK_ERROR_SUBOPTION_NOT_SET;
+             }
          }
          else
          {
@@ -449,7 +488,8 @@ int pf_cmina_dcp_set_ind(
 
          if ((change_name == true) || (change_ip == true))
          {
-            if ((have_name == true) && (have_ip == true))
+         	/* if ((have_name == true) && (have_ip == true)) Commit change to OS */
+            if ((have_name == true) || (have_ip == true))
             {
                /* Stop DHCP timer */
                net->cmina_commit_ip_suite = true;

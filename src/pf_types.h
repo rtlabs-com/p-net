@@ -26,6 +26,8 @@ extern "C"
 {
 #endif
 
+#include <stdio.h>
+#include <cc.h>
 #if PNET_USE_ATOMICS
 #include <stdatomic.h>
 #else
