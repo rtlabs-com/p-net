@@ -342,6 +342,7 @@ int pf_cmina_dcp_set_ind(
 					memset(&net->cmina_perm_dcp_ase.full_ip_suite,0,sizeof(net->cmina_perm_dcp_ase.full_ip_suite));
 		            change_ip =1;
 				}
+				ret = 0;
             }
             else
             {
@@ -359,7 +360,7 @@ int pf_cmina_dcp_set_ind(
          {
             LOG_INFO(PF_DCP_LOG,"CMINA(%d): The incoming set request is about changing IP. PF_DCP_SUB_IP_SUITE\n", __LINE__);
             change_ip = (memcmp(&net->cmina_temp_dcp_ase.full_ip_suite, p_value, value_length) != 0);
-            /* -OCR- This always returend an PF_DCP_BLOCK_ERROR_SUBOPTION_NOT_SET error */
+            /* This always returend an PF_DCP_BLOCK_ERROR_SUBOPTION_NOT_SET error */
                memcpy(&net->cmina_temp_dcp_ase.full_ip_suite, p_value, value_length);
 				if (temp == false)
 				{
@@ -390,14 +391,14 @@ int pf_cmina_dcp_set_ind(
       case PF_DCP_SUB_DEV_PROP_NAME:
          if (value_length < sizeof(net->cmina_temp_dcp_ase.name_of_station))
          {
-             if (pf_cmina_is_stationname_valid((char*)p_value, value_length) == 0)
+             if (pf_cmina_is_stationname_valid((char*)p_value, value_length))
              {
                  /* Removed string company and length check.  This check would not
                   * 	  push the update to the application level so always update the
                   * 	  application so it is aware of the changes.*/
                  strncpy(net->cmina_temp_dcp_ase.name_of_station, (char*)p_value, value_length);
                  net->cmina_temp_dcp_ase.name_of_station[value_length] = '\0';
-				/* -OCR- DCP_NAME_1 Failure: Need to notify the app of change so it can save to NOVRAM*/
+				/* DCP_NAME_1 Failure: Need to notify the app of change so it can save to NOVRAM*/
 				change_name =1;
                  LOG_INFO(PF_DCP_LOG, "CMINA(%d): Change station name request. Change %s (%d,%d,%d) New name: %s\n", 
                 		 __LINE__, 
