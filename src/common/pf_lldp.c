@@ -142,7 +142,7 @@ static void lldp_add_chassis_id_tlv(
    if (len == 0)
    {
       /* Use the MAC address */
-      pf_lldp_tlv_header(p_buf, p_pos, LLDP_TYPE_CHASSIS_ID, 1 + sizeof(os_ethaddr_t));
+      pf_lldp_tlv_header(p_buf, p_pos, LLDP_TYPE_CHASSIS_ID, 1 + sizeof(pnet_ethaddr_t));
 
       pf_put_byte(LLDP_SUBTYPE_CHASSIS_ID_MAC, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
       memcpy(&p_buf[*p_pos], p_cfg->eth_addr.addr, sizeof(pnet_ethaddr_t)); /* ToDo: Shall be device MAC */
@@ -231,7 +231,7 @@ static void lldp_add_chassis_mac(
    uint8_t                 *p_buf,
    uint16_t                *p_pos)
 {
-   pf_lldp_pnio_header(p_buf, p_pos, 1 + sizeof(os_ethaddr_t));
+   pf_lldp_pnio_header(p_buf, p_pos, 1 + sizeof(pnet_ethaddr_t));
 
    pf_put_byte(LLDP_PNIO_SUBTYPE_INTERFACE_MAC, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
    memcpy(&p_buf[*p_pos], p_cfg->eth_addr.addr, sizeof(pnet_ethaddr_t)); /* ToDo: Should be device MAC */
@@ -366,8 +366,8 @@ void pf_lldp_send(
          pf_put_mem(&lldp_dst_addr, sizeof(lldp_dst_addr), PF_FRAME_BUFFER_SIZE, p_buf, &pos);
 
          /* Add source MAC address. ToDo: Shall be port MAC address */
-         memcpy(&p_buf[pos], p_cfg->eth_addr.addr, sizeof(os_ethaddr_t));
-         pos += sizeof(os_ethaddr_t);
+         memcpy(&p_buf[pos], p_cfg->eth_addr.addr, sizeof(pnet_ethaddr_t));
+         pos += sizeof(pnet_ethaddr_t);
 
          /* Add Ethertype for LLDP */
          pf_put_uint16(true, OS_ETHTYPE_LLDP, PF_FRAME_BUFFER_SIZE, p_buf, &pos);

@@ -253,6 +253,7 @@ int os_get_ip_suite(
    os_ipaddr_t             *p_netmask,
    os_ipaddr_t             *p_gw,
    const char              **p_device_name);
+   os_ethaddr_t            *p_mac
 
 /**
  * Set network parameters (IP address, netmask etc)

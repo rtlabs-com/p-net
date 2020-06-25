@@ -33,11 +33,13 @@ extern "C"
 {
 #endif
 
-#include <stdint.h>
-#include <stddef.h>
-#include <stdbool.h>
-#include <stdio.h>
 #include <pnet_export.h>
+#include "osal.h"
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
 
 /**
  * # Profinet Stack Options
