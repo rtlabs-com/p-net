@@ -428,7 +428,7 @@ int main(int argc, char *argv[])
    pnet_cfg_t              pnet_default_cfg;
    app_data_and_stack_t    appdata_and_stack;
    app_data_t              appdata;
-   os_ethaddr_t            macbuffer;
+   pnet_ethaddr_t            macbuffer;
    os_ipaddr_t             ip;
    os_ipaddr_t             netmask;
    os_ipaddr_t             gateway;
@@ -490,7 +490,7 @@ int main(int argc, char *argv[])
    copy_ip_to_struct(&pnet_default_cfg.ip_gateway, gateway);
    copy_ip_to_struct(&pnet_default_cfg.ip_mask, netmask);
    strcpy(pnet_default_cfg.station_name, appdata.arguments.station_name);
-   memcpy(pnet_default_cfg.eth_addr.addr, macbuffer.addr, sizeof(os_ethaddr_t));
+   memcpy(pnet_default_cfg.eth_addr.addr, macbuffer.addr, sizeof(pnet_ethaddr_t));
    pnet_default_cfg.cb_arg = (void*) &appdata;
 
    app_set_led(APP_DATA_LED_ID, false);

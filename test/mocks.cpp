@@ -151,7 +151,7 @@ int mock_pf_alarm_send_diagnosis(
 void mock_pf_generate_uuid(
    uint32_t                timestamp,
    uint32_t                session_number,
-   os_ethaddr_t            mac_address,
+   pnet_ethaddr_t            mac_address,
    pf_uuid_t               *p_uuid)
 {
    p_uuid->data1 = session_number;

@@ -871,8 +871,8 @@ static int pf_alarm_apms_a_data_req(
             pf_put_mem(&p_apmx->da, sizeof(p_apmx->da), PF_FRAME_BUFFER_SIZE, p_buf, &pos);
 
             /* Insert source MAC address (our interface MAC address) */
-            memcpy(&p_buf[pos], p_cfg->eth_addr.addr, sizeof(os_ethaddr_t));
-            pos += sizeof(os_ethaddr_t);
+            memcpy(&p_buf[pos], p_cfg->eth_addr.addr, sizeof(pnet_ethaddr_t));
+            pos += sizeof(pnet_ethaddr_t);
 
             /* Insert VLAN Tag protocol identifier (TPID) */
             pf_put_uint16(true, OS_ETHTYPE_VLAN, PF_FRAME_BUFFER_SIZE, p_buf, &pos);

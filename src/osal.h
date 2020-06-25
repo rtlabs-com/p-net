@@ -125,7 +125,7 @@ typedef uint16_t os_ipport_t;
 typedef struct os_ethaddr
 {
   uint8_t addr[6];
-} os_ethaddr_t;
+} pnet_ethaddr_t;
 
 int os_snprintf (char * str, size_t size, const char * fmt, ...) CC_FORMAT (3,4);
 void os_log (int type, const char * fmt, ...) CC_FORMAT (2,3);
@@ -292,7 +292,7 @@ os_ipaddr_t os_get_gateway(
 */
 int os_get_macaddress(
    const char              *interface_name,
-   os_ethaddr_t            *p_mac
+   pnet_ethaddr_t            *p_mac
 );
 
 /**
@@ -332,6 +332,14 @@ int os_set_ip_suite(
    os_ipaddr_t             *p_gw,
    const char              *hostname,
    bool                    permanent);
+
+void os_set_led(
+   uint16_t                id,         /* Starting from 0 */
+   bool                    on);
+
+void os_get_button(
+   uint16_t                id,         /* Starting from 0 */
+   bool                    *p_pressed);
 
 /* Create an way for the stack to notify
 *	the app of an event

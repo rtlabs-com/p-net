@@ -150,7 +150,7 @@ static int _cmd_pnio_run(
    copy_ip_to_struct(&pnet_default_cfg.ip_addr, ip);
    copy_ip_to_struct(&pnet_default_cfg.ip_mask, netmask);
    copy_ip_to_struct(&pnet_default_cfg.ip_gateway, gateway);
-   memcpy (pnet_default_cfg.eth_addr.addr, netif_default->hwaddr, sizeof(os_ethaddr_t));
+   memcpy (pnet_default_cfg.eth_addr.addr, netif_default->hwaddr, sizeof(pnet_ethaddr_t));
    strcpy(pnet_default_cfg.station_name, gp_appdata->arguments.station_name);
    pnet_default_cfg.cb_arg = (void*)gp_appdata;
 

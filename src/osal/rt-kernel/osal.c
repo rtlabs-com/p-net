@@ -51,7 +51,7 @@ int os_set_ip_suite(
 
 // TODO Move
 void os_mac_to_string(
-   os_ethaddr_t            mac,
+   pnet_ethaddr_t            mac,
    char                    *outputstring)
 {
    snprintf(outputstring, OS_ETH_ADDRSTRLEN, "%02X:%02X:%02X:%02X:%02X:%02X",
@@ -77,10 +77,10 @@ void os_ip_to_string(
 
 int os_get_macaddress(
     const char              *interface_name,
-    os_ethaddr_t            *mac_addr
+    pnet_ethaddr_t            *mac_addr
 )
 {
-   memcpy(mac_addr, netif_default->hwaddr, sizeof(os_ethaddr_t));
+   memcpy(mac_addr, netif_default->hwaddr, sizeof(pnet_ethaddr_t));
    return 0;
 }
 

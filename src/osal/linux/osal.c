@@ -617,7 +617,7 @@ uint8_t os_buf_header(os_buf_t *p, int16_t header_size_increment)
 
 // TODO Move
 void os_mac_to_string(
-   os_ethaddr_t            mac,
+   pnet_ethaddr_t            mac,
    char                    *outputstring)
 {
    snprintf(outputstring, OS_ETH_ADDRSTRLEN, "%02X:%02X:%02X:%02X:%02X:%02X",
