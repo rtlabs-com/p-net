@@ -626,10 +626,8 @@ int pf_cmina_dcp_set_ind(
 
          if ((change_name == true) || (change_ip == true))
          {
-            if ((have_name == true) && (have_ip == true))
+            if ((have_name == true) || (have_ip == true))
             {
-               /* Case 5, 13 in Profinet 2.4 Table 1096 */
-               /* Change name or change IP */
                /* Stop DHCP timer */
                net->cmina_commit_ip_suite = true;
 

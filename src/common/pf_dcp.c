@@ -770,7 +770,8 @@ static int pf_dcp_get_set(
                src_pos += sizeof(*p_src_block_hdr);    /* Point to the block value */
                src_block_len = ntohs(p_src_block_hdr->block_length);
             }
-
+            
+            net->dcp_global_block_qualifier = src_block_qualifier;
             /* Make sure no other MAC address is used in the DCP communication for 3 seconds */
             memcpy(&net->dcp_sam, &p_src_ethhdr->src, sizeof(net->dcp_sam));
             (void)pf_scheduler_add(net, 3*1000*1000,      /* 3s */
@@ -782,7 +783,7 @@ static int pf_dcp_get_set(
             while (src_dcplen >= (src_pos + sizeof(uint8_t) + sizeof(uint8_t)))
             {
                (void)pf_dcp_get_req(net, p_dst, &dst_pos, PF_FRAME_BUFFER_SIZE,
-                  p_src[src_pos], p_src[src_pos + 1], false);
+                  p_src[src_pos], p_src[src_pos + 1], false, false);
 
                /* Point to next block */
                src_pos += sizeof(uint8_t) + sizeof(uint8_t);

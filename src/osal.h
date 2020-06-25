@@ -274,11 +274,19 @@ int os_get_ip_suite(
  */
 int os_set_ip_suite(
    const char              *interface_name,
+   bool                    dhcp_enable,
    os_ipaddr_t             *p_ipaddr,
    os_ipaddr_t             *p_netmask,
    os_ipaddr_t             *p_gw,
    const char              *hostname,
    bool                    permanent);
+
+/* Create an way for the stack to notify
+*	the app of an event
+*/
+void os_stack_to_app_event(uint32_t value);
+void os_stack_set_ip_suite(bool bSavePermanent);
+void os_eth_destroy(os_eth_handle_t *handle);
 
 #ifdef __cplusplus
 }
