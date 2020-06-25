@@ -332,7 +332,7 @@ int pf_cmina_dcp_set_ind(
          {
             LOG_INFO(PF_DCP_LOG,"CMINA(%d): The incoming set request is about changing IP. PF_DCP_SUB_IP_SUITE\n", __LINE__);
             change_ip = (memcmp(&net->cmina_temp_dcp_ase.full_ip_suite, p_value, value_length) != 0);
-
+            /* -OCR- This always returend an PF_DCP_BLOCK_ERROR_SUBOPTION_NOT_SET error */
                memcpy(&net->cmina_temp_dcp_ase.full_ip_suite, p_value, value_length);
                if (temp == false)
                {
@@ -649,13 +649,8 @@ int pf_cmina_dcp_get_req(
          ret = -1;
          break;
       case PF_DCP_SUB_DEV_PROP_ALIAS:
-#if 0
-         *p_value_length = sizeof(net->cmina_temp_dcp_ase.);
-         *pp_value = &net->cmina_temp_dcp_ase.;
-#else
-         *p_block_error = PF_DCP_BLOCK_ERROR_SUBOPTION_NOT_SUPPORTED;
-         ret = -1;
-#endif
+         *p_value_length = sizeof(net->cmina_temp_dcp_ase.alias_name);
+         *pp_value = (uint8_t *)net->cmina_temp_dcp_ase.alias_name;
          break;
       case PF_DCP_SUB_DEV_PROP_INSTANCE:
          *p_value_length = sizeof(net->cmina_temp_dcp_ase.instance_id);

@@ -427,6 +427,7 @@ int pf_cmrdr_rm_read_ind(
           * a The implementation of the MAUType check shall take the AutoNegotiation settings into account. A diagnosis with severity fault shall be issued if an AutoNegotiation error is detected after the next LinkDown / LinkUp do to the used AutoNegotiation settings.
           * b Only possible if CheckMAUType is part of the list
           */
+    	  pf_put_pdport_data_real(net, true, &read_result, res_size, p_res, p_pos);
          ret = 0;
          break;
       case PF_IDX_SUB_PDPORT_DATA_ADJ:

@@ -1812,7 +1812,7 @@ static void pf_put_diag_item(
       pf_put_uint16(is_big_endian, p_item->fmt.std.ch_error_type, res_len, p_bytes, p_pos);
 
       pf_put_uint16(is_big_endian, p_item->fmt.std.ext_ch_error_type, res_len, p_bytes, p_pos);
-      pf_put_uint16(is_big_endian, p_item->fmt.std.ext_ch_add_value, res_len, p_bytes, p_pos);
+      pf_put_uint32(is_big_endian, p_item->fmt.std.ext_ch_add_value, res_len, p_bytes, p_pos);
       break;
    case PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS:
       /* Insert std format diagnosis */
@@ -2378,3 +2378,60 @@ void pf_put_input_data(
    block_pos += offsetof(pf_block_header_t, block_length);   /* Point to correct place */
    pf_put_uint16(is_big_endian, block_len, res_len, p_bytes, &block_pos);
 }
+
+void pf_put_pdport_data_real(
+	pnet_t                  *net,
+	bool                    is_big_endian,
+	pf_iod_read_result_t    *p_res,
+	uint16_t                res_len,
+	uint8_t                 *p_bytes,
+	uint16_t                *p_pos)
+{
+	   uint16_t block_pos = *p_pos;
+	   uint16_t block_len = 0;
+	   uint16_t             temp_u16 	= 0;
+	   uint8_t				numPeers = 0;
+	   
+	   /* Block header first */
+	   pf_put_block_header(is_big_endian,
+			   PF_BT_PDPORTCHECK, 0,                      /* Dont know block_len yet */
+			   PNET_BLOCK_VERSION_HIGH, PNET_BLOCK_VERSION_LOW,
+			   res_len, p_bytes, p_pos);
+
+	   /* Two bytes padding */
+	   pf_put_uint16(is_big_endian, temp_u16, res_len, p_bytes, p_pos);
+	   
+	   /* Slot and subslot info */
+	   pf_put_uint16(is_big_endian, p_res->slot_number, res_len, p_bytes, p_pos);
+	   pf_put_uint16(is_big_endian, p_res->subslot_number, res_len, p_bytes, p_pos);
+
+	   /* PF_BT_CHECKPEERS Block header first */
+	   pf_put_block_header(is_big_endian,
+			   PF_BT_CHECKPEERS, 5+net->fspm_cfg.lldp_peer_req.PeerPortIDLen +net->fspm_cfg.lldp_peer_req.PeerChassisIDLen,                      /* Dont know block_len yet */
+			   PNET_BLOCK_VERSION_HIGH, PNET_BLOCK_VERSION_LOW,
+			   res_len, p_bytes, p_pos);
+
+	   /* Number of Peers */
+	   numPeers = net->fspm_cfg.lldp_peer_req.TTL ? 1:0;
+	   pf_put_byte(numPeers, res_len, p_bytes, p_pos);
+	   
+	   /* Length PeerPortID */
+	   pf_put_byte(net->fspm_cfg.lldp_peer_req.PeerPortIDLen, res_len, p_bytes, p_pos);
+	   /* PeerPortID */
+	   pf_put_mem(&net->fspm_cfg.lldp_peer_req.PeerPortID, net->fspm_cfg.lldp_peer_req.PeerPortIDLen, res_len, p_bytes, p_pos);
+
+	   /* Length ChassisID */
+	   pf_put_byte(net->fspm_cfg.lldp_peer_req.PeerChassisIDLen, res_len, p_bytes, p_pos);
+	   /* ChassisID */
+	   pf_put_mem(&net->fspm_cfg.lldp_peer_req.PeerChassisID, net->fspm_cfg.lldp_peer_req.PeerChassisIDLen, res_len, p_bytes, p_pos);
+
+	   /* Two bytes padding */
+	   pf_put_uint16(is_big_endian, temp_u16, res_len, p_bytes, p_pos);
+	   
+	   /* Finally insert the block length into the block header */
+	   block_len = *p_pos - (block_pos + 4);
+	   block_pos += offsetof(pf_block_header_t, block_length);   /* Point to correct place */
+	   pf_put_uint16(is_big_endian, block_len, res_len, p_bytes, &block_pos);
+}
+
+

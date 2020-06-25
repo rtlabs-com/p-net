@@ -104,6 +104,18 @@ extern "C"
 #define PNET_MAX_MAN_SPECIFIC_FAST_STARTUP_DATA_LENGTH         0     /**< or 512 (bytes) */
 
 #define PNET_MAX_SESSION_BUFFER_SIZE                           4500  /**< Max fragmented RPC request/response length */
+
+/*
+ * Module and submodule ident number for the DAP module.
+ * The DAP module and submodules must be plugged by the application after the call to pnet_init.
+ */
+#define PNET_SLOT_DAP_IDENT                        0x00000000
+#define PNET_MOD_DAP_IDENT                         0x00000002     /* For use in slot 0 */
+#define PNET_SUBMOD_DAP_IDENT                      0x00000001     /* For use in subslot 1 */
+#define PNET_SUBMOD_DAP_INTERFACE_1_IDENT          0x00008000     /* For use in subslot 0x8000 */
+#define PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT   0x00008001     /* For use in subslot 0x8001 */
+
+
 /**
  * # GSDML
  * The following values are application-specific and should match what
@@ -1097,6 +1109,34 @@ typedef struct pnet_lldp_cfg
    uint16_t                mau_type;               /**< Cable MAU type */
 } pnet_lldp_cfg_t;
 
+typedef struct pnet_profibus_delay_valus
+{
+	uint32_t	PortRXDelayLocal;	/* in nanoseconds*/
+	uint32_t	PortRXDelayRemote;	/* in nanoseconds*/
+	uint32_t	PortTXDelayLocal;	/* in nanoseconds*/
+	uint32_t	PortTXDelayRemote;	/* in nanoseconds*/
+	uint32_t	PortCableDelayLocal;/* in nanoseconds*/
+	
+}pnet_profibus_delay_t;
+
+/**
+ * LLDP Peer information used by the Profinet stack.
+ */
+typedef struct pnet_lldp_peer_cfg
+{
+	/*LLDP TVL*/
+   char                    PeerChassisID[512];	/**< Terminated string */
+   size_t				   PeerChassisIDLen;
+   char                    PeerPortID[512]; 	/**< Terminated string */
+   size_t				   PeerPortIDLen;
+   uint16_t                TTL;
+   /*PROFIBUS TVL's*/
+   pnet_profibus_delay_t   PeerDelay;
+   uint16_t                PeerPortStatus;
+   pnet_ethaddr_t          PeerMACAddr;
+   uint16_t                PeerMediaType;
+} pnet_lldp__peer_cfg_t;
+
 /**
  * This is all the configuration needed to use the Profinet stack.
  *
@@ -1138,7 +1178,9 @@ typedef struct pnet_cfg
 
    /** LLDP */
    pnet_lldp_cfg_t         lldp_cfg;
-
+   pnet_lldp__peer_cfg_t   lldp_peer_cfg;
+   pnet_lldp__peer_cfg_t   lldp_peer_req;
+   
    /** Capabilities */
    bool                    send_hello;             /**< Send DCP HELLO message on startup if true. */
 

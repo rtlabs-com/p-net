@@ -255,6 +255,7 @@ static int pf_dcp_put_block(
  * @param opt                 In:   Option key.
  * @param sub                 In:   Sub-option key.
  * @param request_is_identify In:   Usage in response to Identify request (skips some blocks)
+ * @param append_alias_name   In:   Usage in response to Identify request via Alias Name (appends Alias name to response)
  * @return
  */
 static int pf_dcp_get_req(
@@ -264,7 +265,8 @@ static int pf_dcp_get_req(
    uint16_t                dst_max,
    uint8_t                 opt,
    uint8_t                 sub,
-   bool                    request_is_identify)
+   bool                    request_is_identify,
+   bool					   append_alias_name)
 {
    int                     ret = 0;       /* Assume all OK */
    uint8_t                 block_error = PF_DCP_BLOCK_ERROR_NO_ERROR;
@@ -351,7 +353,8 @@ static int pf_dcp_get_req(
          value_length = (uint16_t)strlen((char *)p_value);
          break;
       case PF_DCP_SUB_DEV_PROP_ALIAS:
-         skip = true;
+    	  skip = append_alias_name ? 0:1;
+    	  value_length = (uint16_t)strlen((char *)p_value);
          break;
       case PF_DCP_SUB_DEV_PROP_VENDOR:
          value_length = (uint16_t)strlen((char *)p_value);
@@ -1032,7 +1035,7 @@ static int pf_dcp_identify_req(
    bool                    first = true;     /* First of the blocks */
    bool                    match = false;    /* Is it for us? */
    bool                    filter = false;   /* Is it IdentifyFilter or IdentifyAll? */
-
+   bool					   alias_request = false; /*Is this a request via an alias name?*/
    uint8_t                 *p_src;
    uint16_t                src_pos = 0;
    pf_ethhdr_t             *p_src_ethhdr;
@@ -1053,7 +1056,7 @@ static int pf_dcp_identify_req(
    uint8_t                 *p_value;
    uint8_t                 block_error;
    const pnet_cfg_t        *p_cfg = NULL;
-
+   char s1[256],s2[256];
    pf_fspm_get_default_cfg(net, &p_cfg);
 
    LOG_DEBUG(PF_DCP_LOG,"DCP(%d): Incoming DCP identify request\n", __LINE__);
@@ -1283,14 +1286,14 @@ static int pf_dcp_identify_req(
                      ret = -1;
                   }
                   break;
-   #if 0
-               /* Currently we do not support alias names */
                case PF_DCP_SUB_DEV_PROP_ALIAS:
-                  if ((memcmp(p_value, &p_src[src_pos], value_length) != 0) ||
-                      (src_block_len != value_length))
+            	  strcpy(s1,(const char*)p_value);
+            	  strncpy(s2,(char*)&p_src[src_pos],value_length);
+                  if (strcmp(s1, s2) == 0)
                   {
                      if (first == true)
                      {
+                    	 alias_request = true;
                         filter = true;
                      }
                   }
@@ -1299,7 +1302,6 @@ static int pf_dcp_identify_req(
                      match = false;
                   }
                   break;
-   #endif
                case PF_DCP_SUB_DEV_PROP_INSTANCE:
                   if (filter == true)
                   {
@@ -1379,7 +1381,7 @@ static int pf_dcp_identify_req(
          for (ix = 0; ix < NELEMENTS(device_options); ix++)
          {
             pf_dcp_get_req(net, p_dst, &dst_pos, PF_FRAME_BUFFER_SIZE,
-               device_options[ix].opt, device_options[ix].sub, true);
+               device_options[ix].opt, device_options[ix].sub, true, alias_request);
          }
 
          /* Insert final response length and ship it! */

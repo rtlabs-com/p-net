@@ -33,18 +33,7 @@
 #include "pf_includes.h"
 #include "pf_block_writer.h"
 
-#define LLDP_TYPE_END                     0
-#define LLDP_TYPE_CHASSIS_ID              1
-#define LLDP_TYPE_PORT_ID                 2
-#define LLDP_TYPE_TTL                     3
-#define LLDP_TYPE_MANAGEMENT              8
-#define LLDP_TYPE_ORG_SPEC                127
 
-#define LLDP_SUBTYPE_CHASSIS_ID_MAC       4
-#define LLDP_SUBTYPE_CHASSIS_ID_NAME      7
-#define LLDP_SUBTYPE_PORT_ID_LOCAL        7
-
-#define LLDP_IEEE_SUBTYPE_MAC_PHY         1
 
 typedef enum lldp_pnio_subtype_values
 {
@@ -63,6 +52,7 @@ typedef enum lldp_pnio_subtype_values
 static const os_ethaddr_t   lldp_dst_addr = {
    { 0x01, 0x80, 0xc2, 0x00, 0x00, 0x0e }       /* LLDP Multicast */
 };
+
 
 
 /******************* Insert data into buffer ********************************/
@@ -152,11 +142,7 @@ static void lldp_add_chassis_id_tlv(
    if (len == 0)
    {
       /* Use the MAC address */
-<<<<<<< HEAD
-      pf_lldp_tlv_header(p_buf, p_pos, LLDP_TYPE_CHASSIS_ID, 1+sizeof(os_ethaddr_t));
-=======
-      pf_lldp_tlv_header(p_buf, p_pos, LLDP_TYPE_CHASSIS_ID, 1 + sizeof(pnet_ethaddr_t));
->>>>>>> 76fd7d21ec6cd81bf672c9885f7d5e2c8ed56662
+      pf_lldp_tlv_header(p_buf, p_pos, LLDP_TYPE_CHASSIS_ID, 1 + sizeof(os_ethaddr_t));
 
       pf_put_byte(LLDP_SUBTYPE_CHASSIS_ID_MAC, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
       memcpy(&p_buf[*p_pos], p_cfg->eth_addr.addr, sizeof(os_ethaddr_t)); /* ToDo: Shall be device MAC */
@@ -245,11 +231,7 @@ static void lldp_add_chassis_mac(
    uint8_t                 *p_buf,
    uint16_t                *p_pos)
 {
-<<<<<<< HEAD
-   pf_lldp_pnio_header(p_buf, p_pos, LLDP_TYPE_ORG_SPEC, 1+sizeof(os_ethaddr_t));
-=======
-   pf_lldp_pnio_header(p_buf, p_pos, 1 + sizeof(pnet_ethaddr_t));
->>>>>>> 76fd7d21ec6cd81bf672c9885f7d5e2c8ed56662
+   pf_lldp_pnio_header(p_buf, p_pos, 1 + sizeof(os_ethaddr_t));
 
    pf_put_byte(LLDP_PNIO_SUBTYPE_INTERFACE_MAC, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
    memcpy(&p_buf[*p_pos], p_cfg->eth_addr.addr, sizeof(os_ethaddr_t)); /* ToDo: Should be device MAC */
@@ -384,8 +366,8 @@ void pf_lldp_send(
          pf_put_mem(&lldp_dst_addr, sizeof(lldp_dst_addr), PF_FRAME_BUFFER_SIZE, p_buf, &pos);
 
          /* Add source MAC address. ToDo: Shall be port MAC address */
-         memcpy(&p_buf[pos], p_cfg->eth_addr.addr, sizeof(pnet_ethaddr_t));
-         pos += sizeof(pnet_ethaddr_t);
+         memcpy(&p_buf[pos], p_cfg->eth_addr.addr, sizeof(os_ethaddr_t));
+         pos += sizeof(os_ethaddr_t);
 
          /* Add Ethertype for LLDP */
          pf_put_uint16(true, OS_ETHTYPE_LLDP, PF_FRAME_BUFFER_SIZE, p_buf, &pos);
@@ -406,9 +388,9 @@ void pf_lldp_send(
 
          p_lldp_buffer->len = pos;
 
-        if (os_eth_send(net->eth_handle, p_lldp_buffer) <= 0)
+        if (os_eth_lldp_send(net->eth_handle, p_lldp_buffer) <= 0)
          {
-            LOG_ERROR(PNET_LOG, "LLDP(%d): Error from os_eth_send(lldp)\n", __LINE__);
+            LOG_ERROR(PNET_LOG, "LLDP(%d): Error from os_eth_lldp_send(lldp)\n", __LINE__);
          }
       }
 
@@ -421,3 +403,133 @@ void pf_lldp_init(
 {
    pf_lldp_send(net);
 }
+
+void pf_lldp_recv(
+   pnet_t                  *net,
+   os_buf_t                *p_frame_buf,
+   uint16_t	   				frame_pos)
+{
+	
+	/*Each TVL is structured as follows:
+	 * - Type 	= 7 bits
+	 * - Length = 9 bits
+	 * - data 	= 0-511 bytes*/
+	char _Alias[250]={0};
+	char pPnioCode[] = LLDP_PROFIBUS_CODE;
+	/* Jump to the data in the frame*/
+	uint8_t *pData = (&((uint8_t *)p_frame_buf->payload)[frame_pos]);
+	uint16_t _tvData = htons(GET_UINT16(pData));
+	
+	LLDP_FRAME	_frame = {0};
+	
+	_frame.type = (_tvData & LLDP_TYPE_MASK) >> LLDP_TYPE_SHIFT;
+	_frame.len = (_tvData & LLDP_LENGTH_MASK);
+	
+	/*Index*/
+	pData += 2;
+	
+	
+	while(_frame.type != LLDP_TYPE_END)
+	{
+		switch(_frame.type)
+		{
+		case LLDP_TYPE_CHASSIS_ID:
+
+			/* Set the length */
+			net->fspm_cfg.lldp_peer_cfg.PeerChassisIDLen=_frame.len-1;
+			
+			/* Copy over the information */
+			memcpy(&net->fspm_cfg.lldp_peer_cfg.PeerChassisID, pData+1, net->fspm_cfg.lldp_peer_cfg.PeerChassisIDLen);
+			/* Null terminate */
+			net->fspm_cfg.lldp_peer_cfg.PeerChassisID[net->fspm_cfg.lldp_peer_cfg.PeerChassisIDLen]='\0';
+			break;
+		case LLDP_TYPE_PORT_ID:
+
+			/* Set the length */
+			net->fspm_cfg.lldp_peer_cfg.PeerPortIDLen=_frame.len-1;
+			
+			/* Copy over the information */
+			memcpy(&net->fspm_cfg.lldp_peer_cfg.PeerPortID, pData+1, net->fspm_cfg.lldp_peer_cfg.PeerPortIDLen);
+			/* Null terminate */
+			net->fspm_cfg.lldp_peer_cfg.PeerPortID[net->fspm_cfg.lldp_peer_cfg.PeerPortIDLen]='\0';
+
+			/*Update Alias name as follows:
+			 * -Check if the LLDP_TYPE_PORT_ID contains a "." (Example: port-001.test)
+			 *  If it does than copy this over to the alias name
+			 * -If no "." is found that concatenate the LLDP_TYPE_PORT_ID and  LLDP_TYPE_CHASSIS_ID */
+			if(NULL != strchr((char*)net->fspm_cfg.lldp_peer_cfg.PeerPortID,'.'))
+			{
+				strncpy(_Alias,(char*)net->fspm_cfg.lldp_peer_cfg.PeerPortID, net->fspm_cfg.lldp_peer_cfg.PeerPortIDLen);
+				_Alias[net->fspm_cfg.lldp_peer_cfg.PeerPortIDLen]='\0';
+			}
+			else
+			{
+				/* Concatenate PeerPortID + PeerChassisID (Example: port-003.dut) */
+				strncat(_Alias,(char*)net->fspm_cfg.lldp_peer_cfg.PeerPortID,net->fspm_cfg.lldp_peer_cfg.PeerPortIDLen);
+				strncat(_Alias,".",1);
+				strncat(_Alias,(char*)net->fspm_cfg.lldp_peer_cfg.PeerChassisID,net->fspm_cfg.lldp_peer_cfg.PeerChassisIDLen);
+				_Alias[net->fspm_cfg.lldp_peer_cfg.PeerPortIDLen+net->fspm_cfg.lldp_peer_cfg.PeerChassisIDLen+1]='\0';
+				
+			}
+				
+			 if(strcmp(_Alias,net->cmina_temp_dcp_ase.alias_name) != 0)
+			 {
+				LOG_DEBUG(PF_ETH_LOG, "LLDP(%d): OLD Name: %s\n", __LINE__,net->cmina_temp_dcp_ase.alias_name);
+				memset(net->cmina_temp_dcp_ase.alias_name,0,sizeof(net->cmina_temp_dcp_ase.alias_name));
+				
+				LOG_DEBUG(PF_ETH_LOG, "LLDP(%d): Frame Type %d Length %d\n", __LINE__,_frame.type,strlen(_Alias) );
+				strncpy(net->cmina_temp_dcp_ase.alias_name,_Alias,strlen(_Alias));
+				net->cmina_temp_dcp_ase.alias_name[strlen(_Alias)]='\0';
+				
+				LOG_DEBUG(PF_ETH_LOG, "LLDP(%d): NEW Name: %s\n", __LINE__,net->cmina_temp_dcp_ase.alias_name);
+			 }
+
+			break;
+		case LLDP_TYPE_TTL:
+			net->fspm_cfg.lldp_peer_cfg.TTL=pData[1];
+			break;
+		case LLDP_TYPE_ORG_SPEC:
+		{
+			if(0==memcmp(&pPnioCode,pData,3))
+			{
+				switch(pData[3])
+				{
+				case LLDP_PROFIBUS_SUBTYPE_DELAY_VALUES:
+					memcpy(&net->fspm_cfg.lldp_peer_cfg.PeerDelay,pData+4,sizeof(net->fspm_cfg.lldp_peer_cfg.PeerDelay));
+					net->fspm_cfg.lldp_peer_cfg.PeerDelay.PortRXDelayLocal = htonl(net->fspm_cfg.lldp_peer_cfg.PeerDelay.PortRXDelayLocal);
+					net->fspm_cfg.lldp_peer_cfg.PeerDelay.PortRXDelayRemote = htonl(net->fspm_cfg.lldp_peer_cfg.PeerDelay.PortRXDelayRemote);
+					net->fspm_cfg.lldp_peer_cfg.PeerDelay.PortTXDelayLocal = htonl(net->fspm_cfg.lldp_peer_cfg.PeerDelay.PortTXDelayLocal);
+					net->fspm_cfg.lldp_peer_cfg.PeerDelay.PortTXDelayRemote = htonl(net->fspm_cfg.lldp_peer_cfg.PeerDelay.PortTXDelayRemote);
+					net->fspm_cfg.lldp_peer_cfg.PeerDelay.PortCableDelayLocal = htonl(net->fspm_cfg.lldp_peer_cfg.PeerDelay.PortCableDelayLocal);
+					break;
+				case LLDP_PROFIBUS_SUBTYPE_PORT_STATUS:
+					memcpy(&net->fspm_cfg.lldp_peer_cfg.PeerPortStatus,pData+4,sizeof(net->fspm_cfg.lldp_peer_cfg.PeerPortStatus));
+					break;
+				case LLDP_PROFIBUS_SUBTYPE_CHASSIS_MAC:
+					memcpy(&net->fspm_cfg.lldp_peer_cfg.PeerMACAddr.addr,pData+4,sizeof(net->fspm_cfg.lldp_peer_cfg.PeerMACAddr));
+					break;
+				default:
+					break;
+				}
+			}
+
+		}
+		break;
+		default:
+#if 0
+			LOG_DEBUG(PF_ETH_LOG, "LLDP(%d): Unhandled Frame Type %d Length %d\n", __LINE__,_frame.type,_frame.len );
+#endif
+			break;
+		}
+		/*increment the pointer*/
+		pData +=_frame.len;
+		
+		_tvData = htons(GET_UINT16(pData));
+		_frame.type = (_tvData & LLDP_TYPE_MASK) >> LLDP_TYPE_SHIFT;
+		_frame.len = (_tvData & LLDP_LENGTH_MASK);
+		/*Index*/
+		pData += 2;
+		memset(_frame.value,0,sizeof(_frame.value));
+	}
+}
+
