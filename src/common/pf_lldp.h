@@ -26,6 +26,42 @@ extern "C"
 {
 #endif
 
+#define LLDP_TYPE_END                     	0
+#define LLDP_TYPE_CHASSIS_ID              	1
+#define LLDP_TYPE_PORT_ID                 	2
+#define LLDP_TYPE_TTL                     	3
+#define LLDP_TYPE_MANAGEMENT              	8
+#define LLDP_TYPE_ORG_SPEC                	127
+
+#define LLDP_SUBTYPE_CHASSIS_ID_MAC      	4
+#define LLDP_SUBTYPE_CHASSIS_ID_NAME      	7
+#define LLDP_SUBTYPE_PORT_ID_LOCAL        	7
+
+#define LLDP_IEEE_8023_CODE	{0x00,0x12,0x0f}
+#define LLDP_IEEE_SUBTYPE_MACPHY_CONFIG         	1
+
+#define LLDP_PROFIBUS_CODE	{0x00,0x0e,0xcf}
+
+
+#define LLDP_PROFIBUS_SUBTYPE_DELAY_VALUES	0x01
+#define LLDP_PROFIBUS_SUBTYPE_PORT_STATUS	0x02
+#define LLDP_PROFIBUS_SUBTYPE_CHASSIS_MAC	0x05
+
+#define LLDP_TYPE_MASK		0xFE00
+#define LLDP_TYPE_SHIFT		0x9
+#define LLDP_LENGTH_MASK	0x1FF
+#define LLDP_MAX_TLV		512
+
+#define MAKE_UINT16(a, b)	((uint16_t)(((a) & 0xff) | ((uint16_t)(((b) << 8) & 0xff00))))
+#define GET_UINT16( ptr )	(uint16_t) (MAKE_UINT16((*(uint8_t*)(ptr)),(*(uint8_t*)(ptr+1))))
+
+typedef struct lldp_frame
+{
+	uint8_t type;
+	uint8_t len;
+	uint8_t value[LLDP_MAX_TLV];
+}LLDP_FRAME;
+
 /**
  * Initialize the LLDP component.
  *
@@ -42,6 +78,15 @@ void pf_lldp_init(
  */
 void pf_lldp_send(
    pnet_t                  *net);
+
+/**
+ * Recieve an LLDP message.
+ * @param net              InOut: The p-net stack instance
+ */
+void pf_lldp_recv(
+   pnet_t                  *net,
+   os_buf_t                *p_frame_buf,
+   uint16_t	   				frame_pos);
 
 #ifdef __cplusplus
 }

@@ -628,6 +628,54 @@ void pf_put_diag_data(
    uint8_t                 *p_bytes,
    uint16_t                *p_pos);
 
+void pf_put_pdport_data_check(
+	pnet_t                  *net,
+	bool                    is_big_endian,
+	pf_iod_read_result_t    *p_res,
+	uint16_t                res_len,
+	uint8_t                 *p_bytes,
+	uint16_t                *p_pos);
+
+void pf_put_pdport_data_adj(
+	pnet_t                  *net,
+	bool                    is_big_endian,
+	pf_iod_read_result_t    *p_res,
+	uint16_t                res_len,
+	uint8_t                 *p_bytes,
+	uint16_t                *p_pos);
+
+void pf_put_pdport_data_real(
+	pnet_t                  *net,
+	bool                    is_big_endian,
+	pf_iod_read_result_t    *p_res,
+	uint16_t                res_len,
+	uint8_t                 *p_bytes,
+	uint16_t                *p_pos);
+
+void pf_put_pdport_statistics(
+	pnet_t                  *net,
+	bool                    is_big_endian,
+	pf_iod_read_result_t    *p_res,
+	uint16_t                res_len,
+	uint8_t                 *p_bytes,
+	uint16_t                *p_pos);
+
+void pf_put_pdinterface_data_real(
+	pnet_t                  *net,
+	bool                    is_big_endian,
+	pf_iod_read_result_t    *p_res,
+	uint16_t                res_len,
+	uint8_t                 *p_bytes,
+	uint16_t                *p_pos);
+
+void pf_put_pd_real_data(
+	pnet_t                  *net,
+	bool                    is_big_endian,
+	pf_iod_read_result_t    *p_res,
+	uint16_t                res_len,
+	uint8_t                 *p_bytes,
+	uint16_t                *p_pos);
+
 #ifdef __cplusplus
 }
 #endif

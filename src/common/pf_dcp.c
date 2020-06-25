@@ -114,8 +114,6 @@ static const pf_dcp_opt_sub_t device_options[] =
    {PF_DCP_OPT_CONTROL, PF_DCP_SUB_CONTROL_SIGNAL},
    {PF_DCP_OPT_CONTROL, PF_DCP_SUB_CONTROL_FACTORY_RESET},
    {PF_DCP_OPT_CONTROL, PF_DCP_SUB_CONTROL_RESET_TO_FACTORY},
-#if 1
-#endif
 #if 0
    {PF_DCP_OPT_DHCP, PF_DCP_SUB_DHCP_HOSTNAME},
    {PF_DCP_OPT_DHCP, PF_DCP_SUB_DHCP_VENDOR_SPEC},
@@ -152,10 +150,12 @@ static void pf_dcp_responder(
       {
          if (os_eth_send(net->eth_handle, p_buf) <= 0)
          {
+        	 net->interface_statistics.ifOutErrors++;
             LOG_ERROR(PNET_LOG, "DCP(%d): Error from os_eth_send(dcp)\n", __LINE__);
          }
          else
          {
+        	 net->interface_statistics.ifOutOctects++;
             LOG_DEBUG(PNET_LOG, "DCP(%d): Sent a DCP response.\n", __LINE__);
          }
          os_buf_free(p_buf);
@@ -255,6 +255,7 @@ static int pf_dcp_put_block(
  * @param opt                 In:   Option key.
  * @param sub                 In:   Sub-option key.
  * @param request_is_identify In:   Usage in response to Identify request (skips some blocks)
+ * @param append_alias_name   In:   Usage in response to Identify request via Alias Name (appends Alias name to response)
  * @return
  */
 static int pf_dcp_get_req(
@@ -264,7 +265,8 @@ static int pf_dcp_get_req(
    uint16_t                dst_max,
    uint8_t                 opt,
    uint8_t                 sub,
-   bool                    request_is_identify)
+   bool                    request_is_identify,
+   bool					   append_alias_name)
 {
    int                     ret = 0;       /* Assume all OK */
    uint8_t                 block_error = PF_DCP_BLOCK_ERROR_NO_ERROR;
@@ -351,7 +353,8 @@ static int pf_dcp_get_req(
          value_length = (uint16_t)strlen((char *)p_value);
          break;
       case PF_DCP_SUB_DEV_PROP_ALIAS:
-         skip = true;
+    	  skip = append_alias_name ? 0:1;
+    	  value_length = (uint16_t)strlen((char *)p_value);
          break;
       case PF_DCP_SUB_DEV_PROP_VENDOR:
          value_length = (uint16_t)strlen((char *)p_value);
@@ -767,7 +770,8 @@ static int pf_dcp_get_set(
                src_pos += sizeof(*p_src_block_hdr);    /* Point to the block value */
                src_block_len = ntohs(p_src_block_hdr->block_length);
             }
-
+            
+            net->dcp_global_block_qualifier = src_block_qualifier;
             /* Make sure no other MAC address is used in the DCP communication for 3 seconds */
             memcpy(&net->dcp_sam, &p_src_ethhdr->src, sizeof(net->dcp_sam));
             (void)pf_scheduler_add(net, 3*1000*1000,      /* 3s */
@@ -779,7 +783,7 @@ static int pf_dcp_get_set(
             while (src_dcplen >= (src_pos + sizeof(uint8_t) + sizeof(uint8_t)))
             {
                (void)pf_dcp_get_req(net, p_dst, &dst_pos, PF_FRAME_BUFFER_SIZE,
-                  p_src[src_pos], p_src[src_pos + 1], false);
+                  p_src[src_pos], p_src[src_pos + 1], false, false);
 
                /* Point to next block */
                src_pos += sizeof(uint8_t) + sizeof(uint8_t);
@@ -802,10 +806,12 @@ static int pf_dcp_get_set(
 
          if (os_eth_send(net->eth_handle, p_rsp) <= 0)
          {
+        	 net->interface_statistics.ifOutErrors++;
             LOG_ERROR(PNET_LOG, "pf_dcp(%d): Error from os_eth_send(dcp)\n", __LINE__);
          }
          else
          {
+        	 net->interface_statistics.ifOutOctects++;
             LOG_DEBUG(PF_DCP_LOG,"DCP(%d): Sent DCP Get/Set response\n", __LINE__);
          }
 
@@ -995,7 +1001,12 @@ int pf_dcp_hello_req(
          p_buf->len = dst_pos;
          if (os_eth_send(net->eth_handle, p_buf) <= 0)
          {
+        	 net->interface_statistics.ifOutErrors++;
             LOG_ERROR(PNET_LOG, "pf_dcp(%d): Error from os_eth_send(dcp)\n", __LINE__);
+         }
+         else
+         {
+        	 net->interface_statistics.ifOutOctects++;
          }
       }
       os_buf_free(p_buf);
@@ -1033,7 +1044,7 @@ static int pf_dcp_identify_req(
    bool                    first = true;     /* First of the blocks */
    bool                    match = false;    /* Is it for us? */
    bool                    filter = false;   /* Is it IdentifyFilter or IdentifyAll? */
-
+   bool					   alias_request = false; /*Is this a request via an alias name?*/
    uint8_t                 *p_src;
    uint16_t                src_pos = 0;
    pf_ethhdr_t             *p_src_ethhdr;
@@ -1054,6 +1065,7 @@ static int pf_dcp_identify_req(
    uint8_t                 *p_value;
    uint8_t                 block_error;
    pnet_ethaddr_t          mac_address;
+   char s1[256],s2[256];
 
    pf_cmina_get_macaddr(net, &mac_address);
 
@@ -1284,14 +1296,14 @@ static int pf_dcp_identify_req(
                      ret = -1;
                   }
                   break;
-   #if 0
-               /* Currently we do not support alias names */
                case PF_DCP_SUB_DEV_PROP_ALIAS:
-                  if ((memcmp(p_value, &p_src[src_pos], value_length) != 0) ||
-                      (src_block_len != value_length))
+            	  strcpy(s1,(const char*)p_value);
+            	  strncpy(s2,(char*)&p_src[src_pos],value_length);
+                  if (strcmp(s1, s2) == 0)
                   {
                      if (first == true)
                      {
+                    	 alias_request = true;
                         filter = true;
                      }
                   }
@@ -1300,7 +1312,6 @@ static int pf_dcp_identify_req(
                      match = false;
                   }
                   break;
-   #endif
                case PF_DCP_SUB_DEV_PROP_INSTANCE:
                   if (filter == true)
                   {
@@ -1380,7 +1391,7 @@ static int pf_dcp_identify_req(
          for (ix = 0; ix < NELEMENTS(device_options); ix++)
          {
             pf_dcp_get_req(net, p_dst, &dst_pos, PF_FRAME_BUFFER_SIZE,
-               device_options[ix].opt, device_options[ix].sub, true);
+               device_options[ix].opt, device_options[ix].sub, true, alias_request);
          }
 
          /* Insert final response length and ship it! */
