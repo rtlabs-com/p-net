@@ -50,6 +50,7 @@ int pf_eth_recv(
    uint16_t    type_pos = 2*sizeof(pnet_ethaddr_t);
    uint16_t    type;
    uint16_t    frame_id;
+   uint16_t	   frame_pos=0;
    uint16_t    *p_data;
    uint16_t    ix = 0;
    pnet_t      *net = (pnet_t*)arg;
@@ -64,7 +65,11 @@ int pf_eth_recv(
       p_data = (uint16_t *)(&((uint8_t *)p_buf->payload)[type_pos]);
       type = ntohs(p_data[0]);
    }
-   frame_id = ntohs(p_data[1]);
+   frame_pos = type_pos;
+   frame_pos+=2;
+   /*frame_id = ntohs(p_data[1]);*/
+   p_data = (uint16_t *)(&((uint8_t *)p_buf->payload)[frame_pos]);
+   frame_id = ntohs(p_data[0]);
 
    switch (type)
    {
@@ -81,7 +86,7 @@ int pf_eth_recv(
       {
          /* Call the frame handler */
          ret = net->eth_id_map[ix].frame_handler(net, frame_id, p_buf,
-            type_pos + sizeof(uint16_t), net->eth_id_map[ix].p_arg);
+        		 frame_pos, net->eth_id_map[ix].p_arg);
       }
       break;
    case OS_ETHTYPE_LLDP:
