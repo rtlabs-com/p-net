@@ -659,16 +659,17 @@ int main(int argc, char *argv[])
       printf("Failed to initialize p-net. Do you have enough Ethernet interface permission?\n");
       exit(EXIT_CODE_ERROR);
    }
-   appdata_and_stack.appdata = &appdata;
-   appdata_and_stack.net = net;
 
-   app_plug_dap(net);
+   app_plug_dap(net, &appdata);
 
    /* Initialize timer and Profinet stack */
    appdata.main_events = os_event_create();
    appdata.main_timer  = os_timer_create(TICK_INTERVAL_US, main_timer_tick, (void*)&appdata, false);
 
+   appdata_and_stack.appdata = &appdata;
+   appdata_and_stack.net = net;
    os_thread_create("pn_main", APP_PRIORITY, APP_STACKSIZE, pn_main, (void*)&appdata_and_stack);
+
    os_timer_start(appdata.main_timer);
 
    for(;;)

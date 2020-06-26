@@ -646,16 +646,16 @@ static int app_alarm_ack_cnf(
    return 0;
 }
 
-void app_plug_dap(pnet_t *net)
+void app_plug_dap(pnet_t *net, void *arg)
 {
    /* Use existing callback functions to plug the (sub-)modules */
-   app_exp_module_ind(net, NULL, APP_API , PNET_SLOT_DAP_IDENT, PNET_MOD_DAP_IDENT);
+   app_exp_module_ind(net, arg, APP_API , PNET_SLOT_DAP_IDENT, PNET_MOD_DAP_IDENT);
 
-   app_exp_submodule_ind(net, NULL, APP_API, PNET_SLOT_DAP_IDENT, PNET_SUBMOD_DAP_IDENT,
+   app_exp_submodule_ind(net, arg, APP_API, PNET_SLOT_DAP_IDENT, PNET_SUBMOD_DAP_IDENT,
          PNET_MOD_DAP_IDENT, PNET_SUBMOD_DAP_IDENT);
-   app_exp_submodule_ind(net, NULL, APP_API, PNET_SLOT_DAP_IDENT, PNET_SUBMOD_DAP_INTERFACE_1_IDENT,
+   app_exp_submodule_ind(net, arg, APP_API, PNET_SLOT_DAP_IDENT, PNET_SUBMOD_DAP_INTERFACE_1_IDENT,
          PNET_MOD_DAP_IDENT, PNET_SUBMOD_DAP_INTERFACE_1_IDENT);
-   app_exp_submodule_ind(net, NULL, APP_API, PNET_SLOT_DAP_IDENT, PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT,
+   app_exp_submodule_ind(net, arg, APP_API, PNET_SLOT_DAP_IDENT, PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT,
          PNET_MOD_DAP_IDENT, PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT);
 }
 

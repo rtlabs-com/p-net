@@ -156,7 +156,7 @@ static int _cmd_pnio_run(
    g_net = pnet_init(gp_appdata->arguments.eth_interface, TICK_INTERVAL_US, &pnet_default_cfg);
    if (g_net != NULL)
    {
-      app_plug_dap(g_net);
+      app_plug_dap(g_net, gp_appdata);
 
       if (gp_appdata->arguments.verbosity > 0)
       {
