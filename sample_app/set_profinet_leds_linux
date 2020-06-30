@@ -8,7 +8,7 @@
 # It can be useful when running on for example Ubuntu or some other
 # desktop Linux variant.
 #
-# Modify this script to fit your setup, by for example changing output path
+# Modify this script to fit your setup, by for example changing output path.
 
 if [ $# -ne 2 ]; then
    echo "Usage: ${0} led_number led_state"
@@ -23,13 +23,13 @@ fi
 LED_NUMBER=$1
 LED_STATE=$2
 
-echo "Script for Profinet LEDs. LED number ${LED_NUMBER}, new state ${LED_STATE}"
+echo "Script for setting Profinet LED state in dummy file. LED number ${LED_NUMBER}, new state ${LED_STATE}"
 
 if ! [ ${LED_STATE} == "0" -o ${LED_STATE} == "1" ]; then
    echo "Wrong LED state: ${LED_STATE}"
    exit 1
 fi
 
-echo ${LED_STATE} > "profinet_led_${LED_NUMBER}.txt"
+echo ${LED_STATE} > "pnet_led_${LED_NUMBER}.txt"
 
 exit 0

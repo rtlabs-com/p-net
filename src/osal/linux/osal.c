@@ -35,12 +35,115 @@
 #include <time.h>
 #include <unistd.h>
 
+#define PF_FILE_VERSION    1
+#define PF_FILE_MAGIC_LEN  10
+#define PF_FILE_MAGIC_TEMPLATE "p-net %03d\n"
 
 /* Priority of timer callback thread (if USE_SCHED_FIFO is set) */
 #define TIMER_PRIO        5
 
 #define USECS_PER_SEC     (1 * 1000 * 1000)
 #define NSECS_PER_SEC     (1 * 1000 * 1000 * 1000)
+
+
+static const char *os_fileindex_to_filename(
+   int                     file_index)  /* pnet_file_index_t */
+{
+   const char              *s = "unknown";
+
+   switch (file_index)
+   {
+   case 0:  s = "pnet_data_ip.bin"; break;
+   case 1:  s = "pnet_data_diagnostics.bin"; break;
+   case 2:  s = "pnet_data_logbook.bin"; break;
+   default: break;
+   }
+
+   return s;
+}
+
+
+int os_save_blob(
+   int                     file_index,
+   void                    *object,
+   size_t                  size
+)
+{
+   FILE                    *outputfile;
+   const char              *file_path = os_fileindex_to_filename(file_index);
+
+   outputfile = fopen(file_path, "wb");
+   if (outputfile == NULL)
+   {
+      printf("Could not open file %s\n", file_path);
+      return -1;
+   }
+
+   fprintf(outputfile, PF_FILE_MAGIC_TEMPLATE, PF_FILE_VERSION);
+   fwrite(object, size, 1, outputfile);
+   fclose(outputfile);
+
+   return 0;
+}
+
+
+void os_clear_blob(
+   int                     file_index
+)
+{
+   const char              *file_path = os_fileindex_to_filename(file_index);
+
+   (void)remove(file_path);
+}
+
+
+int os_load_blob(
+   int                     file_index,
+   void                    *object,
+   size_t                  size
+)
+{
+   int                     number_of_read_structs;
+   char                    magicbuffer[PF_FILE_MAGIC_LEN + 1] = { 0 };
+   char                    expected_file_magic[PF_FILE_MAGIC_LEN + 1] = { 0 };
+   FILE                    *inputfile;
+   const char              *file_path = os_fileindex_to_filename(file_index);
+
+   sprintf(expected_file_magic, PF_FILE_MAGIC_TEMPLATE, PF_FILE_VERSION);
+
+   inputfile = fopen(file_path, "rb");
+   if (inputfile == NULL)
+   {
+      os_log(LOG_LEVEL_DEBUG, "Could not open file %s\n", file_path);
+      return -1;
+   }
+
+   number_of_read_structs = fread(magicbuffer, PF_FILE_MAGIC_LEN, 1, inputfile);
+   if (number_of_read_structs != 1)
+   {
+      os_log(LOG_LEVEL_DEBUG, "Could not read magic from file %s\n", file_path);
+      fclose(inputfile);
+      return -1;
+   }
+
+   if(strncmp(magicbuffer, expected_file_magic, PF_FILE_MAGIC_LEN) != 0)
+   {
+      os_log(LOG_LEVEL_DEBUG, "Wrong magic number in file %s\n", file_path);
+      fclose(inputfile);
+      return -1;
+   }
+
+   number_of_read_structs = fread(object, size, 1, inputfile);
+   fclose(inputfile);
+   if (number_of_read_structs != 1)
+   {
+      os_log(LOG_LEVEL_DEBUG, "Could not read struct from file %s\n", file_path);
+      return -1;
+   }
+
+   return 0;
+}
+
 
 void os_log (int type, const char * fmt, ...)
 {
@@ -666,7 +769,6 @@ int os_set_ip_suite(
    free(outputcommand);
    if (status != 0)
    {
-      os_log(LOG_LEVEL_ERROR, "Failed to set network parameters\n");
       return -1;
    }
    return 0;

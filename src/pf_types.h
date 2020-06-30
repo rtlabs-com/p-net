@@ -747,7 +747,7 @@ typedef struct pf_cmina_dcp_ase
    char                    name_of_station[240 + 1];  /* Terminated */
    char                    device_vendor[20+1];       /* Terminated */
    uint8_t                 device_role;               /* Only value "1" supported */
-   uint16_t                device_initiative;
+   uint16_t                device_initiative;         /* 1: Should send hello. 0: No sending of hello */
 
    struct
    {
@@ -1990,8 +1990,8 @@ struct pnet
    uint32_t                            scheduler_tick_interval;
    bool                                cmdev_initialized;
    pf_device_t                         cmdev_device;
-   pf_cmina_dcp_ase_t                  cmina_perm_dcp_ase;
-   pf_cmina_dcp_ase_t                  cmina_temp_dcp_ase;
+   pf_cmina_dcp_ase_t                  cmina_nonvolatile_dcp_ase;  /* Reflects what is/should be stored in nvm */
+   pf_cmina_dcp_ase_t                  cmina_current_dcp_ase;  /* Reflects current settings (possibly not yet commited) */
    pf_cmina_state_values_t             cmina_state;
    uint8_t                             cmina_error_decode;
    uint8_t                             cmina_error_code_1;
@@ -2007,7 +2007,7 @@ struct pnet
    uint8_t                             cmrpc_dcerpc_rsp_frame[PF_FRAME_BUFFER_SIZE];
    pf_cmsu_state_values_t              cmsu_state;
    pf_cmwrr_state_values_t             cmwrr_state;
-   const pnet_cfg_t                    *p_fspm_default_cfg;
+   const pnet_cfg_t                    *p_fspm_default_cfg;  /* Used at factory reset */
    pnet_cfg_t                          fspm_cfg;
    pf_log_book_t                       fspm_log_book;
    os_mutex_t                          *fspm_log_book_mutex;

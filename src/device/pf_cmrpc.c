@@ -291,6 +291,9 @@ static int pf_session_allocate(
    int                     ret = -1;
    uint16_t                ix = 0;
    pf_session_info_t       *p_sess = NULL;
+   pnet_ethaddr_t          mac_address;
+
+   pf_cmina_get_macaddr(net, &mac_address);
 
    os_mutex_lock(net->p_cmrpc_rpc_mutex);
    while ((ix < NELEMENTS(net->cmrpc_session_info)) &&
@@ -311,7 +314,7 @@ static int pf_session_allocate(
       p_sess->ix = ix;
 
       /* Set activity UUID. Will be overwritten for incoming requests. */
-      pf_generate_uuid(os_get_current_time_us(), net->cmrpc_session_number, net->fspm_cfg.eth_addr, &p_sess->activity_uuid);
+      pf_generate_uuid(os_get_current_time_us(), net->cmrpc_session_number, mac_address, &p_sess->activity_uuid);
       net->cmrpc_session_number++;
 
       *pp_sess = p_sess;
@@ -2037,7 +2040,6 @@ int pf_cmrpc_rm_ccontrol_req(
    uint16_t                control_pos = 0;
    uint16_t                rpc_hdr_start_pos = 0;
    uint16_t                length_of_body_pos = 0;
-   pnet_cfg_t              *p_cfg = NULL;
    pf_session_info_t       *p_sess = NULL;
    uint16_t                max_req_len = PF_MAX_UDP_PAYLOAD_SIZE;  /* Reduce to 130 to test fragmented sending */
 
@@ -2045,7 +2047,6 @@ int pf_cmrpc_rm_ccontrol_req(
    memset(&ndr_data, 0, sizeof(ndr_data));
    memset(&control_io, 0, sizeof(control_io));
 
-   pf_fspm_get_cfg(net, &p_cfg);
    if (pf_session_allocate(net, &p_sess) != 0)
    {
       LOG_ERROR(PF_RPC_LOG, "RPC(%d): Out of session resources\n", __LINE__);

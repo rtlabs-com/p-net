@@ -382,6 +382,15 @@ extern "C"
 #define PNET_ERROR_CODE_2_ABORT_DCP_RESET_TO_FACTORY           0x20
 #define PNET_ERROR_CODE_2_ABORT_PDEV_CHECK_FAILED              0x24
 
+
+typedef enum pnet_file_index
+{
+   PNET_FILE_INDEX_IP,
+   PNET_FILE_INDEX_DIAGNOSTICS,
+   PNET_FILE_INDEX_LOGBOOK,
+} pnet_file_index_t;
+
+
 /**
  * # List of error_code_2 values, for
  * PNET_ERROR_CODE_1_DCTRL_FAULTY_CONNECT (not exhaustive).
@@ -1183,7 +1192,7 @@ typedef struct pnet_alarm_spec
  * @param netif            In:   Name of the network interface.
  * @param tick_us          In:   Periodic interval in us. Specify the interval
  *                               between calls to pnet_handle_periodic().
- * @param p_cfg            In:   Profinet configuration.
+ * @param p_cfg            In:   Profinet configuration. These values are used at first startup and at factory reset.
  * @return a handle to the stack instance, or NULL if an error occurred.
  */
 PNET_EXPORT pnet_t* pnet_init(

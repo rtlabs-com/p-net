@@ -75,6 +75,23 @@ int mock_os_set_ip_suite(
    os_ipaddr_t             *p_gw,
    const char              *hostname,
    bool                    permanent);
+
+int mock_os_save_blob(
+   int                     file_index,
+   void                    *object,
+   size_t                  size
+);
+
+void mock_os_clear_blob(
+   int                     file_index
+);
+
+int mock_os_load_blob(
+   int                     file_index,
+   void                    *object,
+   size_t                  size
+);
+
 int mock_pf_alarm_send_diagnosis(
    pf_ar_t                 *p_ar,
    uint32_t                api_id,

@@ -700,7 +700,7 @@ int app_adjust_stack_configuration(
    stack_config->im_0_data.vendor_id_hi = 0xfe;
    stack_config->im_0_data.vendor_id_lo = 0xed;
    stack_config->im_0_data.im_hardware_revision = 1;
-   stack_config->im_0_data.sw_revision_prefix = 'P'; /* 'V', 'R', 'P', 'U', or 'T' */
+   stack_config->im_0_data.sw_revision_prefix = 'V'; /* 'V', 'R', 'P', 'U', or 'T' */
    stack_config->im_0_data.im_sw_revision_functional_enhancement = 0;
    stack_config->im_0_data.im_sw_revision_bug_fix = 0;
    stack_config->im_0_data.im_sw_revision_internal_change = 0;
