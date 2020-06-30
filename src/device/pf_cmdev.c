@@ -3512,16 +3512,16 @@ int pf_cmdev_rm_connect_ind(
    int                     ret = -1;
    uint16_t                ix;
    const char              *p_station_name = NULL;
-   const pnet_cfg_t        *p_cfg = NULL;
+   pnet_ethaddr_t          mac_address;
 
-   pf_fspm_get_default_cfg(net, &p_cfg);
+   pf_cmina_get_macaddr(net, &mac_address);
 
    /* RM_Connect.ind */
    if ((pf_cmdev_check_apdu(net, p_ar, p_connect_result) == 0) &&
        (pf_cmdev_generate_submodule_diff(net, p_ar, p_connect_result) == 0))
    {
       /* Start building the response to the connect request. */
-      memcpy(p_ar->ar_result.cm_responder_mac_add.addr, p_cfg->eth_addr.addr, sizeof(pnet_ethaddr_t));
+      memcpy(p_ar->ar_result.cm_responder_mac_add.addr, mac_address.addr, sizeof(pnet_ethaddr_t));
       p_ar->ar_result.responder_udp_rt_port = 0x8892;
 
       pf_cmdev_fix_frame_id(p_ar);
