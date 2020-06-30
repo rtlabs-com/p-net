@@ -56,6 +56,20 @@ uint32_t pf_get_uint32(
    uint16_t                *p_pos);
 
 /**
+ * @internal
+ * Extract a sequence of bytes from a buffer.
+ * @param p_info           In:   The parser state.
+ * @param p_pos            InOut:Position in the buffer.
+ * @param dest_size        In:   Number of bytes to copy.
+ * @param p_dest           Out:  Destination buffer.
+ */
+void pf_get_mem(
+   pf_get_info_t           *p_info,
+   uint16_t                *p_pos,
+   uint16_t                dest_size,
+   void                    *p_dest);
+
+/**
  * Extract a NDR header from a buffer.
  *
  * This is the first part of the payload of the incoming DCE/RPC message

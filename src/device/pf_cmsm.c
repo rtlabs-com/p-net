@@ -131,7 +131,12 @@ static void pf_cmsm_timeout(
       /* Ignore */
       break;
    case PF_CMSM_STATE_RUN:
-      LOG_DEBUG(PNET_LOG, "CMSM(%d): TIMEOUT!!\n", __LINE__);
+      LOG_ERROR(PNET_LOG, "CMSM(%d): Timeout for communication start up. CMDEV state: %s \n",
+          __LINE__,
+          pf_cmdev_state_to_string(p_ar->cmdev_state));
+
+      p_ar->err_cls = PNET_ERROR_CODE_1_RTA_ERR_CLS_PROTOCOL;
+      p_ar->err_code = PNET_ERROR_CODE_2_ABORT_AR_CMI_TIMEOUT;
       pf_cmdev_state_ind(net, p_ar, PNET_EVENT_ABORT);
       pf_cmsm_set_state(p_ar, PF_CMSM_STATE_IDLE);
       break;

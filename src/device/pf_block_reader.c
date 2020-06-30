@@ -35,18 +35,10 @@
 #include "pf_includes.h"
 #include "pf_block_reader.h"
 
-/**
- * @internal
- * Extract a sequence of bytes from a buffer.
- * @param p_info           In:   The parser state.
- * @param p_pos            InOut:Position in the buffer.
- * @param dest_size        In:   Number of bytes to copy.
- * @param p_dest           Out:  Destination buffer.
- */
-static void pf_get_mem(
+void pf_get_mem(
    pf_get_info_t           *p_info,
    uint16_t                *p_pos,
-   uint16_t                dest_size,     /* bytes to copy */
+   uint16_t                dest_size,
    void                    *p_dest)
 {
    if (p_info->result != PF_PARSE_OK)

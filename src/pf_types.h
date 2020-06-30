@@ -64,6 +64,11 @@ static inline uint32_t atomic_fetch_sub(atomic_int *p, uint32_t v)
  * larger than 1464. */
 #define PF_MAX_UDP_PAYLOAD_SIZE           1440
 
+/**
+ * Timeout in milliseconds after which the CControl request is re-transmitted.
+ */
+#define PF_CCONTROL_TIMEOUT               2000
+
 /*********************** RPC header ******************************************/
 
 /** Magic UUID values */
@@ -81,17 +86,17 @@ static inline uint32_t atomic_fetch_sub(atomic_int *p, uint32_t v)
 
 typedef enum pf_rpc_packet_type_values
 {
-   PF_RPC_PT_REQUEST = 0,
-   PF_RPC_PT_PING,
-   PF_RPC_PT_RESPONSE,
-   PF_RPC_PT_FAULT,
-   PF_RPC_PT_WORKING,
-   PF_RPC_PT_RESP_PING,                   /* No Call - response to ping */
-   PF_RPC_PT_REJECT,
-   PF_RPC_PT_ACK,
-   PF_RPC_PT_CL_CANCEL,
-   PF_RPC_PT_FRAG_ACK,
-   PF_RPC_PT_CANCEL_ACK,
+   PF_RPC_PT_REQUEST = 0,                                                 //!< PF_RPC_PT_REQUEST
+   PF_RPC_PT_PING,                                                        //!< PF_RPC_PT_PING
+   PF_RPC_PT_RESPONSE,                                                    //!< PF_RPC_PT_RESPONSE
+   PF_RPC_PT_FAULT,                                                       //!< PF_RPC_PT_FAULT
+   PF_RPC_PT_WORKING,                                                     //!< PF_RPC_PT_WORKING
+   PF_RPC_PT_RESP_PING,                   /* No Call - response to ping *///!< PF_RPC_PT_RESP_PING
+   PF_RPC_PT_REJECT,                                                      //!< PF_RPC_PT_REJECT
+   PF_RPC_PT_ACK,                                                         //!< PF_RPC_PT_ACK
+   PF_RPC_PT_CL_CANCEL,                                                   //!< PF_RPC_PT_CL_CANCEL
+   PF_RPC_PT_FRAG_ACK,                                                    //!< PF_RPC_PT_FRAG_ACK
+   PF_RPC_PT_CANCEL_ACK,                                                  //!< PF_RPC_PT_CANCEL_ACK
 } pf_rpc_packet_type_values_t;
 
 typedef enum pf_rpc_flags_bits
@@ -1543,7 +1548,8 @@ typedef struct pf_session_info
 
    uint8_t                 out_buffer[PNET_MAX_SESSION_BUFFER_SIZE];       /* Response buffer */
    uint16_t                out_buf_len;
-   uint16_t                out_buf_sent_len;                               /* Number of bytes sent so far */
+   uint16_t                out_buf_sent_pos;                               /* Number of bytes sent so far */
+   uint16_t                out_buf_send_len;                               /* Size of current packet to send */
    uint16_t                out_fragment_nbr;
 
    pf_get_info_t           get_info;
@@ -1554,6 +1560,10 @@ typedef struct pf_session_info
    /* This item is used to handle dcontrol re-runs */
    uint32_t                dcontrol_sequence_nmb;  /* From dcontrol request */
    pnet_result_t           dcontrol_result;
+
+   /* This timer is used to handle ccontrol re-transmissions */
+   uint32_t                ccontrol_timeout;
+   uint32_t                ccontrol_timeout_ctr;
 } pf_session_info_t;
 
 typedef struct pf_ar

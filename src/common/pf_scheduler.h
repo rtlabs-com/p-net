@@ -34,11 +34,11 @@ void pf_scheduler_init(
 /**
  * Schedule a call-back at a specific time.
  * @param net              InOut: The p-net stack instance
- * @param delay         In:   The delay until the function shall be called.
- * @param p_name        In:   Caller/owner (for debugging).
- * @param cb            In:   The call-back.
- * @param arg           In:   Argument to the call-back.
- * @param p_timeout     Out:  The timeout instance (used to remove if necessary).
+ * @param delay            In:   The delay until the function shall be called.
+ * @param p_name           In:   Caller/owner (for debugging).
+ * @param cb               In:   The call-back.
+ * @param arg              In:   Argument to the call-back.
+ * @param p_timeout        Out:  The timeout instance (used to remove if necessary).
  * @return  0  if the call-back was scheduled.
  *          -1 if an error occurred.
  */
@@ -53,8 +53,8 @@ int pf_scheduler_add(
 /**
  * Stop a timeout. If it is not scheduled then ignore.
  * @param net              InOut: The p-net stack instance
- * @param p_name        In: Must be exactly the same address as in the _add().
- * @param timeout       In: Time instance to remove (see pf_scheduler_add)
+ * @param p_name           In: Must be exactly the same address as in the _add().
+ * @param timeout          In: Time instance to remove (see pf_scheduler_add)
  */
 void pf_scheduler_remove(
    pnet_t                     *net,
