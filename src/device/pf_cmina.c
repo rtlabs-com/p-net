@@ -877,6 +877,7 @@ bool pf_cmina_is_stationname_valid(
    char prev = 'a';
    uint16_t n_labels = 1;
    uint16_t n_non_digit = 0;
+   uint8_t c = 0;
 
    /* - Empty station name is valid here (indicating that no station name has been set) */
    if (len == 0)
@@ -909,8 +910,8 @@ bool pf_cmina_is_stationname_valid(
          uint16_t n_char = 0;
          for (i = 5; i < len; i++)
          {
-            if ((!isdigit(station_name[i])) &&
-                !(station_name[i]== '-'))
+            c = station_name[i];
+            if ((!isdigit(c)) &&  !(c == '-'))
             {
                n_char++;
             }
@@ -925,7 +926,7 @@ bool pf_cmina_is_stationname_valid(
 
    for (i = 0; i < len; i++)
    {
-      char c = station_name[i];
+      c = station_name[i];
       if (c == '.')
       {
           n_labels++;
