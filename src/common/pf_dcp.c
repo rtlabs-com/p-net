@@ -114,8 +114,6 @@ static const pf_dcp_opt_sub_t device_options[] =
    {PF_DCP_OPT_CONTROL, PF_DCP_SUB_CONTROL_SIGNAL},
    {PF_DCP_OPT_CONTROL, PF_DCP_SUB_CONTROL_FACTORY_RESET},
    {PF_DCP_OPT_CONTROL, PF_DCP_SUB_CONTROL_RESET_TO_FACTORY},
-#if 1
-#endif
 #if 0
    {PF_DCP_OPT_DHCP, PF_DCP_SUB_DHCP_HOSTNAME},
    {PF_DCP_OPT_DHCP, PF_DCP_SUB_DHCP_VENDOR_SPEC},
@@ -152,10 +150,12 @@ static void pf_dcp_responder(
       {
          if (os_eth_send(net->eth_handle, p_buf) <= 0)
          {
+        	 net->interface_statistics.ifOutErrors++;
             LOG_ERROR(PNET_LOG, "DCP(%d): Error from os_eth_send(dcp)\n", __LINE__);
          }
          else
          {
+        	 net->interface_statistics.ifOutOctects++;
             LOG_DEBUG(PNET_LOG, "DCP(%d): Sent a DCP response.\n", __LINE__);
          }
          os_buf_free(p_buf);
@@ -806,10 +806,12 @@ static int pf_dcp_get_set(
 
          if (os_eth_send(net->eth_handle, p_rsp) <= 0)
          {
+        	 net->interface_statistics.ifOutErrors++;
             LOG_ERROR(PNET_LOG, "pf_dcp(%d): Error from os_eth_send(dcp)\n", __LINE__);
          }
          else
          {
+        	 net->interface_statistics.ifOutOctects++;
             LOG_DEBUG(PF_DCP_LOG,"DCP(%d): Sent DCP Get/Set response\n", __LINE__);
          }
 
@@ -998,7 +1000,12 @@ int pf_dcp_hello_req(
          p_buf->len = dst_pos;
          if (os_eth_send(net->eth_handle, p_buf) <= 0)
          {
+        	 net->interface_statistics.ifOutErrors++;
             LOG_ERROR(PNET_LOG, "pf_dcp(%d): Error from os_eth_send(dcp)\n", __LINE__);
+         }
+         else
+         {
+        	 net->interface_statistics.ifOutOctects++;
          }
       }
       os_buf_free(p_buf);

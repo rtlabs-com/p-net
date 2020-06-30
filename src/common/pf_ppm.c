@@ -273,10 +273,12 @@ static void pf_ppm_send(
       /* ToDo: Handle RT_CLASS_UDP */
       if (os_eth_send(p_arg->p_ar->p_sess->eth_handle, p_arg->ppm.p_send_buffer) <= 0)
       {
+    	  net->interface_statistics.ifOutErrors++;
          LOG_ERROR(PF_PPM_LOG, "PPM(%d): Error from os_eth_send(ppm)\n", __LINE__);
       }
       else
       {
+    	  net->interface_statistics.ifOutOctects++;
          /* Schedule next execution */
          if (pf_scheduler_add(net, p_arg->ppm.compensated_control_interval, ppm_sync_name, pf_ppm_send, arg, &p_arg->ppm.ci_timer) == 0)
          {

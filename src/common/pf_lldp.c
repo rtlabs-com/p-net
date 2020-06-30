@@ -256,7 +256,7 @@ static void lldp_add_ieee_mac_phy(
 {
    pf_lldp_ieee_header(p_buf, p_pos, 6);
 
-   pf_put_byte(LLDP_IEEE_SUBTYPE_MAC_PHY, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
+   pf_put_byte(LLDP_IEEE_SUBTYPE_MACPHY_CONFIG, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
    pf_put_byte(p_cfg->lldp_cfg.cap_aneg, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
    pf_put_uint16(true, p_cfg->lldp_cfg.cap_phy, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
    pf_put_uint16(true, p_cfg->lldp_cfg.mau_type, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
@@ -391,7 +391,12 @@ void pf_lldp_send(
         if (os_eth_lldp_send(net->eth_handle, p_lldp_buffer) <= 0)
          {
             LOG_ERROR(PNET_LOG, "LLDP(%d): Error from os_eth_lldp_send(lldp)\n", __LINE__);
+            net->interface_statistics.ifOutErrors++;
          }
+        else
+        {
+        	net->interface_statistics.ifOutOctects++;
+        }
       }
 
       os_buf_free(p_lldp_buffer);
@@ -402,6 +407,7 @@ void pf_lldp_init(
    pnet_t                  *net)
 {
    pf_lldp_send(net);
+   memset(&net->fspm_cfg.lldp_peer_cfg,0,sizeof(net->fspm_cfg.lldp_peer_cfg));
 }
 
 void pf_lldp_recv(
@@ -416,6 +422,7 @@ void pf_lldp_recv(
 	 * - data 	= 0-511 bytes*/
 	char _Alias[250]={0};
 	char pPnioCode[] = LLDP_PROFIBUS_CODE;
+	char pIeeeCode[] = LLDP_IEEE_8023_CODE;
 	/* Jump to the data in the frame*/
 	uint8_t *pData = (&((uint8_t *)p_frame_buf->payload)[frame_pos]);
 	uint16_t _tvData = htons(GET_UINT16(pData));
@@ -506,7 +513,19 @@ void pf_lldp_recv(
 					memcpy(&net->fspm_cfg.lldp_peer_cfg.PeerPortStatus,pData+4,sizeof(net->fspm_cfg.lldp_peer_cfg.PeerPortStatus));
 					break;
 				case LLDP_PROFIBUS_SUBTYPE_CHASSIS_MAC:
-					memcpy(&net->fspm_cfg.lldp_peer_cfg.PeerMACAddr.addr,pData+4,sizeof(net->fspm_cfg.lldp_peer_cfg.PeerMACAddr));
+					memcpy(&net->fspm_cfg.lldp_peer_cfg.PeerMACAddr.addr,pData+4,sizeof(net->fspm_cfg.lldp_peer_cfg.PeerMACAddr.addr));
+					break;
+				default:
+					break;
+				}
+			}
+			else if(0==memcmp(&pIeeeCode,pData,3))
+			{
+				switch(pData[3])
+				{
+				case LLDP_IEEE_SUBTYPE_MACPHY_CONFIG:
+					memcpy(&net->fspm_cfg.lldp_peer_cfg.PeerMACPhyConfig,pData+3,sizeof(net->fspm_cfg.lldp_peer_cfg.PeerMACPhyConfig));
+					net->fspm_cfg.lldp_peer_cfg.PeerMACPhyConfig.OperationalMAUType = htons(net->fspm_cfg.lldp_peer_cfg.PeerMACPhyConfig.OperationalMAUType);
 					break;
 				default:
 					break;

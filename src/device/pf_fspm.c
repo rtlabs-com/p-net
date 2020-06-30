@@ -441,6 +441,8 @@ int pf_fspm_cm_release_ind(
       ret = net->fspm_cfg.release_cb(net, net->fspm_cfg.cb_arg, p_ar->arep, p_result);
    }
 
+
+   pf_fspm_create_log_book_entry(net, p_ar->arep, &p_result->pnio_status, __LINE__);
    return ret;
 }
 

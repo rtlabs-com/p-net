@@ -37,8 +37,6 @@
 #include <string.h>
 #include <stdint.h>
 #include <ctype.h>
-#include <inttypes.h>
-
 #include "pf_includes.h"
 #include "pf_block_reader.h"
 #include "pf_block_writer.h"
