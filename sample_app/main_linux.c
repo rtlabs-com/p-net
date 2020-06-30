@@ -253,15 +253,22 @@ void print_ip_address(uint32_t ip){
 uint32_t read_ip_address(char* interface_name)
 {
    int fd;
+   int result = 0;
    struct ifreq ifr;
    uint32_t ip;
 
-   fd = socket (AF_INET, SOCK_DGRAM, 0);
    ifr.ifr_addr.sa_family = AF_INET;
    strncpy (ifr.ifr_name, interface_name, IFNAMSIZ - 1);
-   ioctl (fd, SIOCGIFADDR, &ifr);
+
+   fd = socket (AF_INET, SOCK_DGRAM, 0);
+   result = ioctl(fd, SIOCGIFADDR, &ifr);
+   close(fd);
+
+   if (result != 0)
+   {
+      return IP_INVALID;
+   }
    ip = ((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr.s_addr;
-   close (fd);
    return ip;
 }
 
@@ -280,16 +287,16 @@ int read_mac_address(char *interface_name, pnet_ethaddr_t *mac_addr)
    int ret = 0;
    struct ifreq ifr;
 
-   fd = socket (AF_INET, SOCK_DGRAM, 0);
-
    ifr.ifr_addr.sa_family = AF_INET;
    strncpy (ifr.ifr_name, interface_name, IFNAMSIZ - 1);
 
+   fd = socket (AF_INET, SOCK_DGRAM, 0);
    ret = ioctl(fd, SIOCGIFHWADDR, &ifr);
+   close (fd);
+
    if (ret == 0){
       memcpy(mac_addr->addr, ifr.ifr_hwaddr.sa_data, 6);
    }
-   close (fd);
    return ret;
  }
 
@@ -305,15 +312,20 @@ uint32_t read_netmask(char* interface_name)
    int fd;
    struct ifreq ifr;
    uint32_t netmask;
-
-   fd = socket (AF_INET, SOCK_DGRAM, 0);
+   int result = 0;
 
    ifr.ifr_addr.sa_family = AF_INET;
    strncpy (ifr.ifr_name, interface_name, IFNAMSIZ - 1);
-   ioctl (fd, SIOCGIFNETMASK, &ifr);
-   netmask = ((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr.s_addr;
+
+   fd = socket (AF_INET, SOCK_DGRAM, 0);
+   result = ioctl(fd, SIOCGIFNETMASK, &ifr);
    close (fd);
 
+   if (result != 0)
+   {
+      return IP_INVALID;
+   }
+   netmask = ((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr.s_addr;
    return netmask;
 }
 
@@ -333,8 +345,13 @@ uint32_t read_default_gateway(char* interface_name)
    uint32_t gateway;
 
    ip = read_ip_address(interface_name);
-   gateway = (ip & 0x00FFFFFF) | 0x01000000;
 
+   if (ip == IP_INVALID)
+   {
+      return IP_INVALID;
+   }
+
+   gateway = (ip & 0x00FFFFFF) | 0x01000000;
    return gateway;
 }
 
@@ -546,7 +563,7 @@ void pn_main (void * arg)
 
 int main(int argc, char *argv[])
 {
-   pnet_t *net;
+   pnet_t                  *net;
    pnet_cfg_t              pnet_default_cfg;
    app_data_and_stack_t    appdata_and_stack;
    app_data_t              appdata;
@@ -578,20 +595,8 @@ int main(int argc, char *argv[])
    }
 
    uint32_t ip_int = read_ip_address(appdata.arguments.eth_interface);
-   if (ip_int == IP_INVALID)
-   {
-      printf("Error: Invalid IP address.\n");
-      exit(EXIT_CODE_ERROR);
-   }
-
    uint32_t netmask_int = read_netmask(appdata.arguments.eth_interface);
-
    uint32_t gateway_ip_int = read_default_gateway(appdata.arguments.eth_interface);
-   if (gateway_ip_int == IP_INVALID)
-   {
-      printf("Error: Invalid gateway IP address.\n");
-      exit(EXIT_CODE_ERROR);
-   }
 
    pnet_ethaddr_t macbuffer;
    int ret = read_mac_address(appdata.arguments.eth_interface, &macbuffer);

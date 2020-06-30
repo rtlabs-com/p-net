@@ -60,6 +60,31 @@ int os_snprintf(char * str, size_t size, const char * fmt, ...)
    return ret;
 }
 
+int os_save_blob(
+   int                     file_index,
+   void                    *object,
+   size_t                  size
+)
+{
+   return 0;
+}
+
+void os_clear_blob(
+   int                     file_index
+)
+{
+   return;
+}
+
+int os_load_blob(
+   int                     file_index,
+   void                    *object,
+   size_t                  size
+)
+{
+   return -1;
+}
+
 void os_log (int type, const char * fmt, ...)
 {
    va_list list;

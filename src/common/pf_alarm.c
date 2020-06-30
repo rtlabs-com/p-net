@@ -841,10 +841,10 @@ static int pf_alarm_apms_a_data_req(
    os_buf_t                *p_rta;
    uint8_t                 *p_buf = NULL;
    uint16_t                pos = 0;
-   const pnet_cfg_t        *p_cfg = NULL;
+   pnet_ethaddr_t          mac_address;
    uint16_t                u16 = 0;
 
-   pf_fspm_get_default_cfg(net, &p_cfg);
+   pf_cmina_get_macaddr(net, &mac_address);
 
    if (p_apmx->p_ar->alarm_cr_request.alarm_cr_properties.transport_udp == true)
    {
@@ -871,7 +871,7 @@ static int pf_alarm_apms_a_data_req(
             pf_put_mem(&p_apmx->da, sizeof(p_apmx->da), PF_FRAME_BUFFER_SIZE, p_buf, &pos);
 
             /* Insert source MAC address (our interface MAC address) */
-            memcpy(&p_buf[pos], p_cfg->eth_addr.addr, sizeof(pnet_ethaddr_t));
+            memcpy(&p_buf[pos], mac_address.addr, sizeof(pnet_ethaddr_t));
             pos += sizeof(pnet_ethaddr_t);
 
             /* Insert VLAN Tag protocol identifier (TPID) */

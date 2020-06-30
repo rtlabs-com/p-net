@@ -85,6 +85,8 @@ typedef void os_channel_t;
 /** Set an IP address given by the four byte-parts */
 #define OS_IP4_ADDR_TO_U32(ipaddr, a,b,c,d)  ipaddr = OS_MAKEU32(a,b,c,d)
 
+#define OS_INET_ADDRSTRLEN       16
+
 enum os_eth_type {
   OS_ETHTYPE_IP        = 0x0800U,
   OS_ETHTYPE_ARP       = 0x0806U,
@@ -113,6 +115,46 @@ enum os_eth_type {
 
 typedef uint32_t os_ipaddr_t;
 typedef uint16_t os_ipport_t;
+
+/* TODO Handle multiple instances of the stack */
+/**
+ * Load a binary blob.
+ *
+ * @param file_index       In:    Index of binary blobs
+ * @param object           Out:   Struct to load
+ * @param size             In:    Size of struct to load
+ * @return  0  if the operation succeeded.
+ *          -1 if not found or an error occurred.
+ */
+int os_load_blob(
+   int                     file_index,
+   void                    *object,
+   size_t                  size
+);
+
+/**
+ * Save a binary blob.
+ *
+ * @param file_index       In: Index of binary blobs
+ * @param object           In: Struct to save
+ * @param size             In: Size of struct to save
+ * @return  0  if the operation succeeded.
+ *          -1 if an error occurred.
+ */
+int os_save_blob(
+   int                     file_index,
+   void                    *object,
+   size_t                  size
+);
+
+/**
+ * Clear a binary blob.
+ *
+ * @param file_index       In: Index of binary blobs
+ */
+void os_clear_blob(
+   int                     file_index
+);
 
 int os_snprintf (char * str, size_t size, const char * fmt, ...) CC_FORMAT (3,4);
 void os_log (int type, const char * fmt, ...) CC_FORMAT (2,3);

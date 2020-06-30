@@ -41,7 +41,16 @@ void pf_cmina_show(
    pnet_t                  *net);
 
 /**
- * Retrieve the configured station name of the device.
+ * Convert IPv4 address to string
+ * @param ip               In: IP address
+ * @param outputstring     Out: Resulting string. Should have length OS_INET_ADDRSTRLEN.
+ */
+void pf_cmina_ip_to_string(
+   os_ipaddr_t             ip,
+   char                    *outputstring);
+
+/**
+ * Retrieve the current station name of the device.
  * @param net              InOut: The p-net stack instance
  * @param pp_station_name  Out:  The station name.
  * @return  0  if the operation succeeded.
@@ -52,7 +61,7 @@ int pf_cmina_get_station_name(
    const char              **pp_station_name);
 
 /**
- * Retrieve the configured IP address of the device.
+ * Retrieve the current IP address of the device.
  * @param net              InOut: The p-net stack instance
  * @param p_ipaddr         Out:  The ip_address.
  * @return  0  if the operation succeeded.
@@ -61,6 +70,17 @@ int pf_cmina_get_station_name(
 int pf_cmina_get_ipaddr(
    pnet_t                  *net,
    os_ipaddr_t             *p_ipaddr);
+
+/**
+ * Retrieve the MAC address.
+ * @param net              InOut: The p-net stack instance
+ * @param p_macaddr        Out:  The MAC address.
+ * @return  0  if the operation succeeded.
+ *          -1 if an error occurred.
+ */
+int pf_cmina_get_macaddr(
+   pnet_t                  *net,
+   pnet_ethaddr_t          *p_macaddr);
 
 /**
  * Save one block of data for incoming DCP set command.
@@ -98,6 +118,12 @@ int pf_cmina_dcp_set_ind(
  * 1:  Reset application parameters
  * 2:  Reset communication parameters
  * 99: Reset application and communication parameters.
+ *
+ * Populates net->cmina_nonvolatile_dcp_ase from file (and/or from default configuration),
+ * and copies the resulting values to net->cmina_current_dcp_ase
+ *
+ * In order to actually change IP etc, the function pf_cmina_dcp_set_commit()
+ * must be called afterwards.
  *
  * @param net              InOut: The p-net stack instance
  * @param reset_mode       In:   Reset mode.

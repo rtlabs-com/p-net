@@ -137,6 +137,31 @@ void mock_os_udp_close(
 {
 }
 
+int mock_os_save_blob(
+   int                     file_index,
+   void                    *object,
+   size_t                  size
+)
+{
+   return 0;
+}
+
+void mock_os_clear_blob(
+   int                     file_index
+)
+{
+   return;
+}
+
+int mock_os_load_blob(
+   int                     file_index,
+   void                    *object,
+   size_t                  size
+)
+{
+   return -1;
+}
+
 int mock_pf_alarm_send_diagnosis(
    pf_ar_t                 *p_ar,
    uint32_t                api_id,

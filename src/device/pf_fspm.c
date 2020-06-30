@@ -47,7 +47,7 @@ int pf_fspm_init(
     */
    net->fspm_cfg = *p_cfg;
 
-   /* Also save the default settings */
+   /* Reference to the default settings (used at factory reset) */
    net->p_fspm_default_cfg = p_cfg;
 
    if (net->fspm_log_book_mutex == NULL)
@@ -96,6 +96,42 @@ void pf_fspm_create_log_book_entry(
       net->fspm_log_book.entries[put].pnio_status = *p_pnio_status;
       net->fspm_log_book.entries[put].entry_detail = entry_detail;
       os_mutex_unlock(net->fspm_log_book_mutex);
+   }
+}
+
+int pf_fspm_clear_im_data(
+   pnet_t                  *net)
+{
+   memset(net->fspm_cfg.im_1_data.im_tag_function, ' ', sizeof(net->fspm_cfg.im_1_data.im_tag_function));
+   net->fspm_cfg.im_1_data.im_tag_function[sizeof(net->fspm_cfg.im_1_data.im_tag_function) - 1] = '\0';
+   memset(net->fspm_cfg.im_1_data.im_tag_location, ' ', sizeof(net->fspm_cfg.im_1_data.im_tag_location));
+   net->fspm_cfg.im_1_data.im_tag_location[sizeof(net->fspm_cfg.im_1_data.im_tag_location) - 1] = '\0';
+   memset(net->fspm_cfg.im_2_data.im_date, ' ', sizeof(net->fspm_cfg.im_2_data.im_date));
+   net->fspm_cfg.im_2_data.im_date[sizeof(net->fspm_cfg.im_2_data.im_date) - 1] = '\0';
+   memset(net->fspm_cfg.im_3_data.im_descriptor, ' ', sizeof(net->fspm_cfg.im_3_data.im_descriptor));
+   net->fspm_cfg.im_3_data.im_descriptor[sizeof(net->fspm_cfg.im_3_data.im_descriptor) - 1] = '\0';
+   memset(net->fspm_cfg.im_4_data.im_signature, 0, sizeof(net->fspm_cfg.im_4_data.im_signature));
+
+   return 0;
+}
+
+void pf_fspm_get_cfg(
+   pnet_t                  *net,
+   pnet_cfg_t              **pp_cfg)
+{
+   if (pp_cfg != NULL)
+   {
+      *pp_cfg = &net->fspm_cfg;
+   }
+}
+
+void pf_fspm_get_default_cfg(
+   pnet_t                  *net,
+   const pnet_cfg_t        **pp_cfg)
+{
+   if (pp_cfg != NULL)
+   {
+      *pp_cfg = net->p_fspm_default_cfg;
    }
 }
 
@@ -376,42 +412,6 @@ int pf_fspm_cm_write_ind(
    }
 
    return ret;
-}
-
-int pf_fspm_clear_im_data(
-   pnet_t                  *net)
-{
-   memset(net->fspm_cfg.im_1_data.im_tag_function, ' ', sizeof(net->fspm_cfg.im_1_data.im_tag_function));
-   net->fspm_cfg.im_1_data.im_tag_function[sizeof(net->fspm_cfg.im_1_data.im_tag_function) - 1] = '\0';
-   memset(net->fspm_cfg.im_1_data.im_tag_location, ' ', sizeof(net->fspm_cfg.im_1_data.im_tag_location));
-   net->fspm_cfg.im_1_data.im_tag_location[sizeof(net->fspm_cfg.im_1_data.im_tag_location) - 1] = '\0';
-   memset(net->fspm_cfg.im_2_data.im_date, ' ', sizeof(net->fspm_cfg.im_2_data.im_date));
-   net->fspm_cfg.im_2_data.im_date[sizeof(net->fspm_cfg.im_2_data.im_date) - 1] = '\0';
-   memset(net->fspm_cfg.im_3_data.im_descriptor, ' ', sizeof(net->fspm_cfg.im_3_data.im_descriptor));
-   net->fspm_cfg.im_3_data.im_descriptor[sizeof(net->fspm_cfg.im_3_data.im_descriptor) - 1] = '\0';
-   memset(net->fspm_cfg.im_4_data.im_signature, 0, sizeof(net->fspm_cfg.im_4_data.im_signature));
-
-   return 0;
-}
-
-void pf_fspm_get_cfg(
-   pnet_t                  *net,
-   pnet_cfg_t              **pp_cfg)
-{
-   if (pp_cfg != NULL)
-   {
-      *pp_cfg = &net->fspm_cfg;
-   }
-}
-
-void pf_fspm_get_default_cfg(
-   pnet_t                  *net,
-   const pnet_cfg_t        **pp_cfg)
-{
-   if (pp_cfg != NULL)
-   {
-      *pp_cfg = net->p_fspm_default_cfg;
-   }
 }
 
 int pf_fspm_cm_connect_ind(
