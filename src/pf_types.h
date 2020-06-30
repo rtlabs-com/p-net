@@ -135,6 +135,14 @@ typedef enum pf_epmapper_opnum_values
    PF_RPC_EPM_OPNUM_MGMT_DELETE,
 } pf_epmapper_opnum_values_t;
 
+typedef enum pf_mediatype_values
+{
+	PF_PD_MEDIATYPE_UNKNOWN = 0,
+	PF_PD_MEDIATYPE_COPPER,
+	PF_PD_MEDIATYPE_FIBER,
+	PF_PD_MEDIATYPE_RAIO
+}pf_mediatype_values_t;
+
 typedef struct pf_rpc_flags
 {
    bool              last_fragment;
@@ -269,9 +277,13 @@ typedef enum pf_block_type_values
    /* LLDP Peer*/
    PF_BT_PDPORTCHECK              	   = 0x0200,
    PF_BT_CHECKPEERS              	   = 0x020a,
-   
+   PF_BT_PDPORTDATAREAL            	   = 0x020f,
+   PF_BT_INTERFACE_REAL_DATA		   = 0x0240,
    PF_BT_INTERFACE_ADJUST              = 0x0250,
+   PF_BT_PORT_STATISTICS			   = 0x0251,
 
+   PF_BT_MULTIPLEBLOCK_HEADER		   = 0x0400,
+   
    PF_BT_MAINTENANCE_ITEM              = 0x0f00,
 
    /* Output from a PROFINET device */
@@ -1983,6 +1995,15 @@ typedef struct pf_log_book
    bool                    wrap;       /* All entries valid */
 } pf_log_book_t;
 
+typedef struct pf_interface_stats
+{
+	uint32_t ifInOctects;
+	uint32_t ifOutOctects;
+	uint32_t ifInDiscards;
+	uint32_t ifOutDiscards;
+	uint32_t ifInErrors;
+	uint32_t ifOutErrors;
+}pnet_interface_stats_t;
 
 struct pnet
 {
@@ -2028,6 +2049,7 @@ struct pnet
    pnet_cfg_t                          fspm_cfg;
    pf_log_book_t                       fspm_log_book;
    os_mutex_t                          *fspm_log_book_mutex;
+   pnet_interface_stats_t			   interface_statistics;
 };
 
 

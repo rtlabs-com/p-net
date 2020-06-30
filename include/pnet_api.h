@@ -1136,22 +1136,35 @@ typedef struct pnet_profibus_delay_valus
 	
 }pnet_profibus_delay_t;
 
+typedef struct pnet_ieee_macphy_config
+{
+	uint8_t 	ConfigStatus;
+	uint8_t 	AutoNeg_Status;
+	uint16_t 	AutoNeg_Capabilites;
+	uint16_t 	OperationalMAUType;
+}pnet_ieee_macphy_t;
+
 /**
  * LLDP Peer information used by the Profinet stack.
  */
 typedef struct pnet_lldp_peer_cfg
 {
 	/*LLDP TVL*/
-   char                    PeerChassisID[512];	/**< Terminated string */
-   size_t				   PeerChassisIDLen;
-   char                    PeerPortID[512]; 	/**< Terminated string */
-   size_t				   PeerPortIDLen;
-   uint16_t                TTL;
+   char                    	PeerChassisID[512];		/**< Terminated string */
+   size_t				   	PeerChassisIDLen;
+   char                    	PeerPortID[512]; 		/**< Terminated string */
+   size_t				   	PeerPortIDLen;
+   uint16_t                	TTL;
    /*PROFIBUS TVL's*/
-   pnet_profibus_delay_t   PeerDelay;
-   uint16_t                PeerPortStatus;
-   pnet_ethaddr_t          PeerMACAddr;
-   uint16_t                PeerMediaType;
+   pnet_profibus_delay_t   	PeerDelay;
+   uint16_t                	PeerPortStatus;
+   pnet_ethaddr_t          	PeerMACAddr;
+   uint16_t                	PeerMediaType;
+   uint32_t				   	PeerLineDelay;			/* Line Delay */
+   uint32_t				   	PeerDomainBoundary;		/* Line Delay */
+   uint32_t				   	PeerMulticastBoundary;	/* Line Delay */
+   uint8_t					PeerLinkStatePort;
+   pnet_ieee_macphy_t		PeerMACPhyConfig;
 } pnet_lldp__peer_cfg_t;
 
 /**
