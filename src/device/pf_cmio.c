@@ -23,6 +23,8 @@
 
 static const char          *cmio_sched_name = "cmio";
 
+/*************** Diagnostic strings *****************************************/
+
 /**
  * @internal
  * Return a string representation of the CMIO state.
@@ -60,6 +62,8 @@ void pf_cmio_show(
    printf("     timer            = %u\n", (unsigned)p_ar->cmio_timer);
    printf("     timer run        = %u\n", (unsigned)p_ar->cmio_timer_run);
 }
+
+/****************************************************************************/
 
 /**
  * @internal

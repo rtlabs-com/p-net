@@ -194,7 +194,7 @@ int pf_ppm_get_data_status(
 /**
  * Set/Reset the station problem indicator which is inclued in all data messages.
  *
- * |param p_ar                In:   The AR instance.
+ * @param p_ar                In:   The AR instance.
  * @param problem_indicator   In:   The problem indicator.
  */
 void pf_ppm_set_problem_indicator(

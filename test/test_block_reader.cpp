@@ -13,29 +13,19 @@
  * full license information.
  ********************************************************************/
 
-#include "pf_includes.h"
+#include "utils_for_testing.h"
+#include "mocks.h"
+
 #include "pf_block_reader.h"
+#include "pf_includes.h"
 
 #include <gtest/gtest.h>
 
-#include "mocks.h"
-#include "test_util.h"
 
-// Test fixture
+class BlockReaderUnitTest : public PnetUnitTest {};
 
-class BlockReaderTest : public ::testing::Test
-{
-protected:
-   virtual void SetUp() {
-      memset (&net, 0, sizeof(net));
-   };
 
-   pnet_cfg_t net;
-};
-
-// Tests
-
-TEST_F (BlockReaderTest, BlockReaderTestGetBits)
+TEST_F (BlockReaderUnitTest, BlockReaderTestGetBits)
 {
 
    /* 11111111 11111111 11111111 11111111 */

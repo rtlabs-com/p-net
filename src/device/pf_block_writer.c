@@ -659,7 +659,7 @@ static void pf_put_fsu_data(
 }
 #endif
 
-#if PNET_SRL_DATA
+#if PNET_OPTION_SRL
 static void pf_put_srl_data(
    bool                    is_big_endian,
    pf_ar_t                 *p_ar,
@@ -836,7 +836,7 @@ d The number of padding octets shall be adapted to make the following field Unsi
       nbr_ar_data++;
    }
 #endif
-#if PNET_SRL_DATA
+#if PNET_OPTION_SRL
    if (p_ar->srl_data.valid == true)
    {
       pf_put_srl_data(is_big_endian, p_ar, res_len, p_bytes, p_pos);

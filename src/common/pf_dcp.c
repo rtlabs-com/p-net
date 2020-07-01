@@ -15,7 +15,6 @@
 
 #ifdef UNIT_TEST
 #define os_eth_send mock_os_eth_send
-#define os_set_led mock_os_set_led
 #endif
 
 #include <string.h>
@@ -133,7 +132,7 @@ static const pf_dcp_opt_sub_t device_options[] =
 
 /**
  * @internal
- * Send a DCP response (to a GET).
+ * Send a DCP response (to a Identify request).
  *
  * This is a callback for the scheduler. Arguments should fulfill pf_scheduler_timeout_ftn_t
  *
@@ -195,7 +194,7 @@ static void pf_dcp_clear_sam(
  * @param with_block_info  In:   If true then add block_info argument.
  * @param block_info       In:   The block info argument.
  * @param value_length     In:   The length in bytes of the p_value data.
- * @param p_value          In:   The source date.
+ * @param p_value          In:   The source data.
  * @return
  */
 static int pf_dcp_put_block(
@@ -269,6 +268,7 @@ static int pf_dcp_get_req(
 {
    int                     ret = 0;       /* Assume all OK */
    uint8_t                 block_error = PF_DCP_BLOCK_ERROR_NO_ERROR;
+   uint8_t                 negative_response_data[3];  /* For negative get */
    uint16_t                block_info = 0;
    uint16_t                value_length = 0;
    uint8_t                 *p_value = NULL;
@@ -294,6 +294,7 @@ static int pf_dcp_get_req(
          p_value = (uint8_t *)&full_ip_suite.ip_suite;
 
          block_info = ((full_ip_suite.ip_suite.ip_addr == 0) && (full_ip_suite.ip_suite.ip_mask == 0) && (full_ip_suite.ip_suite.ip_gateway == 0)) ? 0: BIT(0);
+         /* ToDo: We do not yet support DHCP (block_info, BIT(1)) */
          /* ToDo: We do not yet report on "IP address conflict" (block_info, BIT(7)) */
          break;
       case PF_DCP_SUB_IP_SUITE:
@@ -308,6 +309,7 @@ static int pf_dcp_get_req(
          p_value = (uint8_t *)&full_ip_suite;
 
          block_info = ((full_ip_suite.ip_suite.ip_addr == 0) && (full_ip_suite.ip_suite.ip_mask == 0) && (full_ip_suite.ip_suite.ip_gateway == 0)) ? 0: BIT(0);
+         /* ToDo: We do not yet support DHCP (block_info, BIT(1)) */
          /* ToDo: We do not yet report on "IP address conflict" (block_info, BIT(7)) */
          break;
       case PF_DCP_SUB_IP_MAC:
@@ -323,7 +325,7 @@ static int pf_dcp_get_req(
       case PF_DCP_SUB_DEV_PROP_OPTIONS:
          if (sizeof(device_options) > 0)
          {
-            p_value = (uint8_t *)&device_options;
+            p_value = (uint8_t *)device_options;
             value_length = sizeof(device_options);
             ret = 0;
          }
@@ -356,6 +358,7 @@ static int pf_dcp_get_req(
          break;
       case PF_DCP_SUB_DEV_PROP_ROLE:
          value_length += 1;
+         break;
       case PF_DCP_SUB_DEV_PROP_ID:
       case PF_DCP_SUB_DEV_PROP_INSTANCE:
       case PF_DCP_SUB_DEV_PROP_OEM_ID:
@@ -397,7 +400,17 @@ static int pf_dcp_get_req(
    {
       if (skip == false)
       {
-         ret = pf_dcp_put_block(p_dst, p_dst_pos, dst_max, opt, sub, true, 0, sizeof(block_error), &block_error);
+         /* GetNegResBlock consists of:
+            - option = Control                              1 byte
+            - suboption = Response                          1 byte
+            - block length                                  2 bytes
+            - type of option involved (option + suboption)  2 bytes
+            - block error                                   1 byte
+         */
+         negative_response_data[0] = opt;
+         negative_response_data[1] = sub;
+         negative_response_data[2] = block_error;
+         ret = pf_dcp_put_block(p_dst, p_dst_pos, dst_max, PF_DCP_OPT_CONTROL, PF_DCP_SUB_CONTROL_RESPONSE, false, 0, sizeof(negative_response_data), negative_response_data);
       }
    }
 
@@ -408,8 +421,8 @@ static int pf_dcp_get_req(
  * @internal
  * Execute DCP control states.
 
- * This functions blinks the system LED 3 times at 1Hz.
- * The system LED is accessed via the os_set_led() osal function.
+ * This functions blinks the Profinet signal LED 3 times at 1 Hz.
+ * The LED is accessed via the pnet_signal_led_ind() callback function.
  *
  * This is a callback for the scheduler. Arguments should fulfill pf_scheduler_timeout_ftn_t
  *
@@ -427,12 +440,16 @@ static void pf_dcp_control_signal(
    if ((state % 2) == 1)
    {
       /* Turn LED on */
-      os_set_led(0, 1);
+      if (pf_fspm_signal_led_ind(net, true) != 0){
+         LOG_ERROR(PF_DCP_LOG, "DCP(%d): Could not turn signal LED on\n", __LINE__);
+      }
    }
    else
    {
       /* Turn LED off */
-      os_set_led(0, 0);
+      if (pf_fspm_signal_led_ind(net, false) != 0){
+         LOG_ERROR(PF_DCP_LOG, "DCP(%d): Could not turn signal LED off\n", __LINE__);
+      }
    }
 
    if ((state > 0) && (state < 200))   /* Plausibility test */
@@ -459,7 +476,7 @@ static void pf_dcp_control_signal(
  * @param sub              In:   Sub-option key.
  * @param block_info       In:   The block info argument.
  * @param value_length     In:   The length in bytes of the p_value data.
- * @param p_value          In:   The source date.
+ * @param p_value          In:   The source data.
  * @return
  */
 static int pf_dcp_set_req(
@@ -474,13 +491,13 @@ static int pf_dcp_set_req(
    uint8_t                 *p_value)
 {
    int                     ret = -1;
-   uint8_t                 response_data[3]; /* For negative set */
+   uint8_t                 response_data[3];
    pf_full_ip_suite_t      full_ip_suite;
    uint16_t                ix;
 
    response_data[0] = opt;
    response_data[1] = sub;
-   response_data[2] = PF_DCP_BLOCK_ERROR_SUBOPTION_NOT_SUPPORTED;
+   response_data[2] = PF_DCP_BLOCK_ERROR_SUBOPTION_NOT_SUPPORTED;  /* Assume negative response initially */
 
    switch (opt)
    {
@@ -566,6 +583,8 @@ static int pf_dcp_set_req(
       {
       case PF_DCP_SUB_CONTROL_START:
          net->dcp_global_block_qualifier = block_qualifier;
+         response_data[2] = PF_DCP_BLOCK_ERROR_NO_ERROR;
+         ret = 0;
          break;
       case PF_DCP_SUB_CONTROL_STOP:
          if (block_qualifier == net->dcp_global_block_qualifier)
@@ -615,6 +634,13 @@ static int pf_dcp_set_req(
       response_data[2] = PF_DCP_BLOCK_ERROR_NO_ERROR;
    }
 
+   /* SetResBlock and SetNegResBlock consists of:
+      - option = Control                              1 byte
+      - suboption = Response                          1 byte
+      - block length                                  2 bytes
+      - type of option involved (option + suboption)  2 bytes
+      - block error                                   1 byte  (=0 when no error)
+   */
    (void)pf_dcp_put_block(p_dst, p_dst_pos, dst_max,
       PF_DCP_OPT_CONTROL, PF_DCP_SUB_CONTROL_RESPONSE,
       false, 0, sizeof(response_data), response_data);
@@ -646,7 +672,6 @@ static int pf_dcp_get_set(
    uint16_t                frame_id_pos,
    void                    *p_arg)
 {
-   int                     ret = 0;       /* Means not handled */
    uint8_t                 *p_src;
    uint16_t                src_pos;
    uint16_t                src_dcplen;
@@ -703,7 +728,7 @@ static int pf_dcp_get_set(
 
          /* Set eth header in the response */
          memcpy(p_dst_ethhdr->dest.addr, p_src_ethhdr->src.addr, sizeof(pnet_ethaddr_t));
-         memcpy (p_dst_ethhdr->src.addr, &p_cfg->eth_addr.addr, sizeof(pnet_ethaddr_t));
+         memcpy (p_dst_ethhdr->src.addr, p_cfg->eth_addr.addr, sizeof(pnet_ethaddr_t));
          p_dst_ethhdr->type = htons(OS_ETHTYPE_PROFINET);
 
          /* Copy DCP header from the request, and modify what is needed. */
@@ -718,15 +743,14 @@ static int pf_dcp_get_set(
             src_pos += sizeof(*p_src_block_hdr);    /* Point to the block value */
             src_block_len = ntohs(p_src_block_hdr->block_length);
 
-            while ((ret == 0) &&
-                   (src_dcplen >= (src_pos + src_block_len)))
+            while (src_dcplen >= (src_pos + src_block_len))
             {
                /* Extract block qualifier */
                src_block_qualifier = ntohs(*(uint16_t*)&p_src[src_pos]);
                src_pos += sizeof(uint16_t);
                src_block_len -= sizeof(uint16_t);
 
-               ret = pf_dcp_set_req(net, p_dst, &dst_pos, PF_FRAME_BUFFER_SIZE,
+               (void)pf_dcp_set_req(net, p_dst, &dst_pos, PF_FRAME_BUFFER_SIZE,
                   p_src_block_hdr->option, p_src_block_hdr->sub_option,
                   src_block_qualifier,
                   src_block_len, &p_src[src_pos]);
@@ -752,10 +776,9 @@ static int pf_dcp_get_set(
          else if (p_src_dcphdr->service_id == PF_DCP_SERVICE_GET)
          {
             LOG_DEBUG(PF_DCP_LOG,"DCP(%d): Incoming DCP Get request\n", __LINE__);
-            while ((ret == 0) &&
-                   (src_dcplen >= (src_pos + sizeof(uint8_t) + sizeof(uint8_t))))
+            while (src_dcplen >= (src_pos + sizeof(uint8_t) + sizeof(uint8_t)))
             {
-               ret = pf_dcp_get_req(net, p_dst, &dst_pos, PF_FRAME_BUFFER_SIZE,
+               (void)pf_dcp_get_req(net, p_dst, &dst_pos, PF_FRAME_BUFFER_SIZE,
                   p_src[src_pos], p_src[src_pos + 1], false);
 
                /* Point to next block */
@@ -893,8 +916,6 @@ int pf_dcp_hello_req(
    pf_ip_suite_t           ip_suite;
    const pnet_cfg_t        *p_cfg = NULL;
 
-   LOG_DEBUG(PF_DCP_LOG,"DCP(%d): Sending DCP Hello request\n", __LINE__);
-
    pf_fspm_get_default_cfg(net, &p_cfg);
 
    if (p_buf != NULL)
@@ -927,6 +948,7 @@ int pf_dcp_hello_req(
          if (pf_cmina_dcp_get_req(net, PF_DCP_OPT_DEVICE_PROPERTIES, PF_DCP_SUB_DEV_PROP_NAME,
             &value_length, &p_value, &block_error) == 0)
          {
+            LOG_DEBUG(PF_DCP_LOG,"DCP(%d): Sending DCP Hello request. Station name: %s\n", __LINE__, (char *)p_value);
             (void)pf_dcp_put_block(p_dst, &dst_pos, PF_FRAME_BUFFER_SIZE,
                PF_DCP_OPT_DEVICE_PROPERTIES, PF_DCP_SUB_DEV_PROP_NAME, true, 0,
 				(uint16_t)strlen((char *)p_value), p_value);
@@ -1276,8 +1298,8 @@ static int pf_dcp_identify_req(
                   {
                      match = false;
                   }
-   #endif
                   break;
+   #endif
                case PF_DCP_SUB_DEV_PROP_INSTANCE:
                   if (filter == true)
                   {
@@ -1351,6 +1373,8 @@ static int pf_dcp_identify_req(
 
       if ((ret == 0) && (match == true))
       {
+         LOG_DEBUG(PF_DCP_LOG,"DCP(%d):   Match for incoming DCP identify request. Sending response.\n", __LINE__);
+
          /* Build the response */
          for (ix = 0; ix < NELEMENTS(device_options); ix++)
          {
@@ -1369,6 +1393,7 @@ static int pf_dcp_identify_req(
       }
       else
       {
+         LOG_DEBUG(PF_DCP_LOG,"DCP(%d):   No match for incoming DCP identify request.\n", __LINE__);
          os_buf_free(p_rsp);
       }
    }

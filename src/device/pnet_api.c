@@ -41,6 +41,8 @@ pnet_t* pnet_init(
       return NULL;
    }
 
+   memset(net, 0, sizeof(*net));
+
    if (strlen(netif) > PNET_MAX_INTERFACE_NAME_LENGTH)
    {
       LOG_ERROR(PNET_LOG, "Too long interface name\n");
@@ -49,9 +51,6 @@ pnet_t* pnet_init(
    strcpy(net->interface_name, netif);
 
    net->cmdev_initialized = false;  /* TODO How to handle that pf_cmdev_exit() is used before pf_cmdev_init()? */
-   net->fspm_log_book_mutex = NULL;  /* TODO is this necessary? */
-   net->scheduler_timeout_mutex = NULL;  /* TODO is this necessary? */
-   net->p_cmrpc_rpc_mutex = NULL;  /* TODO is this necessary? */
 
    pf_cmsu_init(net);
    pf_cmwrr_init(net);
@@ -77,7 +76,7 @@ pnet_t* pnet_init(
 
    pf_dcp_exit(net);    /* Prepare for re-init. */
    pf_dcp_init(net);    /* Start DCP */
-   pf_lldp_init(net);
+   pf_lldp_init(net);   /* Send the LLDP frame */
 
    pf_cmdev_exit(net);     /* Prepare for re-init */
    pf_cmdev_init(net);
@@ -347,6 +346,28 @@ int pnet_ar_abort(
    }
 
    return ret;
+}
+
+int pnet_factory_reset(
+   pnet_t                  *net)
+{
+   uint16_t                ix;
+   pf_ar_t                 *p_ar = NULL;
+
+   /* Look for active connections */
+   for (ix = 0; ix < PNET_MAX_AR; ix++)
+   {
+      p_ar = pf_ar_find_by_index(net, ix);
+      if ((p_ar != NULL) && (p_ar->in_use == true))
+      {
+         (void) pf_cmdev_cm_abort(net, p_ar);
+      }
+   }
+
+   (void) pf_cmina_set_default_cfg(net, 99);
+   pf_cmina_dcp_set_commit(net);
+
+   return 0;
 }
 
 int pnet_get_ar_error_codes(

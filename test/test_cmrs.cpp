@@ -13,26 +13,16 @@
  * full license information.
  ********************************************************************/
 
+#include "utils_for_testing.h"
+#include "mocks.h"
+
 #include "pf_includes.h"
 
 #include <gtest/gtest.h>
 
-#include "mocks.h"
-#include "test_util.h"
 
-// Test fixture
+class CmrsTest : public PnetIntegrationTest {};
 
-class CmrsTest : public ::testing::Test
-{
-protected:
-   virtual void SetUp() {
-      memset (&net, 0, sizeof(net));
-   };
-
-   pnet_cfg_t net;
-};
-
-// Tests
 
 TEST_F (CmrsTest, CmrsRunTest)
 {

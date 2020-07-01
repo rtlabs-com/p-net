@@ -13,20 +13,24 @@
  * full license information.
  ********************************************************************/
 
-#include <string.h>
-
-#include <kern.h>
-#include <shell.h>
-#include <lwip/netif.h>
-
-#include <pnet_api.h>
-#include "log.h"
-#include "osal.h"
 #include "sampleapp_common.h"
 
+#include "log.h"
+#include "osal.h"
+#include <pnet_api.h>
 
+#include <gpio.h>
+#include <kern.h>
+#include <lwip/netif.h>
+#include <shell.h>
+
+#include <string.h>
+
+#define GPIO_LED1                      GPIO_P5_9
+#define GPIO_LED2                      GPIO_P5_8
+#define GPIO_BUTTON1                   GPIO_P15_13
+#define GPIO_BUTTON2                   GPIO_P15_12
 #define APP_DEFAULT_ETHERNET_INTERFACE "en1"
-#define APP_LED_ID                     0           /* "LED1" on circuit board */
 
 
 /********************************** Globals ***********************************/
@@ -37,6 +41,40 @@ static pnet_cfg_t                  pnet_default_cfg;
 
 
 /************************* Utilities ******************************************/
+
+ int app_set_led(
+   uint16_t                id,
+   bool                    led_state)
+{
+   if (id == APP_DATA_LED_ID)
+   {
+      gpio_set(GPIO_LED1, led_state ? 1 : 0);  /* "LED1" on circuit board */
+   }
+   else if (id == APP_PROFINET_SIGNAL_LED_ID)
+   {
+      gpio_set(GPIO_LED2, led_state ? 1 : 0);  /* "LED2" on circuit board */
+   }
+
+   return 0;
+}
+
+
+static void app_get_button(uint16_t id, bool *p_pressed)
+{
+   if (id == 0)
+   {
+      *p_pressed = (gpio_get(GPIO_BUTTON1) == 0);
+   }
+   else if (id == 1)
+   {
+      *p_pressed = (gpio_get(GPIO_BUTTON2) == 0);
+   }
+   else
+   {
+      *p_pressed = false;
+   }
+}
+
 
 static int _cmd_pnio_alarm_ack(
       int                  argc,
@@ -82,8 +120,6 @@ static int _cmd_pnio_run(
       int                  argc,
       char                 *argv[])
 {
-   uint16_t                ix;
-
    if (g_net != NULL)
    {
       printf("Already initialized p-net application.\n");
@@ -120,9 +156,11 @@ static int _cmd_pnio_run(
    g_net = pnet_init(gp_appdata->arguments.eth_interface, TICK_INTERVAL_US, &pnet_default_cfg);
    if (g_net != NULL)
    {
+      app_plug_dap(g_net, gp_appdata);
+
       if (gp_appdata->arguments.verbosity > 0)
       {
-         printf("Station name:        %s\n", gp_appdata->arguments.station_name);
+         printf("\nStation name:        %s\n", gp_appdata->arguments.station_name);
          printf("Initialized p-net application.\n\n");
          printf("Waiting for connect request from IO-controller\n");
       }
@@ -198,7 +236,6 @@ int main(void)
    bool           button1_pressed = false;
    bool           button2_pressed = false;
    bool           button2_pressed_previous = false;
-   bool           led_state = false;
    bool           received_led_state = false;
    uint32_t       tick_ctr_buttons = 0;
    uint32_t       tick_ctr_update_data = 0;
@@ -286,8 +323,8 @@ int main(void)
          {
             tick_ctr_buttons = 0;
 
-            os_get_button(0, &button1_pressed);
-            os_get_button(1, &button2_pressed);
+            app_get_button(0, &button1_pressed);
+            app_get_button(1, &button2_pressed);
          }
 
          /* Set input and output data every 10ms */
@@ -333,7 +370,7 @@ int main(void)
                if (outputdata_length == APP_DATASIZE_OUTPUT)
                {
                   received_led_state = (outputdata[0] & 0x80) > 0;  /* Use most significant bit */
-                  os_set_led(APP_LED_ID, received_led_state);
+                  app_set_led(APP_DATA_LED_ID, received_led_state);
                }
                else
                {

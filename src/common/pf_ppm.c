@@ -54,7 +54,7 @@ void pf_ppm_init(
  * @internal
  * Send error indications to other components.
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:   The AR instance.
+ * @param p_ar             InOut: The AR instance.
  * @param p_ppm            In:   The PPM instance.
  * @param error            In:   An error flag.
  * @return  0  always.
@@ -81,7 +81,7 @@ static int pf_ppm_state_ind(
 /**
  * @internal
  * Handle state changes in the PPM instance.
- * @param p_ppm            In:   The PPM instance.
+ * @param p_ppm            InOut: The PPM instance.
  * @param state            In:   The new PPM state.
  */
 static void pf_ppm_set_state(
@@ -148,7 +148,7 @@ static void pf_ppm_init_buf(
    /* Insert Profinet frame ID (first part of Ethernet frame payload) */
    u16 = htons(frame_id);
    memcpy(&p_payload[pos], &u16, sizeof(u16));
-   pos += sizeof(u16);
+   /* No further pos advancement, to suppress clang warning */
 }
 
 /**
@@ -460,6 +460,7 @@ int pf_ppm_set_data_and_iops(
       case PF_PPM_STATE_RUN:
          if ((data_len == p_iodata->data_length) && (iops_len == p_iodata->iops_length))
          {
+            CC_ASSERT(net->ppm_buf_lock != NULL);
             os_mutex_lock(net->ppm_buf_lock);
             if (data_len > 0)
             {
@@ -519,6 +520,7 @@ int pf_ppm_set_iocs(
       case PF_PPM_STATE_RUN:
          if (iocs_len == p_iodata->iocs_length)
          {
+            CC_ASSERT(net->ppm_buf_lock != NULL);
             os_mutex_lock(net->ppm_buf_lock);
             memcpy(&p_iocr->ppm.buffer_data[p_iodata->iocs_offset], p_iocs, iocs_len);
             os_mutex_unlock(net->ppm_buf_lock);
@@ -577,6 +579,7 @@ int pf_ppm_get_data_and_iops(
       case PF_PPM_STATE_RUN:
          if ((*p_data_len >= p_iodata->data_length) && (*p_iops_len >= p_iodata->iops_length))
          {
+            CC_ASSERT(net->ppm_buf_lock != NULL);
             os_mutex_lock(net->ppm_buf_lock);
             memcpy(p_data, &p_iocr->ppm.buffer_data[p_iodata->data_offset], p_iodata->data_length);
             memcpy(p_iops, &p_iocr->ppm.buffer_data[p_iodata->iops_offset], p_iodata->iops_length);
@@ -643,6 +646,7 @@ int pf_ppm_get_iocs(
       case PF_PPM_STATE_RUN:
          if (*p_iocs_len >= p_iodata->iocs_length)
          {
+            CC_ASSERT(net->ppm_buf_lock != NULL);
             os_mutex_lock(net->ppm_buf_lock);
             memcpy(p_iocs, &p_iocr->ppm.buffer_data[p_iodata->iocs_offset], p_iodata->iocs_length);
             os_mutex_unlock(net->ppm_buf_lock);

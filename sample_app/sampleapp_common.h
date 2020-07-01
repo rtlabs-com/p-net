@@ -16,6 +16,9 @@
 #ifndef SAMPLEAPP_COMMON_H
 #define SAMPLEAPP_COMMON_H
 
+#include "osal.h"
+#include <pnet_api.h>
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -25,6 +28,8 @@ extern "C"
 
 /********************** Settings **********************************************/
 
+#define APP_PROFINET_SIGNAL_LED_ID     0
+#define APP_DATA_LED_ID                1
 #define EVENT_READY_FOR_DATA           BIT(0)
 #define EVENT_TIMER                    BIT(1)
 #define EVENT_ALARM                    BIT(2)
@@ -97,7 +102,6 @@ static const struct
 /************************ App data storage ***********************************/
 
 struct cmd_args {
-   char path_led[256];
    char path_button1[256];
    char path_button2[256];
    char station_name[64];
@@ -141,6 +145,16 @@ int app_adjust_stack_configuration(
    pnet_cfg_t              *stack_config);
 
 /**
+ * Plug DAP (sub-)modules. This operation shall be called after p-net
+ * stack initialization
+ *
+ * @param net     In: p-net stack instance
+ * @param arg     In: user data for callbacks
+ * @return  None
+*/
+void app_plug_dap(pnet_t *net, void *arg);
+
+/**
  * Return a string representation of the given event.
  * @param event            In:   The event.
  * @return  A string representing the event.
@@ -155,6 +169,24 @@ const char* event_value_to_string(
  */
 const char* submodule_direction_to_string(
    pnet_submodule_dir_t direction);
+
+
+/********************** Hardware interaction **********************************/
+
+/**
+ * Control a LED
+ *
+ * This is hardware dependent, so the implementation of this function should be
+ * located in the corresponding main file.
+ *
+ * @param id               In: LED number, starting from 0
+ * @param led_state        In: LED state. Use true for on and false for off.
+ * @return  0  if the operation succeeded.
+ *          -1 if an error occurred.
+*/
+int app_set_led(
+   uint16_t                id,         /* Starting from 0 */
+   bool                    led_state);
 
 
 #ifdef __cplusplus

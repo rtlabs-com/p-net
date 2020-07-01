@@ -94,9 +94,6 @@ enum os_eth_type {
   OS_ETHTYPE_LLDP      = 0x88CCU,
 };
 
-#define OS_PF_RPC_SERVER_PORT    0x8894 /* PROFInet Context Manager */
-#define OS_PF_SNMP_SERVER_PORT   161 /* snmp */
-
 /* 255.255.255.255 */
 #ifndef OS_IPADDR_NONE
 #define OS_IPADDR_NONE         ((uint32_t)0xffffffffUL)
@@ -184,7 +181,6 @@ os_eth_handle_t* os_eth_init(
    os_eth_callback_t       *callback,
    void                    *arg);
 
-int os_udp_socket(void);
 int os_udp_open(os_ipaddr_t addr, os_ipport_t port);
 int os_udp_sendto(uint32_t id,
       os_ipaddr_t dst_addr,
@@ -192,8 +188,8 @@ int os_udp_sendto(uint32_t id,
       const uint8_t * data,
       int size);
 int os_udp_recvfrom(uint32_t id,
-      os_ipaddr_t *dst_addr,
-      os_ipport_t *dst_port,
+      os_ipaddr_t *src_addr,
+      os_ipport_t *src_port,
       uint8_t * data,
       int size);
 void os_udp_close(uint32_t id);
@@ -229,14 +225,6 @@ int os_set_ip_suite(
    os_ipaddr_t             *p_gw,
    const char              *hostname,
    bool                    permanent);
-
-void os_set_led(
-   uint16_t                id,         /* Starting from 0 */
-   bool                    on);
-
-void os_get_button(
-   uint16_t                id,         /* Starting from 0 */
-   bool                    *p_pressed);
 
 #ifdef __cplusplus
 }

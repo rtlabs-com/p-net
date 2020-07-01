@@ -42,11 +42,15 @@ Features:
  * Configurable number of modules and sub-modules
  * Bare-metal or OS
  * Porting layer provided
+ * Supports I&M0 - I&M4
 
-Limitations:
+Limitations or not yet implemented:
 
 * IPv4 only
 * Only a single Ethernet interface (no media redundancy)
+* No startup mode legacy
+* No support for RT_CLASS_UDP
+* No support for DHCP
 
 This software is dual-licensed, with GPL version 3 and a commercial license.
 See LICENSE.md for more details.

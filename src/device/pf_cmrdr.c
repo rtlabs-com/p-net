@@ -114,6 +114,7 @@ int pf_cmrdr_rm_read_ind(
       switch (p_read_request->index)
       {
       case PF_IDX_DEV_IM_0_FILTER_DATA:
+         LOG_INFO(PNET_LOG, "CMRDR(%d): Read I&M0 filter-data\n", __LINE__);
          /* Block-writer knows where to fetch and how to build the answer. */
          pf_put_im_0_filter_data(net, true, res_size, p_res, p_pos);
          ret = 0;

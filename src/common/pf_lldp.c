@@ -17,7 +17,12 @@
 #define os_eth_send           mock_os_eth_send
 #endif
 
-/*
+/**
+ * @file
+ * @brief Implements Link Layer Discovery Protocol (LLDP), for neighborhood detection.
+ *
+ * Builds and sends an LLDP frame.
+ *
  * ToDo: Differentiate between device and port MAC addresses.
  * ToDo: Handle PNET_MAX_PORT ports.
  * ToDo: Receive LLDP and build a per-port peer DB.
@@ -64,11 +69,14 @@ static const pnet_ethaddr_t   lldp_dst_addr = {
 
 /**
  * @internal
- * Insert a TLV header into a buffer.
+ * Insert header of a TLV field into a buffer.
+ *
+ * This is for the type and the payload length.
+ *
  * @param p_buf            InOut:The buffer.
  * @param p_pos            InOut:The buffer position.
  * @param typ              In:   The TLV header type.
- * @param len              In:   The TLV length.
+ * @param len              In:   The TLV payload length.
  */
 static inline void pf_lldp_tlv_header(
    uint8_t                 *p_buf,
@@ -76,24 +84,26 @@ static inline void pf_lldp_tlv_header(
    uint8_t                 typ,
    uint8_t                 len)
 {
-   pf_put_uint16(true, ((typ)<<9) + ((len) & 0x1ff), PF_FRAME_BUFFER_SIZE, p_buf, p_pos); \
+   pf_put_uint16(true, ((typ) << 9) + ((len) & 0x1ff), PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
 }
 
 /**
  * @internal
- * Insert a PNIO header into a buffer.
+ * Insert a Profinet-specific header for a TLV field into a buffer.
+ *
+ * This inserts a TLV header with type="organisation-specific", and
+ * the Profinet organisation identifier as the first part of the TLV payload.
+ *
  * @param p_buf            InOut:The buffer.
  * @param p_pos            InOut:The buffer position.
- * @param typ              In:   The TLV header type.
- * @param len              In:   The TLV length.
+ * @param len              In:   The TLV payload length (for the part after the organisation identifier)
  */
 static inline void pf_lldp_pnio_header(
    uint8_t                 *p_buf,
    uint16_t                *p_pos,
-   uint8_t                 typ,
    uint8_t                 len)
 {
-   pf_lldp_tlv_header(p_buf,p_pos,typ,(len)+3);
+   pf_lldp_tlv_header(p_buf, p_pos, LLDP_TYPE_ORG_SPEC, (len) + 3);
    pf_put_byte(0x00, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
    pf_put_byte(0x0e, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
    pf_put_byte(0xcf, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
@@ -101,19 +111,21 @@ static inline void pf_lldp_pnio_header(
 
 /**
  * @internal
- * Insert a IEEE header into a buffer.
+ * Insert a IEEE 802.3-specific header for a TLV field into a buffer.
+ *
+ * This inserts a TLV header with type="organisation-specific", and
+ * the IEEE 802.3 organisation identifier as the first part of the TLV payload.
+ *
  * @param p_buf            InOut:The buffer.
  * @param p_pos            InOut:The buffer position.
- * @param typ              In:   The TLV header type.
- * @param len              In:   The TLV length.
+ * @param len              In:   The TLV payload length (for the part after the organisation identifier)
  */
 static inline void pf_lldp_ieee_header(
    uint8_t                 *p_buf,
    uint16_t                *p_pos,
-   uint8_t                 typ,
    uint8_t                 len)
 {
-   pf_lldp_tlv_header(p_buf, p_pos, typ, (len) + 3);
+   pf_lldp_tlv_header(p_buf, p_pos, LLDP_TYPE_ORG_SPEC, (len) + 3);
    pf_put_byte(0x00, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
    pf_put_byte(0x12, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
    pf_put_byte(0x0f, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
@@ -122,6 +134,9 @@ static inline void pf_lldp_ieee_header(
 /**
  * @internal
  * Insert the mandatory chassis_id TLV into a buffer.
+ *
+ * Use the MAC address if the chassis ID name not is available in the configuration.
+ *
  * @param p_cfg            In:   The Profinet configuration.
  * @param p_buf            InOut:The buffer.
  * @param p_pos            InOut:The position in the buffer.
@@ -137,7 +152,7 @@ static void lldp_add_chassis_id_tlv(
    if (len == 0)
    {
       /* Use the MAC address */
-      pf_lldp_tlv_header(p_buf, p_pos, LLDP_TYPE_CHASSIS_ID, 1+sizeof(pnet_ethaddr_t));
+      pf_lldp_tlv_header(p_buf, p_pos, LLDP_TYPE_CHASSIS_ID, 1 + sizeof(pnet_ethaddr_t));
 
       pf_put_byte(LLDP_SUBTYPE_CHASSIS_ID_MAC, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
       memcpy(&p_buf[*p_pos], p_cfg->eth_addr.addr, sizeof(pnet_ethaddr_t)); /* ToDo: Shall be device MAC */
@@ -177,7 +192,7 @@ static void lldp_add_port_id_tlv(
 
 /**
  * @internal
- * Insert the mandatory TTL TLV into a buffer.
+ * Insert the mandatory time-to-live (TTL) TLV into a buffer.
  * @param p_cfg            In:   The Profinet configuration.
  * @param p_buf            InOut:The buffer.
  * @param p_pos            InOut:The position in the buffer.
@@ -193,7 +208,7 @@ static void lldp_add_ttl_tlv(
 
 /**
  * @internal
- * Insert the optional port status TLV into a buffer.
+ * Insert the optional Profinet port status TLV into a buffer.
  *
  * The port status TLV is mandatory for ProfiNet.
  * @param p_cfg            In:   The Profinet configuration.
@@ -205,7 +220,7 @@ static void lldp_add_port_status(
    uint8_t                 *p_buf,
    uint16_t                *p_pos)
 {
-   pf_lldp_pnio_header(p_buf, p_pos, LLDP_TYPE_ORG_SPEC, 5);
+   pf_lldp_pnio_header(p_buf, p_pos, 5);
 
    pf_put_byte(LLDP_PNIO_SUBTYPE_PORT_STATUS, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
    pf_put_uint16(true, p_cfg->lldp_cfg.rtclass_2_status, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
@@ -214,7 +229,7 @@ static void lldp_add_port_status(
 
 /**
  * @internal
- * Insert the optional chassis MAC TLV into a buffer.
+ * Insert the optional Profinet chassis MAC TLV into a buffer.
  *
  * The chassis MAC TLV is mandatory for ProfiNet.
  * @param p_cfg            In:   The Profinet configuration.
@@ -226,7 +241,7 @@ static void lldp_add_chassis_mac(
    uint8_t                 *p_buf,
    uint16_t                *p_pos)
 {
-   pf_lldp_pnio_header(p_buf, p_pos, LLDP_TYPE_ORG_SPEC, 1+sizeof(pnet_ethaddr_t));
+   pf_lldp_pnio_header(p_buf, p_pos, 1 + sizeof(pnet_ethaddr_t));
 
    pf_put_byte(LLDP_PNIO_SUBTYPE_INTERFACE_MAC, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
    memcpy(&p_buf[*p_pos], p_cfg->eth_addr.addr, sizeof(pnet_ethaddr_t)); /* ToDo: Should be device MAC */
@@ -236,6 +251,8 @@ static void lldp_add_chassis_mac(
 /**
  * @internal
  * Insert the optional IEEE 802.3 MAC TLV into a buffer.
+ *
+ * This is the autonegotiation capabilities and available speeds, and cable MAU type.
  *
  * The IEEE 802.3 MAC TLV is mandatory for ProfiNet on 803.2 interfaces.
  * @param p_cfg            In:   The Profinet configuration.
@@ -247,7 +264,7 @@ static void lldp_add_ieee_mac_phy(
    uint8_t                 *p_buf,
    uint16_t                *p_pos)
 {
-   pf_lldp_ieee_header(p_buf, p_pos, LLDP_TYPE_ORG_SPEC, 6);
+   pf_lldp_ieee_header(p_buf, p_pos, 6);
 
    pf_put_byte(LLDP_IEEE_SUBTYPE_MAC_PHY, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
    pf_put_byte(p_cfg->lldp_cfg.cap_aneg, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
@@ -258,6 +275,9 @@ static void lldp_add_ieee_mac_phy(
 /**
  * Insert the optional management data TLV into a buffer.
  * It is mandatory for ProfiNet.
+ *
+ * Contains the IP address.
+ *
  * @param net              InOut: The p-net stack instance
  * @param p_cfg            In:   The Profinet configuration.
  * @param p_buf            InOut:The buffer.
@@ -294,7 +314,7 @@ void pf_lldp_send(
    uint16_t                pos = 0;
    pnet_cfg_t              *p_cfg = NULL;
 
-   LOG_INFO(PF_ETH_LOG, "LLDP: Sending LLDP frame\n");
+   LOG_INFO(PF_ETH_LOG, "LLDP(%d): Sending LLDP frame\n", __LINE__);
 
    pf_fspm_get_cfg(net, &p_cfg);
    /*
@@ -352,11 +372,14 @@ void pf_lldp_send(
       if (p_buf != NULL)
       {
          pos = 0;
+         /* Add destination MAC address */
          pf_put_mem(&lldp_dst_addr, sizeof(lldp_dst_addr), PF_FRAME_BUFFER_SIZE, p_buf, &pos);
-         memcpy(&p_buf[pos], p_cfg->eth_addr.addr, sizeof(pnet_ethaddr_t)); /* ToDo: Shall be port MAC address */
+
+         /* Add source MAC address. ToDo: Shall be port MAC address */
+         memcpy(&p_buf[pos], p_cfg->eth_addr.addr, sizeof(pnet_ethaddr_t));
          pos += sizeof(pnet_ethaddr_t);
 
-         /* Add FrameID */
+         /* Add Ethertype for LLDP */
          pf_put_uint16(true, OS_ETHTYPE_LLDP, PF_FRAME_BUFFER_SIZE, p_buf, &pos);
 
          /* Add mandatory parts */

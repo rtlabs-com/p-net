@@ -13,12 +13,15 @@
  * full license information.
  ********************************************************************/
 
-#include <string.h>
-
-#include <pnet_api.h>
-#include "osal.h"
 #include "sampleapp_common.h"
 
+#include "log.h"
+#include "osal.h"
+#include <pnet_api.h>
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 /**
  * Print contents of a buffer
@@ -134,7 +137,7 @@ static int app_write_ind(
    pnet_t                  *net,
    void                    *arg,
    uint32_t                arep,
-   uint16_t                api,
+   uint32_t                api,
    uint16_t                slot,
    uint16_t                subslot,
    uint16_t                idx,
@@ -204,7 +207,7 @@ static int app_read_ind(
    pnet_t                  *net,
    void                    *arg,
    uint32_t                arep,
-   uint16_t                api,
+   uint32_t                api,
    uint16_t                slot,
    uint16_t                subslot,
    uint16_t                idx,
@@ -259,6 +262,8 @@ static int app_state_ind(
    uint16_t                err_cls = 0;
    uint16_t                err_code = 0;
    uint16_t                slot = 0;
+   const char              *error_description = "";
+
    app_data_t              *p_appdata = (app_data_t*)arg;
 
    if (p_appdata->arguments.verbosity > 0)
@@ -272,8 +277,29 @@ static int app_state_ind(
       {
          if (p_appdata->arguments.verbosity > 0)
          {
-               printf("    Error class: %u Error code: %u\n",
-                  (unsigned)err_cls, (unsigned)err_code);
+               /* A few of the most common error codes */
+               switch (err_cls)
+               {
+               case 0:
+                  error_description = "Unknown error class";
+                  break;
+               case PNET_ERROR_CODE_1_RTA_ERR_CLS_PROTOCOL:
+                  switch (err_code)
+                  {
+                  case PNET_ERROR_CODE_2_ABORT_AR_CONSUMER_DHT_EXPIRED:
+                     error_description = "AR_CONSUMER_DHT_EXPIRED";
+                     break;
+                  case PNET_ERROR_CODE_2_ABORT_AR_CMI_TIMEOUT:
+                     error_description = "ABORT_AR_CMI_TIMEOUT";
+                     break;
+                  case PNET_ERROR_CODE_2_ABORT_AR_RELEASE_IND_RECEIVED:
+                     error_description = "Controller sent release request.";
+                     break;
+                  }
+                  break;
+               }
+               printf("    Error class: %u Error code: %u  %s\n",
+                  (unsigned)err_cls, (unsigned)err_code, error_description);
          }
       }
       else
@@ -342,10 +368,25 @@ static int app_reset_ind(
    return 0;
 }
 
+static int app_signal_led_ind(
+   pnet_t                  *net,
+   void                    *arg,
+   bool                    led_state)
+{
+   app_data_t              *p_appdata = (app_data_t*)arg;
+
+   if (p_appdata->arguments.verbosity > 0)
+   {
+      printf("Profinet signal LED call-back. New state: %u\n",
+         led_state);
+   }
+   return app_set_led(APP_PROFINET_SIGNAL_LED_ID, led_state);
+}
+
 static int app_exp_module_ind(
    pnet_t                  *net,
    void                    *arg,
-   uint16_t                api,
+   uint32_t                api,
    uint16_t                slot,
    uint32_t                module_ident)
 {
@@ -431,7 +472,7 @@ static int app_exp_module_ind(
 static int app_exp_submodule_ind(
    pnet_t                  *net,
    void                    *arg,
-   uint16_t                api,
+   uint32_t                api,
    uint16_t                slot,
    uint16_t                subslot,
    uint32_t                module_ident,
@@ -605,6 +646,18 @@ static int app_alarm_ack_cnf(
    return 0;
 }
 
+void app_plug_dap(pnet_t *net, void *arg)
+{
+   /* Use existing callback functions to plug the (sub-)modules */
+   app_exp_module_ind(net, arg, APP_API , PNET_SLOT_DAP_IDENT, PNET_MOD_DAP_IDENT);
+
+   app_exp_submodule_ind(net, arg, APP_API, PNET_SLOT_DAP_IDENT, PNET_SUBMOD_DAP_IDENT,
+         PNET_MOD_DAP_IDENT, PNET_SUBMOD_DAP_IDENT);
+   app_exp_submodule_ind(net, arg, APP_API, PNET_SLOT_DAP_IDENT, PNET_SUBMOD_DAP_INTERFACE_1_IDENT,
+         PNET_MOD_DAP_IDENT, PNET_SUBMOD_DAP_INTERFACE_1_IDENT);
+   app_exp_submodule_ind(net, arg, APP_API, PNET_SLOT_DAP_IDENT, PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT,
+         PNET_MOD_DAP_IDENT, PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT);
+}
 
 /************ Configuration of product ID, software version etc **************/
 
@@ -641,6 +694,7 @@ int app_adjust_stack_configuration(
    stack_config->alarm_cnf_cb = app_alarm_cnf;
    stack_config->alarm_ack_cnf_cb = app_alarm_ack_cnf;
    stack_config->reset_cb = app_reset_ind;
+   stack_config->signal_led_cb = app_signal_led_ind;
 
    /* Identification & Maintenance */
    stack_config->im_0_data.vendor_id_hi = 0xfe;
@@ -650,7 +704,7 @@ int app_adjust_stack_configuration(
    stack_config->im_0_data.im_sw_revision_functional_enhancement = 0;
    stack_config->im_0_data.im_sw_revision_bug_fix = 0;
    stack_config->im_0_data.im_sw_revision_internal_change = 0;
-   stack_config->im_0_data.im_revision_counter = 0;
+   stack_config->im_0_data.im_revision_counter = 0;  /* Only 0 allowed according to standard */
    stack_config->im_0_data.im_profile_id = 0x1234;
    stack_config->im_0_data.im_profile_specific_type = 0x5678;
    stack_config->im_0_data.im_version_major = 1;
@@ -660,7 +714,7 @@ int app_adjust_stack_configuration(
    strcpy(stack_config->im_1_data.im_tag_location, "");
    strcpy(stack_config->im_2_data.im_date, "");
    strcpy(stack_config->im_3_data.im_descriptor, "");
-   strcpy(stack_config->im_4_data.im_signature, "");
+   strcpy(stack_config->im_4_data.im_signature, "");  /* For functional safety only */
 
    /* Device configuration */
    stack_config->device_id.vendor_id_hi = 0xfe;

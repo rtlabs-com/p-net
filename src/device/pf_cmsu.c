@@ -108,7 +108,7 @@ int pf_cmsu_start_req(
          {
             if (p_ar->iocrs[crep].param.iocr_type == PF_IOCR_TYPE_OUTPUT)
             {
-                if (pf_cpm_create(net, p_ar, crep) != 0)
+               if (pf_cpm_create(net, p_ar, crep) != 0)
                {
                   p_stat->pnio_status.error_code_2 = PNET_ERROR_CODE_2_CMSU_AR_ADD_PROV_CONS_FAILED;
                   ret = -1;

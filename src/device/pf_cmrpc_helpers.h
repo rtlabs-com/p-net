@@ -13,17 +13,24 @@
  * full license information.
  ********************************************************************/
 
-#include "utils_for_testing.h"
-#include "mocks.h"
+#ifndef PF_CMRPC_HELPERS_H
+#define PF_CMRPC_HELPERS_H
 
-#include "pf_includes.h"
-
-#include <gtest/gtest.h>
-
-
-class PpmTest : public PnetIntegrationTest {};
-
-
-TEST_F (PpmTest, PpmRunTest)
+#ifdef __cplusplus
+extern "C"
 {
+#endif
+
+/************ Internal functions, made available for unit testing ************/
+
+void pf_generate_uuid(
+   uint32_t                timestamp,
+   uint32_t                session_number,
+   pnet_ethaddr_t          mac_address,
+   pf_uuid_t               *p_uuid);
+
+#ifdef __cplusplus
 }
+#endif
+
+#endif /* PF_CMRPC_HELPERS_H */

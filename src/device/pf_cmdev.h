@@ -58,7 +58,7 @@ typedef int (*pf_ftn_subslot_t)(
       pf_subslot_t         *p_subslot);
 
 /**
- * Initialize the cmdev component. Plugs the DAP (sub-)modules.
+ * Initialize the cmdev component.
  * @param net              InOut: The p-net stack instance
  */
 void pf_cmdev_init(
@@ -297,7 +297,7 @@ void pf_cmdev_show_device(
  *
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
- * @param state            In:   The new CMDEV state.
+ * @param state            In:   The new CMDEV state. Use PNET_EVENT_..., not PF_CMDEV_STATE_...
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -349,6 +349,10 @@ int pf_cmdev_rm_connect_ind(
 
 /**
  * Handle an RPC release request.
+ *
+ * This triggers the user callbacks \a pnet_release_ind() and
+ * \a pnet_state_ind() with PNET_EVENT_ABORT.
+ *
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param p_release_result Out:  Detailed result of the connect operation.

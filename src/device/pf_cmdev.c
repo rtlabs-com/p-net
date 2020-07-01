@@ -66,8 +66,6 @@ int pf_cmdev_cfg_traverse(
    uint16_t                slot_ix;
    uint16_t                subslot_ix;
 
-
-
    if (p_ftn_dev != NULL)
    {
       if (p_ftn_dev(&net->cmdev_device) != 0)
@@ -709,7 +707,7 @@ int pf_cmdev_plug_submodule(
       p_subslot->length_output = length_output;
 
       /* Inherit AR from slot module */
-      p_subslot->p_ar = p_slot->p_ar;;
+      p_subslot->p_ar = p_slot->p_ar;
    }
    else
    {
@@ -1071,7 +1069,7 @@ int pf_cmdev_get_state(
  * Request a state transition of the specified AR.
  * @param net              InOut: The p-net stack instance
  * @param p_ar
- * @param state
+ * @param state            In:    New state. Use PF_CMDEV_STATE_...
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -1170,11 +1168,11 @@ int pf_cmdev_cm_abort(
          switch (p_ar->cmdev_state)
          {
          case PF_CMDEV_STATE_W_CRES:
-            pf_cmdev_set_state(net, p_ar, PNET_EVENT_ABORT);
+            pf_cmdev_set_state(net, p_ar, PF_CMDEV_STATE_ABORT);
             res = 0;
             break;
          case PF_CMDEV_STATE_DATA:
-            pf_cmdev_set_state(net, p_ar, PNET_EVENT_ABORT);
+            pf_cmdev_set_state(net, p_ar, PF_CMDEV_STATE_ABORT);
             res = 0;
             break;
          default:
@@ -1185,7 +1183,7 @@ int pf_cmdev_cm_abort(
       else  /* CMDEV */
       {
          /* Any state */
-         pf_cmdev_set_state(net, p_ar, PNET_EVENT_ABORT);
+         pf_cmdev_set_state(net, p_ar, PF_CMDEV_STATE_ABORT);
          res = 0;
       }
    }
@@ -2555,6 +2553,9 @@ static int pf_cmdev_check_iocr_param(
  *
  * This function configures an expected sub-module.
  * Perform final checks of parameters and let the application plug the sub-module if needed.
+ *
+ * Triggers user call-back \a pnet_exp_submodule_ind()
+ *
  * @param net              InOut: The p-net stack instance
  * @param p_exp_api        In:   The expected API instance.
  * @param p_exp_mod        In:   The expected sub-module instance.
@@ -2805,6 +2806,9 @@ static int pf_cmdev_exp_submodule_configure(
  *
  * This function configures an expected module.
  * Perform final checks of parameters and let the application plug the module if needed.
+ *
+ * Triggers the user call-back \a pnet_exp_module_ind() and \a pnet_exp_submodule_ind().
+ *
  * @param net              InOut: The p-net stack instance
  * @param p_exp_api        In:   The expected API instance.
  * @param p_exp_mod        In:   The expected sub-module instance.
@@ -2931,6 +2935,9 @@ static int pf_cmdev_exp_modules_configure(
  *
  * This function configures an expected API.
  * Perform final checks of parameters and let the application plug the (sub-)modules when needed.
+ *
+ * Triggers the user call-back \a pnet_exp_module_ind() and \a pnet_exp_submodule_ind().
+ *
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param p_stat           Out:  Detailed error information.
@@ -3088,6 +3095,9 @@ static int pf_cmdev_check_ar_rpc(
  * Check the AR for errors.
  *
  * This function implements the APDUCheck function in the Profinet spec.
+ *
+ * Triggers the user call-back \a pnet_exp_module_ind() and \a pnet_exp_submodule_ind().
+ *
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param p_stat           Out:  Detailed error information.
@@ -3660,6 +3670,7 @@ int pf_cmdev_rm_ccontrol_cnf(
    pnet_result_t           *p_ccontrol_result)
 {
    int                     ret = -1;
+   CC_ASSERT(p_ar != NULL);
 
    if (p_ar->cmdev_state == PF_CMDEV_STATE_W_ARDYCNF)
    {

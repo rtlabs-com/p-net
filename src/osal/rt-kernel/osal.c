@@ -14,23 +14,19 @@
  ********************************************************************/
 
 #include "osal.h"
-#include "options.h"
+
 #include "log.h"
+#include "options.h"
+
+#include <drivers/net.h>
 #include <gpio.h>
 #include <lwip/netif.h>
-#include <drivers/net.h>
-
 
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#define GPIO_LED1       GPIO_P5_9
-#define GPIO_LED2       GPIO_P5_8
-
-#define GPIO_BUTTON1    GPIO_P15_13
-#define GPIO_BUTTON2    GPIO_P15_12
 
 int os_set_ip_suite(
    const char              *interface_name,
@@ -275,32 +271,4 @@ void os_buf_free(os_buf_t *p)
 uint8_t os_buf_header(os_buf_t *p, int16_t header_size_increment)
 {
    return pbuf_header(p, header_size_increment);
-}
-
-void os_get_button(uint16_t id, bool *p_pressed)
-{
-   if (id == 0)
-   {
-      *p_pressed = (gpio_get(GPIO_BUTTON1) == 0);
-   }
-   else if (id == 1)
-   {
-      *p_pressed = (gpio_get(GPIO_BUTTON2) == 0);
-   }
-   else
-   {
-      *p_pressed = false;
-   }
-}
-
-void os_set_led(uint16_t id, bool on)
-{
-   if (id == 0)
-   {
-      gpio_set(GPIO_LED1, on?1:0);
-   }
-   else if (id == 1)
-   {
-      gpio_set(GPIO_LED2, on?1:0);
-   }
 }

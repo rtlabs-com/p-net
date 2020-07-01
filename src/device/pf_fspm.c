@@ -20,7 +20,6 @@
  * Stores the user-defined configuration, and calls the user-defined callbacks.
  * Create logbook entries.
  * Reads and writes identification & maintenance records.
- *
  */
 
 
@@ -54,6 +53,11 @@ int pf_fspm_init(
    if (net->fspm_log_book_mutex == NULL)
    {
       net->fspm_log_book_mutex = os_mutex_create();
+   }
+
+   /* Turn LED off */
+   if (pf_fspm_signal_led_ind(net, false) != 0){
+      LOG_ERROR(PNET_LOG, "FSPM(%d): Could not turn signal LED off\n", __LINE__);
    }
 
    return 0;
@@ -463,6 +467,8 @@ int pf_fspm_state_ind(
 {
    int ret = 0;
 
+   CC_ASSERT(p_ar != NULL);
+
    switch (event)
    {
    case    PNET_EVENT_ABORT:     LOG_INFO(PNET_LOG, "CMDEV event ABORT\n"); break;
@@ -539,6 +545,19 @@ int pf_fspm_reset_ind(
    if (net->fspm_cfg.reset_cb != NULL)
    {
       ret = net->fspm_cfg.reset_cb(net, net->fspm_cfg.cb_arg, should_reset_application, reset_mode);
+   }
+
+   return ret;
+}
+
+int pf_fspm_signal_led_ind(
+   pnet_t                  *net,
+   bool                    led_state)
+{
+   int ret = 0;
+   if (net->fspm_cfg.signal_led_cb != NULL)
+   {
+      ret = net->fspm_cfg.signal_led_cb(net, net->fspm_cfg.cb_arg, led_state);
    }
 
    return ret;

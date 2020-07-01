@@ -16,23 +16,23 @@
 #define _GNU_SOURCE
 
 #include <osal.h>
-#include <options.h>
+
 #include <log.h>
+#include <options.h>
 
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
-#include <signal.h>
-#include <limits.h>
-
+#include <arpa/inet.h>
 #include <pthread.h>
 #include <sys/syscall.h>
-#include <arpa/inet.h>
 
 #include <assert.h>
 #include <errno.h>
+#include <limits.h>
+#include <signal.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 
@@ -44,14 +44,21 @@
 
 void os_log (int type, const char * fmt, ...)
 {
-   va_list list;
+   va_list                 list;
+   time_t                   rawtime;
+   struct tm                *timestruct;
+   char                     timestamp[10];
+
+   time(&rawtime);
+   timestruct = localtime(&rawtime);
+   strftime(timestamp, sizeof(timestamp), "%H:%M:%S", timestruct);
 
    switch(LOG_LEVEL_GET (type))
    {
-   case LOG_LEVEL_DEBUG:   printf ("[DEBUG] "); break;
-   case LOG_LEVEL_INFO:    printf ("[INFO ] "); break;
-   case LOG_LEVEL_WARNING: printf ("[WARN ] "); break;
-   case LOG_LEVEL_ERROR:   printf ("[ERROR] "); break;
+   case LOG_LEVEL_DEBUG:   printf ("[%s DEBUG] ", timestamp); break;
+   case LOG_LEVEL_INFO:    printf ("[%s INFO ] ", timestamp); break;
+   case LOG_LEVEL_WARNING: printf ("[%s WARN ] ", timestamp); break;
+   case LOG_LEVEL_ERROR:   printf ("[%s ERROR] ", timestamp); break;
    default: break;
    }
 
@@ -641,7 +648,7 @@ int os_set_ip_suite(
    ip_to_string(*p_gw, gateway_string);
    permanent_string = permanent ? "1" : "0";
 
-   textlen = asprintf(&outputcommand, "./set_network_parameters %s %s %s %s %s %s",
+   textlen = asprintf(&outputcommand, "./set_network_parameters %s %s %s %s '%s' %s",
       interface_name,
       ip_string,
       netmask_string,
@@ -663,14 +670,4 @@ int os_set_ip_suite(
       return -1;
    }
    return 0;
-}
-
-void os_get_button(uint16_t id, bool *p_pressed)
-{
-
-}
-
-void os_set_led(uint16_t id, bool on)
-{
-
 }

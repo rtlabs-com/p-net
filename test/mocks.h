@@ -28,15 +28,23 @@ extern "C"
 
 #include "osal.h"
 
-extern uint8_t     mock_os_eth_send_copy[PF_FRAME_BUFFER_SIZE];
-extern uint16_t    mock_os_eth_send_len;
-extern uint16_t    mock_os_eth_send_count;
+typedef struct mock_os_data_obj
+{
+   uint8_t     eth_send_copy[PF_FRAME_BUFFER_SIZE];
+   uint16_t    eth_send_len;
+   uint16_t    eth_send_count;
 
-extern uint16_t    mock_os_udp_sendto_len;
-extern uint16_t    mock_os_udp_sendto_count;
+   uint16_t    udp_sendto_len;
+   uint16_t    udp_sendto_count;
 
-extern uint16_t    mock_os_set_led_count;
-extern bool        mock_os_set_led_on;
+   uint8_t     udp_recvfrom_buffer[PF_FRAME_BUFFER_SIZE];
+   uint16_t    udp_recvfrom_length;
+   uint16_t    udp_recvfrom_count;
+
+   uint16_t    set_ip_suite_count;
+} mock_os_data_t;
+
+extern mock_os_data_t mock_os_data;
 
 void mock_init(void);
 void mock_clear(void);
@@ -48,7 +56,6 @@ os_eth_handle_t* mock_os_eth_init(
    void *arg);
 int mock_os_eth_send(os_eth_handle_t *handle, os_buf_t * buf);
 void mock_os_cpy_mac_addr(uint8_t * mac_addr);
-int mock_os_udp_socket(void);
 int mock_os_udp_open(os_ipaddr_t addr, os_ipport_t port);
 int mock_os_udp_sendto(uint32_t id,
       os_ipaddr_t dst_addr,
@@ -68,14 +75,18 @@ int mock_os_set_ip_suite(
    os_ipaddr_t             *p_gw,
    const char              *hostname,
    bool                    permanent);
-void mock_os_get_button(uint16_t id, bool *p_pressed);
-void mock_os_set_led(uint16_t id, bool on);
 int mock_pf_alarm_send_diagnosis(
    pf_ar_t                 *p_ar,
    uint32_t                api_id,
    uint16_t                slot_nbr,
    uint16_t                subslot_nbr,
    pf_diag_item_t          *p_item);
+
+void mock_pf_generate_uuid(
+   uint32_t                timestamp,
+   uint32_t                session_number,
+   pnet_ethaddr_t          mac_address,
+   pf_uuid_t               *p_uuid);
 
 #ifdef __cplusplus
 }

@@ -58,7 +58,7 @@ extern "C"
 #define PNET_OPTION_AR_VENDOR_BLOCKS                           1
 #define PNET_OPTION_RS                                         1
 #define PNET_OPTION_MC_CR                                      1
-#define PNET_OPTION_SRL                                        1
+#define PNET_OPTION_SRL                                        0
 
 /**
  * Disable use of atomic operations (stdatomic.h).
@@ -78,7 +78,7 @@ extern "C"
  * Please note that some defines have minimum requirements.
  * These values are used as is by the stack. No validation is performed.
  */
-#define PNET_MAX_AR                                            1     /**< Number of connections. Must be > 0. */
+#define PNET_MAX_AR                                            2     /**< Number of connections. Must be > 0. "Automated RT Tester" uses 2 */
 #define PNET_MAX_API                                           1     /**< Number of Application Processes. Must be > 0. */
 #define PNET_MAX_CR                                            2     /**< Per AR. 1 input and 1 output. */
 #define PNET_MAX_MODULES                                       5     /**< Per API. Should be > 1 to allow at least one I/O module. */
@@ -175,7 +175,11 @@ extern "C"
 #define PNET_ERROR_CODE_1_PNIORW_RES                           0xc0
 
 /**
- * # List of error_code_1 values, for PNET_ERROR_CODE_1_PNIORW_APP
+ * # List of error_code_1 values, for PNET_ERROR_DECODE_PNIORW
+ *
+ * APP = application
+ * ACC = access
+ * RES = resource
  */
 #define PNET_ERROR_CODE_1_APP_READ_ERROR                       (0x00 + PNET_ERROR_CODE_1_PNIORW_APP)
 #define PNET_ERROR_CODE_1_APP_WRITE_ERROR                      (0x01 + PNET_ERROR_CODE_1_PNIORW_APP)
@@ -183,10 +187,6 @@ extern "C"
 #define PNET_ERROR_CODE_1_APP_BUSY                             (0x07 + PNET_ERROR_CODE_1_PNIORW_APP)
 #define PNET_ERROR_CODE_1_APP_VERSION_CONFLICT                 (0x08 + PNET_ERROR_CODE_1_PNIORW_APP)
 #define PNET_ERROR_CODE_1_APP_NOT_SUPPORTED                    (0x09 + PNET_ERROR_CODE_1_PNIORW_APP)
-
-/**
- * # List of error_code_1 values, for PNET_ERROR_CODE_1_PNIORW_ACC
- */
 #define PNET_ERROR_CODE_1_ACC_INVALID_INDEX                    (0x00 + PNET_ERROR_CODE_1_PNIORW_ACC)
 #define PNET_ERROR_CODE_1_ACC_WRITE_LENGTH_ERROR               (0x01 + PNET_ERROR_CODE_1_PNIORW_ACC)
 #define PNET_ERROR_CODE_1_ACC_INVALID_SLOT_SUBSLOT             (0x02 + PNET_ERROR_CODE_1_PNIORW_ACC)
@@ -198,10 +198,6 @@ extern "C"
 #define PNET_ERROR_CODE_1_ACC_INVALID_PARAMETER                (0x08 + PNET_ERROR_CODE_1_PNIORW_ACC)
 #define PNET_ERROR_CODE_1_ACC_INVALID_TYPE                     (0x09 + PNET_ERROR_CODE_1_PNIORW_ACC)
 #define PNET_ERROR_CODE_1_ACC_BACKUP                           (0x0a + PNET_ERROR_CODE_1_PNIORW_ACC)
-
-/**
- * # List of error_code_1 values, for PNET_ERROR_CODE_1_PNIORW_RES
- */
 #define PNET_ERROR_CODE_1_RES_READ_CONFLICT                    (0x00 + PNET_ERROR_CODE_1_PNIORW_RES)
 #define PNET_ERROR_CODE_1_RES_WRITE_CONFLICT                   (0x01 + PNET_ERROR_CODE_1_PNIORW_RES)
 #define PNET_ERROR_CODE_1_RES_RESOURCE_BUSY                    (0x02 + PNET_ERROR_CODE_1_PNIORW_RES)
@@ -385,6 +381,12 @@ extern "C"
 #define PNET_ERROR_CODE_2_ABORT_DCP_STATION_NAME_CHANGED       0x1f
 #define PNET_ERROR_CODE_2_ABORT_DCP_RESET_TO_FACTORY           0x20
 #define PNET_ERROR_CODE_2_ABORT_PDEV_CHECK_FAILED              0x24
+
+/**
+ * # List of error_code_2 values, for
+ * PNET_ERROR_CODE_1_DCTRL_FAULTY_CONNECT (not exhaustive).
+ */
+#define PNET_ERROR_CODE_2_DCTRL_FAULTY_CONNECT_CONTROLCOMMAND  0x08
 
 /**
  * The events are sent from CMDEV to the application using the state_cb call-back function.
@@ -655,7 +657,7 @@ typedef int (*pnet_read_ind)(
    pnet_t                  *net,
    void                    *arg,
    uint32_t                arep,
-   uint16_t                api,
+   uint32_t                api,
    uint16_t                slot,
    uint16_t                subslot,
    uint16_t                idx,
@@ -683,7 +685,7 @@ typedef int (*pnet_read_ind)(
  * @param net              InOut: The p-net stack instance
  * @param arg              InOut: User-defined data (not used by p-net)
  * @param arep             In:   The AREP.
- * @param api              In:   The AP identifier.
+ * @param api              In:   The API identifier.
  * @param slot             In:   The slot number.
  * @param subslot          In:   The sub-slot number.
  * @param idx              In:   The data record index.
@@ -698,7 +700,7 @@ typedef int (*pnet_write_ind)(
    pnet_t                  *net,
    void                    *arg,
    uint32_t                arep,
-   uint16_t                api,
+   uint32_t                api,
    uint16_t                slot,
    uint16_t                subslot,
    uint16_t                idx,
@@ -734,7 +736,7 @@ typedef int (*pnet_write_ind)(
 typedef int (*pnet_exp_module_ind)(
    pnet_t                  *net,
    void                    *arg,
-   uint16_t                api,
+   uint32_t                api,
    uint16_t                slot,
    uint32_t                module_ident);
 
@@ -771,7 +773,7 @@ typedef int (*pnet_exp_module_ind)(
 typedef int (*pnet_exp_submodule_ind)(
    pnet_t                  *net,
    void                    *arg,
-   uint16_t                api,
+   uint32_t                api,
    uint16_t                slot,
    uint16_t                subslot,
    uint32_t                module_ident,
@@ -915,6 +917,25 @@ typedef int (*pnet_reset_ind)(
    void                    *arg,
    bool                    should_reset_application,
    uint16_t                reset_mode);
+
+/**
+ * Indication to the application that the Profinet signal LED should change state.
+ *
+ * Use this callback to implement control of the LED.
+ *
+ * It is optional to implement this callback (but a complianct Profinet device
+ * must have a signal LED)
+ *
+ * @param net                       InOut: The p-net stack instance
+ * @param arg                       InOut: User-defined data (not used by p-net)
+ * @param led_state                 In:    True if the signal LED should be on.
+ * @return  0  on success.
+ *          -1 if an error occurred.
+ */
+typedef int (*pnet_signal_led_ind)(
+   pnet_t                  *net,
+   void                    *arg,
+   bool                    led_state);
 
 /*
  * Network and device configuration.
@@ -1074,12 +1095,12 @@ typedef struct pnet_lldp_cfg
    char                    chassis_id[240 + 1];    /**< Terminated string */
    char                    port_id[240 + 1];       /**< Terminated string */
    pnet_ethaddr_t          port_addr;
-   uint16_t                ttl;
+   uint16_t                ttl;                    /**< Time to live in seconds */
    uint16_t                rtclass_2_status;
    uint16_t                rtclass_3_status;
-   uint8_t                 cap_aneg;
-   uint16_t                cap_phy;
-   uint16_t                mau_type;
+   uint8_t                 cap_aneg;               /**< Autonegotiation supported and enabled */
+   uint16_t                cap_phy;                /**< Autonegotiation speeds */
+   uint16_t                mau_type;               /**< Cable MAU type */
 } pnet_lldp_cfg_t;
 
 /**
@@ -1104,6 +1125,7 @@ typedef struct pnet_cfg
    pnet_alarm_cnf          alarm_cnf_cb;
    pnet_alarm_ack_cnf      alarm_ack_cnf_cb;
    pnet_reset_ind          reset_cb;
+   pnet_signal_led_ind     signal_led_cb;
    void                    *cb_arg;    /* Userdata passed to callbacks, not used by stack */
 
    /** I&M initial data */
@@ -1348,8 +1370,11 @@ PNET_EXPORT int pnet_input_get_iocs(
  * This function may be called to retrieve the latest data and IOPS values
  * of a sub-slot sent from the controller.
  *
- * If new data and IOCS has arrived from the controller since the last call
+ * If a valid new data (and IOCS) frame has arrived from the IO-controller since
+ * your last call to this function (regardless of the slot/subslot arguments)
  * then the flag \a p_new_flag is set to true, else it is set to false.
+ * Note that this does not check whether the data content has changed from
+ * any previous frame.
  *
  * Note that the latest data and IOPS values are copied to the application
  * buffers regardless of the value of \a p_new_flag.
@@ -1452,6 +1477,21 @@ PNET_EXPORT int pnet_set_provider_state(
 PNET_EXPORT int pnet_ar_abort(
    pnet_t                  *net,
    uint32_t                arep);
+
+/**
+ * Application requests factory reset of the device.
+ *
+ * Use this when you detect for example that a local hardware switch is used
+ * to do a factory reset.
+ *
+ * Also closes any open connections.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @return  0  if the operation succeeded.
+ *          -1 if an error occurred.
+ */
+PNET_EXPORT int pnet_factory_reset(
+   pnet_t                  *net);
 
 /**
  * Fetch error information from the AREP.
