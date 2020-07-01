@@ -135,14 +135,16 @@ static void pf_cmsm_timeout(
          __LINE__,
          pf_cmdev_state_to_string(p_ar->cmdev_state));
       p_ar->err_cls = PNET_ERROR_CODE_1_RTA_ERR_CLS_PROTOCOL;
+      p_ar->err_code = PNET_ERROR_CODE_2_ABORT_AR_CMI_TIMEOUT;
+
+
+      /* TODO Remove when Bjarnes CControl resend is merged */
       if (p_ar->cmdev_state == PF_CMDEV_STATE_W_ARDYCNF)
       {
          p_ar->err_code = PNET_ERROR_CODE_2_ABORT_AR_RPC_CONTROL_ERROR;
       }
-      else
-      {
-         p_ar->err_code = PNET_ERROR_CODE_2_ABORT_AR_CMI_TIMEOUT;
-      }
+
+
       pf_cmdev_state_ind(net, p_ar, PNET_EVENT_ABORT);
       pf_cmsm_set_state(p_ar, PF_CMSM_STATE_IDLE);
       break;
