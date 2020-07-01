@@ -2036,7 +2036,7 @@ static int pf_cmrpc_rpc_request(
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
-static void pf_cmrpc_ccontrol_send(
+static void pf_cmrpc_send_with_timeout(
    pnet_t                     *p_net,
    void                       *arg,
    uint32_t                   current_time)
@@ -2045,21 +2045,30 @@ static void pf_cmrpc_ccontrol_send(
 
    if ((p_sess != NULL) && (p_sess->socket > 0))
    {
-      if (p_sess->ccontrol_timeout_ctr > 0)
+      if (p_sess->send_timeout_ctr > 0)
       {
-         p_sess->ccontrol_timeout_ctr--;
+         p_sess->send_timeout_ctr--;
 
          if (os_udp_sendto(p_sess->socket, p_sess->ip_addr, p_sess->port, &p_sess->out_buffer[p_sess->out_buf_sent_pos], p_sess->out_buf_send_len) == p_sess->out_buf_send_len)
          {
-            LOG_INFO(PF_RPC_LOG, "Sent ccontrol request (with APPL_READY) to controller. size = %u. socket %" PRIu32 "\n", p_sess->out_buf_send_len, p_sess->socket);
-#if 1
-            if (pf_scheduler_add(p_net, PF_CCONTROL_TIMEOUT, "ccontrol",
-               pf_cmrpc_ccontrol_send, arg,
-               &p_sess->ccontrol_timeout) != 0)
+            if (p_sess->from_me == true)
             {
-               LOG_ERROR(PF_RPC_LOG, "CMRPC(%d): pf_scheduler_add failed\n", __LINE__);
+               if (pf_scheduler_add(p_net, PF_CCONTROL_TIMEOUT * 1000, "ccontrol",
+                  pf_cmrpc_send_with_timeout, arg,
+                  &p_sess->send_timeout) != 0)
+               {
+                  LOG_ERROR(PF_RPC_LOG, "CMRPC(%d): pf_scheduler_add failed\n", __LINE__);
+               }
             }
-#endif
+            else
+            {
+               if (pf_scheduler_add(p_net, PF_FRAG_TIMEOUT * 1000, "frag",
+                  pf_cmrpc_send_with_timeout, arg,
+                  &p_sess->send_timeout) != 0)
+               {
+                  LOG_ERROR(PF_RPC_LOG, "CMRPC(%d): pf_scheduler_add failed\n", __LINE__);
+               }
+            }
          }
          else
          {
@@ -2230,8 +2239,8 @@ int pf_cmrpc_rm_ccontrol_req(
       pf_put_uint32(rpc_req.is_big_endian, ndr_data.array.actual_count, max_req_len, p_sess->out_buffer, &start_pos);
 
       p_sess->socket = os_udp_open(OS_IPADDR_ANY, PF_RPC_CCONTROL_EPHEMERAL_PORT);
-      p_sess->ccontrol_timeout_ctr = 3;
-      pf_cmrpc_ccontrol_send(net, p_sess, os_get_current_time_us());
+      p_sess->send_timeout_ctr = 3;
+      pf_cmrpc_send_with_timeout(net, p_sess, os_get_current_time_us());
 
       ret = 0;
    }
@@ -2451,8 +2460,6 @@ static int pf_cmrpc_send(
       }
       else
       {
-         /* ToDO: Bjarne: Start a re-transmit timer. */
-         LOG_ERROR(PF_RPC_LOG, "CMRPC(%d): Sent %u bytes success\n", __LINE__, sent_len);
          ret = 0;
       }
    }
@@ -2619,6 +2626,9 @@ static int pf_cmrpc_dce_packet(
       if ((rpc_req.flags.fragment == false) ||
           (rpc_req.flags.last_fragment == true))
       {
+         pf_scheduler_remove(net, "rpc", p_sess->send_timeout);
+         p_sess->send_timeout = 0;
+
          switch (rpc_req.packet_type)
          {
          case PF_RPC_PT_PING:
@@ -2729,7 +2739,17 @@ static int pf_cmrpc_dce_packet(
             /* Insert the real value of length_of_body in the rpc header */
             pf_put_uint16(rpc_res.is_big_endian, (uint16_t)(p_sess->out_buf_send_len - start_pos), p_sess->out_buf_send_len, p_sess->out_buffer, &length_of_body_pos);
 
-            ret = pf_cmrpc_send(net, p_sess);
+            if (rpc_res.flags.fragment == true)
+            {
+               /* Fragments (with ack) are supposed to be re-transmitted according to the spec. */
+               p_sess->send_timeout_ctr = 3;
+               ret = pf_cmrpc_send_with_timeout(net, p_sess, os_get_current_time_us());
+            }
+            else
+            {
+               /* Responses are not re-transmitted */
+               ret = pf_cmrpc_send(net, p_sess);
+            }
             break;
          case PF_RPC_PT_FRAG_ACK:
             /* Handle fragment acknowledgment from the controller. */
@@ -2797,7 +2817,10 @@ static int pf_cmrpc_dce_packet(
                pf_put_uint16(rpc_res.is_big_endian, p_sess->out_buf_send_len, PF_MAX_UDP_PAYLOAD_SIZE, p_sess->out_buffer, &length_of_body_pos);
 
                p_sess->out_buf_send_len += start_pos;
-               ret = pf_cmrpc_send(net, p_sess);
+
+               /* Fragments are supposed to be re-transmitted */
+               p_sess->send_timeout_ctr = 3;
+               ret = pf_cmrpc_send_with_timeout(net, p_sess, os_get_current_time_us());
             }
             else
             {
@@ -2828,7 +2851,6 @@ static int pf_cmrpc_dce_packet(
                p_sess->get_info.is_big_endian = true;  /* From now on all is big-endian */
 
                ret = pf_cmrpc_rpc_response(net, p_sess, req_pos, &rpc_req);
-               //Bjarne: What do we do here??
             }
             break;
          case PF_RPC_PT_CL_CANCEL:
@@ -2970,8 +2992,10 @@ void pf_cmrpc_periodic(
          }
          else
          {
+#if 0
             LOG_DEBUG(PF_RPC_LOG, "CMRPC(%d): socket %u  os_udp_recvfrom() %d\n", __LINE__,
                (unsigned int)net->cmrpc_session_info[ix].socket, dcerpc_req_len);
+#endif
          }
       }
    }

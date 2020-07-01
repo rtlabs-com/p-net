@@ -1562,8 +1562,8 @@ typedef struct pf_session_info
    pnet_result_t           dcontrol_result;
 
    /* This timer is used to handle ccontrol re-transmissions */
-   uint32_t                ccontrol_timeout;
-   uint32_t                ccontrol_timeout_ctr;
+   uint32_t                send_timeout;
+   uint32_t                send_timeout_ctr;
 } pf_session_info_t;
 
 typedef struct pf_ar
