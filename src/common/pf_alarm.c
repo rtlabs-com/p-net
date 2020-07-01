@@ -580,12 +580,12 @@ static void pf_alarm_apms_timeout(
          {
             if (os_eth_send(p_apmx->p_ar->p_sess->eth_handle, p_apmx->p_rta) <= 0)
             {
-            	net->interface_statistics.ifOutErrors++;
+               net->interface_statistics.ifOutErrors++;
                LOG_ERROR(PF_ALARM_LOG, "pf_alarm(%d): Error from os_eth_send(rta)\n", __LINE__);
             }
             else
             {
-            	net->interface_statistics.ifOutOctects++;
+               net->interface_statistics.ifOutOctects++;
             }
          }
 
@@ -935,12 +935,12 @@ static int pf_alarm_apms_a_data_req(
             p_rta->len = pos;
             if (os_eth_send(p_apmx->p_ar->p_sess->eth_handle, p_rta) <= 0)
             {
-            	net->interface_statistics.ifOutOctects++;
+               net->interface_statistics.ifOutOctects++;
                LOG_ERROR(PF_ALARM_LOG, "pf_alarm(%d): Error from os_eth_send(rta)\n", __LINE__);
             }
             else
             {
-            	net->interface_statistics.ifOutErrors++;
+               net->interface_statistics.ifOutErrors++;
                ret = 0;
             }
          }

@@ -66,8 +66,7 @@ pnet_t* pnet_init(
    net->eth_handle = os_eth_init(netif, pf_eth_recv, (void*)net);
    if (net->eth_handle == NULL)
    {
-	   if(net)
-		   free(net);
+       free(net);
        return NULL;
    }
 

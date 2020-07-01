@@ -45,15 +45,6 @@ extern "C"
 #define APP_PARAM_IDX_2          124
 #define APP_API                  0
 
-/*
- * Module and submodule ident number for the DAP module.
- * The DAP module and submodules must be plugged by the application after the call to pnet_init.
- */
-#define PNET_SLOT_DAP_IDENT                        0x00000000
-#define PNET_MOD_DAP_IDENT                         0x00000001     /* For use in slot 0 */
-#define PNET_SUBMOD_DAP_IDENT                      0x00000001     /* For use in subslot 1 */
-#define PNET_SUBMOD_DAP_INTERFACE_1_IDENT          0x00008000     /* For use in subslot 0x8000 */
-#define PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT   0x00008001     /* For use in subslot 0x8001 */
 
 /*
  * I/O Modules. These modules and their sub-modules must be plugged by the

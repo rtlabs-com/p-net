@@ -137,10 +137,10 @@ typedef enum pf_epmapper_opnum_values
 
 typedef enum pf_mediatype_values
 {
-	PF_PD_MEDIATYPE_UNKNOWN = 0,
-	PF_PD_MEDIATYPE_COPPER,
-	PF_PD_MEDIATYPE_FIBER,
-	PF_PD_MEDIATYPE_RAIO
+   PF_PD_MEDIATYPE_UNKNOWN = 0,
+   PF_PD_MEDIATYPE_COPPER,
+   PF_PD_MEDIATYPE_FIBER,
+   PF_PD_MEDIATYPE_RAIO
 }pf_mediatype_values_t;
 
 typedef struct pf_rpc_flags
@@ -193,14 +193,14 @@ typedef struct pf_rpc_header
 
 typedef enum pf_write_req_error_type_values
 {
-	PF_WRT_ERROR_REMOTE_MISMATCH = 0x8001
-}pf_write_req_error_type_t;
+   PF_WRT_ERROR_REMOTE_MISMATCH        = 0x8001
+} pf_write_req_error_type_t;
 
 typedef enum pf_write_req_ext_error_type_values
 {
-	PF_WRT_ERROR_PORTID_MISMATCH = 0x8000,
-	PF_WRT_ERROR_CHASSISID_MISMATCH = 0x8001
-}pf_write_req_ext_error_type_t;
+   PF_WRT_ERROR_PORTID_MISMATCH        = 0x8000,
+   PF_WRT_ERROR_CHASSISID_MISMATCH     = 0x8001
+} pf_write_req_ext_error_type_t;
 
 
 /************************** Block header *************************************/
@@ -275,15 +275,15 @@ typedef enum pf_block_type_values
    PF_BT_SUBMODULE_PRMBEGIN_REQ        = 0x0119,
 
    /* LLDP Peer*/
-   PF_BT_PDPORTCHECK              	   = 0x0200,
-   PF_BT_CHECKPEERS              	   = 0x020a,
-   PF_BT_PDPORTDATAREAL            	   = 0x020f,
-   PF_BT_INTERFACE_REAL_DATA		   = 0x0240,
+   PF_BT_PDPORTCHECK                   = 0x0200,
+   PF_BT_CHECKPEERS                    = 0x020a,
+   PF_BT_PDPORTDATAREAL                = 0x020f,
+   PF_BT_INTERFACE_REAL_DATA           = 0x0240,
    PF_BT_INTERFACE_ADJUST              = 0x0250,
-   PF_BT_PORT_STATISTICS			   = 0x0251,
+   PF_BT_PORT_STATISTICS               = 0x0251,
 
-   PF_BT_MULTIPLEBLOCK_HEADER		   = 0x0400,
-   
+   PF_BT_MULTIPLEBLOCK_HEADER          = 0x0400,
+
    PF_BT_MAINTENANCE_ITEM              = 0x0f00,
 
    /* Output from a PROFINET device */
@@ -776,7 +776,6 @@ typedef struct pf_cmina_dcp_ase
    char                    device_vendor[20+1];       /* Terminated */
    uint8_t                 device_role;               /* Only value "1" supported */
    uint16_t                device_initiative;         /* 1: Should send hello. 0: No sending of hello */
-
    char                    alias_name[249 + 1];  		/* Terminated */
    struct
    {
@@ -1997,12 +1996,12 @@ typedef struct pf_log_book
 
 typedef struct pf_interface_stats
 {
-	uint32_t ifInOctects;
-	uint32_t ifOutOctects;
-	uint32_t ifInDiscards;
-	uint32_t ifOutDiscards;
-	uint32_t ifInErrors;
-	uint32_t ifOutErrors;
+   uint32_t   ifInOctects;
+   uint32_t   ifOutOctects;
+   uint32_t   ifInDiscards;
+   uint32_t   ifOutDiscards;
+   uint32_t   ifInErrors;
+   uint32_t   ifOutErrors;
 }pnet_interface_stats_t;
 
 struct pnet
@@ -2049,7 +2048,7 @@ struct pnet
    pnet_cfg_t                          fspm_cfg;
    pf_log_book_t                       fspm_log_book;
    os_mutex_t                          *fspm_log_book_mutex;
-   pnet_interface_stats_t			   interface_statistics;
+   pnet_interface_stats_t              interface_statistics;
 };
 
 

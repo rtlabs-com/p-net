@@ -86,19 +86,19 @@ int pf_eth_recv(
       {
          /* Call the frame handler */
          ret = net->eth_id_map[ix].frame_handler(net, frame_id, p_buf,
-        		 frame_pos, net->eth_id_map[ix].p_arg);
+            frame_pos, net->eth_id_map[ix].p_arg);
       }
       net->interface_statistics.ifInOctects++;
       break;
    case OS_ETHTYPE_LLDP:
-	   LOG_INFO(PF_ETH_LOG, "LLDP: Recieved LLDP frame\n");
-	   /* eth_display_data(p_buf->payload,p_buf->len); */
-	   pf_lldp_recv(net,p_buf,frame_pos);
-	  net->interface_statistics.ifInOctects++;
+      LOG_INFO(PF_ETH_LOG, "LLDP: Recieved LLDP frame\n");
+      /* eth_display_data(p_buf->payload,p_buf->len); */
+      pf_lldp_recv(net,p_buf,frame_pos);
+      net->interface_statistics.ifInOctects++;
       break;
    default:
       /* Not a profinet packet. */
-	  net->interface_statistics.ifInDiscards++;
+      net->interface_statistics.ifInDiscards++;
       ret = 0;
       break;
    }

@@ -150,12 +150,12 @@ static void pf_dcp_responder(
       {
          if (os_eth_send(net->eth_handle, p_buf) <= 0)
          {
-        	 net->interface_statistics.ifOutErrors++;
+            net->interface_statistics.ifOutErrors++;
             LOG_ERROR(PNET_LOG, "DCP(%d): Error from os_eth_send(dcp)\n", __LINE__);
          }
          else
          {
-        	 net->interface_statistics.ifOutOctects++;
+            net->interface_statistics.ifOutOctects++;
             LOG_DEBUG(PNET_LOG, "DCP(%d): Sent a DCP response.\n", __LINE__);
          }
          os_buf_free(p_buf);
@@ -266,7 +266,7 @@ static int pf_dcp_get_req(
    uint8_t                 opt,
    uint8_t                 sub,
    bool                    request_is_identify,
-   bool					   append_alias_name)
+   bool                    append_alias_name)
 {
    int                     ret = 0;       /* Assume all OK */
    uint8_t                 block_error = PF_DCP_BLOCK_ERROR_NO_ERROR;
@@ -353,8 +353,8 @@ static int pf_dcp_get_req(
          value_length = (uint16_t)strlen((char *)p_value);
          break;
       case PF_DCP_SUB_DEV_PROP_ALIAS:
-    	  skip = append_alias_name ? 0:1;
-    	  value_length = (uint16_t)strlen((char *)p_value);
+         skip = append_alias_name ? 0:1;
+         value_length = (uint16_t)strlen((char *)p_value);
          break;
       case PF_DCP_SUB_DEV_PROP_VENDOR:
          value_length = (uint16_t)strlen((char *)p_value);
@@ -679,7 +679,7 @@ static int pf_dcp_get_set(
    uint16_t                src_pos;
    uint16_t                src_dcplen;
    uint16_t                src_block_len;
-   uint16_t                src_block_qualifier;
+   uint16_t                src_block_qualifier = 0;
    pf_ethhdr_t             *p_src_ethhdr;
    pf_dcp_header_t         *p_src_dcphdr;
    pf_dcp_block_hdr_t      *p_src_block_hdr;
@@ -770,7 +770,7 @@ static int pf_dcp_get_set(
                src_pos += sizeof(*p_src_block_hdr);    /* Point to the block value */
                src_block_len = ntohs(p_src_block_hdr->block_length);
             }
-            
+
             net->dcp_global_block_qualifier = src_block_qualifier;
             /* Make sure no other MAC address is used in the DCP communication for 3 seconds */
             memcpy(&net->dcp_sam, &p_src_ethhdr->src, sizeof(net->dcp_sam));
@@ -806,12 +806,12 @@ static int pf_dcp_get_set(
 
          if (os_eth_send(net->eth_handle, p_rsp) <= 0)
          {
-        	 net->interface_statistics.ifOutErrors++;
+            net->interface_statistics.ifOutErrors++;
             LOG_ERROR(PNET_LOG, "pf_dcp(%d): Error from os_eth_send(dcp)\n", __LINE__);
          }
          else
          {
-        	 net->interface_statistics.ifOutOctects++;
+            net->interface_statistics.ifOutOctects++;
             LOG_DEBUG(PF_DCP_LOG,"DCP(%d): Sent DCP Get/Set response\n", __LINE__);
          }
 
@@ -1000,12 +1000,12 @@ int pf_dcp_hello_req(
          p_buf->len = dst_pos;
          if (os_eth_send(net->eth_handle, p_buf) <= 0)
          {
-        	 net->interface_statistics.ifOutErrors++;
+            net->interface_statistics.ifOutErrors++;
             LOG_ERROR(PNET_LOG, "pf_dcp(%d): Error from os_eth_send(dcp)\n", __LINE__);
          }
          else
          {
-        	 net->interface_statistics.ifOutOctects++;
+            net->interface_statistics.ifOutOctects++;
          }
       }
       os_buf_free(p_buf);
@@ -1043,7 +1043,7 @@ static int pf_dcp_identify_req(
    bool                    first = true;     /* First of the blocks */
    bool                    match = false;    /* Is it for us? */
    bool                    filter = false;   /* Is it IdentifyFilter or IdentifyAll? */
-   bool					   alias_request = false; /*Is this a request via an alias name?*/
+   bool                    alias_request = false; /*Is this a request via an alias name?*/
    uint8_t                 *p_src;
    uint16_t                src_pos = 0;
    pf_ethhdr_t             *p_src_ethhdr;
@@ -1296,8 +1296,8 @@ static int pf_dcp_identify_req(
                   }
                   break;
                case PF_DCP_SUB_DEV_PROP_ALIAS:
-            	  strcpy(s1,(const char*)p_value);
-            	  strncpy(s2,(char*)&p_src[src_pos],value_length);
+                  strcpy(s1,(const char*)p_value);
+                  strncpy(s2,(char*)&p_src[src_pos],value_length);
                   if (strcmp(s1, s2) == 0)
                   {
                      if (first == true)

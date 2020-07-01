@@ -94,8 +94,7 @@ enum os_eth_type {
   OS_ETHTYPE_PROFINET  = 0x8892U,
   OS_ETHTYPE_ETHERCAT  = 0x88A4U,
   OS_ETHTYPE_LLDP      = 0x88CCU,
-}OS_ETH_TYPE;
-
+};
 
 /* 255.255.255.255 */
 #ifndef OS_IPADDR_NONE
@@ -253,7 +252,6 @@ int os_get_ip_suite(
    os_ipaddr_t             *p_netmask,
    os_ipaddr_t             *p_gw,
    const char              **p_device_name);
-   os_ethaddr_t            *p_mac
 
 /**
  * Set network parameters (IP address, netmask etc)
@@ -275,19 +273,11 @@ int os_get_ip_suite(
  */
 int os_set_ip_suite(
    const char              *interface_name,
-   bool                    dhcp_enable,
    os_ipaddr_t             *p_ipaddr,
    os_ipaddr_t             *p_netmask,
    os_ipaddr_t             *p_gw,
    const char              *hostname,
    bool                    permanent);
-
-/* Create an way for the stack to notify
-*	the app of an event
-*/
-void os_stack_to_app_event(uint32_t value);
-void os_stack_set_ip_suite(bool bSavePermanent);
-void os_eth_destroy(os_eth_handle_t *handle);
 
 #ifdef __cplusplus
 }

@@ -274,15 +274,15 @@ int pf_diag_add(
                 p_item->fmt.std.ext_ch_error_type = ext_ch_error_type;
                 p_item->fmt.std.ext_ch_add_value = ext_ch_add_value;
                 p_item->fmt.std.qual_ch_qualifier = qual_ch_qualifier;
-             
+
                 /* Link it into the sub-slot reported list */
                 p_item->next = p_subslot->diag_list;
                 p_subslot->diag_list = item_ix;
-                
+
                 /*ToDo: Write to NVRAM */
-                
+
                 os_mutex_unlock(p_dev->diag_mutex);
-            	return 0;
+                return 0;
             }
             else
             {
