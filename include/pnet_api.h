@@ -1092,7 +1092,7 @@ typedef struct pnet_ethaddr
  */
 typedef struct pnet_lldp_cfg
 {
-   char                    chassis_id[240 + 1];    /**< Terminated string */
+   char                    chassis_id[240 + 1];    /**< Terminated string. Not used */
    char                    port_id[240 + 1];       /**< Terminated string */
    pnet_ethaddr_t          port_addr;
    uint16_t                ttl;                    /**< Time to live in seconds */

@@ -729,7 +729,6 @@ int app_adjust_stack_configuration(
    strcpy(stack_config->manufacturer_specific_string, "PNET demo");
 
    /* LLDP settings */
-   strcpy(stack_config->lldp_cfg.chassis_id, "rt-labs1");
    strcpy(stack_config->lldp_cfg.port_id, "port-001");
    stack_config->lldp_cfg.ttl = 20;                /* seconds */
    stack_config->lldp_cfg.rtclass_2_status = 0;

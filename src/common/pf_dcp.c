@@ -809,12 +809,13 @@ static int pf_dcp_get_set(
             LOG_DEBUG(PF_DCP_LOG,"DCP(%d): Sent DCP Get/Set response\n", __LINE__);
          }
 
-         /* Send LLDP _after_ the response in order to pass I/O-tester tests. */
          if (p_src_dcphdr->service_id == PF_DCP_SERVICE_SET)
          {
             pf_cmina_dcp_set_commit(net);
-            pf_lldp_send(net);
          }
+
+         /* Send LLDP _after_ the response in order to pass I/O-tester tests. */
+         pf_lldp_send(net);
       }
    }
 
