@@ -659,6 +659,7 @@ typedef struct pf_alarm_err
 
 #define PF_CMINA_FS_HELLO_RETRY           3
 #define PF_CMINA_FS_HELLO_INTERVAL        (3*1000)     /* milliseconds. Default is 30 ms */
+#define PF_LLDP_INTERVAL                  (5*1000)     /* milliseconds */
 
 typedef enum pf_cmina_state_values
 {
@@ -2010,6 +2011,7 @@ struct pnet
    pnet_cfg_t                          fspm_cfg;
    pf_log_book_t                       fspm_log_book;
    os_mutex_t                          *fspm_log_book_mutex;
+   uint32_t                            lldp_timeout;  /* Scheduler handle for periodic LLDP sending */
 };
 
 
