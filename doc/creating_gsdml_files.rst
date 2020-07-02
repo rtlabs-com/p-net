@@ -1,12 +1,5 @@
 Creating GSD (GSDML) files
 ==========================
-A GSD (General Station Description) file is an XML file describing a Profinet
-IO-Device. The XML-based language is called GSDML (GSD Markup Language).
-
-Note that the GSD file is not used by the p-net stack or application. It is
-a machine readable file describing the capabilites, hardware- and software
-versions etc, and is used by the engineering tool to adjust the PLC settings.
-
 For Profinet members, the "Profinet GSD Checker" tool is available for
 download. It contains GSD example files showing different aspects of the file
 format.
@@ -85,8 +78,10 @@ XML comments are written::
 
 Entering values
 ---------------
-Values are written in double quotes. To enter several values (including a
-range of values), write ``"0..4 7 9"``.
+Values are written in double quotes. Different attributes have different types:
+
+* ValueList: To enter several values (including a range of values), write "0..4 7 9"
+* TokenList1: Semicolon separated values, for example "Legacy;Advanced"
 
 
 File structure
@@ -205,7 +200,7 @@ The ``<DeviceAccessPointItem>`` element has the attributes:
 * ``DeviceAccessSupported="true"``
 * ``NumberOfDeviceAccessAR="1"`` Number of concurrent connections
 * ``MultipleWriteSupported="true"``
-* ``RequiredSchemaVersion="V2.1"`` This file has features requiring this schema version
+* ``RequiredSchemaVersion="V2.3"`` This file has features requiring this schema version. It must be at least 2.3 if legacy startup mode not is supported.
 * ``CheckDeviceID_Allowed="true"``
 * ``NameOfStationNotTransferable="false"``
 * ``LLDP_NoD_Supported="true"`` (Should be "true" for recent Profinet versions)
@@ -279,7 +274,8 @@ has these attributes:
 
 The communication startup is described in the element ``<ApplicationRelations>``
 with the attribute ``StartupMode``, which typically should be "Advanced" (the
-alternative is "Legacy").
+alternative is "Legacy"). If supporting both modes, use a semicolon separated
+list.
 
 Use the ``<TimingProperties>`` element to define the sending of cyclic IO data.
 The ``SendClock`` attributes contains a list of all supported send cycle times,

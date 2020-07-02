@@ -1079,14 +1079,13 @@ static int pf_cmdev_set_state(
    pf_cmdev_state_values_t state)
 {
    p_ar->cmdev_state = state;
-   LOG_DEBUG(PNET_LOG, "CMDEV(%d): New state: %s\n", __LINE__, pf_cmdev_state_to_string(state));
+   LOG_DEBUG(PNET_LOG, "CMDEV(%d): New state: %s for AR with AREP %u\n", __LINE__, pf_cmdev_state_to_string(state), p_ar->arep);
 
    switch (state)
    {
    case PF_CMDEV_STATE_ABORT:
       pf_cmdev_state_ind(net, p_ar, PNET_EVENT_ABORT);
-      LOG_DEBUG(PNET_LOG, "CMDEV(%d): New state: %s\n", __LINE__, pf_cmdev_state_to_string(PF_CMDEV_STATE_W_CIND));
-
+      LOG_DEBUG(PNET_LOG, "CMDEV(%d): New state: %s for AR with AREP %u\n", __LINE__, pf_cmdev_state_to_string(PF_CMDEV_STATE_W_CIND), p_ar->arep);
       pf_device_clear(net, p_ar);
       break;
    default:
@@ -3522,7 +3521,7 @@ int pf_cmdev_rm_connect_ind(
    {
       /* Start building the response to the connect request. */
       memcpy(p_ar->ar_result.cm_responder_mac_add.addr, mac_address.addr, sizeof(pnet_ethaddr_t));
-      p_ar->ar_result.responder_udp_rt_port = 0x8892;
+      p_ar->ar_result.responder_udp_rt_port = PF_UDP_UNICAST_PORT;
 
       pf_cmdev_fix_frame_id(p_ar);
 

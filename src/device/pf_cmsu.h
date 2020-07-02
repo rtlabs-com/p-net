@@ -104,6 +104,7 @@ int pf_cmsu_alarm_error_ind(
  * Handle DMC error indications for a specific AR.
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
+ * @param err_cls          In:   ERR_CLS
  * @param err_code         In:   ERR_CODE
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.

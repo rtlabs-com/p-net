@@ -43,6 +43,10 @@ Modify the respective lines to::
 
    #define CFG_LWIP_GATEWAY()      IP4_ADDR (&gw, 192, 168, 137, 1)
 
+In the file rt-kernel-xmc4/bsp/xmc48relax/src/lwip.c change to::
+
+    .rx_task_stack = 4000,
+
 In the root folder of the rt-kernel directory::
 
     source setup.sh xmc48relax

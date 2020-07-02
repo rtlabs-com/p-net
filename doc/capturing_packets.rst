@@ -33,6 +33,15 @@ sequence. When a packet is interpreted according to a GSDML file, the name of
 the GSDML file is displayed in the detail view of the packet.
 
 
+Show wall time in Wireshark
+---------------------------
+In order to correlate captured Wireshark frames to other logs, it can be
+convenient to display wall time in the time column in Wireshark.
+Right-click the column header, and select "Edit Column".
+For "Type" use "Time (format as specified)". Click OK.
+In the main menu View > "Time Format Display" select "Time of day".
+
+
 tcpdump
 -------
 When running on an embedded Linux board, it can be convenient to run without

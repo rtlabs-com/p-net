@@ -1057,7 +1057,7 @@ static int pf_dcp_identify_req(
 
    pf_cmina_get_macaddr(net, &mac_address);
 
-   LOG_DEBUG(PF_DCP_LOG,"DCP(%d): Incoming DCP identify request\n", __LINE__);
+   LOG_INFO(PF_DCP_LOG,"DCP(%d): Incoming DCP identify request\n", __LINE__);
    /*
     * IdentifyReqBlock = DeviceRoleBlock ^ DeviceVendorBlock ^ DeviceIDBlock ^
     * DeviceOptionsBlock ^ OEMDeviceIDBlock ^ MACAddressBlock ^ IPParameterBlock ^
@@ -1374,7 +1374,7 @@ static int pf_dcp_identify_req(
 
       if ((ret == 0) && (match == true))
       {
-         LOG_DEBUG(PF_DCP_LOG,"DCP(%d):   Match for incoming DCP identify request. Sending response.\n", __LINE__);
+         LOG_DEBUG(PF_DCP_LOG,"DCP(%d):   Match for incoming DCP identify request. Sending response.\n", __LINE__);  /* TODO Print if it is a general identity request, or just for specific name */
 
          /* Build the response */
          for (ix = 0; ix < NELEMENTS(device_options); ix++)
@@ -1394,7 +1394,7 @@ static int pf_dcp_identify_req(
       }
       else
       {
-         LOG_DEBUG(PF_DCP_LOG,"DCP(%d):   No match for incoming DCP identify request.\n", __LINE__);
+         LOG_DEBUG(PF_DCP_LOG,"DCP(%d):   No match for incoming DCP identify request.\n", __LINE__);  /* TODO Print if it is a general identity request, or just for specific name */
          os_buf_free(p_rsp);
       }
    }

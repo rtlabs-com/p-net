@@ -94,7 +94,6 @@ Usage of the demo IO-device application:
         -v           Incresase verbosity
         -i INTERF    Set Ethernet interface name. Defaults to eth0
         -s NAME      Set station name. Defaults to rt-labs-dev
-        -l FILE      Path to control LED. Defaults to not control any LED.
         -b FILE      Path to read button1. Defaults to not read button1.
         -d FILE      Path to read button2. Defaults to not read button2.
 
@@ -107,7 +106,7 @@ Run the sample application::
 
 On Raspberry Pi::
 
-    sudo build/pn_dev -v -l /sys/class/gpio/gpio17/value -b /sys/class/gpio/gpio22/value -d /sys/class/gpio/gpio27/value
+    sudo build/pn_dev -v -b /sys/class/gpio/gpio22/value -d /sys/class/gpio/gpio27/value
 
 Note that you must set up the GPIO files properly first (see the Raspberry Pi
 page).

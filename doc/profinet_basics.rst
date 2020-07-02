@@ -5,6 +5,26 @@ of 100 Mbit/s. For details on Profinet, see
 https://en.wikipedia.org/wiki/PROFINET
 
 
+GSD files
+---------
+A GSD (General Station Description) file is an XML file describing a Profinet
+IO-Device. The XML-based language is called GSDML (GSD Markup Language).
+
+Note that the GSD file is not used by the p-net stack or application. It is
+a machine readable file describing the capabilities, hardware- and software
+versions etc, and is used by the engineering tool to adjust the PLC settings.
+
+The GSD file describes for example which types of pluggable hardware modules
+that can used in the IO-device. The GSD file is loaded into the engineering tool
+(typically running on a personal computer), and a user can then in the tool
+describe which modules that actually should be plugged into the IO-device.
+This is called configuration. Later this information is downloaded to the PLC
+(IO-controller), a process called commissioning. At startup the PLC will
+tell the IO-device what type of modules it expects to be plugged in.
+If the correct modules not are plugged into the IO-device, the IO-device will
+send an error message back to the PLC.
+
+
 Nodes classes and device details
 --------------------------------
 Profinet defines three node classes:
@@ -12,16 +32,16 @@ Profinet defines three node classes:
 .. table::
     :widths: 25 50 25
 
-    +---------------+-----------------------------------+----------------------------+
-    | Node class    | Description                       | |  Supported by            |
-    |               |                                   | |  this software           |
-    +===============+===================================+============================+
-    | IO-Device     | "Slave"                           | Yes                        |
-    +---------------+-----------------------------------+----------------------------+
-    | I0-Controller | "Master", often a PLC.            | No                         |
-    +---------------+-----------------------------------+----------------------------+
-    | IO-Supervisor | For commissioning and diagnostics | No                         |
-    +---------------+-----------------------------------+----------------------------+
+    +---------------+------------------------------------------------------------------+----------------------------+
+    | Node class    | Description                                                      | |  Supported by            |
+    |               |                                                                  | |  this software           |
+    +===============+==================================================================+============================+
+    | IO-Device     | "Slave"                                                          | Yes                        |
+    +---------------+------------------------------------------------------------------+----------------------------+
+    | IO-Controller | "Master", often a PLC.                                           | No                         |
+    +---------------+------------------------------------------------------------------+----------------------------+
+    | IO-Supervisor | For commissioning and diagnostics, typically a personal computer | No                         |
+    +---------------+------------------------------------------------------------------+----------------------------+
 
 
 Depending on the capabilities, different conformance classes are assigned.
@@ -47,12 +67,12 @@ while for example Ethercat is CPF 12.
 Real Time Class:
 
 * Real Time Class 1 Mandatory for conformance class A, B, C
-* Real Time Class 2 (legacy)
+* Real Time Class 2 (legacy) Only for legacy startup mode
 * Real Time Class 3 = IRT (Isochronous Real Time) Mandatory for conformance class C
-* Real Time Class UDP  Optional for conformance class A, B, C
+* Real Time Class UDP  For cross-network real time communication. Optional for conformance class A, B, C
 * Real Time Class STREAM for conformance class D.
 
-This software supprts Real Time Class 1.
+This software supports Real Time Class 1.
 
 
 Communication
@@ -197,10 +217,6 @@ This is used for example for assigning station name and IP address to devices.
 | 6          | Hello       |
 +------------+-------------+
 
-
-Option 1 suboption 2   Full IP suite
-
-
 +-------------+--------+-----------+------------------------+------------------------------------+
 | Service IDs | Option | Suboption | Description            | Contains                           |
 +=============+========+===========+========================+====================================+
@@ -220,7 +236,7 @@ Option 1 suboption 2   Full IP suite
 +-------------+--------+-----------+------------------------+------------------------------------+
 | 3, 5        | 2      | 5         | Device options         | Which options are available        |
 +-------------+--------+-----------+------------------------+------------------------------------+
-|             | 2      | 6         | Alias name             |                                    |
+| Filter only | 2      | 6         | Alias name             |                                    |
 +-------------+--------+-----------+------------------------+------------------------------------+
 | 6           | 2      | 8         | OEM device ID          |                                    |
 +-------------+--------+-----------+------------------------+------------------------------------+
@@ -232,29 +248,40 @@ Option 1 suboption 2   Full IP suite
 +-------------+--------+-----------+------------------------+------------------------------------+
 | 4           | 5      | 4         | Response               |                                    |
 +-------------+--------+-----------+------------------------+------------------------------------+
-| 4           | 5      | 6         | Reset factory settings |                                    |
-+-------------+--------+-----------+------------------------+------------------------------------+
 | 4           | 5      | 6         | Reset to factory       | Type of reset                      |
 +-------------+--------+-----------+------------------------+------------------------------------+
 | 5           | 255    | 255       | All                    |                                    |
 +-------------+--------+-----------+------------------------+------------------------------------+
-| 6           | 6      | 1         | Device inititive       | Issues Hello at power on           |
+| 6           | 6      | 1         | Device initiative      | Issues Hello at power on           |
 +-------------+--------+-----------+------------------------+------------------------------------+
+
+Setting the station name and IP address etc:
+
+* Permanent: The values should be used after power cycling
+* Temporary: After power cycling the station name should be "" and the IP address 0.0.0.0
 
 
 DCE/RPC protocol via UDP
 ------------------------
+In the connect request, the IO-controller (PLC) tells the IO-device how it
+believes that the IO-device hardware is set up. If that not is correct, the
+IO-device will complain.
 
 Message types:
 
-* req  Request
-* ind  Indication
-* rsp  Response
-* cnf  Confirmation
+* "Request" sent from system A
+* "Indication" when it is received in system B
+* "Response" sent back from system B
+* "Confirmation" when received in system A
 
-* + Positively acknowledge (ACK)
-* - Negatively acknowledge (NACK)
+The "Response" and "Confirmation" can contain a positive value (+, ACK) or negative
+value (-, NACK, indicating an error).
 
+Most often (DCE/RPC) requests are sent from the IO-controller, but CControl
+request and a few alarm requests are sent from the IO-device.
+
+The section 5.2.40 "PDU checking rules" in the standard describes what to check in
+incoming DCE/RPC messages via UDP.
 
 Messages from controller to device:
 
@@ -270,8 +297,8 @@ Messages from controller to device:
 
 Where:
 
-* DControl: Request to IO-device
-* CControl: Request to IO-controller
+* DControl: Request to IO-device (End of parameterization)
+* CControl: Request to IO-controller (Application ready)
 
 Operations:
 
@@ -281,12 +308,15 @@ Operations:
 * 3: Write
 * 4: Control
 * 5: Read Implicit
+* 6: Reject
+* 9: Fragment acknowledge
 
 UDP ports:
 
-* 0x8892 = 34962
-* 0x8894 = 34964
-* 0xC001 = 49153
+* 0x8892 = 34962          Port for RT_CLASS_UDP
+* 0x8894 = 34964          Listening port for incoming requests, both on IO-device and IO-controller.
+* 0xC000 = 49152 and up   Ephemeral port range
+* 0xC001 = 49153          Ephemeral port  for CControl sending???
 
 UDP port numbers are described in Profinet 2.4 section 4.13.3.1.2.4
 
@@ -303,7 +333,26 @@ The first part of the DCE/RPC payload is the NDR (Network Data Representation) h
 
 The Maximum Count, Offset and Actual Count are known as the "Array" block.
 
-In responses there is no Args Maximum field (Instead there is a status field).
+In responses there is no Args Maximum field. Instead there is a status field, with these subfields:
+
+* code
+* decode
+* code1
+* code2
+
+
+DCE/RPC payload
+---------------
+Examples of block identifiers:
+
+* 0x0008 IODWriteReqHeader
+* 0x0009 IODReadReqHeader
+* 0x0020 I&M0
+* 0x0021 I&M1
+* 0x0101 ARBlockReq
+* 0x0110 IODControlReq
+* 0x8008 IODWriteResHeader
+* 0x8009 IODReadResHeader
 
 
 UDP message fragmentation
@@ -312,7 +361,7 @@ Profinet has a mechanism (part of DCE/RPC via UDP) to split large frames
 (for start-up messages) into smaller fragments. Operating systems, for example
 Linux, have a competing mechanism to split frames into fragments.
 
-If sending a large chunk of data via UDP in Linux, it is automatically splitted
+If sending a large chunk of data via UDP in Linux, it is automatically split
 into fragments. The maximum transfer unit (MTU) is often 1500 bytes,
 including the IP header (but not the Ethernet header). An IP header is
 typically 20 bytes, but some rarely used options would make it larger.
@@ -348,6 +397,8 @@ A Profinet IO-device has typically a number of slots where (hardware) modules
 can be placed. A module can have subslots where submodules are placed.
 Each submodule have a number of channels (for example digital inputs).
 
+Each API has its own collection of slots.
+
 TODO Example
 
 * Module
@@ -355,7 +406,6 @@ TODO Example
 * Channels
 
 Channels are always connected to submodules (rather than to modules).
-
 
 Addressing a channel
 
@@ -383,7 +433,9 @@ Also in the GSD file is description on the data exchange?
 | Modular field device | Change modules at configuration?    |
 +----------------------+-------------------------------------+
 
-Subslots in DAP module
+Subslots 0x8000-0xFFFF are reserved by the Profinet standard.
+
+Subslots in the DAP module:
 
 * 0x8000 (32768) First interface
 * 0x8001 (32762) First port of first interface
@@ -391,6 +443,14 @@ Subslots in DAP module
 * 0x8100 (33024) Second interface
 * 0x8101 (33025) First port of second interface
 * 0x8102 (33026) Second port of second interface
+
+User defined indexes are in the range 0x?? to 0x??
+
+Examples of pre-defined indexes:
+
+* 0xaff0  I&M0
+* 0xf840  I&M0FilterData
+* 0xf841  PRRealData
 
 
 Allowed station name
@@ -422,13 +482,20 @@ standard. The p-net stack supports I&M0 - I&M4.
 There is also I&M0 Filterdata, which is read only.
 
 
+Startup modes
+-------------
+The startup mode was changed in Profinet 2.3, to "Advanced". The previous
+startup mode is now called "Legacy".
+
+
 Relevant standards
 ------------------
 
 * IEC IEEE 60802  TSN Profile for Industrial Automation
-* IEC 61158-5-10  PROFINET IO: Application Layer services for decentralized periphery
-* IEC 61158-6-10  PROFINET IO: Application Layer protocol for decentralized periphery
+* IEC 61158-5-10  PROFINET IO: Application Layer services for decentralized periphery (Also known as PNO-2.712)
+* IEC 61158-6-10  PROFINET IO: Application Layer protocol for decentralized periphery (Also known as PNO-2.722)
 * IEC 61784       Describes several fieldbuses, for example Foundation Fieldbus, Profibus and Profinet.
+* IEC 61784-2     Profiles for decentralized periphery (Also known as PNO-2.742)
 * IEEE 802        LANs
 * IEEE 802.1      Higher Layer LAN Protocols
 * IEEE 802.1AB    LLDP (A topology detection protocol)

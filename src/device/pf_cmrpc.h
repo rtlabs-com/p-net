@@ -27,6 +27,9 @@ extern "C"
 
 /**
  * Initialize the CMRPC component.
+ *
+ * Opens the UDP socket for incoming RPC requests.
+ *
  * @param net              InOut: The p-net stack instance
  */
 void pf_cmrpc_init(
@@ -72,7 +75,7 @@ pf_ar_t *pf_ar_find_by_index(
    uint16_t                ix);
 
 /**
- * Insert detailed error information into the result structure.
+ * Insert detailed error information into the result structure (of a session).
  * @param p_stat           Out:  The result structure.
  * @param code             In:   The error_code.
  * @param decode           In:   The error_decode.
@@ -88,6 +91,10 @@ void pf_set_error(
 
 /**
  * Handle CMDEV events.
+ *
+ * For an ABORT event (given some conditions) the related sessions and the AR
+ * are released, and the global RPC socket is re-opened.
+ *
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param event            In:   The CMDEV event.
