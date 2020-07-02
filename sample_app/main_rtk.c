@@ -273,6 +273,8 @@ int main(void)
       printf("Ethernet interface:  %s\n", appdata.arguments.eth_interface);
    }
 
+   _cmd_pnio_run(0,"");
+   
    /* Main loop */
    for (;;)
    {

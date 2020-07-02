@@ -484,6 +484,7 @@ void PnetIntegrationTestBase::cfg_init()
    strcpy(pnet_default_cfg.device_vendor, "rt-labs");
    strcpy(pnet_default_cfg.manufacturer_specific_string, "PNET demo");
 
+   strcpy(pnet_default_cfg.lldp_cfg.chassis_id, "rt-labs demo system"); /* Is this a valid name? '-' allowed?*/
    strcpy(pnet_default_cfg.lldp_cfg.port_id, "port-001");
    pnet_default_cfg.lldp_cfg.ttl = 20; /* seconds */
    pnet_default_cfg.lldp_cfg.rtclass_2_status = 0;

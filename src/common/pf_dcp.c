@@ -679,7 +679,7 @@ static int pf_dcp_get_set(
    uint16_t                src_pos;
    uint16_t                src_dcplen;
    uint16_t                src_block_len;
-   uint16_t                src_block_qualifier;
+   uint16_t                src_block_qualifier = 0;
    pf_ethhdr_t             *p_src_ethhdr;
    pf_dcp_header_t         *p_src_dcphdr;
    pf_dcp_block_hdr_t      *p_src_block_hdr;

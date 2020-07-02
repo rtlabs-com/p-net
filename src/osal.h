@@ -94,8 +94,7 @@ enum os_eth_type {
   OS_ETHTYPE_PROFINET  = 0x8892U,
   OS_ETHTYPE_ETHERCAT  = 0x88A4U,
   OS_ETHTYPE_LLDP      = 0x88CCU,
-}OS_ETH_TYPE;
-
+};
 
 /* 255.255.255.255 */
 #ifndef OS_IPADDR_NONE

@@ -135,3 +135,11 @@ int os_eth_send(
 
    return ret;
 }
+
+int os_eth_lldp_send(
+   os_eth_handle_t   *handle,
+   os_buf_t          *buf)
+{
+   return os_eth_send(handle, buf);
+}
+

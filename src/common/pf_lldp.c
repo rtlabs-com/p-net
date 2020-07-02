@@ -439,6 +439,7 @@ void pf_lldp_send(
 void pf_lldp_init(
    pnet_t                  *net)
 {
+   memset(&net->fspm_cfg.lldp_peer_cfg,0,sizeof(net->fspm_cfg.lldp_peer_cfg));
    pf_lldp_send(net);
    if (pf_scheduler_add(net, PF_LLDP_INTERVAL*1000,
       lldp_sync_name, pf_lldp_trigger_sending, NULL, &net->lldp_timeout) != 0)
@@ -510,22 +511,22 @@ void pf_lldp_recv(
 			{
 				/* Concatenate PeerPortID + PeerChassisID (Example: port-003.dut) */
 				strncat(_Alias,(char*)net->fspm_cfg.lldp_peer_cfg.PeerPortID,net->fspm_cfg.lldp_peer_cfg.PeerPortIDLen);
-				strncat(_Alias,".",1);
+				strncat(_Alias,".",2);
 				strncat(_Alias,(char*)net->fspm_cfg.lldp_peer_cfg.PeerChassisID,net->fspm_cfg.lldp_peer_cfg.PeerChassisIDLen);
 				_Alias[net->fspm_cfg.lldp_peer_cfg.PeerPortIDLen+net->fspm_cfg.lldp_peer_cfg.PeerChassisIDLen+1]='\0';
 				
 			}
 				
-			 if(strcmp(_Alias,net->cmina_temp_dcp_ase.alias_name) != 0)
+			 if(strcmp(_Alias,net->cmina_current_dcp_ase.alias_name) != 0)
 			 {
-				LOG_DEBUG(PF_ETH_LOG, "LLDP(%d): OLD Name: %s\n", __LINE__,net->cmina_temp_dcp_ase.alias_name);
-				memset(net->cmina_temp_dcp_ase.alias_name,0,sizeof(net->cmina_temp_dcp_ase.alias_name));
+				LOG_DEBUG(PF_ETH_LOG, "LLDP(%d): OLD Name: %s\n", __LINE__,net->cmina_current_dcp_ase.alias_name);
+				memset(net->cmina_current_dcp_ase.alias_name,0,sizeof(net->cmina_current_dcp_ase.alias_name));
 				
-				LOG_DEBUG(PF_ETH_LOG, "LLDP(%d): Frame Type %d Length %d\n", __LINE__,_frame.type,strlen(_Alias) );
-				strncpy(net->cmina_temp_dcp_ase.alias_name,_Alias,strlen(_Alias));
-				net->cmina_temp_dcp_ase.alias_name[strlen(_Alias)]='\0';
+				LOG_DEBUG(PF_ETH_LOG, "LLDP(%d): Frame Type %d Length %d\n", __LINE__,_frame.type,(int32_t)strlen(_Alias) );
+				strncpy(net->cmina_current_dcp_ase.alias_name,_Alias,strlen(_Alias));
+				net->cmina_current_dcp_ase.alias_name[strlen(_Alias)]='\0';
 				
-				LOG_DEBUG(PF_ETH_LOG, "LLDP(%d): NEW Name: %s\n", __LINE__,net->cmina_temp_dcp_ase.alias_name);
+				LOG_DEBUG(PF_ETH_LOG, "LLDP(%d): NEW Name: %s\n", __LINE__,net->cmina_current_dcp_ase.alias_name);
 			 }
 
 			break;

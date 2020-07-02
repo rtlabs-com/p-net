@@ -626,7 +626,7 @@ int pf_cmina_dcp_set_ind(
 
          if ((change_name == true) || (change_ip == true))
          {
-            if ((have_name == true) && (have_ip == true))
+            if ((have_name == true) || (have_ip == true))
             {
                /* Case 5, 13 in Profinet 2.4 Table 1096 */
                /* Change name or change IP */
@@ -844,8 +844,8 @@ int pf_cmina_dcp_get_req(
          ret = -1;
          break;
       case PF_DCP_SUB_DEV_PROP_ALIAS:
-         *p_value_length = sizeof(net->cmina_temp_dcp_ase.alias_name);
-         *pp_value = (uint8_t *)net->cmina_temp_dcp_ase.alias_name;
+         *p_value_length = sizeof(net->cmina_current_dcp_ase.alias_name);
+         *pp_value = (uint8_t *)net->cmina_current_dcp_ase.alias_name;
          break;
       case PF_DCP_SUB_DEV_PROP_INSTANCE:
          *p_value_length = sizeof(net->cmina_current_dcp_ase.instance_id);

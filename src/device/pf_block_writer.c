@@ -2720,13 +2720,13 @@ void pf_put_pdinterface_data_real(
 	   pf_put_uint16(is_big_endian, temp_u16, res_len, p_bytes, p_pos);
 	   
 	   /* IP Address */
-	   pf_put_uint32(is_big_endian,net->cmina_temp_dcp_ase.full_ip_suite.ip_suite.ip_addr, res_len, p_bytes, p_pos);
+	   pf_put_uint32(is_big_endian,net->cmina_current_dcp_ase.full_ip_suite.ip_suite.ip_addr, res_len, p_bytes, p_pos);
 	   
 	   /* Subnet Mask */
-	   pf_put_uint32(is_big_endian,net->cmina_temp_dcp_ase.full_ip_suite.ip_suite.ip_mask, res_len, p_bytes, p_pos);
+	   pf_put_uint32(is_big_endian,net->cmina_current_dcp_ase.full_ip_suite.ip_suite.ip_mask, res_len, p_bytes, p_pos);
 	   
 	   /* Router  */
-	   pf_put_uint32(is_big_endian,net->cmina_temp_dcp_ase.full_ip_suite.ip_suite.ip_gateway, res_len, p_bytes, p_pos);
+	   pf_put_uint32(is_big_endian,net->cmina_current_dcp_ase.full_ip_suite.ip_suite.ip_gateway, res_len, p_bytes, p_pos);
 
 	   
 	   /* Finally insert the block length into the block header */
