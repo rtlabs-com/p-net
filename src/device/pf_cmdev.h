@@ -106,6 +106,7 @@ int pf_cmdev_plug_module(
 
 /**
  * Plug a sub-module into a sub-slot.
+ * Sends an alarm describing the result.
  * @param net              InOut: The p-net stack instance
  * @param api_id           In:   The API identifier.
  * @param slot_nbr         In:   The slot number.
@@ -133,6 +134,7 @@ int pf_cmdev_plug_submodule(
 
 /**
  * Pull a sub-module from a sub-slot.
+ * Sends an alarm.
  * @param net              InOut: The p-net stack instance
  * @param api_id           In:   The API identifier.
  * @param slot_nbr         In:   The slot number.
@@ -148,6 +150,7 @@ int pf_cmdev_pull_submodule(
 
 /**
  * Pull a module from a slot.
+ * First pulls all submodules (sends alarms).
  * @param net              InOut: The p-net stack instance
  * @param api_id           In:   The API identifier.
  * @param slot_nbr         In:   The slot number.
@@ -162,7 +165,7 @@ int pf_cmdev_pull_module(
 /**
  * Abort request from the application or from RPC.
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:   The AR instance.
+ * @param p_ar             In:   The AR instance (or NULL).
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -337,7 +340,7 @@ int pf_cmdev_cmio_info_ind(
 /**
  * Handle an RPC connect request.
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:   The AR instance.
+ * @param p_ar             InOut: The AR instance.
  * @param p_connect_result Out:  Detailed result of the connect operation.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.

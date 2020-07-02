@@ -55,6 +55,7 @@ static inline uint32_t atomic_fetch_sub(atomic_int *p, uint32_t v)
 #endif
 
 #define PF_RPC_SERVER_PORT                0x8894   /* PROFInet Context Manager */
+#define PF_UDP_UNICAST_PORT               0x8892
 #define PF_RPC_CCONTROL_EPHEMERAL_PORT    0xc001
 
 #define PF_FRAME_BUFFER_SIZE              1500
@@ -1520,11 +1521,11 @@ typedef struct pf_session_info
 {
    uint16_t                ix;
    bool                    in_use;
-   bool                    release_in_progress;
+   bool                    release_in_progress;    /* The session handles an incoming release request */
    bool                    kill_session;           /* On error or when done. This will kill the session at the end of handling the incoming RPC frame. */
    uint32_t                socket;
    os_eth_handle_t         *eth_handle;
-   struct pf_ar            *p_ar;
+   struct pf_ar            *p_ar;                  /* Parent AR */
    bool                    from_me;                /* True if the session originates from the device. */
    pf_uuid_t               activity_uuid;
    uint32_t                ip_addr;
@@ -1562,10 +1563,10 @@ typedef struct pf_ar
    bool                    in_use;
    uint16_t                arep;
 
-   pf_session_info_t       *p_sess;
+   pf_session_info_t       *p_sess;                      /* Incoming session, not the outgoing CControl session. Use pf_session_locate_by_ar() to find the CControl session. */
 
    pf_cmdev_state_values_t cmdev_state;                  /* pf_cmdev_state_values_t */
-   pnet_ethaddr_t          src_addr;                     /* Connect client address */
+   pnet_ethaddr_t          src_addr;                     /* Connect client MAC address */
 
    uint16_t                nbr_ar_param;
    pf_ar_param_t           ar_param;                     /* From connect.req */
@@ -2000,8 +2001,8 @@ struct pnet
    bool                                cmina_commit_ip_suite;
    os_mutex_t                          *p_cmrpc_rpc_mutex;
    uint32_t                            cmrpc_session_number;
-   pf_ar_t                             cmrpc_ar[PNET_MAX_AR];
-   pf_session_info_t                   cmrpc_session_info[PF_MAX_SESSION];
+   pf_ar_t                             cmrpc_ar[PNET_MAX_AR];  /* ARs */
+   pf_session_info_t                   cmrpc_session_info[PF_MAX_SESSION];  /* Sessions */
    int                                 cmrpc_rpcreq_socket;
    uint8_t                             cmrpc_dcerpc_req_frame[PF_FRAME_BUFFER_SIZE];
    uint8_t                             cmrpc_dcerpc_rsp_frame[PF_FRAME_BUFFER_SIZE];

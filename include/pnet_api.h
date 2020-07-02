@@ -344,6 +344,11 @@ extern "C"
 #define PNET_ERROR_CODE_2_ALPMR_WRONG_STATE                    0x03
 /* Reserved 0x04..0xff */
 
+
+#define PNET_ERROR_CODE_2_INVALID_BLOCK_LEN                    0x01
+#define PNET_ERROR_CODE_2_INVALID_BLOCK_VERSION_HIGH           0x02
+#define PNET_ERROR_CODE_2_INVALID_BLOCK_VERSION_LOW            0x03
+
 /**
  * # List of error_code_2 values, for
  * PNET_ERROR_CODE_1_RTA_ERR_CLS_PROTOCOL (not exhaustive).

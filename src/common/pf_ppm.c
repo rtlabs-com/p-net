@@ -170,7 +170,7 @@ static void pf_ppm_finish_buffer(
    uint16_t                u16;
    int32_t                 cycle_tmp = os_get_current_time_us()*4;
 
-   p_ppm->cycle = cycle_tmp/125;           /* Cycle counter. Get 4/125 = 31.25us tics */
+   p_ppm->cycle = cycle_tmp/125;           /* Cycle counter. Get 4/125 = 31.25us ticks */
    u16 = htons(p_ppm->cycle);
 
    /* Insert data */

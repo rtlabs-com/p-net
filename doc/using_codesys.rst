@@ -200,7 +200,7 @@ sets the value to BAD (0).
 Displaying errors
 -----------------
 Click on the IO-device in the tree structure in the left part of the screen.
-Use the "Log" tab to diplay errors.
+Use the "Log" tab to display errors.
 
 
 Displaying alarms

@@ -2,12 +2,18 @@
 Terminology and abbreviations
 =============================
 
+Abstract syntax
+    Describes the parts (and their subparts) of different messages. See also "Transfer syntax".
 Configuration
     IO-device and IO-controller definition in an engineering tool.
 Commissioning
     Device initialization (Configuration is downloaded to IO-controller).
 Engineering tool
     A desktop program for configuring PLC. For example Siemens TIA portal.
+Parameterization
+    Write parameter values to all submodules
+Transfer syntax
+    Coding of the different fields in a message. See also "Abstract syntax".
 
 
 Abbreviations
@@ -21,14 +27,16 @@ ALPMI
     Alarm Protocol Machine Initiator
 ALPMR
     Alarm Protocol Machine Responder
+ALPMX
+    General term for ALPMI and ALPMR
 AMR
     Asset Management Record
 AP
     ?
 APDU
-    Application Protocol Data Unit
+    Application (layer) Protocol Data Unit
 API
-    Application Programming Identifier (uint32). Used to differentiate between for example user profiles. Sometimes named "Profile ID".
+    Application Process Identifier (uint32). Used to differentiate between for example user profiles. Sometimes named "Profile ID".
 API
     Application Programming Interface. Application implementers use the API of the p-net Profinet stack.
 APMR
@@ -40,7 +48,7 @@ APMX
 APO
     Application Process Object
 AR
-    Application Relation
+    Application Relation. A connection to a PLC. Consists of several communication relations (CR).
 ARP
     Address Resolution Protocol, used to translate from an IP address to a MAC address.
 AREP
@@ -51,6 +59,8 @@ ASE
     Application Service Element. For example logbook, time and diagnosis.
 CC
     Conformance Class (Performance level A to D)
+CE
+    An marking for European Union declaration of conformity
 CIDR
     Classless Inter-Domain Routing. The CIDR notation ``/24`` tells how many bits of the netmask that should be enabled.
 CiR
@@ -103,6 +113,8 @@ DHT
     Data Hold Timer
 DLL
     Data Link Layer
+DLPDU
+    ?
 DNS
     Domain Name System, for converting from host name to IP address.
 DT
@@ -115,6 +127,8 @@ EPM
     EndPoint Mapper
 ES
     Engineering System
+FACK
+    Fragment acknowledge
 FAL
     Fieldbus Application Layer
 FSPM
@@ -142,7 +156,7 @@ IGMP
 IO
     Input Output
 IOC
-    IO Controller (Typically a PLC)
+    IO Controller. Typically a PLC.
 IOD
     IO Device. An input-output device controlled by a PLC via Profinet communication.
 IOCS
@@ -153,8 +167,14 @@ IOPS
     IO Provider Status. Describes validity of IO data per subslot. Sent by IO-device (for input data) or IO-controller (for output data) together with data. (uint8)
 IOxS
     General term for IOCS and IOPS.
+IOS
+    IO Supervisor. Typically an engineering tool running on a personal computer.
 IP
     Internet Protocol
+IP
+    Ingress Protection. For example IP65 is a housing class suitable for outdoor installation.
+iPar
+    Individual Parameters. Backups of these parameters are typically stored in a separate parameter server.
 IRT
     Isochronous Real-Time
 LAN
@@ -171,6 +191,8 @@ MC
     Multicast (as opposed to unicast)
 MC
     Multicore (Codesys runtime variant for Raspberry Pi)
+MCR
+    Multicast Communication Relationship
 MDNS
     Multicast DNS. A UDS based protocol for resolving hostname to IP address. Implemented by Bonjour and Avahi.
 MIB
@@ -187,6 +209,8 @@ NDR
     Network Data Representation. A header as first part of the DCE/RPC payload (sent via UDP). Contains info on how large the payload is, and how large responses that can be accepted.
 NME
     Network Management Engine
+NVM
+    Non-Volatile Memory. Typically flash memory chips.
 OID
     Object IDentifier
 OS
@@ -199,12 +223,14 @@ PCA
     Provider, Consumer or Alarm.
 PCP
     Priority Code Point, for VLAN
+PD
+    Physical Device. This is information related to an Ethernet port.
 PDEV
     Physical Device management. Physical interface and switch ports of a Profinet field device.
 PDU
     Protocol Data Unit
 PI
-    PROFIBUS & PROFINET International. The Profinet interest group.
+    PROFIBUS & PROFINET International. The Profinet interest group. See also PNO.
 PICO
     PI Certification Office
 PITL
@@ -216,7 +242,7 @@ PN
 PNIO
     Profinet IO protocol
 PNO
-    PROFIBUS Nutzerorganisation e.V, located in Germany.
+    PROFIBUS Nutzerorganisation e.V, located in Germany. See also PI.
 POF
     ?
 PPM
@@ -227,14 +253,18 @@ PS
     ?
 PTCP
     Precision Transparent Clock Protocol
+RED
+    Redundancy
 RPC
     Remote Procedure Call. The protocol DCE/RPC runs on UDP.
 RS
     Reporting system
 RSI
-    ?
+    Remote Service Interface
 RTA
     RealTime Acyclic protocol
+RTC
+    Real Time Class
 RTC
     RealTime Cyclic protocol
 RTE
@@ -249,14 +279,22 @@ SCL
     Structured Control Language. Siemens name for the structured text (ST) programming language for PLCs.
 SDU
     ?
+SMA
+    Sample Moving Average. A smoothing function in the Wireshark Ethernet frame capture software.
 SNMP
     Simple Network Management Protocol. For network topology detection.
+SOE
+    Sequence Of Events
 ST
     Structured Text. A programming language for PLCs.
 STX
     See ST.
+TED
+    Topology and Engineering Discovery
 TIA
     Totally Integrated Automation. An automation portal (engineering tool) by Siemens.
+TIAP
+    See TIA.
 TCI
     Tool Calling Interface (The engineering tool can call specialized device-related tools)
 TCP
@@ -265,6 +303,8 @@ TLV
     Type-Length-Value. A data structure in an LLDP Ethernet frame.
 TPID
     Tag protocol identifier, for VLAN.
+TSDU
+    ?
 TSN
     Time-Sensitive Networking
 TTL

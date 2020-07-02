@@ -1,4 +1,6 @@
 acyclic
+Adafruit
+autonegotiation
 Avahi
 BaseTXFD
 Bonjour
@@ -49,6 +51,7 @@ netmask
 nmap
 ns
 Nutzerorganisation
+organisation
 Parameterization
 picocom
 pnet
@@ -79,6 +82,7 @@ tcpdump
 toolchain
 uint
 Unmount
+Virtualbox
 Wireshark
 xBusy
 xError

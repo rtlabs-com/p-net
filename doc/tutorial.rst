@@ -100,7 +100,6 @@ This is the typical output from the Linux sample application at startup::
     Ethernet interface: eth0
     MAC address:        08:00:27:6E:99:77
     Station name:       rt-labs-dev
-    LED file:           /sys/class/gpio/gpio17/value
     Button1 file:       /sys/class/gpio/gpio22/value
     Button2 file:       /sys/class/gpio/gpio27/value
     IP address:         192.168.137.4
@@ -137,7 +136,7 @@ This is the typical output from the Linux sample application at startup::
 
 Timing issues
 -------------
-If running on a Linux machine whithout realtime patches, you might face timeout
+If running on a Linux machine without realtime patches, you might face timeout
 problems. It can look like::
 
    Callback on event PNET_EVENT_ABORT. Error class: 253 Error code: 6
@@ -159,7 +158,7 @@ When looking in Wireshark, look at the "Profinet IO Cyclic Service Data Unit",
 which is 40 bytes. The relevant byte it the fourth byte from left in this
 block.
 
-Details of the 40 bytes from I0-device to IO-controller:
+Details of the 40 bytes from IO-device to IO-controller:
 
 * IOPS from slot 0, subslot 1
 * IOPS from slot 0, subslot 0x8000
@@ -177,7 +176,7 @@ When looking in Wireshark, look at the "Profinet IO Cyclic Service Data Unit",
 which is 40 bytes. The relevant byte is the fifth byte from left in this
 block. The value toggles between 0x80 and 0x00.
 
-Details of the 40 bytes from IO-controller to I0-device:
+Details of the 40 bytes from IO-controller to IO-device:
 
 * IOCS to slot 0, subslot 1
 * IOCS to slot 0, subslot 0x8000
@@ -318,14 +317,3 @@ This is an example if you populate slot 1 to 3 with different modules.
 +------+---------+--------------------------------------------+-----------------------------------------+--------------------------------------------+
 
 Note that the submodules (in subslots) in slot 0 do not send any cyclic data, but they behave as inputs (as they send cyclic IOPS).
-
-
-Create your own application
----------------------------
-If you prefer not to implement some of the callbacks, set the corresponding
-fields in the configuration struct to NULL instead of a function pointer.
-See the API documentation on which callbacks that are optional.
-
-To read output data from the PLC, use ``pnet_output_get_data_and_iops()``.
-To write data to the PLC (= input data in Profinet naming), use
-``pnet_input_set_data_and_iops()``.

@@ -24,6 +24,7 @@ documentation.
    prepare_raspberrypi.rst
    creating_gsdml_files.rst
    network_topology_detection.rst
+   applications_and_porting.rst
    linuxtiming.rst
    compliancetest.rst
    yoctobuild.rst

@@ -17,7 +17,10 @@
  * @file
  * @brief Implements the Cyclic Consumer Provider Protocol Machine (CPM)
  *
- * This handles receiving cyclic data.
+ * This handles receiving cyclic data. Registers a handler for incoming
+ * real time data frames. Maintains a timer to monitor incoming frames.
+ *
+ * States are W_START, FRUN and RUN.
  *
  * A global mutex is used instead of a per-instance mutex.
  * The locking time is very low so it should not be very congested.

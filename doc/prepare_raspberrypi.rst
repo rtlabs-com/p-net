@@ -77,7 +77,7 @@ named ``/dev/ttyS0``.
 | 10  | UART0_RXD | TX                  | Green                 |
 +-----+-----------+---------------------+-----------------------+
 
-Use a communication program with a baudrate of 115200.
+Use a communication program with a baud rate of 115200.
 
 Before connecting the serial cable to your Raspberry Pi you can verify the
 functionality of the cable by connecting the USB connector to your Laptop,
@@ -143,6 +143,10 @@ Show state of buttons::
 
 .. image:: illustrations/RaspberryPiLedButtons.jpg
 
+On Raspberry Pi, replace the file for controlling the LEDs (in the build directory)::
+
+    mv set_profinet_leds_linux.raspberrypi set_profinet_leds_linux
+
 
 Control of built-in LEDs
 ------------------------
@@ -163,16 +167,22 @@ Note that you need root privileges to control the LEDs.
 Similarly for the red (power) LED, which is called ``led1``.
 
 
-Set static IP address permanently
----------------------------------
-In order to use a static IP address instead of DHCP, modify the file
-``/etc/dhcpcd.conf`` in the root file system. Insert these lines::
+Adjust IP address
+-----------------
+The DHCP client daemon will adjust the network interface settings automatically.
+This interferes with the p-net control of the Ethernet interface, why you need to
+add this line to ``/etc/dhcpcd.conf`` in the root file system.
+
+    denyinterfaces eth*
+
+If you would like to have a static IP address (will not work with Profinet),
+instead modify the file ``/etc/dhcpcd.conf`` to include these lines::
 
    interface eth0
    static ip_address=192.168.137.4/24
 
 You can still ping the <hostname>.local address to find it on the network.
-To re-enable HDCP, remove the lines again from ``/etc/dhcpcd.conf``.
+To re-enable DHCP, remove the lines again from ``/etc/dhcpcd.conf``.
 
 
 Autostart of sample application
