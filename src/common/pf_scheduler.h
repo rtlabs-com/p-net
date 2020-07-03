@@ -53,8 +53,8 @@ int pf_scheduler_add(
 /**
  * Stop a timeout. If it is not scheduled then ignore.
  * @param net              InOut: The p-net stack instance
- * @param p_name        In: Must be exactly the same address as in the _add().
- * @param timeout       In: Time instance to remove (see pf_scheduler_add)
+ * @param p_name           In: Must be exactly the same address as in the _add().
+ * @param timeout          In: Time instance to remove (see pf_scheduler_add)
  */
 void pf_scheduler_remove(
    pnet_t                     *net,

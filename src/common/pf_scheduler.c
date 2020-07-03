@@ -294,7 +294,7 @@ void pf_scheduler_remove(
 
    if (timeout == 0)
    {
-      LOG_DEBUG(PNET_LOG, "SCHEDULER(%d): timeout(%s) == 0\n", __LINE__, p_name);
+      LOG_DEBUG(PNET_LOG, "SCHEDULER(%d): timeout == 0 for event %s. No removal.\n", __LINE__, p_name);
    }
    else
    {
@@ -303,7 +303,7 @@ void pf_scheduler_remove(
 
       if (net->scheduler_timeouts[ix].p_name != p_name)
       {
-         LOG_ERROR(PNET_LOG, "SCHEDULER(%d): Expected %s but got %s\n", __LINE__, net->scheduler_timeouts[ix].p_name, p_name);
+         LOG_ERROR(PNET_LOG, "SCHEDULER(%d): Expected %s but got %s. No removal.\n", __LINE__, net->scheduler_timeouts[ix].p_name, p_name);
       }
       else
       {

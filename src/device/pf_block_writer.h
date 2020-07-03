@@ -37,6 +37,24 @@ void pf_put_mem(
    uint16_t                *p_pos);
 
 /**
+ * Insert a sequence of bytes into a buffer, for overlapping source and destinations.
+ *
+ * Uses memmove() internally.
+ *
+ * @param p_src            In:   The start of the byte sequence to insert.
+ * @param src_size         In:   Number of bytes to insert.
+ * @param res_len          In:   Size of destination buffer.
+ * @param p_bytes          Out:  Destination buffer.
+ * @param p_pos            InOut:Position in destination buffer.
+ */
+void pf_put_mem_overlapping(
+   const void              *p_src,
+   uint16_t                src_size,
+   uint16_t                res_len,
+   uint8_t                 *p_bytes,
+   uint16_t                *p_pos);
+
+/**
  * Insert a byte into a buffer.
  * @param val              In:   The byte to insert.
  * @param res_len          In:   Size of destination buffer.
