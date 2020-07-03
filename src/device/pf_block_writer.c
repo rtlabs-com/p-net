@@ -89,7 +89,7 @@ static void pf_put_str(
    uint16_t                str_len = (uint16_t)strlen(p_src);
    uint16_t                ix;
 
-   if (((*p_pos) + src_size) >= res_len)
+   if (((*p_pos) + src_size) > res_len)
    {
       /* Reached end of buffer */
       LOG_DEBUG(PNET_LOG, "BW(%d): Output buffer is full\n", __LINE__);
@@ -139,7 +139,7 @@ void pf_put_mem(
    uint8_t                 *p_bytes,
    uint16_t                *p_pos)
 {
-   if (((*p_pos) + src_size) >= res_len)
+   if (((*p_pos) + src_size) > res_len)
    {
       /* Reached end of buffer */
       LOG_DEBUG(PNET_LOG, "BW(%d): Output buffer is full\n", __LINE__);
@@ -153,13 +153,35 @@ void pf_put_mem(
    }
 }
 
+void pf_put_mem_overlapping(
+   const void              *p_src,
+   uint16_t                src_size,      /* Bytes to copy */
+   uint16_t                res_len,       /* Sizeof p_bytes buf */
+   uint8_t                 *p_bytes,
+   uint16_t                *p_pos)
+{
+   if (((*p_pos) + src_size) > res_len)
+   {
+      /* Reached end of buffer */
+      LOG_DEBUG(PNET_LOG, "BW(%d): Output buffer is full\n", __LINE__);
+      p_bytes = NULL;
+   }
+
+   if (p_bytes != NULL)
+   {
+      memmove(&p_bytes[*p_pos], p_src, src_size);
+      (*p_pos) += src_size;
+   }
+}
+
+
 void pf_put_byte(
    uint8_t                 val,
    uint16_t                res_len,
    uint8_t                 *p_bytes,
    uint16_t                *p_pos)
 {
-   if (*p_pos >= res_len)
+   if (*p_pos + 1 > res_len)
    {
       /* Reached end of buffer */
       LOG_DEBUG(PNET_LOG, "BW(%d): End of buffer reached\n", __LINE__);
