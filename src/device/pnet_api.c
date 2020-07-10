@@ -442,6 +442,7 @@ int pnet_diag_add(
    uint32_t                ext_ch_add_value,
    uint32_t                qual_ch_qualifier,
    uint16_t                usi,
+   pnet_alarm_spec_t       *p_alarm_spec,
    uint8_t                 *p_manuf_data)
 {
    int                     ret = -1;
@@ -450,7 +451,7 @@ int pnet_diag_add(
    if (pf_ar_find_by_arep(net, arep, &p_ar) == 0)
    {
       ret = pf_diag_add(net, p_ar, api, slot, subslot, ch, ch_properties, ch_error_type, ext_ch_error_type, ext_ch_add_value,
-         qual_ch_qualifier, usi, p_manuf_data);
+         qual_ch_qualifier, usi, p_alarm_spec, p_manuf_data);
    }
 
    return ret;
@@ -465,6 +466,7 @@ int pnet_diag_update(
    uint16_t                ch,
    uint16_t                ch_properties,
    uint16_t                ch_error_type,
+   uint16_t                ext_ch_error_type,
    uint32_t                ext_ch_add_value,
    uint16_t                usi,
    uint8_t                 *p_manuf_data)
@@ -474,7 +476,7 @@ int pnet_diag_update(
 
    if (pf_ar_find_by_arep(net, arep, &p_ar) == 0)
    {
-      ret = pf_diag_update(net, p_ar, api, slot, subslot, ch, ch_properties, ch_error_type, ext_ch_add_value, usi, p_manuf_data);
+      ret = pf_diag_update(net, p_ar, api, slot, subslot, ch, ch_properties, ch_error_type, ext_ch_error_type, ext_ch_add_value, usi, p_manuf_data);
    }
 
    return ret;

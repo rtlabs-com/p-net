@@ -26,6 +26,7 @@ extern "C"
 #include <sys/socket.h>
 #include <lwip/pbuf.h>
 #include <dev.h>
+#include <inttypes.h>
 
 #define OS_THREAD
 #define OS_MUTEX

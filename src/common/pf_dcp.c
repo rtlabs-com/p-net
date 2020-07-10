@@ -63,7 +63,7 @@ typedef struct CC_PACKED pf_dcp_header
    uint16_t                data_length;
 } pf_dcp_header_t;
 CC_PACKED_END
-CC_STATIC_ASSERT(PF_DCP_HEADER_SIZE == sizeof(pf_dcp_header_t));
+/*CC_STATIC_ASSERT(PF_DCP_HEADER_SIZE == sizeof(pf_dcp_header_t));*/
 
 CC_PACKED_BEGIN
 typedef struct CC_PACKED pf_dcp_block_hdr
@@ -73,7 +73,7 @@ typedef struct CC_PACKED pf_dcp_block_hdr
    uint16_t                block_length;
 } pf_dcp_block_hdr_t;
 CC_PACKED_END
-CC_STATIC_ASSERT(PF_DCP_BLOCK_HDR_SIZE == sizeof(pf_dcp_block_hdr_t));
+/*CC_STATIC_ASSERT(PF_DCP_BLOCK_HDR_SIZE == sizeof(pf_dcp_block_hdr_t));*/
 
 /*
  * This is the standard DCP HELLO broadcast address (MAC).

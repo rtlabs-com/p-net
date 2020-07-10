@@ -690,8 +690,8 @@ int pf_cmina_dcp_get_req(
          ret = -1;
          break;
       case PF_DCP_SUB_DEV_PROP_ALIAS:
-         *p_value_length = sizeof(net->cmina_temp_dcp_ase.alias_name);
-         *pp_value = (uint8_t *)net->cmina_temp_dcp_ase.alias_name;
+         *p_value_length = sizeof(net->cmina_perm_dcp_ase.alias_name);
+         *pp_value = (uint8_t *)net->cmina_perm_dcp_ase.alias_name;
          break;
       case PF_DCP_SUB_DEV_PROP_INSTANCE:
          *p_value_length = sizeof(net->cmina_temp_dcp_ase.instance_id);

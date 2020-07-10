@@ -24,6 +24,7 @@ extern "C"
 #include <pthread.h>
 #include <time.h>
 #include <netinet/in.h>
+#include <inttypes.h>
 
 #define OS_THREAD
 #define OS_MUTEX

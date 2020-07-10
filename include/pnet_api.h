@@ -83,8 +83,19 @@ extern "C"
 #define PNET_MAX_AR                                            2     /**< Number of connections. Must be > 0. "Automated RT Tester" uses 2 */
 #define PNET_MAX_API                                           1     /**< Number of Application Processes. Must be > 0. */
 #define PNET_MAX_CR                                            2     /**< Per AR. 1 input and 1 output. */
-#define PNET_MAX_MODULES                                       5     /**< Per API. Should be > 1 to allow at least one I/O module. */
+#ifdef MVRUNTIME
+#define PNET_MAX_MODULES                                       27	 /**< Per API. Should be > 1 to allow at least one I/O module. */
+#elif defined(READER)
+#define PNET_MAX_MODULES                                       60	 /**< Per API. Should be > 1 to allow at least one I/O module. */
+#else
+#define PNET_MAX_MODULES                                       3	 /**< Per API. Should be > 1 to allow at least one I/O module. */
+#endif
+
+#ifdef READER
+#define PNET_MAX_SUBMODULES                                    60     /**< Per module (3 needed for DAP). */
+#else
 #define PNET_MAX_SUBMODULES                                    3     /**< Per module (3 needed for DAP). */
+#endif
 #define PNET_MAX_CHANNELS                                      1     /**< Per sub-slot. Used for diagnosis. */
 #define PNET_MAX_DFP_IOCR                                      2     /**< Allowed values are 0 (zero) or 2. */
 #define PNET_MAX_PORT                                          1     /**< 2 for media redundancy. Currently only 1 is supported. */
@@ -109,11 +120,14 @@ extern "C"
  * Module and submodule ident number for the DAP module.
  * The DAP module and submodules must be plugged by the application after the call to pnet_init.
  */
-#define PNET_SLOT_DAP_IDENT                        0x00000000
-#define PNET_MOD_DAP_IDENT                         0x00000002     /* For use in slot 0 */
-#define PNET_SUBMOD_DAP_IDENT                      0x00000001     /* For use in subslot 1 */
-#define PNET_SUBMOD_DAP_INTERFACE_1_IDENT          0x00008000     /* For use in subslot 0x8000 */
-#define PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT   0x00008001     /* For use in subslot 0x8001 */
+#define PNET_SLOT_DAP_IDENT                        0x0
+#define PNET_MOD_DAP_IDENT                         0x2     /* For use in slot 0 */
+#define PNET_SUBMOD_DAP_IDENT                      0x1     /* For use in subslot 1 */
+#define PNET_SUBMOD_DAP_INTERFACE_1_IDENT          0x8000     /* For use in subslot 0x8000 */
+#define PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT   0x8001     /* For use in subslot 0x8001 */
+#define PNET_SUBMODID_DAP_IDENT                    0x1     /* For use in subslot 1 */
+#define PNET_SUBMODID_DAP_INTERFACE_1_IDENT        0x2     /* For use in subslot 0x8000 */
+#define PNET_SUBMODID_DAP_INTERFACE_1_PORT_0_IDENT 0x3     /* For use in subslot 0x8001 */
 
 
 /**
@@ -840,9 +854,10 @@ typedef int (*pnet_alarm_ind)(
    pnet_t                  *net,
    void                    *arg,
    uint32_t                arep,
+   /*uint16_t                alarm_type,
    uint32_t                api,
    uint16_t                slot,
-   uint16_t                subslot,
+   uint16_t                subslot,*/
    uint16_t                data_len,
    uint16_t                data_usi,
    uint8_t                 *p_data);
@@ -1151,6 +1166,35 @@ typedef struct pnet_lldp_peer_cfg
 } pnet_lldp__peer_cfg_t;
 
 /**
+ * # Alarm and Diagnosis
+ *
+ */
+typedef struct pnet_alarm_spec
+{
+   bool                    channel_diagnosis;
+   bool                    manufacturer_diagnosis;
+   bool                    submodule_diagnosis;
+   bool                    ar_diagnosis;
+} pnet_alarm_spec_t;
+
+/**
+ * # Alarm information sent to application
+ *
+ */
+typedef struct pnet_alarm_ack
+{
+   uint16_t                alarm_type;          /* pf_alarm_type_values_t */
+   uint32_t                api_id;				/* api affected 	(Notification only)*/
+   uint16_t                slot_nbr;			/* slot affected 	(Notification only)*/
+   uint16_t                subslot_nbr;			/* subslot affected (Notification only)*/
+   uint32_t                module_ident;		/* modID affected    (Notification only)*/
+   uint16_t                submodule_ident;		/* subModID affected (Notification only)*/
+   pnet_alarm_spec_t       alarm_specifier;		/* Alarm Specifics (Notification only)*/
+   uint16_t                sequence_number;		/* Sequence number (Notification only) */
+   pnet_pnio_status_t      pnio_status;			/* Application status response */
+} pnet_alarm_ack_t;
+
+/**
  * This is all the configuration needed to use the Profinet stack.
  *
  * The application must supply the values in the call to function pnet_init().
@@ -1202,20 +1246,11 @@ typedef struct pnet_cfg
    pnet_cfg_ip_addr_t      ip_addr;
    pnet_cfg_ip_addr_t      ip_mask;
    pnet_cfg_ip_addr_t      ip_gateway;
-   pnet_ethaddr_t            eth_addr;
+   pnet_ethaddr_t          eth_addr;
+   pnet_alarm_ack_t		   alarm_ack;
 } pnet_cfg_t;
 
-/**
- * # Alarm and Diagnosis
- *
- */
-typedef struct pnet_alarm_spec
-{
-   bool                    channel_diagnosis;
-   bool                    manufacturer_diagnosis;
-   bool                    submodule_diagnosis;
-   bool                    ar_diagnosis;
-} pnet_alarm_spec_t;
+
 
 /*
 * API function return values
@@ -1731,6 +1766,7 @@ PNET_EXPORT int pnet_diag_add(
    uint32_t                ext_ch_add_value,
    uint32_t                qual_ch_qualifier,
    uint16_t                usi,
+   pnet_alarm_spec_t       *p_alarm_spec,
    uint8_t                 *p_manuf_data);
 
 /**
@@ -1776,6 +1812,7 @@ PNET_EXPORT int pnet_diag_update(
    uint16_t                ch,
    uint16_t                ch_properties,
    uint16_t                ch_error_type,
+   uint16_t                ext_ch_error_type,
    uint32_t                ext_ch_add_value,
    uint16_t                usi,
    uint8_t                 *p_manuf_data);

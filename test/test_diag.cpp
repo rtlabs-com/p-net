@@ -211,6 +211,7 @@ TEST_F (DiagTest, DiagRunTest)
 
    ret = pnet_diag_update(net, appdata.main_arep, TEST_API_IDENT, slot, subslot, 0, ch_properties,
       0x0001,     /* ch_error_type */
+      0x0000,	 /* ext_ch_error_type */
       0x00030004, /* add_value */
       PNET_DIAG_USI_STD, NULL);
    EXPECT_EQ(ret, 0);
@@ -278,7 +279,7 @@ TEST_F (DiagTest, DiagRunTest)
 
    printf("Try to update a diag entry that does not exist\n");
    PNET_DIAG_CH_PROP_MAINT_SET(ch_properties, PNET_DIAG_CH_PROP_MAINT_REQUIRED);
-   ret = pnet_diag_update(net, appdata.main_arep, TEST_API_IDENT, slot, subslot, 0, ch_properties, 0x0007, 0x00030004, PNET_DIAG_USI_STD, NULL);
+   ret = pnet_diag_update(net, appdata.main_arep, TEST_API_IDENT, slot, subslot, 0, ch_properties, 0x0007, 0x0000, 0x00030004, PNET_DIAG_USI_STD, NULL);
    EXPECT_EQ(ret, -1);
 
    printf("Add diag to non-existing sub-slot\n");

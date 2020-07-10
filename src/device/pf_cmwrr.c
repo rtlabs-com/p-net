@@ -126,6 +126,9 @@ static void pf_cmwrr_pdportcheck(
 	uint8_t 		*pData = p_bytes;
 	uint16_t 		tmpShort = 0;
 	uint8_t 		tmpByte = 0;
+	pnet_alarm_spec_t	alarm_spec;
+	pf_diag_item_t 		diag_item;
+	
     /* Request:
      * PDPortDataCheck
      *    blockHeader
@@ -255,7 +258,25 @@ static void pf_cmwrr_pdportcheck(
 					p_ar->nbr_api_diffs++;
 					p_ar->api_diffs[api_ix].nbr_module_diffs++;
 					p_ar->api_diffs[api_ix].module_diffs[mod_ix].nbr_submodule_diffs++;
+					
 
+					memset(&diag_item,0,sizeof(pf_diag_item_t));
+					
+					diag_item.alarm_spec.channel_diagnosis 		= true;
+					diag_item.alarm_spec.manufacturer_diagnosis = false;
+					diag_item.alarm_spec.submodule_diagnosis 	= true;
+					diag_item.alarm_spec.ar_diagnosis 			= true;
+					  
+					  /* Set Diagnostic Information Second */
+		              PNET_DIAG_CH_PROP_SPEC_SET(diag_item.fmt.std.ch_properties, PNET_DIAG_CH_PROP_SPEC_APPEARS);
+		              diag_item.usi = PF_USI_EXTENDED_CHANNEL_DIAGNOSIS;
+		              diag_item.fmt.std.ch_nbr = PF_USI_CHANNEL_DIAGNOSIS;
+		              diag_item.fmt.std.ch_error_type = PF_WRT_ERROR_REMOTE_MISMATCH;
+		              diag_item.fmt.std.ext_ch_error_type = PF_WRT_ERROR_PORTID_MISMATCH;
+		              diag_item.fmt.std.ext_ch_add_value = 0;
+		              diag_item.fmt.std.qual_ch_qualifier = 0;
+		              diag_item.next = 0;
+		              
 					/* Add the diagnostic block*/
 					pf_diag_add(net,
 							p_ar,
@@ -263,16 +284,14 @@ static void pf_cmwrr_pdportcheck(
 							p_ar->exp_apis[p_write_request->api].modules[i].slot_number,
 							p_ar->exp_apis[p_write_request->api].modules[i].submodules[j].subslot_number,
 							PF_USI_CHANNEL_DIAGNOSIS,			/*Channel Number */
-							0x0800,								/*Channel Properties */
+							diag_item.fmt.std.ch_properties,	/*Channel Properties */
 							PF_WRT_ERROR_REMOTE_MISMATCH,		/*Channel Error Type: Remote Mismatch*/
 							errCode,							/*Ext Channel Error Type: peer chassisid mismatch*/
 							0,									/* Ext Channel Add Value */
 							0,									/* Channel Qualifier ? */
 							PF_USI_EXTENDED_CHANNEL_DIAGNOSIS,	/* USI*/
+							&diag_item.alarm_spec,				/*Alarm Specifications */
 							NULL);								/*Data*/
-					
-					/*Set the problem indictor*/
-					pf_ppm_set_problem_indicator(p_ar, is_problem);
 					
 					bFound = true;
 					break;

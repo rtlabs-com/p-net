@@ -410,6 +410,136 @@ void pf_lldp_init(
    memset(&net->fspm_cfg.lldp_peer_cfg,0,sizeof(net->fspm_cfg.lldp_peer_cfg));
 }
 
+static void pf_lldp_send_alarm(pnet_t *net)
+{
+
+	uint16_t ix = 0,
+			 maxIndex = NELEMENTS(net->cmrpc_ar);
+
+    pf_ar_t				*p_ar = NULL;	
+	pf_diag_item_t 		diag_item;
+	bool				alarm_sent = false;
+	int					ret = -1;
+
+	for(ix = 0; ix<maxIndex;ix++)
+	{
+		  if (net->cmrpc_ar[ix].in_use == true)
+		  {
+			  p_ar = &net->cmrpc_ar[ix];
+			  memset(&diag_item,0,sizeof(pf_diag_item_t));
+			  
+			  /* Set Alarm Specifications first */
+			  diag_item.alarm_spec.manufacturer_diagnosis = false;			  /*Always false*/
+			  if(strcmp(net->cmina_perm_dcp_ase.alias_name,net->cmina_temp_dcp_ase.alias_name) != 0)
+			  {
+	              PNET_DIAG_CH_PROP_SPEC_SET(diag_item.fmt.std.ch_properties, PNET_DIAG_CH_PROP_SPEC_APPEARS);
+				  diag_item.alarm_spec.channel_diagnosis = true;
+				  diag_item.alarm_spec.submodule_diagnosis = true;
+				  diag_item.alarm_spec.ar_diagnosis = true;
+			  }
+			  else
+			  {
+	              PNET_DIAG_CH_PROP_SPEC_SET(diag_item.fmt.std.ch_properties, PNET_DIAG_CH_PROP_SPEC_DISAPPEARS);
+				  diag_item.alarm_spec.channel_diagnosis = false;
+				  diag_item.alarm_spec.submodule_diagnosis = false;
+				  diag_item.alarm_spec.ar_diagnosis = false;
+			  }
+			  
+			  /* Set Diagnostic Information Second */
+              diag_item.usi = PF_USI_EXTENDED_CHANNEL_DIAGNOSIS;
+              diag_item.fmt.std.ch_nbr = PF_USI_CHANNEL_DIAGNOSIS;
+              diag_item.fmt.std.ch_error_type = PF_WRT_ERROR_REMOTE_MISMATCH;
+              diag_item.fmt.std.ext_ch_error_type = PF_WRT_ERROR_PORTID_MISMATCH;
+              diag_item.fmt.std.ext_ch_add_value = 0;
+              diag_item.fmt.std.qual_ch_qualifier = 0;
+              diag_item.next = 0;
+              
+              /*Check if Channel Diagnosis is TRUE*/
+			  if(diag_item.alarm_spec.channel_diagnosis)
+			  {     
+				  /*Try and update the diagnostic data first 
+				   * (Error will occur if 
+				   * the diagnostic index does not exists)*/
+				  ret = pf_diag_update(net,											/*net*/
+							p_ar,												/*ar */
+							 p_ar->nbr_api_diffs,								/*api id*/
+							(uint16_t)PNET_SLOT_DAP_IDENT,						/*slot*/
+							(uint16_t)PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT,	/*subslot*/
+							diag_item.fmt.std.ch_nbr,							/*Channel Number */
+							diag_item.fmt.std.ch_properties,					/*Channel Properties */
+							diag_item.fmt.std.ch_error_type,					/*Channel Error Type: Remote Mismatch*/
+							diag_item.fmt.std.ext_ch_error_type,				/*Ext Channel Error Type: peer chassisid mismatch*/
+							diag_item.fmt.std.ext_ch_add_value,					/* Ext Channel Add Value */
+							diag_item.usi,										/* USI*/
+							(uint8_t*)&diag_item.alarm_spec);					/* Alarm Specific Data*/
+				  
+
+				  /* Handle Error if update failed by adding the diagnostic block */
+				  if(ret != 0)
+				  {
+					/* Add the diagnostic block*/
+				  ret = pf_diag_add(net,
+							p_ar,
+							 p_ar->nbr_api_diffs,
+							(uint16_t)PNET_SLOT_DAP_IDENT,
+							(uint16_t)PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT,
+							diag_item.fmt.std.ch_nbr,							/*Channel Number */
+							diag_item.fmt.std.ch_properties ,					/*Channel Properties */
+							diag_item.fmt.std.ch_error_type,					/*Channel Error Type: Remote Mismatch*/
+							diag_item.fmt.std.ext_ch_error_type,				/*Ext Channel Error Type: peer chassisid mismatch*/
+							diag_item.fmt.std.ext_ch_add_value,					/* Ext Channel Add Value */
+							0,													/* Channel Qualifier ? */
+							diag_item.usi,										/* USI*/
+							&diag_item.alarm_spec,								/*Alarm Specifications */
+							NULL);												/* MFG Data*/ 
+					
+
+				  }
+			  }
+			  else
+			  {
+
+				  /*Update diagnostic data */
+				  ret = pf_diag_update(net,										/*net*/
+							p_ar,												/*ar */
+							 p_ar->nbr_api_diffs,								/*api id*/
+							(uint16_t)PNET_SLOT_DAP_IDENT,						/*slot*/
+							(uint16_t)PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT,	/*subslot*/
+							diag_item.fmt.std.ch_nbr,							/*Channel Number */
+							diag_item.fmt.std.ch_properties,					/*Channel Properties */
+							diag_item.fmt.std.ch_error_type,					/*Channel Error Type: Remote Mismatch*/
+							diag_item.fmt.std.ext_ch_error_type,				/*Ext Channel Error Type: peer chassisid mismatch*/
+							diag_item.fmt.std.ext_ch_add_value,					/* Ext Channel Add Value */
+							diag_item.usi,										/* USI*/
+							(uint8_t*)&diag_item.alarm_spec);					/* Alarm Specific Data*/
+	
+			  }
+	
+			  /* Finally send the alarm */
+			  pf_alarm_send_port_change_notification(net,
+					  p_ar, 
+					  p_ar->nbr_api_diffs, 							/* api_id */
+					  PNET_SLOT_DAP_IDENT,							/* slot */
+					  PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT,		/* subSlot */
+					  PNET_MOD_DAP_IDENT,							/* Module ID */
+					  PNET_SUBMODID_DAP_INTERFACE_1_PORT_0_IDENT,	/* subModule ID */
+					  &diag_item);
+			  /*Set the alarm flag */
+				alarm_sent = true;
+		  }  
+	}
+ 
+	if(false == alarm_sent)
+	{
+	      /*Copy over the Alias name to perm*/
+	      strncpy((char*)net->cmina_perm_dcp_ase.alias_name,
+	    		  (char*)net->cmina_temp_dcp_ase.alias_name,
+	    		  strlen(net->cmina_temp_dcp_ase.alias_name));
+	      
+	      net->cmina_perm_dcp_ase.alias_name[strlen(net->cmina_temp_dcp_ase.alias_name)]='\0';
+	}
+}
+
 void pf_lldp_recv(
    pnet_t                  *net,
    os_buf_t                *p_frame_buf,
@@ -426,7 +556,6 @@ void pf_lldp_recv(
 	/* Jump to the data in the frame*/
 	uint8_t *pData = (&((uint8_t *)p_frame_buf->payload)[frame_pos]);
 	uint16_t _tvData = htons(GET_UINT16(pData));
-	
 	LLDP_FRAME	_frame = {0};
 	
 	_frame.type = (_tvData & LLDP_TYPE_MASK) >> LLDP_TYPE_SHIFT;
@@ -444,7 +573,7 @@ void pf_lldp_recv(
 
 			/* Set the length */
 			net->fspm_cfg.lldp_peer_cfg.PeerChassisIDLen=_frame.len-1;
-			
+						
 			/* Copy over the information */
 			memcpy(&net->fspm_cfg.lldp_peer_cfg.PeerChassisID, pData+1, net->fspm_cfg.lldp_peer_cfg.PeerChassisIDLen);
 			/* Null terminate */
@@ -489,6 +618,9 @@ void pf_lldp_recv(
 				net->cmina_temp_dcp_ase.alias_name[strlen(_Alias)]='\0';
 				
 				LOG_DEBUG(PF_ETH_LOG, "LLDP(%d): NEW Name: %s\n", __LINE__,net->cmina_temp_dcp_ase.alias_name);
+				
+				pf_lldp_send_alarm(net);
+
 			 }
 
 			break;
@@ -535,9 +667,6 @@ void pf_lldp_recv(
 		}
 		break;
 		default:
-#if 0
-			LOG_DEBUG(PF_ETH_LOG, "LLDP(%d): Unhandled Frame Type %d Length %d\n", __LINE__,_frame.type,_frame.len );
-#endif
 			break;
 		}
 		/*increment the pointer*/

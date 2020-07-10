@@ -77,6 +77,7 @@ int pf_diag_add(
    uint32_t                ext_ch_add_value,
    uint32_t                qual_ch_qualifier,
    uint16_t                usi,
+   pnet_alarm_spec_t       *p_alarm_spec,
    uint8_t                 *p_manuf_data);
 
 /**
@@ -120,6 +121,7 @@ int pf_diag_update(
    uint16_t                ch_nbr,
    uint16_t                ch_properties,
    uint16_t                ch_error_type,
+   uint16_t                ext_ch_error_type,
    uint32_t                ext_ch_add_value,
    uint16_t                usi,
    uint8_t                 *p_manuf_data);
@@ -160,11 +162,17 @@ int pf_diag_remove(
    uint16_t                ch_error_type,
    uint16_t                usi);
 
-int pf_diag_get_maintenance_status(
-   uint32_t                api_id,
-   uint16_t                slot_nbr,
-   uint16_t                subslot_nbr,
-   uint32_t                *p_maint_status);
+int pf_diag_get(
+		   pnet_t                  *net,
+		   pf_ar_t                 *p_ar,
+		   uint32_t                api_id,
+		   uint16_t                slot_nbr,
+		   uint16_t                subslot_nbr,
+		   uint16_t                ch_nbr,
+		   uint16_t                ch_properties,
+		   uint16_t                ch_error_type,
+		   uint16_t                usi,
+		   pf_diag_item_t 		   *p_diag_item);
 
 #ifdef __cplusplus
 }

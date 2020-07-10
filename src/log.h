@@ -29,8 +29,6 @@ extern "C"
 #include "options.h"
 #include "osal.h"
 
-#include <inttypes.h>
-
 /* Log levels */
 #define LOG_LEVEL_DEBUG   0x00
 #define LOG_LEVEL_INFO    0x01

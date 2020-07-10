@@ -471,8 +471,9 @@ typedef struct CC_PACKED pf_block_header
    uint8_t                 block_version_low;
 } pf_block_header_t;
 CC_PACKED_END
-/* The following line guarantees that offsetof works as expected on received data. */
-CC_STATIC_ASSERT(sizeof(pf_block_header_t) == (2+2+1+1));
+
+/* The following line guarantees that offsetof works as expected on received data. 
+CC_STATIC_ASSERT((sizeof(pf_block_header_t) == (2+2+1+1)));*/
 
 /* <============================ Block header */
 
@@ -1468,6 +1469,7 @@ typedef struct pf_apmx
    uint16_t                exp_seq_count;
    uint16_t                exp_seq_count_o;
 
+   uint16_t					alarm_seq_num;
    /* The receive queue */
    os_mbox_t               *p_alarm_q;
    /* The messages sent via the mailbox */
@@ -1500,6 +1502,7 @@ typedef enum pf_alpmi_state_values
    PF_ALPMI_STATE_W_START,
    PF_ALPMI_STATE_W_ALARM,
    PF_ALPMI_STATE_W_ACK,
+   PF_ALPMI_STATE_W_ALARM_PENDING
 } pf_alpmi_state_values_t;
 
 /*
@@ -1812,7 +1815,9 @@ typedef struct pf_diag_item
       pf_diag_std_t        std;
       pf_diag_usi_t        usi;
    } fmt;
-
+   uint16_t				   slot_nb;
+   uint16_t				   subslot_nb;
+   pnet_alarm_spec_t       alarm_spec;
    bool                    in_use;
    uint16_t                usi;        /* pf_usi_values_t */
    uint16_t                next;       /* Next in list */

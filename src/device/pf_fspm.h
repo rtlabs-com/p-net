@@ -184,9 +184,7 @@ int pf_fspm_state_ind(
 int pf_fspm_aplmr_alarm_ind(
    pnet_t                  *net,
    pf_ar_t                 *p_ar,
-   uint32_t                api,
-   uint16_t                slot,
-   uint16_t                subslot,
+   pf_alarm_data_t         *p_alarm_data,
    uint16_t                data_len,
    uint16_t                data_usi,
    uint8_t                 *p_data);

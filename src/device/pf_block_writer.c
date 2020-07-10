@@ -1001,14 +1001,19 @@ void pf_put_pnet_status(
    uint8_t                 *p_bytes,
    uint16_t                *p_pos)
 {
-   uint32_t                pnio_result;
+   /*uint32_t                pnio_result;
 
    pnio_result =
          0x01000000u * p_status->error_code +
          0x10000u * p_status->error_decode +
          0x100u * p_status->error_code_1 +
          p_status->error_code_2;
-   pf_put_uint32(is_big_endian, pnio_result, res_len, p_bytes, p_pos);
+   pf_put_uint32(is_big_endian, pnio_result, res_len, p_bytes, p_pos);*/
+   pf_put_byte((uint8_t)p_status->error_code,res_len,p_bytes,p_pos);
+   pf_put_byte((uint8_t)p_status->error_decode,res_len,p_bytes,p_pos);
+   pf_put_byte((uint8_t)p_status->error_code_1,res_len,p_bytes,p_pos);
+   pf_put_byte((uint8_t)p_status->error_code_2,res_len,p_bytes,p_pos);
+   
 }
 
 void pf_put_dce_rpc_header(
@@ -1871,68 +1876,60 @@ static void pf_put_diag_list(
    uint8_t                 *p_bytes,
    uint16_t                *p_pos)
 {
-   uint16_t                ch_properties = 0;
    pf_diag_item_t          *p_item = NULL;
    bool                    insert;
 
    /* Walk the list to insert all items */
    pf_cmdev_get_diag_item(net, list_head, &p_item);
-   if (p_item != NULL)
-   {
-      pf_put_uint16(is_big_endian, slot_nbr, res_len, p_bytes, p_pos);
-      pf_put_uint16(is_big_endian, subslot_nbr, res_len, p_bytes, p_pos);
-      pf_put_uint16(is_big_endian, 0x8000, res_len, p_bytes, p_pos); /* ch_nbr */
-      /*
-       * The list only contains APPEARS, so it can be hardcoded here.
-       * ToDo: More info into ch_properties here!
-       */
-      PNET_DIAG_CH_PROP_SPEC_SET(ch_properties, PNET_DIAG_CH_PROP_SPEC_APPEARS);
-      pf_put_uint16(is_big_endian, ch_properties, res_len, p_bytes, p_pos);
 
-      while (p_item != NULL)
-      {
-         insert = false;
-         switch (diag_filter)
-         {
-         case PF_DIAG_FILTER_FAULT_STD:
-            if (p_item->usi >= PF_USI_CHANNEL_DIAGNOSIS)
-            {
-               insert = true;
-            }
-            break;
-         case PF_DIAG_FILTER_FAULT_ALL:
-            if ((p_item->usi < PF_USI_CHANNEL_DIAGNOSIS) ||
-                (PNET_DIAG_CH_PROP_MAINT_GET(p_item->fmt.std.ch_properties) == PNET_DIAG_CH_PROP_MAINT_FAULT))
-            {
-               insert = true;
-            }
-            break;
-         case PF_DIAG_FILTER_ALL:
-            insert = true;
-            break;
-         case PF_DIAG_FILTER_M_REQ:
-            if ((p_item->usi < PF_USI_CHANNEL_DIAGNOSIS) ||
-                (PNET_DIAG_CH_PROP_MAINT_GET(p_item->fmt.std.ch_properties) == PNET_DIAG_CH_PROP_MAINT_REQUIRED))
-            {
-               insert = true;
-            }
-            break;
-         case PF_DIAG_FILTER_M_DEM:
-            if ((p_item->usi < PF_USI_CHANNEL_DIAGNOSIS) ||
-                (PNET_DIAG_CH_PROP_MAINT_GET(p_item->fmt.std.ch_properties) == PNET_DIAG_CH_PROP_MAINT_DEMANDED))
-            {
-               insert = true;
-            }
-            break;
-         }
-         if (insert == true)
-         {
-            pf_put_diag_item(is_big_endian, p_item, res_len, p_bytes, p_pos);
-         }
+  while (p_item != NULL)
+  {
+	 insert = false;
+	 switch (diag_filter)
+	 {
+	 case PF_DIAG_FILTER_FAULT_STD:
+		if (p_item->usi >= PF_USI_CHANNEL_DIAGNOSIS)
+		{
+		   insert = (PNET_DIAG_CH_PROP_SPEC_GET(p_item->fmt.std.ch_properties)==PNET_DIAG_CH_PROP_SPEC_APPEARS)?true:false;
+		}
+		break;
+	 case PF_DIAG_FILTER_FAULT_ALL:
+		if ((p_item->usi < PF_USI_CHANNEL_DIAGNOSIS) ||
+			(PNET_DIAG_CH_PROP_MAINT_GET(p_item->fmt.std.ch_properties) == PNET_DIAG_CH_PROP_MAINT_FAULT))
+		{
+		   insert = true;
+		}
+		break;
+	 case PF_DIAG_FILTER_ALL:
+		insert =  (PNET_DIAG_CH_PROP_SPEC_GET(p_item->fmt.std.ch_properties)==PNET_DIAG_CH_PROP_SPEC_APPEARS)?true:false;
+		break;
+	 case PF_DIAG_FILTER_M_REQ:
+		if ((p_item->usi < PF_USI_CHANNEL_DIAGNOSIS) ||
+			(PNET_DIAG_CH_PROP_MAINT_GET(p_item->fmt.std.ch_properties) == PNET_DIAG_CH_PROP_MAINT_REQUIRED))
+		{
+		   insert = true;
+		}
+		break;
+	 case PF_DIAG_FILTER_M_DEM:
+		if ((p_item->usi < PF_USI_CHANNEL_DIAGNOSIS) ||
+			(PNET_DIAG_CH_PROP_MAINT_GET(p_item->fmt.std.ch_properties) == PNET_DIAG_CH_PROP_MAINT_DEMANDED))
+		{
+		   insert = true;
+		}
+		break;
+	 }
+	 
+	 if (insert == true)
+	 {
+		  pf_put_uint16(is_big_endian, /*slot_nbr*/		p_item->slot_nb, 				res_len, p_bytes, p_pos);
+		  pf_put_uint16(is_big_endian, /*subslot_nbr*/	p_item->subslot_nb, 			res_len, p_bytes, p_pos);
+		  pf_put_uint16(is_big_endian, /*0x8000*/		p_item->fmt.std.ch_nbr, 		res_len, p_bytes, p_pos); /* ch_nbr */
+		  pf_put_uint16(is_big_endian, 					p_item->fmt.std.ch_properties, 	res_len, p_bytes, p_pos);
+		  pf_put_diag_item(is_big_endian, p_item, res_len, p_bytes, p_pos);
+	 }
 
-         pf_cmdev_get_diag_item(net, p_item->next, &p_item);
-      }
-   }
+	 pf_cmdev_get_diag_item(net, p_item->next, &p_item);
+  }
 }
 
 /**
@@ -2206,7 +2203,14 @@ void pf_put_alarm_block(
    uint32_t temp_u16;
    uint32_t temp_u32;
    uint16_t block_pos_2;
-
+ 
+   /*Check if alarm data is NULL*/
+   if(NULL == p_alarm_data)
+   {
+    LOG_ERROR(PF_ALARM_LOG, "Alarm(%d): NULL Alarm detected!\n", __LINE__);
+	   /*unhandled alarm */
+   }
+   
    /* Insert block header for the alarm block */
    pf_put_block_header(is_big_endian, bh_type,
       0,                      /* Dont know block_len yet */
@@ -2216,9 +2220,13 @@ void pf_put_alarm_block(
    pf_put_uint16(is_big_endian, p_alarm_data->alarm_type, res_len, p_bytes, p_pos);
    pf_put_uint32(is_big_endian, p_alarm_data->api_id, res_len, p_bytes, p_pos);
    pf_put_uint16(is_big_endian, p_alarm_data->slot_nbr, res_len, p_bytes, p_pos);
-   pf_put_uint16(is_big_endian, p_alarm_data->subslot_nbr, res_len, p_bytes, p_pos);
-   pf_put_uint32(is_big_endian, p_alarm_data->module_ident, res_len, p_bytes, p_pos);
-   pf_put_uint32(is_big_endian, p_alarm_data->submodule_ident, res_len, p_bytes, p_pos);
+   pf_put_uint16(is_big_endian, p_alarm_data->subslot_nbr, res_len, p_bytes, p_pos);	/* 10 */
+   if(bh_type == PF_BT_ALARM_NOTIFICATION_LOW)
+   {
+	   pf_put_uint32(is_big_endian, p_alarm_data->module_ident, res_len, p_bytes, p_pos);
+	   pf_put_uint32(is_big_endian, p_alarm_data->submodule_ident, res_len, p_bytes, p_pos);
+   }
+
 
    temp_u32 = 0;
    pf_put_bits(p_alarm_data->sequence_number, 11, 0, &temp_u32);
@@ -2227,7 +2235,7 @@ void pf_put_alarm_block(
    pf_put_bits(p_alarm_data->alarm_specifier.submodule_diagnosis, 1, 13, &temp_u32);
    pf_put_bits(p_alarm_data->alarm_specifier.ar_diagnosis, 1, 15, &temp_u32);
    temp_u16 = (uint16_t)temp_u32;
-   pf_put_uint16(is_big_endian, temp_u16, res_len, p_bytes, p_pos);
+   pf_put_uint16(is_big_endian, temp_u16, res_len, p_bytes, p_pos);	/* 12 */
 
    switch (payload_usi)
    {
@@ -2262,18 +2270,28 @@ void pf_put_alarm_block(
          pf_put_uint16(is_big_endian, block_len, res_len, p_bytes, &block_pos_2);
       }
 
-      pf_put_diag_item(is_big_endian, (pf_diag_item_t *)p_payload, res_len, p_bytes, p_pos);
+      if(NULL != p_payload)
+    	  pf_put_diag_item(is_big_endian, (pf_diag_item_t *)p_payload, res_len, p_bytes, p_pos);
+      
+      /* Finally insert the block length into the block header */
+      block_len = *p_pos - (block_pos+4);
+      block_pos += offsetof(pf_block_header_t, block_length);   /* Point to correct place */
+      pf_put_uint16(is_big_endian, block_len, res_len, p_bytes, &block_pos);
+      return;
+      
       break;
    default:
       /* Manufacturer data */
       /* Starts with the USI and then followed by raw data bytes */
       pf_put_uint16(is_big_endian, payload_usi, res_len, p_bytes, p_pos);
-      pf_put_mem(p_payload, payload_len, res_len, p_bytes, p_pos);
+      if(NULL != p_payload)
+    	  pf_put_mem(p_payload, payload_len, res_len, p_bytes, p_pos);
+      
       break;
    }
 
    /* Finally insert the block length into the block header */
-   block_len = *p_pos - (block_pos + 4);
+   block_len = *p_pos - (block_pos);
    block_pos += offsetof(pf_block_header_t, block_length);   /* Point to correct place */
    pf_put_uint16(is_big_endian, block_len, res_len, p_bytes, &block_pos);
 }

@@ -1919,12 +1919,10 @@ static int pf_cmdev_iocr_setup_desc(
 
    if (pf_cmdev_iocr_setup_data_iops(p_ar, p_iocr, dir, p_stat) != 0)
    {
-      printf("%s(%d)\n", __FILE__, __LINE__);
       ret = -1;
    }
    else if (pf_cmdev_iocr_setup_iocs(p_ar, p_iocr, dir, p_stat) != 0)
    {
-      printf("%s(%d)\n", __FILE__, __LINE__);
       ret = -1;
    }
 
@@ -3539,7 +3537,14 @@ int pf_cmdev_rm_connect_ind(
       strncpy(p_ar->ar_server.cm_responder_station_name, p_station_name, sizeof(p_ar->ar_server.cm_responder_station_name));
       p_ar->ar_server.cm_responder_station_name[sizeof(p_ar->ar_server.cm_responder_station_name) - 1] = '\0';
       p_ar->ar_server.length_cm_responder_station_name = (uint16_t)strlen(p_station_name);
+      
+      /*Copy over the Alias name to perm*/
+      strncpy((char*)net->cmina_perm_dcp_ase.alias_name,
+    		  (char*)net->cmina_temp_dcp_ase.alias_name,
+    		  strlen(net->cmina_temp_dcp_ase.alias_name));
 
+      net->cmina_perm_dcp_ase.alias_name[strlen(net->cmina_temp_dcp_ase.alias_name)]='\0';
+      
       p_ar->ready_4_data = false;
 
       ret = pf_fspm_cm_connect_ind(net, p_ar, p_connect_result);

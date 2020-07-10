@@ -748,6 +748,17 @@ void pf_get_alarm_fixed(
    p_alarm_fixed->ack_seq_nbr = pf_get_uint16(p_info, p_pos);
 }
 
+void pf_get_alarm_block(
+   pf_get_info_t           *p_info,
+   uint16_t                *p_pos,
+   pf_block_header_t       *p_alarm_block)
+{
+	p_alarm_block->block_type 			= pf_get_uint16(p_info, p_pos);
+	p_alarm_block->block_length 		= pf_get_uint16(p_info, p_pos);
+	p_alarm_block->block_version_high 	= pf_get_byte(p_info, p_pos);
+	p_alarm_block->block_version_low 	= pf_get_byte(p_info, p_pos);
+}
+
 void pf_get_alarm_data(
    pf_get_info_t           *p_info,
    uint16_t                *p_pos,
@@ -761,7 +772,6 @@ void pf_get_alarm_data(
    p_alarm_data->subslot_nbr = pf_get_uint16(p_info, p_pos);
    p_alarm_data->module_ident = pf_get_uint32(p_info, p_pos);
    p_alarm_data->submodule_ident = pf_get_uint32(p_info, p_pos);
-   p_alarm_data->alarm_type = pf_get_uint16(p_info, p_pos);
 
    /* AlarmSpecifier */
    temp_u16 = pf_get_uint16(p_info, p_pos);
@@ -783,7 +793,6 @@ void pf_get_alarm_ack(
    p_alarm_data->api_id = pf_get_uint32(p_info, p_pos);
    p_alarm_data->slot_nbr = pf_get_uint16(p_info, p_pos);
    p_alarm_data->subslot_nbr = pf_get_uint16(p_info, p_pos);
-   p_alarm_data->alarm_type = pf_get_uint16(p_info, p_pos);
 
    /* AlarmSpecifier */
    temp_u16 = pf_get_uint16(p_info, p_pos);

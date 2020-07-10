@@ -207,6 +207,7 @@ int pf_diag_add(
    uint32_t                ext_ch_add_value,
    uint32_t                qual_ch_qualifier,
    uint16_t                usi,
+   pnet_alarm_spec_t       *p_alarm_spec,
    uint8_t                 *p_manuf_data)
 {
    int                     ret = -1;
@@ -262,6 +263,14 @@ int pf_diag_add(
             {
                p_item->usi = usi;
                memcpy(p_item->fmt.usi.manuf_data, p_manuf_data, sizeof(p_item->fmt.usi.manuf_data));
+               
+               p_item->slot_nb = slot_nbr;
+               p_item->subslot_nb = subslot_nbr;
+               p_item->alarm_spec.channel_diagnosis = p_alarm_spec->channel_diagnosis;
+               p_item->alarm_spec.manufacturer_diagnosis = p_alarm_spec->manufacturer_diagnosis;
+               p_item->alarm_spec.submodule_diagnosis = p_alarm_spec->submodule_diagnosis;
+               p_item->alarm_spec.ar_diagnosis = p_alarm_spec->ar_diagnosis;
+               
             }
             else if (usi == PF_USI_EXTENDED_CHANNEL_DIAGNOSIS)
             {
@@ -275,12 +284,23 @@ int pf_diag_add(
                 p_item->fmt.std.ext_ch_add_value = ext_ch_add_value;
                 p_item->fmt.std.qual_ch_qualifier = qual_ch_qualifier;
              
+                p_item->slot_nb = slot_nbr;
+                p_item->subslot_nb = subslot_nbr;
+                p_item->alarm_spec.channel_diagnosis = p_alarm_spec->channel_diagnosis;
+                p_item->alarm_spec.manufacturer_diagnosis = p_alarm_spec->manufacturer_diagnosis;
+                p_item->alarm_spec.submodule_diagnosis = p_alarm_spec->submodule_diagnosis;
+                p_item->alarm_spec.ar_diagnosis = p_alarm_spec->ar_diagnosis;
+                
                 /* Link it into the sub-slot reported list */
                 p_item->next = p_subslot->diag_list;
                 p_subslot->diag_list = item_ix;
                 
+				/*Set the problem indictor*/
+				pf_ppm_set_problem_indicator(p_ar, true);
+				
                 /*ToDo: Write to NVRAM */
-                
+
+				
                 os_mutex_unlock(p_dev->diag_mutex);
             	return 0;
             }
@@ -295,6 +315,13 @@ int pf_diag_add(
                p_item->fmt.std.ext_ch_error_type = ext_ch_error_type;
                p_item->fmt.std.ext_ch_add_value = ext_ch_add_value;
                p_item->fmt.std.qual_ch_qualifier = qual_ch_qualifier;
+               
+               p_item->slot_nb = slot_nbr;
+               p_item->subslot_nb = subslot_nbr;
+               p_item->alarm_spec.channel_diagnosis = p_alarm_spec->channel_diagnosis;
+               p_item->alarm_spec.manufacturer_diagnosis = p_alarm_spec->manufacturer_diagnosis;
+               p_item->alarm_spec.submodule_diagnosis = p_alarm_spec->submodule_diagnosis;
+               p_item->alarm_spec.ar_diagnosis = p_alarm_spec->ar_diagnosis;
             }
 
             ret = pf_alarm_send_diagnosis(net, p_ar, api_id, slot_nbr, subslot_nbr, p_item);
@@ -340,6 +367,7 @@ int pf_diag_update(
    uint16_t                ch_nbr,
    uint16_t                ch_properties,
    uint16_t                ch_error_code,
+   uint16_t                ext_ch_error_code,
    uint32_t                ext_ch_add_value,
    uint16_t                usi,
    uint8_t                 *p_manuf_data)
@@ -373,6 +401,37 @@ int pf_diag_update(
             {
                memcpy(p_item->fmt.usi.manuf_data, p_manuf_data, sizeof(p_item->fmt.usi.manuf_data));
             }
+            else if (usi == PF_USI_EXTENDED_CHANNEL_DIAGNOSIS)
+			{
+				p_item->usi = usi;
+
+
+				p_item->fmt.std.ch_nbr = ch_nbr;
+				p_item->fmt.std.ch_properties = ch_properties;
+				p_item->fmt.std.ch_error_type = ch_error_code;
+				p_item->fmt.std.ext_ch_error_type = ext_ch_error_code;
+				p_item->fmt.std.ext_ch_add_value = ext_ch_add_value;
+			 
+				p_item->slot_nb = slot_nbr;
+				p_item->subslot_nb = subslot_nbr;
+				p_item->alarm_spec.channel_diagnosis = ((pnet_alarm_spec_t*)p_manuf_data)->channel_diagnosis;
+				p_item->alarm_spec.manufacturer_diagnosis = ((pnet_alarm_spec_t*)p_manuf_data)->manufacturer_diagnosis;
+				p_item->alarm_spec.submodule_diagnosis = ((pnet_alarm_spec_t*)p_manuf_data)->submodule_diagnosis;
+				p_item->alarm_spec.ar_diagnosis = ((pnet_alarm_spec_t*)p_manuf_data)->ar_diagnosis;
+				
+				/* Link it into the sub-slot reported list */
+				p_item->next = p_subslot->diag_list;
+				p_subslot->diag_list = item_ix;
+				
+				/*Set the problem indictor*/
+				pf_ppm_set_problem_indicator(p_ar, ((pnet_alarm_spec_t*)p_manuf_data)->channel_diagnosis);
+				
+				/*ToDo: Write to NVRAM */
+
+				
+				os_mutex_unlock(p_dev->diag_mutex);
+				return 0;
+			}
             else
             {
                PNET_DIAG_CH_PROP_SPEC_SET(p_item->fmt.std.ch_properties, PNET_DIAG_CH_PROP_SPEC_APPEARS);
@@ -458,7 +517,21 @@ int pf_diag_remove(
                {
                   PNET_DIAG_CH_PROP_SPEC_SET(p_item->fmt.std.ch_properties, PNET_DIAG_CH_PROP_SPEC_DISAPPEARS);
                }
+
                ret = pf_alarm_send_diagnosis(net, p_ar, api_id, slot_nbr, subslot_nbr, p_item);
+            }
+            else if ( usi == PF_USI_EXTENDED_CHANNEL_DIAGNOSIS)
+            {
+
+                PNET_DIAG_CH_PROP_SPEC_SET(p_item->fmt.std.ch_properties, PNET_DIAG_CH_PROP_SPEC_ALL_DISAPPEARS);
+                
+				/*Set the problem indictor*/
+				pf_ppm_set_problem_indicator(p_ar, false);
+				
+		         /* Free diag entry */
+		         pf_cmdev_free_diag(net, item_ix);
+				ret = 0;
+				return 0;
             }
             else
             {
@@ -484,4 +557,60 @@ int pf_diag_remove(
    }
 
    return ret;
+}
+
+int pf_diag_get(
+		   pnet_t                  *net,
+		   pf_ar_t                 *p_ar,
+		   uint32_t                api_id,
+		   uint16_t                slot_nbr,
+		   uint16_t                subslot_nbr,
+		   uint16_t                ch_nbr,
+		   uint16_t                ch_properties,
+		   uint16_t                ch_error_type,
+		   uint16_t                usi,
+		   pf_diag_item_t 		   *p_diag_item)
+{
+	int                     ret = -1;
+	pf_device_t             *p_dev = NULL;
+	pf_subslot_t            *p_subslot = NULL;
+	uint16_t                item_ix = PF_DIAG_IX_NULL;
+	pf_diag_item_t          *p_item = NULL;
+	if (usi > PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS)
+	{
+	  LOG_ERROR(PNET_LOG, "DIAG(%d): Bad USI\n", __LINE__);
+	}
+	else if (pf_cmdev_get_device(net, &p_dev) == 0)
+	{
+	  os_mutex_lock(p_dev->diag_mutex);
+	
+	  pf_diag_find_entry(net, api_id, slot_nbr, subslot_nbr, ch_nbr, ch_properties, ch_error_type, usi,
+		 &p_subslot, &item_ix);
+	  if (p_subslot != NULL)
+	  {
+		 ret = pf_cmdev_get_diag_item(net, item_ix, &p_item);
+		 
+		 if(ret != 0)
+		 {
+			/* Diag not found */
+			LOG_ERROR(PNET_LOG, "DIAG(%d): Diag not found\n", __LINE__);
+		 }
+		 else
+		 {
+			 *p_diag_item = *p_item;
+			 
+             /* Link it back into the sub-slot reported list */
+             p_item->next = p_subslot->diag_list;
+             p_subslot->diag_list = item_ix;
+		 }
+	  }
+	  else
+	  {
+		 LOG_ERROR(PNET_LOG, "DIAG(%d): Unknown sub-slot\n", __LINE__);
+	  }
+	
+	  os_mutex_unlock(p_dev->diag_mutex);
+	}
+	
+	return ret;
 }

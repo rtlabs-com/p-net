@@ -258,6 +258,11 @@ void pf_get_alarm_fixed(
    uint16_t                *p_pos,
    pf_alarm_fixed_t        *p_alarm_fixed);
 
+void pf_get_alarm_block(
+   pf_get_info_t           *p_info,
+   uint16_t                *p_pos,
+   pf_block_header_t         *p_alarm_data);
+
 void pf_get_alarm_data(
    pf_get_info_t           *p_info,
    uint16_t                *p_pos,

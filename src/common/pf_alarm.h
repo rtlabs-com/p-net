@@ -179,6 +179,33 @@ int pf_alarm_send_process(
    uint8_t                 *p_payload);
 
 /**
+ * Send process alarm.
+ *
+ * This function sends a process alarm to a controller.
+ * These alarms are always sent as high priority alarms.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param p_ar             In:   The AR instance.
+ * @param api_id           In:   The API identifier.
+ * @param slot_nbr         In:   The slot number.
+ * @param subslot_nbr      In:   The sub-slot number.
+ * @param payload_usi      In:   The USI for the alarm (may be 0).
+ * @param payload_len      In:   Length of diagnostics data (may be 0).
+ * @param p_payload        In:   Diagnostics data (may be NULL if payload_usi == 0).
+ * @return  0  if operation succeeded.
+ *          -1 if an error occurred (or waiting for ACK from controller: re-try later).
+ */
+int pf_alarm_send_port_change_notification(
+   pnet_t                  *net,
+   pf_ar_t                 *p_ar,
+   uint32_t                api_id,
+   uint16_t                slot_nbr,
+   uint16_t                subslot_nbr,
+   uint16_t                modId_nbr,
+   uint16_t                subModId_nbr,
+   pf_diag_item_t          *p_diag_item);
+
+/**
  * Send diagnosis alarm.
  *
  * This function sends a diagnosis alarm to a controller.

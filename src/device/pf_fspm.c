@@ -488,20 +488,28 @@ int pf_fspm_state_ind(
 }
 
 int pf_fspm_aplmr_alarm_ind(
-   pnet_t                  *net,
-   pf_ar_t                 *p_ar,
-   uint32_t                api,
-   uint16_t                slot,
-   uint16_t                subslot,
-   uint16_t                data_len,
-   uint16_t                data_usi,
-   uint8_t                 *p_data)
+	   pnet_t                  *net,
+	   pf_ar_t                 *p_ar,
+	   pf_alarm_data_t         *p_alarm_data,
+	   uint16_t                data_len,
+	   uint16_t                data_usi,
+	   uint8_t                 *p_data)
 {
    int ret = 0;
 
    if (net->fspm_cfg.alarm_ind_cb != NULL)
    {
-      ret = net->fspm_cfg.alarm_ind_cb(net, net->fspm_cfg.cb_arg, p_ar->arep, api, slot, subslot, data_len, data_usi, p_data);
+	   /*Set the alarm information up for the application to consume*/
+	   net->fspm_cfg.alarm_ack.alarm_type = p_alarm_data->alarm_type;
+	   net->fspm_cfg.alarm_ack.api_id = p_alarm_data->api_id;
+	   net->fspm_cfg.alarm_ack.slot_nbr = p_alarm_data->slot_nbr;
+	   net->fspm_cfg.alarm_ack.subslot_nbr = p_alarm_data->subslot_nbr;
+	   net->fspm_cfg.alarm_ack.module_ident = p_alarm_data->module_ident;
+	   net->fspm_cfg.alarm_ack.submodule_ident = p_alarm_data->submodule_ident;
+	   net->fspm_cfg.alarm_ack.alarm_specifier = p_alarm_data->alarm_specifier;
+	   net->fspm_cfg.alarm_ack.sequence_number = p_alarm_data->sequence_number;
+	   
+      ret = net->fspm_cfg.alarm_ind_cb(net, net->fspm_cfg.cb_arg, p_ar->arep, data_len, data_usi, p_data);
    }
 
    return ret;
