@@ -589,8 +589,10 @@ os_buf_t * os_buf_alloc(uint16_t length)
 
    if (p != NULL)
    {
+#if 1
       p->payload = (void *)((uint8_t *)p + sizeof(os_buf_t));  /* Payload follows header struct */
       p->len = length;
+#endif
       os_buf_alloc_cnt++;
    }
    else

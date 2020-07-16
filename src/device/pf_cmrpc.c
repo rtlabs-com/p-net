@@ -2912,9 +2912,57 @@ void pf_cmrpc_periodic(
    }
 }
 
-void pf_cmrpc_init(
+void pf_cmrpc_thread(
+		void *thread_arg)
+{
+	pnet_t	*net = thread_arg;
+	
+	/*Set KeepAlive to true*/
+	net->cmrpc_keepAlive = true;
+	struct	timeval tv;
+	fd_set readfds, writefds,errFds; /* set of socket descriptors  */
+	int activity = 0;
+	
+	/*Set the timeout to 1 second*/
+	tv.tv_sec = 1;
+	tv.tv_usec = 0;	
+	
+	while(net->cmrpc_keepAlive)
+	{
+		/* clear the socket set */  
+		FD_ZERO(&readfds);
+		FD_ZERO(&writefds);
+		FD_ZERO(&errFds);
+		
+		/* add master socket to set */ 
+		FD_SET(net->cmrpc_rpcreq_socket, &readfds);
+		/* wait for an activity on the socket */
+		activity = select(net->cmrpc_rpcreq_socket + 1, &readfds, &writefds, &errFds, &tv);
+		
+		if ((activity < 0) && (errno != EINTR))
+		{
+			perror("PROFINET RX error #1: ");
+		}
+		
+		if (FD_ISSET(net->cmrpc_rpcreq_socket, &readfds) ||
+				FD_ISSET(net->cmrpc_rpcreq_socket, &writefds))
+		{
+			pf_cmrpc_periodic(net);
+		}
+	}
+}
+
+os_thread_t* pf_cmrpc_init(
    pnet_t                  *net)
 {
+	os_thread_t             *udpThread;
+	
+	udpThread = malloc(sizeof(os_thread_t));
+   if (udpThread == NULL)
+   {
+	  return NULL;
+   }
+	   
    if (net->p_cmrpc_rpc_mutex == NULL)
    {
       net->p_cmrpc_rpc_mutex = os_mutex_create();
@@ -2926,6 +2974,15 @@ void pf_cmrpc_init(
 
    /* Save for later (put it into each session */
    net->cmrpc_session_number = 0x12345678;     /* Starting number */
+   
+#if OS_USE_UDP_THREAD
+   udpThread = os_thread_create (os_task_table[UDP_TABLE_INDEX].taskName,
+ 		  	  	  	  	  	  	  	  os_task_table[UDP_TABLE_INDEX].priority,
+ 		  	  	  	  	  	  	  	  os_task_table[UDP_TABLE_INDEX].stackSize,
+ 		  	  	  	  	  	          pf_cmrpc_thread, net);
+#endif
+   
+   return udpThread;
 }
 
 

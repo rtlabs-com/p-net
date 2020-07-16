@@ -34,6 +34,7 @@
 #include "pf_includes.h"
 
 static const char             *hello_sync_name = "hello";
+static const char             *cmina_alarm_name = "cmina_alarm";
 
 
 /**
@@ -71,6 +72,41 @@ static void pf_cmina_send_hello(
       net->cmina_hello_timeout = UINT32_MAX;
       net->cmina_hello_count = 0;
    }
+}
+
+
+/**
+ * @internal
+ * Send a DCP HELLO message.
+ *
+ * This is a callback for the scheduler. Arguments should fulfill pf_scheduler_timeout_ftn_t
+ *
+ * If this was not the last requested HELLO message then re-schedule another call after 1 s.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param arg              In:   Not used.
+ * @param current_time     In:   Not used.
+ */
+static void pf_cmina_send_alarm(
+   pnet_t                  *net,
+   void                    *arg,
+   uint32_t                current_time)
+{
+	   pf_ar_t *p_ar = NULL;
+	   int ix = 0;
+	   
+       for (ix = 0; ix < PNET_MAX_AR; ix++)
+       {
+          p_ar = pf_ar_find_by_index(net, ix);
+          if ((p_ar != NULL) && (p_ar->in_use == true))
+          {
+        	  pf_cmdev_state_ind(net, p_ar, PNET_EVENT_ABORT);
+          }
+       }
+       
+
+       
+
 }
 
 /**
@@ -309,7 +345,8 @@ int pf_cmina_dcp_set_ind(
    bool                    reset_to_factory = false;
    pf_ar_t                 *p_ar = NULL;
    uint16_t                ix;
-   bool                    found = false;
+   bool                    found = false,
+		   	   	   	   	   sendAlarm = false;
    bool                    temp = ((block_qualifier & 1) == 0);
    uint16_t                reset_mode = block_qualifier >> 1;
 
@@ -470,7 +507,7 @@ int pf_cmina_dcp_set_ind(
                  (net->cmina_temp_dcp_ase.full_ip_suite.ip_suite.ip_mask != 0) ||
                  (net->cmina_temp_dcp_ase.full_ip_suite.ip_suite.ip_gateway != 0));
       have_dhcp = false;   /* ToDo: Not supported here */
-
+      
       switch (net->cmina_state)
       {
       case PF_CMINA_STATE_SETUP:
@@ -487,6 +524,7 @@ int pf_cmina_dcp_set_ind(
             ret = pf_cmina_set_default_cfg(net, reset_mode);
          }
 
+        
          if ((change_name == true) || (change_ip == true))
          {
          	/* if ((have_name == true) && (have_ip == true)) Commit change to OS */
@@ -533,11 +571,64 @@ int pf_cmina_dcp_set_ind(
       case PF_CMINA_STATE_W_CONNECT:
          if (reset_to_factory == true)
          {
-            /* Handle reset to factory here */
-            ret = pf_cmina_set_default_cfg(net, reset_mode);
-         }
+             /* Any connection active ? */
+             found = false;
+             for (ix = 0; ix < PNET_MAX_AR; ix++)
+             {
+                p_ar = pf_ar_find_by_index(net, ix);
+                if ((p_ar != NULL) && (p_ar->in_use == true))
+                {
+                   found = true;
+                   /* 38 */
+                   /*Close the connection and send the error code RESET TO FACTORY */
+                   net->cmina_error_decode = PNET_ERROR_DECODE_PNIORW;
+                   net->cmina_error_code_1  = PNET_ERROR_CODE_2_ABORT_DCP_RESET_TO_FACTORY;
+                   
+                   /* Set AR error codes to RESET TO FACTORY and terminate the connection */
+                   p_ar->err_code = PNET_ERROR_CODE_2_ABORT_DCP_RESET_TO_FACTORY;
+                   
+                   sendAlarm = true;
+                }
+             }
 
-         if ((change_name == false) && (change_ip == false))
+             /* Handle reset to factory here */
+             ret = pf_cmina_set_default_cfg(net, reset_mode);
+
+             net->cmina_commit_ip_suite = true;
+             net->cmina_state = PF_CMINA_STATE_SET_IP;
+
+             
+         }
+         else if ((change_name == true))
+         {
+             /* Any connection active ?? */
+             found = false;
+             for (ix = 0; ix < PNET_MAX_AR; ix++)
+             {
+                p_ar = pf_ar_find_by_index(net, ix);
+                if ((p_ar != NULL) && (p_ar->in_use == true))
+                {
+                   found = true;
+                   /* Set the error codes to Name changed  */
+                   net->cmina_error_decode = PNET_ERROR_CODE_1_RTA_ERR_CLS_PROTOCOL;
+                   net->cmina_error_code_1  = PNET_ERROR_CODE_2_ABORT_DCP_STATION_NAME_CHANGED;
+                   
+                   /* Set AR error codes to Name changed and terminate the connection */
+                   p_ar->err_code = PNET_ERROR_CODE_2_ABORT_DCP_STATION_NAME_CHANGED;
+                   
+                   
+                   sendAlarm = true;
+                }
+             }
+
+             
+             /* All the name change */
+             net->cmina_commit_ip_suite = true;
+             net->cmina_state = PF_CMINA_STATE_SET_IP;
+            	 
+             ret = 0;
+         }
+         else if ((change_name == false) && (change_ip == false))
          {
             /* all OK */
          }
@@ -552,7 +643,7 @@ int pf_cmina_dcp_set_ind(
                {
                   found = true;
                   /* 38 */
-                  pf_cmdev_state_ind(net, p_ar, PNET_EVENT_ABORT);
+                  sendAlarm = true;
                }
             }
 
@@ -574,7 +665,7 @@ int pf_cmina_dcp_set_ind(
                {
                   found = true;
                   /* 40 */
-                  pf_cmdev_state_ind(net, p_ar, PNET_EVENT_ABORT);
+                  sendAlarm = true;
                }
             }
 
@@ -617,6 +708,33 @@ int pf_cmina_dcp_set_ind(
                ret = -1;
             }
          }
+         else if ((have_name == true) && (change_name == true))
+         {
+            /* Any connection active ?? */
+            found = false;
+            for (ix = 0; ix < PNET_MAX_AR; ix++)
+            {
+               p_ar = pf_ar_find_by_index(net, ix);
+               if ((p_ar != NULL) && (p_ar->in_use == true))
+               {
+                  found = true;
+               }
+            }
+
+            if (found == false)
+            {
+            	/* All the name change */
+            	net->cmina_state = PF_CMINA_STATE_SET_NAME;
+            	ret = 0;
+            }
+            else
+            {
+               /* Drop the AR Connection with the correct error code */
+               net->cmina_error_decode = PNET_ERROR_CODE_1_RTA_ERR_CLS_PROTOCOL;
+               net->cmina_error_code_1  = PNET_ERROR_CODE_2_ABORT_DCP_STATION_NAME_CHANGED;
+               ret = -1;
+            }
+         }
          else
          {
             /* 43 */
@@ -627,6 +745,18 @@ int pf_cmina_dcp_set_ind(
          break;
       }
    }
+   
+   if(true == sendAlarm)
+   {
+	   net->cmina_timeout = UINT32_MAX;
+	   pf_scheduler_add(net,
+			   32*1000, 			/* Fast delay*/
+			   cmina_alarm_name,	/* no name for the scheduler */		
+			   pf_cmina_send_alarm,	/* fp to the routine*/
+			   NULL,				/* No arguments */
+			   &net->cmina_timeout);
+   }
+
 
    return ret;
 }

@@ -120,7 +120,7 @@ extern "C"
  * Module and submodule ident number for the DAP module.
  * The DAP module and submodules must be plugged by the application after the call to pnet_init.
  */
-#define PNET_SLOT_DAP_IDENT                        0x0
+#define PNET_SLOT_DAP_IDENT                        0x0000
 #define PNET_MOD_DAP_IDENT                         0x2     /* For use in slot 0 */
 #define PNET_SUBMOD_DAP_IDENT                      0x1     /* For use in subslot 1 */
 #define PNET_SUBMOD_DAP_INTERFACE_1_IDENT          0x8000     /* For use in subslot 0x8000 */

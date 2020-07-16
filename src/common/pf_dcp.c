@@ -832,7 +832,7 @@ static int pf_dcp_get_set(
    {
       os_buf_free(p_rsp);
    }
-
+ 
    return 1;    /* Buffer handled */
 }
 

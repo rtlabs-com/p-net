@@ -158,7 +158,7 @@ int os_mbox_fetch (os_mbox_t * mbox, void ** msg, uint32_t time);
 int os_mbox_post (os_mbox_t * mbox, void * msg, uint32_t time);
 void os_mbox_destroy (os_mbox_t * mbox);
 
-os_timer_t * os_timer_create (uint32_t us, void (*fn) (os_timer_t * timer/*, void * arg*/),
+os_timer_t * os_timer_create (uint32_t us, void (*fn) (os_timer_t * timer, void * arg),
                               void * arg, bool oneshot);
 void os_timer_set (os_timer_t * timer, uint32_t us);
 void os_timer_start (os_timer_t * timer);

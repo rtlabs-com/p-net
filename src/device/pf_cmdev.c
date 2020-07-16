@@ -3469,7 +3469,7 @@ static int pf_cmdev_cm_connect_rsp_pos(
          else
          {
             /* pf_cmdev_cmsu_start_cnf_neg */
-            pf_set_error(p_stat, PNET_ERROR_CODE_CONNECT, PNET_ERROR_DECODE_PNIO, PNET_ERROR_CODE_1_CMDEV, PNET_ERROR_CODE_2_CMDEV_STATE_CONFLICT);
+            pf_set_error(p_stat, PNET_ERROR_CODE_CONNECT, PNET_ERROR_DECODE_PNIO, PNET_ERROR_CODE_1_CMRPC, PNET_ERROR_CODE_2_CMRPC_NO_AR_RESOURCES);
             pnet_create_log_book_entry(net, p_ar->arep, &p_stat->pnio_status,
                (p_stat->add_data_1<<16) + (p_stat->add_data_2));
             /* pf_cmdev_rm_connect_rsp_neg handled by caller. */
@@ -3660,6 +3660,7 @@ int pf_cmdev_rm_dcontrol_ind(
 
    if (ret != 0)
    {
+	   printf("%s line %d\n\r",__FUNCTION__,__LINE__);
       ret = pf_cmdev_state_ind(net, p_ar, PNET_EVENT_ABORT);
    }
 

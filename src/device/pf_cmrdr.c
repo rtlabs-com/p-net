@@ -450,11 +450,16 @@ int pf_cmrdr_rm_read_ind(
          break;
       case PF_IDX_DEV_PDREAL_DATA:
     	  /*Response shall be:
-    	   * - PortDataReal
-    	   * - PortStatistics
+    	   * - Multiblock:
+    	   * 	-> PDInterfaceDataReal
+    	   * 	-> PDPortStatistics
+    	   * - Multiblock:
+    	   * 	-> PDPortDataReal
+    	   * 	-> PDPortStatistics
     	   */
-          if((PNET_SLOT_DAP_IDENT == p_read_request->slot_number) &&
-          		(PNET_SLOT_DAP_IDENT == p_read_request->subslot_number))
+          if( (PNET_SLOT_DAP_IDENT == p_read_request->slot_number) && /* Slot 0x0 */
+        	  ((PNET_SLOT_DAP_IDENT == p_read_request->subslot_number) || /*Subslot 0x0*/
+        		(PNET_SUBMOD_DAP_IDENT == p_read_request->subslot_number))  /*Subslot 0x1*/)
           {
 			  pf_put_pd_real_data(net, true, &read_result, res_size, p_res, p_pos);
 			  ret = 0;

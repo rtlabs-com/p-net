@@ -126,7 +126,6 @@ static void pf_cmwrr_pdportcheck(
 	uint8_t 		*pData = p_bytes;
 	uint16_t 		tmpShort = 0;
 	uint8_t 		tmpByte = 0;
-	pnet_alarm_spec_t	alarm_spec;
 	pf_diag_item_t 		diag_item;
 	
     /* Request:
@@ -267,15 +266,15 @@ static void pf_cmwrr_pdportcheck(
 					diag_item.alarm_spec.submodule_diagnosis 	= true;
 					diag_item.alarm_spec.ar_diagnosis 			= true;
 					  
-					  /* Set Diagnostic Information Second */
-		              PNET_DIAG_CH_PROP_SPEC_SET(diag_item.fmt.std.ch_properties, PNET_DIAG_CH_PROP_SPEC_APPEARS);
-		              diag_item.usi = PF_USI_EXTENDED_CHANNEL_DIAGNOSIS;
-		              diag_item.fmt.std.ch_nbr = PF_USI_CHANNEL_DIAGNOSIS;
-		              diag_item.fmt.std.ch_error_type = PF_WRT_ERROR_REMOTE_MISMATCH;
-		              diag_item.fmt.std.ext_ch_error_type = PF_WRT_ERROR_PORTID_MISMATCH;
-		              diag_item.fmt.std.ext_ch_add_value = 0;
-		              diag_item.fmt.std.qual_ch_qualifier = 0;
-		              diag_item.next = 0;
+					/* Set Diagnostic Information Second */
+		            PNET_DIAG_CH_PROP_SPEC_SET(diag_item.fmt.std.ch_properties, PNET_DIAG_CH_PROP_SPEC_APPEARS);
+		            diag_item.usi = PF_USI_EXTENDED_CHANNEL_DIAGNOSIS;
+		            diag_item.fmt.std.ch_nbr = PF_USI_CHANNEL_DIAGNOSIS;
+		            diag_item.fmt.std.ch_error_type = PF_WRT_ERROR_REMOTE_MISMATCH;
+		            diag_item.fmt.std.ext_ch_error_type = PF_WRT_ERROR_PORTID_MISMATCH;
+		            diag_item.fmt.std.ext_ch_add_value = 0;
+		            diag_item.fmt.std.qual_ch_qualifier = 0;
+		            diag_item.next = 0;
 		              
 					/* Add the diagnostic block*/
 					pf_diag_add(net,

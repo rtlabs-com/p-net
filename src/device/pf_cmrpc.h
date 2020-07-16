@@ -29,7 +29,7 @@ extern "C"
  * Initialize the CMRPC component.
  * @param net              InOut: The p-net stack instance
  */
-void pf_cmrpc_init(
+os_thread_t *pf_cmrpc_init(
    pnet_t                  *net);
 
 /**
@@ -125,6 +125,10 @@ int pf_cmrpc_rm_ccontrol_req(
 void pf_cmrpc_show(
    pnet_t                  *net,
    unsigned                level);
+
+void pf_cmrpc_thread(
+		void	*thread_arg);
+
 
 #ifdef __cplusplus
 }

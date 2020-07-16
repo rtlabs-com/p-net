@@ -258,7 +258,6 @@ int pf_cmio_cpm_state_ind(
       if (start == false)
       {
          LOG_INFO(PNET_LOG, "CMIO(%d): CPM State Ind (crep=%u) start=%s\n", __LINE__, crep, start?"true":"false");
-
          /* if (crep != crep.mcpm) not possible - handled elsewhere */
          (void)pf_cmdev_state_ind(net, p_ar, PNET_EVENT_ABORT);
       }

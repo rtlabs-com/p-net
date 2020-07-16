@@ -82,7 +82,7 @@ pnet_t* pnet_init(
    pf_cmdev_exit(net);     /* Prepare for re-init */
    pf_cmdev_init(net);
 
-   pf_cmrpc_init(net);
+   net->udpThread = pf_cmrpc_init(net);
 
    return net;
 }
@@ -90,8 +90,10 @@ pnet_t* pnet_init(
 void pnet_handle_periodic(
    pnet_t                  *net)
 {
-   pf_cmrpc_periodic(net);
-   pf_alarm_periodic(net);
+#if OS_USE_UDP_THREAD == 0
+	pf_cmrpc_periodic(net);
+#endif
+	pf_alarm_periodic(net);
 
    /* Handle expired timeout events */
    pf_scheduler_tick(net);

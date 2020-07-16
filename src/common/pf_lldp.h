@@ -52,6 +52,8 @@ extern "C"
 #define LLDP_LENGTH_MASK	0x1FF
 #define LLDP_MAX_TLV		512
 
+#define LLDP_MAX_PEER_GROUP	10
+
 #define MAKE_UINT16(a, b)	((uint16_t)(((a) & 0xff) | ((uint16_t)(((b) << 8) & 0xff00))))
 #define GET_UINT16( ptr )	(uint16_t) (MAKE_UINT16((*(uint8_t*)(ptr)),(*(uint8_t*)(ptr+1))))
 
@@ -61,6 +63,24 @@ typedef struct lldp_frame
 	uint8_t len;
 	uint8_t value[LLDP_MAX_TLV];
 }LLDP_FRAME;
+
+typedef enum pf_lldp_peer_state
+{
+	PF_LLDP_PEER_NAME_CHANGE_DETECTED,
+	PF_LLDP_PEER_TTL_TIMEOUT
+}pf_lldp_peer_state_t;
+
+typedef struct pf_lldp_peer
+{
+	pf_lldp_peer_state_t	state;
+	pnet_lldp__peer_cfg_t 	peer;
+}pf_lldp_peer_t;
+
+typedef struct pf_lldp_peer_group
+{
+	uint8_t 		activePeers;
+	pf_lldp_peer_t	peerGroup[LLDP_MAX_PEER_GROUP];
+}pf_lldp_peer_group_t;
 
 /**
  * Initialize the LLDP component.

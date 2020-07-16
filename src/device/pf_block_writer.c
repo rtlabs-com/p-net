@@ -2552,9 +2552,9 @@ void pf_put_pdport_data_real(
 	   /* Two bytes padding */
 	   pf_put_uint16(is_big_endian, temp_u16, res_len, p_bytes, p_pos);
 	   
-	   /* Slot and subslot info */
-	   pf_put_uint16(is_big_endian, p_res->slot_number, res_len, p_bytes, p_pos);
-	   pf_put_uint16(is_big_endian, p_res->subslot_number, res_len, p_bytes, p_pos);
+	   /* Slot 0 and subslot 0x8001 */
+	   pf_put_uint16(is_big_endian, PNET_SLOT_DAP_IDENT, res_len, p_bytes, p_pos);
+	   pf_put_uint16(is_big_endian, PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT, res_len, p_bytes, p_pos);
 
 	   /* Length OwnerPortID */
 	   pf_put_byte(strlen(net->fspm_cfg.lldp_cfg.port_id), res_len, p_bytes, p_pos);
@@ -2721,11 +2721,22 @@ void pf_put_pdinterface_data_real(
 			   PNET_BLOCK_VERSION_HIGH, PNET_BLOCK_VERSION_LOW,
 			   res_len, p_bytes, p_pos);
 
-	   /* Owner ChassisID Length */
-	   pf_put_byte((uint8_t)strlen(net->fspm_cfg.lldp_cfg.chassis_id), res_len, p_bytes, p_pos);
 	   
-	   /* Owner ChassisID*/
-	   pf_put_mem(&net->fspm_cfg.lldp_cfg.chassis_id, strlen(net->fspm_cfg.lldp_cfg.chassis_id), res_len, p_bytes, p_pos);
+	   /* Owner ChassisID Length */
+	   if((uint8_t)strlen(net->fspm_cfg.lldp_cfg.chassis_id) > 0)
+	   {
+		   pf_put_byte((uint8_t)strlen(net->fspm_cfg.lldp_cfg.chassis_id), res_len, p_bytes, p_pos);
+		   
+		   /* Owner ChassisID*/
+		   pf_put_mem(&net->fspm_cfg.lldp_cfg.chassis_id, strlen(net->fspm_cfg.lldp_cfg.chassis_id), res_len, p_bytes, p_pos);
+	   }
+	   else
+	   {
+		   pf_put_byte((uint8_t)strlen(net->cmina_temp_dcp_ase.name_of_station), res_len, p_bytes, p_pos);
+		   
+		   /* Owner ChassisID*/
+		   pf_put_mem(&net->cmina_temp_dcp_ase.name_of_station, strlen(net->cmina_temp_dcp_ase.name_of_station), res_len, p_bytes, p_pos);
+	   }
 
 	   
 	   /* Two bytes padding */
@@ -2753,7 +2764,7 @@ void pf_put_pdinterface_data_real(
 	   pf_put_uint16(is_big_endian, block_len, res_len, p_bytes, &block_pos);
 }
 
-void pf_put_pd_real_data(
+static void pf_put_pd_multiblock_interface_and_statistics(
 	pnet_t                  *net,
 	bool                    is_big_endian,
 	pf_iod_read_result_t    *p_res,
@@ -2763,12 +2774,15 @@ void pf_put_pd_real_data(
 {
 	   uint16_t block_pos = *p_pos;
 	   uint16_t block_len = 0;
+	   uint16_t temp16 = 0;
 
 	   /* Block header first */
 	   pf_put_block_header(is_big_endian,
 			   PF_BT_MULTIPLEBLOCK_HEADER, 0,                      /* Dont know block_len yet */
 			   PNET_BLOCK_VERSION_HIGH, PNET_BLOCK_VERSION_LOW,
 			   res_len, p_bytes, p_pos);
+	   /*2 byte padding*/
+	   pf_put_uint16(is_big_endian, temp16, res_len, p_bytes, p_pos);
 	   
 	   /* API */
 	   pf_put_uint32(is_big_endian, p_res->api, res_len, p_bytes, p_pos);
@@ -2786,6 +2800,20 @@ void pf_put_pd_real_data(
 	   block_len = *p_pos - (block_pos + 4);
 	   block_pos += offsetof(pf_block_header_t, block_length);   /* Point to correct place */
 	   pf_put_uint16(is_big_endian, block_len, res_len, p_bytes, &block_pos);
+
+}
+
+static void pf_put_pd_multiblock_port_and_statistics(
+	pnet_t                  *net,
+	bool                    is_big_endian,
+	pf_iod_read_result_t    *p_res,
+	uint16_t                res_len,
+	uint8_t                 *p_bytes,
+	uint16_t                *p_pos)
+{
+	   uint16_t block_pos = *p_pos;
+	   uint16_t block_len = 0;
+	   uint16_t temp16 = 0;
 	   
 	   /* Block header first */
 	   pf_put_block_header(is_big_endian,
@@ -2793,6 +2821,9 @@ void pf_put_pd_real_data(
 			   PNET_BLOCK_VERSION_HIGH, PNET_BLOCK_VERSION_LOW,
 			   res_len, p_bytes, p_pos);
 
+	   /*2 byte padding*/
+	   pf_put_uint16(is_big_endian, temp16, res_len, p_bytes, p_pos);
+	   
 	   /* API */
 	   pf_put_uint32(is_big_endian, p_res->api, res_len, p_bytes, p_pos);
 	   
@@ -2809,4 +2840,22 @@ void pf_put_pd_real_data(
 	   block_len = *p_pos - (block_pos + 4);
 	   block_pos += offsetof(pf_block_header_t, block_length);   /* Point to correct place */
 	   pf_put_uint16(is_big_endian, block_len, res_len, p_bytes, &block_pos);
+}
+
+void pf_put_pd_real_data(
+	pnet_t                  *net,
+	bool                    is_big_endian,
+	pf_iod_read_result_t    *p_res,
+	uint16_t                res_len,
+	uint8_t                 *p_bytes,
+	uint16_t                *p_pos)
+{
+	/* Add Interface Data with the interface statistics */
+	pf_put_pd_multiblock_interface_and_statistics(net,is_big_endian,p_res,res_len,p_bytes,p_pos);
+	/* Added Port Data and Port Statistics 
+	 * ToDo: Probably should have a loop that knows how
+	 * how many interfaces are on the device so this
+	 * routine correctly reports out the information
+	 */
+	pf_put_pd_multiblock_port_and_statistics(net,is_big_endian,p_res,res_len,p_bytes,p_pos);
 }

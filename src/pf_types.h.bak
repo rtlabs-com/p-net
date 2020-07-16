@@ -81,9 +81,6 @@ static inline uint32_t atomic_fetch_sub(atomic_int *p, uint32_t v)
 #define PNET_UUID_IO_SUPERVISOR_INTERFACE "DEA00003-6C97-11D1-8271-00A02442DF7D" /* RPC interface version 1.0 */
 #define PNET_UUID_IO_PRM_SERVER_INTERFACE "DEA00004-6C97-11D1-8271-00A02442DF7D" /* RPC interface version 1.0 */
 
-
-
-
 typedef enum pf_rpc_packet_type_values
 {
    PF_RPC_PT_REQUEST = 0,
@@ -1279,14 +1276,6 @@ typedef struct pf_ar_vendor_result_t
 } pf_ar_vendor_result_t;
 #endif
 
-typedef struct pf_ppm_rt_args
-{
-	   os_timer_t			   		*rt_timer;					 /* Real-Time timer for cyclic data */
-	   pnet_t                  		*net;						 /* pointer to pnet_t */
-	   pf_scheduler_timeout_ftn_t 	cb;
-	   void                    		*arg;
-}pf_ppm_rt_args_t;
-
 typedef struct pf_ppm
 {
    pf_ppm_state_values_t   state;
@@ -1319,12 +1308,6 @@ typedef struct pf_ppm
    uint32_t                compensated_control_interval; /* Period in microseconds between frames, adjusted for stack periodicity */
    bool                    ci_running;                   /* True if the timer is running. Used for stopping transmission before next scheduled sending.  */
    uint32_t                ci_timer;                     /* Scheduler timeout instance. UINT32_MAX when stopped */
-   
-   uint16_t                send_clock_factor;            /** res: 31.25us, Allowed: 1..128, default: 32 */
-   uint16_t                reduction_ratio;
-#if PNET_OS_RTOS_SUPPORTED
-   pf_ppm_rt_args_t		   *rt_args;
-#endif
 } pf_ppm_t;
 
 typedef struct pf_cpm
@@ -2042,7 +2025,6 @@ struct pnet
    uint32_t                            dcp_timeout;
    uint32_t                            dcp_sam_timeout; /* Handle to the SAM timeout instance */
    os_eth_handle_t                     *eth_handle;
-   os_thread_t             				*udpThread;
    pf_eth_frame_id_map_t               eth_id_map[PF_ETH_MAX_MAP];
    volatile pf_scheduler_timeouts_t    scheduler_timeouts[PF_MAX_TIMEOUTS];
    volatile uint32_t                   scheduler_timeout_first;
@@ -2058,14 +2040,12 @@ struct pnet
    uint8_t                             cmina_error_code_1;
    uint16_t                            cmina_hello_count;
    uint32_t                            cmina_hello_timeout;
-   uint32_t							   cmina_timeout;
    bool                                cmina_commit_ip_suite;
    os_mutex_t                          *p_cmrpc_rpc_mutex;
    uint32_t                            cmrpc_session_number;
    pf_ar_t                             cmrpc_ar[PNET_MAX_AR];
    pf_session_info_t                   cmrpc_session_info[PF_MAX_SESSION];
    int                                 cmrpc_rpcreq_socket;
-   bool								   cmrpc_keepAlive;
    uint8_t                             cmrpc_dcerpc_req_frame[PF_FRAME_BUFFER_SIZE];
    uint8_t                             cmrpc_dcerpc_rsp_frame[PF_FRAME_BUFFER_SIZE];
    pf_cmsu_state_values_t              cmsu_state;

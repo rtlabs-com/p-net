@@ -43,8 +43,9 @@
 #include <string.h>
 #include "pf_includes.h"
 
-
+#if PNET_OS_RTOS_SUPPORTED == 0
 static const char          *ppm_sync_name = "ppm";
+#endif
 
 void pf_ppm_init(
    pnet_t                  *net)
@@ -174,9 +175,26 @@ static void pf_ppm_finish_buffer(
 {
    uint8_t                 *p_payload = ((os_buf_t*)p_ppm->p_send_buffer)->payload;
    uint16_t                u16;
+   uint16_t				   _remainder = 0,
+		   	   	   	   	   _ratio = 0;
    int32_t                 cycle_tmp = os_get_current_time_us()*4;
 
-   p_ppm->cycle = cycle_tmp/125;           /* Cycle counter. Get 4/125 = 31.25us tics */
+   cycle_tmp	= cycle_tmp/125;           /* Cycle counter. Get 4/125 = 31.25us tics */
+   _ratio 		= p_ppm->send_clock_factor * p_ppm->reduction_ratio;
+   _remainder	= cycle_tmp%_ratio;
+   
+   /* Make the cycle counter a multiple of send_clock_factor * reduction ration 
+    * by subtracting the remainder in the calculations above 
+    */
+   if(cycle_tmp<_ratio)
+	   cycle_tmp = _ratio;
+   else
+	   cycle_tmp = cycle_tmp - _remainder; 
+   
+   p_ppm->cycle = cycle_tmp;           /* Cycle counter corrected! */
+
+   /*logMsg("Inteval: %u \n\r", p_ppm->control_interval,2,3,4,5,6);*/
+   
    u16 = htons(p_ppm->cycle);
 
    /* Insert data */
@@ -240,7 +258,11 @@ uint32_t pf_ppm_calculate_compensated_delay(
 
    CC_ASSERT(number_of_stack_tics >= 1);
    CC_ASSERT(number_of_stack_tics < 0x80000000);  /* No rollover to 'negative' numbers */
+#if PNET_OS_RTOS_SUPPORTED
+   return number_of_stack_tics * stack_cycle_time;
+#else
    return number_of_stack_tics * stack_cycle_time - stack_cycle_time / 2;
+#endif
 }
 
 /**
@@ -262,7 +284,7 @@ static void pf_ppm_send(
    uint32_t                current_time)
 {
    pf_iocr_t               *p_arg = (pf_iocr_t *)arg;
-
+   int                     ret = -1;
    p_arg->ppm.ci_timer = UINT32_MAX;
    if (p_arg->ppm.ci_running == true)
    {
@@ -279,8 +301,19 @@ static void pf_ppm_send(
       else
       {
     	  net->interface_statistics.ifOutOctects++;
-         /* Schedule next execution */
-         if (pf_scheduler_add(net, p_arg->ppm.compensated_control_interval, ppm_sync_name, pf_ppm_send, arg, &p_arg->ppm.ci_timer) == 0)
+#if PNET_OS_RTOS_SUPPORTED
+      /*Santiy Check*/
+      if(0 != p_arg->ppm.rt_args->rt_timer->timerid)
+      {
+    	  /*Start the timer */
+    	   os_timer_start(p_arg->ppm.rt_args->rt_timer);
+    	   ret = 0;
+      }
+#else
+      /* Schedule next execution */
+ 	  ret = pf_scheduler_add(net, p_arg->ppm.compensated_control_interval, ppm_sync_name, pf_ppm_send, arg, &p_arg->ppm.ci_timer);
+#endif
+         if(ret == 0)
          {
             p_arg->ppm.trx_cnt++;
             if (p_arg->ppm.first_transmit == false)
@@ -297,6 +330,22 @@ static void pf_ppm_send(
       }
    }
 }
+
+#if PNET_OS_RTOS_SUPPORTED
+static void pf_ppm_wdtimer_event(os_timer_t *timer)
+{
+	pf_ppm_t			*p_ppm 			= (pf_ppm_t*)timer->arg;
+	pf_ppm_rt_args_t 	*p_ppm_rt_args	= p_ppm->rt_args;
+	
+	p_ppm_rt_args->cb( p_ppm_rt_args->net, p_ppm_rt_args->arg, p_ppm->ci_timer);
+	
+	  /*Start the timer */
+	if(!timer->exit)
+	{
+		   os_timer_start(p_ppm->rt_args->rt_timer);
+	}
+}
+#endif
 
 int pf_ppm_activate_req(
    pnet_t                  *net,
@@ -366,6 +415,10 @@ int pf_ppm_activate_req(
 
       p_ppm->control_interval = ((uint32_t)p_iocr->param.send_clock_factor *
             (uint32_t)p_iocr->param.reduction_ratio * 1000U) / 32U;   /* us */
+      
+      /*Keep history of this as we will need it for counter calculations */
+      p_ppm->send_clock_factor = p_iocr->param.send_clock_factor;
+      p_ppm->reduction_ratio = p_iocr->param.reduction_ratio;
 
       p_ppm->compensated_control_interval = pf_ppm_calculate_compensated_delay(
          p_ppm->control_interval,
@@ -377,8 +430,36 @@ int pf_ppm_activate_req(
       pf_ppm_set_state(p_ppm, PF_PPM_STATE_RUN);
 
       p_ppm->ci_running = true;
+
+#if PNET_OS_RTOS_SUPPORTED
+      /*Implement a more deterministic IO timer to send data */
+      p_ppm->rt_args->net = net;
+      p_ppm->rt_args->cb = pf_ppm_send;
+      p_ppm->rt_args->arg = p_iocr;
+      
+      /*Create the timer*/
+	  p_ppm->rt_args->rt_timer = os_timer_create(
+			  p_ppm->compensated_control_interval,	/* Send interval */
+			  pf_ppm_wdtimer_event,					/* function pointer */
+			  (void*)p_ppm,							/* argument */
+			  false);								/* oneshot */
+
+      /*Santiy Check*/
+      if(NULL != p_ppm->rt_args->rt_timer)
+      {
+    	  /*Start the timer */
+    	   os_timer_start(p_ppm->rt_args->rt_timer);
+    	   ret = 0;
+      }
+      else
+      {
+          LOG_DEBUG(PF_PPM_LOG, "PPM(%d): Realtime time was not created!\n",__LINE__);
+    	  ret = -1;
+      }
+#else
       ret = pf_scheduler_add(net, p_ppm->compensated_control_interval,
          ppm_sync_name, pf_ppm_send, p_iocr, &p_ppm->ci_timer);
+#endif
       if (ret != 0)
       {
          p_ppm->ci_timer = UINT32_MAX;
@@ -400,11 +481,21 @@ int pf_ppm_close_req(
    LOG_DEBUG(PF_PPM_LOG, "PPM(%d): close\n", __LINE__);
    p_ppm = &p_ar->iocrs[crep].ppm;
    p_ppm->ci_running = false;
+#if PNET_OS_RTOS_SUPPORTED
+   /* Stop the timer */
+   if(NULL != p_ppm->rt_args->rt_timer)
+   {
+	   os_timer_destroy(p_ppm->rt_args->rt_timer);
+	   p_ppm->ci_timer = UINT32_MAX;
+	   p_ppm->rt_args->rt_timer->timerid = 0;
+   }
+#else
    if (p_ppm->ci_timer != UINT32_MAX)
    {
       pf_scheduler_remove(net, ppm_sync_name, p_ppm->ci_timer);
       p_ppm->ci_timer = UINT32_MAX;
    }
+#endif
 
    os_buf_free(p_ppm->p_send_buffer);
    pf_ppm_set_state(p_ppm, PF_PPM_STATE_W_START);

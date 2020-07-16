@@ -584,11 +584,24 @@ void pf_lldp_recv(
 			/* Set the length */
 			net->fspm_cfg.lldp_peer_cfg.PeerPortIDLen=_frame.len-1;
 			
+			/* Copy over the information temp*/
+			memcpy(&_frame.value, pData+1, net->fspm_cfg.lldp_peer_cfg.PeerPortIDLen);
+			/* Null terminate */
+			_frame.value[net->fspm_cfg.lldp_peer_cfg.PeerPortIDLen]='\0';
+			
+			if(NULL != strchr((char*)_frame.value,'.'))
+			{
+
+			}
+
 			/* Copy over the information */
-			memcpy(&net->fspm_cfg.lldp_peer_cfg.PeerPortID, pData+1, net->fspm_cfg.lldp_peer_cfg.PeerPortIDLen);
+			memcpy(&net->fspm_cfg.lldp_peer_cfg.PeerPortID,pData+1, net->fspm_cfg.lldp_peer_cfg.PeerPortIDLen);
 			/* Null terminate */
 			net->fspm_cfg.lldp_peer_cfg.PeerPortID[net->fspm_cfg.lldp_peer_cfg.PeerPortIDLen]='\0';
-
+			
+			/*printf("%s , %s\n\r",
+					_frame.value,
+					net->fspm_cfg.lldp_peer_cfg.PeerPortID);*/
 			/*Update Alias name as follows:
 			 * -Check if the LLDP_TYPE_PORT_ID contains a "." (Example: port-001.test)
 			 *  If it does than copy this over to the alias name
