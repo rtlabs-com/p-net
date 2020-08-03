@@ -44,7 +44,7 @@ static void os_eth_task(
 
    while (1)
    {
-      readlen = recv(eth_handle->socket, p->payload, p->len, 0);
+      readlen = recv(eth_handle->socket, p->payload, OS_BUF_MAX_SIZE, 0);
       if(readlen == -1)
          continue;
       p->len = readlen;
@@ -55,7 +55,7 @@ static void os_eth_task(
       }
       else
       {
-         handled = 0;
+         handled = 0;  /* Message not handled */
       }
 
       if (handled == 1)
