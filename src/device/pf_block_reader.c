@@ -761,15 +761,14 @@ void pf_get_alarm_data(
    p_alarm_data->subslot_nbr = pf_get_uint16(p_info, p_pos);
    p_alarm_data->module_ident = pf_get_uint32(p_info, p_pos);
    p_alarm_data->submodule_ident = pf_get_uint32(p_info, p_pos);
-   p_alarm_data->alarm_type = pf_get_uint16(p_info, p_pos);
 
    /* AlarmSpecifier */
    temp_u16 = pf_get_uint16(p_info, p_pos);
    p_alarm_data->sequence_number = pf_get_bits(temp_u16, 0, 11);
-   p_alarm_data->alarm_specifier.channel_diagnosis = pf_get_bits(temp_u16, 1, 11);
-   p_alarm_data->alarm_specifier.manufacturer_diagnosis = pf_get_bits(temp_u16, 1, 12);
-   p_alarm_data->alarm_specifier.submodule_diagnosis = pf_get_bits(temp_u16, 1, 13);
-   p_alarm_data->alarm_specifier.ar_diagnosis = pf_get_bits(temp_u16, 1, 15);
+   p_alarm_data->alarm_specifier.channel_diagnosis = pf_get_bits(temp_u16, 11, 1);
+   p_alarm_data->alarm_specifier.manufacturer_diagnosis = pf_get_bits(temp_u16, 12, 1);
+   p_alarm_data->alarm_specifier.submodule_diagnosis = pf_get_bits(temp_u16, 13, 1);
+   p_alarm_data->alarm_specifier.ar_diagnosis = pf_get_bits(temp_u16, 15, 1);
 }
 
 void pf_get_alarm_ack(
@@ -783,15 +782,14 @@ void pf_get_alarm_ack(
    p_alarm_data->api_id = pf_get_uint32(p_info, p_pos);
    p_alarm_data->slot_nbr = pf_get_uint16(p_info, p_pos);
    p_alarm_data->subslot_nbr = pf_get_uint16(p_info, p_pos);
-   p_alarm_data->alarm_type = pf_get_uint16(p_info, p_pos);
 
    /* AlarmSpecifier */
    temp_u16 = pf_get_uint16(p_info, p_pos);
    p_alarm_data->sequence_number = pf_get_bits(temp_u16, 0, 11);
-   p_alarm_data->alarm_specifier.channel_diagnosis = pf_get_bits(temp_u16, 1, 11);
-   p_alarm_data->alarm_specifier.manufacturer_diagnosis = pf_get_bits(temp_u16, 1, 12);
-   p_alarm_data->alarm_specifier.submodule_diagnosis = pf_get_bits(temp_u16, 1, 13);
-   p_alarm_data->alarm_specifier.ar_diagnosis = pf_get_bits(temp_u16, 1, 15);
+   p_alarm_data->alarm_specifier.channel_diagnosis = pf_get_bits(temp_u16, 11, 1);
+   p_alarm_data->alarm_specifier.manufacturer_diagnosis = pf_get_bits(temp_u16, 12, 1);
+   p_alarm_data->alarm_specifier.submodule_diagnosis = pf_get_bits(temp_u16, 13, 1);
+   p_alarm_data->alarm_specifier.ar_diagnosis = pf_get_bits(temp_u16, 15, 1);
 }
 
 void pf_get_pnio_status(

@@ -438,7 +438,7 @@ static int pf_alarm_alpmr_apmr_a_data_ind(
       /* Only DATA: AlarmNotifications are sent to this function */
       ret = pf_fspm_aplmr_alarm_ind(net, p_apmx->p_ar,
          p_alarm_data->api_id, p_alarm_data->slot_nbr, p_alarm_data->subslot_nbr,
-         data_usi, data_len, p_data);
+         data_len, data_usi, p_data);
 
       /* App must now send an ACK or a NACK */
       p_apmx->p_alpmx->alpmr_state = PF_ALPMR_STATE_W_USER_ACK;
