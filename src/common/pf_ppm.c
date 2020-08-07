@@ -303,7 +303,7 @@ static void pf_ppm_send(
     	  net->interface_statistics.ifOutOctects++;
 #if PNET_OS_RTOS_SUPPORTED
       /*Santiy Check*/
-      if(0 != p_arg->ppm.rt_args->rt_timer->timerid)
+      if(NULL != p_arg->ppm.rt_args->rt_timer)
       {
     	  /*Start the timer */
     	   os_timer_start(p_arg->ppm.rt_args->rt_timer);
@@ -338,12 +338,6 @@ static void pf_ppm_wdtimer_event(os_timer_t *timer)
 	pf_ppm_rt_args_t 	*p_ppm_rt_args	= p_ppm->rt_args;
 	
 	p_ppm_rt_args->cb( p_ppm_rt_args->net, p_ppm_rt_args->arg, p_ppm->ci_timer);
-	
-	  /*Start the timer */
-	if(!timer->exit)
-	{
-		   os_timer_start(p_ppm->rt_args->rt_timer);
-	}
 }
 #endif
 
@@ -439,6 +433,7 @@ int pf_ppm_activate_req(
       
       /*Create the timer*/
 	  p_ppm->rt_args->rt_timer = os_timer_create(
+			  net->interrupt_timer_handle,			/* interrupt handle */
 			  p_ppm->compensated_control_interval,	/* Send interval */
 			  pf_ppm_wdtimer_event,					/* function pointer */
 			  (void*)p_ppm,							/* argument */
@@ -485,6 +480,7 @@ int pf_ppm_close_req(
    /* Stop the timer */
    if(NULL != p_ppm->rt_args->rt_timer)
    {
+	   p_ppm->rt_args->rt_timer->exit = true;
 	   os_timer_destroy(p_ppm->rt_args->rt_timer);
 	   p_ppm->ci_timer = UINT32_MAX;
 	   p_ppm->rt_args->rt_timer->timerid = 0;

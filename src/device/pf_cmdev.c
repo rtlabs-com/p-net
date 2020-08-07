@@ -1040,7 +1040,7 @@ void pf_cmdev_init(
       }
       net->cmdev_device.diag_items[NELEMENTS(net->cmdev_device.diag_items) - 1].next = PF_DIAG_IX_NULL;
 
-      (void)pf_diag_init();
+      (void)pf_diag_init(net);
 
       /* Create the default API */
       pf_cmdev_new_api(net, 0, &p_api);
@@ -3660,7 +3660,6 @@ int pf_cmdev_rm_dcontrol_ind(
 
    if (ret != 0)
    {
-	   printf("%s line %d\n\r",__FUNCTION__,__LINE__);
       ret = pf_cmdev_state_ind(net, p_ar, PNET_EVENT_ABORT);
    }
 

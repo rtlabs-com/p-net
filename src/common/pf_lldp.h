@@ -73,7 +73,7 @@ typedef enum pf_lldp_peer_state
 typedef struct pf_lldp_peer
 {
 	pf_lldp_peer_state_t	state;
-	pnet_lldp__peer_cfg_t 	peer;
+	pnet_lldp_peer_cfg_t 	peer;
 }pf_lldp_peer_t;
 
 typedef struct pf_lldp_peer_group
@@ -107,6 +107,12 @@ void pf_lldp_recv(
    pnet_t                  *net,
    os_buf_t                *p_frame_buf,
    uint16_t	   				frame_pos);
+
+void pf_lldp_start_broadcast(pnet_t *net);
+
+#if PNET_OS_RTOS_SUPPORTED
+void pf_lldp_timer_cb(os_timer_t *timer);
+#endif
 
 #ifdef __cplusplus
 }

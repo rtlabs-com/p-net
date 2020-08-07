@@ -33,7 +33,9 @@
 #include "pf_includes.h"
 #include "pf_block_writer.h"
 
-
+#if PNET_OS_RTOS_SUPPORTED == 0
+static const char          *lldp_name = "lldp";
+#endif
 
 typedef enum lldp_pnio_subtype_values
 {
@@ -294,11 +296,352 @@ static void lldp_add_management(
    pf_put_byte(0, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);       /* OID string length: 0 => Not supported */
 }
 
+static void pf_lldp_send_remote_mismatch_alarm(pnet_t *net)
+{
+
+	uint16_t ix = 0,
+			 maxIndex = NELEMENTS(net->cmrpc_ar);
+
+    pf_ar_t				*p_ar = NULL;	
+	pf_diag_item_t 		diag_item;
+	bool				alarm_sent = false;
+	int					ret = -1;
+
+	for(ix = 0; ix<maxIndex;ix++)
+	{
+		  if (net->cmrpc_ar[ix].in_use == true)
+		  {
+			  p_ar = &net->cmrpc_ar[ix];
+			  memset(&diag_item,0,sizeof(pf_diag_item_t));
+			  
+			  /* Set Alarm Specifications first */
+			  diag_item.alarm_spec.manufacturer_diagnosis = false;			  /*Always false*/
+			  if(strcmp(net->cmina_perm_dcp_ase.alias_name,net->cmina_temp_dcp_ase.alias_name) != 0)
+			  {
+	              PNET_DIAG_CH_PROP_SPEC_SET(diag_item.fmt.std.ch_properties, PNET_DIAG_CH_PROP_SPEC_APPEARS);
+				  diag_item.alarm_spec.channel_diagnosis = true;
+				  diag_item.alarm_spec.submodule_diagnosis = true;
+				  diag_item.alarm_spec.ar_diagnosis = true;
+			  }
+			  else
+			  {
+	              PNET_DIAG_CH_PROP_SPEC_SET(diag_item.fmt.std.ch_properties, PNET_DIAG_CH_PROP_SPEC_DISAPPEARS);
+				  diag_item.alarm_spec.channel_diagnosis = false;
+				  diag_item.alarm_spec.submodule_diagnosis = false;
+				  diag_item.alarm_spec.ar_diagnosis = false;
+			  }
+			  
+			  /* Set Diagnostic Information Second */
+              diag_item.usi = PF_USI_EXTENDED_CHANNEL_DIAGNOSIS;
+              diag_item.fmt.std.ch_nbr = PF_USI_CHANNEL_DIAGNOSIS;
+              diag_item.fmt.std.ch_error_type = PF_WRT_ERROR_REMOTE_MISMATCH;
+              diag_item.fmt.std.ext_ch_error_type = PF_WRT_ERROR_PORTID_MISMATCH;
+              diag_item.fmt.std.ext_ch_add_value = 0;
+              diag_item.fmt.std.qual_ch_qualifier = 0;
+              diag_item.next = 0;
+              
+              /*Check if Channel Diagnosis is TRUE*/
+			  if(diag_item.alarm_spec.channel_diagnosis)
+			  {     
+				  /*Try and update the diagnostic data first 
+				   * (Error will occur if 
+				   * the diagnostic index does not exists)*/
+				  ret = pf_diag_update(net,											/*net*/
+							p_ar,												/*ar */
+							 0,								/*api id*/
+							(uint16_t)PNET_SLOT_DAP_IDENT,						/*slot*/
+							(uint16_t)PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT,	/*subslot*/
+							diag_item.fmt.std.ch_nbr,							/*Channel Number */
+							diag_item.fmt.std.ch_properties,					/*Channel Properties */
+							diag_item.fmt.std.ch_error_type,					/*Channel Error Type: Remote Mismatch*/
+							diag_item.fmt.std.ext_ch_error_type,				/*Ext Channel Error Type: peer chassisid mismatch*/
+							diag_item.fmt.std.ext_ch_add_value,					/* Ext Channel Add Value */
+							diag_item.usi,										/* USI*/
+							(uint8_t*)&diag_item.alarm_spec);					/* Alarm Specific Data*/
+				  
+
+				  /* Handle Error if update failed by adding the diagnostic block */
+				  if(ret != 0)
+				  {
+					/* Add the diagnostic block*/
+				  ret = pf_diag_add(net,
+							p_ar,
+							 0,
+							(uint16_t)PNET_SLOT_DAP_IDENT,
+							(uint16_t)PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT,
+							diag_item.fmt.std.ch_nbr,							/*Channel Number */
+							diag_item.fmt.std.ch_properties ,					/*Channel Properties */
+							diag_item.fmt.std.ch_error_type,					/*Channel Error Type: Remote Mismatch*/
+							diag_item.fmt.std.ext_ch_error_type,				/*Ext Channel Error Type: peer chassisid mismatch*/
+							diag_item.fmt.std.ext_ch_add_value,					/* Ext Channel Add Value */
+							0,													/* Channel Qualifier ? */
+							diag_item.usi,										/* USI*/
+							&diag_item.alarm_spec,								/*Alarm Specifications */
+							NULL);												/* MFG Data*/ 
+					
+
+				  }
+			  }
+			  else
+			  {
+
+				  /*Update diagnostic data */
+				  ret = pf_diag_update(net,										/*net*/
+							p_ar,												/*ar */
+							 0,								/*api id*/
+							(uint16_t)PNET_SLOT_DAP_IDENT,						/*slot*/
+							(uint16_t)PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT,	/*subslot*/
+							diag_item.fmt.std.ch_nbr,							/*Channel Number */
+							diag_item.fmt.std.ch_properties,					/*Channel Properties */
+							diag_item.fmt.std.ch_error_type,					/*Channel Error Type: Remote Mismatch*/
+							diag_item.fmt.std.ext_ch_error_type,				/*Ext Channel Error Type: peer chassisid mismatch*/
+							diag_item.fmt.std.ext_ch_add_value,					/* Ext Channel Add Value */
+							diag_item.usi,										/* USI*/
+							(uint8_t*)&diag_item.alarm_spec);					/* Alarm Specific Data*/
+	
+			  }
+	
+			  /* Finally send the alarm */
+			  pf_alarm_send_port_change_notification(net,
+					  p_ar, 
+					  /*p_ar->nbr_api_diffs*/0, 							/* api_id */
+					  PNET_SLOT_DAP_IDENT,							/* slot */
+					  PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT,		/* subSlot */
+					  PNET_MOD_DAP_IDENT,							/* Module ID */
+					  PNET_SUBMODID_DAP_INTERFACE_1_PORT_0_IDENT,	/* subModule ID */
+					  &diag_item);
+			  /*Set the alarm flag */
+				alarm_sent = true;
+		  }  
+	}
+ 
+	if(false == alarm_sent)
+	{
+	      /*Copy over the Alias name to perm*/
+	      strncpy((char*)net->cmina_perm_dcp_ase.alias_name,
+	    		  (char*)net->cmina_temp_dcp_ase.alias_name,
+	    		  strlen(net->cmina_temp_dcp_ase.alias_name));
+	      
+	      net->cmina_perm_dcp_ase.alias_name[strlen(net->cmina_temp_dcp_ase.alias_name)]='\0';
+	}
+}
+
+static void pf_lldp_send_port_datachange_alarm(pnet_t *net)
+{
+
+	uint16_t ix = 0,
+			 maxIndex = NELEMENTS(net->cmrpc_ar);
+	uint32_t	api_ix = 0,
+				mod_ix = 0,
+				sub_ix = 0;
+
+    pf_ar_t				*p_ar = NULL;	
+	pf_diag_item_t 		diag_item;
+	int					ret = -1;
+	bool 				bFound = false;
+	
+	for(ix = 0; ix<maxIndex;ix++)
+	{
+		  if (net->cmrpc_ar[ix].in_use == true)
+		  {
+			  p_ar = &net->cmrpc_ar[ix];
+			  api_ix = p_ar->nbr_api_diffs;
+			  mod_ix = p_ar->api_diffs[api_ix].nbr_module_diffs;
+			  sub_ix = p_ar->api_diffs[api_ix].module_diffs[mod_ix].nbr_submodule_diffs;
+
+
+			  /*Search Modules*/
+			  for(int i = 0;i<p_ar->exp_apis[0].nbr_modules;i++)
+			  {
+			  	/*Search SubModules*/
+			  	for(int j = 0;j<p_ar->exp_apis[0].modules[i].nbr_submodules;j++)
+			  	{
+			  		if((p_ar->exp_apis[0].modules[i].slot_number == PNET_SLOT_DAP_IDENT) &&
+			  				(p_ar->exp_apis[0].modules[i].submodules[j].subslot_number == PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT))
+			  		{
+			  			/*Set the api to the request api */
+			  			p_ar->api_diffs[api_ix].api = 0;
+
+			  			/*Set the slot number to the request slot number */
+			  			p_ar->api_diffs[api_ix].module_diffs[mod_ix].slot_number 			=
+			  					p_ar->exp_apis[0].modules[i].slot_number;
+			  			
+			  			/*Set the modID to the request modID */
+			  			p_ar->api_diffs[api_ix].module_diffs[mod_ix].module_ident_number	= 
+			  					p_ar->exp_apis[0].modules[i].module_ident_number;
+			  			
+			  			/*Set the subSlot to the request subSlot */
+			  			p_ar->api_diffs[api_ix].module_diffs[mod_ix].submodule_diffs[sub_ix].subslot_number 		= 
+			  					p_ar->exp_apis[0].modules[i].submodules[j].subslot_number;
+			  			
+			  			/*Set the subModID to the request subModID */
+			  			p_ar->api_diffs[api_ix].module_diffs[mod_ix].submodule_diffs[sub_ix].submodule_ident_number	= 
+			  					p_ar->exp_apis[0].modules[i].submodules[j].submodule_ident_number;
+
+			  			/*Set the subMod error state*/
+			  			p_ar->api_diffs[api_ix].module_diffs[mod_ix].submodule_diffs[sub_ix].submodule_state.fault = true;
+			  			
+
+
+			  			memset(&diag_item,0,sizeof(pf_diag_item_t));
+			  			
+			  			/* Set Diagnostic Information Second */
+			  			PNET_DIAG_CH_PROP_SPEC_SET(diag_item.fmt.std.ch_properties, PNET_DIAG_CH_PROP_SPEC_APPEARS);
+			  			
+			  			PNET_DIAG_CH_PROP_SPEC_SET(diag_item.fmt.std.ch_properties, PNET_DIAG_CH_PROP_SPEC_APPEARS);
+			  			diag_item.alarm_spec.channel_diagnosis = true;
+			  			diag_item.alarm_spec.submodule_diagnosis = true;
+			  			diag_item.alarm_spec.ar_diagnosis = true;
+
+			  			  
+			  			/* Set Diagnostic Information Second */
+			  			diag_item.usi = PF_USI_EXTENDED_CHANNEL_DIAGNOSIS;
+			  			diag_item.fmt.std.ch_nbr = PF_USI_CHANNEL_DIAGNOSIS;
+			  			diag_item.fmt.std.ch_error_type = PF_WRT_ERROR_REMOTE_MISMATCH;
+			  			diag_item.fmt.std.ext_ch_error_type = PF_WRT_ERROR_NO_PEER_DETECTED;
+			  			diag_item.fmt.std.ext_ch_add_value = 0;
+			  			diag_item.fmt.std.qual_ch_qualifier = 0;
+			  			diag_item.next = 0;
+
+			  			/*Try and update the diagnostic data first 
+			  			* (Error will occur if 
+			  			* the diagnostic index does not exists)*/
+			  			ret = pf_diag_update(net,										/*net*/
+			  					p_ar,												/*ar */
+			  					0,													/*api id*/
+			  					(uint16_t)PNET_SLOT_DAP_IDENT,						/*slot*/
+			  					(uint16_t)PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT,	/*subslot*/
+			  					diag_item.fmt.std.ch_nbr,							/*Channel Number */
+			  					diag_item.fmt.std.ch_properties,					/*Channel Properties */
+			  					diag_item.fmt.std.ch_error_type,					/*Channel Error Type: Remote Mismatch*/
+			  					diag_item.fmt.std.ext_ch_error_type,				/*Ext Channel Error Type: peer chassisid mismatch*/
+			  					diag_item.fmt.std.ext_ch_add_value,					/* Ext Channel Add Value */
+			  					diag_item.usi,										/* USI*/
+			  					(uint8_t*)&diag_item.alarm_spec);					/* Alarm Specific Data*/
+
+			  			/* Handle Error if update failed by adding the diagnostic block */
+			  			if(ret != 0)
+			  			{
+			  			/* Add the diagnostic block*/
+			  			ret = pf_diag_add(net,
+			  					 p_ar,
+			  					 0,
+			  					(uint16_t)PNET_SLOT_DAP_IDENT,
+			  					(uint16_t)PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT,
+			  					diag_item.fmt.std.ch_nbr,							/*Channel Number */
+			  					diag_item.fmt.std.ch_properties ,					/*Channel Properties */
+			  					diag_item.fmt.std.ch_error_type,					/*Channel Error Type: Remote Mismatch*/
+			  					diag_item.fmt.std.ext_ch_error_type,				/*Ext Channel Error Type: peer chassisid mismatch*/
+			  					diag_item.fmt.std.ext_ch_add_value,					/* Ext Channel Add Value */
+			  					0,													/* Channel Qualifier ? */
+			  					diag_item.usi,										/* USI*/
+			  					&diag_item.alarm_spec,								/*Alarm Specifications */
+			  					NULL);												/* MFG Data*/ 
+
+
+			  			}
+
+
+			  			/* Finally send the alarm */
+			  			pf_alarm_send_port_change_notification(net,
+			  				  p_ar, 
+			  				  0, 							/* api_id */
+			  				  PNET_SLOT_DAP_IDENT,							/* slot */
+			  				  PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT,		/* subSlot */
+			  				  PNET_MOD_DAP_IDENT,							/* Module ID */
+			  				  PNET_SUBMODID_DAP_INTERFACE_1_PORT_0_IDENT,	/* subModule ID */
+			  				  &diag_item);
+
+			  			bFound = true;
+			  			break;
+			  		}
+			  	}
+			  	
+			  	if(bFound)
+			  	{
+			  		break;
+			  	}
+
+			  }
+			  
+		  }  
+	}
+
+}
+
+#if PNET_OS_RTOS_SUPPORTED
+static void pf_lldp_peer_timeout_cb(os_timer_t *timer)
+{
+	pnet_t *net = (pnet_t *)timer->arg;
+	
+	/*Issue Alarm*/
+	pf_lldp_send_port_datachange_alarm(net);
+}
+#endif
+
+static void pf_lldp_create_peer_timer(pnet_t *net)
+{
+#if PNET_OS_RTOS_SUPPORTED
+
+      /*Create the timer*/
+		net->fspm_cfg.lldp_peer_cfg.peerTimer = os_timer_create(
+			  net->interrupt_timer_handle,							/* interrupt handle */
+			  net->fspm_cfg.lldp_peer_cfg.TTL*TICK_INTERVAL_SEC,	/* Send interval */
+			  pf_lldp_peer_timeout_cb,								/* function pointer */
+			  (void*)net,											/* argument */
+			  true);												/* oneshot */
+
+      /*Santiy Check*/
+      if(NULL != net->fspm_cfg.lldp_peer_cfg.peerTimer)
+      {
+    	  /*Start the timer */
+    	   os_timer_start(net->fspm_cfg.lldp_peer_cfg.peerTimer);
+      }
+      else
+      {
+    	  LOG_DEBUG(PF_ETH_LOG, "PPM(%d): Realtime time was not created!\n",__LINE__);
+      }
+#else
+      ret = pf_scheduler_add(net, LLDP_BROADCAST_RATE,
+    		  lldp_name, pf_lldp_timer_cb, net, &net->fspm_cfg.lldp_peer_cfg.peerTimer);
+#endif	
+}
+
+
+
 /********************* Initialize and send **********************************/
+
+#if PNET_OS_RTOS_SUPPORTED
+void pf_lldp_timer_cb(os_timer_t *timer)
+{
+	pnet_t *net = (pnet_t *)timer->arg;
+	/*Check if we need to shut down the LLDP TX'ing*/
+	if(!net->fspm_cfg.lldp_peer_req.peerBoundary.boundary.not_send_LLDP_Frames)
+	{
+		pf_lldp_send(net);
+		
+		/*Start the timer */
+		os_timer_start(net->eth_handle->lldpBroadcastTimer);
+	}
+	else
+	{
+		/*stop the timer*/
+		net->eth_handle->lldpBroadcastTimer->exit = true;
+	}
+}
+#endif
 
 void pf_lldp_send(
    pnet_t                  *net)
 {
+	
+	/*Check if we need to shut down the LLDP TX'ing*/
+	if(net->fspm_cfg.lldp_peer_req.peerBoundary.boundary.not_send_LLDP_Frames)
+	{
+		   LOG_INFO(PF_ETH_LOG, "LLDP(%d): Sending LLDP frame skipped\n", __LINE__);
+		return;
+	}
+		
    os_buf_t                *p_lldp_buffer = os_buf_alloc(PF_FRAME_BUFFER_SIZE);
    uint8_t                 *p_buf = NULL;
    uint16_t                pos = 0;
@@ -401,143 +744,41 @@ void pf_lldp_send(
 
       os_buf_free(p_lldp_buffer);
    }
+  
+}
+
+void pf_lldp_start_broadcast(pnet_t *net)
+{
+#if PNET_OS_RTOS_SUPPORTED
+
+      /*Create the timer*/
+      net->eth_handle->lldpBroadcastTimer = os_timer_create(
+			  net->interrupt_timer_handle,			/* interrupt handle */
+			  LLDP_BROADCAST_RATE,					/* Send interval */
+			  pf_lldp_timer_cb,						/* function pointer */
+			  (void*)net,							/* argument */
+			  false);								/* oneshot */
+
+      /*Santiy Check*/
+      if(NULL != net->eth_handle->lldpBroadcastTimer)
+      {
+    	  /*Start the timer */
+    	   os_timer_start(net->eth_handle->lldpBroadcastTimer);
+      }
+      else
+      {
+    	  LOG_DEBUG(PF_ETH_LOG, "PPM(%d): Realtime time was not created!\n",__LINE__);
+      }
+#else
+      ret = pf_scheduler_add(net, LLDP_BROADCAST_RATE,
+    		  lldp_name, pf_lldp_timer_cb, net, &net->eth_handle->lldpBroadcastTimer);
+#endif	
 }
 
 void pf_lldp_init(
    pnet_t                  *net)
-{
-   pf_lldp_send(net);
+{	
    memset(&net->fspm_cfg.lldp_peer_cfg,0,sizeof(net->fspm_cfg.lldp_peer_cfg));
-}
-
-static void pf_lldp_send_alarm(pnet_t *net)
-{
-
-	uint16_t ix = 0,
-			 maxIndex = NELEMENTS(net->cmrpc_ar);
-
-    pf_ar_t				*p_ar = NULL;	
-	pf_diag_item_t 		diag_item;
-	bool				alarm_sent = false;
-	int					ret = -1;
-
-	for(ix = 0; ix<maxIndex;ix++)
-	{
-		  if (net->cmrpc_ar[ix].in_use == true)
-		  {
-			  p_ar = &net->cmrpc_ar[ix];
-			  memset(&diag_item,0,sizeof(pf_diag_item_t));
-			  
-			  /* Set Alarm Specifications first */
-			  diag_item.alarm_spec.manufacturer_diagnosis = false;			  /*Always false*/
-			  if(strcmp(net->cmina_perm_dcp_ase.alias_name,net->cmina_temp_dcp_ase.alias_name) != 0)
-			  {
-	              PNET_DIAG_CH_PROP_SPEC_SET(diag_item.fmt.std.ch_properties, PNET_DIAG_CH_PROP_SPEC_APPEARS);
-				  diag_item.alarm_spec.channel_diagnosis = true;
-				  diag_item.alarm_spec.submodule_diagnosis = true;
-				  diag_item.alarm_spec.ar_diagnosis = true;
-			  }
-			  else
-			  {
-	              PNET_DIAG_CH_PROP_SPEC_SET(diag_item.fmt.std.ch_properties, PNET_DIAG_CH_PROP_SPEC_DISAPPEARS);
-				  diag_item.alarm_spec.channel_diagnosis = false;
-				  diag_item.alarm_spec.submodule_diagnosis = false;
-				  diag_item.alarm_spec.ar_diagnosis = false;
-			  }
-			  
-			  /* Set Diagnostic Information Second */
-              diag_item.usi = PF_USI_EXTENDED_CHANNEL_DIAGNOSIS;
-              diag_item.fmt.std.ch_nbr = PF_USI_CHANNEL_DIAGNOSIS;
-              diag_item.fmt.std.ch_error_type = PF_WRT_ERROR_REMOTE_MISMATCH;
-              diag_item.fmt.std.ext_ch_error_type = PF_WRT_ERROR_PORTID_MISMATCH;
-              diag_item.fmt.std.ext_ch_add_value = 0;
-              diag_item.fmt.std.qual_ch_qualifier = 0;
-              diag_item.next = 0;
-              
-              /*Check if Channel Diagnosis is TRUE*/
-			  if(diag_item.alarm_spec.channel_diagnosis)
-			  {     
-				  /*Try and update the diagnostic data first 
-				   * (Error will occur if 
-				   * the diagnostic index does not exists)*/
-				  ret = pf_diag_update(net,											/*net*/
-							p_ar,												/*ar */
-							 p_ar->nbr_api_diffs,								/*api id*/
-							(uint16_t)PNET_SLOT_DAP_IDENT,						/*slot*/
-							(uint16_t)PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT,	/*subslot*/
-							diag_item.fmt.std.ch_nbr,							/*Channel Number */
-							diag_item.fmt.std.ch_properties,					/*Channel Properties */
-							diag_item.fmt.std.ch_error_type,					/*Channel Error Type: Remote Mismatch*/
-							diag_item.fmt.std.ext_ch_error_type,				/*Ext Channel Error Type: peer chassisid mismatch*/
-							diag_item.fmt.std.ext_ch_add_value,					/* Ext Channel Add Value */
-							diag_item.usi,										/* USI*/
-							(uint8_t*)&diag_item.alarm_spec);					/* Alarm Specific Data*/
-				  
-
-				  /* Handle Error if update failed by adding the diagnostic block */
-				  if(ret != 0)
-				  {
-					/* Add the diagnostic block*/
-				  ret = pf_diag_add(net,
-							p_ar,
-							 p_ar->nbr_api_diffs,
-							(uint16_t)PNET_SLOT_DAP_IDENT,
-							(uint16_t)PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT,
-							diag_item.fmt.std.ch_nbr,							/*Channel Number */
-							diag_item.fmt.std.ch_properties ,					/*Channel Properties */
-							diag_item.fmt.std.ch_error_type,					/*Channel Error Type: Remote Mismatch*/
-							diag_item.fmt.std.ext_ch_error_type,				/*Ext Channel Error Type: peer chassisid mismatch*/
-							diag_item.fmt.std.ext_ch_add_value,					/* Ext Channel Add Value */
-							0,													/* Channel Qualifier ? */
-							diag_item.usi,										/* USI*/
-							&diag_item.alarm_spec,								/*Alarm Specifications */
-							NULL);												/* MFG Data*/ 
-					
-
-				  }
-			  }
-			  else
-			  {
-
-				  /*Update diagnostic data */
-				  ret = pf_diag_update(net,										/*net*/
-							p_ar,												/*ar */
-							 p_ar->nbr_api_diffs,								/*api id*/
-							(uint16_t)PNET_SLOT_DAP_IDENT,						/*slot*/
-							(uint16_t)PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT,	/*subslot*/
-							diag_item.fmt.std.ch_nbr,							/*Channel Number */
-							diag_item.fmt.std.ch_properties,					/*Channel Properties */
-							diag_item.fmt.std.ch_error_type,					/*Channel Error Type: Remote Mismatch*/
-							diag_item.fmt.std.ext_ch_error_type,				/*Ext Channel Error Type: peer chassisid mismatch*/
-							diag_item.fmt.std.ext_ch_add_value,					/* Ext Channel Add Value */
-							diag_item.usi,										/* USI*/
-							(uint8_t*)&diag_item.alarm_spec);					/* Alarm Specific Data*/
-	
-			  }
-	
-			  /* Finally send the alarm */
-			  pf_alarm_send_port_change_notification(net,
-					  p_ar, 
-					  p_ar->nbr_api_diffs, 							/* api_id */
-					  PNET_SLOT_DAP_IDENT,							/* slot */
-					  PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT,		/* subSlot */
-					  PNET_MOD_DAP_IDENT,							/* Module ID */
-					  PNET_SUBMODID_DAP_INTERFACE_1_PORT_0_IDENT,	/* subModule ID */
-					  &diag_item);
-			  /*Set the alarm flag */
-				alarm_sent = true;
-		  }  
-	}
- 
-	if(false == alarm_sent)
-	{
-	      /*Copy over the Alias name to perm*/
-	      strncpy((char*)net->cmina_perm_dcp_ase.alias_name,
-	    		  (char*)net->cmina_temp_dcp_ase.alias_name,
-	    		  strlen(net->cmina_temp_dcp_ase.alias_name));
-	      
-	      net->cmina_perm_dcp_ase.alias_name[strlen(net->cmina_temp_dcp_ase.alias_name)]='\0';
-	}
 }
 
 void pf_lldp_recv(
@@ -632,13 +873,36 @@ void pf_lldp_recv(
 				
 				LOG_DEBUG(PF_ETH_LOG, "LLDP(%d): NEW Name: %s\n", __LINE__,net->cmina_temp_dcp_ase.alias_name);
 				
-				pf_lldp_send_alarm(net);
+				pf_lldp_send_remote_mismatch_alarm(net);
 
 			 }
 
 			break;
 		case LLDP_TYPE_TTL:
 			net->fspm_cfg.lldp_peer_cfg.TTL=pData[1];
+			/*Configure the timeout timer*/
+			if(NULL == net->fspm_cfg.lldp_peer_cfg.peerTimer)
+			{
+				/*Create it*/
+				pf_lldp_create_peer_timer(net);
+			}
+			else
+			{
+				/* cancel the timer*/
+				os_timer_stop(net->fspm_cfg.lldp_peer_cfg.peerTimer);
+				
+				pf_diag_item_t 		diag_item;
+				memset(&diag_item,0,sizeof(pf_diag_item_t));
+				
+		        PNET_DIAG_CH_PROP_SPEC_SET(diag_item.fmt.std.ch_properties, PNET_DIAG_CH_PROP_SPEC_APPEARS);
+
+				/* Adjust time */
+				net->fspm_cfg.lldp_peer_cfg.peerTimer->us = net->fspm_cfg.lldp_peer_cfg.TTL*TICK_INTERVAL_SEC;
+				
+				/* Start the timer */
+				os_timer_start(net->fspm_cfg.lldp_peer_cfg.peerTimer);
+			}
+			
 			break;
 		case LLDP_TYPE_ORG_SPEC:
 		{

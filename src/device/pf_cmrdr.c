@@ -406,7 +406,6 @@ int pf_cmrdr_rm_read_ind(
          pf_put_ar_diff(true, p_ar, res_size, p_res, p_pos);
          ret = 0;
          break;
-
       case PF_IDX_SUB_PDPORT_DATA_REAL:
           if((PNET_SLOT_DAP_IDENT == p_read_request->slot_number) &&
           		(PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT == p_read_request->subslot_number))
@@ -427,8 +426,8 @@ int pf_cmrdr_rm_read_ind(
          if((PNET_SLOT_DAP_IDENT == p_read_request->slot_number) &&
          		(PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT == p_read_request->subslot_number))
          {
-        	 pf_put_pdport_data_adj(net, true, &read_result, res_size, p_res, p_pos);/**/
-            ret = 0;
+        	 pf_put_pdport_data_adj(net, true, &read_result, res_size, p_res, p_pos);
+        	 ret = 0;
          }
          else
          {
@@ -440,7 +439,7 @@ int pf_cmrdr_rm_read_ind(
         if((PNET_SLOT_DAP_IDENT == p_read_request->slot_number) &&
         		(PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT == p_read_request->subslot_number))
         {
-      	  pf_put_pdport_data_check(net, true, &read_result, res_size, p_res, p_pos);/**/
+      	  pf_put_pdport_data_check(net, true, &read_result, res_size, p_res, p_pos);
            ret = 0;
         }
         else

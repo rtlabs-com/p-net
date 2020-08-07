@@ -55,6 +55,26 @@
 
 static const pf_uuid_t     implicit_ar = {0,0,0,{0,0,0,0,0,0,0,0}};
 
+/*
+ * #define PNET_UUID_NIL_OBJECT              "00000000-0000-0000-0000-000000000000"
+ * #define PNET_UUID_EPMAP_INTERFACE         "E1AF8308-5D1F-11C9-91A4-08002B14A0FA"
+ * 
+ * #define PNET_UUID_IO_DEVICE_INTERFACE     "DEA00001-6C97-11D1-8271-00A02442DF7D" 
+*/
+static const pf_uuid_t     uuid_epmap_interface = {
+												0xE1AF8308,
+												0x5D1F,
+												0x11C9,
+												{0x91,0xA4,0x08,0x00,0x2B,0x14,0xA0,0xFA}
+											  };
+
+static const pf_uuid_t     uuid_io_device_interface = {
+												0xDEA00001,
+												0x6C97,
+												0x11D1,
+												{0x82,0x71,0x00,0xA0,0x24,0x42,0xDF,0x7D}
+											  };
+
 /**************** Diagnostic strings *****************************************/
 
 /**
@@ -1088,6 +1108,56 @@ static int pf_cmrpc_rm_connect_ind(
       p_sess->p_ar = NULL;
       p_sess->kill_session = true;
    }
+   else
+   {
+		pf_diag_item_t 		diag_item;
+		memset(&diag_item,0,sizeof(pf_diag_item_t));
+		
+        PNET_DIAG_CH_PROP_SPEC_SET(diag_item.fmt.std.ch_properties, PNET_DIAG_CH_PROP_SPEC_APPEARS);
+		
+	   /*Remove any lingering error's for slot 0 subslot 0x8001*/
+        do
+        {
+        	ret = pf_diag_remove(net,
+    						p_ar,
+    						0,
+    						PNET_SLOT_DAP_IDENT,
+    						PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT,
+    					   (uint16_t)PF_USI_CHANNEL_DIAGNOSIS,
+    					   diag_item.fmt.std.ch_properties,
+    					   (uint16_t)PF_WRT_ERROR_REMOTE_MISMATCH,
+    					   (uint16_t)PF_USI_EXTENDED_CHANNEL_DIAGNOSIS);		/* USI*/
+        }while (ret == 0);
+        
+        memset(&net->fspm_cfg.lldp_peer_req,0,sizeof(net->fspm_cfg.lldp_peer_req));
+
+        ret = 0;
+		
+#if PNET_OS_RTOS_SUPPORTED
+		/*Reset and startup LLDP timer*/
+		if(net->eth_handle->lldpBroadcastTimer->exit)
+		{
+			/*Reset*/
+			net->eth_handle->lldpBroadcastTimer->exit = false;
+			
+			/*Reset boundary conditions */
+			net->fspm_cfg.lldp_peer_req.peerBoundary.boundary.not_send_LLDP_Frames = false;
+			net->fspm_cfg.lldp_peer_req.peerBoundary.boundary.send_PTCP_Delay = false;
+			net->fspm_cfg.lldp_peer_req.peerBoundary.boundary.send_PATH_Delay = false;
+			
+			/*Reset properties*/
+			net->fspm_cfg.lldp_peer_req.peerBoundary.properites = 0;
+			
+			/* Send an LLDP Packet */
+			pf_lldp_send(net);
+			
+			/*Startup LLDP timer again*/
+			os_timer_start(net->eth_handle->lldpBroadcastTimer);
+		}
+#else
+		/*ToDo: Reschedule the LLDP Tx'ing*/
+#endif
+   }
 
    LOG_DEBUG(PF_RPC_LOG, "CMRPC(%d): Created connect response: ret %d\n", __LINE__, ret);
    /* RPC_connect_rsp */
@@ -1671,6 +1741,42 @@ static int pf_cmrpc_rm_read_ind(
    return ret;
 }
 
+
+static int pf_cmrpc_lookup_ind(
+   pnet_t                  *net,
+   pf_session_info_t       *p_sess,
+   pf_rpc_header_t         *p_rpc_req,
+   uint16_t				   *lk_pos,
+   uint16_t                req_pos,
+   uint16_t                res_size,
+   uint8_t                 *p_res,
+   uint16_t                *p_res_pos)
+{
+   int                     ret = -1;
+   pf_rpc_lookup_req_t     lkup_request;
+   pf_ar_t                 *p_ar = NULL;  /* Assume the implicit AR */
+
+   memset(&lkup_request, 0, sizeof(lkup_request));
+
+   if (p_sess->rpc_result.pnio_status.error_code != 0)
+   {
+	  LOG_ERROR(PF_RPC_LOG, "CMRPC(%d): RPC request has error\n", __LINE__);
+	  pf_set_error(&p_sess->rpc_result, PNET_ERROR_CODE_READ, PNET_ERROR_DECODE_PNIO, PNET_ERROR_CODE_1_CMRPC, PNET_ERROR_CODE_2_CMRPC_STATE_CONFLICT);
+   }
+   else
+   {
+	 /*Get lookup request info*/
+	 pf_get_lookup_request(&p_sess->get_info, lk_pos, &lkup_request);
+	   
+	 lkup_request.udpPort = p_sess->port;
+	 /* Do the work of the lookup request */
+	 ret = pf_cmrpc_lookup_request(net, p_ar, p_rpc_req, &lkup_request, &p_sess->rpc_result, res_size, p_res, p_res_pos);
+
+   }
+
+   return ret;
+}
+
 /**
  * @internal
  * Parse one block in a IODWrite RPC request message.
@@ -2039,7 +2145,8 @@ int pf_cmrpc_rm_ccontrol_req(
    pnet_cfg_t              *p_cfg = NULL;
    pf_session_info_t       *p_sess = NULL;
    uint16_t                max_req_len = PF_MAX_UDP_PAYLOAD_SIZE;  /* Reduce to 130 to test fragmented sending */
-
+   uint16_t				   lkup_location = 0;
+   
    memset(&rpc_req, 0, sizeof(rpc_req));
    memset(&ndr_data, 0, sizeof(ndr_data));
    memset(&control_io, 0, sizeof(control_io));
@@ -2106,7 +2213,7 @@ int pf_cmrpc_rm_ccontrol_req(
 
       /* Insert RPC header */
       rpc_hdr_start_pos = p_sess->out_buf_len;
-      pf_put_dce_rpc_header(&rpc_req, sizeof(p_sess->out_buffer), p_sess->out_buffer, &p_sess->out_buf_len, &length_of_body_pos);
+      pf_put_dce_rpc_header(&rpc_req, sizeof(p_sess->out_buffer), p_sess->out_buffer, &p_sess->out_buf_len, &length_of_body_pos, &lkup_location);
       start_pos = p_sess->out_buf_len;
 
       /* Write temporary values to the NDR header */
@@ -2151,7 +2258,7 @@ int pf_cmrpc_rm_ccontrol_req(
          rpc_req.flags.no_fack = false;
 
          /* Re-write the RPC header with the new info */
-         pf_put_dce_rpc_header(&rpc_req, max_req_len, p_sess->out_buffer, &rpc_hdr_start_pos, &length_of_body_pos);
+         pf_put_dce_rpc_header(&rpc_req, max_req_len, p_sess->out_buffer, &rpc_hdr_start_pos, &length_of_body_pos, &lkup_location);
 
          p_sess->out_fragment_nbr++; /* Number of the next fragment */
       }
@@ -2412,6 +2519,7 @@ static int pf_cmrpc_dce_packet(
    uint16_t                rpc_hdr_start_pos = 0;
    uint16_t                start_pos = 0;
    uint16_t                length_of_body_pos = 0;
+   uint16_t				   lkup_location = 0;
    uint16_t                req_pos = 0;
    uint16_t                res_pos = 0;
    uint16_t                max_rsp_len;
@@ -2420,7 +2528,7 @@ static int pf_cmrpc_dce_packet(
    bool                    is_new_session = false;
    uint32_t                fault_code = 0;
    uint32_t                reject_code = 0;
-
+   bool					   bIsLookupRequest = false;
    get_info.result = PF_PARSE_OK;
    get_info.p_buf = p_req;
    get_info.len = req_len;
@@ -2552,7 +2660,7 @@ static int pf_cmrpc_dce_packet(
             rpc_res.fragment_nmb = 0;
             rpc_res.is_big_endian = p_sess->is_big_endian;
 
-            pf_put_dce_rpc_header(&rpc_res, *p_res_len, p_res, &res_pos, &length_of_body_pos);
+            pf_put_dce_rpc_header(&rpc_res, *p_res_len, p_res, &res_pos, &length_of_body_pos, &lkup_location);
 
             p_sess->kill_session = is_new_session;
             break;
@@ -2563,23 +2671,38 @@ static int pf_cmrpc_dce_packet(
             p_sess->out_fragment_nbr = 0;
 
             pf_get_ndr_data(&p_sess->get_info, &req_pos, &p_sess->ndr_data);
-            p_sess->get_info.is_big_endian = true;  /* From now on all is big-endian */
-
-            /* Our response is limited by the size of the requesters response buffer */
-            max_rsp_len = req_pos + p_sess->ndr_data.args_maximum;
-            if (max_rsp_len > sizeof(p_sess->out_buffer))
+            
+            /*Check what type of request this is EPMv4 or PNIO?*/
+            if( memcmp(&rpc_req.interface_uuid,&uuid_epmap_interface,sizeof(rpc_req.object_uuid))==0)
             {
-               /* Our response is also limited by what our buffer can accommodate */
-               max_rsp_len = sizeof(p_sess->out_buffer);
+            	bIsLookupRequest = true;
+                p_sess->get_info.is_big_endian = false;  /* EPM requirement is little endian*/
+            	/*Set response length to maximum allowable request size*/
+            	max_rsp_len = PNET_MAX_SESSION_BUFFER_SIZE;
             }
+            else
+            {
+                p_sess->get_info.is_big_endian = true;  /* From now on all is big-endian */
+
+                /* Our response is limited by the size of the requesters response buffer */
+                max_rsp_len = req_pos + p_sess->ndr_data.args_maximum;
+                if (max_rsp_len > sizeof(p_sess->out_buffer))
+                {
+                   /* Our response is also limited by what our buffer can accommodate */
+                   max_rsp_len = sizeof(p_sess->out_buffer);
+                }
+            }
+
+            
+
             /* Prepare the response */
             rpc_res = rpc_req;
             rpc_res.packet_type = PF_RPC_PT_RESPONSE;
-            rpc_res.flags.last_fragment = false;
+            rpc_res.flags.last_fragment = (bIsLookupRequest ? true:false);
             rpc_res.flags.fragment = false;
             rpc_res.flags.no_fack = true;
             rpc_res.flags.maybe = false;
-            rpc_res.flags.idempotent = true;
+            rpc_res.flags.idempotent = false;/*(bIsLookupRequest ? false: true);*/
             rpc_res.flags.broadcast = false;
             rpc_res.flags2.cancel_pending = false;
             rpc_res.fragment_nmb = 0;
@@ -2587,7 +2710,7 @@ static int pf_cmrpc_dce_packet(
 
             /* Insert the response header to get pos of rpc response body. */
             rpc_hdr_start_pos = res_pos;
-            pf_put_dce_rpc_header(&rpc_res, *p_res_len, p_res, &res_pos, &length_of_body_pos);
+            pf_put_dce_rpc_header(&rpc_res, *p_res_len, p_res, &res_pos, &length_of_body_pos, &lkup_location);
             start_pos = res_pos;                /* Save for later */
 
             if (rpc_req.opnum == PF_RPC_DEV_OPNUM_RELEASE)
@@ -2598,10 +2721,31 @@ static int pf_cmrpc_dce_packet(
 
             /* Handle the RPC request */
             p_sess->out_buf_len = 0;  /* Just to make sure */
-            ret = pf_cmrpc_rpc_request(net, p_sess, req_pos, &rpc_req, max_rsp_len, p_sess->out_buffer, &p_sess->out_buf_len);
+            
+            LOG_INFO(PF_RPC_LOG, "CMRPC(%d): Incoming READ request via DCE RPC on UDP\n", __LINE__);
+            
+            /* Handle PROFINET Requests by looking at the Interface UUID*/
+            if( memcmp(&rpc_req.interface_uuid,&uuid_io_device_interface,sizeof(rpc_req.object_uuid))==0)
+            {
+
+          	  ret = pf_cmrpc_rpc_request(net, p_sess, req_pos, &rpc_req, max_rsp_len, p_sess->out_buffer, &p_sess->out_buf_len);
+            }
+            /* Handle Endpoint Map Requests by looking at the Interface UUID*/
+            else if( memcmp(&rpc_req.interface_uuid,&uuid_epmap_interface,sizeof(rpc_req.object_uuid))==0)
+			{
+
+			  ret = pf_cmrpc_lookup_ind(net, p_sess, &rpc_req, &lkup_location, req_pos, max_rsp_len,p_sess->out_buffer, &p_sess->out_buf_len);
+			  *p_is_release = true;
+			}
+            else
+            {
+          	  LOG_ERROR(PF_RPC_LOG, "CMRPC(%d): Unhandled Object or Interface UUID!\n", __LINE__);
+          	  /*ToDo: Report NULL endpoint with proper error code*/
+            }
 
             if (res_pos + p_sess->out_buf_len < *p_res_len)
             {
+                rpc_res.flags.last_fragment = true;
                /* NOT a fragmented answer - all fits into send buffer */
                memcpy(&p_res[res_pos], p_sess->out_buffer, p_sess->out_buf_len);
                p_sess->out_buf_sent_len = p_sess->out_buf_len;
@@ -2621,7 +2765,7 @@ static int pf_cmrpc_dce_packet(
                rpc_res.flags.no_fack = false;
 
                /* Re-write the header with the new info */
-               pf_put_dce_rpc_header(&rpc_res, *p_res_len, p_res, &rpc_hdr_start_pos, &length_of_body_pos);
+               pf_put_dce_rpc_header(&rpc_res, *p_res_len, p_res, &rpc_hdr_start_pos, &length_of_body_pos, &lkup_location);
 
                p_sess->out_fragment_nbr++; /* Number of the next fragment */
             }
@@ -2661,7 +2805,7 @@ static int pf_cmrpc_dce_packet(
                      rpc_res.flags.no_fack = true;
 
                      /* Insert the response header to get pos of rpc response length. */
-                     pf_put_dce_rpc_header(&rpc_res, *p_res_len, p_res, &res_pos, &length_of_body_pos);
+                     pf_put_dce_rpc_header(&rpc_res, *p_res_len, p_res, &res_pos, &length_of_body_pos, &lkup_location);
                      start_pos = res_pos;                /* Save for later */
 
                      /* We need to send a fragmented answer - Send the last fragment now */
@@ -2676,7 +2820,7 @@ static int pf_cmrpc_dce_packet(
                      LOG_DEBUG(PF_RPC_LOG, "CMRPC(%d): Sending intermediate fragment.\n", __LINE__);
                      /* Send next fragment */
                      /* Insert the response header to get pos of rpc response body. */
-                     pf_put_dce_rpc_header(&rpc_res, *p_res_len, p_res, &res_pos, &length_of_body_pos);
+                     pf_put_dce_rpc_header(&rpc_res, *p_res_len, p_res, &res_pos, &length_of_body_pos, &lkup_location);
                      start_pos = res_pos;                /* Save for later */
 
                      /* We need to send a fragmented answer - Send an intermediate fragment now */
@@ -2797,7 +2941,7 @@ static int pf_cmrpc_dce_packet(
             rpc_res.length_of_body = 0;
             rpc_res.is_big_endian = p_sess->is_big_endian;
 
-            pf_put_dce_rpc_header(&rpc_res, *p_res_len, p_res, &res_pos, &length_of_body_pos);
+            pf_put_dce_rpc_header(&rpc_res, *p_res_len, p_res, &res_pos, &length_of_body_pos, &lkup_location);
          }
          else
          {
@@ -2852,6 +2996,7 @@ void pf_cmrpc_periodic(
                sent_len = os_udp_sendto(net->cmrpc_session_info[ix].socket, dcerpc_addr, PF_RPC_SERVER_PORT, net->cmrpc_dcerpc_rsp_frame, dcerpc_resp_len);
                if (sent_len != dcerpc_resp_len)
                {
+                   is_release = true;
             	   net->interface_statistics.ifOutErrors++;
                   LOG_ERROR(PF_RPC_LOG, "CMRPC(%d): Failed to send %u UDP bytes payload on socket used in session with index %u\n", __LINE__, dcerpc_resp_len, ix);
                }
@@ -2890,6 +3035,7 @@ void pf_cmrpc_periodic(
          sent_len = os_udp_sendto(net->cmrpc_rpcreq_socket, dcerpc_addr, dcerpc_port, net->cmrpc_dcerpc_rsp_frame, dcerpc_resp_len);
          if (sent_len != dcerpc_resp_len)
          {
+        	  is_release = true;
         	 net->interface_statistics.ifOutErrors++;
             LOG_ERROR(PF_RPC_LOG, "CMRPC(%d): Failed to send %u UDP bytes payload on the socket for incoming DCE RPC requests.\n", __LINE__, dcerpc_resp_len);
          }

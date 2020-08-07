@@ -45,6 +45,7 @@ int pf_cmrdr_rm_read_ind(
    uint8_t                 *p_res,        /** Output buffer */
    uint16_t                *p_pos);       /** in/out: Current pos in output buffer */
 
+
 #ifdef __cplusplus
 }
 #endif

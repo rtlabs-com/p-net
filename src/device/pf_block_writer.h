@@ -408,13 +408,15 @@ void pf_put_pnet_status(
  * @param p_bytes          Out:  Destination buffer.
  * @param p_pos            InOut:Position in destination buffer.
  * @param p_pos_body_len   Out:  Position of the length_of_body member.
+ * @param p_pos_lkup_len   Out:  Position of the lookup member.
  */
 void pf_put_dce_rpc_header(
    pf_rpc_header_t         *p_rpc,
    uint16_t                res_len,
    uint8_t                 *p_bytes,
    uint16_t                *p_pos,
-   uint16_t                *p_pos_body_len);
+   uint16_t                *p_pos_body_len,
+   uint16_t				   *p_pos_lkup_len);
 
 /**
  * Insert a write result into a buffer.
@@ -675,6 +677,69 @@ void pf_put_pd_real_data(
 	uint16_t                res_len,
 	uint8_t                 *p_bytes,
 	uint16_t                *p_pos);
+
+void pf_put_lookup_response_data(
+	pnet_t                  *net,
+	bool                    is_big_endian,
+	pf_rpc_lookup_rsp_t     *p_lkup_response,
+	uint16_t                res_len,
+	uint8_t                 *p_bytes,
+	uint16_t                *p_pos);
+
+void pf_put_rpc_floor_count(
+		pnet_t              *net,
+		bool                is_big_endian,
+		uint32_t			count,
+		uint16_t            res_len,
+		uint8_t             *p_bytes,
+		uint16_t            *p_pos);
+
+void pf_put_rpc_floor_ip(
+		pnet_t              *net,
+		bool                is_big_endian,
+		uint8_t				protocol_id,
+		uint32_t			ip_address,
+		uint16_t            res_len,
+		uint8_t             *p_bytes,
+		uint16_t            *p_pos);
+
+void pf_put_rpc_floor_udp(
+		pnet_t              *net,
+		bool                is_big_endian,
+		uint8_t				protocol_id,
+		uint16_t			port,
+		uint16_t            res_len,
+		uint8_t             *p_bytes,
+		uint16_t            *p_pos);
+
+void pf_put_rpc_floor_rpc(
+		pnet_t              *net,
+		bool                is_big_endian,
+		uint8_t				protocol_id,
+		uint16_t			version_minor,
+		uint16_t            res_len,
+		uint8_t             *p_bytes,
+		uint16_t            *p_pos);
+
+void pf_put_rpc_floor_with_uuid(
+		pnet_t              *net,
+		bool                is_big_endian,
+		uint8_t				protocol_id,
+		pf_rpc_uuid_type_t	uuid,
+		uint16_t			version_major,
+		uint16_t			version_minor,
+		uint16_t            res_len,
+		uint8_t             *p_bytes,
+		uint16_t            *p_pos);
+
+void pf_put_portcheck(
+		pnet_t                  *net,
+		bool                    is_big_endian,
+		pf_iod_read_result_t    *p_res,
+		uint16_t                res_len,
+		uint8_t                 *p_bytes,
+		uint16_t                *p_pos);
+
 
 #ifdef __cplusplus
 }

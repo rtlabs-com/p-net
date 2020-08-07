@@ -60,6 +60,10 @@ int pf_fspm_init(
       LOG_ERROR(PNET_LOG, "FSPM(%d): Could not turn signal LED off\n", __LINE__);
    }
 
+   /* ToDo Restore I&M data from Nonvol*/
+   pf_fspm_nonvol_restore(net);
+
+   
    return 0;
 }
 
@@ -306,6 +310,8 @@ int pf_fspm_cm_write_ind(
          pf_get_im_1(&get_info, &pos, &net->fspm_cfg.im_1_data);
          if ((get_info.result == PF_PARSE_OK) && (pos == write_length))
          {
+        	/*ToDo: Write I&M1 data to NVRam*/
+        	pf_fspm_nonvol_save(net);
             ret = 0;
          }
          else
@@ -322,7 +328,11 @@ int pf_fspm_cm_write_ind(
          {
             memcpy(&net->fspm_cfg.im_2_data, p_write_data, sizeof(net->fspm_cfg.im_2_data) - 1);
             net->fspm_cfg.im_2_data.im_date[sizeof(net->fspm_cfg.im_2_data) - 1] = '\0';
+            
+        	/*ToDo: Write I&M2 data to NVRam*/
+        	pf_fspm_nonvol_save(net);
             ret = 0;
+
          }
          else
          {
@@ -338,7 +348,11 @@ int pf_fspm_cm_write_ind(
          {
             memcpy(&net->fspm_cfg.im_3_data, p_write_data, sizeof(net->fspm_cfg.im_3_data) - 1);
             net->fspm_cfg.im_3_data.im_descriptor[sizeof(net->fspm_cfg.im_3_data) - 1] = '\0';
+            
+        	/*ToDo: Write I&M3 data to NVRam*/
+        	pf_fspm_nonvol_save(net);
             ret = 0;
+            
          }
          else
          {
@@ -352,6 +366,9 @@ int pf_fspm_cm_write_ind(
          if (write_length == sizeof(net->fspm_cfg.im_4_data))
          {
             memcpy(&net->fspm_cfg.im_4_data, p_write_data, sizeof(net->fspm_cfg.im_4_data));
+            
+        	/*ToDo: Write I&M4 data to NVRam*/
+        	pf_fspm_nonvol_save(net);
             ret = 0;
          }
          else
@@ -391,6 +408,8 @@ int pf_fspm_clear_im_data(
    net->fspm_cfg.im_3_data.im_descriptor[sizeof(net->fspm_cfg.im_3_data.im_descriptor) - 1] = '\0';
    memset(net->fspm_cfg.im_4_data.im_signature, 0, sizeof(net->fspm_cfg.im_4_data.im_signature));
 
+   pf_fspm_nonvol_save(net);
+   
    return 0;
 }
 
@@ -425,7 +444,9 @@ int pf_fspm_cm_connect_ind(
    {
       ret = net->fspm_cfg.connect_cb(net, net->fspm_cfg.cb_arg, p_ar->arep, p_result);
    }
-
+   
+   pf_fspm_create_log_book_entry(net, p_ar->arep, &p_result->pnio_status, __LINE__);
+   
    return ret;
 }
 
@@ -459,6 +480,8 @@ int pf_fspm_cm_dcontrol_ind(
       ret = net->fspm_cfg.dcontrol_cb(net, net->fspm_cfg.cb_arg, p_ar->arep, control_command, p_result);
    }
 
+   pf_fspm_create_log_book_entry(net, p_ar->arep, &p_result->pnio_status, __LINE__);
+   
    return ret;
 }
 
@@ -525,6 +548,9 @@ int pf_fspm_aplmi_alarm_cnf(
    if (net->fspm_cfg.alarm_cnf_cb != NULL)
    {
       ret = net->fspm_cfg.alarm_cnf_cb(net, net->fspm_cfg.cb_arg, p_ar->arep, p_pnio_status);
+      
+      pf_fspm_create_log_book_entry(net, p_ar->arep, p_pnio_status, __LINE__);
+      
    }
 
    return ret;
@@ -571,4 +597,42 @@ int pf_fspm_signal_led_ind(
    }
 
    return ret;
+}
+
+
+typedef struct nvramIMSave
+{
+	pnet_im_1_t	im_1_data;
+	pnet_im_2_t im_2_data;
+	pnet_im_3_t im_3_data;
+	pnet_im_4_t im_4_data;	
+}NVRAM_IM_SAVE;
+
+void pf_fspm_nonvol_save(pnet_t* net)
+{
+	 NVRAM_IM_SAVE temp;
+	 memcpy(&temp.im_1_data, &net->fspm_cfg.im_1_data, sizeof(pnet_im_1_t));
+	 memcpy(&temp.im_2_data, &net->fspm_cfg.im_2_data, sizeof(pnet_im_2_t));
+	 memcpy(&temp.im_3_data, &net->fspm_cfg.im_3_data, sizeof(pnet_im_3_t));
+	 memcpy(&temp.im_4_data, &net->fspm_cfg.im_4_data, sizeof(pnet_im_4_t));
+	 
+	 os_save_nvram_instance((char*)net->p_fspm_default_cfg->IM_NonvolFilePath,
+			 	 	 	 	 &temp,
+	 						 sizeof(NVRAM_IM_SAVE));	
+
+}
+
+void pf_fspm_nonvol_restore(pnet_t* net)
+{
+	NVRAM_IM_SAVE temp;
+	BOOL status = os_restore_nvram_instance((char*)net->p_fspm_default_cfg->IM_NonvolFilePath,
+	      	   	              	   	        &temp,
+	      	   	   	                        sizeof(NVRAM_IM_SAVE));
+	if(status == TRUE)
+	{
+		memcpy(&net->fspm_cfg.im_1_data, &temp.im_1_data, sizeof(pnet_im_1_t));
+		memcpy(&net->fspm_cfg.im_2_data, &temp.im_2_data, sizeof(pnet_im_2_t));
+		memcpy(&net->fspm_cfg.im_3_data, &temp.im_3_data, sizeof(pnet_im_3_t));
+		memcpy(&net->fspm_cfg.im_4_data, &temp.im_4_data, sizeof(pnet_im_4_t));
+	}
 }

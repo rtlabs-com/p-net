@@ -505,3 +505,22 @@ int pnet_diag_remove(
 
    return ret;
 }
+
+PNET_EXPORT void pnet_restore_diag(
+   pnet_t                  *net)
+{
+	pf_diag_restore(net);
+}
+
+PNET_EXPORT void pnet_restore_write_records(
+   pnet_t                  *net)
+{
+	pf_cmwrr_restore_records(net);
+}
+
+PNET_EXPORT void pnet_start_lldp_broadcast(
+   pnet_t                  *net)
+{
+	pf_lldp_start_broadcast(net);
+}
+

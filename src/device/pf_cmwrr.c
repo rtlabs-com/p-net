@@ -22,6 +22,35 @@
 #include "pf_block_writer.h"
 
 
+void pf_cmwrr_restore_records(pnet_t *net)
+{
+	uint32_t recordSize = sizeof(pdev_record_t); 
+	pdev_record_t pRecords;
+
+
+
+	memset(&pRecords,0,recordSize);
+	
+	/* Restore Pdev Data */
+	if(os_restore_nvram_instance((char*)net->p_fspm_default_cfg->PDev_NonvolFilePath, &pRecords, recordSize))
+	{
+		net->fspm_cfg.lldp_peer_req = pRecords.peerRequested;
+	}
+	
+}
+
+void pf_cmwrr_update_records(pnet_t *net)
+{
+	pdev_record_t pRecords;
+	pRecords.peerRequested = net->fspm_cfg.lldp_peer_req;
+	
+	os_save_nvram_instance((char*)net->p_fspm_default_cfg->PDev_NonvolFilePath,
+							  &pRecords,
+			                 sizeof(pdev_record_t));
+	
+}
+
+
 void pf_cmwrr_init(
    pnet_t                  *net)
 {
@@ -195,7 +224,7 @@ static void pf_cmwrr_pdportcheck(
 	pData +=net->fspm_cfg.lldp_peer_req.PeerChassisIDLen;
 	
 	/*Use the TTL as a flag for number of peers connected to the device */
-	net->fspm_cfg.lldp_peer_req.TTL = net->fspm_cfg.lldp_peer_cfg.TTL;
+	net->fspm_cfg.lldp_peer_req.TTL = 1 /*net->fspm_cfg.lldp_peer_cfg.TTL*/;
 
 	/*Inform the system that there is a difference now*/
 	uint32_t	api_ix = 0,
@@ -216,11 +245,13 @@ static void pf_cmwrr_pdportcheck(
 		errCode = PF_WRT_ERROR_CHASSISID_MISMATCH;
 	}
 
-	if(is_problem)
+	api_ix = p_ar->nbr_api_diffs;
+	mod_ix = p_ar->api_diffs[api_ix].nbr_module_diffs;
+	sub_ix = p_ar->api_diffs[api_ix].module_diffs[mod_ix].nbr_submodule_diffs;
+	
+	/*if(is_problem)*/
 	{
-		api_ix = p_ar->nbr_api_diffs;
-		mod_ix = p_ar->api_diffs[api_ix].nbr_module_diffs;
-		sub_ix = p_ar->api_diffs[api_ix].module_diffs[mod_ix].nbr_submodule_diffs;
+
 		
 		/*Search Modules*/
 		for(int i = 0;i<p_ar->exp_apis[p_write_request->api].nbr_modules;i++)
@@ -253,21 +284,28 @@ static void pf_cmwrr_pdportcheck(
 					/*Set the subMod error state*/
 					p_ar->api_diffs[api_ix].module_diffs[mod_ix].submodule_diffs[sub_ix].submodule_state.fault = true;
 					
-					/* Increment the counter */
-					p_ar->nbr_api_diffs++;
-					p_ar->api_diffs[api_ix].nbr_module_diffs++;
-					p_ar->api_diffs[api_ix].module_diffs[mod_ix].nbr_submodule_diffs++;
-					
+
 
 					memset(&diag_item,0,sizeof(pf_diag_item_t));
 					
-					diag_item.alarm_spec.channel_diagnosis 		= true;
-					diag_item.alarm_spec.manufacturer_diagnosis = false;
-					diag_item.alarm_spec.submodule_diagnosis 	= true;
-					diag_item.alarm_spec.ar_diagnosis 			= true;
-					  
 					/* Set Diagnostic Information Second */
 		            PNET_DIAG_CH_PROP_SPEC_SET(diag_item.fmt.std.ch_properties, PNET_DIAG_CH_PROP_SPEC_APPEARS);
+		            
+					if(is_problem)
+					{
+						/* Increment the counter */
+						p_ar->nbr_api_diffs++;
+						p_ar->api_diffs[api_ix].nbr_module_diffs++;
+						p_ar->api_diffs[api_ix].module_diffs[mod_ix].nbr_submodule_diffs++;
+						
+						diag_item.alarm_spec.channel_diagnosis 		= true;
+						diag_item.alarm_spec.manufacturer_diagnosis = false;
+						diag_item.alarm_spec.submodule_diagnosis 	= true;
+						diag_item.alarm_spec.ar_diagnosis 			= true;
+					}
+
+		            
+		            
 		            diag_item.usi = PF_USI_EXTENDED_CHANNEL_DIAGNOSIS;
 		            diag_item.fmt.std.ch_nbr = PF_USI_CHANNEL_DIAGNOSIS;
 		            diag_item.fmt.std.ch_error_type = PF_WRT_ERROR_REMOTE_MISMATCH;
@@ -279,7 +317,7 @@ static void pf_cmwrr_pdportcheck(
 					/* Add the diagnostic block*/
 					pf_diag_add(net,
 							p_ar,
-							api_ix,
+							0,
 							p_ar->exp_apis[p_write_request->api].modules[i].slot_number,
 							p_ar->exp_apis[p_write_request->api].modules[i].submodules[j].subslot_number,
 							PF_USI_CHANNEL_DIAGNOSIS,			/*Channel Number */
@@ -304,6 +342,54 @@ static void pf_cmwrr_pdportcheck(
 	
 		}
 	}
+}
+
+static void pf_cmwrr_pdport_data_adj(
+		pnet_t                  *net,
+		pf_ar_t                 *p_ar,
+		pf_iod_write_request_t  *p_write_request,
+		uint8_t                 *p_bytes,
+		uint16_t                p_datalength,
+		pnet_result_t           *p_result)
+{
+	uint8_t 		*pData = p_bytes;
+	uint16_t 		tmpShort = 0;
+	uint32_t		temp_u32 = 0;
+	
+	/*Jump over the padding */
+	pData += sizeof(p_write_request->padding);
+	/*Jump over the slot/subslot */
+	pData += sizeof(p_write_request->slot_number);
+	pData += sizeof(p_write_request->subslot_number);
+	
+	/*Sanity check the block header*/
+	memcpy(&tmpShort,pData,sizeof(tmpShort));
+	tmpShort = htons(tmpShort);
+	pData +=2;
+	
+	if(tmpShort!=PF_BT_PEER_TO_PEER_BOUNDARY)
+	{
+		return;
+	}
+	/*Jump over the block*/
+	pData +=4;
+	
+	/*Jump over the padding*/
+	pData +=2;
+	/*Get the boundary conditions*/
+
+	memcpy(&temp_u32, pData, sizeof(temp_u32));
+	pData +=sizeof(temp_u32);
+	
+	temp_u32 = htonl(temp_u32);
+
+	net->fspm_cfg.lldp_peer_req.peerBoundary.boundary.not_send_LLDP_Frames = pf_get_bits(temp_u32, 0, 1);
+	net->fspm_cfg.lldp_peer_req.peerBoundary.boundary.send_PTCP_Delay  = pf_get_bits(temp_u32, 1, 1);
+	net->fspm_cfg.lldp_peer_req.peerBoundary.boundary.send_PATH_Delay  = pf_get_bits(temp_u32, 2, 1);
+	/*Copy Adjust Properties*/
+	memcpy(&net->fspm_cfg.lldp_peer_req.peerBoundary.properites, pData, sizeof(net->fspm_cfg.lldp_peer_req.peerBoundary.properites));
+	pData +=sizeof(net->fspm_cfg.lldp_peer_req.peerBoundary.properites);
+	
 }
 
 /**
@@ -351,11 +437,14 @@ static int pf_cmwrr_write(
       switch (p_write_request->index)
       {
       case PF_IDX_SUB_PDPORT_DATA_CHECK:
-    	  pf_cmwrr_pdportcheck(net, p_ar, p_write_request,&p_req_buf[*p_req_pos],data_length,p_result );
+    	 pf_cmwrr_pdportcheck(net, p_ar, p_write_request,&p_req_buf[*p_req_pos],data_length,p_result );
+    	 pf_cmwrr_update_records(net);
          ret = 0;
          break;
       case PF_IDX_SUB_PDPORT_DATA_ADJ:
          /* ToDo: Handle the request. */
+    	  pf_cmwrr_pdport_data_adj(net, p_ar, p_write_request,&p_req_buf[*p_req_pos],data_length,p_result );
+     	 pf_cmwrr_update_records(net);
          break;
       default:
          break;

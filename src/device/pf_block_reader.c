@@ -171,6 +171,28 @@ static void pf_get_uuid(
 
 /**
  * @internal
+ * Extract a Handle from a buffer.
+ * @param p_info           In:   The parser state.
+ * @param p_pos            InOut:Position in the buffer.
+ * @param p_dest           Out:  Destination buffer.
+ */
+static void pf_get_handle(
+   pf_get_info_t           *p_info,
+   uint16_t                *p_pos,
+   pf_rpc_handle_t         *p_dest)
+{
+   p_dest->rpc_entry_handle 						= pf_get_uint32(p_info, p_pos);
+   
+   p_dest->handle_uuid.time_low 				= pf_get_uint32(p_info, p_pos);
+   p_dest->handle_uuid.time_mid 				= pf_get_uint16(p_info, p_pos);
+   p_dest->handle_uuid.time_hi_and_version		= pf_get_uint16(p_info, p_pos);
+   p_dest->handle_uuid.clock_hi_and_reserved 	= pf_get_byte(p_info, p_pos);
+   p_dest->handle_uuid.clock_low 				= pf_get_byte(p_info, p_pos);
+   pf_get_mem(p_info, p_pos, sizeof(p_dest->handle_uuid.node), p_dest->handle_uuid.node);
+}
+
+/**
+ * @internal
  * Extract bits from a uint32_t.
  * The extracted bits are placed at bit 0 in the returned uint32_t.
  *
@@ -205,7 +227,6 @@ uint32_t pf_get_bits(
    }
    else
    {
-
       return (bits >> pos) & (BIT(len) - 1u);
    }
 }
@@ -690,6 +711,34 @@ void pf_get_read_request(
    {
       p_req->rw_padding[ix] = pf_get_byte(p_info, p_pos);
    }
+}
+
+void pf_get_lookup_request(
+   pf_get_info_t           *p_info,
+   uint16_t                *p_pos,
+   pf_rpc_lookup_req_t     *p_req)
+{
+	/*Inquiry Info*/
+	p_req->inquiry_type = pf_get_uint32(p_info, p_pos);
+	
+	/*Object ID Info*/
+	p_req->object_id 	= pf_get_uint32(p_info, p_pos);
+	pf_get_uuid(p_info, p_pos, &p_req->object_uuid);
+	
+	/*Interface Info*/
+	p_req->interface_id = pf_get_uint32(p_info, p_pos);
+	pf_get_uuid(p_info, p_pos, &p_req->interface_uuid);
+	p_req->interface_ver_major = pf_get_uint16(p_info, p_pos);
+	p_req->interface_ver_minor = pf_get_uint16(p_info, p_pos);
+	
+	/*Version Option*/
+	p_req->version_option = pf_get_uint32(p_info, p_pos);
+	
+	/*Handle info*/
+	pf_get_handle(p_info, p_pos, &p_req->rpc_handle);
+	
+	/*Get max entries*/
+	p_req->max_entries = pf_get_uint32(p_info, p_pos);
 }
 
 void pf_get_write_request(

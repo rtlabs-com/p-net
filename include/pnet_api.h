@@ -129,6 +129,8 @@ extern "C"
 #define PNET_SUBMODID_DAP_INTERFACE_1_IDENT        0x2     /* For use in subslot 0x8000 */
 #define PNET_SUBMODID_DAP_INTERFACE_1_PORT_0_IDENT 0x3     /* For use in subslot 0x8001 */
 
+/* Nonvol File Path size */
+#define MAX_NONVOL_FILE_PATH_LENGTH 256
 
 /**
  * # GSDML
@@ -153,6 +155,20 @@ extern "C"
 #define PNET_BLOCK_VERSION_LOW_1                               1
 
 #define PNET_MAX_INTERFACE_NAME_LENGTH                         21       /** Including termination */
+
+#define PNET_RESET_BIT_HIGH(value,bitvalue) ((value&bitvalue) == bitvalue ? 1:0)
+
+typedef enum pnet_reset_bits
+{
+	pnet_reset_restore_comms			= 0x0000,
+	pnet_reset_factory_reset			= 0x0001, /* Reset_To_Factory Reset Type 5 */
+	pnet_reset_application_data 		= 0x0002, /* Mode 1 */
+	pnet_reset_communication_parameter 	= 0x0004, /* Mode 2 */
+	pnet_reset_engineering_parameter 	= 0x0008, /* Mode 3 */
+	pnet_reset_all_stored_data 			= 0x0010, /* Mode 4 */
+	pnet_reset_device 					= 0x0100, /* Mode 8 */
+	pnet_reset_and_restore_data 		= 0x0200  /* Mode 9 */
+}pnet_reset_bits_t;
 
 /**
  * # Error Codes
@@ -1001,6 +1017,7 @@ typedef struct pnet_im_0
    uint8_t                 im_version_major;       /**< Always 1 */
    uint8_t                 im_version_minor;       /**< Always 1 */
    uint16_t                im_supported;           /**< One bit for each supported I&M1..15 (I&M0 always supported) */
+   char                    deviceType[64];         /**< Terminated string */
 } pnet_im_0_t;
 
 /**
@@ -1142,28 +1159,45 @@ typedef struct pnet_ieee_macphy_config
 	uint16_t 	OperationalMAUType;
 }pnet_ieee_macphy_t;
 
+typedef struct pnet_lldp_boundary
+{
+	bool	 not_send_LLDP_Frames;
+	bool	 send_PTCP_Delay;
+	bool	 send_PATH_Delay;
+	bool	 reserved_bit4;
+	uint8_t  reserved_8;
+	uint16_t rserved_16;
+}pnet_lldp_boundary_t;
+
+typedef struct pnet_lldp_peer_to_peer_boundary
+{
+	pnet_lldp_boundary_t boundary;
+	uint16_t properites;
+}pnet_lldp_peer_to_peer_boundary_t;
 /**
  * LLDP Peer information used by the Profinet stack.
  */
 typedef struct pnet_lldp_peer_cfg
 {
 	/*LLDP TVL*/
-   char                    	PeerChassisID[512];		/**< Terminated string */
-   size_t				   	PeerChassisIDLen;
-   char                    	PeerPortID[512]; 		/**< Terminated string */
-   size_t				   	PeerPortIDLen;
-   uint16_t                	TTL;
+   char                    				PeerChassisID[512];		/**< Terminated string */
+   size_t				   				PeerChassisIDLen;
+   char                    				PeerPortID[512]; 		/**< Terminated string */
+   size_t				   				PeerPortIDLen;
+   uint16_t                				TTL;
    /*PROFIBUS TVL's*/
-   pnet_profibus_delay_t   	PeerDelay;
-   uint16_t                	PeerPortStatus;
-   pnet_ethaddr_t          	PeerMACAddr;
-   uint16_t                	PeerMediaType;
-   uint32_t				   	PeerLineDelay;			/* Line Delay */
-   uint32_t				   	PeerDomainBoundary;		/* Line Delay */
-   uint32_t				   	PeerMulticastBoundary;	/* Line Delay */
-   uint8_t					PeerLinkStatePort;
-   pnet_ieee_macphy_t		PeerMACPhyConfig;
-} pnet_lldp__peer_cfg_t;
+   pnet_profibus_delay_t   				PeerDelay;
+   uint16_t                				PeerPortStatus;
+   pnet_ethaddr_t          				PeerMACAddr;
+   uint16_t                				PeerMediaType;
+   uint32_t				   				PeerLineDelay;			/* Line Delay */
+   uint32_t				   				PeerDomainBoundary;		/* Line Delay */
+   uint32_t				   				PeerMulticastBoundary;	/* Line Delay */
+   uint8_t								PeerLinkStatePort;
+   pnet_ieee_macphy_t					PeerMACPhyConfig;
+   os_timer_t*							peerTimer;
+   pnet_lldp_peer_to_peer_boundary_t	peerBoundary;		
+} pnet_lldp_peer_cfg_t;
 
 /**
  * # Alarm and Diagnosis
@@ -1235,8 +1269,8 @@ typedef struct pnet_cfg
 
    /** LLDP */
    pnet_lldp_cfg_t         lldp_cfg;
-   pnet_lldp__peer_cfg_t   lldp_peer_cfg;
-   pnet_lldp__peer_cfg_t   lldp_peer_req;
+   pnet_lldp_peer_cfg_t   lldp_peer_cfg;
+   pnet_lldp_peer_cfg_t   lldp_peer_req;
    
    /** Capabilities */
    bool                    send_hello;             /**< Send DCP HELLO message on startup if true. */
@@ -1248,6 +1282,12 @@ typedef struct pnet_cfg
    pnet_cfg_ip_addr_t      ip_gateway;
    pnet_ethaddr_t          eth_addr;
    pnet_alarm_ack_t		   alarm_ack;
+   uint16_t				   reset_types_supported;	/* Supported reset types */
+   char                    diagNonvolFilePath[MAX_NONVOL_FILE_PATH_LENGTH];
+   char                    IM_NonvolFilePath[MAX_NONVOL_FILE_PATH_LENGTH];
+   char                    CIM_NonvolFilePath[MAX_NONVOL_FILE_PATH_LENGTH];
+   char                    PDev_NonvolFilePath[MAX_NONVOL_FILE_PATH_LENGTH];
+   char                    NonPDev_NonvolFilePath[MAX_NONVOL_FILE_PATH_LENGTH];
 } pnet_cfg_t;
 
 
@@ -1872,6 +1912,15 @@ PNET_EXPORT int pnet_diag_remove(
 PNET_EXPORT void pnet_show(
    pnet_t                  *net,
    unsigned                level);
+
+PNET_EXPORT void pnet_restore_diag(
+   pnet_t                  *net);
+
+PNET_EXPORT void pnet_restore_write_records(
+   pnet_t                  *net);
+
+PNET_EXPORT void pnet_start_lldp_broadcast(
+   pnet_t                  *net);
 
 #ifdef __cplusplus
 }

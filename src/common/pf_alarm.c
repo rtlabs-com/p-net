@@ -1770,7 +1770,7 @@ static int pf_alarm_get_diag_digest(
       if (pf_cmdev_get_subslot_full(net, api_id, slot_nbr, subslot_nbr, &p_subslot) == 0)
       {
          /* Collect all diags into maintenanceStatus*/
-
+    	  
          /* First handle the "current" (unreported) item. */
          if (p_diag_item != NULL)
          {
@@ -1788,6 +1788,26 @@ static int pf_alarm_get_diag_digest(
             item_ix = p_item->next;
             pf_cmdev_get_diag_item(net, item_ix, &p_item);
          }
+      }
+      else
+      {
+          /* First handle the "current" (unreported) item. */
+          if (p_diag_item != NULL)
+          {
+             pf_alarm_add_item_to_digest(p_ar, p_subslot, p_diag_item, p_alarm_spec, p_maint_status);
+          }
+
+          /* Now handle all the already reported diag items. */
+          item_ix = p_subslot->diag_list;
+          pf_cmdev_get_diag_item(net, item_ix, &p_item);
+          while (p_item != NULL)
+          {
+             /* Collect all diags into maintenanceStatus*/
+             pf_alarm_add_item_to_digest(p_ar, p_subslot, p_item, p_alarm_spec, p_maint_status);
+
+             item_ix = p_item->next;
+             pf_cmdev_get_diag_item(net, item_ix, &p_item);
+          }
       }
    }
 
@@ -1926,6 +1946,7 @@ static int pf_alarm_send_alarm(
    pf_apmx_t               *p_apmx = &p_ar->apmx[high_prio ? 1 : 0];
    pf_alpmx_t              *p_alpmx = &p_ar->alpmx[high_prio ? 1 : 0];
 
+   
    if (net->global_alarm_enable == true)
    {
       if (p_alpmx->alpmi_state == PF_ALPMI_STATE_W_ALARM)

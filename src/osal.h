@@ -158,13 +158,24 @@ int os_mbox_fetch (os_mbox_t * mbox, void ** msg, uint32_t time);
 int os_mbox_post (os_mbox_t * mbox, void * msg, uint32_t time);
 void os_mbox_destroy (os_mbox_t * mbox);
 
-os_timer_t * os_timer_create (uint32_t us, void (*fn) (os_timer_t * timer/*, void * arg*/),
-                              void * arg, bool oneshot);
-void os_timer_set (os_timer_t * timer, uint32_t us);
+#if PNET_OS_RTOS_SUPPORTED == 0
+os_timer_t * os_timer_create (uint32_t us, void (*fn) (os_timer_t * timer), void * arg, bool oneshot);
 void os_timer_start (os_timer_t * timer);
 void os_timer_stop (os_timer_t * timer);
 void os_timer_destroy (os_timer_t * timer);
+#else
+os_timer_handle_t * os_timer_init(void);
+os_timer_t * os_timer_create (os_timer_handle_t *interrupt_timer_handle,
+								uint32_t us, 
+								void (*fn) (os_timer_t * timer),
+								void * arg, 
+								bool oneshot);
 
+void os_timer_start (os_timer_t * timer);
+void os_timer_stop (os_timer_t * timer);
+void os_timer_destroy (os_timer_t * timer);
+void os_timer_thread_destroy(os_timer_handle_t * timerHandle);
+#endif
 os_buf_t * os_buf_alloc(uint16_t length);
 void os_buf_free(os_buf_t *p);
 uint8_t os_buf_header(os_buf_t *p, int16_t header_size_increment);
@@ -347,6 +358,11 @@ void os_get_button(
 void os_stack_to_app_event(uint32_t value);
 void os_stack_set_ip_suite(bool bSavePermanent);
 void os_eth_destroy(os_eth_handle_t *handle);
+
+/* Nonvolatile file storage */
+BOOL os_init_nvram_instance(char* filePath);
+BOOL os_save_nvram_instance(char* filePath, void* data, int len);
+BOOL os_restore_nvram_instance(char* filePath, void* data, int len);
 
 #ifdef __cplusplus
 }

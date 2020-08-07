@@ -329,6 +329,22 @@ void pf_fspm_get_default_cfg(
 int pf_fspm_clear_im_data(
    pnet_t                  *net);
 
+/**
+ * Rstore I&M Data from Nonvolatile Storage
+ * @param net              InOut: The p-net stack instance
+ * @return  none
+ */
+void pf_fspm_nonvol_restore(
+   pnet_t                  *net);
+
+/**
+ * Save I&M Data to Nonvolatile Storage
+ * @param net              InOut: The p-net stack instance
+ * @return  none
+ */
+void pf_fspm_nonvol_save(
+   pnet_t                  *net);
+
 #ifdef __cplusplus
 }
 #endif

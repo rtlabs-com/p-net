@@ -77,6 +77,10 @@ int pf_cmwrr_rm_write_ind(
    uint16_t                data_length,
    uint16_t                *p_req_pos);
 
+void pf_cmwrr_restore_records(pnet_t *net);
+
+void pf_cmwrr_update_records(pnet_t *net);
+
 #ifdef __cplusplus
 }
 #endif

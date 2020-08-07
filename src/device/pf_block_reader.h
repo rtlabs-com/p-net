@@ -232,6 +232,17 @@ void pf_get_read_request(
    pf_iod_read_request_t   *p_req);
 
 /**
+ * Extract a lookup request block from a buffer.
+ * @param p_info           In:   The parser information.
+ * @param p_pos            InOut:The current parsing position.
+ * @param p_req            Out:  Destination structure.
+ */
+void pf_get_lookup_request(
+   pf_get_info_t           *p_info,
+   uint16_t                *p_pos,
+   pf_rpc_lookup_req_t   *p_req);
+
+/**
  * Extract a write request block from a buffer.
  * @param p_info           In:   The parser information.
  * @param p_pos            InOut:The current parsing position.

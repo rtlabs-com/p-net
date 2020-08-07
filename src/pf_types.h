@@ -202,15 +202,114 @@ typedef enum pf_write_req_error_type_values
 typedef enum pf_write_req_ext_error_type_values
 {
 	PF_WRT_ERROR_PORTID_MISMATCH = 0x8000,
-	PF_WRT_ERROR_CHASSISID_MISMATCH = 0x8001
+	PF_WRT_ERROR_CHASSISID_MISMATCH = 0x8001,
+	PF_WRT_ERROR_NO_PEER_DETECTED = 0x8005,
 }pf_write_req_ext_error_type_t;
+
+
+/* RPC Implementation */
+
+#define RPC_TOWER_REFERENTID		3
+#define RPC_TOWER_FLOOR_COUNT		5	/* 4.10.3.3.27 Coding of the field RPCFloorCount */
+
+#define RPC_FLOOR_VERSION_EPMv4		3
+#define RPC_FLOOR_VERSION_NPR		2
+#define RPC_FLOOR_VERSION_PNIO		1
+#define RPC_FLOOR_VERSION_MINOR		0
+
+/*Described in DCP 1.1 Appendix A*/
+typedef struct pf_rpc_uuid_type
+{
+	uint32_t time_low;
+	uint16_t time_mid;
+	uint16_t time_hi_and_version;
+	uint8_t  clock_hi_and_reserved;
+	uint8_t  clock_low;
+	uint8_t  node[6];
+}pf_rpc_uuid_type_t;
+
+typedef struct pf_rpc_annotation_data
+{
+	uint8_t		deviceType[51];
+	uint8_t		hw_revision[2];
+	uint8_t		version[3];
+	uint8_t		sw_major[3];
+	uint8_t		sw_minor[3];
+	uint8_t		sw_subminor[2];
+}pf_rpc_annotation_data_t;
+
+typedef struct pf_rpc_tower
+{
+	uint32_t		referentID;
+	uint32_t		annotation_offset;
+	uint32_t		annotation_length;
+	uint8_t			annotation_data[64];
+	uint32_t		floor_length1;
+	uint32_t		floor_length2;
+	uint8_t			floor_data[256];
+}pf_rpc_tower_t;
+
+typedef struct pf_rpc_entry
+{
+	uint32_t 			max_count;
+	uint32_t 			offset;
+	uint32_t 			actual_count;
+	pf_rpc_uuid_type_t	object_uuid;
+	pf_rpc_tower_t		tower_entry;
+	struct pf_rpc_entry *next_entry;
+}pf_rpc_entry_t;
+
+typedef struct pf_rpc_handle
+{
+	uint32_t 			rpc_entry_handle;
+	pf_rpc_uuid_type_t	handle_uuid;
+}pf_rpc_handle_t;
+
+typedef struct pf_rpc_lookup_rsp
+{
+	pf_rpc_handle_t		rpc_handle;
+	uint32_t			num_entry;
+	pf_rpc_entry_t		*rpc_entries;
+	uint32_t			return_code;
+}pf_rpc_lookup_rsp_t;
+
+typedef struct pf_rpc_lookup_req
+{
+	uint32_t			inquiry_type;
+	uint32_t			object_id;
+	pf_uuid_t			object_uuid;
+	uint32_t			interface_id;
+	pf_uuid_t			interface_uuid;
+	uint16_t			interface_ver_major;
+	uint16_t			interface_ver_minor;
+	uint32_t			version_option;
+	pf_rpc_handle_t		rpc_handle;
+	uint32_t			max_entries;
+	uint16_t			udpPort;
+}pf_rpc_lookup_req_t;
+
+/*Defined in PN-AL-protocol page 336 table 330*/
+typedef enum pf_rpc_inquiry_type
+{
+	PF_RPC_INQUIRY_READ_ALL_REGISTERED_INTERFACES 			= 0x00000000,	/*mandatory*/
+	PF_RPC_INQUIRY_READ_ALL_OBJECTS_FOR_ONE_INTERFACE 		= 0x00000001,	/*optional*/
+	PF_RPC_INQUIRY_READ_ALL_INTERFACES_INCLUDING_OBJECTS 	= 0x00000002,	/*optional*/
+	PF_RPC_INQUIRY_READ_ONE_INTERFACE_WITH_ONE_OBJECT		= 0x00000003	/*optional*/
+	/*0x00000004 – 0xFFFFFFFF (Reserved)*/
+}pf_rpc_inquiry_type_t;
+
+typedef enum pf_rpc_error_value
+{
+	PF_RPC_OK = 0x00000000, 			/* Result is Good */
+	PF_RPC_NOT_REGISTERED = 0x16c9a0d6, /* Endpoint not registered */
+}pf_rpc_error_value_t;
 
 
 /************************** Block header *************************************/
 
 typedef enum pf_block_type_values
 {
-   /* Reserved 0x0000 */
+   PF_BT_RPC_ENDPOINT_LOOKUP		   = 0x0000,
    PF_BT_ALARM_NOTIFICATION_HIGH       = 0x0001,
    PF_BT_ALARM_NOTIFICATION_LOW        = 0x0002,
    /* Reserved 0x0003.. 0x0007 */
@@ -281,6 +380,8 @@ typedef enum pf_block_type_values
    PF_BT_PDPORTCHECK              	   = 0x0200,
    PF_BT_CHECKPEERS              	   = 0x020a,
    PF_BT_PDPORTDATAREAL            	   = 0x020f,
+   PF_BT_BOUNDARY_ADJUST	     	   = 0x0202,
+   PF_BT_PEER_TO_PEER_BOUNDARY     	   = 0x0224,
    PF_BT_INTERFACE_REAL_DATA		   = 0x0240,
    PF_BT_INTERFACE_ADJUST              = 0x0250,
    PF_BT_PORT_STATISTICS			   = 0x0251,
@@ -1836,6 +1937,8 @@ typedef struct pf_diag_item
    uint16_t				   subslot_nb;
    pnet_alarm_spec_t       alarm_spec;
    bool                    in_use;
+   uint8_t				   unused_char;
+   uint16_t				   unused_short;
    uint16_t                usi;        /* pf_usi_values_t */
    uint16_t                next;       /* Next in list */
 } pf_diag_item_t;
@@ -2075,8 +2178,13 @@ struct pnet
    pf_log_book_t                       fspm_log_book;
    os_mutex_t                          *fspm_log_book_mutex;
    pnet_interface_stats_t			   interface_statistics;
+   os_timer_handle_t				   *interrupt_timer_handle;
 };
 
+typedef struct pdev_record
+{
+	pnet_lldp_peer_cfg_t peerRequested;
+}pdev_record_t;
 
 #ifdef __cplusplus
 }

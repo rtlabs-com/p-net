@@ -149,14 +149,6 @@ int pf_cmsu_start_req(
          ret = -1;
       }
 
-#if 0
-      if ((ret == 0) && (pf_dfp_activate_req(p_ar) != 0))
-      {
-         p_stat->pnio_status.error_code_2 = PNET_ERROR_CODE_2_CMSU_AR_ADD_PROV_CONS_FAILED;
-         ret = -1;
-      }
-#endif
-
       /* ToDo: Create static ARP cache entry */
       /* ACCM_req(Command: ADD, ip_address, mac_address) */
 

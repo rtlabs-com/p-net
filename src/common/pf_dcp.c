@@ -819,7 +819,11 @@ static int pf_dcp_get_set(
          if (p_src_dcphdr->service_id == PF_DCP_SERVICE_SET)
          {
             pf_cmina_dcp_set_commit(net);
-            pf_lldp_send(net);
+        	/*Check if we need to shut down the LLDP TX'ing*/
+        	if(!net->fspm_cfg.lldp_peer_req.peerBoundary.boundary.not_send_LLDP_Frames)
+        	{
+        		pf_lldp_send(net);
+        	}
          }
       }
    }

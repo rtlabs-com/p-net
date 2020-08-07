@@ -28,8 +28,52 @@
 #include "pf_block_writer.h"
 
 
-int pf_diag_init(void)
+
+int pf_diag_init(pnet_t *net)
 {
+
+   return 0;
+}
+
+int pf_diag_restore(pnet_t *net)
+{
+   /* Restore nonvol diag data and add to diag list */
+   pf_diag_item_t 	temp_diag_items[PNET_MAX_DIAG_ITEMS];
+   
+   if(os_restore_nvram_instance((char*)net->p_fspm_default_cfg->diagNonvolFilePath,
+							   temp_diag_items,
+							   sizeof(pf_diag_item_t)*PNET_MAX_DIAG_ITEMS))
+   {
+	   for(int i = 0; i<PNET_MAX_DIAG_ITEMS; i++)
+	   {
+		   if ((temp_diag_items[i].usi < PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS) &&
+				   (temp_diag_items[i].usi > 0))
+		   {
+				
+				temp_diag_items[i].alarm_spec.channel_diagnosis = true;
+				temp_diag_items[i].alarm_spec.manufacturer_diagnosis = false;
+				temp_diag_items[i].alarm_spec.submodule_diagnosis = true;
+				temp_diag_items[i].alarm_spec.ar_diagnosis = true;
+				
+			   pf_diag_restore_item(net,
+					   (void*)NULL,
+						0,
+						temp_diag_items[i].slot_nb,
+						temp_diag_items[i].subslot_nb,
+						temp_diag_items[i].fmt.std.ch_nbr,				/*Channel Number */
+						temp_diag_items[i].fmt.std.ch_properties,		/*Channel Properties */
+						temp_diag_items[i].fmt.std.ch_error_type,		/*Channel Error Type: Remote Mismatch*/
+						temp_diag_items[i].fmt.std.ext_ch_error_type,	/*Ext Channel Error Type: peer chassisid mismatch*/
+						temp_diag_items[i].fmt.std.ext_ch_add_value,	/* Ext Channel Add Value */
+						temp_diag_items[i].fmt.std.qual_ch_qualifier,	/* Channel Qualifier ? */
+						temp_diag_items[i].usi,							/* USI*/
+						&temp_diag_items[i].alarm_spec,					/*Alarm Specifications */
+						(uint8_t*)temp_diag_items[i].fmt.usi.manuf_data);		/*Data*/
+		   }
+
+	   }
+   }
+   
    return 0;
 }
 
@@ -217,7 +261,7 @@ int pf_diag_add(
    pf_diag_item_t          *p_item = NULL;
    bool                    overwrite = false;
    pf_diag_item_t          old_item;
-
+   bool						set_problem_indicator = false;
    /* Remove reserved bits before we use it */
    qual_ch_qualifier &= ~0x00000007;
 
@@ -230,7 +274,7 @@ int pf_diag_add(
       os_mutex_lock(p_dev->diag_mutex);
 
       pf_diag_find_entry(net, api_id, slot_nbr, subslot_nbr, ch_nbr, ch_properties, ch_error_type, usi,
-         &p_subslot, &item_ix);
+         &p_subslot, &item_ix); 
       if (p_subslot != NULL)
       {
          if (item_ix == PF_DIAG_IX_NULL)
@@ -295,11 +339,17 @@ int pf_diag_add(
                 p_item->next = p_subslot->diag_list;
                 p_subslot->diag_list = item_ix;
                 
-				/*Set the problem indictor*/
-				pf_ppm_set_problem_indicator(p_ar, true);
-				
-                /*ToDo: Write to NVRAM */
+                set_problem_indicator = p_alarm_spec->channel_diagnosis ? true:false;
 
+				/*Set the problem indictor*/
+				pf_ppm_set_problem_indicator(p_ar,  set_problem_indicator);
+
+                /*Write to NVRAM */
+				os_save_nvram_instance((char*)net->p_fspm_default_cfg->diagNonvolFilePath,
+						                 net->cmdev_device.diag_items,
+						                 sizeof(pf_diag_item_t)*PNET_MAX_DIAG_ITEMS);
+				
+				
 				
                 os_mutex_unlock(p_dev->diag_mutex);
             	return 0;
@@ -427,7 +477,9 @@ int pf_diag_update(
 				pf_ppm_set_problem_indicator(p_ar, ((pnet_alarm_spec_t*)p_manuf_data)->channel_diagnosis);
 				
 				/*ToDo: Write to NVRAM */
-
+				os_save_nvram_instance((char*)net->p_fspm_default_cfg->diagNonvolFilePath,
+						                 net->cmdev_device.diag_items,
+						                 sizeof(pf_diag_item_t)*PNET_MAX_DIAG_ITEMS);
 				
 				os_mutex_unlock(p_dev->diag_mutex);
 				return 0;
@@ -530,8 +582,14 @@ int pf_diag_remove(
 				
 		         /* Free diag entry */
 		         pf_cmdev_free_diag(net, item_ix);
+		         
+				/*Write to NVRAM */
+				os_save_nvram_instance((char*)net->p_fspm_default_cfg->diagNonvolFilePath,
+										 net->cmdev_device.diag_items,
+										 sizeof(pf_diag_item_t)*PNET_MAX_DIAG_ITEMS);
+					
 				ret = 0;
-				return 0;
+				return ret;
             }
             else
             {
@@ -549,6 +607,11 @@ int pf_diag_remove(
          pf_cmdev_free_diag(net, item_ix);
 
          pf_diag_update_station_problem_indicator(net, p_ar, p_subslot);
+         
+		/*Write to NVRAM */
+		os_save_nvram_instance((char*)net->p_fspm_default_cfg->diagNonvolFilePath,
+								 net->cmdev_device.diag_items,
+								 sizeof(pf_diag_item_t)*PNET_MAX_DIAG_ITEMS);
       }
       else
       {
@@ -613,4 +676,148 @@ int pf_diag_get(
 	}
 	
 	return ret;
+}
+
+int pf_diag_restore_item(
+   pnet_t                  *net,
+   pf_ar_t                 *p_ar,
+   uint32_t                api_id,
+   uint16_t                slot_nbr,
+   uint16_t                subslot_nbr,
+   uint16_t                ch_nbr,
+   uint16_t                ch_properties,
+   uint16_t                ch_error_type,
+   uint16_t                ext_ch_error_type,
+   uint32_t                ext_ch_add_value,
+   uint32_t                qual_ch_qualifier,
+   uint16_t                usi,
+   pnet_alarm_spec_t       *p_alarm_spec,
+   uint8_t                 *p_manuf_data)
+{
+   int                     ret = -1;
+   pf_device_t             *p_dev = NULL;
+   pf_subslot_t            *p_subslot = NULL;
+   uint16_t                item_ix = PF_DIAG_IX_NULL;
+   pf_diag_item_t          *p_item = NULL;
+   bool                    overwrite = false;
+   pf_diag_item_t          old_item;
+
+   /* Remove reserved bits before we use it */
+   qual_ch_qualifier &= ~0x00000007;
+
+   if (usi > PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS)
+   {
+	  LOG_ERROR(PNET_LOG, "DIAG(%d): Bad USI\n", __LINE__);
+   }
+   else if (pf_cmdev_get_device(net, &p_dev) == 0)
+   {
+	  os_mutex_lock(p_dev->diag_mutex);
+
+	  pf_diag_find_entry(net, api_id, slot_nbr, subslot_nbr, ch_nbr, ch_properties, ch_error_type, usi,
+		 &p_subslot, &item_ix);
+	  if (p_subslot != NULL)
+	  {
+		 if (item_ix == PF_DIAG_IX_NULL)
+		 {
+			/* Allocate a new entry and determine format */
+			if (pf_cmdev_new_diag(net, &item_ix) == 0)
+			{
+			   (void)pf_cmdev_get_diag_item(net, item_ix, &p_item);
+			}
+			else
+			{
+			   /* Diag overflow */
+			   /* ToDo: Handle diag overflow */
+			   LOG_ERROR(PNET_LOG, "DIAG(%d): overflow\n", __LINE__);
+			}
+		 }
+		 else
+		 {
+			/* Re-use the old entry */
+			(void)pf_cmdev_get_diag_item(net, item_ix, &p_item);
+			overwrite = true;
+		 }
+
+		 if (p_item != NULL)
+		 {
+			old_item = *p_item;  /* In case we need to remove the old - after inserting the new */
+
+			/* Determine diag format */
+			if (usi < PF_USI_CHANNEL_DIAGNOSIS)
+			{
+			   p_item->usi = usi;
+			   memcpy(p_item->fmt.usi.manuf_data, p_manuf_data, sizeof(p_item->fmt.usi.manuf_data));
+			   
+			   p_item->slot_nb = slot_nbr;
+			   p_item->subslot_nb = subslot_nbr;
+			   p_item->alarm_spec.channel_diagnosis = p_alarm_spec->channel_diagnosis;
+			   p_item->alarm_spec.manufacturer_diagnosis = p_alarm_spec->manufacturer_diagnosis;
+			   p_item->alarm_spec.submodule_diagnosis = p_alarm_spec->submodule_diagnosis;
+			   p_item->alarm_spec.ar_diagnosis = p_alarm_spec->ar_diagnosis;
+			   
+			}
+			else if (usi == PF_USI_EXTENDED_CHANNEL_DIAGNOSIS)
+			{
+				p_item->usi = usi;
+				PNET_DIAG_CH_PROP_SPEC_SET(p_item->fmt.std.ch_properties, PNET_DIAG_CH_PROP_SPEC_APPEARS);
+
+				p_item->fmt.std.ch_nbr = ch_nbr;
+				p_item->fmt.std.ch_properties = ch_properties;
+				p_item->fmt.std.ch_error_type = ch_error_type;
+				p_item->fmt.std.ext_ch_error_type = ext_ch_error_type;
+				p_item->fmt.std.ext_ch_add_value = ext_ch_add_value;
+				p_item->fmt.std.qual_ch_qualifier = qual_ch_qualifier;
+			 
+				p_item->slot_nb = slot_nbr;
+				p_item->subslot_nb = subslot_nbr;
+				p_item->alarm_spec.channel_diagnosis = p_alarm_spec->channel_diagnosis;
+				p_item->alarm_spec.manufacturer_diagnosis = p_alarm_spec->manufacturer_diagnosis;
+				p_item->alarm_spec.submodule_diagnosis = p_alarm_spec->submodule_diagnosis;
+				p_item->alarm_spec.ar_diagnosis = p_alarm_spec->ar_diagnosis;
+				
+				/* Link it into the sub-slot reported list */
+				p_item->next = p_subslot->diag_list;
+				p_subslot->diag_list = item_ix;
+
+				os_mutex_unlock(p_dev->diag_mutex);
+				return 0;
+			}
+			else
+			{
+			   p_item->usi = PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS;
+			   PNET_DIAG_CH_PROP_SPEC_SET(p_item->fmt.std.ch_properties, PNET_DIAG_CH_PROP_SPEC_APPEARS);
+
+			   p_item->fmt.std.ch_nbr = ch_nbr;
+			   p_item->fmt.std.ch_properties = ch_properties;
+			   p_item->fmt.std.ch_error_type = ch_error_type;
+			   p_item->fmt.std.ext_ch_error_type = ext_ch_error_type;
+			   p_item->fmt.std.ext_ch_add_value = ext_ch_add_value;
+			   p_item->fmt.std.qual_ch_qualifier = qual_ch_qualifier;
+			   
+			   p_item->slot_nb = slot_nbr;
+			   p_item->subslot_nb = subslot_nbr;
+			   p_item->alarm_spec.channel_diagnosis = p_alarm_spec->channel_diagnosis;
+			   p_item->alarm_spec.manufacturer_diagnosis = p_alarm_spec->manufacturer_diagnosis;
+			   p_item->alarm_spec.submodule_diagnosis = p_alarm_spec->submodule_diagnosis;
+			   p_item->alarm_spec.ar_diagnosis = p_alarm_spec->ar_diagnosis;
+			}
+
+			if (ret == 0)
+			{
+			   /* Link it into the sub-slot reported list */
+			   p_item->next = p_subslot->diag_list;
+			   p_subslot->diag_list = item_ix;
+
+			}
+		 }
+	  }
+	  else
+	  {
+		 LOG_ERROR(PNET_LOG, "DIAG(%d): Unknown sub-slot\n", __LINE__);
+	  }
+
+	  os_mutex_unlock(p_dev->diag_mutex);
+   }
+
+   return ret;
 }

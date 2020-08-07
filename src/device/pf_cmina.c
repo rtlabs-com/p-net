@@ -156,36 +156,77 @@ int pf_cmina_set_default_cfg(
       net->cmina_perm_dcp_ase.oem_device_id = p_cfg->oem_device_id;
 
       net->cmina_perm_dcp_ase.dhcp_enable = p_cfg->dhcp_enable;
-      if (reset_mode == 0)                /* Power-on reset */
+      
+      /*Handle special case of reset_mode == 0*/
+      if(reset_mode == 0)
       {
-         /* ToDo: Get from permanent pool */
-         /* osal_get_perm_pool((uint8_t *)&net->cmina_perm_dcp_ase, sizeof(net->cmina_perm_dcp_ase)); */
+          /* ToDo: Get from permanent pool */
+          /* osal_get_perm_pool((uint8_t *)&net->cmina_perm_dcp_ase, sizeof(net->cmina_perm_dcp_ase)); */
 
-         OS_IP4_ADDR_TO_U32(net->cmina_perm_dcp_ase.full_ip_suite.ip_suite.ip_addr,
-            p_cfg->ip_addr.a, p_cfg->ip_addr.b, p_cfg->ip_addr.c, p_cfg->ip_addr.d);
-         OS_IP4_ADDR_TO_U32(net->cmina_perm_dcp_ase.full_ip_suite.ip_suite.ip_mask,
-            p_cfg->ip_mask.a, p_cfg->ip_mask.b, p_cfg->ip_mask.c, p_cfg->ip_mask.d);
-         OS_IP4_ADDR_TO_U32(net->cmina_perm_dcp_ase.full_ip_suite.ip_suite.ip_gateway,
-            p_cfg->ip_gateway.a, p_cfg->ip_gateway.b, p_cfg->ip_gateway.c, p_cfg->ip_gateway.d);
-         memcpy(net->cmina_perm_dcp_ase.name_of_station, p_cfg->station_name, sizeof(net->cmina_perm_dcp_ase.name_of_station));
-         net->cmina_perm_dcp_ase.name_of_station[sizeof(net->cmina_perm_dcp_ase.name_of_station) - 1] = '\0';
+          OS_IP4_ADDR_TO_U32(net->cmina_perm_dcp_ase.full_ip_suite.ip_suite.ip_addr,
+             p_cfg->ip_addr.a, p_cfg->ip_addr.b, p_cfg->ip_addr.c, p_cfg->ip_addr.d);
+          OS_IP4_ADDR_TO_U32(net->cmina_perm_dcp_ase.full_ip_suite.ip_suite.ip_mask,
+             p_cfg->ip_mask.a, p_cfg->ip_mask.b, p_cfg->ip_mask.c, p_cfg->ip_mask.d);
+          OS_IP4_ADDR_TO_U32(net->cmina_perm_dcp_ase.full_ip_suite.ip_suite.ip_gateway,
+             p_cfg->ip_gateway.a, p_cfg->ip_gateway.b, p_cfg->ip_gateway.c, p_cfg->ip_gateway.d);
+          memcpy(net->cmina_perm_dcp_ase.name_of_station, p_cfg->station_name, sizeof(net->cmina_perm_dcp_ase.name_of_station));
+          net->cmina_perm_dcp_ase.name_of_station[sizeof(net->cmina_perm_dcp_ase.name_of_station) - 1] = '\0';
       }
-      if (reset_mode == 1 || reset_mode == 99)  /* Reset application parameters */
+      
+      /*Now check if any of the bits are set 
+       * HINT: We shouldn't be operating any bits that the 
+       *       application said NOT to use previously!
+       */
+      if( (PNET_RESET_BIT_HIGH(reset_mode, pnet_reset_factory_reset))				||	/* Reset_To_Factory */
+    		  (PNET_RESET_BIT_HIGH(reset_mode, pnet_reset_application_data)) 		||	/* mode 1 */
+    		  (PNET_RESET_BIT_HIGH(reset_mode, pnet_reset_engineering_parameter)) 	||	/* mode 3 */
+    		  (PNET_RESET_BIT_HIGH(reset_mode, pnet_reset_all_stored_data))			||	/* mode 4 */
+    		  (PNET_RESET_BIT_HIGH(reset_mode, pnet_reset_device))					||	/* mode 8 */
+    		  (PNET_RESET_BIT_HIGH(reset_mode, pnet_reset_and_restore_data)))			/* mode 9*/
       {
-         should_reset_user_application = true;
+          /* Reset I&M data */
+          ret = pf_fspm_clear_im_data(net);
+      }
+      
+      if( (PNET_RESET_BIT_HIGH(reset_mode, pnet_reset_factory_reset))				||	/* Reset_To_Factory */
+    		  (PNET_RESET_BIT_HIGH(reset_mode, pnet_reset_communication_parameter)) ||	/* mode 2*/
+    		  (PNET_RESET_BIT_HIGH(reset_mode, pnet_reset_engineering_parameter)) 	||	/* mode 3 */
+    		  (PNET_RESET_BIT_HIGH(reset_mode, pnet_reset_all_stored_data))			||	/* mode 4 */
+    		  (PNET_RESET_BIT_HIGH(reset_mode, pnet_reset_device))					||	/* mode 8 */
+    		  (PNET_RESET_BIT_HIGH(reset_mode, pnet_reset_and_restore_data)) )			/* mode 9*/
+      {
+    	  
 
-         /* Reset I&M data */
-         ret = pf_fspm_clear_im_data(net);
+    	  
+          should_reset_user_application = true;
+          /* Reset IP suite */
+          net->cmina_perm_dcp_ase.full_ip_suite.ip_suite.ip_addr = 0;
+          net->cmina_perm_dcp_ase.full_ip_suite.ip_suite.ip_mask = 0;
+          net->cmina_perm_dcp_ase.full_ip_suite.ip_suite.ip_gateway = 0;
+          /* Clear name of station */
+          memset(net->cmina_perm_dcp_ase.name_of_station, 0, sizeof(net->cmina_perm_dcp_ase.name_of_station));
       }
-      if (reset_mode == 2 || reset_mode == 99)  /* Reset communication parameters */
+      
+      if( (PNET_RESET_BIT_HIGH(reset_mode, pnet_reset_factory_reset))				||	/* Reset_To_Factory */
+    		  (PNET_RESET_BIT_HIGH(reset_mode, pnet_reset_communication_parameter)))	/* mode 2*/
       {
-         /* Reset IP suite */
-         net->cmina_perm_dcp_ase.full_ip_suite.ip_suite.ip_addr = 0;
-         net->cmina_perm_dcp_ase.full_ip_suite.ip_suite.ip_mask = 0;
-         net->cmina_perm_dcp_ase.full_ip_suite.ip_suite.ip_gateway = 0;
-         /* Clear name of station */
-         memset(net->cmina_perm_dcp_ase.name_of_station, 0, sizeof(net->cmina_perm_dcp_ase.name_of_station));
+    	  memset(&net->fspm_cfg.lldp_peer_req, 0, sizeof(net->fspm_cfg.lldp_peer_req));
+    	  pf_cmwrr_update_records(net);
       }
+      
+
+      
+      if(PNET_RESET_BIT_HIGH(reset_mode, pnet_reset_engineering_parameter))
+      {
+    	/*ToDo: Implement this*/  
+      }
+      
+
+      if(PNET_RESET_BIT_HIGH(reset_mode, pnet_reset_device))
+      {
+    	  /*Application handles this request*/
+      }
+
       if (reset_mode > 0)
       {
          /* User callback */
@@ -482,16 +523,33 @@ int pf_cmina_dcp_set_ind(
    case PF_DCP_OPT_CONTROL:
       if (sub == PF_DCP_SUB_CONTROL_FACTORY_RESET)
       {
-         reset_to_factory = true;
-         reset_mode = 99;        /* Reset all */
-
-         ret = 0;
+		  if(PNET_RESET_BIT_HIGH(net->fspm_cfg.reset_types_supported,block_qualifier))
+		  {
+			  reset_to_factory = true;
+			  reset_mode = pnet_reset_factory_reset; /* Reset_To_Factory Reset Type 5  */
+			  ret = 0;
+		  }
+		  else
+		  {
+			  /*Not allowed!*/
+			  *p_block_error = PF_DCP_SUB_CONTROL_RESET_TO_FACTORY;
+			  ret = -1;
+		  }
       }
       else if (sub == PF_DCP_SUB_CONTROL_RESET_TO_FACTORY)
       {
-         reset_to_factory = true;
-
-         ret = 0;
+		  if(PNET_RESET_BIT_HIGH(net->fspm_cfg.reset_types_supported,block_qualifier))
+		  {
+			  reset_to_factory = true;
+			  reset_mode = block_qualifier; /* Set the correct reset type */
+			  ret = 0;
+		  }
+		  else
+		  {
+			  /*Not allowed!*/
+			  *p_block_error = PF_DCP_BLOCK_ERROR_SUBOPTION_NOT_SUPPORTED;
+			  ret = -1;
+		  }
       }
       break;
    default:

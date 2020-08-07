@@ -237,7 +237,7 @@ int pf_cmio_cpm_state_ind(
    switch (p_ar->cmio_state)
    {
    case PF_CMIO_STATE_IDLE:
-   case PF_CMIO_STATE_STARTUP:
+   //case PF_CMIO_STATE_STARTUP:
       /* Ignore */
       break;
    case PF_CMIO_STATE_WDATA:
@@ -254,6 +254,7 @@ int pf_cmio_cpm_state_ind(
          ret = -1;
       }
       break;
+   case PF_CMIO_STATE_STARTUP:
    case PF_CMIO_STATE_DATA:
       if (start == false)
       {
