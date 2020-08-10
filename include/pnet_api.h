@@ -344,6 +344,11 @@ extern "C"
 #define PNET_ERROR_CODE_2_ALPMR_WRONG_STATE                    0x03
 /* Reserved 0x04..0xff */
 
+
+#define PNET_ERROR_CODE_2_INVALID_BLOCK_LEN                    0x01
+#define PNET_ERROR_CODE_2_INVALID_BLOCK_VERSION_HIGH           0x02
+#define PNET_ERROR_CODE_2_INVALID_BLOCK_VERSION_LOW            0x03
+
 /**
  * # List of error_code_2 values, for
  * PNET_ERROR_CODE_1_RTA_ERR_CLS_PROTOCOL (not exhaustive).
@@ -381,6 +386,15 @@ extern "C"
 #define PNET_ERROR_CODE_2_ABORT_DCP_STATION_NAME_CHANGED       0x1f
 #define PNET_ERROR_CODE_2_ABORT_DCP_RESET_TO_FACTORY           0x20
 #define PNET_ERROR_CODE_2_ABORT_PDEV_CHECK_FAILED              0x24
+
+
+typedef enum pnet_file_index
+{
+   PNET_FILE_INDEX_IP,
+   PNET_FILE_INDEX_DIAGNOSTICS,
+   PNET_FILE_INDEX_LOGBOOK,
+} pnet_file_index_t;
+
 
 /**
  * # List of error_code_2 values, for
@@ -1092,7 +1106,7 @@ typedef struct pnet_ethaddr
  */
 typedef struct pnet_lldp_cfg
 {
-   char                    chassis_id[240 + 1];    /**< Terminated string */
+   char                    chassis_id[240 + 1];    /**< Terminated string. Not used */
    char                    port_id[240 + 1];       /**< Terminated string */
    pnet_ethaddr_t          port_addr;
    uint16_t                ttl;                    /**< Time to live in seconds */
@@ -1183,7 +1197,7 @@ typedef struct pnet_alarm_spec
  * @param netif            In:   Name of the network interface.
  * @param tick_us          In:   Periodic interval in us. Specify the interval
  *                               between calls to pnet_handle_periodic().
- * @param p_cfg            In:   Profinet configuration.
+ * @param p_cfg            In:   Profinet configuration. These values are used at first startup and at factory reset.
  * @return a handle to the stack instance, or NULL if an error occurred.
  */
 PNET_EXPORT pnet_t* pnet_init(

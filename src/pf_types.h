@@ -55,6 +55,7 @@ static inline uint32_t atomic_fetch_sub(atomic_int *p, uint32_t v)
 #endif
 
 #define PF_RPC_SERVER_PORT                0x8894   /* PROFInet Context Manager */
+#define PF_UDP_UNICAST_PORT               0x8892
 #define PF_RPC_CCONTROL_EPHEMERAL_PORT    0xc001
 
 #define PF_FRAME_BUFFER_SIZE              1500
@@ -659,6 +660,7 @@ typedef struct pf_alarm_err
 
 #define PF_CMINA_FS_HELLO_RETRY           3
 #define PF_CMINA_FS_HELLO_INTERVAL        (3*1000)     /* milliseconds. Default is 30 ms */
+#define PF_LLDP_INTERVAL                  (5*1000)     /* milliseconds */
 
 typedef enum pf_cmina_state_values
 {
@@ -746,7 +748,7 @@ typedef struct pf_cmina_dcp_ase
    char                    name_of_station[240 + 1];  /* Terminated */
    char                    device_vendor[20+1];       /* Terminated */
    uint8_t                 device_role;               /* Only value "1" supported */
-   uint16_t                device_initiative;
+   uint16_t                device_initiative;         /* 1: Should send hello. 0: No sending of hello */
 
    struct
    {
@@ -1519,11 +1521,11 @@ typedef struct pf_session_info
 {
    uint16_t                ix;
    bool                    in_use;
-   bool                    release_in_progress;
+   bool                    release_in_progress;    /* The session handles an incoming release request */
    bool                    kill_session;           /* On error or when done. This will kill the session at the end of handling the incoming RPC frame. */
    uint32_t                socket;
    os_eth_handle_t         *eth_handle;
-   struct pf_ar            *p_ar;
+   struct pf_ar            *p_ar;                  /* Parent AR */
    bool                    from_me;                /* True if the session originates from the device. */
    pf_uuid_t               activity_uuid;
    uint32_t                ip_addr;
@@ -1561,10 +1563,10 @@ typedef struct pf_ar
    bool                    in_use;
    uint16_t                arep;
 
-   pf_session_info_t       *p_sess;
+   pf_session_info_t       *p_sess;                      /* Incoming session, not the outgoing CControl session. Use pf_session_locate_by_ar() to find the CControl session. */
 
    pf_cmdev_state_values_t cmdev_state;                  /* pf_cmdev_state_values_t */
-   pnet_ethaddr_t          src_addr;                     /* Connect client address */
+   pnet_ethaddr_t          src_addr;                     /* Connect client MAC address */
 
    uint16_t                nbr_ar_param;
    pf_ar_param_t           ar_param;                     /* From connect.req */
@@ -1989,8 +1991,8 @@ struct pnet
    uint32_t                            scheduler_tick_interval;
    bool                                cmdev_initialized;
    pf_device_t                         cmdev_device;
-   pf_cmina_dcp_ase_t                  cmina_perm_dcp_ase;
-   pf_cmina_dcp_ase_t                  cmina_temp_dcp_ase;
+   pf_cmina_dcp_ase_t                  cmina_nonvolatile_dcp_ase;  /* Reflects what is/should be stored in nvm */
+   pf_cmina_dcp_ase_t                  cmina_current_dcp_ase;  /* Reflects current settings (possibly not yet commited) */
    pf_cmina_state_values_t             cmina_state;
    uint8_t                             cmina_error_decode;
    uint8_t                             cmina_error_code_1;
@@ -1999,17 +2001,18 @@ struct pnet
    bool                                cmina_commit_ip_suite;
    os_mutex_t                          *p_cmrpc_rpc_mutex;
    uint32_t                            cmrpc_session_number;
-   pf_ar_t                             cmrpc_ar[PNET_MAX_AR];
-   pf_session_info_t                   cmrpc_session_info[PF_MAX_SESSION];
+   pf_ar_t                             cmrpc_ar[PNET_MAX_AR];  /* ARs */
+   pf_session_info_t                   cmrpc_session_info[PF_MAX_SESSION];  /* Sessions */
    int                                 cmrpc_rpcreq_socket;
    uint8_t                             cmrpc_dcerpc_req_frame[PF_FRAME_BUFFER_SIZE];
    uint8_t                             cmrpc_dcerpc_rsp_frame[PF_FRAME_BUFFER_SIZE];
    pf_cmsu_state_values_t              cmsu_state;
    pf_cmwrr_state_values_t             cmwrr_state;
-   const pnet_cfg_t                    *p_fspm_default_cfg;
+   const pnet_cfg_t                    *p_fspm_default_cfg;  /* Used at factory reset */
    pnet_cfg_t                          fspm_cfg;
    pf_log_book_t                       fspm_log_book;
    os_mutex_t                          *fspm_log_book_mutex;
+   uint32_t                            lldp_timeout;  /* Scheduler handle for periodic LLDP sending */
 };
 
 

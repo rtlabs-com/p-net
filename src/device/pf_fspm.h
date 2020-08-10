@@ -29,6 +29,9 @@ extern "C"
 
 /**
  * Initialize the FSPM component.
+ *
+ * Turns off the signal LED.
+ *
  * @param net              InOut: The p-net stack instance
  * @param p_cfg            In:   The application configuration of the Profinet stack.
  * @return  0  if operation succeeded.

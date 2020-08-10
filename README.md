@@ -6,10 +6,10 @@ Web resources
 
 * Source repository: [https://github.com/rtlabs-com/p-net](https://github.com/rtlabs-com/p-net)
 * Documentation: [https://rt-labs.com/docs/p-net](https://rt-labs.com/docs/p-net)
-* Continuous integration: [https://travis-ci.org/rtlabs-com/p-net](https://travis-ci.org/rtlabs-com/p-net)
+* Continuous integration: [https://travis-ci.com/rtlabs-com/p-net](https://travis-ci.com/rtlabs-com/p-net)
 * rt-labs: [https://rt-labs.com](https://rt-labs.com)
 
-[![Build Status](https://travis-ci.org/rtlabs-com/p-net.svg?branch=master)](https://travis-ci.org/rtlabs-com/p-net)
+[![Build Status](https://travis-ci.com/rtlabs-com/p-net.svg?branch=master)](https://travis-ci.com/rtlabs-com/p-net)
 
 p-net
 -----
@@ -51,6 +51,10 @@ Limitations or not yet implemented:
 * No startup mode legacy
 * No support for RT_CLASS_UDP
 * No support for DHCP
+* No fast start-up
+* No MC multicast device-to-device
+* No iPar (parameter server) support
+* No support for time synchronization
 
 This software is dual-licensed, with GPL version 3 and a commercial license.
 See LICENSE.md for more details.

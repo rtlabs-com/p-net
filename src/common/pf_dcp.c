@@ -686,9 +686,9 @@ static int pf_dcp_get_set(
    uint16_t                dst_start;
    pf_ethhdr_t             *p_dst_ethhdr;
    pf_dcp_header_t         *p_dst_dcphdr;
-   const pnet_cfg_t        *p_cfg = NULL;
+   pnet_ethaddr_t          mac_address;
 
-   pf_fspm_get_default_cfg(net, &p_cfg);
+   pf_cmina_get_macaddr(net, &mac_address);
 
    if (p_buf != NULL)
    {
@@ -728,7 +728,7 @@ static int pf_dcp_get_set(
 
          /* Set eth header in the response */
          memcpy(p_dst_ethhdr->dest.addr, p_src_ethhdr->src.addr, sizeof(pnet_ethaddr_t));
-         memcpy (p_dst_ethhdr->src.addr, p_cfg->eth_addr.addr, sizeof(pnet_ethaddr_t));
+         memcpy(p_dst_ethhdr->src.addr, mac_address.addr, sizeof(pnet_ethaddr_t));
          p_dst_ethhdr->type = htons(OS_ETHTYPE_PROFINET);
 
          /* Copy DCP header from the request, and modify what is needed. */
@@ -809,12 +809,13 @@ static int pf_dcp_get_set(
             LOG_DEBUG(PF_DCP_LOG,"DCP(%d): Sent DCP Get/Set response\n", __LINE__);
          }
 
-         /* Send LLDP _after_ the response in order to pass I/O-tester tests. */
          if (p_src_dcphdr->service_id == PF_DCP_SERVICE_SET)
          {
             pf_cmina_dcp_set_commit(net);
-            pf_lldp_send(net);
          }
+
+         /* Send LLDP _after_ the response in order to pass I/O-tester tests. */
+         pf_lldp_send(net);
       }
    }
 
@@ -914,9 +915,9 @@ int pf_dcp_hello_req(
    uint8_t                 block_error;
    uint16_t                temp16;
    pf_ip_suite_t           ip_suite;
-   const pnet_cfg_t        *p_cfg = NULL;
+   pnet_ethaddr_t          mac_address;
 
-   pf_fspm_get_default_cfg(net, &p_cfg);
+   pf_cmina_get_macaddr(net, &mac_address);
 
    if (p_buf != NULL)
    {
@@ -926,7 +927,7 @@ int pf_dcp_hello_req(
          dst_pos = 0;
          p_ethhdr = (pf_ethhdr_t *)&p_dst[dst_pos];
          memcpy(p_ethhdr->dest.addr, dcp_mc_addr_hello.addr, sizeof(p_ethhdr->dest.addr));
-         memcpy(p_ethhdr->src.addr, p_cfg->eth_addr.addr, sizeof(pnet_ethaddr_t));
+         memcpy(p_ethhdr->src.addr, mac_address.addr, sizeof(pnet_ethaddr_t));
 
          p_ethhdr->type = htons(OS_ETHTYPE_PROFINET);
          dst_pos += sizeof(pf_ethhdr_t);
@@ -1052,11 +1053,11 @@ static int pf_dcp_identify_req(
    uint16_t                value_length;
    uint8_t                 *p_value;
    uint8_t                 block_error;
-   const pnet_cfg_t        *p_cfg = NULL;
+   pnet_ethaddr_t          mac_address;
 
-   pf_fspm_get_default_cfg(net, &p_cfg);
+   pf_cmina_get_macaddr(net, &mac_address);
 
-   LOG_DEBUG(PF_DCP_LOG,"DCP(%d): Incoming DCP identify request\n", __LINE__);
+   LOG_INFO(PF_DCP_LOG,"DCP(%d): Incoming DCP identify request\n", __LINE__);
    /*
     * IdentifyReqBlock = DeviceRoleBlock ^ DeviceVendorBlock ^ DeviceIDBlock ^
     * DeviceOptionsBlock ^ OEMDeviceIDBlock ^ MACAddressBlock ^ IPParameterBlock ^
@@ -1090,7 +1091,7 @@ static int pf_dcp_identify_req(
       dst_start = dst_pos;
 
       memcpy(p_dst_ethhdr->dest.addr, p_src_ethhdr->src.addr, sizeof(pnet_ethaddr_t));
-      memcpy(p_dst_ethhdr->src.addr, p_cfg->eth_addr.addr, sizeof(pnet_ethaddr_t));
+      memcpy(p_dst_ethhdr->src.addr, mac_address.addr, sizeof(pnet_ethaddr_t));
       p_dst_ethhdr->type = htons(OS_ETHTYPE_PROFINET);
 
       /* Start with the request header and modify what is needed. */
@@ -1373,7 +1374,7 @@ static int pf_dcp_identify_req(
 
       if ((ret == 0) && (match == true))
       {
-         LOG_DEBUG(PF_DCP_LOG,"DCP(%d):   Match for incoming DCP identify request. Sending response.\n", __LINE__);
+         LOG_DEBUG(PF_DCP_LOG,"DCP(%d):   Match for incoming DCP identify request. Sending response.\n", __LINE__);  /* TODO Print if it is a general identity request, or just for specific name */
 
          /* Build the response */
          for (ix = 0; ix < NELEMENTS(device_options); ix++)
@@ -1387,13 +1388,13 @@ static int pf_dcp_identify_req(
          p_rsp->len = dst_pos;
 
          net->dcp_delayed_response_waiting = true;
-         response_delay = ((p_cfg->eth_addr.addr[4] * 256 + p_cfg->eth_addr.addr[5]) % ntohs(p_src_dcphdr->response_delay_factor)) * 10;
+         response_delay = ((mac_address.addr[4] * 256 + mac_address.addr[5]) % ntohs(p_src_dcphdr->response_delay_factor)) * 10;
          pf_scheduler_add(net, response_delay*1000,
             dcp_sync_name, pf_dcp_responder, p_rsp, &net->dcp_timeout);
       }
       else
       {
-         LOG_DEBUG(PF_DCP_LOG,"DCP(%d):   No match for incoming DCP identify request.\n", __LINE__);
+         LOG_DEBUG(PF_DCP_LOG,"DCP(%d):   No match for incoming DCP identify request.\n", __LINE__);  /* TODO Print if it is a general identity request, or just for specific name */
          os_buf_free(p_rsp);
       }
    }

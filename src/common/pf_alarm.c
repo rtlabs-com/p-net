@@ -13,6 +13,22 @@
  * full license information.
  ********************************************************************/
 
+/**
+ * @file
+ * @brief Alarm implementation
+ *
+ * Sends and receives low- and high prio alarm Ethernet frames.
+ *
+ * A timer resends alarms if not acknowledged.
+ *
+ * ALPMI  Sends alarm
+ * ALPMR  Receives alarm
+ * APMR  Receives high- and low priority alarm Ethernet frames from the IO-controller.
+ * APMS  Sends alarm Ethernet frames to IO-controller
+ *
+ *  Note that ALPMX is a general term for ALPMI and ALPMR
+ */
+
 #ifdef UNIT_TEST
 #define os_eth_send                 mock_os_eth_send
 #endif
@@ -444,7 +460,7 @@ static int pf_alarm_alpmr_apmr_a_data_ind(
 
 /**
  * @internal
- * Handle high-priority alarm PDUs from the controller.
+ * Handle high-priority alarm PDUs from the controller, and puts it into the queue (mbox).
  *
  * This is a callback for the frame handler. Arguments should fulfill pf_eth_frame_handler_t
  *
@@ -472,6 +488,7 @@ static int pf_alarm_apmr_high_handler(
 
    if (ret != 0)
    {
+      LOG_INFO(PF_ALARM_LOG, "Alarm(%d): Received high prio alarm frame.\n", __LINE__);
       if (p_buf != NULL)
       {
          nbr = p_apmx->apmr_msg_nbr++;    /* ToDo: Make atomic */
@@ -494,7 +511,7 @@ static int pf_alarm_apmr_high_handler(
 
 /**
  * @internal
- * Handle low-priority alarm PDUs from the controller.
+ * Handle low-priority alarm PDUs from the controller, and puts it into the queue (mbox).
  *
  * This is a callback for the frame handler. Arguments should fulfill pf_eth_frame_handler_t
  *
@@ -522,6 +539,7 @@ static int pf_alarm_apmr_low_handler(
 
    if (ret != 0)
    {
+      LOG_INFO(PF_ALARM_LOG, "Alarm(%d): Received low prio alarm frame.\n", __LINE__);
       if (p_buf != NULL)
       {
          nbr = p_apmx->apmr_msg_nbr++;    /* ToDo: Make atomic */
@@ -578,16 +596,17 @@ static void pf_alarm_apms_timeout(
          }
          else
          {
+            LOG_INFO(PF_ALARM_LOG, "Alarm(%d): Re-sending alarm frame\n", __LINE__);
             if (os_eth_send(p_apmx->p_ar->p_sess->eth_handle, p_apmx->p_rta) <= 0)
             {
-               LOG_ERROR(PF_ALARM_LOG, "pf_alarm(%d): Error from os_eth_send(rta)\n", __LINE__);
+               LOG_ERROR(PF_ALARM_LOG, "Alarm(%d): Error from os_eth_send(rta)\n", __LINE__);
             }
          }
 
          if (pf_scheduler_add(net, p_apmx->timeout_us,
             apmx_sync_name, pf_alarm_apms_timeout, p_apmx, &p_apmx->timeout_id) != 0)
          {
-            LOG_ERROR(PF_ALARM_LOG, "pf_alarm(%d): Error from pf_scheduler_add\n", __LINE__);
+            LOG_ERROR(PF_ALARM_LOG, "Alarm(%d): Error from pf_scheduler_add\n", __LINE__);
          }
          else
          {
@@ -603,7 +622,7 @@ static void pf_alarm_apms_timeout(
           *
           * There is no need to do anything more here!!!
           */
-         LOG_DEBUG(PF_AL_BUF_LOG, "pf_alarm(%d): Free saved RTA buffer %p\n", __LINE__, p_apmx->p_rta);
+         LOG_DEBUG(PF_AL_BUF_LOG, "Alarm(%d): Free saved RTA buffer %p\n", __LINE__, p_apmx->p_rta);
          if (p_apmx->p_rta != NULL)
          {
             p_rta = p_apmx->p_rta;
@@ -624,8 +643,8 @@ static void pf_alarm_apms_timeout(
    }
    else
    {
-      LOG_DEBUG(PF_ALARM_LOG, "pf_alarm(%d): Timeout in state %s\n", __LINE__, pf_alarm_apms_state_to_string(p_apmx->apms_state));
-      LOG_DEBUG(PF_AL_BUF_LOG, "pf_alarm(%d): Free saved RTA buffer %p\n", __LINE__, p_apmx->p_rta);
+      LOG_DEBUG(PF_ALARM_LOG, "Alarm(%d): Timeout in state %s\n", __LINE__, pf_alarm_apms_state_to_string(p_apmx->apms_state));
+      LOG_DEBUG(PF_AL_BUF_LOG, "Alarm(%d): Free saved RTA buffer %p\n", __LINE__, p_apmx->p_rta);
       if (p_apmx->p_rta != NULL)
       {
          p_rta = p_apmx->p_rta;
@@ -757,7 +776,7 @@ static int pf_alarm_apms_a_data_ind(
             p_apmx->send_seq_count_o = p_apmx->send_seq_count;
             p_apmx->send_seq_count = (p_apmx->send_seq_count + 1) & 0x7fff;
 
-            LOG_DEBUG(PF_AL_BUF_LOG, "pf_alarm(%d): Free saved RTA buffer %p\n", __LINE__, p_apmx->p_rta);
+            LOG_DEBUG(PF_AL_BUF_LOG, "Alarm(%d): Free saved RTA buffer %p\n", __LINE__, p_apmx->p_rta);
             if (p_apmx->p_rta != NULL)
             {
                p_rta = p_apmx->p_rta;
@@ -841,10 +860,10 @@ static int pf_alarm_apms_a_data_req(
    os_buf_t                *p_rta;
    uint8_t                 *p_buf = NULL;
    uint16_t                pos = 0;
-   const pnet_cfg_t        *p_cfg = NULL;
+   pnet_ethaddr_t          mac_address;
    uint16_t                u16 = 0;
 
-   pf_fspm_get_default_cfg(net, &p_cfg);
+   pf_cmina_get_macaddr(net, &mac_address);
 
    if (p_apmx->p_ar->alarm_cr_request.alarm_cr_properties.transport_udp == true)
    {
@@ -871,7 +890,7 @@ static int pf_alarm_apms_a_data_req(
             pf_put_mem(&p_apmx->da, sizeof(p_apmx->da), PF_FRAME_BUFFER_SIZE, p_buf, &pos);
 
             /* Insert source MAC address (our interface MAC address) */
-            memcpy(&p_buf[pos], p_cfg->eth_addr.addr, sizeof(pnet_ethaddr_t));
+            memcpy(&p_buf[pos], mac_address.addr, sizeof(pnet_ethaddr_t));
             pos += sizeof(pnet_ethaddr_t);
 
             /* Insert VLAN Tag protocol identifier (TPID) */
@@ -928,9 +947,10 @@ static int pf_alarm_apms_a_data_req(
             pf_put_uint16(true, var_part_len, PF_FRAME_BUFFER_SIZE, p_buf, &var_part_len_pos);
 
             p_rta->len = pos;
+            LOG_INFO(PF_AL_BUF_LOG, "Alarm(%d): Send an alarm frame.\n", __LINE__);
             if (os_eth_send(p_apmx->p_ar->p_sess->eth_handle, p_rta) <= 0)
             {
-               LOG_ERROR(PF_ALARM_LOG, "pf_alarm(%d): Error from os_eth_send(rta)\n", __LINE__);
+               LOG_ERROR(PF_ALARM_LOG, "Alarm(%d): Error from os_eth_send(rta)\n", __LINE__);
             }
             else
             {
@@ -942,19 +962,19 @@ static int pf_alarm_apms_a_data_req(
          {
             if (p_apmx->p_rta == NULL)
             {
-               LOG_DEBUG(PF_AL_BUF_LOG, "pf_alarm(%d): Save RTA buffer\n", __LINE__);
+               LOG_DEBUG(PF_AL_BUF_LOG, "Alarm(%d): Save RTA buffer\n", __LINE__);
                p_apmx->p_rta = p_rta;
             }
             else
             {
-               LOG_ERROR(PF_ALARM_LOG, "pf_alarm(%d): RTA buffer with TACK lost!!\n", __LINE__);
+               LOG_ERROR(PF_ALARM_LOG, "Alarm(%d): RTA buffer with TACK lost!!\n", __LINE__);
                os_buf_free(p_rta);
             }
          }
          else
          {
             /* ACK, NAK and ERR buffers are not saved for retransmission. */
-            LOG_DEBUG(PF_AL_BUF_LOG, "pf_alarm(%d): Free unsaved RTA buffer\n", __LINE__);
+            LOG_DEBUG(PF_AL_BUF_LOG, "Alarm(%d): Free unsaved RTA buffer\n", __LINE__);
             os_buf_free(p_rta);
          }
       }
@@ -1028,7 +1048,7 @@ static int pf_alarm_apms_apms_a_data_req(
       if (ret != 0)
       {
          p_apmx->timeout_id = UINT32_MAX;
-         LOG_ERROR(PF_ALARM_LOG, "pf_alarm(%d): Error from pf_scheduler_add\n", __LINE__);
+         LOG_ERROR(PF_ALARM_LOG, "Alarm(%d): Error from pf_scheduler_add\n", __LINE__);
       }
    }
 
@@ -1038,6 +1058,10 @@ static int pf_alarm_apms_apms_a_data_req(
 /**
  * @internal
  * Close APMX.
+ *
+ * Sends a low prio alarm.
+ * Unregisters frame handlers.
+ *
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param err_code         In:   Error code. See PNET_ERROR_CODE_2_*
@@ -1089,7 +1113,7 @@ static int pf_alarm_apmx_close(
          p_ar->apmx[ix].p_ar = NULL;
          p_ar->apmx[ix].apms_state = PF_APMS_STATE_CLOSED;
       }
-      LOG_DEBUG(PF_AL_BUF_LOG, "pf_alarm(%d): Free saved RTA buffer %p\n", __LINE__, p_ar->apmx[ix].p_rta);
+      LOG_DEBUG(PF_AL_BUF_LOG, "Alarm(%d): Free saved RTA buffer %p\n", __LINE__, p_ar->apmx[ix].p_rta);
       if (p_ar->apmx[ix].p_rta != NULL)
       {
          p_rta = p_ar->apmx[ix].p_rta;
@@ -1349,7 +1373,7 @@ static int pf_alarm_apmr_a_data_ind(
  * @internal
  * Handle the reception of ALARM messages for one AR instance.
  *
- * When called this function reads max 1 alarm message from its input queue.
+ * When called this function reads max 1 alarm message from its input queue (mbox).
  * The message is processed in APMR/ALPMR and indications may be sent to the
  * application.
  *
@@ -1477,7 +1501,7 @@ static int pf_alarm_apmr_periodic(
                ret = 0;
             }
 
-            LOG_DEBUG(PF_AL_BUF_LOG, "pf_alarm(%d): Free received buffer\n", __LINE__);
+            LOG_DEBUG(PF_AL_BUF_LOG, "Alarm(%d): Free received buffer\n", __LINE__);
             os_buf_free(p_buf);
             p_buf = NULL;
          }
@@ -1733,6 +1757,8 @@ int pf_alarm_alpmr_alarm_ack(
  *
  * This function sends an alarm to the controller using an RTA DATA PDU.
  *
+ * It uses pf_alarm_apms_apms_a_data_req() for sending.
+ *
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param alarm_type       In:   The alarm type.
@@ -1745,7 +1771,7 @@ int pf_alarm_alpmr_alarm_ack(
  * @param module_ident     In:   The module ident number.
  * @param submodule_ident  In:   The sub-module ident number.
  * @param payload_usi      In:   The USI of the payload.
- * @param payload_len      In:   The length of the payload (is usi < 0x8000).
+ * @param payload_len      In:   The length of the payload (if usi < 0x8000).
  * @param p_payload        In:   The payload data (if usi < 0x8000).
  * @return  0  if operation succeeded.
  *          -1 if an error occurred (or waiting for ACK from controller: re-try later).
