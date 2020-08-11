@@ -71,10 +71,12 @@ void show_usage()
    printf("   --help       Show this help text and exit\n");
    printf("   -h           Show this help text and exit\n");
    printf("   -v           Incresase verbosity\n");
-   printf("   -i INTERF    Set Ethernet interface name. Defaults to %s\n", APP_DEFAULT_ETHERNET_INTERFACE);
-   printf("   -s NAME      Set station name. Defaults to %s\n", APP_DEFAULT_STATION_NAME);
-   printf("   -b FILE      Path to read button1. Defaults to not read button1.\n");
-   printf("   -d FILE      Path to read button2. Defaults to not read button2.\n");
+   printf("   -i INTERF    Name of Ethernet interface to use. Defaults to %s\n", APP_DEFAULT_ETHERNET_INTERFACE);
+   printf("   -s NAME      Set station name. Defaults to %s  Only used\n", APP_DEFAULT_STATION_NAME);
+   printf("                if not already available in storage file.\n");
+   printf("   -b FILE      Path (absolute or relative) to read button1. Defaults to not read button1.\n");
+   printf("   -d FILE      Path (absolute or relative) to read button2. Defaults to not read button2.\n");
+   printf("   -p PATH      Absolute path to storage directory. Defaults to use current directory.\n");
 }
 
 /**
@@ -100,13 +102,16 @@ struct cmd_args parse_commandline_arguments(int argc, char *argv[])
    struct cmd_args output_arguments;
    strcpy(output_arguments.path_button1, "");
    strcpy(output_arguments.path_button2, "");
+   strcpy(output_arguments.path_storage_directory, "");
    strcpy(output_arguments.station_name, APP_DEFAULT_STATION_NAME);
    strcpy(output_arguments.eth_interface, APP_DEFAULT_ETHERNET_INTERFACE);
    output_arguments.verbosity = 0;
 
    int option;
-   while ((option = getopt(argc, argv, "hvi:s:b:d:")) != -1) {
-      switch (option) {
+   while ((option = getopt(argc, argv, "hvi:s:b:d:p:")) != -1)
+   {
+      switch (option)
+      {
       case 'v':
          output_arguments.verbosity++;
          break;
@@ -117,10 +122,28 @@ struct cmd_args parse_commandline_arguments(int argc, char *argv[])
          strcpy(output_arguments.station_name, optarg);
          break;
       case 'b':
+         if (strlen(optarg) + 1 > PNET_MAX_FILE_FULLPATH_LEN)
+         {
+            printf("Error: The argument to -b is too long.\n");
+            exit(EXIT_CODE_ERROR);
+         }
          strcpy(output_arguments.path_button1, optarg);
          break;
       case 'd':
+         if (strlen(optarg) + 1 > PNET_MAX_FILE_FULLPATH_LEN)
+         {
+            printf("Error: The argument to -d is too long.\n");
+            exit(EXIT_CODE_ERROR);
+         }
          strcpy(output_arguments.path_button2, optarg);
+         break;
+      case 'p':
+         if (strlen(optarg) + 1 > PNET_MAX_FILE_FULLPATH_LEN)
+         {
+            printf("Error: The argument to -p is too long.\n");
+            exit(EXIT_CODE_ERROR);
+         }
+         strcpy(output_arguments.path_storage_directory, optarg);
          break;
       case 'h':
          /* fallthrough */
@@ -132,16 +155,27 @@ struct cmd_args parse_commandline_arguments(int argc, char *argv[])
       }
    }
 
+   /* Use current directory for storage, if not given */
+   if (strlen(output_arguments.path_storage_directory) == 0)
+   {
+      if (getcwd(output_arguments.path_storage_directory, sizeof(output_arguments.path_storage_directory)) == NULL)
+      {
+         printf("Error: Could not read current working directory. Is PNET_MAX_DIRECTORYPATH_LENGTH too small?\n");
+         exit(EXIT_CODE_ERROR);
+      }
+   }
+
    return output_arguments;
 }
 
 /**
- * Check if file exists
+ * Check if a file or directory exists
  *
- * @param filepath      In: Path to file
+ * @param filepath         In:    Path to file or directory. Trailing slash
+ *                                is optional for directories.
  * @return true if file exists
 */
-bool does_file_exist(const char*  filepath)
+bool does_file_exist(const char* filepath)
 {
    struct stat statbuffer;
 
@@ -232,7 +266,7 @@ void pn_main (void * arg)
 
    if (p_appdata->arguments.verbosity > 0)
    {
-      printf("Waiting for connect request from IO-controller\n");
+      printf("Waiting for connect request from IO-controller\n\n");
    }
 
    /* Main loop */
@@ -313,7 +347,7 @@ void pn_main (void * arg)
             }
 
             /* Set data for custom input modules, if any */
-            for (slot = 0; slot < APP_MAX_MODULES; slot++)
+            for (slot = 0; slot < PNET_MAX_MODULES; slot++)
             {
                if (p_appdata->custom_input_slots[slot] == true)
                {
@@ -322,7 +356,7 @@ void pn_main (void * arg)
             }
 
             /* Read data from first of the custom output modules, if any */
-            for (slot = 0; slot < APP_MAX_MODULES; slot++)
+            for (slot = 0; slot < PNET_MAX_MODULES; slot++)
             {
                if (p_appdata->custom_output_slots[slot] == true)
                {
@@ -361,7 +395,7 @@ void pn_main (void * arg)
             if ((button2_pressed == true) && (button2_pressed_previous == false) && (p_appdata->alarm_allowed == true))
             {
                alarm_payload[0]++;
-               for (slot = 0; slot < APP_MAX_MODULES; slot++)
+               for (slot = 0; slot < PNET_MAX_MODULES; slot++)
                {
                   if (p_appdata->custom_input_slots[slot] == true)
                   {
@@ -397,13 +431,13 @@ void pn_main (void * arg)
          os_event_clr(p_appdata->main_events, EVENT_ABORT); /* Re-arm */
          if (p_appdata->arguments.verbosity > 0)
          {
-            printf("Aborting the application\n");
+            printf("Aborting the application\n\n");
          }
       }
    }
    os_timer_destroy(p_appdata->main_timer);
    os_event_destroy(p_appdata->main_events);
-   printf("Ending the application\n");
+   printf("Ending the application\n\n");
 }
 
 /****************************** Main ******************************************/
@@ -430,7 +464,7 @@ int main(int argc, char *argv[])
    printf("\n** Starting Profinet demo application **\n");
    if (appdata.arguments.verbosity > 0)
    {
-      printf("Number of slots:      %u (incl slot for DAP module)\n", APP_MAX_MODULES);
+      printf("Number of slots:      %u (incl slot for DAP module)\n", PNET_MAX_MODULES);
       printf("P-net log level:      %u (DEBUG=0, ERROR=3)\n", LOG_LEVEL);
       printf("App verbosity level:  %u\n", appdata.arguments.verbosity);
       printf("Ethernet interface:   %s\n", appdata.arguments.eth_interface);
@@ -469,8 +503,21 @@ int main(int argc, char *argv[])
    copy_ip_to_struct(&pnet_default_cfg.ip_gateway, gateway);
    copy_ip_to_struct(&pnet_default_cfg.ip_mask, netmask);
    strcpy(pnet_default_cfg.station_name, appdata.arguments.station_name);
+   strcpy(pnet_default_cfg.file_directory, appdata.arguments.path_storage_directory);
    memcpy(pnet_default_cfg.eth_addr.addr, macbuffer.addr, sizeof(os_ethaddr_t));
    pnet_default_cfg.cb_arg = (void*) &appdata;
+
+   if (appdata.arguments.verbosity > 0)
+   {
+      printf("Storage directory:    %s\n\n", pnet_default_cfg.file_directory);
+   }
+
+   if (!does_file_exist(pnet_default_cfg.file_directory))
+   {
+      printf("Error: The given storage directory does not exist: %s\n",
+         pnet_default_cfg.file_directory);
+      exit(EXIT_CODE_ERROR);
+   }
 
    app_set_led(APP_DATA_LED_ID, false);
 

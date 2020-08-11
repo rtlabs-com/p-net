@@ -144,29 +144,83 @@ void mock_os_udp_close(
 {
 }
 
-int mock_os_save_blob(
-   int                     file_index,
-   void                    *object,
-   size_t                  size
+int mock_os_save_file(
+   const char              *fullpath,
+   void                    *object_1,
+   size_t                  size_1,
+   void                    *object_2,
+   size_t                  size_2
 )
 {
+   int                     pos = 0;
+
+   if (size_1 + size_2 > sizeof(mock_os_data.file_content))
+   {
+      return -1;
+   }
+   if (strlen(fullpath) > sizeof(mock_os_data.file_fullpath))
+   {
+      return -1;
+   }
+
+   strcpy(mock_os_data.file_fullpath, fullpath);
+   mock_os_data.file_size = size_1 + size_2;
+
+   if (size_1 > 0)
+   {
+      memcpy(&mock_os_data.file_content[pos], object_1, size_1);
+      pos += size_1;
+   }
+   if (size_2 > 0)
+   {
+      memcpy(&mock_os_data.file_content[pos], object_2, size_2);
+   }
+
    return 0;
 }
 
-void mock_os_clear_blob(
-   int                     file_index
+void mock_os_clear_file(
+   const char              *fullpath
 )
 {
-   return;
+   if(strcmp(fullpath, mock_os_data.file_fullpath) == 0)
+   {
+      strcpy(mock_os_data.file_fullpath, "");
+      mock_os_data.file_size = 0;
+   }
 }
 
-int mock_os_load_blob(
-   int                     file_index,
-   void                    *object,
-   size_t                  size
+int mock_os_load_file(
+   const char              *fullpath,
+   void                    *object_1,
+   size_t                  size_1,
+   void                    *object_2,
+   size_t                  size_2
 )
 {
-   return -1;
+   int                     pos = 0;
+
+   if (size_1 + size_2 > mock_os_data.file_size)
+   {
+      return -1;
+   }
+
+   if(strcmp(fullpath, mock_os_data.file_fullpath) != 0)
+   {
+      return -1;
+   }
+
+   if (size_1 > 0)
+   {
+      memcpy(object_1, &mock_os_data.file_content[pos], size_1);
+      pos += size_1;
+   }
+   if (size_2 > 0)
+   {
+      memcpy(object_2, &mock_os_data.file_content[pos], size_2);
+   }
+
+   return 0;
 }
 
 int mock_pf_alarm_send_diagnosis(

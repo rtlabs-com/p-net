@@ -34,6 +34,7 @@ target_sources(pf_test PRIVATE
   test_dcp.cpp
   test_diag.cpp
   test_eth.cpp
+  test_file.cpp
   test_fspm.cpp
   test_lldp.cpp
   test_osal.cpp
@@ -78,6 +79,7 @@ target_sources(pf_test PRIVATE
   ${PROFINET_SOURCE_DIR}/src/common/pf_dcp.c
   ${PROFINET_SOURCE_DIR}/src/common/pf_eth.c
   ${PROFINET_SOURCE_DIR}/src/common/pf_lldp.c
+  ${PROFINET_SOURCE_DIR}/src/common/pf_file.c
   ${PROFINET_SOURCE_DIR}/src/common/pf_ppm.c
   ${PROFINET_SOURCE_DIR}/src/common/pf_ptcp.c
   ${PROFINET_SOURCE_DIR}/src/common/pf_scheduler.c

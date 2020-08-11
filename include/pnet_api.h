@@ -40,6 +40,10 @@ extern "C"
 #include <stdint.h>
 #include <stdio.h>
 
+#define PNET_MAX_FILE_FULLPATH_LEN           (PNET_MAX_DIRECTORYPATH_LENGTH + PNET_MAX_FILENAME_LENGTH)  /** Including separator and one termination */
+
+#define PNET_MAX_INTERFACE_NAME_LENGTH       16  /** Including termination. Based on Linux IFNAMSIZ */
+
 /** Supported block version by this implementation */
 #define PNET_BLOCK_VERSION_HIGH                                1
 #define PNET_BLOCK_VERSION_LOW                                 0
@@ -47,7 +51,6 @@ extern "C"
 /** Some blocks (e.g. logbook) uses the following lower version number. */
 #define PNET_BLOCK_VERSION_LOW_1                               1
 
-#define PNET_MAX_INTERFACE_NAME_LENGTH                         21       /** Including termination */
 
 /**
  * # Error Codes
@@ -310,13 +313,9 @@ extern "C"
 #define PNET_ERROR_CODE_2_ABORT_DCP_RESET_TO_FACTORY           0x20
 #define PNET_ERROR_CODE_2_ABORT_PDEV_CHECK_FAILED              0x24
 
-
-typedef enum pnet_file_index
-{
-   PNET_FILE_INDEX_IP,
-   PNET_FILE_INDEX_DIAGNOSTICS,
-   PNET_FILE_INDEX_LOGBOOK,
-} pnet_file_index_t;
+#define PNET_FILENAME_IP               "pnet_data_ip.bin"            /* Max length PNET_MAX_FILENAME_LENGTH */
+#define PNET_FILENAME_DIAGNOSTICS      "pnet_data_diagnostics.bin"
+#define PNET_FILENAME_LOGBOOK          "pnet_data_logbook.bin"
 
 /**
  * # List of error_code_2 values, for
@@ -1094,6 +1093,10 @@ typedef struct pnet_cfg
    pnet_cfg_ip_addr_t      ip_mask;
    pnet_cfg_ip_addr_t      ip_gateway;
    pnet_ethaddr_t          eth_addr;
+
+   /** Storage between runs */
+   char                    file_directory[PNET_MAX_DIRECTORYPATH_LENGTH]; /**< Terminated string with absolute path. Use NULL or empty string for current directory. */
+
 } pnet_cfg_t;
 
 /**

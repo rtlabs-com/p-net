@@ -23,27 +23,32 @@ extern "C"
 
 #include <stdint.h>
 
+#include "options.h"
 #include "pnet_api.h"
 #include "pf_includes.h"
-
 #include "osal.h"
 
 typedef struct mock_os_data_obj
 {
-   uint8_t     eth_send_copy[PF_FRAME_BUFFER_SIZE];
-   uint16_t    eth_send_len;
-   uint16_t    eth_send_count;
+   uint8_t                 eth_send_copy[PF_FRAME_BUFFER_SIZE];
+   uint16_t                eth_send_len;
+   uint16_t                eth_send_count;
 
-   uint16_t    udp_sendto_len;
-   uint16_t    udp_sendto_count;
+   uint16_t                udp_sendto_len;
+   uint16_t                udp_sendto_count;
 
-   uint8_t     udp_recvfrom_buffer[PF_FRAME_BUFFER_SIZE];
-   uint16_t    udp_recvfrom_length;
-   uint16_t    udp_recvfrom_count;
+   uint8_t                 udp_recvfrom_buffer[PF_FRAME_BUFFER_SIZE];
+   uint16_t                udp_recvfrom_length;
+   uint16_t                udp_recvfrom_count;
 
-   uint16_t    set_ip_suite_count;
+   uint16_t                set_ip_suite_count;
 
-   uint32_t    current_time_us;
+   uint32_t                current_time_us;
+
+   char                    file_fullpath[100];  /* Full file path at latest save operation */
+   uint16_t                file_size;
+   uint8_t                 file_content[2000];
+
 } mock_os_data_t;
 
 extern mock_os_data_t mock_os_data;
@@ -80,20 +85,24 @@ int mock_os_set_ip_suite(
    const char              *hostname,
    bool                    permanent);
 
-int mock_os_save_blob(
-   int                     file_index,
-   void                    *object,
-   size_t                  size
+int mock_os_save_file(
+   const char              *fullpath,
+   void                    *object_1,
+   size_t                  size_1,
+   void                    *object_2,
+   size_t                  size_2
 );
 
-void mock_os_clear_blob(
-   int                     file_index
+void mock_os_clear_file(
+   const char              *fullpath
 );
 
-int mock_os_load_blob(
-   int                     file_index,
-   void                    *object,
-   size_t                  size
+int mock_os_load_file(
+   const char              *fullpath,
+   void                    *object_1,
+   size_t                  size_1,
+   void                    *object_2,
+   size_t                  size_2
 );
 
 int mock_pf_alarm_send_diagnosis(
