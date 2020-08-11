@@ -201,7 +201,7 @@ int main(void)
    printf("\n** Profinet sample application **\n");
    if (appdata.arguments.verbosity > 0)
    {
-      printf("Number of slots:      %u (incl slot for DAP module)\n", APP_MAX_MODULES);
+      printf("Number of slots:      %u (incl slot for DAP module)\n", PNET_MAX_MODULES);
       printf("P-net log level:      %u (DEBUG=0, ERROR=3)\n", LOG_LEVEL);
       printf("App verbosity level:  %u\n", appdata.arguments.verbosity);
       printf("Ethernet interface:   %s\n", appdata.arguments.eth_interface);
@@ -237,6 +237,7 @@ int main(void)
    copy_ip_to_struct(&pnet_default_cfg.ip_addr, ip);
    copy_ip_to_struct(&pnet_default_cfg.ip_gateway, gateway);
    copy_ip_to_struct(&pnet_default_cfg.ip_mask, netmask);
+   strcpy(pnet_default_cfg.file_directory, "/disk1");
    strcpy(pnet_default_cfg.station_name, gp_appdata->arguments.station_name);
    memcpy (pnet_default_cfg.eth_addr.addr, macbuffer.addr, sizeof(pnet_ethaddr_t));
    pnet_default_cfg.cb_arg = (void*)gp_appdata;
@@ -328,7 +329,7 @@ int main(void)
             }
 
             /* Set data for custom input modules, if any */
-            for (slot = 0; slot < APP_MAX_MODULES; slot++)
+            for (slot = 0; slot < PNET_MAX_MODULES; slot++)
             {
                if (appdata.custom_input_slots[slot] == true)
                {
@@ -337,7 +338,7 @@ int main(void)
             }
 
             /* Read data from first of the custom output modules, if any */
-            for (slot = 0; slot < APP_MAX_MODULES; slot++)
+            for (slot = 0; slot < PNET_MAX_MODULES; slot++)
             {
                if (appdata.custom_output_slots[slot] == true)
                {
@@ -368,7 +369,7 @@ int main(void)
             if ((button2_pressed == true) && (button2_pressed_previous == false) && (appdata.alarm_allowed == true))
             {
                alarm_payload[0]++;
-               for (slot = 0; slot < APP_MAX_MODULES; slot++)
+               for (slot = 0; slot < PNET_MAX_MODULES; slot++)
                {
                   if (appdata.custom_input_slots[slot] == true)
                   {
@@ -405,7 +406,7 @@ int main(void)
          os_event_clr(appdata.main_events, EVENT_ABORT); /* Re-arm */
          if (appdata.arguments.verbosity > 0)
          {
-            printf("Aborting the application\n");
+            printf("Aborting the application\n\n");
          }
       }
    }

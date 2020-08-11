@@ -126,44 +126,55 @@ typedef struct os_ethaddr
   uint8_t addr[6];
 } os_ethaddr_t;
 
-/* TODO Handle multiple instances of the stack */
 /**
- * Load a binary blob.
+ * Load a binary file.
  *
- * @param file_index       In:    Index of binary blobs
- * @param object           Out:   Struct to load
- * @param size             In:    Size of struct to load
+ * Can load the data into two buffers.
+ *
+ * @param fullpath         In:    Full path to the file
+ * @param object_1         Out:   Data to load, or NULL. Mandatory if size_1 > 0
+ * @param size_1           In:    Size of object_1.
+ * @param object_2         Out:   Data to load, or NULL. Mandatory if size_2 > 0
+ * @param size_2           In:    Size of object_2.
  * @return  0  if the operation succeeded.
  *          -1 if not found or an error occurred.
  */
-int os_load_blob(
-   int                     file_index,
-   void                    *object,
-   size_t                  size
+int os_load_file(
+   const char              *fullpath,
+   void                    *object_1,
+   size_t                  size_1,
+   void                    *object_2,
+   size_t                  size_2
 );
 
 /**
- * Save a binary blob.
+ * Save a binary file.
  *
- * @param file_index       In: Index of binary blobs
- * @param object           In: Struct to save
- * @param size             In: Size of struct to save
+ * Can handle two output buffers.
+ *
+ * @param fullpath         In:    Full path to the file
+ * @param object_1         In:    Data to save, or NULL. Mandatory if size_1 > 0
+ * @param size_1           In:    Size of object_1.
+ * @param object_2         In:    Data to save, or NULL. Mandatory if size_2 > 0
+ * @param size_2           In:    Size of object_2.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
-int os_save_blob(
-   int                     file_index,
-   void                    *object,
-   size_t                  size
+int os_save_file(
+   const char              *fullpath,
+   void                    *object_1,
+   size_t                  size_1,
+   void                    *object_2,
+   size_t                  size_2
 );
 
 /**
- * Clear a binary blob.
+ * Clear a binary file.
  *
- * @param file_index       In: Index of binary blobs
+ * @param fullpath         In:    Full path to the file
  */
-void os_clear_blob(
-   int                     file_index
+void os_clear_file(
+   const char              *fullpath
 );
 
 int os_snprintf (char * str, size_t size, const char * fmt, ...) CC_FORMAT (3,4);
@@ -302,7 +313,7 @@ void os_udp_close(
  * @param p_ipaddr            Out: IPv4 address
  * @param p_netmask           Out: Netmask
  * @param p_gw                Out: Default gateway
- * @param hostname            Out: Host name, for example my_laptop_4
+ * @param hostname            Out: Host name, for example my_laptop_4. Existing buffer should have length OS_HOST_NAME_MAX.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -369,7 +380,7 @@ int os_get_macaddress(
 /**
  * Read the current host name
  *
- * @param hostname            Out: Host name
+ * @param hostname            Out: Host name, for example my_laptop_4. Existing buffer should have length OS_HOST_NAME_MAX.
  * @return 0 on success and
  *         -1 if an error occurred
 */

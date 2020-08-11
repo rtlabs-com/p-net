@@ -453,6 +453,9 @@ void PnetIntegrationTestBase::cfg_init()
    strcpy(pnet_default_cfg.im_2_data.im_date, "");
    strcpy(pnet_default_cfg.im_3_data.im_descriptor, "");
    strcpy(pnet_default_cfg.im_4_data.im_signature, "");
+
+   /* Storage */
+   strcpy(pnet_default_cfg.file_directory, "/disk1");
 }
 
 void PnetIntegrationTestBase::run_stack (int us)

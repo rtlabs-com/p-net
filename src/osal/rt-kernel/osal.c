@@ -27,7 +27,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-
 int os_set_ip_suite(
    const char              *interface_name,
    os_ipaddr_t             *p_ipaddr,
@@ -45,7 +44,6 @@ int os_set_ip_suite(
    ip_gw.addr = htonl(*p_gw);
    net_configure(NULL, &ip_addr, &ip_mask, &ip_gw, NULL, hostname);
 
-   /* ToDo: Save to flash?? */
    return 0;
 }
 
@@ -121,29 +119,97 @@ int os_snprintf(char * str, size_t size, const char * fmt, ...)
    return ret;
 }
 
-int os_save_blob(
-   int                     file_index,
-   void                    *object,
-   size_t                  size
+int os_save_file(
+   const char              *fullpath,
+   void                    *object_1,
+   size_t                  size_1,
+   void                    *object_2,
+   size_t                  size_2
 )
 {
-   return 0;
+   int                     outputfile;
+   int                     ret = 0;  /* Assume everything goes well */
+
+   /* Open file */
+   outputfile = open(fullpath, O_WRONLY | O_CREAT);
+   if (outputfile < 0)
+   {
+      return -1;
+   }
+
+   /* Write file contents */
+   os_log(LOG_LEVEL_DEBUG, "Saving to file %s\n", fullpath);
+   if (size_1 > 0)
+   {
+      if(write(outputfile, object_1, size_1) != (int)size_1)
+      {
+         ret = -1;
+         os_log(LOG_LEVEL_ERROR, "Failed to write file %s\n", fullpath);
+      }
+   }
+   if (size_2 > 0 && ret == 0)
+   {
+      if(write(outputfile, object_2, size_2) != (int)size_2)
+      {
+         ret = -1;
+         os_log(LOG_LEVEL_ERROR, "Failed to write file %s\n", fullpath);
+      }
+   }
+
+   /* Close file */
+   close(outputfile);
+   return ret;
 }
 
-void os_clear_blob(
-   int                     file_index
+void os_clear_file(
+   const char              *fullpath
 )
 {
-   return;
+   os_log(LOG_LEVEL_DEBUG, "Clearing file %s\n", fullpath);
+   (void)remove(fullpath);
 }
 
-int os_load_blob(
-   int                     file_index,
-   void                    *object,
-   size_t                  size
+int os_load_file(
+   const char              *fullpath,
+   void                    *object_1,
+   size_t                  size_1,
+   void                    *object_2,
+   size_t                  size_2
 )
 {
-   return -1;
+   int                     inputfile;
+   int                     ret = 0;  /* Assume everything goes well */
+
+   /* Open file */
+   inputfile = open(fullpath, O_RDONLY);
+   if (inputfile < 0)
+   {
+      os_log(LOG_LEVEL_DEBUG, "Could not yet open file %s\n", fullpath);
+      return -1;
+   }
+
+   /* Read file contents */
+   if (size_1 > 0)
+   {
+      if(read(inputfile, object_1, size_1) != (int)size_1)
+      {
+         ret = -1;
+         os_log(LOG_LEVEL_ERROR, "Failed to read file %s\n", fullpath);
+      }
+   }
+   if (size_2 > 0 && ret == 0)
+   {
+      if(read(inputfile, object_2, size_2) != (int)size_2)
+      {
+         ret = -1;
+         os_log(LOG_LEVEL_ERROR, "Failed to write file %s\n", fullpath);
+      }
+   }
+
+   /* Close file */
+   close(inputfile);
+
+   return ret;
 }
 
 void os_log (int type, const char * fmt, ...)

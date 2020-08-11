@@ -17,6 +17,7 @@
 #define SAMPLEAPP_COMMON_H
 
 #include "osal.h"
+#include "options.h"
 #include <pnet_api.h>
 
 #ifdef __cplusplus
@@ -70,8 +71,6 @@ extern "C"
 #define APP_DATASIZE_OUTPUT      1     /* bytes, for digital outputs data */
 #define APP_ALARM_PAYLOAD_SIZE   1     /* bytes */
 
-#define APP_MAX_MODULES          5     /* Max number of modules in app */
-
 /*** Example on how to keep lists of supported modules and submodules ********/
 
 static const uint32_t            cfg_available_module_types[] =
@@ -103,10 +102,11 @@ static const struct
 /************************ App data storage ***********************************/
 
 struct cmd_args {
-   char path_button1[256];
-   char path_button2[256];
+   char path_button1[PNET_MAX_FILE_FULLPATH_LEN];
+   char path_button2[PNET_MAX_FILE_FULLPATH_LEN];
+   char path_storage_directory[PNET_MAX_DIRECTORYPATH_LENGTH];
    char station_name[64];
-   char eth_interface[64];
+   char eth_interface[PNET_MAX_INTERFACE_NAME_LENGTH];
    int  verbosity;
 };
 
@@ -120,8 +120,8 @@ typedef struct app_data_obj
    uint32_t                  app_param_1;
    uint32_t                  app_param_2;
    uint8_t                   inputdata[APP_DATASIZE_INPUT];
-   uint8_t                   custom_input_slots[APP_MAX_MODULES];
-   uint8_t                   custom_output_slots[APP_MAX_MODULES];
+   uint8_t                   custom_input_slots[PNET_MAX_MODULES];
+   uint8_t                   custom_output_slots[PNET_MAX_MODULES];
 } app_data_t;
 
 

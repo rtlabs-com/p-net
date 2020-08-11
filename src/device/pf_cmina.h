@@ -58,10 +58,22 @@ void pf_cmina_ip_to_string(
    os_ipaddr_t             ip,
    char                    *outputstring);
 
+
+/**
+ * Retrieve the path to the directory for saving files.
+ * @param net                 InOut: The p-net stack instance
+ * @param pp_file_directory   Out:   The absolute path to the file directory. Terminated string or NULL.
+ * @return  0  if the operation succeeded.
+ *          -1 if an error occurred.
+ */
+int pf_cmina_get_file_directory(
+   pnet_t                  *net,
+   const char              **pp_file_directory);
+
 /**
  * Retrieve the current station name of the device.
  * @param net              InOut: The p-net stack instance
- * @param pp_station_name  Out:  The station name.
+ * @param pp_station_name  Out:   The station name. Terminated string.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */

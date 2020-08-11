@@ -33,7 +33,7 @@ pnet_t * pnet_init_only (
 
    if (strlen(netif) > PNET_MAX_INTERFACE_NAME_LENGTH)
    {
-      LOG_ERROR(PNET_LOG, "Too long interface name\n");
+      LOG_ERROR(PNET_LOG, "Too long interface name. Given: %s  Max len: %d\n", netif, PNET_MAX_INTERFACE_NAME_LENGTH);
       return NULL;
    }
    strcpy(net->interface_name, netif);
