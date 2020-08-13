@@ -58,7 +58,6 @@ static pnet_cfg_t                  pnet_default_cfg;
    return 0;
 }
 
-
 static void app_get_button(uint16_t id, bool *p_pressed)
 {
    if (id == 0)
@@ -75,6 +74,17 @@ static void app_get_button(uint16_t id, bool *p_pressed)
    }
 }
 
+static void main_timer_tick(
+   os_timer_t              *timer,
+   void                    *arg)
+{
+   os_event_set(gp_appdata->main_events, EVENT_TIMER);
+}
+
+
+/************************* Shell commands *************************************/
+/*  Press enter in the terminal to get to the built-in shell.                 */
+/*  Type help to see available commands.                                      */
 
 static int _cmd_pnio_alarm_ack(
       int                  argc,
@@ -116,81 +126,6 @@ const shell_cmd_t cmd_pnio_alarm_ack =
 };
 SHELL_CMD (cmd_pnio_alarm_ack);
 
-static int _cmd_pnio_run(
-      int                  argc,
-      char                 *argv[])
-{
-   if (g_net != NULL)
-   {
-      printf("Already initialized p-net application.\n");
-      return 0;
-   }
-
-   if (argc == 2)
-   {
-      strcpy(gp_appdata->arguments.station_name, argv[1]);
-   }
-   else{
-      strcpy(gp_appdata->arguments.station_name, APP_DEFAULT_STATION_NAME);
-   }
-
-   app_adjust_stack_configuration(&pnet_default_cfg);
-   strcpy(pnet_default_cfg.im_0_data.order_id, "12345");
-   strcpy(pnet_default_cfg.im_0_data.im_serial_number, "00001");
-   pnet_default_cfg.ip_addr.a = ip4_addr1 (&netif_default->ip_addr);
-   pnet_default_cfg.ip_addr.b = ip4_addr2 (&netif_default->ip_addr);
-   pnet_default_cfg.ip_addr.c = ip4_addr3 (&netif_default->ip_addr);
-   pnet_default_cfg.ip_addr.d = ip4_addr4 (&netif_default->ip_addr);
-   pnet_default_cfg.ip_mask.a = ip4_addr1 (&netif_default->netmask);
-   pnet_default_cfg.ip_mask.b = ip4_addr2 (&netif_default->netmask);
-   pnet_default_cfg.ip_mask.c = ip4_addr3 (&netif_default->netmask);
-   pnet_default_cfg.ip_mask.d = ip4_addr4 (&netif_default->netmask);
-   pnet_default_cfg.ip_gateway.a = pnet_default_cfg.ip_addr.a;
-   pnet_default_cfg.ip_gateway.b = pnet_default_cfg.ip_addr.b;
-   pnet_default_cfg.ip_gateway.c = pnet_default_cfg.ip_addr.c;
-   pnet_default_cfg.ip_gateway.d = 1;
-   memcpy (pnet_default_cfg.eth_addr.addr, netif_default->hwaddr, sizeof(pnet_ethaddr_t));
-   strcpy(pnet_default_cfg.station_name, gp_appdata->arguments.station_name);
-   pnet_default_cfg.cb_arg = (void*)gp_appdata;
-
-   g_net = pnet_init(gp_appdata->arguments.eth_interface, TICK_INTERVAL_US, &pnet_default_cfg);
-   if (g_net != NULL)
-   {
-      app_plug_dap(g_net, gp_appdata);
-
-      if (gp_appdata->arguments.verbosity > 0)
-      {
-         printf("\nStation name:        %s\n", gp_appdata->arguments.station_name);
-         printf("Initialized p-net application.\n\n");
-         printf("Waiting for connect request from IO-controller\n");
-      }
-
-      if (gp_appdata->init_done == true)
-      {
-         os_timer_stop(gp_appdata->main_timer);
-      }
-      os_timer_start(gp_appdata->main_timer);
-      gp_appdata->init_done = true;
-   }
-   else
-   {
-      printf("Failed to initialize p-net application.\n");
-   }
-
-   return 0;
-}
-
-const shell_cmd_t cmd_pnio_run =
-{
-      .cmd = _cmd_pnio_run,
-      .name = "pnio_run",
-      .help_short = "Start pnio sample app",
-      .help_long = "pnio_run [station name]\n\n"
-                   "Start the pnio sample app. Station name defaults to "
-                   APP_DEFAULT_STATION_NAME " if not given.\n"
-};
-SHELL_CMD (cmd_pnio_run);
-
 static int _cmd_pnio_show(
       int                  argc,
       char                 *argv[])
@@ -217,13 +152,6 @@ const shell_cmd_t cmd_pnio_show =
   .help_long ="Show pnio (level)"
 };
 SHELL_CMD (cmd_pnio_show);
-
-static void main_timer_tick(
-   os_timer_t              *timer,
-   void                    *arg)
-{
-   os_event_set(gp_appdata->main_events, EVENT_TIMER);
-}
 
 
 /****************************** Main ******************************************/
@@ -253,6 +181,7 @@ int main(void)
 
    memset(&cmdline_arguments, 0, sizeof(cmdline_arguments));
    strcpy(cmdline_arguments.eth_interface, APP_DEFAULT_ETHERNET_INTERFACE);
+   strcpy(cmdline_arguments.station_name, APP_DEFAULT_STATION_NAME);
    cmdline_arguments.verbosity = (LOG_LEVEL <= LOG_LEVEL_WARNING) ? 1 : 0;
 
    gp_appdata = &appdata;
@@ -264,13 +193,49 @@ int main(void)
    appdata.main_events = os_event_create();
    appdata.main_timer = os_timer_create(TICK_INTERVAL_US, main_timer_tick, NULL, false);
 
-   printf("\n** Profinet demo application ready to start **\n");
+   printf("\n** Profinet sample application **\n");
    if (appdata.arguments.verbosity > 0)
    {
       printf("Number of slots:     %u (incl slot for DAP module)\n", PNET_MAX_MODULES);
       printf("P-net log level:     %u (DEBUG=0, ERROR=3)\n", LOG_LEVEL);
       printf("App verbosity level: %u\n", appdata.arguments.verbosity);
       printf("Ethernet interface:  %s\n", appdata.arguments.eth_interface);
+      printf("Station name:        %s\n\n", appdata.arguments.station_name);
+   }
+
+   app_adjust_stack_configuration(&pnet_default_cfg);
+   strcpy(pnet_default_cfg.im_0_data.order_id, "12345");
+   strcpy(pnet_default_cfg.im_0_data.im_serial_number, "00001");
+   pnet_default_cfg.ip_addr.a = ip4_addr1 (&netif_default->ip_addr);
+   pnet_default_cfg.ip_addr.b = ip4_addr2 (&netif_default->ip_addr);
+   pnet_default_cfg.ip_addr.c = ip4_addr3 (&netif_default->ip_addr);
+   pnet_default_cfg.ip_addr.d = ip4_addr4 (&netif_default->ip_addr);
+   pnet_default_cfg.ip_mask.a = ip4_addr1 (&netif_default->netmask);
+   pnet_default_cfg.ip_mask.b = ip4_addr2 (&netif_default->netmask);
+   pnet_default_cfg.ip_mask.c = ip4_addr3 (&netif_default->netmask);
+   pnet_default_cfg.ip_mask.d = ip4_addr4 (&netif_default->netmask);
+   pnet_default_cfg.ip_gateway.a = pnet_default_cfg.ip_addr.a;
+   pnet_default_cfg.ip_gateway.b = pnet_default_cfg.ip_addr.b;
+   pnet_default_cfg.ip_gateway.c = pnet_default_cfg.ip_addr.c;
+   pnet_default_cfg.ip_gateway.d = 1;
+   memcpy (pnet_default_cfg.eth_addr.addr, netif_default->hwaddr, sizeof(pnet_ethaddr_t));
+   strcpy(pnet_default_cfg.station_name, gp_appdata->arguments.station_name);
+   pnet_default_cfg.cb_arg = (void*)gp_appdata;
+
+   g_net = pnet_init(gp_appdata->arguments.eth_interface, TICK_INTERVAL_US, &pnet_default_cfg);
+   if (g_net == NULL)
+   {
+      printf("Failed to initialize p-net application.\n");
+      return -1;
+   }
+
+   app_plug_dap(g_net, gp_appdata);
+   os_timer_start(gp_appdata->main_timer);
+
+   if (gp_appdata->arguments.verbosity > 0)
+   {
+      printf("Initialized p-net sample application.\n");
+      printf("Waiting for connect request from IO-controller\n\n");
    }
 
    /* Main loop */
@@ -309,8 +274,6 @@ int main(void)
          {
             printf("Alarm ACK sent\n");
          }
-
-
       }
       else if (flags & EVENT_TIMER)
       {

@@ -121,7 +121,6 @@ typedef struct app_data_obj
    uint8_t                   inputdata[APP_DATASIZE_INPUT];
    uint8_t                   custom_input_slots[PNET_MAX_MODULES];
    uint8_t                   custom_output_slots[PNET_MAX_MODULES];
-   bool                      init_done;
 } app_data_t;
 
 
