@@ -174,7 +174,7 @@ TEST_F (PnetapiTest, PnetapiRunTest)
    const uint16_t          slot = 1;
    const uint16_t          subslot = 1;
 
-   printf("\nGenerating mock connection request\n");
+   TEST_TRACE("\nGenerating mock connection request\n");
    mock_set_os_udp_recvfrom_buffer(connect_req, sizeof(connect_req));
    os_usleep(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.state_calls, 1);
@@ -182,33 +182,33 @@ TEST_F (PnetapiTest, PnetapiRunTest)
    EXPECT_EQ(appdata.call_counters.connect_calls, 1);
    EXPECT_GT(mock_os_data.eth_send_count, 0);
 
-   printf("\nGenerating mock write request\n");
+   TEST_TRACE("\nGenerating mock write request\n");
    mock_set_os_udp_recvfrom_buffer(write_req, sizeof(write_req));
    os_usleep(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.state_calls, 1);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_STARTUP);
    EXPECT_EQ(appdata.call_counters.connect_calls, 1);
 
-   printf("\nGenerating mock parameter end request\n");
+   TEST_TRACE("\nGenerating mock parameter end request\n");
    mock_set_os_udp_recvfrom_buffer(prm_end_req, sizeof(prm_end_req));
    os_usleep(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.state_calls, 2);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_PRMEND);
    EXPECT_EQ(appdata.call_counters.connect_calls, 1);
 
-   printf("\nSimulate application calling APPL_RDY\n");
+   TEST_TRACE("\nSimulate application calling APPL_RDY\n");
    ret = pnet_application_ready(net, appdata.main_arep);
    EXPECT_EQ(ret, 0);
    EXPECT_EQ(appdata.call_counters.state_calls, 3);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_APPLRDY);
 
-   printf("\nGenerating mock application ready response\n");
+   TEST_TRACE("\nGenerating mock application ready response\n");
    mock_set_os_udp_recvfrom_buffer(appl_rdy_rsp, sizeof(appl_rdy_rsp));
    os_usleep(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.state_calls, 3);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_APPLRDY);
 
-   printf("\nTry receiving data before any received\n");
+   TEST_TRACE("\nTry receiving data before any received\n");
    in_len = sizeof(in_data);
    ret = pnet_output_get_data_and_iops(net, TEST_API_IDENT, slot, subslot, &new_flag, in_data, &in_len, &iops);
    EXPECT_EQ(ret, -1);
@@ -216,7 +216,7 @@ TEST_F (PnetapiTest, PnetapiRunTest)
    EXPECT_EQ(in_len, 0);
    EXPECT_EQ(iops, PNET_IOXS_BAD);
 
-   printf("\nTest data with bad IOPS and bad IOCS\n");
+   TEST_TRACE("\nTest data with bad IOPS and bad IOCS\n");
    for (ix = 0; ix < 100; ix++)
    {
       send_data(net, &appdata.data_cycle_ctr, data_packet1_bad_iops_bad_iocs, sizeof(data_packet1_bad_iops_bad_iocs));
@@ -237,7 +237,7 @@ TEST_F (PnetapiTest, PnetapiRunTest)
    EXPECT_EQ(in_len, 1);
    EXPECT_EQ(iocs, 0x04);
 
-   printf("\nTest data with bad IOPS and good IOCS\n");
+   TEST_TRACE("\nTest data with bad IOPS and good IOCS\n");
    for (ix = 0; ix < 100; ix++)
    {
       send_data(net, &appdata.data_cycle_ctr, data_packet2_bad_iops_good_iocs, sizeof(data_packet2_bad_iops_good_iocs));
@@ -258,7 +258,7 @@ TEST_F (PnetapiTest, PnetapiRunTest)
    EXPECT_EQ(in_len, 1);
    EXPECT_EQ(iocs, PNET_IOXS_GOOD);
 
-   printf("\nTest data with good IOPS and bad IOCS\n");
+   TEST_TRACE("\nTest data with good IOPS and bad IOCS\n");
    for (ix = 0; ix < 100; ix++)
    {
       send_data(net, &appdata.data_cycle_ctr, data_packet3_good_iops_bad_iocs, sizeof(data_packet3_good_iops_bad_iocs));
@@ -280,7 +280,7 @@ TEST_F (PnetapiTest, PnetapiRunTest)
    EXPECT_EQ(in_len, 1);
    EXPECT_EQ(iocs, 0x04);
 
-   printf("\nTest data with good IOPS and good IOCS\n");
+   TEST_TRACE("\nTest data with good IOPS and good IOCS\n");
    for (ix = 0; ix < 100; ix++)
    {
       send_data(net, &appdata.data_cycle_ctr, data_packet4_good_iops_good_iocs, sizeof(data_packet4_good_iops_good_iocs));
@@ -304,7 +304,7 @@ TEST_F (PnetapiTest, PnetapiRunTest)
    EXPECT_EQ(appdata.call_counters.state_calls, 4);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_DATA);
 
-   printf("\nRead more data when no new data received\n");
+   TEST_TRACE("\nRead more data when no new data received\n");
    iops = 88;     /* Something non-valid */
    in_len = sizeof(in_data);
    in_data[0] = 0;
@@ -316,21 +316,21 @@ TEST_F (PnetapiTest, PnetapiRunTest)
    EXPECT_EQ(in_data[0], 0x23);     /* Same as before */
    EXPECT_EQ(iops, PNET_IOXS_GOOD); /* Same as before */
 
-   printf("\nSend some data to the controller\n");
-   printf("Line %d\n", __LINE__);
+   TEST_TRACE("\nSend some data to the controller\n");
+   TEST_TRACE("Line %d\n", __LINE__);
    ret = pnet_input_set_data_and_iops(net, TEST_API_IDENT, slot, subslot, out_data, sizeof(out_data), PNET_IOXS_GOOD);
    EXPECT_EQ(ret, 0);
 
-   printf("\nAcknowledge the reception of controller data\n");
+   TEST_TRACE("\nAcknowledge the reception of controller data\n");
    ret = pnet_output_set_iocs(net, TEST_API_IDENT, slot, subslot, PNET_IOXS_GOOD);
    EXPECT_EQ(ret, 0);
    EXPECT_EQ(appdata.call_counters.state_calls, 4);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_DATA);
 
-   printf("\nCreate a logbook entry\n");
+   TEST_TRACE("\nCreate a logbook entry\n");
    pnet_create_log_book_entry(net, appdata.main_arep, &pnio_status, 0x13245768);
 
-   printf("\nGenerating mock release request\n");
+   TEST_TRACE("\nGenerating mock release request\n");
    mock_set_os_udp_recvfrom_buffer(release_req, sizeof(release_req));
    os_usleep(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.release_calls, 1);

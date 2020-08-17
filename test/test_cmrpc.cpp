@@ -342,7 +342,7 @@ TEST_F (CmrpcTest, CmrpcConnectReleaseTest)
    uint32_t                ix;
    EXPECT_EQ(mock_os_data.udp_sendto_len, 0);
 
-   printf("\nGenerating mock connection request\n");
+   TEST_TRACE("\nGenerating mock connection request\n");
    mock_set_os_udp_recvfrom_buffer(connect_req, sizeof(connect_req));
    os_usleep(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.state_calls, 1);
@@ -352,7 +352,7 @@ TEST_F (CmrpcTest, CmrpcConnectReleaseTest)
    EXPECT_EQ(mock_os_data.udp_sendto_count, 1);
    EXPECT_EQ(mock_os_data.udp_sendto_len, 178);
 
-   printf("\nGenerating mock write request\n");
+   TEST_TRACE("\nGenerating mock write request\n");
    mock_set_os_udp_recvfrom_buffer(write_req, sizeof(write_req));
    os_usleep(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.state_calls, 1);
@@ -362,7 +362,7 @@ TEST_F (CmrpcTest, CmrpcConnectReleaseTest)
    EXPECT_EQ(mock_os_data.udp_sendto_count, 2);
    EXPECT_EQ(mock_os_data.udp_sendto_len, 164);
 
-   printf("\nGenerating mock parameter end request\n");
+   TEST_TRACE("\nGenerating mock parameter end request\n");
    mock_set_os_udp_recvfrom_buffer(prm_end_req, sizeof(prm_end_req));
    os_usleep(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.state_calls, 2);
@@ -372,7 +372,7 @@ TEST_F (CmrpcTest, CmrpcConnectReleaseTest)
    EXPECT_EQ(mock_os_data.udp_sendto_count, 3);
    EXPECT_EQ(mock_os_data.udp_sendto_len, 132);
 
-   printf("\nSimulate application calling APPL_RDY\n");
+   TEST_TRACE("\nSimulate application calling APPL_RDY\n");
    ret = pnet_application_ready(net, appdata.main_arep);
    EXPECT_EQ(ret, 0);
    EXPECT_EQ(appdata.call_counters.state_calls, 3);
@@ -380,14 +380,14 @@ TEST_F (CmrpcTest, CmrpcConnectReleaseTest)
    EXPECT_EQ(mock_os_data.udp_sendto_count, 4);
    EXPECT_EQ(mock_os_data.udp_sendto_len, 132);
 
-   printf("\nGenerating mock application ready response\n");
+   TEST_TRACE("\nGenerating mock application ready response\n");
    mock_set_os_udp_recvfrom_buffer(appl_rdy_rsp, sizeof(appl_rdy_rsp));
    os_usleep(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.state_calls, 3);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_APPLRDY);
    EXPECT_EQ(mock_os_data.udp_sendto_count, 4);
 
-   printf("\nGenerating I&M0 request\n");
+   TEST_TRACE("\nGenerating I&M0 request\n");
    mock_set_os_udp_recvfrom_buffer(read_im0_req, sizeof(read_im0_req));
    os_usleep(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.state_calls, 3);
@@ -395,7 +395,7 @@ TEST_F (CmrpcTest, CmrpcConnectReleaseTest)
    EXPECT_EQ(mock_os_data.udp_sendto_count, 5);
    EXPECT_EQ(mock_os_data.udp_sendto_len, 224);
 
-   printf("\nGenerating cyclic data\n");
+   TEST_TRACE("\nGenerating cyclic data\n");
    for (ix = 0; ix < 100; ix++)
    {
       send_data(net, &appdata.data_cycle_ctr, data_packet, sizeof(data_packet));
@@ -404,7 +404,7 @@ TEST_F (CmrpcTest, CmrpcConnectReleaseTest)
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_DATA);
    EXPECT_EQ(mock_os_data.udp_sendto_count, 5);
 
-   printf("nGenerating mock release request\n");
+   TEST_TRACE("nGenerating mock release request\n");
    mock_set_os_udp_recvfrom_buffer(release_req, sizeof(release_req));
    os_usleep(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.release_calls, 1);
@@ -426,7 +426,7 @@ TEST_F(CmrpcTest, CmrpcConnectionTimeoutTest)
    uint8_t                 iops = PNET_IOXS_BAD;
    uint32_t                ix;
 
-   printf("\nGenerating mock connection request\n");
+   TEST_TRACE("\nGenerating mock connection request\n");
    mock_set_os_udp_recvfrom_buffer(connect_req, sizeof(connect_req));
    os_usleep(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.state_calls, 1);
@@ -434,33 +434,33 @@ TEST_F(CmrpcTest, CmrpcConnectionTimeoutTest)
    EXPECT_EQ(appdata.call_counters.connect_calls, 1);
    EXPECT_GT(mock_os_data.eth_send_count, 0);
 
-   printf("\nGenerating mock write request\n");
+   TEST_TRACE("\nGenerating mock write request\n");
    mock_set_os_udp_recvfrom_buffer(write_req, sizeof(write_req));
    os_usleep(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.state_calls, 1);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_STARTUP);
    EXPECT_EQ(appdata.call_counters.connect_calls, 1);
 
-   printf("\nGenerating mock parameter end request\n");
+   TEST_TRACE("\nGenerating mock parameter end request\n");
    mock_set_os_udp_recvfrom_buffer(prm_end_req, sizeof(prm_end_req));
    os_usleep(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.state_calls, 2);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_PRMEND);
    EXPECT_EQ(appdata.call_counters.connect_calls, 1);
 
-   printf("\nSimulate application calling APPL_RDY\n");
+   TEST_TRACE("\nSimulate application calling APPL_RDY\n");
    ret = pnet_application_ready(net, appdata.main_arep);
    EXPECT_EQ(ret, 0);
    EXPECT_EQ(appdata.call_counters.state_calls, 3);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_APPLRDY);
 
-   printf("\nGenerating mock application ready response\n");
+   TEST_TRACE("\nGenerating mock application ready response\n");
    mock_set_os_udp_recvfrom_buffer(appl_rdy_rsp, sizeof(appl_rdy_rsp));
    os_usleep(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.state_calls, 3);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_APPLRDY);
 
-   printf("\nGenerate a couple of data packets to move pf_cpm to RUN state\n");
+   TEST_TRACE("\nGenerate a couple of data packets to move pf_cpm to RUN state\n");
    for (ix = 0; ix < 100; ix++)
    {
       send_data(net, &appdata.data_cycle_ctr, data_packet, sizeof(data_packet));
@@ -468,7 +468,7 @@ TEST_F(CmrpcTest, CmrpcConnectionTimeoutTest)
    EXPECT_EQ(appdata.call_counters.state_calls, 4);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_DATA);
 
-   printf("\nRead data just to see that it works\n");
+   TEST_TRACE("\nRead data just to see that it works\n");
    in_len = sizeof(in_data);
    ret = pnet_output_get_data_and_iops(net, TEST_API_IDENT, 1, 1, &new_flag, in_data, &in_len, &iops);
    EXPECT_EQ(ret, 0);
@@ -476,17 +476,17 @@ TEST_F(CmrpcTest, CmrpcConnectionTimeoutTest)
    EXPECT_EQ(in_len, 1);
    EXPECT_EQ(iops, PNET_IOXS_GOOD);
 
-   printf("\nGenerate new data to move PPM to RUN state\n");
+   TEST_TRACE("\nGenerate new data to move PPM to RUN state\n");
    ret = pnet_input_set_data_and_iops(net, TEST_API_IDENT, 1, 1, out_data, sizeof(out_data), PNET_IOXS_GOOD);
    EXPECT_EQ(ret, 0);
 
-   printf("\nWait for timeout in CPM\n");
+   TEST_TRACE("\nWait for timeout in CPM\n");
    os_usleep(TEST_TIMEOUT_DELAY);
    EXPECT_EQ(appdata.call_counters.release_calls, 0);
    EXPECT_EQ(appdata.call_counters.state_calls, 5);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_ABORT);
 
-   printf("\nGenerating mock release request\n");
+   TEST_TRACE("\nGenerating mock release request\n");
    mock_set_os_udp_recvfrom_buffer(release_req, sizeof(release_req));
    os_usleep(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.release_calls, 0);
@@ -501,7 +501,7 @@ TEST_F (CmrpcTest, CmrpcSiemensConnectTest)
 {
    EXPECT_EQ(mock_os_data.udp_sendto_len, 0);
 
-   printf("\nGenerating mock connection request\n");
+   TEST_TRACE("\nGenerating mock connection request\n");
    mock_set_os_udp_recvfrom_buffer(connect_req_siemens, sizeof(connect_req_siemens));
    os_usleep(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_STARTUP);
@@ -515,7 +515,7 @@ TEST_F (CmrpcTest, CmrpcSiemensConnectTest)
    EXPECT_EQ(mock_os_data.udp_sendto_count, 1);
    EXPECT_EQ(mock_os_data.udp_sendto_len, 178);  // Actual value. OK in Wireshark (232 bytes)
 
-   printf("\nGenerating mock write request\n");
+   TEST_TRACE("\nGenerating mock write request\n");
    mock_set_os_udp_recvfrom_buffer(write_req_siemens, sizeof(write_req_siemens));
    os_usleep(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_STARTUP);
@@ -528,7 +528,7 @@ TEST_F (CmrpcTest, CmrpcSiemensConnectTest)
    EXPECT_EQ(mock_os_data.udp_sendto_count, 2);
    EXPECT_EQ(mock_os_data.udp_sendto_len, 356);  // Actual value. OK in Wireshark (398 bytes)
 
-   printf("\nGenerating mock parameter end request\n");
+   TEST_TRACE("\nGenerating mock parameter end request\n");
    mock_set_os_udp_recvfrom_buffer(prm_end_req_siemens, sizeof(prm_end_req_siemens));
    os_usleep(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_PRMEND);
@@ -547,14 +547,14 @@ TEST_F (CmrpcTest, CmrpcConnectFragmentTest)
    int                     ret;
    uint32_t                ix;
 
-   printf("\nGenerating mock connection request, fragment 1\n");
+   TEST_TRACE("\nGenerating mock connection request, fragment 1\n");
    mock_set_os_udp_recvfrom_buffer(connect_frag_1_req, sizeof(connect_frag_1_req));
    os_usleep(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.state_calls, 0);
    EXPECT_EQ(appdata.call_counters.connect_calls, 0);
    EXPECT_EQ(mock_os_data.eth_send_count, 0);
 
-   printf("\nGenerating mock connection request, fragment 2\n");
+   TEST_TRACE("\nGenerating mock connection request, fragment 2\n");
    mock_set_os_udp_recvfrom_buffer(connect_frag_2_req, sizeof(connect_frag_2_req));
    os_usleep(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.state_calls, 1);
@@ -562,7 +562,7 @@ TEST_F (CmrpcTest, CmrpcConnectFragmentTest)
    EXPECT_EQ(appdata.call_counters.connect_calls, 1);
    EXPECT_GT(mock_os_data.eth_send_count, 0);
 
-   printf("\nGenerating mock connection write request\n");
+   TEST_TRACE("\nGenerating mock connection write request\n");
    mock_set_os_udp_recvfrom_buffer(write_req, sizeof(write_req));
    os_usleep(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.state_calls, 1);
@@ -570,32 +570,32 @@ TEST_F (CmrpcTest, CmrpcConnectFragmentTest)
    EXPECT_EQ(appdata.call_counters.write_calls, 1);
    EXPECT_EQ(appdata.call_counters.connect_calls, 1);
 
-   printf("\nGenerating mock parameter end request\n");
+   TEST_TRACE("\nGenerating mock parameter end request\n");
    mock_set_os_udp_recvfrom_buffer(prm_end_req, sizeof(prm_end_req));
    os_usleep(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.state_calls, 2);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_PRMEND);
    EXPECT_EQ(appdata.call_counters.connect_calls, 1);
 
-   printf("\nSimulate application calling APPL_RDY\n");
+   TEST_TRACE("\nSimulate application calling APPL_RDY\n");
    ret = pnet_application_ready(net, appdata.main_arep);
    EXPECT_EQ(ret, 0);
    EXPECT_EQ(appdata.call_counters.state_calls, 3);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_APPLRDY);
 
-   printf("\nGenerating mock application ready response\n");
+   TEST_TRACE("\nGenerating mock application ready response\n");
    mock_set_os_udp_recvfrom_buffer(appl_rdy_rsp, sizeof(appl_rdy_rsp));
    os_usleep(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.state_calls, 3);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_APPLRDY);
 
-   printf("\nRead I&M0\n");
+   TEST_TRACE("\nRead I&M0\n");
    mock_set_os_udp_recvfrom_buffer(read_im0_req, sizeof(read_im0_req));
    os_usleep(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.state_calls, 3);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_APPLRDY);
 
-   printf("\nSending data\n");
+   TEST_TRACE("\nSending data\n");
    for (ix = 0; ix < 100; ix++)
    {
       send_data(net, &appdata.data_cycle_ctr, data_packet, sizeof(data_packet));
@@ -603,7 +603,7 @@ TEST_F (CmrpcTest, CmrpcConnectFragmentTest)
    EXPECT_EQ(appdata.call_counters.state_calls, 4);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_DATA);
 
-   printf("Sending mock release request\n");
+   TEST_TRACE("Sending mock release request\n");
    mock_set_os_udp_recvfrom_buffer(release_req, sizeof(release_req));
    os_usleep(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.release_calls, 1);
@@ -613,7 +613,7 @@ TEST_F (CmrpcTest, CmrpcConnectFragmentTest)
 
 TEST_F (CmrpcTest, CmrpcConnectReleaseIOSAR_DA)
 {
-   printf("\nGenerating mock connection request IOSAR_DA\n");
+   TEST_TRACE("\nGenerating mock connection request IOSAR_DA\n");
    mock_set_os_udp_recvfrom_buffer(connect_req_iosar_da, sizeof(connect_req_iosar_da));
    os_usleep(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.state_calls, 1);
@@ -621,7 +621,7 @@ TEST_F (CmrpcTest, CmrpcConnectReleaseIOSAR_DA)
    EXPECT_EQ(appdata.call_counters.connect_calls, 1);
    EXPECT_EQ(mock_os_data.eth_send_count, 0);
 
-   printf("\nGenerating mock release request IOSAR_DA\n");
+   TEST_TRACE("\nGenerating mock release request IOSAR_DA\n");
    mock_set_os_udp_recvfrom_buffer(release_req_iosar_da, sizeof(release_req_iosar_da));
    os_usleep(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.state_calls, 2);

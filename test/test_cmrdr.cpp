@@ -207,7 +207,7 @@ void test_read(pnet_t *net, app_data_for_testing_t *p_appdata, test_reads_t *p_t
 
    if (read_status.pnio_status.error_code != 0)
    {
-      printf("Read failed for idx %#x\n", (unsigned)idx);
+      TEST_TRACE("Read failed for idx %#x\n", (unsigned)idx);
       p_appdata->read_fails++;
    }
 }
@@ -229,7 +229,7 @@ TEST_F (CmrdrTest, CmrdrRunTest)
    const uint16_t          slot = 1;
    const uint16_t          subslot = 1;
 
-   printf("\nGenerating mock connection request\n");
+   TEST_TRACE("\nGenerating mock connection request\n");
    mock_set_os_udp_recvfrom_buffer(connect_req, sizeof(connect_req));
    os_usleep(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.state_calls, 1);
@@ -237,27 +237,27 @@ TEST_F (CmrdrTest, CmrdrRunTest)
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_STARTUP);
    EXPECT_GT(mock_os_data.eth_send_count, 0);
 
-   printf("\nGenerating mock parameter end request\n");
+   TEST_TRACE("\nGenerating mock parameter end request\n");
    mock_set_os_udp_recvfrom_buffer(prm_end_req, sizeof(prm_end_req));
    os_usleep(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.state_calls, 2);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_PRMEND);
    EXPECT_EQ(appdata.call_counters.connect_calls, 1);
 
-   printf("\nSimulate application calling APPL_RDY\n");
-   printf("Line %d\n", __LINE__);
+   TEST_TRACE("\nSimulate application calling APPL_RDY\n");
+   TEST_TRACE("Line %d\n", __LINE__);
    ret = pnet_application_ready(net, appdata.main_arep);
    EXPECT_EQ(ret, 0);
    EXPECT_EQ(appdata.call_counters.state_calls, 3);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_APPLRDY);
 
-   printf("\nGenerating mock application ready response\n");
+   TEST_TRACE("\nGenerating mock application ready response\n");
    mock_set_os_udp_recvfrom_buffer(appl_rdy_rsp, sizeof(appl_rdy_rsp));
    os_usleep(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.state_calls, 3);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_APPLRDY);
 
-   printf("\nSend a couple of data packets and verify reception\n");
+   TEST_TRACE("\nSend a couple of data packets and verify reception\n");
    for (ix = 0; ix < 100; ix++)
    {
       send_data(net, &appdata.data_cycle_ctr, data_packet_good_iops_good_iocs, sizeof(data_packet_good_iops_good_iocs));
@@ -281,11 +281,11 @@ TEST_F (CmrdrTest, CmrdrRunTest)
    EXPECT_EQ(appdata.call_counters.state_calls, 4);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_DATA);
 
-   printf("\nSend some data to the controller\n");
+   TEST_TRACE("\nSend some data to the controller\n");
    ret = pnet_input_set_data_and_iops(net, TEST_API_IDENT, slot, subslot, out_data, sizeof(out_data), PNET_IOXS_GOOD);
    EXPECT_EQ(ret, 0);
 
-   printf("\nAcknowledge the reception of controller data\n");
+   TEST_TRACE("\nAcknowledge the reception of controller data\n");
    ret = pnet_output_set_iocs(net, TEST_API_IDENT, slot, subslot, PNET_IOXS_GOOD);
    EXPECT_EQ(ret, 0);
    EXPECT_EQ(appdata.call_counters.state_calls, 4);
@@ -294,10 +294,10 @@ TEST_F (CmrdrTest, CmrdrRunTest)
    /* Send data to avoid timeout */
    send_data(net, &appdata.data_cycle_ctr, data_packet_good_iops_good_iocs, sizeof(data_packet_good_iops_good_iocs));
 
-   printf("\nCreate a logbook entry\n");
+   TEST_TRACE("\nCreate a logbook entry\n");
    pnet_create_log_book_entry(net, appdata.main_arep, &pnio_status, 0x13245768);
 
-   printf("\nCreate a diag and an alarm.\n");
+   TEST_TRACE("\nCreate a diag and an alarm.\n");
    PNET_DIAG_CH_PROP_TYPE_SET(ch_properties, PNET_DIAG_CH_PROP_TYPE_8_BIT);
    PNET_DIAG_CH_PROP_ACC_SET(ch_properties, 0);
    PNET_DIAG_CH_PROP_MAINT_SET(ch_properties, PNET_DIAG_CH_PROP_MAINT_FAULT);
@@ -305,16 +305,16 @@ TEST_F (CmrdrTest, CmrdrRunTest)
    PNET_DIAG_CH_PROP_DIR_SET(ch_properties, PNET_DIAG_CH_PROP_DIR_OUTPUT);
    pnet_diag_add(net, appdata.main_arep, TEST_API_IDENT, slot, subslot, 0, ch_properties, 0x0001, 0x0002, 0x00030004, 0, PNET_DIAG_USI_STD, NULL);
 
-   printf("Number of tests: %u\n", (unsigned)NELEMENTS(test_reads));
+   TEST_TRACE("Number of tests: %u\n", (unsigned)NELEMENTS(test_reads));
 
-   printf("\nNow read all the records\n");
+   TEST_TRACE("\nNow read all the records\n");
    for (ix = 0; ix < NELEMENTS(test_reads); ix++)
    {
       test_read(net, &appdata, &test_reads[ix]);
    }
    EXPECT_EQ(appdata.read_fails, 60); // Currently expected number of fails.
 
-   printf("\nGenerating mock release request\n");
+   TEST_TRACE("\nGenerating mock release request\n");
    mock_set_os_udp_recvfrom_buffer(release_req, sizeof(release_req));
    os_usleep(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.release_calls, 1);
@@ -342,7 +342,7 @@ TEST_F (CmrdrTest, CmrdrModDiffTest)
    // in the on_submodule callback. However it does not make any difference
    // for the test result
 
-   printf("\nGenerating mock connection request\n");
+   TEST_TRACE("\nGenerating mock connection request\n");
    mock_set_os_udp_recvfrom_buffer(connect_req, sizeof(connect_req));
    os_usleep(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.state_calls, 1);
@@ -350,26 +350,26 @@ TEST_F (CmrdrTest, CmrdrModDiffTest)
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_STARTUP);
    EXPECT_GT(mock_os_data.eth_send_count, 0);
 
-   printf("\nGenerating mock parameter end request\n");
+   TEST_TRACE("\nGenerating mock parameter end request\n");
    mock_set_os_udp_recvfrom_buffer(prm_end_req, sizeof(prm_end_req));
    os_usleep(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.state_calls, 2);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_PRMEND);
    EXPECT_EQ(appdata.call_counters.connect_calls, 1);
 
-   printf("\nSimulate application calling APPL_RDY\n");
+   TEST_TRACE("\nSimulate application calling APPL_RDY\n");
    ret = pnet_application_ready(net, appdata.main_arep);
    EXPECT_EQ(ret, 0);
    EXPECT_EQ(appdata.call_counters.state_calls, 3);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_APPLRDY);
 
-   printf("\nGenerating mock application ready response\n");
+   TEST_TRACE("\nGenerating mock application ready response\n");
    mock_set_os_udp_recvfrom_buffer(appl_rdy_rsp, sizeof(appl_rdy_rsp));
    os_usleep(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.state_calls, 3);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_APPLRDY);
 
-   printf("\nSend a couple of data packets and verify reception\n");
+   TEST_TRACE("\nSend a couple of data packets and verify reception\n");
    for (ix = 0; ix < 100; ix++)
    {
       send_data(net, &appdata.data_cycle_ctr, data_packet_good_iops_good_iocs, sizeof(data_packet_good_iops_good_iocs));
@@ -394,7 +394,7 @@ TEST_F (CmrdrTest, CmrdrModDiffTest)
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_DATA);
 
    /* Send some data to the controller */
-   printf("Line %d\n", __LINE__);
+   TEST_TRACE("Line %d\n", __LINE__);
    ret = pnet_input_set_data_and_iops(net, TEST_API_IDENT, slot, subslot, out_data, sizeof(out_data), PNET_IOXS_GOOD);
    EXPECT_EQ(ret, 0);
 
@@ -406,11 +406,11 @@ TEST_F (CmrdrTest, CmrdrModDiffTest)
 
    /* Setup some record for the reader */
 
-   printf("Line %d\n", __LINE__);
+   TEST_TRACE("Line %d\n", __LINE__);
    /* Create a logbook entry */
    pnet_create_log_book_entry(net, appdata.main_arep, &pnio_status, 0x13245768);
 
-   printf("Number of tests: %u\n", (unsigned)NELEMENTS(test_mod_diff));
+   TEST_TRACE("Number of tests: %u\n", (unsigned)NELEMENTS(test_mod_diff));
 
    /* Now read all the mod diff record */
    for (ix = 0; ix < NELEMENTS(test_mod_diff); ix++)
@@ -419,7 +419,7 @@ TEST_F (CmrdrTest, CmrdrModDiffTest)
    }
    EXPECT_EQ(appdata.read_fails, 0);
 
-   printf("\nGenerating mock release request\n");
+   TEST_TRACE("\nGenerating mock release request\n");
    mock_set_os_udp_recvfrom_buffer(release_req, sizeof(release_req));
    os_usleep(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.release_calls, 1);
