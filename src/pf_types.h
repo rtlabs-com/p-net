@@ -996,7 +996,7 @@ typedef struct pf_iocr_param
    uint16_t                c_sdu_length;                 /** Allowed: RT_CLASS_UDP: 12..1440, others: 40..1440 */
    uint16_t                frame_id;                     /** Depends on RT_class */
    uint16_t                send_clock_factor;            /** res: 31.25us, Allowed: 1..128, default: 32 */
-   uint16_t                reduction_ratio;
+   uint16_t                reduction_ratio;              /** Allowed: 1..512 */
    uint16_t                phase;                        /** 1..reduction_ratio */
    uint16_t                sequence;                     /** Allowed: RT_class_3: 0, others: 0 (mandatory) 1..0xffff (optional) */
    uint32_t                frame_send_offset;            /** res: 1ns, Allowed: (All:) BEST_EFFORT (0xffffffff), RT_class_3: 0x0..0x3D08FF (mandatory) */
@@ -1276,9 +1276,12 @@ typedef struct pf_ppm
 
    uint32_t                trx_cnt;
 
+   uint16_t                send_clock_factor;   /** res: 31.25us, Allowed: 1..128, default: 32 */
+   uint16_t                reduction_ratio;     /** Allowed: 1..512 */
    uint32_t                control_interval;
    bool                    ci_running;
    uint32_t                ci_timer;
+
 } pf_ppm_t;
 
 typedef struct pf_cpm
