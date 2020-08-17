@@ -2016,6 +2016,16 @@ struct pnet
 };
 
 
+/**
+ * @internal
+ * Initialise a pnet_t structure. For testing purposes.
+ */
+pnet_t * pnet_init_only (
+   pnet_t                  *net,
+   const char              *netif,
+   uint32_t                tick_us,
+   const pnet_cfg_t        *p_cfg);
+
 #ifdef __cplusplus
 }
 #endif

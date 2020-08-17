@@ -152,10 +152,10 @@ TEST_F (DcpTest, DcpRunTest)
    memcpy(p_buf->payload, signal_req, sizeof(signal_req));
    ret = pf_eth_recv(net, p_buf);
    EXPECT_EQ(ret, 1);
-   /* 3.5 s should be enough, but on Windows even 5 s is not enough :-( */
-   os_usleep(9*1000*1000);
+    /* Wait for LED to flash three times at 1 Hz */
+   run_stack(4*1000*1000);
 
-   EXPECT_EQ(mock_os_data.eth_send_count, 10);
+   EXPECT_EQ(mock_os_data.eth_send_count, 9);
    EXPECT_EQ(mock_os_data.set_ip_suite_count, 2);
 
    EXPECT_EQ(appdata.call_counters.led_on_calls, 3);

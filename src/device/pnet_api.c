@@ -28,19 +28,12 @@
 #include "pf_includes.h"
 #include "pf_block_reader.h"
 
-pnet_t* pnet_init(
+pnet_t * pnet_init_only (
+   pnet_t                  *net,
    const char              *netif,
    uint32_t                tick_us,
    const pnet_cfg_t        *p_cfg)
 {
-   pnet_t                  *net;
-
-   net = os_malloc(sizeof(*net));
-   if (net == NULL)
-   {
-      return NULL;
-   }
-
    memset(net, 0, sizeof(*net));
 
    if (strlen(netif) > PNET_MAX_INTERFACE_NAME_LENGTH)
@@ -83,6 +76,23 @@ pnet_t* pnet_init(
 
    pf_cmrpc_init(net);
 
+   return net;
+}
+
+pnet_t* pnet_init(
+   const char              *netif,
+   uint32_t                tick_us,
+   const pnet_cfg_t        *p_cfg)
+{
+   pnet_t                  *net;
+
+   net = os_malloc(sizeof(*net));
+   if (net == NULL)
+   {
+      return NULL;
+   }
+
+   pnet_init_only (net, netif, tick_us, p_cfg);
    return net;
 }
 
