@@ -182,7 +182,7 @@ int my_read_ind(
    app_data_for_testing_t     *p_appdata = (app_data_for_testing_t*)arg;
 
    TEST_TRACE("Callback on read\n");
-   TEST_TRACE("  API: %u Slot: %u Subslot: %u Index: %u Sequence: %u\n", api, slot, subslot, idx, sequence_number);
+   TEST_TRACE("  API: %" PRIu32 " Slot: %" PRIu16 " Subslot: %" PRIu16 " Index: %" PRIu16 " Sequence: %" PRIu16 "\n", api, slot, subslot, idx, sequence_number);
    p_appdata->call_counters.read_calls++;
    return 0;
 }
@@ -203,7 +203,7 @@ int my_write_ind(
    app_data_for_testing_t     *p_appdata = (app_data_for_testing_t*)arg;
 
    TEST_TRACE("Callback on write\n");
-   TEST_TRACE("  API: %u Slot: %u Subslot: %u Index: %u Sequence: %u Len: %u\n", api, slot, subslot, idx, sequence_number, write_length);
+   TEST_TRACE("  API: %" PRIu32 " Slot: %" PRIu16 " Subslot: %" PRIu16 " Index: %" PRIu16 " Sequence: %" PRIu16 " Len: %" PRIu16 "\n", api, slot, subslot, idx, sequence_number, write_length);
    p_appdata->call_counters.write_calls++;
    return 0;
 }
@@ -293,7 +293,7 @@ int my_state_ind(
    {
       ret = pnet_get_ar_error_codes(net, arep, &err_cls, &err_code);
       EXPECT_EQ(ret, 0);
-      TEST_TRACE("ABORT err_cls 0x%02x  err_code 0x%02x\n", (unsigned)err_cls, (unsigned)err_code);
+      TEST_TRACE("ABORT err_cls 0x%02" PRIx16 "  err_code 0x%02" PRIx16 "\n", err_cls, err_code);
    }
 
    return 0;
@@ -328,7 +328,7 @@ int my_exp_module_ind(
    if (found == true)
    {
       /* For now support any module in any slot */
-      TEST_TRACE("  Plug module.    API: %u Slot: %u Module ID: %" PRIu32 " Index in list of supported modules: %u\n", api, slot, module_ident, ix);
+      TEST_TRACE("  Plug module.    API: %" PRIu32 " Slot: %" PRIu16 " Module ID: %" PRIu32 " Index in list of supported modules: %" PRIu16 "\n", api, slot, module_ident, ix);
       ret = pnet_plug_module(net, api, slot, module_ident);
       EXPECT_EQ(ret, 0);
 
@@ -344,7 +344,7 @@ int my_exp_module_ind(
    }
    else
    {
-      TEST_TRACE("  Module ident %08x not found\n", (unsigned)module_ident);
+      TEST_TRACE("  Module ident %08" PRIx32 " not found\n", module_ident);
       EXPECT_TRUE(false);  // Fail the test
    }
 
@@ -382,8 +382,8 @@ int my_exp_submodule_ind(
 
    if (found == true)
    {
-      TEST_TRACE("  Plug submodule. API: %u Slot: %u Subslot: %u Module ID: %" PRIu32 " Submodule ID: %" PRIu32 " (Index in available submodules: %u) Direction: %u Len in: %u out: %u\n",
-        api, slot, subslot, module_ident, submodule_ident, ix,
+      TEST_TRACE("  Plug submodule. API: %" PRIu32 " Slot: %" PRIu16 " Subslot: %" PRIu16 " Module ID: %" PRIu32 " Submodule ID: %" PRIu32 " (Index in available submodules: %" PRIu16 ") Direction: %u Len in: %" PRIu16 " out: %" PRIu16 "\n",
+             api, slot, subslot, module_ident, submodule_ident, ix,
         p_appdata->available_submodule_types[ix].direction,
         p_appdata->available_submodule_types[ix].input_length,
         p_appdata->available_submodule_types[ix].output_length);
@@ -395,7 +395,7 @@ int my_exp_submodule_ind(
    }
    else
    {
-      TEST_TRACE("  Sub-module ident %08x not found\n", (unsigned)submodule_ident);
+      TEST_TRACE("  Sub-module ident %08" PRIx32 " not found\n", submodule_ident);
       EXPECT_TRUE(false);  // Fail the test
    }
 
