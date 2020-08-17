@@ -109,16 +109,8 @@ typedef struct app_data_for_testing_obj
    call_counters_t         call_counters;
 } app_data_for_testing_t;
 
-typedef struct app_data_and_stack_for_testing_obj
-{
-   app_data_for_testing_t  *appdata;
-   pnet_t                  *net;
-} app_data_and_stack_for_testing_t;
-
 
 /************************** Utilities ****************************************/
-
-void run_periodic(os_timer_t *p_timer, void *p_arg);
 
 void send_data(
    pnet_t                  *net,
@@ -248,8 +240,8 @@ protected:
 
    pnet_cfg_t                          pnet_default_cfg;
    app_data_for_testing_t              appdata;
-   pnet_t                              *net;
-   app_data_and_stack_for_testing_obj  appdata_and_stack;
+   pnet_t                              the_net;
+   pnet_t                              *net = &the_net;
 
    /** Initialize appdata, including clearing available modules etc. */
    virtual void appdata_init();
@@ -259,6 +251,42 @@ protected:
    virtual void available_modules_and_submodules_init();
 
    virtual void cfg_init();
+
+   /** This function calls the periodic maintenance functions while
+       simulating sleeping */
+   void test_sleep (int us)
+   {
+      uint16_t slot = 0;
+
+      for (int tmr = 0; tmr < us / 1000; tmr++)
+      {
+         /* Set new output data every 10ms */
+         appdata.tick_ctr++;
+         if ((appdata.main_arep != 0) && (appdata.tick_ctr > 10))
+         {
+            appdata.tick_ctr = 0;
+            appdata.inputdata[0] = appdata.data_ctr++;
+
+            /* Set data for custom input modules, if any */
+            for (slot = 0; slot < PNET_MAX_MODULES; slot++)
+            {
+               if (appdata.custom_input_slots[slot] == true)
+               {
+                  (void)pnet_input_set_data_and_iops(
+                     net,
+                     TEST_API_IDENT,
+                     slot,
+                     TEST_SUBMOD_CUSTOM_IDENT,
+                     appdata.inputdata,
+                     TEST_DATASIZE_INPUT,
+                     PNET_IOXS_GOOD);
+               }
+            }
+         }
+
+         pnet_handle_periodic (net);
+      }
+   }
 
 };
 
@@ -276,14 +304,9 @@ protected:
 
       callcounter_reset();
 
-      net = pnet_init(TEST_INTERFACE_NAME, TICK_INTERVAL_US, &pnet_default_cfg);
-      appdata_and_stack.net = net;
-      appdata_and_stack.appdata = &appdata;
+      pnet_init2 (net, TEST_INTERFACE_NAME, TICK_INTERVAL_US, &pnet_default_cfg);
 
       mock_clear();        /* lldp sends a frame at init */
-
-      appdata.periodic_timer = os_timer_create(TICK_INTERVAL_US, run_periodic, (void*)&appdata_and_stack, false);
-      os_timer_start(appdata.periodic_timer);
    };
 };
 

@@ -176,7 +176,7 @@ TEST_F (PnetapiTest, PnetapiRunTest)
 
    TEST_TRACE("\nGenerating mock connection request\n");
    mock_set_os_udp_recvfrom_buffer(connect_req, sizeof(connect_req));
-   os_usleep(TEST_UDP_DELAY);
+   test_sleep(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.state_calls, 1);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_STARTUP);
    EXPECT_EQ(appdata.call_counters.connect_calls, 1);
@@ -184,14 +184,14 @@ TEST_F (PnetapiTest, PnetapiRunTest)
 
    TEST_TRACE("\nGenerating mock write request\n");
    mock_set_os_udp_recvfrom_buffer(write_req, sizeof(write_req));
-   os_usleep(TEST_UDP_DELAY);
+   test_sleep(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.state_calls, 1);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_STARTUP);
    EXPECT_EQ(appdata.call_counters.connect_calls, 1);
 
    TEST_TRACE("\nGenerating mock parameter end request\n");
    mock_set_os_udp_recvfrom_buffer(prm_end_req, sizeof(prm_end_req));
-   os_usleep(TEST_UDP_DELAY);
+   test_sleep(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.state_calls, 2);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_PRMEND);
    EXPECT_EQ(appdata.call_counters.connect_calls, 1);
@@ -204,7 +204,7 @@ TEST_F (PnetapiTest, PnetapiRunTest)
 
    TEST_TRACE("\nGenerating mock application ready response\n");
    mock_set_os_udp_recvfrom_buffer(appl_rdy_rsp, sizeof(appl_rdy_rsp));
-   os_usleep(TEST_UDP_DELAY);
+   test_sleep(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.state_calls, 3);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_APPLRDY);
 
@@ -220,6 +220,7 @@ TEST_F (PnetapiTest, PnetapiRunTest)
    for (ix = 0; ix < 100; ix++)
    {
       send_data(net, &appdata.data_cycle_ctr, data_packet1_bad_iops_bad_iocs, sizeof(data_packet1_bad_iops_bad_iocs));
+      test_sleep (TEST_DATA_DELAY);
    }
 
    iops = 88;     /* Something non-valid */
@@ -241,6 +242,7 @@ TEST_F (PnetapiTest, PnetapiRunTest)
    for (ix = 0; ix < 100; ix++)
    {
       send_data(net, &appdata.data_cycle_ctr, data_packet2_bad_iops_good_iocs, sizeof(data_packet2_bad_iops_good_iocs));
+      test_sleep (TEST_DATA_DELAY);
    }
 
    iops = 88;     /* Something non-valid */
@@ -262,6 +264,7 @@ TEST_F (PnetapiTest, PnetapiRunTest)
    for (ix = 0; ix < 100; ix++)
    {
       send_data(net, &appdata.data_cycle_ctr, data_packet3_good_iops_bad_iocs, sizeof(data_packet3_good_iops_bad_iocs));
+      test_sleep (TEST_DATA_DELAY);
    }
 
    iops = 88;     /* Something non-valid */
@@ -284,6 +287,7 @@ TEST_F (PnetapiTest, PnetapiRunTest)
    for (ix = 0; ix < 100; ix++)
    {
       send_data(net, &appdata.data_cycle_ctr, data_packet4_good_iops_good_iocs, sizeof(data_packet4_good_iops_good_iocs));
+      test_sleep (TEST_DATA_DELAY);
    }
 
    iops = 88;     /* Something non-valid */
@@ -332,7 +336,7 @@ TEST_F (PnetapiTest, PnetapiRunTest)
 
    TEST_TRACE("\nGenerating mock release request\n");
    mock_set_os_udp_recvfrom_buffer(release_req, sizeof(release_req));
-   os_usleep(TEST_UDP_DELAY);
+   test_sleep(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.release_calls, 1);
    EXPECT_EQ(appdata.call_counters.state_calls, 5);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_ABORT);
@@ -341,7 +345,7 @@ TEST_F (PnetapiTest, PnetapiRunTest)
 TEST_F(PnetapiTest, PnetapiShowTest)
 {
    mock_set_os_udp_recvfrom_buffer(connect_req, sizeof(connect_req));
-   os_usleep(TEST_UDP_DELAY);
+   test_sleep(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.state_calls, 1);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_STARTUP);
    EXPECT_EQ(appdata.call_counters.connect_calls, 1);
@@ -350,7 +354,7 @@ TEST_F(PnetapiTest, PnetapiShowTest)
    pnet_show(net, 0x7fffffff);
 
    mock_set_os_udp_recvfrom_buffer(release_req, sizeof(release_req));
-   os_usleep(TEST_UDP_DELAY);
+   test_sleep(TEST_UDP_DELAY);
 
    EXPECT_EQ(appdata.call_counters.release_calls, 1);
    EXPECT_EQ(appdata.call_counters.state_calls, 2);

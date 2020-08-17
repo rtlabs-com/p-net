@@ -61,39 +61,9 @@ void send_data(
          os_buf_free(p_buf);
       }
 
-      os_usleep(TEST_DATA_DELAY);
+      // os_usleep(TEST_DATA_DELAY);
    }
 }
-
-/*
- * This is a timer callback,
- * and the arguments should fulfill the requirements of os_timer_create()
- */
-void run_periodic(os_timer_t *p_timer, void *p_arg)
-{
-   app_data_and_stack_for_testing_t       *appdata_and_stack = (app_data_and_stack_for_testing_t*)p_arg;
-   uint16_t                               slot = 0;
-
-   /* Set new output data every 10ms */
-   appdata_and_stack->appdata->tick_ctr++;
-   if ((appdata_and_stack->appdata->main_arep != 0) && (appdata_and_stack->appdata->tick_ctr > 10))
-   {
-      appdata_and_stack->appdata->tick_ctr = 0;
-      appdata_and_stack->appdata->inputdata[0] = appdata_and_stack->appdata->data_ctr++;
-
-      /* Set data for custom input modules, if any */
-      for (slot = 0; slot < PNET_MAX_MODULES; slot++)
-      {
-         if (appdata_and_stack->appdata->custom_input_slots[slot] == true)
-         {
-            (void)pnet_input_set_data_and_iops(appdata_and_stack->net, TEST_API_IDENT, slot, TEST_SUBMOD_CUSTOM_IDENT, appdata_and_stack->appdata->inputdata, TEST_DATASIZE_INPUT, PNET_IOXS_GOOD);
-         }
-      }
-   }
-
-   pnet_handle_periodic(appdata_and_stack->net);
-}
-
 
 /******************** Callbacks defined by p-net *****************************/
 

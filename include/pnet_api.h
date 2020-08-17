@@ -1205,6 +1205,12 @@ PNET_EXPORT pnet_t* pnet_init(
    uint32_t                tick_us,
    const pnet_cfg_t        *p_cfg);
 
+PNET_EXPORT pnet_t* pnet_init2(
+   pnet_t                  *net,
+   const char              *netif,
+   uint32_t                tick_us,
+   const pnet_cfg_t        *p_cfg);
+
 /**
  * Execute all periodic functions within the ProfiNet stack.
  *

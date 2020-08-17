@@ -35,10 +35,6 @@
 
 #include <gtest/gtest.h>
 
-
-class CmrdrTest : public PnetIntegrationTest {};
-
-
 static uint8_t connect_req[] =
 {
                                                              0x04, 0x00, 0x28, 0x00, 0x10, 0x00,
@@ -180,37 +176,44 @@ static pf_iod_read_request_t     read_request;
 static pnet_result_t             read_status;
 static uint16_t                  seq_nbr = 0;
 
-void test_read(pnet_t *net, app_data_for_testing_t *p_appdata, test_reads_t *p_the_test)
+
+class CmrdrTest : public PnetIntegrationTest
 {
-   pf_ar_t                 *p_ar;
-   uint8_t                 buffer[PF_FRAME_BUFFER_SIZE];
-   uint16_t                pos = 0;
-   uint16_t                idx = p_the_test->idx;
+protected:
 
-   /* Send data to prevent timeout */
-   send_data(net, &p_appdata->data_cycle_ctr, data_packet_good_iops_good_iocs, sizeof(data_packet_good_iops_good_iocs));
-
-   memset(&read_status, 0, sizeof(read_status));
-   memset(&read_request, 0, sizeof(read_request));
-   pf_ar_find_by_arep(net, p_appdata->main_arep, &p_ar);
-
-   read_request.sequence_number = seq_nbr++;
-   /* read_request.ar_uuid = NIL */
-   read_request.api = 0;
-   read_request.slot_number = 1;
-   read_request.subslot_number = 1;
-   read_request.index = idx;
-   read_request.record_data_length = 0;
-   // read_request.target_ar_uuid;   /* Only used if implicit AR */
-
-   pf_cmrdr_rm_read_ind(net, p_ar, &read_request, &read_status, sizeof(buffer), buffer, &pos);
-
-   if (read_status.pnio_status.error_code != 0)
+   void test_read(app_data_for_testing_t *p_appdata, test_reads_t *p_the_test)
    {
-      TEST_TRACE("Read failed for idx %#x\n", (unsigned)idx);
-      p_appdata->read_fails++;
+      pf_ar_t                 *p_ar;
+      uint8_t                 buffer[PF_FRAME_BUFFER_SIZE];
+      uint16_t                pos = 0;
+      uint16_t                idx = p_the_test->idx;
+
+      /* Send data to prevent timeout */
+      send_data(net, &p_appdata->data_cycle_ctr, data_packet_good_iops_good_iocs, sizeof(data_packet_good_iops_good_iocs));
+      test_sleep (TEST_DATA_DELAY);
+
+      memset(&read_status, 0, sizeof(read_status));
+      memset(&read_request, 0, sizeof(read_request));
+      pf_ar_find_by_arep(net, p_appdata->main_arep, &p_ar);
+
+      read_request.sequence_number = seq_nbr++;
+      /* read_request.ar_uuid = NIL */
+      read_request.api = 0;
+      read_request.slot_number = 1;
+      read_request.subslot_number = 1;
+      read_request.index = idx;
+      read_request.record_data_length = 0;
+      // read_request.target_ar_uuid;   /* Only used if implicit AR */
+
+      pf_cmrdr_rm_read_ind(net, p_ar, &read_request, &read_status, sizeof(buffer), buffer, &pos);
+
+      if (read_status.pnio_status.error_code != 0)
+      {
+         TEST_TRACE("Read failed for idx %#x\n", (unsigned)idx);
+         p_appdata->read_fails++;
+      }
    }
-}
+};
 
 TEST_F (CmrdrTest, CmrdrRunTest)
 {
@@ -231,7 +234,7 @@ TEST_F (CmrdrTest, CmrdrRunTest)
 
    TEST_TRACE("\nGenerating mock connection request\n");
    mock_set_os_udp_recvfrom_buffer(connect_req, sizeof(connect_req));
-   os_usleep(TEST_UDP_DELAY);
+   test_sleep (TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.state_calls, 1);
    EXPECT_EQ(appdata.call_counters.connect_calls, 1);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_STARTUP);
@@ -239,7 +242,7 @@ TEST_F (CmrdrTest, CmrdrRunTest)
 
    TEST_TRACE("\nGenerating mock parameter end request\n");
    mock_set_os_udp_recvfrom_buffer(prm_end_req, sizeof(prm_end_req));
-   os_usleep(TEST_UDP_DELAY);
+   test_sleep (TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.state_calls, 2);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_PRMEND);
    EXPECT_EQ(appdata.call_counters.connect_calls, 1);
@@ -253,7 +256,7 @@ TEST_F (CmrdrTest, CmrdrRunTest)
 
    TEST_TRACE("\nGenerating mock application ready response\n");
    mock_set_os_udp_recvfrom_buffer(appl_rdy_rsp, sizeof(appl_rdy_rsp));
-   os_usleep(TEST_UDP_DELAY);
+   test_sleep (TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.state_calls, 3);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_APPLRDY);
 
@@ -261,6 +264,7 @@ TEST_F (CmrdrTest, CmrdrRunTest)
    for (ix = 0; ix < 100; ix++)
    {
       send_data(net, &appdata.data_cycle_ctr, data_packet_good_iops_good_iocs, sizeof(data_packet_good_iops_good_iocs));
+      test_sleep (TEST_DATA_DELAY);
    }
 
    iops = 88;     /* Something non-valid */
@@ -293,6 +297,7 @@ TEST_F (CmrdrTest, CmrdrRunTest)
 
    /* Send data to avoid timeout */
    send_data(net, &appdata.data_cycle_ctr, data_packet_good_iops_good_iocs, sizeof(data_packet_good_iops_good_iocs));
+   test_sleep (TEST_DATA_DELAY);
 
    TEST_TRACE("\nCreate a logbook entry\n");
    pnet_create_log_book_entry(net, appdata.main_arep, &pnio_status, 0x13245768);
@@ -310,13 +315,13 @@ TEST_F (CmrdrTest, CmrdrRunTest)
    TEST_TRACE("\nNow read all the records\n");
    for (ix = 0; ix < NELEMENTS(test_reads); ix++)
    {
-      test_read(net, &appdata, &test_reads[ix]);
+      test_read(&appdata, &test_reads[ix]);
    }
    EXPECT_EQ(appdata.read_fails, 60); // Currently expected number of fails.
 
    TEST_TRACE("\nGenerating mock release request\n");
    mock_set_os_udp_recvfrom_buffer(release_req, sizeof(release_req));
-   os_usleep(TEST_UDP_DELAY);
+   test_sleep (TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.release_calls, 1);
    EXPECT_EQ(appdata.call_counters.state_calls, 5);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_ABORT);
@@ -344,7 +349,7 @@ TEST_F (CmrdrTest, CmrdrModDiffTest)
 
    TEST_TRACE("\nGenerating mock connection request\n");
    mock_set_os_udp_recvfrom_buffer(connect_req, sizeof(connect_req));
-   os_usleep(TEST_UDP_DELAY);
+   test_sleep (TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.state_calls, 1);
    EXPECT_EQ(appdata.call_counters.connect_calls, 1);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_STARTUP);
@@ -352,7 +357,7 @@ TEST_F (CmrdrTest, CmrdrModDiffTest)
 
    TEST_TRACE("\nGenerating mock parameter end request\n");
    mock_set_os_udp_recvfrom_buffer(prm_end_req, sizeof(prm_end_req));
-   os_usleep(TEST_UDP_DELAY);
+   test_sleep (TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.state_calls, 2);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_PRMEND);
    EXPECT_EQ(appdata.call_counters.connect_calls, 1);
@@ -365,7 +370,7 @@ TEST_F (CmrdrTest, CmrdrModDiffTest)
 
    TEST_TRACE("\nGenerating mock application ready response\n");
    mock_set_os_udp_recvfrom_buffer(appl_rdy_rsp, sizeof(appl_rdy_rsp));
-   os_usleep(TEST_UDP_DELAY);
+   test_sleep (TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.state_calls, 3);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_APPLRDY);
 
@@ -373,6 +378,7 @@ TEST_F (CmrdrTest, CmrdrModDiffTest)
    for (ix = 0; ix < 100; ix++)
    {
       send_data(net, &appdata.data_cycle_ctr, data_packet_good_iops_good_iocs, sizeof(data_packet_good_iops_good_iocs));
+      test_sleep (TEST_DATA_DELAY);
    }
 
    iops = 88;     /* Something non-valid */
@@ -415,13 +421,13 @@ TEST_F (CmrdrTest, CmrdrModDiffTest)
    /* Now read all the mod diff record */
    for (ix = 0; ix < NELEMENTS(test_mod_diff); ix++)
    {
-      test_read(net, &appdata, &test_mod_diff[ix]);
+      test_read(&appdata, &test_mod_diff[ix]);
    }
    EXPECT_EQ(appdata.read_fails, 0);
 
    TEST_TRACE("\nGenerating mock release request\n");
    mock_set_os_udp_recvfrom_buffer(release_req, sizeof(release_req));
-   os_usleep(TEST_UDP_DELAY);
+   test_sleep (TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.release_calls, 1);
    EXPECT_EQ(appdata.call_counters.state_calls, 5);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_ABORT);

@@ -153,7 +153,7 @@ TEST_F (DcpTest, DcpRunTest)
    ret = pf_eth_recv(net, p_buf);
    EXPECT_EQ(ret, 1);
    /* 3.5 s should be enough, but on Windows even 5 s is not enough :-( */
-   os_usleep(9*1000*1000);
+   test_sleep(9*1000*1000);
 
    EXPECT_EQ(mock_os_data.eth_send_count, 10);
    EXPECT_EQ(mock_os_data.set_ip_suite_count, 2);
