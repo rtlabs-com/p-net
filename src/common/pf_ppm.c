@@ -34,6 +34,7 @@
 
 #ifdef UNIT_TEST
 #define os_eth_send mock_os_eth_send
+#define os_get_current_time_us mock_os_get_current_time_us
 #endif
 
 #include <string.h>

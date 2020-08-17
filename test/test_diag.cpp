@@ -134,7 +134,7 @@ TEST_F (DiagTest, DiagRunTest)
 
    TEST_TRACE("\nGenerating mock connection request\n");
    mock_set_os_udp_recvfrom_buffer(connect_req, sizeof(connect_req));
-   os_usleep(TEST_UDP_DELAY);
+   run_stack(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.state_calls, 1);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_STARTUP);
    EXPECT_EQ(appdata.call_counters.connect_calls, 1);
@@ -142,7 +142,7 @@ TEST_F (DiagTest, DiagRunTest)
 
    TEST_TRACE("\nGenerating mock parameter end request\n");
    mock_set_os_udp_recvfrom_buffer(prm_end_req, sizeof(prm_end_req));
-   os_usleep(TEST_UDP_DELAY);
+   run_stack(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.state_calls, 2);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_PRMEND);
    EXPECT_EQ(appdata.call_counters.connect_calls, 1);
@@ -155,14 +155,15 @@ TEST_F (DiagTest, DiagRunTest)
 
    TEST_TRACE("\nGenerating mock application ready response\n");
    mock_set_os_udp_recvfrom_buffer(appl_rdy_rsp, sizeof(appl_rdy_rsp));
-   os_usleep(TEST_UDP_DELAY);
+   run_stack(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.state_calls, 3);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_APPLRDY);
 
    TEST_TRACE("\nGenerating cyclic data\n");
    for (ix = 0; ix < 100; ix++)
    {
-      send_data(net, &appdata.data_cycle_ctr, data_packet_good_iops_good_iocs, sizeof(data_packet_good_iops_good_iocs));
+      send_data(data_packet_good_iops_good_iocs, sizeof(data_packet_good_iops_good_iocs));
+      run_stack (TEST_DATA_DELAY);
    }
 
    TEST_TRACE("\nTesting pnet_output_get_data_and_iops()\n");
@@ -197,7 +198,8 @@ TEST_F (DiagTest, DiagRunTest)
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_DATA);
 
    /* Send data to avoid timeout */
-   send_data(net, &appdata.data_cycle_ctr, data_packet_good_iops_good_iocs, sizeof(data_packet_good_iops_good_iocs));
+   send_data(data_packet_good_iops_good_iocs, sizeof(data_packet_good_iops_good_iocs));
+   run_stack (TEST_DATA_DELAY);
 
    TEST_TRACE("\nCreate a STD diag entry. Then update it and finally remove it.\n");
    PNET_DIAG_CH_PROP_TYPE_SET(ch_properties, PNET_DIAG_CH_PROP_TYPE_8_BIT);
@@ -299,7 +301,7 @@ TEST_F (DiagTest, DiagRunTest)
 
    TEST_TRACE("\nGenerating mock release request\n");
    mock_set_os_udp_recvfrom_buffer(release_req, sizeof(release_req));
-   os_usleep(TEST_UDP_DELAY);
+   run_stack(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.release_calls, 1);
    EXPECT_EQ(appdata.call_counters.state_calls, 5);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_ABORT);

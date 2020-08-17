@@ -34,6 +34,12 @@ void mock_init(void)
    mock_clear();
 }
 
+uint32_t mock_os_get_current_time_us(
+   void)
+{
+   return mock_os_data.current_time_us;
+}
+
 os_eth_handle_t* mock_os_eth_init(
    const char *if_name,
    os_eth_callback_t *callback,

@@ -40,14 +40,9 @@ protected:
 
       callcounter_reset();
 
-      net = pnet_init(TEST_INTERFACE_NAME, TICK_INTERVAL_US, &pnet_default_cfg);
-      appdata_and_stack.net = net;
-      appdata_and_stack.appdata = &appdata;
+      pnet_init_only (net, TEST_INTERFACE_NAME, TICK_INTERVAL_US, &pnet_default_cfg);
 
       /* Do not clear mock or callcounters here - we need to verify send at init from LLDP */
-
-      appdata.periodic_timer = os_timer_create(TICK_INTERVAL_US, run_periodic, (void*)&appdata_and_stack, false);
-      os_timer_start(appdata.periodic_timer);
    };
 };
 
