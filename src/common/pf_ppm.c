@@ -169,10 +169,8 @@ static void pf_ppm_finish_buffer(
 {
    uint8_t                 *p_payload = ((os_buf_t*)p_ppm->p_send_buffer)->payload;
    uint16_t                u16;
-   int32_t                 cycle_tmp = os_get_current_time_us()*4;
 
-   p_ppm->cycle = cycle_tmp/125;           /* Cycle counter. Get 4/125 = 31.25us ticks */
-   u16 = htons(p_ppm->cycle);
+   p_ppm->cycle = pf_ppm_calculate_cyclecounter(os_get_current_time_us(), p_ppm->send_clock_factor, p_ppm->reduction_ratio);
 
    /* Insert data */
    os_mutex_lock(net->ppm_buf_lock);
@@ -180,6 +178,7 @@ static void pf_ppm_finish_buffer(
    os_mutex_unlock(net->ppm_buf_lock);
 
    /* Insert cycle counter */
+   u16 = htons(p_ppm->cycle);
    memcpy(&p_payload[p_ppm->cycle_counter_offset], &u16, sizeof(u16));
 
    /* Insert data status */
@@ -308,6 +307,10 @@ int pf_ppm_activate_req(
 
       p_ppm->control_interval = ((uint32_t)p_iocr->param.send_clock_factor *
             (uint32_t)p_iocr->param.reduction_ratio * 1000U) / 32U;   /* us */
+
+      /* Needed for counter calculations */
+      p_ppm->send_clock_factor = p_iocr->param.send_clock_factor;
+      p_ppm->reduction_ratio = p_iocr->param.reduction_ratio;
 
       pf_ppm_set_state(p_ppm, PF_PPM_STATE_RUN);
 
@@ -768,6 +771,60 @@ void pf_ppm_set_problem_indicator(
          }
       }
    }
+}
+
+
+/************************** Utilities ****************************************/
+
+/**
+ * Calculate the current cyclecounter from the current time.
+ *
+ * The timebase is 1/32 of a millisecond (31.25 us).
+ * Note that 31.25 us is 1000/32 us.
+ * This is the cyclecounter value, which is the background counter used for cycles.
+ *
+ * One cycle length is send_clock_factor x 31.25 us.
+ * The cyclenumber value is keeping track of which cycle we are in now.
+ *
+ * The reduction_ratio describes if transmit and receive should
+ * be done every cycle. A value of 1 corresponds to every cycle,
+ * while a value of 4 corresponds to transmit and receive every fourth cycle.
+ *
+ * For example, send_clock_factor=2 and reduction_ratio=4 gives a
+ * cycle time of 62.5 us, and a frame is sent every 250 us.
+ * In the first frame the cyclecounter value should be 0, and in the next should
+ * the value be 8.
+ *
+ * We need to normalize the cyclecounter to multiples of
+ * send_clock_factor x reduction_ratio.
+ *
+ * Described in Profinet protocol 2.4 sections
+ *  - 4.5.3
+ *  - 4.7.2.1.2 Coding of the field CycleCounter
+ *  - 4.12.4.5
+ *  - 5.2.5.59 and .62 and .63
+ *
+ * @param timestamp         In:   Current time in microseconds.
+ * @param send_clock_factor In:   Defines the length of a cycle, in units of 31.25 us.
+ *                                Allowed 1 .. 128. Typically powers of two.
+ * @param reduction_ratio   In:   Reduction ratio. If transmission should be done every cycle.
+ *                                Allowed 1 .. 512. Typically powers of two.
+ * @return                  The current cyclecounter
+ */
+uint16_t pf_ppm_calculate_cyclecounter(
+   uint32_t                timestamp,
+   uint16_t                send_clock_factor,
+   uint16_t                reduction_ratio)
+{
+   uint64_t                raw_cyclecounter;
+   uint32_t                transmission_interval_in_timebases;
+   uint32_t                number_of_transmissions;
+
+   raw_cyclecounter = (32UL * timestamp) / 1000UL;
+   transmission_interval_in_timebases = send_clock_factor * reduction_ratio;
+   number_of_transmissions = raw_cyclecounter / transmission_interval_in_timebases;  /* Integer division for truncation */
+
+   return number_of_transmissions * transmission_interval_in_timebases;  /* Now a multiple of transmission intervals */
 }
 
 

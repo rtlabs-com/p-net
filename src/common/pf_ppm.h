@@ -208,6 +208,15 @@ void pf_ppm_set_problem_indicator(
 void pf_ppm_show(
    pf_ppm_t                *p_ppm);
 
+
+/************ Internal functions, made available for unit testing ************/
+
+uint16_t pf_ppm_calculate_cyclecounter(
+   uint32_t                timestamp,
+   uint16_t                send_clock_factor,
+   uint16_t                reduction_ratio);
+
+
 #ifdef __cplusplus
 }
 #endif
