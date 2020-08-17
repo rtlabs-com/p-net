@@ -26,6 +26,11 @@ extern "C"
 #include "pf_includes.h"
 #include "mocks.h"
 
+#if defined (TEST_DEBUG)
+#define TEST_TRACE(...) printf (__VA_ARGS__)
+#else
+#define TEST_TRACE(...)
+#endif
 
 #define TEST_UDP_DELAY                             (500*1000)     /* us */
 #define TEST_DATA_DELAY                            (2*1000)       /* us */

@@ -13,6 +13,8 @@
 # full license information.
 #*******************************************************************/
 
+option(TEST_DEBUG "Add trace output to tests" OFF)
+
 target_sources(pf_test PRIVATE
   # Unit tests
   test_alarm.cpp
@@ -83,6 +85,7 @@ target_sources(pf_test PRIVATE
 get_target_property(PROFINET_OPTIONS profinet COMPILE_OPTIONS)
 target_compile_options(pf_test PRIVATE
   -DUNIT_TEST
+  $<$<BOOL:${TEST_DEBUG}>:-DTEST_DEBUG>
   ${PROFINET_OPTIONS}
   )
 
