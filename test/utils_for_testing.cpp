@@ -414,6 +414,9 @@ void PnetIntegrationTestBase::cfg_init()
    pnet_default_cfg.lldp_cfg.cap_phy = 0x8000; /* Unknown (0x8000) */
    pnet_default_cfg.lldp_cfg.mau_type = 0x0000; /* Unknown */
 
+   /* Timing */
+   pnet_default_cfg.min_device_interval = 32;  /* Corresponds to 1 ms */
+
    /* Network configuration */
    pnet_default_cfg.send_hello = 1; /* Send HELLO */
    pnet_default_cfg.dhcp_enable = 0;
@@ -435,7 +438,7 @@ void PnetIntegrationTestBase::cfg_init()
    strcpy(pnet_default_cfg.im_0_data.order_id, "<orderid>           ");
    strcpy(pnet_default_cfg.im_0_data.im_serial_number, "<serial nbr>    ");
    pnet_default_cfg.im_0_data.im_hardware_revision = 1;
-   pnet_default_cfg.im_0_data.sw_revision_prefix = 'P'; /* 'V', 'R', 'P', 'U', or 'T' */
+   pnet_default_cfg.im_0_data.im_sw_revision_prefix = 'P'; /* 'V', 'R', 'P', 'U', or 'T' */
    pnet_default_cfg.im_0_data.im_sw_revision_functional_enhancement = 0;
    pnet_default_cfg.im_0_data.im_sw_revision_bug_fix = 0;
    pnet_default_cfg.im_0_data.im_sw_revision_internal_change = 0;

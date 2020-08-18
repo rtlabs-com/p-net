@@ -51,8 +51,11 @@ pnet_t * pnet_init_only (
    pf_ppm_init(net);
    pf_alarm_init(net);
 
-   /* pnet_cm_init_req */
-   pf_fspm_init(net, p_cfg);    /* Init cfg */
+   /* initialize configuration */
+   if (pf_fspm_init(net, p_cfg) != 0)
+   {
+      return NULL;
+   }
 
    /* Initialize everything (and the DCP protocol) */
    /* First initialize the network interface */

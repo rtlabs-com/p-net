@@ -278,9 +278,10 @@ alternative is "Legacy"). If supporting both modes, use a semicolon separated
 list.
 
 Use the ``<TimingProperties>`` element to define the sending of cyclic IO data.
-The ``SendClock`` attributes contains a list of all supported send cycle times,
-in ticks of 31.25 us. Defaults to "32", which corresponds to 1 ms. The
-attribute ``ReductionRatio`` defines how much the sending can be slowed down,
+The ``SendClock`` attribute contains a list of all supported send cycle times,
+in units of 31.25 us. Defaults to "32", which corresponds to 1 ms.
+It should match the value ``min_device_interval`` in the p-net configuration.
+The attribute ``ReductionRatio`` defines how much the sending can be slowed down,
 and defaults to "1 2 4 8 16 32 64 128 256 512".
 
 Ethernet port properties are descried using the ``<PortSubmoduleItem>``, which

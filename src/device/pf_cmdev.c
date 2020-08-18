@@ -2342,12 +2342,14 @@ static int pf_cmdev_check_iocr_apis(
 /**
  * @internal
  * Check the IOCR param of an AR for errors.
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param p_stat           Out:  Detailed error information.
  * @return  0  if no error was found
  *          -1 if an error was found.
  */
 static int pf_cmdev_check_iocr_param(
+   pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pnet_result_t           *p_stat)
 {
@@ -2463,7 +2465,7 @@ static int pf_cmdev_check_iocr_param(
                (((p_iocr->reduction_ratio < 1) || (p_iocr->reduction_ratio > 512)) ||
                 ((p_iocr->reduction_ratio >= 256) && (p_iocr->send_clock_factor > 64)) ||
                 ((p_iocr->reduction_ratio == 512) && (p_iocr->send_clock_factor > 32)) ||
-               (PNET_MIN_DEVICE_INTERVAL > p_iocr->send_clock_factor * p_iocr->reduction_ratio)))
+               (pf_cmina_get_min_device_interval(net) > p_iocr->send_clock_factor * p_iocr->reduction_ratio)))
       {
          pf_set_error(p_stat, PNET_ERROR_CODE_CONNECT, PNET_ERROR_DECODE_PNIO, PNET_ERROR_CODE_1_CONN_FAULTY_IOCR_BLOCK_REQ, 11);
          ret = -1;
@@ -3120,7 +3122,7 @@ static int pf_cmdev_check_apdu(
 
       if (ret == 0)
       {
-         ret = pf_cmdev_check_iocr_param(p_ar, p_stat);
+         ret = pf_cmdev_check_iocr_param(net, p_ar, p_stat);
       }
 
       if (ret == 0)

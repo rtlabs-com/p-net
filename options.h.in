@@ -160,21 +160,6 @@
 #endif
 
 /**
- * # GSDML
- *
- * The following values are application-specific and should match what
- * is specified in the GSDML file.
- */
-
-/**
- * A value of 32 allows data exchange every 1 ms (resolution is 32.25us).
- */
-/* TODO: Should this be a configuration parameter? */
-#if !defined (PNET_MIN_DEVICE_INTERVAL)
-#define PNET_MIN_DEVICE_INTERVAL  @PNET_MIN_DEVICE_INTERVAL@
-#endif
-
-/**
  * # Logging
  *
  * The following options controlling logging.

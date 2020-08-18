@@ -1565,7 +1565,7 @@ void pf_put_im_0(
    pf_put_str(p_im_0->order_id, sizeof(p_im_0->order_id), res_len, p_bytes, p_pos);
    pf_put_str(p_im_0->im_serial_number, sizeof(p_im_0->im_serial_number), res_len, p_bytes, p_pos);
    pf_put_uint16(is_big_endian, p_im_0->im_hardware_revision, res_len, p_bytes, p_pos);
-   pf_put_byte(p_im_0->sw_revision_prefix, res_len, p_bytes, p_pos);
+   pf_put_byte(p_im_0->im_sw_revision_prefix, res_len, p_bytes, p_pos);
    pf_put_byte(p_im_0->im_sw_revision_functional_enhancement, res_len, p_bytes, p_pos);
    pf_put_byte(p_im_0->im_sw_revision_bug_fix, res_len, p_bytes, p_pos);
    pf_put_byte(p_im_0->im_sw_revision_internal_change, res_len, p_bytes, p_pos);
