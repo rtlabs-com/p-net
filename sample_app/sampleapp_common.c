@@ -372,7 +372,7 @@ static int app_state_ind(
       (void)pnet_input_set_data_and_iops(net, APP_API, PNET_SLOT_DAP_IDENT, PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT, NULL, 0, PNET_IOXS_GOOD);
 
       /* Set initial data and IOPS for custom input modules, and IOCS for custom output modules */
-      for (slot = 0; slot < PNET_MAX_MODULES; slot++)
+      for (slot = 0; slot < APP_MAX_MODULES; slot++)
       {
          if (p_appdata->custom_input_slots[slot] == true)
          {
@@ -488,7 +488,7 @@ static int app_exp_module_ind(
       else
       {
          /* Remember what is plugged in each slot */
-         if (slot < PNET_MAX_MODULES)
+         if (slot < APP_MAX_MODULES)
          {
             if (module_ident == PNET_MOD_8_0_IDENT || module_ident == PNET_MOD_8_8_IDENT)
             {
@@ -501,7 +501,7 @@ static int app_exp_module_ind(
          }
          else
          {
-            printf("Wrong slot number recieved: %u  It should be less than %u\n", slot, PNET_MAX_MODULES);
+            printf("Wrong slot number recieved: %u  It should be less than %u\n", slot, APP_MAX_MODULES);
          }
       }
 

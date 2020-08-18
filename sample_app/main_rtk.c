@@ -201,7 +201,7 @@ int main(void)
    printf("\n** Profinet sample application **\n");
    if (appdata.arguments.verbosity > 0)
    {
-      printf("Number of slots:      %u (incl slot for DAP module)\n", PNET_MAX_MODULES);
+      printf("Number of slots:      %u (incl slot for DAP module)\n", APP_MAX_MODULES);
       printf("P-net log level:      %u (DEBUG=0, ERROR=3)\n", LOG_LEVEL);
       printf("App verbosity level:  %u\n", appdata.arguments.verbosity);
       printf("Ethernet interface:   %s\n", appdata.arguments.eth_interface);
@@ -328,7 +328,7 @@ int main(void)
             }
 
             /* Set data for custom input modules, if any */
-            for (slot = 0; slot < PNET_MAX_MODULES; slot++)
+            for (slot = 0; slot < APP_MAX_MODULES; slot++)
             {
                if (appdata.custom_input_slots[slot] == true)
                {
@@ -337,7 +337,7 @@ int main(void)
             }
 
             /* Read data from first of the custom output modules, if any */
-            for (slot = 0; slot < PNET_MAX_MODULES; slot++)
+            for (slot = 0; slot < APP_MAX_MODULES; slot++)
             {
                if (appdata.custom_output_slots[slot] == true)
                {
@@ -368,7 +368,7 @@ int main(void)
             if ((button2_pressed == true) && (button2_pressed_previous == false) && (appdata.alarm_allowed == true))
             {
                alarm_payload[0]++;
-               for (slot = 0; slot < PNET_MAX_MODULES; slot++)
+               for (slot = 0; slot < APP_MAX_MODULES; slot++)
                {
                   if (appdata.custom_input_slots[slot] == true)
                   {

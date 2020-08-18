@@ -29,9 +29,62 @@ set (CMAKE_CXX_STANDARD 11)
 set(CMAKE_C_OUTPUT_EXTENSION_REPLACE 1)
 set(CMAKE_CXX_OUTPUT_EXTENSION_REPLACE 1)
 
-# Options
+# Options. See options.h.in for more information.
 
 option (BUILD_SHARED_LIBS "Build shared library" OFF)
+option (PNET_OPTION_FAST_STARTUP "" ON)
+option (PNET_OPTION_PARAMETER_SERVER "" ON)
+option (PNET_OPTION_IR "" ON)
+option (PNET_OPTION_SR "" ON)
+option (PNET_OPTION_REDUNDANCY "" ON)
+option (PNET_OPTION_AR_VENDOR_BLOCKS "" ON)
+option (PNET_OPTION_RS "" ON)
+option (PNET_OPTION_MC_CR "" ON)
+option (PNET_OPTION_SRL "" OFF)
+
+# TODO: this should be handled in cc.h
+option (PNET_USE_ATOMICS "Enable use of atomic operations (stdatomic.h)" OFF)
+
+set(PNET_MAX_AR                 2
+  CACHE STRING "Number of connections. Must be > 0. 'Automated RT Tester' uses 2")
+set(PNET_MAX_API                1
+  CACHE STRING "Number of Application Processes. Must be > 0")
+set(PNET_MAX_CR                 2
+  CACHE STRING "Per AR. 1 input and 1 output")
+set(PNET_MAX_MODULES            5
+  CACHE STRING "Per API. Should be > 1 to allow at least one I/O module")
+set(PNET_MAX_SUBMODULES         3
+  CACHE STRING "Per module (3 needed for DAP)")
+set(PNET_MAX_CHANNELS           1
+  CACHE STRING "Per sub-slot. Used for diagnosis")
+set(PNET_MAX_DFP_IOCR           2
+  CACHE STRING "Allowed values are 0 (zero) or 2")
+set(PNET_MAX_PORT               1
+  CACHE STRING "2 for media redundancy. Currently only 1 is supported")
+set(PNET_MAX_LOG_BOOK_ENTRIES   16
+  CACHE STRING "")
+set(PNET_MAX_ALARMS             3
+  CACHE STRING "Per AR and queue. One queue for hi and one for lo alarms")
+set(PNET_MAX_DIAG_ITEMS         200
+  CACHE STRING "Total, per device. Max is 65534 items")
+
+set(PNET_MAX_MC_CR              1
+  CACHE STRING "Par AR")
+
+set(PNET_MAX_AR_VENDOR_BLOCKS   1
+  CACHE STRING "Must be > 0")
+
+set(PNET_MAX_AR_VENDOR_BLOCK_DATA_LENGTH 512
+  CACHE STRING "")
+
+set(PNET_MAX_MAN_SPECIFIC_FAST_STARTUP_DATA_LENGTH 0
+  CACHE STRING "or 512 (bytes")
+
+set(PNET_MAX_SESSION_BUFFER_SIZE 4500
+  CACHE STRING "Max fragmented RPC request/response length")
+
+set(PNET_MIN_DEVICE_INTERVAL    32
+  CACHE STRING "A value of 32 allows data exchange every 1 ms (resolution is 32.25us)")
 
 set(LOG_STATE_VALUES "ON;OFF")
 set(LOG_LEVEL_VALUES "DEBUG;INFO;WARNING;ERROR")

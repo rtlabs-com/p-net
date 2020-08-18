@@ -70,6 +70,7 @@ extern "C"
 #define APP_DATASIZE_OUTPUT      1     /* bytes, for digital outputs data */
 #define APP_ALARM_PAYLOAD_SIZE   1     /* bytes */
 
+#define APP_MAX_MODULES          5     /* Max number of modules in app */
 
 /*** Example on how to keep lists of supported modules and submodules ********/
 
@@ -119,8 +120,8 @@ typedef struct app_data_obj
    uint32_t                  app_param_1;
    uint32_t                  app_param_2;
    uint8_t                   inputdata[APP_DATASIZE_INPUT];
-   uint8_t                   custom_input_slots[PNET_MAX_MODULES];
-   uint8_t                   custom_output_slots[PNET_MAX_MODULES];
+   uint8_t                   custom_input_slots[APP_MAX_MODULES];
+   uint8_t                   custom_output_slots[APP_MAX_MODULES];
 } app_data_t;
 
 
