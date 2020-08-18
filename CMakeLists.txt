@@ -83,9 +83,6 @@ set(PNET_MAX_MAN_SPECIFIC_FAST_STARTUP_DATA_LENGTH 0
 set(PNET_MAX_SESSION_BUFFER_SIZE 4500
   CACHE STRING "Max fragmented RPC request/response length")
 
-set(PNET_MIN_DEVICE_INTERVAL    32
-  CACHE STRING "A value of 32 allows data exchange every 1 ms (resolution is 32.25us)")
-
 set(LOG_STATE_VALUES "ON;OFF")
 set(LOG_LEVEL_VALUES "DEBUG;INFO;WARNING;ERROR")
 

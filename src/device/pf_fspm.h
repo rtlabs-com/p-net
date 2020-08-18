@@ -30,7 +30,9 @@ extern "C"
 /**
  * Initialize the FSPM component.
  *
- * Turns off the signal LED.
+ * Validate and store the application configuration.
+ *
+ * Turn off the signal LED.
  *
  * @param net              InOut: The p-net stack instance
  * @param p_cfg            In:   The application configuration of the Profinet stack.
@@ -40,6 +42,18 @@ extern "C"
 int pf_fspm_init(
    pnet_t                  *net,
    const pnet_cfg_t        *p_cfg);
+
+/**
+ * Retrieve the minimum device interval, from the configuration.
+ *
+ * This is the smallest allowed data exchange interval, in units of 31.25 us.
+ * Typically 32, which corresponds to 1 ms.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @return the minimum device interval.
+ */
+int16_t pf_cmina_get_min_device_interval(
+   pnet_t                  *net);
 
 /**
  * Create a LogBook entry.
@@ -333,6 +347,13 @@ void pf_fspm_get_default_cfg(
  */
 int pf_fspm_clear_im_data(
    pnet_t                  *net);
+
+
+/************ Internal functions, made available for unit testing ************/
+
+int pf_fspm_validate_configuration(
+   const pnet_cfg_t        *p_cfg);
+
 
 #ifdef __cplusplus
 }

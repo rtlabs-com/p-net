@@ -898,7 +898,7 @@ typedef struct pnet_im_0
    char                    order_id[20+1];         /**< Terminated string */
    char                    im_serial_number[16+1]; /**< Terminated string */
    uint16_t                im_hardware_revision;
-   char                    sw_revision_prefix;
+   char                    im_sw_revision_prefix;
    uint8_t                 im_sw_revision_functional_enhancement;
    uint8_t                 im_sw_revision_bug_fix;
    uint8_t                 im_sw_revision_internal_change;
@@ -1078,6 +1078,10 @@ typedef struct pnet_cfg
    char                    device_vendor[20+1];                   /**< Terminated string */
    char                    manufacturer_specific_string[240+1];   /**< Terminated string */
 
+   /* Timing */
+   uint16_t                min_device_interval;    /** Smallest allowed data exchange interval, in units of 31.25 us.
+                                                       Used for triggering error messages to the PLC. Should match GSDML file.
+                                                       Typically 32, which corresponds to 1 ms. Max 0x1000 (128 ms) */
    /** LLDP */
    pnet_lldp_cfg_t         lldp_cfg;
 
