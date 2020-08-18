@@ -13,6 +13,12 @@
  * full license information.
  ********************************************************************/
 
+/**
+ * @file
+ * @brief Unit tests of helper functions from block reader.
+ */
+
+
 #include "utils_for_testing.h"
 #include "mocks.h"
 

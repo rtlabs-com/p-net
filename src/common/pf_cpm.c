@@ -33,7 +33,7 @@
 
 
 #ifdef UNIT_TEST
-
+#define os_get_current_time_us mock_os_get_current_time_us
 #endif
 
 #include <string.h>

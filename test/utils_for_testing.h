@@ -284,10 +284,11 @@ protected:
             }
          }
 
-         pnet_handle_periodic (net);
+         /* Run stack functionality every 1 ms */
+         pnet_handle_periodic(net);
+         mock_os_data.current_time_us += 1000;
       }
    }
-
 };
 
 

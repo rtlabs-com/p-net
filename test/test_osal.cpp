@@ -20,6 +20,7 @@
  */
 
 #include "osal.h"
+
 #include <gtest/gtest.h>
 
 static int expired_calls;
@@ -30,7 +31,7 @@ static void expired (os_timer_t * timer, void * arg)
    expired_arg = arg;
 }
 
-class Osal : public ::testing::Test
+class OsalUnitTest : public ::testing::Test
 {
 protected:
    virtual void SetUp() {
@@ -38,7 +39,8 @@ protected:
    }
 };
 
-TEST (Osal, SemShouldTimeoutWhenCountIsZero)
+
+TEST (OsalUnitTest, SemShouldTimeoutWhenCountIsZero)
 {
    os_sem_t * sem = os_sem_create (2);
    int tmo;
@@ -73,7 +75,7 @@ TEST (Osal, SemShouldTimeoutWhenCountIsZero)
    os_sem_destroy (sem);
 }
 
-TEST (Osal, EventShouldNotTimeout)
+TEST (OsalUnitTest, EventShouldNotTimeout)
 {
    os_event_t * event = os_event_create();
    uint32_t value = 99;
@@ -87,7 +89,7 @@ TEST (Osal, EventShouldNotTimeout)
    os_event_destroy (event);
 }
 
-TEST (Osal, EventShouldTimeout)
+TEST (OsalUnitTest, EventShouldTimeout)
 {
    os_event_t * event = os_event_create();
    uint32_t value = 99;
@@ -101,7 +103,7 @@ TEST (Osal, EventShouldTimeout)
    os_event_destroy (event);
 }
 
-TEST (Osal, MboxShouldNotTimeout)
+TEST (OsalUnitTest, MboxShouldNotTimeout)
 {
    os_mbox_t * mbox = os_mbox_create(2);
    void * msg;
@@ -116,7 +118,7 @@ TEST (Osal, MboxShouldNotTimeout)
    os_mbox_destroy (mbox);
 }
 
-TEST (Osal, FetchFromEmptyMboxShouldTimeout)
+TEST (OsalUnitTest, FetchFromEmptyMboxShouldTimeout)
 {
    os_mbox_t * mbox = os_mbox_create(2);
    void * msg;
@@ -128,7 +130,7 @@ TEST (Osal, FetchFromEmptyMboxShouldTimeout)
    os_mbox_destroy (mbox);
 }
 
-TEST (Osal, PostToFullMBoxShouldTimeout)
+TEST (OsalUnitTest, PostToFullMBoxShouldTimeout)
 {
    os_mbox_t * mbox = os_mbox_create(2);
    int tmo;
@@ -141,7 +143,7 @@ TEST (Osal, PostToFullMBoxShouldTimeout)
    os_mbox_destroy (mbox);
 }
 
-TEST (Osal, CyclicTimer)
+TEST (OsalUnitTest, CyclicTimer)
 {
    int t0, t1;
    os_timer_t * timer;
@@ -168,7 +170,7 @@ TEST (Osal, CyclicTimer)
    os_timer_destroy (timer);
 }
 
-TEST (Osal, OneshotTimer)
+TEST (OsalUnitTest, OneshotTimer)
 {
    os_timer_t * timer;
 

@@ -24,12 +24,12 @@
 
 
 #ifdef UNIT_TEST
+#define os_eth_init mock_os_eth_init
+#define os_get_current_time_us mock_os_get_current_time_us
+#define os_udp_close mock_os_udp_close
+#define os_udp_open mock_os_udp_open
 #define os_udp_recvfrom mock_os_udp_recvfrom
 #define os_udp_sendto mock_os_udp_sendto
-#define os_udp_open mock_os_udp_open
-#define os_udp_close mock_os_udp_close
-
-#define os_eth_init mock_os_eth_init
 #endif
 
 #include <string.h>
