@@ -346,6 +346,7 @@ void pf_lldp_send(
    uint8_t                 *p_buf = NULL;
    uint16_t                pos = 0;
    pnet_cfg_t              *p_cfg = NULL;
+   int                     sent_len = 0;
 
    LOG_DEBUG(PF_ETH_LOG, "LLDP(%d): Sending LLDP frame\n", __LINE__);
 
@@ -431,9 +432,15 @@ void pf_lldp_send(
 
          p_lldp_buffer->len = pos;
 
-        if (os_eth_send(net->eth_handle, p_lldp_buffer) <= 0)
+         sent_len = os_eth_send(net->eth_handle, p_lldp_buffer);
+         if (sent_len <= 0)
          {
             LOG_ERROR(PNET_LOG, "LLDP(%d): Error from os_eth_send(lldp)\n", __LINE__);
+            net->interface_statistics.if_out_errors++;
+         }
+         else
+         {
+            net->interface_statistics.if_out_octets += sent_len;
          }
       }
 

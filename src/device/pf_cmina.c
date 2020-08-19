@@ -953,6 +953,7 @@ int pf_cmina_get_macaddr(
    return 0;
 }
 
+
 /*************** Diagnostic strings *****************************************/
 
 void pf_cmina_ip_to_string(
@@ -1000,6 +1001,19 @@ void pf_ip_address_show(
 
    pf_cmina_ip_to_string(ip, ip_string);
    printf("%s", ip_string);
+}
+
+void pf_cmina_show_interface_statistics(
+   pnet_t                  *net)
+{
+   printf("Interface %s    In: %" PRIu32 " bytes %" PRIu32 " errors %" PRIu32 " discards  Out: %" PRIu32 " bytes %" PRIu32 " errors %" PRIu32 " discards\n",
+      net->interface_name,
+      net->interface_statistics.if_in_octets,
+      net->interface_statistics.if_in_errors,
+      net->interface_statistics.if_in_discards,
+      net->interface_statistics.if_out_octets,
+      net->interface_statistics.if_out_errors,
+      net->interface_statistics.if_out_discards);
 }
 
 void pf_cmina_show(

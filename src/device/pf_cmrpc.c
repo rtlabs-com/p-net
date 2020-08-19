@@ -671,10 +671,12 @@ static int pf_cmrpc_send_once_from_buffer(
 
       if (sent_len != size)
       {
+         p_net->interface_statistics.if_out_errors++;
          LOG_ERROR(PF_RPC_LOG, "CMRPC(%d): Failed to send %u UDP bytes payload on the socket.\n", __LINE__, p_sess->out_buf_send_len);
       }
       else
       {
+         p_net->interface_statistics.if_out_octets += sent_len;
          ret = 0;
       }
    }
@@ -3066,6 +3068,8 @@ void pf_cmrpc_periodic(
          dcerpc_input_len = os_udp_recvfrom(net->cmrpc_session_info[ix].socket, &dcerpc_addr, &dcerpc_port, net->cmrpc_dcerpc_input_frame, sizeof(net->cmrpc_dcerpc_input_frame));
          if (dcerpc_input_len > 0)
          {
+            net->interface_statistics.if_in_octets += dcerpc_input_len;
+
             pf_cmina_ip_to_string(dcerpc_addr, ip_string);
             dcerpc_resp_len = PF_MAX_UDP_PAYLOAD_SIZE;
             LOG_INFO(PF_RPC_LOG, "CMRPC(%d): Received %u bytes UDP payload from remote %s:%u, on socket %" PRIu32 " used in session with index %u\n",
@@ -3086,6 +3090,8 @@ void pf_cmrpc_periodic(
    dcerpc_input_len = os_udp_recvfrom(net->cmrpc_rpcreq_socket, &dcerpc_addr, &dcerpc_port, net->cmrpc_dcerpc_input_frame, sizeof(net->cmrpc_dcerpc_input_frame));
    if (dcerpc_input_len > 0)
    {
+      net->interface_statistics.if_in_octets += dcerpc_input_len;
+
       pf_cmina_ip_to_string(dcerpc_addr, ip_string);
       dcerpc_resp_len = PF_MAX_UDP_PAYLOAD_SIZE;
       LOG_INFO(PF_RPC_LOG, "CMRPC(%d): Received %u bytes UDP payload from remote %s:%u, on socket %u for incoming DCE RPC requests.\n",
