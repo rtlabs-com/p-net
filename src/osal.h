@@ -89,8 +89,6 @@ typedef void os_channel_t;
 /** Set an IP address given by the four byte-parts */
 #define OS_IP4_ADDR_TO_U32(ipaddr, a,b,c,d)  ipaddr = OS_MAKEU32(a,b,c,d)
 
-#define OS_INET_ADDRSTRLEN       16
-
 enum os_eth_type {
   OS_ETHTYPE_IP        = 0x0800U,
   OS_ETHTYPE_ARP       = 0x0806U,
@@ -235,18 +233,61 @@ os_eth_handle_t* os_eth_init(
    os_eth_callback_t       *callback,
    void                    *arg);
 
-int os_udp_open(os_ipaddr_t addr, os_ipport_t port);
-int os_udp_sendto(uint32_t id,
-      os_ipaddr_t dst_addr,
-      os_ipport_t dst_port,
-      const uint8_t * data,
-      int size);
-int os_udp_recvfrom(uint32_t id,
-      os_ipaddr_t *src_addr,
-      os_ipport_t *src_port,
-      uint8_t * data,
-      int size);
-void os_udp_close(uint32_t id);
+/**
+ * Open an UDP socket
+ *
+ * @param addr             In:    IP address to listen to. Typically used with OS_IPADDR_ANY.
+ * @param port             In:    UDP port to listen to.
+ * @return Socket ID, or -1 if an error occurred.
+ */
+int os_udp_open(
+   os_ipaddr_t             addr,
+   os_ipport_t             port);
+
+/**
+ * Send UDP data
+ *
+ * @param id               In:    Socket ID
+ * @param dst_addr         In:    Destination IP address
+ * @param dst_port         In:    Destination UDP port
+ * @param data             In:    Data to be sent
+ * @param size             In:    Size of data
+ * @return  The number of bytes sent, or -1 if an error occurred.
+ */
+int os_udp_sendto(
+   uint32_t                id,
+   os_ipaddr_t             dst_addr,
+   os_ipport_t             dst_port,
+   const uint8_t           *data,
+   int                     size);
+
+/**
+ * Receive UDP data.
+ *
+ * This is a nonblocking function, and it
+ * returns 0 immediately if no data is available.
+ *
+ * @param id               In:    Socket ID
+ * @param dst_addr         Out:   Source IP address
+ * @param dst_port         Out:   Source UDP port
+ * @param data             Out:   Received data
+ * @param size             In:    Size of buffer for received data
+ * @return  The number of bytes received, or -1 if an error occurred.
+ */
+int os_udp_recvfrom(
+   uint32_t                id,
+   os_ipaddr_t             *src_addr,
+   os_ipport_t             *src_port,
+   uint8_t                 *data,
+   int                     size);
+
+/**
+ * Close an UDP socket
+ *
+ * @param id               In:    Socket ID
+ */
+void os_udp_close(
+   uint32_t                id);
 
 /**
  * Get network parameters (IP address, netmask etc)
