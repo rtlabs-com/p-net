@@ -69,6 +69,8 @@ int pf_eth_recv(
    switch (type)
    {
    case OS_ETHTYPE_PROFINET:
+      net->interface_statistics.if_in_octets += p_buf->len;
+
       /* Find the associated frame handler */
       ix = 0;
       while ((ix < NELEMENTS(net->eth_id_map)) &&
@@ -85,10 +87,13 @@ int pf_eth_recv(
       }
       break;
    case OS_ETHTYPE_LLDP:
+      net->interface_statistics.if_in_octets += p_buf->len;
+
       /* ToDo: */
       break;
    default:
       /* Not a profinet packet. */
+      net->interface_statistics.if_in_discards++;
       ret = 0;
       break;
    }

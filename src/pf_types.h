@@ -1982,6 +1982,16 @@ typedef struct pf_log_book
    bool                    wrap;       /* All entries valid */
 } pf_log_book_t;
 
+/* See Profinet 2.4 section 5.2.28 and appendix W */
+typedef struct pf_interface_stats
+{
+	uint32_t if_in_octets;
+	uint32_t if_out_octets;
+	uint32_t if_in_discards;
+	uint32_t if_out_discards;
+	uint32_t if_in_errors;
+	uint32_t if_out_errors;
+}pnet_interface_stats_t;
 
 struct pnet
 {
@@ -2027,6 +2037,7 @@ struct pnet
    pnet_cfg_t                          fspm_cfg;
    pf_log_book_t                       fspm_log_book;
    os_mutex_t                          *fspm_log_book_mutex;
+   pnet_interface_stats_t              interface_statistics;
    uint32_t                            lldp_timeout;  /* Scheduler handle for periodic LLDP sending */
 };
 
