@@ -753,11 +753,12 @@ typedef struct pf_eth_frame_id_map
  */
 typedef struct pf_cmina_dcp_ase
 {
-   char                    name_of_station[240 + 1];  /* Terminated */
+   char                    name_of_station[PNET_STATION_NAME_MAX_LEN + 1];  /* Terminated */
    char                    device_vendor[20+1];       /* Terminated */
    uint8_t                 device_role;               /* Only value "1" supported */
    uint16_t                device_initiative;         /* 1: Should send hello. 0: No sending of hello */
 
+   char                    alias_name[PNET_STATION_NAME_MAX_LEN + 1 + PNET_PORT_ID_MAX_LEN + 1]; /* Terminated */
    struct
    {
       /* Order is important!! */
@@ -955,7 +956,7 @@ typedef struct pf_ar_param
    uint16_t                cm_initiator_activity_timeout_factor;        /** res: 100ms */
    uint16_t                cm_initiator_udp_rt_port;                    /** 0x8892 */
    uint16_t                cm_initiator_station_name_len;
-   char                    cm_initiator_station_name[240 + 1];          /** Terminated string. */
+   char                    cm_initiator_station_name[PNET_STATION_NAME_MAX_LEN+1];          /** Terminated string. */
 } pf_ar_param_t;
 
 typedef struct pf_ar_result
@@ -1133,7 +1134,7 @@ typedef struct pf_multicast_cr
    pf_address_resolution_properties_t address_resolution_properties;
    uint16_t                mci_timeout_factor;              /* MCI_timeout range 0x0001..0xffff */
    uint16_t                length_provider_station_name;
-   char                    provider_station_name[240 + 1];  /** Terminated */
+   char                    provider_station_name[PNET_STATION_NAME_MAX_LEN+1];  /** Terminated */
 } pf_multicast_cr_t;
 
 typedef struct pf_ar_rpc_request
@@ -2039,6 +2040,10 @@ struct pnet
    os_mutex_t                          *fspm_log_book_mutex;
    pnet_interface_stats_t              interface_statistics;
    uint32_t                            lldp_timeout;  /* Scheduler handle for periodic LLDP sending */
+
+   pnet_lldp_peer_info_t               lldp_peer_info;
+   uint32_t                            lldp_rx_timeout;  /* Scheduler handle for LLDP timeout */
+
 };
 
 

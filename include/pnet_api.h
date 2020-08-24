@@ -995,6 +995,14 @@ typedef struct pnet_ethaddr
   uint8_t addr[6];
 } pnet_ethaddr_t;
 
+
+#define PNET_CHASSIS_ID_MAX_LEN                                (240)
+#define PNET_STATION_NAME_MAX_LEN                              (240)
+#define PNET_PORT_ID_MAX_LEN                                   (14)
+#define PNET_LLDP_CHASSIS_ID_MAX_LEN                           (PNET_CHASSIS_ID_MAX_LEN)
+#define PNET_LLDP_PORT_ID_MAX_LEN                              (PNET_STATION_NAME_MAX_LEN + PNET_PORT_ID_MAX_LEN)
+
+
 /* LLDP Autonegotiation */
 #define PNET_LLDP_AUTONEG_SUPPORTED                            (1u << 0)
 #define PNET_LLDP_AUTONEG_ENABLED                              (1u << 1)
@@ -1027,16 +1035,77 @@ typedef struct pnet_ethaddr
  */
 typedef struct pnet_lldp_cfg
 {
-   char                    chassis_id[240 + 1];    /**< Terminated string. Not used */
-   char                    port_id[240 + 1];       /**< Terminated string */
-   pnet_ethaddr_t          port_addr;
-   uint16_t                ttl;                    /**< Time to live in seconds */
-   uint16_t                rtclass_2_status;
-   uint16_t                rtclass_3_status;
-   uint8_t                 cap_aneg;               /**< Autonegotiation supported and enabled */
-   uint16_t                cap_phy;                /**< Autonegotiation speeds */
-   uint16_t                mau_type;               /**< Cable MAU type */
+   char             chassis_id[PNET_LLDP_CHASSIS_ID_MAX_LEN+1];    /**< Terminated string. */
+   char             port_id[PNET_LLDP_PORT_ID_MAX_LEN+1];          /**< Terminated string */
+   pnet_ethaddr_t   port_addr;
+   uint16_t         ttl;                    /**< Time to live in seconds */
+   uint16_t         rtclass_2_status;
+   uint16_t         rtclass_3_status;
+   uint8_t          cap_aneg;               /**< Autonegotiation supported and enabled */
+   uint16_t         cap_phy;                /**< Autonegotiation speeds */
+   uint16_t         mau_type;               /**< Cable MAU type */
 } pnet_lldp_cfg_t;
+
+/**
+ * All delays in nano seconds
+ */
+typedef struct pnet_profibus_delay_valus
+{
+   uint32_t    rx_delay_local;
+   uint32_t    rx_delay_remote;
+   uint32_t    tx_delay_local;
+   uint32_t    tx_delay_remote;
+   uint32_t    cable_delay_local;
+} pnet_profibus_delay_t;
+
+typedef struct pnet_ieee_macphy_config
+{
+   uint8_t     aneg_support_status;      /**< Autonegotiation status */
+   uint16_t    aneg_cap;                 /**< Autonegotiation capabilites */
+   uint16_t    operational_mau_type;
+} pnet_ieee_macphy_t;
+
+typedef struct pnet_lldp_boundary
+{
+   bool        not_send_LLDP_Frames;
+   bool        send_PTCP_Delay;
+   bool        send_PATH_Delay;
+   bool        reserved_bit4;
+   uint8_t     reserved_8;
+   uint16_t    rserved_16;
+} pnet_lldp_boundary_t;
+
+typedef struct pnet_lldp_peer_to_peer_boundary
+{
+   pnet_lldp_boundary_t boundary;
+   uint16_t properites;
+} pnet_lldp_peer_to_peer_boundary_t;
+
+/**
+ * LLDP Peer information used by the Profinet stack.
+ */
+typedef struct pnet_lldp_peer_info
+{
+   /* LLDP TLVs */
+   uint8_t                             chassis_id_subtype;
+   char                                chassis_id[PNET_LLDP_CHASSIS_ID_MAX_LEN+1];
+   size_t                              chassis_id_len;
+   uint8_t                             port_id_subtype;
+   char                                port_id[PNET_LLDP_PORT_ID_MAX_LEN+1];
+   size_t                              port_id_len;
+   uint16_t                            ttl;
+   /* PROFIBUS TLVs */
+   pnet_profibus_delay_t               port_delay;
+   uint8_t                             port_status[4];
+   pnet_ethaddr_t                      mac_address;
+   uint16_t                            media_type;
+   uint32_t                            line_delay;
+   uint32_t                            domain_boundary;
+   uint32_t                            multicast_boundary;
+   uint8_t                             link_state_port;
+   pnet_ieee_macphy_t                  phy_config;
+   pnet_lldp_peer_to_peer_boundary_t   peer_boundary;
+} pnet_lldp_peer_info_t;
 
 /**
  * This is all the configuration needed to use the Profinet stack.
@@ -1073,9 +1142,9 @@ typedef struct pnet_cfg
    /** Identities */
    pnet_cfg_device_id_t    device_id;
    pnet_cfg_device_id_t    oem_device_id;
-   char                    station_name[240+1];                   /**< Terminated string */
-   char                    device_vendor[20+1];                   /**< Terminated string */
-   char                    manufacturer_specific_string[240+1];   /**< Terminated string */
+   char                    station_name[PNET_STATION_NAME_MAX_LEN+1]; /**< Terminated string */
+   char                    device_vendor[20+1];                      /**< Terminated string */
+   char                    manufacturer_specific_string[240+1];      /**< Terminated string */
 
    /* Timing */
    uint16_t                min_device_interval;    /** Smallest allowed data exchange interval, in units of 31.25 us.
@@ -1083,7 +1152,7 @@ typedef struct pnet_cfg
                                                        Typically 32, which corresponds to 1 ms. Max 0x1000 (128 ms) */
    /** LLDP */
    pnet_lldp_cfg_t         lldp_cfg;
-
+   
    /** Capabilities */
    bool                    send_hello;             /**< Send DCP HELLO message on startup if true. */
 

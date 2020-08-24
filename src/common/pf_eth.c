@@ -108,10 +108,9 @@ int pf_eth_recv(
       }
       break;
    case OS_ETHTYPE_LLDP:
-      net->interface_statistics.if_in_octets += p_buf->len;
-
-      /* ToDo: */
-      break;
+     net->interface_statistics.if_in_octets += p_buf->len;
+     pf_lldp_recv(net, p_buf, type_pos + sizeof(uint16_t));
+     break;
    default:
       /* Not a profinet packet. */
       net->interface_statistics.if_in_discards++;

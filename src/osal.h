@@ -82,6 +82,9 @@ typedef void os_channel_t;
                              ((uint32_t)((c) & 0xff) << 8)  | \
                              (uint32_t)((d) & 0xff))
 
+#define OS_MAKEU16(a,b)     (((uint16_t)((a) & 0xff) << 8)  | \
+                             (uint16_t)((b) & 0xff))
+
 #define OS_INET_ADDRSTRLEN       16
 #define OS_ETH_ADDRSTRLEN        18
 #define OS_HOST_NAME_MAX         64     /* Value from Linux */

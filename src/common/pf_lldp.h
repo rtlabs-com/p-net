@@ -15,7 +15,8 @@
 
 /**
  * @file
- * @brief Send LLDP frame on startup.
+ * @brief Periodical transmission outgoing LLDP frames
+ *        Reception of incoming LLDP frames
  */
 
 #ifndef PF_LLDP_H
@@ -42,6 +43,29 @@ void pf_lldp_init(
  */
 void pf_lldp_send(
    pnet_t                  *net);
+
+/**
+ * Receive an LLDP message.
+ *
+ * Parse LLDP tlv format and store selected information.
+ * Trigger alarms if needed.
+ * @param net              InOut: The p-net stack instance
+ * @param p_buf            In:    The Ethernet frame
+ * @param offset           In:    The offset to start of LLDP data
+ */
+void pf_lldp_recv(
+   pnet_t                  *net,
+   os_buf_t                *p_frame_buf,
+   uint16_t                offset);
+
+
+/************ Internal functions, made available for unit testing ************/
+
+int pf_lldp_generate_alias_name(
+   const char*             port_id,
+   const char*             chassis_id,
+   char*                   alias,
+   uint16_t                len);
 
 #ifdef __cplusplus
 }
