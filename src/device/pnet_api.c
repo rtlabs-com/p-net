@@ -378,6 +378,12 @@ int pnet_factory_reset(
    return 0;
 }
 
+int pnet_remove_data_files(
+   const char*             file_directory)
+{
+   return pf_cmina_remove_all_data_files(file_directory);
+}
+
 int pnet_get_ar_error_codes(
    pnet_t                  *net,
    uint32_t                arep,

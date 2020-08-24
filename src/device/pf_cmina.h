@@ -36,13 +36,22 @@ int pf_cmina_init(
    pnet_t                  *net);
 
 /**
+ * Remove the stack's data files.
+ *
+ * @param file_directory   In:    File directory
+ * @return  0  if the operation succeeded.
+ *          -1 if an error occurred.
+ */
+int pf_cmina_remove_all_data_files(
+   const char*             file_directory);
+
+/**
  * Show interface statistics
  *
  * @param net              InOut: The p-net stack instance
  */
 void pf_cmina_interface_statistics_show(
    pnet_t                  *net);
-
 
 /**
  * Show the CMINA status.
