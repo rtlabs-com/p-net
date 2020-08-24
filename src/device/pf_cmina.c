@@ -1154,7 +1154,7 @@ bool pf_cmina_is_stationname_valid(
     * - Labels do not start with [-]
     * - Total length is 1 to 240
     */
-   if ((station_name[0] == '-') || (len > 240))
+   if ((station_name[0] == '-') || (len > PNET_STATION_NAME_MAX_LEN))
    {
       return false;
    }
