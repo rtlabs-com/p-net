@@ -1437,6 +1437,21 @@ PNET_EXPORT int pnet_factory_reset(
    pnet_t                  *net);
 
 /**
+ * Delete data files.
+ *
+ * Mainly intended for device development and testing.
+ * Applications should typically not use this function.
+ *
+ * Use pnet_factory_reset() instead, that uses this functionality internally.
+ *
+ * @param file_directory   In:    File directory
+ * @return  0  if the operation succeeded.
+ *          -1 if an error occurred.
+ */
+PNET_EXPORT int pnet_remove_data_files(
+   const char*             file_directory);
+
+/**
  * Fetch error information from the AREP.
  *
  * @param net              InOut: The p-net stack instance

@@ -31,6 +31,7 @@
 #define GPIO_BUTTON1                   GPIO_P15_13
 #define GPIO_BUTTON2                   GPIO_P15_12
 #define APP_DEFAULT_ETHERNET_INTERFACE "en1"
+#define APP_DEFAULT_FILE_DIRECTORY     "/disk1"
 
 
 /********************************** Globals ***********************************/
@@ -127,6 +128,7 @@ const shell_cmd_t cmd_pnio_alarm_ack =
 };
 SHELL_CMD (cmd_pnio_alarm_ack);
 
+
 static int _cmd_pnio_show(
       int                  argc,
       char                 *argv[])
@@ -153,6 +155,46 @@ const shell_cmd_t cmd_pnio_show =
   .help_long ="Show pnio (level)"
 };
 SHELL_CMD (cmd_pnio_show);
+
+
+static int _cmd_pnio_factory_reset(
+      int                  argc,
+      char                 *argv[])
+{
+   printf("Factory reset\n");
+   (void)pnet_factory_reset(g_net);
+
+   return 0;
+}
+
+const shell_cmd_t cmd_pnio_factory_reset =
+{
+  .cmd = _cmd_pnio_factory_reset,
+  .name = "pnio_factory_reset",
+  .help_short = "Perform factory reset, and save to file",
+  .help_long = "Perform factory reset, and save to file"
+};
+SHELL_CMD (cmd_pnio_factory_reset);
+
+
+static int _cmd_pnio_remove_files(
+      int                  argc,
+      char                 *argv[])
+{
+   printf("Deleting data files\n");
+   (void)pnet_remove_data_files(APP_DEFAULT_FILE_DIRECTORY);
+
+   return 0;
+}
+
+const shell_cmd_t cmd_pnio_remove_files =
+{
+  .cmd = _cmd_pnio_remove_files,
+  .name = "pnio_remove_files",
+  .help_short = "Remove data files",
+  .help_long = "Remove data files"
+};
+SHELL_CMD (cmd_pnio_remove_files);
 
 
 /****************************** Main ******************************************/
@@ -237,7 +279,7 @@ int main(void)
    copy_ip_to_struct(&pnet_default_cfg.ip_addr, ip);
    copy_ip_to_struct(&pnet_default_cfg.ip_gateway, gateway);
    copy_ip_to_struct(&pnet_default_cfg.ip_mask, netmask);
-   strcpy(pnet_default_cfg.file_directory, "/disk1");
+   strcpy(pnet_default_cfg.file_directory, APP_DEFAULT_FILE_DIRECTORY);
    strcpy(pnet_default_cfg.station_name, gp_appdata->arguments.station_name);
    memcpy (pnet_default_cfg.eth_addr.addr, macbuffer.addr, sizeof(pnet_ethaddr_t));
    pnet_default_cfg.cb_arg = (void*)gp_appdata;

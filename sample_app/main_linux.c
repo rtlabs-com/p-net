@@ -30,7 +30,6 @@
 #include <string.h>
 #include <unistd.h>
 
-#define EXIT_CODE_ERROR                1
 #define APP_DEFAULT_ETHERNET_INTERFACE "eth0"
 #define APP_PRIORITY                   15
 #define APP_STACKSIZE                  4096        /* bytes */
@@ -71,6 +70,8 @@ void show_usage()
    printf("   --help       Show this help text and exit\n");
    printf("   -h           Show this help text and exit\n");
    printf("   -v           Incresase verbosity\n");
+   printf("   -f           Reset to factory settings, and store to file\n");
+   printf("   -r           Remove stored files\n");
    printf("   -i INTERF    Name of Ethernet interface to use. Defaults to %s\n", APP_DEFAULT_ETHERNET_INTERFACE);
    printf("   -s NAME      Set station name. Defaults to %s  Only used\n", APP_DEFAULT_STATION_NAME);
    printf("                if not already available in storage file.\n");
@@ -94,7 +95,7 @@ struct cmd_args parse_commandline_arguments(int argc, char *argv[])
       if (strcmp(argv[1], "--help") == 0)
       {
          show_usage();
-         exit(EXIT_CODE_ERROR);
+         exit(EXIT_FAILURE);
       }
    }
 
@@ -106,14 +107,22 @@ struct cmd_args parse_commandline_arguments(int argc, char *argv[])
    strcpy(output_arguments.station_name, APP_DEFAULT_STATION_NAME);
    strcpy(output_arguments.eth_interface, APP_DEFAULT_ETHERNET_INTERFACE);
    output_arguments.verbosity = 0;
+   output_arguments.factory_reset = false;
+   output_arguments.remove_files = false;
 
    int option;
-   while ((option = getopt(argc, argv, "hvi:s:b:d:p:")) != -1)
+   while ((option = getopt(argc, argv, "hvfri:s:b:d:p:")) != -1)
    {
       switch (option)
       {
       case 'v':
          output_arguments.verbosity++;
+         break;
+      case 'f':
+         output_arguments.factory_reset = true;
+         break;
+      case 'r':
+         output_arguments.remove_files = true;
          break;
       case 'i':
          strcpy(output_arguments.eth_interface, optarg);
@@ -125,7 +134,7 @@ struct cmd_args parse_commandline_arguments(int argc, char *argv[])
          if (strlen(optarg) + 1 > PNET_MAX_FILE_FULLPATH_LEN)
          {
             printf("Error: The argument to -b is too long.\n");
-            exit(EXIT_CODE_ERROR);
+            exit(EXIT_FAILURE);
          }
          strcpy(output_arguments.path_button1, optarg);
          break;
@@ -133,7 +142,7 @@ struct cmd_args parse_commandline_arguments(int argc, char *argv[])
          if (strlen(optarg) + 1 > PNET_MAX_FILE_FULLPATH_LEN)
          {
             printf("Error: The argument to -d is too long.\n");
-            exit(EXIT_CODE_ERROR);
+            exit(EXIT_FAILURE);
          }
          strcpy(output_arguments.path_button2, optarg);
          break;
@@ -141,7 +150,7 @@ struct cmd_args parse_commandline_arguments(int argc, char *argv[])
          if (strlen(optarg) + 1 > PNET_MAX_FILE_FULLPATH_LEN)
          {
             printf("Error: The argument to -p is too long.\n");
-            exit(EXIT_CODE_ERROR);
+            exit(EXIT_FAILURE);
          }
          strcpy(output_arguments.path_storage_directory, optarg);
          break;
@@ -151,7 +160,7 @@ struct cmd_args parse_commandline_arguments(int argc, char *argv[])
          /* fallthrough */
       default:
          show_usage();
-         exit(EXIT_CODE_ERROR);
+         exit(EXIT_FAILURE);
       }
    }
 
@@ -161,7 +170,7 @@ struct cmd_args parse_commandline_arguments(int argc, char *argv[])
       if (getcwd(output_arguments.path_storage_directory, sizeof(output_arguments.path_storage_directory)) == NULL)
       {
          printf("Error: Could not read current working directory. Is PNET_MAX_DIRECTORYPATH_LENGTH too small?\n");
-         exit(EXIT_CODE_ERROR);
+         exit(EXIT_FAILURE);
       }
    }
 
@@ -478,7 +487,7 @@ int main(int argc, char *argv[])
    if (ret != 0)
    {
       printf("Error: The given Ethernet interface does not exist: %s\n", appdata.arguments.eth_interface);
-      exit(EXIT_CODE_ERROR);
+      exit(EXIT_FAILURE);
    }
 
    ip = os_get_ip_address(appdata.arguments.eth_interface);
@@ -487,7 +496,7 @@ int main(int argc, char *argv[])
    if (gateway == IP_INVALID)
    {
       printf("Error: Invalid gateway IP address for Ethernet interface: %s\n", appdata.arguments.eth_interface);
-      exit(EXIT_CODE_ERROR);
+      exit(EXIT_FAILURE);
    }
 
    if (appdata.arguments.verbosity > 0)
@@ -516,7 +525,14 @@ int main(int argc, char *argv[])
    {
       printf("Error: The given storage directory does not exist: %s\n",
          pnet_default_cfg.file_directory);
-      exit(EXIT_CODE_ERROR);
+      exit(EXIT_FAILURE);
+   }
+
+   if (appdata.arguments.remove_files == true)
+   {
+      printf("\nRemoving stored files\n");
+      (void)pnet_remove_data_files(pnet_default_cfg.file_directory);
+      exit(EXIT_SUCCESS);
    }
 
    app_set_led(APP_DATA_LED_ID, false);
@@ -527,7 +543,7 @@ int main(int argc, char *argv[])
       {
          printf("Error: The given input file for button1 does not exist: %s\n",
             appdata.arguments.path_button1);
-         exit(EXIT_CODE_ERROR);
+         exit(EXIT_FAILURE);
       }
    }
 
@@ -537,7 +553,7 @@ int main(int argc, char *argv[])
       {
          printf("Error: The given input file for button2 does not exist: %s\n",
             appdata.arguments.path_button2);
-         exit(EXIT_CODE_ERROR);
+         exit(EXIT_FAILURE);
       }
    }
 
@@ -546,7 +562,14 @@ int main(int argc, char *argv[])
    if (net == NULL)
    {
       printf("Failed to initialize p-net. Do you have enough Ethernet interface permission?\n");
-      exit(EXIT_CODE_ERROR);
+      exit(EXIT_FAILURE);
+   }
+
+   if (appdata.arguments.factory_reset == true)
+   {
+      printf("\nPerforming factory reset\n");
+      (void)pnet_factory_reset(net);
+      exit(EXIT_SUCCESS);
    }
 
    app_plug_dap(net, &appdata);
