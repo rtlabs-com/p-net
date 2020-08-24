@@ -718,7 +718,7 @@ int app_adjust_stack_configuration(
     *
     * Note that these members are set by the sample_app main:
     *    cb_arg
-    *    im_0_data.order_id
+    *    im_0_data.im_order_id
     *    im_0_data.im_serial_number
     *    eth_addr.addr
     *    ip_addr
@@ -745,8 +745,8 @@ int app_adjust_stack_configuration(
    stack_config->signal_led_cb = app_signal_led_ind;
 
    /* Identification & Maintenance */
-   stack_config->im_0_data.vendor_id_hi = 0xfe;
-   stack_config->im_0_data.vendor_id_lo = 0xed;
+   stack_config->im_0_data.im_vendor_id_hi = 0xfe;
+   stack_config->im_0_data.im_vendor_id_lo = 0xed;
    stack_config->im_0_data.im_hardware_revision = 1;
    stack_config->im_0_data.im_sw_revision_prefix = 'V'; /* 'V', 'R', 'P', 'U', or 'T' */
    stack_config->im_0_data.im_sw_revision_functional_enhancement = 0;

@@ -232,7 +232,7 @@ int main(void)
 
    /* Prepare stack config with IP address, gateway, station name etc */
    app_adjust_stack_configuration(&pnet_default_cfg);
-   strcpy(pnet_default_cfg.im_0_data.order_id, "12345");
+   strcpy(pnet_default_cfg.im_0_data.im_order_id, "12345");
    strcpy(pnet_default_cfg.im_0_data.im_serial_number, "00001");
    copy_ip_to_struct(&pnet_default_cfg.ip_addr, ip);
    copy_ip_to_struct(&pnet_default_cfg.ip_gateway, gateway);

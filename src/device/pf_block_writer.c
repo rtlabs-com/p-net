@@ -1582,9 +1582,9 @@ void pf_put_im_0(
       PNET_BLOCK_VERSION_HIGH, PNET_BLOCK_VERSION_LOW,
       res_len, p_bytes, p_pos);
 
-   pf_put_byte(p_im_0->vendor_id_hi, res_len, p_bytes, p_pos);
-   pf_put_byte(p_im_0->vendor_id_lo, res_len, p_bytes, p_pos);
-   pf_put_str(p_im_0->order_id, sizeof(p_im_0->order_id), res_len, p_bytes, p_pos);
+   pf_put_byte(p_im_0->im_vendor_id_hi, res_len, p_bytes, p_pos);
+   pf_put_byte(p_im_0->im_vendor_id_lo, res_len, p_bytes, p_pos);
+   pf_put_str(p_im_0->im_order_id, sizeof(p_im_0->im_order_id), res_len, p_bytes, p_pos);
    pf_put_str(p_im_0->im_serial_number, sizeof(p_im_0->im_serial_number), res_len, p_bytes, p_pos);
    pf_put_uint16(is_big_endian, p_im_0->im_hardware_revision, res_len, p_bytes, p_pos);
    pf_put_byte(p_im_0->im_sw_revision_prefix, res_len, p_bytes, p_pos);

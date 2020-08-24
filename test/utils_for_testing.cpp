@@ -433,9 +433,9 @@ void PnetIntegrationTestBase::cfg_init()
    pnet_default_cfg.ip_gateway.c = 1;
    pnet_default_cfg.ip_gateway.d = 1;
 
-   pnet_default_cfg.im_0_data.vendor_id_hi = 0x00;
-   pnet_default_cfg.im_0_data.vendor_id_lo = 0x01;
-   strcpy(pnet_default_cfg.im_0_data.order_id, "<orderid>           ");
+   pnet_default_cfg.im_0_data.im_vendor_id_hi = 0x00;
+   pnet_default_cfg.im_0_data.im_vendor_id_lo = 0x01;
+   strcpy(pnet_default_cfg.im_0_data.im_order_id, "<orderid>           ");
    strcpy(pnet_default_cfg.im_0_data.im_serial_number, "<serial nbr>    ");
    pnet_default_cfg.im_0_data.im_hardware_revision = 1;
    pnet_default_cfg.im_0_data.im_sw_revision_prefix = 'P'; /* 'V', 'R', 'P', 'U', or 'T' */

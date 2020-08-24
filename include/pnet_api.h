@@ -893,9 +893,9 @@ typedef int (*pnet_signal_led_ind)(
  */
 typedef struct pnet_im_0
 {
-   uint8_t                 vendor_id_hi;
-   uint8_t                 vendor_id_lo;
-   char                    order_id[20+1];         /**< Terminated string */
+   uint8_t                 im_vendor_id_hi;
+   uint8_t                 im_vendor_id_lo;
+   char                    im_order_id[20+1];         /**< Terminated string */
    char                    im_serial_number[16+1]; /**< Terminated string */
    uint16_t                im_hardware_revision;
    char                    im_sw_revision_prefix;
