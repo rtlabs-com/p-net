@@ -76,11 +76,12 @@ target_sources(pf_test PRIVATE
   ${PROFINET_SOURCE_DIR}/src/common/pf_alarm.c
   ${PROFINET_SOURCE_DIR}/src/common/pf_cpm.c
   ${PROFINET_SOURCE_DIR}/src/common/pf_dcp.c
+  ${PROFINET_SOURCE_DIR}/src/common/pf_eth.c
+  ${PROFINET_SOURCE_DIR}/src/common/pf_lldp.c
   ${PROFINET_SOURCE_DIR}/src/common/pf_ppm.c
   ${PROFINET_SOURCE_DIR}/src/common/pf_ptcp.c
   ${PROFINET_SOURCE_DIR}/src/common/pf_scheduler.c
-  ${PROFINET_SOURCE_DIR}/src/common/pf_eth.c
-  ${PROFINET_SOURCE_DIR}/src/common/pf_lldp.c
+  ${PROFINET_SOURCE_DIR}/src/common/pf_udp.c
   )
 
 get_target_property(PROFINET_OPTIONS profinet COMPILE_OPTIONS)

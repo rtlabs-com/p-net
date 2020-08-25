@@ -33,7 +33,6 @@
 
 
 #ifdef UNIT_TEST
-#define os_eth_send mock_os_eth_send
 #define os_get_current_time_us mock_os_get_current_time_us
 #endif
 
@@ -206,7 +205,6 @@ static void pf_ppm_send(
    void                    *arg,
    uint32_t                current_time)
 {
-   int                     sent_len = 0;
    pf_iocr_t               *p_arg = (pf_iocr_t *)arg;
    uint32_t                start = os_get_current_time_us();
 
@@ -219,16 +217,8 @@ static void pf_ppm_send(
       pf_ppm_finish_buffer(net, &p_arg->ppm, p_arg->in_length);
 
       /* Now send it */
-      sent_len = os_eth_send(p_arg->p_ar->p_sess->eth_handle, p_arg->ppm.p_send_buffer);
-      if (sent_len <= 0)
+      if (pf_eth_send(net, p_arg->p_ar->p_sess->eth_handle, p_arg->ppm.p_send_buffer) > 0)
       {
-         LOG_ERROR(PF_PPM_LOG, "PPM(%d): Error from os_eth_send(ppm)\n", __LINE__);
-         net->interface_statistics.if_out_errors++;
-      }
-      else
-      {
-         net->interface_statistics.if_out_octets += sent_len;
-
          /* Compensate for the execution delay variations */
          if (pf_scheduler_add(net, p_arg->ppm.control_interval, ppm_sync_name, pf_ppm_send, arg, &p_arg->ppm.ci_timer) == 0)
          {

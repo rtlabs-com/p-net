@@ -14,7 +14,6 @@
  ********************************************************************/
 
 #ifdef UNIT_TEST
-#define os_eth_send mock_os_eth_send
 #endif
 
 #include <string.h>
@@ -146,23 +145,16 @@ static void pf_dcp_responder(
    uint32_t                current_time)
 {
    os_buf_t                *p_buf = (os_buf_t *)arg;
-   int                     sent_len = 0;
 
    if (p_buf != NULL)
    {
       if (net->dcp_delayed_response_waiting == true)
       {
-         sent_len = os_eth_send(net->eth_handle, p_buf);
-         if (sent_len <= 0)
-         {
-            LOG_ERROR(PNET_LOG, "DCP(%d): Error from os_eth_send(dcp)\n", __LINE__);
-            net->interface_statistics.if_out_errors++;
-         }
-         else
+         if (pf_eth_send(net, net->eth_handle, p_buf) > 0)
          {
             LOG_DEBUG(PNET_LOG, "DCP(%d): Sent a DCP response.\n", __LINE__);
-            net->interface_statistics.if_out_octets += sent_len;
          }
+
          os_buf_free(p_buf);
          net->dcp_delayed_response_waiting = false;
       }
@@ -692,7 +684,6 @@ static int pf_dcp_get_set(
    pf_ethhdr_t             *p_dst_ethhdr;
    pf_dcp_header_t         *p_dst_dcphdr;
    pnet_ethaddr_t          mac_address;
-   int                     sent_len = 0;
 
    pf_cmina_get_macaddr(net, &mac_address);
 
@@ -806,16 +797,9 @@ static int pf_dcp_get_set(
          p_dst_dcphdr->data_length = htons(dst_pos - dst_start);
          p_rsp->len = dst_pos;
 
-         sent_len = os_eth_send(net->eth_handle, p_rsp);
-         if (sent_len <= 0)
-         {
-            LOG_ERROR(PNET_LOG, "pf_dcp(%d): Error from os_eth_send(dcp)\n", __LINE__);
-            net->interface_statistics.if_out_errors++;
-         }
-         else
+         if (pf_eth_send(net, net->eth_handle, p_rsp) > 0)
          {
             LOG_DEBUG(PF_DCP_LOG,"DCP(%d): Sent DCP Get/Set response\n", __LINE__);
-            net->interface_statistics.if_out_octets += sent_len;
          }
 
          if (p_src_dcphdr->service_id == PF_DCP_SERVICE_SET)
@@ -925,7 +909,6 @@ int pf_dcp_hello_req(
    uint16_t                temp16;
    pf_ip_suite_t           ip_suite;
    pnet_ethaddr_t          mac_address;
-   int                     sent_len = 0;
 
    pf_cmina_get_macaddr(net, &mac_address);
 
@@ -1004,16 +987,7 @@ int pf_dcp_hello_req(
          p_dcphdr->data_length = htons(dst_pos - dst_start_pos);
          p_buf->len = dst_pos;
 
-         sent_len = os_eth_send(net->eth_handle, p_buf);
-         if (sent_len <= 0)
-         {
-            LOG_ERROR(PNET_LOG, "pf_dcp(%d): Error from os_eth_send(dcp)\n", __LINE__);
-            net->interface_statistics.if_out_errors++;
-         }
-         else
-         {
-            net->interface_statistics.if_out_octets += sent_len;
-         }
+         (void)pf_eth_send(net, net->eth_handle, p_buf);
       }
       os_buf_free(p_buf);
    }
