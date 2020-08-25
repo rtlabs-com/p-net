@@ -32,6 +32,21 @@ int pf_eth_init(
    pnet_t                  *net);
 
 /**
+ * Send raw Ethernet data.
+ *
+ * Update interface statistics.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param handle           In:    Ethernet handle
+ * @param buf              In:    Buffer with data to be sent
+ * @return  The number of bytes sent, or -1 if an error occurred.
+ */
+int pf_eth_send(
+   pnet_t                  *net,
+   os_eth_handle_t         *handle,
+   os_buf_t                *buf);
+
+/**
  * Add a frame_id entry to the frame id filter map.
  *
  * This function adds an entry to the frame id table.

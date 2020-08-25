@@ -30,7 +30,6 @@
  */
 
 #ifdef UNIT_TEST
-#define os_eth_send                 mock_os_eth_send
 #endif
 
 /*
@@ -581,7 +580,6 @@ static void pf_alarm_apms_timeout(
 {
    pf_apmx_t               *p_apmx = (pf_apmx_t *)arg;
    os_buf_t                *p_rta;
-   int                     sent_len = 0;
 
    p_apmx->timeout_id = UINT32_MAX;
    if (p_apmx->apms_state == PF_APMS_STATE_WTACK)
@@ -598,16 +596,7 @@ static void pf_alarm_apms_timeout(
          else
          {
             LOG_INFO(PF_ALARM_LOG, "Alarm(%d): Re-sending alarm frame\n", __LINE__);
-            sent_len = os_eth_send(p_apmx->p_ar->p_sess->eth_handle, p_apmx->p_rta);
-            if (sent_len <= 0)
-            {
-               LOG_ERROR(PF_ALARM_LOG, "Alarm(%d): Error from os_eth_send(rta)\n", __LINE__);
-               net->interface_statistics.if_out_errors++;
-            }
-            else
-            {
-               net->interface_statistics.if_out_octets += sent_len;
-            }
+            (void)pf_eth_send(net, p_apmx->p_ar->p_sess->eth_handle, p_apmx->p_rta);
          }
 
          if (pf_scheduler_add(net, p_apmx->timeout_us,
@@ -869,7 +858,6 @@ static int pf_alarm_apms_a_data_req(
    uint16_t                pos = 0;
    pnet_ethaddr_t          mac_address;
    uint16_t                u16 = 0;
-   int                     sent_len = 0;
 
    pf_cmina_get_macaddr(net, &mac_address);
 
@@ -957,15 +945,8 @@ static int pf_alarm_apms_a_data_req(
             p_rta->len = pos;
             LOG_INFO(PF_AL_BUF_LOG, "Alarm(%d): Send an alarm frame.\n", __LINE__);
 
-            sent_len = os_eth_send(p_apmx->p_ar->p_sess->eth_handle, p_rta);
-            if (sent_len <= 0)
+            if (pf_eth_send(net, p_apmx->p_ar->p_sess->eth_handle, p_rta) > 0)
             {
-               LOG_ERROR(PF_ALARM_LOG, "Alarm(%d): Error from os_eth_send(rta)\n", __LINE__);
-               net->interface_statistics.if_out_errors++;
-            }
-            else
-            {
-               net->interface_statistics.if_out_octets += sent_len;
                ret = 0;
             }
          }

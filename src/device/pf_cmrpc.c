@@ -40,10 +40,6 @@
 
 #ifdef UNIT_TEST
 #define os_get_current_time_us mock_os_get_current_time_us
-#define os_udp_close mock_os_udp_close
-#define os_udp_open mock_os_udp_open
-#define os_udp_recvfrom mock_os_udp_recvfrom
-#define os_udp_sendto mock_os_udp_sendto
 #define pf_generate_uuid mock_pf_generate_uuid
 #endif
 
@@ -390,7 +386,7 @@ static void pf_session_release(
          {
             if (p_sess->from_me)
             {
-               os_udp_close(p_sess->socket);
+               pf_udp_close(net, p_sess->socket);
             }
          }
          if (p_sess->resend_timeout != 0)
@@ -658,7 +654,6 @@ static int pf_cmrpc_send_once_from_buffer(
    const char              *payload_description)
 {
    int                     ret = -1;
-   uint16_t                sent_len;
    char                    ip_string[OS_INET_ADDRSTRLEN] = { 0 };
 
    if (size != 0)
@@ -667,16 +662,8 @@ static int pf_cmrpc_send_once_from_buffer(
       LOG_INFO(PF_RPC_LOG, "CMRPC(%d): Sending %u bytes on socket %u to %s:%u Payload:'%s' Session from me:%u Session index:%u\n", __LINE__,
          size, (unsigned)p_sess->socket, ip_string, p_sess->port, payload_description, p_sess->from_me, p_sess->ix);
 
-      sent_len = os_udp_sendto(p_sess->socket, p_sess->ip_addr, p_sess->port, data, size);
-
-      if (sent_len != size)
+      if (pf_udp_sendto(p_net, p_sess->socket, p_sess->ip_addr, p_sess->port, data, size) == size)
       {
-         p_net->interface_statistics.if_out_errors++;
-         LOG_ERROR(PF_RPC_LOG, "CMRPC(%d): Failed to send %u UDP bytes payload on the socket.\n", __LINE__, p_sess->out_buf_send_len);
-      }
-      else
-      {
-         p_net->interface_statistics.if_out_octets += sent_len;
          ret = 0;
       }
    }
@@ -773,7 +760,7 @@ static void pf_cmrpc_send_with_timeout(
             (void)pf_cmdev_cm_abort(p_net, p_sess->p_ar);
             if (p_sess->socket > 0)
             {
-               os_udp_close(p_sess->socket);
+               pf_udp_close(p_net, p_sess->socket);
             }
          }
          else
@@ -2382,7 +2369,7 @@ int pf_cmrpc_rm_ccontrol_req(
       pf_put_uint32(rpc_req.is_big_endian, ndr_data.array.offset, max_req_len, p_sess->out_buffer, &start_pos);
       pf_put_uint32(rpc_req.is_big_endian, ndr_data.array.actual_count, max_req_len, p_sess->out_buffer, &start_pos);
 
-      p_sess->socket = os_udp_open(OS_IPADDR_ANY, PF_RPC_CCONTROL_EPHEMERAL_PORT);
+      p_sess->socket = pf_udp_open(net, PF_RPC_CCONTROL_EPHEMERAL_PORT);
       p_sess->resend_timeout_ctr = 3;
       pf_cmrpc_send_with_timeout(net, p_sess, os_get_current_time_us());
 
@@ -3065,14 +3052,12 @@ void pf_cmrpc_periodic(
       if ((net->cmrpc_session_info[ix].in_use == true) && (net->cmrpc_session_info[ix].from_me == true))
       {
          /* We are waiting for a response from the IO-controller */
-         dcerpc_input_len = os_udp_recvfrom(net->cmrpc_session_info[ix].socket, &dcerpc_addr, &dcerpc_port, net->cmrpc_dcerpc_input_frame, sizeof(net->cmrpc_dcerpc_input_frame));
+         dcerpc_input_len = pf_udp_recvfrom(net, net->cmrpc_session_info[ix].socket, &dcerpc_addr, &dcerpc_port, net->cmrpc_dcerpc_input_frame, sizeof(net->cmrpc_dcerpc_input_frame));
          if (dcerpc_input_len > 0)
          {
-            net->interface_statistics.if_in_octets += dcerpc_input_len;
-
             pf_cmina_ip_to_string(dcerpc_addr, ip_string);
             dcerpc_resp_len = PF_MAX_UDP_PAYLOAD_SIZE;
-            LOG_INFO(PF_RPC_LOG, "CMRPC(%d): Received %u bytes UDP payload from remote %s:%u, on socket %" PRIu32 " used in session with index %u\n",
+            LOG_INFO(PF_RPC_LOG, "CMRPC(%d): Received %u bytes UDP payload from remote %s:%u, on socket %d used in session with index %u\n",
                __LINE__, dcerpc_input_len, ip_string, dcerpc_port, net->cmrpc_session_info[ix].socket, ix);
             is_release = false;
             (void)pf_cmrpc_dce_packet(net, dcerpc_addr, dcerpc_port, net->cmrpc_dcerpc_input_frame, dcerpc_input_len, net->cmrpc_dcerpc_output_frame, &dcerpc_resp_len, &is_release);
@@ -3080,18 +3065,16 @@ void pf_cmrpc_periodic(
             if (is_release == true)
             {
                LOG_DEBUG(PF_RPC_LOG, "CMRPC(%d): Closing socket used in session with index %u\n", __LINE__, ix);
-               os_udp_close(net->cmrpc_session_info[ix].socket);
+               pf_udp_close(net, net->cmrpc_session_info[ix].socket);
             }
          }
       }
    }
 
    /* Poll RPC requests */
-   dcerpc_input_len = os_udp_recvfrom(net->cmrpc_rpcreq_socket, &dcerpc_addr, &dcerpc_port, net->cmrpc_dcerpc_input_frame, sizeof(net->cmrpc_dcerpc_input_frame));
+   dcerpc_input_len = pf_udp_recvfrom(net, net->cmrpc_rpcreq_socket, &dcerpc_addr, &dcerpc_port, net->cmrpc_dcerpc_input_frame, sizeof(net->cmrpc_dcerpc_input_frame));
    if (dcerpc_input_len > 0)
    {
-      net->interface_statistics.if_in_octets += dcerpc_input_len;
-
       pf_cmina_ip_to_string(dcerpc_addr, ip_string);
       dcerpc_resp_len = PF_MAX_UDP_PAYLOAD_SIZE;
       LOG_INFO(PF_RPC_LOG, "CMRPC(%d): Received %u bytes UDP payload from remote %s:%u, on socket %u for incoming DCE RPC requests.\n",
@@ -3102,8 +3085,8 @@ void pf_cmrpc_periodic(
       if (is_release == true)
       {
          LOG_DEBUG(PF_RPC_LOG, "CMRPC(%d): Closing and reopening socket used for incoming DCE RPC requests.\n", __LINE__);
-         os_udp_close(net->cmrpc_rpcreq_socket);
-         net->cmrpc_rpcreq_socket = os_udp_open(OS_IPADDR_ANY, PF_RPC_SERVER_PORT);
+         pf_udp_close(net, net->cmrpc_rpcreq_socket);
+         net->cmrpc_rpcreq_socket = pf_udp_open(net, PF_RPC_SERVER_PORT);
       }
    }
 }
@@ -3119,7 +3102,7 @@ void pf_cmrpc_init(
       memset(net->cmrpc_ar, 0, sizeof(net->cmrpc_ar));
       memset(net->cmrpc_session_info, 0, sizeof(net->cmrpc_session_info));
 
-      net->cmrpc_rpcreq_socket = os_udp_open(OS_IPADDR_ANY, PF_RPC_SERVER_PORT);
+      net->cmrpc_rpcreq_socket = pf_udp_open(net, PF_RPC_SERVER_PORT);
    }
 
    /* Save for later (put it into each session */
@@ -3169,8 +3152,8 @@ int pf_cmrpc_cmdev_state_ind(
 
                /* Re-open the global RPC socket. */
                LOG_DEBUG(PF_RPC_LOG, "CMRPC(%d): Closing and reopening socket used for incoming DCE RPC requests.\n", __LINE__);
-               os_udp_close(net->cmrpc_rpcreq_socket);
-               net->cmrpc_rpcreq_socket = os_udp_open(OS_IPADDR_ANY, PF_RPC_SERVER_PORT);
+               pf_udp_close(net, net->cmrpc_rpcreq_socket);
+               net->cmrpc_rpcreq_socket = pf_udp_open(net, PF_RPC_SERVER_PORT);
             }
          }
          else
