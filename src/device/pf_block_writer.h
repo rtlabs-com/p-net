@@ -26,7 +26,7 @@ extern "C"
  * @param p_src            In:   The start of the byte sequence to insert.
  * @param src_size         In:   Number of bytes to insert.
  * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
+ * @param p_bytes          Out:  Destination buffer. Silently ignored if NULL.
  * @param p_pos            InOut:Position in destination buffer.
  */
 void pf_put_mem(

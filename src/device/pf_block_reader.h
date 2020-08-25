@@ -267,21 +267,45 @@ void pf_get_im_1(
    uint16_t                *p_pos,
    pnet_im_1_t             *p_im_1);
 
+/**
+ * Extract the fixed part of an alarm frame from a buffer.
+ * @param p_info           In:   The parser information.
+ * @param p_pos            InOut:The current parsing position.
+ * @param p_alarm_fixed    Out:  Destination structure.
+ */
 void pf_get_alarm_fixed(
    pf_get_info_t           *p_info,
    uint16_t                *p_pos,
    pf_alarm_fixed_t        *p_alarm_fixed);
 
+/**
+ * Extract an alarm DATA block from a buffer.
+ * @param p_info           In:    The parser information.
+ * @param p_pos            InOut: The current parsing position.
+ * @param p_alarm_data     Out:   Destination structure. Contains slot, subslot etc.
+ */
 void pf_get_alarm_data(
    pf_get_info_t           *p_info,
    uint16_t                *p_pos,
    pf_alarm_data_t         *p_alarm_data);
 
+/**
+ * Extract an alarm ACK block from a buffer.
+ * @param p_info           In:    The parser information.
+ * @param p_pos            InOut: The current parsing position.
+ * @param p_alarm_data     Out:   Destination structure. Contains slot, subslot etc.
+ */
 void pf_get_alarm_ack(
    pf_get_info_t           *p_info,
    uint16_t                *p_pos,
    pf_alarm_data_t         *p_alarm_data);
 
+/**
+ * Extract a PNIO status block from a buffer.
+ * @param p_info           In:   The parser information.
+ * @param p_pos            InOut:The current parsing position.
+ * @param p_status         Out:  Destination structure.
+ */
 void pf_get_pnio_status(
    pf_get_info_t           *p_info,
    uint16_t                *p_pos,

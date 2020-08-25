@@ -21,12 +21,26 @@
  *
  * A timer resends alarms if not acknowledged.
  *
- * ALPMI  Sends alarm
- * ALPMR  Receives alarm
+ * ALPMI  Sends alarm (initiator)
+ * ALPMR  Receives alarm (responder)
  * APMR  Receives high- and low priority alarm Ethernet frames from the IO-controller.
  * APMS  Sends alarm Ethernet frames to IO-controller
  *
- *  Note that ALPMX is a general term for ALPMI and ALPMR
+ * See the documentation of this project for an overview of alarm implementation
+ * details.
+ *
+ * Note that ALPMX is a general term for ALPMI and ALPMR, and APMX is a
+ * general term for APMS and APMR.
+ *
+ * There is one APMS+APMR pair for low prio messages and one pair for high prio messages.
+ * Similarly there is one ALPMI+ALPMR pair for low prio and one pair for high prio.
+ *
+ * A frame handler is registered for each of the high prio and low prio
+ * alarm frame IDs. The incoming frames are put into high prio and low prio
+ * queues (mboxes). The periodic task handles frames in the queues.
+ *
+ * There are convenience functions to send different types of alarms, for
+ * example process alarms.
  */
 
 #ifdef UNIT_TEST
@@ -36,6 +50,7 @@
  * ToDo:
  * 1) Send UDP frames.
  */
+
 #include <string.h>
 
 #include "pf_includes.h"
@@ -198,6 +213,12 @@ void pf_alarm_init(
 /**
  * @internal
  * Send an ALARM error indication to CMSU.
+ *
+ * ALPMI: ALPMI_Error_ind
+ * ALPMR: ALPMR_Error_ind
+ * APMS:  APMS_Error_ind
+ * APMR:  APMR_Error_ind
+ *
  * @param net              InOut: The p-net stack instance
  * @param p_apmx           In:   The APMX instance.
  * @param err_cls          In:   The ERRCLS variable.
@@ -221,11 +242,14 @@ static void pf_alarm_error_ind(
    (void)pf_cmsu_alarm_error_ind(net, p_apmx->p_ar, err_cls, err_code);
 }
 
-/* ===== ALPMI - Alarm initiator ===== */
-
 /**
  * @internal
  * Activate the ALPMI and ALPMR instances.
+ *
+ * ALPMI: ALPMI_Activate_req
+ * ALPMI: ALPMI_Activate_cnf(+/-) via return value and err_cls/err_code
+ * ALPMR: ALPMR_Activate_req
+ * ALPMR: ALPMR_Activate_cnf(+/-) via return value and err_cls/err_code
  *
  * @param p_ar             In:   The AR instance.
  * @return  0  if the operation succeeded.
@@ -273,7 +297,12 @@ static int pf_alarm_alpmx_activate(
 
 /**
  * @internal
- * Close the ALPMI and ALPMR instances.
+ * Close all the ALPMI and ALPMR instances.
+ *
+ * ALPMI: ALPMI_Close_req
+ * ALPMI: ALPMI_Close_cnf(+)
+ * ALPMR: ALPMR_Close_req
+ * ALPMR: ALPMR_Close_cnf    via return value and err_cls/err_code
  *
  * @param p_ar             In:   The AR instance.
  * @return  0  if the operation succeeded.
@@ -285,11 +314,13 @@ static int pf_alarm_alpmx_close(
    int                     ret = 0; /* Assume all goes well */
    uint16_t                ix;
 
+   /* This is ALPMI_Close_req */
    for (ix = 0; ix < NELEMENTS(p_ar->alpmx); ix++)
    {
       p_ar->alpmx[ix].alpmi_state = PF_ALPMI_STATE_W_START;
    }
 
+   /* This is ALPMR_Close_req */
    for (ix = 0; ix < NELEMENTS(p_ar->alpmx); ix++)
    {
       switch (p_ar->alpmx[ix].alpmr_state)
@@ -320,11 +351,14 @@ static int pf_alarm_alpmx_close(
 
 /**
  * @internal
- * ALPMI: APMS_Data.cnf(+/-)
+ * Confirmation back to ALPMI on message sent via APMS.
+ *
+ * ALPMI: APMS_A_Data.cnf(+/-)
  *
  * @param net              InOut: The p-net stack instance
  * @param p_apmx           In:   The APMS instance sending the confirmation.
- * @param res              In:   The positive (true) or negative (false) confirmation.
+ * @param res              In:   0  positive confirmation. This is cnf(+)
+ *                               -1 negative confirmation. This is cnf(-)
  */
 static void pf_alarm_alpmi_apms_a_data_cnf(
    pnet_t                  *net,
@@ -349,11 +383,13 @@ static void pf_alarm_alpmi_apms_a_data_cnf(
 
 /**
  * @internal
- * ALPMI: APMR_Data.cnf(+/-)
+ * The APMR has received an Alarm ACK DATA message over wire, and tells ALPMI about the result.
+ *
+ * ALPMI: APMR_A_Data.ind  (Implements part of it)
  *
  * @param net              InOut: The p-net stack instance
  * @param p_apmx           In:   The APMS instance sending the confirmation.
- * @param p_pnio_status    In:   The positive (true) or negative (false) confirmation.
+ * @param p_pnio_status    In:   Detailed ACK information.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -364,7 +400,6 @@ static int pf_alarm_alpmi_apmr_a_data_ind(
 {
    int                     ret = -1;
 
-   /* ALPMI: APMR_A_Data.ind */
    switch (p_apmx->p_alpmx->alpmi_state)
    {
    case PF_ALPMI_STATE_W_START:
@@ -385,11 +420,16 @@ static int pf_alarm_alpmi_apmr_a_data_ind(
 
 /**
  * @internal
- * ALPMR: APMS_Data.cnf(+/-)
+ * Confirmation back to ALPMR from APMS that a Transport ACK (TACK) has been received.
+ *
+ * Calls user call-back \a pnet_alarm_ack_cnf() for some cases.
+ *
+ * ALPMR: APMS_A_Data.cnf(+/-)
  *
  * @param net              InOut: The p-net stack instance
  * @param p_apmx           In:   The APMS instance sending the confirmation.
- * @param res              In:   The positive (true) or negative (false) confirmation.
+ * @param res              In:   0  positive confirmation. This is conf(+)
+ *                               -1 negative confirmation. This is conf(-)
  */
 static void pf_alarm_alpmr_apms_a_data_cnf(
    pnet_t                  *net,
@@ -425,8 +465,8 @@ static void pf_alarm_alpmr_apms_a_data_cnf(
       }
       else
       {
-         /* ALPMR_Alarm_Ack.cnf(+) */
-         (void)pf_fspm_alpmr_alarm_ack_cnf(net, p_apmx->p_ar, res);
+         /* Handle pos cnf */
+         (void)pf_fspm_alpmr_alarm_ack_cnf(net, p_apmx->p_ar, res);  /* ALPMR: ALPMR_Alarm_Ack.cnf(+) */
          p_apmx->p_alpmx->alpmr_state = PF_ALPMR_STATE_W_NOTIFY;
       }
       break;
@@ -435,15 +475,17 @@ static void pf_alarm_alpmr_apms_a_data_cnf(
 
 /**
  * @internal
- * Handle APMR DATA messages in ALPMR.
+ * The APMR has received an Alarm Notification DATA message over wire, and tells ALPMR about the result.
+ *
+ * ALPMR: APMR_A_Data.ind
  *
  * @param net              InOut: The p-net stack instance
- * @param p_apmx           In:   The APMR instance that received the message.
- * @param p_fixed          In:   The Fixed part of the RTA-PDU.
- * @param p_alarm_data     In:   The AlarmData from the RTA-PDU.
- * @param data_len         In:   VarDataLen from the RTA-PDU.
- * @param data_usi         In:   The USI from the RTA-PDU.
- * @param p_data           In:   The variable part of the RTA-PDU.
+ * @param p_apmx           In:    The APMR instance that received the message.
+ * @param p_fixed          In:    The Fixed part of the RTA-PDU.
+ * @param p_alarm_data     In:    The AlarmData from the RTA-PDU. (Slot, subslot etc)
+ * @param data_len         In:    VarDataLen from the RTA-PDU.
+ * @param data_usi         In:    The USI from the RTA-PDU.
+ * @param p_data           In:    The variable part of the RTA-PDU.
  * @return
  */
 static int pf_alarm_alpmr_apmr_a_data_ind(
@@ -493,7 +535,7 @@ static int pf_alarm_alpmr_apmr_a_data_ind(
    return ret;
 }
 
-/* ===== APMS - Acyclic sender ===== */
+/********************** Frame handler callbacks ******************************/
 
 /**
  * @internal
@@ -597,15 +639,20 @@ static int pf_alarm_apmr_low_handler(
    return ret;
 }
 
+/********************* Scheduler callback ************************************/
+
 /**
  * @internal
- * Timeout while waiting for an ACK from the controller.
+ * Timeout while waiting for an alarm TACK from the controller.
  *
  * Re-send the frame unless the number of re-transmits have been reached.
  * If an ACK is received then the APMS state is no longer WTACK and the
  * frame is not re-sent (and the timer stops).
  *
  * This is a callback for the scheduler. Arguments should fulfill pf_scheduler_timeout_ftn_t
+ *
+ * APMS: TimerExpired
+ * APMS: A_Data_req   retransmission   (This is LMPM_A_Data.req via macro)
  *
  * @param net              InOut: The p-net stack instance
  * @param arg
@@ -673,11 +720,14 @@ static void pf_alarm_apms_timeout(
          pf_alarm_alpmr_apms_a_data_cnf(net, p_apmx, -1);
 
 #endif
+
+         /* Timeout */
          p_apmx->apms_state = PF_APMS_STATE_OPEN;
 
          p_apmx->p_ar->err_cls = PNET_ERROR_CODE_1_APMS;
          p_apmx->p_ar->err_code = PNET_ERROR_CODE_2_APMS_TIMEOUT;
          pf_alarm_error_ind(net, p_apmx, p_apmx->p_ar->err_cls, p_apmx->p_ar->err_code);
+         /* Standard also says APMS_A_Data.cnf(-) */
       }
    }
    else
@@ -693,13 +743,18 @@ static void pf_alarm_apms_timeout(
    }
 }
 
+/****************************************************************************/
+
 /**
  * @internal
- * Initialize and start an AMPX instance.
- *
- * This function activates and starts an APMS/APMR pair.
+ * Initialize and start an AMPX instance (an APMS/APMR pair).
  *
  * It registers handlers for incoming alarm frames.
+ *
+ * APMS: APMS_Activate_req
+ * APMS: APMS_Activate_cnf(+/-) via return value and err_cls/err_code
+ * APMR: APMR_Activate_req
+ * APMR: APMR_Activate_cnf(+/-) via return value and err_cls/err_code
  *
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
@@ -787,9 +842,9 @@ static int pf_alarm_apmx_activate(
 
 /**
  * @internal
- * APMS: a_data_ind
+ * APMS is checking incoming TACK (the ack_seq_num)
  *
- * Handle incoming alarm data
+ * APMS: A_Data_ind  (Implements parts of it. This ia LMPM_A_Data.ind via macro)
  *
  * @param net              InOut: The p-net stack instance
  * @param p_apmx           In:   The APMX instance.
@@ -808,7 +863,6 @@ static int pf_alarm_apms_a_data_ind(
    if ((p_fixed->pdu_type.type == PF_RTA_PDU_TYPE_ACK) ||
        (p_fixed->pdu_type.type == PF_RTA_PDU_TYPE_DATA))
    {
-      /* APMS: a_data_ind */
       if (p_apmx->apms_state == PF_APMS_STATE_WTACK)
       {
          if (p_fixed->ack_seq_nbr == p_apmx->send_seq_count)
@@ -824,7 +878,7 @@ static int pf_alarm_apms_a_data_ind(
                os_buf_free(p_rta);
             }
 
-            pf_alarm_alpmi_apms_a_data_cnf(net, p_apmx, 0);
+            pf_alarm_alpmi_apms_a_data_cnf(net, p_apmx, 0);  /* This is APMS_A_Data.cnf(+) */
             pf_alarm_alpmr_apms_a_data_cnf(net, p_apmx, 0);
 
             ret = 0;
@@ -835,6 +889,7 @@ static int pf_alarm_apms_a_data_ind(
          {
             /*
              * Ignore!
+             * Wrong sequence number.
              * A timeout occurs and the frame will be re-sent.
              */
             ret = 0;
@@ -863,23 +918,24 @@ static int pf_alarm_apms_a_data_ind(
 
 /**
  * @internal
- * APMS: A_Data_Req
- *
  * Create and send a Profinet alarm frame to the IO-controller.
  *
  * Messages with TACK == true are saved in the APMX instance in order
  * to handle re-transmissions.
  *
+ * APMS: A_Data_req  (This is LMPM_A_Data.req via macro)
+ *
  * @param net              InOut: The p-net stack instance
- * @param p_apmx           In:   The APMX instance.
- * @param p_fixed          In:   The fixed part of the RTA-PDU.
- * @param p_alarm_data     In:   More fixed data for DATA messages.
- * @param maint_status     In:   Added if > 0.
- * @param payload_usi      In:   The payload USI (may be 0)..
- * @param payload_len      In:   Mandatory if payload_usi > 0.
- * @param p_payload        In:   Mandatory if payload_len > 0.
- * @param p_pnio_status    In:   Mandatory for ERROR messages.
- *                               Must be NULL for DATA messages.
+ * @param p_apmx           In:    The APMX instance.
+ * @param p_fixed          In:    The fixed part of the RTA-PDU.
+ * @param p_alarm_data     In:    Slot, subslot etc. Mandatory for DATA messages, otherwise NULL.
+ * @param maint_status     In:    The Maintenance status used for specific USI values (inserted only if not zero).
+ * @param payload_usi      In:    The payload USI (may be 0).
+ * @param payload_len      In:    Payload length. Must be > 0 if payload_usi > 0.
+ * @param p_payload        In:    Mandatory if payload_len > 0. May be NULL. Custom data or pf_diag_item_t.
+ * @param p_pnio_status    In:    Mandatory for ERROR messages.
+ *                                For DATA messages a NULL value gives an Alarm Notification DATA message,
+ *                                otherwise an Alarm Ack DATA message.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -1091,7 +1147,8 @@ static int pf_alarm_apms_apms_a_data_req(
 
       p_apmx->apms_state = PF_APMS_STATE_WTACK;
 
-      /* APMS: a_data_cnf */
+      /* APMS: A_Data_cnf     (tells that incoming message is acyclic data)
+         In state PF_APMS_STATE_WTACK with A_Data_cnf we should start retransmission timer */
       ret = pf_scheduler_add(net, p_apmx->timeout_us, apmx_sync_name,
          pf_alarm_apms_timeout, p_apmx, &p_apmx->timeout_id);
       if (ret != 0)
@@ -1106,14 +1163,19 @@ static int pf_alarm_apms_apms_a_data_req(
 
 /**
  * @internal
- * Close APMX.
+ * Close APMX (i.e. close APMS and APMR, for both high and low prio alarms)
  *
  * Sends a low prio alarm.
  * Unregisters frame handlers.
  *
+ * APMS: APMS_Close_req
+ * APMS: APMS_Close_cnf via return value and err_cls/err_code
+ * APMR: APMR_Close_req
+ * APMR: APMR_Close_cnf(+)
+ *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:   The AR instance.
- * @param err_code         In:   Error code. See PNET_ERROR_CODE_2_*
+ * @param p_ar             In:    The AR instance.
+ * @param err_code         In:    Error code. See PNET_ERROR_CODE_2_*
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -1160,6 +1222,7 @@ static int pf_alarm_apmx_close(
 
    for (ix = 0; ix < NELEMENTS(p_ar->apmx); ix++)
    {
+      /* Close APMS */
       if (p_ar->apmx[ix].apms_state != PF_APMS_STATE_CLOSED)
       {
          /* Free resources */
@@ -1173,7 +1236,8 @@ static int pf_alarm_apmx_close(
          p_ar->apmx[ix].p_ar = NULL;
          p_ar->apmx[ix].apms_state = PF_APMS_STATE_CLOSED;
       }
-      LOG_DEBUG(PF_AL_BUF_LOG, "Alarm(%d): Free saved RTA buffer %p\n", __LINE__, p_ar->apmx[ix].p_rta);
+
+      LOG_DEBUG(PF_AL_BUF_LOG, "Alarm(%d): Free saved RTA buffer %p if necessary\n", __LINE__, p_ar->apmx[ix].p_rta);
       if (p_ar->apmx[ix].p_rta != NULL)
       {
          p_rta = p_ar->apmx[ix].p_rta;
@@ -1181,6 +1245,7 @@ static int pf_alarm_apmx_close(
          os_buf_free(p_rta);
       }
 
+      /* Close APMR */
       if (p_ar->apmx[ix].apmr_state != PF_APMR_STATE_CLOSED)
       {
          p_ar->apmx[ix].apmr_state = PF_APMR_STATE_CLOSED;
@@ -1195,12 +1260,13 @@ static int pf_alarm_apmx_close(
    return 0;
 }
 
-
 /**
  * @internal
  * Send alarm APMR ACK
  *
- * It uses pf_alarm_apms_a_data_req() for the sending.
+ * It uses APMS  pf_alarm_apms_a_data_req() for the sending.
+ *
+ * APMR: A_Data_req  (Implements parts of it. This ia LMPM_A_Data.req via macro)
  *
  * @param net              InOut: The p-net stack instance
  * @param p_apmx           In:   The APMX instance.
@@ -1225,20 +1291,21 @@ static int pf_alarm_apmr_send_ack(
    fixed.ack_seq_nbr = p_apmx->exp_seq_count_o;
 
    ret = pf_alarm_apms_a_data_req(net, p_apmx, &fixed,
-      NULL,
+      NULL,  /* No additional data for ACK message */
       0,
-      0, 0, NULL,
+      0, 0, NULL,  /* No payload for ACK message */
       NULL);
 
    return ret;
 }
 
-
 /**
  * @internal
  * Send alarm APMR NACK
  *
- * It uses pf_alarm_apms_a_data_req() for the sending.
+ * It uses APMS  pf_alarm_apms_a_data_req() for the sending.
+ *
+ * APMR: A_Data_req  (Implements parts of it. This ia LMPM_A_Data.req via macro)
  *
  * @param net              InOut: The p-net stack instance
  * @param p_apmx           In:   The APMX instance.
@@ -1263,9 +1330,9 @@ static int pf_alarm_apmr_send_nack(
    fixed.ack_seq_nbr = p_apmx->exp_seq_count_o;
 
    ret = pf_alarm_apms_a_data_req(net, p_apmx, &fixed,
-      NULL,
+      NULL,  /* No additional data for NACK message */
       0,
-      0, 0, NULL,
+      0, 0, NULL,  /* No payload for NACK message */
       NULL);
 
    return ret;
@@ -1273,9 +1340,12 @@ static int pf_alarm_apmr_send_nack(
 
 /**
  * @internal
- * Handle reception of an RTA DATA PDU.
+ * Handle reception of an RTA DATA PDU in APMR.
  *
- * This function handles reception of an RTA-DATA-PDU in APMR.
+ * Sends back ACK or NACK.
+ * Uses APMS to handle ack_seq_num in incoming messages.
+ *
+ * APMR: A_Data_ind   (Implements part of it. This ia LMPM_A_Data.ind via macro)
  *
  * @param net              InOut: The p-net stack instance
  * @param p_apmx           In:   The APMX instance.
@@ -1301,7 +1371,6 @@ static int pf_alarm_apmr_a_data_ind(
    uint16_t                data_usi;
    uint8_t                 *p_data;
 
-   /* APMR: a_data_ind */
    switch (p_apmx->apmr_state)
    {
    case PF_APMR_STATE_CLOSED:
@@ -1316,12 +1385,13 @@ static int pf_alarm_apmr_a_data_ind(
       }
       else
       {
-         /* Interpret the RTA-SDU ::= Alarm-Notification-PDU || Alarm-Ack-PDU */
          if (p_fixed->send_seq_num == p_apmx->exp_seq_count)
          {
             pf_get_block_header(p_get_info, &pos, &block_header);
             if (block_header.block_type == p_apmx->block_type_alarm_ack)
             {
+               /* This message is an Alarm ACK PDU. Parse it and deliver to ALPMI. */
+
                /* Tell APMS to handle ack_seq_num in message */
                (void)pf_alarm_apms_a_data_ind(net, p_apmx, p_fixed);
 
@@ -1345,6 +1415,8 @@ static int pf_alarm_apmr_a_data_ind(
             }
             else if (block_header.block_type == p_apmx->block_type_alarm_notify)
             {
+               /* This message is an Alarm Notification PDU. Parse it and deliver to ALPMR. */
+
                /* Tell APMS to handle ack_seq_num in message */
                (void)pf_alarm_apms_a_data_ind(net, p_apmx, p_fixed);
 
@@ -1356,24 +1428,21 @@ static int pf_alarm_apmr_a_data_ind(
                {
                   p_apmx->apmr_state = PF_APMR_STATE_WCNF;
 
-                  /* APMR: A_Data_Cnf */
-                  /* AlarmNotification */
-                  /* APMR: APMR_A_Data.ind */
+                  /* APMR: A_Data_cnf is triggered here*/
+
                   pf_get_alarm_data(p_get_info, &pos, &alarm_data);
-                  /* Check for USI */
                   data_usi = pf_get_uint16(p_get_info, &pos);
                   if (p_get_info->result == PF_PARSE_OK)
                   {
                      data_len -= (pos - start_pos);
                      p_data = &p_get_info->p_buf[pos];
-                     ret = pf_alarm_alpmr_apmr_a_data_ind(net, p_apmx, p_fixed, &alarm_data, data_len, data_usi, p_data);
+                     ret = pf_alarm_alpmr_apmr_a_data_ind(net, p_apmx, p_fixed, &alarm_data, data_len, data_usi, p_data);  /* APMR: APMR_A_Data.ind */
                   }
                   else
                   {
                      LOG_ERROR(PF_ALARM_LOG, "Alarm(%d): Error parsing Alarm notification\n", __LINE__);
                      ret = -1;
                   }
-
                   if (ret == 0)
                   {
                      p_apmx->apmr_state = PF_APMR_STATE_OPEN;
@@ -1429,11 +1498,17 @@ static int pf_alarm_apmr_a_data_ind(
 
 /**
  * @internal
- * Handle the reception of ALARM messages for one AR instance.
+ * Handle the reception of Alarm messages for one AR instance.
  *
- * When called this function reads max 1 alarm message from its input queue (mbox).
- * The message is processed in APMR/ALPMR and indications may be sent to the
- * application.
+ * When called this function reads max 1 alarm message from its input queue (mbox),
+ * and is partially parsed.
+ *
+ * The message is normally processed in APMR/ALPMR, and indications may be sent
+ * to the application. Repeated for both low and high prio queue.
+ *
+ * Incoming ACK is sent to APMS.
+ *
+ * APMR + APMS: Implementation detail
  *
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
@@ -1484,13 +1559,12 @@ static int pf_alarm_apmr_periodic(
             pf_get_alarm_fixed(&get_info, &pos, &fixed);
             var_part_len = pf_get_uint16(&get_info, &pos);
 
-            /* APMR: A_data.ind */
             if (fixed.pdu_type.version == 1)
             {
                switch (fixed.pdu_type.type)
                {
                case PF_RTA_PDU_TYPE_ACK:
-                  LOG_DEBUG(PF_ALARM_LOG, "Alarm(%d): ACK received\n", __LINE__);
+                  LOG_DEBUG(PF_ALARM_LOG, "Alarm(%d): Alarm ACK frame received\n", __LINE__);
                   if (var_part_len == 0)
                   {
                      /* Tell APMS to check for and handle ACK */
@@ -1498,13 +1572,13 @@ static int pf_alarm_apmr_periodic(
                   }
                   else
                   {
-                     LOG_ERROR(PF_ALARM_LOG, "Alarm(%d): var_part_len %u\n", __LINE__, (unsigned)var_part_len);
+                     LOG_ERROR(PF_ALARM_LOG, "Alarm(%d): Wrong var_part_len %u for ACK frame\n", __LINE__, (unsigned)var_part_len);
                      ret = 0; /* Just ignore */
                   }
                   break;
                case PF_RTA_PDU_TYPE_NACK:
-                  LOG_DEBUG(PF_ALARM_LOG, "Alarm(%d): NACK received\n", __LINE__);
-                  /* APMS: A_Data_Ind (NAK) */
+                  LOG_DEBUG(PF_ALARM_LOG, "Alarm(%d): Alarm NACK frame received\n", __LINE__);
+                  /* APMS: A_Data_ind  (Implements parts of it, for NACK) */
                   if (var_part_len == 0)
                   {
                      /* Ignore */
@@ -1512,26 +1586,32 @@ static int pf_alarm_apmr_periodic(
                   }
                   else
                   {
-                     LOG_ERROR(PF_ALARM_LOG, "Alarm(%d): var_part_len %u\n", __LINE__, (unsigned)var_part_len);
+                     LOG_ERROR(PF_ALARM_LOG, "Alarm(%d): Wrong var_part_len %u for NACK frame\n", __LINE__, (unsigned)var_part_len);
                      ret = 0; /* Just ignore */
                   }
                   break;
                case PF_RTA_PDU_TYPE_DATA:
-                  LOG_DEBUG(PF_ALARM_LOG, "Alarm(%d): DATA received\n", __LINE__);
+                  LOG_DEBUG(PF_ALARM_LOG, "Alarm(%d): Alarm DATA frame received\n", __LINE__);
                   ret = pf_alarm_apmr_a_data_ind(net, p_apmx, &fixed, var_part_len, &get_info, pos);
                   break;
                case PF_RTA_PDU_TYPE_ERR:
                   if (var_part_len == 4)     /* sizeof(pf_pnio_status_t) */
                   {
-                     /* APMS: A_Data_Ind(ERR) */
+                     /* APMR: A_Data_ind  (Implements parts of it, for ERR) */
+                     /* APMS: A_Data_ind  (Implements parts of it, for ERR) */
                      pf_get_pnio_status(&get_info, &pos, &pnio_status);
+
+                     /* Should we also be able to receive ERR frames to APMS? Should its state have an effect of the result? */
                      switch (p_apmx->apmr_state)
                      {
                      case PF_APMR_STATE_OPEN:
-                        LOG_DEBUG(PF_ALARM_LOG, "Alarm(%d): Alarm received from IO-controller\n", __LINE__);
+                        LOG_DEBUG(PF_ALARM_LOG, "Alarm(%d): Alarm received from IO-controller. Error code 1 (ERRCLS): %u  Error code 2 (ERRCODE): %u \n",
+                            __LINE__, pnio_status.error_code_1, pnio_status.error_code_2);
                         pf_alarm_error_ind(net, p_apmx, pnio_status.error_code_1, pnio_status.error_code_2);
                         break;
                      default:
+                        LOG_ERROR(PF_ALARM_LOG, "Alarm(%d): Alarm received from IO-controller, but the APMR state is %s\n",
+                           __LINE__, pf_alarm_apmr_state_to_string(p_apmx->apmr_state));
                         pf_alarm_error_ind(net, p_apmx, PNET_ERROR_CODE_1_APMR, PNET_ERROR_CODE_2_APMR_INVALID_STATE);
                         break;
                      }
@@ -1540,13 +1620,13 @@ static int pf_alarm_apmr_periodic(
                   }
                   else
                   {
-                     LOG_ERROR(PF_ALARM_LOG, "Alarm(%d): var_part_len %u\n", __LINE__, (unsigned)var_part_len);
+                     LOG_ERROR(PF_ALARM_LOG, "Alarm(%d): Alarm received from IO-controller, but has wrong var_part_len %u\n", __LINE__, (unsigned)var_part_len);
                      /* Ignore */
                      ret = 0;
                   }
                   break;
                default:
-                  LOG_ERROR(PF_ALARM_LOG, "Alarm(%d): PDU-Type.type %u\n", __LINE__, (unsigned)fixed.pdu_type.type);
+                  LOG_ERROR(PF_ALARM_LOG, "Alarm(%d): Wrong PDU-Type.type %u\n", __LINE__, (unsigned)fixed.pdu_type.type);
                   /* Ignore */
                   ret = 0;
                   break;
@@ -1554,7 +1634,7 @@ static int pf_alarm_apmr_periodic(
             }
             else
             {
-               LOG_ERROR(PF_ALARM_LOG, "Alarm(%d): PDU-Type.version %u\n", __LINE__, (unsigned)fixed.pdu_type.version);
+               LOG_ERROR(PF_ALARM_LOG, "Alarm(%d): Wrong PDU-Type.version %u\n", __LINE__, (unsigned)fixed.pdu_type.version);
                /* Ignore */
                ret = 0;
             }
@@ -1565,7 +1645,7 @@ static int pf_alarm_apmr_periodic(
          }
          else
          {
-            LOG_ERROR(PF_ALARM_LOG, "Alarm(%d): expected buf from mbox, but got NULL\n", __LINE__);
+            LOG_ERROR(PF_ALARM_LOG, "Alarm(%d): Expected buf from mbox, but got NULL\n", __LINE__);
             ret = -1;
          }
       }
@@ -1639,7 +1719,7 @@ int pf_alarm_close(
  * @param p_ar             In:   The AR instance.
  * @param p_subslot        In:   The subslot instance.
  * @param p_diag_item      In:   The diag item.
- * @param p_alarm_spec     Out:  The computed alarm specifier.
+ * @param p_alarm_spec     Out:  The computed alarm specifier. Describes diagnosis alarms.
  * @param p_maint_status   Out:  The computed maintenance status.
  */
 static void pf_alarm_add_item_to_digest(
@@ -1681,6 +1761,8 @@ static void pf_alarm_add_item_to_digest(
 /**
  * @internal
  * Return the alarm specifier for a specific sub-slot.
+ * Describes diagnosis alarms.
+ *
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param api_id           In:   The API identifier.
@@ -1901,6 +1983,8 @@ static int pf_alarm_send_alarm(
    return ret;
 }
 
+/************************ Send specific alarm types **************************/
+
 int pf_alarm_send_process(
    pnet_t                  *net,
    pf_ar_t                 *p_ar,
@@ -1957,7 +2041,7 @@ int pf_alarm_send_pull(
 {
    uint16_t                alarm_type;
 
-   LOG_INFO(PF_ALARM_LOG, "Alarm(%d): pull alarm\n", __LINE__);
+   LOG_INFO(PF_ALARM_LOG, "Alarm(%d): Sending pull alarm\n", __LINE__);
    if (subslot_nbr == 0)
    {
       if (p_ar->ar_param.ar_properties.pull_module_alarm_allowed == true)
