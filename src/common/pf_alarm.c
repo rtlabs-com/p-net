@@ -55,6 +55,29 @@ static const char *apmx_sync_name = "apmx";
 
 /**
  * @internal
+ * Return a string representation of alarm PDU type (message type).
+ * @param pdu_type            In:   alarm PDU type  See pf_alarm_pdu_type_values_t
+ * @return  A string representing the alarm PDU type.
+ */
+static const char *pf_alarm_pdu_type_to_string(
+   uint8_t pdu_type)
+{
+   const char              *s = NULL;
+
+   switch (pdu_type)
+   {
+   case PF_RTA_PDU_TYPE_DATA:  s = "PF_RTA_PDU_TYPE_DATA"; break;
+   case PF_RTA_PDU_TYPE_NACK:  s = "PF_RTA_PDU_TYPE_NACK"; break;
+   case PF_RTA_PDU_TYPE_ACK:   s = "PF_RTA_PDU_TYPE_ACK"; break;
+   case PF_RTA_PDU_TYPE_ERR:   s = "PF_RTA_PDU_TYPE_ERR"; break;
+   default:                    s = "<error>"; break;
+   }
+
+   return s;
+}
+
+/**
+ * @internal
  * Return a string representation of the given ALPMI state.
  * @param state            In:   The ALPMI state.
  * @return  A string representing the ALPMI state.
@@ -194,7 +217,7 @@ static void pf_alarm_error_ind(
     *
     * APMR:  PNET_ERROR_CODE_2_CMSU_AR_ALARM_IND
     */
-   LOG_INFO(PF_ALARM_LOG, "Alarm(%d): err_cls 0x%02x  err_code 0x%02x\n", __LINE__, err_cls, err_code);
+   LOG_INFO(PF_ALARM_LOG, "Alarm(%d): Setting err_cls 0x%02x err_code 0x%02x\n", __LINE__, err_cls, err_code);
    (void)pf_cmsu_alarm_error_ind(net, p_apmx->p_ar, err_cls, err_code);
 }
 
@@ -216,7 +239,7 @@ static int pf_alarm_alpmx_activate(
 
    for (ix = 0; ix < NELEMENTS(p_ar->alpmx); ix++)
    {
-      if (p_ar->alpmx[ix].alpmi_state == PF_ALPMI_STATE_W_START)
+      if (p_ar->alpmx[ix].alpmi_state == PF_ALPMI_STATE_W_START && p_ar->alpmx[ix].alpmr_state == PF_ALPMR_STATE_W_START)
       {
          /* Save the remote side MAC address for easy retrieval. */
          memcpy(&p_ar->alpmx[ix].da, &p_ar->ar_param.cm_initiator_mac_add, sizeof(p_ar->alpmx[ix].da));
@@ -227,10 +250,19 @@ static int pf_alarm_alpmx_activate(
          p_ar->alpmx[ix].alpmr_state = PF_ALPMR_STATE_W_NOTIFY;
          p_ar->alpmx[ix].alpmi_state = PF_ALPMI_STATE_W_ALARM;
       }
-      else
+      else if (p_ar->alpmx[ix].alpmi_state != PF_ALPMI_STATE_W_START)
       {
+         /* This is ALPMI_Activate_cnf(-) */
          p_ar->err_cls = PNET_ERROR_CODE_1_ALPMI;
          p_ar->err_code = PNET_ERROR_CODE_2_ALPMI_WRONG_STATE;
+
+         ret = -1;
+      }
+      else
+      {
+         /* This is ALPMR_Activate_cnf(-) */
+         p_ar->err_cls = PNET_ERROR_CODE_1_ALPMR;
+         p_ar->err_code = PNET_ERROR_CODE_2_ALPMR_WRONG_STATE;
 
          ret = -1;
       }
@@ -423,6 +455,7 @@ static int pf_alarm_alpmr_apmr_a_data_ind(
    uint16_t                data_usi,
    uint8_t                 *p_data)
 {
+   pnet_alarm_argument_t   alarm_arg = {0};
    int                     ret = -1;
 
    switch (p_apmx->p_alpmx->alpmr_state)
@@ -433,8 +466,15 @@ static int pf_alarm_alpmr_apmr_a_data_ind(
       break;
    case PF_ALPMR_STATE_W_NOTIFY:
       /* Only DATA: AlarmNotifications are sent to this function */
+      alarm_arg.api_id = p_alarm_data->api_id;
+      alarm_arg.slot_nbr = p_alarm_data->slot_nbr;
+      alarm_arg.subslot_nbr = p_alarm_data->subslot_nbr;
+      alarm_arg.alarm_type = p_alarm_data->alarm_type;
+      alarm_arg.alarm_specifier = p_alarm_data->alarm_specifier;
+      alarm_arg.sequence_number = p_alarm_data->sequence_number;
+
       ret = pf_fspm_alpmr_alarm_ind(net, p_apmx->p_ar,
-         p_alarm_data->api_id, p_alarm_data->slot_nbr, p_alarm_data->subslot_nbr,
+         &alarm_arg,
          data_len, data_usi, p_data);
 
       /* App must now send an ACK or a NACK */
@@ -583,7 +623,11 @@ static void pf_alarm_apms_timeout(
    p_apmx->timeout_id = UINT32_MAX;
    if (p_apmx->apms_state == PF_APMS_STATE_WTACK)
    {
-      if (p_apmx->retry > 0)
+      if (p_apmx->p_rta == NULL)
+      {
+         LOG_ERROR(PF_ALARM_LOG, "Alarm(%d): No alarm frame available for resending.\n", __LINE__);
+      }
+      else if (p_apmx->retry > 0)
       {
          p_apmx->retry--;
 
@@ -723,6 +767,7 @@ static int pf_alarm_apmx_activate(
          p_ar->apmx[ix].apmr_msg_nbr = 0;
 
          p_ar->apmx[ix].timeout_us = 100*1000*p_ar->alarm_cr_request.rta_timeout_factor;
+         p_ar->apmx[ix].retry = 0;  /* Updated in pf_alarm_apms_apms_a_data_req() */
 
          p_ar->apmx[ix].p_ar = p_ar;
          p_ar->apmx[ix].p_alpmx = &p_ar->alpmx[ix];
@@ -905,26 +950,28 @@ static int pf_alarm_apms_a_data_req(
             pf_put_alarm_fixed(true, p_fixed, PF_FRAME_BUFFER_SIZE, p_buf, &pos);
 
             var_part_len_pos = pos;
-            pf_put_uint16(true, 0, PF_FRAME_BUFFER_SIZE, p_buf, &pos);                     /* var_part_len is unknown here */
+            pf_put_uint16(true, 0, PF_FRAME_BUFFER_SIZE, p_buf, &pos);    /* var_part_len is unknown here */
 
+            /* Insert variable part of alarm payload for DATA and ERR */
             if (p_fixed->pdu_type.type == PF_RTA_PDU_TYPE_DATA)
             {
                if (p_pnio_status != NULL)
                {
-                  /* Send an AlarmAck DATA message */
+                  /* Build an Alarm Ack DATA message */
                   pf_put_alarm_block(true, p_apmx->block_type_alarm_ack,
                      p_alarm_data, maint_status,
-                     0, 0, NULL, PF_FRAME_BUFFER_SIZE, p_buf, &pos);
-
-                  /* Append the PNIO status */
-                  pf_put_pnet_status(true, p_pnio_status, PF_FRAME_BUFFER_SIZE, p_buf, &pos);
+                     0, 0, NULL,  /* No payload */
+                     p_pnio_status,
+                     PF_FRAME_BUFFER_SIZE, p_buf, &pos);
                }
                else
                {
-                  /* Send an AlarmNotification DATA message */
+                  /* Build an Alarm Notification DATA message */
                   pf_put_alarm_block(true, p_apmx->block_type_alarm_notify,
                      p_alarm_data, maint_status,
-                     payload_usi, payload_len, p_payload, PF_FRAME_BUFFER_SIZE, p_buf, &pos);
+                     payload_usi, payload_len, p_payload,
+                     NULL,   /* No PNIO status */
+                     PF_FRAME_BUFFER_SIZE, p_buf, &pos);
                }
             }
             else if (p_fixed->pdu_type.type == PF_RTA_PDU_TYPE_ERR)
@@ -942,9 +989,16 @@ static int pf_alarm_apms_a_data_req(
             pf_put_uint16(true, var_part_len, PF_FRAME_BUFFER_SIZE, p_buf, &var_part_len_pos);
 
             p_rta->len = pos;
-            LOG_INFO(PF_AL_BUF_LOG, "Alarm(%d): Send an alarm frame.\n", __LINE__);
 
-            if (pf_eth_send(net, p_apmx->p_ar->p_sess->eth_handle, p_rta) > 0)
+            LOG_INFO(PF_AL_BUF_LOG, "Alarm(%d): Send an alarm frame %s  Frame ID: %04x  Tack: %u  USI: %u  Payload len: %u  Send seq: %u  ACK seq: %u\n",
+               __LINE__, pf_alarm_pdu_type_to_string(p_fixed->pdu_type.type),
+               p_apmx->frame_id, p_fixed->add_flags.tack, payload_usi, payload_len,
+               p_fixed->send_seq_num, p_fixed->ack_seq_nbr);
+            if (pf_eth_send(net, p_apmx->p_ar->p_sess->eth_handle, p_rta) <= 0)
+            {
+               LOG_ERROR(PF_ALARM_LOG, "Alarm(%d): Error from os_eth_send(rta)\n", __LINE__);
+            }
+            else
             {
                ret = 0;
             }
@@ -977,29 +1031,29 @@ static int pf_alarm_apms_a_data_req(
 
 /**
  * @internal
- * APMS: APMS_A_Data_req
+ * Create and send an DATA RTA-PDU
  *
- * This function creates and sends an RTA-PDU.
+ * This is done by APMS, and is triggered by ALPMI or ALPMR.
  *
+ * The message will have TACK == true, and will be scheduled for retransmission.
  * It uses pf_alarm_apms_a_data_req() for the sending.
  *
+ * APMS: APMS_A_Data.req
+ *
  * @param net              InOut: The p-net stack instance
- * @param p_apmx           In:   The APMS instance.
- * @param pdu_type         In:   Mandatory. The PDU type.
- * @param tack             In:   Mandatory. TACK.
- * @param p_alarm_data     In:   Mandatory if pdu_type == DATA.
- * @param maint_status     In:   Inserted if > 0.
- * @param payload_usi      In:   May be 0.
- * @param payload_len      In:   Payload length. Mandatory id payload_usi != 0.
- * @param p_payload        In:   Mandatory if payload_len > 0.
- * @param p_pnio_status    Out:  Optional. Detailed error information.
- * @return
+ * @param p_apmx           In:    The APMS instance. Select high or low prio by using the correct instance.
+ * @param p_alarm_data     In:    Alarm details (slot, subslot etc). Mandatory.
+ * @param maint_status     In:    The Maintenance status used for specific USI values (inserted only if not zero).
+ * @param payload_usi      In:    The payload USI. May be 0.
+ * @param payload_len      In:    Payload length. Must be > 0 if payload_usi > 0.
+ * @param p_payload        In:    Mandatory if payload_len > 0, otherwise NULL. Custom data or pf_diag_item_t.
+ * @param p_pnio_status    In:    Optional. Detailed error information (or NULL).
+ * @return  0  if the operation succeeded.
+ *          -1 if an error occurred.
  */
 static int pf_alarm_apms_apms_a_data_req(
    pnet_t                  *net,
    pf_apmx_t               *p_apmx,
-   pf_alarm_pdu_type_values_t pdu_type,
-   bool                    tack,
    pf_alarm_data_t         *p_alarm_data,
    uint32_t                maint_status,
    uint16_t                payload_usi,
@@ -1012,17 +1066,20 @@ static int pf_alarm_apms_apms_a_data_req(
 
    if (p_apmx->apms_state != PF_APMS_STATE_OPEN)
    {
+      /* TODO: The standard says err_cls = PNET_ERROR_CODE_1_APMS
+                                 err_code = PNET_ERROR_CODE_2_APMS_WRONG_STATE */
       pf_alarm_alpmi_apms_a_data_cnf(net, p_apmx, -1);
       pf_alarm_alpmr_apms_a_data_cnf(net, p_apmx, -1);
    }
    else
    {
+      memset(&fixed, 0, sizeof(fixed));
       fixed.src_ref = p_apmx->src_ref;
       fixed.dst_ref = p_apmx->dst_ref;
-      fixed.pdu_type.type = pdu_type;
+      fixed.pdu_type.type = PF_RTA_PDU_TYPE_DATA;
       fixed.pdu_type.version = PF_ALARM_PDU_TYPE_VERSION_1;
       fixed.add_flags.window_size = 1;
-      fixed.add_flags.tack = tack;
+      fixed.add_flags.tack = true;
       fixed.send_seq_num = p_apmx->send_seq_count;
       fixed.ack_seq_nbr = p_apmx->exp_seq_count_o;
 
@@ -1068,8 +1125,9 @@ static int pf_alarm_apmx_close(
    uint16_t                ix;
    pnet_pnio_status_t      pnio_status;
    os_buf_t                *p_rta;
+   pf_alarm_fixed_t        fixed;
 
-   /* Send low prio CLOSE alarm first */
+   /* Send CLOSE alarm first, with low prio by using p_ar->apmx[0] */
    if (p_ar->apmx[0].apms_state != PF_APMS_STATE_CLOSED)
    {
       pnio_status.error_code = PNET_ERROR_CODE_RTA_ERROR;
@@ -1077,11 +1135,21 @@ static int pf_alarm_apmx_close(
       pnio_status.error_code_1 = PNET_ERROR_CODE_1_RTA_ERR_CLS_PROTOCOL;
       pnio_status.error_code_2 = err_code;
 
-      if (pf_alarm_apms_apms_a_data_req(net, &p_ar->apmx[0], PF_RTA_PDU_TYPE_ERR, false,
-         NULL,
+      memset(&fixed, 0, sizeof(fixed));
+      fixed.src_ref = p_ar->apmx[0].src_ref;
+      fixed.dst_ref = p_ar->apmx[0].dst_ref;
+      fixed.pdu_type.type = PF_RTA_PDU_TYPE_ERR;
+      fixed.pdu_type.version = PF_ALARM_PDU_TYPE_VERSION_1;
+      fixed.add_flags.window_size = 1;
+      fixed.add_flags.tack = false;
+      fixed.send_seq_num = p_ar->apmx[0].send_seq_count;
+      fixed.ack_seq_nbr = p_ar->apmx[0].exp_seq_count_o;
+
+      if (pf_alarm_apms_a_data_req(net, &p_ar->apmx[0], &fixed,
+         NULL,        /* No alarm_data */
          0,
-         0, 0, NULL,
-         &pnio_status) != 0)
+         0, 0, NULL,  /* No payload */
+          &pnio_status) != 0)
       {
          LOG_ERROR(PF_ALARM_LOG, "alarm(%d): Could not send close alarm\n", __LINE__);
       }
@@ -1265,13 +1333,10 @@ static int pf_alarm_apmr_a_data_ind(
                {
                   p_apmx->apmr_state = PF_APMR_STATE_WCNF;
 
-                  /* APMR: A_Data_Cnf */
-                  /* AlarmAck */
-                  /* APMR: APMR_A_Data.ind */
-                  pf_get_alarm_ack(p_get_info, &pos, &alarm_data);
-                  pf_get_pnio_status(p_get_info, &pos, &pnio_status);
+                  /* APMR: A_Data_cnf is triggered here*/
 
-                  ret = pf_alarm_alpmi_apmr_a_data_ind(net, p_apmx, &pnio_status);
+                  pf_get_pnio_status(p_get_info, &pos, &pnio_status);
+                  ret = pf_alarm_alpmi_apmr_a_data_ind(net, p_apmx, &pnio_status);  /* APMR: APMR_A_Data.ind */
                   if (ret == 0)
                   {
                      p_apmx->apmr_state = PF_APMR_STATE_OPEN;
@@ -1317,9 +1382,10 @@ static int pf_alarm_apmr_a_data_ind(
             }
             else
             {
-               LOG_ERROR(PF_ALARM_LOG, "Alarm(%d): Unhandled block type %#x\n", __LINE__, block_header.block_type);
-               p_apmx->p_ar->err_cls = PNET_ERROR_CODE_1_ALPMR;
-               p_apmx->p_ar->err_code = PNET_ERROR_CODE_2_ALPMR_WRONG_ALARM_PDU;
+               LOG_ERROR(PF_ALARM_LOG, "Alarm(%d): Unhandled incoming alarm block type 0x%04x\n", __LINE__, block_header.block_type);
+               /* The standard says PNET_ERROR_CODE_1_ALPMR, PNET_ERROR_CODE_2_ALPMR_WRONG_ALARM_PDU internally */
+               p_apmx->p_ar->err_cls = PNET_ERROR_CODE_1_RTA_ERR_CLS_PROTOCOL;
+               p_apmx->p_ar->err_code = PNET_ERROR_CODE_2_ABORT_AR_ALARM_IND_ERROR;
                pf_alarm_error_ind(net, p_apmx, p_apmx->p_ar->err_cls, p_apmx->p_ar->err_code);
                ret = -1;
             }
@@ -1698,44 +1764,45 @@ int pf_alarm_periodic(
 int pf_alarm_alpmr_alarm_ack(
    pnet_t                  *net,
    pf_ar_t                 *p_ar,
+   pnet_alarm_argument_t   *p_alarm_argument,
    pnet_pnio_status_t      *p_pnio_status)
 {
    int                     ret = -1;
-   pf_alarm_fixed_t        fixed;
+   pf_alarm_data_t         alarm_data;
    pf_apmx_t               *p_apmx = &p_ar->apmx[1];  /* Always use high prio. */
    pf_alpmx_t              *p_alpmx = &p_ar->alpmx[1];
 
-   /* ALPMR_alarm_ack_req */
+   CC_ASSERT(p_alarm_argument != NULL);  /* From user code */
+   CC_ASSERT(p_pnio_status != NULL);
+
    switch (p_alpmx->alpmr_state)
    {
    case PF_ALPMR_STATE_W_USER_ACK:
-      fixed.src_ref = p_apmx->src_ref;
-      fixed.dst_ref = p_apmx->dst_ref;
-      fixed.pdu_type.type = PF_RTA_PDU_TYPE_DATA;
-      fixed.pdu_type.version = PF_ALARM_PDU_TYPE_VERSION_1;
-      fixed.add_flags.window_size = 1;
-      fixed.add_flags.tack = true;
-      fixed.send_seq_num = p_apmx->send_seq_count;
-      fixed.ack_seq_nbr = p_apmx->exp_seq_count_o;
+      memset(&alarm_data, 0, sizeof(alarm_data));
+      alarm_data.alarm_type = p_alarm_argument->alarm_type;
+      alarm_data.api_id = p_alarm_argument->api_id;
+      alarm_data.slot_nbr = p_alarm_argument->slot_nbr;
+      alarm_data.subslot_nbr = p_alarm_argument->subslot_nbr;
+      alarm_data.alarm_specifier = p_alarm_argument->alarm_specifier;
+      alarm_data.sequence_number = p_alarm_argument->sequence_number;
 
-      ret = pf_alarm_apms_a_data_req(net, p_apmx, &fixed,
-         NULL,
+      p_alpmx->prev_sequence_number = p_alpmx->sequence_number;
+      p_alpmx->sequence_number++;
+      p_alpmx->sequence_number %= 0x0800;
+
+      ret = pf_alarm_apms_apms_a_data_req(net, p_apmx,
+         &alarm_data,
          0,
-         0, 0, NULL,
+         0, 0, NULL,  /* No payload */
          p_pnio_status);
 
-      /* ALPMR: APMS_A_Data.cnf */
-      if (ret != 0)
-      {
-         p_ar->err_cls = PNET_ERROR_CODE_1_ALPMI;
-         p_ar->err_code = PNET_ERROR_CODE_2_ALPMI_INVALID;
-         pf_alarm_error_ind(net, p_apmx, p_ar->err_cls, p_ar->err_code);
-      }
-      p_alpmx->alpmr_state = PF_ALPMR_STATE_W_NOTIFY;
+      p_alpmx->alpmr_state = PF_ALPMR_STATE_W_TACK;
       break;
    case PF_ALPMR_STATE_W_START:
    case PF_ALPMR_STATE_W_NOTIFY:
    case PF_ALPMR_STATE_W_TACK:
+      LOG_ERROR(PF_ALARM_LOG, "Alarm(%d): You tried to send an alarm ACK, but the ALPMR state is %s.\n",
+         __LINE__, pf_alarm_alpmr_state_to_string(p_alpmx->alpmr_state));
       p_ar->err_cls = PNET_ERROR_CODE_1_ALPMI;
       p_ar->err_code = PNET_ERROR_CODE_2_ALPMI_WRONG_STATE;
       break;
@@ -1746,26 +1813,27 @@ int pf_alarm_alpmr_alarm_ack(
 
 /**
  * @internal
- * Send an alarm.
+ * Send an alarm to the controller using an RTA DATA PDU.
  *
- * This function sends an alarm to the controller using an RTA DATA PDU.
+ * It will always require TACK back.
  *
- * It uses pf_alarm_apms_apms_a_data_req() for sending.
+ * It uses pf_alarm_apms_apms_a_data_req() for sending (and retransmission).
+ *
+ * ALPMI: ALPMI_Alarm_Notification.req
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:   The AR instance.
- * @param alarm_type       In:   The alarm type.
- * @param high_prio        In:   true => use high prio alarm.
- * @param tack             In:   true => require transfer ACK.
- * @param api_id           In:   The API identifier.
- * @param slot_nbr         In:   The slot number.
- * @param subslot_nbr      In:   The sub-slot number.
- * @param p_diag_item      In:   The diagnosis item (may be NULL).
- * @param module_ident     In:   The module ident number.
- * @param submodule_ident  In:   The sub-module ident number.
- * @param payload_usi      In:   The USI of the payload.
- * @param payload_len      In:   The length of the payload (if usi < 0x8000).
- * @param p_payload        In:   The payload data (if usi < 0x8000).
+ * @param p_ar             In:    The AR instance.
+ * @param alarm_type       In:    The alarm type.
+ * @param high_prio        In:    true => Use high prio alarm.
+ * @param api_id           In:    The API identifier.
+ * @param slot_nbr         In:    The slot number.
+ * @param subslot_nbr      In:    The sub-slot number.
+ * @param p_diag_item      In:    The diagnosis item (may be NULL).
+ * @param module_ident     In:    The module ident number.
+ * @param submodule_ident  In:    The sub-module ident number.
+ * @param payload_usi      In:    The USI of the payload. May be 0.
+ * @param payload_len      In:    The length of the payload (if usi < 0x8000).
+ * @param p_payload        In:    Mandatory if payload_len > 0, otherwise NULL. Custom data or pf_diag_item_t.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred (or waiting for ACK from controller: re-try later).
  */
@@ -1774,7 +1842,6 @@ static int pf_alarm_send_alarm(
    pf_ar_t                 *p_ar,
    pf_alarm_type_values_t  alarm_type,
    bool                    high_prio,
-   bool                    tack,
    uint32_t                api_id,
    uint16_t                slot_nbr,
    uint16_t                subslot_nbr,
@@ -1811,7 +1878,7 @@ static int pf_alarm_send_alarm(
          p_alpmx->sequence_number++;
          p_alpmx->sequence_number %= 0x0800;
 
-         ret = pf_alarm_apms_apms_a_data_req(net, p_apmx, PF_RTA_PDU_TYPE_DATA, tack,
+         ret = pf_alarm_apms_apms_a_data_req(net, p_apmx,
             &alarm_data,
             maint_status,
             payload_usi, payload_len, p_payload,
@@ -1821,7 +1888,8 @@ static int pf_alarm_send_alarm(
       }
       else
       {
-         LOG_INFO(PF_ALARM_LOG, "Alarm(%d): ALPMI state %s (dropped)\n",
+         /* The standard says that ALPMI_Alarm_Notification.cnf(-) should be sent back to application */
+         LOG_INFO(PF_ALARM_LOG, "Alarm(%d): Skipped sending the alarm, as the ALPMI state is %s.\n",
             __LINE__, pf_alarm_alpmi_state_to_string(p_alpmx->alpmi_state));
       }
    }
@@ -1843,12 +1911,14 @@ int pf_alarm_send_process(
    uint16_t                payload_len,
    uint8_t                 *p_payload)
 {
-   LOG_INFO(PF_ALARM_LOG, "Alarm(%d): process alarm\n", __LINE__);
+   LOG_INFO(PF_ALARM_LOG, "Alarm(%d): Sending process alarm. Slot %u, subslot %u, %u bytes, USI %u\n",
+      __LINE__, slot_nbr, subslot_nbr, payload_len, payload_usi);
 
-   /* High prio, require TACK */
-   return pf_alarm_send_alarm(net, p_ar, PF_ALARM_TYPE_PROCESS, true, true,
+   return pf_alarm_send_alarm(net, p_ar,
+      PF_ALARM_TYPE_PROCESS,
+      true,       /* High prio */
       api_id, slot_nbr, subslot_nbr,
-      NULL,       /* p_diag_item */
+      NULL,       /* No p_diag_item */
       0, 0,       /* module_ident, submodule_ident */
       payload_usi, payload_len, p_payload);
 }
@@ -1863,11 +1933,12 @@ int pf_alarm_send_diagnosis(
 {
    int                     ret = -1;
 
-   LOG_INFO(PF_ALARM_LOG, "Alarm(%d): diagnosis alarm\n", __LINE__);
+   LOG_INFO(PF_ALARM_LOG, "Alarm(%d): Sending diagnosis alarm\n", __LINE__);
    if (p_diag_item != NULL)
    {
-      /* Low prio, require TACK */
-      ret = pf_alarm_send_alarm(net, p_ar, PF_ALARM_TYPE_DIAGNOSIS, false, true,
+      ret = pf_alarm_send_alarm(net, p_ar,
+         PF_ALARM_TYPE_DIAGNOSIS,
+         false,       /* Low prio */
          api_id, slot_nbr, subslot_nbr,
          p_diag_item,
          0, 0,       /* module_ident, submodule_ident */
@@ -1903,12 +1974,13 @@ int pf_alarm_send_pull(
       alarm_type = PF_ALARM_TYPE_PULL;
    }
 
-   /* High prio, no TACK */
-   (void)pf_alarm_send_alarm(net, p_ar, alarm_type, false, false,
+   (void)pf_alarm_send_alarm(net, p_ar,
+      alarm_type,
+      false,        /* Low prio */
       api_id, slot_nbr, subslot_nbr,
-      NULL,       /* p_diag_item */
-      0, 0,       /* module_ident, submodule_ident */
-      0, 0, NULL); /* payload_usi, payload_len, p_payload */
+      NULL,         /* No p_diag_item */
+      0, 0,         /* module_ident, submodule_ident */
+      0, 0, NULL);  /* No payload */
 
    return 0;
 }
@@ -1922,14 +1994,15 @@ int pf_alarm_send_plug(
    uint32_t                module_ident,
    uint32_t                submodule_ident)
 {
-   LOG_INFO(PF_ALARM_LOG, "Alarm(%d): plug alarm\n", __LINE__);
+   LOG_INFO(PF_ALARM_LOG, "Alarm(%d): Sending plug alarm\n", __LINE__);
 
-   /* High prio, no TACK */
-   (void)pf_alarm_send_alarm(net, p_ar, PF_ALARM_TYPE_PLUG, false, false,
+   (void)pf_alarm_send_alarm(net, p_ar,
+      PF_ALARM_TYPE_PLUG,
+      false,        /* Low prio */
       api_id, slot_nbr, subslot_nbr,
-      NULL,       /* p_diag_item */
+      NULL,         /* No p_diag_item */
       module_ident, submodule_ident,
-      0, 0, NULL); /* payload_usi, payload_len, p_payload */
+      0, 0, NULL);  /* No payload */
 
    return 0;
 }
@@ -1943,15 +2016,15 @@ int pf_alarm_send_plug_wrong(
    uint32_t                module_ident,
    uint32_t                submodule_ident)
 {
-   LOG_INFO(PF_ALARM_LOG, "Alarm(%d): plug wrong alarm\n", __LINE__);
+   LOG_INFO(PF_ALARM_LOG, "Alarm(%d): Sending plug wrong alarm\n", __LINE__);
 
-   /* High prio, no TACK */
-   (void)pf_alarm_send_alarm(net, p_ar, PF_ALARM_TYPE_PLUG_WRONG_MODULE, false, false,
+   (void)pf_alarm_send_alarm(net, p_ar,
+      PF_ALARM_TYPE_PLUG_WRONG_MODULE,
+      false,        /* Low prio */
       api_id, slot_nbr, subslot_nbr,
-      NULL,       /* p_diag_item */
+      NULL,         /* No p_diag_item */
       module_ident, submodule_ident,
-      0, 0, NULL); /* payload_usi, payload_len, p_payload */
-
+      0, 0, NULL);  /* No payload */
 
    return 0;
 }

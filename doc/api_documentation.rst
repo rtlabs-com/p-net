@@ -108,8 +108,6 @@ Along with the configuration the initial (default) values of the
 I&M data records are conveyed as well as the values used for
 sending LLDP frames.
 
-Configuration values are taken as is. No validation is performed.
-
 .. doxygenstruct:: pnet_im_0_t
 .. doxygenstruct:: pnet_im_1_t
 .. doxygenstruct:: pnet_im_2_t
@@ -119,3 +117,4 @@ Configuration values are taken as is. No validation is performed.
 .. doxygenstruct:: pnet_lldp_cfg_t
 .. doxygenstruct:: pnet_cfg_t
 .. doxygenstruct:: pnet_alarm_spec_t
+.. doxygenstruct:: pnet_alarm_argument_t

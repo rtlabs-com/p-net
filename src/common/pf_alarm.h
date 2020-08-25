@@ -205,17 +205,24 @@ int pf_alarm_send_diagnosis(
    pf_diag_item_t          *p_diag_item);
 
 /**
- * Send Alarm ACK.
+ * Send Alarm ACK (from the application)
+ *
+ * Always uses high prio.
+ *
+ * ALPMR: ALPMR_Alarm_Ack.req
+ * ALPMR: ALPMR_Alarm_Ack.cnf   (Implements part of that signal via the return value)
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:   The AR instance.
- * @param p_pnio_status    In:   Detailed ACK information.
+ * @param p_ar             In:    The AR instance.
+ * @param p_alarm_argument In:    The alarm argument (with slot, subslot, alarm_type etc)
+ * @param p_pnio_status    In:    Detailed ACK information.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred (or waiting for ACK from controller: re-try later).
  */
 int pf_alarm_alpmr_alarm_ack(
    pnet_t                  *net,
    pf_ar_t                 *p_ar,
+   pnet_alarm_argument_t   *p_alarm_argument,
    pnet_pnio_status_t      *p_pnio_status);
 
 /**

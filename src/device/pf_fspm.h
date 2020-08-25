@@ -187,26 +187,25 @@ int pf_fspm_state_ind(
 /**
  * The remote side sends an alarm.
  * Calls user call-back \a pnet_alarm_ind().
+ *
+ * ALPMR: ALPMR_Alarm_Notification.ind
+ *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:   The AR instance.
- * @param api              In:   The API id.
- * @param slot             In:   The slot number.
- * @param subslot          In:   The subslot number.
- * @param data_len         In:   Data length
- * @param data_usi         In:   USI for the alarm
+ * @param p_ar             In:    The AR instance.
+ * @param p_alarm_argument In:    The alarm argument (with slot, subslot, alarm_type etc)
+ * @param data_len         In:    Data length
+ * @param data_usi         In:    USI for the alarm
  * @param p_data           InOut: Alarm data
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
 int pf_fspm_alpmr_alarm_ind(
-   pnet_t                  *net,
-   pf_ar_t                 *p_ar,
-   uint32_t                api,
-   uint16_t                slot,
-   uint16_t                subslot,
-   uint16_t                data_len,
-   uint16_t                data_usi,
-   uint8_t                 *p_data);
+   pnet_t                        *net,
+   pf_ar_t                       *p_ar,
+   const pnet_alarm_argument_t   *p_alarm_arg,
+   uint16_t                      data_len,
+   uint16_t                      data_usi,
+   uint8_t                       *p_data);
 
 /**
  * The remote side acknowledges the alarm sent by this side by sending an AlarmAck.

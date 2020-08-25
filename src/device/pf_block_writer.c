@@ -1006,11 +1006,11 @@ void pf_put_control(
 }
 
 void pf_put_pnet_status(
-   bool                    is_big_endian,
-   pnet_pnio_status_t      *p_status,
-   uint16_t                res_len,
-   uint8_t                 *p_bytes,
-   uint16_t                *p_pos)
+   bool                       is_big_endian,
+   const pnet_pnio_status_t   *p_status,
+   uint16_t                   res_len,
+   uint8_t                    *p_bytes,
+   uint16_t                   *p_pos)
 {
    uint32_t                pnio_result;
 
@@ -2175,9 +2175,12 @@ void pf_put_alarm_fixed(
    uint8_t                 temp_u8;
 
    /* The fixed part is not a "block" so do not insert a block header */
+
+   /* Destination and source */
    pf_put_uint16(is_big_endian, p_alarm_fixed->dst_ref, res_len, p_bytes, p_pos);
    pf_put_uint16(is_big_endian, p_alarm_fixed->src_ref, res_len, p_bytes, p_pos);
 
+   /* Flags for PDU type, version, window size and transport ACK */
    temp_u32 = 0;
    pf_put_bits(p_alarm_fixed->pdu_type.type, 4, 0, &temp_u32);
    pf_put_bits(p_alarm_fixed->pdu_type.version, 4, 4, &temp_u32);
@@ -2190,21 +2193,23 @@ void pf_put_alarm_fixed(
    temp_u8 = (uint8_t)temp_u32;
    pf_put_byte(temp_u8, res_len, p_bytes, p_pos);
 
+   /* Sequence numbers for sending and ACK */
    pf_put_uint16(is_big_endian, p_alarm_fixed->send_seq_num, res_len, p_bytes, p_pos);
    pf_put_uint16(is_big_endian, p_alarm_fixed->ack_seq_nbr, res_len, p_bytes, p_pos);
 }
 
 void pf_put_alarm_block(
    bool                    is_big_endian,
-   pf_block_type_values_t  bh_type,
-   pf_alarm_data_t         *p_alarm_data,
-   uint32_t                maint_status,
-   uint16_t                payload_usi,   /* pf_usi_values_t */
-   uint16_t                payload_len,
-   uint8_t                 *p_payload,    /* Union of may types - see below */
-   uint16_t                res_len,
-   uint8_t                 *p_bytes,
-   uint16_t                *p_pos)
+   pf_block_type_values_t        bh_type,
+   pf_alarm_data_t               *p_alarm_data,
+   uint32_t                      maint_status,
+   uint16_t                      payload_usi,   /* pf_usi_values_t */
+   uint16_t                      payload_len,
+   uint8_t                       *p_payload,    /* Union of may types - see below */
+   const pnet_pnio_status_t      *p_status,
+   uint16_t                      res_len,
+   uint8_t                       *p_bytes,
+   uint16_t                      *p_pos)
 {
    uint16_t block_pos = *p_pos;
    uint16_t block_len = 0;
@@ -2222,8 +2227,13 @@ void pf_put_alarm_block(
    pf_put_uint32(is_big_endian, p_alarm_data->api_id, res_len, p_bytes, p_pos);
    pf_put_uint16(is_big_endian, p_alarm_data->slot_nbr, res_len, p_bytes, p_pos);
    pf_put_uint16(is_big_endian, p_alarm_data->subslot_nbr, res_len, p_bytes, p_pos);
-   pf_put_uint32(is_big_endian, p_alarm_data->module_ident, res_len, p_bytes, p_pos);
-   pf_put_uint32(is_big_endian, p_alarm_data->submodule_ident, res_len, p_bytes, p_pos);
+
+   /* Insert module and submodule info for AlarmNotification, but not for AlarmAck */
+   if (bh_type == PF_BT_ALARM_NOTIFICATION_LOW || bh_type == PF_BT_ALARM_NOTIFICATION_HIGH)
+   {
+      pf_put_uint32(is_big_endian, p_alarm_data->module_ident, res_len, p_bytes, p_pos);
+      pf_put_uint32(is_big_endian, p_alarm_data->submodule_ident, res_len, p_bytes, p_pos);
+   }
 
    temp_u32 = 0;
    pf_put_bits(p_alarm_data->sequence_number, 11, 0, &temp_u32);
@@ -2234,47 +2244,57 @@ void pf_put_alarm_block(
    temp_u16 = (uint16_t)temp_u32;
    pf_put_uint16(is_big_endian, temp_u16, res_len, p_bytes, p_pos);
 
-   switch (payload_usi)
+   if (bh_type == PF_BT_ALARM_NOTIFICATION_LOW || bh_type == PF_BT_ALARM_NOTIFICATION_HIGH)
    {
-   case 0:
-      /* Nothing */
-      break;
-   case PF_USI_MAINTENANCE:
-      /* This is actually an error */
-      LOG_ERROR(PNET_LOG, "BW(%d): Illegal USI\n", payload_usi);
-      break;
-   case PF_USI_CHANNEL_DIAGNOSIS:
-   case PF_USI_EXTENDED_CHANNEL_DIAGNOSIS:
-   case PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS:
-      if (maint_status != 0)
+      /* AlarmNotification DATA message */
+
+      switch (payload_usi)
       {
-         pf_put_uint16(is_big_endian, PF_USI_MAINTENANCE, res_len, p_bytes, p_pos);
+      case 0:
+         /* Nothing */
+         break;
+      case PF_USI_MAINTENANCE:
+         /* This is actually an error */
+         LOG_ERROR(PNET_LOG, "BW(%d): Illegal USI\n", payload_usi);
+         break;
+      case PF_USI_CHANNEL_DIAGNOSIS:
+      case PF_USI_EXTENDED_CHANNEL_DIAGNOSIS:
+      case PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS:
+         if (maint_status != 0)
+         {
+            pf_put_uint16(is_big_endian, PF_USI_MAINTENANCE, res_len, p_bytes, p_pos);
 
-         block_pos_2 = *p_pos;
-         pf_put_block_header(is_big_endian, PF_BT_MAINTENANCE_ITEM,
-            0,                      /* Dont know block_len yet */
-            PNET_BLOCK_VERSION_HIGH, PNET_BLOCK_VERSION_LOW,
-            res_len, p_bytes, p_pos);
+            block_pos_2 = *p_pos;
+            pf_put_block_header(is_big_endian, PF_BT_MAINTENANCE_ITEM,
+               0,                      /* Dont know block_len yet */
+               PNET_BLOCK_VERSION_HIGH, PNET_BLOCK_VERSION_LOW,
+               res_len, p_bytes, p_pos);
 
-         pf_put_byte(0, res_len, p_bytes, p_pos);
-         pf_put_byte(0, res_len, p_bytes, p_pos);
+            pf_put_byte(0, res_len, p_bytes, p_pos);
+            pf_put_byte(0, res_len, p_bytes, p_pos);
 
-         pf_put_uint32(is_big_endian, maint_status, res_len, p_bytes, p_pos);
+            pf_put_uint32(is_big_endian, maint_status, res_len, p_bytes, p_pos);
 
-         /* Finally insert the block length into the block header */
-         block_len = *p_pos - (block_pos_2 + 4);
-         block_pos_2 += offsetof(pf_block_header_t, block_length);   /* Point to correct place */
-         pf_put_uint16(is_big_endian, block_len, res_len, p_bytes, &block_pos_2);
+            /* Finally insert the block length into the block header */
+            block_len = *p_pos - (block_pos_2 + 4);
+            block_pos_2 += offsetof(pf_block_header_t, block_length);   /* Point to correct place */
+            pf_put_uint16(is_big_endian, block_len, res_len, p_bytes, &block_pos_2);
+         }
+
+         pf_put_diag_item(is_big_endian, (pf_diag_item_t *)p_payload, res_len, p_bytes, p_pos);
+         break;
+      default:
+         /* Manufacturer data */
+         /* Starts with the USI and then followed by raw data bytes */
+         pf_put_uint16(is_big_endian, payload_usi, res_len, p_bytes, p_pos);
+         pf_put_mem(p_payload, payload_len, res_len, p_bytes, p_pos);
+         break;
       }
-
-      pf_put_diag_item(is_big_endian, (pf_diag_item_t *)p_payload, res_len, p_bytes, p_pos);
-      break;
-   default:
-      /* Manufacturer data */
-      /* Starts with the USI and then followed by raw data bytes */
-      pf_put_uint16(is_big_endian, payload_usi, res_len, p_bytes, p_pos);
-      pf_put_mem(p_payload, payload_len, res_len, p_bytes, p_pos);
-      break;
+   }
+   else
+   {
+      /* AlarmAck DATA message */
+      pf_put_pnet_status(true, p_status, PF_FRAME_BUFFER_SIZE, p_bytes, p_pos);
    }
 
    /* Finally insert the block length into the block header */

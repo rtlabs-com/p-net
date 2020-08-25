@@ -175,9 +175,7 @@ int my_alarm_ind(
    pnet_t *net,
    void *arg,
    uint32_t arep,
-   uint32_t api,
-   uint16_t slot,
-   uint16_t subslot,
+   const pnet_alarm_argument_t   *p_alarm_arg,
    uint16_t data_len,
    uint16_t data_usi,
    uint8_t *p_data);

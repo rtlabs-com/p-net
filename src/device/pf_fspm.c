@@ -757,20 +757,18 @@ int pf_fspm_state_ind(
 }
 
 int pf_fspm_alpmr_alarm_ind(
-   pnet_t                  *net,
-   pf_ar_t                 *p_ar,
-   uint32_t                api,
-   uint16_t                slot,
-   uint16_t                subslot,
-   uint16_t                data_len,
-   uint16_t                data_usi,
-   uint8_t                 *p_data)
+   pnet_t                        *net,
+   pf_ar_t                       *p_ar,
+   const pnet_alarm_argument_t   *p_alarm_arg,
+   uint16_t                      data_len,
+   uint16_t                      data_usi,
+   uint8_t                       *p_data)
 {
    int ret = 0;
 
    if (net->fspm_cfg.alarm_ind_cb != NULL)
    {
-      ret = net->fspm_cfg.alarm_ind_cb(net, net->fspm_cfg.cb_arg, p_ar->arep, api, slot, subslot, data_len, data_usi, p_data);
+      ret = net->fspm_cfg.alarm_ind_cb(net, net->fspm_cfg.cb_arg, p_ar->arep, p_alarm_arg, data_len, data_usi, p_data);
    }
 
    return ret;
