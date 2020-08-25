@@ -796,6 +796,8 @@ typedef int (*pnet_alarm_ind)(
  * The controller acknowledges the alarm sent previously.
  * It is now possible to send another alarm.
  *
+ * This functionality is used for alarms triggered by the IO-device.
+ *
  * It is optional to implement this callback.
  *
  * @param net              InOut: The p-net stack instance
@@ -814,13 +816,15 @@ typedef int (*pnet_alarm_cnf)(
 /**
  * The controller acknowledges the alarm ACK sent previously.
  *
+ * This functionality is used for alarms triggered by the IO-controller.
+ *
  * It is optional to implement this callback.
  *
  * @param net              InOut: The p-net stack instance
  * @param arg              InOut: User-defined data (not used by p-net)
  * @param arep             In:   The AREP.
- * @param res              In:   0  if ACK was received by the remote side.
- *                               -1 if ACK was not received by the remote side.
+ * @param res              In:   0  if ACK was received by the remote side. This is cnf(+)
+ *                               -1 if ACK was not received by the remote side. This is cnf(-)
  * @return  0  on success.
  *          -1 if an error occurred.
  */
@@ -1598,6 +1602,8 @@ PNET_EXPORT void pnet_create_log_book_entry(
  * before sending another alarm.
  * This function fails if the application does not wait for the alarm_cnf_cb
  * between sending two alarms.
+ *
+ * This functionality is used for alarms triggered by the IO-device.
  *
  * @param net              InOut: The p-net stack instance
  * @param arep             In:   The AREP.

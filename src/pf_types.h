@@ -619,7 +619,7 @@ typedef struct pf_alarm_data
    uint16_t                subslot_nbr;
    uint32_t                module_ident;
    uint16_t                submodule_ident;
-   pnet_alarm_spec_t       alarm_specifier;
+   pnet_alarm_spec_t       alarm_specifier;    /* Describes diagnosis alarms. */
    uint16_t                sequence_number;
    /*
     * pf_alarm_data_t may be followed by alarm_payload:
@@ -1457,7 +1457,7 @@ typedef struct pf_apmx
    uint16_t                frame_id;
 
    uint32_t                timeout_us;
-   uint32_t                timeout_id;
+   uint32_t                timeout_id;   /* Scheduler handle for Alarm retransmission */
    uint32_t                retry;
 } pf_apmx_t;
 

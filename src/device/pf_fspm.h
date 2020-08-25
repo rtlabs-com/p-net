@@ -210,6 +210,9 @@ int pf_fspm_alpmr_alarm_ind(
 /**
  * The remote side acknowledges the alarm sent by this side by sending an AlarmAck.
  * Calls user call-back \a pnet_alarm_cnf().
+ *
+ * ALPMI: ALPMI_Alarm_Notification.cnf(+/-)
+ *
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param p_pnio_status    In:   Detailed ACK information.
@@ -224,10 +227,13 @@ int pf_fspm_alpmi_alarm_cnf(
 /**
  * Local side has successfully sent the AlarmAck to the remote side.
  * Calls user call-back \a pnet_alarm_ack_cnf().
+ *
+ * ALPMR: ALPMR_Alarm_Ack.cnf(+/-)  (Implements part of the signal)
+ *
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
- * @param res              In:   0  ACk was received by remote side.
- *                               -1 ACk was not received by remote side.
+ * @param res              In:   0  if ACK was received by the remote side. This is cnf(+)
+ *                               -1 if ACK was not received by the remote side. This is cnf(-)
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
