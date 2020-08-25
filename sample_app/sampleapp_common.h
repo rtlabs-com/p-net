@@ -115,16 +115,17 @@ struct cmd_args {
 
 typedef struct app_data_obj
 {
-   os_timer_t                *main_timer;
-   os_event_t                *main_events;
-   uint32_t                  main_arep;
-   bool                      alarm_allowed;
-   struct cmd_args           arguments;
-   uint32_t                  app_param_1;
-   uint32_t                  app_param_2;
-   uint8_t                   inputdata[APP_DATASIZE_INPUT];
-   uint8_t                   custom_input_slots[PNET_MAX_MODULES];
-   uint8_t                   custom_output_slots[PNET_MAX_MODULES];
+   os_timer_t              *main_timer;
+   os_event_t              *main_events;
+   uint32_t                main_arep;
+   bool                    alarm_allowed;
+   pnet_alarm_argument_t   alarm_arg;
+   struct cmd_args         arguments;
+   uint32_t                app_param_1;
+   uint32_t                app_param_2;
+   uint8_t                 inputdata[APP_DATASIZE_INPUT];
+   uint8_t                 custom_input_slots[PNET_MAX_MODULES];
+   uint8_t                 custom_output_slots[PNET_MAX_MODULES];
 } app_data_t;
 
 

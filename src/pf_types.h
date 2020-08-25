@@ -610,6 +610,7 @@ typedef struct pf_alarm_fixed
     */
 } pf_alarm_fixed_t;
 
+/* See also pnet_alarm_argument_t for a subset */
 typedef struct pf_alarm_data
 {
    uint16_t                alarm_type;          /* pf_alarm_type_values_t */
@@ -626,16 +627,6 @@ typedef struct pf_alarm_data
     */
 } pf_alarm_data_t;
 
-
-typedef struct pf_alarm_ack
-{
-   uint16_t                alarm_type;          /* pf_alarm_type_values_t */
-   uint32_t                api_id;
-   uint16_t                slot_nbr;
-   uint16_t                subslot_nbr;
-   pnet_alarm_spec_t       alarm_specifier;
-   pnet_pnio_status_t      pnio_status;
-} pf_alarm_ack_t;
 
 typedef struct pf_alarm_err
 {

@@ -429,6 +429,7 @@ int pnet_alarm_send_process_alarm(
 int pnet_alarm_send_ack(
    pnet_t                  *net,
    uint32_t                arep,
+   pnet_alarm_argument_t   *p_alarm_argument,
    pnet_pnio_status_t      *p_pnio_status)
 {
    int                     ret = -1;
@@ -436,7 +437,7 @@ int pnet_alarm_send_ack(
 
    if (pf_ar_find_by_arep(net, arep, &p_ar) == 0)
    {
-      ret = pf_alarm_alpmr_alarm_ack(net, p_ar, p_pnio_status);
+      ret = pf_alarm_alpmr_alarm_ack(net, p_ar, p_alarm_argument, p_pnio_status);
    }
 
    return ret;

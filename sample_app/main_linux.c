@@ -313,7 +313,7 @@ void pn_main (void * arg)
 
          os_event_clr(p_appdata->main_events, EVENT_ALARM); /* Re-arm */
 
-         ret = pnet_alarm_send_ack(net, p_appdata->main_arep, &pnio_status);
+         ret = pnet_alarm_send_ack(net, p_appdata->main_arep, &p_appdata->alarm_arg, &pnio_status);
          if (ret != 0)
          {
             printf("Error when sending alarm ACK. Error: %d\n", ret);
@@ -413,9 +413,10 @@ void pn_main (void * arg)
                {
                   if (p_appdata->custom_input_slots[slot] == true)
                   {
-                     printf("Sending process alarm from slot %u subslot %u to IO-controller. Payload: 0x%x\n",
+                     printf("Sending process alarm from slot %u subslot %u USI %u to IO-controller. Payload: 0x%x\n",
                         slot,
                         PNET_SUBMOD_CUSTOM_IDENT,
+                        APP_ALARM_USI,
                         alarm_payload[0]);
                      pnet_alarm_send_process_alarm(
                         net,

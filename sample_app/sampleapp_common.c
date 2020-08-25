@@ -629,28 +629,29 @@ static int app_new_data_status_ind(
 }
 
 static int app_alarm_ind(
-   pnet_t                  *net,
-   void                    *arg,
-   uint32_t                arep,
-   uint32_t                api,
-   uint16_t                slot,
-   uint16_t                subslot,
-   uint16_t                data_len,
-   uint16_t                data_usi,
-   uint8_t                 *p_data)
+   pnet_t                        *net,
+   void                          *arg,
+   uint32_t                      arep,
+   const pnet_alarm_argument_t   *p_alarm_arg,
+   uint16_t                      data_len,
+   uint16_t                      data_usi,
+   uint8_t                       *p_data)
 {
    app_data_t              *p_appdata = (app_data_t*)arg;
 
    if (p_appdata->arguments.verbosity > 0)
    {
-      printf("Alarm indicated callback. AREP: %u  API: %d  Slot: %d  Subslot: %d  Length: %d  USI: %d",
+      printf("Alarm indicated callback. AREP: %u API: %d Slot: %d Subslot: %d Type: %d Seq: %d Length: %d USI: %d\n",
          arep,
-         api,
-         slot,
-         subslot,
+         p_alarm_arg->api_id,
+         p_alarm_arg->slot_nbr,
+         p_alarm_arg->subslot_nbr,
+         p_alarm_arg->alarm_type,
+         p_alarm_arg->sequence_number,
          data_len,
          data_usi);
    }
+   p_appdata->alarm_arg = *p_alarm_arg;
    os_event_set(p_appdata->main_events, EVENT_ALARM);
 
    return 0;

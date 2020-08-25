@@ -410,11 +410,11 @@ void pf_put_ident_data(
  * @param p_pos            InOut:Position in destination buffer.
  */
 void pf_put_pnet_status(
-   bool                    is_big_endian,
-   pnet_pnio_status_t      *p_status,
-   uint16_t                res_len,
-   uint8_t                 *p_bytes,
-   uint16_t                *p_pos);
+   bool                       is_big_endian,
+   const pnet_pnio_status_t   *p_status,
+   uint16_t                   res_len,
+   uint8_t                    *p_bytes,
+   uint16_t                   *p_pos);
 
 /**
  * Insert a DCE RPC header into a buffer.
@@ -479,36 +479,35 @@ void pf_put_alarm_fixed(
    uint8_t                 *p_bytes,
    uint16_t                *p_pos);
 
-
 /**
  * Insert an AlarmNotification block into a buffer.
  *
  * This function inserts a complete AlarmNotification-PDU.
- * If maintenance_usi is not zero it is inserted, along with the maintenance_status.
- * If extra_len is not zero then the memory is inserted from p_extra.
  *
- * @param is_big_endian    In:   Endianness of the destination buffer.
- * @param bh_type          In:   The block type.
- * @param p_alarm_data     In:   The alarm notification.
- * @param maint_status     In:   The Maintenance status (inserted only if not zero).
- * @param payload_usi      In:   Valid id != 0.
- * @param payload_len      In:   Length of payload. Mandatory if payload_usi != 0.
- * @param p_payload        In:   Mandatory if payload_len > 0.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
- * @param p_pos            InOut:Position in destination buffer.
+ * @param is_big_endian    In:    Endianness of the destination buffer.
+ * @param bh_type          In:    The block type.
+ * @param p_alarm_data     In:    Slot, subslot etc. Mandatory.
+ * @param maint_status     In:    The Maintenance status used for specific USI values (inserted only if not zero).
+ * @param payload_usi      In:    The payload USI (may be 0). Only used for block type = alarm notify.
+ * @param payload_len      In:    Payload length. Must be > 0 if payload_usi > 0.
+ * @param p_payload        In:    Mandatory if payload_len > 0. May be NULL. Custom data or pf_diag_item_t.
+ * @param p_status         In:    PNIO status. Only used for block type = alarm ack.
+ * @param res_len          In:    Size of destination buffer.
+ * @param p_bytes          Out:   Destination buffer.
+ * @param p_pos            InOut: Position in destination buffer.
  */
 void pf_put_alarm_block(
-   bool                    is_big_endian,
-   pf_block_type_values_t  bh_type,
-   pf_alarm_data_t         *p_alarm_data,
-   uint32_t                maint_status,
-   uint16_t                payload_usi,
-   uint16_t                payload_len,
-   uint8_t                 *p_payload,
-   uint16_t                res_len,
-   uint8_t                 *p_bytes,
-   uint16_t                *p_pos);
+   bool                       is_big_endian,
+   pf_block_type_values_t     bh_type,
+   pf_alarm_data_t            *p_alarm_data,
+   uint32_t                   maint_status,
+   uint16_t                   payload_usi,
+   uint16_t                   payload_len,
+   uint8_t                    *p_payload,
+   const pnet_pnio_status_t   *p_status,
+   uint16_t                   res_len,
+   uint8_t                    *p_bytes,
+   uint16_t                   *p_pos);
 
 /**
  * Insert a SubstituteValue block block into a buffer.

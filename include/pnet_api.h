@@ -401,6 +401,30 @@ typedef struct pnet_pnio_status
 } pnet_pnio_status_t;
 
 /**
+ * Alarm and Diagnosis
+ *
+ */
+typedef struct pnet_alarm_spec
+{
+   bool                    channel_diagnosis;
+   bool                    manufacturer_diagnosis;
+   bool                    submodule_diagnosis;
+   bool                    ar_diagnosis;
+} pnet_alarm_spec_t;
+
+typedef struct pnet_alarm_argument
+{
+   uint32_t                api_id;
+   uint16_t                slot_nbr;
+   uint16_t                subslot_nbr;
+   uint16_t                alarm_type;
+   uint16_t                sequence_number;
+   pnet_alarm_spec_t       alarm_specifier;
+
+} pnet_alarm_argument_t;
+
+
+/**
  * Sent to controller on negative result.
  */
 typedef struct pnet_result
@@ -743,32 +767,30 @@ typedef int (*pnet_new_data_status_ind)(
    uint8_t                 data_status);
 
 /**
- * The controller has sent an alarm to the device.
+ * The IO-controller has sent an alarm to the device.
+ *
+ * This functionality is used for alarms triggered by the IO-controller.
  *
  * It is optional to implement this callback.
  *
  * @param net              InOut: The p-net stack instance
  * @param arg              InOut: User-defined data (not used by p-net)
- * @param arep             In:   The AREP.
- * @param api              In:   The AP identifier.
- * @param slot             In:   The slot number.
- * @param subslot          In:   The sub-slot number.
- * @param data_len         In:   Data length
- * @param data_usi         In:   Alarm USI
+ * @param arep             In:    The AREP.
+ * @param p_alarm_argument In:    The alarm argument (with slot, subslot, alarm_type etc)
+ * @param data_len         In:    Data length
+ * @param data_usi         In:    Alarm USI
  * @param p_data           InOut: Alarm data
  * @return  0  on success.
  *          -1 if an error occurred.
  */
 typedef int (*pnet_alarm_ind)(
-   pnet_t                  *net,
-   void                    *arg,
-   uint32_t                arep,
-   uint32_t                api,
-   uint16_t                slot,
-   uint16_t                subslot,
-   uint16_t                data_len,
-   uint16_t                data_usi,
-   uint8_t                 *p_data);
+   pnet_t                        *net,
+   void                          *arg,
+   uint32_t                      arep,
+   const pnet_alarm_argument_t   *p_alarm_argument,
+   uint16_t                      data_len,
+   uint16_t                      data_usi,
+   uint8_t                       *p_data);
 
 /**
  * The controller acknowledges the alarm sent previously.
@@ -1175,7 +1197,7 @@ typedef struct pnet_cfg
                                                        Typically 32, which corresponds to 1 ms. Max 0x1000 (128 ms) */
    /** LLDP */
    pnet_lldp_cfg_t         lldp_cfg;
-   
+
    /** Capabilities */
    bool                    send_hello;             /**< Send DCP HELLO message on startup if true. */
 
@@ -1191,17 +1213,6 @@ typedef struct pnet_cfg
 
 } pnet_cfg_t;
 
-/**
- * # Alarm and Diagnosis
- *
- */
-typedef struct pnet_alarm_spec
-{
-   bool                    channel_diagnosis;
-   bool                    manufacturer_diagnosis;
-   bool                    submodule_diagnosis;
-   bool                    ar_diagnosis;
-} pnet_alarm_spec_t;
 
 /*
 * API function return values
@@ -1612,21 +1623,25 @@ PNET_EXPORT int pnet_alarm_send_process_alarm(
 /**
  * Application acknowledges the reception of an alarm from the controller.
  *
- * This function sends an ACk to the controller.
+ * This function sends an ACK to the controller.
  * This function must be called by the application after receiving an alarm
  * in the pnet_alarm_ind call-back. Failure to do so within the timeout
  * specified in the connect of the controller will make the controller
  * re-send the alarm.
  *
- * @param net              InOut: The p-net stack instance
- * @param arep             In:   The AREP.
- * @param p_pnio_status    In:   Detailed ACK status.
+ * This functionality is used for alarms triggered by the IO-controller.
+ *
+ * @param net                    InOut: The p-net stack instance
+ * @param arep                   In:    The AREP.
+ * @param p_alarm_argument       In:    The alarm argument (with slot, subslot, alarm_type etc)
+ * @param p_pnio_status          In:    Detailed ACK status.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
 PNET_EXPORT int pnet_alarm_send_ack(
    pnet_t                  *net,
    uint32_t                arep,
+   pnet_alarm_argument_t   *p_alarm_argument,
    pnet_pnio_status_t      *p_pnio_status);
 
 /* ****************************** Diagnosis ****************************** */
