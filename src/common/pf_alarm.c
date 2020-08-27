@@ -345,7 +345,7 @@ static int pf_alarm_alpmi_apmr_a_data_ind(
    case PF_ALPMI_STATE_W_ACK:
       /* This function is only called for DATA = ACK */
       p_apmx->p_alpmx->alpmi_state = PF_ALPMI_STATE_W_ALARM;
-      (void)pf_fspm_aplmi_alarm_cnf(net, p_apmx->p_ar, p_pnio_status);
+      (void)pf_fspm_alpmi_alarm_cnf(net, p_apmx->p_ar, p_pnio_status);
       ret = 0;
       break;
    }
@@ -396,7 +396,7 @@ static void pf_alarm_alpmr_apms_a_data_cnf(
       else
       {
          /* ALPMR_Alarm_Ack.cnf(+) */
-         (void)pf_fspm_aplmr_alarm_ack_cnf(net, p_apmx->p_ar, res);
+         (void)pf_fspm_alpmr_alarm_ack_cnf(net, p_apmx->p_ar, res);
          p_apmx->p_alpmx->alpmr_state = PF_ALPMR_STATE_W_NOTIFY;
       }
       break;
@@ -435,7 +435,7 @@ static int pf_alarm_alpmr_apmr_a_data_ind(
       break;
    case PF_ALPMR_STATE_W_NOTIFY:
       /* Only DATA: AlarmNotifications are sent to this function */
-      ret = pf_fspm_aplmr_alarm_ind(net, p_apmx->p_ar,
+      ret = pf_fspm_alpmr_alarm_ind(net, p_apmx->p_ar,
          p_alarm_data->api_id, p_alarm_data->slot_nbr, p_alarm_data->subslot_nbr,
          data_len, data_usi, p_data);
 
