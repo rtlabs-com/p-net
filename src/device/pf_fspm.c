@@ -519,7 +519,7 @@ int pf_fspm_state_ind(
    return ret;
 }
 
-int pf_fspm_aplmr_alarm_ind(
+int pf_fspm_alpmr_alarm_ind(
    pnet_t                  *net,
    pf_ar_t                 *p_ar,
    uint32_t                api,
@@ -539,7 +539,7 @@ int pf_fspm_aplmr_alarm_ind(
    return ret;
 }
 
-int pf_fspm_aplmi_alarm_cnf(
+int pf_fspm_alpmi_alarm_cnf(
    pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pnet_pnio_status_t      *p_pnio_status)
@@ -554,7 +554,7 @@ int pf_fspm_aplmi_alarm_cnf(
    return ret;
 }
 
-int pf_fspm_aplmr_alarm_ack_cnf(
+int pf_fspm_alpmr_alarm_ack_cnf(
    pnet_t                  *net,
    pf_ar_t                 *p_ar,
    int                     res)
