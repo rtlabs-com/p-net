@@ -135,7 +135,7 @@ static void pf_cpm_control_interval_expired(
          if (p_iocr->cpm.dht >= p_iocr->cpm.data_hold_factor)
          {
             /* dht expired */
-            p_iocr->p_ar->err_code = PNET_ERROR_CODE_2_ABORT_AR_CMI_TIMEOUT;
+            p_iocr->p_ar->err_code = PNET_ERROR_CODE_2_ABORT_AR_CONSUMER_DHT_EXPIRED;
 
             p_iocr->cpm.dht = 0;
             p_iocr->cpm.ci_running = false;    /* Stop timer */
