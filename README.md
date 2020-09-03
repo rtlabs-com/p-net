@@ -46,7 +46,6 @@ Features:
 
 Limitations or not yet implemented:
 
-* IPv4 only
 * Only a single Ethernet interface (no media redundancy)
 * No startup mode legacy
 * No support for RT_CLASS_UDP
@@ -83,6 +82,19 @@ which has an ARM Cortex-M4 running at 144 MHz, with 2 MB Flash and 352 kB RAM.
 It runs rt-kernel, and we have tested it with 9 Profinet slots each
 having 8 digital inputs and 8 digital outputs (one bit each). The values are
 sent and received each millisecond (PLC watchdog setting 3 ms).
+
+
+Dependencies
+------------
+The p-net stack contains no third party components. Its external dependencies are:
+
+* C-library
+* An operating system (if used)
+
+Tools used for building and documentation (not shipped in the resulting binaries):
+
+* cmake (BSD 3-clause License)
+* Sphinx (BSD license)
 
 
 Contributions

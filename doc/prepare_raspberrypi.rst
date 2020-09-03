@@ -170,16 +170,18 @@ Similarly for the red (power) LED, which is called ``led1``.
 Adjust IP address
 -----------------
 The DHCP client daemon will adjust the network interface settings automatically.
-This interferes with the p-net control of the Ethernet interface, why you need to
+This interferes with the p-net control of the Ethernet interface. So if you
+run your Raspberry Pi as a Profinet IO-Device, you need to
 add this line to ``/etc/dhcpcd.conf`` in the root file system.
 
     denyinterfaces eth*
 
-If you would like to have a static IP address (will not work with Profinet),
-instead modify the file ``/etc/dhcpcd.conf`` to include these lines::
+If running your Raspberry Pi as a PLC (Profinet IO-Controller). you would like
+to have a static IP address (it will not work if running as a Profinet IO-Device).
+Instead modify the file ``/etc/dhcpcd.conf`` to include these lines::
 
    interface eth0
-   static ip_address=192.168.137.4/24
+   static ip_address=192.168.0.100/24
 
 You can still ping the <hostname>.local address to find it on the network.
 To re-enable DHCP, remove the lines again from ``/etc/dhcpcd.conf``.

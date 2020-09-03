@@ -26,6 +26,8 @@ extern "C"
  *
  * Sets the IP address if necessary.
  *
+ * Schedules sending HELLO frames.
+ *
  * @param net              InOut: The p-net stack instance
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.

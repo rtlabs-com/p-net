@@ -1317,7 +1317,7 @@ typedef struct pf_cpm
    uint16_t                buffer_length;
    uint16_t                buffer_pos;          /* Start of PROFINET data in frame */
 
-   uint16_t                dht;
+   uint16_t                dht;                 /* Set to zero at incoming cyclic frame, increased by pf_cpm_control_interval_expired() */
    bool                    new_data;
    uint32_t                rxa[PNET_MAX_PORT][2];  /* Max 2 frame_ids */
    int32_t                 cycle;               /* value -1 means "never" */

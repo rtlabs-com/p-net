@@ -174,8 +174,8 @@ int pf_fspm_cm_dcontrol_ind(
  * within the profinet stack.
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:   The AR instance.
- * @param event            In:   The CMDEV event.
+ * @param p_ar             In:    The AR instance.
+ * @param event            In:    The new CMDEV state. Use PNET_EVENT_..., not PF_CMDEV_STATE_...
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */

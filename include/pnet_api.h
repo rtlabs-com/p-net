@@ -858,7 +858,7 @@ typedef int (*pnet_reset_ind)(
  *
  * Use this callback to implement control of the LED.
  *
- * It is optional to implement this callback (but a complianct Profinet device
+ * It is optional to implement this callback (but a compliant Profinet device
  * must have a signal LED)
  *
  * @param net                       InOut: The p-net stack instance

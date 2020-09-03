@@ -514,7 +514,7 @@ static int pf_ar_allocate(
    if (ix < PNET_MAX_AR)
    {
       net->cmrpc_ar[ix].arep = ix + 1;      /* Avoid AREP == 0 */
-      LOG_INFO(PF_RPC_LOG, "CMRPC(%d): Allocate AR %u\n", __LINE__, ix);
+      LOG_DEBUG(PF_RPC_LOG, "CMRPC(%d): Allocate AR %u\n", __LINE__, ix);
    }
 
    return ret;
@@ -532,7 +532,7 @@ static void pf_ar_release(
    {
       if (p_ar->in_use == true)
       {
-         LOG_INFO(PF_RPC_LOG, "CMRPC(%d): Free AR %u\n", __LINE__, p_ar->arep - 1);
+         LOG_DEBUG(PF_RPC_LOG, "CMRPC(%d): Free AR %u\n", __LINE__, p_ar->arep - 1);
          memset(p_ar, 0, sizeof(*p_ar));
       }
       else
@@ -3131,6 +3131,9 @@ int pf_cmrpc_cmdev_state_ind(
 {
    int                     res = -1;
    pf_session_info_t       *p_sess = NULL;
+
+   LOG_DEBUG(PF_RPC_LOG, "CMRPC(%d): Received event %s from CMDEV.\n", __LINE__,
+      pf_cmdev_event_to_string(event));
 
    switch (event)
    {

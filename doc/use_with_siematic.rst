@@ -249,3 +249,9 @@ If you are connected to the PLC ("online"), then it is possible to see if
 there are communication problems to the IO-device. In the project tree > PLC_1
 > Distributed I/O > Profinet IO-System > rt-labs-dev. In case of communication
 errors, the hover text on the small icon is showing "Not reachable".
+
+
+Trouble shooting
+----------------
+Note that the PLC might complain if there is a non-Profinet switch between the
+IO-device and the IO-controller. This is probably due to wrong port names in LLDP messages.

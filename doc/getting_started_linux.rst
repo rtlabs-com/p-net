@@ -61,7 +61,7 @@ Run the Linux demo application
 ------------------------------
 If you need to set a static IP-address (adapt IP address and network adapter name)::
 
-   sudo ifconfig eth0 192.168.137.4 netmask 255.255.255.0 up
+   sudo ifconfig eth0 192.168.0.50 netmask 255.255.255.0 up
 
 Usage of the demo IO-device application:
 
@@ -101,7 +101,7 @@ Run the sample application::
 
     cd build
     make pn_dev
-    sudo ifconfig eth0 192.168.137.4 netmask 255.255.255.0 up
+    sudo ifconfig eth0 192.168.0.50 netmask 255.255.255.0 up
     sudo ./pn_dev -v
 
 On Raspberry Pi::
@@ -158,3 +158,19 @@ To change the ephemeral port range::
     echo "49152 60999" > /proc/sys/net/ipv4/ip_local_port_range
 
 This should typically be done at system start up.
+
+
+Debug intermittent segmentation faults during tests on Linux
+------------------------------------------------------------
+
+Enable core dumps::
+
+    ulimit -c unlimited
+
+Run a testcase until the problem occurs (in the build directory)::
+
+    while ./pf_test --gtest_filter=DiagTest.DiagRunTest; do :; done
+
+Study the resulting core::
+
+    gdb pf_test core

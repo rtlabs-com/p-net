@@ -503,14 +503,8 @@ int pf_fspm_state_ind(
 
    CC_ASSERT(p_ar != NULL);
 
-   switch (event)
-   {
-   case    PNET_EVENT_ABORT:     LOG_INFO(PNET_LOG, "CMDEV event ABORT\n"); break;
-   case    PNET_EVENT_STARTUP:   LOG_INFO(PNET_LOG, "CMDEV event STARTUP\n"); break;
-   case    PNET_EVENT_PRMEND:    LOG_INFO(PNET_LOG, "CMDEV event PRMEND\n"); break;
-   case    PNET_EVENT_APPLRDY:   LOG_INFO(PNET_LOG, "CMDEV event APPLRDY\n"); break;
-   case    PNET_EVENT_DATA:      LOG_INFO(PNET_LOG, "CMDEV event DATA\n"); break;
-   }
+   LOG_DEBUG(PNET_LOG, "FSPM(%d): Triggering user state-change callback with %s\n",  __LINE__, pf_cmdev_event_to_string(event));
+
    if (net->fspm_cfg.state_cb != NULL)
    {
       ret = net->fspm_cfg.state_cb(net, net->fspm_cfg.cb_arg, p_ar->arep, event);

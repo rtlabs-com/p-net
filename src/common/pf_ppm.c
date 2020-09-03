@@ -48,6 +48,28 @@ void pf_ppm_init(
    net->ppm_instance_cnt = ATOMIC_VAR_INIT(0);
 }
 
+
+/**
+ * @internal
+ * Return a string representation of the PPM state.
+ * @param state            In:   The PPM state.
+ * @return  A string representing the PPM state.
+ */
+static const char *pf_ppm_state_to_string(
+   pf_ppm_state_values_t   state)
+{
+   const char *s = "<unknown>";
+
+   switch (state)
+   {
+   case PF_PPM_STATE_W_START: s = "PF_PPM_STATE_W_START"; break;
+   case PF_PPM_STATE_RUN:     s = "PF_PPM_STATE_RUN"; break;
+   }
+
+   return s;
+}
+
+
 /********************* Error handling ****************************************/
 
 /**
@@ -88,7 +110,7 @@ static void pf_ppm_set_state(
    pf_ppm_t                *p_ppm,
    pf_ppm_state_values_t   state)
 {
-   LOG_DEBUG(PF_PPM_LOG, "PPM(%d): New state %d\n", __LINE__, state);
+   LOG_DEBUG(PF_PPM_LOG, "PPM(%d): New state %s\n", __LINE__, pf_ppm_state_to_string(state));
    p_ppm->state = state;
 }
 
@@ -332,7 +354,7 @@ int pf_ppm_close_req(
    pf_ppm_t                *p_ppm;
    uint32_t                cnt;
 
-   LOG_DEBUG(PF_PPM_LOG, "PPM(%d): close\n", __LINE__);
+   LOG_DEBUG(PF_PPM_LOG, "PPM(%d): Closing\n", __LINE__);
    p_ppm = &p_ar->iocrs[crep].ppm;
    p_ppm->ci_running = false;
    if (p_ppm->ci_timer != UINT32_MAX)
@@ -827,25 +849,6 @@ uint16_t pf_ppm_calculate_cyclecounter(
 
 /**************** Diagnostic strings *****************************************/
 
-/**
- * @internal
- * Return a string representation of the PPM state.
- * @param state            In:   The PPM state.
- * @return  A string representing the PPM state.
- */
-static const char *pf_ppm_state_to_string(
-   pf_ppm_state_values_t   state)
-{
-   const char *s = "<unknown>";
-
-   switch (state)
-   {
-   case PF_PPM_STATE_W_START: s = "PF_PPM_STATE_W_START"; break;
-   case PF_PPM_STATE_RUN:     s = "PF_PPM_STATE_RUN"; break;
-   }
-
-   return s;
-}
 
 void pf_ppm_show(
    pf_ppm_t                *p_ppm)

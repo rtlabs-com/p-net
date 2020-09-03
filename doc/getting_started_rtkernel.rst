@@ -4,6 +4,7 @@ Getting started using rt-kernel
 Evaluation board details
 ------------------------
 This example uses the Infineon evaluation board "XMC4800 Relax EtherCAT Kit".
+It has a Cortex®-M4 running at 144 MHz, and it has 352 kB RAM and 2 MB flash.
 Details are found on
 https://www.infineon.com/cms/en/product/evaluation-boards/kit_xmc48_relax_ecat_v1/
 
@@ -39,9 +40,9 @@ Modify the respective lines to::
 
    #undef CFG_LWIP_ADDRESS_DYNAMIC
 
-   #define CFG_LWIP_IPADDR()       IP4_ADDR (&ipaddr, 192, 168, 137, 4)
+   #define CFG_LWIP_IPADDR()       IP4_ADDR (&ipaddr, 192, 168, 0, 50)
 
-   #define CFG_LWIP_GATEWAY()      IP4_ADDR (&gw, 192, 168, 137, 1)
+   #define CFG_LWIP_GATEWAY()      IP4_ADDR (&gw, 192, 168, 0, 1)
 
 In the file rt-kernel-xmc4/bsp/xmc48relax/src/lwip.c change to::
 
@@ -124,6 +125,9 @@ On the "Startup" tab enter ``monitor reset 0`` in the "Run commands".
 Click Apply and Close. Select ``pn_dev.elf`` and click OK.
 The download progress pop-up window should appear.
 
+The resulting ``.elf`` file contains the sample application, the p-net stack,
+the rt-kernel, lwip and drivers.
+
 If you need to adjust debugger settings later, right-click the Profinet build
 project, and select "Debug as > Debug configurations". Select the "Profinet... "
 node. You might need to double click "Hardware Debugging" if the child node
@@ -143,15 +147,7 @@ for example ``/dev/ttyACM0``. An example of a terminal program is picocom
     sudo picocom -b 115200 /dev/ttyACM0
 
 You can step-debug in the Workbench GUI. Press the small "Resume" icon to have
-the target run continuously. The you should be able to use the on-target shell
-via the serial console. To view a list of available commands, use::
-
-   help
-
-To start the sample application on target, type this command in the on-target
-shell::
-
-   pnio_run
+the target run continuously.
 
 
 Adjust log level
@@ -188,10 +184,66 @@ In case of problems, increase the reduction ratio (and timeout) value a lot,
 and then gradually reduce it to find the smallest usable value.
 
 
+Using the built-in rt-kernel shell
+----------------------------------
+Press Enter key to enter the built-in rt-kernel shell via the serial consol.
+To view a list of available commands, use::
+
+   help
+
+Example commands::
+
+   ls /disk1
+   hexdump /disk1/pnet_data_ip.bin
+   rm /disk1/pnet_data_ip.bin
+
+
 Memory requirements for the tests
 ---------------------------------
 Note that the tests require a stack of at least 6 kB. You may have to increase
 CFG_MAIN_STACK_SIZE in your BSP ``include/config.h`` file.
+
+
+Examining flash and RAM usage
+-----------------------------
+The flash and RAM usage is shown by the tool ``arm-eabi-size``
+(example values only)::
+
+   arm-eabi-size pn_dev.elf
+      text	   data	    bss	    dec	    hex	filename
+   332454	    592	  34040	 367086	  599ee	pn_dev.elf
+
+Values in bytes (including the rt-kernel RTOS).
+
+* text: code in flash
+* data: Memory, statically initialized
+* bss: Memory, zero-initialized. For example the stack.
+* dec = text + data + bss
+* hex = text + data + bss (in hexadecimal)
+
+The flash usage is text+data, as the RAM initialization values are stored in flash.
+
+
+Run tests on XMC4800 target
+---------------------------
+In order to compile the test code, enable BUILD_TESTING and disable TEST_DEBUG
+in cmake. Reduce PNET_MAX_FILENAME_LENGTH to 30 bytes.
+This is done via ccmake, which should be started in the build directory::
+
+    ccmake .
+
+In the file ``include/pnet_api.h`` set PNET_MAX_AR to 1.
+
+Set CFG_MAIN_STACK_SIZE to at least 8192 in ``rt-kernel-xmc4/bsp/xmc48relax/include/config.h``
+
+The resulting file after compiling is named ``pf_test.elf``
+
+Add a new hardware debugging configuration, where the C/C++ application on the
+"Main" tab is set to ``pn_dev.elf``.
+
+The test will run on the target board when starting hardware debugging.
+You might need to press the Play button in the Workbench if you have enabled
+breakpoints.
 
 
 IP-stack lwip
