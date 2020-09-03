@@ -58,26 +58,6 @@ Profinet devices must fulfill "Security Level 1" with regards to the net
 load. This is tested by a separate tool (not the "Automated RT tester").
 
 
-Additional hardware
--------------------
-Some of the test cases requires additional hardware; a Profinet-enabled switch
-("Device B") and an IO-controller ("Device A").
-Connection of the switch ports is described in the table below:
-
-+-------------+-----------------------------------------------+
-| Switch port | Connected to                                  |
-+=============+===============================================+
-| P1          | Personal computer running Automated RT Tester |
-+-------------+-----------------------------------------------+
-| P2          | IO-controller ("Device A")                    |
-+-------------+-----------------------------------------------+
-| P3          | Device under test (DUT) running p-net         |
-+-------------+-----------------------------------------------+
-
-The Automated RT Tester can control a power outlet via Ethernet. It must be
-connected via a separate Ethernet interface on the personal computer.
-
-
 Installation of Automated RT tester on a Windows PC
 ---------------------------------------------------
 Unzip the downloaded file, and double-click the
@@ -93,6 +73,8 @@ More details are given in the "Product Documentation" document for the tool.
 
 You might also need to turn off LLDP protocol for the selected network
 interface. Both Windows and Simatic TIA can have LLDP implemented.
+
+Set the IP address to 192.168.0.25 and netmask to 255.255.255.0.
 
 
 Supported GSD versions
@@ -139,6 +121,86 @@ Project > Run.
 When communication is verified, enable all relevant test cases.
 
 
+Additional hardware
+-------------------
+Some of the test cases requires additional hardware; a Profinet-enabled switch
+("Device B") and an IO-controller ("Device A"). Also a remote controlled
+power outlet can be used to simplify the tests.
+
+
+Profinet-enabled switch
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Some of the test cases for the Automated RT Tester requires an Profinet-enabled
+switch.
+
+The test specification of version V 2.41 recommends the use of a
+Siemens Scalance X204IRT (article number 6GK5204-0BA00-2BA3).
+It should have IP address 192.168.0.99, netmask 255.255.255.0 and station name "b".
+Use for example Codesys to scan for the device, and to adjust the IP settings.
+Alternatively, use SinecPni to change the IP address (see below).
+
+The switch has a web interface, but it is not necessary to do any setting
+adjustments via the web interface.
+Log in to the web interface by directing your web browser to its IP address.
+User name "admin", factory default password "admin".
+
+Connection of the switch ports is described in the table below:
+
++-------------+-----------------------------------------------+
+| Switch port | Connected to                                  |
++=============+===============================================+
+| P1          | Personal computer running Automated RT Tester |
++-------------+-----------------------------------------------+
+| P2          | IO-controller ("Device A")                    |
++-------------+-----------------------------------------------+
+| P3          | Device under test (DUT) running p-net         |
++-------------+-----------------------------------------------+
+
+The Automated RT tester will detect "Device B" by itself. No configuration is
+required in the Automated RT tester menu.
+
+
+Using Siemens SinecPni (Primary Network Initialization)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+This is a tool for configuration of Profinet network equipment.
+Use it to adjust the IP address of the web interface for the Profinet-enabled
+switch (Scalance X204IRT).
+
+Download the program from the Siemens homepage, and unzip the file.
+Start the program by doubleclicking the SinecPni executable.
+
+Click the "Settings" tab, and enable "PROFINET devices" for "Scan Protocol",
+and click "Save".
+On the "Device list" tab, click "Start network scan".
+Select the "Scalance X-200" line, and click "Configure Device".
+Adjust the IP address to 192.168.0.99, netmask 255.255.255.0 and
+"PROFINET device name" to "b". Click "Load" to store the settings.
+
+
+Remote controlled power outlet
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The Automated RT Tester can control an "Anel Net-PwrCtrl" power outlet via Ethernet.
+It must be connected via a separate Ethernet
+interface on the personal computer. Use a static IP address 192.168.1.243 with
+subnet mask to 255.255.255.0 on that interface.
+
+The Power outlet has a default IP address of 192.168.0.244, and it has a
+built-in web server. Enter its IP address in your web browser to log in
+(username and password printed on the hardware).
+(You might need to temporary set your Ethernet interface to IP 192.168.0.1
+and subnet mask to 255.255.255.0)
+Modify the IP settings (on the "Einstellung" page) to use a static IP address
+of 192.168.1.244.
+On the "Steuerung" page you can control the individual power outputs.
+
+Connect power for your device under test to connector number 3 on the power outlet.
+
+Test the functionality from Automated RT Tester by clicking on the symbol to the
+left of the "PowerOutlet" text in the tool bar. The symbol to the right of the
+"PowerOutlet" text shows a green check mark when the outputs are on, and a
+black cross when the outputs are off (or when the power outlet not is connected).
+
+
 Tips and ideas
 --------------
 If you end up with ``Pass with Hint "The device made a EPM Request from a
@@ -178,24 +240,25 @@ These values have large impact on test execution times:
 
 Relevant test cases for Automated RT Tester
 -------------------------------------------
-(Not exhaustive)
 
 +---------------------------------------+-----------------------------------------------------+
 | Test case                             | Notes                                               |
 +=======================================+=====================================================+
-| DCP_1                                 |                                                     |
+| DCP_1                                 | Power cycle 8 times.                                |
 +---------------------------------------+-----------------------------------------------------+
-| DCP_2                                 |                                                     |
+| DCP_2                                 | Power cycle 2 times.                                |
 +---------------------------------------+-----------------------------------------------------+
-| DCP_3                                 |                                                     |
+| DCP_3                                 | Power cycle 2 times.                                |
 +---------------------------------------+-----------------------------------------------------+
-| DCP_4                                 |                                                     |
+| DCP_4                                 | Fast                                                |
 +---------------------------------------+-----------------------------------------------------+
-| DCP_IDN                               |                                                     |
+| DCP_ALIAS                             | Requires additional hardware ("Device B")           |
 +---------------------------------------+-----------------------------------------------------+
-| DCP_NAME_1                            |                                                     |
+| DCP_IDN                               | Fast.                                               |
 +---------------------------------------+-----------------------------------------------------+
-| DCP_NAME_2                            |                                                     |
+| DCP_NAME_1                            | Power cycle 4 times.                                |
++---------------------------------------+-----------------------------------------------------+
+| DCP_NAME_2                            | Power cycle 4 times.                                |
 +---------------------------------------+-----------------------------------------------------+
 | DCP_ResetToFactory                    |                                                     |
 +---------------------------------------+-----------------------------------------------------+
@@ -203,13 +266,13 @@ Relevant test cases for Automated RT Tester
 +---------------------------------------+-----------------------------------------------------+
 | DCP_Router                            |                                                     |
 +---------------------------------------+-----------------------------------------------------+
-| DCP_Access                            |                                                     |
+| DCP_Access                            | Fast.                                               |
 +---------------------------------------+-----------------------------------------------------+
-| DCP_VLAN                              |                                                     |
+| DCP_VLAN                              | Power cycle 2 times                                 |
 +---------------------------------------+-----------------------------------------------------+
-| DCP IP-parameter Remanence            |                                                     |
+| DCP IP-parameter Remanence            | Power cycle 4 times.                                |
 +---------------------------------------+-----------------------------------------------------+
-| Behavior Scenario 1 to 9              |                                                     |
+| Behavior Scenario 1 to 9              | Power cycle                                         |
 +---------------------------------------+-----------------------------------------------------+
 | Behavior Scenario 10                  |                                                     |
 +---------------------------------------+-----------------------------------------------------+
@@ -217,30 +280,46 @@ Relevant test cases for Automated RT Tester
 +---------------------------------------+-----------------------------------------------------+
 | Different Access Ways                 |                                                     |
 +---------------------------------------+-----------------------------------------------------+
+| PDEV_CHECK_ONEPORT                    | Requires additional hardware ("Device B")           |
++---------------------------------------+-----------------------------------------------------+
 | Diagnosis                             |                                                     |
 +---------------------------------------+-----------------------------------------------------+
-| AR-ASE                                |                                                     |
+| Alarm                                 | Requires additional hardware ("Device B")           |
++---------------------------------------+-----------------------------------------------------+
+| AR-ASE                                | Power cycle                                         |
 +---------------------------------------+-----------------------------------------------------+
 | IP_UDP_RPC_I&M_EPM                    |                                                     |
 +---------------------------------------+-----------------------------------------------------+
-| VLAN                                  |                                                     |
+| RTC                                   | Requires additional hardware ("Device B")           |
 +---------------------------------------+-----------------------------------------------------+
-| DCP_Signal (Manual)                   | Flash Signal LED                                    |
+| VLAN                                  | Use "Port To Port" test setup. Turn off             |
+|                                       | IO-controller ("device A")                          |
++---------------------------------------+-----------------------------------------------------+
+| Topology discovery check (TED)        | Requires additional hardware ("Device B")           |
++---------------------------------------+-----------------------------------------------------+
+| DCP_Signal (Manual)                   | Flash Signal LED. Fast.                             |
 +---------------------------------------+-----------------------------------------------------+
 | Behavior of ResetToFactory (manual)   |                                                     |
 +---------------------------------------+-----------------------------------------------------+
-| Manual checking of sending RTC frames |                                                     |
+| Manual checking of sending RTC frames | Fast                                                |
++---------------------------------------+-----------------------------------------------------+
+| DataHoldTimer (Manual)                |                                                     |
++---------------------------------------+-----------------------------------------------------+
+| RPC_IP_UDP_EPM                        | ?                                                   |
 +---------------------------------------+-----------------------------------------------------+
 
-Possibly also these test cases:
-
-* DCP_ALIAS
-* ALARM
-* PDEV_CHECK_ONEPORT
-* RTC
 
 For conformance class B:
 
 * Topology discovery check
 * Non-Profinet neighbour setup
 * Port-to-port
+
+
+Other tests
+-----------
+
+* GSDMLcheck
+* Security Level 1
+* Interoperability
+* Interoperability with controller

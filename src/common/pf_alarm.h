@@ -42,6 +42,9 @@ int pf_alarm_activate(
 
 /**
  * Close an alarm instance for the specified AR.
+ *
+ * Sends a low prio alarm.
+ *
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @return  0  if operation succeeded.

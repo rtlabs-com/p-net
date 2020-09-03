@@ -38,4 +38,3 @@ int pf_cmdmc_cpm_state_ind(
 {
    return 0;
 }
-

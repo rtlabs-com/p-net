@@ -326,10 +326,12 @@ int pf_cmina_init(
 
    /* Collect the DCP ASE database */
    memset(&net->cmina_nonvolatile_dcp_ase, 0, sizeof(net->cmina_nonvolatile_dcp_ase));
-   (void)pf_cmina_set_default_cfg(net, 0);
+   (void)pf_cmina_set_default_cfg(net, 0);  /* Populates net->cmina_current_dcp_ase and net->cmina_nonvolatile_dcp_ase */
 
    if (strlen(net->cmina_current_dcp_ase.name_of_station) == 0)
    {
+      LOG_DEBUG(PF_DCP_LOG,"CMINA(%d): No station name available. Will not send any HELLO messages.\n",  __LINE__);
+
       if (net->cmina_current_dcp_ase.dhcp_enable == true)
       {
          /* Case 4 in Profinet 2.4 Table 1096 */
@@ -362,6 +364,8 @@ int pf_cmina_init(
           (net->cmina_current_dcp_ase.full_ip_suite.ip_suite.ip_mask == 0) &&
           (net->cmina_current_dcp_ase.full_ip_suite.ip_suite.ip_gateway == 0))
       {
+         LOG_DEBUG(PF_DCP_LOG,"CMINA(%d): No IP address available. Will not send any HELLO messages.\n",  __LINE__);
+
          if (net->cmina_current_dcp_ase.dhcp_enable == true)
          {
             /* Case 4 in Profinet 2.4 Table 1096 */
@@ -395,6 +399,10 @@ int pf_cmina_init(
             {
                net->cmina_hello_timeout = UINT32_MAX;
             }
+         }
+         else
+         {
+            LOG_DEBUG(PF_DCP_LOG,"CMINA(%d): Sending of HELLO messages is disabled in configuration.\n",  __LINE__);
          }
 
          net->cmina_state = PF_CMINA_STATE_W_CONNECT;

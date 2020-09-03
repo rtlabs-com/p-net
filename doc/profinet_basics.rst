@@ -15,14 +15,29 @@ a machine readable file describing the capabilities, hardware- and software
 versions etc, and is used by the engineering tool to adjust the PLC settings.
 
 The GSD file describes for example which types of pluggable hardware modules
-that can used in the IO-device. The GSD file is loaded into the engineering tool
-(typically running on a personal computer), and a user can then in the tool
+that can be used in the IO-device. The GSD file is loaded into the
+engineering tool (typically running on a personal computer),
+and a user can then in the tool
 describe which modules that actually should be plugged into the IO-device.
 This is called configuration. Later this information is downloaded to the PLC
-(IO-controller), a process called commissioning. At startup the PLC will
+(IO-controller), in a process called commissioning. At startup the PLC will
 tell the IO-device what type of modules it expects to be plugged in.
 If the correct modules not are plugged into the IO-device, the IO-device will
 send an error message back to the PLC.
+
+
+Startup description
+-------------------
+In the startup of an Profinet IO device (before the IP address has been set) the
+DCP protocol is used. It is like DHCP, but without using a central server.
+
+The PLC sends a DCP broadcast message, and all IO Devices on the subnet answer
+with their MAC addresses. The PLC sends a DCP message to the IO Device with
+a specific MAC address, containing which IP address and station name that the
+IO Device should use. The IO Device sets its IP address accordingly.
+
+Then the PLC starts the actual configuration of the IO device, using the
+DCE/RPC protocol that runs on UDP over IP.
 
 
 Nodes classes and device details
@@ -64,10 +79,12 @@ Depending on the capabilities, different conformance classes are assigned.
 The first digit in the Communication Profile (CP) is the Communication Profile Family (CPF). Profinet and Profibus are CPF 3,
 while for example Ethercat is CPF 12.
 
+Communication profiles CP 3/1 and CP 3/2 are for Profibus. The CP 3/3 was used for the legacy Profinet CBA.
+
 Real Time Class:
 
 * Real Time Class 1 Mandatory for conformance class A, B, C
-* Real Time Class 2 (legacy) Only for legacy startup mode
+* Real Time Class 2 (legacy) Only for legacy startup mode for conformance class C.
 * Real Time Class 3 = IRT (Isochronous Real Time) Mandatory for conformance class C
 * Real Time Class UDP  For cross-network real time communication. Optional for conformance class A, B, C
 * Real Time Class STREAM for conformance class D.
@@ -77,6 +94,7 @@ This software supports Real Time Class 1.
 
 Communication
 -------------
+
 Profinet uses three protocol levels:
 
 +-----------------------------+--------------------+-------------+---------------+----------------------------+
@@ -89,6 +107,8 @@ Profinet uses three protocol levels:
 +-----------------------------+--------------------+-------------+---------------+----------------------------+
 | IRT (Isochronous Real-Time) | 1 ms               |             | 0x8892?       | No                         |
 +-----------------------------+--------------------+-------------+---------------+----------------------------+
+
+Profinet uses IPv4 only (not IPv6).
 
 
 Overview of all protocols used in a Profinet Application
@@ -345,12 +365,19 @@ DCE/RPC payload
 ---------------
 Examples of block identifiers:
 
+* 0x0001 AlarmNotificationHigh
+* 0x0002 AlarmNotificationLow
 * 0x0008 IODWriteReqHeader
 * 0x0009 IODReadReqHeader
 * 0x0020 I&M0
 * 0x0021 I&M1
 * 0x0101 ARBlockReq
+* 0x0102 IOCRBlockReq
+* 0x0103 AlarmCRBlockReq
+* 0x0104 ExpectedSubmoduleBlockReq
 * 0x0110 IODControlReq
+* 0x8001 AlarmAckHigh
+* 0x8002 AlarmAckLow
 * 0x8008 IODWriteResHeader
 * 0x8009 IODReadResHeader
 
@@ -487,6 +514,15 @@ Startup modes
 The startup mode was changed in Profinet 2.3, to "Advanced". The previous
 startup mode is now called "Legacy".
 
+Alarm types
+-----------
+
+* Process alarm: There is something wrong with the process, for example too high temperature.
+* Diagnosis alarm: There is something wrong with the IO device itself.
+* Pull alarm: Module/submodule pulled from slot/subslot.
+* Plug alarm: Module/submodule plugged into slot/subslot.
+* Plug wrong alarm: Wrong module/submodule plugged into slot/subslot.
+
 
 Relevant standards
 ------------------
@@ -509,9 +545,11 @@ Relevant standards
 * IETF RFC 826    ARP
 * IETF RFC 1034   DNS
 * IETF RFC 1157   SNMP
+* IETF RFC 1213   Management Information Base v 2 (MIB-II)
 * IETF RFC 2131   DHCP
 * IETF RFC 2132   DHCP Options
 * IETF RFC 3418   Management Information Base (MIB) for SNMP
+* IETF RFC 3635   Definitions of Managed Objects for the Ethernet-like Interface Types
 * IETF RFC 5890   Internationalized Domain Names for Applications (IDNA)
 * ISO/IEC 7498-1  ?
 * ISO 8859-1      ?

@@ -81,7 +81,7 @@ static void pf_cpm_set_state(
 {
    if (state != p_cpm->state)
    {
-      LOG_INFO(PF_CPM_LOG, "CPM(%d): New state %s\n", __LINE__, pf_cpm_state_to_string(state));
+      LOG_DEBUG(PF_CPM_LOG, "CPM(%d): New state %s\n", __LINE__, pf_cpm_state_to_string(state));
       p_cpm->state = state;
    }
 }
@@ -90,9 +90,9 @@ static void pf_cpm_set_state(
  * @internal
  * Notify other components about CPM events.
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:   The AR instance.
- * @param crep             In:   The IOCR index
- * @param start            In:   Start/Stop indicator
+ * @param p_ar             In:    The AR instance.
+ * @param crep             In:    The IOCR index
+ * @param start            In:    Start/Stop indicator. True if CPM is starting.
  */
 static void pf_cpm_state_ind(
    pnet_t                  *net,
@@ -158,7 +158,7 @@ static void pf_cpm_control_interval_expired(
          {
             p_iocr->cpm.ci_timer = UINT32_MAX;
 
-            LOG_ERROR(PNET_LOG, "CPM(%d): Timeout not started\n", __LINE__);
+            LOG_ERROR(PF_CPM_LOG, "CPM(%d): Timeout not started\n", __LINE__);
             p_iocr->p_ar->err_cls = PNET_ERROR_CODE_1_CPM;
             p_iocr->p_ar->err_code = PNET_ERROR_CODE_2_CPM_INVALID;
             pf_cmsu_cpm_error_ind(net, p_iocr->p_ar, p_iocr->p_ar->err_cls, p_iocr->p_ar->err_code);
@@ -224,7 +224,7 @@ int pf_cpm_close_req(
    pf_cpm_t                *p_cpm = &p_ar->iocrs[crep].cpm;
    uint32_t                cnt;
 
-   LOG_INFO(PF_CPM_LOG, "CPM: close\n");
+   LOG_DEBUG(PF_CPM_LOG, "CPM(%d): Closing\n", __LINE__);
    p_cpm->ci_running = false;    /* StopTimer */
    if (p_cpm->ci_timer != UINT32_MAX)
    {
@@ -466,7 +466,7 @@ static int pf_cpm_c_data_ind(
       {
          /* 19 */
          /* Ignore */
-         LOG_DEBUG(PF_PPM_LOG, "CPM(%d): data_valid == false\n", __LINE__);
+         LOG_DEBUG(PF_CPM_LOG, "CPM(%d): data_valid == false\n", __LINE__);
       }
       else if (dht_reload)
       {
@@ -506,7 +506,7 @@ static int pf_cpm_c_data_ind(
       else
       {
          /* Ignore */
-         LOG_DEBUG(PF_PPM_LOG, "CPM(%d): data_valid != false && dht_reload == 0\n", __LINE__);
+         LOG_DEBUG(PF_CPM_LOG, "CPM(%d): data_valid != false && dht_reload == 0\n", __LINE__);
       }
 
       ret = 1;    /* Means "handled" */
@@ -596,7 +596,7 @@ int pf_cpm_activate_req(
       {
          p_cpm->ci_timer = UINT32_MAX;
 
-         LOG_ERROR(PNET_LOG, "CPM(%d): Timeout not started\n", __LINE__);
+         LOG_ERROR(PF_CPM_LOG, "CPM(%d): Timeout not started\n", __LINE__);
          p_ar->err_cls = PNET_ERROR_CODE_1_CPM;
          p_ar->err_code = PNET_ERROR_CODE_2_CPM_INVALID;
          pf_cmsu_cpm_error_ind(net, p_ar, p_ar->err_cls, p_ar->err_code);
@@ -655,7 +655,7 @@ static int pf_cpm_get_ar_iocr_desc(
 
    if (p_ar == NULL)
    {
-      LOG_DEBUG(PF_PPM_LOG, "CPM(%d): No AR set in sub-slot\n", __LINE__);
+      LOG_DEBUG(PF_CPM_LOG, "CPM(%d): No AR set in sub-slot\n", __LINE__);
    }
    else
    {

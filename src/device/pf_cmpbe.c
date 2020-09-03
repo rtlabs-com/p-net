@@ -81,7 +81,7 @@ static void pf_cmpbe_set_state(
    pf_ar_t                    *p_ar,
    pf_cmpbe_state_values_t    state)
 {
-   LOG_INFO(PNET_LOG, "CMPBE(%d): New state %s\n", __LINE__, pf_cmpbe_state_to_string(state));
+   LOG_DEBUG(PNET_LOG, "CMPBE(%d): New state %s\n", __LINE__, pf_cmpbe_state_to_string(state));
    p_ar->cmpbe_state = state;
 }
 
@@ -89,7 +89,7 @@ int pf_cmpbe_cmdev_state_ind(
    pf_ar_t                 *p_ar,
    pnet_event_values_t     event)
 {
-   LOG_DEBUG(PNET_LOG, "CMPBE(%d): cmdev event ind %s. Our state %s\n", __LINE__,
+   LOG_DEBUG(PNET_LOG, "CMPBE(%d): Received event %s from CMDEV. Our state %s.\n", __LINE__,
       pf_cmdev_event_to_string(event), pf_cmpbe_state_to_string(p_ar->cmpbe_state));
    switch (p_ar->cmpbe_state)
    {

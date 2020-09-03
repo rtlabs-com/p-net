@@ -102,9 +102,9 @@ This is the typical output from the Linux sample application at startup::
     Station name:       rt-labs-dev
     Button1 file:       /sys/class/gpio/gpio22/value
     Button2 file:       /sys/class/gpio/gpio27/value
-    IP address:         192.168.137.4
+    IP address:         192.168.0.50
     Netmask:            255.255.255.0
-    Gateway:            192.168.137.1
+    Gateway:            192.168.0.1
 
     Waiting for connect request from IO-controller
     Module plug call-back

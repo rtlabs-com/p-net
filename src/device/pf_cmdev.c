@@ -1130,7 +1130,7 @@ int pf_cmdev_cmio_info_ind(
 {
    if (data_possible != p_ar->ready_4_data)
    {
-      LOG_INFO(PNET_LOG, "CMDEV(%d): data_possible = %s\n", __LINE__, data_possible?"true":"false");
+      LOG_DEBUG(PNET_LOG, "CMDEV(%d): Incoming DataPossible indication from CMIO. value = %s\n", __LINE__, data_possible?"true":"false");
    }
    switch (p_ar->cmdev_state)
    {

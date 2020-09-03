@@ -1554,6 +1554,7 @@ int pf_alarm_close(
 {
    int                     ret = 0;
 
+   LOG_DEBUG(PF_ALARM_LOG, "Alarm(%d): Closing alarm instance.\n", __LINE__);
    if (pf_alarm_alpmx_close(p_ar) != 0)
    {
       ret = -1;

@@ -51,6 +51,7 @@ int pf_cpm_create(
  * Close a CPM instance.
  *
  * This function terminates the specified CPM instance.
+ * De-registers a frame handler for incoming Ethernet frames.
  * The buffer mutex is destroyed on the last call.
  *
  * @param net              InOut: The p-net stack instance
@@ -66,6 +67,9 @@ int pf_cpm_close_req(
 
 /**
  * Activate a CPM instance and of the specified CR instance.
+ *
+ * Registers a frame handler for incoming Ethernet frames.
+ *
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param crep             In:   The IOCR index.

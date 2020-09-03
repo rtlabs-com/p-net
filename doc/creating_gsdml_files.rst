@@ -52,7 +52,7 @@ File name
 ---------
 The current GSD version (as of writing) is 2.35.
 
-The file name is specified in section 5.1 of the GSD specification. For example
+The file name format is specified in section 5.1 of the GSD specification. For example
 ``GSDML-V2.35-Vendor-Device-20171231.xml``. You can give it an optional timestamp
 in the filename: ``-20171231-235900.xml``.
 
@@ -138,6 +138,8 @@ DeviceAccessPointList element hierarchy::
            |  +--InfoText
            |  +--VendorName
            |  +--OrderNumber
+           |  +--HardwareRelease
+           |  +--SoftwareRelease
            |
            +--CertificationInfo
            +--SubslotList
@@ -191,14 +193,14 @@ The ``<DeviceAccessPointItem>`` element has the attributes:
 
 * ``ID="IDD_1"``
 * ``PNIO_Version="V2.35"`` Which version of Profinet specification it is certified against
-* ``PhysicalSlots="0..4"`` Slot 0 is always used by the DAP (bus interface) module.
+* ``PhysicalSlots="0..4"`` Slot 0 is always used by the DAP (bus interface) module. Relates to the PNET_MAX_MODULES value in the p-net stack.
 * ``ModuleIdentNumber="0x00000001"`` Unsigned32hex.
 * ``MinDeviceInterval="32"`` Minimum cyclic data update interval, in number of 31.25 us ticks. A value 32 corresponds to cyclic data sending and receiving every millisecond. Unsigned16.
 * ``DNS_CompatibleName="pno-example-dap"`` (Default station name)
 * ``FixedInSlots="0"`` The DAP module is always in slot 0
 * ``ObjectUUID_LocalIndex="0"``
 * ``DeviceAccessSupported="true"``
-* ``NumberOfDeviceAccessAR="1"`` Number of concurrent connections
+* ``NumberOfDeviceAccessAR="1"`` Number of concurrent connections. Relates to the PNET_MAX_AR value in the p-net stack.
 * ``MultipleWriteSupported="true"``
 * ``RequiredSchemaVersion="V2.3"`` This file has features requiring this schema version. It must be at least 2.3 if legacy startup mode not is supported.
 * ``CheckDeviceID_Allowed="true"``
@@ -267,7 +269,7 @@ has these attributes:
 * ``SubslotNumber="32768"`` This is first interface (0x8000). Unsigned16.
 * ``TextId="IDT_NAME_IS"``
 * ``SupportedRT_Classes="RT_CLASS_1"``
-* ``SupportedProtocols="SNMP;LLDP"``
+* ``SupportedProtocols="SNMP;LLDP"`` Conformance class B must support SNMP.
 * ``PTP_BoundarySupported="true"``
 * ``DCP_BoundarySupported="true"``
 * ``DCP_HelloSupported="true"`` Often used for fast startup.
@@ -361,6 +363,9 @@ Virtual submodules are submodules that are built-in into a module (no physical
 submodule can be removed). If only virtual submodules are available, the
 ``PhysicalSubslots`` attribute is not given in ``<ModuleItem>``.
 For details on ``<VirtualSubmoduleItem>``, see ``<SubmoduleItem>`` below.
+
+The configuration value PNET_MAX_SUBMODULES defines the maximum number of
+submodules (for each module) that the p-net stack can handle.
 
 
 Details on the submodule list

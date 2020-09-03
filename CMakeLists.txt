@@ -64,7 +64,7 @@ set(PNET_MAX_PORT               1
 set(PNET_MAX_LOG_BOOK_ENTRIES   16
   CACHE STRING "")
 set(PNET_MAX_ALARMS             3
-  CACHE STRING "Per AR and queue. One queue for hi and one for lo alarms")
+  CACHE STRING "Per AR and queue. One queue for high and one for low priority alarms.")
 set(PNET_MAX_DIAG_ITEMS         200
   CACHE STRING "Total, per device. Max is 65534 items")
 

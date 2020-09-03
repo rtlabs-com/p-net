@@ -59,6 +59,7 @@ int pf_cmsu_cmdev_state_ind(
    case PF_CMSU_STATE_RUN:
       if (event == PNET_EVENT_ABORT)
       {
+         LOG_DEBUG(PNET_LOG, "CMSU(%d): Received state PNET_EVENT_ABORT from CMDEV. Closing PPM, CPM and alarm instances.\n", __LINE__);
          for (crep = 0; crep < p_ar->nbr_iocrs; crep++)
          {
             if (p_ar->iocrs[crep].param.iocr_type == PF_IOCR_TYPE_INPUT)
