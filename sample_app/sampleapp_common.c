@@ -1285,6 +1285,7 @@ int app_adjust_stack_configuration (pnet_cfg_t * stack_config)
    stack_config->oem_device_id.device_id_lo = 0x01;
    strcpy (stack_config->device_vendor, "rt-labs");
    strcpy (stack_config->manufacturer_specific_string, "PNET demo");
+   strcpy (stack_config->product_name, "rt-labs PNET demo");
 
    /* Timing */
    stack_config->min_device_interval = 32; /* Corresponds to 1 ms */

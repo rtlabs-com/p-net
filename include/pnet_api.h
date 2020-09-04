@@ -1295,6 +1295,16 @@ typedef struct pnet_cfg
    char device_vendor[20 + 1];                       /**< Terminated string */
    char manufacturer_specific_string[240 + 1];       /**< Terminated string */
 
+   /**
+    * Product name
+    *
+    * This is known as DeviceVendorValue and DeviceType in the Profinet
+    * specification. It constitutes the first part of SystemIdentification
+    * (sysDescr in SNMP). It may also be used to construct the Chassis ID.
+    * See IEC CDV 61158-6-10 ch. 4.10.3.3.1.
+    */
+   char product_name[25 + 1]; /**< Terminated string */
+
    /* Timing */
    uint16_t min_device_interval; /** Smallest allowed data exchange interval, in
                                     units of 31.25 us. Used for triggering error
