@@ -57,7 +57,7 @@ static const pf_uuid_t     implicit_ar = {0,0,0,{0,0,0,0,0,0,0,0}};
 
 /**************** Diagnostic strings *****************************************/
 
-void pf_show_memory(
+void pf_memory_contents_show(
    const uint8_t           *data,
    int                     size)
 {

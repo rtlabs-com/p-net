@@ -51,9 +51,9 @@ Incoming frame PDU types
 * R_Data  RSI
 
 
-Development functions
----------------------
-Use ``pf_show_memory()`` to show the contents of a buffer/memory area.
+Stack development helper functions
+----------------------------------
+Use ``pf_memory_contents_show()`` to show the contents of a buffer/memory area.
 
 
 State machines

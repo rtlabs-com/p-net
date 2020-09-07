@@ -1725,6 +1725,16 @@ PNET_EXPORT int pnet_diag_remove(
  *     0x2000              | Show CFG information.
  *     0x4000              | Show scheduler information.
  *     0x8000              | Show I&M data.
+ *
+ *   Bit in the level parameter
+ *   15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0
+ *    1                                     I&M
+ *       1                                  Scheduler
+ *          1                               CMINA
+ *             1                            AR
+ *                1                         Sessions
+ *                                     1    More IOCR info on AR
+ *                                       1  More IOCR info on AR
  */
 PNET_EXPORT void pnet_show(
    pnet_t                  *net,

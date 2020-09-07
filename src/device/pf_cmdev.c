@@ -351,10 +351,6 @@ void pf_cmdev_free_diag(
       net->cmdev_device.diag_items[item_ix].next = net->cmdev_device.diag_items_free;
       net->cmdev_device.diag_items_free = item_ix;
    }
-   else
-   {
-      printf("ix =%u\n", (unsigned)item_ix);
-   }
 }
 
 /**
@@ -1920,12 +1916,12 @@ static int pf_cmdev_iocr_setup_desc(
 
    if (pf_cmdev_iocr_setup_data_iops(p_ar, p_iocr, dir, p_stat) != 0)
    {
-      printf("%s(%d)\n", __FILE__, __LINE__);
+      LOG_ERROR(PNET_LOG, "CMDEV(%d): Failed to collect IOPS information\n", __LINE__);
       ret = -1;
    }
    else if (pf_cmdev_iocr_setup_iocs(p_ar, p_iocr, dir, p_stat) != 0)
    {
-      printf("%s(%d)\n", __FILE__, __LINE__);
+      LOG_ERROR(PNET_LOG, "CMDEV(%d): Failed to collect IOCS information\n", __LINE__);
       ret = -1;
    }
 
