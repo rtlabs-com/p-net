@@ -30,7 +30,9 @@ extern "C"
 /**
  * Initialize the FSPM component.
  *
- * Turns off the signal LED.
+ * Validate and store the application configuration.
+ *
+ * Turn off the signal LED.
  *
  * @param net              InOut: The p-net stack instance
  * @param p_cfg            In:   The application configuration of the Profinet stack.
@@ -40,6 +42,18 @@ extern "C"
 int pf_fspm_init(
    pnet_t                  *net,
    const pnet_cfg_t        *p_cfg);
+
+/**
+ * Retrieve the minimum device interval, from the configuration.
+ *
+ * This is the smallest allowed data exchange interval, in units of 31.25 us.
+ * Typically 32, which corresponds to 1 ms.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @return the minimum device interval.
+ */
+int16_t pf_cmina_get_min_device_interval(
+   pnet_t                  *net);
 
 /**
  * Create a LogBook entry.
@@ -160,8 +174,8 @@ int pf_fspm_cm_dcontrol_ind(
  * within the profinet stack.
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:   The AR instance.
- * @param event            In:   The CMDEV event.
+ * @param p_ar             In:    The AR instance.
+ * @param event            In:    The new CMDEV state. Use PNET_EVENT_..., not PF_CMDEV_STATE_...
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -184,7 +198,7 @@ int pf_fspm_state_ind(
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_fspm_aplmr_alarm_ind(
+int pf_fspm_alpmr_alarm_ind(
    pnet_t                  *net,
    pf_ar_t                 *p_ar,
    uint32_t                api,
@@ -203,7 +217,7 @@ int pf_fspm_aplmr_alarm_ind(
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_fspm_aplmi_alarm_cnf(
+int pf_fspm_alpmi_alarm_cnf(
    pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pnet_pnio_status_t      *p_pnio_status);
@@ -218,7 +232,7 @@ int pf_fspm_aplmi_alarm_cnf(
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_fspm_aplmr_alarm_ack_cnf(
+int pf_fspm_alpmr_alarm_ack_cnf(
    pnet_t                  *net,
    pf_ar_t                 *p_ar,
    int                     res);
@@ -333,6 +347,13 @@ void pf_fspm_get_default_cfg(
  */
 int pf_fspm_clear_im_data(
    pnet_t                  *net);
+
+
+/************ Internal functions, made available for unit testing ************/
+
+int pf_fspm_validate_configuration(
+   const pnet_cfg_t        *p_cfg);
+
 
 #ifdef __cplusplus
 }

@@ -33,7 +33,7 @@
 
 
 #ifdef UNIT_TEST
-#define os_eth_send mock_os_eth_send
+#define os_get_current_time_us mock_os_get_current_time_us
 #endif
 
 #include <string.h>
@@ -47,6 +47,28 @@ void pf_ppm_init(
 {
    net->ppm_instance_cnt = ATOMIC_VAR_INIT(0);
 }
+
+
+/**
+ * @internal
+ * Return a string representation of the PPM state.
+ * @param state            In:   The PPM state.
+ * @return  A string representing the PPM state.
+ */
+static const char *pf_ppm_state_to_string(
+   pf_ppm_state_values_t   state)
+{
+   const char *s = "<unknown>";
+
+   switch (state)
+   {
+   case PF_PPM_STATE_W_START: s = "PF_PPM_STATE_W_START"; break;
+   case PF_PPM_STATE_RUN:     s = "PF_PPM_STATE_RUN"; break;
+   }
+
+   return s;
+}
+
 
 /********************* Error handling ****************************************/
 
@@ -88,7 +110,7 @@ static void pf_ppm_set_state(
    pf_ppm_t                *p_ppm,
    pf_ppm_state_values_t   state)
 {
-   LOG_DEBUG(PF_PPM_LOG, "PPM(%d): New state %d\n", __LINE__, state);
+   LOG_DEBUG(PF_PPM_LOG, "PPM(%d): New state %s\n", __LINE__, pf_ppm_state_to_string(state));
    p_ppm->state = state;
 }
 
@@ -168,10 +190,8 @@ static void pf_ppm_finish_buffer(
 {
    uint8_t                 *p_payload = ((os_buf_t*)p_ppm->p_send_buffer)->payload;
    uint16_t                u16;
-   int32_t                 cycle_tmp = os_get_current_time_us()*4;
 
-   p_ppm->cycle = cycle_tmp/125;           /* Cycle counter. Get 4/125 = 31.25us ticks */
-   u16 = htons(p_ppm->cycle);
+   p_ppm->cycle = pf_ppm_calculate_cyclecounter(os_get_current_time_us(), p_ppm->send_clock_factor, p_ppm->reduction_ratio);
 
    /* Insert data */
    os_mutex_lock(net->ppm_buf_lock);
@@ -179,6 +199,7 @@ static void pf_ppm_finish_buffer(
    os_mutex_unlock(net->ppm_buf_lock);
 
    /* Insert cycle counter */
+   u16 = htons(p_ppm->cycle);
    memcpy(&p_payload[p_ppm->cycle_counter_offset], &u16, sizeof(u16));
 
    /* Insert data status */
@@ -209,18 +230,16 @@ static void pf_ppm_send(
    pf_iocr_t               *p_arg = (pf_iocr_t *)arg;
    uint32_t                start = os_get_current_time_us();
 
+   /* ToDo: Handle RT_CLASS_UDP */
+
    p_arg->ppm.ci_timer = UINT32_MAX;
    if (p_arg->ppm.ci_running == true)
    {
       /* in_length is size of input to the controller */
       pf_ppm_finish_buffer(net, &p_arg->ppm, p_arg->in_length);
+
       /* Now send it */
-      /* ToDo: Handle RT_CLASS_UDP */
-      if (os_eth_send(p_arg->p_ar->p_sess->eth_handle, p_arg->ppm.p_send_buffer) <= 0)
-      {
-         LOG_ERROR(PF_PPM_LOG, "PPM(%d): Error from os_eth_send(ppm)\n", __LINE__);
-      }
-      else
+      if (pf_eth_send(net, p_arg->p_ar->p_sess->eth_handle, p_arg->ppm.p_send_buffer) > 0)
       {
          /* Compensate for the execution delay variations */
          if (pf_scheduler_add(net, p_arg->ppm.control_interval, ppm_sync_name, pf_ppm_send, arg, &p_arg->ppm.ci_timer) == 0)
@@ -308,6 +327,10 @@ int pf_ppm_activate_req(
       p_ppm->control_interval = ((uint32_t)p_iocr->param.send_clock_factor *
             (uint32_t)p_iocr->param.reduction_ratio * 1000U) / 32U;   /* us */
 
+      /* Needed for counter calculations */
+      p_ppm->send_clock_factor = p_iocr->param.send_clock_factor;
+      p_ppm->reduction_ratio = p_iocr->param.reduction_ratio;
+
       pf_ppm_set_state(p_ppm, PF_PPM_STATE_RUN);
 
       p_ppm->ci_running = true;
@@ -331,7 +354,7 @@ int pf_ppm_close_req(
    pf_ppm_t                *p_ppm;
    uint32_t                cnt;
 
-   LOG_DEBUG(PF_PPM_LOG, "PPM(%d): close\n", __LINE__);
+   LOG_DEBUG(PF_PPM_LOG, "PPM(%d): Closing\n", __LINE__);
    p_ppm = &p_ar->iocrs[crep].ppm;
    p_ppm->ci_running = false;
    if (p_ppm->ci_timer != UINT32_MAX)
@@ -770,27 +793,62 @@ void pf_ppm_set_problem_indicator(
 }
 
 
-/**************** Diagnostic strings *****************************************/
+/************************** Utilities ****************************************/
 
 /**
- * @internal
- * Return a string representation of the PPM state.
- * @param state            In:   The PPM state.
- * @return  A string representing the PPM state.
+ * Calculate the current cyclecounter from the current time.
+ *
+ * The timebase is 1/32 of a millisecond (31.25 us).
+ * Note that 31.25 us is 1000/32 us.
+ * This is the cyclecounter value, which is the background counter used for cycles.
+ *
+ * One cycle length is send_clock_factor x 31.25 us.
+ * The cyclenumber value is keeping track of which cycle we are in now.
+ *
+ * The reduction_ratio describes if transmit and receive should
+ * be done every cycle. A value of 1 corresponds to every cycle,
+ * while a value of 4 corresponds to transmit and receive every fourth cycle.
+ *
+ * For example, send_clock_factor=2 and reduction_ratio=4 gives a
+ * cycle time of 62.5 us, and a frame is sent every 250 us.
+ * In the first frame the cyclecounter value should be 0, and in the next should
+ * the value be 8.
+ *
+ * We need to normalize the cyclecounter to multiples of
+ * send_clock_factor x reduction_ratio.
+ *
+ * Described in Profinet protocol 2.4 sections
+ *  - 4.5.3
+ *  - 4.7.2.1.2 Coding of the field CycleCounter
+ *  - 4.12.4.5
+ *  - 5.2.5.59 and .62 and .63
+ *
+ * @param timestamp         In:   Current time in microseconds.
+ * @param send_clock_factor In:   Defines the length of a cycle, in units of 31.25 us.
+ *                                Allowed 1 .. 128. Typically powers of two.
+ * @param reduction_ratio   In:   Reduction ratio. If transmission should be done every cycle.
+ *                                Allowed 1 .. 512. Typically powers of two.
+ * @return                  The current cyclecounter
  */
-static const char *pf_ppm_state_to_string(
-   pf_ppm_state_values_t   state)
+uint16_t pf_ppm_calculate_cyclecounter(
+   uint32_t                timestamp,
+   uint16_t                send_clock_factor,
+   uint16_t                reduction_ratio)
 {
-   const char *s = "<unknown>";
+   uint64_t                raw_cyclecounter;
+   uint32_t                transmission_interval_in_timebases;
+   uint32_t                number_of_transmissions;
 
-   switch (state)
-   {
-   case PF_PPM_STATE_W_START: s = "PF_PPM_STATE_W_START"; break;
-   case PF_PPM_STATE_RUN:     s = "PF_PPM_STATE_RUN"; break;
-   }
+   raw_cyclecounter = (32UL * timestamp) / 1000UL;
+   transmission_interval_in_timebases = send_clock_factor * reduction_ratio;
+   number_of_transmissions = raw_cyclecounter / transmission_interval_in_timebases;  /* Integer division for truncation */
 
-   return s;
+   return number_of_transmissions * transmission_interval_in_timebases;  /* Now a multiple of transmission intervals */
 }
+
+
+/**************** Diagnostic strings *****************************************/
+
 
 void pf_ppm_show(
    pf_ppm_t                *p_ppm)

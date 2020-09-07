@@ -65,6 +65,13 @@ static inline uint32_t atomic_fetch_sub(atomic_int *p, uint32_t v)
  * larger than 1464. */
 #define PF_MAX_UDP_PAYLOAD_SIZE           1440
 
+/**
+ * Timeout in milliseconds after which the CControl request is re-transmitted.
+ */
+#define PF_CCONTROL_TIMEOUT               2000
+#define PF_FRAG_TIMEOUT                   2000
+
+
 /*********************** RPC header ******************************************/
 
 /** Magic UUID values */
@@ -82,17 +89,17 @@ static inline uint32_t atomic_fetch_sub(atomic_int *p, uint32_t v)
 
 typedef enum pf_rpc_packet_type_values
 {
-   PF_RPC_PT_REQUEST = 0,
-   PF_RPC_PT_PING,
-   PF_RPC_PT_RESPONSE,
-   PF_RPC_PT_FAULT,
-   PF_RPC_PT_WORKING,
-   PF_RPC_PT_RESP_PING,                   /* No Call - response to ping */
-   PF_RPC_PT_REJECT,
-   PF_RPC_PT_ACK,
-   PF_RPC_PT_CL_CANCEL,
-   PF_RPC_PT_FRAG_ACK,
-   PF_RPC_PT_CANCEL_ACK,
+   PF_RPC_PT_REQUEST = 0,                                                 //!< PF_RPC_PT_REQUEST
+   PF_RPC_PT_PING,                                                        //!< PF_RPC_PT_PING
+   PF_RPC_PT_RESPONSE,                                                    //!< PF_RPC_PT_RESPONSE
+   PF_RPC_PT_FAULT,                                                       //!< PF_RPC_PT_FAULT
+   PF_RPC_PT_WORKING,                                                     //!< PF_RPC_PT_WORKING
+   PF_RPC_PT_RESP_PING,                   /* No Call - response to ping *///!< PF_RPC_PT_RESP_PING
+   PF_RPC_PT_REJECT,                                                      //!< PF_RPC_PT_REJECT
+   PF_RPC_PT_ACK,                                                         //!< PF_RPC_PT_ACK
+   PF_RPC_PT_CL_CANCEL,                                                   //!< PF_RPC_PT_CL_CANCEL
+   PF_RPC_PT_FRAG_ACK,                                                    //!< PF_RPC_PT_FRAG_ACK
+   PF_RPC_PT_CANCEL_ACK,                                                  //!< PF_RPC_PT_CANCEL_ACK
 } pf_rpc_packet_type_values_t;
 
 typedef enum pf_rpc_flags_bits
@@ -691,7 +698,7 @@ typedef enum pf_cmwrr_state_values
  * The prototype of the externally supplied call-back functions.
  * @param net              InOut: The p-net stack instance
  * @param arg              In:   User-defined (may be NULL).
- * @param current_time     In:   The current system time.
+ * @param current_time     In:   The current system time, in microseconds.
  */
 typedef void (*pf_scheduler_timeout_ftn_t)(
    pnet_t                     *net,
@@ -996,7 +1003,7 @@ typedef struct pf_iocr_param
    uint16_t                c_sdu_length;                 /** Allowed: RT_CLASS_UDP: 12..1440, others: 40..1440 */
    uint16_t                frame_id;                     /** Depends on RT_class */
    uint16_t                send_clock_factor;            /** res: 31.25us, Allowed: 1..128, default: 32 */
-   uint16_t                reduction_ratio;
+   uint16_t                reduction_ratio;              /** Allowed: 1..512 */
    uint16_t                phase;                        /** 1..reduction_ratio */
    uint16_t                sequence;                     /** Allowed: RT_class_3: 0, others: 0 (mandatory) 1..0xffff (optional) */
    uint32_t                frame_send_offset;            /** res: 1ns, Allowed: (All:) BEST_EFFORT (0xffffffff), RT_class_3: 0x0..0x3D08FF (mandatory) */
@@ -1276,9 +1283,12 @@ typedef struct pf_ppm
 
    uint32_t                trx_cnt;
 
+   uint16_t                send_clock_factor;   /** res: 31.25us, Allowed: 1..128, default: 32 */
+   uint16_t                reduction_ratio;     /** Allowed: 1..512 */
    uint32_t                control_interval;
    bool                    ci_running;
    uint32_t                ci_timer;
+
 } pf_ppm_t;
 
 typedef struct pf_cpm
@@ -1307,7 +1317,7 @@ typedef struct pf_cpm
    uint16_t                buffer_length;
    uint16_t                buffer_pos;          /* Start of PROFINET data in frame */
 
-   uint16_t                dht;
+   uint16_t                dht;                 /* Set to zero at incoming cyclic frame, increased by pf_cpm_control_interval_expired() */
    bool                    new_data;
    uint32_t                rxa[PNET_MAX_PORT][2];  /* Max 2 frame_ids */
    int32_t                 cycle;               /* value -1 means "never" */
@@ -1523,10 +1533,10 @@ typedef struct pf_session_info
    bool                    in_use;
    bool                    release_in_progress;    /* The session handles an incoming release request */
    bool                    kill_session;           /* On error or when done. This will kill the session at the end of handling the incoming RPC frame. */
-   uint32_t                socket;
+   int                     socket;
    os_eth_handle_t         *eth_handle;
    struct pf_ar            *p_ar;                  /* Parent AR */
-   bool                    from_me;                /* True if the session originates from the device. */
+   bool                    from_me;                /* True if the session originates from the device (i.e. CControl requests and responses). */
    pf_uuid_t               activity_uuid;
    uint32_t                ip_addr;
    os_ipport_t             port;                   /* Source port on incoming message, destination port on outgoing message */
@@ -1539,13 +1549,14 @@ typedef struct pf_session_info
     * These are sent/received via fragmented RPC requests/responses.
     * Allocate buffers to handle these large request here.
     */
-   uint8_t                 in_buffer[PNET_MAX_SESSION_BUFFER_SIZE];        /* Request buffer */
+   uint8_t                 in_buffer[PNET_MAX_SESSION_BUFFER_SIZE];        /* Typically request buffer */
    uint16_t                in_buf_len;
    uint16_t                in_fragment_nbr;
 
-   uint8_t                 out_buffer[PNET_MAX_SESSION_BUFFER_SIZE];       /* Response buffer */
+   uint8_t                 out_buffer[PNET_MAX_SESSION_BUFFER_SIZE];       /* Typically response buffer */
    uint16_t                out_buf_len;
-   uint16_t                out_buf_sent_len;                               /* Number of bytes sent so far */
+   uint16_t                out_buf_sent_pos;                               /* Number of bytes sent so far */
+   uint16_t                out_buf_send_len;                               /* Size of current packet to send */
    uint16_t                out_fragment_nbr;
 
    pf_get_info_t           get_info;
@@ -1556,6 +1567,10 @@ typedef struct pf_session_info
    /* This item is used to handle dcontrol re-runs */
    uint32_t                dcontrol_sequence_nmb;  /* From dcontrol request */
    pnet_result_t           dcontrol_result;
+
+   /* This timer is used to handle ccontrol and fragment re-transmissions */
+   uint32_t                resend_timeout;  /* Handle for removing scheduled event */
+   uint32_t                resend_timeout_ctr;
 } pf_session_info_t;
 
 typedef struct pf_ar
@@ -1967,6 +1982,16 @@ typedef struct pf_log_book
    bool                    wrap;       /* All entries valid */
 } pf_log_book_t;
 
+/* See Profinet 2.4 section 5.2.28 and appendix W */
+typedef struct pf_interface_stats
+{
+	uint32_t if_in_octets;
+	uint32_t if_out_octets;
+	uint32_t if_in_discards;
+	uint32_t if_out_discards;
+	uint32_t if_in_errors;
+	uint32_t if_out_errors;
+}pnet_interface_stats_t;
 
 struct pnet
 {
@@ -2003,18 +2028,29 @@ struct pnet
    uint32_t                            cmrpc_session_number;
    pf_ar_t                             cmrpc_ar[PNET_MAX_AR];  /* ARs */
    pf_session_info_t                   cmrpc_session_info[PF_MAX_SESSION];  /* Sessions */
-   int                                 cmrpc_rpcreq_socket;
-   uint8_t                             cmrpc_dcerpc_req_frame[PF_FRAME_BUFFER_SIZE];
-   uint8_t                             cmrpc_dcerpc_rsp_frame[PF_FRAME_BUFFER_SIZE];
+   int                                 cmrpc_rpcreq_socket;  /* Main socket for incoming requests */
+   uint8_t                             cmrpc_dcerpc_input_frame[PF_FRAME_BUFFER_SIZE];
+   uint8_t                             cmrpc_dcerpc_output_frame[PF_FRAME_BUFFER_SIZE];
    pf_cmsu_state_values_t              cmsu_state;
    pf_cmwrr_state_values_t             cmwrr_state;
    const pnet_cfg_t                    *p_fspm_default_cfg;  /* Used at factory reset */
    pnet_cfg_t                          fspm_cfg;
    pf_log_book_t                       fspm_log_book;
    os_mutex_t                          *fspm_log_book_mutex;
+   pnet_interface_stats_t              interface_statistics;
    uint32_t                            lldp_timeout;  /* Scheduler handle for periodic LLDP sending */
 };
 
+
+/**
+ * @internal
+ * Initialise a pnet_t structure. For testing purposes.
+ */
+pnet_t * pnet_init_only (
+   pnet_t                  *net,
+   const char              *netif,
+   uint32_t                tick_us,
+   const pnet_cfg_t        *p_cfg);
 
 #ifdef __cplusplus
 }

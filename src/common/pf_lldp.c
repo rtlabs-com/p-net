@@ -14,7 +14,6 @@
  ********************************************************************/
 
 #ifdef UNIT_TEST
-#define os_eth_send           mock_os_eth_send
 #endif
 
 /**
@@ -431,10 +430,7 @@ void pf_lldp_send(
 
          p_lldp_buffer->len = pos;
 
-        if (os_eth_send(net->eth_handle, p_lldp_buffer) <= 0)
-         {
-            LOG_ERROR(PNET_LOG, "LLDP(%d): Error from os_eth_send(lldp)\n", __LINE__);
-         }
+         (void)pf_eth_send(net, net->eth_handle, p_lldp_buffer);
       }
 
       os_buf_free(p_lldp_buffer);

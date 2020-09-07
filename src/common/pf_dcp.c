@@ -14,7 +14,6 @@
  ********************************************************************/
 
 #ifdef UNIT_TEST
-#define os_eth_send mock_os_eth_send
 #endif
 
 #include <string.h>
@@ -146,18 +145,16 @@ static void pf_dcp_responder(
    uint32_t                current_time)
 {
    os_buf_t                *p_buf = (os_buf_t *)arg;
+
    if (p_buf != NULL)
    {
       if (net->dcp_delayed_response_waiting == true)
       {
-         if (os_eth_send(net->eth_handle, p_buf) <= 0)
-         {
-            LOG_ERROR(PNET_LOG, "DCP(%d): Error from os_eth_send(dcp)\n", __LINE__);
-         }
-         else
+         if (pf_eth_send(net, net->eth_handle, p_buf) > 0)
          {
             LOG_DEBUG(PNET_LOG, "DCP(%d): Sent a DCP response.\n", __LINE__);
          }
+
          os_buf_free(p_buf);
          net->dcp_delayed_response_waiting = false;
       }
@@ -800,11 +797,7 @@ static int pf_dcp_get_set(
          p_dst_dcphdr->data_length = htons(dst_pos - dst_start);
          p_rsp->len = dst_pos;
 
-         if (os_eth_send(net->eth_handle, p_rsp) <= 0)
-         {
-            LOG_ERROR(PNET_LOG, "pf_dcp(%d): Error from os_eth_send(dcp)\n", __LINE__);
-         }
-         else
+         if (pf_eth_send(net, net->eth_handle, p_rsp) > 0)
          {
             LOG_DEBUG(PF_DCP_LOG,"DCP(%d): Sent DCP Get/Set response\n", __LINE__);
          }
@@ -993,10 +986,8 @@ int pf_dcp_hello_req(
          /* Insert final response length and ship it! */
          p_dcphdr->data_length = htons(dst_pos - dst_start_pos);
          p_buf->len = dst_pos;
-         if (os_eth_send(net->eth_handle, p_buf) <= 0)
-         {
-            LOG_ERROR(PNET_LOG, "pf_dcp(%d): Error from os_eth_send(dcp)\n", __LINE__);
-         }
+
+         (void)pf_eth_send(net, net->eth_handle, p_buf);
       }
       os_buf_free(p_buf);
    }

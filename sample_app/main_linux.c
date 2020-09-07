@@ -71,10 +71,12 @@ void show_usage()
    printf("   --help       Show this help text and exit\n");
    printf("   -h           Show this help text and exit\n");
    printf("   -v           Incresase verbosity\n");
-   printf("   -i INTERF    Set Ethernet interface name. Defaults to %s\n", APP_DEFAULT_ETHERNET_INTERFACE);
-   printf("   -s NAME      Set station name. Defaults to %s\n", APP_DEFAULT_STATION_NAME);
-   printf("   -b FILE      Path to read button1. Defaults to not read button1.\n");
-   printf("   -d FILE      Path to read button2. Defaults to not read button2.\n");
+   printf("   -i INTERF    Name of Ethernet interface to use. Defaults to %s\n", APP_DEFAULT_ETHERNET_INTERFACE);
+   printf("   -s NAME      Set station name. Defaults to %s  Only used\n", APP_DEFAULT_STATION_NAME);
+   printf("                if not already available in storage file.\n");
+   printf("   -b FILE      Path (absolute or relative) to read button1. Defaults to not read button1.\n");
+   printf("   -d FILE      Path (absolute or relative) to read button2. Defaults to not read button2.\n");
+   printf("   -p PATH      Absolute path to storage directory. Defaults to use current directory.\n");
 }
 
 /**
@@ -100,13 +102,16 @@ struct cmd_args parse_commandline_arguments(int argc, char *argv[])
    struct cmd_args output_arguments;
    strcpy(output_arguments.path_button1, "");
    strcpy(output_arguments.path_button2, "");
+   strcpy(output_arguments.path_storage_directory, "");
    strcpy(output_arguments.station_name, APP_DEFAULT_STATION_NAME);
    strcpy(output_arguments.eth_interface, APP_DEFAULT_ETHERNET_INTERFACE);
    output_arguments.verbosity = 0;
 
    int option;
-   while ((option = getopt(argc, argv, "hvi:s:b:d:")) != -1) {
-      switch (option) {
+   while ((option = getopt(argc, argv, "hvi:s:b:d:p:")) != -1)
+   {
+      switch (option)
+      {
       case 'v':
          output_arguments.verbosity++;
          break;
@@ -117,10 +122,28 @@ struct cmd_args parse_commandline_arguments(int argc, char *argv[])
          strcpy(output_arguments.station_name, optarg);
          break;
       case 'b':
+         if (strlen(optarg) + 1 > PNET_MAX_FILE_FULLPATH_LEN)
+         {
+            printf("Error: The argument to -b is too long.\n");
+            exit(EXIT_CODE_ERROR);
+         }
          strcpy(output_arguments.path_button1, optarg);
          break;
       case 'd':
+         if (strlen(optarg) + 1 > PNET_MAX_FILE_FULLPATH_LEN)
+         {
+            printf("Error: The argument to -d is too long.\n");
+            exit(EXIT_CODE_ERROR);
+         }
          strcpy(output_arguments.path_button2, optarg);
+         break;
+      case 'p':
+         if (strlen(optarg) + 1 > PNET_MAX_FILE_FULLPATH_LEN)
+         {
+            printf("Error: The argument to -p is too long.\n");
+            exit(EXIT_CODE_ERROR);
+         }
+         strcpy(output_arguments.path_storage_directory, optarg);
          break;
       case 'h':
          /* fallthrough */
@@ -132,29 +155,27 @@ struct cmd_args parse_commandline_arguments(int argc, char *argv[])
       }
    }
 
+   /* Use current directory for storage, if not given */
+   if (strlen(output_arguments.path_storage_directory) == 0)
+   {
+      if (getcwd(output_arguments.path_storage_directory, sizeof(output_arguments.path_storage_directory)) == NULL)
+      {
+         printf("Error: Could not read current working directory. Is PNET_MAX_DIRECTORYPATH_LENGTH too small?\n");
+         exit(EXIT_CODE_ERROR);
+      }
+   }
+
    return output_arguments;
 }
 
 /**
- * Check if network interface exists
+ * Check if a file or directory exists
  *
- * @param name      In: Name of network interface
- * @return true if interface exists
-*/
-bool does_network_interface_exist(const char* name)
-{
-   uint32_t index = if_nametoindex(name);
-
-   return index != 0;
-}
-
-/**
- * Check if file exists
- *
- * @param filepath      In: Path to file
+ * @param filepath         In:    Path to file or directory. Trailing slash
+ *                                is optional for directories.
  * @return true if file exists
 */
-bool does_file_exist(const char*  filepath)
+bool does_file_exist(const char* filepath)
 {
    struct stat statbuffer;
 
@@ -215,146 +236,6 @@ int app_set_led(
    return 0;
 }
 
-/**
- * Copy an IP address (as an integer) to a struct
- *
- * @param destination_struct  Out: destination
- * @param ip                  In: IP address
-*/
-void copy_ip_to_struct(pnet_cfg_ip_addr_t* destination_struct, uint32_t ip)
-{
-   destination_struct->a = (ip & 0xFF);
-   destination_struct->b = ((ip >> 8) & 0xFF);
-   destination_struct->c = ((ip >> 16) & 0xFF);
-   destination_struct->d = ((ip >> 24) & 0xFF);
-}
-
-/**
- * Print an IPv4 address (without newline)
- *
- * @param ip      In: IP address
-*/
-void print_ip_address(uint32_t ip){
-   printf("%d.%d.%d.%d",
-      (ip & 0xFF),
-      ((ip >> 8) & 0xFF),
-      ((ip >> 16) & 0xFF),
-      ((ip >> 24) & 0xFF)
-   );
-}
-
-/**
- * Read the IP address as an integer. For IPv4.
- *
- * @param interface_name      In: Name of network interface
- * @return IP address on success and
- *         0 if an error occurred
-*/
-uint32_t read_ip_address(char* interface_name)
-{
-   int fd;
-   int result = 0;
-   struct ifreq ifr;
-   uint32_t ip;
-
-   ifr.ifr_addr.sa_family = AF_INET;
-   strncpy (ifr.ifr_name, interface_name, IFNAMSIZ - 1);
-
-   fd = socket (AF_INET, SOCK_DGRAM, 0);
-   result = ioctl(fd, SIOCGIFADDR, &ifr);
-   close(fd);
-
-   if (result != 0)
-   {
-      return IP_INVALID;
-   }
-   ip = ((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr.s_addr;
-   return ip;
-}
-
-/**
- * Read the MAC address.
- *
- * @param interface_name      In: Name of network interface
- * @param mac_addr            Out: MAC address
- *
- * @return 0 on success and
- *         -1 if an error occurred
-*/
-int read_mac_address(char *interface_name, pnet_ethaddr_t *mac_addr)
-{
-   int fd;
-   int ret = 0;
-   struct ifreq ifr;
-
-   ifr.ifr_addr.sa_family = AF_INET;
-   strncpy (ifr.ifr_name, interface_name, IFNAMSIZ - 1);
-
-   fd = socket (AF_INET, SOCK_DGRAM, 0);
-   ret = ioctl(fd, SIOCGIFHWADDR, &ifr);
-   close (fd);
-
-   if (ret == 0){
-      memcpy(mac_addr->addr, ifr.ifr_hwaddr.sa_data, 6);
-   }
-   return ret;
- }
-
-/**
- * Read the netmask as an integer. For IPv4.
- *
- * @param interface_name      In: Name of network interface
- * @return netmask
-*/
-uint32_t read_netmask(char* interface_name)
-{
-
-   int fd;
-   struct ifreq ifr;
-   uint32_t netmask;
-   int result = 0;
-
-   ifr.ifr_addr.sa_family = AF_INET;
-   strncpy (ifr.ifr_name, interface_name, IFNAMSIZ - 1);
-
-   fd = socket (AF_INET, SOCK_DGRAM, 0);
-   result = ioctl(fd, SIOCGIFNETMASK, &ifr);
-   close (fd);
-
-   if (result != 0)
-   {
-      return IP_INVALID;
-   }
-   netmask = ((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr.s_addr;
-   return netmask;
-}
-
-/**
- * Read the default gateway address as an integer. For IPv4.
- *
- * Assumes the default gateway is found on .1 on same subnet as the IP address.
- *
- * @param interface_name      In: Name of network interface
- * @return netmask
-*/
-uint32_t read_default_gateway(char* interface_name)
-{
-   /* TODO Read the actual default gateway (somewhat complicated) */
-
-   uint32_t ip;
-   uint32_t gateway;
-
-   ip = read_ip_address(interface_name);
-
-   if (ip == IP_INVALID)
-   {
-      return IP_INVALID;
-   }
-
-   gateway = (ip & 0x00FFFFFF) | 0x01000000;
-   return gateway;
-}
-
 void pn_main (void * arg)
 {
    app_data_t     *p_appdata;
@@ -385,7 +266,7 @@ void pn_main (void * arg)
 
    if (p_appdata->arguments.verbosity > 0)
    {
-      printf("Waiting for connect request from IO-controller\n");
+      printf("Waiting for connect request from IO-controller\n\n");
    }
 
    /* Main loop */
@@ -550,13 +431,13 @@ void pn_main (void * arg)
          os_event_clr(p_appdata->main_events, EVENT_ABORT); /* Re-arm */
          if (p_appdata->arguments.verbosity > 0)
          {
-            printf("Aborting the application\n");
+            printf("Aborting the application\n\n");
          }
       }
    }
    os_timer_destroy(p_appdata->main_timer);
    os_event_destroy(p_appdata->main_events);
-   printf("Ending the application\n");
+   printf("Ending the application\n\n");
 }
 
 /****************************** Main ******************************************/
@@ -567,6 +448,11 @@ int main(int argc, char *argv[])
    pnet_cfg_t              pnet_default_cfg;
    app_data_and_stack_t    appdata_and_stack;
    app_data_t              appdata;
+   os_ethaddr_t            macbuffer;
+   os_ipaddr_t             ip;
+   os_ipaddr_t             netmask;
+   os_ipaddr_t             gateway;
+   int                     ret = 0;
 
    memset(&appdata, 0, sizeof(appdata));
    appdata.alarm_allowed = true;
@@ -578,62 +464,60 @@ int main(int argc, char *argv[])
    printf("\n** Starting Profinet demo application **\n");
    if (appdata.arguments.verbosity > 0)
    {
-      printf("Number of slots:     %u (incl slot for DAP module)\n", PNET_MAX_MODULES);
-      printf("P-net log level:     %u (DEBUG=0, ERROR=3)\n", LOG_LEVEL);
-      printf("App verbosity level: %u\n", appdata.arguments.verbosity);
-      printf("Ethernet interface:  %s\n", appdata.arguments.eth_interface);
-      printf("Station name:        %s\n", appdata.arguments.station_name);
-      printf("Button1 file:        %s\n", appdata.arguments.path_button1);
-      printf("Button2 file:        %s\n", appdata.arguments.path_button2);
+      printf("Number of slots:      %u (incl slot for DAP module)\n", PNET_MAX_MODULES);
+      printf("P-net log level:      %u (DEBUG=0, ERROR=3)\n", LOG_LEVEL);
+      printf("App verbosity level:  %u\n", appdata.arguments.verbosity);
+      printf("Ethernet interface:   %s\n", appdata.arguments.eth_interface);
+      printf("Button1 file:         %s\n", appdata.arguments.path_button1);
+      printf("Button2 file:         %s\n", appdata.arguments.path_button2);
+      printf("Default station name: %s\n", appdata.arguments.station_name);
    }
 
    /* Read IP, netmask, gateway and MAC address from operating system */
-   if (!does_network_interface_exist(appdata.arguments.eth_interface))
+   ret = os_get_macaddress(appdata.arguments.eth_interface, &macbuffer);
+   if (ret != 0)
    {
       printf("Error: The given Ethernet interface does not exist: %s\n", appdata.arguments.eth_interface);
       exit(EXIT_CODE_ERROR);
    }
 
-   uint32_t ip_int = read_ip_address(appdata.arguments.eth_interface);
-   uint32_t netmask_int = read_netmask(appdata.arguments.eth_interface);
-   uint32_t gateway_ip_int = read_default_gateway(appdata.arguments.eth_interface);
-
-   pnet_ethaddr_t macbuffer;
-   int ret = read_mac_address(appdata.arguments.eth_interface, &macbuffer);
-   if (ret != 0)
+   ip = os_get_ip_address(appdata.arguments.eth_interface);
+   netmask = os_get_netmask(appdata.arguments.eth_interface);
+   gateway = os_get_gateway(appdata.arguments.eth_interface);
+   if (gateway == IP_INVALID)
    {
-      printf("Error: Can not read MAC address for Ethernet interface %s\n", appdata.arguments.eth_interface);
+      printf("Error: Invalid gateway IP address for Ethernet interface: %s\n", appdata.arguments.eth_interface);
       exit(EXIT_CODE_ERROR);
    }
 
    if (appdata.arguments.verbosity > 0)
    {
-      printf("MAC address:        %02x:%02x:%02x:%02x:%02x:%02x\n",
-         macbuffer.addr[0],
-         macbuffer.addr[1],
-         macbuffer.addr[2],
-         macbuffer.addr[3],
-         macbuffer.addr[4],
-         macbuffer.addr[5]);
-      printf("IP address:         ");
-      print_ip_address(ip_int);
-      printf("\nNetmask:            ");
-      print_ip_address(netmask_int);
-      printf("\nGateway:            ");
-      print_ip_address(gateway_ip_int);
-      printf("\n\n");
+      print_network_details(&macbuffer, ip, netmask, gateway);
    }
 
    /* Prepare stack config with IP address, gateway, station name etc */
    app_adjust_stack_configuration(&pnet_default_cfg);
-   strcpy(pnet_default_cfg.im_0_data.order_id, "12345");
+   strcpy(pnet_default_cfg.im_0_data.im_order_id, "12345");
    strcpy(pnet_default_cfg.im_0_data.im_serial_number, "00001");
-   copy_ip_to_struct(&pnet_default_cfg.ip_addr, ip_int);
-   copy_ip_to_struct(&pnet_default_cfg.ip_gateway, gateway_ip_int);
-   copy_ip_to_struct(&pnet_default_cfg.ip_mask, netmask_int);
+   copy_ip_to_struct(&pnet_default_cfg.ip_addr, ip);
+   copy_ip_to_struct(&pnet_default_cfg.ip_gateway, gateway);
+   copy_ip_to_struct(&pnet_default_cfg.ip_mask, netmask);
    strcpy(pnet_default_cfg.station_name, appdata.arguments.station_name);
-   memcpy(pnet_default_cfg.eth_addr.addr, macbuffer.addr, sizeof(pnet_ethaddr_t));
+   strcpy(pnet_default_cfg.file_directory, appdata.arguments.path_storage_directory);
+   memcpy(pnet_default_cfg.eth_addr.addr, macbuffer.addr, sizeof(os_ethaddr_t));
    pnet_default_cfg.cb_arg = (void*) &appdata;
+
+   if (appdata.arguments.verbosity > 0)
+   {
+      printf("Storage directory:    %s\n\n", pnet_default_cfg.file_directory);
+   }
+
+   if (!does_file_exist(pnet_default_cfg.file_directory))
+   {
+      printf("Error: The given storage directory does not exist: %s\n",
+         pnet_default_cfg.file_directory);
+      exit(EXIT_CODE_ERROR);
+   }
 
    app_set_led(APP_DATA_LED_ID, false);
 

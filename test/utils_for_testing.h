@@ -26,6 +26,11 @@ extern "C"
 #include "pf_includes.h"
 #include "mocks.h"
 
+#if defined (TEST_DEBUG)
+#define TEST_TRACE(...) printf (__VA_ARGS__)
+#else
+#define TEST_TRACE(...)
+#endif
 
 #define TEST_UDP_DELAY                             (500*1000)     /* us */
 #define TEST_DATA_DELAY                            (2*1000)       /* us */
@@ -104,22 +109,6 @@ typedef struct app_data_for_testing_obj
    call_counters_t         call_counters;
 } app_data_for_testing_t;
 
-typedef struct app_data_and_stack_for_testing_obj
-{
-   app_data_for_testing_t  *appdata;
-   pnet_t                  *net;
-} app_data_and_stack_for_testing_t;
-
-
-/************************** Utilities ****************************************/
-
-void run_periodic(os_timer_t *p_timer, void *p_arg);
-
-void send_data(
-   pnet_t                  *net,
-   uint16_t                *cycle_counter,
-   uint8_t                 *data_packet,
-   uint16_t                len);
 
 /******************** Callbacks defined by p-net *****************************/
 
@@ -243,8 +232,8 @@ protected:
 
    pnet_cfg_t                          pnet_default_cfg;
    app_data_for_testing_t              appdata;
-   pnet_t                              *net;
-   app_data_and_stack_for_testing_obj  appdata_and_stack;
+   pnet_t                              the_net;
+   pnet_t                              *net = &the_net;
 
    /** Initialize appdata, including clearing available modules etc. */
    virtual void appdata_init();
@@ -255,6 +244,23 @@ protected:
 
    virtual void cfg_init();
 
+   /** Simulate sleep
+    *
+    * This function updates the app state and calls the periodic
+    * maintenance functions while simulating sleeping.
+    *
+    * @param us         In: time to sleep (in us)
+    */
+   virtual void run_stack (int us);
+
+   /** Send raw Ethernet test data
+    *
+    * @param data_packet    In: Data packet
+    * @param len            In: Length of data packet
+    */
+   virtual void send_data (
+      uint8_t                 *data_packet,
+      uint16_t                len);
 };
 
 
@@ -271,14 +277,9 @@ protected:
 
       callcounter_reset();
 
-      net = pnet_init(TEST_INTERFACE_NAME, TICK_INTERVAL_US, &pnet_default_cfg);
-      appdata_and_stack.net = net;
-      appdata_and_stack.appdata = &appdata;
+      pnet_init_only (net, TEST_INTERFACE_NAME, TICK_INTERVAL_US, &pnet_default_cfg);
 
       mock_clear();        /* lldp sends a frame at init */
-
-      appdata.periodic_timer = os_timer_create(TICK_INTERVAL_US, run_periodic, (void*)&appdata_and_stack, false);
-      os_timer_start(appdata.periodic_timer);
    };
 };
 

@@ -1,40 +1,215 @@
 #ifndef OPTIONS_H
 #define OPTIONS_H
 
+/**
+ * # Profinet Stack Options
+ *
+ * The defines named `PNET_OPTION_*` may be used to extend or reduce
+ * the functionality of the stack. Setting these values to 0 excludes
+ * the specific function and may also reduce the memory usage of the
+ * Profinet stack.
+ *
+ * Note that none of these options are currently supported (even if
+ * enabled by setting the value to 1), except for parsing the RPC
+ * Connect request message and generating the connect RPC Connect
+ * response message.
+ */
+
+#if !defined (PNET_OPTION_FAST_STARTUP)
+#cmakedefine01 PNET_OPTION_FAST_STARTUP
+#endif
+
+#if !defined (PNET_OPTION_PARAMETER_SERVER)
+#cmakedefine01 PNET_OPTION_PARAMETER_SERVER
+#endif
+
+#if !defined (PNET_OPTION_IR)
+#cmakedefine01 PNET_OPTION_IR
+#endif
+
+#if !defined (PNET_OPTION_SR)
+#cmakedefine01 PNET_OPTION_SR
+#endif
+
+#if !defined (PNET_OPTION_REDUNDANCY)
+#cmakedefine01 PNET_OPTION_REDUNDANCY
+#endif
+
+#if !defined (PNET_OPTION_AR_VENDOR_BLOCKS)
+#cmakedefine01 PNET_OPTION_AR_VENDOR_BLOCKS
+#endif
+
+#if !defined (PNET_OPTION_RS)
+#cmakedefine01 PNET_OPTION_RS
+#endif
+
+#if !defined (PNET_OPTION_MC_CR)
+#cmakedefine01 PNET_OPTION_MC_CR
+#endif
+
+#if !defined (PNET_OPTION_SRL)
+#cmakedefine01 PNET_OPTION_SRL
+#endif
+
+/**
+ * Disable use of atomic operations (stdatomic.h).
+ * If the compiler supports it then set this define to 1.
+ */
+/* TODO: compiler abstraction should be handled by cc.h */
+#if !defined (PNET_USE_ATOMICS)
+#cmakedefine01 PNET_USE_ATOMICS
+#endif
+
+/**
+ * # Memory Usage
+ *
+ * Memory usage is controlled by the `PNET_MAX_*` defines. Define the
+ * required number of supported items.
+ *
+ * These values directly affect the memory usage of the
+ * implementation. Sometimes in complicated ways.
+ *
+ * Please note that some defines have minimum requirements. These
+ * values are used as is by the stack. No validation is performed.
+ */
+
+/** Number of connections. Must be > 0. "Automated RT Tester" uses 2 */
+#if !defined (PNET_MAX_AR)
+#define PNET_MAX_AR               @PNET_MAX_AR@
+#endif
+
+/** Number of Application Processes. Must be > 0. */
+#if !defined (PNET_MAX_API)
+#define PNET_MAX_API              @PNET_MAX_API@
+#endif
+
+/** Per AR. 1 input and 1 output. */
+#if !defined (PNET_MAX_CR)
+#define PNET_MAX_CR               @PNET_MAX_CR@
+#endif
+
+/** Per API. Should be > 1 to allow at least one I/O module. */
+#if !defined (PNET_MAX_MODULES)
+#define PNET_MAX_MODULES          @PNET_MAX_MODULES@
+#endif
+
+/** Per module (3 needed for DAP). */
+#if !defined (PNET_MAX_SUBMODULES)
+#define PNET_MAX_SUBMODULES       @PNET_MAX_SUBMODULES@
+#endif
+
+/** Per sub-slot. Used for diagnosis. */
+#if !defined (PNET_MAX_CHANNELS)
+#define PNET_MAX_CHANNELS         @PNET_MAX_CHANNELS@
+#endif
+
+/** Allowed values are 0 (zero) or 2. */
+#if !defined (PNET_MAX_DFP_IOCR)
+#define PNET_MAX_DFP_IOCR         @PNET_MAX_DFP_IOCR@
+#endif
+
+/** 2 for media redundancy. Currently only 1 is supported. */
+#if !defined (PNET_MAX_PORT)
+#define PNET_MAX_PORT             @PNET_MAX_PORT@
+#endif
+
+#if !defined (PNET_MAX_LOG_BOOK_ENTRIES)
+#define PNET_MAX_LOG_BOOK_ENTRIES @PNET_MAX_LOG_BOOK_ENTRIES@
+#endif
+
+/** Per AR and queue. One queue for hi and one for lo alarms. */
+#if !defined (PNET_MAX_ALARMS)
+#define PNET_MAX_ALARMS           @PNET_MAX_ALARMS@
+#endif
+
+/** Total, per device. Max is 65534 items. */
+#if !defined (PNET_MAX_DIAG_ITEMS)
+#define PNET_MAX_DIAG_ITEMS       @PNET_MAX_DIAG_ITEMS@
+#endif
+
+#if PNET_OPTION_MC_CR
+
+/**< Par AR. */
+#if !defined (PNET_MAX_MC_CR)
+#define PNET_MAX_MC_CR            @PNET_MAX_MC_CR@
+#endif
+
+#endif  /* PNET_OPTION_MC_CR */
+
+#if PNET_OPTION_AR_VENDOR_BLOCKS
+
+/**< Must be > 0 */
+#if !defined (PNET_MAX_AR_VENDOR_BLOCKS)
+#define PNET_MAX_AR_VENDOR_BLOCKS @PNET_MAX_AR_VENDOR_BLOCKS@
+#endif
+
+#if !defined (PNET_MAX_AR_VENDOR_BLOCK_DATA_LENGTH)
+#define PNET_MAX_AR_VENDOR_BLOCK_DATA_LENGTH @PNET_MAX_AR_VENDOR_BLOCK_DATA_LENGTH@
+#endif
+
+#endif  /* PNET_OPTION_AR_VENDOR_BLOCKS */
+
+/** or 512 (bytes) */
+#if !defined (PNET_MAX_MAN_SPECIFIC_FAST_STARTUP_DATA_LENGTH)
+#define PNET_MAX_MAN_SPECIFIC_FAST_STARTUP_DATA_LENGTH @PNET_MAX_MAN_SPECIFIC_FAST_STARTUP_DATA_LENGTH@
+#endif
+
+/** Max fragmented RPC request/response length */
+#if !defined (PNET_MAX_SESSION_BUFFER_SIZE)
+#define PNET_MAX_SESSION_BUFFER_SIZE @PNET_MAX_SESSION_BUFFER_SIZE@
+#endif
+
+/** Max directory path length */
+#if !defined (PNET_MAX_DIRECTORYPATH_LENGTH)
+#define PNET_MAX_DIRECTORYPATH_LENGTH @PNET_MAX_DIRECTORYPATH_LENGTH@
+#endif
+
+/** Max filename length */
+#if !defined (PNET_MAX_FILENAME_LENGTH)
+#define PNET_MAX_FILENAME_LENGTH @PNET_MAX_FILENAME_LENGTH@
+#endif
+
+
+/**
+ * # Logging
+ *
+ * The following options controlling logging.
+ */
+
 #ifndef LOG_LEVEL
 #define LOG_LEVEL               (LOG_LEVEL_@LOG_LEVEL@)
 #endif
 
 #ifndef PF_ETH_LOG
-#define PF_ETH_LOG      		(LOG_STATE_@PF_ETH_LOG@)
+#define PF_ETH_LOG              (LOG_STATE_@PF_ETH_LOG@)
 #endif
 
 #ifndef PF_CPM_LOG
-#define PF_CPM_LOG      		(LOG_STATE_@PF_CPM_LOG@)
+#define PF_CPM_LOG              (LOG_STATE_@PF_CPM_LOG@)
 #endif
 
 #ifndef PF_PPM_LOG
-#define PF_PPM_LOG      		(LOG_STATE_@PF_PPM_LOG@)
+#define PF_PPM_LOG              (LOG_STATE_@PF_PPM_LOG@)
 #endif
 
 #ifndef PF_DCP_LOG
-#define PF_DCP_LOG      		(LOG_STATE_@PF_DCP_LOG@)
+#define PF_DCP_LOG              (LOG_STATE_@PF_DCP_LOG@)
 #endif
 
 #ifndef PF_RPC_LOG
-#define PF_RPC_LOG      		(LOG_STATE_@PF_RPC_LOG@)
+#define PF_RPC_LOG              (LOG_STATE_@PF_RPC_LOG@)
 #endif
 
 #ifndef PF_ALARM_LOG
-#define PF_ALARM_LOG      		(LOG_STATE_@PF_ALARM_LOG@)
+#define PF_ALARM_LOG            (LOG_STATE_@PF_ALARM_LOG@)
 #endif
 
 #ifndef PF_AL_BUF_LOG
-#define PF_AL_BUF_LOG      		(LOG_STATE_@PF_AL_BUF_LOG@)
+#define PF_AL_BUF_LOG           (LOG_STATE_@PF_AL_BUF_LOG@)
 #endif
 
 #ifndef PNET_LOG
-#define PNET_LOG      			(LOG_STATE_@PNET_LOG@)
+#define PNET_LOG                (LOG_STATE_@PNET_LOG@)
 #endif
 
 #endif  /* OPTIONS_H */

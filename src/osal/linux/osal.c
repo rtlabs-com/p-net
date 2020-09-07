@@ -13,15 +13,17 @@
  * full license information.
  ********************************************************************/
 
-#define _GNU_SOURCE
+#define _GNU_SOURCE  /* For asprintf() */
 
 #include <osal.h>
 
-#include <log.h>
 #include <options.h>
+#include <log.h>
 
 #include <arpa/inet.h>
+#include <net/if.h>
 #include <pthread.h>
+#include <sys/ioctl.h>
 #include <sys/syscall.h>
 
 #include <assert.h>
@@ -35,9 +37,6 @@
 #include <time.h>
 #include <unistd.h>
 
-#define PF_FILE_VERSION    1
-#define PF_FILE_MAGIC_LEN  10
-#define PF_FILE_MAGIC_TEMPLATE "p-net %03d\n"
 
 /* Priority of timer callback thread (if USE_SCHED_FIFO is set) */
 #define TIMER_PRIO        5
@@ -46,104 +45,101 @@
 #define NSECS_PER_SEC     (1 * 1000 * 1000 * 1000)
 
 
-static const char *os_fileindex_to_filename(
-   int                     file_index)  /* pnet_file_index_t */
-{
-   const char              *s = "unknown";
-
-   switch (file_index)
-   {
-   case 0:  s = "pnet_data_ip.bin"; break;
-   case 1:  s = "pnet_data_diagnostics.bin"; break;
-   case 2:  s = "pnet_data_logbook.bin"; break;
-   default: break;
-   }
-
-   return s;
-}
-
-
-int os_save_blob(
-   int                     file_index,
-   void                    *object,
-   size_t                  size
+int os_save_file(
+   const char              *fullpath,
+   void                    *object_1,
+   size_t                  size_1,
+   void                    *object_2,
+   size_t                  size_2
 )
 {
+   int                     ret = 0;  /* Assume everything goes well */
    FILE                    *outputfile;
-   const char              *file_path = os_fileindex_to_filename(file_index);
 
-   outputfile = fopen(file_path, "wb");
+   /* Open file */
+   outputfile = fopen(fullpath, "wb");
    if (outputfile == NULL)
    {
-      printf("Could not open file %s\n", file_path);
+      os_log(LOG_LEVEL_ERROR, "Could not open file %s\n", fullpath);
       return -1;
    }
 
-   fprintf(outputfile, PF_FILE_MAGIC_TEMPLATE, PF_FILE_VERSION);
-   fwrite(object, size, 1, outputfile);
+   /* Write file contents */
+   os_log(LOG_LEVEL_DEBUG, "Saving to file %s\n", fullpath);
+   if (size_1 > 0)
+   {
+      if(fwrite(object_1, size_1, 1, outputfile) != 1)
+      {
+         ret = -1;
+         os_log(LOG_LEVEL_ERROR, "Failed to write file %s\n", fullpath);
+      }
+   }
+   if (size_2 > 0 && ret == 0)
+   {
+      if(fwrite(object_2, size_2, 1, outputfile) != 1)
+      {
+         ret = -1;
+         os_log(LOG_LEVEL_ERROR, "Failed to write file %s\n (second buffer)", fullpath);
+      }
+   }
+
+   /* Close file */
    fclose(outputfile);
 
-   return 0;
+   return ret;
 }
 
-
-void os_clear_blob(
-   int                     file_index
+void os_clear_file(
+   const char              *fullpath
 )
 {
-   const char              *file_path = os_fileindex_to_filename(file_index);
-
-   (void)remove(file_path);
+   os_log(LOG_LEVEL_DEBUG, "Clearing file %s\n", fullpath);
+   (void)remove(fullpath);
 }
 
-
-int os_load_blob(
-   int                     file_index,
-   void                    *object,
-   size_t                  size
+int os_load_file(
+   const char              *fullpath,
+   void                    *object_1,
+   size_t                  size_1,
+   void                    *object_2,
+   size_t                  size_2
 )
 {
-   int                     number_of_read_structs;
-   char                    magicbuffer[PF_FILE_MAGIC_LEN + 1] = { 0 };
-   char                    expected_file_magic[PF_FILE_MAGIC_LEN + 1] = { 0 };
+   int                     ret = 0;  /* Assume everything goes well */
    FILE                    *inputfile;
-   const char              *file_path = os_fileindex_to_filename(file_index);
 
-   sprintf(expected_file_magic, PF_FILE_MAGIC_TEMPLATE, PF_FILE_VERSION);
-
-   inputfile = fopen(file_path, "rb");
+   /* Open file */
+   inputfile = fopen(fullpath, "rb");
    if (inputfile == NULL)
    {
-      os_log(LOG_LEVEL_DEBUG, "Could not open file %s\n", file_path);
+      os_log(LOG_LEVEL_DEBUG, "Could not yet open file %s\n", fullpath);
       return -1;
    }
 
-   number_of_read_structs = fread(magicbuffer, PF_FILE_MAGIC_LEN, 1, inputfile);
-   if (number_of_read_structs != 1)
+   /* Read file contents */
+   if (size_1 > 0)
    {
-      os_log(LOG_LEVEL_DEBUG, "Could not read magic from file %s\n", file_path);
-      fclose(inputfile);
-      return -1;
+      if(fread(object_1, size_1, 1, inputfile) != 1)
+      {
+         ret = -1;
+         os_log(LOG_LEVEL_ERROR, "Failed to read file %s\n", fullpath);
+      }
    }
 
-   if(strncmp(magicbuffer, expected_file_magic, PF_FILE_MAGIC_LEN) != 0)
+   if (size_2 > 0 && ret == 0)
    {
-      os_log(LOG_LEVEL_DEBUG, "Wrong magic number in file %s\n", file_path);
-      fclose(inputfile);
-      return -1;
+      if(fread(object_2, size_2, 1, inputfile) != 1)
+      {
+         ret = -1;
+         os_log(LOG_LEVEL_ERROR, "Failed to read file %s\n (second buffer)", fullpath);
+      }
    }
 
-   number_of_read_structs = fread(object, size, 1, inputfile);
+   /* Close file */
    fclose(inputfile);
-   if (number_of_read_structs != 1)
-   {
-      os_log(LOG_LEVEL_DEBUG, "Could not read struct from file %s\n", file_path);
-      return -1;
-   }
 
-   return 0;
+   return ret;
 }
-
 
 void os_log (int type, const char * fmt, ...)
 {
@@ -717,17 +713,20 @@ uint8_t os_buf_header(os_buf_t *p, int16_t header_size_increment)
    return 255;
 }
 
-/**
+/** @internal
  * Convert IPv4 address to string
  * @param ip               In: IP address
- * @param outputstring     Out: Outputstring. Should have length INET_ADDRSTRLEN.
+ * @param outputstring     Out: Resulting string. Should have length OS_INET_ADDRSTRLEN.
  */
-static void ip_to_string(
-   uint32_t                ip,
+static void os_ip_to_string(
+   os_ipaddr_t             ip,
    char                    *outputstring)
 {
-   uint32_t                ip_network_endianness = htonl(ip);
-   inet_ntop(AF_INET, (struct in_addr*)&ip_network_endianness, outputstring, INET_ADDRSTRLEN);
+   snprintf(outputstring, OS_INET_ADDRSTRLEN, "%u.%u.%u.%u",
+      (uint8_t)((ip >> 24) & 0xFF),
+      (uint8_t)((ip >> 16) & 0xFF),
+      (uint8_t)((ip >> 8) & 0xFF),
+      (uint8_t)(ip & 0xFF));
 }
 
 int os_set_ip_suite(
@@ -738,17 +737,17 @@ int os_set_ip_suite(
    const char              *hostname,
    bool                    permanent)
 {
-   char                    ip_string[INET_ADDRSTRLEN];
-   char                    netmask_string[INET_ADDRSTRLEN];
-   char                    gateway_string[INET_ADDRSTRLEN];
+   char                    ip_string[OS_INET_ADDRSTRLEN];
+   char                    netmask_string[OS_INET_ADDRSTRLEN];
+   char                    gateway_string[OS_INET_ADDRSTRLEN];
    char                    *permanent_string;
    char                    *outputcommand;
    int                     textlen = -1;
    int                     status = -1;
 
-   ip_to_string(*p_ipaddr, ip_string);
-   ip_to_string(*p_netmask, netmask_string);
-   ip_to_string(*p_gw, gateway_string);
+   os_ip_to_string(*p_ipaddr, ip_string);
+   os_ip_to_string(*p_netmask, netmask_string);
+   os_ip_to_string(*p_gw, gateway_string);
    permanent_string = permanent ? "1" : "0";
 
    textlen = asprintf(&outputcommand, "./set_network_parameters %s %s %s %s '%s' %s",
@@ -772,4 +771,106 @@ int os_set_ip_suite(
       return -1;
    }
    return 0;
+}
+
+int os_get_macaddress(
+    const char             *interface_name,
+    os_ethaddr_t         *mac_addr
+)
+{
+   int fd;
+   int ret = 0;
+   struct ifreq ifr;
+
+   fd = socket (AF_INET, SOCK_DGRAM, 0);
+
+   ifr.ifr_addr.sa_family = AF_INET;
+   strncpy (ifr.ifr_name, interface_name, IFNAMSIZ - 1);
+
+   ret = ioctl(fd, SIOCGIFHWADDR, &ifr);
+   if (ret == 0){
+      memcpy(mac_addr->addr, ifr.ifr_hwaddr.sa_data, 6);
+   }
+   close (fd);
+   return ret;
+}
+
+os_ipaddr_t os_get_ip_address(
+    const char             *interface_name
+)
+{
+   int fd;
+   struct ifreq ifr;
+   os_ipaddr_t ip;
+
+   fd = socket (AF_INET, SOCK_DGRAM, 0);
+   ifr.ifr_addr.sa_family = AF_INET;
+   strncpy (ifr.ifr_name, interface_name, IFNAMSIZ - 1);
+   ioctl (fd, SIOCGIFADDR, &ifr);
+   ip = ntohl(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr.s_addr);
+   close (fd);
+
+   return ip;
+}
+
+os_ipaddr_t os_get_netmask(
+   const char              *interface_name)
+{
+   int fd;
+   struct ifreq ifr;
+   os_ipaddr_t netmask;
+
+   fd = socket (AF_INET, SOCK_DGRAM, 0);
+
+   ifr.ifr_addr.sa_family = AF_INET;
+   strncpy (ifr.ifr_name, interface_name, IFNAMSIZ - 1);
+   ioctl (fd, SIOCGIFNETMASK, &ifr);
+   netmask = ntohl(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr.s_addr);
+   close (fd);
+
+   return netmask;
+}
+
+os_ipaddr_t os_get_gateway(
+   const char              *interface_name)
+{
+   /* TODO Read the actual default gateway (somewhat complicated) */
+
+   os_ipaddr_t ip;
+   os_ipaddr_t gateway;
+
+   ip = os_get_ip_address(interface_name);
+   gateway = (ip & 0xFFFFFF00) | 0x00000001;
+
+   return gateway;
+}
+
+
+int os_get_hostname(
+   char                    *hostname
+)
+{
+   int                     ret = -1;
+
+   ret = gethostname(hostname, OS_HOST_NAME_MAX);
+   hostname[OS_HOST_NAME_MAX - 1] = '\0';
+
+   return ret;
+}
+
+int os_get_ip_suite(
+   const char              *interface_name,
+   os_ipaddr_t             *p_ipaddr,
+   os_ipaddr_t             *p_netmask,
+   os_ipaddr_t             *p_gw,
+   char                    *hostname)
+{
+   int                     ret = -1;
+
+   *p_ipaddr = os_get_ip_address(interface_name);
+   *p_netmask = os_get_netmask(interface_name);
+   *p_gw = os_get_gateway(interface_name);
+   ret = os_get_hostname(hostname);
+
+   return ret;
 }

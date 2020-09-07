@@ -17,6 +17,7 @@
 #define SAMPLEAPP_COMMON_H
 
 #include "osal.h"
+#include "options.h"
 #include <pnet_api.h>
 
 #ifdef __cplusplus
@@ -70,7 +71,6 @@ extern "C"
 #define APP_DATASIZE_OUTPUT      1     /* bytes, for digital outputs data */
 #define APP_ALARM_PAYLOAD_SIZE   1     /* bytes */
 
-
 /*** Example on how to keep lists of supported modules and submodules ********/
 
 static const uint32_t            cfg_available_module_types[] =
@@ -102,10 +102,11 @@ static const struct
 /************************ App data storage ***********************************/
 
 struct cmd_args {
-   char path_button1[256];
-   char path_button2[256];
+   char path_button1[PNET_MAX_FILE_FULLPATH_LEN];
+   char path_button2[PNET_MAX_FILE_FULLPATH_LEN];
+   char path_storage_directory[PNET_MAX_DIRECTORYPATH_LENGTH];
    char station_name[64];
-   char eth_interface[64];
+   char eth_interface[PNET_MAX_INTERFACE_NAME_LENGTH];
    int  verbosity;
 };
 
@@ -121,7 +122,6 @@ typedef struct app_data_obj
    uint8_t                   inputdata[APP_DATASIZE_INPUT];
    uint8_t                   custom_input_slots[PNET_MAX_MODULES];
    uint8_t                   custom_output_slots[PNET_MAX_MODULES];
-   bool                      init_done;
 } app_data_t;
 
 
@@ -133,6 +133,22 @@ typedef struct app_data_and_stack_obj
 
 
 /********************* Helper function declarations ***************************/
+
+/**
+ * Print out current IP address, MAC address etc.
+ *
+ * @param p_macbuffer      In:    MAC address
+ * @param ip               In:    IP address
+ * @param netmask          In:    Netmask
+ * @param gateway          In:    Gateway
+ * @return  0  if the operation succeeded.
+ *          -1 if an error occurred.
+ */
+void print_network_details(
+   os_ethaddr_t            *p_macbuffer,
+   os_ipaddr_t             ip,
+   os_ipaddr_t             netmask,
+   os_ipaddr_t             gateway);
 
 /**
  * Adjust some members of the p-net configuration object.
@@ -169,6 +185,35 @@ const char* event_value_to_string(
  */
 const char* submodule_direction_to_string(
    pnet_submodule_dir_t direction);
+
+
+/**
+ * Convert MAC address to string
+ * @param mac              In: MAC address
+ * @param outputstring     Out: Resulting string. Should have length OS_ETH_ADDRSTRLEN.
+ */
+void mac_to_string(
+   os_ethaddr_t            mac,
+   char                    *outputstring);
+
+/**
+ * Convert IPv4 address to string
+ * @param ip               In: IP address
+ * @param outputstring     Out: Resulting string. Should have length OS_INET_ADDRSTRLEN.
+ */
+void ip_to_string(
+   os_ipaddr_t             ip,
+   char                    *outputstring);
+
+/**
+ * Copy an IP address (as an integer) to a struct
+ *
+ * @param destination_struct  Out: destination
+ * @param ip                  In: IP address
+*/
+void copy_ip_to_struct(
+   pnet_cfg_ip_addr_t      *destination_struct,
+   os_ipaddr_t             ip);
 
 
 /********************** Hardware interaction **********************************/

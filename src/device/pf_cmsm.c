@@ -100,7 +100,7 @@ static void pf_cmsm_set_state(
 
    if (state != p_ar->cmsm_state)
    {
-      LOG_INFO(PNET_LOG, "CMSM(%d): New state %s\n", __LINE__, pf_cmsm_state_to_string(state));
+      LOG_DEBUG(PNET_LOG, "CMSM(%d): New state %s\n", __LINE__, pf_cmsm_state_to_string(state));
       p_ar->cmsm_state = state;
    }
 }
@@ -134,17 +134,9 @@ static void pf_cmsm_timeout(
       LOG_ERROR(PNET_LOG, "CMSM(%d): Timeout for communication start up. CMDEV state: %s \n",
          __LINE__,
          pf_cmdev_state_to_string(p_ar->cmdev_state));
+
       p_ar->err_cls = PNET_ERROR_CODE_1_RTA_ERR_CLS_PROTOCOL;
       p_ar->err_code = PNET_ERROR_CODE_2_ABORT_AR_CMI_TIMEOUT;
-
-
-      /* TODO Remove when Bjarnes CControl resend is merged */
-      if (p_ar->cmdev_state == PF_CMDEV_STATE_W_ARDYCNF)
-      {
-         p_ar->err_code = PNET_ERROR_CODE_2_ABORT_AR_RPC_CONTROL_ERROR;
-      }
-
-
       pf_cmdev_state_ind(net, p_ar, PNET_EVENT_ABORT);
       pf_cmsm_set_state(p_ar, PF_CMSM_STATE_IDLE);
       break;
@@ -165,6 +157,9 @@ int pf_cmsm_cmdev_state_ind(
       return 0;
    }
 
+   LOG_DEBUG(PNET_LOG, "CMSM(%d): Received event %s from CMDEV. Our state %s.\n", __LINE__,
+   pf_cmdev_event_to_string(event), pf_cmsm_state_to_string(p_ar->cmsm_state));
+
    switch (p_ar->cmsm_state)
    {
    case PF_CMSM_STATE_IDLE:
@@ -172,7 +167,7 @@ int pf_cmsm_cmdev_state_ind(
       {
       case PNET_EVENT_STARTUP:
          pf_cmsm_set_state(p_ar, PF_CMSM_STATE_RUN);
-         LOG_INFO(PNET_LOG, "CMSM(%d): p_ar->ar_param.cm_initiator_activity_timeout_factor = %u\n",
+         LOG_DEBUG(PNET_LOG, "CMSM(%d): Starting timer. cm_initiator_activity_timeout_factor %u x 100 ms\n",
             __LINE__, (unsigned)p_ar->ar_param.cm_initiator_activity_timeout_factor);
          if (p_ar->cmsm_timer != UINT32_MAX)
          {
@@ -196,6 +191,7 @@ int pf_cmsm_cmdev_state_ind(
       case PNET_EVENT_ABORT:
          if (p_ar->cmsm_timer != UINT32_MAX)
          {
+            LOG_DEBUG(PNET_LOG, "CMSM(%d): Stopping timer.\n", __LINE__);
             pf_scheduler_remove(net, cmsm_sync_name, p_ar->cmsm_timer);
             p_ar->cmsm_timer = UINT32_MAX;   /* unused */
          }

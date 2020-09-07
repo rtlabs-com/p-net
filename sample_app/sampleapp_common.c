@@ -39,6 +39,54 @@ static void print_bytes(uint8_t *bytes, int32_t len)
    printf("\n");
 }
 
+void ip_to_string(
+   os_ipaddr_t             ip,
+   char                    *outputstring)
+{
+   snprintf(outputstring, OS_INET_ADDRSTRLEN, "%u.%u.%u.%u",
+      (uint8_t)((ip >> 24) & 0xFF),
+      (uint8_t)((ip >> 16) & 0xFF),
+      (uint8_t)((ip >> 8) & 0xFF),
+      (uint8_t)(ip & 0xFF));
+}
+
+void mac_to_string(
+   os_ethaddr_t            mac,
+   char                    *outputstring)
+{
+   snprintf(outputstring, OS_ETH_ADDRSTRLEN, "%02X:%02X:%02X:%02X:%02X:%02X",
+      mac.addr[0],
+      mac.addr[1],
+      mac.addr[2],
+      mac.addr[3],
+      mac.addr[4],
+      mac.addr[5]);
+}
+
+void print_network_details(
+   os_ethaddr_t            *p_macbuffer,
+   os_ipaddr_t             ip,
+   os_ipaddr_t             netmask,
+   os_ipaddr_t             gateway)
+{
+   char                    ip_string[OS_INET_ADDRSTRLEN];
+   char                    netmask_string[OS_INET_ADDRSTRLEN];
+   char                    gateway_string[OS_INET_ADDRSTRLEN];
+   char                    mac_string[OS_ETH_ADDRSTRLEN];
+   char                    hostname_string[OS_HOST_NAME_MAX];
+
+   mac_to_string(*p_macbuffer, mac_string);
+   ip_to_string(ip, ip_string);
+   ip_to_string(netmask, netmask_string);
+   ip_to_string(gateway, gateway_string);
+   os_get_hostname(hostname_string);
+
+   printf("MAC address:          %s\n", mac_string);
+   printf("Current hostname:     %s\n", hostname_string);
+   printf("Current IP address:   %s\n", ip_string);
+   printf("Current Netmask:      %s\n", netmask_string);
+   printf("Current Gateway:      %s\n", gateway_string);
+}
 
 /*********************************** Callbacks ********************************/
 
@@ -670,13 +718,14 @@ int app_adjust_stack_configuration(
     *
     * Note that these members are set by the sample_app main:
     *    cb_arg
-    *    im_0_data.order_id
+    *    im_0_data.im_order_id
     *    im_0_data.im_serial_number
     *    eth_addr.addr
     *    ip_addr
     *    ip_gateway
     *    ip_mask
     *    station_name
+    *    file_directory
     */
 
    /* Call-backs */
@@ -697,10 +746,10 @@ int app_adjust_stack_configuration(
    stack_config->signal_led_cb = app_signal_led_ind;
 
    /* Identification & Maintenance */
-   stack_config->im_0_data.vendor_id_hi = 0xfe;
-   stack_config->im_0_data.vendor_id_lo = 0xed;
+   stack_config->im_0_data.im_vendor_id_hi = 0xfe;
+   stack_config->im_0_data.im_vendor_id_lo = 0xed;
    stack_config->im_0_data.im_hardware_revision = 1;
-   stack_config->im_0_data.sw_revision_prefix = 'V'; /* 'V', 'R', 'P', 'U', or 'T' */
+   stack_config->im_0_data.im_sw_revision_prefix = 'V'; /* 'V', 'R', 'P', 'U', or 'T' */
    stack_config->im_0_data.im_sw_revision_functional_enhancement = 0;
    stack_config->im_0_data.im_sw_revision_bug_fix = 0;
    stack_config->im_0_data.im_sw_revision_internal_change = 0;
@@ -728,6 +777,9 @@ int app_adjust_stack_configuration(
    strcpy(stack_config->device_vendor, "rt-labs");
    strcpy(stack_config->manufacturer_specific_string, "PNET demo");
 
+   /* Timing */
+   stack_config->min_device_interval = 32;  /* Corresponds to 1 ms */
+
    /* LLDP settings */
    strcpy(stack_config->lldp_cfg.port_id, "port-001");
    stack_config->lldp_cfg.ttl = 20;                /* seconds */
@@ -747,6 +799,17 @@ int app_adjust_stack_configuration(
 }
 
 /*************************** Helper functions ********************************/
+
+
+void copy_ip_to_struct(
+   pnet_cfg_ip_addr_t      *destination_struct,
+   os_ipaddr_t             ip)
+{
+   destination_struct->a = ((ip >> 24) & 0xFF);
+   destination_struct->b = ((ip >> 16) & 0xFF);
+   destination_struct->c = ((ip >> 8) & 0xFF);
+   destination_struct->d = (ip & 0xFF);
+}
 
 const char* event_value_to_string(
    pnet_event_values_t event)

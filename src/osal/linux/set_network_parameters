@@ -17,7 +17,7 @@ if [ $# -ne 6 ]; then
    echo "Usage: ${0} interfacename ip netmask gateway hostname permanent"
    echo "   where:"
    echo "       interfacename:   Network interface name, for example eth0"
-   echo "       ip:              IPv4 address, for example 192.168.137.4"
+   echo "       ip:              IPv4 address, for example 192.168.0.50"
    echo "       netmask:         Netmask"
    echo "       gateway:         Default gateway"
    echo "       hostname:        Host name, for example my_laptop_3"

@@ -33,89 +33,16 @@ extern "C"
 {
 #endif
 
-#include <stdint.h>
-#include <stddef.h>
-#include <stdbool.h>
-#include <stdio.h>
 #include <pnet_export.h>
 
-/**
- * # Profinet Stack Options
- *
- * The defines named `PNET_OPTION_*` may be used to extend or reduce the functionality
- * of the stack. Setting these values to 0 excludes the specific function and may also
- * reduce the memory usage of the Profinet stack.
- *
- * Note that none of these options are currently supported (even if enabled by setting
- * the value to 1), except for parsing the RPC Connect request message and generating the
- * connect RPC Connect response message.
- */
-#define PNET_OPTION_FAST_STARTUP                               1
-#define PNET_OPTION_PARAMETER_SERVER                           1
-#define PNET_OPTION_IR                                         1
-#define PNET_OPTION_SR                                         1
-#define PNET_OPTION_REDUNDANCY                                 1
-#define PNET_OPTION_AR_VENDOR_BLOCKS                           1
-#define PNET_OPTION_RS                                         1
-#define PNET_OPTION_MC_CR                                      1
-#define PNET_OPTION_SRL                                        0
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
 
-/**
- * Disable use of atomic operations (stdatomic.h).
- * If the compiler supports it then set this define to 1.
- */
-#define PNET_USE_ATOMICS                                       0
+#define PNET_MAX_FILE_FULLPATH_LEN           (PNET_MAX_DIRECTORYPATH_LENGTH + PNET_MAX_FILENAME_LENGTH)  /** Including separator and one termination */
 
-/**
- * # Memory Usage
- *
- * Memory usage is controlled by the `PNET_MAX_*` defines.
- * Define the required number of supported items.
- *
- * These values directly affect the memory usage of the implementation.
- * Sometimes in complicated ways.
- *
- * Please note that some defines have minimum requirements.
- * These values are used as is by the stack. No validation is performed.
- */
-#define PNET_MAX_AR                                            2     /**< Number of connections. Must be > 0. "Automated RT Tester" uses 2 */
-#define PNET_MAX_API                                           1     /**< Number of Application Processes. Must be > 0. */
-#define PNET_MAX_CR                                            2     /**< Per AR. 1 input and 1 output. */
-#define PNET_MAX_MODULES                                       5     /**< Per API. Should be > 1 to allow at least one I/O module. */
-#define PNET_MAX_SUBMODULES                                    3     /**< Per module (3 needed for DAP). */
-#define PNET_MAX_CHANNELS                                      1     /**< Per sub-slot. Used for diagnosis. */
-#define PNET_MAX_DFP_IOCR                                      2     /**< Allowed values are 0 (zero) or 2. */
-#define PNET_MAX_PORT                                          1     /**< 2 for media redundancy. Currently only 1 is supported. */
-#define PNET_MAX_LOG_BOOK_ENTRIES                              16
-#define PNET_MAX_ALARMS                                        3     /**< Per AR and queue. One queue for hi and one for lo alarms. */
-#define PNET_MAX_DIAG_ITEMS                                    200   /**< Total, per device. Max is 65534 items. */
-
-#if PNET_OPTION_MC_CR
-#define PNET_MAX_MC_CR                                         1     /**< Par AR. */
-#endif
-
-#if PNET_OPTION_AR_VENDOR_BLOCKS
-#define PNET_MAX_AR_VENDOR_BLOCKS                              1     /**< Must be > 0 */
-#define PNET_MAX_AR_VENDOR_BLOCK_DATA_LENGTH                   512
-#endif
-
-#define PNET_MAX_MAN_SPECIFIC_FAST_STARTUP_DATA_LENGTH         0     /**< or 512 (bytes) */
-
-#define PNET_MAX_SESSION_BUFFER_SIZE                           4500  /**< Max fragmented RPC request/response length */
-/**
- * # GSDML
- * The following values are application-specific and should match what
- * is specified in the GSDML file.
- */
-
-/**
- * A value of 32 allows data exchange every 1 ms (resolution is 32.25us).
- */
-#define PNET_MIN_DEVICE_INTERVAL                               32
-
-/* ======================================================================= */
-/*                 Do not modify anything below this text!                 */
-/* ======================================================================= */
+#define PNET_MAX_INTERFACE_NAME_LENGTH       16  /** Including termination. Based on Linux IFNAMSIZ */
 
 /** Supported block version by this implementation */
 #define PNET_BLOCK_VERSION_HIGH                                1
@@ -124,7 +51,6 @@ extern "C"
 /** Some blocks (e.g. logbook) uses the following lower version number. */
 #define PNET_BLOCK_VERSION_LOW_1                               1
 
-#define PNET_MAX_INTERFACE_NAME_LENGTH                         21       /** Including termination */
 
 /**
  * # Error Codes
@@ -387,14 +313,9 @@ extern "C"
 #define PNET_ERROR_CODE_2_ABORT_DCP_RESET_TO_FACTORY           0x20
 #define PNET_ERROR_CODE_2_ABORT_PDEV_CHECK_FAILED              0x24
 
-
-typedef enum pnet_file_index
-{
-   PNET_FILE_INDEX_IP,
-   PNET_FILE_INDEX_DIAGNOSTICS,
-   PNET_FILE_INDEX_LOGBOOK,
-} pnet_file_index_t;
-
+#define PNET_FILENAME_IP               "pnet_data_ip.bin"            /* Max length PNET_MAX_FILENAME_LENGTH */
+#define PNET_FILENAME_DIAGNOSTICS      "pnet_data_diagnostics.bin"
+#define PNET_FILENAME_LOGBOOK          "pnet_data_logbook.bin"
 
 /**
  * # List of error_code_2 values, for
@@ -937,7 +858,7 @@ typedef int (*pnet_reset_ind)(
  *
  * Use this callback to implement control of the LED.
  *
- * It is optional to implement this callback (but a complianct Profinet device
+ * It is optional to implement this callback (but a compliant Profinet device
  * must have a signal LED)
  *
  * @param net                       InOut: The p-net stack instance
@@ -971,12 +892,12 @@ typedef int (*pnet_signal_led_ind)(
  */
 typedef struct pnet_im_0
 {
-   uint8_t                 vendor_id_hi;
-   uint8_t                 vendor_id_lo;
-   char                    order_id[20+1];         /**< Terminated string */
+   uint8_t                 im_vendor_id_hi;
+   uint8_t                 im_vendor_id_lo;
+   char                    im_order_id[20+1];         /**< Terminated string */
    char                    im_serial_number[16+1]; /**< Terminated string */
    uint16_t                im_hardware_revision;
-   char                    sw_revision_prefix;
+   char                    im_sw_revision_prefix;
    uint8_t                 im_sw_revision_functional_enhancement;
    uint8_t                 im_sw_revision_bug_fix;
    uint8_t                 im_sw_revision_internal_change;
@@ -1054,7 +975,7 @@ typedef struct pnet_cfg_device_id
  * The Profinet stack also supports assigning an IP address, mask and gateway address
  * via DCP Set commands based on the Ethernet MAC address.
  *
- * An IP address of 1.0.0.0 has the member a=1, and the rest of the members
+ * An IP address of 0.0.0.1 has the member d=1, and the rest of the members
  * set to 0.
  *
  */
@@ -1156,6 +1077,10 @@ typedef struct pnet_cfg
    char                    device_vendor[20+1];                   /**< Terminated string */
    char                    manufacturer_specific_string[240+1];   /**< Terminated string */
 
+   /* Timing */
+   uint16_t                min_device_interval;    /** Smallest allowed data exchange interval, in units of 31.25 us.
+                                                       Used for triggering error messages to the PLC. Should match GSDML file.
+                                                       Typically 32, which corresponds to 1 ms. Max 0x1000 (128 ms) */
    /** LLDP */
    pnet_lldp_cfg_t         lldp_cfg;
 
@@ -1168,6 +1093,10 @@ typedef struct pnet_cfg
    pnet_cfg_ip_addr_t      ip_mask;
    pnet_cfg_ip_addr_t      ip_gateway;
    pnet_ethaddr_t          eth_addr;
+
+   /** Storage between runs */
+   char                    file_directory[PNET_MAX_DIRECTORYPATH_LENGTH]; /**< Terminated string with absolute path. Use NULL or empty string for current directory. */
+
 } pnet_cfg_t;
 
 /**

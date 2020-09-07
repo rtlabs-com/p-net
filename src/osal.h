@@ -82,10 +82,12 @@ typedef void os_channel_t;
                              ((uint32_t)((c) & 0xff) << 8)  | \
                              (uint32_t)((d) & 0xff))
 
+#define OS_INET_ADDRSTRLEN       16
+#define OS_ETH_ADDRSTRLEN        18
+#define OS_HOST_NAME_MAX         64     /* Value from Linux */
+
 /** Set an IP address given by the four byte-parts */
 #define OS_IP4_ADDR_TO_U32(ipaddr, a,b,c,d)  ipaddr = OS_MAKEU32(a,b,c,d)
-
-#define OS_INET_ADDRSTRLEN       16
 
 enum os_eth_type {
   OS_ETHTYPE_IP        = 0x0800U,
@@ -116,44 +118,63 @@ enum os_eth_type {
 typedef uint32_t os_ipaddr_t;
 typedef uint16_t os_ipport_t;
 
-/* TODO Handle multiple instances of the stack */
 /**
- * Load a binary blob.
+ * The Ethernet MAC address.
+ */
+typedef struct os_ethaddr
+{
+  uint8_t addr[6];
+} os_ethaddr_t;
+
+/**
+ * Load a binary file.
  *
- * @param file_index       In:    Index of binary blobs
- * @param object           Out:   Struct to load
- * @param size             In:    Size of struct to load
+ * Can load the data into two buffers.
+ *
+ * @param fullpath         In:    Full path to the file
+ * @param object_1         Out:   Data to load, or NULL. Mandatory if size_1 > 0
+ * @param size_1           In:    Size of object_1.
+ * @param object_2         Out:   Data to load, or NULL. Mandatory if size_2 > 0
+ * @param size_2           In:    Size of object_2.
  * @return  0  if the operation succeeded.
  *          -1 if not found or an error occurred.
  */
-int os_load_blob(
-   int                     file_index,
-   void                    *object,
-   size_t                  size
+int os_load_file(
+   const char              *fullpath,
+   void                    *object_1,
+   size_t                  size_1,
+   void                    *object_2,
+   size_t                  size_2
 );
 
 /**
- * Save a binary blob.
+ * Save a binary file.
  *
- * @param file_index       In: Index of binary blobs
- * @param object           In: Struct to save
- * @param size             In: Size of struct to save
+ * Can handle two output buffers.
+ *
+ * @param fullpath         In:    Full path to the file
+ * @param object_1         In:    Data to save, or NULL. Mandatory if size_1 > 0
+ * @param size_1           In:    Size of object_1.
+ * @param object_2         In:    Data to save, or NULL. Mandatory if size_2 > 0
+ * @param size_2           In:    Size of object_2.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
-int os_save_blob(
-   int                     file_index,
-   void                    *object,
-   size_t                  size
+int os_save_file(
+   const char              *fullpath,
+   void                    *object_1,
+   size_t                  size_1,
+   void                    *object_2,
+   size_t                  size_2
 );
 
 /**
- * Clear a binary blob.
+ * Clear a binary file.
  *
- * @param file_index       In: Index of binary blobs
+ * @param fullpath         In:    Full path to the file
  */
-void os_clear_blob(
-   int                     file_index
+void os_clear_file(
+   const char              *fullpath
 );
 
 int os_snprintf (char * str, size_t size, const char * fmt, ...) CC_FORMAT (3,4);
@@ -223,24 +244,149 @@ os_eth_handle_t* os_eth_init(
    os_eth_callback_t       *callback,
    void                    *arg);
 
-int os_udp_open(os_ipaddr_t addr, os_ipport_t port);
-int os_udp_sendto(uint32_t id,
-      os_ipaddr_t dst_addr,
-      os_ipport_t dst_port,
-      const uint8_t * data,
-      int size);
-int os_udp_recvfrom(uint32_t id,
-      os_ipaddr_t *src_addr,
-      os_ipport_t *src_port,
-      uint8_t * data,
-      int size);
-void os_udp_close(uint32_t id);
+/**
+ * Open an UDP socket
+ *
+ * @param addr             In:    IP address to listen to. Typically used with OS_IPADDR_ANY.
+ * @param port             In:    UDP port to listen to.
+ * @return Socket ID, or -1 if an error occurred.
+ */
+int os_udp_open(
+   os_ipaddr_t             addr,
+   os_ipport_t             port);
 
+/**
+ * Send UDP data
+ *
+ * @param id               In:    Socket ID
+ * @param dst_addr         In:    Destination IP address
+ * @param dst_port         In:    Destination UDP port
+ * @param data             In:    Data to be sent
+ * @param size             In:    Size of data
+ * @return  The number of bytes sent, or -1 if an error occurred.
+ */
+int os_udp_sendto(
+   uint32_t                id,
+   os_ipaddr_t             dst_addr,
+   os_ipport_t             dst_port,
+   const uint8_t           *data,
+   int                     size);
+
+/**
+ * Receive UDP data.
+ *
+ * This is a nonblocking function, and it
+ * returns 0 immediately if no data is available.
+ *
+ * @param id               In:    Socket ID
+ * @param dst_addr         Out:   Source IP address
+ * @param dst_port         Out:   Source UDP port
+ * @param data             Out:   Received data
+ * @param size             In:    Size of buffer for received data
+ * @return  The number of bytes received, or -1 if an error occurred.
+ */
+int os_udp_recvfrom(
+   uint32_t                id,
+   os_ipaddr_t             *src_addr,
+   os_ipport_t             *src_port,
+   uint8_t                 *data,
+   int                     size);
+
+/**
+ * Close an UDP socket
+ *
+ * @param id               In:    Socket ID
+ */
+void os_udp_close(
+   uint32_t                id);
+
+/**
+ * Get network parameters (IP address, netmask etc)
+ *
+ * For example:
+ *
+ * IP address        Represented by
+ * 1.0.0.0           0x01000000 = 16777216
+ * 0.0.0.1           0x00000001 = 1
+ *
+ * @param interface_name      In: Ethernet interface name, for example eth0
+ * @param p_ipaddr            Out: IPv4 address
+ * @param p_netmask           Out: Netmask
+ * @param p_gw                Out: Default gateway
+ * @param hostname            Out: Host name, for example my_laptop_4. Existing buffer should have length OS_HOST_NAME_MAX.
+ * @return  0  if the operation succeeded.
+ *          -1 if an error occurred.
+ */
 int os_get_ip_suite(
+   const char              *interface_name,
    os_ipaddr_t             *p_ipaddr,
    os_ipaddr_t             *p_netmask,
    os_ipaddr_t             *p_gw,
-   const char              **p_device_name);
+   char                    *hostname);
+
+/**
+ * Read the IP address as an integer. For IPv4.
+ *
+ * For example:
+ *
+ * IP address        Represented by
+ * 1.0.0.0           0x01000000 = 16777216
+ * 0.0.0.1           0x00000001 = 1
+ *
+ * @param interface_name      In: Name of network interface
+ * @return IP address on success and
+ *         0 if an error occurred
+*/
+os_ipaddr_t os_get_ip_address(
+    const char              *interface_name
+);
+
+/**
+ * Read the netmask as an integer. For IPv4.
+ *
+ * @param interface_name      In: Name of network interface
+ * @return netmask
+*/
+os_ipaddr_t os_get_netmask(
+    const char              *interface_name
+);
+
+/**
+ * Read the default gateway address as an integer. For IPv4.
+ *
+ * Assumes the default gateway is found on .1 on same subnet as the IP address.
+ *
+ * @param interface_name      In: Name of network interface
+ * @return netmask
+*/
+os_ipaddr_t os_get_gateway(
+   const char              *interface_name
+);
+
+/**
+ * Read the MAC address.
+ *
+ * @param interface_name      In: Name of network interface
+ * @param mac_addr            Out: MAC address
+ *
+ * @return 0 on success and
+ *         -1 if an error occurred
+*/
+int os_get_macaddress(
+   const char              *interface_name,
+   os_ethaddr_t            *p_mac
+);
+
+/**
+ * Read the current host name
+ *
+ * @param hostname            Out: Host name, for example my_laptop_4. Existing buffer should have length OS_HOST_NAME_MAX.
+ * @return 0 on success and
+ *         -1 if an error occurred
+*/
+int os_get_hostname(
+   char              *hostname
+);
 
 /**
  * Set network parameters (IP address, netmask etc)
@@ -267,6 +413,7 @@ int os_set_ip_suite(
    os_ipaddr_t             *p_gw,
    const char              *hostname,
    bool                    permanent);
+
 
 #ifdef __cplusplus
 }

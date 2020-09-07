@@ -132,40 +132,41 @@ TEST_F (DiagTest, DiagRunTest)
    const uint16_t          slot = 1;
    const uint16_t          subslot = 1;
 
-   printf("\nGenerating mock connection request\n");
+   TEST_TRACE("\nGenerating mock connection request\n");
    mock_set_os_udp_recvfrom_buffer(connect_req, sizeof(connect_req));
-   os_usleep(TEST_UDP_DELAY);
+   run_stack(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.state_calls, 1);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_STARTUP);
    EXPECT_EQ(appdata.call_counters.connect_calls, 1);
    EXPECT_GT(mock_os_data.eth_send_count, 0);
 
-   printf("\nGenerating mock parameter end request\n");
+   TEST_TRACE("\nGenerating mock parameter end request\n");
    mock_set_os_udp_recvfrom_buffer(prm_end_req, sizeof(prm_end_req));
-   os_usleep(TEST_UDP_DELAY);
+   run_stack(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.state_calls, 2);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_PRMEND);
    EXPECT_EQ(appdata.call_counters.connect_calls, 1);
 
-   printf("\nSimulate application calling APPL_RDY\n");
+   TEST_TRACE("\nSimulate application calling APPL_RDY\n");
    ret = pnet_application_ready(net, appdata.main_arep);
    EXPECT_EQ(ret, 0);
    EXPECT_EQ(appdata.call_counters.state_calls, 3);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_APPLRDY);
 
-   printf("\nGenerating mock application ready response\n");
+   TEST_TRACE("\nGenerating mock application ready response\n");
    mock_set_os_udp_recvfrom_buffer(appl_rdy_rsp, sizeof(appl_rdy_rsp));
-   os_usleep(TEST_UDP_DELAY);
+   run_stack(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.state_calls, 3);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_APPLRDY);
 
-   printf("\nGenerating cyclic data\n");
+   TEST_TRACE("\nGenerating cyclic data\n");
    for (ix = 0; ix < 100; ix++)
    {
-      send_data(net, &appdata.data_cycle_ctr, data_packet_good_iops_good_iocs, sizeof(data_packet_good_iops_good_iocs));
+      send_data(data_packet_good_iops_good_iocs, sizeof(data_packet_good_iops_good_iocs));
+      run_stack (TEST_DATA_DELAY);
    }
 
-   printf("\nTesting pnet_output_get_data_and_iops()\n");
+   TEST_TRACE("\nTesting pnet_output_get_data_and_iops()\n");
    iops = 88;     /* Something non-valid */
    in_len = sizeof(in_data);
    ret = pnet_output_get_data_and_iops(net, TEST_API_IDENT, slot, subslot, &new_flag, in_data, &in_len, &iops);
@@ -175,7 +176,7 @@ TEST_F (DiagTest, DiagRunTest)
    EXPECT_EQ(in_data[0], 0x23);
    EXPECT_EQ(iops, PNET_IOXS_GOOD);
 
-   printf("\nTesting pnet_input_get_iocs()\n");
+   TEST_TRACE("\nTesting pnet_input_get_iocs()\n");
    iocs = 77;     /* Something non-valid */
    ret = pnet_input_get_iocs(net, TEST_API_IDENT, slot, subslot, &iocs);
    EXPECT_EQ(ret, 0);
@@ -186,20 +187,21 @@ TEST_F (DiagTest, DiagRunTest)
    EXPECT_EQ(appdata.call_counters.state_calls, 4);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_DATA);
 
-   printf("\nSend some data to the controller\n");
+   TEST_TRACE("\nSend some data to the controller\n");
    ret = pnet_input_set_data_and_iops(net, TEST_API_IDENT, slot, subslot, out_data, sizeof(out_data), PNET_IOXS_GOOD);
    EXPECT_EQ(ret, 0);
 
-   printf("\nAcknowledge the reception of controller data\n");
+   TEST_TRACE("\nAcknowledge the reception of controller data\n");
    ret = pnet_output_set_iocs(net, TEST_API_IDENT, slot, subslot, PNET_IOXS_GOOD);
    EXPECT_EQ(ret, 0);
    EXPECT_EQ(appdata.call_counters.state_calls, 4);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_DATA);
 
    /* Send data to avoid timeout */
-   send_data(net, &appdata.data_cycle_ctr, data_packet_good_iops_good_iocs, sizeof(data_packet_good_iops_good_iocs));
+   send_data(data_packet_good_iops_good_iocs, sizeof(data_packet_good_iops_good_iocs));
+   run_stack (TEST_DATA_DELAY);
 
-   printf("\nCreate a STD diag entry. Then update it and finally remove it.\n");
+   TEST_TRACE("\nCreate a STD diag entry. Then update it and finally remove it.\n");
    PNET_DIAG_CH_PROP_TYPE_SET(ch_properties, PNET_DIAG_CH_PROP_TYPE_8_BIT);
    PNET_DIAG_CH_PROP_ACC_SET(ch_properties, 0);
    PNET_DIAG_CH_PROP_MAINT_SET(ch_properties, PNET_DIAG_CH_PROP_MAINT_FAULT);
@@ -218,7 +220,7 @@ TEST_F (DiagTest, DiagRunTest)
    ret = pnet_diag_remove(net, appdata.main_arep, TEST_API_IDENT, slot, subslot, 0, ch_properties, 0x0001, PNET_DIAG_USI_STD);
    EXPECT_EQ(ret, 0);
 
-   printf("\nCreate several different severity STD diag entries. Then remove them.\n");
+   TEST_TRACE("\nCreate several different severity STD diag entries. Then remove them.\n");
    PNET_DIAG_CH_PROP_TYPE_SET(ch_properties, PNET_DIAG_CH_PROP_TYPE_8_BIT);
    PNET_DIAG_CH_PROP_ACC_SET(ch_properties, 0);
    PNET_DIAG_CH_PROP_MAINT_SET(ch_properties, PNET_DIAG_CH_PROP_MAINT_FAULT);
@@ -248,7 +250,7 @@ TEST_F (DiagTest, DiagRunTest)
    ret = pnet_diag_remove(net, appdata.main_arep, TEST_API_IDENT, slot, subslot, 0, ch_properties, 0x0001, PNET_DIAG_USI_STD);
    EXPECT_EQ(ret, 0);
 
-   printf("Try to remove it again\n");
+   TEST_TRACE("Try to remove it again\n");
    ret = pnet_diag_remove(net, appdata.main_arep, TEST_API_IDENT, slot, subslot, 0, ch_properties, 0x0001, PNET_DIAG_USI_STD);
    EXPECT_EQ(ret, -1);
 
@@ -264,7 +266,7 @@ TEST_F (DiagTest, DiagRunTest)
    ret = pnet_diag_remove(net, appdata.main_arep, TEST_API_IDENT, slot, subslot, 0, ch_properties, 0x0004, PNET_DIAG_USI_STD);
    EXPECT_EQ(ret, 0);
 
-   printf("Try to add two of the same kind\n");
+   TEST_TRACE("Try to add two of the same kind\n");
    PNET_DIAG_CH_PROP_MAINT_SET(ch_properties, PNET_DIAG_CH_PROP_MAINT_REQUIRED);
    ret = pnet_diag_add(net, appdata.main_arep, TEST_API_IDENT, slot, subslot, 0, ch_properties, 0x0002, 0x0002, 0x00030004, 0, PNET_DIAG_USI_STD, NULL);
    EXPECT_EQ(ret, 0);
@@ -276,30 +278,30 @@ TEST_F (DiagTest, DiagRunTest)
    ret = pnet_diag_remove(net, appdata.main_arep, TEST_API_IDENT, slot, subslot, 0, ch_properties, 0x0002, PNET_DIAG_USI_STD);
    EXPECT_EQ(ret, 0);
 
-   printf("Try to update a diag entry that does not exist\n");
+   TEST_TRACE("Try to update a diag entry that does not exist\n");
    PNET_DIAG_CH_PROP_MAINT_SET(ch_properties, PNET_DIAG_CH_PROP_MAINT_REQUIRED);
    ret = pnet_diag_update(net, appdata.main_arep, TEST_API_IDENT, slot, subslot, 0, ch_properties, 0x0007, 0x00030004, PNET_DIAG_USI_STD, NULL);
    EXPECT_EQ(ret, -1);
 
-   printf("Add diag to non-existing sub-slot\n");
+   TEST_TRACE("Add diag to non-existing sub-slot\n");
    ret = pnet_diag_add(net, appdata.main_arep, TEST_API_IDENT, slot, 2, 0, ch_properties, 0x0002, 0x0002, 0x00030004, 0, PNET_DIAG_USI_STD, NULL);
    EXPECT_EQ(ret, -1);
 
-   printf("Test with a different USI\n");
+   TEST_TRACE("Test with a different USI\n");
    PNET_DIAG_CH_PROP_MAINT_SET(ch_properties, PNET_DIAG_CH_PROP_MAINT_REQUIRED);
    ret = pnet_diag_add(net, appdata.main_arep, TEST_API_IDENT, slot, subslot, 0, ch_properties, 0x0002, 0x0002, 0x00030004, 0, 0x1234, (uint8_t*)"Bjarne");
    EXPECT_EQ(ret, 0);
 
-   printf("Remove wrong USI\n");
+   TEST_TRACE("Remove wrong USI\n");
    ret = pnet_diag_remove(net, appdata.main_arep, TEST_API_IDENT, slot, subslot, 0, ch_properties, 0x0002, 0x1235);
    EXPECT_EQ(ret, -1);
 
    ret = pnet_diag_remove(net, appdata.main_arep, TEST_API_IDENT, slot, subslot, 0, ch_properties, 0x0002, 0x1234);
    EXPECT_EQ(ret, 0);
 
-   printf("\nGenerating mock release request\n");
+   TEST_TRACE("\nGenerating mock release request\n");
    mock_set_os_udp_recvfrom_buffer(release_req, sizeof(release_req));
-   os_usleep(TEST_UDP_DELAY);
+   run_stack(TEST_UDP_DELAY);
    EXPECT_EQ(appdata.call_counters.release_calls, 1);
    EXPECT_EQ(appdata.call_counters.state_calls, 5);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_ABORT);

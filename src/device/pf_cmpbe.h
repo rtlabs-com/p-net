@@ -30,8 +30,8 @@ void pf_cmpbe_show(
 
 /**
  * Handle CMDEV events.
- * @param p_ar             In:   The AR instance.
- * @param event            In:   The CMDEV event.
+ * @param p_ar             In:    The AR instance.
+ * @param event            In:    The new CMDEV state. Use PNET_EVENT_..., not PF_CMDEV_STATE_...
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */

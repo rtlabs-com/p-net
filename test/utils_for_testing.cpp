@@ -17,84 +17,6 @@
 
 #include <gtest/gtest.h>
 
-
-/************************** Utilities ****************************************/
-
-/* Send raw Ethernet test data
- *
- * @param net     InOut: Stack handle
- * @param         InOut: Cycle counter
- * @param         In: Data packet
- * @param         In: Length of data packet
- */
-void send_data(
-   pnet_t                  *net,
-   uint16_t                *cycle_counter,
-   uint8_t                 *data_packet,
-   uint16_t                len)
-{
-   int                     ret;
-   os_buf_t                *p_buf;
-   uint8_t                 *p_ctr;
-
-   p_buf = os_buf_alloc(PF_FRAME_BUFFER_SIZE);
-   if (p_buf == NULL)
-   {
-      printf("(%d): Out of memory in send_data\n", __LINE__);
-   }
-   else
-   {
-      memcpy(p_buf->payload, data_packet, len);
-
-      /* Insert frame time, store in big-endian */
-      (*cycle_counter)++;
-      p_ctr = &((uint8_t*)(p_buf->payload))[len - 4];
-      *(p_ctr + 0) = (*cycle_counter >> 8) & 0xff;
-      *(p_ctr + 1) = *cycle_counter & 0xff;
-
-      p_buf->len = len;
-      ret = pf_eth_recv(net, p_buf);
-      EXPECT_EQ(ret, 1);
-      if (ret == 0)
-      {
-         printf("(%d): Unhandled p_buf\n", __LINE__);
-         os_buf_free(p_buf);
-      }
-
-      os_usleep(TEST_DATA_DELAY);
-   }
-}
-
-/*
- * This is a timer callback,
- * and the arguments should fulfill the requirements of os_timer_create()
- */
-void run_periodic(os_timer_t *p_timer, void *p_arg)
-{
-   app_data_and_stack_for_testing_t       *appdata_and_stack = (app_data_and_stack_for_testing_t*)p_arg;
-   uint16_t                               slot = 0;
-
-   /* Set new output data every 10ms */
-   appdata_and_stack->appdata->tick_ctr++;
-   if ((appdata_and_stack->appdata->main_arep != 0) && (appdata_and_stack->appdata->tick_ctr > 10))
-   {
-      appdata_and_stack->appdata->tick_ctr = 0;
-      appdata_and_stack->appdata->inputdata[0] = appdata_and_stack->appdata->data_ctr++;
-
-      /* Set data for custom input modules, if any */
-      for (slot = 0; slot < PNET_MAX_MODULES; slot++)
-      {
-         if (appdata_and_stack->appdata->custom_input_slots[slot] == true)
-         {
-            (void)pnet_input_set_data_and_iops(appdata_and_stack->net, TEST_API_IDENT, slot, TEST_SUBMOD_CUSTOM_IDENT, appdata_and_stack->appdata->inputdata, TEST_DATASIZE_INPUT, PNET_IOXS_GOOD);
-         }
-      }
-   }
-
-   pnet_handle_periodic(appdata_and_stack->net);
-}
-
-
 /******************** Callbacks defined by p-net *****************************/
 
 int my_connect_ind(
@@ -153,7 +75,7 @@ static int my_signal_led_ind(
 {
    app_data_for_testing_t     *p_appdata = (app_data_for_testing_t*)arg;
 
-   printf("Callback on set LED state: %u\n", led_state);
+   TEST_TRACE("Callback on set LED state: %u\n", led_state);
    if (led_state == 1)
    {
       p_appdata->call_counters.led_on_calls++;
@@ -181,8 +103,8 @@ int my_read_ind(
 {
    app_data_for_testing_t     *p_appdata = (app_data_for_testing_t*)arg;
 
-   printf("Callback on read\n");
-   printf("  API: %u Slot: %u Subslot: %u Index: %u Sequence: %u\n", api, slot, subslot, idx, sequence_number);
+   TEST_TRACE("Callback on read\n");
+   TEST_TRACE("  API: %" PRIu32 " Slot: %" PRIu16 " Subslot: %" PRIu16 " Index: %" PRIu16 " Sequence: %" PRIu16 "\n", api, slot, subslot, idx, sequence_number);
    p_appdata->call_counters.read_calls++;
    return 0;
 }
@@ -202,8 +124,8 @@ int my_write_ind(
 {
    app_data_for_testing_t     *p_appdata = (app_data_for_testing_t*)arg;
 
-   printf("Callback on write\n");
-   printf("  API: %u Slot: %u Subslot: %u Index: %u Sequence: %u Len: %u\n", api, slot, subslot, idx, sequence_number, write_length);
+   TEST_TRACE("Callback on write\n");
+   TEST_TRACE("  API: %" PRIu32 " Slot: %" PRIu16 " Subslot: %" PRIu16 " Index: %" PRIu16 " Sequence: %" PRIu16 " Len: %" PRIu16 "\n", api, slot, subslot, idx, sequence_number, write_length);
    p_appdata->call_counters.write_calls++;
    return 0;
 }
@@ -216,7 +138,7 @@ int my_new_data_status_ind(
    uint8_t changes,
    uint8_t data_status)
 {
-   printf("Callback on new data\n");
+   TEST_TRACE("Callback on new data\n");
    return 0;
 }
 
@@ -231,7 +153,7 @@ int my_alarm_ind(
    uint16_t data_usi,
    uint8_t *p_data)
 {
-   printf("Callback on alarm\n");
+   TEST_TRACE("Callback on alarm\n");
    return 0;
 }
 
@@ -241,7 +163,7 @@ int my_alarm_cnf(
    uint32_t arep,
    pnet_pnio_status_t *p_pnio_status)
 {
-   printf("Callback on alarm confirmation\n");
+   TEST_TRACE("Callback on alarm confirmation\n");
    return 0;
 }
 
@@ -293,7 +215,7 @@ int my_state_ind(
    {
       ret = pnet_get_ar_error_codes(net, arep, &err_cls, &err_code);
       EXPECT_EQ(ret, 0);
-      printf("ABORT err_cls 0x%02x  err_code 0x%02x\n", (unsigned)err_cls, (unsigned)err_code);
+      TEST_TRACE("ABORT err_cls 0x%02" PRIx16 "  err_code 0x%02" PRIx16 "\n", err_cls, err_code);
    }
 
    return 0;
@@ -311,7 +233,7 @@ int my_exp_module_ind(
    bool                       found = false;
    uint16_t                   ix;
 
-   printf("Callback on module\n");
+   TEST_TRACE("Callback on module\n");
 
    /* Find it in the list of supported modules */
    ix = 0;
@@ -328,7 +250,7 @@ int my_exp_module_ind(
    if (found == true)
    {
       /* For now support any module in any slot */
-      printf("  Plug module.    API: %u Slot: %u Module ID: %" PRIu32 " Index in list of supported modules: %u\n", api, slot, module_ident, ix);
+      TEST_TRACE("  Plug module.    API: %" PRIu32 " Slot: %" PRIu16 " Module ID: %" PRIu32 " Index in list of supported modules: %" PRIu16 "\n", api, slot, module_ident, ix);
       ret = pnet_plug_module(net, api, slot, module_ident);
       EXPECT_EQ(ret, 0);
 
@@ -344,7 +266,7 @@ int my_exp_module_ind(
    }
    else
    {
-      printf("  Module ident %08x not found\n", (unsigned)module_ident);
+      TEST_TRACE("  Module ident %08" PRIx32 " not found\n", module_ident);
       EXPECT_TRUE(false);  // Fail the test
    }
 
@@ -365,7 +287,7 @@ int my_exp_submodule_ind(
    bool                       found = false;
    uint16_t                   ix = 0;
 
-   printf("Callback on submodule\n");
+   TEST_TRACE("Callback on submodule\n");
 
    /* Find it in the list of supported submodules */
    ix = 0;
@@ -382,8 +304,8 @@ int my_exp_submodule_ind(
 
    if (found == true)
    {
-      printf("  Plug submodule. API: %u Slot: %u Subslot: %u Module ID: %" PRIu32 " Submodule ID: %" PRIu32 " (Index in available submodules: %u) Direction: %u Len in: %u out: %u\n",
-        api, slot, subslot, module_ident, submodule_ident, ix,
+      TEST_TRACE("  Plug submodule. API: %" PRIu32 " Slot: %" PRIu16 " Subslot: %" PRIu16 " Module ID: %" PRIu32 " Submodule ID: %" PRIu32 " (Index in available submodules: %" PRIu16 ") Direction: %u Len in: %" PRIu16 " out: %" PRIu16 "\n",
+             api, slot, subslot, module_ident, submodule_ident, ix,
         p_appdata->available_submodule_types[ix].direction,
         p_appdata->available_submodule_types[ix].input_length,
         p_appdata->available_submodule_types[ix].output_length);
@@ -395,7 +317,7 @@ int my_exp_submodule_ind(
    }
    else
    {
-      printf("  Sub-module ident %08x not found\n", (unsigned)submodule_ident);
+      TEST_TRACE("  Sub-module ident %08" PRIx32 " not found\n", submodule_ident);
       EXPECT_TRUE(false);  // Fail the test
    }
 
@@ -492,6 +414,9 @@ void PnetIntegrationTestBase::cfg_init()
    pnet_default_cfg.lldp_cfg.cap_phy = 0x8000; /* Unknown (0x8000) */
    pnet_default_cfg.lldp_cfg.mau_type = 0x0000; /* Unknown */
 
+   /* Timing */
+   pnet_default_cfg.min_device_interval = 32;  /* Corresponds to 1 ms */
+
    /* Network configuration */
    pnet_default_cfg.send_hello = 1; /* Send HELLO */
    pnet_default_cfg.dhcp_enable = 0;
@@ -508,12 +433,12 @@ void PnetIntegrationTestBase::cfg_init()
    pnet_default_cfg.ip_gateway.c = 1;
    pnet_default_cfg.ip_gateway.d = 1;
 
-   pnet_default_cfg.im_0_data.vendor_id_hi = 0x00;
-   pnet_default_cfg.im_0_data.vendor_id_lo = 0x01;
-   strcpy(pnet_default_cfg.im_0_data.order_id, "<orderid>           ");
+   pnet_default_cfg.im_0_data.im_vendor_id_hi = 0x00;
+   pnet_default_cfg.im_0_data.im_vendor_id_lo = 0x01;
+   strcpy(pnet_default_cfg.im_0_data.im_order_id, "<orderid>           ");
    strcpy(pnet_default_cfg.im_0_data.im_serial_number, "<serial nbr>    ");
    pnet_default_cfg.im_0_data.im_hardware_revision = 1;
-   pnet_default_cfg.im_0_data.sw_revision_prefix = 'P'; /* 'V', 'R', 'P', 'U', or 'T' */
+   pnet_default_cfg.im_0_data.im_sw_revision_prefix = 'P'; /* 'V', 'R', 'P', 'U', or 'T' */
    pnet_default_cfg.im_0_data.im_sw_revision_functional_enhancement = 0;
    pnet_default_cfg.im_0_data.im_sw_revision_bug_fix = 0;
    pnet_default_cfg.im_0_data.im_sw_revision_internal_change = 0;
@@ -528,4 +453,77 @@ void PnetIntegrationTestBase::cfg_init()
    strcpy(pnet_default_cfg.im_2_data.im_date, "");
    strcpy(pnet_default_cfg.im_3_data.im_descriptor, "");
    strcpy(pnet_default_cfg.im_4_data.im_signature, "");
+
+   /* Storage */
+   strcpy(pnet_default_cfg.file_directory, "/disk1");
+}
+
+void PnetIntegrationTestBase::run_stack (int us)
+{
+   uint16_t slot = 0;
+
+   for (int tmr = 0; tmr < us / TICK_INTERVAL_US; tmr++)
+   {
+      /* Set new output data every 10 ticks */
+      appdata.tick_ctr++;
+      if ((appdata.main_arep != 0) && (appdata.tick_ctr > 10))
+      {
+         appdata.tick_ctr = 0;
+         appdata.inputdata[0] = appdata.data_ctr++;
+
+         /* Set data for custom input modules, if any */
+         for (slot = 0; slot < PNET_MAX_MODULES; slot++)
+         {
+            if (appdata.custom_input_slots[slot] == true)
+            {
+               (void)pnet_input_set_data_and_iops(
+                  net,
+                  TEST_API_IDENT,
+                  slot,
+                  TEST_SUBMOD_CUSTOM_IDENT,
+                  appdata.inputdata,
+                  TEST_DATASIZE_INPUT,
+                  PNET_IOXS_GOOD);
+            }
+         }
+      }
+
+      /* Run stack functionality every tick */
+      pnet_handle_periodic(net);
+      mock_os_data.current_time_us += TICK_INTERVAL_US;
+   }
+}
+
+void PnetIntegrationTestBase::send_data(
+   uint8_t                 *data_packet,
+   uint16_t                len)
+{
+   int                     ret;
+   os_buf_t                *p_buf;
+   uint8_t                 *p_ctr;
+
+   p_buf = os_buf_alloc(PF_FRAME_BUFFER_SIZE);
+   if (p_buf == NULL)
+   {
+      TEST_TRACE("(%d): Out of memory in send_data\n", __LINE__);
+   }
+   else
+   {
+      memcpy(p_buf->payload, data_packet, len);
+
+      /* Insert frame time, store in big-endian */
+      appdata.data_cycle_ctr++;
+      p_ctr = &((uint8_t*)(p_buf->payload))[len - 4];
+      *(p_ctr + 0) = (appdata.data_cycle_ctr >> 8) & 0xff;
+      *(p_ctr + 1) = appdata.data_cycle_ctr & 0xff;
+
+      p_buf->len = len;
+      ret = pf_eth_recv(net, p_buf);
+      EXPECT_EQ(ret, 1);
+      if (ret == 0)
+      {
+         TEST_TRACE("(%d): Unhandled p_buf\n", __LINE__);
+         os_buf_free(p_buf);
+      }
+   }
 }

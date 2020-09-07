@@ -30,7 +30,6 @@
  */
 
 #ifdef UNIT_TEST
-#define os_eth_send                 mock_os_eth_send
 #endif
 
 /*
@@ -346,7 +345,7 @@ static int pf_alarm_alpmi_apmr_a_data_ind(
    case PF_ALPMI_STATE_W_ACK:
       /* This function is only called for DATA = ACK */
       p_apmx->p_alpmx->alpmi_state = PF_ALPMI_STATE_W_ALARM;
-      (void)pf_fspm_aplmi_alarm_cnf(net, p_apmx->p_ar, p_pnio_status);
+      (void)pf_fspm_alpmi_alarm_cnf(net, p_apmx->p_ar, p_pnio_status);
       ret = 0;
       break;
    }
@@ -397,7 +396,7 @@ static void pf_alarm_alpmr_apms_a_data_cnf(
       else
       {
          /* ALPMR_Alarm_Ack.cnf(+) */
-         (void)pf_fspm_aplmr_alarm_ack_cnf(net, p_apmx->p_ar, res);
+         (void)pf_fspm_alpmr_alarm_ack_cnf(net, p_apmx->p_ar, res);
          p_apmx->p_alpmx->alpmr_state = PF_ALPMR_STATE_W_NOTIFY;
       }
       break;
@@ -436,9 +435,9 @@ static int pf_alarm_alpmr_apmr_a_data_ind(
       break;
    case PF_ALPMR_STATE_W_NOTIFY:
       /* Only DATA: AlarmNotifications are sent to this function */
-      ret = pf_fspm_aplmr_alarm_ind(net, p_apmx->p_ar,
+      ret = pf_fspm_alpmr_alarm_ind(net, p_apmx->p_ar,
          p_alarm_data->api_id, p_alarm_data->slot_nbr, p_alarm_data->subslot_nbr,
-         data_usi, data_len, p_data);
+         data_len, data_usi, p_data);
 
       /* App must now send an ACK or a NACK */
       p_apmx->p_alpmx->alpmr_state = PF_ALPMR_STATE_W_USER_ACK;
@@ -597,10 +596,7 @@ static void pf_alarm_apms_timeout(
          else
          {
             LOG_INFO(PF_ALARM_LOG, "Alarm(%d): Re-sending alarm frame\n", __LINE__);
-            if (os_eth_send(p_apmx->p_ar->p_sess->eth_handle, p_apmx->p_rta) <= 0)
-            {
-               LOG_ERROR(PF_ALARM_LOG, "Alarm(%d): Error from os_eth_send(rta)\n", __LINE__);
-            }
+            (void)pf_eth_send(net, p_apmx->p_ar->p_sess->eth_handle, p_apmx->p_rta);
          }
 
          if (pf_scheduler_add(net, p_apmx->timeout_us,
@@ -948,11 +944,8 @@ static int pf_alarm_apms_a_data_req(
 
             p_rta->len = pos;
             LOG_INFO(PF_AL_BUF_LOG, "Alarm(%d): Send an alarm frame.\n", __LINE__);
-            if (os_eth_send(p_apmx->p_ar->p_sess->eth_handle, p_rta) <= 0)
-            {
-               LOG_ERROR(PF_ALARM_LOG, "Alarm(%d): Error from os_eth_send(rta)\n", __LINE__);
-            }
-            else
+
+            if (pf_eth_send(net, p_apmx->p_ar->p_sess->eth_handle, p_rta) > 0)
             {
                ret = 0;
             }
@@ -1561,6 +1554,7 @@ int pf_alarm_close(
 {
    int                     ret = 0;
 
+   LOG_DEBUG(PF_ALARM_LOG, "Alarm(%d): Closing alarm instance.\n", __LINE__);
    if (pf_alarm_alpmx_close(p_ar) != 0)
    {
       ret = -1;

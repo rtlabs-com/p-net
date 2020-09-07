@@ -76,7 +76,7 @@ static void pf_cmio_set_state(
 {
    if (state != p_ar->cmio_state)
    {
-      LOG_INFO(PNET_LOG, "CMIO(%d): New state %s\n", __LINE__, pf_cmio_state_to_string(state));
+      LOG_DEBUG(PNET_LOG, "CMIO(%d): New state %s\n", __LINE__, pf_cmio_state_to_string(state));
       p_ar->cmio_state = state;
    }
 }
@@ -91,6 +91,7 @@ static void pf_cmio_set_state(
  * to see if data has arrived from the controller.
  * If CPM data has arrived in state PF_CMIO_STATE_WDATA then notify CMDEV, else
  * schedule another call in 100ms.
+ *
  * @param net              InOut: The p-net stack instance
  * @param arg              In:   The AR instance.
  * @param current_time     In:   The current time.
@@ -135,6 +136,9 @@ int pf_cmio_cmdev_state_ind(
    pnet_event_values_t     event)
 {
    uint16_t                crep;
+
+   LOG_DEBUG(PNET_LOG, "CMIO(%d): Received event %s from CMDEV. Our state %s.\n", __LINE__,
+   pf_cmdev_event_to_string(event), pf_cmio_state_to_string(p_ar->cmio_state));
 
    switch (p_ar->cmio_state)
    {
@@ -233,7 +237,6 @@ int pf_cmio_cpm_state_ind(
    bool                    start)
 {
    int                     ret = 0;
-
    switch (p_ar->cmio_state)
    {
    case PF_CMIO_STATE_IDLE:
@@ -245,7 +248,7 @@ int pf_cmio_cpm_state_ind(
       {
          if (start != p_ar->iocrs[crep].cpm.cmio_start)
          {
-            LOG_INFO(PNET_LOG, "CMIO(%d): CPM State Ind (crep=%u) start=%s\n", __LINE__, crep, start?"true":"false");
+            LOG_INFO(PNET_LOG, "CMIO(%d): CPM state change. CMIO state is WDATA. crep: %u, CPM start=%s\n", __LINE__, crep, start?"true":"false");
          }
          p_ar->iocrs[crep].cpm.cmio_start = start;
       }
@@ -257,7 +260,7 @@ int pf_cmio_cpm_state_ind(
    case PF_CMIO_STATE_DATA:
       if (start == false)
       {
-         LOG_INFO(PNET_LOG, "CMIO(%d): CPM State Ind (crep=%u) start=%s\n", __LINE__, crep, start?"true":"false");
+         LOG_INFO(PNET_LOG, "CMIO(%d): CPM is stopping. CMIO state is DATA. Aborting. crep: %u\n", __LINE__, crep);
 
          /* if (crep != crep.mcpm) not possible - handled elsewhere */
          (void)pf_cmdev_state_ind(net, p_ar, PNET_EVENT_ABORT);
@@ -287,7 +290,7 @@ int pf_cmio_cpm_new_data_ind(
       {
          if (new_data != p_ar->iocrs[crep].cpm.cmio_start)
          {
-            LOG_INFO(PNET_LOG, "CMIO(%d): CPM New Data Ind (crep=%u) start=%s\n", __LINE__, crep, new_data?"true":"false");
+            LOG_DEBUG(PNET_LOG, "CMIO(%d): New data ind from CPM. (crep=%u) new_data=%s\n", __LINE__, crep, new_data?"true":"false");
          }
 
          p_ar->iocrs[crep].cpm.cmio_start = new_data;

@@ -96,8 +96,8 @@ void pf_set_error(
  * are released, and the global RPC socket is re-opened.
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:   The AR instance.
- * @param event            In:   The CMDEV event.
+ * @param p_ar             In:    The AR instance.
+ * @param event            In:    The new CMDEV state. Use PNET_EVENT_..., not PF_CMDEV_STATE_...
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -108,7 +108,7 @@ int pf_cmrpc_cmdev_state_ind(
 
 /**
  * Send a DCE RPC request to the controller.
- * The only request handled is the APPL_RDY request.
+ * The only request handled is the CControl (APPL_RDY) request.
  *
  * Opens a new UDP socket for the session.
  *
@@ -132,6 +132,29 @@ int pf_cmrpc_rm_ccontrol_req(
 void pf_cmrpc_show(
    pnet_t                  *net,
    unsigned                level);
+
+
+/************************* Utilities ******************************************/
+
+/**
+ * Display buffer contents
+ *
+ * For example:
+ *
+ *    uint8_t mybuffer[18] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 0, 1, 2, 3, 4, 5};
+ *    pf_show_memory(mybuffer, 18);
+ *
+ * will be displayed as:
+ *
+ *    41 42 43 44 45 46 47 48 49 4a 4b 4c 00 01 02 03 |ABCDEFGHIJKL....|
+ *    04 05                                           |..|
+ *
+ * @param data            In:   Buffer contents to be displayed
+ * @param size            In:   Buffer size (or smaller, to only display the beginning)
+ */
+void pf_show_memory(
+   const uint8_t           *data,
+   int                     size);
 
 #ifdef __cplusplus
 }

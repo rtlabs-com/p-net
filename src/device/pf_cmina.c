@@ -28,9 +28,6 @@
 
 #ifdef UNIT_TEST
 #define os_set_ip_suite mock_os_set_ip_suite
-#define os_load_blob mock_os_load_blob
-#define os_save_blob mock_os_save_blob
-#define os_clear_blob mock_os_clear_blob
 #endif
 
 #include <string.h>
@@ -85,22 +82,27 @@ static void pf_cmina_send_hello(
  * Compares with the content of already stored settings (in order not to
  * wear out the flash chip)
  *
- * @param p_ase            In:   Settings to be saved
+ * @param net              InOut: The p-net stack instance
+ * @param p_ase            In:    Settings to be saved
  */
 static void pf_cmina_save_ase_if_modified(
-   pf_cmina_dcp_ase_t     *p_ase)
+   pnet_t                  *net,
+   pf_cmina_dcp_ase_t      *p_ase)
 {
    pf_cmina_dcp_ase_t      file_ase;
    bool                    save = false;
    char                    ip_string[OS_INET_ADDRSTRLEN] = { 0 };
    char                    netmask_string[OS_INET_ADDRSTRLEN] = { 0 };
    char                    gateway_string[OS_INET_ADDRSTRLEN] = { 0 };
+   const char              *p_file_directory = NULL;
+
+   (void)pf_cmina_get_file_directory(net, &p_file_directory);
 
    pf_cmina_ip_to_string(p_ase->full_ip_suite.ip_suite.ip_addr, ip_string);
    pf_cmina_ip_to_string(p_ase->full_ip_suite.ip_suite.ip_mask, netmask_string);
    pf_cmina_ip_to_string(p_ase->full_ip_suite.ip_suite.ip_gateway, gateway_string);
 
-   if (os_load_blob(PNET_FILE_INDEX_IP, &file_ase, sizeof(pf_cmina_dcp_ase_t)) == 0)
+   if (pf_file_load(p_file_directory, PNET_FILENAME_IP, &file_ase, sizeof(pf_cmina_dcp_ase_t)) == 0)
    {
       if (memcmp(&file_ase.full_ip_suite.ip_suite, &p_ase->full_ip_suite.ip_suite, sizeof(p_ase->full_ip_suite.ip_suite)) != 0)
       {
@@ -128,7 +130,7 @@ static void pf_cmina_save_ase_if_modified(
 
    if (save == true)
    {
-      if (os_save_blob(PNET_FILE_INDEX_IP, p_ase, sizeof(pf_cmina_dcp_ase_t)) != 0)
+      if (pf_file_save(p_file_directory, PNET_FILENAME_IP, p_ase, sizeof(pf_cmina_dcp_ase_t)) != 0)
       {
          LOG_ERROR(PF_DCP_LOG,"CMINA(%d): Failed to store nvm IP settings.\n", __LINE__);
       }
@@ -156,12 +158,16 @@ int pf_cmina_set_default_cfg(
    uint32_t                ip = 0;
    uint32_t                netmask = 0;
    uint32_t                gateway = 0;
+   const char              *p_file_directory = NULL;
+
 
    LOG_DEBUG(PF_DCP_LOG,"CMINA(%d): Setting default configuration. Reset mode: %u\n", __LINE__, reset_mode);
 
    pf_fspm_get_default_cfg(net, &p_cfg);
    if (p_cfg != NULL)
    {
+      (void)pf_cmina_get_file_directory(net, &p_file_directory);
+
       net->cmina_nonvolatile_dcp_ase.device_initiative = p_cfg->send_hello ? 1 : 0;
       net->cmina_nonvolatile_dcp_ase.device_role = 1;            /* Means: PNIO Device */
 
@@ -178,7 +184,7 @@ int pf_cmina_set_default_cfg(
       if (reset_mode == 0)                /* Power-on reset */
       {
          /* Read from file (nvm) */
-         if (os_load_blob(PNET_FILE_INDEX_IP, &file_ase, sizeof(file_ase)) == 0)
+         if (pf_file_load(p_file_directory, PNET_FILENAME_IP, &file_ase, sizeof(file_ase)) == 0)
          {
             LOG_DEBUG(PF_DCP_LOG,"CMINA(%d): Did read IP parameters from nvm\n", __LINE__);
             ip = file_ase.full_ip_suite.ip_suite.ip_addr;
@@ -230,9 +236,9 @@ int pf_cmina_set_default_cfg(
          /* Clear name of station */
          memset(net->cmina_nonvolatile_dcp_ase.name_of_station, 0, sizeof(net->cmina_nonvolatile_dcp_ase.name_of_station));
 
-         os_clear_blob(PNET_FILE_INDEX_IP);
-         os_clear_blob(PNET_FILE_INDEX_DIAGNOSTICS);
-         os_clear_blob(PNET_FILE_INDEX_LOGBOOK);
+         pf_file_clear(p_file_directory, PNET_FILENAME_IP);
+         pf_file_clear(p_file_directory, PNET_FILENAME_DIAGNOSTICS);
+         pf_file_clear(p_file_directory, PNET_FILENAME_LOGBOOK);
       }
 
       if (reset_mode > 0)
@@ -256,7 +262,7 @@ int pf_cmina_set_default_cfg(
       net->cmina_nonvolatile_dcp_ase.device_vendor[ix] = '\0';
 
       /* Save to file */
-      pf_cmina_save_ase_if_modified(&net->cmina_nonvolatile_dcp_ase);
+      pf_cmina_save_ase_if_modified(net, &net->cmina_nonvolatile_dcp_ase);
 
       /* Init the current communication values */
       net->cmina_current_dcp_ase = net->cmina_nonvolatile_dcp_ase;
@@ -320,10 +326,12 @@ int pf_cmina_init(
 
    /* Collect the DCP ASE database */
    memset(&net->cmina_nonvolatile_dcp_ase, 0, sizeof(net->cmina_nonvolatile_dcp_ase));
-   (void)pf_cmina_set_default_cfg(net, 0);
+   (void)pf_cmina_set_default_cfg(net, 0);  /* Populates net->cmina_current_dcp_ase and net->cmina_nonvolatile_dcp_ase */
 
    if (strlen(net->cmina_current_dcp_ase.name_of_station) == 0)
    {
+      LOG_DEBUG(PF_DCP_LOG,"CMINA(%d): No station name available. Will not send any HELLO messages.\n",  __LINE__);
+
       if (net->cmina_current_dcp_ase.dhcp_enable == true)
       {
          /* Case 4 in Profinet 2.4 Table 1096 */
@@ -356,6 +364,8 @@ int pf_cmina_init(
           (net->cmina_current_dcp_ase.full_ip_suite.ip_suite.ip_mask == 0) &&
           (net->cmina_current_dcp_ase.full_ip_suite.ip_suite.ip_gateway == 0))
       {
+         LOG_DEBUG(PF_DCP_LOG,"CMINA(%d): No IP address available. Will not send any HELLO messages.\n",  __LINE__);
+
          if (net->cmina_current_dcp_ase.dhcp_enable == true)
          {
             /* Case 4 in Profinet 2.4 Table 1096 */
@@ -389,6 +399,10 @@ int pf_cmina_init(
             {
                net->cmina_hello_timeout = UINT32_MAX;
             }
+         }
+         else
+         {
+            LOG_DEBUG(PF_DCP_LOG,"CMINA(%d): Sending of HELLO messages is disabled in configuration.\n",  __LINE__);
          }
 
          net->cmina_state = PF_CMINA_STATE_W_CONNECT;
@@ -598,7 +612,7 @@ int pf_cmina_dcp_set_ind(
    if (ret == 0)
    {
       /* Save to file */
-      pf_cmina_save_ase_if_modified(&net->cmina_nonvolatile_dcp_ase);
+      pf_cmina_save_ase_if_modified(net, &net->cmina_nonvolatile_dcp_ase);
 
       /* Evaluate what we have and where to go */
       have_name = (strlen(net->cmina_current_dcp_ase.name_of_station) > 0);
@@ -929,6 +943,14 @@ int pf_cmina_dcp_get_req(
    return ret;
 }
 
+int pf_cmina_get_file_directory(
+   pnet_t                  *net,
+   const char              **pp_file_directory)
+{
+   *pp_file_directory = net->fspm_cfg.file_directory;
+   return 0;
+}
+
 int pf_cmina_get_station_name(
    pnet_t                  *net,
    const char **pp_station_name)
@@ -952,6 +974,7 @@ int pf_cmina_get_macaddr(
    *p_macaddr = net->cmina_current_dcp_ase.mac_address;
    return 0;
 }
+
 
 /*************** Diagnostic strings *****************************************/
 
@@ -1000,6 +1023,19 @@ void pf_ip_address_show(
 
    pf_cmina_ip_to_string(ip, ip_string);
    printf("%s", ip_string);
+}
+
+void pf_cmina_show_interface_statistics(
+   pnet_t                  *net)
+{
+   printf("Interface %s    In: %" PRIu32 " bytes %" PRIu32 " errors %" PRIu32 " discards  Out: %" PRIu32 " bytes %" PRIu32 " errors %" PRIu32 " discards\n",
+      net->interface_name,
+      net->interface_statistics.if_in_octets,
+      net->interface_statistics.if_in_errors,
+      net->interface_statistics.if_in_discards,
+      net->interface_statistics.if_out_octets,
+      net->interface_statistics.if_out_errors,
+      net->interface_statistics.if_out_discards);
 }
 
 void pf_cmina_show(

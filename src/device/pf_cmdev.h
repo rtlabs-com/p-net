@@ -299,8 +299,8 @@ void pf_cmdev_show_device(
  * Among other actions, it calls the \a pnet_state_ind() user callback.
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:   The AR instance.
- * @param state            In:   The new CMDEV state. Use PNET_EVENT_..., not PF_CMDEV_STATE_...
+ * @param p_ar             In:    The AR instance.
+ * @param state            In:    The new CMDEV state. Use PNET_EVENT_..., not PF_CMDEV_STATE_...
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */

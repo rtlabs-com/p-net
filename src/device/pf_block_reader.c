@@ -35,18 +35,10 @@
 #include "pf_includes.h"
 #include "pf_block_reader.h"
 
-/**
- * @internal
- * Extract a sequence of bytes from a buffer.
- * @param p_info           In:   The parser state.
- * @param p_pos            InOut:Position in the buffer.
- * @param dest_size        In:   Number of bytes to copy.
- * @param p_dest           Out:  Destination buffer.
- */
-static void pf_get_mem(
+void pf_get_mem(
    pf_get_info_t           *p_info,
    uint16_t                *p_pos,
-   uint16_t                dest_size,     /* bytes to copy */
+   uint16_t                dest_size,
    void                    *p_dest)
 {
    if (p_info->result != PF_PARSE_OK)
@@ -761,15 +753,14 @@ void pf_get_alarm_data(
    p_alarm_data->subslot_nbr = pf_get_uint16(p_info, p_pos);
    p_alarm_data->module_ident = pf_get_uint32(p_info, p_pos);
    p_alarm_data->submodule_ident = pf_get_uint32(p_info, p_pos);
-   p_alarm_data->alarm_type = pf_get_uint16(p_info, p_pos);
 
    /* AlarmSpecifier */
    temp_u16 = pf_get_uint16(p_info, p_pos);
    p_alarm_data->sequence_number = pf_get_bits(temp_u16, 0, 11);
-   p_alarm_data->alarm_specifier.channel_diagnosis = pf_get_bits(temp_u16, 1, 11);
-   p_alarm_data->alarm_specifier.manufacturer_diagnosis = pf_get_bits(temp_u16, 1, 12);
-   p_alarm_data->alarm_specifier.submodule_diagnosis = pf_get_bits(temp_u16, 1, 13);
-   p_alarm_data->alarm_specifier.ar_diagnosis = pf_get_bits(temp_u16, 1, 15);
+   p_alarm_data->alarm_specifier.channel_diagnosis = pf_get_bits(temp_u16, 11, 1);
+   p_alarm_data->alarm_specifier.manufacturer_diagnosis = pf_get_bits(temp_u16, 12, 1);
+   p_alarm_data->alarm_specifier.submodule_diagnosis = pf_get_bits(temp_u16, 13, 1);
+   p_alarm_data->alarm_specifier.ar_diagnosis = pf_get_bits(temp_u16, 15, 1);
 }
 
 void pf_get_alarm_ack(
@@ -783,15 +774,14 @@ void pf_get_alarm_ack(
    p_alarm_data->api_id = pf_get_uint32(p_info, p_pos);
    p_alarm_data->slot_nbr = pf_get_uint16(p_info, p_pos);
    p_alarm_data->subslot_nbr = pf_get_uint16(p_info, p_pos);
-   p_alarm_data->alarm_type = pf_get_uint16(p_info, p_pos);
 
    /* AlarmSpecifier */
    temp_u16 = pf_get_uint16(p_info, p_pos);
    p_alarm_data->sequence_number = pf_get_bits(temp_u16, 0, 11);
-   p_alarm_data->alarm_specifier.channel_diagnosis = pf_get_bits(temp_u16, 1, 11);
-   p_alarm_data->alarm_specifier.manufacturer_diagnosis = pf_get_bits(temp_u16, 1, 12);
-   p_alarm_data->alarm_specifier.submodule_diagnosis = pf_get_bits(temp_u16, 1, 13);
-   p_alarm_data->alarm_specifier.ar_diagnosis = pf_get_bits(temp_u16, 1, 15);
+   p_alarm_data->alarm_specifier.channel_diagnosis = pf_get_bits(temp_u16, 11, 1);
+   p_alarm_data->alarm_specifier.manufacturer_diagnosis = pf_get_bits(temp_u16, 12, 1);
+   p_alarm_data->alarm_specifier.submodule_diagnosis = pf_get_bits(temp_u16, 13, 1);
+   p_alarm_data->alarm_specifier.ar_diagnosis = pf_get_bits(temp_u16, 15, 1);
 }
 
 void pf_get_pnio_status(

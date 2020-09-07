@@ -25,7 +25,8 @@
  */
 
 #ifdef UNIT_TEST
-#define os_eth_init mock_os_eth_init
+#define os_eth_init        mock_os_eth_init
+#define os_eth_send        mock_os_eth_send
 #endif
 
 #include <string.h>
@@ -40,6 +41,26 @@ int pf_eth_init(
    memset(net->eth_id_map, 0, sizeof(net->eth_id_map));
 
    return ret;
+}
+
+int pf_eth_send(
+   pnet_t                  *net,
+   os_eth_handle_t         *handle,
+   os_buf_t                *buf)
+{
+   int                     sent_len = 0;
+
+   sent_len = os_eth_send(handle, buf);
+   if (sent_len <= 0)
+   {
+      LOG_ERROR(PF_ETH_LOG, "ETH(%d): Error from os_eth_send\n", __LINE__);
+      net->interface_statistics.if_out_errors++;
+   }
+   else
+   {
+      net->interface_statistics.if_out_octets += sent_len;
+   }
+   return sent_len;
 }
 
 int pf_eth_recv(
@@ -69,6 +90,8 @@ int pf_eth_recv(
    switch (type)
    {
    case OS_ETHTYPE_PROFINET:
+      net->interface_statistics.if_in_octets += p_buf->len;
+
       /* Find the associated frame handler */
       ix = 0;
       while ((ix < NELEMENTS(net->eth_id_map)) &&
@@ -85,10 +108,13 @@ int pf_eth_recv(
       }
       break;
    case OS_ETHTYPE_LLDP:
+      net->interface_statistics.if_in_octets += p_buf->len;
+
       /* ToDo: */
       break;
    default:
       /* Not a profinet packet. */
+      net->interface_statistics.if_in_discards++;
       ret = 0;
       break;
    }

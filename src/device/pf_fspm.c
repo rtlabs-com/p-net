@@ -24,12 +24,7 @@
 
 
 #ifdef UNIT_TEST
-#define os_udp_recvfrom mock_os_udp_recvfrom
-#define os_udp_sendto mock_os_udp_sendto
-#define os_udp_open mock_os_udp_open
-#define os_udp_close mock_os_udp_close
-
-#define os_eth_init mock_os_eth_init
+#define os_get_current_time_us mock_os_get_current_time_us
 #endif
 
 #include <string.h>
@@ -37,14 +32,47 @@
 #include "pf_includes.h"
 #include "pf_block_reader.h"
 
+/**
+ * @internal
+ * Validate the configuration from the user.
+ *
+ * @param p_cfg            In:    Configuration object
+ * @return  0  if the configuration is valid.
+ *          -1 if the configuration is invalid.
+ */
+int pf_fspm_validate_configuration(
+   const pnet_cfg_t        *p_cfg)
+{
+   if (p_cfg == NULL)
+   {
+      LOG_ERROR(PNET_LOG, "FSPM(%d): You must provide a configuration, but it is NULL.\n", __LINE__);
+      return -1;
+   }
+
+   if (p_cfg->min_device_interval == 0)
+   {
+      LOG_ERROR(PNET_LOG, "FSPM(%d): The min_device_interval in the config must not be 0. It should typically be 32, corresponding to 1 ms.\n", __LINE__);
+      return -1;
+   }
+   else if (p_cfg->min_device_interval > 0x1000)
+   {
+      LOG_ERROR(PNET_LOG, "FSPM(%d): The min_device_interval in the config is too large. Max is 4096, corresponding to 128 ms.\n", __LINE__);
+      return -1;
+   }
+
+   return 0;
+}
+
 int pf_fspm_init(
    pnet_t                  *net,
    const pnet_cfg_t        *p_cfg)
 {
-   /*
-    * Save a copy before doing anything else.
-    * Some init functions may ask for it.
-    */
+   if (pf_fspm_validate_configuration(p_cfg) != 0)
+   {
+      return -1;
+   }
+
+   /* Save a copy of the configuration. Some init functions may ask for it. */
    net->fspm_cfg = *p_cfg;
 
    /* Reference to the default settings (used at factory reset) */
@@ -133,6 +161,12 @@ void pf_fspm_get_default_cfg(
    {
       *pp_cfg = net->p_fspm_default_cfg;
    }
+}
+
+int16_t pf_cmina_get_min_device_interval(
+   pnet_t                  *net)
+{
+   return net->fspm_cfg.min_device_interval;
 }
 
 /******************* Execute user callbacks *********************************/
@@ -469,14 +503,8 @@ int pf_fspm_state_ind(
 
    CC_ASSERT(p_ar != NULL);
 
-   switch (event)
-   {
-   case    PNET_EVENT_ABORT:     LOG_INFO(PNET_LOG, "CMDEV event ABORT\n"); break;
-   case    PNET_EVENT_STARTUP:   LOG_INFO(PNET_LOG, "CMDEV event STARTUP\n"); break;
-   case    PNET_EVENT_PRMEND:    LOG_INFO(PNET_LOG, "CMDEV event PRMEND\n"); break;
-   case    PNET_EVENT_APPLRDY:   LOG_INFO(PNET_LOG, "CMDEV event APPLRDY\n"); break;
-   case    PNET_EVENT_DATA:      LOG_INFO(PNET_LOG, "CMDEV event DATA\n"); break;
-   }
+   LOG_DEBUG(PNET_LOG, "FSPM(%d): Triggering user state-change callback with %s\n",  __LINE__, pf_cmdev_event_to_string(event));
+
    if (net->fspm_cfg.state_cb != NULL)
    {
       ret = net->fspm_cfg.state_cb(net, net->fspm_cfg.cb_arg, p_ar->arep, event);
@@ -485,7 +513,7 @@ int pf_fspm_state_ind(
    return ret;
 }
 
-int pf_fspm_aplmr_alarm_ind(
+int pf_fspm_alpmr_alarm_ind(
    pnet_t                  *net,
    pf_ar_t                 *p_ar,
    uint32_t                api,
@@ -505,7 +533,7 @@ int pf_fspm_aplmr_alarm_ind(
    return ret;
 }
 
-int pf_fspm_aplmi_alarm_cnf(
+int pf_fspm_alpmi_alarm_cnf(
    pnet_t                  *net,
    pf_ar_t                 *p_ar,
    pnet_pnio_status_t      *p_pnio_status)
@@ -520,7 +548,7 @@ int pf_fspm_aplmi_alarm_cnf(
    return ret;
 }
 
-int pf_fspm_aplmr_alarm_ack_cnf(
+int pf_fspm_alpmr_alarm_ack_cnf(
    pnet_t                  *net,
    pf_ar_t                 *p_ar,
    int                     res)

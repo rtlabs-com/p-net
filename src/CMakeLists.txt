@@ -58,13 +58,17 @@ target_sources (profinet PRIVATE
   common/pf_ptcp.c
   common/pf_scheduler.c
   common/pf_eth.c
+  common/pf_file.c
   common/pf_lldp.c
+  common/pf_udp.c
   common/pf_alarm.h
   common/pf_cpm.h
   common/pf_dcp.h
+  common/pf_file.h
   common/pf_ppm.h
   common/pf_ptcp.h
   common/pf_scheduler.h
   common/pf_eth.h
   common/pf_lldp.h
+  common/pf_udp.h
   )

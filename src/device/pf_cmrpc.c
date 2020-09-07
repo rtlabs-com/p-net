@@ -39,26 +39,63 @@
  */
 
 #ifdef UNIT_TEST
-#define os_udp_sendto mock_os_udp_sendto
-#define os_udp_open mock_os_udp_open
-#define os_udp_close mock_os_udp_close
-#define os_udp_recvfrom mock_os_udp_recvfrom
+#define os_get_current_time_us mock_os_get_current_time_us
 #define pf_generate_uuid mock_pf_generate_uuid
 #endif
-
-#include <string.h>
-#include <stdint.h>
-#include <ctype.h>
-#include <inttypes.h>
 
 #include "pf_includes.h"
 #include "pf_block_reader.h"
 #include "pf_block_writer.h"
 
+#include <ctype.h>
+#include <inttypes.h>
+#include <stdint.h>
+#include <string.h>
 
+static const char          *rpc_sync_name = "rpc";
 static const pf_uuid_t     implicit_ar = {0,0,0,{0,0,0,0,0,0,0,0}};
 
 /**************** Diagnostic strings *****************************************/
+
+void pf_show_memory(
+   const uint8_t           *data,
+   int                     size)
+{
+   int                     i, j, pos;
+   uint8_t                 c;
+   char                    s[80];
+
+   for (i = 0; i < size; i += 16)
+   {
+      pos = 0;
+
+      /* Print hex values */
+      for (j = 0; j < 16 && (i + j) < size; j++)
+      {
+         pos += snprintf(s + pos, sizeof(s) - pos, "%02x ", *(data + i + j));
+      }
+
+      /* Fill up short line */
+      for (; j < 16; j++)
+      {
+         pos += snprintf(s + pos, sizeof(s) - pos, "   ");
+      }
+
+      pos += snprintf(s + pos, sizeof(s) - pos, "|");
+
+      /* Print ASCII values */
+      for (j = 0; j < 16 && (i + j) < size; j++)
+      {
+         c = *(data + i + j);
+         c = (isprint(c)) ? c : '.';
+         pos += snprintf(s + pos, sizeof(s) - pos, "%c", c);
+      }
+
+      pos += snprintf(s + pos, sizeof(s) - pos, "|\n");
+
+      printf("%s", s);
+   }
+}
 
 /**
  * @internal
@@ -334,9 +371,11 @@ static int pf_session_allocate(
  * Free the session_info.
  * Close the corresponding UDP socket if necessary.
  *
- * @param p_sess           In:   The session instance.
+ * @param net              InOut: The p-net stack instance
+ * @param p_sess           In:    The session instance.
  */
 static void pf_session_release(
+   pnet_t                  *net,
    pf_session_info_t       *p_sess)
 {
    if (p_sess != NULL)
@@ -345,7 +384,15 @@ static void pf_session_release(
       {
          if (p_sess->socket > 0)
          {
-            os_udp_close(p_sess->socket);
+            if (p_sess->from_me)
+            {
+               pf_udp_close(net, p_sess->socket);
+            }
+         }
+         if (p_sess->resend_timeout != 0)
+         {
+            pf_scheduler_remove(net, rpc_sync_name, p_sess->resend_timeout);
+            p_sess->resend_timeout = 0;
          }
          LOG_DEBUG(PF_RPC_LOG, "CMRPC(%d): Released session %u\n", __LINE__, (unsigned)p_sess->ix);
          memset(p_sess, 0, sizeof(*p_sess));
@@ -467,7 +514,7 @@ static int pf_ar_allocate(
    if (ix < PNET_MAX_AR)
    {
       net->cmrpc_ar[ix].arep = ix + 1;      /* Avoid AREP == 0 */
-      LOG_INFO(PF_RPC_LOG, "CMRPC(%d): Allocate AR %u\n", __LINE__, ix);
+      LOG_DEBUG(PF_RPC_LOG, "CMRPC(%d): Allocate AR %u\n", __LINE__, ix);
    }
 
    return ret;
@@ -485,7 +532,7 @@ static void pf_ar_release(
    {
       if (p_ar->in_use == true)
       {
-         LOG_INFO(PF_RPC_LOG, "CMRPC(%d): Free AR %u\n", __LINE__, p_ar->arep - 1);
+         LOG_DEBUG(PF_RPC_LOG, "CMRPC(%d): Free AR %u\n", __LINE__, p_ar->arep - 1);
          memset(p_ar, 0, sizeof(*p_ar));
       }
       else
@@ -583,6 +630,149 @@ void pf_set_error(
    p_stat->pnio_status.error_decode = decode;
    p_stat->pnio_status.error_code_1 = code_1;
    p_stat->pnio_status.error_code_2 = code_2;
+}
+
+/******************** Send UDP ***********************************************/
+
+/**
+ * @internal
+ * Send a UDP packet from a buffer
+ *
+ * @param p_net               InOut: The p-net stack instance
+ * @param p_sess              InOut: The session.
+ * @param data                In:    Data
+ * @param size                In:    Size in bytes
+ * @param payload_description In:    Payload description for debug printouts
+ * @return  0  if operation succeeded.
+ *          -1 if an error occurred.
+ */
+static int pf_cmrpc_send_once_from_buffer(
+   pnet_t                  *p_net,
+   pf_session_info_t       *p_sess,
+   const uint8_t           *data,
+   int                     size,
+   const char              *payload_description)
+{
+   int                     ret = -1;
+   char                    ip_string[OS_INET_ADDRSTRLEN] = { 0 };
+
+   if (size != 0)
+   {
+      pf_cmina_ip_to_string(p_sess->ip_addr, ip_string);
+      LOG_INFO(PF_RPC_LOG, "CMRPC(%d): Sending %u bytes on socket %u to %s:%u Payload:'%s' Session from me:%u Session index:%u\n", __LINE__,
+         size, (unsigned)p_sess->socket, ip_string, p_sess->port, payload_description, p_sess->from_me, p_sess->ix);
+
+      if (pf_udp_sendto(p_net, p_sess->socket, p_sess->ip_addr, p_sess->port, data, size) == size)
+      {
+         ret = 0;
+      }
+   }
+   else
+   {
+      LOG_DEBUG(PF_RPC_LOG, "CMRPC(%d): No UDP data to send on the socket. Session from me:%u Session index:%u\n", __LINE__, p_sess->from_me, p_sess->ix);
+   }
+
+   return ret;
+}
+
+/**
+ * @internal
+ * Send a UDP packet from the output buffer in the session.
+ *
+ * @param p_net               InOut: The p-net stack instance
+ * @param p_sess              InOut: The session.
+ * @param payload_description In:    Payload description for debug printouts
+ * @return  0  if operation succeeded.
+ *          -1 if an error occurred.
+ */
+static int pf_cmrpc_send_once(
+   pnet_t                  *p_net,
+   pf_session_info_t       *p_sess,
+   const char              *payload_description)
+{
+   int                     ret = -1;
+
+   ret = pf_cmrpc_send_once_from_buffer(p_net, p_sess, p_sess->out_buffer, p_sess->out_buf_send_len, payload_description);
+
+   return ret;
+}
+
+/**
+ * @internal
+ * Send a UDP packet from the output buffer in the session, with retry.
+ * Start a timer that calls this function again if the timer expires.
+ *
+ * This is a callback for the scheduler. Arguments should fulfill pf_scheduler_timeout_ftn_t
+ *
+ * Typically used for CControl and for fragments.
+ *
+ * @param p_net            InOut: The p-net stack instance
+ * @param arg              InOut: The session.
+ * @param current_time     In:    Current time in microseconds.
+ * @return  0  if operation succeeded.
+ *          -1 if an error occurred.
+ */
+static void pf_cmrpc_send_with_timeout(
+   pnet_t                     *p_net,
+   void                       *arg,
+   uint32_t                   current_time)
+{
+   pf_session_info_t       *p_sess = (pf_session_info_t *)arg;
+   uint32_t                delay = 0;
+   const char              *payload_description;
+
+   if (p_sess == NULL)
+   {
+      LOG_ERROR(PF_RPC_LOG, "CMRPC(%d): Invalid session, it is NULL\n", __LINE__);
+   }
+   else if (p_sess->socket < 0)
+   {
+      LOG_ERROR(PF_RPC_LOG, "CMRPC(%d): Invalid session, the socket is not open.\n", __LINE__);
+   }
+   else
+   {
+      p_sess->resend_timeout = 0;
+
+      if (p_sess->resend_timeout_ctr > 0)
+      {
+         /* Send */
+         p_sess->resend_timeout_ctr--;
+         delay = p_sess->from_me ? (PF_CCONTROL_TIMEOUT * 1000) : (PF_FRAG_TIMEOUT * 1000);
+         payload_description = p_sess->from_me ? "CControl request (possibly fragment)" : "response fragment";
+         if (pf_cmrpc_send_once(p_net, p_sess, payload_description) == 0)
+         {
+            if (pf_scheduler_add(p_net, delay, rpc_sync_name,
+               pf_cmrpc_send_with_timeout, arg,
+               &p_sess->resend_timeout) != 0)
+            {
+               LOG_ERROR(PF_RPC_LOG, "CMRPC(%d): pf_scheduler_add failed for response fragment\n", __LINE__);
+            }
+         }
+      }
+      else
+      {
+         if (p_sess->from_me == true)
+         {
+            /* Error: No response to CControl request. */
+            LOG_ERROR(PF_RPC_LOG, "CMRPC(%d): Last CControl request has been sent, with no response received.\n", __LINE__);
+            p_sess->p_ar->err_cls = PNET_ERROR_CODE_1_RTA_ERR_CLS_PROTOCOL;
+            p_sess->p_ar->err_code = PNET_ERROR_CODE_2_ABORT_AR_RPC_CONTROL_ERROR;
+            (void)pf_cmdev_cm_abort(p_net, p_sess->p_ar);
+            if (p_sess->socket > 0)
+            {
+               pf_udp_close(p_net, p_sess->socket);
+            }
+         }
+         else
+         {
+            /* Error: No reaction to sent fragment */
+            LOG_ERROR(PF_RPC_LOG, "CMRPC(%d): Fragment has been sent, but timing out due to lack of incoming message.\n", __LINE__);
+            p_sess->p_ar->err_cls = PNET_ERROR_CODE_1_RTA_ERR_CLS_PROTOCOL;
+            p_sess->p_ar->err_code = PNET_ERROR_CODE_2_ABORT_AR_RPC_CONTROL_ERROR;
+            (void)pf_cmdev_cm_abort(p_net, p_sess->p_ar);
+         }
+      }
+   }
 }
 
 /******************** RPC parsers *******************************************/
@@ -2046,7 +2236,7 @@ int pf_cmrpc_rm_ccontrol_req(
    uint16_t                rpc_hdr_start_pos = 0;
    uint16_t                length_of_body_pos = 0;
    pf_session_info_t       *p_sess = NULL;
-   uint16_t                max_req_len = PF_MAX_UDP_PAYLOAD_SIZE;  /* Reduce to 130 to test fragmented sending */
+   uint16_t                max_req_len = PF_MAX_UDP_PAYLOAD_SIZE;  /* Reduce to 125 to test fragmented sending */
 
    memset(&rpc_req, 0, sizeof(rpc_req));
    memset(&ndr_data, 0, sizeof(ndr_data));
@@ -2062,6 +2252,7 @@ int pf_cmrpc_rm_ccontrol_req(
       p_sess->ip_addr = p_ar->p_sess->ip_addr;
       p_sess->port = PF_RPC_SERVER_PORT;  /* Destination port on IO-controller */
       p_sess->from_me = true;
+      p_sess->is_big_endian = true;
 
       memset(&rpc_req, 0, sizeof(rpc_req));
       memset(&ndr_data, 0, sizeof(ndr_data));
@@ -2070,7 +2261,7 @@ int pf_cmrpc_rm_ccontrol_req(
       rpc_req.version = 4;
       rpc_req.packet_type = PF_RPC_PT_REQUEST;
       rpc_req.flags.idempotent = true;
-      rpc_req.is_big_endian = true;
+      rpc_req.is_big_endian = p_sess->is_big_endian;
 
       rpc_req.float_repr = 0;  /* IEEE */
       rpc_req.serial_high = 0;
@@ -2109,6 +2300,8 @@ int pf_cmrpc_rm_ccontrol_req(
 
       memset(p_sess->out_buffer, 0, sizeof(p_sess->out_buffer));
       p_sess->out_buf_len = 0;
+      p_sess->out_buf_sent_pos = 0;
+      p_sess->out_fragment_nbr = 0;
       length_of_body_pos = 0;
 
       /* Insert RPC header */
@@ -2136,7 +2329,7 @@ int pf_cmrpc_rm_ccontrol_req(
       ndr_data.args_length = p_sess->out_buf_len - control_pos;
 
       /*
-       * The complete request is stored in sess->out_buffer. It may be too large for one UDP frame
+       * The complete request is stored in p_sess->out_buffer. It may be too large for one UDP frame
        * so we may need to sent it as fragments.
        * In that case the first fragment is sent from here and the rest is handled by the PT_FRAG_ACK
        * handler in pf_cmrpc_dce_packet.
@@ -2144,14 +2337,14 @@ int pf_cmrpc_rm_ccontrol_req(
       if (p_sess->out_buf_len < max_req_len)
       {
          /* NOT a fragmented request - all fits into send buffer */
-         p_sess->out_buf_sent_len = p_sess->out_buf_len;
+         LOG_DEBUG(PF_RPC_LOG, "CMRPC(%d): Send CControl request, total %u bytes (not fragmented).\n", __LINE__, p_sess->out_buf_len);
+         p_sess->out_buf_send_len = p_sess->out_buf_len;
       }
       else
       {
-         LOG_DEBUG(PF_RPC_LOG, "CMRPC(%d): Send fragmented CControl request, out_buf_len %u max is %u.\n", __LINE__, p_sess->out_buf_len, max_req_len);
-
          /* We need to send a fragmented answer - Send the first fragment now */
-         p_sess->out_buf_sent_len = max_req_len;   /* This is what is sent in the first fragment */
+         LOG_DEBUG(PF_RPC_LOG, "CMRPC(%d): Send fragmented CControl request, total %u, max per frame %u bytes.\n", __LINE__, p_sess->out_buf_len, max_req_len);
+         p_sess->out_buf_send_len = max_req_len;   /* This is what is sent in the first fragment */
 
          /* Also set the fragment bit in the RPC response header */
          rpc_req.flags.fragment = true;
@@ -2159,13 +2352,11 @@ int pf_cmrpc_rm_ccontrol_req(
 
          /* Re-write the RPC header with the new info */
          pf_put_dce_rpc_header(&rpc_req, max_req_len, p_sess->out_buffer, &rpc_hdr_start_pos, &length_of_body_pos);
-
-         p_sess->out_fragment_nbr++; /* Number of the next fragment */
       }
 
       /* Finalize */
       /* Insert the real value of length_of_body into the RPC header */
-      pf_put_uint16(rpc_req.is_big_endian, p_sess->out_buf_sent_len - start_pos, max_req_len, p_sess->out_buffer, &length_of_body_pos);
+      pf_put_uint16(rpc_req.is_big_endian, p_sess->out_buf_send_len - start_pos, max_req_len, p_sess->out_buffer, &length_of_body_pos);
 
       /* Fixup the NDR header with correct values. */
       ndr_data.array.actual_count = ndr_data.args_length;   /* Must be equal for requests */
@@ -2178,23 +2369,11 @@ int pf_cmrpc_rm_ccontrol_req(
       pf_put_uint32(rpc_req.is_big_endian, ndr_data.array.offset, max_req_len, p_sess->out_buffer, &start_pos);
       pf_put_uint32(rpc_req.is_big_endian, ndr_data.array.actual_count, max_req_len, p_sess->out_buffer, &start_pos);
 
-      p_sess->socket = os_udp_open(OS_IPADDR_ANY, PF_RPC_CCONTROL_EPHEMERAL_PORT);
-      if (p_sess->socket > 0)
-      {
-         if (os_udp_sendto(p_sess->socket, p_sess->ip_addr, p_sess->port, p_sess->out_buffer, p_sess->out_buf_sent_len) == p_sess->out_buf_sent_len)
-         {
-            LOG_INFO(PF_RPC_LOG, "Sent ccontrol request (with APPL_READY) to controller. size = %u. socket %" PRIu32 "\n", p_sess->out_buf_sent_len, p_sess->socket);
-            ret = 0;
-         }
-         else
-         {
-            LOG_ERROR(PF_RPC_LOG, "CMRPC(%d): os_udp_sendto failed\n", __LINE__);
-         }
-      }
-      else
-      {
-         LOG_ERROR(PF_RPC_LOG, "CMRPC(%d): os_udp_open failed: %d\n", __LINE__, (int)p_sess->socket);
-      }
+      p_sess->socket = pf_udp_open(net, PF_RPC_CCONTROL_EPHEMERAL_PORT);
+      p_sess->resend_timeout_ctr = 3;
+      pf_cmrpc_send_with_timeout(net, p_sess, os_get_current_time_us());
+
+      ret = 0;
    }
 
    return ret;
@@ -2347,7 +2526,7 @@ static int pf_cmrpc_rm_ccontrol_cnf(
 }
 
 
-/******************** State machine and DCE RPC protocol *********************/
+/*********************** Incoming packets ************************************/
 
 /**
  * @internal
@@ -2382,10 +2561,10 @@ static int pf_cmrpc_rpc_response(
 
 /**
  * @internal
- * Handle one incoming DCE RPC message, and prepare a response.
+ * Handle one incoming DCE RPC message, and typically sends a response.
  *
- * Receives raw UDP data, and prepares the raw UDP response.
- * Puts together incoming fragments, and handles the RPC request by using
+ * Receives raw UDP data.
+ * Puts together incoming fragments, and handles the full RPC request by using
  * \a pf_cmrpc_rpc_request().
  *
  * @param net              InOut: The p-net stack instance
@@ -2439,7 +2618,15 @@ static int pf_cmrpc_dce_packet(
    if (p_sess == NULL)
    {
       (void)pf_session_allocate(net, &p_sess);
-      is_new_session = true;
+      if (p_sess != NULL)
+      {
+         is_new_session = true;
+         p_sess->from_me = false;
+
+         p_sess->ip_addr = ip_addr;
+         p_sess->port = port;  /* Source port on incoming message */
+         p_sess->socket = net->cmrpc_rpcreq_socket;
+      }
    }
 
    if (p_sess == NULL)
@@ -2449,20 +2636,13 @@ static int pf_cmrpc_dce_packet(
    }
    else
    {
-      if (is_new_session)
-      {
-         p_sess->from_me = false;
-      }
       p_sess->get_info = get_info;
       memset(&p_sess->rpc_result, 0, sizeof(p_sess->rpc_result));
 
-      /* Handle incoming RPC fragments: */
       if (rpc_req.flags.fragment == false)
       {
-         /* This is the normal path where the incoming request or response is contained entirely in one frame */
+         /* Incoming message is a request or response contained entirely in one frame */
          p_sess->in_buf_len = 0;
-         p_sess->ip_addr = ip_addr;
-         p_sess->port = port;  /* Source port on incoming message */
 
          p_sess->activity_uuid = rpc_req.activity_uuid;
          p_sess->is_big_endian = p_sess->get_info.is_big_endian;
@@ -2471,8 +2651,8 @@ static int pf_cmrpc_dce_packet(
       }
       else
       {
-         /*
-          * It is a fragment of an incoming request or response.
+         /* Incoming message is a fragment of a request or response.
+          *
           * Collect all fragments into the session buffer and
           * proceed only when the last fragment has been received.
           */
@@ -2481,8 +2661,6 @@ static int pf_cmrpc_dce_packet(
             /* This is the first incoming fragment. */
             /* Initialize the session */
             p_sess->in_buf_len = 0;
-            p_sess->ip_addr = ip_addr;
-            p_sess->port = port;
 
             p_sess->activity_uuid = rpc_req.activity_uuid;
 
@@ -2492,17 +2670,16 @@ static int pf_cmrpc_dce_packet(
          }
          else
          {
-            /* All fragments must have same endianness in this implementation */
+            /* Intermediate or last incoming fragment. */
             if (p_sess->is_big_endian != rpc_req.is_big_endian)
             {
-               /*
-                * Endianness differs.
-                */
+               /* Endianness differs. All fragments must have same endianness in this implementation */
                LOG_ERROR(PF_RPC_LOG, "CMRPC(%d): Endianness differs in incoming fragments\n", __LINE__);
                pf_set_error(&p_sess->rpc_result, PNET_ERROR_CODE_CONNECT, PNET_ERROR_DECODE_PNIO, PNET_ERROR_CODE_1_CMRPC, PNET_ERROR_CODE_2_CMRPC_STATE_CONFLICT);
             }
          }
 
+         /* Fragment validation */
          /* Enter here _even_if_ an error is already detected because we need to generate an error response. */
          if (p_sess->in_fragment_nbr != rpc_req.fragment_nmb)
          {
@@ -2517,7 +2694,7 @@ static int pf_cmrpc_dce_packet(
          }
          else
          {
-            /* Copy to session buffer */
+            /* Copy to session input buffer */
             memcpy(&p_sess->in_buffer[p_sess->in_buf_len], &p_req[req_pos], rpc_req.length_of_body);
             p_sess->in_buf_len += rpc_req.length_of_body;
             p_sess->in_fragment_nbr++;
@@ -2532,18 +2709,27 @@ static int pf_cmrpc_dce_packet(
          }
       }
 
-      /* Handle re-assembled messages */
+      /* Any incoming message stops resending */
+      if (p_sess->resend_timeout != 0)
+      {
+         pf_scheduler_remove(net, rpc_sync_name, p_sess->resend_timeout);
+         p_sess->resend_timeout = 0;
+      }
+
+      /* Decide to do with incoming message */
       /* Enter here _even_if_ an error is already detected because we may need to generate an error response. */
       if ((rpc_req.flags.fragment == false) ||
           (rpc_req.flags.last_fragment == true))
       {
+         /* Full message has arrived */
          switch (rpc_req.packet_type)
          {
          case PF_RPC_PT_PING:
             LOG_INFO(PF_RPC_LOG, "CMRPC(%d): Incoming DCE RPC ping on UDP\n", __LINE__);
             /* A new request - clear the response buffer */
             p_sess->out_buf_len = 0;
-            p_sess->out_buf_sent_len = 0;
+            p_sess->out_buf_sent_pos = 0;
+            p_sess->out_buf_send_len = 0;
             p_sess->out_fragment_nbr = 0;
 
             /* Prepare the response */
@@ -2561,12 +2747,16 @@ static int pf_cmrpc_dce_packet(
 
             pf_put_dce_rpc_header(&rpc_res, *p_res_len, p_res, &res_pos, &length_of_body_pos);
 
+            pf_cmrpc_send_once_from_buffer(net, p_sess, p_res, res_pos, "PING response");
+
             p_sess->kill_session = is_new_session;
             break;
          case PF_RPC_PT_REQUEST:
+            LOG_INFO(PF_RPC_LOG, "CMRPC(%d): Incoming DCE RPC request on UDP.\n", __LINE__);
             /* A new request - clear the response buffer */
             p_sess->out_buf_len = 0;
-            p_sess->out_buf_sent_len = 0;
+            p_sess->out_buf_sent_pos = 0;
+            p_sess->out_buf_send_len = 0;
             p_sess->out_fragment_nbr = 0;
 
             pf_get_ndr_data(&p_sess->get_info, &req_pos, &p_sess->ndr_data);
@@ -2589,13 +2779,13 @@ static int pf_cmrpc_dce_packet(
             rpc_res.flags.idempotent = true;
             rpc_res.flags.broadcast = false;
             rpc_res.flags2.cancel_pending = false;
-            rpc_res.fragment_nmb = 0;
+            rpc_res.fragment_nmb = p_sess->out_fragment_nbr;
             rpc_res.is_big_endian = p_sess->get_info.is_big_endian;
 
             /* Insert the response header to get pos of rpc response body. */
-            rpc_hdr_start_pos = res_pos;
-            pf_put_dce_rpc_header(&rpc_res, *p_res_len, p_res, &res_pos, &length_of_body_pos);
-            start_pos = res_pos;                /* Save for later */
+            rpc_hdr_start_pos = p_sess->out_buf_len;
+            pf_put_dce_rpc_header(&rpc_res, max_rsp_len, p_sess->out_buffer, &p_sess->out_buf_len, &length_of_body_pos);
+            start_pos = p_sess->out_buf_len;                /* Save for later */
 
             if (rpc_req.opnum == PF_RPC_DEV_OPNUM_RELEASE)
             {
@@ -2604,117 +2794,131 @@ static int pf_cmrpc_dce_packet(
             }
 
             /* Handle the RPC request */
-            p_sess->out_buf_len = 0;  /* Just to make sure */
             ret = pf_cmrpc_rpc_request(net, p_sess, req_pos, &rpc_req, max_rsp_len, p_sess->out_buffer, &p_sess->out_buf_len);
 
-            if (res_pos + p_sess->out_buf_len < *p_res_len)
+            if (p_sess->out_buf_len < PF_MAX_UDP_PAYLOAD_SIZE)
             {
-               /* NOT a fragmented answer - all fits into send buffer */
-               memcpy(&p_res[res_pos], p_sess->out_buffer, p_sess->out_buf_len);
-               p_sess->out_buf_sent_len = p_sess->out_buf_len;
-               res_pos += p_sess->out_buf_len;
+               /* Our response will fit into send buffer (not fragmented) */
+               p_sess->out_buf_send_len = p_sess->out_buf_len;    /* Send everything */
             }
             else
             {
-               LOG_DEBUG(PF_RPC_LOG, "CMRPC(%d): Send fragmented response. Total RPC payload %u, max fragment UDP payload %u (incl RPC header), max response RPC payload %u. res_pos %u.\n", __LINE__, p_sess->out_buf_len, *p_res_len, max_rsp_len, res_pos);
-
-               /* We need to send a fragmented answer - Send the first fragment now */
-               memcpy(&p_res[res_pos], p_sess->out_buffer, *p_res_len - res_pos);
-               p_sess->out_buf_sent_len = *p_res_len - res_pos;
-               res_pos += *p_res_len - res_pos;
+               /* Send a fragmented response - Send the first fragment now */
+               p_sess->out_buf_send_len = PF_MAX_UDP_PAYLOAD_SIZE;   /* Send as much as can fit */
 
                /* Also set the fragment bit in the RPC response header */
                rpc_res.flags.fragment = true;
                rpc_res.flags.no_fack = false;
 
                /* Re-write the header with the new info */
-               pf_put_dce_rpc_header(&rpc_res, *p_res_len, p_res, &rpc_hdr_start_pos, &length_of_body_pos);
-
-               p_sess->out_fragment_nbr++; /* Number of the next fragment */
+               pf_put_dce_rpc_header(&rpc_res, max_rsp_len, p_sess->out_buffer, &rpc_hdr_start_pos, &length_of_body_pos);
             }
+
+            LOG_DEBUG(PF_RPC_LOG, "CMRPC(%d): Send RPC response. Total response length %u, sending %u bytes. Start of RPC payload: %u\n", __LINE__,
+               p_sess->out_buf_len, p_sess->out_buf_send_len, start_pos);
+
             /* Insert the real value of length_of_body in the rpc header */
-            pf_put_uint16(rpc_res.is_big_endian, (uint16_t)(res_pos - start_pos), *p_res_len, p_res, &length_of_body_pos);
-            break;
-         case PF_RPC_PT_FRAG_ACK:
-            /* Handle fragment acknowledgment from the controller. */
-            p_sess->get_info.is_big_endian = true;  /* From now on all is big-endian */
-            if (p_sess->out_fragment_nbr > 0)
+            pf_put_uint16(rpc_res.is_big_endian, (uint16_t)(p_sess->out_buf_send_len - start_pos), p_sess->out_buf_send_len, p_sess->out_buffer, &length_of_body_pos);
+
+            if (rpc_res.flags.fragment == true)
             {
-               LOG_DEBUG(PF_RPC_LOG, "CMRPC(%d): Received valid fragment ACK.\n", __LINE__);
-               /* The fragment acknowledgment is valid (expected) */
-               if (p_sess->out_buf_len > p_sess->out_buf_sent_len)
-               {
-                  LOG_DEBUG(PF_RPC_LOG, "CMRPC(%d): More fragmented response to send. Total RPC payload %u, already sent %u, max fragment UDP payload %u (incl RPC header). args_length %" PRIu32 "\n", __LINE__,
-                     p_sess->out_buf_len, p_sess->out_buf_sent_len, *p_res_len, p_sess->ndr_data.args_length);
-
-                  /* Prepare the response */
-                  rpc_res = rpc_req;
-                  rpc_res.packet_type = p_sess->from_me ? PF_RPC_PT_REQUEST : PF_RPC_PT_RESPONSE;
-                  rpc_res.flags.last_fragment = false;
-                  rpc_res.flags.fragment = true;
-                  rpc_res.flags.no_fack = false;
-                  rpc_res.flags.maybe = false;
-                  rpc_res.flags.idempotent = true;
-                  rpc_res.flags.broadcast = false;
-                  rpc_res.flags2.cancel_pending = false;
-                  rpc_res.fragment_nmb = p_sess->out_fragment_nbr;
-                  rpc_res.is_big_endian = p_sess->get_info.is_big_endian;
-
-                  if (res_pos + (uint16_t)(p_sess->out_buf_len - p_sess->out_buf_sent_len) < *p_res_len)
-                  {
-                     LOG_DEBUG(PF_RPC_LOG, "CMRPC(%d): Sending last fragment.\n", __LINE__);
-                     /* Send last fragment */
-                     rpc_res.flags.last_fragment = true;
-                     rpc_res.flags.no_fack = true;
-
-                     /* Insert the response header to get pos of rpc response length. */
-                     pf_put_dce_rpc_header(&rpc_res, *p_res_len, p_res, &res_pos, &length_of_body_pos);
-                     start_pos = res_pos;                /* Save for later */
-
-                     /* We need to send a fragmented answer - Send the last fragment now */
-                     memcpy(&p_res[res_pos], &p_sess->out_buffer[p_sess->out_buf_sent_len], p_sess->out_buf_len - p_sess->out_buf_sent_len);
-                     res_pos += p_sess->out_buf_len - p_sess->out_buf_sent_len;
-                     p_sess->out_buf_sent_len += p_sess->out_buf_len - p_sess->out_buf_sent_len; /* All sent */
-
-                     p_sess->out_fragment_nbr = 0;
-                  }
-                  else
-                  {
-                     LOG_DEBUG(PF_RPC_LOG, "CMRPC(%d): Sending intermediate fragment.\n", __LINE__);
-                     /* Send next fragment */
-                     /* Insert the response header to get pos of rpc response body. */
-                     pf_put_dce_rpc_header(&rpc_res, *p_res_len, p_res, &res_pos, &length_of_body_pos);
-                     start_pos = res_pos;                /* Save for later */
-
-                     /* We need to send a fragmented answer - Send an intermediate fragment now */
-                     memcpy(&p_res[res_pos], &p_sess->out_buffer[p_sess->out_buf_sent_len], *p_res_len - res_pos);
-                     p_sess->out_buf_sent_len += *p_res_len - res_pos;
-                     res_pos += *p_res_len - res_pos;
-
-                     p_sess->out_fragment_nbr++; /* Number of the next fragment */
-                  }
-
-                  /* Insert the real value of length_of_body in the rpc header */
-                  pf_put_uint16(rpc_res.is_big_endian, (uint16_t)(res_pos - start_pos), *p_res_len, p_res, &length_of_body_pos);
-               }
-               else
-               {
-                  LOG_DEBUG(PF_RPC_LOG, "CMRPC(%d): No more fragments to send. Total %u bytes, already sent %u bytes.\n", __LINE__,
-                     p_sess->out_buf_len, p_sess->out_buf_sent_len);
-                  /* The last fragment has been acknowledged */
-                  p_sess->out_fragment_nbr = 0;
-                  res_pos = 0;  /* Nothing more to do */
-               }
+               /* Fragmented respones from us (with ack) are supposed to be re-transmitted according to the spec. */
+               p_sess->resend_timeout_ctr = 3;
+               pf_cmrpc_send_with_timeout(net, p_sess, os_get_current_time_us());
             }
             else
             {
-               /* Unexpected fragment ack received */
-               LOG_ERROR(PF_RPC_LOG, "CMRPC(%d): Unexpected incoming fragment ACK received\n", __LINE__);
+               /* Non-fragmented responses from us are not re-transmitted */
+               ret = pf_cmrpc_send_once(net, p_sess, "response");
+            }
+            break;
+         case PF_RPC_PT_FRAG_ACK:
+            /* Handle fragment acknowledgment from the controller. */
+            LOG_DEBUG(PF_RPC_LOG, "CMRPC(%d): Received fragment ACK.\n", __LINE__);
+
+            /* Update how much the controller has received (ack'ed) */
+            p_sess->out_buf_sent_pos += p_sess->out_buf_send_len;
+            p_sess->out_fragment_nbr++;
+
+            /* The fragment acknowledgment is valid (expected) */
+            if (p_sess->out_buf_len > p_sess->out_buf_sent_pos)
+            {
+               LOG_DEBUG(PF_RPC_LOG, "CMRPC(%d): More fragments to send. Total RPC payload %u, already sent %u, max fragment UDP payload %u (incl RPC header). args_length %" PRIu32 "\n", __LINE__,
+                  p_sess->out_buf_len, p_sess->out_buf_sent_pos, *p_res_len, p_sess->ndr_data.args_length);
+
+               /* res_pos holds the number of bytes we are preparing to send in this frame */
+               res_pos = 0;
+
+               /* Prepare the RPC header of next fragment */
+               rpc_res = rpc_req;
+               rpc_res.packet_type = p_sess->from_me ? PF_RPC_PT_REQUEST : PF_RPC_PT_RESPONSE;
+               rpc_res.flags.last_fragment = false;
+               rpc_res.flags.fragment = true;
+               rpc_res.flags.no_fack = false;
+               rpc_res.flags.maybe = false;
+               rpc_res.flags.idempotent = true;
+               rpc_res.flags.broadcast = false;
+               rpc_res.flags2.cancel_pending = false;
+               rpc_res.fragment_nmb = p_sess->out_fragment_nbr;
+               rpc_res.is_big_endian = p_sess->from_me ? true : p_sess->get_info.is_big_endian;
+
+               rpc_hdr_start_pos = res_pos;
+               /* Insert the response header to get pos of rpc response length. */
+               pf_put_dce_rpc_header(&rpc_res, PF_MAX_UDP_PAYLOAD_SIZE, p_sess->out_buffer, &res_pos, &length_of_body_pos);
+               start_pos = res_pos;                /* Save for later */
+
+               if ((uint16_t)(p_sess->out_buf_len - p_sess->out_buf_sent_pos) < (PF_MAX_UDP_PAYLOAD_SIZE - start_pos))
+               {
+                  LOG_DEBUG(PF_RPC_LOG, "CMRPC(%d): Sending last fragment.\n", __LINE__);
+
+                  /* We need to send one last fragment */
+                  p_sess->out_buf_send_len = p_sess->out_buf_len - p_sess->out_buf_sent_pos; /* Send all the rest */
+
+                  /* Send last fragment */
+                  rpc_res.flags.last_fragment = true;
+
+                  /* Update the response header to get pos of rpc response length. */
+                  pf_put_dce_rpc_header(&rpc_res, PF_MAX_UDP_PAYLOAD_SIZE, p_sess->out_buffer, &rpc_hdr_start_pos, &length_of_body_pos);
+               }
+               else
+               {
+                  LOG_DEBUG(PF_RPC_LOG, "CMRPC(%d): Sending intermediate fragment.\n", __LINE__);
+
+                  /* Send next fragment */
+                  p_sess->out_buf_send_len = PF_MAX_UDP_PAYLOAD_SIZE - start_pos; /* Send as much as we can */
+               }
+
+               /* Send a fragment now */
+               /* This is essentially a memmove() in order to make the next fragment data follow the RPC header at the start of out_buffer */
+               pf_put_mem_overlapping(&p_sess->out_buffer[p_sess->out_buf_sent_pos], p_sess->out_buf_send_len, PF_MAX_UDP_PAYLOAD_SIZE, p_sess->out_buffer, &res_pos);
+
+               LOG_DEBUG(PF_RPC_LOG, "CMRPC(%d): Send RPC fragment. Total response length %u, already sent %u, sending %u bytes RPC payload. RPC payload start pos %u, Fragment size: %u bytes\n",
+                  __LINE__, p_sess->out_buf_len, p_sess->out_buf_sent_pos, p_sess->out_buf_send_len, start_pos, res_pos);
+
+               /* Insert the real value of length_of_body in the rpc header */
+               pf_put_uint16(rpc_res.is_big_endian, p_sess->out_buf_send_len, PF_MAX_UDP_PAYLOAD_SIZE, p_sess->out_buffer, &length_of_body_pos);
+
+               p_sess->out_buf_send_len += start_pos;
+
+               /* Fragments from us are supposed to be re-transmitted */
+               p_sess->resend_timeout_ctr = 3;
+               pf_cmrpc_send_with_timeout(net, p_sess, os_get_current_time_us());
+            }
+            else
+            {
+               LOG_DEBUG(PF_RPC_LOG, "CMRPC(%d): No more fragments to send. Total %u, already sent %u.\n", __LINE__,
+                  p_sess->out_buf_len, p_sess->out_buf_sent_pos);
+               /* The last fragment has been acknowledged */
+               p_sess->out_buf_len = 0;
+               p_sess->out_buf_sent_pos = 0;
+               p_sess->out_buf_send_len = 0;
+               p_sess->out_fragment_nbr = 0;
                res_pos = 0;  /* Nothing more to do */
             }
             break;
          case PF_RPC_PT_RESPONSE:
             /* A response to a CCONTROL request */
+            LOG_DEBUG(PF_RPC_LOG, "CMRPC(%d): Received an RPC response.\n", __LINE__);
             if (is_new_session)
             {
                LOG_ERROR(PF_RPC_LOG, "CMRPC(%d): Responses should be part of existing sessions. Unknown incoming activity UUID.\n", __LINE__);
@@ -2799,13 +3003,15 @@ static int pf_cmrpc_dce_packet(
             rpc_res.flags.fragment = false;
             rpc_res.flags.no_fack = false;
             rpc_res.flags.maybe = false;
-            rpc_res.flags.idempotent = true;
+            rpc_res.flags.idempotent = false;
             rpc_res.flags.broadcast = false;
             rpc_res.flags2.cancel_pending = false;
             rpc_res.length_of_body = 0;
             rpc_res.is_big_endian = p_sess->is_big_endian;
 
             pf_put_dce_rpc_header(&rpc_res, *p_res_len, p_res, &res_pos, &length_of_body_pos);
+
+            pf_cmrpc_send_once_from_buffer(net, p_sess, p_res, res_pos, "fragment ack");
          }
          else
          {
@@ -2820,12 +3026,9 @@ static int pf_cmrpc_dce_packet(
       /* Kill session if necessary */
       if ((p_sess != NULL) && (p_sess->kill_session == true))
       {
-         pf_session_release(p_sess);
+         pf_session_release(net, p_sess);
       }
    }
-
-   /* Size of result data */
-   *p_res_len = res_pos;
 
    return ret;
 }
@@ -2835,77 +3038,60 @@ void pf_cmrpc_periodic(
 {
    uint32_t                dcerpc_addr;
    uint16_t                dcerpc_port;
-   int                     dcerpc_req_len;
+   int                     dcerpc_input_len;
    uint16_t                dcerpc_resp_len = 0;
    uint16_t                ix;
    bool                    is_release = false;
-   int                     sent_len = 0;
+   char                    ip_string[OS_INET_ADDRSTRLEN] = { 0 };
+
+   /* TODO Use a common function to avoid code duplication, remove some arguments for pf_cmrpc_dce_packet() */
 
    /* Poll for RPC session confirmations */
-   for (ix = 0; ix < NELEMENTS(net->cmrpc_session_info); ix++)
+   for (ix = 1; ix < NELEMENTS(net->cmrpc_session_info); ix++)
    {
       if ((net->cmrpc_session_info[ix].in_use == true) && (net->cmrpc_session_info[ix].from_me == true))
       {
          /* We are waiting for a response from the IO-controller */
-         dcerpc_req_len = os_udp_recvfrom(net->cmrpc_session_info[ix].socket, &dcerpc_addr, &dcerpc_port, net->cmrpc_dcerpc_req_frame, sizeof(net->cmrpc_dcerpc_req_frame));
-         if (dcerpc_req_len > 0)
+         dcerpc_input_len = pf_udp_recvfrom(net, net->cmrpc_session_info[ix].socket, &dcerpc_addr, &dcerpc_port, net->cmrpc_dcerpc_input_frame, sizeof(net->cmrpc_dcerpc_input_frame));
+         if (dcerpc_input_len > 0)
          {
+            pf_cmina_ip_to_string(dcerpc_addr, ip_string);
             dcerpc_resp_len = PF_MAX_UDP_PAYLOAD_SIZE;
-            LOG_INFO(PF_RPC_LOG, "CMRPC(%d): Received %u bytes UDP payload from remote port %u, on a socket used in session with index %u\n", __LINE__, dcerpc_req_len, dcerpc_port, ix);
+            LOG_INFO(PF_RPC_LOG, "CMRPC(%d): Received %u bytes UDP payload from remote %s:%u, on socket %d used in session with index %u\n",
+               __LINE__, dcerpc_input_len, ip_string, dcerpc_port, net->cmrpc_session_info[ix].socket, ix);
             is_release = false;
-            (void)pf_cmrpc_dce_packet(net, dcerpc_addr, dcerpc_port, net->cmrpc_dcerpc_req_frame, dcerpc_req_len, net->cmrpc_dcerpc_rsp_frame, &dcerpc_resp_len, &is_release);
-            if (dcerpc_resp_len != 0)
-            {
-               LOG_INFO(PF_RPC_LOG, "CMRPC(%d): Sending %u bytes UDP payload to remote port %u, on the socket in session with index %u.\n", __LINE__, dcerpc_resp_len, dcerpc_port, ix);
-               sent_len = os_udp_sendto(net->cmrpc_session_info[ix].socket, dcerpc_addr, PF_RPC_SERVER_PORT, net->cmrpc_dcerpc_rsp_frame, dcerpc_resp_len);
-               if (sent_len != dcerpc_resp_len)
-               {
-                  LOG_ERROR(PF_RPC_LOG, "CMRPC(%d): Failed to send %u UDP bytes payload on socket used in session with index %u\n", __LINE__, dcerpc_resp_len, ix);
-               }
-            }
-            else
-            {
-               LOG_DEBUG(PF_RPC_LOG, "CMRPC(%d): No UDP data to send on socket used in session with index %u\n", __LINE__, ix);
-            }
+            (void)pf_cmrpc_dce_packet(net, dcerpc_addr, dcerpc_port, net->cmrpc_dcerpc_input_frame, dcerpc_input_len, net->cmrpc_dcerpc_output_frame, &dcerpc_resp_len, &is_release);
+
             if (is_release == true)
             {
-               LOG_DEBUG(PF_RPC_LOG, "CMRPC(%d): Closing and reopening socket used in session with index %u\n", __LINE__, ix);
-               os_udp_close(net->cmrpc_session_info[ix].socket);
-               net->cmrpc_session_info[ix].socket = os_udp_open(OS_IPADDR_ANY, PF_RPC_CCONTROL_EPHEMERAL_PORT);
+               LOG_DEBUG(PF_RPC_LOG, "CMRPC(%d): Closing socket used in session with index %u\n", __LINE__, ix);
+               pf_udp_close(net, net->cmrpc_session_info[ix].socket);
             }
          }
       }
    }
 
    /* Poll RPC requests */
-   dcerpc_req_len = os_udp_recvfrom(net->cmrpc_rpcreq_socket, &dcerpc_addr, &dcerpc_port, net->cmrpc_dcerpc_req_frame, sizeof(net->cmrpc_dcerpc_req_frame));
-   if (dcerpc_req_len > 0)
+   dcerpc_input_len = pf_udp_recvfrom(net, net->cmrpc_rpcreq_socket, &dcerpc_addr, &dcerpc_port, net->cmrpc_dcerpc_input_frame, sizeof(net->cmrpc_dcerpc_input_frame));
+   if (dcerpc_input_len > 0)
    {
+      pf_cmina_ip_to_string(dcerpc_addr, ip_string);
       dcerpc_resp_len = PF_MAX_UDP_PAYLOAD_SIZE;
-      LOG_INFO(PF_RPC_LOG, "CMRPC(%d): Received %u bytes UDP payload from remote port %u, on the socket for incoming DCE RPC requests.\n", __LINE__, dcerpc_req_len, dcerpc_port);
+      LOG_INFO(PF_RPC_LOG, "CMRPC(%d): Received %u bytes UDP payload from remote %s:%u, on socket %u for incoming DCE RPC requests.\n",
+         __LINE__, dcerpc_input_len, ip_string, dcerpc_port, net->cmrpc_rpcreq_socket);
       is_release = false;
-      (void)pf_cmrpc_dce_packet(net, dcerpc_addr, dcerpc_port, net->cmrpc_dcerpc_req_frame, dcerpc_req_len, net->cmrpc_dcerpc_rsp_frame, &dcerpc_resp_len, &is_release);
-      if (dcerpc_resp_len != 0)
-      {
-         LOG_INFO(PF_RPC_LOG, "CMRPC(%d): Sending %u bytes UDP payload to remote port %u, on the socket used for incoming DCE RPC requests.\n", __LINE__, dcerpc_resp_len, dcerpc_port);
-         sent_len = os_udp_sendto(net->cmrpc_rpcreq_socket, dcerpc_addr, dcerpc_port, net->cmrpc_dcerpc_rsp_frame, dcerpc_resp_len);
-         if (sent_len != dcerpc_resp_len)
-         {
-            LOG_ERROR(PF_RPC_LOG, "CMRPC(%d): Failed to send %u UDP bytes payload on the socket for incoming DCE RPC requests.\n", __LINE__, dcerpc_resp_len);
-         }
-      }
-      else
-      {
-         LOG_DEBUG(PF_RPC_LOG, "CMRPC(%d): No UDP data to send on the socket for incoming DCE RPC requests.\n", __LINE__);
-      }
+      (void)pf_cmrpc_dce_packet(net, dcerpc_addr, dcerpc_port, net->cmrpc_dcerpc_input_frame, dcerpc_input_len, net->cmrpc_dcerpc_output_frame, &dcerpc_resp_len, &is_release);
+
       if (is_release == true)
       {
          LOG_DEBUG(PF_RPC_LOG, "CMRPC(%d): Closing and reopening socket used for incoming DCE RPC requests.\n", __LINE__);
-         os_udp_close(net->cmrpc_rpcreq_socket);
-         net->cmrpc_rpcreq_socket = os_udp_open(OS_IPADDR_ANY, PF_RPC_SERVER_PORT);
+         pf_udp_close(net, net->cmrpc_rpcreq_socket);
+         net->cmrpc_rpcreq_socket = pf_udp_open(net, PF_RPC_SERVER_PORT);
       }
    }
 }
+
+/*********************** Initialize ******************************************/
 
 void pf_cmrpc_init(
    pnet_t                  *net)
@@ -2916,7 +3102,7 @@ void pf_cmrpc_init(
       memset(net->cmrpc_ar, 0, sizeof(net->cmrpc_ar));
       memset(net->cmrpc_session_info, 0, sizeof(net->cmrpc_session_info));
 
-      net->cmrpc_rpcreq_socket = os_udp_open(OS_IPADDR_ANY, PF_RPC_SERVER_PORT);
+      net->cmrpc_rpcreq_socket = pf_udp_open(net, PF_RPC_SERVER_PORT);
    }
 
    /* Save for later (put it into each session */
@@ -2946,6 +3132,9 @@ int pf_cmrpc_cmdev_state_ind(
    int                     res = -1;
    pf_session_info_t       *p_sess = NULL;
 
+   LOG_DEBUG(PF_RPC_LOG, "CMRPC(%d): Received event %s from CMDEV.\n", __LINE__,
+      pf_cmdev_event_to_string(event));
+
    switch (event)
    {
    case PNET_EVENT_ABORT:
@@ -2962,12 +3151,12 @@ int pf_cmrpc_cmdev_state_ind(
          {
             if (p_ar->p_sess->release_in_progress == false)
             {
-               pf_session_release(p_ar->p_sess);
+               pf_session_release(net, p_ar->p_sess);
 
                /* Re-open the global RPC socket. */
                LOG_DEBUG(PF_RPC_LOG, "CMRPC(%d): Closing and reopening socket used for incoming DCE RPC requests.\n", __LINE__);
-               os_udp_close(net->cmrpc_rpcreq_socket);
-               net->cmrpc_rpcreq_socket = os_udp_open(OS_IPADDR_ANY, PF_RPC_SERVER_PORT);
+               pf_udp_close(net, net->cmrpc_rpcreq_socket);
+               net->cmrpc_rpcreq_socket = pf_udp_open(net, PF_RPC_SERVER_PORT);
             }
          }
          else
@@ -2978,7 +3167,7 @@ int pf_cmrpc_cmdev_state_ind(
          /* Free other (CCONTROL) sessions and close all RPC sockets. */
          while (pf_session_locate_by_ar(net, p_ar, &p_sess) == 0)
          {
-            pf_session_release(p_sess);
+            pf_session_release(net, p_sess);
          }
 
          /* Finally free the AR */
