@@ -142,7 +142,7 @@ void pf_cmrpc_show(
  * For example:
  *
  *    uint8_t mybuffer[18] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 0, 1, 2, 3, 4, 5};
- *    pf_show_memory(mybuffer, 18);
+ *    pf_memory_contents_show(mybuffer, 18);
  *
  * will be displayed as:
  *
@@ -152,7 +152,7 @@ void pf_cmrpc_show(
  * @param data            In:   Buffer contents to be displayed
  * @param size            In:   Buffer size (or smaller, to only display the beginning)
  */
-void pf_show_memory(
+void pf_memory_contents_show(
    const uint8_t           *data,
    int                     size);
 

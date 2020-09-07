@@ -412,12 +412,10 @@ os_buf_t * os_buf_alloc(uint16_t length)
 {
    return pbuf_alloc(PBUF_RAW, length, PBUF_POOL);
 }
+
 void os_buf_free(os_buf_t *p)
 {
-   if (pbuf_free(p) != 1)
-   {
-      printf("\n\nPBUF not freed\n");
-   }
+   ASSERT(pbuf_free(p) == 1);
 }
 
 uint8_t os_buf_header(os_buf_t *p, int16_t header_size_increment)

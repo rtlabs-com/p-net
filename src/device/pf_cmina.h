@@ -40,7 +40,7 @@ int pf_cmina_init(
  *
  * @param net              InOut: The p-net stack instance
  */
-void pf_cmina_show_interface_statistics(
+void pf_cmina_interface_statistics_show(
    pnet_t                  *net);
 
 

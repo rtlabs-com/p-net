@@ -1025,7 +1025,7 @@ void pf_ip_address_show(
    printf("%s", ip_string);
 }
 
-void pf_cmina_show_interface_statistics(
+void pf_cmina_interface_statistics_show(
    pnet_t                  *net)
 {
    printf("Interface %s    In: %" PRIu32 " bytes %" PRIu32 " errors %" PRIu32 " discards  Out: %" PRIu32 " bytes %" PRIu32 " errors %" PRIu32 " discards\n",
