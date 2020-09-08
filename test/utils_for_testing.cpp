@@ -447,7 +447,10 @@ void PnetIntegrationTestBase::cfg_init()
    pnet_default_cfg.im_0_data.im_profile_specific_type = 0x5678;
    pnet_default_cfg.im_0_data.im_version_major = 0;
    pnet_default_cfg.im_0_data.im_version_minor = 1;
-   pnet_default_cfg.im_0_data.im_supported = 0x001e; /* Only I&M0..I&M4 supported */
+   pnet_default_cfg.im_0_data.im_supported = PNET_SUPPORTED_IM1 |
+                                             PNET_SUPPORTED_IM2 |
+                                             PNET_SUPPORTED_IM3 |
+                                             PNET_SUPPORTED_IM4;
    strcpy(pnet_default_cfg.im_1_data.im_tag_function, "");
    strcpy(pnet_default_cfg.im_1_data.im_tag_location, "");
    strcpy(pnet_default_cfg.im_2_data.im_date, "");

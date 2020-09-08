@@ -314,6 +314,7 @@ extern "C"
 #define PNET_ERROR_CODE_2_ABORT_PDEV_CHECK_FAILED              0x24
 
 #define PNET_FILENAME_IP               "pnet_data_ip.bin"            /* Max length PNET_MAX_FILENAME_LENGTH */
+#define PNET_FILENAME_IM               "pnet_data_im.bin"
 #define PNET_FILENAME_DIAGNOSTICS      "pnet_data_diagnostics.bin"
 #define PNET_FILENAME_LOGBOOK          "pnet_data_logbook.bin"
 
@@ -886,6 +887,16 @@ typedef int (*pnet_signal_led_ind)(
  * Configuration values are taken as is. No validation is performed.
  */
 
+
+typedef enum pnet_im_supported_value
+{
+   /* I&M0 is always supported */
+   PNET_SUPPORTED_IM1 = 0x0002,
+   PNET_SUPPORTED_IM2 = 0x0004,
+   PNET_SUPPORTED_IM3 = 0x0008,
+   PNET_SUPPORTED_IM4 = 0x0010,
+} pnet_im_supported_values_t;
+
 /**
  * The I&M0 data record is read-only by the controller.
  *
@@ -907,7 +918,9 @@ typedef struct pnet_im_0
    uint16_t                im_profile_specific_type;
    uint8_t                 im_version_major;       /**< Always 1 */
    uint8_t                 im_version_minor;       /**< Always 1 */
-   uint16_t                im_supported;           /**< One bit for each supported I&M1..15 (I&M0 always supported)  Use pnet_im_supported_values_t */
+   uint16_t                im_supported;           /**< One bit for each supported I&M1..15.
+                                                        I&M0 is always supported.
+                                                        Use pnet_im_supported_values_t.*/
 } pnet_im_0_t;
 
 /**
@@ -948,12 +961,21 @@ typedef struct pnet_im_3
  * The I&M4 data record is read-write by the controller.
  *
  * This data record is optional. If this data record is supported
- * by the application then bit 3 in the im_supported member of I&M0 shall be set.
+ * by the application then bit 4 in the im_supported member of I&M0 shall be set.
  */
 typedef struct pnet_im_4
 {
    char                    im_signature[54];       /**< Non-terminated binary string, padded with zeroes */
 } pnet_im_4_t;
+
+typedef struct pnet_im_nvm
+{
+   pnet_im_1_t             im1;
+   pnet_im_2_t             im2;
+   pnet_im_3_t             im3;
+   pnet_im_4_t             im4;
+} pnet_im_nvm_t;
+
 
 /**
  * The device-specific vendor and device identities.

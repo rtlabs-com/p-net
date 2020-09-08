@@ -758,11 +758,14 @@ int app_adjust_stack_configuration(
    stack_config->im_0_data.im_profile_specific_type = 0x5678;
    stack_config->im_0_data.im_version_major = 1;
    stack_config->im_0_data.im_version_minor = 1;
-   stack_config->im_0_data.im_supported = 0x001e;        /* Only I&M0..I&M4 supported */
-   strcpy(stack_config->im_1_data.im_tag_function, "");
-   strcpy(stack_config->im_1_data.im_tag_location, "");
-   strcpy(stack_config->im_2_data.im_date, "");
-   strcpy(stack_config->im_3_data.im_descriptor, "");
+   stack_config->im_0_data.im_supported = PNET_SUPPORTED_IM1 |
+                                          PNET_SUPPORTED_IM2 |
+                                          PNET_SUPPORTED_IM3 |
+                                          PNET_SUPPORTED_IM4;
+   strcpy(stack_config->im_1_data.im_tag_function, "my function");
+   strcpy(stack_config->im_1_data.im_tag_location, "my location");
+   strcpy(stack_config->im_2_data.im_date, "2020-09-03 13:53");
+   strcpy(stack_config->im_3_data.im_descriptor, "my descriptor");
    strcpy(stack_config->im_4_data.im_signature, "");  /* For functional safety only */
 
    /* Device configuration */

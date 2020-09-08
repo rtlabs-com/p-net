@@ -981,6 +981,7 @@ int pf_cmina_get_macaddr(
 int pf_cmina_remove_all_data_files(
    const char*             file_directory)
 {
+   pf_file_clear(file_directory, PNET_FILENAME_IM);
    pf_file_clear(file_directory, PNET_FILENAME_IP);
    pf_file_clear(file_directory, PNET_FILENAME_DIAGNOSTICS);
    pf_file_clear(file_directory, PNET_FILENAME_LOGBOOK);
