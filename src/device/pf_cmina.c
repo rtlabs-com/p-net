@@ -196,7 +196,7 @@ int pf_cmina_set_default_cfg(
          else
          {
             /* Use values for IP and station name from user configuration */
-            LOG_DEBUG(PF_DCP_LOG,"CMINA(%d): Could not read IP prameters from nvm. Use values from user configuration.\n", __LINE__);
+            LOG_DEBUG(PF_DCP_LOG,"CMINA(%d): Could not yet read IP parameters from nvm. Use values from user configuration.\n", __LINE__);
             OS_IP4_ADDR_TO_U32(ip, p_cfg->ip_addr.a, p_cfg->ip_addr.b, p_cfg->ip_addr.c, p_cfg->ip_addr.d);
             OS_IP4_ADDR_TO_U32(netmask, p_cfg->ip_mask.a, p_cfg->ip_mask.b, p_cfg->ip_mask.c, p_cfg->ip_mask.d);
             OS_IP4_ADDR_TO_U32(gateway, p_cfg->ip_gateway.a, p_cfg->ip_gateway.b, p_cfg->ip_gateway.c, p_cfg->ip_gateway.d);

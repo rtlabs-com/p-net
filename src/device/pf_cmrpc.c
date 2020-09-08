@@ -1978,7 +1978,7 @@ static int pf_cmrpc_perform_one_write(
           *
           * Skip the block header - it is not needed in the stack.
           */
-         pf_get_block_header(&p_sess->get_info, p_req_pos, &block_header);  /* Not needed by code!! */
+         pf_get_block_header(&p_sess->get_info, p_req_pos, &block_header);  /* Not needed by code, but advances position in buffer */
          if (pf_cmwrr_rm_write_ind(net, p_ar, p_write_request, p_write_result, p_stat,
             p_sess->get_info.p_buf, p_write_request->record_data_length - sizeof(pf_block_header_t), p_req_pos) == 0)
          {
