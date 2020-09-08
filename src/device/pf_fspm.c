@@ -43,6 +43,8 @@
 int pf_fspm_validate_configuration(
    const pnet_cfg_t        *p_cfg)
 {
+   const uint16_t          im_mask = ~(PNET_SUPPORTED_IM1 | PNET_SUPPORTED_IM2 | PNET_SUPPORTED_IM3 | PNET_SUPPORTED_IM4);
+
    if (p_cfg == NULL)
    {
       LOG_ERROR(PNET_LOG, "FSPM(%d): You must provide a configuration, but it is NULL.\n", __LINE__);
@@ -60,7 +62,92 @@ int pf_fspm_validate_configuration(
       return -1;
    }
 
+   if ((p_cfg->im_0_data.im_supported & im_mask) > 0)
+   {
+      LOG_ERROR(PNET_LOG, "FSPM(%d): The I&M supported setting is wrong. Given: 0x%04x\n", __LINE__, p_cfg->im_0_data.im_supported);
+      return -1;
+   }
+
    return 0;
+}
+
+/**
+ * @internal
+ * Load the I&M settings from nonvolatile memory, if existing.
+ *
+ * @param net              InOut: The p-net stack instance
+ */
+static void pf_fspm_load_im(
+   pnet_t                  *net)
+{
+   pnet_im_nvm_t           file_im;
+   const char              *p_file_directory = NULL;
+
+   (void)pf_cmina_get_file_directory(net, &p_file_directory);
+
+   if (pf_file_load(p_file_directory, PNET_FILENAME_IM, &file_im, sizeof(pnet_im_nvm_t)) == 0)
+   {
+      LOG_DEBUG(PNET_LOG,"FSPM(%d): Did read I&M settings from nvm.\n", __LINE__);
+      memcpy(&net->fspm_cfg.im_1_data, &file_im.im1, sizeof(pnet_im_1_t));
+      memcpy(&net->fspm_cfg.im_2_data, &file_im.im2, sizeof(pnet_im_2_t));
+      memcpy(&net->fspm_cfg.im_3_data, &file_im.im3, sizeof(pnet_im_3_t));
+      memcpy(&net->fspm_cfg.im_4_data, &file_im.im4, sizeof(pnet_im_4_t));
+   }
+   else
+   {
+      LOG_DEBUG(PNET_LOG,"FSPM(%d): Could not yet read I&M settings from nvm. Use values from user configuration.\n", __LINE__);
+   }
+}
+
+/**
+ * @internal
+ * Save the I&M settings to nonvolatile memory, if necessary.
+ *
+ * Compares with the content of already stored settings (in order not to
+ * wear out the flash chip)
+ *
+ * @param net              InOut: The p-net stack instance
+ */
+static void pf_fspm_save_im_if_modified(
+   pnet_t                  *net)
+{
+   pnet_im_nvm_t           output_im = {0};
+   pnet_im_nvm_t           current_file_im = {0};
+   bool                    save = false;
+   const char              *p_file_directory = NULL;
+
+   memcpy(&output_im.im1, &net->fspm_cfg.im_1_data, sizeof(pnet_im_1_t));
+   memcpy(&output_im.im2, &net->fspm_cfg.im_2_data, sizeof(pnet_im_2_t));
+   memcpy(&output_im.im3, &net->fspm_cfg.im_3_data, sizeof(pnet_im_3_t));
+   memcpy(&output_im.im4, &net->fspm_cfg.im_4_data, sizeof(pnet_im_4_t));
+
+   (void)pf_cmina_get_file_directory(net, &p_file_directory);
+
+   if (pf_file_load(p_file_directory, PNET_FILENAME_IM, &current_file_im, sizeof(pnet_im_nvm_t)) == 0)
+   {
+      if (memcmp(&current_file_im, &output_im, sizeof(pnet_im_nvm_t)) != 0)
+      {
+         LOG_INFO(PNET_LOG,"FSPM(%d): Updating nvm stored I&M settings.\n", __LINE__);
+         save = true;
+      }
+   }
+   else
+   {
+      LOG_INFO(PNET_LOG,"FSPM(%d): First nvm saving of I&M settings.\n", __LINE__);
+      save = true;
+   }
+
+   if (save == true)
+   {
+      if (pf_file_save(p_file_directory, PNET_FILENAME_IM, &output_im, sizeof(pnet_im_nvm_t)) != 0)
+      {
+         LOG_ERROR(PNET_LOG,"FSPM(%d): Failed to store nvm I&M settings.\n", __LINE__);
+      }
+   }
+   else
+   {
+      LOG_DEBUG(PNET_LOG,"FSPM(%d): No storing of nvm I&M settings (no changes).\n", __LINE__);
+   }
 }
 
 int pf_fspm_init(
@@ -72,12 +159,17 @@ int pf_fspm_init(
       return -1;
    }
 
-   /* Save a copy of the configuration. Some init functions may ask for it. */
+   /* Use a copy of the configuration. For example the I&M data might be updated at runtime. */
    net->fspm_cfg = *p_cfg;
 
    /* Reference to the default settings (used at factory reset) */
    net->p_fspm_default_cfg = p_cfg;
 
+   /* Load I&M data modifications from file, if any */
+   pf_fspm_load_im(net);
+   pf_fspm_save_im_if_modified(net);
+
+   /* Log book */
    if (net->fspm_log_book_mutex == NULL)
    {
       net->fspm_log_book_mutex = os_mutex_create();
@@ -139,6 +231,8 @@ int pf_fspm_clear_im_data(
    memset(net->fspm_cfg.im_3_data.im_descriptor, ' ', sizeof(net->fspm_cfg.im_3_data.im_descriptor));
    net->fspm_cfg.im_3_data.im_descriptor[sizeof(net->fspm_cfg.im_3_data.im_descriptor) - 1] = '\0';
    memset(net->fspm_cfg.im_4_data.im_signature, 0, sizeof(net->fspm_cfg.im_4_data.im_signature));
+
+   pf_fspm_save_im_if_modified(net);
 
    return 0;
 }
@@ -290,29 +384,57 @@ int pf_fspm_cm_read_ind(
          }
          break;
       case PF_IDX_SUB_IM_1:
-         LOG_INFO(PNET_LOG, "FSPM(%d): PLC is reading I&M1 data. Function: %s Location: %s\n",
-            __LINE__, net->fspm_cfg.im_1_data.im_tag_function, net->fspm_cfg.im_1_data.im_tag_location);
-         *pp_read_data = (uint8_t *)&net->fspm_cfg.im_1_data;
-         *p_read_length = sizeof(net->fspm_cfg.im_1_data);
-         ret = 0;
+         if ((net->fspm_cfg.im_0_data.im_supported & PNET_SUPPORTED_IM1) > 0)
+         {
+            LOG_INFO(PNET_LOG, "FSPM(%d): PLC is reading I&M1 data. Function: %s Location: %s\n",
+               __LINE__, net->fspm_cfg.im_1_data.im_tag_function, net->fspm_cfg.im_1_data.im_tag_location);
+            *pp_read_data = (uint8_t *)&net->fspm_cfg.im_1_data;
+            *p_read_length = sizeof(net->fspm_cfg.im_1_data);
+            ret = 0;
+         }
+         else
+         {
+            LOG_INFO(PNET_LOG, "FSPM(%d): PLC is trying to read I&M1 data, but we have not enabled it.\n",__LINE__);
+         }
          break;
       case PF_IDX_SUB_IM_2:
-         LOG_INFO(PNET_LOG, "FSPM(%d): PLC is reading I&M2 data. Date: %s\n", __LINE__, net->fspm_cfg.im_2_data.im_date);
-         *pp_read_data = (uint8_t *)&net->fspm_cfg.im_2_data;
-         *p_read_length = sizeof(net->fspm_cfg.im_2_data);
-         ret = 0;
+         if ((net->fspm_cfg.im_0_data.im_supported & PNET_SUPPORTED_IM2) > 0)
+         {
+            LOG_INFO(PNET_LOG, "FSPM(%d): PLC is reading I&M2 data. Date: %s\n", __LINE__, net->fspm_cfg.im_2_data.im_date);
+            *pp_read_data = (uint8_t *)&net->fspm_cfg.im_2_data;
+            *p_read_length = sizeof(net->fspm_cfg.im_2_data);
+            ret = 0;
+         }
+         else
+         {
+            LOG_INFO(PNET_LOG, "FSPM(%d): PLC is trying to read I&M2 data, but we have not enabled it.\n",__LINE__);
+         }
          break;
       case PF_IDX_SUB_IM_3:
-         LOG_INFO(PNET_LOG, "FSPM(%d): PLC is reading I&M3 data. Descriptor: %s\n", __LINE__, net->fspm_cfg.im_3_data.im_descriptor);
-         *pp_read_data = (uint8_t *)&net->fspm_cfg.im_3_data;
-         *p_read_length = sizeof(net->fspm_cfg.im_3_data);
-         ret = 0;
+         if ((net->fspm_cfg.im_0_data.im_supported & PNET_SUPPORTED_IM3) > 0)
+         {
+            LOG_INFO(PNET_LOG, "FSPM(%d): PLC is reading I&M3 data. Descriptor: %s\n", __LINE__, net->fspm_cfg.im_3_data.im_descriptor);
+            *pp_read_data = (uint8_t *)&net->fspm_cfg.im_3_data;
+            *p_read_length = sizeof(net->fspm_cfg.im_3_data);
+            ret = 0;
+         }
+         else
+         {
+            LOG_INFO(PNET_LOG, "FSPM(%d): PLC is trying to read I&M3 data, but we have not enabled it.\n",__LINE__);
+         }
          break;
       case PF_IDX_SUB_IM_4:
-         LOG_INFO(PNET_LOG, "FSPM(%d): PLC is reading I&M4 data\n", __LINE__);
-         *pp_read_data = (uint8_t *)&net->fspm_cfg.im_4_data;
-         *p_read_length = sizeof(net->fspm_cfg.im_4_data);
-         ret = 0;
+         if ((net->fspm_cfg.im_0_data.im_supported & PNET_SUPPORTED_IM4) > 0)
+         {
+            LOG_INFO(PNET_LOG, "FSPM(%d): PLC is reading I&M4 data\n", __LINE__);
+            *pp_read_data = (uint8_t *)&net->fspm_cfg.im_4_data;
+            *p_read_length = sizeof(net->fspm_cfg.im_4_data);
+            ret = 0;
+         }
+         else
+         {
+            LOG_INFO(PNET_LOG, "FSPM(%d): PLC is trying to read I&M4 data, but we have not enabled it.\n",__LINE__);
+         }
          break;
       default:
          /* Nothing if data not available here */
@@ -380,77 +502,120 @@ int pf_fspm_cm_write_ind(
          ret = 0;
          break;
       case PF_IDX_SUB_IM_1:
-         get_info.result = PF_PARSE_OK;
-         get_info.p_buf = p_write_data;
-         get_info.is_big_endian = true;
-         get_info.len = write_length;      /* Bytes in input buffer */
-
-         pf_get_im_1(&get_info, &pos, &net->fspm_cfg.im_1_data);
-         if ((get_info.result == PF_PARSE_OK) && (pos == write_length))
+         if ((net->fspm_cfg.im_0_data.im_supported & PNET_SUPPORTED_IM1) > 0)
          {
-            LOG_INFO(PNET_LOG, "FSPM(%d): PLC is writing I&M01 data. Function: %s Location: %s\n",
-                __LINE__, net->fspm_cfg.im_1_data.im_tag_function, net->fspm_cfg.im_1_data.im_tag_location);
-            ret = 0;
+            get_info.result = PF_PARSE_OK;
+            get_info.p_buf = p_write_data;
+            get_info.is_big_endian = true;
+            get_info.len = write_length;      /* Bytes in input buffer */
+
+            pf_get_im_1(&get_info, &pos, &net->fspm_cfg.im_1_data);
+            if ((get_info.result == PF_PARSE_OK) && (pos == write_length))
+            {
+               LOG_INFO(PNET_LOG, "FSPM(%d): PLC is writing I&M1 data. Function: %s Location: %s\n",
+                  __LINE__, net->fspm_cfg.im_1_data.im_tag_function, net->fspm_cfg.im_1_data.im_tag_location);
+               ret = 0;
+            }
+            else
+            {
+               LOG_ERROR(PNET_LOG, "FSPM(%d): Wrong length of incoming I&M1 data\n", __LINE__);
+               p_write_status->pnio_status.error_code = PNET_ERROR_CODE_WRITE;
+               p_write_status->pnio_status.error_decode = PNET_ERROR_DECODE_PNIORW;
+               p_write_status->pnio_status.error_code_1 = PNET_ERROR_CODE_1_ACC_WRITE_LENGTH_ERROR;
+               p_write_status->pnio_status.error_code_2 = 0;
+            }
          }
          else
          {
-            LOG_ERROR(PNET_LOG, "FSPM(%d): Wrong length of incoming I&M01 data\n", __LINE__);
+            LOG_ERROR(PNET_LOG, "FSPM(%d): PLC is trying to write I&M1 data, but we have not enabled it.\n",__LINE__);
             p_write_status->pnio_status.error_code = PNET_ERROR_CODE_WRITE;
             p_write_status->pnio_status.error_decode = PNET_ERROR_DECODE_PNIORW;
-            p_write_status->pnio_status.error_code_1 = PNET_ERROR_CODE_1_ACC_WRITE_LENGTH_ERROR;
+            p_write_status->pnio_status.error_code_1 = PNET_ERROR_CODE_1_ACC_INVALID_INDEX;
             p_write_status->pnio_status.error_code_2 = 0;
          }
          break;
       case PF_IDX_SUB_IM_2:
-
-         /* Do not count the terminator byte */
-         if (write_length == (sizeof(net->fspm_cfg.im_2_data) - 1))
+         if ((net->fspm_cfg.im_0_data.im_supported & PNET_SUPPORTED_IM2) > 0)
          {
-            memcpy(&net->fspm_cfg.im_2_data, p_write_data, sizeof(net->fspm_cfg.im_2_data) - 1);
-            net->fspm_cfg.im_2_data.im_date[sizeof(net->fspm_cfg.im_2_data) - 1] = '\0';
-            LOG_INFO(PNET_LOG, "FSPM(%d): PLC is writing I&M02 data. Date: %s\n", __LINE__, net->fspm_cfg.im_2_data.im_date);
-            ret = 0;
+            /* Do not count the terminator byte */
+            if (write_length == (sizeof(net->fspm_cfg.im_2_data) - 1))
+            {
+               memcpy(&net->fspm_cfg.im_2_data, p_write_data, sizeof(net->fspm_cfg.im_2_data) - 1);
+               net->fspm_cfg.im_2_data.im_date[sizeof(net->fspm_cfg.im_2_data) - 1] = '\0';
+               LOG_INFO(PNET_LOG, "FSPM(%d): PLC is writing I&M2 data. Date: %s\n", __LINE__, net->fspm_cfg.im_2_data.im_date);
+               ret = 0;
+            }
+            else
+            {
+               LOG_ERROR(PNET_LOG, "FSPM(%d): Wrong length of incoming I&M2 data\n", __LINE__);
+               p_write_status->pnio_status.error_code = PNET_ERROR_CODE_WRITE;
+               p_write_status->pnio_status.error_decode = PNET_ERROR_DECODE_PNIORW;
+               p_write_status->pnio_status.error_code_1 = PNET_ERROR_CODE_1_ACC_WRITE_LENGTH_ERROR;
+               p_write_status->pnio_status.error_code_2 = 0;
+            }
          }
          else
          {
-            LOG_ERROR(PNET_LOG, "FSPM(%d): Wrong length of incoming I&M02 data\n", __LINE__);
+            LOG_ERROR(PNET_LOG, "FSPM(%d): PLC is trying to write I&M2 data, but we have not enabled it.\n",__LINE__);
             p_write_status->pnio_status.error_code = PNET_ERROR_CODE_WRITE;
             p_write_status->pnio_status.error_decode = PNET_ERROR_DECODE_PNIORW;
-            p_write_status->pnio_status.error_code_1 = PNET_ERROR_CODE_1_ACC_WRITE_LENGTH_ERROR;
+            p_write_status->pnio_status.error_code_1 = PNET_ERROR_CODE_1_ACC_INVALID_INDEX;
             p_write_status->pnio_status.error_code_2 = 0;
          }
          break;
       case PF_IDX_SUB_IM_3:
-         /* Do not count the terminator byte */
-         if (write_length == (sizeof(net->fspm_cfg.im_3_data) - 1))
+         if ((net->fspm_cfg.im_0_data.im_supported & PNET_SUPPORTED_IM3) > 0)
          {
-            memcpy(&net->fspm_cfg.im_3_data, p_write_data, sizeof(net->fspm_cfg.im_3_data) - 1);
-            net->fspm_cfg.im_3_data.im_descriptor[sizeof(net->fspm_cfg.im_3_data) - 1] = '\0';
-            LOG_INFO(PNET_LOG, "FSPM(%d): PLC is writing I&M3 data. Descriptor: %s\n", __LINE__, net->fspm_cfg.im_3_data.im_descriptor);
-            ret = 0;
+            /* Do not count the terminator byte */
+            if (write_length == (sizeof(net->fspm_cfg.im_3_data) - 1))
+            {
+               memcpy(&net->fspm_cfg.im_3_data, p_write_data, sizeof(net->fspm_cfg.im_3_data) - 1);
+               net->fspm_cfg.im_3_data.im_descriptor[sizeof(net->fspm_cfg.im_3_data) - 1] = '\0';
+               LOG_INFO(PNET_LOG, "FSPM(%d): PLC is writing I&M3 data. Descriptor: %s\n", __LINE__, net->fspm_cfg.im_3_data.im_descriptor);
+               ret = 0;
+            }
+            else
+            {
+               LOG_ERROR(PNET_LOG, "FSPM(%d): Wrong length of incoming I&M3 data\n", __LINE__);
+               p_write_status->pnio_status.error_code = PNET_ERROR_CODE_WRITE;
+               p_write_status->pnio_status.error_decode = PNET_ERROR_DECODE_PNIORW;
+               p_write_status->pnio_status.error_code_1 = PNET_ERROR_CODE_1_ACC_WRITE_LENGTH_ERROR;
+               p_write_status->pnio_status.error_code_2 = 0;
+            }
          }
          else
          {
-            LOG_ERROR(PNET_LOG, "FSPM(%d): Wrong length of incoming I&M03 data\n", __LINE__);
+            LOG_ERROR(PNET_LOG, "FSPM(%d): PLC is trying to write I&M3 data, but we have not enabled it.\n",__LINE__);
             p_write_status->pnio_status.error_code = PNET_ERROR_CODE_WRITE;
             p_write_status->pnio_status.error_decode = PNET_ERROR_DECODE_PNIORW;
-            p_write_status->pnio_status.error_code_1 = PNET_ERROR_CODE_1_ACC_WRITE_LENGTH_ERROR;
+            p_write_status->pnio_status.error_code_1 = PNET_ERROR_CODE_1_ACC_INVALID_INDEX;
             p_write_status->pnio_status.error_code_2 = 0;
          }
          break;
       case PF_IDX_SUB_IM_4:
-         if (write_length == sizeof(net->fspm_cfg.im_4_data))
+         if ((net->fspm_cfg.im_0_data.im_supported & PNET_SUPPORTED_IM4) > 0)
          {
-            LOG_INFO(PNET_LOG, "FSPM(%d): PLC is writing I&M04 data\n", __LINE__);
-            memcpy(&net->fspm_cfg.im_4_data, p_write_data, sizeof(net->fspm_cfg.im_4_data));
-            ret = 0;
+            if (write_length == sizeof(net->fspm_cfg.im_4_data))
+            {
+               LOG_INFO(PNET_LOG, "FSPM(%d): PLC is writing I&M4 data\n", __LINE__);
+               memcpy(&net->fspm_cfg.im_4_data, p_write_data, sizeof(net->fspm_cfg.im_4_data));
+               ret = 0;
+            }
+            else
+            {
+               LOG_ERROR(PNET_LOG, "FSPM(%d): Wrong length of incoming I&M4 data\n", __LINE__);
+               p_write_status->pnio_status.error_code = PNET_ERROR_CODE_WRITE;
+               p_write_status->pnio_status.error_decode = PNET_ERROR_DECODE_PNIORW;
+               p_write_status->pnio_status.error_code_1 = PNET_ERROR_CODE_1_ACC_WRITE_LENGTH_ERROR;
+               p_write_status->pnio_status.error_code_2 = 0;
+            }
          }
          else
          {
-            LOG_ERROR(PNET_LOG, "FSPM(%d): Wrong length of incoming I&M04 data\n", __LINE__);
+            LOG_ERROR(PNET_LOG, "FSPM(%d): PLC is trying to write I&M4 data, but we have not enabled it.\n",__LINE__);
             p_write_status->pnio_status.error_code = PNET_ERROR_CODE_WRITE;
             p_write_status->pnio_status.error_decode = PNET_ERROR_DECODE_PNIORW;
-            p_write_status->pnio_status.error_code_1 = PNET_ERROR_CODE_1_ACC_WRITE_LENGTH_ERROR;
+            p_write_status->pnio_status.error_code_1 = PNET_ERROR_CODE_1_ACC_INVALID_INDEX;
             p_write_status->pnio_status.error_code_2 = 0;
          }
          break;
@@ -462,6 +627,9 @@ int pf_fspm_cm_write_ind(
          p_write_status->pnio_status.error_code_2 = 0;
          break;
       }
+
+      pf_fspm_save_im_if_modified(net);
+
    }
    else
    {
