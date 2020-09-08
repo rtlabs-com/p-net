@@ -28,8 +28,10 @@
  * Contains a single function \a pf_cmrdr_rm_read_ind(),
  * that handles a RPC parameter read request (and read implicit request).
  *
+ * Triggers the \a pnet_read_ind() user callback for some values.
+ *
  * This implementation of CMRDR has no internal state.
- * Every call to pf_cmrdr_rm_read_ind finishes by returning the result.
+ * Every call to \a pf_cmrdr_rm_read_ind() finishes by returning the result.
  * Since there are no internal static variables there is also no need
  * for a POWER-ON state.
  */
@@ -64,9 +66,7 @@ int pf_cmrdr_rm_read_ind(
    read_result.subslot_number = p_read_request->subslot_number;
    read_result.index = p_read_request->index;
 
-   /*
-    * Let FSPM or the application provide the value if possible.
-    */
+   /* Get the data from FSPM or the application, if possible. */
    data_len = res_size - *p_pos;
    ret = pf_fspm_cm_read_ind(net, p_ar, p_read_request, &p_data, &data_len, p_read_status);
    if (ret != 0)
@@ -120,12 +120,9 @@ int pf_cmrdr_rm_read_ind(
          ret = 0;
          break;
 
-      /*
-       * I&M data are provided by FSPM.
-       * Accept whatever it says (after verifying the data length).
-       */
+      /* I&M data has been provided by FSPM. Accept whatever it says.
+       * Put it into the response after verifying the data length. */
       case PF_IDX_SUB_IM_0:
-         LOG_INFO(PNET_LOG, "CMRDR(%d): Read I&M0 data\n", __LINE__);
          if ((data_len == sizeof(pnet_im_0_t)) && (*p_pos + data_len < res_size))
          {
             pf_put_im_0(true, (pnet_im_0_t *)p_data, res_size, p_res, p_pos);
@@ -133,7 +130,6 @@ int pf_cmrdr_rm_read_ind(
          }
          break;
       case PF_IDX_SUB_IM_1:
-         LOG_INFO(PNET_LOG, "CMRDR(%d): Read I&M1 data\n", __LINE__);
          if ((data_len == sizeof(pnet_im_1_t)) && (*p_pos + data_len < res_size))
          {
             pf_put_im_1(true, (pnet_im_1_t *)p_data, res_size, p_res, p_pos);
@@ -141,7 +137,6 @@ int pf_cmrdr_rm_read_ind(
          }
          break;
       case PF_IDX_SUB_IM_2:
-         LOG_INFO(PNET_LOG, "CMRDR(%d): Read I&M2 data\n", __LINE__);
          if ((data_len == sizeof(pnet_im_2_t)) && (*p_pos + data_len < res_size))
          {
             pf_put_im_2(true, (pnet_im_2_t *)p_data, res_size, p_res, p_pos);
@@ -149,7 +144,6 @@ int pf_cmrdr_rm_read_ind(
          }
          break;
       case PF_IDX_SUB_IM_3:
-         LOG_INFO(PNET_LOG, "CMRDR(%d): Read I&M3 data\n", __LINE__);
          if ((data_len == sizeof(pnet_im_3_t)) && (*p_pos + data_len < res_size))
          {
             pf_put_im_3(true, (pnet_im_3_t *)p_data, res_size, p_res, p_pos);
@@ -157,7 +151,6 @@ int pf_cmrdr_rm_read_ind(
          }
          break;
       case PF_IDX_SUB_IM_4:
-         LOG_INFO(PNET_LOG, "CMRDR(%d): Read I&M4 data\n", __LINE__);
          if ((data_len == sizeof(pnet_im_4_t)) && (*p_pos + data_len < res_size))
          {
             pf_put_record_data_read(true, PF_BT_IM_4, data_len, p_data, res_size, p_res, p_pos);
@@ -165,13 +158,9 @@ int pf_cmrdr_rm_read_ind(
          }
          break;
 
-      /*
-       * I&M data are provided by FSPM.
-       * Accept whatever it says (after verifying the data length).
-       */
+      /* Logbook data has been provided by FSPM. Accept whatever it says.
+       * Put it into the response after verifying the data length. */
       case PF_IDX_DEV_LOGBOOK_DATA:
-         LOG_INFO(PNET_LOG, "CMRDR(%d): Read logbook data\n", __LINE__);
-         /* Provided by FSPM. Accept whatever it says. */
          pf_put_log_book_data(true, (pf_log_book_t *)p_data, res_size, p_res, p_pos);
          ret = 0;
          break;
@@ -489,6 +478,7 @@ int pf_cmrdr_rm_read_ind(
    read_result.record_data_length = *p_pos - start_pos;
    pf_put_uint32(true, read_result.record_data_length, res_size, p_res, &data_length_pos);   /* Insert actual data length */
 
+   /* Restart timer */
    ret = pf_cmsm_cm_read_ind(net, p_ar, p_read_request);
 
    return ret;

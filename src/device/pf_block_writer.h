@@ -246,12 +246,12 @@ void pf_put_control(
  * Insert an RPC read result into a buffer.
  * Return the position of the data_length member of the read result as it must be
  * modified later.
- * @param is_big_endian    In:   Endianness of the destination buffer.
- * @param p_res            In:   The read result to insert.
- * @param res_len          In:   Size of destination buffer.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
- * @param p_pos            InOut:Position in destination buffer.
+ * @param is_big_endian       In:   Endianness of the destination buffer.
+ * @param p_res               In:   The read result to insert.
+ * @param res_len             In:   Size of destination buffer.
+ * @param p_bytes             Out:  Destination buffer.
+ * @param p_pos               InOut:Position in destination buffer.
+ * @param p_data_length_pos   Out:  Position of the data length field
  */
 void pf_put_read_result(
    bool                    is_big_endian,

@@ -21,6 +21,14 @@
 #include "pf_block_reader.h"
 #include "pf_block_writer.h"
 
+/**
+ * @file
+ * @brief Implements the Context Management Write Record Responder protocol machine device (CMWRR)
+ *
+ * Handles a RPC parameter write request.
+ *
+ * Triggers the \a pnet_write_ind() user callback for some values.
+ */
 
 void pf_cmwrr_init(
    pnet_t                  *net)
@@ -258,6 +266,7 @@ int pf_cmwrr_rm_write_ind(
    p_write_result->add_data_1 = p_result->add_data_1;
    p_write_result->add_data_2 = p_result->add_data_2;
 
+   /* Restart timer */
    ret = pf_cmsm_cm_write_ind(net, p_ar, p_write_request);
 
    return ret;

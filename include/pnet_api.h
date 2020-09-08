@@ -384,6 +384,7 @@ typedef enum pnet_data_status_bits
    PNET_DATA_STATUS_BIT_IGNORE                       /** 0 => Evaluate data status, 1 => Ignore the data status (typically used on a frame with subframes) */
 } pnet_data_status_bits_t;
 
+
  /** Network handle */
 typedef struct pnet pnet_t;
 
@@ -906,14 +907,14 @@ typedef struct pnet_im_0
    uint16_t                im_profile_specific_type;
    uint8_t                 im_version_major;       /**< Always 1 */
    uint8_t                 im_version_minor;       /**< Always 1 */
-   uint16_t                im_supported;           /**< One bit for each supported I&M1..15 (I&M0 always supported) */
+   uint16_t                im_supported;           /**< One bit for each supported I&M1..15 (I&M0 always supported)  Use pnet_im_supported_values_t */
 } pnet_im_0_t;
 
 /**
  * The I&M1 data record is read-write by the controller.
  *
  * This data record is optional. If this data record is supported
- * by the application then bit 0 in the im_supported member of I&M0 shall be set.
+ * by the application then bit 1 in the im_supported member of I&M0 shall be set.
  */
 typedef struct pnet_im_1
 {
@@ -925,7 +926,7 @@ typedef struct pnet_im_1
  * The I&M2 data record is read-write by the controller.
  *
  * This data record is optional. If this data record is supported
- * by the application then bit 1 in the im_supported member of I&M0 shall be set.
+ * by the application then bit 2 in the im_supported member of I&M0 shall be set.
  */
 typedef struct pnet_im_2
 {
@@ -936,7 +937,7 @@ typedef struct pnet_im_2
  * The I&M3 data record is read-write by the controller.
  *
  * This data record is optional. If this data record is supported
- * by the application then bit 2 in the im_supported member of I&M0 shall be set.
+ * by the application then bit 3 in the im_supported member of I&M0 shall be set.
  */
 typedef struct pnet_im_3
 {
