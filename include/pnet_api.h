@@ -1824,6 +1824,8 @@ PNET_EXPORT int pnet_diag_remove(
  *
  * @param net              InOut: The p-net stack instance
  * @param level            In:   The amount of detail to show.
+ *     0x0010              | Show compile time options
+ *     0x0020              | Show CMDEV
  *     0x0800              | Show all sessions.
  *     0x1000              | Show all ARs.
  *     0x1001              |           include IOCR.
@@ -1840,6 +1842,8 @@ PNET_EXPORT int pnet_diag_remove(
  *          1                               CMINA
  *             1                            AR
  *                1                         Sessions
+ *                             1            CMDEV
+ *                               1          Options
  *                                     1    More IOCR info on AR
  *                                       1  More IOCR info on AR
  */

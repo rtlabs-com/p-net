@@ -32,6 +32,58 @@
 #include "pf_includes.h"
 #include "pf_block_reader.h"
 
+void pf_fspm_im_show(
+   pnet_t                  *net
+)
+{
+   printf("Identification & Maintainance\n");
+   printf("I&M1.im_tag_function     : <%s>\n", net->fspm_cfg.im_1_data.im_tag_function);
+   printf("I&M1.im_tag_location     : <%s>\n", net->fspm_cfg.im_1_data.im_tag_location);
+   printf("I&M2.date                : <%s>\n", net->fspm_cfg.im_2_data.im_date);
+   printf("I&M3.im_descriptor       : <%s>\n", net->fspm_cfg.im_3_data.im_descriptor);
+   printf("I&M4.im_signature        : <%s>\n", net->fspm_cfg.im_4_data.im_signature);    /* Should be binary data, but works for now */
+}
+
+void pf_fspm_option_show(
+   pnet_t                  *net
+)
+{
+   printf("Compile time options affecting memory consumption:\n");
+   printf("PNET_MAX_AR                                    : %d\n", PNET_MAX_AR);
+   printf("PNET_MAX_API                                   : %d\n", PNET_MAX_API);
+   printf("PNET_MAX_CR                                    : %d\n", PNET_MAX_CR);
+   printf("PNET_MAX_MODULES                               : %d\n", PNET_MAX_MODULES);
+   printf("PNET_MAX_SUBMODULES                            : %d\n", PNET_MAX_SUBMODULES);
+   printf("PNET_MAX_CHANNELS                              : %d\n", PNET_MAX_CHANNELS);
+   printf("PNET_MAX_DFP_IOCR                              : %d\n", PNET_MAX_DFP_IOCR);
+   printf("PNET_MAX_PORT                                  : %d\n", PNET_MAX_PORT);
+   printf("PNET_MAX_LOG_BOOK_ENTRIES                      : %d\n", PNET_MAX_LOG_BOOK_ENTRIES);
+   printf("PNET_MAX_ALARMS                                : %d\n", PNET_MAX_ALARMS);
+   printf("PNET_MAX_DIAG_ITEMS                            : %d\n", PNET_MAX_DIAG_ITEMS);
+   printf("PNET_MAX_DIRECTORYPATH_LENGTH                  : %d\n", PNET_MAX_DIRECTORYPATH_LENGTH);
+   printf("PNET_MAX_FILENAME_LENGTH                       : %d\n", PNET_MAX_FILENAME_LENGTH);
+   printf("PNET_MAX_SESSION_BUFFER_SIZE                   : %d\n", PNET_MAX_SESSION_BUFFER_SIZE);
+   printf("PNET_MAX_MAN_SPECIFIC_FAST_STARTUP_DATA_LENGTH : %d\n", PNET_MAX_MAN_SPECIFIC_FAST_STARTUP_DATA_LENGTH);
+   printf("PNET_OPTION_MC_CR                              : %d\n", PNET_OPTION_MC_CR);
+#if PNET_OPTION_MC_CR
+   printf("PNET_MAX_MC_CR                                 : %d\n", PNET_MAX_MC_CR);
+#endif
+   printf("PNET_OPTION_AR_VENDOR_BLOCKS                   : %d\n", PNET_OPTION_AR_VENDOR_BLOCKS);
+#if PNET_OPTION_AR_VENDOR_BLOCKS
+   printf("PNET_MAX_AR_VENDOR_BLOCKS                      : %d\n", PNET_MAX_AR_VENDOR_BLOCKS);
+   printf("PNET_MAX_AR_VENDOR_BLOCK_DATA_LENGTH           : %d\n", PNET_MAX_AR_VENDOR_BLOCK_DATA_LENGTH);
+#endif
+   printf("PNET_OPTION_FAST_STARTUP                       : %d\n", PNET_OPTION_FAST_STARTUP);
+   printf("PNET_OPTION_PARAMETER_SERVER                   : %d\n", PNET_OPTION_PARAMETER_SERVER);
+   printf("PNET_OPTION_IR                                 : %d\n", PNET_OPTION_IR);
+   printf("PNET_OPTION_SR                                 : %d\n", PNET_OPTION_SR);
+   printf("PNET_OPTION_REDUNDANCY                         : %d\n", PNET_OPTION_REDUNDANCY);
+   printf("PNET_OPTION_RS                                 : %d\n", PNET_OPTION_RS);
+   printf("PNET_OPTION_SRL                                : %d\n", PNET_OPTION_SRL);
+   printf("LOG_LEVEL (DEBUG=0, ERROR=3)                   : %d\n", LOG_LEVEL);
+   printf("sizeof(pnet_t) : %" PRIu32 " bytes (for currently selected option values)\n", (uint32_t)sizeof(pnet_t));
+}
+
 /**
  * @internal
  * Validate the configuration from the user.

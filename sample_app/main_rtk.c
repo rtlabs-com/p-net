@@ -89,8 +89,8 @@ static void main_timer_tick(
 /*  Type help to see available commands.                                      */
 
 static int _cmd_pnio_alarm_ack(
-      int                  argc,
-      char                 *argv[])
+   int                     argc,
+   char                    *argv[])
 {
 #if 1
    /* Make it synchronous to periodic */
@@ -121,28 +121,44 @@ static int _cmd_pnio_alarm_ack(
 
 const shell_cmd_t cmd_pnio_alarm_ack =
 {
-      .cmd = _cmd_pnio_alarm_ack,
-      .name = "pnio_alarm_ack",
-      .help_short = "Send AlarmAck",
-      .help_long ="Send AlarmAck"
+   .cmd = _cmd_pnio_alarm_ack,
+   .name = "pnio_alarm_ack",
+   .help_short = "Send AlarmAck",
+   .help_long ="Send AlarmAck"
 };
 SHELL_CMD (cmd_pnio_alarm_ack);
 
 
 static int _cmd_pnio_show(
-      int                  argc,
-      char                 *argv[])
+   int                     argc,
+   char                    *argv[])
 {
-   unsigned long level = 0;
-   char *end = NULL;
+   unsigned long           level = 0;
+   char                    *end = NULL;
 
-   if (argc == 2)
+   if (argc == 1)
+   {
+      level = 0x2010;  /*  See documentation for pnet_show()  */
+   }
+   else if (argc == 2)
    {
       level = strtoul(argv[1], &end, 0);
+      if (end == argv[1] || level == 0)
+      {
+         shell_usage (argv[0], "level must be an integer > 0");
+         return -1;
+      }
    }
+   else
+   {
+      shell_usage (argv[0], "wrong number of arguments");
+      return -1;
+   }
+
    pnet_show(g_net, level);
-   printf("ar_param_1 = 0x%08x\n", (unsigned)ntohl(gp_appdata->app_param_1));
-   printf("ar_param_2 = 0x%08x\n", (unsigned)ntohl(gp_appdata->app_param_2));
+   printf("\n");
+   printf("App parameter 1 = 0x%08x\n", (unsigned)ntohl(gp_appdata->app_param_1));
+   printf("App parameter 2 = 0x%08x\n", (unsigned)ntohl(gp_appdata->app_param_2));
 
    return 0;
 }
@@ -151,15 +167,15 @@ const shell_cmd_t cmd_pnio_show =
 {
   .cmd = _cmd_pnio_show,
   .name = "pnio_show",
-  .help_short = "Show pnio (level)",
-  .help_long ="Show pnio (level)"
+  .help_short = "Show pnio [level]",
+  .help_long ="Show pnio [level]. Defaults to 8208. Use 65535 to show all."
 };
 SHELL_CMD (cmd_pnio_show);
 
 
 static int _cmd_pnio_factory_reset(
-      int                  argc,
-      char                 *argv[])
+   int                     argc,
+   char                    *argv[])
 {
    printf("Factory reset\n");
    (void)pnet_factory_reset(g_net);
@@ -178,8 +194,8 @@ SHELL_CMD (cmd_pnio_factory_reset);
 
 
 static int _cmd_pnio_remove_files(
-      int                  argc,
-      char                 *argv[])
+   int                     argc,
+   char                    *argv[])
 {
    printf("Deleting data files\n");
    (void)pnet_remove_data_files(APP_DEFAULT_FILE_DIRECTORY);

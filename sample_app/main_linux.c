@@ -70,8 +70,9 @@ void show_usage()
    printf("   --help       Show this help text and exit\n");
    printf("   -h           Show this help text and exit\n");
    printf("   -v           Incresase verbosity\n");
-   printf("   -f           Reset to factory settings, and store to file\n");
-   printf("   -r           Remove stored files\n");
+   printf("   -f           Reset to factory settings, and store to file. Exit.\n");
+   printf("   -r           Remove stored files and exit.\n");
+   printf("   -g           Show stack details and exit. Repeat for more details.\n");
    printf("   -i INTERF    Name of Ethernet interface to use. Defaults to %s\n", APP_DEFAULT_ETHERNET_INTERFACE);
    printf("   -s NAME      Set station name. Defaults to %s  Only used\n", APP_DEFAULT_STATION_NAME);
    printf("                if not already available in storage file.\n");
@@ -107,16 +108,20 @@ struct cmd_args parse_commandline_arguments(int argc, char *argv[])
    strcpy(output_arguments.station_name, APP_DEFAULT_STATION_NAME);
    strcpy(output_arguments.eth_interface, APP_DEFAULT_ETHERNET_INTERFACE);
    output_arguments.verbosity = 0;
+   output_arguments.show = 0;
    output_arguments.factory_reset = false;
    output_arguments.remove_files = false;
 
    int option;
-   while ((option = getopt(argc, argv, "hvfri:s:b:d:p:")) != -1)
+   while ((option = getopt(argc, argv, "hvgfri:s:b:d:p:")) != -1)
    {
       switch (option)
       {
       case 'v':
          output_arguments.verbosity++;
+         break;
+      case 'g':
+         output_arguments.show++;
          break;
       case 'f':
          output_arguments.factory_reset = true;
@@ -569,6 +574,20 @@ int main(int argc, char *argv[])
    {
       printf("\nPerforming factory reset\n");
       (void)pnet_factory_reset(net);
+      exit(EXIT_SUCCESS);
+   }
+
+   if (appdata.arguments.show > 0)
+   {
+      int                  level = 0xFFFF;
+
+      printf("\nShowing stack information.\n\n");
+      if (appdata.arguments.show == 1)
+      {
+         level = 0x2010;  /*  See documentation for pnet_show()  */
+      }
+
+      pnet_show(net, level);
       exit(EXIT_SUCCESS);
    }
 

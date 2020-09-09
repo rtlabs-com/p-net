@@ -995,6 +995,7 @@ static int pf_cmdev_cfg_subslot_show(
 void pf_cmdev_show_device(
    pnet_t                  *net)
 {
+   printf("\nCMDEV:\n");
    (void)pf_cmdev_cfg_traverse(
       net,
       pf_cmdev_cfg_dev_show,

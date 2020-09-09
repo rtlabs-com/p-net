@@ -151,7 +151,6 @@ void pf_alarm_show(
    printf("  send_seq_count      = 0x%x\n", (unsigned)p_ar->apmx[0].send_seq_count);
    printf("  send_seq_count_o    = 0x%x\n", (unsigned)p_ar->apmx[0].send_seq_count_o);
    printf("  sequence_number     = %u\n", (unsigned)p_ar->alpmx[0].sequence_number);
-   printf("\n");
    printf("Alarms   (high)\n");
    printf("  alpmi_state         = %s\n", pf_alarm_alpmi_state_to_string(p_ar->alpmx[1].alpmi_state));
    printf("  alpmr_state         = %s\n", pf_alarm_alpmr_state_to_string(p_ar->alpmx[1].alpmr_state));
@@ -162,7 +161,6 @@ void pf_alarm_show(
    printf("  send_seq_count      = 0x%x\n", (unsigned)p_ar->apmx[1].send_seq_count);
    printf("  send_seq_count_o    = 0x%x\n", (unsigned)p_ar->apmx[1].send_seq_count_o);
    printf("  sequence_number     = %u\n", (unsigned)p_ar->alpmx[1].sequence_number);
-   printf("\n");
 }
 
 /*****************************************************************************/

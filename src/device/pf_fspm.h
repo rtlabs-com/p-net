@@ -348,6 +348,23 @@ void pf_fspm_get_default_cfg(
 int pf_fspm_clear_im_data(
    pnet_t                  *net);
 
+/**
+ * Show identification & maintainance settings.
+ *
+ * @param net              InOut: The p-net stack instance
+ */
+void pf_fspm_im_show(
+   pnet_t                  *net
+);
+
+/**
+ * Show compile time options, and memory usage.
+ *
+ * @param net              InOut: The p-net stack instance
+ */
+void pf_fspm_option_show(
+   pnet_t                  *net
+);
 
 /************ Internal functions, made available for unit testing ************/
 
