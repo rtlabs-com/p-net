@@ -198,6 +198,7 @@ void pf_cmrpc_show(
 
    if (level & 0x0800)
    {
+      printf("\nCMRPC sessions:\n");
       for (ix = 0; ix < PF_MAX_SESSION; ix++)
       {
          p_sess = &net->cmrpc_session_info[ix];
@@ -240,6 +241,7 @@ void pf_cmrpc_show(
 
    if (level & 0x1000)
    {
+      printf("\nCMRPC ARs:\n");
       for (ar_ix = 0; ar_ix < PNET_MAX_AR; ar_ix++)
       {
          p_ar = pf_ar_find_by_index(net, ar_ix);
@@ -275,7 +277,7 @@ void pf_cmrpc_show(
             for (ix = 0; ix < p_ar->nbr_iocrs; ix++)
             {
                p_iocr = &p_ar->iocrs[ix];
-               printf("\n-------------- IOCR %u ---------------\n", ix);
+               printf("\n--------------CMRPC AR IOCR %u ---------------\n", ix);
                printf("%3u    : IOCR type    = %s\n", (unsigned)ix, pf_iocr_type_to_string(p_iocr->param.iocr_type));
                printf("%3u    : in_length    = %u\n", (unsigned)ix, (unsigned)p_iocr->in_length);
                printf("%3u    : out_length   = %u\n", (unsigned)ix, (unsigned)p_iocr->out_length);
@@ -309,6 +311,7 @@ void pf_cmrpc_show(
                }
             }
          }
+         printf("\n");
       }
    }
 }

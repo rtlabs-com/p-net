@@ -108,6 +108,7 @@ struct cmd_args {
    char station_name[64];
    char eth_interface[PNET_MAX_INTERFACE_NAME_LENGTH];
    int  verbosity;
+   int  show;
    bool factory_reset;
    bool remove_files;
 };

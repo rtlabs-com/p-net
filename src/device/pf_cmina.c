@@ -1058,8 +1058,8 @@ void pf_cmina_show(
 
    pf_fspm_get_default_cfg(net, &p_cfg);
 
-   printf("CMINA state : %s\n\n", pf_cmina_state_to_string(net));
-
+   printf("CMINA\n");
+   printf("state                          : %s\n", pf_cmina_state_to_string(net));
    printf("Default name_of_station        : <%s>\n", p_cfg->station_name);
    printf("Perm name_of_station           : <%s>\n", net->cmina_nonvolatile_dcp_ase.name_of_station);
    printf("Temp name_of_station           : <%s>\n", net->cmina_current_dcp_ase.name_of_station);

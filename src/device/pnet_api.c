@@ -108,33 +108,33 @@ void pnet_show(
    pnet_t                  *net,
    unsigned                level)
 {
-   pnet_cfg_t              *p_cfg = NULL;
-
    if (net != NULL){
-      pf_cmdev_show_device(net);
+      if (level & 0x0010)
+      {
+         pf_fspm_option_show(net);
+      }
+
+      if (level & 0x0020)
+      {
+         pf_cmdev_show_device(net);
+      }
+
       pf_cmrpc_show(net, level);
 
       if (level & 0x2000)
       {
-         printf("\n");
+         printf("\n\n");
          pf_cmina_show(net);
-         printf("\n");
       }
       if (level & 0x4000)
       {
+         printf("\n\n");
          pf_scheduler_show(net);
-         printf("\n");
       }
       if (level & 0x8000)
       {
-         pf_fspm_get_cfg(net, &p_cfg);
-
-         printf("I&M1.im_tag_function     : <%s>\n", p_cfg->im_1_data.im_tag_function);
-         printf("I&M1.im_tag_location     : <%s>\n", p_cfg->im_1_data.im_tag_location);
-         printf("I&M2.date                : <%s>\n", p_cfg->im_2_data.im_date);
-         printf("I&M3.im_descriptor       : <%s>\n", p_cfg->im_3_data.im_descriptor);
-         printf("I&M4.im_signature        : <%s>\n", p_cfg->im_4_data.im_signature);    /* Should be binary data, but works for now */
-         printf("\n");
+         printf("\n\n");
+         pf_fspm_im_show(net);
       }
    }
    else
