@@ -36,7 +36,7 @@
 int pf_eth_init(
    pnet_t                  *net)
 {
-   int ret = 0;
+   int                     ret = 0;
 
    memset(net->eth_id_map, 0, sizeof(net->eth_id_map));
 
@@ -67,30 +67,35 @@ int pf_eth_recv(
    void                    *arg,
    os_buf_t                *p_buf)
 {
-   int         ret = 0;       /* Means: "Not handled" */
-   uint16_t    type_pos = 2*sizeof(pnet_ethaddr_t);
-   uint16_t    type;
-   uint16_t    frame_id;
-   uint16_t    *p_data;
-   uint16_t    ix = 0;
-   pnet_t      *net = (pnet_t*)arg;
+   int                     ret = 0;  /* Means: "Not handled" */
+   uint16_t                eth_type_pos = 2 * sizeof(pnet_ethaddr_t);
+   uint16_t                eth_type = 0;
+   uint16_t                frame_id = 0;
+   uint16_t                frame_pos = 0;
+   uint16_t                *p_data = NULL;
+   uint16_t                ix = 0;
+   pnet_t                  *net = (pnet_t*)arg;
 
    /* Skip ALL VLAN tags */
-   p_data = (uint16_t *)(&((uint8_t *)p_buf->payload)[type_pos]);
-   type = ntohs(p_data[0]);
-   while (type == OS_ETHTYPE_VLAN)
+   p_data = (uint16_t *)(&((uint8_t *)p_buf->payload)[eth_type_pos]);
+   eth_type = ntohs(p_data[0]);
+   while (eth_type == OS_ETHTYPE_VLAN)
    {
-      type_pos += 4;    /* Sizeof VLAN tag */
+      eth_type_pos += 4;    /* Sizeof VLAN tag */
 
-      p_data = (uint16_t *)(&((uint8_t *)p_buf->payload)[type_pos]);
-      type = ntohs(p_data[0]);
+      p_data = (uint16_t *)(&((uint8_t *)p_buf->payload)[eth_type_pos]);
+      eth_type = ntohs(p_data[0]);
    }
-   frame_id = ntohs(p_data[1]);
 
-   switch (type)
+   frame_pos = eth_type_pos + sizeof(uint16_t);
+
+   switch (eth_type)
    {
    case OS_ETHTYPE_PROFINET:
       net->interface_statistics.if_in_octets += p_buf->len;
+
+      p_data = (uint16_t *)(&((uint8_t *)p_buf->payload)[frame_pos]);
+      frame_id = ntohs(p_data[0]);
 
       /* Find the associated frame handler */
       ix = 0;
@@ -104,12 +109,12 @@ int pf_eth_recv(
       {
          /* Call the frame handler */
          ret = net->eth_id_map[ix].frame_handler(net, frame_id, p_buf,
-            type_pos + sizeof(uint16_t), net->eth_id_map[ix].p_arg);
+            frame_pos, net->eth_id_map[ix].p_arg);
       }
       break;
    case OS_ETHTYPE_LLDP:
      net->interface_statistics.if_in_octets += p_buf->len;
-     pf_lldp_recv(net, p_buf, type_pos + sizeof(uint16_t));
+     pf_lldp_recv(net, p_buf, frame_pos);
      break;
    default:
       /* Not a profinet packet. */
