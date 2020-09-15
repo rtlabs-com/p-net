@@ -113,12 +113,18 @@ int pf_eth_recv(
       }
       break;
    case OS_ETHTYPE_LLDP:
-     net->interface_statistics.if_in_octets += p_buf->len;
-     pf_lldp_recv(net, p_buf, frame_pos);
-     break;
+      net->interface_statistics.if_in_octets += p_buf->len;
+
+      ret = pf_lldp_recv(net, p_buf, frame_pos);
+      break;
+   case OS_ETHTYPE_IP:
+      /* IP-packets (UDP) are also received via the UDP sockets. Do not count statistics here. */
+      ret = 0;
+      break;
    default:
-      /* Not a profinet packet. */
+      /* Unknown packet. */
       net->interface_statistics.if_in_discards++;
+
       ret = 0;
       break;
    }

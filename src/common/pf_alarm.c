@@ -508,8 +508,8 @@ static int pf_alarm_alpmr_apmr_a_data_ind(
  * @param p_buf            In:   The Ethernet frame buffer.
  * @param frame_id_pos     In:   Position in the buffer of the frame id.
  * @param p_arg            In:   The AR.
- * @return  0  if the operation succeeded.
- *          -1 if an error occurred.
+ * @return  0     If the frame was NOT handled by this function.
+ *          1     If the frame was handled and the buffer freed.
  */
 static int pf_alarm_apmr_high_handler(
    pnet_t                  *net,
@@ -518,28 +518,28 @@ static int pf_alarm_apmr_high_handler(
    uint16_t                frame_id_pos,
    void                    *p_arg)
 {
-   int                     ret = 1;       /* Means "handled" */
+   int                     ret = 1; /* Means that calling function should not free buffer,
+                                       as that will be done when reading the mbox */
    pf_apmx_t               *p_apmx = (pf_apmx_t *)p_arg;
    pf_apmr_msg_t           *p_apmr_msg;
    uint16_t                nbr;
 
-   if (ret != 0)
+   LOG_INFO(PF_ALARM_LOG, "Alarm(%d): Received high prio alarm frame.\n", __LINE__);
+
+   if (p_buf != NULL)
    {
-      LOG_INFO(PF_ALARM_LOG, "Alarm(%d): Received high prio alarm frame.\n", __LINE__);
-      if (p_buf != NULL)
+      nbr = p_apmx->apmr_msg_nbr++;    /* ToDo: Make atomic */
+      if (p_apmx->apmr_msg_nbr >= NELEMENTS(p_apmx->apmr_msg))
       {
-         nbr = p_apmx->apmr_msg_nbr++;    /* ToDo: Make atomic */
-         if (p_apmx->apmr_msg_nbr >= NELEMENTS(p_apmx->apmr_msg))
-         {
-            p_apmx->apmr_msg_nbr = 0;
-         }
-         p_apmr_msg = &p_apmx->apmr_msg[nbr];
-         p_apmr_msg->p_buf = p_buf;
-         p_apmr_msg->frame_id_pos = frame_id_pos;
-         if (os_mbox_post(p_apmx->p_alarm_q, (void *)p_apmr_msg, 0) != 0)
-         {
-            LOG_ERROR(PF_ALARM_LOG, "Alarm(%d): Lost one alarm\n", __LINE__);
-         }
+         p_apmx->apmr_msg_nbr = 0;
+      }
+      p_apmr_msg = &p_apmx->apmr_msg[nbr];
+      p_apmr_msg->p_buf = p_buf;
+      p_apmr_msg->frame_id_pos = frame_id_pos;
+      if (os_mbox_post(p_apmx->p_alarm_q, (void *)p_apmr_msg, 0) != 0)
+      {
+         LOG_ERROR(PF_ALARM_LOG, "Alarm(%d): Lost one alarm\n", __LINE__);
+         ret = 0;  /* Failed to handle frame. The calling function needs to free the buffer. */
       }
    }
 
@@ -559,8 +559,8 @@ static int pf_alarm_apmr_high_handler(
  * @param p_buf            In:   The Ethernet frame buffer.
  * @param frame_id_pos     In:   Position in the buffer of the frame id.
  * @param p_arg            In:   The AR.
- * @return  0  if the operation succeeded.
- *          -1 if an error occurred.
+ * @return  0     If the frame was NOT handled by this function.
+ *          1     If the frame was handled and the buffer freed.
  */
 static int pf_alarm_apmr_low_handler(
    pnet_t                  *net,
@@ -569,28 +569,27 @@ static int pf_alarm_apmr_low_handler(
    uint16_t                frame_id_pos,
    void                    *p_arg)
 {
-   int                     ret = 1;       /* Means "handled" */
+   int                     ret = 1; /* Means that calling function should not free buffer,
+                                       as that will be done when reading the mbox */
    pf_apmx_t               *p_apmx = (pf_apmx_t *)p_arg;
    pf_apmr_msg_t           *p_apmr_msg;
    uint16_t                nbr;
 
-   if (ret != 0)
+   LOG_INFO(PF_ALARM_LOG, "Alarm(%d): Received low prio alarm frame.\n", __LINE__);
+   if (p_buf != NULL)
    {
-      LOG_INFO(PF_ALARM_LOG, "Alarm(%d): Received low prio alarm frame.\n", __LINE__);
-      if (p_buf != NULL)
+      nbr = p_apmx->apmr_msg_nbr++;    /* ToDo: Make atomic */
+      if (p_apmx->apmr_msg_nbr >= NELEMENTS(p_apmx->apmr_msg))
       {
-         nbr = p_apmx->apmr_msg_nbr++;    /* ToDo: Make atomic */
-         if (p_apmx->apmr_msg_nbr >= NELEMENTS(p_apmx->apmr_msg))
-         {
-            p_apmx->apmr_msg_nbr = 0;
-         }
-         p_apmr_msg = &p_apmx->apmr_msg[nbr];
-         p_apmr_msg->p_buf = p_buf;
-         p_apmr_msg->frame_id_pos = frame_id_pos;
-         if (os_mbox_post(p_apmx->p_alarm_q, (void *)p_apmr_msg, 0) != 0)
-         {
-            LOG_ERROR(PF_ALARM_LOG, "Alarm(%d): Lost one alarm\n", __LINE__);
-         }
+         p_apmx->apmr_msg_nbr = 0;
+      }
+      p_apmr_msg = &p_apmx->apmr_msg[nbr];
+      p_apmr_msg->p_buf = p_buf;
+      p_apmr_msg->frame_id_pos = frame_id_pos;
+      if (os_mbox_post(p_apmx->p_alarm_q, (void *)p_apmr_msg, 0) != 0)
+      {
+         LOG_ERROR(PF_ALARM_LOG, "Alarm(%d): Lost one alarm\n", __LINE__);
+         ret = 0;  /* Failed to handle frame. The calling function needs to free the buffer. */
       }
    }
 
@@ -790,6 +789,8 @@ static int pf_alarm_apmx_activate(
  * APMS: a_data_ind
  *
  * Handle incoming alarm data
+ *
+ * Does free the incoming alarm frame buffer.
  *
  * @param net              InOut: The p-net stack instance
  * @param p_apmx           In:   The APMX instance.

@@ -843,7 +843,7 @@ void pf_lldp_update_peer(
    memcpy(stored_peer_info, lldp_peer_info, sizeof(pnet_lldp_peer_info_t));
 }
 
-void pf_lldp_recv(
+int pf_lldp_recv(
    pnet_t                  *net,
    os_buf_t                *p_frame_buf,
    uint16_t                offset)
@@ -871,4 +871,11 @@ void pf_lldp_recv(
       );
       pf_lldp_update_peer(net, &peer_data);
    }
+
+   if (p_frame_buf != NULL)
+   {
+      os_buf_free(p_frame_buf);
+   }
+
+   return 1;  /* Means: handled */
 }
