@@ -32,7 +32,7 @@ extern "C"
  *
  * This function initializes the LLDP component and
  * sends the initial LLDP message.
- * @param net               InOut: The p-net stack instance
+ * @param net              InOut: The p-net stack instance
  */
 void pf_lldp_init(
    pnet_t                  *net);
@@ -50,7 +50,7 @@ void pf_lldp_send(
  * Parse LLDP tlv format and store selected information.
  * Trigger alarms if needed.
  * @param net              InOut: The p-net stack instance
- * @param p_buf            In:    The Ethernet frame
+ * @param p_frame_buf      In:    The Ethernet frame
  * @param offset           In:    The offset to start of LLDP data
  */
 void pf_lldp_recv(
