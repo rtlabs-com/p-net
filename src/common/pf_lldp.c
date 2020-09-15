@@ -52,7 +52,7 @@
 #define LLDP_LENGTH_MASK                  0x1FF
 #define LLDP_MAX_TLV                      512
 
-#define LLDP_PEER_MAX_TTL_IN_SECS         60
+#define LLDP_PEER_MAX_TTL_IN_SECS         60    /* Profinet peers should have TTL = 20 seconds. Use some margin. */
 
 #define LLDP_PNIO_SUBTYPE_MEAS_DELAY_VALUES_TLV_LEN        24
 #define LLDP_PNIO_SUBTYPE_PORT_STATUS_TLV_LEN              8
@@ -61,9 +61,9 @@
 
 typedef struct lldp_tlv
 {
-   uint8_t  type;
-   uint16_t len;
-   uint8_t  *p_data;
+   uint8_t                 type;
+   uint16_t                len;
+   uint8_t                 *p_data;
 } lldp_tlv_t;
 
 static const char org_id_pnio[]        = {0x00, 0x0e, 0xcf};
@@ -102,12 +102,12 @@ static const pnet_ethaddr_t lldp_dst_addr = {
  *
  * This is for the type and the payload length.
  *
- * @param p_buf            InOut:The buffer.
- * @param p_pos            InOut:The buffer position.
- * @param typ              In:   The TLV header type.
- * @param len              In:   The TLV payload length.
+ * @param p_buf            InOut: The buffer.
+ * @param p_pos            InOut: The buffer position.
+ * @param typ              In:    The TLV header type.
+ * @param len              In:    The TLV payload length.
  */
-static inline void pf_put_lldp_tlv_header(
+static inline void pf_lldp_add_tlv_header(
    uint8_t                 *p_buf,
    uint16_t                *p_pos,
    uint8_t                 typ,
@@ -129,7 +129,7 @@ static inline void pf_put_lldp_tlv_header(
  * @param p_pos            InOut: Offset in parsed buffer
  * @return parsed frame. If parsing fails, frame type is set to LLDP_TYPE_END and len field set to 0.
  */
-lldp_tlv_t pf_get_lldp_tlv(
+lldp_tlv_t pf_lldp_get_tlv(
    pf_get_info_t           *p_info,
    uint16_t                *p_pos)
 {
@@ -158,16 +158,16 @@ lldp_tlv_t pf_get_lldp_tlv(
  * This inserts a TLV header with type="organisation-specific", and
  * the Profinet organisation identifier as the first part of the TLV payload.
  *
- * @param p_buf            InOut:The buffer.
- * @param p_pos            InOut:The buffer position.
- * @param len              In:   The TLV payload length (for the part after the organisation identifier)
+ * @param p_buf            InOut: The buffer.
+ * @param p_pos            InOut: The buffer position.
+ * @param len              In:    The TLV payload length (for the part after the organisation identifier)
  */
-static inline void pf_put_lldp_pnio_header(
+static inline void pf_lldp_add_pnio_header(
    uint8_t                 *p_buf,
    uint16_t                *p_pos,
    uint8_t                 len)
 {
-   pf_put_lldp_tlv_header(p_buf, p_pos, LLDP_TYPE_ORG_SPEC, (len) + 3);
+   pf_lldp_add_tlv_header(p_buf, p_pos, LLDP_TYPE_ORG_SPEC, (len) + 3);
    pf_put_byte(0x00, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
    pf_put_byte(0x0e, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
    pf_put_byte(0xcf, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
@@ -180,16 +180,16 @@ static inline void pf_put_lldp_pnio_header(
  * This inserts a TLV header with type="organisation-specific", and
  * the IEEE 802.3 organisation identifier as the first part of the TLV payload.
  *
- * @param p_buf            InOut:The buffer.
- * @param p_pos            InOut:The buffer position.
- * @param len              In:   The TLV payload length (for the part after the organisation identifier)
+ * @param p_buf            InOut: The buffer.
+ * @param p_pos            InOut: The buffer position.
+ * @param len              In:    The TLV payload length (for the part after the organisation identifier)
  */
-static inline void pf_lldp_ieee_header(
+static inline void pf_lldp_add_ieee_header(
    uint8_t                 *p_buf,
    uint16_t                *p_pos,
    uint8_t                 len)
 {
-   pf_put_lldp_tlv_header(p_buf, p_pos, LLDP_TYPE_ORG_SPEC, (len) + 3);
+   pf_lldp_add_tlv_header(p_buf, p_pos, LLDP_TYPE_ORG_SPEC, (len) + 3);
    pf_put_byte(0x00, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
    pf_put_byte(0x12, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
    pf_put_byte(0x0f, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
@@ -201,22 +201,22 @@ static inline void pf_lldp_ieee_header(
  *
  * Use the MAC address if the chassis ID name not is available in the configuration.
  *
- * @param p_cfg            In:   The Profinet configuration.
- * @param p_buf            InOut:The buffer.
- * @param p_pos            InOut:The position in the buffer.
+ * @param p_cfg            In:    The Profinet configuration.
+ * @param p_buf            InOut: The buffer.
+ * @param p_pos            InOut: The position in the buffer.
  */
-static void lldp_add_chassis_id_tlv(
+static void pf_lldp_add_chassis_id_tlv(
    pnet_cfg_t              *p_cfg,
    uint8_t                 *p_buf,
    uint16_t                *p_pos)
 {
-   uint16_t                  len;
+   uint16_t                len;
 
    len = (uint16_t)strlen(p_cfg->lldp_cfg.chassis_id);
    if (len == 0)
    {
       /* Use the MAC address */
-      pf_put_lldp_tlv_header(p_buf, p_pos, LLDP_TYPE_CHASSIS_ID, 1 + sizeof(pnet_ethaddr_t));
+      pf_lldp_add_tlv_header(p_buf, p_pos, LLDP_TYPE_CHASSIS_ID, 1 + sizeof(pnet_ethaddr_t));
 
       pf_put_byte(LLDP_SUBTYPE_MAC, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
       memcpy(&p_buf[*p_pos], p_cfg->eth_addr.addr, sizeof(pnet_ethaddr_t)); /* ToDo: Shall be device MAC */
@@ -225,7 +225,7 @@ static void lldp_add_chassis_id_tlv(
    else
    {
       /* Use the chassis_id from the cfg */
-      pf_put_lldp_tlv_header(p_buf, p_pos, LLDP_TYPE_CHASSIS_ID, 1+len);
+      pf_lldp_add_tlv_header(p_buf, p_pos, LLDP_TYPE_CHASSIS_ID, 1+len);
 
       pf_put_byte(LLDP_SUBTYPE_LOCALLY_ASSIGNED, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
       pf_put_mem(p_cfg->lldp_cfg.chassis_id, len, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
@@ -235,11 +235,11 @@ static void lldp_add_chassis_id_tlv(
 /**
  * @internal
  * Insert the mandatory port_id TLV into a buffer.
- * @param p_cfg            In:   The Profinet configuration.
- * @param p_buf            InOut:The buffer.
- * @param p_pos            InOut:The position in the buffer.
+ * @param p_cfg            In:    The Profinet configuration.
+ * @param p_buf            InOut: The buffer.
+ * @param p_pos            InOut: The position in the buffer.
  */
-static void lldp_add_port_id_tlv(
+static void pf_lldp_add_port_id_tlv(
    pnet_cfg_t              *p_cfg,
    uint8_t                 *p_buf,
    uint16_t                *p_pos)
@@ -248,7 +248,7 @@ static void lldp_add_port_id_tlv(
 
    len = (uint16_t)strlen(p_cfg->lldp_cfg.port_id);
 
-   pf_put_lldp_tlv_header(p_buf, p_pos, LLDP_TYPE_PORT_ID, 1+len);
+   pf_lldp_add_tlv_header(p_buf, p_pos, LLDP_TYPE_PORT_ID, 1+len);
 
    pf_put_byte(LLDP_SUBTYPE_LOCALLY_ASSIGNED, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
    pf_put_mem(p_cfg->lldp_cfg.port_id, len, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
@@ -257,16 +257,16 @@ static void lldp_add_port_id_tlv(
 /**
  * @internal
  * Insert the mandatory time-to-live (TTL) TLV into a buffer.
- * @param p_cfg            In:   The Profinet configuration.
- * @param p_buf            InOut:The buffer.
- * @param p_pos            InOut:The position in the buffer.
+ * @param p_cfg            In:    The Profinet configuration.
+ * @param p_buf            InOut: The buffer.
+ * @param p_pos            InOut: The position in the buffer.
  */
-static void lldp_add_ttl_tlv(
+static void pf_lldp_add_ttl_tlv(
    pnet_cfg_t              *p_cfg,
    uint8_t                 *p_buf,
    uint16_t                *p_pos)
 {
-   pf_put_lldp_tlv_header(p_buf, p_pos, LLDP_TYPE_TTL, 2);
+   pf_lldp_add_tlv_header(p_buf, p_pos, LLDP_TYPE_TTL, 2);
    pf_put_uint16(true, p_cfg->lldp_cfg.ttl, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
 }
 
@@ -275,16 +275,16 @@ static void lldp_add_ttl_tlv(
  * Insert the optional Profinet port status TLV into a buffer.
  *
  * The port status TLV is mandatory for ProfiNet.
- * @param p_cfg            In:   The Profinet configuration.
- * @param p_buf            InOut:The buffer.
- * @param p_pos            InOut:The position in the buffer.
+ * @param p_cfg            In:    The Profinet configuration.
+ * @param p_buf            InOut: The buffer.
+ * @param p_pos            InOut: The position in the buffer.
  */
-static void lldp_add_port_status(
+static void pf_lldp_add_port_status(
    pnet_cfg_t              *p_cfg,
    uint8_t                 *p_buf,
    uint16_t                *p_pos)
 {
-   pf_put_lldp_pnio_header(p_buf, p_pos, 5);
+   pf_lldp_add_pnio_header(p_buf, p_pos, 5);
 
    pf_put_byte(LLDP_PNIO_SUBTYPE_PORT_STATUS, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
    pf_put_uint16(true, p_cfg->lldp_cfg.rtclass_2_status, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
@@ -296,16 +296,16 @@ static void lldp_add_port_status(
  * Insert the optional Profinet chassis MAC TLV into a buffer.
  *
  * The chassis MAC TLV is mandatory for ProfiNet.
- * @param p_cfg            In:   The Profinet configuration.
- * @param p_buf            InOut:The buffer.
- * @param p_pos            InOut:The position in the buffer.
+ * @param p_cfg            In:    The Profinet configuration.
+ * @param p_buf            InOut: The buffer.
+ * @param p_pos            InOut: The position in the buffer.
  */
-static void lldp_add_chassis_mac(
+static void pf_lldp_add_chassis_mac(
    pnet_cfg_t              *p_cfg,
    uint8_t                 *p_buf,
    uint16_t                *p_pos)
 {
-   pf_put_lldp_pnio_header(p_buf, p_pos, 1 + sizeof(pnet_ethaddr_t));
+   pf_lldp_add_pnio_header(p_buf, p_pos, 1 + sizeof(pnet_ethaddr_t));
 
    pf_put_byte(LLDP_PNIO_SUBTYPE_CHASSIS_MAC, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
    memcpy(&p_buf[*p_pos], p_cfg->eth_addr.addr, sizeof(pnet_ethaddr_t)); /* ToDo: Should be device MAC */
@@ -319,16 +319,16 @@ static void lldp_add_chassis_mac(
  * This is the autonegotiation capabilities and available speeds, and cable MAU type.
  *
  * The IEEE 802.3 MAC TLV is mandatory for ProfiNet on 803.2 interfaces.
- * @param p_cfg            In:   The Profinet configuration.
- * @param p_buf            InOut:The buffer.
- * @param p_pos            InOut:The position in the buffer.
+ * @param p_cfg            In:    The Profinet configuration.
+ * @param p_buf            InOut: The buffer.
+ * @param p_pos            InOut: The position in the buffer.
  */
-static void lldp_add_ieee_mac_phy(
+static void pf_lldp_add_ieee_mac_phy(
    pnet_cfg_t              *p_cfg,
    uint8_t                 *p_buf,
    uint16_t                *p_pos)
 {
-   pf_lldp_ieee_header(p_buf, p_pos, 6);
+   pf_lldp_add_ieee_header(p_buf, p_pos, 6);
 
    pf_put_byte(LLDP_IEEE_SUBTYPE_MAC_PHY, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
    pf_put_byte(p_cfg->lldp_cfg.cap_aneg, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
@@ -343,11 +343,11 @@ static void lldp_add_ieee_mac_phy(
  * Contains the IP address.
  *
  * @param net              InOut: The p-net stack instance
- * @param p_cfg            In:   The Profinet configuration.
- * @param p_buf            InOut:The buffer.
- * @param p_pos            InOut:The position in the buffer.
+ * @param p_cfg            In:    The Profinet configuration.
+ * @param p_buf            InOut: The buffer.
+ * @param p_pos            InOut: The position in the buffer.
  */
-static void lldp_add_management(
+static void pf_lldp_add_management(
    pnet_t                  *net,
    pnet_cfg_t              *p_cfg,
    uint8_t                 *p_buf,
@@ -357,9 +357,9 @@ static void lldp_add_management(
 
    pf_cmina_get_ipaddr(net, &ipaddr);
 
-   pf_put_lldp_tlv_header(p_buf, p_pos, LLDP_TYPE_MANAGEMENT, 12);
+   pf_lldp_add_tlv_header(p_buf, p_pos, LLDP_TYPE_MANAGEMENT, 12);
 
-   /* ToDo: What shall be moved to lldp_cfg? */
+   /* ToDo: What shall be moved to the configuration? */
    pf_put_byte(1+4, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);     /* Address string length (incl type) */
    pf_put_byte(1, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);       /* Type IPV4 */
    pf_put_uint32(true, ipaddr, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
@@ -379,8 +379,8 @@ static void lldp_add_management(
  * Re-schedules itself after 5 s.
  *
  * @param net              InOut: The p-net stack instance
- * @param arg              In:   Not used.
- * @param current_time     In:   Not used.
+ * @param arg              In:    Not used.
+ * @param current_time     In:    Not used.
  */
 static void pf_lldp_trigger_sending(
    pnet_t                  *net,
@@ -390,7 +390,7 @@ static void pf_lldp_trigger_sending(
   pf_lldp_send(net);
 
   /* Reschedule */
-  if (pf_scheduler_add(net, PF_LLDP_INTERVAL*1000,
+  if (pf_scheduler_add(net, PF_LLDP_SEND_INTERVAL*1000,
      shed_tag_tx, pf_lldp_trigger_sending, NULL, &net->lldp_timeout) != 0)
   {
      LOG_ERROR(PF_LLDP_LOG, "LLDP(%d): Failed to reschedule LLDP sending\n", __LINE__);
@@ -401,9 +401,12 @@ static void pf_lldp_trigger_sending(
  * @internal
  * Handle LLDP peer timeout. Timeout occurs if no LLDP data is received
  * on port after LLPD TTL timeout.
- * @param net           InOut: The p-net stack instance
- * @param arg           In: Not used
- * @param current_time  In: Not used
+ *
+ * This is a callback for the scheduler. Arguments should fulfill pf_scheduler_timeout_ftn_t
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param arg              In:    Not used
+ * @param current_time     In:    Not used
  */
 static void pf_lldp_receive_timeout(
    pnet_t                  *net,
@@ -413,13 +416,19 @@ static void pf_lldp_receive_timeout(
    LOG_WARNING(PF_LLDP_LOG, "LLDP(%d): Receive timeout expired - TODO trig alarm\n", __LINE__);
 }
 
-static void reset_peer_timeout(
-      pnet_t                  *net,
-      uint16_t                timeout_in_secs)
+/**
+ * @internal
+ * Start or restart a timer that monitors the peer LLDP sending.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param timeout_in_secs  In:    TTL of the peer, typically 20 seconds.
+ */
+static void pf_lldp_reset_peer_timeout(
+   pnet_t                  *net,
+   uint16_t                timeout_in_secs)
 {
    if (net->lldp_rx_timeout != 0)
    {
-      LOG_DEBUG(PF_LLDP_LOG, "LLDP(%d): Remove timeout\n", __LINE__);
       pf_scheduler_remove(net, shed_tag_rx, net->lldp_rx_timeout);
       net->lldp_rx_timeout = 0;
    }
@@ -451,8 +460,8 @@ void pf_lldp_send(
    uint8_t                 *p_buf = NULL;
    uint16_t                pos = 0;
    pnet_cfg_t              *p_cfg = NULL;
-
-   LOG_DEBUG(PF_LLDP_LOG, "LLDP(%d): Sending LLDP frame\n", __LINE__);
+   os_ipaddr_t             ipaddr = 0;
+   char                    ip_string[OS_INET_ADDRSTRLEN] = { 0 };
 
    pf_fspm_get_cfg(net, &p_cfg);
    /*
@@ -509,6 +518,20 @@ void pf_lldp_send(
       p_buf = p_lldp_buffer->payload;
       if (p_buf != NULL)
       {
+         pf_cmina_get_ipaddr(net, &ipaddr);
+         pf_cmina_ip_to_string(ipaddr, ip_string);
+         LOG_DEBUG(PF_LLDP_LOG, "LLDP(%d): Sending LLDP frame. MAC %02X:%02X:%02X:%02X:%02X:%02X IP: %s Chassis ID: %s Port ID: %s\n",
+            __LINE__,
+            p_cfg->eth_addr.addr[0],
+            p_cfg->eth_addr.addr[1],
+            p_cfg->eth_addr.addr[2],
+            p_cfg->eth_addr.addr[3],
+            p_cfg->eth_addr.addr[4],
+            p_cfg->eth_addr.addr[5],
+            ip_string,
+            p_cfg->lldp_cfg.chassis_id,
+            p_cfg->lldp_cfg.port_id);
+
          pos = 0;
          /* Add destination MAC address */
          pf_put_mem(&lldp_dst_addr, sizeof(lldp_dst_addr), PF_FRAME_BUFFER_SIZE, p_buf, &pos);
@@ -521,18 +544,18 @@ void pf_lldp_send(
          pf_put_uint16(true, OS_ETHTYPE_LLDP, PF_FRAME_BUFFER_SIZE, p_buf, &pos);
 
          /* Add mandatory parts */
-         lldp_add_chassis_id_tlv(p_cfg, p_buf, &pos);
-         lldp_add_port_id_tlv(p_cfg, p_buf, &pos);
-         lldp_add_ttl_tlv(p_cfg, p_buf, &pos);
+         pf_lldp_add_chassis_id_tlv(p_cfg, p_buf, &pos);
+         pf_lldp_add_port_id_tlv(p_cfg, p_buf, &pos);
+         pf_lldp_add_ttl_tlv(p_cfg, p_buf, &pos);
 
          /* Add optional parts */
-         lldp_add_port_status(p_cfg, p_buf, &pos);
-         lldp_add_chassis_mac(p_cfg, p_buf, &pos);
-         lldp_add_ieee_mac_phy(p_cfg, p_buf, &pos);
-         lldp_add_management(net, p_cfg, p_buf, &pos);
+         pf_lldp_add_port_status(p_cfg, p_buf, &pos);
+         pf_lldp_add_chassis_mac(p_cfg, p_buf, &pos);
+         pf_lldp_add_ieee_mac_phy(p_cfg, p_buf, &pos);
+         pf_lldp_add_management(net, p_cfg, p_buf, &pos);
 
          /* Add end of LLDP-PDU marker */
-         pf_put_lldp_tlv_header(p_buf, &pos, LLDP_TYPE_END, 0);
+         pf_lldp_add_tlv_header(p_buf, &pos, LLDP_TYPE_END, 0);
 
          p_lldp_buffer->len = pos;
 
@@ -549,10 +572,11 @@ void pf_lldp_init(
    memset(&net->lldp_peer_info, 0, sizeof(net->lldp_peer_info));
 
    pf_lldp_send(net);
-   if (pf_scheduler_add(net, PF_LLDP_INTERVAL*1000,
+
+   if (pf_scheduler_add(net, PF_LLDP_SEND_INTERVAL*1000,
       shed_tag_tx, pf_lldp_trigger_sending, NULL, &net->lldp_timeout) != 0)
    {
-      LOG_ERROR(PF_ETH_LOG, "LLDP(%d): Failed to reschedule LLDP sending\n", __LINE__);
+      LOG_ERROR(PF_ETH_LOG, "LLDP(%d): Failed to schedule LLDP sending\n", __LINE__);
    }
 }
 
@@ -566,25 +590,23 @@ void pf_lldp_init(
  * @return 0 if parsing is successful, -1 on error.
  */
 int pf_lldp_parse_packet(
-      uint8_t               buf[],
-      uint16_t              len,
-      pnet_lldp_peer_info_t *lldp_peer_info)
+   uint8_t                 buf[],
+   uint16_t                len,
+   pnet_lldp_peer_info_t   *lldp_peer_info)
 {
-   lldp_tlv_t           tlv;
-   pf_get_info_t        parse_info;
-   uint16_t             offset = 0;
+   lldp_tlv_t              tlv;
+   pf_get_info_t           parse_info;
+   uint16_t                offset = 0;
 
    parse_info.result = PF_PARSE_OK;
    parse_info.is_big_endian = true;
    parse_info.len = len;
    parse_info.p_buf = buf;
 
-   tlv = pf_get_lldp_tlv(&parse_info, &offset);
+   tlv = pf_lldp_get_tlv(&parse_info, &offset);
 
    while (tlv.type != LLDP_TYPE_END)
    {
-      LOG_DEBUG(PF_LLDP_LOG, "LLDP(%d): lldp tlv type=%d len=%d\n", __LINE__, tlv.type, tlv.len);
-
       switch (tlv.type)
       {
       case LLDP_TYPE_CHASSIS_ID:
@@ -724,12 +746,12 @@ int pf_lldp_parse_packet(
          offset += tlv.len;
          break;
       }
-      tlv = pf_get_lldp_tlv(&parse_info, &offset);
+      tlv = pf_lldp_get_tlv(&parse_info, &offset);
    }
 
    if (parse_info.result != PF_PARSE_OK)
    {
-      LOG_ERROR(PF_LLDP_LOG, "LLDP(%d): Parsing error\n", __LINE__);
+      LOG_ERROR(PF_LLDP_LOG, "LLDP(%d): Received LLDP frame, but failed to parse it.\n", __LINE__);
       return -1;
    }
    return 0;
@@ -741,10 +763,10 @@ int pf_lldp_parse_packet(
  *
  * See PN-Topology 6.4.2 and PN-Protocol 4.3.1.4.18
  *
- * @param port_id          In:   Peer port ID. Terminated string.
- * @param chassis_id       In:   Peer chassis ID. Terminated string.
- * @param alias            Out:  Alias name. Terminated string.
- * @param len              In:   Size of alias name output buffer
+ * @param port_id          In:    Peer port ID. Terminated string.
+ * @param chassis_id       In:    Peer chassis ID. Terminated string.
+ * @param alias            Out:   Alias name. Terminated string.
+ * @param len              In:    Size of alias name output buffer
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -786,18 +808,18 @@ int pf_lldp_generate_alias_name(
 
 /**
  * Apply updated peer information
- * @param net               InOut: p-net stack instance
- * @param lldp_peer_info    In: Peer data to be applied
+ * @param net              InOut: p-net stack instance
+ * @param lldp_peer_info   In:    Peer data to be applied
  */
 void pf_lldp_update_peer(
       pnet_t                       *net,
       const pnet_lldp_peer_info_t  *lldp_peer_info)
 {
-   int error = 0;
-   char alias[sizeof(net->cmina_current_dcp_ase.alias_name)];
-   pnet_lldp_peer_info_t *stored_peer_info = &net->lldp_peer_info;
+   int                     error = 0;
+   char                    alias[sizeof(net->cmina_current_dcp_ase.alias_name)];
+   pnet_lldp_peer_info_t   *stored_peer_info = &net->lldp_peer_info;
 
-   reset_peer_timeout(net, lldp_peer_info->ttl);
+   pf_lldp_reset_peer_timeout(net, lldp_peer_info->ttl);
 
    if (memcmp(lldp_peer_info, stored_peer_info, sizeof(pnet_lldp_peer_info_t)) == 0)
    {
@@ -809,8 +831,7 @@ void pf_lldp_update_peer(
    if (!error && (strcmp(alias, net->cmina_current_dcp_ase.alias_name) != 0))
    {
       LOG_INFO(PF_LLDP_LOG, "LLDP(%d): Updating alias name: %s -> %s\n",
-            __LINE__, net->cmina_current_dcp_ase.alias_name,
-            alias);
+         __LINE__, net->cmina_current_dcp_ase.alias_name, alias);
 
       strncpy(net->cmina_current_dcp_ase.alias_name, alias, sizeof(net->cmina_current_dcp_ase.alias_name));
 
@@ -823,22 +844,31 @@ void pf_lldp_update_peer(
 }
 
 void pf_lldp_recv(
-    pnet_t              *net,
-    os_buf_t            *p_frame_buf,
-    uint16_t            offset)
+   pnet_t                  *net,
+   os_buf_t                *p_frame_buf,
+   uint16_t                offset)
 {
-   uint8_t              *buf = p_frame_buf->payload + offset;
-   uint16_t             buf_len = p_frame_buf->len - offset;
-   pnet_lldp_peer_info_t peer_data = {0};
-   int                  err = 0;
-
-   LOG_DEBUG(PF_LLDP_LOG, "LLDP(%d): packet received len=%d, offset=%d\n", __LINE__, p_frame_buf->len, offset);
+   uint8_t                 *buf = p_frame_buf->payload + offset;
+   uint16_t                buf_len = p_frame_buf->len - offset;
+   pnet_lldp_peer_info_t   peer_data = {0};
+   int                     err = 0;
 
    err = pf_lldp_parse_packet(buf, buf_len, &peer_data);
 
    if (!err)
    {
+      LOG_DEBUG(PF_LLDP_LOG, "LLDP(%d): Received LLDP packet from %02X:%02X:%02X:%02X:%02X:%02X Len: %d Chassis ID: %s Port ID: %s\n",
+         __LINE__,
+         peer_data.mac_address.addr[0],
+         peer_data.mac_address.addr[1],
+         peer_data.mac_address.addr[2],
+         peer_data.mac_address.addr[3],
+         peer_data.mac_address.addr[4],
+         peer_data.mac_address.addr[5],
+         p_frame_buf->len,
+         peer_data.chassis_id,
+         peer_data.port_id
+      );
       pf_lldp_update_peer(net, &peer_data);
    }
 }
-

@@ -1058,7 +1058,7 @@ typedef struct pnet_ethaddr
  */
 typedef struct pnet_lldp_cfg
 {
-   char             chassis_id[PNET_LLDP_CHASSIS_ID_MAX_LEN+1];    /**< Terminated string. */
+   char             chassis_id[PNET_LLDP_CHASSIS_ID_MAX_LEN+1];    /**< Terminated string. If len=0 the MAC address will be used instead. */
    char             port_id[PNET_LLDP_PORT_ID_MAX_LEN+1];          /**< Terminated string */
    pnet_ethaddr_t   port_addr;
    uint16_t         ttl;                    /**< Time to live in seconds */
@@ -1175,7 +1175,7 @@ typedef struct pnet_cfg
                                                        Typically 32, which corresponds to 1 ms. Max 0x1000 (128 ms) */
    /** LLDP */
    pnet_lldp_cfg_t         lldp_cfg;
-   
+
    /** Capabilities */
    bool                    send_hello;             /**< Send DCP HELLO message on startup if true. */
 
