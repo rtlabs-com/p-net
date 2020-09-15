@@ -13,14 +13,15 @@
  * full license information.
  ********************************************************************/
 
-#include <stdlib.h>
-#include <string.h>
+#include "osal.h"
 
+#include <net/ethernet.h>
 #include <net/if.h>
 #include <netpacket/packet.h>
 #include <sys/ioctl.h>
 
-#include "osal.h"
+#include <stdlib.h>
+#include <string.h>
 
 /**
  * @internal
@@ -86,32 +87,33 @@ os_eth_handle_t* os_eth_init(
 
    handle->arg = arg;
    handle->callback = callback;
-   handle->socket = socket(PF_PACKET, SOCK_RAW, htons(OS_ETHTYPE_PROFINET));
+   handle->socket = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
 
+   /* Adjust send timeout */
    timeout.tv_sec = 0;
    timeout.tv_usec = 1;
    setsockopt(handle->socket, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
 
+   /* Send outgoing messages directly to the interface, without using Linux routing */
    i = 1;
    setsockopt(handle->socket, SOL_SOCKET, SO_DONTROUTE, &i, sizeof(i));
 
+   /* Read interface index */
    strcpy(ifr.ifr_name, if_name);
    ioctl(handle->socket, SIOCGIFINDEX, &ifr);
-
    ifindex = ifr.ifr_ifindex;
+
+   /* Set flags of NIC interface, here promiscuous and broadcast */
    strcpy(ifr.ifr_name, if_name);
    ifr.ifr_flags = 0;
-   /* reset flags of NIC interface */
    ioctl(handle->socket, SIOCGIFFLAGS, &ifr);
-
-   /* set flags of NIC interface, here promiscuous and broadcast */
    ifr.ifr_flags = ifr.ifr_flags | IFF_PROMISC | IFF_BROADCAST;
    ioctl(handle->socket, SIOCSIFFLAGS, &ifr);
 
    /* bind socket to protocol, in this case Profinet */
    sll.sll_family = AF_PACKET;
    sll.sll_ifindex = ifindex;
-   sll.sll_protocol = htons(OS_ETHTYPE_PROFINET);
+   sll.sll_protocol = htons(ETH_P_ALL);
    bind(handle->socket, (struct sockaddr *)&sll, sizeof(sll));
 
    if (handle->socket > -1)
