@@ -76,6 +76,9 @@ interface. Both Windows and Simatic TIA can have LLDP implemented.
 
 Set the IP address to 192.168.0.25 and netmask to 255.255.255.0.
 
+Use a separate network for running tests with Advanced RT tester
+(avoid running it on a network with unrelated devices).
+
 
 Supported GSD versions
 ----------------------
@@ -167,7 +170,7 @@ Use it to adjust the IP address of the web interface for the Profinet-enabled
 switch (Scalance X204IRT).
 
 Download the program from the Siemens homepage, and unzip the file.
-Start the program by doubleclicking the SinecPni executable.
+Start the program by double clicking the SinecPni executable.
 
 Click the "Settings" tab, and enable "PROFINET devices" for "Scan Protocol",
 and click "Save".
@@ -297,6 +300,10 @@ Relevant test cases for Automated RT Tester
 +---------------------------------------+-----------------------------------------------------+
 | Topology discovery check (TED)        | Requires additional hardware ("Device B")           |
 +---------------------------------------+-----------------------------------------------------+
+| Different access ways port-to-port    |                                                     |
++---------------------------------------+-----------------------------------------------------+
+| Topology discovery check non-Profinet |                                                     |
++---------------------------------------+-----------------------------------------------------+
 | DCP_Signal (Manual)                   | Flash Signal LED. Fast.                             |
 +---------------------------------------+-----------------------------------------------------+
 | Behavior of ResetToFactory (manual)   |                                                     |
@@ -308,6 +315,11 @@ Relevant test cases for Automated RT Tester
 | RPC_IP_UDP_EPM                        | ?                                                   |
 +---------------------------------------+-----------------------------------------------------+
 
+
+
+For multi-port devices:
+
+* PDEV_RECORDS
 
 For conformance class B:
 

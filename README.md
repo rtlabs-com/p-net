@@ -42,7 +42,7 @@ Features:
  * Configurable number of modules and sub-modules
  * Bare-metal or OS
  * Porting layer provided
- * Supports I&M0 - I&M4
+ * Supports I&M0 - I&M4. The I&M data is supported for the device, but not for individual modules.
 
 Limitations or not yet implemented:
 

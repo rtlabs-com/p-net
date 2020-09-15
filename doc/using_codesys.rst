@@ -14,7 +14,7 @@ Download "CODESYS Development System V3". The file is named for example
 "CODESYS 64 3.5.15.30.exe". Install it on a Windows machine by double clicking
 the icon.
 
-Also download "Codesys Control for Raspberry Pi".
+Also download "CODESYS Control for Raspberry Pi SL".
 Install it by double-clicking the ``.package`` file.
 
 Restart the program after the installation.
@@ -151,6 +151,12 @@ IP address, and a PN-DCP packet to ask for the IO-device with the name
 Running the application
 -----------------------
 See the "Tutorial" page.
+
+Once the Codesys softplc running on the Raspberry Pi has been configured,
+you can turn off the personal computer (running the Codesys desktop application)
+used to configure it.
+Remember that you need to power cycle the Raspberry Pi running the softplc every
+two hours, if using the trial version.
 
 
 Adjust PLC timing settings
