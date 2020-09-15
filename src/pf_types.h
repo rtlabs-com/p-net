@@ -715,10 +715,12 @@ typedef struct pf_scheduler_timeouts
  * This is the prototype for the Profinet frame handler.
  *
  * @param net              InOut: The p-net stack instance
- * @param frame_id         In:   The frame ID.
- * @param p_buf            In:   The Ethernet frame.
- * @param frame_id_pos     In:   The position of the frame ID.
- * @param p_arg            In:   User-defined argument.
+ * @param frame_id         In:    The frame ID.
+ * @param p_buf            In:    The Ethernet frame.
+ * @param frame_id_pos     In:    The position of the frame ID.
+ * @param p_arg            In:    User-defined argument.
+ * @return  0     If the frame was NOT handled by this function.
+ *          1     If the frame was handled and the buffer freed.
  */
 typedef int (*pf_eth_frame_handler_t)(
    pnet_t                   *net,

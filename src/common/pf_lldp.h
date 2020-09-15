@@ -52,8 +52,10 @@ void pf_lldp_send(
  * @param net              InOut: The p-net stack instance
  * @param p_frame_buf      In:    The Ethernet frame
  * @param offset           In:    The offset to start of LLDP data
+ * @return  0     If the frame was NOT handled by this function.
+ *          1     If the frame was handled and the buffer freed.
  */
-void pf_lldp_recv(
+int pf_lldp_recv(
    pnet_t                  *net,
    os_buf_t                *p_frame_buf,
    uint16_t                offset);
