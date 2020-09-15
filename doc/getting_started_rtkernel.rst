@@ -158,6 +158,9 @@ adjust the log level to see the incoming and outgoing messages. See the
 
 However note that printing out log strings is slow, so you probably need
 to decrease the cyclic data frequency (see PLC timing settings below).
+It is recommended to use log level ERROR when running with short cycle times
+on a microcontroller, in order not to interfere with the real-time
+requirements of the Profinet communication.
 
 
 Standalone rt-kernel project
@@ -206,12 +209,26 @@ CFG_MAIN_STACK_SIZE in your BSP ``include/config.h`` file.
 
 Examining flash and RAM usage
 -----------------------------
-The flash and RAM usage is shown by the tool ``arm-eabi-size``
-(example values only)::
+The flash and RAM usage is shown by the tool ``arm-eabi-size``.
+In this example we use::
 
-   arm-eabi-size pn_dev.elf
-      text	   data	    bss	    dec	    hex	filename
-   332454	    592	  34040	 367086	  599ee	pn_dev.elf
+   BUILD_SHARED_LIBS ON
+   CMAKE_BUILD_TYPE Release
+   LOG_LEVEL Warning
+   PNET_MAX_AR 1
+   PNET_MAX_MODULES 5
+   PNET_MAX_SUBMODULES 3
+
+To estimate the binary size, link partially (without standard libraries)::
+
+   build$ make all
+   build$ /opt/rt-tools/compilers/arm-eabi/bin/arm-eabi-gcc -O3 -DNDEBUG -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 CMakeFiles/pn_dev.dir/sample_app/sampleapp_common.obj CMakeFiles/pn_dev.dir/sample_app/main_rtk.obj -o pn_dev.elf libprofinet.a -nostartfiles -nostdlib -r
+
+Study the resulting executable::
+
+   build$ arm-eabi-size pn_dev.elf
+      text   data    bss     dec      hex  filename
+    127421     16   1388  128825    1f739  pn_dev.elf
 
 Values in bytes (including the rt-kernel RTOS).
 

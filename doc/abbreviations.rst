@@ -248,7 +248,7 @@ PLC
 PN
     See PROFINET
 PNI
-    Primary Network Initialization. Simens SinecPni is a tool for configuration of Profinet equipment.
+    Primary Network Initialization. Siemens SinecPni is a tool for configuration of Profinet equipment.
 PNIO
     Profinet IO protocol
 PNO
@@ -320,7 +320,7 @@ TSDU
 TSN
     Time-Sensitive Networking
 TTL
-   Time to live. A field in an LLDP Ethernet frames.
+   Time to live. A field in an LLDP Ethernet frame.
 UC
     Unicast (as opposed to multicast)
 UDP

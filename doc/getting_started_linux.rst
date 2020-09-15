@@ -73,18 +73,16 @@ Usage of the demo IO-device application:
 
     Wait for connection from IO-controller.
     Then read buttons (input) and send to controller.
-    Listen for LED output (from controller) and set LED state.
-    It will also send a counter value (useful also without
-    buttons and LED).
+    Listen for application LED output (from controller) and set application LED state.
+    It will also send a counter value (useful also without buttons and LED).
     Button1 value is sent in the periodic data. Button2 triggers an alarm.
 
-    The LED is controlled by writing '1' or '0' to the control file,
-    for example /sys/class/gpio/gpio17/value
-    A pressed button should be indicated by that the first character in
-    the control file is '1'.
-    Make sure to activate the appropriate GPIO files by exporting them.
-    If no hardware-controlling files in /sys are available, you can
-    still try the functionality by using plain text files.
+    Also the mandatory Profinet signal LED is controlled by this application.
+
+    The LEDs are controlled by the script set_profinet_leds_linux
+    located in the same directory as the application binary.
+    A version for Raspberry Pi is available, and also a version writing
+    to plain text files (useful for demo if no LEDs are available).
 
     Assumes the default gateway is found on .1 on same subnet as the IP address.
 
@@ -92,10 +90,15 @@ Usage of the demo IO-device application:
         --help       Show this help text and exit
         -h           Show this help text and exit
         -v           Incresase verbosity
-        -i INTERF    Set Ethernet interface name. Defaults to eth0
-        -s NAME      Set station name. Defaults to rt-labs-dev
-        -b FILE      Path to read button1. Defaults to not read button1.
-        -d FILE      Path to read button2. Defaults to not read button2.
+        -f           Reset to factory settings, and store to file. Exit.
+        -r           Remove stored files and exit.
+        -g           Show stack details and exit. Repeat for more details.
+        -i INTERF    Name of Ethernet interface to use. Defaults to eth0
+        -s NAME      Set station name. Defaults to rt-labs-dev  Only used
+                     if not already available in storage file.
+        -b FILE      Path (absolute or relative) to read button1. Defaults to not read button1.
+        -d FILE      Path (absolute or relative) to read button2. Defaults to not read button2.
+        -p PATH      Absolute path to storage directory. Defaults to use current directory.
 
 Run the sample application::
 
@@ -160,6 +163,47 @@ To change the ephemeral port range::
 This should typically be done at system start up.
 
 
+File size and memory usage on Linux
+-----------------------------------
+The resulting file size of the sample application binary is heavily dependent
+on the compile time options, for example whether to include debug information.
+In this example we use::
+
+   BUILD_SHARED_LIBS ON
+   CMAKE_BUILD_TYPE Release
+   LOG_LEVEL Warning
+   PNET_MAX_AR 2
+   PNET_MAX_MODULES 5
+   PNET_MAX_SUBMODULES 3
+
+To get an estimate of the binary size, partially link it (use release, without
+standard libraries)::
+
+   p-net/build$ make all
+   p-net/build$ /usr/bin/cc -O3 -DNDEBUG CMakeFiles/pn_dev.dir/sample_app/sampleapp_common.o CMakeFiles/pn_dev.dir/sample_app/main_linux.o -o pn_dev libprofinet.a -nostdlib -r
+
+Resulting size::
+
+   p-net/build$ size pn_dev
+      text	   data	    bss	    dec	    hex	filename
+   244481	     72	      8	 244561	  3bb51	pn_dev
+
+See https://linux.die.net/man/1/size for information on how to use the command.
+Also the rt-kernel page in this documentation has some description on how to
+interpret the output.
+
+The size of the p-net stack can be estimated from the size of libprofinet,
+built with the options given above::
+
+   p-net/build$ size libprofinet.so
+      text	   data	    bss	    dec	    hex	filename
+   230888	   3304	      8	 234200	  392d8	libprofinet.so
+
+An estimate of the p-net RAM usage can be made from the size of the pnet_t struct.
+The sample application has a command line option to show this value, for the used
+compile time options (for example the maximum number of modules allowed).
+
+
 Debug intermittent segmentation faults during tests on Linux
 ------------------------------------------------------------
 
@@ -167,7 +211,7 @@ Enable core dumps::
 
     ulimit -c unlimited
 
-Run a testcase until the problem occurs (in the build directory)::
+Run a test case until the problem occurs (in the build directory)::
 
     while ./pf_test --gtest_filter=DiagTest.DiagRunTest; do :; done
 

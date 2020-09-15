@@ -4,6 +4,10 @@ Profinet is a field bus that communicates over Ethernet, typically at a speed
 of 100 Mbit/s. For details on Profinet, see
 https://en.wikipedia.org/wiki/PROFINET
 
+A detailed introduction to Profinet is given in the book "Industrial
+communication with PROFINET" by Manfred Popp.
+It is available to Profinet members.
+
 
 GSD files
 ---------
@@ -476,9 +480,11 @@ User defined indexes are in the range 0x?? to 0x??
 Examples of pre-defined indexes:
 
 * 0xaff0  I&M0
+* 0xaff1  I&M1
+* 0xaff2  I&M2
+* 0xaff3  I&M3
 * 0xf840  I&M0FilterData
 * 0xf841  PRRealData
-
 
 Allowed station name
 --------------------
@@ -514,12 +520,17 @@ startup mode is now called "Legacy".
 
 Alarm types
 -----------
+A process alarm describes conditions in the monitored process, for example
+too high temperature.
+A diagnostic alarm describes conditions in the IO Device itself, for example
+a faulty channel or short circuit. Diagnostic alarms are also stored in the IO-Device.
 
-* Process alarm: There is something wrong with the process, for example too high temperature.
-* Diagnosis alarm: There is something wrong with the IO device itself.
-* Pull alarm: Module/submodule pulled from slot/subslot.
-* Plug alarm: Module/submodule plugged into slot/subslot.
-* Plug wrong alarm: Wrong module/submodule plugged into slot/subslot.
+* Diagnosis alarm (0x0001): There is something wrong with the IO device itself.
+* Process alarm (0x0002): There is something wrong with the process, for example too high temperature.
+* Pull alarm (0x0003): Module/submodule pulled from slot/subslot.
+* Plug alarm (0x0004): Module/submodule plugged into slot/subslot.
+* Plug wrong alarm (0x000a): Wrong module/submodule plugged into slot/subslot.
+* etc
 
 
 Relevant standards

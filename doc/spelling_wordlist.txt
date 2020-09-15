@@ -1,5 +1,6 @@
 acyclic
 Adafruit
+Anel
 autonegotiation
 Avahi
 BaseTXFD
@@ -7,6 +8,8 @@ Bonjour
 Bool
 boolean
 booleans
+bss
+bsp
 Buildroot
 ccmake
 CControl
@@ -19,6 +22,7 @@ DControl
 Democontroller
 Doxygen
 dropdown
+Einstellung
 Endian
 endianness
 enums
@@ -56,16 +60,20 @@ parameterization
 Parameterization
 picocom
 pnet
+Popp
 PRMEND
 Profibus
 Profinet
+PwrCtrl
 Raspbian
 realtime
 repo
 Responder
 runtime
+Scalance
 Segger
 Simatic
+Steuerung
 subelement
 subelements
 subframes
@@ -87,6 +95,7 @@ Virtualbox
 Wireshark
 xBusy
 xError
+xmc
 xml
 xRunning
 Yocto

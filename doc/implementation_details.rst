@@ -360,8 +360,14 @@ Registers and invokes frame handlers for incoming raw Ethernet frames.
 
 LLDP - Link Layer Discovery Protocol
 ------------------------------------
-A protocol for neighborhood detection.
-An LLDP frame is sent at startup, to indicate the IO-Device IP address etc.
+A protocol for neighborhood detection. LLDP frames are not forwarded by managed
+switches, so the frames are useful to detect which neighbor the device is
+connected to.
+
+An LLDP frame is sent by p-net every 5 seconds, to indicate the IP address etc.
+
+The p-net stack also receives LLDP frames. It uses the chassis ID and the
+frame ID of the frame from its neighbor, to set the alias name.
 
 The LLDP frame is a layer 2 Ethernet frame with the payload consisting of a number
 of Type-Length-Value (TLV) blocks. The first 16 bits of each block contains info
@@ -499,6 +505,7 @@ Show lots of details of the stack state::
 Coding rules
 ------------
 In order to be platform independent, use ``CC_ASSERT()`` instead of ``assert()``.
+Use ``ASSERT()`` for rt-kernel-specific code.
 
 Include headers in sorted groups in this order:
 
@@ -510,3 +517,9 @@ Include headers in sorted groups in this order:
 Avoid "Yoda conditions"::
 
     if (3 == a) { /* ... */ }
+
+Use C-style comments in C files, C or C++ comments in C++ files::
+
+   /* C style comment */
+
+   // C++ style comment

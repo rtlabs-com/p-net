@@ -13,6 +13,20 @@
  * full license information.
  ********************************************************************/
 
+/**
+ * @file
+ * @brief Implements the Context Management Input Output protocol machine (CMIO)
+ *
+ * This monitors several CPM during startup, to know when there is incoming
+ * cyclic data.
+ *
+ * States are IDLE, STARTUP, WDATA and DATA.
+ *
+ * While waiting for data, it polls the CPMs every 100 ms to check if data has
+ * arrived, and tells CMDEV the result.
+ *
+ */
+
 #ifdef UNIT_TEST
 
 #endif
