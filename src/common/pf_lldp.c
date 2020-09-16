@@ -413,6 +413,7 @@ static void pf_lldp_receive_timeout(
    void                    *arg,
    uint32_t                current_time)
 {
+   net->lldp_rx_timeout = 0;
    LOG_WARNING(PF_LLDP_LOG, "LLDP(%d): Receive timeout expired - TODO trig alarm\n", __LINE__);
 }
 
@@ -446,7 +447,7 @@ static void pf_lldp_reset_peer_timeout(
    if (timeout_in_secs <= LLDP_PEER_MAX_TTL_IN_SECS)
    {
       if (pf_scheduler_add(net, timeout_in_secs*1000000,
-         shed_tag_rx, pf_lldp_receive_timeout, NULL, &net->lldp_rx_timeout) != 0)
+          shed_tag_rx, pf_lldp_receive_timeout, NULL, &net->lldp_rx_timeout) != 0)
       {
          LOG_ERROR(PF_LLDP_LOG, "LLDP(%d): Failed to add LLDP timeout\n", __LINE__);
       }
@@ -566,18 +567,34 @@ void pf_lldp_send(
    }
 }
 
+void pf_lldp_restart(
+   pnet_t                  *net,
+   bool                    send)
+{
+   if (net->lldp_timeout != 0)
+   {
+      pf_scheduler_remove(net, shed_tag_tx, net->lldp_timeout);
+      net->lldp_timeout = 0;
+   }
+
+
+   if (pf_scheduler_add(net, PF_LLDP_SEND_INTERVAL*1000,
+       shed_tag_tx, pf_lldp_trigger_sending, NULL, &net->lldp_timeout) != 0)
+   {
+      LOG_ERROR(PF_ETH_LOG, "LLDP(%d): Failed to schedule LLDP sending\n", __LINE__);
+   }
+
+   if (send)
+   {
+      pf_lldp_send(net);
+   }
+}
+
 void pf_lldp_init(
    pnet_t                  *net)
 {
    memset(&net->lldp_peer_info, 0, sizeof(net->lldp_peer_info));
-
-   pf_lldp_send(net);
-
-   if (pf_scheduler_add(net, PF_LLDP_SEND_INTERVAL*1000,
-      shed_tag_tx, pf_lldp_trigger_sending, NULL, &net->lldp_timeout) != 0)
-   {
-      LOG_ERROR(PF_ETH_LOG, "LLDP(%d): Failed to schedule LLDP sending\n", __LINE__);
-   }
+   pf_lldp_restart(net, true);
 }
 
 /**

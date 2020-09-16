@@ -317,7 +317,7 @@ TEST_F (CmrdrTest, CmrdrRunTest)
    {
       test_read(&test_reads[ix]);
    }
-   EXPECT_EQ(appdata.read_fails, 60); // Currently expected number of fails.
+   EXPECT_EQ(appdata.read_fails, 62); // Currently expected number of fails.
 
    TEST_TRACE("\nGenerating mock release request\n");
    mock_set_os_udp_recvfrom_buffer(release_req, sizeof(release_req));

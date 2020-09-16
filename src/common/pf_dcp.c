@@ -253,7 +253,7 @@ static int pf_dcp_put_block(
  * @param opt                 In:   Option key.
  * @param sub                 In:   Sub-option key.
  * @param request_is_identify In:   Usage in response to Identify request (skips some blocks)
- * @param append_alias_name   In:   Addend alias name
+ * @param append_alias_name   In:   Append alias name
  * @return
  */
 static int pf_dcp_get_req(

@@ -287,6 +287,56 @@ void pf_get_pnio_status(
    uint16_t                *p_pos,
    pnet_pnio_status_t      *p_status);
 
+/**
+ * Extract PortDataCheck data block from buffer.
+ * Use the block_header_type to identify which check is
+ * contained in buffer and use corresponding parsing operation
+ * to retrieve the check data. For example pf_get_port_data_check_check_peers().
+ * @param p_info              In:   The parser information.
+ * @param p_pos               InOut:The current parsing position.
+ * @param p_port_data_check:  Out:  Destination structure
+ */
+void pf_get_port_data_check(
+   pf_get_info_t           *p_info,
+   uint16_t                *p_pos,
+   pf_port_data_check_t    *p_port_data_check);
+
+/**
+ * Extract CheckPeer data blocks from buffer.
+ * @param p_info              In:   The parser information.
+ * @param p_pos               InOut:The current parsing position.
+ * @param max_peers:          In:   Number of elements in destination array
+ * @param check_peers:        Out:  Array of destination structures
+ */void pf_get_port_data_check_check_peers(
+   pf_get_info_t           *p_info,
+   uint16_t                *p_pos,
+   uint8_t                 max_peers,
+   pf_check_peers_t        check_peers[]);
+
+/**
+ * Extract PortDataAdjust data block from buffer.
+ * Use the block_header_type to identify which adjust data is
+ * contained in buffer and use corresponding parsing operation
+ * to retrieve the data. For example pf_get_port_data_adjust_peer_to_peer_boundary().
+ * @param p_info                   In:   The parser information.
+ * @param p_pos                    InOut:The current parsing position.
+ * @param pf_port_data_adjust_t:   Out:  Destination structure
+ */
+void pf_get_port_data_adjust(
+   pf_get_info_t           *p_info,
+   uint16_t                *p_pos,
+   pf_port_data_adjust_t   *p_port_data_check);
+
+/**
+ * Extract a AdjustPeerToPeerBoundary data block from a buffer.
+ * @param p_info           In:   The parser information.
+ * @param p_pos            InOut:The current parsing position.
+ * @param p_im_1           Out:  Destination structure.
+ */
+void pf_get_port_data_adjust_peer_to_peer_boundary(
+   pf_get_info_t                    *p_info,
+   uint16_t                         *p_pos,
+   pf_adjust_peer_to_peer_boundary_t *boundary);
 
 /************ Internal functions, made available for unit testing ************/
 

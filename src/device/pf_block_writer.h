@@ -645,6 +645,103 @@ void pf_put_diag_data(
    uint8_t                 *p_bytes,
    uint16_t                *p_pos);
 
+/**
+ * Insert pd port data check block into a buffer.
+ * @param check_peer       In:    check_peer data. ToDo - add support for misc port data checks
+ * @param is_big_endian    In:    Endianness of the destination buffer.
+ * @param res_len          In:    Size of destination buffer.
+ * @param p_bytes          Out:   Destination buffer.
+ * @param p_pos            InOut: Position in destination buffer.
+ */
+void pf_put_pdport_data_check(
+   pf_check_peer_t         *check_peer,
+   bool                    is_big_endian,
+   pf_iod_read_result_t    *p_res,
+   uint16_t                res_len,
+   uint8_t                 *p_bytes,
+   uint16_t                *p_pos);
+
+/**
+ * Insert pd port data adjust block into a buffer.
+ * @param p_peer_to_peer_boundary   In:    Peer to peer boundary ToDo - Add support for other adjust properties
+ * @param is_big_endian             In:    Endianness of the destination buffer.
+ * @param res_len                   In:    Size of destination buffer.
+ * @param p_bytes                   Out:   Destination buffer.
+ * @param p_pos                     InOut: Position in destination buffer.
+ */
+void pf_put_pdport_data_adj(
+   pf_adjust_peer_to_peer_boundary_t *p_peer_to_peer_boundary,
+   bool                    is_big_endian,
+   pf_iod_read_result_t    *p_res,
+   uint16_t                res_len,
+   uint8_t                 *p_bytes,
+   uint16_t                *p_pos);
+
+/**
+ * Insert pd port real data block into a buffer.
+ * @param net              InOut: The p-net stack instance
+ * @param is_big_endian    In:    Endianness of the destination buffer.
+ * @param res_len          In:    Size of destination buffer.
+ * @param p_bytes          Out:   Destination buffer.
+ * @param p_pos            InOut: Position in destination buffer.
+ */
+void pf_put_pdport_data_real(
+   pnet_t                  *net,
+   bool                    is_big_endian,
+   pf_iod_read_result_t    *p_res,
+   uint16_t                res_len,
+   uint8_t                 *p_bytes,
+   uint16_t                *p_pos);
+
+/**
+ * Insert pd port statistics block into a buffer.
+ * @param p_if_stats       In:    Interface statistics
+ * @param is_big_endian    In:    Endianness of the destination buffer.
+ * @param res_len          In:    Size of destination buffer.
+ * @param p_bytes          Out:   Destination buffer.
+ * @param p_pos            InOut: Position in destination buffer.
+ */
+
+void pf_put_pdport_statistics(
+   pnet_interface_stats_t     *p_if_stats,
+   bool                       is_big_endian,
+   pf_iod_read_result_t       *p_res,
+   uint16_t                   res_len,
+   uint8_t                    *p_bytes,
+   uint16_t                   *p_pos);
+
+/**
+ * Insert dp interface real data block into a buffer.
+ * @param net              InOut: The p-net stack instance
+ * @param is_big_endian    In:    Endianness of the destination buffer.
+ * @param res_len          In:    Size of destination buffer.
+ * @param p_bytes          Out:   Destination buffer.
+ * @param p_pos            InOut: Position in destination buffer.
+ */
+void pf_put_pdinterface_data_real(
+   pnet_t                  *net,
+   bool                    is_big_endian,
+   pf_iod_read_result_t    *p_res,
+   uint16_t                res_len,
+   uint8_t                 *p_bytes,
+   uint16_t                *p_pos);
+
+/**
+ * Insert dp real data block into a buffer.
+ * @param net              InOut: The p-net stack instance
+ * @param is_big_endian    In:    Endianness of the destination buffer.
+ * @param res_len          In:    Size of destination buffer.
+ * @param p_bytes          Out:   Destination buffer.
+ * @param p_pos            InOut: Position in destination buffer.
+ */
+void pf_put_pd_real_data(
+   pnet_t                  *net,
+   bool                    is_big_endian,
+   pf_iod_read_result_t    *p_res,
+   uint16_t                res_len,
+   uint8_t                 *p_bytes,
+   uint16_t                *p_pos);
+
 #ifdef __cplusplus
 }
 #endif

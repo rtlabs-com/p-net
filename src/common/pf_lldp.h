@@ -45,6 +45,15 @@ void pf_lldp_send(
    pnet_t                  *net);
 
 /**
+ * Restart LLDP timer and optionally send LLDP frame.
+ * @param net              InOut: The p-net stack instance
+ * @param send             In: Send LLDP message
+ */
+void pf_lldp_restart(
+   pnet_t                  *net,
+   bool                    send);
+
+/**
  * Receive an LLDP message.
  *
  * Parse LLDP tlv format and store selected information.

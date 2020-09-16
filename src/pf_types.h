@@ -141,6 +141,14 @@ typedef enum pf_epmapper_opnum_values
    PF_RPC_EPM_OPNUM_MGMT_DELETE,
 } pf_epmapper_opnum_values_t;
 
+typedef enum pf_mediatype_values
+{
+	PF_PD_MEDIATYPE_UNKNOWN = 0,
+	PF_PD_MEDIATYPE_COPPER,
+	PF_PD_MEDIATYPE_FIBER,
+	PF_PD_MEDIATYPE_RADIO
+}pf_mediatype_values_t;
+
 typedef struct pf_rpc_flags
 {
    bool              last_fragment;
@@ -189,6 +197,17 @@ typedef struct pf_rpc_header
    uint8_t           serial_low;
 } pf_rpc_header_t;
 
+typedef enum pf_write_req_error_type_values
+{
+   PF_WRT_ERROR_REMOTE_MISMATCH     = 0x8001
+}pf_write_req_error_type_t;
+
+typedef enum pf_write_req_ext_error_type_values
+{
+   PF_WRT_ERROR_PORTID_MISMATCH     = 0x8000,
+   PF_WRT_ERROR_CHASSISID_MISMATCH  = 0x8001,
+   PF_WRT_ERROR_NO_PEER_DETECTED    = 0x8005
+}pf_write_req_ext_error_type_t;
 
 /************************** Block header *************************************/
 
@@ -261,7 +280,16 @@ typedef enum pf_block_type_values
    PF_BT_PRMBEGIN_REQ                  = 0x0118,
    PF_BT_SUBMODULE_PRMBEGIN_REQ        = 0x0119,
 
+   PF_BT_PDPORTCHECK                   = 0x0200,
+   PF_BT_CHECKPEERS                    = 0x020a,
+   PF_BT_PDPORTDATAREAL                = 0x020f,
+   PF_BT_BOUNDARY_ADJUST               = 0x0202,
+   PF_BT_PEER_TO_PEER_BOUNDARY         = 0x0224,
+   PF_BT_INTERFACE_REAL_DATA           = 0x0240,
    PF_BT_INTERFACE_ADJUST              = 0x0250,
+   PF_BT_PORT_STATISTICS               = 0x0251,
+
+   PF_BT_MULTIPLEBLOCK_HEADER          = 0x0400,
 
    PF_BT_MAINTENANCE_ITEM              = 0x0f00,
 
@@ -1974,16 +2002,111 @@ typedef struct pf_log_book
    bool                    wrap;       /* All entries valid */
 } pf_log_book_t;
 
+/**
+ *
+ * Substitution name: PDPortDataCheck
+ * BlockHeader, Padding, Padding, SlotNumber, SubslotNumber, { [CheckPeers],
+ * [CheckLineDelay], [CheckMAUType a], [CheckLinkState], [CheckSyncDifference],
+ * [CheckMAUTypeDifference], [CheckMAUTypeExtension] b }
+ *
+ */
+typedef struct pf_port_data_check
+{
+   uint16_t                slot_number;
+   uint16_t                subslot_number;
+   pf_block_header_t       block_header;
+} pf_port_data_check_t;
+
+/**
+ * Substitution name : CheckPeers
+ * BlockHeader, NumberOfPeers, (LengthPeerPortName, PeerPortName,
+ * LengthPeerStationName, PeerStationName)*, [Padding*]
+ *
+ * CheckPeers contains an array of peers to check
+ */
+typedef struct pf_check_peer
+{
+   uint8_t           length_peer_port_name;
+   uint8_t           peer_port_name[PNET_LLDP_PORT_ID_MAX_LEN];
+   uint8_t           length_peer_station_name;
+   uint8_t           peer_station_name[PNET_STATION_NAME_MAX_LEN];
+} pf_check_peer_t;
+
+typedef struct pf_check_peers
+{
+   uint8_t           number_of_peers;
+   pf_check_peer_t   peers[1]; /* Todo define max_peer_checks*/
+} pf_check_peers_t;
+
+/**
+ * Substitution name: PDPortDataAdjust
+ * BlockHeader, Padding, Padding, SlotNumber, SubslotNumber, { [AdjustDomainBoundary],
+ * [AdjustMulticastBoundary], [AdjustMAUType ^ AdjustLinkState],
+ * [AdjustPeerToPeerBoundary], [AdjustDCPBoundary], [AdjustPreambleLength],
+ * [AdjustMAUTypeExtension] a }
+ */
+typedef struct pf_port_data_adjust
+{
+   uint16_t                slot_number;
+   uint16_t                subslot_number;
+   pf_block_header_t       block_header;
+} pf_port_data_adjust_t;
+
+/**
+ * Substitution name: PeerToPeerBoundary
+ * Table 722 
+ */
+typedef struct pf_peer_to_peer_boundary
+{
+   uint32_t do_not_send_LLDP_frames:               1;  /* 1: The LLDP agent shall not send LLDP frames */
+   uint32_t do_not_send_pctp_delay_request_frames: 1;  /* 1: The PTCP ASE shall not send PTCP_DELAY request frames */
+   uint32_t do_not_send_path_delay_request_frames: 1;  /* 1: The Time ASE shall not send PATH_DELAY request frames */
+   uint32_t reserved:                              29;
+} pf_peer_to_peer_boundary_t;
+
+/**
+ * Substitution name: AdjustPeerToPeerBoundary
+ * BlockHeader, Padding, Padding, PeerToPeerBoundary, AdjustProperties, [Padding*]
+ */
+typedef struct pf_port_data_adjust_peer_to_peer_boundary
+{
+   pf_peer_to_peer_boundary_t    peer_to_peer_boundary;
+   uint16_t                      adjust_properties;
+} pf_adjust_peer_to_peer_boundary_t;
+
 /* See Profinet 2.4 section 5.2.28 and appendix W */
 typedef struct pf_interface_stats
 {
-	uint32_t if_in_octets;
-	uint32_t if_out_octets;
-	uint32_t if_in_discards;
-	uint32_t if_out_discards;
-	uint32_t if_in_errors;
-	uint32_t if_out_errors;
-}pnet_interface_stats_t;
+   uint32_t if_in_octets;
+   uint32_t if_out_octets;
+   uint32_t if_in_discards;
+   uint32_t if_out_discards;
+   uint32_t if_in_errors;
+   uint32_t if_out_errors;
+} pnet_interface_stats_t;
+
+/**
+ * Port attributes
+ *
+ * Todo:
+ * - Add interface statistics
+ * - Interface name
+ * - Add lldp peer info
+ * - Add LLDP client timer handles
+ */
+typedef struct pf_port
+{
+   struct
+   {
+      bool              active;                                            /* Todo maybe a bitmask for different checks*/
+      pf_check_peer_t   peer;
+   } check;
+   struct
+   {
+      bool                               active;                           /* Todo maybe a bitmask for different checks*/
+      pf_adjust_peer_to_peer_boundary_t  peer_to_peer_boundary;
+   } adjust;
+} pf_port_t;
 
 struct pnet
 {
@@ -2035,6 +2158,7 @@ struct pnet
    pnet_lldp_peer_info_t               lldp_peer_info;
    uint32_t                            lldp_rx_timeout;  /* Scheduler handle for LLDP timeout */
 
+   pf_port_t                           port[PNET_MAX_PORT];
 };
 
 

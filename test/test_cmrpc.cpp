@@ -622,7 +622,7 @@ TEST_F (CmrpcTest, CmrpcConnectReleaseIOSAR_DA)
    EXPECT_EQ(appdata.call_counters.state_calls, 1);
    EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_STARTUP);
    EXPECT_EQ(appdata.call_counters.connect_calls, 1);
-   EXPECT_EQ(mock_os_data.eth_send_count, 0);
+   EXPECT_EQ(mock_os_data.eth_send_count, 1);
 
    TEST_TRACE("\nGenerating mock release request IOSAR_DA\n");
    mock_set_os_udp_recvfrom_buffer(release_req_iosar_da, sizeof(release_req_iosar_da));

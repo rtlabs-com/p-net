@@ -1291,6 +1291,11 @@ static int pf_cmrpc_rm_connect_ind(
       p_sess->p_ar = NULL;
       p_sess->kill_session = true;
    }
+   else
+   {
+      net->port[0].adjust.active = false;
+      pf_lldp_restart(net, true);
+   }
 
    LOG_DEBUG(PF_RPC_LOG, "CMRPC(%d): Created connect response: ret %d\n", __LINE__, ret);
 

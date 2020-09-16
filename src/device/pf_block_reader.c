@@ -794,3 +794,84 @@ void pf_get_pnio_status(
    p_status->error_code_1 = pf_get_byte(p_info, p_pos);
    p_status->error_code_2 = pf_get_byte(p_info, p_pos);
 }
+
+void pf_get_port_data_check(
+   pf_get_info_t           *p_info,
+   uint16_t                *p_pos,
+   pf_port_data_check_t    *p_port_data_check)
+{
+   uint8_t  dummy[4];
+
+   pf_get_mem(p_info, p_pos, 2, dummy); /* Padding */
+   p_port_data_check->slot_number = pf_get_uint16(p_info, p_pos);
+   p_port_data_check->subslot_number = pf_get_uint16(p_info, p_pos);
+   pf_get_block_header(p_info, p_pos, &p_port_data_check->block_header);
+}
+
+static void get_check_peer(
+   pf_get_info_t           *p_info,
+   uint16_t                *p_pos,
+   pf_check_peer_t         *p_check_peer)
+{
+   p_check_peer->length_peer_port_name = pf_get_byte(p_info, p_pos);
+   pf_get_mem(p_info, p_pos, p_check_peer->length_peer_port_name, p_check_peer->peer_port_name);
+   p_check_peer->peer_port_name[p_check_peer->length_peer_port_name] = '\0';
+
+   p_check_peer->length_peer_station_name = pf_get_byte(p_info, p_pos);
+   pf_get_mem(p_info, p_pos, p_check_peer->length_peer_station_name, p_check_peer->peer_station_name);
+   p_check_peer->peer_station_name[p_check_peer->length_peer_station_name] = '\0';
+}
+
+void pf_get_port_data_check_check_peers(
+   pf_get_info_t           *p_info,
+   uint16_t                *p_pos,
+   uint8_t                 max_peers,
+   pf_check_peers_t        p_check_peers[])
+{
+   uint8_t i;
+
+   p_check_peers->number_of_peers = pf_get_byte(p_info, p_pos);
+   if (p_check_peers->number_of_peers > max_peers)
+   {
+      LOG_ERROR(PNET_LOG, "BR(%d): Unsupported number of check peers\n", __LINE__);
+      p_check_peers->number_of_peers = max_peers;
+   }
+
+   for (i = 0; i < p_check_peers->number_of_peers; i++)
+   {
+      get_check_peer(p_info, p_pos, &p_check_peers->peers[i]);
+   }
+}
+
+void pf_get_port_data_adjust(
+   pf_get_info_t           *p_info,
+   uint16_t                *p_pos,
+   pf_port_data_adjust_t   *p_port_data_adjust)
+{
+   uint8_t dummy[4];
+
+   pf_get_mem(p_info, p_pos, 2, dummy); /* Padding */
+   p_port_data_adjust->slot_number = pf_get_uint16(p_info, p_pos);
+   p_port_data_adjust->subslot_number = pf_get_uint16(p_info, p_pos);
+   pf_get_block_header(p_info, p_pos, &p_port_data_adjust->block_header);
+}
+
+void pf_get_port_data_adjust_peer_to_peer_boundary(
+   pf_get_info_t                       *p_info,
+   uint16_t                            *p_pos,
+   pf_adjust_peer_to_peer_boundary_t   *p_boundary)
+{
+   uint8_t  dummy[4];
+   uint32_t temp;
+
+   memset(p_boundary, 0, sizeof(*p_boundary));
+
+   pf_get_mem(p_info, p_pos, 2, dummy); /* Padding */
+
+   temp = pf_get_uint32(p_info, p_pos);
+   p_boundary->peer_to_peer_boundary.do_not_send_LLDP_frames = pf_get_bits(temp, 0, 1);
+   p_boundary->peer_to_peer_boundary.do_not_send_pctp_delay_request_frames = pf_get_bits(temp, 1, 1);
+   p_boundary->peer_to_peer_boundary.do_not_send_path_delay_request_frames = pf_get_bits(temp, 2, 1);
+
+   p_boundary->adjust_properties = pf_get_uint16(p_info, p_pos);
+}

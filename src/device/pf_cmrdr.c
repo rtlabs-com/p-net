@@ -391,58 +391,45 @@ int pf_cmrdr_rm_read_ind(
          break;
 
       case PF_IDX_SUB_PDPORT_DATA_REAL:
-         /* ToDo: Implement properly when LLDP is done */
-         /*
-          * BlockHeader, Padding, Padding, SlotNumber, SubslotNumber, LengthOwnPortName, OwnPortName,
-          * NumberOfPeers, [Padding*] a,
-          * ToDo: Find out where the closing paran goes. It is missing in the spec!!
-          * [LengthPeerPortName, PeerPortName, LengthPeerStationName, PeerStationName, [Padding*] a,
-          *  LineDelay e, PeerMACAddress b, [Padding*] a ]*, MAUType c, [Padding*] a, Reserved d,
-          *  RTClass3_PortStatus, MulticastBoundary, LinkState, [Padding*] a, MediaType
-          * a The number of padding octets shall be adapted to make the block Unsigned32 aligned.
-          * b This field contains the interface MAC address of the peer
-          * c See Table 641
-          * d The number of reserved octets shall be 2.
-          * e The local calculated LineDelay shall be used.
-          */
-         ret = 0;
-         break;
-      case PF_IDX_SUB_PDPORT_DATA_CHECK:
-         /* ToDo: Implement properly when LLDP is done */
-         /*
-          * BlockHeader, Padding, Padding, SlotNumber, SubslotNumber,
-          * { [CheckPeers], [CheckLineDelay], [CheckMAUType a], [CheckLinkState],
-          *   [CheckSyncDifference], [CheckMAUTypeDifference], [CheckMAUTypeExtension] b }
-          * a The implementation of the MAUType check shall take the AutoNegotiation settings into account. A diagnosis with severity fault shall be issued if an AutoNegotiation error is detected after the next LinkDown / LinkUp do to the used AutoNegotiation settings.
-          * b Only possible if CheckMAUType is part of the list
-          */
-         ret = 0;
+         if ((p_read_request->slot_number == PNET_SLOT_DAP_IDENT) &&
+             (p_read_request->subslot_number == PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT))
+         {
+            pf_put_pdport_data_real(net, true, &read_result, res_size, p_res, p_pos);
+            ret = 0;
+         }
          break;
       case PF_IDX_SUB_PDPORT_DATA_ADJ:
-         /* ToDo: Implement properly when LLDP is done */
-         /*
-          * BlockHeader, Padding, Padding, SlotNumber, SubslotNumber,
-          * { [AdjustDomainBoundary], [AdjustMulticastBoundary],
-          *   [AdjustMAUType ^ AdjustLinkState],
-          *   [AdjustPeerToPeerBoundary], [AdjustDCPBoundary],
-          *   [AdjustPreambleLength], [AdjustMAUTypeExtension] a }
-          * a Only possible if AdjustMAUType is part of the list
-          */
-         ret = 0;
+          /* Only check if this is the port subslot */
+         if ((p_read_request->slot_number == PNET_SLOT_DAP_IDENT) &&
+             (p_read_request->subslot_number == PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT))
+         {
+            if (net->port[0].adjust.active)
+            {
+               pf_put_pdport_data_adj(&net->port[0].adjust.peer_to_peer_boundary, true, &read_result, res_size, p_res, p_pos);
+            }
+            ret = 0;
+         }
+         break;
+      case PF_IDX_SUB_PDPORT_DATA_CHECK:
+         /* Only check if this is the port subslot */
+         if ((p_read_request->slot_number == PNET_SLOT_DAP_IDENT) &&
+             (p_read_request->subslot_number == PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT))
+         {
+            if (net->port[0].check.active)
+            {
+               pf_put_pdport_data_check(&net->port[0].check.peer, true, &read_result, res_size, p_res, p_pos);
+            }
+            ret = 0;
+         }
          break;
       case PF_IDX_DEV_PDREAL_DATA:
-         /* ToDo: Implement when LLDP is done */
-         /*
-          * MultipleBlockHeader, { [PDPortDataReal] b d, [PDPortDataRealExtended] b d,
-          *                        [PDInterfaceMrpDataReal], [PDPortMrpDataReal],
-          *                        [PDPortFODataReal] a, [PDInterfaceDataReal],
-          *                        [PDPortStatistic], [PDPortMrpIcDataReal] }
-          * a There shall be no FiberOpticManufacturerSpecific information
-          * b The fields SlotNumber and SubslotNumber shall be ignored
-          * c Each submodule's data (for example interface or port) need its own MultipleBlockHeader
-          * d If MAUTypeExtension is used, both blocks shall be provided
-          */
-         ret = -1;
+         if ((p_read_request->slot_number == PNET_SLOT_DAP_IDENT) &&     /* Slot 0x0    */
+             ((p_read_request->subslot_number == PNET_SLOT_DAP_IDENT) || /* Subslot 0x0 */
+              (p_read_request->subslot_number == PNET_SUBMOD_DAP_IDENT)) /* Subslot 0x1 */)
+         {
+            pf_put_pd_real_data(net, true, &read_result, res_size, p_res, p_pos);
+            ret = 0;
+         }
          break;
       case PF_IDX_DEV_PDEXP_DATA:
          /* ToDo: Implement when LLDP is done */
@@ -456,9 +443,39 @@ int pf_cmrdr_rm_read_ind(
           * a The fields SlotNumber and SubslotNumber shall be ignored
           * b Each submodule's data (for example interface or port) need its own MultipleBlockHeader
           */
-         ret = -1;
+         ret = 0;
          break;
-
+      case PF_IDX_SUB_PDINTF_REAL:
+         /* Only check if this is the port subslot */
+         if ((p_read_request->slot_number == PNET_SLOT_DAP_IDENT) &&
+             (p_read_request->subslot_number == PNET_SUBMOD_DAP_INTERFACE_1_IDENT))
+         {
+            pf_put_pdinterface_data_real(net, true, &read_result, res_size, p_res, p_pos);
+            ret = 0;
+         }
+         else
+         {
+            ret = -1;
+         }
+         break;
+      case PF_IDX_SUB_PDINTF_ADJUST:
+         /* Only check if this is the port subslot */
+         if ((p_read_request->slot_number == PNET_SLOT_DAP_IDENT) &&
+             (p_read_request->subslot_number == PNET_SUBMOD_DAP_INTERFACE_1_IDENT))
+         {
+            /* return ok */
+            ret = 0;
+         }
+         break;
+      case PF_IDX_SUB_PDPORT_STATISTIC:
+         if ((p_read_request->slot_number == PNET_SLOT_DAP_IDENT) &&
+             ((p_read_request->subslot_number == PNET_SUBMOD_DAP_INTERFACE_1_IDENT) ||
+              (p_read_request->subslot_number == PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT)))
+         {
+            pf_put_pdport_statistics(&net->interface_statistics, true, &read_result, res_size, p_res, p_pos);
+            ret = 0;
+         }
+         break;
       default:
          LOG_INFO(PNET_LOG, "cmrdr(%d): No support for reading index 0x%x\n", __LINE__, p_read_request->index);
          ret = -1;
