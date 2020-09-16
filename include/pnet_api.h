@@ -52,6 +52,17 @@ extern "C"
 #define PNET_BLOCK_VERSION_LOW_1                               1
 
 
+/*
+ * Module and submodule ident number for the DAP module.
+ * The DAP module and submodules must be plugged by the application after the call to pnet_init.
+ */
+#define PNET_SLOT_DAP_IDENT                        0x00000000
+#define PNET_MOD_DAP_IDENT                         0x00000001     /* For use in slot 0 */
+#define PNET_SUBMOD_DAP_IDENT                      0x00000001     /* For use in subslot 1 */
+#define PNET_SUBMOD_DAP_INTERFACE_1_IDENT          0x00008000     /* For use in subslot 0x8000 */
+#define PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT   0x00008001     /* For use in subslot 0x8001 */
+
+
 /**
  * # Error Codes
  *
@@ -1155,6 +1166,21 @@ typedef struct pnet_lldp_peer_info
    pnet_ieee_macphy_t                  phy_config;
    pnet_lldp_peer_to_peer_boundary_t   peer_boundary;
 } pnet_lldp_peer_info_t;
+
+/**
+ * Peer port information
+ */
+typedef struct pnet_lldp_peer_req
+{
+   uint8_t                             chassis_id_subtype;
+   char                                chassis_id[PNET_LLDP_CHASSIS_ID_MAX_LEN+1];
+   size_t                              chassis_id_len;
+   uint8_t                             port_id_subtype;
+   char                                port_id[PNET_LLDP_PORT_ID_MAX_LEN+1];
+   size_t                              port_id_len;
+   uint16_t                            ttl;
+   pnet_lldp_peer_to_peer_boundary_t   peer_boundary;
+} pnet_lldp_peer_req_t;
 
 /**
  * This is all the configuration needed to use the Profinet stack.
