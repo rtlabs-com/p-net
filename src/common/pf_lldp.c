@@ -776,6 +776,8 @@ int pf_lldp_generate_alias_name(
    char*                   alias,
    uint16_t                len)
 {
+   int                     res = 0;
+
    if (port_id == NULL || chassis_id == NULL || alias == NULL)
    {
       return -1;
@@ -801,7 +803,12 @@ int pf_lldp_generate_alias_name(
       {
          return -1;
       }
-      snprintf(alias, len, "%s.%s", port_id, chassis_id);
+
+      res = snprintf(alias, len, "%s.%s", port_id, chassis_id);
+      if ((res < 0) || (res >= (int)len))
+      {
+         return -1;
+      }
    }
    return 0;
 }
