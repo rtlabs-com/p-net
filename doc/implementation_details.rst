@@ -523,3 +523,11 @@ Use C-style comments in C files, C or C++ comments in C++ files::
    /* C style comment */
 
    // C++ style comment
+
+Run clang-format on staged files before committing.
+
+    $ git add .
+    $ git clang-format
+
+This will format the commit using clang-format. Examine and stage
+modified files before finalizing the commit.
