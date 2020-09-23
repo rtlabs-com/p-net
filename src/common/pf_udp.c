@@ -19,39 +19,40 @@
  */
 
 #ifdef UNIT_TEST
-#define os_udp_close mock_os_udp_close
-#define os_udp_open mock_os_udp_open
+#define os_udp_close    mock_os_udp_close
+#define os_udp_open     mock_os_udp_open
 #define os_udp_recvfrom mock_os_udp_recvfrom
-#define os_udp_sendto mock_os_udp_sendto
+#define os_udp_sendto   mock_os_udp_sendto
 #endif
 
 #include <string.h>
 #include "pf_includes.h"
 
-
-int pf_udp_open(
-   pnet_t                  *net,
-   os_ipport_t             port)
+int pf_udp_open (pnet_t * net, os_ipport_t port)
 {
-   return os_udp_open(OS_IPADDR_ANY, port);
+   return os_udp_open (OS_IPADDR_ANY, port);
 }
 
-int pf_udp_sendto(
-   pnet_t                  *net,
-   uint32_t                id,
-   os_ipaddr_t             dst_addr,
-   os_ipport_t             dst_port,
-   const uint8_t           *data,
-   int                     size)
+int pf_udp_sendto (
+   pnet_t * net,
+   uint32_t id,
+   os_ipaddr_t dst_addr,
+   os_ipport_t dst_port,
+   const uint8_t * data,
+   int size)
 {
-   int                     sent_len = 0;
+   int sent_len = 0;
 
-   sent_len = os_udp_sendto(id, dst_addr, dst_port, data, size);
+   sent_len = os_udp_sendto (id, dst_addr, dst_port, data, size);
 
    if (sent_len != size)
    {
       net->interface_statistics.if_out_errors++;
-      LOG_ERROR(PNET_LOG, "UDP(%d): Failed to send %u UDP bytes payload on the socket.\n", __LINE__, size);
+      LOG_ERROR (
+         PNET_LOG,
+         "UDP(%d): Failed to send %u UDP bytes payload on the socket.\n",
+         __LINE__,
+         size);
    }
    else
    {
@@ -61,26 +62,24 @@ int pf_udp_sendto(
    return sent_len;
 }
 
-int pf_udp_recvfrom(
-   pnet_t                  *net,
-   uint32_t                id,
-   os_ipaddr_t             *src_addr,
-   os_ipport_t             *src_port,
-   uint8_t                 *data,
-   int                     size)
+int pf_udp_recvfrom (
+   pnet_t * net,
+   uint32_t id,
+   os_ipaddr_t * src_addr,
+   os_ipport_t * src_port,
+   uint8_t * data,
+   int size)
 {
-   int                     input_len = 0;
+   int input_len = 0;
 
-   input_len = os_udp_recvfrom(id, src_addr, src_port, data, size);
+   input_len = os_udp_recvfrom (id, src_addr, src_port, data, size);
 
    net->interface_statistics.if_in_octets += input_len;
 
    return input_len;
 }
 
-void pf_udp_close(
-   pnet_t                  *net,
-   uint32_t                id)
+void pf_udp_close (pnet_t * net, uint32_t id)
 {
-   os_udp_close(id);
+   os_udp_close (id);
 }

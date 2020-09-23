@@ -17,39 +17,35 @@
 #define PF_CMWRR_H
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
-
 
 /**
  * Initialize the CMWRR component.
  * @param net              InOut: The p-net stack instance
  */
-void pf_cmwrr_init(
-   pnet_t                  *net);
+void pf_cmwrr_init (pnet_t * net);
 
 /**
  * Show the CMWRR part of the specified AR.
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  */
-void pf_cmwrr_show(
-   pnet_t                  *net,
-   pf_ar_t                 *p_ar);
+void pf_cmwrr_show (pnet_t * net, pf_ar_t * p_ar);
 
 /**
  * Handle CMDEV events.
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:    The AR instance.
- * @param event            In:    The new CMDEV state. Use PNET_EVENT_..., not PF_CMDEV_STATE_...
+ * @param event            In:    The new CMDEV state. Use PNET_EVENT_..., not
+ * PF_CMDEV_STATE_...
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_cmwrr_cmdev_state_ind(
-   pnet_t                  *net,
-   pf_ar_t                 *p_ar,
-   pnet_event_values_t     event);
+int pf_cmwrr_cmdev_state_ind (
+   pnet_t * net,
+   pf_ar_t * p_ar,
+   pnet_event_values_t event);
 
 /**
  * Handle RPC write requests.
@@ -67,15 +63,15 @@ int pf_cmwrr_cmdev_state_ind(
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_cmwrr_rm_write_ind(
-   pnet_t                  *net,
-   pf_ar_t                 *p_ar,
-   pf_iod_write_request_t  *p_write_request,
-   pf_iod_write_result_t   *p_write_result,
-   pnet_result_t           *p_result,
-   uint8_t                 *p_req_buf,
-   uint16_t                data_length,
-   uint16_t                *p_req_pos);
+int pf_cmwrr_rm_write_ind (
+   pnet_t * net,
+   pf_ar_t * p_ar,
+   pf_iod_write_request_t * p_write_request,
+   pf_iod_write_result_t * p_write_result,
+   pnet_result_t * p_result,
+   uint8_t * p_req_buf,
+   uint16_t data_length,
+   uint16_t * p_req_pos);
 
 #ifdef __cplusplus
 }

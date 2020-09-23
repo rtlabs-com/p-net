@@ -20,9 +20,9 @@
 
 #include <gtest/gtest.h>
 
-
-class PtcpTest : public PnetIntegrationTest {};
-
+class PtcpTest : public PnetIntegrationTest
+{
+};
 
 TEST_F (PtcpTest, PtcpRunTest)
 {

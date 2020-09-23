@@ -33,53 +33,52 @@
  *
  * @param thread_arg     InOut: Will be converted to os_eth_handle_t
  */
-static void os_eth_task(
-   void *                  thread_arg)
+static void os_eth_task (void * thread_arg)
 {
-   os_eth_handle_t         *eth_handle = thread_arg;
-   ssize_t                 readlen;
-   int                     handled = 0;
+   os_eth_handle_t * eth_handle = thread_arg;
+   ssize_t readlen;
+   int handled = 0;
 
-   os_buf_t *p = os_buf_alloc(OS_BUF_MAX_SIZE);
-   assert(p != NULL);
+   os_buf_t * p = os_buf_alloc (OS_BUF_MAX_SIZE);
+   assert (p != NULL);
 
    while (1)
    {
-      readlen = recv(eth_handle->socket, p->payload, OS_BUF_MAX_SIZE, 0);
-      if(readlen == -1)
+      readlen = recv (eth_handle->socket, p->payload, OS_BUF_MAX_SIZE, 0);
+      if (readlen == -1)
          continue;
       p->len = readlen;
 
       if (eth_handle->callback != NULL)
       {
-         handled = eth_handle->callback(eth_handle->arg, p);
+         handled = eth_handle->callback (eth_handle->arg, p);
       }
       else
       {
-         handled = 0;  /* Message not handled */
+         handled = 0; /* Message not handled */
       }
 
       if (handled == 1)
       {
-         p = os_buf_alloc(OS_BUF_MAX_SIZE);
-         assert(p != NULL);
+         p = os_buf_alloc (OS_BUF_MAX_SIZE);
+         assert (p != NULL);
       }
    }
 }
 
-os_eth_handle_t* os_eth_init(
-   const char              *if_name,
-   os_eth_callback_t       *callback,
-   void                    *arg)
+os_eth_handle_t * os_eth_init (
+   const char * if_name,
+   os_eth_callback_t * callback,
+   void * arg)
 {
-   os_eth_handle_t         *handle;
-   int                     i;
-   struct ifreq            ifr;
-   struct sockaddr_ll      sll;
-   int                     ifindex;
-   struct timeval          timeout;
+   os_eth_handle_t * handle;
+   int i;
+   struct ifreq ifr;
+   struct sockaddr_ll sll;
+   int ifindex;
+   struct timeval timeout;
 
-   handle = malloc(sizeof(os_eth_handle_t));
+   handle = malloc (sizeof (os_eth_handle_t));
    if (handle == NULL)
    {
       return NULL;
@@ -87,53 +86,57 @@ os_eth_handle_t* os_eth_init(
 
    handle->arg = arg;
    handle->callback = callback;
-   handle->socket = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
+   handle->socket = socket (PF_PACKET, SOCK_RAW, htons (ETH_P_ALL));
 
    /* Adjust send timeout */
    timeout.tv_sec = 0;
    timeout.tv_usec = 1;
-   setsockopt(handle->socket, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
+   setsockopt (
+      handle->socket,
+      SOL_SOCKET,
+      SO_SNDTIMEO,
+      &timeout,
+      sizeof (timeout));
 
-   /* Send outgoing messages directly to the interface, without using Linux routing */
+   /* Send outgoing messages directly to the interface, without using Linux
+    * routing */
    i = 1;
-   setsockopt(handle->socket, SOL_SOCKET, SO_DONTROUTE, &i, sizeof(i));
+   setsockopt (handle->socket, SOL_SOCKET, SO_DONTROUTE, &i, sizeof (i));
 
    /* Read interface index */
-   strcpy(ifr.ifr_name, if_name);
-   ioctl(handle->socket, SIOCGIFINDEX, &ifr);
+   strcpy (ifr.ifr_name, if_name);
+   ioctl (handle->socket, SIOCGIFINDEX, &ifr);
    ifindex = ifr.ifr_ifindex;
 
    /* Set flags of NIC interface, here promiscuous and broadcast */
-   strcpy(ifr.ifr_name, if_name);
+   strcpy (ifr.ifr_name, if_name);
    ifr.ifr_flags = 0;
-   ioctl(handle->socket, SIOCGIFFLAGS, &ifr);
+   ioctl (handle->socket, SIOCGIFFLAGS, &ifr);
    ifr.ifr_flags = ifr.ifr_flags | IFF_PROMISC | IFF_BROADCAST;
-   ioctl(handle->socket, SIOCSIFFLAGS, &ifr);
+   ioctl (handle->socket, SIOCSIFFLAGS, &ifr);
 
    /* bind socket to protocol, in this case Profinet */
    sll.sll_family = AF_PACKET;
    sll.sll_ifindex = ifindex;
-   sll.sll_protocol = htons(ETH_P_ALL);
-   bind(handle->socket, (struct sockaddr *)&sll, sizeof(sll));
+   sll.sll_protocol = htons (ETH_P_ALL);
+   bind (handle->socket, (struct sockaddr *)&sll, sizeof (sll));
 
    if (handle->socket > -1)
    {
-      handle->thread = os_thread_create ("os_eth_task", 10,
-              4096, os_eth_task, handle);
+      handle->thread =
+         os_thread_create ("os_eth_task", 10, 4096, os_eth_task, handle);
       return handle;
    }
    else
    {
-      free(handle);
+      free (handle);
       return NULL;
    }
 }
 
-int os_eth_send(
-   os_eth_handle_t      *handle,
-   os_buf_t             *buf)
+int os_eth_send (os_eth_handle_t * handle, os_buf_t * buf)
 {
-   int ret = send(handle->socket, buf->payload, buf->len, 0);
+   int ret = send (handle->socket, buf->payload, buf->len, 0);
 
    return ret;
 }

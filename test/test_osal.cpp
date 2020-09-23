@@ -32,8 +32,9 @@ static void expired (os_timer_t * timer, void * arg)
 
 class Osal : public ::testing::Test
 {
-protected:
-   virtual void SetUp() {
+ protected:
+   virtual void SetUp()
+   {
       expired_calls = 0;
    }
 };
@@ -103,7 +104,7 @@ TEST (Osal, EventShouldTimeout)
 
 TEST (Osal, MboxShouldNotTimeout)
 {
-   os_mbox_t * mbox = os_mbox_create(2);
+   os_mbox_t * mbox = os_mbox_create (2);
    void * msg;
    int tmo;
 
@@ -118,7 +119,7 @@ TEST (Osal, MboxShouldNotTimeout)
 
 TEST (Osal, FetchFromEmptyMboxShouldTimeout)
 {
-   os_mbox_t * mbox = os_mbox_create(2);
+   os_mbox_t * mbox = os_mbox_create (2);
    void * msg;
    int tmo;
 
@@ -130,7 +131,7 @@ TEST (Osal, FetchFromEmptyMboxShouldTimeout)
 
 TEST (Osal, PostToFullMBoxShouldTimeout)
 {
-   os_mbox_t * mbox = os_mbox_create(2);
+   os_mbox_t * mbox = os_mbox_create (2);
    int tmo;
 
    os_mbox_post (mbox, (void *)1, 100);

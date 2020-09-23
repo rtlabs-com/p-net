@@ -20,9 +20,9 @@
 
 #include <gtest/gtest.h>
 
-
-class CmpbeTest : public PnetIntegrationTest {};
-
+class CmpbeTest : public PnetIntegrationTest
+{
+};
 
 TEST_F (CmpbeTest, CmpbeRunTest)
 {

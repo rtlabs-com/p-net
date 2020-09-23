@@ -17,10 +17,8 @@
 #define PF_ETH_H
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
-
 
 /**
  * Initialize the ETH component.
@@ -28,8 +26,7 @@ extern "C"
  * @return  0  if the ETH component could be initialized.
  *          -1 if an error occurred.
  */
-int pf_eth_init(
-   pnet_t                  *net);
+int pf_eth_init (pnet_t * net);
 
 /**
  * Send raw Ethernet data.
@@ -41,10 +38,7 @@ int pf_eth_init(
  * @param buf              In:    Buffer with data to be sent
  * @return  The number of bytes sent, or -1 if an error occurred.
  */
-int pf_eth_send(
-   pnet_t                  *net,
-   os_eth_handle_t         *handle,
-   os_buf_t                *buf);
+int pf_eth_send (pnet_t * net, os_eth_handle_t * handle, os_buf_t * buf);
 
 /**
  * Add a frame_id entry to the frame id filter map.
@@ -58,11 +52,11 @@ int pf_eth_send(
  * @param frame_handler    In:   The handler function to call.
  * @param p_arg            In:   Argument to handler function.
  */
-void pf_eth_frame_id_map_add(
-   pnet_t                  *net,
-   uint16_t                frame_id,
-   pf_eth_frame_handler_t  frame_handler,
-   void                    *p_arg);
+void pf_eth_frame_id_map_add (
+   pnet_t * net,
+   uint16_t frame_id,
+   pf_eth_frame_handler_t frame_handler,
+   void * p_arg);
 
 /**
  * Remove an entry from the frame id filter map (if it exists).
@@ -70,17 +64,14 @@ void pf_eth_frame_id_map_add(
  * @param net              InOut: The p-net stack instance
  * @param frame_id         In:   The frame ID to remove.
  */
-void pf_eth_frame_id_map_remove(
-   pnet_t                  *net,
-   uint16_t                frame_id);
+void pf_eth_frame_id_map_remove (pnet_t * net, uint16_t frame_id);
 
 /**
  * Inspect and possibly handle Ethernet frames:
  *
- * Find the packet type. If it is for Profinet then send it to the right handler,
- * depending on the frame_id within the packet.
- * The frame_id is located right after the packet type.
- * Take care of handling the VLAN tag!!
+ * Find the packet type. If it is for Profinet then send it to the right
+ * handler, depending on the frame_id within the packet. The frame_id is located
+ * right after the packet type. Take care of handling the VLAN tag!!
  *
  * Note that this itself is a callback, and its arguments should fulfill the
  * prototype os_raw_frame_handler_t
@@ -90,9 +81,7 @@ void pf_eth_frame_id_map_remove(
  * @return  0  If the frame was NOT handled by this function.
  *          1  If the frame was handled and the buffer freed.
  */
-int pf_eth_recv(
-   void                    *arg,
-   os_buf_t                *p_buf);
+int pf_eth_recv (void * arg, os_buf_t * p_buf);
 
 #ifdef __cplusplus
 }

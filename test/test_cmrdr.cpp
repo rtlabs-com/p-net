@@ -35,6 +35,8 @@
 
 #include <gtest/gtest.h>
 
+// clang-format off
+
 static uint8_t connect_req[] =
 {
                                                              0x04, 0x00, 0x28, 0x00, 0x10, 0x00,
@@ -118,15 +120,15 @@ static uint8_t data_packet_good_iops_good_iocs[] =
 
 typedef struct test_reads
 {
-   uint16_t                idx;
+   uint16_t idx;
 } test_reads_t;
 
-static test_reads_t        test_mod_diff[] =
+static test_reads_t test_mod_diff[] =
 {
-    0xe002
+   0xe002
 };
 
-static test_reads_t        test_reads[] =
+static test_reads_t test_reads[] =
 {
     0x8000, 0x8001,
     0x800a, 0x800b, 0x800c,
@@ -172,29 +174,31 @@ static test_reads_t        test_reads[] =
     0xfbff,
 };
 
-static pf_iod_read_request_t     read_request;
-static pnet_result_t             read_status;
-static uint16_t                  seq_nbr = 0;
+// clang-format on
 
+static pf_iod_read_request_t read_request;
+static pnet_result_t read_status;
+static uint16_t seq_nbr = 0;
 
 class CmrdrTest : public PnetIntegrationTest
 {
-protected:
-
-   void test_read(test_reads_t *p_the_test)
+ protected:
+   void test_read (test_reads_t * p_the_test)
    {
-      pf_ar_t                 *p_ar;
-      uint8_t                 buffer[PF_FRAME_BUFFER_SIZE];
-      uint16_t                pos = 0;
-      uint16_t                idx = p_the_test->idx;
+      pf_ar_t * p_ar;
+      uint8_t buffer[PF_FRAME_BUFFER_SIZE];
+      uint16_t pos = 0;
+      uint16_t idx = p_the_test->idx;
 
       /* Send data to prevent timeout */
-      send_data(data_packet_good_iops_good_iocs, sizeof(data_packet_good_iops_good_iocs));
+      send_data (
+         data_packet_good_iops_good_iocs,
+         sizeof (data_packet_good_iops_good_iocs));
       run_stack (TEST_DATA_DELAY);
 
-      memset(&read_status, 0, sizeof(read_status));
-      memset(&read_request, 0, sizeof(read_request));
-      pf_ar_find_by_arep(net, appdata.main_arep, &p_ar);
+      memset (&read_status, 0, sizeof (read_status));
+      memset (&read_request, 0, sizeof (read_request));
+      pf_ar_find_by_arep (net, appdata.main_arep, &p_ar);
 
       read_request.sequence_number = seq_nbr++;
       /* read_request.ar_uuid = NIL */
@@ -205,11 +209,18 @@ protected:
       read_request.record_data_length = 0;
       // read_request.target_ar_uuid;   /* Only used if implicit AR */
 
-      pf_cmrdr_rm_read_ind(net, p_ar, &read_request, &read_status, sizeof(buffer), buffer, &pos);
+      pf_cmrdr_rm_read_ind (
+         net,
+         p_ar,
+         &read_request,
+         &read_status,
+         sizeof (buffer),
+         buffer,
+         &pos);
 
       if (read_status.pnio_status.error_code != 0)
       {
-         TEST_TRACE("Read failed for idx %#x\n", (unsigned)idx);
+         TEST_TRACE ("Read failed for idx %#x\n", (unsigned)idx);
          appdata.read_fails++;
       }
    }
@@ -217,218 +228,269 @@ protected:
 
 TEST_F (CmrdrTest, CmrdrRunTest)
 {
-   int                     ret;
-   pnet_pnio_status_t      pnio_status = {1, 2, 3, 4};
-   bool                    new_flag = false;
-   uint8_t                 in_data[10];
-   uint16_t                in_len = sizeof(in_data);
-   uint8_t                 out_data[] = {
-         0x33,       /* Slot 1, subslot 1 Data */
+   int ret;
+   pnet_pnio_status_t pnio_status = {1, 2, 3, 4};
+   bool new_flag = false;
+   uint8_t in_data[10];
+   uint16_t in_len = sizeof (in_data);
+   uint8_t out_data[] = {
+      0x33, /* Slot 1, subslot 1 Data */
    };
-   uint8_t                 iops = PNET_IOXS_BAD;
-   uint8_t                 iocs = PNET_IOXS_BAD;
-   uint32_t                ix;
-   uint16_t                ch_properties = 0;
-   const uint16_t          slot = 1;
-   const uint16_t          subslot = 1;
+   uint8_t iops = PNET_IOXS_BAD;
+   uint8_t iocs = PNET_IOXS_BAD;
+   uint32_t ix;
+   uint16_t ch_properties = 0;
+   const uint16_t slot = 1;
+   const uint16_t subslot = 1;
 
-   TEST_TRACE("\nGenerating mock connection request\n");
-   mock_set_os_udp_recvfrom_buffer(connect_req, sizeof(connect_req));
+   TEST_TRACE ("\nGenerating mock connection request\n");
+   mock_set_os_udp_recvfrom_buffer (connect_req, sizeof (connect_req));
    run_stack (TEST_UDP_DELAY);
-   EXPECT_EQ(appdata.call_counters.state_calls, 1);
-   EXPECT_EQ(appdata.call_counters.connect_calls, 1);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_STARTUP);
-   EXPECT_GT(mock_os_data.eth_send_count, 0);
+   EXPECT_EQ (appdata.call_counters.state_calls, 1);
+   EXPECT_EQ (appdata.call_counters.connect_calls, 1);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_STARTUP);
+   EXPECT_GT (mock_os_data.eth_send_count, 0);
 
-   TEST_TRACE("\nGenerating mock parameter end request\n");
-   mock_set_os_udp_recvfrom_buffer(prm_end_req, sizeof(prm_end_req));
+   TEST_TRACE ("\nGenerating mock parameter end request\n");
+   mock_set_os_udp_recvfrom_buffer (prm_end_req, sizeof (prm_end_req));
    run_stack (TEST_UDP_DELAY);
-   EXPECT_EQ(appdata.call_counters.state_calls, 2);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_PRMEND);
-   EXPECT_EQ(appdata.call_counters.connect_calls, 1);
+   EXPECT_EQ (appdata.call_counters.state_calls, 2);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_PRMEND);
+   EXPECT_EQ (appdata.call_counters.connect_calls, 1);
 
-   TEST_TRACE("\nSimulate application calling APPL_RDY\n");
-   TEST_TRACE("Line %d\n", __LINE__);
-   ret = pnet_application_ready(net, appdata.main_arep);
-   EXPECT_EQ(ret, 0);
-   EXPECT_EQ(appdata.call_counters.state_calls, 3);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_APPLRDY);
+   TEST_TRACE ("\nSimulate application calling APPL_RDY\n");
+   TEST_TRACE ("Line %d\n", __LINE__);
+   ret = pnet_application_ready (net, appdata.main_arep);
+   EXPECT_EQ (ret, 0);
+   EXPECT_EQ (appdata.call_counters.state_calls, 3);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_APPLRDY);
 
-   TEST_TRACE("\nGenerating mock application ready response\n");
-   mock_set_os_udp_recvfrom_buffer(appl_rdy_rsp, sizeof(appl_rdy_rsp));
+   TEST_TRACE ("\nGenerating mock application ready response\n");
+   mock_set_os_udp_recvfrom_buffer (appl_rdy_rsp, sizeof (appl_rdy_rsp));
    run_stack (TEST_UDP_DELAY);
-   EXPECT_EQ(appdata.call_counters.state_calls, 3);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_APPLRDY);
+   EXPECT_EQ (appdata.call_counters.state_calls, 3);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_APPLRDY);
 
-   TEST_TRACE("\nSend a couple of data packets and verify reception\n");
+   TEST_TRACE ("\nSend a couple of data packets and verify reception\n");
    for (ix = 0; ix < 100; ix++)
    {
-      send_data(data_packet_good_iops_good_iocs, sizeof(data_packet_good_iops_good_iocs));
+      send_data (
+         data_packet_good_iops_good_iocs,
+         sizeof (data_packet_good_iops_good_iocs));
       run_stack (TEST_DATA_DELAY);
    }
 
-   iops = 88;     /* Something non-valid */
-   in_len = sizeof(in_data);
-   ret = pnet_output_get_data_and_iops(net, TEST_API_IDENT, slot, subslot, &new_flag, in_data, &in_len, &iops);
-   EXPECT_EQ(ret, 0);
-   EXPECT_EQ(new_flag, true);
-   EXPECT_EQ(in_len, 1);
-   EXPECT_EQ(in_data[0], 0x23);
-   EXPECT_EQ(iops, PNET_IOXS_GOOD);
+   iops = 88; /* Something non-valid */
+   in_len = sizeof (in_data);
+   ret = pnet_output_get_data_and_iops (
+      net,
+      TEST_API_IDENT,
+      slot,
+      subslot,
+      &new_flag,
+      in_data,
+      &in_len,
+      &iops);
+   EXPECT_EQ (ret, 0);
+   EXPECT_EQ (new_flag, true);
+   EXPECT_EQ (in_len, 1);
+   EXPECT_EQ (in_data[0], 0x23);
+   EXPECT_EQ (iops, PNET_IOXS_GOOD);
 
-   iocs = 77;     /* Something non-valid */
-   ret = pnet_input_get_iocs(net, TEST_API_IDENT, slot, subslot, &iocs);
-   EXPECT_EQ(ret, 0);
-   EXPECT_EQ(new_flag, true);
-   EXPECT_EQ(in_len, 1);
-   EXPECT_EQ(iocs, PNET_IOXS_GOOD);
-   EXPECT_EQ(appdata.call_counters.state_calls, 4);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_DATA);
+   iocs = 77; /* Something non-valid */
+   ret = pnet_input_get_iocs (net, TEST_API_IDENT, slot, subslot, &iocs);
+   EXPECT_EQ (ret, 0);
+   EXPECT_EQ (new_flag, true);
+   EXPECT_EQ (in_len, 1);
+   EXPECT_EQ (iocs, PNET_IOXS_GOOD);
+   EXPECT_EQ (appdata.call_counters.state_calls, 4);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_DATA);
 
-   TEST_TRACE("\nSend some data to the controller\n");
-   ret = pnet_input_set_data_and_iops(net, TEST_API_IDENT, slot, subslot, out_data, sizeof(out_data), PNET_IOXS_GOOD);
-   EXPECT_EQ(ret, 0);
+   TEST_TRACE ("\nSend some data to the controller\n");
+   ret = pnet_input_set_data_and_iops (
+      net,
+      TEST_API_IDENT,
+      slot,
+      subslot,
+      out_data,
+      sizeof (out_data),
+      PNET_IOXS_GOOD);
+   EXPECT_EQ (ret, 0);
 
-   TEST_TRACE("\nAcknowledge the reception of controller data\n");
-   ret = pnet_output_set_iocs(net, TEST_API_IDENT, slot, subslot, PNET_IOXS_GOOD);
-   EXPECT_EQ(ret, 0);
-   EXPECT_EQ(appdata.call_counters.state_calls, 4);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_DATA);
+   TEST_TRACE ("\nAcknowledge the reception of controller data\n");
+   ret =
+      pnet_output_set_iocs (net, TEST_API_IDENT, slot, subslot, PNET_IOXS_GOOD);
+   EXPECT_EQ (ret, 0);
+   EXPECT_EQ (appdata.call_counters.state_calls, 4);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_DATA);
 
    /* Send data to avoid timeout */
-   send_data(data_packet_good_iops_good_iocs, sizeof(data_packet_good_iops_good_iocs));
+   send_data (
+      data_packet_good_iops_good_iocs,
+      sizeof (data_packet_good_iops_good_iocs));
    run_stack (TEST_DATA_DELAY);
 
-   TEST_TRACE("\nCreate a logbook entry\n");
-   pnet_create_log_book_entry(net, appdata.main_arep, &pnio_status, 0x13245768);
+   TEST_TRACE ("\nCreate a logbook entry\n");
+   pnet_create_log_book_entry (net, appdata.main_arep, &pnio_status, 0x13245768);
 
-   TEST_TRACE("\nCreate a diag and an alarm.\n");
-   PNET_DIAG_CH_PROP_TYPE_SET(ch_properties, PNET_DIAG_CH_PROP_TYPE_8_BIT);
-   PNET_DIAG_CH_PROP_ACC_SET(ch_properties, 0);
-   PNET_DIAG_CH_PROP_MAINT_SET(ch_properties, PNET_DIAG_CH_PROP_MAINT_FAULT);
-   PNET_DIAG_CH_PROP_SPEC_SET(ch_properties, PNET_DIAG_CH_PROP_SPEC_APPEARS);
-   PNET_DIAG_CH_PROP_DIR_SET(ch_properties, PNET_DIAG_CH_PROP_DIR_OUTPUT);
-   pnet_diag_add(net, appdata.main_arep, TEST_API_IDENT, slot, subslot, 0, ch_properties, 0x0001, 0x0002, 0x00030004, 0, PNET_DIAG_USI_STD, NULL);
+   TEST_TRACE ("\nCreate a diag and an alarm.\n");
+   PNET_DIAG_CH_PROP_TYPE_SET (ch_properties, PNET_DIAG_CH_PROP_TYPE_8_BIT);
+   PNET_DIAG_CH_PROP_ACC_SET (ch_properties, 0);
+   PNET_DIAG_CH_PROP_MAINT_SET (ch_properties, PNET_DIAG_CH_PROP_MAINT_FAULT);
+   PNET_DIAG_CH_PROP_SPEC_SET (ch_properties, PNET_DIAG_CH_PROP_SPEC_APPEARS);
+   PNET_DIAG_CH_PROP_DIR_SET (ch_properties, PNET_DIAG_CH_PROP_DIR_OUTPUT);
+   pnet_diag_add (
+      net,
+      appdata.main_arep,
+      TEST_API_IDENT,
+      slot,
+      subslot,
+      0,
+      ch_properties,
+      0x0001,
+      0x0002,
+      0x00030004,
+      0,
+      PNET_DIAG_USI_STD,
+      NULL);
 
-   TEST_TRACE("Number of tests: %u\n", (unsigned)NELEMENTS(test_reads));
+   TEST_TRACE ("Number of tests: %u\n", (unsigned)NELEMENTS (test_reads));
 
-   TEST_TRACE("\nNow read all the records\n");
-   for (ix = 0; ix < NELEMENTS(test_reads); ix++)
+   TEST_TRACE ("\nNow read all the records\n");
+   for (ix = 0; ix < NELEMENTS (test_reads); ix++)
    {
-      test_read(&test_reads[ix]);
+      test_read (&test_reads[ix]);
    }
-   EXPECT_EQ(appdata.read_fails, 62); // Currently expected number of fails.
+   EXPECT_EQ (appdata.read_fails, 62); // Currently expected number of fails.
 
-   TEST_TRACE("\nGenerating mock release request\n");
-   mock_set_os_udp_recvfrom_buffer(release_req, sizeof(release_req));
+   TEST_TRACE ("\nGenerating mock release request\n");
+   mock_set_os_udp_recvfrom_buffer (release_req, sizeof (release_req));
    run_stack (TEST_UDP_DELAY);
-   EXPECT_EQ(appdata.call_counters.release_calls, 1);
-   EXPECT_EQ(appdata.call_counters.state_calls, 5);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_ABORT);
+   EXPECT_EQ (appdata.call_counters.release_calls, 1);
+   EXPECT_EQ (appdata.call_counters.state_calls, 5);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_ABORT);
 }
 
 TEST_F (CmrdrTest, CmrdrModDiffTest)
 {
-   int                     ret;
-   pnet_pnio_status_t      pnio_status = {1, 2, 3, 4};
-   bool                    new_flag = false;
-   uint8_t                 in_data[10];
-   uint16_t                in_len = sizeof(in_data);
-   uint8_t                 out_data[] = {
-         0x33,       /* Slot 1, subslot 1 Data */
+   int ret;
+   pnet_pnio_status_t pnio_status = {1, 2, 3, 4};
+   bool new_flag = false;
+   uint8_t in_data[10];
+   uint16_t in_len = sizeof (in_data);
+   uint8_t out_data[] = {
+      0x33, /* Slot 1, subslot 1 Data */
    };
-   uint8_t                 iops = PNET_IOXS_BAD;
-   uint8_t                 iocs = PNET_IOXS_BAD;
-   uint32_t                ix;
-   const uint16_t          slot = 1;
-   const uint16_t          subslot = 1;
+   uint8_t iops = PNET_IOXS_BAD;
+   uint8_t iocs = PNET_IOXS_BAD;
+   uint32_t ix;
+   const uint16_t slot = 1;
+   const uint16_t subslot = 1;
 
    // TODO  This test used to have an offset for the submodule identifier value
    // in the on_submodule callback. However it does not make any difference
    // for the test result
 
-   TEST_TRACE("\nGenerating mock connection request\n");
-   mock_set_os_udp_recvfrom_buffer(connect_req, sizeof(connect_req));
+   TEST_TRACE ("\nGenerating mock connection request\n");
+   mock_set_os_udp_recvfrom_buffer (connect_req, sizeof (connect_req));
    run_stack (TEST_UDP_DELAY);
-   EXPECT_EQ(appdata.call_counters.state_calls, 1);
-   EXPECT_EQ(appdata.call_counters.connect_calls, 1);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_STARTUP);
-   EXPECT_GT(mock_os_data.eth_send_count, 0);
+   EXPECT_EQ (appdata.call_counters.state_calls, 1);
+   EXPECT_EQ (appdata.call_counters.connect_calls, 1);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_STARTUP);
+   EXPECT_GT (mock_os_data.eth_send_count, 0);
 
-   TEST_TRACE("\nGenerating mock parameter end request\n");
-   mock_set_os_udp_recvfrom_buffer(prm_end_req, sizeof(prm_end_req));
+   TEST_TRACE ("\nGenerating mock parameter end request\n");
+   mock_set_os_udp_recvfrom_buffer (prm_end_req, sizeof (prm_end_req));
    run_stack (TEST_UDP_DELAY);
-   EXPECT_EQ(appdata.call_counters.state_calls, 2);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_PRMEND);
-   EXPECT_EQ(appdata.call_counters.connect_calls, 1);
+   EXPECT_EQ (appdata.call_counters.state_calls, 2);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_PRMEND);
+   EXPECT_EQ (appdata.call_counters.connect_calls, 1);
 
-   TEST_TRACE("\nSimulate application calling APPL_RDY\n");
-   ret = pnet_application_ready(net, appdata.main_arep);
-   EXPECT_EQ(ret, 0);
-   EXPECT_EQ(appdata.call_counters.state_calls, 3);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_APPLRDY);
+   TEST_TRACE ("\nSimulate application calling APPL_RDY\n");
+   ret = pnet_application_ready (net, appdata.main_arep);
+   EXPECT_EQ (ret, 0);
+   EXPECT_EQ (appdata.call_counters.state_calls, 3);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_APPLRDY);
 
-   TEST_TRACE("\nGenerating mock application ready response\n");
-   mock_set_os_udp_recvfrom_buffer(appl_rdy_rsp, sizeof(appl_rdy_rsp));
+   TEST_TRACE ("\nGenerating mock application ready response\n");
+   mock_set_os_udp_recvfrom_buffer (appl_rdy_rsp, sizeof (appl_rdy_rsp));
    run_stack (TEST_UDP_DELAY);
-   EXPECT_EQ(appdata.call_counters.state_calls, 3);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_APPLRDY);
+   EXPECT_EQ (appdata.call_counters.state_calls, 3);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_APPLRDY);
 
-   TEST_TRACE("\nSend a couple of data packets and verify reception\n");
+   TEST_TRACE ("\nSend a couple of data packets and verify reception\n");
    for (ix = 0; ix < 100; ix++)
    {
-      send_data(data_packet_good_iops_good_iocs, sizeof(data_packet_good_iops_good_iocs));
+      send_data (
+         data_packet_good_iops_good_iocs,
+         sizeof (data_packet_good_iops_good_iocs));
       run_stack (TEST_DATA_DELAY);
    }
 
-   iops = 88;     /* Something non-valid */
-   in_len = sizeof(in_data);
-   ret = pnet_output_get_data_and_iops(net, TEST_API_IDENT, slot, subslot, &new_flag, in_data, &in_len, &iops);
-   EXPECT_EQ(ret, 0);
-   EXPECT_EQ(new_flag, true);
-   EXPECT_EQ(in_len, 1);
-   EXPECT_EQ(in_data[0], 0x23);
-   EXPECT_EQ(iops, PNET_IOXS_GOOD);
+   iops = 88; /* Something non-valid */
+   in_len = sizeof (in_data);
+   ret = pnet_output_get_data_and_iops (
+      net,
+      TEST_API_IDENT,
+      slot,
+      subslot,
+      &new_flag,
+      in_data,
+      &in_len,
+      &iops);
+   EXPECT_EQ (ret, 0);
+   EXPECT_EQ (new_flag, true);
+   EXPECT_EQ (in_len, 1);
+   EXPECT_EQ (in_data[0], 0x23);
+   EXPECT_EQ (iops, PNET_IOXS_GOOD);
 
-   iocs = 77;     /* Something non-valid */
-   ret = pnet_input_get_iocs(net, TEST_API_IDENT, slot, subslot, &iocs);
-   EXPECT_EQ(ret, 0);
-   EXPECT_EQ(new_flag, true);
-   EXPECT_EQ(in_len, 1);
-   EXPECT_EQ(iocs, PNET_IOXS_GOOD);
-   EXPECT_EQ(appdata.call_counters.state_calls, 4);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_DATA);
+   iocs = 77; /* Something non-valid */
+   ret = pnet_input_get_iocs (net, TEST_API_IDENT, slot, subslot, &iocs);
+   EXPECT_EQ (ret, 0);
+   EXPECT_EQ (new_flag, true);
+   EXPECT_EQ (in_len, 1);
+   EXPECT_EQ (iocs, PNET_IOXS_GOOD);
+   EXPECT_EQ (appdata.call_counters.state_calls, 4);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_DATA);
 
    /* Send some data to the controller */
-   TEST_TRACE("Line %d\n", __LINE__);
-   ret = pnet_input_set_data_and_iops(net, TEST_API_IDENT, slot, subslot, out_data, sizeof(out_data), PNET_IOXS_GOOD);
-   EXPECT_EQ(ret, 0);
+   TEST_TRACE ("Line %d\n", __LINE__);
+   ret = pnet_input_set_data_and_iops (
+      net,
+      TEST_API_IDENT,
+      slot,
+      subslot,
+      out_data,
+      sizeof (out_data),
+      PNET_IOXS_GOOD);
+   EXPECT_EQ (ret, 0);
 
    /* Acknowledge the reception of controller data */
-   ret = pnet_output_set_iocs(net, TEST_API_IDENT, slot, subslot, PNET_IOXS_GOOD);
-   EXPECT_EQ(ret, 0);
-   EXPECT_EQ(appdata.call_counters.state_calls, 4);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_DATA);
+   ret =
+      pnet_output_set_iocs (net, TEST_API_IDENT, slot, subslot, PNET_IOXS_GOOD);
+   EXPECT_EQ (ret, 0);
+   EXPECT_EQ (appdata.call_counters.state_calls, 4);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_DATA);
 
    /* Setup some record for the reader */
 
-   TEST_TRACE("Line %d\n", __LINE__);
+   TEST_TRACE ("Line %d\n", __LINE__);
    /* Create a logbook entry */
-   pnet_create_log_book_entry(net, appdata.main_arep, &pnio_status, 0x13245768);
+   pnet_create_log_book_entry (net, appdata.main_arep, &pnio_status, 0x13245768);
 
-   TEST_TRACE("Number of tests: %u\n", (unsigned)NELEMENTS(test_mod_diff));
+   TEST_TRACE ("Number of tests: %u\n", (unsigned)NELEMENTS (test_mod_diff));
 
    /* Now read all the mod diff record */
-   for (ix = 0; ix < NELEMENTS(test_mod_diff); ix++)
+   for (ix = 0; ix < NELEMENTS (test_mod_diff); ix++)
    {
-      test_read(&test_mod_diff[ix]);
+      test_read (&test_mod_diff[ix]);
    }
-   EXPECT_EQ(appdata.read_fails, 0);
+   EXPECT_EQ (appdata.read_fails, 0);
 
-   TEST_TRACE("\nGenerating mock release request\n");
-   mock_set_os_udp_recvfrom_buffer(release_req, sizeof(release_req));
+   TEST_TRACE ("\nGenerating mock release request\n");
+   mock_set_os_udp_recvfrom_buffer (release_req, sizeof (release_req));
    run_stack (TEST_UDP_DELAY);
-   EXPECT_EQ(appdata.call_counters.release_calls, 1);
-   EXPECT_EQ(appdata.call_counters.state_calls, 5);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_ABORT);
+   EXPECT_EQ (appdata.call_counters.release_calls, 1);
+   EXPECT_EQ (appdata.call_counters.state_calls, 5);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_ABORT);
 }

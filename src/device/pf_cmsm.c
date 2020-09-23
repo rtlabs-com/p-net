@@ -15,7 +15,8 @@
 
 /**
  * @file
- * @brief Implements the Context Management Surveillance Protocol Machine Device (CMSM)
+ * @brief Implements the Context Management Surveillance Protocol Machine Device
+ * (CMSM)
  *
  * The CMSM component monitors the establishment of a connection.
  * Once the device enters the DATA state this component is done.
@@ -36,13 +37,11 @@
 
 #endif
 
-
 #include "pf_includes.h"
 
-static const char          *cmsm_sync_name = "cmsm";
+static const char * cmsm_sync_name = "cmsm";
 
-int pf_cmsm_activate(
-   pf_ar_t                 *p_ar)
+int pf_cmsm_activate (pf_ar_t * p_ar)
 {
    if (p_ar == NULL)
    {
@@ -59,31 +58,35 @@ int pf_cmsm_activate(
  * @param state            In:   The CMSM state
  * @return  A string representing the CMSM state.
  */
-static const char *pf_cmsm_state_to_string(
-   pf_cmsm_state_values_t  state)
+static const char * pf_cmsm_state_to_string (pf_cmsm_state_values_t state)
 {
-   const char              *s = "<unknown>";
+   const char * s = "<unknown>";
 
    switch (state)
    {
-   case PF_CMSM_STATE_IDLE:   s = "PF_CMSM_STATE_IDLE"; break;
-   case PF_CMSM_STATE_RUN:    s = "PF_CMSM_STATE_RUN"; break;
+   case PF_CMSM_STATE_IDLE:
+      s = "PF_CMSM_STATE_IDLE";
+      break;
+   case PF_CMSM_STATE_RUN:
+      s = "PF_CMSM_STATE_RUN";
+      break;
    }
 
    return s;
 }
 
-void pf_cmsm_show(
-   pf_ar_t                 *p_ar)
+void pf_cmsm_show (pf_ar_t * p_ar)
 {
    if (p_ar == NULL)
    {
-      printf("CMSM: The AR is null\n");
+      printf ("CMSM: The AR is null\n");
       return;
    }
 
-   printf("CMSM state            = %s\n", pf_cmsm_state_to_string(p_ar->cmsm_state));
-   printf("     timer            = %u\n", (unsigned)p_ar->cmsm_timer);
+   printf (
+      "CMSM state            = %s\n",
+      pf_cmsm_state_to_string (p_ar->cmsm_state));
+   printf ("     timer            = %u\n", (unsigned)p_ar->cmsm_timer);
 }
 
 /**
@@ -92,15 +95,17 @@ void pf_cmsm_show(
  * @param p_ar             In:   The AR instance (not NULL)
  * @param state            In:   The new state.
  */
-static void pf_cmsm_set_state(
-   pf_ar_t                 *p_ar,
-   pf_cmsm_state_values_t  state)
+static void pf_cmsm_set_state (pf_ar_t * p_ar, pf_cmsm_state_values_t state)
 {
-   CC_ASSERT(p_ar != NULL);
+   CC_ASSERT (p_ar != NULL);
 
    if (state != p_ar->cmsm_state)
    {
-      LOG_DEBUG(PNET_LOG, "CMSM(%d): New state %s\n", __LINE__, pf_cmsm_state_to_string(state));
+      LOG_DEBUG (
+         PNET_LOG,
+         "CMSM(%d): New state %s\n",
+         __LINE__,
+         pf_cmsm_state_to_string (state));
       p_ar->cmsm_state = state;
    }
 }
@@ -110,20 +115,20 @@ static void pf_cmsm_set_state(
  * Handle timeouts in the connection monitoring.
  * Aborts the connection start-up procedure if timing out.
  *
- * This is a callback for the scheduler. Arguments should fulfill pf_scheduler_timeout_ftn_t
+ * This is a callback for the scheduler. Arguments should fulfill
+ * pf_scheduler_timeout_ftn_t
  *
  * @param net              InOut: The p-net stack instance
- * @param arg              In:    The AR instance (not NULL). Void pointer converted to pf_ar_t
+ * @param arg              In:    The AR instance (not NULL). Void pointer
+ * converted to pf_ar_t
  * @param current_time     In:    The current system time, in microseconds,
- *                                when the scheduler is started to execute stored tasks.
+ *                                when the scheduler is started to execute
+ * stored tasks.
  */
-static void pf_cmsm_timeout(
-   pnet_t                  *net,
-   void                    *arg,
-   uint32_t                current_time)
+static void pf_cmsm_timeout (pnet_t * net, void * arg, uint32_t current_time)
 {
-   CC_ASSERT(arg != NULL);
-   pf_ar_t                 *p_ar = (pf_ar_t *)arg;
+   CC_ASSERT (arg != NULL);
+   pf_ar_t * p_ar = (pf_ar_t *)arg;
 
    p_ar->cmsm_timer = UINT32_MAX;
    switch (p_ar->cmsm_state)
@@ -132,34 +137,40 @@ static void pf_cmsm_timeout(
       /* Ignore */
       break;
    case PF_CMSM_STATE_RUN:
-      LOG_ERROR(PNET_LOG, "CMSM(%d): Timeout for communication start up. CMDEV state: %s \n",
+      LOG_ERROR (
+         PNET_LOG,
+         "CMSM(%d): Timeout for communication start up. CMDEV state: %s \n",
          __LINE__,
-         pf_cmdev_state_to_string(p_ar->cmdev_state));
+         pf_cmdev_state_to_string (p_ar->cmdev_state));
 
       p_ar->err_cls = PNET_ERROR_CODE_1_RTA_ERR_CLS_PROTOCOL;
       p_ar->err_code = PNET_ERROR_CODE_2_ABORT_AR_CMI_TIMEOUT;
-      pf_cmdev_state_ind(net, p_ar, PNET_EVENT_ABORT);
-      pf_cmsm_set_state(p_ar, PF_CMSM_STATE_IDLE);
+      pf_cmdev_state_ind (net, p_ar, PNET_EVENT_ABORT);
+      pf_cmsm_set_state (p_ar, PF_CMSM_STATE_IDLE);
       break;
    }
 }
 
 /********************** Public functions affecting the timer *****************/
 
-int pf_cmsm_cmdev_state_ind(
-   pnet_t                  *net,
-   pf_ar_t                 *p_ar,
-   pnet_event_values_t     event)
+int pf_cmsm_cmdev_state_ind (
+   pnet_t * net,
+   pf_ar_t * p_ar,
+   pnet_event_values_t event)
 {
-   int                     ret = -1;
+   int ret = -1;
 
    if (p_ar == NULL)
    {
       return 0;
    }
 
-   LOG_DEBUG(PNET_LOG, "CMSM(%d): Received event %s from CMDEV. Our state %s.\n", __LINE__,
-   pf_cmdev_event_to_string(event), pf_cmsm_state_to_string(p_ar->cmsm_state));
+   LOG_DEBUG (
+      PNET_LOG,
+      "CMSM(%d): Received event %s from CMDEV. Our state %s.\n",
+      __LINE__,
+      pf_cmdev_event_to_string (event),
+      pf_cmsm_state_to_string (p_ar->cmsm_state));
 
    switch (p_ar->cmsm_state)
    {
@@ -167,16 +178,26 @@ int pf_cmsm_cmdev_state_ind(
       switch (event)
       {
       case PNET_EVENT_STARTUP:
-         pf_cmsm_set_state(p_ar, PF_CMSM_STATE_RUN);
-         LOG_DEBUG(PNET_LOG, "CMSM(%d): Starting timer. cm_initiator_activity_timeout_factor %u x 100 ms\n",
-            __LINE__, (unsigned)p_ar->ar_param.cm_initiator_activity_timeout_factor);
+         pf_cmsm_set_state (p_ar, PF_CMSM_STATE_RUN);
+         LOG_DEBUG (
+            PNET_LOG,
+            "CMSM(%d): Starting timer. cm_initiator_activity_timeout_factor %u "
+            "x 100 ms\n",
+            __LINE__,
+            (unsigned)p_ar->ar_param.cm_initiator_activity_timeout_factor);
          if (p_ar->cmsm_timer != UINT32_MAX)
          {
-            pf_scheduler_remove(net, cmsm_sync_name, p_ar->cmsm_timer);
-            p_ar->cmsm_timer = UINT32_MAX;   /* unused */
+            pf_scheduler_remove (net, cmsm_sync_name, p_ar->cmsm_timer);
+            p_ar->cmsm_timer = UINT32_MAX; /* unused */
          }
-         pf_scheduler_add(net, p_ar->ar_param.cm_initiator_activity_timeout_factor*100*1000,   /* time in us */
-            cmsm_sync_name, pf_cmsm_timeout, (void *)p_ar, &p_ar->cmsm_timer);
+         pf_scheduler_add (
+            net,
+            p_ar->ar_param.cm_initiator_activity_timeout_factor * 100 *
+               1000, /* time in us */
+            cmsm_sync_name,
+            pf_cmsm_timeout,
+            (void *)p_ar,
+            &p_ar->cmsm_timer);
          ret = 0;
          break;
       default:
@@ -192,11 +213,11 @@ int pf_cmsm_cmdev_state_ind(
       case PNET_EVENT_ABORT:
          if (p_ar->cmsm_timer != UINT32_MAX)
          {
-            LOG_DEBUG(PNET_LOG, "CMSM(%d): Stopping timer.\n", __LINE__);
-            pf_scheduler_remove(net, cmsm_sync_name, p_ar->cmsm_timer);
-            p_ar->cmsm_timer = UINT32_MAX;   /* unused */
+            LOG_DEBUG (PNET_LOG, "CMSM(%d): Stopping timer.\n", __LINE__);
+            pf_scheduler_remove (net, cmsm_sync_name, p_ar->cmsm_timer);
+            p_ar->cmsm_timer = UINT32_MAX; /* unused */
          }
-         pf_cmsm_set_state(p_ar, PF_CMSM_STATE_IDLE);
+         pf_cmsm_set_state (p_ar, PF_CMSM_STATE_IDLE);
          ret = 0;
          break;
       default:
@@ -210,12 +231,12 @@ int pf_cmsm_cmdev_state_ind(
    return ret;
 }
 
-int pf_cmsm_rm_read_ind(
-   pnet_t                  *net,
-   pf_ar_t                 *p_ar,
-   pf_iod_read_request_t   *p_read_request)
+int pf_cmsm_rm_read_ind (
+   pnet_t * net,
+   pf_ar_t * p_ar,
+   pf_iod_read_request_t * p_read_request)
 {
-   int                     ret = -1;
+   int ret = -1;
 
    if (p_ar == NULL)
    {
@@ -234,13 +255,20 @@ int pf_cmsm_rm_read_ind(
          /* Restart timeout period */
          if (p_ar->cmsm_timer != UINT32_MAX)
          {
-            pf_scheduler_remove(net, cmsm_sync_name, p_ar->cmsm_timer);
-            p_ar->cmsm_timer = UINT32_MAX;   /* unused */
+            pf_scheduler_remove (net, cmsm_sync_name, p_ar->cmsm_timer);
+            p_ar->cmsm_timer = UINT32_MAX; /* unused */
          }
-         if (pf_scheduler_add(net, p_ar->ar_param.cm_initiator_activity_timeout_factor*100*1000,   /* time in us */
-            cmsm_sync_name, pf_cmsm_timeout, (void *)p_ar, &p_ar->cmsm_timer) != 0)
+         if (
+            pf_scheduler_add (
+               net,
+               p_ar->ar_param.cm_initiator_activity_timeout_factor * 100 *
+                  1000, /* time in us */
+               cmsm_sync_name,
+               pf_cmsm_timeout,
+               (void *)p_ar,
+               &p_ar->cmsm_timer) != 0)
          {
-            p_ar->cmsm_timer = UINT32_MAX;   /* unused */
+            p_ar->cmsm_timer = UINT32_MAX; /* unused */
          }
          ret = 0;
       }
@@ -254,12 +282,12 @@ int pf_cmsm_rm_read_ind(
    return ret;
 }
 
-int pf_cmsm_cm_read_ind(
-   pnet_t                  *net,
-   pf_ar_t                 *p_ar,
-   pf_iod_read_request_t   *p_read_request)
+int pf_cmsm_cm_read_ind (
+   pnet_t * net,
+   pf_ar_t * p_ar,
+   pf_iod_read_request_t * p_read_request)
 {
-   int                     ret = -1;
+   int ret = -1;
 
    if (p_ar == NULL)
    {
@@ -275,13 +303,20 @@ int pf_cmsm_cm_read_ind(
    case PF_CMSM_STATE_RUN:
       if (p_ar->cmsm_timer != UINT32_MAX)
       {
-         pf_scheduler_remove(net, cmsm_sync_name, p_ar->cmsm_timer);
-         p_ar->cmsm_timer = UINT32_MAX;   /* unused */
+         pf_scheduler_remove (net, cmsm_sync_name, p_ar->cmsm_timer);
+         p_ar->cmsm_timer = UINT32_MAX; /* unused */
       }
-      if (pf_scheduler_add(net, p_ar->ar_param.cm_initiator_activity_timeout_factor*100*1000,   /* time in us */
-         cmsm_sync_name, pf_cmsm_timeout, (void *)p_ar, &p_ar->cmsm_timer) != 0)
+      if (
+         pf_scheduler_add (
+            net,
+            p_ar->ar_param.cm_initiator_activity_timeout_factor * 100 *
+               1000, /* time in us */
+            cmsm_sync_name,
+            pf_cmsm_timeout,
+            (void *)p_ar,
+            &p_ar->cmsm_timer) != 0)
       {
-         p_ar->cmsm_timer = UINT32_MAX;   /* unused */
+         p_ar->cmsm_timer = UINT32_MAX; /* unused */
       }
       ret = 0;
       break;
@@ -290,12 +325,12 @@ int pf_cmsm_cm_read_ind(
    return ret;
 }
 
-int pf_cmsm_cm_write_ind(
-   pnet_t                  *net,
-   pf_ar_t                 *p_ar,
-   pf_iod_write_request_t   *p_write_request)
+int pf_cmsm_cm_write_ind (
+   pnet_t * net,
+   pf_ar_t * p_ar,
+   pf_iod_write_request_t * p_write_request)
 {
-   int                     ret = -1;
+   int ret = -1;
 
    if (p_ar == NULL)
    {
@@ -311,13 +346,20 @@ int pf_cmsm_cm_write_ind(
    case PF_CMSM_STATE_RUN:
       if (p_ar->cmsm_timer != UINT32_MAX)
       {
-         pf_scheduler_remove(net, cmsm_sync_name, p_ar->cmsm_timer);
-         p_ar->cmsm_timer = UINT32_MAX;   /* unused */
+         pf_scheduler_remove (net, cmsm_sync_name, p_ar->cmsm_timer);
+         p_ar->cmsm_timer = UINT32_MAX; /* unused */
       }
-      if (pf_scheduler_add(net, p_ar->ar_param.cm_initiator_activity_timeout_factor*100*1000,   /* time in us */
-         cmsm_sync_name, pf_cmsm_timeout, (void *)p_ar, &p_ar->cmsm_timer) != 0)
+      if (
+         pf_scheduler_add (
+            net,
+            p_ar->ar_param.cm_initiator_activity_timeout_factor * 100 *
+               1000, /* time in us */
+            cmsm_sync_name,
+            pf_cmsm_timeout,
+            (void *)p_ar,
+            &p_ar->cmsm_timer) != 0)
       {
-         p_ar->cmsm_timer = UINT32_MAX;   /* unused */
+         p_ar->cmsm_timer = UINT32_MAX; /* unused */
       }
       ret = 0;
       break;
@@ -325,7 +367,7 @@ int pf_cmsm_cm_write_ind(
 
    if (ret != 0)
    {
-      LOG_ERROR(PNET_LOG, "CMSM(%d): Wrong state\n", __LINE__);
+      LOG_ERROR (PNET_LOG, "CMSM(%d): Wrong state\n", __LINE__);
    }
 
    return ret;

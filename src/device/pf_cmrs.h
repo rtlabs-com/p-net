@@ -17,11 +17,8 @@
 #define PF_CMRS_H
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
-
-
 
 #ifdef __cplusplus
 }
