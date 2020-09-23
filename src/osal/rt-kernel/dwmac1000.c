@@ -41,16 +41,16 @@ COMPILETIME_ASSERT ((BUFFER_SIZE % 4) == 0);
 #define RX_MAX_BUFFERS 10
 #define TX_MAX_BUFFERS 10
 
-#undef RTK_DEBUG                /* Print debugging info? */
-#undef DEBUG_DATA               /* Print packets? */
+#undef RTK_DEBUG  /* Print debugging info? */
+#undef DEBUG_DATA /* Print packets? */
 
 #ifdef RTK_DEBUG
-#define DPRINT(...) rprintp ("dwmac1000: "__VA_ARGS__)
-#define DEBUG_ASSERT(expression)    ASSERT(expression)
+#define DPRINT(...)              rprintp ("dwmac1000: "__VA_ARGS__)
+#define DEBUG_ASSERT(expression) ASSERT (expression)
 #else
 #define DPRINT(...)
 #define DEBUG_ASSERT(expression)
-#endif  /* DEBUG */
+#endif /* DEBUG */
 
 typedef struct eth_mac
 {
@@ -78,28 +78,28 @@ typedef struct eth_mac
    uint32_t maca3lr;
 } eth_mac_t;
 
-COMPILETIME_ASSERT (offsetof(eth_mac_t, maca3lr) == 0x5c);
+COMPILETIME_ASSERT (offsetof (eth_mac_t, maca3lr) == 0x5c);
 
-#define CR_RE   BIT(2)
-#define CR_TE   BIT(3)
-#define CR_DC   BIT(4)
-#define CR_APCS BIT(7)
-#define CR_RD   BIT(9)
-#define CR_IPCO BIT(10)
-#define CR_DM   BIT(11)
-#define CR_LM   BIT(12)
-#define CR_ROD  BIT(13)
-#define CR_FES  BIT(14)
-#define CR_CSD  BIT(16)
-#define CR_JD   BIT(22)
-#define CR_WD   BIT(23)
-#define CR_CSTF BIT(25)
+#define CR_RE   BIT (2)
+#define CR_TE   BIT (3)
+#define CR_DC   BIT (4)
+#define CR_APCS BIT (7)
+#define CR_RD   BIT (9)
+#define CR_IPCO BIT (10)
+#define CR_DM   BIT (11)
+#define CR_LM   BIT (12)
+#define CR_ROD  BIT (13)
+#define CR_FES  BIT (14)
+#define CR_CSD  BIT (16)
+#define CR_JD   BIT (22)
+#define CR_WD   BIT (23)
+#define CR_CSTF BIT (25)
 
 /* Frame Filter Register */
-#define FFR_PM  BIT(4)        /* Pass All Multicast */
+#define FFR_PM BIT (4) /* Pass All Multicast */
 
-#define MIIAR_MB    BIT(0)
-#define MIIAR_MW    BIT(1)
+#define MIIAR_MB    BIT (0)
+#define MIIAR_MW    BIT (1)
 #define MIIAR_CR42  (0 << 2)
 #define MIIAR_CR62  (1 << 2)
 #define MIIAR_CR16  (2 << 2)
@@ -109,17 +109,17 @@ COMPILETIME_ASSERT (offsetof(eth_mac_t, maca3lr) == 0x5c);
 /* Ethernet MAC Management Counter registers */
 typedef struct eth_mmc
 {
-   uint32_t cr;         /* Control */
-   uint32_t rir;        /* Receive Interrupt */
-   uint32_t tir;        /* Transmit Interrupt  */
-   uint32_t rimr;       /* Receive Interrupt Mask */
-   uint32_t timr;       /* Transmit Interrupt Mask */
+   uint32_t cr;   /* Control */
+   uint32_t rir;  /* Receive Interrupt */
+   uint32_t tir;  /* Transmit Interrupt  */
+   uint32_t rimr; /* Receive Interrupt Mask */
+   uint32_t timr; /* Transmit Interrupt Mask */
    uint32_t reserved0[0x3b];
    uint32_t ipc_rcoimr; /* Receive Checksum Offload Interrupt Mask*/
 } eth_mmc_t;
 
-COMPILETIME_ASSERT (offsetof(eth_mmc_t, timr) == 0x10);
-COMPILETIME_ASSERT (offsetof(eth_mmc_t, ipc_rcoimr) == 0x100);
+COMPILETIME_ASSERT (offsetof (eth_mmc_t, timr) == 0x10);
+COMPILETIME_ASSERT (offsetof (eth_mmc_t, ipc_rcoimr) == 0x100);
 
 typedef struct eth_dma
 {
@@ -140,62 +140,62 @@ typedef struct eth_dma
    uint32_t chrbar;
 } eth_dma_t;
 
-#define BMR_SR   BIT(0)
-#define BMR_DA   BIT(1)
-#define BMR_EDFE BIT(7)
-#define BMR_FB   BIT(16)
-#define BMR_USP  BIT(23)
-#define BMR_FPM  BIT(24)
-#define BMR_AAB  BIT(25)
-#define BMR_MB   BIT(26)
+#define BMR_SR   BIT (0)
+#define BMR_DA   BIT (1)
+#define BMR_EDFE BIT (7)
+#define BMR_FB   BIT (16)
+#define BMR_USP  BIT (23)
+#define BMR_FPM  BIT (24)
+#define BMR_AAB  BIT (25)
+#define BMR_MB   BIT (26)
 
-#define SR_TS          BIT(0)
-#define SR_TPSS        BIT(1)
-#define SR_TBUS        BIT(2)
-#define SR_TJTS        BIT(3)
-#define SR_ROS         BIT(4)
-#define SR_TUS         BIT(5)
-#define SR_RS          BIT(6)
-#define SR_RBUS        BIT(7)
-#define SR_RPSS        BIT(8)
-#define SR_RWTS        BIT(9)
-#define SR_ETS         BIT(10)
-#define SR_FBES        BIT(13)
-#define SR_ERS         BIT(14)
-#define SR_AIS         BIT(15)
-#define SR_NIS         BIT(16)
+#define SR_TS          BIT (0)
+#define SR_TPSS        BIT (1)
+#define SR_TBUS        BIT (2)
+#define SR_TJTS        BIT (3)
+#define SR_ROS         BIT (4)
+#define SR_TUS         BIT (5)
+#define SR_RS          BIT (6)
+#define SR_RBUS        BIT (7)
+#define SR_RPSS        BIT (8)
+#define SR_RWTS        BIT (9)
+#define SR_ETS         BIT (10)
+#define SR_FBES        BIT (13)
+#define SR_ERS         BIT (14)
+#define SR_AIS         BIT (15)
+#define SR_NIS         BIT (16)
 #define SR_TPS         (7 << 20)
 #define SR_TPS_STALLED (6 << 20)
-#define SR_MMCS        BIT(27)
-#define SR_PMTS        BIT(28)
-#define SR_TSTS        BIT(29)
+#define SR_MMCS        BIT (27)
+#define SR_PMTS        BIT (28)
+#define SR_TSTS        BIT (29)
 
-#define OMR_SR     BIT(1)
-#define OMR_OSF    BIT(2)
-#define OMR_FUGF   BIT(6)
-#define OMR_FEF    BIT(7)
-#define OMR_ST     BIT(13)
-#define OMR_FTF    BIT(20)
-#define OMR_TSF    BIT(21)
-#define OMR_DFRF   BIT(24)
-#define OMR_RSF    BIT(25)
-#define OMR_DTCEFD BIT(26)
+#define OMR_SR     BIT (1)
+#define OMR_OSF    BIT (2)
+#define OMR_FUGF   BIT (6)
+#define OMR_FEF    BIT (7)
+#define OMR_ST     BIT (13)
+#define OMR_FTF    BIT (20)
+#define OMR_TSF    BIT (21)
+#define OMR_DFRF   BIT (24)
+#define OMR_RSF    BIT (25)
+#define OMR_DTCEFD BIT (26)
 
-#define IER_TIE   BIT(0)
-#define IER_TPSIE BIT(1)
-#define IER_TBUIE BIT(2)
-#define IER_TJTIE BIT(3)
-#define IER_ROIE  BIT(4)
-#define IER_TUIE  BIT(5)
-#define IER_RIE   BIT(6)
-#define IER_RBUIE BIT(7)
-#define IER_RPSIE BIT(8)
-#define IER_RWTIE BIT(9)
-#define IER_ETIE  BIT(10)
-#define IER_FBEIE BIT(13)
-#define IER_ERIE  BIT(14)
-#define IER_AISE  BIT(15)
-#define IER_NISE  BIT(16)
+#define IER_TIE   BIT (0)
+#define IER_TPSIE BIT (1)
+#define IER_TBUIE BIT (2)
+#define IER_TJTIE BIT (3)
+#define IER_ROIE  BIT (4)
+#define IER_TUIE  BIT (5)
+#define IER_RIE   BIT (6)
+#define IER_RBUIE BIT (7)
+#define IER_RPSIE BIT (8)
+#define IER_RWTIE BIT (9)
+#define IER_ETIE  BIT (10)
+#define IER_FBEIE BIT (13)
+#define IER_ERIE  BIT (14)
+#define IER_AISE  BIT (15)
+#define IER_NISE  BIT (16)
 
 typedef struct dma_descriptor
 {
@@ -206,19 +206,19 @@ typedef struct dma_descriptor
    struct pbuf * pbuf;
 } dma_descriptor_t;
 
-#define xDES0_OWN BIT(31)        /* Owned by DMA engine */
-#define TDES0_IC  BIT(30)        /* Interrupt on completion */
-#define TDES0_LS  BIT(29)        /* Last segment */
-#define TDES0_FS  BIT(28)        /* First segment */
-#define TDES0_TCH BIT(20)        /* Chained descriptors */
+#define xDES0_OWN BIT (31) /* Owned by DMA engine */
+#define TDES0_IC  BIT (30) /* Interrupt on completion */
+#define TDES0_LS  BIT (29) /* Last segment */
+#define TDES0_FS  BIT (28) /* First segment */
+#define TDES0_TCH BIT (20) /* Chained descriptors */
 
-#define RDES0_AFM  BIT (30)       /* Failed address filter */
-#define RDES0_ES   BIT (15)       /* Error summary */
-#define RDES0_VLAN BIT (10)       /* VLAN frame */
-#define RDES0_FS   BIT (9)        /* First segment */
-#define RDES0_LS   BIT (8)        /* Last segment */
+#define RDES0_AFM  BIT (30) /* Failed address filter */
+#define RDES0_ES   BIT (15) /* Error summary */
+#define RDES0_VLAN BIT (10) /* VLAN frame */
+#define RDES0_FS   BIT (9)  /* First segment */
+#define RDES0_LS   BIT (8)  /* Last segment */
 
-#define RDES1_RCH BIT(14)        /* Chained descriptors */
+#define RDES1_RCH BIT (14) /* Chained descriptors */
 
 typedef struct dwmac1000
 {
@@ -235,19 +235,19 @@ typedef struct dwmac1000
    /* Receive and transmit DMA descriptors */
    volatile dma_descriptor_t rx[RX_MAX_BUFFERS];
    volatile dma_descriptor_t tx[TX_MAX_BUFFERS];
-   volatile dma_descriptor_t *pRx;
-   volatile dma_descriptor_t *pTx;
+   volatile dma_descriptor_t * pRx;
+   volatile dma_descriptor_t * pTx;
 
    /* MIIAR CR divider */
    uint32_t cr;
 } dwmac1000_t;
 
-static os_eth_callback_t* input_rx_hook = NULL;
-static void* input_rx_arg = NULL;
+static os_eth_callback_t * input_rx_hook = NULL;
+static void * input_rx_arg = NULL;
 
 #ifdef DEBUG_DATA
 #include <ctype.h>
-static void dwmac1000_pbuf_dump (struct pbuf *p)
+static void dwmac1000_pbuf_dump (struct pbuf * p)
 {
    int i, j, n;
    char s[80];
@@ -257,58 +257,65 @@ static void dwmac1000_pbuf_dump (struct pbuf *p)
       n = 0;
       for (j = 0; j < 16 && (i + j) < p->len; j++)
       {
-         n += rsnprintf (s + n, sizeof(s) - n, "%02x ",
-                         *(uint8_t *)(p->payload + i + j));
+         n += rsnprintf (
+            s + n,
+            sizeof (s) - n,
+            "%02x ",
+            *(uint8_t *)(p->payload + i + j));
       }
       for (; j < 16; j++)
       {
-         n += rsnprintf (s + n, sizeof(s) - n, "   ");
+         n += rsnprintf (s + n, sizeof (s) - n, "   ");
       }
-      n += rsnprintf (s + n, sizeof(s) - n, "|");
+      n += rsnprintf (s + n, sizeof (s) - n, "|");
       for (j = 0; j < 16 && (i + j) < p->len; j++)
       {
          uint8_t c = *(uint8_t *)(p->payload + i + j);
          c = (isprint (c)) ? c : '.';
-         n += rsnprintf (s + n, sizeof(s) - n, "%c", c);
+         n += rsnprintf (s + n, sizeof (s) - n, "%c", c);
       }
-      n += rsnprintf (s + n, sizeof(s) - n, "|\n");
+      n += rsnprintf (s + n, sizeof (s) - n, "|\n");
       DPRINT ("%s", s);
    }
 }
-#endif  /* DEBUG_DATA */
+#endif /* DEBUG_DATA */
 
 static uint16_t dwmac1000_read_phy (void * arg, uint8_t address, uint8_t reg)
 {
-   dwmac1000_t *dwmac1000 = arg;
+   dwmac1000_t * dwmac1000 = arg;
    volatile eth_mac_t * mac = dwmac1000->mac;
    uint16_t value;
 
-   mac->miiar = (address << 11) | (reg << 6) | MIIAR_MB |
-      dwmac1000->cr;
-   while (mac->miiar & MIIAR_MB);
+   mac->miiar = (address << 11) | (reg << 6) | MIIAR_MB | dwmac1000->cr;
+   while (mac->miiar & MIIAR_MB)
+      ;
 
    value = mac->miidr;
    DPRINT ("phy_read: %02d = %04x\n", reg, value);
    return value;
 }
 
-static void dwmac1000_write_phy (void * arg, uint8_t address, uint8_t reg,
-                                uint16_t value)
+static void dwmac1000_write_phy (
+   void * arg,
+   uint8_t address,
+   uint8_t reg,
+   uint16_t value)
 {
-   dwmac1000_t *dwmac1000 = arg;
+   dwmac1000_t * dwmac1000 = arg;
    volatile eth_mac_t * mac = dwmac1000->mac;
 
    mac->miidr = value;
    mac->miiar = (address << 11) | (reg << 6) | MIIAR_MW | MIIAR_MB |
-      dwmac1000->cr;
-   while (mac->miiar & MIIAR_MB);
+                dwmac1000->cr;
+   while (mac->miiar & MIIAR_MB)
+      ;
 
    DPRINT ("phy_write: %02d = %04x\n", reg, value);
 }
 
-static void dwmac1000_hw_init (struct netif *netif, const dwmac1000_cfg_t * cfg)
+static void dwmac1000_hw_init (struct netif * netif, const dwmac1000_cfg_t * cfg)
 {
-   dwmac1000_t *dwmac1000 = netif->state;
+   dwmac1000_t * dwmac1000 = netif->state;
    volatile eth_mac_t * mac = dwmac1000->mac;
    volatile eth_mmc_t * mmc = dwmac1000->mmc;
    volatile eth_dma_t * dma = dwmac1000->dma;
@@ -316,7 +323,8 @@ static void dwmac1000_hw_init (struct netif *netif, const dwmac1000_cfg_t * cfg)
 
    /* Software reset */
    dma->bmr = BMR_SR;
-   while (dma->bmr & BMR_SR);
+   while (dma->bmr & BMR_SR)
+      ;
 
    /* Configure MII divider according to HCLK */
    if (cfg->hclk >= 150 * 1000 * 1000)
@@ -344,14 +352,9 @@ static void dwmac1000_hw_init (struct netif *netif, const dwmac1000_cfg_t * cfg)
    mac->cr = CR_RE | CR_TE;
 
    /* Set mac address */
-   mac->maca0hr =
-      netif->hwaddr[5] << 8 |
-      netif->hwaddr[4] << 0;
-   mac->maca0lr =
-      netif->hwaddr[3] << 24 |
-      netif->hwaddr[2] << 16 |
-      netif->hwaddr[1] << 8  |
-      netif->hwaddr[0] << 0;
+   mac->maca0hr = netif->hwaddr[5] << 8 | netif->hwaddr[4] << 0;
+   mac->maca0lr = netif->hwaddr[3] << 24 | netif->hwaddr[2] << 16 |
+                  netif->hwaddr[1] << 8 | netif->hwaddr[0] << 0;
 
    /* Enable reception of all broadcast and multicast frames.
     * Enable reception of unicast frames with selected MAC address.
@@ -366,7 +369,7 @@ static void dwmac1000_hw_init (struct netif *netif, const dwmac1000_cfg_t * cfg)
    /* Setup Rx descriptors using chained mode */
    for (ix = 0; ix < cfg->rx_buffers; ix++)
    {
-      struct pbuf * p = pbuf_alloc(PBUF_RAW, BUFFER_SIZE, PBUF_POOL);
+      struct pbuf * p = pbuf_alloc (PBUF_RAW, BUFFER_SIZE, PBUF_POOL);
       UASSERT (p != NULL, EMEM);
 
       dwmac1000->rx[ix].des0 = xDES0_OWN;
@@ -405,7 +408,8 @@ static void dwmac1000_hw_init (struct netif *netif, const dwmac1000_cfg_t * cfg)
 
    /* Flush FIFO */
    dma->omr = OMR_FTF;
-   while (dma->omr & OMR_FTF);
+   while (dma->omr & OMR_FTF)
+      ;
 
    /* Start DMA */
    dma->omr = OMR_DTCEFD | OMR_RSF | OMR_TSF | OMR_ST | OMR_SR;
@@ -419,19 +423,19 @@ static void dwmac1000_hw_init (struct netif *netif, const dwmac1000_cfg_t * cfg)
  * might be chained.
  *
  */
-static err_t dwmac1000_hw_transmit_frame (struct netif *netif, struct pbuf *p)
+static err_t dwmac1000_hw_transmit_frame (struct netif * netif, struct pbuf * p)
 {
-   dwmac1000_t *dwmac1000 = netif->state;
+   dwmac1000_t * dwmac1000 = netif->state;
    volatile eth_dma_t * dma = dwmac1000->dma;
-   struct pbuf *q;
+   struct pbuf * q;
    volatile dma_descriptor_t * pTx;
    uint8_t * buffer;
 
    if (p->tot_len > BUFFER_SIZE)
    {
-      DPRINT("transmit_frame: frame is too big\n");
+      DPRINT ("transmit_frame: frame is too big\n");
       LINK_STATS_INC (link.drop);
-      LINK_STATS_INC(link.lenerr);
+      LINK_STATS_INC (link.lenerr);
       return ERR_OK;
    }
 
@@ -439,7 +443,7 @@ static err_t dwmac1000_hw_transmit_frame (struct netif *netif, struct pbuf *p)
    mtx_lock (dwmac1000->mtx_tx);
 
 #if ETH_PAD_SIZE
-   pbuf_header (p, -ETH_PAD_SIZE);  /* drop the padding word */
+   pbuf_header (p, -ETH_PAD_SIZE); /* drop the padding word */
 #endif
 
    pTx = dwmac1000->pTx;
@@ -449,7 +453,7 @@ static err_t dwmac1000_hw_transmit_frame (struct netif *netif, struct pbuf *p)
    if (pTx->des0 & xDES0_OWN)
    {
       /* No free descriptors, packet dropped */
-      LINK_STATS_INC(link.drop);
+      LINK_STATS_INC (link.drop);
       goto exit;
    }
 
@@ -462,7 +466,7 @@ static err_t dwmac1000_hw_transmit_frame (struct netif *netif, struct pbuf *p)
       DPRINT ("out (%d):\n", q->len);
 #ifdef DEBUG_DATA
       dwmac1000_pbuf_dump (q);
-#endif  /* DEBUG_DATA */
+#endif /* DEBUG_DATA */
    }
 
    /* Finalize DMA descriptor. Passes ownership of descriptor to hardware */
@@ -470,28 +474,28 @@ static err_t dwmac1000_hw_transmit_frame (struct netif *netif, struct pbuf *p)
    pTx->des0 = xDES0_OWN | TDES0_FS | TDES0_LS | TDES0_TCH;
 
    /* Start Tx engine if stalled */
-   dma->sr = SR_TBUS;     /* Clear buffer unavailable */
-   dma->tpdr = 1;         /* Demand transmit poll */
+   dma->sr = SR_TBUS; /* Clear buffer unavailable */
+   dma->tpdr = 1;     /* Demand transmit poll */
 
    /* Move to next descriptor */
    pTx = pTx->next;
    dwmac1000->pTx = pTx;
 
-   LINK_STATS_INC(link.xmit);
+   LINK_STATS_INC (link.xmit);
 
- exit:
+exit:
 
 #if ETH_PAD_SIZE
-   pbuf_header (p, ETH_PAD_SIZE);   /* reclaim the padding word */
+   pbuf_header (p, ETH_PAD_SIZE); /* reclaim the padding word */
 #endif
 
    mtx_unlock (dwmac1000->mtx_tx);
    return ERR_OK;
 }
 
-static void dwmac1000_isr (void *arg)
+static void dwmac1000_isr (void * arg)
 {
-   dwmac1000_t *dwmac1000 = (dwmac1000_t *)arg;
+   dwmac1000_t * dwmac1000 = (dwmac1000_t *)arg;
    volatile eth_dma_t * dma = dwmac1000->dma;
    uint32_t sr;
 
@@ -499,7 +503,7 @@ static void dwmac1000_isr (void *arg)
    sr = dma->sr;
    dma->sr = sr;
 
-   if(sr & SR_RS)
+   if (sr & SR_RS)
    {
       /* Packet received, serve in task */
       task_start (dwmac1000->tRcv);
@@ -515,10 +519,10 @@ static void dwmac1000_isr (void *arg)
  * Should allocate a pbuf and transfer the bytes of the incoming
  * packet from the interface into the pbuf.
  */
-static struct pbuf *dwmac1000_hw_get_received_frame (dwmac1000_t *dwmac1000)
+static struct pbuf * dwmac1000_hw_get_received_frame (dwmac1000_t * dwmac1000)
 {
-   struct pbuf *p = NULL;
-   struct pbuf *q = NULL;
+   struct pbuf * p = NULL;
+   struct pbuf * q = NULL;
    uint16_t length;
    volatile dma_descriptor_t * pRx;
    uint32_t des0;
@@ -538,13 +542,13 @@ static struct pbuf *dwmac1000_hw_get_received_frame (dwmac1000_t *dwmac1000)
    p = pRx->pbuf;
    p->payload = pRx->buff;
    length = (des0 >> 16) & 0x3FFF;
-   length -= 4;                 /* Drop CRC */
+   length -= 4; /* Drop CRC */
    p->len = p->tot_len = length;
 
    DPRINT ("in (%d):\n", p->len);
 #ifdef DEBUG_DATA
    dwmac1000_pbuf_dump (q);
-#endif  /* DEBUG_DATA */
+#endif /* DEBUG_DATA */
 
 #if ETH_PAD_SIZE
 #error "ETH_PAD_SIZE not supported"
@@ -555,7 +559,7 @@ static struct pbuf *dwmac1000_hw_get_received_frame (dwmac1000_t *dwmac1000)
 
    if (q != NULL)
    {
-      DEBUG_ASSERT(q->len == q->tot_len);
+      DEBUG_ASSERT (q->len == q->tot_len);
       pRx->buff = q->payload;
       pRx->pbuf = q;
       LINK_STATS_INC (link.recv);
@@ -567,7 +571,7 @@ static struct pbuf *dwmac1000_hw_get_received_frame (dwmac1000_t *dwmac1000)
       LINK_STATS_INC (link.drop);
    }
 
- done:
+done:
    /* Assign descriptor back to DMA engine */
    pRx->des0 = xDES0_OWN;
 
@@ -591,11 +595,11 @@ static struct pbuf *dwmac1000_hw_get_received_frame (dwmac1000_t *dwmac1000)
  * called.
  *
  */
-static void dwmac1000_input (dwmac1000_t *dwmac1000, struct netif *netif)
+static void dwmac1000_input (dwmac1000_t * dwmac1000, struct netif * netif)
 {
    int handled = 0;
-   struct eth_hdr *ethhdr;
-   struct pbuf *p;
+   struct eth_hdr * ethhdr;
+   struct pbuf * p;
 
    /* Move received packet into a new pbuf */
    p = dwmac1000_hw_get_received_frame (dwmac1000);
@@ -611,7 +615,7 @@ static void dwmac1000_input (dwmac1000_t *dwmac1000, struct netif *netif)
    /* Pass pbuf to rx hook if set */
    if (input_rx_hook != NULL)
    {
-      handled = input_rx_hook(input_rx_arg, p);
+      handled = input_rx_hook (input_rx_arg, p);
       if (handled != 0)
       {
          return;
@@ -643,10 +647,10 @@ static void dwmac1000_input (dwmac1000_t *dwmac1000, struct netif *netif)
  * NOTE: It is not thread-safe and expected to only be called from
  * EthRcv.
  */
-static void dwmac1000_receiver (void *arg)
+static void dwmac1000_receiver (void * arg)
 {
-   struct netif *netif = (struct netif *)arg;
-   dwmac1000_t *dwmac1000 = netif->state;
+   struct netif * netif = (struct netif *)arg;
+   dwmac1000_t * dwmac1000 = netif->state;
 
    for (;;)
    {
@@ -703,7 +707,7 @@ static void dwmac1000_hotplug (drv_t * drv, dev_state_t state)
 
 static dev_state_t dwmac1000_probe (drv_t * drv)
 {
-   dwmac1000_t *dwmac1000 = (dwmac1000_t *)drv;
+   dwmac1000_t * dwmac1000 = (dwmac1000_t *)drv;
    uint8_t link_state;
 
    link_state = dwmac1000->phy->ops->get_link_state (dwmac1000->phy);
@@ -717,32 +721,34 @@ int eth_ioctl (drv_t * drv, void * arg, int req, void * param)
 
    if (req == IOCTL_NET_SET_RX_HOOK)
    {
-      input_rx_hook = (os_eth_callback_t*)param;
+      input_rx_hook = (os_eth_callback_t *)param;
       input_rx_arg = arg;
       return 0;
    }
    else
    {
-      UASSERT(0, EARG);
+      UASSERT (0, EARG);
    }
 
    return status;
 }
 
-static const drv_ops_t dwmac1000_ops =
-{
-   .open    = NULL,
-   .read    = NULL,
-   .write   = NULL,
-   .close   = NULL,
-   .ioctl   = NULL,
+static const drv_ops_t dwmac1000_ops = {
+   .open = NULL,
+   .read = NULL,
+   .write = NULL,
+   .close = NULL,
+   .ioctl = NULL,
    .hotplug = dwmac1000_hotplug,
 };
 
-drv_t * dwmac1000_init (const char * name, const dwmac1000_cfg_t * cfg,
-                       struct netif * netif, phy_t * phy)
+drv_t * dwmac1000_init (
+   const char * name,
+   const dwmac1000_cfg_t * cfg,
+   struct netif * netif,
+   phy_t * phy)
 {
-   dwmac1000_t *dwmac1000;
+   dwmac1000_t * dwmac1000;
 
    UASSERT (cfg->hclk >= 20 * 1000 * 1000, EARG);
    UASSERT (cfg->rx_buffers <= RX_MAX_BUFFERS, EARG);
@@ -753,15 +759,15 @@ drv_t * dwmac1000_init (const char * name, const dwmac1000_cfg_t * cfg,
    UASSERT (dwmac1000 != NULL, EMEM);
 
    /* Initialise netif */
-   netif->state      = dwmac1000;
-   netif->name[0]    = 'e';
-   netif->name[1]    = 'n';
-   netif->output     = etharp_output;
+   netif->state = dwmac1000;
+   netif->name[0] = 'e';
+   netif->name[1] = 'n';
+   netif->output = etharp_output;
    netif->linkoutput = dwmac1000_hw_transmit_frame;
-   netif->mtu = 1500;   /* maximum transfer unit */
+   netif->mtu = 1500; /* maximum transfer unit */
    netif->flags |= NETIF_FLAG_BROADCAST | NETIF_FLAG_ETHARP | NETIF_FLAG_IGMP;
    netif->hwaddr_len = ETHARP_HWADDR_LEN;
-   memcpy (netif->hwaddr, cfg->mac_address, sizeof(netif->hwaddr));
+   memcpy (netif->hwaddr, cfg->mac_address, sizeof (netif->hwaddr));
 
    /* Initialise driver state */
    dwmac1000->phy = phy;
@@ -772,16 +778,17 @@ drv_t * dwmac1000_init (const char * name, const dwmac1000_cfg_t * cfg,
    dwmac1000->dma = (eth_dma_t *)(cfg->base + 0x1000);
 
    /* Create receive task */
-   dwmac1000->tRcv = task_spawn ("EthRcv",
-                                 dwmac1000_receiver,
-                                 cfg->rx_task_prio,
-                                 cfg->rx_task_stack + 256,  // Bjarne
-                                 netif);
+   dwmac1000->tRcv = task_spawn (
+      "EthRcv",
+      dwmac1000_receiver,
+      cfg->rx_task_prio,
+      cfg->rx_task_stack + 256, // Bjarne
+      netif);
 
    /* Initialise PHY */
    dwmac1000->phy->arg = dwmac1000;
    if (dwmac1000->phy->read == NULL)
-      dwmac1000->phy->read  = dwmac1000_read_phy;
+      dwmac1000->phy->read = dwmac1000_read_phy;
    if (dwmac1000->phy->write == NULL)
       dwmac1000->phy->write = dwmac1000_write_phy;
 

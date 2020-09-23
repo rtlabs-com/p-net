@@ -13,7 +13,7 @@
  * full license information.
  ********************************************************************/
 
-#define _GNU_SOURCE  /* For asprintf() */
+#define _GNU_SOURCE /* For asprintf() */
 
 #include <osal.h>
 
@@ -37,128 +37,137 @@
 #include <time.h>
 #include <unistd.h>
 
-
 /* Priority of timer callback thread (if USE_SCHED_FIFO is set) */
-#define TIMER_PRIO        5
+#define TIMER_PRIO 5
 
-#define USECS_PER_SEC     (1 * 1000 * 1000)
-#define NSECS_PER_SEC     (1 * 1000 * 1000 * 1000)
+#define USECS_PER_SEC (1 * 1000 * 1000)
+#define NSECS_PER_SEC (1 * 1000 * 1000 * 1000)
 
-
-int os_save_file(
-   const char              *fullpath,
-   void                    *object_1,
-   size_t                  size_1,
-   void                    *object_2,
-   size_t                  size_2
-)
+int os_save_file (
+   const char * fullpath,
+   void * object_1,
+   size_t size_1,
+   void * object_2,
+   size_t size_2)
 {
-   int                     ret = 0;  /* Assume everything goes well */
-   FILE                    *outputfile;
+   int ret = 0; /* Assume everything goes well */
+   FILE * outputfile;
 
    /* Open file */
-   outputfile = fopen(fullpath, "wb");
+   outputfile = fopen (fullpath, "wb");
    if (outputfile == NULL)
    {
-      os_log(LOG_LEVEL_ERROR, "Could not open file %s\n", fullpath);
+      os_log (LOG_LEVEL_ERROR, "Could not open file %s\n", fullpath);
       return -1;
    }
 
    /* Write file contents */
-   os_log(LOG_LEVEL_DEBUG, "Saving to file %s\n", fullpath);
+   os_log (LOG_LEVEL_DEBUG, "Saving to file %s\n", fullpath);
    if (size_1 > 0)
    {
-      if(fwrite(object_1, size_1, 1, outputfile) != 1)
+      if (fwrite (object_1, size_1, 1, outputfile) != 1)
       {
          ret = -1;
-         os_log(LOG_LEVEL_ERROR, "Failed to write file %s\n", fullpath);
+         os_log (LOG_LEVEL_ERROR, "Failed to write file %s\n", fullpath);
       }
    }
    if (size_2 > 0 && ret == 0)
    {
-      if(fwrite(object_2, size_2, 1, outputfile) != 1)
+      if (fwrite (object_2, size_2, 1, outputfile) != 1)
       {
          ret = -1;
-         os_log(LOG_LEVEL_ERROR, "Failed to write file %s\n (second buffer)", fullpath);
+         os_log (
+            LOG_LEVEL_ERROR,
+            "Failed to write file %s\n (second buffer)",
+            fullpath);
       }
    }
 
    /* Close file */
-   fclose(outputfile);
+   fclose (outputfile);
 
    return ret;
 }
 
-void os_clear_file(
-   const char              *fullpath
-)
+void os_clear_file (const char * fullpath)
 {
-   os_log(LOG_LEVEL_DEBUG, "Clearing file %s\n", fullpath);
-   (void)remove(fullpath);
+   os_log (LOG_LEVEL_DEBUG, "Clearing file %s\n", fullpath);
+   (void)remove (fullpath);
 }
 
-int os_load_file(
-   const char              *fullpath,
-   void                    *object_1,
-   size_t                  size_1,
-   void                    *object_2,
-   size_t                  size_2
-)
+int os_load_file (
+   const char * fullpath,
+   void * object_1,
+   size_t size_1,
+   void * object_2,
+   size_t size_2)
 {
-   int                     ret = 0;  /* Assume everything goes well */
-   FILE                    *inputfile;
+   int ret = 0; /* Assume everything goes well */
+   FILE * inputfile;
 
    /* Open file */
-   inputfile = fopen(fullpath, "rb");
+   inputfile = fopen (fullpath, "rb");
    if (inputfile == NULL)
    {
-      os_log(LOG_LEVEL_DEBUG, "Could not yet open file %s\n", fullpath);
+      os_log (LOG_LEVEL_DEBUG, "Could not yet open file %s\n", fullpath);
       return -1;
    }
 
    /* Read file contents */
    if (size_1 > 0)
    {
-      if(fread(object_1, size_1, 1, inputfile) != 1)
+      if (fread (object_1, size_1, 1, inputfile) != 1)
       {
          ret = -1;
-         os_log(LOG_LEVEL_ERROR, "Failed to read file %s\n", fullpath);
+         os_log (LOG_LEVEL_ERROR, "Failed to read file %s\n", fullpath);
       }
    }
 
    if (size_2 > 0 && ret == 0)
    {
-      if(fread(object_2, size_2, 1, inputfile) != 1)
+      if (fread (object_2, size_2, 1, inputfile) != 1)
       {
          ret = -1;
-         os_log(LOG_LEVEL_ERROR, "Failed to read file %s\n (second buffer)", fullpath);
+         os_log (
+            LOG_LEVEL_ERROR,
+            "Failed to read file %s\n (second buffer)",
+            fullpath);
       }
    }
 
    /* Close file */
-   fclose(inputfile);
+   fclose (inputfile);
 
    return ret;
 }
 
 void os_log (int type, const char * fmt, ...)
 {
-   va_list                 list;
-   time_t                   rawtime;
-   struct tm                *timestruct;
-   char                     timestamp[10];
+   va_list list;
+   time_t rawtime;
+   struct tm * timestruct;
+   char timestamp[10];
 
-   time(&rawtime);
-   timestruct = localtime(&rawtime);
-   strftime(timestamp, sizeof(timestamp), "%H:%M:%S", timestruct);
+   time (&rawtime);
+   timestruct = localtime (&rawtime);
+   strftime (timestamp, sizeof (timestamp), "%H:%M:%S", timestruct);
 
-   switch(LOG_LEVEL_GET (type))
+   switch (LOG_LEVEL_GET (type))
    {
-   case LOG_LEVEL_DEBUG:   printf ("[%s DEBUG] ", timestamp); break;
-   case LOG_LEVEL_INFO:    printf ("[%s INFO ] ", timestamp); break;
-   case LOG_LEVEL_WARNING: printf ("[%s WARN ] ", timestamp); break;
-   case LOG_LEVEL_ERROR:   printf ("[%s ERROR] ", timestamp); break;
-   default: break;
+   case LOG_LEVEL_DEBUG:
+      printf ("[%s DEBUG] ", timestamp);
+      break;
+   case LOG_LEVEL_INFO:
+      printf ("[%s INFO ] ", timestamp);
+      break;
+   case LOG_LEVEL_WARNING:
+      printf ("[%s WARN ] ", timestamp);
+      break;
+   case LOG_LEVEL_ERROR:
+      printf ("[%s ERROR] ", timestamp);
+      break;
+   default:
+      break;
    }
 
    va_start (list, fmt);
@@ -172,11 +181,15 @@ void * os_malloc (size_t size)
    return malloc (size);
 }
 
-os_thread_t * os_thread_create (const char * name, int priority,
-        int stacksize, void (*entry) (void * arg), void * arg)
+os_thread_t * os_thread_create (
+   const char * name,
+   int priority,
+   int stacksize,
+   void (*entry) (void * arg),
+   void * arg)
 {
    int result;
-   pthread_t * thread = malloc (sizeof(*thread));
+   pthread_t * thread = malloc (sizeof (*thread));
    if (thread == NULL)
    {
       return NULL;
@@ -187,9 +200,9 @@ os_thread_t * os_thread_create (const char * name, int priority,
    pthread_attr_init (&attr);
    pthread_attr_setstacksize (&attr, PTHREAD_STACK_MIN + stacksize);
 
-#if defined (USE_SCHED_FIFO)
+#if defined(USE_SCHED_FIFO)
    CC_STATIC_ASSERT (_POSIX_THREAD_PRIORITY_SCHEDULING > 0);
-   struct sched_param param = { .sched_priority = priority };
+   struct sched_param param = {.sched_priority = priority};
    pthread_attr_setinheritsched (&attr, PTHREAD_EXPLICIT_SCHED);
    pthread_attr_setschedpolicy (&attr, SCHED_FIFO);
    pthread_attr_setschedparam (&attr, &param);
@@ -198,7 +211,7 @@ os_thread_t * os_thread_create (const char * name, int priority,
    result = pthread_create (thread, &attr, (void *)entry, arg);
    if (result != 0)
    {
-      free(thread);
+      free (thread);
       return NULL;
    }
 
@@ -209,7 +222,7 @@ os_thread_t * os_thread_create (const char * name, int priority,
 os_mutex_t * os_mutex_create (void)
 {
    int result;
-   pthread_mutex_t * mutex = malloc (sizeof(*mutex));
+   pthread_mutex_t * mutex = malloc (sizeof (*mutex));
    if (mutex == NULL)
    {
       return NULL;
@@ -224,7 +237,7 @@ os_mutex_t * os_mutex_create (void)
    result = pthread_mutex_init (mutex, &attr);
    if (result != 0)
    {
-      free(mutex);
+      free (mutex);
       return NULL;
    }
 
@@ -255,7 +268,7 @@ os_sem_t * os_sem_create (size_t count)
    os_sem_t * sem;
    pthread_mutexattr_t attr;
 
-   sem = (os_sem_t *)malloc (sizeof(*sem));
+   sem = (os_sem_t *)malloc (sizeof (*sem));
    if (sem == NULL)
    {
       return NULL;
@@ -306,7 +319,7 @@ int os_sem_wait (os_sem_t * sem, uint32_t time)
 
    sem->count--;
 
- timeout:
+timeout:
    pthread_mutex_unlock (&sem->mutex);
    return (error) ? 1 : 0;
 }
@@ -352,7 +365,7 @@ os_event_t * os_event_create (void)
    os_event_t * event;
    pthread_mutexattr_t attr;
 
-   event = (os_event_t *)malloc (sizeof(*event));
+   event = (os_event_t *)malloc (sizeof (*event));
    if (event == NULL)
    {
       return NULL;
@@ -367,7 +380,11 @@ os_event_t * os_event_create (void)
    return event;
 }
 
-int os_event_wait (os_event_t * event, uint32_t mask, uint32_t * value, uint32_t time)
+int os_event_wait (
+   os_event_t * event,
+   uint32_t mask,
+   uint32_t * value,
+   uint32_t time)
 {
    struct timespec ts;
    int error = 0;
@@ -402,7 +419,7 @@ int os_event_wait (os_event_t * event, uint32_t mask, uint32_t * value, uint32_t
       }
    }
 
- timeout:
+timeout:
    *value = event->flags & mask;
    pthread_mutex_unlock (&event->mutex);
    return (error) ? 1 : 0;
@@ -436,7 +453,7 @@ os_mbox_t * os_mbox_create (size_t size)
    os_mbox_t * mbox;
    pthread_mutexattr_t attr;
 
-   mbox = (os_mbox_t *)malloc (sizeof(*mbox) + size * sizeof(void *));
+   mbox = (os_mbox_t *)malloc (sizeof (*mbox) + size * sizeof (void *));
    if (mbox == NULL)
    {
       return NULL;
@@ -447,10 +464,10 @@ os_mbox_t * os_mbox_create (size_t size)
    pthread_mutexattr_setprotocol (&attr, PTHREAD_PRIO_INHERIT);
    pthread_mutex_init (&mbox->mutex, &attr);
 
-   mbox->r     = 0;
-   mbox->w     = 0;
+   mbox->r = 0;
+   mbox->w = 0;
    mbox->count = 0;
-   mbox->size  = size;
+   mbox->size = size;
 
    return mbox;
 }
@@ -496,7 +513,7 @@ int os_mbox_fetch (os_mbox_t * mbox, void ** msg, uint32_t time)
 
    mbox->count--;
 
- timeout:
+timeout:
    pthread_mutex_unlock (&mbox->mutex);
    pthread_cond_signal (&mbox->cond);
 
@@ -544,7 +561,7 @@ int os_mbox_post (os_mbox_t * mbox, void * msg, uint32_t time)
 
    mbox->count++;
 
- timeout:
+timeout:
    pthread_mutex_unlock (&mbox->mutex);
    pthread_cond_signal (&mbox->cond);
 
@@ -570,7 +587,7 @@ static void os_timer_thread (void * arg)
    /* Add SIGALRM */
    sigemptyset (&sigset);
    sigprocmask (SIG_BLOCK, &sigset, NULL);
-   sigaddset(&sigset, SIGALRM);
+   sigaddset (&sigset, SIGALRM);
 
    tmo.tv_sec = 0;
    tmo.tv_nsec = 500 * 1000 * 1000;
@@ -586,8 +603,11 @@ static void os_timer_thread (void * arg)
    }
 }
 
-os_timer_t * os_timer_create (uint32_t us, void (*fn) (os_timer_t *, void * arg),
-                              void * arg, bool oneshot)
+os_timer_t * os_timer_create (
+   uint32_t us,
+   void (*fn) (os_timer_t *, void * arg),
+   void * arg,
+   bool oneshot)
 {
    os_timer_t * timer;
    struct sigevent sev;
@@ -598,25 +618,25 @@ os_timer_t * os_timer_create (uint32_t us, void (*fn) (os_timer_t *, void * arg)
    sigaddset (&sigset, SIGALRM);
    sigprocmask (SIG_BLOCK, &sigset, NULL);
 
-   timer = (os_timer_t *)malloc (sizeof(*timer));
+   timer = (os_timer_t *)malloc (sizeof (*timer));
    if (timer == NULL)
    {
       return NULL;
    }
 
-   timer->exit      = false;
+   timer->exit = false;
    timer->thread_id = 0;
-   timer->fn        = fn;
-   timer->arg       = arg;
-   timer->us        = us;
-   timer->oneshot   = oneshot;
+   timer->fn = fn;
+   timer->arg = arg;
+   timer->us = us;
+   timer->oneshot = oneshot;
 
    /* Create timer thread */
-   timer->thread = os_thread_create ("os_timer", TIMER_PRIO, 1024,
-                                     os_timer_thread,timer);
+   timer->thread =
+      os_thread_create ("os_timer", TIMER_PRIO, 1024, os_timer_thread, timer);
    if (timer->thread == NULL)
    {
-      free(timer);
+      free (timer);
       return NULL;
    }
 
@@ -635,7 +655,7 @@ os_timer_t * os_timer_create (uint32_t us, void (*fn) (os_timer_t *, void * arg)
 
    if (timer_create (CLOCK_MONOTONIC, &sev, &timer->timerid) == -1)
    {
-      free(timer);
+      free (timer);
       return NULL;
    }
 
@@ -679,36 +699,38 @@ void os_timer_destroy (os_timer_t * timer)
    free (timer);
 }
 
-uint32_t    os_buf_alloc_cnt = 0; /* Count outstanding buffers */
+uint32_t os_buf_alloc_cnt = 0; /* Count outstanding buffers */
 
-os_buf_t * os_buf_alloc(uint16_t length)
+os_buf_t * os_buf_alloc (uint16_t length)
 {
-   os_buf_t *p = malloc(sizeof(os_buf_t) + length);
+   os_buf_t * p = malloc (sizeof (os_buf_t) + length);
 
    if (p != NULL)
    {
 #if 1
-      p->payload = (void *)((uint8_t *)p + sizeof(os_buf_t));  /* Payload follows header struct */
+      p->payload = (void *)((uint8_t *)p + sizeof (os_buf_t)); /* Payload
+                                                                  follows header
+                                                                  struct */
       p->len = length;
 #endif
       os_buf_alloc_cnt++;
    }
    else
    {
-      assert("malloc() failed\n");
+      assert ("malloc() failed\n");
    }
 
    return p;
 }
 
-void os_buf_free(os_buf_t *p)
+void os_buf_free (os_buf_t * p)
 {
-   free(p);
+   free (p);
    os_buf_alloc_cnt--;
    return;
 }
 
-uint8_t os_buf_header(os_buf_t *p, int16_t header_size_increment)
+uint8_t os_buf_header (os_buf_t * p, int16_t header_size_increment)
 {
    return 255;
 }
@@ -716,41 +738,45 @@ uint8_t os_buf_header(os_buf_t *p, int16_t header_size_increment)
 /** @internal
  * Convert IPv4 address to string
  * @param ip               In: IP address
- * @param outputstring     Out: Resulting string. Should have length OS_INET_ADDRSTRLEN.
+ * @param outputstring     Out: Resulting string. Should have length
+ * OS_INET_ADDRSTRLEN.
  */
-static void os_ip_to_string(
-   os_ipaddr_t             ip,
-   char                    *outputstring)
+static void os_ip_to_string (os_ipaddr_t ip, char * outputstring)
 {
-   snprintf(outputstring, OS_INET_ADDRSTRLEN, "%u.%u.%u.%u",
-      (uint8_t)((ip >> 24) & 0xFF),
-      (uint8_t)((ip >> 16) & 0xFF),
-      (uint8_t)((ip >> 8) & 0xFF),
-      (uint8_t)(ip & 0xFF));
+   snprintf (
+      outputstring,
+      OS_INET_ADDRSTRLEN,
+      "%u.%u.%u.%u",
+      (uint8_t) ((ip >> 24) & 0xFF),
+      (uint8_t) ((ip >> 16) & 0xFF),
+      (uint8_t) ((ip >> 8) & 0xFF),
+      (uint8_t) (ip & 0xFF));
 }
 
-int os_set_ip_suite(
-   const char              *interface_name,
-   os_ipaddr_t             *p_ipaddr,
-   os_ipaddr_t             *p_netmask,
-   os_ipaddr_t             *p_gw,
-   const char              *hostname,
-   bool                    permanent)
+int os_set_ip_suite (
+   const char * interface_name,
+   os_ipaddr_t * p_ipaddr,
+   os_ipaddr_t * p_netmask,
+   os_ipaddr_t * p_gw,
+   const char * hostname,
+   bool permanent)
 {
-   char                    ip_string[OS_INET_ADDRSTRLEN];
-   char                    netmask_string[OS_INET_ADDRSTRLEN];
-   char                    gateway_string[OS_INET_ADDRSTRLEN];
-   char                    *permanent_string;
-   char                    *outputcommand;
-   int                     textlen = -1;
-   int                     status = -1;
+   char ip_string[OS_INET_ADDRSTRLEN];
+   char netmask_string[OS_INET_ADDRSTRLEN];
+   char gateway_string[OS_INET_ADDRSTRLEN];
+   char * permanent_string;
+   char * outputcommand;
+   int textlen = -1;
+   int status = -1;
 
-   os_ip_to_string(*p_ipaddr, ip_string);
-   os_ip_to_string(*p_netmask, netmask_string);
-   os_ip_to_string(*p_gw, gateway_string);
+   os_ip_to_string (*p_ipaddr, ip_string);
+   os_ip_to_string (*p_netmask, netmask_string);
+   os_ip_to_string (*p_gw, gateway_string);
    permanent_string = permanent ? "1" : "0";
 
-   textlen = asprintf(&outputcommand, "./set_network_parameters %s %s %s %s '%s' %s",
+   textlen = asprintf (
+      &outputcommand,
+      "./set_network_parameters %s %s %s %s '%s' %s",
       interface_name,
       ip_string,
       netmask_string,
@@ -762,10 +788,13 @@ int os_set_ip_suite(
       return -1;
    }
 
-   os_log(LOG_LEVEL_DEBUG, "Command for setting network parameters: %s\n", outputcommand);
+   os_log (
+      LOG_LEVEL_DEBUG,
+      "Command for setting network parameters: %s\n",
+      outputcommand);
 
-   status = system(outputcommand);
-   free(outputcommand);
+   status = system (outputcommand);
+   free (outputcommand);
    if (status != 0)
    {
       return -1;
@@ -773,10 +802,7 @@ int os_set_ip_suite(
    return 0;
 }
 
-int os_get_macaddress(
-    const char             *interface_name,
-    os_ethaddr_t         *mac_addr
-)
+int os_get_macaddress (const char * interface_name, os_ethaddr_t * mac_addr)
 {
    int fd;
    int ret = 0;
@@ -787,17 +813,16 @@ int os_get_macaddress(
    ifr.ifr_addr.sa_family = AF_INET;
    strncpy (ifr.ifr_name, interface_name, IFNAMSIZ - 1);
 
-   ret = ioctl(fd, SIOCGIFHWADDR, &ifr);
-   if (ret == 0){
-      memcpy(mac_addr->addr, ifr.ifr_hwaddr.sa_data, 6);
+   ret = ioctl (fd, SIOCGIFHWADDR, &ifr);
+   if (ret == 0)
+   {
+      memcpy (mac_addr->addr, ifr.ifr_hwaddr.sa_data, 6);
    }
    close (fd);
    return ret;
 }
 
-os_ipaddr_t os_get_ip_address(
-    const char             *interface_name
-)
+os_ipaddr_t os_get_ip_address (const char * interface_name)
 {
    int fd;
    struct ifreq ifr;
@@ -807,14 +832,13 @@ os_ipaddr_t os_get_ip_address(
    ifr.ifr_addr.sa_family = AF_INET;
    strncpy (ifr.ifr_name, interface_name, IFNAMSIZ - 1);
    ioctl (fd, SIOCGIFADDR, &ifr);
-   ip = ntohl(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr.s_addr);
+   ip = ntohl (((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr.s_addr);
    close (fd);
 
    return ip;
 }
 
-os_ipaddr_t os_get_netmask(
-   const char              *interface_name)
+os_ipaddr_t os_get_netmask (const char * interface_name)
 {
    int fd;
    struct ifreq ifr;
@@ -825,52 +849,48 @@ os_ipaddr_t os_get_netmask(
    ifr.ifr_addr.sa_family = AF_INET;
    strncpy (ifr.ifr_name, interface_name, IFNAMSIZ - 1);
    ioctl (fd, SIOCGIFNETMASK, &ifr);
-   netmask = ntohl(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr.s_addr);
+   netmask = ntohl (((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr.s_addr);
    close (fd);
 
    return netmask;
 }
 
-os_ipaddr_t os_get_gateway(
-   const char              *interface_name)
+os_ipaddr_t os_get_gateway (const char * interface_name)
 {
    /* TODO Read the actual default gateway (somewhat complicated) */
 
    os_ipaddr_t ip;
    os_ipaddr_t gateway;
 
-   ip = os_get_ip_address(interface_name);
+   ip = os_get_ip_address (interface_name);
    gateway = (ip & 0xFFFFFF00) | 0x00000001;
 
    return gateway;
 }
 
-
-int os_get_hostname(
-   char                    *hostname
-)
+int os_get_hostname (char * hostname)
 {
-   int                     ret = -1;
+   int ret = -1;
 
-   ret = gethostname(hostname, OS_HOST_NAME_MAX);
+   ret = gethostname (hostname, OS_HOST_NAME_MAX);
    hostname[OS_HOST_NAME_MAX - 1] = '\0';
 
    return ret;
 }
 
-int os_get_ip_suite(
-   const char              *interface_name,
-   os_ipaddr_t             *p_ipaddr,
-   os_ipaddr_t             *p_netmask,
-   os_ipaddr_t             *p_gw,
-   char                    *hostname)
+int os_get_ip_suite (
+   const char * interface_name,
+   os_ipaddr_t * p_ipaddr,
+   os_ipaddr_t * p_netmask,
+   os_ipaddr_t * p_gw,
+   char * hostname)
 {
-   int                     ret = -1;
+   int ret = -1;
 
-   *p_ipaddr = os_get_ip_address(interface_name);
-   *p_netmask = os_get_netmask(interface_name);
-   *p_gw = os_get_gateway(interface_name);
-   ret = os_get_hostname(hostname);
+   *p_ipaddr = os_get_ip_address (interface_name);
+   *p_netmask = os_get_netmask (interface_name);
+   *p_gw = os_get_gateway (interface_name);
+   ret = os_get_hostname (hostname);
 
    return ret;
 }

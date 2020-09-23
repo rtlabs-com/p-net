@@ -20,9 +20,9 @@
 
 #include <gtest/gtest.h>
 
-
-class EthTest : public PnetIntegrationTest {};
-
+class EthTest : public PnetIntegrationTest
+{
+};
 
 TEST_F (EthTest, EthRunTest)
 {

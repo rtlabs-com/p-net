@@ -17,8 +17,7 @@
 #define PF_DCP_H
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 /*
@@ -47,22 +46,22 @@ typedef enum pf_dcp_sub_all_values
 
 typedef enum pf_dcp_sub_ip_values
 {
-   PF_DCP_SUB_IP_MAC = 0x01,                 /* Read */
-   PF_DCP_SUB_IP_PAR,                        /* Read/Write */
-   PF_DCP_SUB_IP_SUITE                       /* Read/(optional Write) */
+   PF_DCP_SUB_IP_MAC = 0x01, /* Read */
+   PF_DCP_SUB_IP_PAR,        /* Read/Write */
+   PF_DCP_SUB_IP_SUITE       /* Read/(optional Write) */
 } pf_dcp_sub_ip_values_t;
 
 typedef enum pf_dcp_sub_dev_prop
 {
-   PF_DCP_SUB_DEV_PROP_VENDOR = 0x01,        /* Read */
-   PF_DCP_SUB_DEV_PROP_NAME,                 /* Read/Write */
-   PF_DCP_SUB_DEV_PROP_ID,                   /* Read */
-   PF_DCP_SUB_DEV_PROP_ROLE,                 /* Read */
-   PF_DCP_SUB_DEV_PROP_OPTIONS,              /* Read */
-   PF_DCP_SUB_DEV_PROP_ALIAS,                /* Used as filter only */
-   PF_DCP_SUB_DEV_PROP_INSTANCE,             /* Read, optional */
-   PF_DCP_SUB_DEV_PROP_OEM_ID,               /* Read, optional */
-   PF_DCP_SUB_DEV_PROP_GATEWAY               /* Read, optional */
+   PF_DCP_SUB_DEV_PROP_VENDOR = 0x01, /* Read */
+   PF_DCP_SUB_DEV_PROP_NAME,          /* Read/Write */
+   PF_DCP_SUB_DEV_PROP_ID,            /* Read */
+   PF_DCP_SUB_DEV_PROP_ROLE,          /* Read */
+   PF_DCP_SUB_DEV_PROP_OPTIONS,       /* Read */
+   PF_DCP_SUB_DEV_PROP_ALIAS,         /* Used as filter only */
+   PF_DCP_SUB_DEV_PROP_INSTANCE,      /* Read, optional */
+   PF_DCP_SUB_DEV_PROP_OEM_ID,        /* Read, optional */
+   PF_DCP_SUB_DEV_PROP_GATEWAY        /* Read, optional */
 } pf_dcp_sub_dev_prop_t;
 
 typedef enum pf_dcp_sub_dhcp
@@ -75,22 +74,22 @@ typedef enum pf_dcp_sub_dhcp
    PF_DCP_SUB_DHCP_CLIENT_ID = 61,
    PF_DCP_SUB_DHCP_FQDN = 81,
    PF_DCP_SUB_DHCP_UUID_CLIENT_ID = 97,
-   PF_DCP_SUB_DHCP_CONTROL = 255             /* Defined as END in the DHCP spec */
+   PF_DCP_SUB_DHCP_CONTROL = 255 /* Defined as END in the DHCP spec */
 } pf_dcp_sub_dhcp_t;
 
 typedef enum pf_dcp_sub_control
 {
-   PF_DCP_SUB_CONTROL_START = 0x01,          /* Write */
-   PF_DCP_SUB_CONTROL_STOP,                  /* Write */
-   PF_DCP_SUB_CONTROL_SIGNAL,                /* Write */
+   PF_DCP_SUB_CONTROL_START = 0x01, /* Write */
+   PF_DCP_SUB_CONTROL_STOP,         /* Write */
+   PF_DCP_SUB_CONTROL_SIGNAL,       /* Write */
    PF_DCP_SUB_CONTROL_RESPONSE,
-   PF_DCP_SUB_CONTROL_FACTORY_RESET,         /* Optional, Write */
-   PF_DCP_SUB_CONTROL_RESET_TO_FACTORY,      /* Write */
+   PF_DCP_SUB_CONTROL_FACTORY_RESET,    /* Optional, Write */
+   PF_DCP_SUB_CONTROL_RESET_TO_FACTORY, /* Write */
 } pf_dcp_sub_control_t;
 
 typedef enum pf_dcp_sub_dev_initiative
 {
-   PF_DCP_SUB_DEV_INITIATIVE_SUPPORT = 0x01  /* Read */
+   PF_DCP_SUB_DEV_INITIATIVE_SUPPORT = 0x01 /* Read */
 } pf_dcp_sub_dev_initiative_t;
 
 typedef enum pf_dcp_block_error_values
@@ -107,15 +106,13 @@ typedef enum pf_dcp_block_error_values
  * Initialize the DCP component.
  * @param net              InOut: The p-net stack instance
  */
-void pf_dcp_init(
-   pnet_t                  *net);
+void pf_dcp_init (pnet_t * net);
 
 /**
  * Stop the DCP component.
  * @param net              InOut: The p-net stack instance
  */
-void pf_dcp_exit(
-   pnet_t                  *net);
+void pf_dcp_exit (pnet_t * net);
 
 /**
  * Send a DCP HELLO message.
@@ -123,8 +120,7 @@ void pf_dcp_exit(
  * @return  0  if a HELLO message was sent.
  *          -1 if an error occurred.
  */
-int pf_dcp_hello_req(
-   pnet_t                  *net);
+int pf_dcp_hello_req (pnet_t * net);
 
 #ifdef __cplusplus
 }

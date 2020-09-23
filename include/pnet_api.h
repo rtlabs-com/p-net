@@ -29,8 +29,7 @@
 #define PNET_API_H
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 #include <pnet_export.h>
@@ -40,28 +39,35 @@ extern "C"
 #include <stdint.h>
 #include <stdio.h>
 
-#define PNET_MAX_FILE_FULLPATH_LEN           (PNET_MAX_DIRECTORYPATH_LENGTH + PNET_MAX_FILENAME_LENGTH)  /** Including separator and one termination */
+#define PNET_MAX_FILE_FULLPATH_LEN                                             \
+   (PNET_MAX_DIRECTORYPATH_LENGTH + PNET_MAX_FILENAME_LENGTH) /** Including    \
+                                                                 separator and \
+                                                                 one           \
+                                                                 termination   \
+                                                               */
 
-#define PNET_MAX_INTERFACE_NAME_LENGTH       16  /** Including termination. Based on Linux IFNAMSIZ */
+#define PNET_MAX_INTERFACE_NAME_LENGTH                                         \
+   16 /** Including termination. Based on Linux IFNAMSIZ */
 
 /** Supported block version by this implementation */
-#define PNET_BLOCK_VERSION_HIGH                                1
-#define PNET_BLOCK_VERSION_LOW                                 0
+#define PNET_BLOCK_VERSION_HIGH 1
+#define PNET_BLOCK_VERSION_LOW  0
 
 /** Some blocks (e.g. logbook) uses the following lower version number. */
-#define PNET_BLOCK_VERSION_LOW_1                               1
-
+#define PNET_BLOCK_VERSION_LOW_1 1
 
 /*
  * Module and submodule ident number for the DAP module.
- * The DAP module and submodules must be plugged by the application after the call to pnet_init.
+ * The DAP module and submodules must be plugged by the application after the
+ * call to pnet_init.
  */
-#define PNET_SLOT_DAP_IDENT                        0x00000000
-#define PNET_MOD_DAP_IDENT                         0x00000001     /* For use in slot 0 */
-#define PNET_SUBMOD_DAP_IDENT                      0x00000001     /* For use in subslot 1 */
-#define PNET_SUBMOD_DAP_INTERFACE_1_IDENT          0x00008000     /* For use in subslot 0x8000 */
-#define PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT   0x00008001     /* For use in subslot 0x8001 */
-
+#define PNET_SLOT_DAP_IDENT   0x00000000
+#define PNET_MOD_DAP_IDENT    0x00000001 /* For use in slot 0 */
+#define PNET_SUBMOD_DAP_IDENT 0x00000001 /* For use in subslot 1 */
+#define PNET_SUBMOD_DAP_INTERFACE_1_IDENT                                      \
+   0x00008000 /* For use in subslot 0x8000 */
+#define PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT                               \
+   0x00008001 /* For use in subslot 0x8001 */
 
 /**
  * # Error Codes
@@ -77,19 +83,18 @@ extern "C"
  *
  * Reserved 0x00 (No error)
  * Reserved 0x01-0x1F
- * Manufacturer specific 0x20-0x3F                                  (LogBookData)
- * Reserved 0x40-0x80
+ * Manufacturer specific 0x20-0x3F (LogBookData) Reserved 0x40-0x80
  */
-#define PNET_ERROR_CODE_PNIO                                   0x81     /** All other errors */
+#define PNET_ERROR_CODE_PNIO 0x81 /** All other errors */
 /** Reserved 0x82-0xDE */
-#define PNET_ERROR_CODE_RTA_ERROR                              0xCF     /** In ERR-RTA-PDU and ERR-UDP-PDU */
+#define PNET_ERROR_CODE_RTA_ERROR 0xCF /** In ERR-RTA-PDU and ERR-UDP-PDU */
 /** Reserved 0xD0-0xD9 */
-#define PNET_ERROR_CODE_ALARM_ACK                              0xDA     /** In DATA-RTA-PDU and DATA-UDP-PDU */
-#define PNET_ERROR_CODE_CONNECT                                0xDB     /** CL-RPC-PDU */
-#define PNET_ERROR_CODE_RELEASE                                0xDC     /** CL-RPC-PDU */
-#define PNET_ERROR_CODE_CONTROL                                0xDD     /** CL-RPC-PDU */
-#define PNET_ERROR_CODE_READ                                   0xDE     /** Only with PNIORW */
-#define PNET_ERROR_CODE_WRITE                                  0xDF     /** Only with PNIORW */
+#define PNET_ERROR_CODE_ALARM_ACK 0xDA /** In DATA-RTA-PDU and DATA-UDP-PDU */
+#define PNET_ERROR_CODE_CONNECT   0xDB /** CL-RPC-PDU */
+#define PNET_ERROR_CODE_RELEASE   0xDC /** CL-RPC-PDU */
+#define PNET_ERROR_CODE_CONTROL   0xDD /** CL-RPC-PDU */
+#define PNET_ERROR_CODE_READ      0xDE /** Only with PNIORW */
+#define PNET_ERROR_CODE_WRITE     0xDF /** Only with PNIORW */
 /** Reserved 0xE0-0xFF */
 
 /**
@@ -99,17 +104,17 @@ extern "C"
  *
  * Reserved 0x01-0x7F
  */
-#define PNET_ERROR_DECODE_PNIORW                               0x80     /** Only Read/Write */
-#define PNET_ERROR_DECODE_PNIO                                 0x81
-#define PNET_ERROR_DECODE_MANUFACTURER_SPECIFIC                0x82
+#define PNET_ERROR_DECODE_PNIORW                0x80 /** Only Read/Write */
+#define PNET_ERROR_DECODE_PNIO                  0x81
+#define PNET_ERROR_DECODE_MANUFACTURER_SPECIFIC 0x82
 /** Reserved 0x83-0xFF */
 
 /**
  * # List of error_code_1 values, bits 4..7, for PNET_ERROR_DECODE_PNIORW
  */
-#define PNET_ERROR_CODE_1_PNIORW_APP                           0xa0
-#define PNET_ERROR_CODE_1_PNIORW_ACC                           0xb0
-#define PNET_ERROR_CODE_1_PNIORW_RES                           0xc0
+#define PNET_ERROR_CODE_1_PNIORW_APP 0xa0
+#define PNET_ERROR_CODE_1_PNIORW_ACC 0xb0
+#define PNET_ERROR_CODE_1_PNIORW_RES 0xc0
 
 /**
  * # List of error_code_1 values, for PNET_ERROR_DECODE_PNIORW
@@ -118,232 +123,250 @@ extern "C"
  * ACC = access
  * RES = resource
  */
-#define PNET_ERROR_CODE_1_APP_READ_ERROR                       (0x00 + PNET_ERROR_CODE_1_PNIORW_APP)
-#define PNET_ERROR_CODE_1_APP_WRITE_ERROR                      (0x01 + PNET_ERROR_CODE_1_PNIORW_APP)
-#define PNET_ERROR_CODE_1_APP_MODULE_FAILURE                   (0x02 + PNET_ERROR_CODE_1_PNIORW_APP)
-#define PNET_ERROR_CODE_1_APP_BUSY                             (0x07 + PNET_ERROR_CODE_1_PNIORW_APP)
-#define PNET_ERROR_CODE_1_APP_VERSION_CONFLICT                 (0x08 + PNET_ERROR_CODE_1_PNIORW_APP)
-#define PNET_ERROR_CODE_1_APP_NOT_SUPPORTED                    (0x09 + PNET_ERROR_CODE_1_PNIORW_APP)
-#define PNET_ERROR_CODE_1_ACC_INVALID_INDEX                    (0x00 + PNET_ERROR_CODE_1_PNIORW_ACC)
-#define PNET_ERROR_CODE_1_ACC_WRITE_LENGTH_ERROR               (0x01 + PNET_ERROR_CODE_1_PNIORW_ACC)
-#define PNET_ERROR_CODE_1_ACC_INVALID_SLOT_SUBSLOT             (0x02 + PNET_ERROR_CODE_1_PNIORW_ACC)
-#define PNET_ERROR_CODE_1_ACC_TYPE_CONFLICT                    (0x03 + PNET_ERROR_CODE_1_PNIORW_ACC)
-#define PNET_ERROR_CODE_1_ACC_INVALID_AREA_API                 (0x04 + PNET_ERROR_CODE_1_PNIORW_ACC)
-#define PNET_ERROR_CODE_1_ACC_STATE_CONFLICT                   (0x05 + PNET_ERROR_CODE_1_PNIORW_ACC)
-#define PNET_ERROR_CODE_1_ACC_ACCESS_DENIED                    (0x06 + PNET_ERROR_CODE_1_PNIORW_ACC)
-#define PNET_ERROR_CODE_1_ACC_INVALID_RANGE                    (0x07 + PNET_ERROR_CODE_1_PNIORW_ACC)
-#define PNET_ERROR_CODE_1_ACC_INVALID_PARAMETER                (0x08 + PNET_ERROR_CODE_1_PNIORW_ACC)
-#define PNET_ERROR_CODE_1_ACC_INVALID_TYPE                     (0x09 + PNET_ERROR_CODE_1_PNIORW_ACC)
-#define PNET_ERROR_CODE_1_ACC_BACKUP                           (0x0a + PNET_ERROR_CODE_1_PNIORW_ACC)
-#define PNET_ERROR_CODE_1_RES_READ_CONFLICT                    (0x00 + PNET_ERROR_CODE_1_PNIORW_RES)
-#define PNET_ERROR_CODE_1_RES_WRITE_CONFLICT                   (0x01 + PNET_ERROR_CODE_1_PNIORW_RES)
-#define PNET_ERROR_CODE_1_RES_RESOURCE_BUSY                    (0x02 + PNET_ERROR_CODE_1_PNIORW_RES)
-#define PNET_ERROR_CODE_1_RES_RESOURCE_UNAVAILABLE             (0x03 + PNET_ERROR_CODE_1_PNIORW_RES)
+#define PNET_ERROR_CODE_1_APP_READ_ERROR  (0x00 + PNET_ERROR_CODE_1_PNIORW_APP)
+#define PNET_ERROR_CODE_1_APP_WRITE_ERROR (0x01 + PNET_ERROR_CODE_1_PNIORW_APP)
+#define PNET_ERROR_CODE_1_APP_MODULE_FAILURE                                   \
+   (0x02 + PNET_ERROR_CODE_1_PNIORW_APP)
+#define PNET_ERROR_CODE_1_APP_BUSY (0x07 + PNET_ERROR_CODE_1_PNIORW_APP)
+#define PNET_ERROR_CODE_1_APP_VERSION_CONFLICT                                 \
+   (0x08 + PNET_ERROR_CODE_1_PNIORW_APP)
+#define PNET_ERROR_CODE_1_APP_NOT_SUPPORTED                                    \
+   (0x09 + PNET_ERROR_CODE_1_PNIORW_APP)
+#define PNET_ERROR_CODE_1_ACC_INVALID_INDEX                                    \
+   (0x00 + PNET_ERROR_CODE_1_PNIORW_ACC)
+#define PNET_ERROR_CODE_1_ACC_WRITE_LENGTH_ERROR                               \
+   (0x01 + PNET_ERROR_CODE_1_PNIORW_ACC)
+#define PNET_ERROR_CODE_1_ACC_INVALID_SLOT_SUBSLOT                             \
+   (0x02 + PNET_ERROR_CODE_1_PNIORW_ACC)
+#define PNET_ERROR_CODE_1_ACC_TYPE_CONFLICT                                    \
+   (0x03 + PNET_ERROR_CODE_1_PNIORW_ACC)
+#define PNET_ERROR_CODE_1_ACC_INVALID_AREA_API                                 \
+   (0x04 + PNET_ERROR_CODE_1_PNIORW_ACC)
+#define PNET_ERROR_CODE_1_ACC_STATE_CONFLICT                                   \
+   (0x05 + PNET_ERROR_CODE_1_PNIORW_ACC)
+#define PNET_ERROR_CODE_1_ACC_ACCESS_DENIED                                    \
+   (0x06 + PNET_ERROR_CODE_1_PNIORW_ACC)
+#define PNET_ERROR_CODE_1_ACC_INVALID_RANGE                                    \
+   (0x07 + PNET_ERROR_CODE_1_PNIORW_ACC)
+#define PNET_ERROR_CODE_1_ACC_INVALID_PARAMETER                                \
+   (0x08 + PNET_ERROR_CODE_1_PNIORW_ACC)
+#define PNET_ERROR_CODE_1_ACC_INVALID_TYPE (0x09 + PNET_ERROR_CODE_1_PNIORW_ACC)
+#define PNET_ERROR_CODE_1_ACC_BACKUP       (0x0a + PNET_ERROR_CODE_1_PNIORW_ACC)
+#define PNET_ERROR_CODE_1_RES_READ_CONFLICT                                    \
+   (0x00 + PNET_ERROR_CODE_1_PNIORW_RES)
+#define PNET_ERROR_CODE_1_RES_WRITE_CONFLICT                                   \
+   (0x01 + PNET_ERROR_CODE_1_PNIORW_RES)
+#define PNET_ERROR_CODE_1_RES_RESOURCE_BUSY                                    \
+   (0x02 + PNET_ERROR_CODE_1_PNIORW_RES)
+#define PNET_ERROR_CODE_1_RES_RESOURCE_UNAVAILABLE                             \
+   (0x03 + PNET_ERROR_CODE_1_PNIORW_RES)
 
 /**
  * # List of error_code_1 values, for PNET_ERROR_DECODE_PNIO
  */
-#define PNET_ERROR_CODE_1_CONN_FAULTY_AR_BLOCK_REQ             0x01
-#define PNET_ERROR_CODE_1_CONN_FAULTY_IOCR_BLOCK_REQ           0x02
-#define PNET_ERROR_CODE_1_CONN_FAULTY_EXP_BLOCK_REQ            0x03
-#define PNET_ERROR_CODE_1_CONN_FAULTY_ALARM_BLOCK_REQ          0x04
-#define PNET_ERROR_CODE_1_CONN_FAULTY_PRM_SERVER_BLOCK_REQ     0x05
-#define PNET_ERROR_CODE_1_CONN_FAULTY_MCR_BLOCK_REQ            0x06
-#define PNET_ERROR_CODE_1_CONN_FAULTY_AR_RPC_BLOCK_REQ         0x07
-#define PNET_ERROR_CODE_1_CONN_FAULTY_FAULTY_RECORD            0x08
-#define PNET_ERROR_CODE_1_CONN_FAULTY_IR_INFO                  0x09
-#define PNET_ERROR_CODE_1_CONN_FAULTY_SR_INFO                  0x0A
-#define PNET_ERROR_CODE_1_CONN_FAULTY_AR_FSU                   0x0B
-#define PNET_ERROR_CODE_1_CONN_FAULTY_VENDOR                   0x0C
-#define PNET_ERROR_CODE_1_CONN_FAULTY_RSINFO                   0x0D
+#define PNET_ERROR_CODE_1_CONN_FAULTY_AR_BLOCK_REQ         0x01
+#define PNET_ERROR_CODE_1_CONN_FAULTY_IOCR_BLOCK_REQ       0x02
+#define PNET_ERROR_CODE_1_CONN_FAULTY_EXP_BLOCK_REQ        0x03
+#define PNET_ERROR_CODE_1_CONN_FAULTY_ALARM_BLOCK_REQ      0x04
+#define PNET_ERROR_CODE_1_CONN_FAULTY_PRM_SERVER_BLOCK_REQ 0x05
+#define PNET_ERROR_CODE_1_CONN_FAULTY_MCR_BLOCK_REQ        0x06
+#define PNET_ERROR_CODE_1_CONN_FAULTY_AR_RPC_BLOCK_REQ     0x07
+#define PNET_ERROR_CODE_1_CONN_FAULTY_FAULTY_RECORD        0x08
+#define PNET_ERROR_CODE_1_CONN_FAULTY_IR_INFO              0x09
+#define PNET_ERROR_CODE_1_CONN_FAULTY_SR_INFO              0x0A
+#define PNET_ERROR_CODE_1_CONN_FAULTY_AR_FSU               0x0B
+#define PNET_ERROR_CODE_1_CONN_FAULTY_VENDOR               0x0C
+#define PNET_ERROR_CODE_1_CONN_FAULTY_RSINFO               0x0D
 /** Reserved 0x0E-0x13 */
-#define PNET_ERROR_CODE_1_DCTRL_FAULTY_CONNECT                 0x14
-#define PNET_ERROR_CODE_1_DCTRL_FAULTY_CONNECT_PLUG            0x15
-#define PNET_ERROR_CODE_1_XCTRL_FAULTY_CONNECT                 0x16
-#define PNET_ERROR_CODE_1_XCTRL_FAULTY_CONNECT_PLUG            0x17
-#define PNET_ERROR_CODE_1_DCTRL_FAULTY_CONNECT_PRMBEG          0x18
-#define PNET_ERROR_CODE_1_DCTRL_FAULTY_CONNECT_SUBMODLIST      0x19
+#define PNET_ERROR_CODE_1_DCTRL_FAULTY_CONNECT            0x14
+#define PNET_ERROR_CODE_1_DCTRL_FAULTY_CONNECT_PLUG       0x15
+#define PNET_ERROR_CODE_1_XCTRL_FAULTY_CONNECT            0x16
+#define PNET_ERROR_CODE_1_XCTRL_FAULTY_CONNECT_PLUG       0x17
+#define PNET_ERROR_CODE_1_DCTRL_FAULTY_CONNECT_PRMBEG     0x18
+#define PNET_ERROR_CODE_1_DCTRL_FAULTY_CONNECT_SUBMODLIST 0x19
 /** Reserved 0x1A-0x27 */
-#define PNET_ERROR_CODE_1_RELS_FAULTY_BLOCK                    0x28
+#define PNET_ERROR_CODE_1_RELS_FAULTY_BLOCK 0x28
 /** Reserved 0x29-0x31 */
 /** Reserved 0x39-0x3B */
-#define PNET_ERROR_CODE_1_ALARM_ACK                            0x3C
-#define PNET_ERROR_CODE_1_CMDEV                                0x3D
-#define PNET_ERROR_CODE_1_CMCTL                                0x3E
-#define PNET_ERROR_CODE_1_CTLDINA                              0x3F
-#define PNET_ERROR_CODE_1_CMRPC                                0x40
-#define PNET_ERROR_CODE_1_ALPMI                                0x41
-#define PNET_ERROR_CODE_1_ALPMR                                0x42
-#define PNET_ERROR_CODE_1_LMPM                                 0x43
-#define PNET_ERROR_CODE_1_MAC                                  0x44
-#define PNET_ERROR_CODE_1_RPC                                  0x45
-#define PNET_ERROR_CODE_1_APMR                                 0x46
-#define PNET_ERROR_CODE_1_APMS                                 0x47
-#define PNET_ERROR_CODE_1_CPM                                  0x48
-#define PNET_ERROR_CODE_1_PPM                                  0x49
-#define PNET_ERROR_CODE_1_DCPUCS                               0x4A
-#define PNET_ERROR_CODE_1_DCPUCR                               0x4B
-#define PNET_ERROR_CODE_1_DCPMCS                               0x4C
-#define PNET_ERROR_CODE_1_DCPMCR                               0x4D
-#define PNET_ERROR_CODE_1_FSPM                                 0x4E
+#define PNET_ERROR_CODE_1_ALARM_ACK 0x3C
+#define PNET_ERROR_CODE_1_CMDEV     0x3D
+#define PNET_ERROR_CODE_1_CMCTL     0x3E
+#define PNET_ERROR_CODE_1_CTLDINA   0x3F
+#define PNET_ERROR_CODE_1_CMRPC     0x40
+#define PNET_ERROR_CODE_1_ALPMI     0x41
+#define PNET_ERROR_CODE_1_ALPMR     0x42
+#define PNET_ERROR_CODE_1_LMPM      0x43
+#define PNET_ERROR_CODE_1_MAC       0x44
+#define PNET_ERROR_CODE_1_RPC       0x45
+#define PNET_ERROR_CODE_1_APMR      0x46
+#define PNET_ERROR_CODE_1_APMS      0x47
+#define PNET_ERROR_CODE_1_CPM       0x48
+#define PNET_ERROR_CODE_1_PPM       0x49
+#define PNET_ERROR_CODE_1_DCPUCS    0x4A
+#define PNET_ERROR_CODE_1_DCPUCR    0x4B
+#define PNET_ERROR_CODE_1_DCPMCS    0x4C
+#define PNET_ERROR_CODE_1_DCPMCR    0x4D
+#define PNET_ERROR_CODE_1_FSPM      0x4E
 /** Reserved 0x4F-0x63 */
 /** CTRLxxx  0x64-0xC7 */
-#define PNET_ERROR_CODE_1_CMSM                                 0xC8
-#define PNET_ERROR_CODE_1_CMRDR                                0xCA
-#define PNET_ERROR_CODE_1_CMWRR                                0xCC
-#define PNET_ERROR_CODE_1_CMIO                                 0xCD
-#define PNET_ERROR_CODE_1_CMSU                                 0xCE
-#define PNET_ERROR_CODE_1_CMINA                                0xD0
-#define PNET_ERROR_CODE_1_CMPBE                                0xD1
-#define PNET_ERROR_CODE_1_CMSRL                                0xD2
-#define PNET_ERROR_CODE_1_CMDMC                                0xD3
+#define PNET_ERROR_CODE_1_CMSM  0xC8
+#define PNET_ERROR_CODE_1_CMRDR 0xCA
+#define PNET_ERROR_CODE_1_CMWRR 0xCC
+#define PNET_ERROR_CODE_1_CMIO  0xCD
+#define PNET_ERROR_CODE_1_CMSU  0xCE
+#define PNET_ERROR_CODE_1_CMINA 0xD0
+#define PNET_ERROR_CODE_1_CMPBE 0xD1
+#define PNET_ERROR_CODE_1_CMSRL 0xD2
+#define PNET_ERROR_CODE_1_CMDMC 0xD3
 /** CTRLxxx  0xD4-0xFC */
-#define PNET_ERROR_CODE_1_RTA_ERR_CLS_PROTOCOL                 0xFD
+#define PNET_ERROR_CODE_1_RTA_ERR_CLS_PROTOCOL 0xFD
 /** Reserved 0xFE */
-#define PNET_ERROR_CODE_1_USER_SPECIFIC                        0xFF
+#define PNET_ERROR_CODE_1_USER_SPECIFIC 0xFF
 
 /**
  * # List of error_code_2 values (not exhaustive)
  */
-#define PNET_ERROR_CODE_2_CMDEV_STATE_CONFLICT                 0x00
-#define PNET_ERROR_CODE_2_CMDEV_RESOURCE                       0x01
+#define PNET_ERROR_CODE_2_CMDEV_STATE_CONFLICT 0x00
+#define PNET_ERROR_CODE_2_CMDEV_RESOURCE       0x01
 
-#define PNET_ERROR_CODE_2_CMRPC_ARGSLENGTH_INVALID             0x00
-#define PNET_ERROR_CODE_2_CMRPC_UNKNOWN_BLOCKS                 0x01
-#define PNET_ERROR_CODE_2_CMRPC_IOCR_MISSING                   0x02
-#define PNET_ERROR_CODE_2_CMRPC_WRONG_BLOCK_COUNT              0x03
-#define PNET_ERROR_CODE_2_CMRPC_NO_AR_RESOURCES                0x04
-#define PNET_ERROR_CODE_2_CMRPC_AR_UUID_UNKNOWN                0x05
-#define PNET_ERROR_CODE_2_CMRPC_STATE_CONFLICT                 0x06
-#define PNET_ERROR_CODE_2_CMRPC_OUT_OF_PCA_RESOURCES           0x07 /** PCA = Provider, Consumer or Alarm */
-#define PNET_ERROR_CODE_2_CMRPC_OUT_OF_MEMORY                  0x08
-#define PNET_ERROR_CODE_2_CMRPC_PDEV_ALREADY_OWNED             0x09
-#define PNET_ERROR_CODE_2_CMRPC_ARSET_STATE_CONFLICT           0x0A
-#define PNET_ERROR_CODE_2_CMRPC_ARSET_PARAM_CONFLICT           0x0B
-#define PNET_ERROR_CODE_2_CMRPC_PDEV_PORTS_WO_INTERFACE        0x0C
+#define PNET_ERROR_CODE_2_CMRPC_ARGSLENGTH_INVALID 0x00
+#define PNET_ERROR_CODE_2_CMRPC_UNKNOWN_BLOCKS     0x01
+#define PNET_ERROR_CODE_2_CMRPC_IOCR_MISSING       0x02
+#define PNET_ERROR_CODE_2_CMRPC_WRONG_BLOCK_COUNT  0x03
+#define PNET_ERROR_CODE_2_CMRPC_NO_AR_RESOURCES    0x04
+#define PNET_ERROR_CODE_2_CMRPC_AR_UUID_UNKNOWN    0x05
+#define PNET_ERROR_CODE_2_CMRPC_STATE_CONFLICT     0x06
+#define PNET_ERROR_CODE_2_CMRPC_OUT_OF_PCA_RESOURCES                           \
+   0x07 /** PCA = Provider, Consumer or Alarm */
+#define PNET_ERROR_CODE_2_CMRPC_OUT_OF_MEMORY           0x08
+#define PNET_ERROR_CODE_2_CMRPC_PDEV_ALREADY_OWNED      0x09
+#define PNET_ERROR_CODE_2_CMRPC_ARSET_STATE_CONFLICT    0x0A
+#define PNET_ERROR_CODE_2_CMRPC_ARSET_PARAM_CONFLICT    0x0B
+#define PNET_ERROR_CODE_2_CMRPC_PDEV_PORTS_WO_INTERFACE 0x0C
 
-#define PNET_ERROR_CODE_2_CMSM_INVALID_STATE                   0x00
-#define PNET_ERROR_CODE_2_CMSM_SIGNALED_ERROR                  0x01
+#define PNET_ERROR_CODE_2_CMSM_INVALID_STATE  0x00
+#define PNET_ERROR_CODE_2_CMSM_SIGNALED_ERROR 0x01
 
-#define PNET_ERROR_CODE_2_CMRDR_INVALID_STATE                  0x00
-#define PNET_ERROR_CODE_2_CMRDR_SIGNALED_ERROR                 0x01
+#define PNET_ERROR_CODE_2_CMRDR_INVALID_STATE  0x00
+#define PNET_ERROR_CODE_2_CMRDR_SIGNALED_ERROR 0x01
 
-#define PNET_ERROR_CODE_2_CMWRR_INVALID_STATE                  0x00
-#define PNET_ERROR_CODE_2_CMWRR_AR_STATE_NOT_PRIMARY           0x01
-#define PNET_ERROR_CODE_2_CMWRR_SIGNALED_ERROR                 0x02
+#define PNET_ERROR_CODE_2_CMWRR_INVALID_STATE        0x00
+#define PNET_ERROR_CODE_2_CMWRR_AR_STATE_NOT_PRIMARY 0x01
+#define PNET_ERROR_CODE_2_CMWRR_SIGNALED_ERROR       0x02
 
-#define PNET_ERROR_CODE_2_CMIO_INVALID_STATE                   0x00
-#define PNET_ERROR_CODE_2_CMIO_SIGNALED_ERROR                  0x01
+#define PNET_ERROR_CODE_2_CMIO_INVALID_STATE  0x00
+#define PNET_ERROR_CODE_2_CMIO_SIGNALED_ERROR 0x01
 
-#define PNET_ERROR_CODE_2_CMSU_INVALID_STATE                   0x00
-#define PNET_ERROR_CODE_2_CMSU_AR_ADD_PROV_CONS_FAILED         0x01
-#define PNET_ERROR_CODE_2_CMSU_AR_ALARM_OPEN_FAILED            0x02
-#define PNET_ERROR_CODE_2_CMSU_AR_ALARM_SEND                   0x03
-#define PNET_ERROR_CODE_2_CMSU_AR_ALARM_ACK_SEND               0x04
-#define PNET_ERROR_CODE_2_CMSU_AR_ALARM_IND                    0x05
+#define PNET_ERROR_CODE_2_CMSU_INVALID_STATE           0x00
+#define PNET_ERROR_CODE_2_CMSU_AR_ADD_PROV_CONS_FAILED 0x01
+#define PNET_ERROR_CODE_2_CMSU_AR_ALARM_OPEN_FAILED    0x02
+#define PNET_ERROR_CODE_2_CMSU_AR_ALARM_SEND           0x03
+#define PNET_ERROR_CODE_2_CMSU_AR_ALARM_ACK_SEND       0x04
+#define PNET_ERROR_CODE_2_CMSU_AR_ALARM_IND            0x05
 
-#define PNET_ERROR_CODE_2_CMINA_INVALID_STATE                  0x00
-#define PNET_ERROR_CODE_2_CMINA_SIGNALED_ERROR                 0x01
+#define PNET_ERROR_CODE_2_CMINA_INVALID_STATE  0x00
+#define PNET_ERROR_CODE_2_CMINA_SIGNALED_ERROR 0x01
 
-#define PNET_ERROR_CODE_2_CMPBE_INVALID_STATE                  0x00
-#define PNET_ERROR_CODE_2_CMPBE_SIGNALED_ERROR                 0x01
+#define PNET_ERROR_CODE_2_CMPBE_INVALID_STATE  0x00
+#define PNET_ERROR_CODE_2_CMPBE_SIGNALED_ERROR 0x01
 
-#define PNET_ERROR_CODE_2_CMSRL_INVALID_STATE                  0x00
-#define PNET_ERROR_CODE_2_CMSRL_SIGNALED_ERROR                 0x01
+#define PNET_ERROR_CODE_2_CMSRL_INVALID_STATE  0x00
+#define PNET_ERROR_CODE_2_CMSRL_SIGNALED_ERROR 0x01
 
-#define PNET_ERROR_CODE_2_CMDMC_INVALID_STATE                  0x00
-#define PNET_ERROR_CODE_2_CMDMC_SIGNALED_ERROR                 0x01
+#define PNET_ERROR_CODE_2_CMDMC_INVALID_STATE  0x00
+#define PNET_ERROR_CODE_2_CMDMC_SIGNALED_ERROR 0x01
 
-#define PNET_ERROR_CODE_2_CPM_INVALID_STATE                    0x00
-#define PNET_ERROR_CODE_2_CPM_INVALID                          0x01
+#define PNET_ERROR_CODE_2_CPM_INVALID_STATE 0x00
+#define PNET_ERROR_CODE_2_CPM_INVALID       0x01
 
-#define PNET_ERROR_CODE_2_PPM_INVALID_STATE                    0x00
-#define PNET_ERROR_CODE_2_PPM_INVALID                          0x01
+#define PNET_ERROR_CODE_2_PPM_INVALID_STATE 0x00
+#define PNET_ERROR_CODE_2_PPM_INVALID       0x01
 
-#define PNET_ERROR_CODE_2_APMS_INVALID_STATE                   0x00
-#define PNET_ERROR_CODE_2_APMS_LMPM_ERROR                      0x01
-#define PNET_ERROR_CODE_2_APMS_TIMEOUT                         0x02
+#define PNET_ERROR_CODE_2_APMS_INVALID_STATE 0x00
+#define PNET_ERROR_CODE_2_APMS_LMPM_ERROR    0x01
+#define PNET_ERROR_CODE_2_APMS_TIMEOUT       0x02
 /* Reserved 0x03..0xff */
 
-#define PNET_ERROR_CODE_2_APMR_INVALID_STATE                   0x00
-#define PNET_ERROR_CODE_2_APMR_LMPM_ERROR                      0x01
+#define PNET_ERROR_CODE_2_APMR_INVALID_STATE 0x00
+#define PNET_ERROR_CODE_2_APMR_LMPM_ERROR    0x01
 /* Reserved 0x02..0xff */
 
-#define PNET_ERROR_CODE_2_ALPMI_INVALID_STATE                  0x00
-#define PNET_ERROR_CODE_2_ALPMI_WRONG_ACK_PDU                  0x01
-#define PNET_ERROR_CODE_2_ALPMI_INVALID                        0x02
-#define PNET_ERROR_CODE_2_ALPMI_WRONG_STATE                    0x03
+#define PNET_ERROR_CODE_2_ALPMI_INVALID_STATE 0x00
+#define PNET_ERROR_CODE_2_ALPMI_WRONG_ACK_PDU 0x01
+#define PNET_ERROR_CODE_2_ALPMI_INVALID       0x02
+#define PNET_ERROR_CODE_2_ALPMI_WRONG_STATE   0x03
 /* Reserved 0x04..0xff */
 
-#define PNET_ERROR_CODE_2_ALPMR_INVALID_STATE                  0x00
-#define PNET_ERROR_CODE_2_ALPMR_WRONG_ALARM_PDU                0x01
-#define PNET_ERROR_CODE_2_ALPMR_INVALID                        0x02
-#define PNET_ERROR_CODE_2_ALPMR_WRONG_STATE                    0x03
+#define PNET_ERROR_CODE_2_ALPMR_INVALID_STATE   0x00
+#define PNET_ERROR_CODE_2_ALPMR_WRONG_ALARM_PDU 0x01
+#define PNET_ERROR_CODE_2_ALPMR_INVALID         0x02
+#define PNET_ERROR_CODE_2_ALPMR_WRONG_STATE     0x03
 /* Reserved 0x04..0xff */
 
-
-#define PNET_ERROR_CODE_2_INVALID_BLOCK_LEN                    0x01
-#define PNET_ERROR_CODE_2_INVALID_BLOCK_VERSION_HIGH           0x02
-#define PNET_ERROR_CODE_2_INVALID_BLOCK_VERSION_LOW            0x03
+#define PNET_ERROR_CODE_2_INVALID_BLOCK_LEN          0x01
+#define PNET_ERROR_CODE_2_INVALID_BLOCK_VERSION_HIGH 0x02
+#define PNET_ERROR_CODE_2_INVALID_BLOCK_VERSION_LOW  0x03
 
 /**
  * # List of error_code_2 values, for
  * PNET_ERROR_CODE_1_RTA_ERR_CLS_PROTOCOL (not exhaustive).
  */
-#define PNET_ERROR_CODE_2_ABORT_CODE_SEQ                       0x01
-#define PNET_ERROR_CODE_2_ABORT_INSTANCE_CLOSED                0x02
-#define PNET_ERROR_CODE_2_ABORT_AR_OUT_OF_MEMORY               0x03
-#define PNET_ERROR_CODE_2_ABORT_AR_ADD_CPM_PPM_FAILED          0x04
-#define PNET_ERROR_CODE_2_ABORT_AR_CONSUMER_DHT_EXPIRED        0x05
-#define PNET_ERROR_CODE_2_ABORT_AR_CMI_TIMEOUT                 0x06
-#define PNET_ERROR_CODE_2_ABORT_AR_ALARM_OPEN_FAILED           0x07
-#define PNET_ERROR_CODE_2_ABORT_AR_ALARM_SEND_CNF_NEG          0x08
-#define PNET_ERROR_CODE_2_ABORT_AR_ALARM_ACK_SEND_CNF_NEG      0x09
-#define PNET_ERROR_CODE_2_ABORT_AR_ALARM_DATA_TOO_LONG         0x0a
-#define PNET_ERROR_CODE_2_ABORT_AR_ALARM_IND_ERROR             0x0b
-#define PNET_ERROR_CODE_2_ABORT_AR_RPC_CLIENT_CALL_CNF_NEG     0x0c
-#define PNET_ERROR_CODE_2_ABORT_AR_ABORT_REQ                   0x0d
-#define PNET_ERROR_CODE_2_ABORT_AR_RE_RUN_ABORTS_EXISTING      0x0e
-#define PNET_ERROR_CODE_2_ABORT_AR_RELEASE_IND_RECEIVED        0x0f
-#define PNET_ERROR_CODE_2_ABORT_AR_DEVICE_DEACTIVATED          0x10
-#define PNET_ERROR_CODE_2_ABORT_AR_REMOVED                     0x11
-#define PNET_ERROR_CODE_2_ABORT_AR_PROTOCOL_VIOLATION          0x12
-#define PNET_ERROR_CODE_2_ABORT_AR_NAME_RESOLUTION_ERROR       0x13
-#define PNET_ERROR_CODE_2_ABORT_AR_RPC_BIND_ERROR              0x14
-#define PNET_ERROR_CODE_2_ABORT_AR_RPC_CONNECT_ERROR           0x15
-#define PNET_ERROR_CODE_2_ABORT_AR_RPC_READ_ERROR              0x16
-#define PNET_ERROR_CODE_2_ABORT_AR_RPC_WRITE_ERROR             0x17
-#define PNET_ERROR_CODE_2_ABORT_AR_RPC_CONTROL_ERROR           0x18
-#define PNET_ERROR_CODE_2_ABORT_AR_FORBIDDEN_PULL_OR_PLUG      0x19
-#define PNET_ERROR_CODE_2_ABORT_AR_AP_REMOVED                  0x1a
-#define PNET_ERROR_CODE_2_ABORT_AR_LINK_DOWN                   0x1b
-#define PNET_ERROR_CODE_2_ABORT_AR_MC_REGISTER_FAILED          0x1c
-#define PNET_ERROR_CODE_2_ABORT_NOT_SYNCHRONIZED               0x1d
-#define PNET_ERROR_CODE_2_ABORT_WRONG_TOPOLOGY                 0x1e
-#define PNET_ERROR_CODE_2_ABORT_DCP_STATION_NAME_CHANGED       0x1f
-#define PNET_ERROR_CODE_2_ABORT_DCP_RESET_TO_FACTORY           0x20
-#define PNET_ERROR_CODE_2_ABORT_PDEV_CHECK_FAILED              0x24
+#define PNET_ERROR_CODE_2_ABORT_CODE_SEQ                   0x01
+#define PNET_ERROR_CODE_2_ABORT_INSTANCE_CLOSED            0x02
+#define PNET_ERROR_CODE_2_ABORT_AR_OUT_OF_MEMORY           0x03
+#define PNET_ERROR_CODE_2_ABORT_AR_ADD_CPM_PPM_FAILED      0x04
+#define PNET_ERROR_CODE_2_ABORT_AR_CONSUMER_DHT_EXPIRED    0x05
+#define PNET_ERROR_CODE_2_ABORT_AR_CMI_TIMEOUT             0x06
+#define PNET_ERROR_CODE_2_ABORT_AR_ALARM_OPEN_FAILED       0x07
+#define PNET_ERROR_CODE_2_ABORT_AR_ALARM_SEND_CNF_NEG      0x08
+#define PNET_ERROR_CODE_2_ABORT_AR_ALARM_ACK_SEND_CNF_NEG  0x09
+#define PNET_ERROR_CODE_2_ABORT_AR_ALARM_DATA_TOO_LONG     0x0a
+#define PNET_ERROR_CODE_2_ABORT_AR_ALARM_IND_ERROR         0x0b
+#define PNET_ERROR_CODE_2_ABORT_AR_RPC_CLIENT_CALL_CNF_NEG 0x0c
+#define PNET_ERROR_CODE_2_ABORT_AR_ABORT_REQ               0x0d
+#define PNET_ERROR_CODE_2_ABORT_AR_RE_RUN_ABORTS_EXISTING  0x0e
+#define PNET_ERROR_CODE_2_ABORT_AR_RELEASE_IND_RECEIVED    0x0f
+#define PNET_ERROR_CODE_2_ABORT_AR_DEVICE_DEACTIVATED      0x10
+#define PNET_ERROR_CODE_2_ABORT_AR_REMOVED                 0x11
+#define PNET_ERROR_CODE_2_ABORT_AR_PROTOCOL_VIOLATION      0x12
+#define PNET_ERROR_CODE_2_ABORT_AR_NAME_RESOLUTION_ERROR   0x13
+#define PNET_ERROR_CODE_2_ABORT_AR_RPC_BIND_ERROR          0x14
+#define PNET_ERROR_CODE_2_ABORT_AR_RPC_CONNECT_ERROR       0x15
+#define PNET_ERROR_CODE_2_ABORT_AR_RPC_READ_ERROR          0x16
+#define PNET_ERROR_CODE_2_ABORT_AR_RPC_WRITE_ERROR         0x17
+#define PNET_ERROR_CODE_2_ABORT_AR_RPC_CONTROL_ERROR       0x18
+#define PNET_ERROR_CODE_2_ABORT_AR_FORBIDDEN_PULL_OR_PLUG  0x19
+#define PNET_ERROR_CODE_2_ABORT_AR_AP_REMOVED              0x1a
+#define PNET_ERROR_CODE_2_ABORT_AR_LINK_DOWN               0x1b
+#define PNET_ERROR_CODE_2_ABORT_AR_MC_REGISTER_FAILED      0x1c
+#define PNET_ERROR_CODE_2_ABORT_NOT_SYNCHRONIZED           0x1d
+#define PNET_ERROR_CODE_2_ABORT_WRONG_TOPOLOGY             0x1e
+#define PNET_ERROR_CODE_2_ABORT_DCP_STATION_NAME_CHANGED   0x1f
+#define PNET_ERROR_CODE_2_ABORT_DCP_RESET_TO_FACTORY       0x20
+#define PNET_ERROR_CODE_2_ABORT_PDEV_CHECK_FAILED          0x24
 
-#define PNET_FILENAME_IP               "pnet_data_ip.bin"            /* Max length PNET_MAX_FILENAME_LENGTH */
-#define PNET_FILENAME_IM               "pnet_data_im.bin"
-#define PNET_FILENAME_DIAGNOSTICS      "pnet_data_diagnostics.bin"
-#define PNET_FILENAME_LOGBOOK          "pnet_data_logbook.bin"
+#define PNET_FILENAME_IP                                                       \
+   "pnet_data_ip.bin" /* Max length PNET_MAX_FILENAME_LENGTH */
+#define PNET_FILENAME_IM          "pnet_data_im.bin"
+#define PNET_FILENAME_DIAGNOSTICS "pnet_data_diagnostics.bin"
+#define PNET_FILENAME_LOGBOOK     "pnet_data_logbook.bin"
 
 /**
  * # List of error_code_2 values, for
  * PNET_ERROR_CODE_1_DCTRL_FAULTY_CONNECT (not exhaustive).
  */
-#define PNET_ERROR_CODE_2_DCTRL_FAULTY_CONNECT_CONTROLCOMMAND  0x08
+#define PNET_ERROR_CODE_2_DCTRL_FAULTY_CONNECT_CONTROLCOMMAND 0x08
 
 /**
- * The events are sent from CMDEV to the application using the state_cb call-back function.
+ * The events are sent from CMDEV to the application using the state_cb
+ * call-back function.
  */
 typedef enum pnet_event_values
 {
-   PNET_EVENT_ABORT,          /**< The AR has been closed. */
-   PNET_EVENT_STARTUP,        /**< A connection has been initiated. */
-   PNET_EVENT_PRMEND,         /**< Controller has sent all write records. */
-   PNET_EVENT_APPLRDY,        /**< Controller has acknowledged the APPL_RDY message */
+   PNET_EVENT_ABORT,   /**< The AR has been closed. */
+   PNET_EVENT_STARTUP, /**< A connection has been initiated. */
+   PNET_EVENT_PRMEND,  /**< Controller has sent all write records. */
+   PNET_EVENT_APPLRDY, /**< Controller has acknowledged the APPL_RDY message */
    PNET_EVENT_DATA
 } pnet_event_values_t;
 
@@ -386,18 +409,20 @@ typedef enum pnet_control_command
  */
 typedef enum pnet_data_status_bits
 {
-   PNET_DATA_STATUS_BIT_STATE = 0,                   /** 0 => BACKUP, 1 => PRIMARY */
-   PNET_DATA_STATUS_BIT_REDUNDANCY,                  /** Meaning depends on STATE bit */
-   PNET_DATA_STATUS_BIT_DATA_VALID,                  /** 0 => INVALID, 1 => VALID */
+   PNET_DATA_STATUS_BIT_STATE = 0,  /** 0 => BACKUP, 1 => PRIMARY */
+   PNET_DATA_STATUS_BIT_REDUNDANCY, /** Meaning depends on STATE bit */
+   PNET_DATA_STATUS_BIT_DATA_VALID, /** 0 => INVALID, 1 => VALID */
    PNET_DATA_STATUS_BIT_RESERVED_1,
-   PNET_DATA_STATUS_BIT_PROVIDER_STATE,              /** 0 => STOP, 1 => RUN */
-   PNET_DATA_STATUS_BIT_STATION_PROBLEM_INDICATOR,   /** 0 => Problem detected, 1 => Normal operation */
+   PNET_DATA_STATUS_BIT_PROVIDER_STATE,            /** 0 => STOP, 1 => RUN */
+   PNET_DATA_STATUS_BIT_STATION_PROBLEM_INDICATOR, /** 0 => Problem detected, 1
+                                                      => Normal operation */
    PNET_DATA_STATUS_BIT_RESERVED_2,
-   PNET_DATA_STATUS_BIT_IGNORE                       /** 0 => Evaluate data status, 1 => Ignore the data status (typically used on a frame with subframes) */
+   PNET_DATA_STATUS_BIT_IGNORE /** 0 => Evaluate data status, 1 => Ignore the
+                                  data status (typically used on a frame with
+                                  subframes) */
 } pnet_data_status_bits_t;
 
-
- /** Network handle */
+/** Network handle */
 typedef struct pnet pnet_t;
 
 /**
@@ -405,10 +430,10 @@ typedef struct pnet pnet_t;
  */
 typedef struct pnet_pnio_status
 {
-   uint8_t                 error_code;
-   uint8_t                 error_decode;
-   uint8_t                 error_code_1;
-   uint8_t                 error_code_2;
+   uint8_t error_code;
+   uint8_t error_decode;
+   uint8_t error_code_1;
+   uint8_t error_code_2;
 } pnet_pnio_status_t;
 
 /**
@@ -417,32 +442,31 @@ typedef struct pnet_pnio_status
  */
 typedef struct pnet_alarm_spec
 {
-   bool                    channel_diagnosis;
-   bool                    manufacturer_diagnosis;
-   bool                    submodule_diagnosis;
-   bool                    ar_diagnosis;
+   bool channel_diagnosis;
+   bool manufacturer_diagnosis;
+   bool submodule_diagnosis;
+   bool ar_diagnosis;
 } pnet_alarm_spec_t;
 
 typedef struct pnet_alarm_argument
 {
-   uint32_t                api_id;
-   uint16_t                slot_nbr;
-   uint16_t                subslot_nbr;
-   uint16_t                alarm_type;
-   uint16_t                sequence_number;
-   pnet_alarm_spec_t       alarm_specifier;
+   uint32_t api_id;
+   uint16_t slot_nbr;
+   uint16_t subslot_nbr;
+   uint16_t alarm_type;
+   uint16_t sequence_number;
+   pnet_alarm_spec_t alarm_specifier;
 
 } pnet_alarm_argument_t;
-
 
 /**
  * Sent to controller on negative result.
  */
 typedef struct pnet_result
 {
-   pnet_pnio_status_t      pnio_status;   /**< Profinet-specific error information. */
-   uint16_t                add_data_1;    /**< Application-specific error information. */
-   uint16_t                add_data_2;    /**< Application-specific error information. */
+   pnet_pnio_status_t pnio_status; /**< Profinet-specific error information. */
+   uint16_t add_data_1; /**< Application-specific error information. */
+   uint16_t add_data_2; /**< Application-specific error information. */
 } pnet_result_t;
 
 /*
@@ -451,16 +475,17 @@ typedef struct pnet_result
  * The application should define call-back functions which are called by
  * the stack when specific events occurs within the stack.
  *
- * Note that most of these functions are mandatory in the sense that they must exist
- * and return 0 (zero) for a functioning stack. Some functions are required to
- * perform specific functionality.
+ * Note that most of these functions are mandatory in the sense that they must
+ * exist and return 0 (zero) for a functioning stack. Some functions are
+ * required to perform specific functionality.
  *
  * The call-back functions should return 0 (zero) for a successful call and
  * -1 for an unsuccessful call.
  */
 
 /**
- * Indication to the application that a Connect request was received from the controller.
+ * Indication to the application that a Connect request was received from the
+ * controller.
  *
  * This application call-back function is called by the Profinet stack on every
  * Connect request from the Profinet controller.
@@ -468,9 +493,9 @@ typedef struct pnet_result
  * The connection will be opened if this function returns 0 (zero) and the stack
  * is otherwise able to establish a connection.
  *
- * If this function returns something other than 0 (zero) then the Connect request is
- * refused by the device.
- * In case of error the application should provide error information in \a p_result.
+ * If this function returns something other than 0 (zero) then the Connect
+ * request is refused by the device. In case of error the application should
+ * provide error information in \a p_result.
  *
  * It is optional to implement this callback (assumes success if not
  * implemented).
@@ -482,20 +507,22 @@ typedef struct pnet_result
  * @return  0  on success.
  *          -1 if an error occurred.
  */
-typedef int (*pnet_connect_ind)(
-   pnet_t                  *net,
-   void                    *arg,
-   uint32_t                arep,
-   pnet_result_t           *p_result);
+typedef int (*pnet_connect_ind) (
+   pnet_t * net,
+   void * arg,
+   uint32_t arep,
+   pnet_result_t * p_result);
 
 /**
- * Indication to the application that a Release request was received from the controller.
+ * Indication to the application that a Release request was received from the
+ * controller.
  *
  * This application call-back function is called by the Profinet stack on every
  * Release request from the Profinet controller.
  *
- * The connection will be closed regardless of the return value from this function.
- * In case of error the application should provide error information in \a p_result.
+ * The connection will be closed regardless of the return value from this
+ * function. In case of error the application should provide error information
+ * in \a p_result.
  *
  * It is optional to implement this callback.
  *
@@ -506,23 +533,24 @@ typedef int (*pnet_connect_ind)(
  * @return  0  on success.
  *          -1 if an error occurred.
  */
-typedef int (*pnet_release_ind)(
-   pnet_t                  *net,
-   void                    *arg,
-   uint32_t                arep,
-   pnet_result_t           *p_result);
+typedef int (*pnet_release_ind) (
+   pnet_t * net,
+   void * arg,
+   uint32_t arep,
+   pnet_result_t * p_result);
 
 /**
- * Indication to the application that a DControl request was received from the controller.
+ * Indication to the application that a DControl request was received from the
+ * controller.
  *
  * This application call-back function is called by the Profinet stack on every
  * DControl request from the Profinet controller.
  *
- * The application is not required to take any action but the function must return 0 (zero)
- * for proper function of the stack.
- * If this function returns something other than 0 (zero) then the DControl request is
- * refused by the device.
- * In case of error the application should provide error information in \a p_result.
+ * The application is not required to take any action but the function must
+ * return 0 (zero) for proper function of the stack. If this function returns
+ * something other than 0 (zero) then the DControl request is refused by the
+ * device. In case of error the application should provide error information in
+ * \a p_result.
  *
  * It is optional to implement this callback (assumes success if not
  * implemented).
@@ -535,21 +563,23 @@ typedef int (*pnet_release_ind)(
  * @return  0  on success.
  *          -1 if an error occurred.
  */
-typedef int (*pnet_dcontrol_ind)(
-   pnet_t                  *net,
-   void                    *arg,
-   uint32_t                arep,
-   pnet_control_command_t  control_command,
-   pnet_result_t           *p_result);
+typedef int (*pnet_dcontrol_ind) (
+   pnet_t * net,
+   void * arg,
+   uint32_t arep,
+   pnet_control_command_t control_command,
+   pnet_result_t * p_result);
 
 /**
- * Indication to the application that a CControl confirmation was received from the controller.
+ * Indication to the application that a CControl confirmation was received from
+ * the controller.
  *
  * This application call-back function is called by the Profinet stack on every
  * CControl confirmation from the Profinet controller.
  *
  * The application is not required to take any action.
- * In case of error the application should provide error information in \a p_result.
+ * In case of error the application should provide error information in \a
+ * p_result.
  *
  * It is optional to implement this callback.
  *
@@ -560,23 +590,26 @@ typedef int (*pnet_dcontrol_ind)(
  * @return  0  on success.
  *          -1 if an error occurred.
  */
-typedef int (*pnet_ccontrol_cnf)(
-   pnet_t                  *net,
-   void                    *arg,
-   uint32_t                arep,
-   pnet_result_t           *p_result);
+typedef int (*pnet_ccontrol_cnf) (
+   pnet_t * net,
+   void * arg,
+   uint32_t arep,
+   pnet_result_t * p_result);
 
 /**
- * Indication to the application that a state transition has occurred within the Profinet stack.
+ * Indication to the application that a state transition has occurred within the
+ * Profinet stack.
  *
- * This application call-back function is called by the Profinet stack on specific
- * state transitions within the Profinet stack.
+ * This application call-back function is called by the Profinet stack on
+ * specific state transitions within the Profinet stack.
  *
- * At the very least the application must react to the PNET_EVENT_PRMEND state transition.
- * After this event the application must call \a pnet_application_ready(), when it has finished
- * its setup and it is ready to exchange data.
+ * At the very least the application must react to the PNET_EVENT_PRMEND state
+ * transition. After this event the application must call \a
+ * pnet_application_ready(), when it has finished its setup and it is ready to
+ * exchange data.
  *
- * The return value from this call-back function is ignored by the Profinet stack.
+ * The return value from this call-back function is ignored by the Profinet
+ * stack.
  *
  * It is optional to implement this callback (but then it would be difficult
  * to know when to call the \a pnet_application_ready() function).
@@ -584,32 +617,36 @@ typedef int (*pnet_ccontrol_cnf)(
  * @param net              InOut: The p-net stack instance
  * @param arg              InOut: User-defined data (not used by p-net)
  * @param arep             In:   The AREP.
- * @param state            In:   The state transition event. See pnet_event_values_t.
+ * @param state            In:   The state transition event. See
+ * pnet_event_values_t.
  * @return  0  on success.
  *          Other values are ignored.
  */
-typedef int (*pnet_state_ind)(
-   pnet_t                  *net,
-   void                    *arg,
-   uint32_t                arep,
-   pnet_event_values_t     state);
+typedef int (*pnet_state_ind) (
+   pnet_t * net,
+   void * arg,
+   uint32_t arep,
+   pnet_event_values_t state);
 
 /**
- * Indication to the application that an IODRead request was received from the controller.
+ * Indication to the application that an IODRead request was received from the
+ * controller.
  *
  * This application call-back function is called by the Profinet stack on every
- * IODRead request from the Profinet controller which specify an application-specific
- * value of \a idx (0x0000 - 0x7fff). All other values of \a idx are handled internally
- * by the Profinet stack.
+ * IODRead request from the Profinet controller which specify an
+ * application-specific value of \a idx (0x0000 - 0x7fff). All other values of
+ * \a idx are handled internally by the Profinet stack.
  *
  * The application must verify the value of \a idx, and that \a p_read_length is
  * large enough. Further, the application must provide a
  * pointer to the binary value in \a pp_read_data and the size, in bytes, of the
  * binary value in \a p_read_length.
  *
- * The Profinet stack does not perform any endianness conversion on the binary value.
+ * The Profinet stack does not perform any endianness conversion on the binary
+ * value.
  *
- * In case of error the application should provide error information in \a p_result.
+ * In case of error the application should provide error information in \a
+ * p_result.
  *
  * @param net              InOut: The p-net stack instance
  * @param arg              InOut: User-defined data (not used by p-net)
@@ -620,39 +657,43 @@ typedef int (*pnet_state_ind)(
  * @param idx              In:   The data record index.
  * @param sequence_number  In:   The sequence number.
  * @param pp_read_data     Out:  A pointer to the binary value.
- * @param p_read_length    InOut: The maximum (in) and actual (out) length in bytes of the binary value.
+ * @param p_read_length    InOut: The maximum (in) and actual (out) length in
+ * bytes of the binary value.
  * @param p_result         Out:  Detailed error information.
  * @return  0  on success.
  *          -1 if an error occurred.
  */
-typedef int (*pnet_read_ind)(
-   pnet_t                  *net,
-   void                    *arg,
-   uint32_t                arep,
-   uint32_t                api,
-   uint16_t                slot,
-   uint16_t                subslot,
-   uint16_t                idx,
-   uint16_t                sequence_number,
-   uint8_t                 **pp_read_data,   /**< Out: A pointer to the data */
-   uint16_t                *p_read_length,   /**< Out: Size of data */
-   pnet_result_t           *p_result);       /**< Error status if returning != 0 */
+typedef int (*pnet_read_ind) (
+   pnet_t * net,
+   void * arg,
+   uint32_t arep,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
+   uint16_t idx,
+   uint16_t sequence_number,
+   uint8_t ** pp_read_data,   /**< Out: A pointer to the data */
+   uint16_t * p_read_length,  /**< Out: Size of data */
+   pnet_result_t * p_result); /**< Error status if returning != 0 */
 
 /**
- * Indication to the application that an IODWrite request was received from the controller.
+ * Indication to the application that an IODWrite request was received from the
+ * controller.
  *
  * This application call-back function is called by the Profinet stack on every
- * IODWrite request from the Profinet controller which specify an application-specific
- * value of \a idx (0x0000 - 0x7fff). All other values of \a idx are handled internally
- * by the Profinet stack.
+ * IODWrite request from the Profinet controller which specify an
+ * application-specific value of \a idx (0x0000 - 0x7fff). All other values of
+ * \a idx are handled internally by the Profinet stack.
  *
- * The application must verify the values of \a idx and \a write_length and save (copy)
- * the binary value in \a p_write_data. A future IODRead must return the latest written
+ * The application must verify the values of \a idx and \a write_length and save
+ * (copy) the binary value in \a p_write_data. A future IODRead must return the
+ * latest written value.
+ *
+ * The Profinet stack does not perform any endianness conversion on the binary
  * value.
  *
- * The Profinet stack does not perform any endianness conversion on the binary value.
- *
- * In case of error the application should provide error information in \a p_result.
+ * In case of error the application should provide error information in \a
+ * p_result.
  *
  * @param net              InOut: The p-net stack instance
  * @param arg              InOut: User-defined data (not used by p-net)
@@ -668,34 +709,36 @@ typedef int (*pnet_read_ind)(
  * @return  0  on success.
  *          -1 if an error occurred.
  */
-typedef int (*pnet_write_ind)(
-   pnet_t                  *net,
-   void                    *arg,
-   uint32_t                arep,
-   uint32_t                api,
-   uint16_t                slot,
-   uint16_t                subslot,
-   uint16_t                idx,
-   uint16_t                sequence_number,
-   uint16_t                write_length,
-   uint8_t                 *p_write_data,
-   pnet_result_t           *p_result);
+typedef int (*pnet_write_ind) (
+   pnet_t * net,
+   void * arg,
+   uint32_t arep,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
+   uint16_t idx,
+   uint16_t sequence_number,
+   uint16_t write_length,
+   uint8_t * p_write_data,
+   pnet_result_t * p_result);
 
 /**
- * Indication to the application that a module is requested by the controller in a specific slot.
+ * Indication to the application that a module is requested by the controller in
+ * a specific slot.
  *
- * This application call-back function is called by the Profinet stack to indicate that the
- * controller has requested the presence of a specific module, ident number \a module_ident,
- * in the slot number \a slot.
+ * This application call-back function is called by the Profinet stack to
+ * indicate that the controller has requested the presence of a specific module,
+ * ident number \a module_ident, in the slot number \a slot.
  *
- * The application must react to this by configuring itself accordingly (if possible) and
- * call function pnet_plug_module() to configure the stack for this module.
+ * The application must react to this by configuring itself accordingly (if
+ * possible) and call function pnet_plug_module() to configure the stack for
+ * this module.
  *
- * If the wrong module ident number is plugged then the stack will accept this, but signal
- * to the controller that a substitute module is fitted.
+ * If the wrong module ident number is plugged then the stack will accept this,
+ * but signal to the controller that a substitute module is fitted.
  *
- * This function should return 0 (zero) if a valid module was plugged. Or return -1 if the
- * application cannot handle this request.
+ * This function should return 0 (zero) if a valid module was plugged. Or return
+ * -1 if the application cannot handle this request.
  *
  * @param net              InOut: The p-net stack instance
  * @param arg              InOut: User-defined data (not used by p-net)
@@ -705,32 +748,34 @@ typedef int (*pnet_write_ind)(
  * @return  0  on success.
  *          -1 if an error occurred.
  */
-typedef int (*pnet_exp_module_ind)(
-   pnet_t                  *net,
-   void                    *arg,
-   uint32_t                api,
-   uint16_t                slot,
-   uint32_t                module_ident);
+typedef int (*pnet_exp_module_ind) (
+   pnet_t * net,
+   void * arg,
+   uint32_t api,
+   uint16_t slot,
+   uint32_t module_ident);
 
 /**
- * Indication to the application that a sub-module is requested by the controller in a specific sub-slot.
+ * Indication to the application that a sub-module is requested by the
+ * controller in a specific sub-slot.
  *
- * This application call-back function is called by the Profinet stack to indicate that the
- * controller has requested the presence of a specific sub-module, ident number \a submodule_ident,
- * in the sub-slot number \a subslot, with module ident number \a module_ident in slot \a slot.
+ * This application call-back function is called by the Profinet stack to
+ * indicate that the controller has requested the presence of a specific
+ * sub-module, ident number \a submodule_ident, in the sub-slot number \a
+ * subslot, with module ident number \a module_ident in slot \a slot.
  *
- * If a module has not been plugged in the slot \a slot then an automatic plug request is issued
- * internally by the stack.
+ * If a module has not been plugged in the slot \a slot then an automatic plug
+ * request is issued internally by the stack.
  *
- * The application must react to this by configuring itself accordingly (if possible) and
- * call function pnet_plug_submodule() to configure the stack with the correct input/output data
- * sizes.
+ * The application must react to this by configuring itself accordingly (if
+ * possible) and call function pnet_plug_submodule() to configure the stack with
+ * the correct input/output data sizes.
  *
- * If the wrong sub-module ident number is plugged then the stack will accept this, but signal
- * to the controller that a substitute sub-module is fitted.
+ * If the wrong sub-module ident number is plugged then the stack will accept
+ * this, but signal to the controller that a substitute sub-module is fitted.
  *
- * This function should return 0 (zero) if a valid sub-module was plugged. Or return -1 if the
- * application cannot handle this request.
+ * This function should return 0 (zero) if a valid sub-module was plugged. Or
+ * return -1 if the application cannot handle this request.
  *
  * @param net              InOut: The p-net stack instance
  * @param arg              InOut: User-defined data (not used by p-net)
@@ -742,40 +787,42 @@ typedef int (*pnet_exp_module_ind)(
  * @return  0  on success.
  *          -1 if an error occurred.
  */
-typedef int (*pnet_exp_submodule_ind)(
-   pnet_t                  *net,
-   void                    *arg,
-   uint32_t                api,
-   uint16_t                slot,
-   uint16_t                subslot,
-   uint32_t                module_ident,
-   uint32_t                submodule_ident);
+typedef int (*pnet_exp_submodule_ind) (
+   pnet_t * net,
+   void * arg,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
+   uint32_t module_ident,
+   uint32_t submodule_ident);
 
 /**
- * Indication to the application that the data status received from the controller has changed.
+ * Indication to the application that the data status received from the
+ * controller has changed.
  *
- * This application call-back function is called by the Profinet stack to indicate
- * that the received data status has changed.
+ * This application call-back function is called by the Profinet stack to
+ * indicate that the received data status has changed.
  *
- * The application is not required by the Profinet stack to take any action. It may
- * use this information as it wishes.
+ * The application is not required by the Profinet stack to take any action. It
+ * may use this information as it wishes.
  *
  * @param net              InOut: The p-net stack instance
  * @param arg              InOut: User-defined data (not used by p-net)
  * @param arep             In:   The AREP.
  * @param crep             In:   The CREP.
- * @param changes          In:   The changed bits in the received data status. See pnet_data_status_bits_t
+ * @param changes          In:   The changed bits in the received data status.
+ * See pnet_data_status_bits_t
  * @param data_status      In:   Current received data status (after changes).
  * @return  0  on success.
  *          -1 if an error occurred.
  */
-typedef int (*pnet_new_data_status_ind)(
-   pnet_t                  *net,
-   void                    *arg,
-   uint32_t                arep,
-   uint32_t                crep,
-   uint8_t                 changes, /**< Only modified bits from pnet_data_status_bits_t */
-   uint8_t                 data_status);
+typedef int (*pnet_new_data_status_ind) (
+   pnet_t * net,
+   void * arg,
+   uint32_t arep,
+   uint32_t crep,
+   uint8_t changes, /**< Only modified bits from pnet_data_status_bits_t */
+   uint8_t data_status);
 
 /**
  * The IO-controller has sent an alarm to the device.
@@ -787,21 +834,22 @@ typedef int (*pnet_new_data_status_ind)(
  * @param net              InOut: The p-net stack instance
  * @param arg              InOut: User-defined data (not used by p-net)
  * @param arep             In:    The AREP.
- * @param p_alarm_argument In:    The alarm argument (with slot, subslot, alarm_type etc)
+ * @param p_alarm_argument In:    The alarm argument (with slot, subslot,
+ * alarm_type etc)
  * @param data_len         In:    Data length
  * @param data_usi         In:    Alarm USI
  * @param p_data           InOut: Alarm data
  * @return  0  on success.
  *          -1 if an error occurred.
  */
-typedef int (*pnet_alarm_ind)(
-   pnet_t                        *net,
-   void                          *arg,
-   uint32_t                      arep,
-   const pnet_alarm_argument_t   *p_alarm_argument,
-   uint16_t                      data_len,
-   uint16_t                      data_usi,
-   uint8_t                       *p_data);
+typedef int (*pnet_alarm_ind) (
+   pnet_t * net,
+   void * arg,
+   uint32_t arep,
+   const pnet_alarm_argument_t * p_alarm_argument,
+   uint16_t data_len,
+   uint16_t data_usi,
+   uint8_t * p_data);
 
 /**
  * The controller acknowledges the alarm sent previously.
@@ -818,11 +866,11 @@ typedef int (*pnet_alarm_ind)(
  * @return  0  on success.
  *          -1 if an error occurred.
  */
-typedef int (*pnet_alarm_cnf)(
-   pnet_t                  *net,
-   void                    *arg,
-   uint32_t                arep,
-   pnet_pnio_status_t      *p_pnio_status);
+typedef int (*pnet_alarm_cnf) (
+   pnet_t * net,
+   void * arg,
+   uint32_t arep,
+   pnet_pnio_status_t * p_pnio_status);
 
 /**
  * The controller acknowledges the alarm ACK sent previously.
@@ -834,16 +882,13 @@ typedef int (*pnet_alarm_cnf)(
  * @param net              InOut: The p-net stack instance
  * @param arg              InOut: User-defined data (not used by p-net)
  * @param arep             In:   The AREP.
- * @param res              In:   0  if ACK was received by the remote side. This is cnf(+)
- *                               -1 if ACK was not received by the remote side. This is cnf(-)
+ * @param res              In:   0  if ACK was received by the remote side. This
+ * is cnf(+) -1 if ACK was not received by the remote side. This is cnf(-)
  * @return  0  on success.
  *          -1 if an error occurred.
  */
-typedef int (*pnet_alarm_ack_cnf)(
-   pnet_t                  *net,
-   void                    *arg,
-   uint32_t                arep,
-   int                     res);
+typedef int (
+   *pnet_alarm_ack_cnf) (pnet_t * net, void * arg, uint32_t arep, int res);
 
 /**
  * Indication to the application that a reset request was received from the
@@ -859,7 +904,8 @@ typedef int (*pnet_alarm_ack_cnf)(
  * \a should_reset_application is true. For other cases this callback is
  * triggered for diagnostic reasons.
  *
- * The return value from this call-back function is ignored by the Profinet stack.
+ * The return value from this call-back function is ignored by the Profinet
+ * stack.
  *
  * It is optional to implement this callback (if you do not have any application
  * data that could be reset).
@@ -881,19 +927,21 @@ typedef int (*pnet_alarm_ack_cnf)(
  *
  * @param net                       InOut: The p-net stack instance
  * @param arg                       InOut: User-defined data (not used by p-net)
- * @param should_reset_application  In:    True if the user should reset the application data.
+ * @param should_reset_application  In:    True if the user should reset the
+ * application data.
  * @param reset_mode                In:    Detailed reset information.
  * @return  0  on success.
  *          -1 if an error occurred.
  */
-typedef int (*pnet_reset_ind)(
-   pnet_t                  *net,
-   void                    *arg,
-   bool                    should_reset_application,
-   uint16_t                reset_mode);
+typedef int (*pnet_reset_ind) (
+   pnet_t * net,
+   void * arg,
+   bool should_reset_application,
+   uint16_t reset_mode);
 
 /**
- * Indication to the application that the Profinet signal LED should change state.
+ * Indication to the application that the Profinet signal LED should change
+ * state.
  *
  * Use this callback to implement control of the LED.
  *
@@ -906,10 +954,7 @@ typedef int (*pnet_reset_ind)(
  * @return  0  on success.
  *          -1 if an error occurred.
  */
-typedef int (*pnet_signal_led_ind)(
-   pnet_t                  *net,
-   void                    *arg,
-   bool                    led_state);
+typedef int (*pnet_signal_led_ind) (pnet_t * net, void * arg, bool led_state);
 
 /*
  * Network and device configuration.
@@ -923,7 +968,6 @@ typedef int (*pnet_signal_led_ind)(
  *
  * Configuration values are taken as is. No validation is performed.
  */
-
 
 typedef enum pnet_im_supported_value
 {
@@ -941,78 +985,82 @@ typedef enum pnet_im_supported_value
  */
 typedef struct pnet_im_0
 {
-   uint8_t                 im_vendor_id_hi;
-   uint8_t                 im_vendor_id_lo;
-   char                    im_order_id[20+1];         /**< Terminated string */
-   char                    im_serial_number[16+1]; /**< Terminated string */
-   uint16_t                im_hardware_revision;
-   char                    im_sw_revision_prefix;
-   uint8_t                 im_sw_revision_functional_enhancement;
-   uint8_t                 im_sw_revision_bug_fix;
-   uint8_t                 im_sw_revision_internal_change;
-   uint16_t                im_revision_counter;
-   uint16_t                im_profile_id;
-   uint16_t                im_profile_specific_type;
-   uint8_t                 im_version_major;       /**< Always 1 */
-   uint8_t                 im_version_minor;       /**< Always 1 */
-   uint16_t                im_supported;           /**< One bit for each supported I&M1..15.
-                                                        I&M0 is always supported.
-                                                        Use pnet_im_supported_values_t.*/
+   uint8_t im_vendor_id_hi;
+   uint8_t im_vendor_id_lo;
+   char im_order_id[20 + 1];      /**< Terminated string */
+   char im_serial_number[16 + 1]; /**< Terminated string */
+   uint16_t im_hardware_revision;
+   char im_sw_revision_prefix;
+   uint8_t im_sw_revision_functional_enhancement;
+   uint8_t im_sw_revision_bug_fix;
+   uint8_t im_sw_revision_internal_change;
+   uint16_t im_revision_counter;
+   uint16_t im_profile_id;
+   uint16_t im_profile_specific_type;
+   uint8_t im_version_major; /**< Always 1 */
+   uint8_t im_version_minor; /**< Always 1 */
+   uint16_t im_supported;    /**< One bit for each supported I&M1..15.
+                                  I&M0 is always supported.
+                                  Use pnet_im_supported_values_t.*/
 } pnet_im_0_t;
 
 /**
  * The I&M1 data record is read-write by the controller.
  *
  * This data record is optional. If this data record is supported
- * by the application then bit 1 in the im_supported member of I&M0 shall be set.
+ * by the application then bit 1 in the im_supported member of I&M0 shall be
+ * set.
  */
 typedef struct pnet_im_1
 {
-   char                    im_tag_function[32+1];  /**< Terminated string */
-   char                    im_tag_location[22+1];  /**< Terminated string */
+   char im_tag_function[32 + 1]; /**< Terminated string */
+   char im_tag_location[22 + 1]; /**< Terminated string */
 } pnet_im_1_t;
 
 /**
  * The I&M2 data record is read-write by the controller.
  *
  * This data record is optional. If this data record is supported
- * by the application then bit 2 in the im_supported member of I&M0 shall be set.
+ * by the application then bit 2 in the im_supported member of I&M0 shall be
+ * set.
  */
 typedef struct pnet_im_2
 {
-   char                    im_date[16+1];          /**< "YYYY-MM-DD HH:MM" terminated string */
+   char im_date[16 + 1]; /**< "YYYY-MM-DD HH:MM" terminated string */
 } pnet_im_2_t;
 
 /**
  * The I&M3 data record is read-write by the controller.
  *
  * This data record is optional. If this data record is supported
- * by the application then bit 3 in the im_supported member of I&M0 shall be set.
+ * by the application then bit 3 in the im_supported member of I&M0 shall be
+ * set.
  */
 typedef struct pnet_im_3
 {
-   char                    im_descriptor[54+1];    /**< Terminated string padded with spaces */
+   char im_descriptor[54 + 1]; /**< Terminated string padded with spaces */
 } pnet_im_3_t;
 
 /**
  * The I&M4 data record is read-write by the controller.
  *
  * This data record is optional. If this data record is supported
- * by the application then bit 4 in the im_supported member of I&M0 shall be set.
+ * by the application then bit 4 in the im_supported member of I&M0 shall be
+ * set.
  */
 typedef struct pnet_im_4
 {
-   char                    im_signature[54];       /**< Non-terminated binary string, padded with zeroes */
+   char im_signature[54]; /**< Non-terminated binary string, padded with zeroes
+                           */
 } pnet_im_4_t;
 
 typedef struct pnet_im_nvm
 {
-   pnet_im_1_t             im1;
-   pnet_im_2_t             im2;
-   pnet_im_3_t             im3;
-   pnet_im_4_t             im4;
+   pnet_im_1_t im1;
+   pnet_im_2_t im2;
+   pnet_im_3_t im3;
+   pnet_im_4_t im4;
 } pnet_im_nvm_t;
-
 
 /**
  * The device-specific vendor and device identities.
@@ -1023,17 +1071,17 @@ typedef struct pnet_im_nvm
  */
 typedef struct pnet_cfg_device_id
 {
-   uint8_t                 vendor_id_hi;
-   uint8_t                 vendor_id_lo;
-   uint8_t                 device_id_hi;
-   uint8_t                 device_id_lo;
+   uint8_t vendor_id_hi;
+   uint8_t vendor_id_lo;
+   uint8_t device_id_hi;
+   uint8_t device_id_lo;
 } pnet_cfg_device_id_t;
 
 /**
  * Used for assigning a static IPv4 address to the device.
  *
- * The Profinet stack also supports assigning an IP address, mask and gateway address
- * via DCP Set commands based on the Ethernet MAC address.
+ * The Profinet stack also supports assigning an IP address, mask and gateway
+ * address via DCP Set commands based on the Ethernet MAC address.
  *
  * An IP address of 0.0.0.1 has the member d=1, and the rest of the members
  * set to 0.
@@ -1041,10 +1089,10 @@ typedef struct pnet_cfg_device_id
  */
 typedef struct pnet_ip_addr_t
 {
-   uint8_t                 a;
-   uint8_t                 b;
-   uint8_t                 c;
-   uint8_t                 d;
+   uint8_t a;
+   uint8_t b;
+   uint8_t c;
+   uint8_t d;
 } pnet_cfg_ip_addr_t;
 
 /**
@@ -1052,58 +1100,60 @@ typedef struct pnet_ip_addr_t
  */
 typedef struct pnet_ethaddr
 {
-  uint8_t addr[6];
+   uint8_t addr[6];
 } pnet_ethaddr_t;
 
-
-#define PNET_CHASSIS_ID_MAX_LEN                                (240)
-#define PNET_STATION_NAME_MAX_LEN                              (240)
-#define PNET_PORT_ID_MAX_LEN                                   (14)
-#define PNET_LLDP_CHASSIS_ID_MAX_LEN                           (PNET_CHASSIS_ID_MAX_LEN)
-#define PNET_LLDP_PORT_ID_MAX_LEN                              (PNET_STATION_NAME_MAX_LEN + PNET_PORT_ID_MAX_LEN)
-
+#define PNET_CHASSIS_ID_MAX_LEN      (240)
+#define PNET_STATION_NAME_MAX_LEN    (240)
+#define PNET_PORT_ID_MAX_LEN         (14)
+#define PNET_LLDP_CHASSIS_ID_MAX_LEN (PNET_CHASSIS_ID_MAX_LEN)
+#define PNET_LLDP_PORT_ID_MAX_LEN                                              \
+   (PNET_STATION_NAME_MAX_LEN + PNET_PORT_ID_MAX_LEN)
 
 /* LLDP Autonegotiation */
-#define PNET_LLDP_AUTONEG_SUPPORTED                            (1u << 0)
-#define PNET_LLDP_AUTONEG_ENABLED                              (1u << 1)
+#define PNET_LLDP_AUTONEG_SUPPORTED (1u << 0)
+#define PNET_LLDP_AUTONEG_ENABLED   (1u << 1)
 
 /* LLDP Autonegotiation capabilities (not exhaustive) */
-#define PNET_LLDP_AUTONEG_CAP_1000BaseT_FULL_DUPLEX            (1ul << 0)
-#define PNET_LLDP_AUTONEG_CAP_1000BaseT_HALF_DUPLEX            (1ul << 1)
-#define PNET_LLDP_AUTONEG_CAP_1000BaseX_FULL_DUPLEX            (1ul << 2)
-#define PNET_LLDP_AUTONEG_CAP_1000BaseX_HALF_DUPLEX            (1ul << 3)
-#define PNET_LLDP_AUTONEG_CAP_100BaseTX_FULL_DUPLEX            (1ul << 10)
-#define PNET_LLDP_AUTONEG_CAP_100BaseTX_HALF_DUPLEX            (1ul << 11)
-#define PNET_LLDP_AUTONEG_CAP_10BaseT_FULL_DUPLEX              (1ul << 13)
-#define PNET_LLDP_AUTONEG_CAP_10BaseT_HALF_DUPLEX              (1ul << 14)
-#define PNET_LLDP_AUTONEG_CAP_UNKNOWN                          (1ul << 15)
+#define PNET_LLDP_AUTONEG_CAP_1000BaseT_FULL_DUPLEX (1ul << 0)
+#define PNET_LLDP_AUTONEG_CAP_1000BaseT_HALF_DUPLEX (1ul << 1)
+#define PNET_LLDP_AUTONEG_CAP_1000BaseX_FULL_DUPLEX (1ul << 2)
+#define PNET_LLDP_AUTONEG_CAP_1000BaseX_HALF_DUPLEX (1ul << 3)
+#define PNET_LLDP_AUTONEG_CAP_100BaseTX_FULL_DUPLEX (1ul << 10)
+#define PNET_LLDP_AUTONEG_CAP_100BaseTX_HALF_DUPLEX (1ul << 11)
+#define PNET_LLDP_AUTONEG_CAP_10BaseT_FULL_DUPLEX   (1ul << 13)
+#define PNET_LLDP_AUTONEG_CAP_10BaseT_HALF_DUPLEX   (1ul << 14)
+#define PNET_LLDP_AUTONEG_CAP_UNKNOWN               (1ul << 15)
 
 /* LLDP MAU type (not exhaustive). See Profinet 2.4, section 5.2.13.12 */
-#define PNET_MAU_RADIO                                         0x0000
-#define PNET_MAU_COPPER_10BaseT                                0x0005
-#define PNET_MAU_COPPER_100BaseTX_HALF_DUPLEX                  0x000F
-#define PNET_MAU_COPPER_100BaseTX_FULL_DUPLEX                  0x0010
-#define PNET_MAU_COPPER_1000BaseT_HALF_DUPLEX                  0x001D
-#define PNET_MAU_COPPER_1000BaseT_FULL_DUPLEX                  0x001E
-#define PNET_MAU_FIBER_100BaseFX_HALF_DUPLEX                   0x0011
-#define PNET_MAU_FIBER_100BaseFX_FULL_DUPLEX                   0x0012
-#define PNET_MAU_FIBER_1000BaseX_HALF_DUPLEX                   0x0015
-#define PNET_MAU_FIBER_1000BaseX_FULL_DUPLEX                   0x0016
+#define PNET_MAU_RADIO                        0x0000
+#define PNET_MAU_COPPER_10BaseT               0x0005
+#define PNET_MAU_COPPER_100BaseTX_HALF_DUPLEX 0x000F
+#define PNET_MAU_COPPER_100BaseTX_FULL_DUPLEX 0x0010
+#define PNET_MAU_COPPER_1000BaseT_HALF_DUPLEX 0x001D
+#define PNET_MAU_COPPER_1000BaseT_FULL_DUPLEX 0x001E
+#define PNET_MAU_FIBER_100BaseFX_HALF_DUPLEX  0x0011
+#define PNET_MAU_FIBER_100BaseFX_FULL_DUPLEX  0x0012
+#define PNET_MAU_FIBER_1000BaseX_HALF_DUPLEX  0x0015
+#define PNET_MAU_FIBER_1000BaseX_FULL_DUPLEX  0x0016
 
 /**
  * LLDP information used by the Profinet stack.
  */
 typedef struct pnet_lldp_cfg
 {
-   char             chassis_id[PNET_LLDP_CHASSIS_ID_MAX_LEN+1];    /**< Terminated string. If len=0 the MAC address will be used instead. */
-   char             port_id[PNET_LLDP_PORT_ID_MAX_LEN+1];          /**< Terminated string */
-   pnet_ethaddr_t   port_addr;
-   uint16_t         ttl;                    /**< Time to live in seconds */
-   uint16_t         rtclass_2_status;
-   uint16_t         rtclass_3_status;
-   uint8_t          cap_aneg;               /**< Autonegotiation supported and enabled */
-   uint16_t         cap_phy;                /**< Autonegotiation speeds */
-   uint16_t         mau_type;               /**< Cable MAU type */
+   char chassis_id[PNET_LLDP_CHASSIS_ID_MAX_LEN + 1]; /**< Terminated string. If
+                                                         len=0 the MAC address
+                                                         will be used instead.
+                                                       */
+   char port_id[PNET_LLDP_PORT_ID_MAX_LEN + 1];       /**< Terminated string */
+   pnet_ethaddr_t port_addr;
+   uint16_t ttl; /**< Time to live in seconds */
+   uint16_t rtclass_2_status;
+   uint16_t rtclass_3_status;
+   uint8_t cap_aneg;  /**< Autonegotiation supported and enabled */
+   uint16_t cap_phy;  /**< Autonegotiation speeds */
+   uint16_t mau_type; /**< Cable MAU type */
 } pnet_lldp_cfg_t;
 
 /**
@@ -1111,28 +1161,28 @@ typedef struct pnet_lldp_cfg
  */
 typedef struct pnet_profibus_delay_valus
 {
-   uint32_t    rx_delay_local;
-   uint32_t    rx_delay_remote;
-   uint32_t    tx_delay_local;
-   uint32_t    tx_delay_remote;
-   uint32_t    cable_delay_local;
+   uint32_t rx_delay_local;
+   uint32_t rx_delay_remote;
+   uint32_t tx_delay_local;
+   uint32_t tx_delay_remote;
+   uint32_t cable_delay_local;
 } pnet_profibus_delay_t;
 
 typedef struct pnet_ieee_macphy_config
 {
-   uint8_t     aneg_support_status;      /**< Autonegotiation status */
-   uint16_t    aneg_cap;                 /**< Autonegotiation capabilites */
-   uint16_t    operational_mau_type;
+   uint8_t aneg_support_status; /**< Autonegotiation status */
+   uint16_t aneg_cap;           /**< Autonegotiation capabilites */
+   uint16_t operational_mau_type;
 } pnet_ieee_macphy_t;
 
 typedef struct pnet_lldp_boundary
 {
-   bool        not_send_LLDP_Frames;
-   bool        send_PTCP_Delay;
-   bool        send_PATH_Delay;
-   bool        reserved_bit4;
-   uint8_t     reserved_8;
-   uint16_t    rserved_16;
+   bool not_send_LLDP_Frames;
+   bool send_PTCP_Delay;
+   bool send_PATH_Delay;
+   bool reserved_bit4;
+   uint8_t reserved_8;
+   uint16_t rserved_16;
 } pnet_lldp_boundary_t;
 
 typedef struct pnet_lldp_peer_to_peer_boundary
@@ -1147,24 +1197,24 @@ typedef struct pnet_lldp_peer_to_peer_boundary
 typedef struct pnet_lldp_peer_info
 {
    /* LLDP TLVs */
-   uint8_t                             chassis_id_subtype;
-   char                                chassis_id[PNET_LLDP_CHASSIS_ID_MAX_LEN+1];
-   size_t                              chassis_id_len;
-   uint8_t                             port_id_subtype;
-   char                                port_id[PNET_LLDP_PORT_ID_MAX_LEN+1];
-   size_t                              port_id_len;
-   uint16_t                            ttl;
+   uint8_t chassis_id_subtype;
+   char chassis_id[PNET_LLDP_CHASSIS_ID_MAX_LEN + 1];
+   size_t chassis_id_len;
+   uint8_t port_id_subtype;
+   char port_id[PNET_LLDP_PORT_ID_MAX_LEN + 1];
+   size_t port_id_len;
+   uint16_t ttl;
    /* PROFIBUS TLVs */
-   pnet_profibus_delay_t               port_delay;
-   uint8_t                             port_status[4];
-   pnet_ethaddr_t                      mac_address;
-   uint16_t                            media_type;
-   uint32_t                            line_delay;
-   uint32_t                            domain_boundary;
-   uint32_t                            multicast_boundary;
-   uint8_t                             link_state_port;
-   pnet_ieee_macphy_t                  phy_config;
-   pnet_lldp_peer_to_peer_boundary_t   peer_boundary;
+   pnet_profibus_delay_t port_delay;
+   uint8_t port_status[4];
+   pnet_ethaddr_t mac_address;
+   uint16_t media_type;
+   uint32_t line_delay;
+   uint32_t domain_boundary;
+   uint32_t multicast_boundary;
+   uint8_t link_state_port;
+   pnet_ieee_macphy_t phy_config;
+   pnet_lldp_peer_to_peer_boundary_t peer_boundary;
 } pnet_lldp_peer_info_t;
 
 /**
@@ -1172,14 +1222,14 @@ typedef struct pnet_lldp_peer_info
  */
 typedef struct pnet_lldp_peer_req
 {
-   uint8_t                             chassis_id_subtype;
-   char                                chassis_id[PNET_LLDP_CHASSIS_ID_MAX_LEN+1];
-   size_t                              chassis_id_len;
-   uint8_t                             port_id_subtype;
-   char                                port_id[PNET_LLDP_PORT_ID_MAX_LEN+1];
-   size_t                              port_id_len;
-   uint16_t                            ttl;
-   pnet_lldp_peer_to_peer_boundary_t   peer_boundary;
+   uint8_t chassis_id_subtype;
+   char chassis_id[PNET_LLDP_CHASSIS_ID_MAX_LEN + 1];
+   size_t chassis_id_len;
+   uint8_t port_id_subtype;
+   char port_id[PNET_LLDP_PORT_ID_MAX_LEN + 1];
+   size_t port_id_len;
+   uint16_t ttl;
+   pnet_lldp_peer_to_peer_boundary_t peer_boundary;
 } pnet_lldp_peer_req_t;
 
 /**
@@ -1190,66 +1240,71 @@ typedef struct pnet_lldp_peer_req
 typedef struct pnet_cfg
 {
    /** Application call-backs */
-   pnet_state_ind          state_cb;
-   pnet_connect_ind        connect_cb;
-   pnet_release_ind        release_cb;
-   pnet_dcontrol_ind       dcontrol_cb;
-   pnet_ccontrol_cnf       ccontrol_cb;
-   pnet_write_ind          write_cb;
-   pnet_read_ind           read_cb;
-   pnet_exp_module_ind     exp_module_cb;
-   pnet_exp_submodule_ind  exp_submodule_cb;
+   pnet_state_ind state_cb;
+   pnet_connect_ind connect_cb;
+   pnet_release_ind release_cb;
+   pnet_dcontrol_ind dcontrol_cb;
+   pnet_ccontrol_cnf ccontrol_cb;
+   pnet_write_ind write_cb;
+   pnet_read_ind read_cb;
+   pnet_exp_module_ind exp_module_cb;
+   pnet_exp_submodule_ind exp_submodule_cb;
    pnet_new_data_status_ind new_data_status_cb;
-   pnet_alarm_ind          alarm_ind_cb;
-   pnet_alarm_cnf          alarm_cnf_cb;
-   pnet_alarm_ack_cnf      alarm_ack_cnf_cb;
-   pnet_reset_ind          reset_cb;
-   pnet_signal_led_ind     signal_led_cb;
-   void                    *cb_arg;    /* Userdata passed to callbacks, not used by stack */
+   pnet_alarm_ind alarm_ind_cb;
+   pnet_alarm_cnf alarm_cnf_cb;
+   pnet_alarm_ack_cnf alarm_ack_cnf_cb;
+   pnet_reset_ind reset_cb;
+   pnet_signal_led_ind signal_led_cb;
+   void * cb_arg; /* Userdata passed to callbacks, not used by stack */
 
    /** I&M initial data */
-   pnet_im_0_t             im_0_data;
-   pnet_im_1_t             im_1_data;
-   pnet_im_2_t             im_2_data;
-   pnet_im_3_t             im_3_data;
-   pnet_im_4_t             im_4_data;
+   pnet_im_0_t im_0_data;
+   pnet_im_1_t im_1_data;
+   pnet_im_2_t im_2_data;
+   pnet_im_3_t im_3_data;
+   pnet_im_4_t im_4_data;
 
    /** Identities */
-   pnet_cfg_device_id_t    device_id;
-   pnet_cfg_device_id_t    oem_device_id;
-   char                    station_name[PNET_STATION_NAME_MAX_LEN+1]; /**< Terminated string */
-   char                    device_vendor[20+1];                      /**< Terminated string */
-   char                    manufacturer_specific_string[240+1];      /**< Terminated string */
+   pnet_cfg_device_id_t device_id;
+   pnet_cfg_device_id_t oem_device_id;
+   char station_name[PNET_STATION_NAME_MAX_LEN + 1]; /**< Terminated string */
+   char device_vendor[20 + 1];                       /**< Terminated string */
+   char manufacturer_specific_string[240 + 1];       /**< Terminated string */
 
    /* Timing */
-   uint16_t                min_device_interval;    /** Smallest allowed data exchange interval, in units of 31.25 us.
-                                                       Used for triggering error messages to the PLC. Should match GSDML file.
-                                                       Typically 32, which corresponds to 1 ms. Max 0x1000 (128 ms) */
+   uint16_t min_device_interval; /** Smallest allowed data exchange interval, in
+                                    units of 31.25 us. Used for triggering error
+                                    messages to the PLC. Should match GSDML
+                                    file. Typically 32, which corresponds to 1
+                                    ms. Max 0x1000 (128 ms) */
    /** LLDP */
-   pnet_lldp_cfg_t         lldp_cfg;
+   pnet_lldp_cfg_t lldp_cfg;
 
    /** Capabilities */
-   bool                    send_hello;             /**< Send DCP HELLO message on startup if true. */
+   bool send_hello; /**< Send DCP HELLO message on startup if true. */
 
    /** IP configuration */
-   bool                    dhcp_enable;            /**< Not supported by stack. */
-   pnet_cfg_ip_addr_t      ip_addr;
-   pnet_cfg_ip_addr_t      ip_mask;
-   pnet_cfg_ip_addr_t      ip_gateway;
-   pnet_ethaddr_t          eth_addr;
+   bool dhcp_enable; /**< Not supported by stack. */
+   pnet_cfg_ip_addr_t ip_addr;
+   pnet_cfg_ip_addr_t ip_mask;
+   pnet_cfg_ip_addr_t ip_gateway;
+   pnet_ethaddr_t eth_addr;
 
    /** Storage between runs */
-   char                    file_directory[PNET_MAX_DIRECTORYPATH_LENGTH]; /**< Terminated string with absolute path. Use NULL or empty string for current directory. */
+   char file_directory[PNET_MAX_DIRECTORYPATH_LENGTH]; /**< Terminated string
+                                                          with absolute path.
+                                                          Use NULL or empty
+                                                          string for current
+                                                          directory. */
 
 } pnet_cfg_t;
 
-
 /*
-* API function return values
-*
-* All functions return either (zero) 0 for a successful call or
-* -1 for an unsuccessful call.
-*/
+ * API function return values
+ *
+ * All functions return either (zero) 0 for a successful call or
+ * -1 for an unsuccessful call.
+ */
 
 /**
  * Initialize the Profinet stack.
@@ -1259,13 +1314,14 @@ typedef struct pnet_cfg
  * @param netif            In:   Name of the network interface.
  * @param tick_us          In:   Periodic interval in us. Specify the interval
  *                               between calls to pnet_handle_periodic().
- * @param p_cfg            In:   Profinet configuration. These values are used at first startup and at factory reset.
+ * @param p_cfg            In:   Profinet configuration. These values are used
+ * at first startup and at factory reset.
  * @return a handle to the stack instance, or NULL if an error occurred.
  */
-PNET_EXPORT pnet_t* pnet_init(
-   const char              *netif,
-   uint32_t                tick_us,
-   const pnet_cfg_t        *p_cfg);
+PNET_EXPORT pnet_t * pnet_init (
+   const char * netif,
+   uint32_t tick_us,
+   const pnet_cfg_t * p_cfg);
 
 /**
  * Execute all periodic functions within the ProfiNet stack.
@@ -1276,8 +1332,7 @@ PNET_EXPORT pnet_t* pnet_init(
  * The period should match the expected I/O data rate to and from the device.
  * @param net              InOut: The p-net stack instance
  */
-PNET_EXPORT void pnet_handle_periodic(
-   pnet_t                  *net);
+PNET_EXPORT void pnet_handle_periodic (pnet_t * net);
 
 /**
  * Application signals ready to exchange data.
@@ -1287,8 +1342,8 @@ PNET_EXPORT void pnet_handle_periodic(
  * This function must be called _after_ the application has received
  * state_cb(PNET_EVENT_PRMEND) in order for a connection to be established.
  *
- * If this function does not see all PPM data and IOPS areas are set (by the app)
- * then it returns error and the application must try again - otherwise the
+ * If this function does not see all PPM data and IOPS areas are set (by the
+ * app) then it returns error and the application must try again - otherwise the
  * startup will hang.
  *
  * Triggers the \a pnet_state_ind() user callback with PNET_EVENT_APPLRDY.
@@ -1298,9 +1353,7 @@ PNET_EXPORT void pnet_handle_periodic(
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
-PNET_EXPORT int pnet_application_ready(
-   pnet_t                  *net,
-   uint32_t                arep);
+PNET_EXPORT int pnet_application_ready (pnet_t * net, uint32_t arep);
 
 /**
  * Plug a module into a slot.
@@ -1317,11 +1370,11 @@ PNET_EXPORT int pnet_application_ready(
  * @return  0  if a module could be plugged into the slot.
  *          -1 if an error occurred.
  */
-PNET_EXPORT int pnet_plug_module(
-   pnet_t                  *net,
-   uint32_t                api,
-   uint16_t                slot,
-   uint32_t                module_ident);
+PNET_EXPORT int pnet_plug_module (
+   pnet_t * net,
+   uint32_t api,
+   uint16_t slot,
+   uint32_t module_ident);
 
 /**
  * Plug a sub-module into a sub-slot.
@@ -1346,16 +1399,16 @@ PNET_EXPORT int pnet_plug_module(
  * @return  0  if the sub-module could be plugged into the sub-slot.
  *          -1 if an error occurred.
  */
-PNET_EXPORT int pnet_plug_submodule(
-   pnet_t                  *net,
-   uint32_t                api,
-   uint16_t                slot,
-   uint16_t                subslot,
-   uint32_t                module_ident,
-   uint32_t                submodule_ident,
-   pnet_submodule_dir_t    direction,
-   uint16_t                length_input,
-   uint16_t                length_output);
+PNET_EXPORT int pnet_plug_submodule (
+   pnet_t * net,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
+   uint32_t module_ident,
+   uint32_t submodule_ident,
+   pnet_submodule_dir_t direction,
+   uint16_t length_input,
+   uint16_t length_output);
 
 /**
  * Pull a module from a slot.
@@ -1371,10 +1424,7 @@ PNET_EXPORT int pnet_plug_submodule(
  * @return  0  if a module could be pulled from the slot.
  *          -1 if an error occurred.
  */
-PNET_EXPORT int pnet_pull_module(
-   pnet_t                  *net,
-   uint32_t                api,
-   uint16_t                slot);
+PNET_EXPORT int pnet_pull_module (pnet_t * net, uint32_t api, uint16_t slot);
 
 /**
  * Pull a sub-module from a sub-slot.
@@ -1388,11 +1438,11 @@ PNET_EXPORT int pnet_pull_module(
  * @return  0  if the sub-module could be pulled from the sub-slot.
  *          -1 if an error occurred.
  */
-PNET_EXPORT int pnet_pull_submodule(
-   pnet_t                  *net,
-   uint32_t                api,
-   uint16_t                slot,
-   uint16_t                subslot);
+PNET_EXPORT int pnet_pull_submodule (
+   pnet_t * net,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot);
 
 /**
  * Updates the IOPS and data of one sub-slot to send to the controller.
@@ -1410,14 +1460,14 @@ PNET_EXPORT int pnet_pull_submodule(
  * @return  0  if a sub-module data and IOPS was set.
  *          -1 if an error occurred.
  */
-PNET_EXPORT int pnet_input_set_data_and_iops(
-   pnet_t                  *net,
-   uint32_t                api,
-   uint16_t                slot,
-   uint16_t                subslot,
-   uint8_t                 *p_data,
-   uint16_t                data_len,
-   uint8_t                 iops);
+PNET_EXPORT int pnet_input_set_data_and_iops (
+   pnet_t * net,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
+   uint8_t * p_data,
+   uint16_t data_len,
+   uint8_t iops);
 
 /**
  * Fetch the controller consumer status of one sub-slot.
@@ -1433,12 +1483,12 @@ PNET_EXPORT int pnet_input_set_data_and_iops(
  * @return  0  if a sub-module IOCS was set.
  *          -1 if an error occurred.
  */
-PNET_EXPORT int pnet_input_get_iocs(
-   pnet_t                  *net,
-   uint32_t                api,
-   uint16_t                slot,
-   uint16_t                subslot,
-   uint8_t                 *p_iocs);
+PNET_EXPORT int pnet_input_get_iocs (
+   pnet_t * net,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
+   uint8_t * p_iocs);
 
 /**
  * Retrieve latest sub-slot data and IOPS received from the controller.
@@ -1467,15 +1517,15 @@ PNET_EXPORT int pnet_input_get_iocs(
  * @return  0  if a sub-module data and IOPS is retrieved.
  *          -1 if an error occurred.
  */
-PNET_EXPORT int pnet_output_get_data_and_iops(
-   pnet_t                  *net,
-   uint32_t                api,
-   uint16_t                slot,
-   uint16_t                subslot,
-   bool                    *p_new_flag,
-   uint8_t                 *p_data,
-   uint16_t                *p_data_len,
-   uint8_t                 *p_iops);
+PNET_EXPORT int pnet_output_get_data_and_iops (
+   pnet_t * net,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
+   bool * p_new_flag,
+   uint8_t * p_data,
+   uint16_t * p_data_len,
+   uint8_t * p_iops);
 
 /**
  * Set the device consumer status for one sub-slot.
@@ -1491,12 +1541,12 @@ PNET_EXPORT int pnet_output_get_data_and_iops(
  * @return  0  if a sub-module IOCS was set.
  *          -1 if an error occurred.
  */
-PNET_EXPORT int pnet_output_set_iocs(
-   pnet_t                  *net,
-   uint32_t                api,
-   uint16_t                slot,
-   uint16_t                subslot,
-   uint8_t                 iocs);
+PNET_EXPORT int pnet_output_set_iocs (
+   pnet_t * net,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
+   uint8_t iocs);
 
 /**
  * Implements the "Local Set State" primitive.
@@ -1506,9 +1556,7 @@ PNET_EXPORT int pnet_output_set_iocs(
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
-PNET_EXPORT int pnet_set_state(
-   pnet_t                  *net,
-   bool                    primary);
+PNET_EXPORT int pnet_set_state (pnet_t * net, bool primary);
 
 /**
  * Implements the "Local Set Redundancy State" primitive.
@@ -1518,9 +1566,7 @@ PNET_EXPORT int pnet_set_state(
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
-PNET_EXPORT int pnet_set_redundancy_state(
-   pnet_t                  *net,
-   bool                    redundant);
+PNET_EXPORT int pnet_set_redundancy_state (pnet_t * net, bool redundant);
 
 /**
  * Implements the "Local set Provider State" primitive.
@@ -1528,8 +1574,8 @@ PNET_EXPORT int pnet_set_redundancy_state(
  * The application should call this function at least once during startup to set
  * the provider status of frames sent to the controller.
  *
- * The application may call this function at any time, e.g., to signal a temporary
- * inability to produce new application data to the controller.
+ * The application may call this function at any time, e.g., to signal a
+ * temporary inability to produce new application data to the controller.
  *
  * Its effect is similar to setting IOPS to PNET_IOXS_BAD for all sub-slots.
  *
@@ -1538,9 +1584,7 @@ PNET_EXPORT int pnet_set_redundancy_state(
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
-PNET_EXPORT int pnet_set_provider_state(
-   pnet_t                  *net,
-   bool                    run);
+PNET_EXPORT int pnet_set_provider_state (pnet_t * net, bool run);
 
 /**
  * Application requests abortion of the connection.
@@ -1550,9 +1594,7 @@ PNET_EXPORT int pnet_set_provider_state(
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
-PNET_EXPORT int pnet_ar_abort(
-   pnet_t                  *net,
-   uint32_t                arep);
+PNET_EXPORT int pnet_ar_abort (pnet_t * net, uint32_t arep);
 
 /**
  * Application requests factory reset of the device.
@@ -1566,8 +1608,7 @@ PNET_EXPORT int pnet_ar_abort(
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
-PNET_EXPORT int pnet_factory_reset(
-   pnet_t                  *net);
+PNET_EXPORT int pnet_factory_reset (pnet_t * net);
 
 /**
  * Delete data files.
@@ -1581,8 +1622,7 @@ PNET_EXPORT int pnet_factory_reset(
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
-PNET_EXPORT int pnet_remove_data_files(
-   const char*             file_directory);
+PNET_EXPORT int pnet_remove_data_files (const char * file_directory);
 
 /**
  * Fetch error information from the AREP.
@@ -1594,11 +1634,11 @@ PNET_EXPORT int pnet_remove_data_files(
  * @return  0  If the AREP is valid.
  *          -1 if the AREP is not valid.
  */
-PNET_EXPORT int pnet_get_ar_error_codes(
-   pnet_t                  *net,
-   uint32_t                arep,
-   uint16_t                *p_err_cls,
-   uint16_t                *p_err_code);
+PNET_EXPORT int pnet_get_ar_error_codes (
+   pnet_t * net,
+   uint32_t arep,
+   uint16_t * p_err_cls,
+   uint16_t * p_err_code);
 
 /**
  * Application creates an entry in the log book.
@@ -1611,11 +1651,11 @@ PNET_EXPORT int pnet_get_ar_error_codes(
  * @param p_pnio_status    In:   The PNIO status.
  * @param entry_detail     In:   Additional application information.
  */
-PNET_EXPORT void pnet_create_log_book_entry(
-   pnet_t                  *net,
-   uint32_t                 arep,
-   const pnet_pnio_status_t *p_pnio_status,
-   uint32_t                 entry_detail);
+PNET_EXPORT void pnet_create_log_book_entry (
+   pnet_t * net,
+   uint32_t arep,
+   const pnet_pnio_status_t * p_pnio_status,
+   uint32_t entry_detail);
 
 /**
  * Application issues a process alarm.
@@ -1640,17 +1680,18 @@ PNET_EXPORT void pnet_create_log_book_entry(
  * @param payload_len      In:   Length in bytes of the payload.
  * @param p_payload        In:   The alarm payload (USI specific format).
  * @return  0  if the operation succeeded.
- *          -1 if an error occurred (or waiting for ACK from controller: re-try later).
+ *          -1 if an error occurred (or waiting for ACK from controller: re-try
+ * later).
  */
-PNET_EXPORT int pnet_alarm_send_process_alarm(
-   pnet_t                  *net,
-   uint32_t                arep,
-   uint32_t                api,
-   uint16_t                slot,
-   uint16_t                subslot,
-   uint16_t                payload_usi,
-   uint16_t                payload_len,
-   uint8_t                 *p_payload);
+PNET_EXPORT int pnet_alarm_send_process_alarm (
+   pnet_t * net,
+   uint32_t arep,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
+   uint16_t payload_usi,
+   uint16_t payload_len,
+   uint8_t * p_payload);
 
 /**
  * Application acknowledges the reception of an alarm from the controller.
@@ -1665,84 +1706,115 @@ PNET_EXPORT int pnet_alarm_send_process_alarm(
  *
  * @param net                    InOut: The p-net stack instance
  * @param arep                   In:    The AREP.
- * @param p_alarm_argument       In:    The alarm argument (with slot, subslot, alarm_type etc)
+ * @param p_alarm_argument       In:    The alarm argument (with slot, subslot,
+ * alarm_type etc)
  * @param p_pnio_status          In:    Detailed ACK status.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
-PNET_EXPORT int pnet_alarm_send_ack(
-   pnet_t                  *net,
-   uint32_t                arep,
-   pnet_alarm_argument_t   *p_alarm_argument,
-   pnet_pnio_status_t      *p_pnio_status);
+PNET_EXPORT int pnet_alarm_send_ack (
+   pnet_t * net,
+   uint32_t arep,
+   pnet_alarm_argument_t * p_alarm_argument,
+   pnet_pnio_status_t * p_pnio_status);
 
 /* ****************************** Diagnosis ****************************** */
 /* Mask and position of bit fields and values within ch_properties         */
 
-#define PNET_DIAG_CH_PROP_TYPE_MASK          0x00ff
-#define PNET_DIAG_CH_PROP_TYPE_POS           0
-#define PNET_DIAG_CH_PROP_TYPE_GET(x)        (((X) & PNET_DIAG_CH_PROP_TYPE_MASK)>>PNET_DIAG_CH_PROP_TYPE_POS)
-#define PNET_DIAG_CH_PROP_TYPE_SET(x, v)     do { (x) &= ~PNET_DIAG_CH_PROP_TYPE_MASK; (x) |= (v)<<PNET_DIAG_CH_PROP_TYPE_POS; } while (0)
+#define PNET_DIAG_CH_PROP_TYPE_MASK 0x00ff
+#define PNET_DIAG_CH_PROP_TYPE_POS  0
+#define PNET_DIAG_CH_PROP_TYPE_GET(x)                                          \
+   (((X)&PNET_DIAG_CH_PROP_TYPE_MASK) >> PNET_DIAG_CH_PROP_TYPE_POS)
+#define PNET_DIAG_CH_PROP_TYPE_SET(x, v)                                       \
+   do                                                                          \
+   {                                                                           \
+      (x) &= ~PNET_DIAG_CH_PROP_TYPE_MASK;                                     \
+      (x) |= (v) << PNET_DIAG_CH_PROP_TYPE_POS;                                \
+   } while (0)
 typedef enum pnet_diag_ch_prop_type_values
 {
-   PNET_DIAG_CH_PROP_TYPE_UNSPECIFIED        = 0,
-   PNET_DIAG_CH_PROP_TYPE_1_BIT              = 1,
-   PNET_DIAG_CH_PROP_TYPE_2_BIT              = 2,
-   PNET_DIAG_CH_PROP_TYPE_4_BIT              = 3,
-   PNET_DIAG_CH_PROP_TYPE_8_BIT              = 4,
-   PNET_DIAG_CH_PROP_TYPE_16_BIT             = 5,
-   PNET_DIAG_CH_PROP_TYPE_32_BIT             = 6,
-   PNET_DIAG_CH_PROP_TYPE_64_BIT             = 7,
+   PNET_DIAG_CH_PROP_TYPE_UNSPECIFIED = 0,
+   PNET_DIAG_CH_PROP_TYPE_1_BIT = 1,
+   PNET_DIAG_CH_PROP_TYPE_2_BIT = 2,
+   PNET_DIAG_CH_PROP_TYPE_4_BIT = 3,
+   PNET_DIAG_CH_PROP_TYPE_8_BIT = 4,
+   PNET_DIAG_CH_PROP_TYPE_16_BIT = 5,
+   PNET_DIAG_CH_PROP_TYPE_32_BIT = 6,
+   PNET_DIAG_CH_PROP_TYPE_64_BIT = 7,
    /* 8..255 Reserved */
 } pnet_diag_ch_prop_type_values_t;
 
-#define PNET_DIAG_CH_PROP_ACC_MASK           0x0100
-#define PNET_DIAG_CH_PROP_ACC_POS            8
-#define PNET_DIAG_CH_PROP_ACC_GET(x)         (((x) & PNET_DIAG_CH_PROP_ACC_MASK)>>PNET_DIAG_CH_PROP_ACC_POS)
-#define PNET_DIAG_CH_PROP_ACC_SET(x, v)      do { (x) &= ~PNET_DIAG_CH_PROP_ACC_MASK; (x) |= (v)<<PNET_DIAG_CH_PROP_ACC_POS; } while (0)
+#define PNET_DIAG_CH_PROP_ACC_MASK 0x0100
+#define PNET_DIAG_CH_PROP_ACC_POS  8
+#define PNET_DIAG_CH_PROP_ACC_GET(x)                                           \
+   (((x)&PNET_DIAG_CH_PROP_ACC_MASK) >> PNET_DIAG_CH_PROP_ACC_POS)
+#define PNET_DIAG_CH_PROP_ACC_SET(x, v)                                        \
+   do                                                                          \
+   {                                                                           \
+      (x) &= ~PNET_DIAG_CH_PROP_ACC_MASK;                                      \
+      (x) |= (v) << PNET_DIAG_CH_PROP_ACC_POS;                                 \
+   } while (0)
 
-#define PNET_DIAG_CH_PROP_MAINT_MASK         0x0600
-#define PNET_DIAG_CH_PROP_MAINT_POS          9
-#define PNET_DIAG_CH_PROP_MAINT_GET(x)       (((x) & PNET_DIAG_CH_PROP_MAINT_MASK)>>PNET_DIAG_CH_PROP_MAINT_POS)
-#define PNET_DIAG_CH_PROP_MAINT_SET(x, v)    do { (x) &= ~PNET_DIAG_CH_PROP_MAINT_MASK; (x) |= (v)<<PNET_DIAG_CH_PROP_MAINT_POS; } while (0)
+#define PNET_DIAG_CH_PROP_MAINT_MASK 0x0600
+#define PNET_DIAG_CH_PROP_MAINT_POS  9
+#define PNET_DIAG_CH_PROP_MAINT_GET(x)                                         \
+   (((x)&PNET_DIAG_CH_PROP_MAINT_MASK) >> PNET_DIAG_CH_PROP_MAINT_POS)
+#define PNET_DIAG_CH_PROP_MAINT_SET(x, v)                                      \
+   do                                                                          \
+   {                                                                           \
+      (x) &= ~PNET_DIAG_CH_PROP_MAINT_MASK;                                    \
+      (x) |= (v) << PNET_DIAG_CH_PROP_MAINT_POS;                               \
+   } while (0)
 typedef enum pnet_diag_ch_prop_maint_values
 {
-   PNET_DIAG_CH_PROP_MAINT_FAULT             = 0,
-   PNET_DIAG_CH_PROP_MAINT_REQUIRED          = 1,
-   PNET_DIAG_CH_PROP_MAINT_DEMANDED          = 2,
-   PNET_DIAG_CH_PROP_MAINT_QUALIFIED         = 3,
+   PNET_DIAG_CH_PROP_MAINT_FAULT = 0,
+   PNET_DIAG_CH_PROP_MAINT_REQUIRED = 1,
+   PNET_DIAG_CH_PROP_MAINT_DEMANDED = 2,
+   PNET_DIAG_CH_PROP_MAINT_QUALIFIED = 3,
 } pnet_diag_ch_prop_maint_values_t;
 
-#define PNET_DIAG_CH_PROP_SPEC_MASK          0x1800
-#define PNET_DIAG_CH_PROP_SPEC_POS           11
-#define PNET_DIAG_CH_PROP_SPEC_GET(x)        (((x) & PNET_DIAG_CH_PROP_SPEC_MASK)>>PNET_DIAG_CH_PROP_SPEC_POS)
-#define PNET_DIAG_CH_PROP_SPEC_SET(x, v)     do { (x) &= ~PNET_DIAG_CH_PROP_SPEC_MASK; (x) |= (v)<<PNET_DIAG_CH_PROP_SPEC_POS; } while (0)
+#define PNET_DIAG_CH_PROP_SPEC_MASK 0x1800
+#define PNET_DIAG_CH_PROP_SPEC_POS  11
+#define PNET_DIAG_CH_PROP_SPEC_GET(x)                                          \
+   (((x)&PNET_DIAG_CH_PROP_SPEC_MASK) >> PNET_DIAG_CH_PROP_SPEC_POS)
+#define PNET_DIAG_CH_PROP_SPEC_SET(x, v)                                       \
+   do                                                                          \
+   {                                                                           \
+      (x) &= ~PNET_DIAG_CH_PROP_SPEC_MASK;                                     \
+      (x) |= (v) << PNET_DIAG_CH_PROP_SPEC_POS;                                \
+   } while (0)
 typedef enum pnet_diag_ch_prop_spec_values
 {
-   PNET_DIAG_CH_PROP_SPEC_ALL_DISAPPEARS     = 0,
-   PNET_DIAG_CH_PROP_SPEC_APPEARS            = 1,
-   PNET_DIAG_CH_PROP_SPEC_DISAPPEARS         = 2,
-   PNET_DIAG_CH_PROP_SPEC_DIS_OTHERS_REMAIN  = 3,
+   PNET_DIAG_CH_PROP_SPEC_ALL_DISAPPEARS = 0,
+   PNET_DIAG_CH_PROP_SPEC_APPEARS = 1,
+   PNET_DIAG_CH_PROP_SPEC_DISAPPEARS = 2,
+   PNET_DIAG_CH_PROP_SPEC_DIS_OTHERS_REMAIN = 3,
 } pnet_diag_ch_prop_spec_values_t;
 
-#define PNET_DIAG_CH_PROP_DIR_MASK           0xe000
-#define PNET_DIAG_CH_PROP_DIR_POS            13
-#define PNET_DIAG_CH_PROP_DIR_GET(x)         (((x) & PNET_DIAG_CH_PROP_DIR_MASK)>>PNET_DIAG_CH_PROP_DIR_POS)
-#define PNET_DIAG_CH_PROP_DIR_SET(x, v)      do { (x) &= ~PNET_DIAG_CH_PROP_DIR_MASK; (x) |= (v)<<PNET_DIAG_CH_PROP_DIR_POS; } while (0)
+#define PNET_DIAG_CH_PROP_DIR_MASK 0xe000
+#define PNET_DIAG_CH_PROP_DIR_POS  13
+#define PNET_DIAG_CH_PROP_DIR_GET(x)                                           \
+   (((x)&PNET_DIAG_CH_PROP_DIR_MASK) >> PNET_DIAG_CH_PROP_DIR_POS)
+#define PNET_DIAG_CH_PROP_DIR_SET(x, v)                                        \
+   do                                                                          \
+   {                                                                           \
+      (x) &= ~PNET_DIAG_CH_PROP_DIR_MASK;                                      \
+      (x) |= (v) << PNET_DIAG_CH_PROP_DIR_POS;                                 \
+   } while (0)
 typedef enum pnet_diag_ch_prop_dir_values
 {
-   PNET_DIAG_CH_PROP_DIR_MANUF_SPEC          = 0,
-   PNET_DIAG_CH_PROP_DIR_INPUT               = 1,
-   PNET_DIAG_CH_PROP_DIR_OUTPUT              = 2,
-   PNET_DIAG_CH_PROP_DIR_INOUT               = 3,
+   PNET_DIAG_CH_PROP_DIR_MANUF_SPEC = 0,
+   PNET_DIAG_CH_PROP_DIR_INPUT = 1,
+   PNET_DIAG_CH_PROP_DIR_OUTPUT = 2,
+   PNET_DIAG_CH_PROP_DIR_INOUT = 3,
 } pnet_diag_ch_prop_dir_values_t;
 
-#define PNET_DIAG_QUALIFIER_POS_FAULT        27
-#define PNET_DIAG_QUALIFIER_POS_DEMANDED     17
-#define PNET_DIAG_QUALIFIER_POS_REQUIRED     7
-#define PNET_DIAG_QUALIFIER_POS_ADVICE       3
+#define PNET_DIAG_QUALIFIER_POS_FAULT    27
+#define PNET_DIAG_QUALIFIER_POS_DEMANDED 17
+#define PNET_DIAG_QUALIFIER_POS_REQUIRED 7
+#define PNET_DIAG_QUALIFIER_POS_ADVICE   3
 
-#define PNET_DIAG_USI_STD                    0x8000
+#define PNET_DIAG_USI_STD 0x8000
 
 /**
  * Add a diagnosis entry.
@@ -1759,27 +1831,27 @@ typedef enum pnet_diag_ch_prop_dir_values
  * @param ext_ch_add_value In:   The extended channel error additional value.
  * @param qual_ch_qualifier In:  The qualified channel qualifier.
  * @param usi              In:   The USI.
- *                               range: 0..0x7fff for manufacturer-specific diag format.
- *                                      0x8000 for standard format.
+ *                               range: 0..0x7fff for manufacturer-specific diag
+ * format. 0x8000 for standard format.
  * @param p_manuf_data     In:   The manufacturer specific diagnosis data.
  *                               (Only needed if USI <= 0x7fff).
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
-PNET_EXPORT int pnet_diag_add(
-   pnet_t                  *net,
-   uint32_t                arep,
-   uint32_t                api,
-   uint16_t                slot,
-   uint16_t                subslot,
-   uint16_t                ch,
-   uint16_t                ch_properties,
-   uint16_t                ch_error_type,
-   uint16_t                ext_ch_error_type,
-   uint32_t                ext_ch_add_value,
-   uint32_t                qual_ch_qualifier,
-   uint16_t                usi,
-   uint8_t                 *p_manuf_data);
+PNET_EXPORT int pnet_diag_add (
+   pnet_t * net,
+   uint32_t arep,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
+   uint16_t ch,
+   uint16_t ch_properties,
+   uint16_t ch_error_type,
+   uint16_t ext_ch_error_type,
+   uint32_t ext_ch_add_value,
+   uint32_t qual_ch_qualifier,
+   uint16_t usi,
+   uint8_t * p_manuf_data);
 
 /**
  * Update a diagnosis entry.
@@ -1808,25 +1880,25 @@ PNET_EXPORT int pnet_diag_add(
  * @param ch_error_type    In:   The channel error type.
  * @param ext_ch_add_value In:   The extended channel error additional value.
  * @param usi              In:   The USI.
- *                               range: 0..0x7fff for manufacturer-specific diag format.
- *                                      0x8000 for standard format.
+ *                               range: 0..0x7fff for manufacturer-specific diag
+ * format. 0x8000 for standard format.
  * @param p_manuf_data     In:   The manufacturer specific diagnosis data.
  *                               (Only needed if USI <= 0x7fff).
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
-PNET_EXPORT int pnet_diag_update(
-   pnet_t                  *net,
-   uint32_t                arep,
-   uint32_t                api,
-   uint16_t                slot,
-   uint16_t                subslot,
-   uint16_t                ch,
-   uint16_t                ch_properties,
-   uint16_t                ch_error_type,
-   uint32_t                ext_ch_add_value,
-   uint16_t                usi,
-   uint8_t                 *p_manuf_data);
+PNET_EXPORT int pnet_diag_update (
+   pnet_t * net,
+   uint32_t arep,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
+   uint16_t ch,
+   uint16_t ch_properties,
+   uint16_t ch_error_type,
+   uint32_t ext_ch_add_value,
+   uint16_t usi,
+   uint8_t * p_manuf_data);
 
 /**
  * Remove a diagnosis entry.
@@ -1850,21 +1922,21 @@ PNET_EXPORT int pnet_diag_update(
  * @param ch_properties    In:   The channel properties.
  * @param ch_error_type    In:   The channel error type.
  * @param usi              In:   The USI.
- *                               range: 0..0x7fff for manufacturer-specific diag format.
- *                                      0x8000 for standard format.
+ *                               range: 0..0x7fff for manufacturer-specific diag
+ * format. 0x8000 for standard format.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
-PNET_EXPORT int pnet_diag_remove(
-   pnet_t                  *net,
-   uint32_t                arep,
-   uint32_t                api,
-   uint16_t                slot,
-   uint16_t                subslot,
-   uint16_t                ch,
-   uint16_t                ch_properties,
-   uint16_t                ch_error_type,
-   uint16_t                usi);
+PNET_EXPORT int pnet_diag_remove (
+   pnet_t * net,
+   uint32_t arep,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
+   uint16_t ch,
+   uint16_t ch_properties,
+   uint16_t ch_error_type,
+   uint16_t usi);
 
 /**
  * Show information from the Profinet stack.
@@ -1894,9 +1966,7 @@ PNET_EXPORT int pnet_diag_remove(
  *                                     1    More IOCR info on AR
  *                                       1  More IOCR info on AR
  */
-PNET_EXPORT void pnet_show(
-   pnet_t                  *net,
-   unsigned                level);
+PNET_EXPORT void pnet_show (pnet_t * net, unsigned level);
 
 #ifdef __cplusplus
 }

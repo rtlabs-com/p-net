@@ -23,8 +23,7 @@
 #define PF_LLDP_H
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 /**
@@ -34,24 +33,20 @@ extern "C"
  * sends the initial LLDP message.
  * @param net              InOut: The p-net stack instance
  */
-void pf_lldp_init(
-   pnet_t                  *net);
+void pf_lldp_init (pnet_t * net);
 
 /**
  * Build and send an LLDP message.
  * @param net              InOut: The p-net stack instance
  */
-void pf_lldp_send(
-   pnet_t                  *net);
+void pf_lldp_send (pnet_t * net);
 
 /**
  * Restart LLDP timer and optionally send LLDP frame.
  * @param net              InOut: The p-net stack instance
  * @param send             In: Send LLDP message
  */
-void pf_lldp_restart(
-   pnet_t                  *net,
-   bool                    send);
+void pf_lldp_restart (pnet_t * net, bool send);
 
 /**
  * Receive an LLDP message.
@@ -64,19 +59,15 @@ void pf_lldp_restart(
  * @return  0     If the frame was NOT handled by this function.
  *          1     If the frame was handled and the buffer freed.
  */
-int pf_lldp_recv(
-   pnet_t                  *net,
-   os_buf_t                *p_frame_buf,
-   uint16_t                offset);
-
+int pf_lldp_recv (pnet_t * net, os_buf_t * p_frame_buf, uint16_t offset);
 
 /************ Internal functions, made available for unit testing ************/
 
-int pf_lldp_generate_alias_name(
-   const char*             port_id,
-   const char*             chassis_id,
-   char*                   alias,
-   uint16_t                len);
+int pf_lldp_generate_alias_name (
+   const char * port_id,
+   const char * chassis_id,
+   char * alias,
+   uint16_t len);
 
 #ifdef __cplusplus
 }

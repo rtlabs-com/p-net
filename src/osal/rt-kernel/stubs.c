@@ -16,7 +16,7 @@
 #include <stddef.h>
 #include <kern/types.h>
 
-char *getcwd(char *buf, size_t size)
+char * getcwd (char * buf, size_t size)
 {
    buf[0] = '/';
    buf[1] = 0;

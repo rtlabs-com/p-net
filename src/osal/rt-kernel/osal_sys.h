@@ -17,8 +17,7 @@
 #define OSAL_SYS_H
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 #include <kern.h>
@@ -51,14 +50,13 @@ typedef flags_t os_event_t;
 typedef mbox_t os_mbox_t;
 typedef tmr_t os_timer_t;
 
-
 /* Re-use lwIP pbuf for rt-kernel */
 typedef struct pbuf os_buf_t;
 
 /* TODO: Integrate in standard drivers?
  * Local handling to enable the NIC drivers to support a RX hook
  */
-#define IOCTL_NET_SET_RX_HOOK      0x601
+#define IOCTL_NET_SET_RX_HOOK 0x601
 
 int eth_ioctl (drv_t * drv, void * arg, int req, void * param);
 
@@ -71,9 +69,7 @@ int eth_ioctl (drv_t * drv, void * arg, int req, void * param);
  * @return  0  If the frame was NOT handled by this function.
  *          1  If the frame was handled and the buffer freed.
  */
-typedef int (os_eth_callback_t)(
-   void                    *arg,
-   os_buf_t                *p_buf);
+typedef int (os_eth_callback_t) (void * arg, os_buf_t * p_buf);
 
 typedef struct os_eth_handle
 {

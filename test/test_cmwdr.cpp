@@ -20,9 +20,9 @@
 
 #include <gtest/gtest.h>
 
-
-class CmwdrTest : public PnetIntegrationTest {};
-
+class CmwdrTest : public PnetIntegrationTest
+{
+};
 
 TEST_F (CmwdrTest, CmwdrRunTest)
 {

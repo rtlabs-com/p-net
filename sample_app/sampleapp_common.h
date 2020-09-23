@@ -21,23 +21,22 @@
 #include <pnet_api.h>
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
-#define IP_INVALID              0
+#define IP_INVALID 0
 
 /********************** Settings **********************************************/
 
-#define APP_PROFINET_SIGNAL_LED_ID     0
-#define APP_DATA_LED_ID                1
-#define EVENT_READY_FOR_DATA           BIT(0)
-#define EVENT_TIMER                    BIT(1)
-#define EVENT_ALARM                    BIT(2)
-#define EVENT_ABORT                    BIT(15)
+#define APP_PROFINET_SIGNAL_LED_ID 0
+#define APP_DATA_LED_ID            1
+#define EVENT_READY_FOR_DATA       BIT (0)
+#define EVENT_TIMER                BIT (1)
+#define EVENT_ALARM                BIT (2)
+#define EVENT_ABORT                BIT (15)
 
-#define TICK_INTERVAL_US               1000        /* 1 ms */
-#define APP_ALARM_USI                  1
+#define TICK_INTERVAL_US 1000 /* 1 ms */
+#define APP_ALARM_USI    1
 
 /**************** From the GSDML file ****************************************/
 
@@ -52,79 +51,100 @@ extern "C"
  *
  * Assume that all modules only have a single submodule, with same number.
  */
-#define PNET_MOD_8_0_IDENT          0x00000030     /* 8 bit input */
-#define PNET_MOD_0_8_IDENT          0x00000031     /* 8 bit output */
-#define PNET_MOD_8_8_IDENT          0x00000032     /* 8 bit input, 8 bit output */
-#define PNET_SUBMOD_CUSTOM_IDENT    0x00000001
+#define PNET_MOD_8_0_IDENT       0x00000030 /* 8 bit input */
+#define PNET_MOD_0_8_IDENT       0x00000031 /* 8 bit output */
+#define PNET_MOD_8_8_IDENT       0x00000032 /* 8 bit input, 8 bit output */
+#define PNET_SUBMOD_CUSTOM_IDENT 0x00000001
 
-#define APP_DATASIZE_INPUT       1     /* bytes, for digital inputs data */
-#define APP_DATASIZE_OUTPUT      1     /* bytes, for digital outputs data */
-#define APP_ALARM_PAYLOAD_SIZE   1     /* bytes */
+#define APP_DATASIZE_INPUT     1 /* bytes, for digital inputs data */
+#define APP_DATASIZE_OUTPUT    1 /* bytes, for digital outputs data */
+#define APP_ALARM_PAYLOAD_SIZE 1 /* bytes */
 
 /*** Example on how to keep lists of supported modules and submodules ********/
 
-static const uint32_t            cfg_available_module_types[] =
-{
+static const uint32_t cfg_available_module_types[] = {
    PNET_MOD_DAP_IDENT,
    PNET_MOD_8_0_IDENT,
    PNET_MOD_0_8_IDENT,
-   PNET_MOD_8_8_IDENT
-};
+   PNET_MOD_8_8_IDENT};
 
 static const struct
 {
-   uint32_t                api;
-   uint32_t                module_ident_nbr;
-   uint32_t                submodule_ident_nbr;
-   pnet_submodule_dir_t    data_dir;
-   uint16_t                insize;     /* bytes */
-   uint16_t                outsize;    /* bytes */
-} cfg_available_submodule_types[] =
-{
-   {APP_API, PNET_MOD_DAP_IDENT, PNET_SUBMOD_DAP_IDENT,                    PNET_DIR_NO_IO,  0,                  0},
-   {APP_API, PNET_MOD_DAP_IDENT, PNET_SUBMOD_DAP_INTERFACE_1_IDENT,        PNET_DIR_NO_IO,  0,                  0},
-   {APP_API, PNET_MOD_DAP_IDENT, PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT, PNET_DIR_NO_IO,  0,                  0},
-   {APP_API, PNET_MOD_8_0_IDENT, PNET_SUBMOD_CUSTOM_IDENT,                 PNET_DIR_INPUT,  APP_DATASIZE_INPUT, 0},
-   {APP_API, PNET_MOD_0_8_IDENT, PNET_SUBMOD_CUSTOM_IDENT,                 PNET_DIR_OUTPUT, 0,                  APP_DATASIZE_OUTPUT},
-   {APP_API, PNET_MOD_8_8_IDENT, PNET_SUBMOD_CUSTOM_IDENT,                 PNET_DIR_IO,     APP_DATASIZE_INPUT, APP_DATASIZE_OUTPUT},
+   uint32_t api;
+   uint32_t module_ident_nbr;
+   uint32_t submodule_ident_nbr;
+   pnet_submodule_dir_t data_dir;
+   uint16_t insize;  /* bytes */
+   uint16_t outsize; /* bytes */
+} cfg_available_submodule_types[] = {
+   {APP_API, PNET_MOD_DAP_IDENT, PNET_SUBMOD_DAP_IDENT, PNET_DIR_NO_IO, 0, 0},
+   {APP_API,
+    PNET_MOD_DAP_IDENT,
+    PNET_SUBMOD_DAP_INTERFACE_1_IDENT,
+    PNET_DIR_NO_IO,
+    0,
+    0},
+   {APP_API,
+    PNET_MOD_DAP_IDENT,
+    PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT,
+    PNET_DIR_NO_IO,
+    0,
+    0},
+   {APP_API,
+    PNET_MOD_8_0_IDENT,
+    PNET_SUBMOD_CUSTOM_IDENT,
+    PNET_DIR_INPUT,
+    APP_DATASIZE_INPUT,
+    0},
+   {APP_API,
+    PNET_MOD_0_8_IDENT,
+    PNET_SUBMOD_CUSTOM_IDENT,
+    PNET_DIR_OUTPUT,
+    0,
+    APP_DATASIZE_OUTPUT},
+   {APP_API,
+    PNET_MOD_8_8_IDENT,
+    PNET_SUBMOD_CUSTOM_IDENT,
+    PNET_DIR_IO,
+    APP_DATASIZE_INPUT,
+    APP_DATASIZE_OUTPUT},
 };
 
 /************************ App data storage ***********************************/
 
-struct cmd_args {
+struct cmd_args
+{
    char path_button1[PNET_MAX_FILE_FULLPATH_LEN];
    char path_button2[PNET_MAX_FILE_FULLPATH_LEN];
    char path_storage_directory[PNET_MAX_DIRECTORYPATH_LENGTH];
    char station_name[64];
    char eth_interface[PNET_MAX_INTERFACE_NAME_LENGTH];
-   int  verbosity;
-   int  show;
+   int verbosity;
+   int show;
    bool factory_reset;
    bool remove_files;
 };
 
 typedef struct app_data_obj
 {
-   os_timer_t              *main_timer;
-   os_event_t              *main_events;
-   uint32_t                main_arep;
-   bool                    alarm_allowed;
-   pnet_alarm_argument_t   alarm_arg;
-   struct cmd_args         arguments;
-   uint32_t                app_param_1;
-   uint32_t                app_param_2;
-   uint8_t                 inputdata[APP_DATASIZE_INPUT];
-   uint8_t                 custom_input_slots[PNET_MAX_MODULES];
-   uint8_t                 custom_output_slots[PNET_MAX_MODULES];
+   os_timer_t * main_timer;
+   os_event_t * main_events;
+   uint32_t main_arep;
+   bool alarm_allowed;
+   pnet_alarm_argument_t alarm_arg;
+   struct cmd_args arguments;
+   uint32_t app_param_1;
+   uint32_t app_param_2;
+   uint8_t inputdata[APP_DATASIZE_INPUT];
+   uint8_t custom_input_slots[PNET_MAX_MODULES];
+   uint8_t custom_output_slots[PNET_MAX_MODULES];
 } app_data_t;
-
 
 typedef struct app_data_and_stack_obj
 {
-   app_data_t           *appdata;
-   pnet_t               *net;
+   app_data_t * appdata;
+   pnet_t * net;
 } app_data_and_stack_t;
-
 
 /********************* Helper function declarations ***************************/
 
@@ -138,11 +158,11 @@ typedef struct app_data_and_stack_obj
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
-void print_network_details(
-   os_ethaddr_t            *p_macbuffer,
-   os_ipaddr_t             ip,
-   os_ipaddr_t             netmask,
-   os_ipaddr_t             gateway);
+void print_network_details (
+   os_ethaddr_t * p_macbuffer,
+   os_ipaddr_t ip,
+   os_ipaddr_t netmask,
+   os_ipaddr_t gateway);
 
 /**
  * Adjust some members of the p-net configuration object.
@@ -150,9 +170,8 @@ void print_network_details(
  * @param stack_config     Out: Configuration for use by p-net
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
-*/
-int app_adjust_stack_configuration(
-   pnet_cfg_t              *stack_config);
+ */
+int app_adjust_stack_configuration (pnet_cfg_t * stack_config);
 
 /**
  * Plug DAP (sub-)modules. This operation shall be called after p-net
@@ -161,54 +180,46 @@ int app_adjust_stack_configuration(
  * @param net     In: p-net stack instance
  * @param arg     In: user data for callbacks
  * @return  None
-*/
-void app_plug_dap(pnet_t *net, void *arg);
+ */
+void app_plug_dap (pnet_t * net, void * arg);
 
 /**
  * Return a string representation of the given event.
  * @param event            In:   The event.
  * @return  A string representing the event.
  */
-const char* event_value_to_string(
-   pnet_event_values_t event);
+const char * event_value_to_string (pnet_event_values_t event);
 
 /**
  * Return a string representation of the submodule data direction.
  * @param direction        In:   The direction.
  * @return  A string representing the direction.
  */
-const char* submodule_direction_to_string(
-   pnet_submodule_dir_t direction);
-
+const char * submodule_direction_to_string (pnet_submodule_dir_t direction);
 
 /**
  * Convert MAC address to string
  * @param mac              In: MAC address
- * @param outputstring     Out: Resulting string. Should have length OS_ETH_ADDRSTRLEN.
+ * @param outputstring     Out: Resulting string. Should have length
+ * OS_ETH_ADDRSTRLEN.
  */
-void mac_to_string(
-   os_ethaddr_t            mac,
-   char                    *outputstring);
+void mac_to_string (os_ethaddr_t mac, char * outputstring);
 
 /**
  * Convert IPv4 address to string
  * @param ip               In: IP address
- * @param outputstring     Out: Resulting string. Should have length OS_INET_ADDRSTRLEN.
+ * @param outputstring     Out: Resulting string. Should have length
+ * OS_INET_ADDRSTRLEN.
  */
-void ip_to_string(
-   os_ipaddr_t             ip,
-   char                    *outputstring);
+void ip_to_string (os_ipaddr_t ip, char * outputstring);
 
 /**
  * Copy an IP address (as an integer) to a struct
  *
  * @param destination_struct  Out: destination
  * @param ip                  In: IP address
-*/
-void copy_ip_to_struct(
-   pnet_cfg_ip_addr_t      *destination_struct,
-   os_ipaddr_t             ip);
-
+ */
+void copy_ip_to_struct (pnet_cfg_ip_addr_t * destination_struct, os_ipaddr_t ip);
 
 /********************** Hardware interaction **********************************/
 
@@ -222,11 +233,10 @@ void copy_ip_to_struct(
  * @param led_state        In: LED state. Use true for on and false for off.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
-*/
-int app_set_led(
-   uint16_t                id,         /* Starting from 0 */
-   bool                    led_state);
-
+ */
+int app_set_led (
+   uint16_t id, /* Starting from 0 */
+   bool led_state);
 
 #ifdef __cplusplus
 }

@@ -31,9 +31,11 @@
 
 #include <gtest/gtest.h>
 
+class DiagTest : public PnetIntegrationTest
+{
+};
 
-class DiagTest : public PnetIntegrationTest {};
-
+// clang-format off
 
 static uint8_t connect_req[] =
 {
@@ -116,193 +118,450 @@ static uint8_t data_packet_good_iops_good_iocs[] =
  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf6, 0x35, 0x00
 };
 
+// clang-format on
+
 TEST_F (DiagTest, DiagRunTest)
 {
-   int                     ret;
-   bool                    new_flag = false;
-   uint8_t                 in_data[10];
-   uint16_t                in_len = sizeof(in_data);
-   uint8_t                 out_data[] = {
-         0x33,       /* Slot 1, subslot 1 Data */
+   int ret;
+   bool new_flag = false;
+   uint8_t in_data[10];
+   uint16_t in_len = sizeof (in_data);
+   uint8_t out_data[] = {
+      0x33, /* Slot 1, subslot 1 Data */
    };
-   uint8_t                 iops = PNET_IOXS_BAD;
-   uint8_t                 iocs = PNET_IOXS_BAD;
-   uint32_t                ix;
-   uint16_t                ch_properties = 0;
-   const uint16_t          slot = 1;
-   const uint16_t          subslot = 1;
+   uint8_t iops = PNET_IOXS_BAD;
+   uint8_t iocs = PNET_IOXS_BAD;
+   uint32_t ix;
+   uint16_t ch_properties = 0;
+   const uint16_t slot = 1;
+   const uint16_t subslot = 1;
 
-   TEST_TRACE("\nGenerating mock connection request\n");
-   mock_set_os_udp_recvfrom_buffer(connect_req, sizeof(connect_req));
-   run_stack(TEST_UDP_DELAY);
-   EXPECT_EQ(appdata.call_counters.state_calls, 1);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_STARTUP);
-   EXPECT_EQ(appdata.call_counters.connect_calls, 1);
-   EXPECT_GT(mock_os_data.eth_send_count, 0);
+   TEST_TRACE ("\nGenerating mock connection request\n");
+   mock_set_os_udp_recvfrom_buffer (connect_req, sizeof (connect_req));
+   run_stack (TEST_UDP_DELAY);
+   EXPECT_EQ (appdata.call_counters.state_calls, 1);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_STARTUP);
+   EXPECT_EQ (appdata.call_counters.connect_calls, 1);
+   EXPECT_GT (mock_os_data.eth_send_count, 0);
 
-   TEST_TRACE("\nGenerating mock parameter end request\n");
-   mock_set_os_udp_recvfrom_buffer(prm_end_req, sizeof(prm_end_req));
-   run_stack(TEST_UDP_DELAY);
-   EXPECT_EQ(appdata.call_counters.state_calls, 2);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_PRMEND);
-   EXPECT_EQ(appdata.call_counters.connect_calls, 1);
+   TEST_TRACE ("\nGenerating mock parameter end request\n");
+   mock_set_os_udp_recvfrom_buffer (prm_end_req, sizeof (prm_end_req));
+   run_stack (TEST_UDP_DELAY);
+   EXPECT_EQ (appdata.call_counters.state_calls, 2);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_PRMEND);
+   EXPECT_EQ (appdata.call_counters.connect_calls, 1);
 
-   TEST_TRACE("\nSimulate application calling APPL_RDY\n");
-   ret = pnet_application_ready(net, appdata.main_arep);
-   EXPECT_EQ(ret, 0);
-   EXPECT_EQ(appdata.call_counters.state_calls, 3);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_APPLRDY);
+   TEST_TRACE ("\nSimulate application calling APPL_RDY\n");
+   ret = pnet_application_ready (net, appdata.main_arep);
+   EXPECT_EQ (ret, 0);
+   EXPECT_EQ (appdata.call_counters.state_calls, 3);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_APPLRDY);
 
-   TEST_TRACE("\nGenerating mock application ready response\n");
-   mock_set_os_udp_recvfrom_buffer(appl_rdy_rsp, sizeof(appl_rdy_rsp));
-   run_stack(TEST_UDP_DELAY);
-   EXPECT_EQ(appdata.call_counters.state_calls, 3);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_APPLRDY);
+   TEST_TRACE ("\nGenerating mock application ready response\n");
+   mock_set_os_udp_recvfrom_buffer (appl_rdy_rsp, sizeof (appl_rdy_rsp));
+   run_stack (TEST_UDP_DELAY);
+   EXPECT_EQ (appdata.call_counters.state_calls, 3);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_APPLRDY);
 
-   TEST_TRACE("\nGenerating cyclic data\n");
+   TEST_TRACE ("\nGenerating cyclic data\n");
    for (ix = 0; ix < 100; ix++)
    {
-      send_data(data_packet_good_iops_good_iocs, sizeof(data_packet_good_iops_good_iocs));
+      send_data (
+         data_packet_good_iops_good_iocs,
+         sizeof (data_packet_good_iops_good_iocs));
       run_stack (TEST_DATA_DELAY);
    }
 
-   TEST_TRACE("\nTesting pnet_output_get_data_and_iops()\n");
-   iops = 88;     /* Something non-valid */
-   in_len = sizeof(in_data);
-   ret = pnet_output_get_data_and_iops(net, TEST_API_IDENT, slot, subslot, &new_flag, in_data, &in_len, &iops);
-   EXPECT_EQ(ret, 0);
-   EXPECT_EQ(new_flag, true);
-   EXPECT_EQ(in_len, 1);
-   EXPECT_EQ(in_data[0], 0x23);
-   EXPECT_EQ(iops, PNET_IOXS_GOOD);
+   TEST_TRACE ("\nTesting pnet_output_get_data_and_iops()\n");
+   iops = 88; /* Something non-valid */
+   in_len = sizeof (in_data);
+   ret = pnet_output_get_data_and_iops (
+      net,
+      TEST_API_IDENT,
+      slot,
+      subslot,
+      &new_flag,
+      in_data,
+      &in_len,
+      &iops);
+   EXPECT_EQ (ret, 0);
+   EXPECT_EQ (new_flag, true);
+   EXPECT_EQ (in_len, 1);
+   EXPECT_EQ (in_data[0], 0x23);
+   EXPECT_EQ (iops, PNET_IOXS_GOOD);
 
-   TEST_TRACE("\nTesting pnet_input_get_iocs()\n");
-   iocs = 77;     /* Something non-valid */
-   ret = pnet_input_get_iocs(net, TEST_API_IDENT, slot, subslot, &iocs);
-   EXPECT_EQ(ret, 0);
-   EXPECT_EQ(new_flag, true);
-   EXPECT_EQ(in_len, 1);
-   EXPECT_EQ(iocs, PNET_IOXS_GOOD);
+   TEST_TRACE ("\nTesting pnet_input_get_iocs()\n");
+   iocs = 77; /* Something non-valid */
+   ret = pnet_input_get_iocs (net, TEST_API_IDENT, slot, subslot, &iocs);
+   EXPECT_EQ (ret, 0);
+   EXPECT_EQ (new_flag, true);
+   EXPECT_EQ (in_len, 1);
+   EXPECT_EQ (iocs, PNET_IOXS_GOOD);
 
-   EXPECT_EQ(appdata.call_counters.state_calls, 4);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_DATA);
+   EXPECT_EQ (appdata.call_counters.state_calls, 4);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_DATA);
 
-   TEST_TRACE("\nSend some data to the controller\n");
-   ret = pnet_input_set_data_and_iops(net, TEST_API_IDENT, slot, subslot, out_data, sizeof(out_data), PNET_IOXS_GOOD);
-   EXPECT_EQ(ret, 0);
+   TEST_TRACE ("\nSend some data to the controller\n");
+   ret = pnet_input_set_data_and_iops (
+      net,
+      TEST_API_IDENT,
+      slot,
+      subslot,
+      out_data,
+      sizeof (out_data),
+      PNET_IOXS_GOOD);
+   EXPECT_EQ (ret, 0);
 
-   TEST_TRACE("\nAcknowledge the reception of controller data\n");
-   ret = pnet_output_set_iocs(net, TEST_API_IDENT, slot, subslot, PNET_IOXS_GOOD);
-   EXPECT_EQ(ret, 0);
-   EXPECT_EQ(appdata.call_counters.state_calls, 4);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_DATA);
+   TEST_TRACE ("\nAcknowledge the reception of controller data\n");
+   ret =
+      pnet_output_set_iocs (net, TEST_API_IDENT, slot, subslot, PNET_IOXS_GOOD);
+   EXPECT_EQ (ret, 0);
+   EXPECT_EQ (appdata.call_counters.state_calls, 4);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_DATA);
 
    /* Send data to avoid timeout */
-   send_data(data_packet_good_iops_good_iocs, sizeof(data_packet_good_iops_good_iocs));
+   send_data (
+      data_packet_good_iops_good_iocs,
+      sizeof (data_packet_good_iops_good_iocs));
    run_stack (TEST_DATA_DELAY);
 
-   TEST_TRACE("\nCreate a STD diag entry. Then update it and finally remove it.\n");
-   PNET_DIAG_CH_PROP_TYPE_SET(ch_properties, PNET_DIAG_CH_PROP_TYPE_8_BIT);
-   PNET_DIAG_CH_PROP_ACC_SET(ch_properties, 0);
-   PNET_DIAG_CH_PROP_MAINT_SET(ch_properties, PNET_DIAG_CH_PROP_MAINT_FAULT);
-   PNET_DIAG_CH_PROP_SPEC_SET(ch_properties, PNET_DIAG_CH_PROP_SPEC_APPEARS);
-   PNET_DIAG_CH_PROP_DIR_SET(ch_properties, PNET_DIAG_CH_PROP_DIR_OUTPUT);
+   TEST_TRACE (
+      "\nCreate a STD diag entry. Then update it and finally remove it.\n");
+   PNET_DIAG_CH_PROP_TYPE_SET (ch_properties, PNET_DIAG_CH_PROP_TYPE_8_BIT);
+   PNET_DIAG_CH_PROP_ACC_SET (ch_properties, 0);
+   PNET_DIAG_CH_PROP_MAINT_SET (ch_properties, PNET_DIAG_CH_PROP_MAINT_FAULT);
+   PNET_DIAG_CH_PROP_SPEC_SET (ch_properties, PNET_DIAG_CH_PROP_SPEC_APPEARS);
+   PNET_DIAG_CH_PROP_DIR_SET (ch_properties, PNET_DIAG_CH_PROP_DIR_OUTPUT);
 
-   ret = pnet_diag_add(net, appdata.main_arep, TEST_API_IDENT, slot, subslot, 0, ch_properties, 0x0001, 0x0002, 0x00030004, 0, PNET_DIAG_USI_STD, NULL);
-   EXPECT_EQ(ret, 0);
+   ret = pnet_diag_add (
+      net,
+      appdata.main_arep,
+      TEST_API_IDENT,
+      slot,
+      subslot,
+      0,
+      ch_properties,
+      0x0001,
+      0x0002,
+      0x00030004,
+      0,
+      PNET_DIAG_USI_STD,
+      NULL);
+   EXPECT_EQ (ret, 0);
 
-   ret = pnet_diag_update(net, appdata.main_arep, TEST_API_IDENT, slot, subslot, 0, ch_properties,
+   ret = pnet_diag_update (
+      net,
+      appdata.main_arep,
+      TEST_API_IDENT,
+      slot,
+      subslot,
+      0,
+      ch_properties,
       0x0001,     /* ch_error_type */
       0x00030004, /* add_value */
-      PNET_DIAG_USI_STD, NULL);
-   EXPECT_EQ(ret, 0);
+      PNET_DIAG_USI_STD,
+      NULL);
+   EXPECT_EQ (ret, 0);
 
-   ret = pnet_diag_remove(net, appdata.main_arep, TEST_API_IDENT, slot, subslot, 0, ch_properties, 0x0001, PNET_DIAG_USI_STD);
-   EXPECT_EQ(ret, 0);
+   ret = pnet_diag_remove (
+      net,
+      appdata.main_arep,
+      TEST_API_IDENT,
+      slot,
+      subslot,
+      0,
+      ch_properties,
+      0x0001,
+      PNET_DIAG_USI_STD);
+   EXPECT_EQ (ret, 0);
 
-   TEST_TRACE("\nCreate several different severity STD diag entries. Then remove them.\n");
-   PNET_DIAG_CH_PROP_TYPE_SET(ch_properties, PNET_DIAG_CH_PROP_TYPE_8_BIT);
-   PNET_DIAG_CH_PROP_ACC_SET(ch_properties, 0);
-   PNET_DIAG_CH_PROP_MAINT_SET(ch_properties, PNET_DIAG_CH_PROP_MAINT_FAULT);
-   PNET_DIAG_CH_PROP_SPEC_SET(ch_properties, PNET_DIAG_CH_PROP_SPEC_APPEARS);
-   PNET_DIAG_CH_PROP_DIR_SET(ch_properties, PNET_DIAG_CH_PROP_DIR_OUTPUT);
+   TEST_TRACE ("\nCreate several different severity STD diag entries. Then "
+               "remove them.\n");
+   PNET_DIAG_CH_PROP_TYPE_SET (ch_properties, PNET_DIAG_CH_PROP_TYPE_8_BIT);
+   PNET_DIAG_CH_PROP_ACC_SET (ch_properties, 0);
+   PNET_DIAG_CH_PROP_MAINT_SET (ch_properties, PNET_DIAG_CH_PROP_MAINT_FAULT);
+   PNET_DIAG_CH_PROP_SPEC_SET (ch_properties, PNET_DIAG_CH_PROP_SPEC_APPEARS);
+   PNET_DIAG_CH_PROP_DIR_SET (ch_properties, PNET_DIAG_CH_PROP_DIR_OUTPUT);
 
-   ret = pnet_diag_add(net, appdata.main_arep, TEST_API_IDENT, slot, subslot, 0, ch_properties, 0x0001, 0x0002, 0x00030004, 0, PNET_DIAG_USI_STD, NULL);
-   EXPECT_EQ(ret, 0);
+   ret = pnet_diag_add (
+      net,
+      appdata.main_arep,
+      TEST_API_IDENT,
+      slot,
+      subslot,
+      0,
+      ch_properties,
+      0x0001,
+      0x0002,
+      0x00030004,
+      0,
+      PNET_DIAG_USI_STD,
+      NULL);
+   EXPECT_EQ (ret, 0);
 
-   PNET_DIAG_CH_PROP_MAINT_SET(ch_properties, PNET_DIAG_CH_PROP_MAINT_REQUIRED);
-   ret = pnet_diag_add(net, appdata.main_arep, TEST_API_IDENT, slot, subslot, 0, ch_properties, 0x0002, 0x0002, 0x00030004, 0, PNET_DIAG_USI_STD, NULL);
-   EXPECT_EQ(ret, 0);
+   PNET_DIAG_CH_PROP_MAINT_SET (ch_properties, PNET_DIAG_CH_PROP_MAINT_REQUIRED);
+   ret = pnet_diag_add (
+      net,
+      appdata.main_arep,
+      TEST_API_IDENT,
+      slot,
+      subslot,
+      0,
+      ch_properties,
+      0x0002,
+      0x0002,
+      0x00030004,
+      0,
+      PNET_DIAG_USI_STD,
+      NULL);
+   EXPECT_EQ (ret, 0);
 
-   PNET_DIAG_CH_PROP_MAINT_SET(ch_properties, PNET_DIAG_CH_PROP_MAINT_DEMANDED);
-   ret = pnet_diag_add(net, appdata.main_arep, TEST_API_IDENT, slot, subslot, 0, ch_properties, 0x0003, 0x0002, 0x00030004, 0, PNET_DIAG_USI_STD, NULL);
-   EXPECT_EQ(ret, 0);
+   PNET_DIAG_CH_PROP_MAINT_SET (ch_properties, PNET_DIAG_CH_PROP_MAINT_DEMANDED);
+   ret = pnet_diag_add (
+      net,
+      appdata.main_arep,
+      TEST_API_IDENT,
+      slot,
+      subslot,
+      0,
+      ch_properties,
+      0x0003,
+      0x0002,
+      0x00030004,
+      0,
+      PNET_DIAG_USI_STD,
+      NULL);
+   EXPECT_EQ (ret, 0);
 
-   PNET_DIAG_CH_PROP_MAINT_SET(ch_properties, PNET_DIAG_CH_PROP_MAINT_QUALIFIED);
-   ret = pnet_diag_add(net, appdata.main_arep, TEST_API_IDENT, slot, subslot, 0, ch_properties, 0x0004, 0x0002, 0x00030004, 0x00010000, PNET_DIAG_USI_STD, NULL);
-   EXPECT_EQ(ret, 0);
+   PNET_DIAG_CH_PROP_MAINT_SET (
+      ch_properties,
+      PNET_DIAG_CH_PROP_MAINT_QUALIFIED);
+   ret = pnet_diag_add (
+      net,
+      appdata.main_arep,
+      TEST_API_IDENT,
+      slot,
+      subslot,
+      0,
+      ch_properties,
+      0x0004,
+      0x0002,
+      0x00030004,
+      0x00010000,
+      PNET_DIAG_USI_STD,
+      NULL);
+   EXPECT_EQ (ret, 0);
 
-   PNET_DIAG_CH_PROP_MAINT_SET(ch_properties, PNET_DIAG_CH_PROP_MAINT_QUALIFIED);
-   ret = pnet_diag_remove(net, appdata.main_arep, TEST_API_IDENT, slot, subslot, 0, ch_properties, 0x0005, PNET_DIAG_USI_STD);
-   EXPECT_EQ(ret, -1);
+   PNET_DIAG_CH_PROP_MAINT_SET (
+      ch_properties,
+      PNET_DIAG_CH_PROP_MAINT_QUALIFIED);
+   ret = pnet_diag_remove (
+      net,
+      appdata.main_arep,
+      TEST_API_IDENT,
+      slot,
+      subslot,
+      0,
+      ch_properties,
+      0x0005,
+      PNET_DIAG_USI_STD);
+   EXPECT_EQ (ret, -1);
 
-   PNET_DIAG_CH_PROP_MAINT_SET(ch_properties, PNET_DIAG_CH_PROP_MAINT_FAULT);
-   ret = pnet_diag_remove(net, appdata.main_arep, TEST_API_IDENT, slot, subslot, 0, ch_properties, 0x0001, PNET_DIAG_USI_STD);
-   EXPECT_EQ(ret, 0);
+   PNET_DIAG_CH_PROP_MAINT_SET (ch_properties, PNET_DIAG_CH_PROP_MAINT_FAULT);
+   ret = pnet_diag_remove (
+      net,
+      appdata.main_arep,
+      TEST_API_IDENT,
+      slot,
+      subslot,
+      0,
+      ch_properties,
+      0x0001,
+      PNET_DIAG_USI_STD);
+   EXPECT_EQ (ret, 0);
 
-   TEST_TRACE("Try to remove it again\n");
-   ret = pnet_diag_remove(net, appdata.main_arep, TEST_API_IDENT, slot, subslot, 0, ch_properties, 0x0001, PNET_DIAG_USI_STD);
-   EXPECT_EQ(ret, -1);
+   TEST_TRACE ("Try to remove it again\n");
+   ret = pnet_diag_remove (
+      net,
+      appdata.main_arep,
+      TEST_API_IDENT,
+      slot,
+      subslot,
+      0,
+      ch_properties,
+      0x0001,
+      PNET_DIAG_USI_STD);
+   EXPECT_EQ (ret, -1);
 
-   PNET_DIAG_CH_PROP_MAINT_SET(ch_properties, PNET_DIAG_CH_PROP_MAINT_REQUIRED);
-   ret = pnet_diag_remove(net, appdata.main_arep, TEST_API_IDENT, slot, subslot, 0, ch_properties, 0x0002, PNET_DIAG_USI_STD);
-   EXPECT_EQ(ret, 0);
+   PNET_DIAG_CH_PROP_MAINT_SET (ch_properties, PNET_DIAG_CH_PROP_MAINT_REQUIRED);
+   ret = pnet_diag_remove (
+      net,
+      appdata.main_arep,
+      TEST_API_IDENT,
+      slot,
+      subslot,
+      0,
+      ch_properties,
+      0x0002,
+      PNET_DIAG_USI_STD);
+   EXPECT_EQ (ret, 0);
 
-   PNET_DIAG_CH_PROP_MAINT_SET(ch_properties, PNET_DIAG_CH_PROP_MAINT_DEMANDED);
-   ret = pnet_diag_remove(net, appdata.main_arep, TEST_API_IDENT, slot, subslot, 0, ch_properties, 0x0003, PNET_DIAG_USI_STD);
-   EXPECT_EQ(ret, 0);
+   PNET_DIAG_CH_PROP_MAINT_SET (ch_properties, PNET_DIAG_CH_PROP_MAINT_DEMANDED);
+   ret = pnet_diag_remove (
+      net,
+      appdata.main_arep,
+      TEST_API_IDENT,
+      slot,
+      subslot,
+      0,
+      ch_properties,
+      0x0003,
+      PNET_DIAG_USI_STD);
+   EXPECT_EQ (ret, 0);
 
-   PNET_DIAG_CH_PROP_MAINT_SET(ch_properties, PNET_DIAG_CH_PROP_MAINT_QUALIFIED);
-   ret = pnet_diag_remove(net, appdata.main_arep, TEST_API_IDENT, slot, subslot, 0, ch_properties, 0x0004, PNET_DIAG_USI_STD);
-   EXPECT_EQ(ret, 0);
+   PNET_DIAG_CH_PROP_MAINT_SET (
+      ch_properties,
+      PNET_DIAG_CH_PROP_MAINT_QUALIFIED);
+   ret = pnet_diag_remove (
+      net,
+      appdata.main_arep,
+      TEST_API_IDENT,
+      slot,
+      subslot,
+      0,
+      ch_properties,
+      0x0004,
+      PNET_DIAG_USI_STD);
+   EXPECT_EQ (ret, 0);
 
-   TEST_TRACE("Try to add two of the same kind\n");
-   PNET_DIAG_CH_PROP_MAINT_SET(ch_properties, PNET_DIAG_CH_PROP_MAINT_REQUIRED);
-   ret = pnet_diag_add(net, appdata.main_arep, TEST_API_IDENT, slot, subslot, 0, ch_properties, 0x0002, 0x0002, 0x00030004, 0, PNET_DIAG_USI_STD, NULL);
-   EXPECT_EQ(ret, 0);
+   TEST_TRACE ("Try to add two of the same kind\n");
+   PNET_DIAG_CH_PROP_MAINT_SET (ch_properties, PNET_DIAG_CH_PROP_MAINT_REQUIRED);
+   ret = pnet_diag_add (
+      net,
+      appdata.main_arep,
+      TEST_API_IDENT,
+      slot,
+      subslot,
+      0,
+      ch_properties,
+      0x0002,
+      0x0002,
+      0x00030004,
+      0,
+      PNET_DIAG_USI_STD,
+      NULL);
+   EXPECT_EQ (ret, 0);
 
-   /* This is expected to succeed as the same entry will be re-used and overwritten. */
-   ret = pnet_diag_add(net, appdata.main_arep, TEST_API_IDENT, slot, subslot, 0, ch_properties, 0x0002, 0x0002, 0x00030004, 0, PNET_DIAG_USI_STD, NULL);
-   EXPECT_EQ(ret, 0);
+   /* This is expected to succeed as the same entry will be re-used and
+    * overwritten. */
+   ret = pnet_diag_add (
+      net,
+      appdata.main_arep,
+      TEST_API_IDENT,
+      slot,
+      subslot,
+      0,
+      ch_properties,
+      0x0002,
+      0x0002,
+      0x00030004,
+      0,
+      PNET_DIAG_USI_STD,
+      NULL);
+   EXPECT_EQ (ret, 0);
 
-   ret = pnet_diag_remove(net, appdata.main_arep, TEST_API_IDENT, slot, subslot, 0, ch_properties, 0x0002, PNET_DIAG_USI_STD);
-   EXPECT_EQ(ret, 0);
+   ret = pnet_diag_remove (
+      net,
+      appdata.main_arep,
+      TEST_API_IDENT,
+      slot,
+      subslot,
+      0,
+      ch_properties,
+      0x0002,
+      PNET_DIAG_USI_STD);
+   EXPECT_EQ (ret, 0);
 
-   TEST_TRACE("Try to update a diag entry that does not exist\n");
-   PNET_DIAG_CH_PROP_MAINT_SET(ch_properties, PNET_DIAG_CH_PROP_MAINT_REQUIRED);
-   ret = pnet_diag_update(net, appdata.main_arep, TEST_API_IDENT, slot, subslot, 0, ch_properties, 0x0007, 0x00030004, PNET_DIAG_USI_STD, NULL);
-   EXPECT_EQ(ret, -1);
+   TEST_TRACE ("Try to update a diag entry that does not exist\n");
+   PNET_DIAG_CH_PROP_MAINT_SET (ch_properties, PNET_DIAG_CH_PROP_MAINT_REQUIRED);
+   ret = pnet_diag_update (
+      net,
+      appdata.main_arep,
+      TEST_API_IDENT,
+      slot,
+      subslot,
+      0,
+      ch_properties,
+      0x0007,
+      0x00030004,
+      PNET_DIAG_USI_STD,
+      NULL);
+   EXPECT_EQ (ret, -1);
 
-   TEST_TRACE("Add diag to non-existing sub-slot\n");
-   ret = pnet_diag_add(net, appdata.main_arep, TEST_API_IDENT, slot, 2, 0, ch_properties, 0x0002, 0x0002, 0x00030004, 0, PNET_DIAG_USI_STD, NULL);
-   EXPECT_EQ(ret, -1);
+   TEST_TRACE ("Add diag to non-existing sub-slot\n");
+   ret = pnet_diag_add (
+      net,
+      appdata.main_arep,
+      TEST_API_IDENT,
+      slot,
+      2,
+      0,
+      ch_properties,
+      0x0002,
+      0x0002,
+      0x00030004,
+      0,
+      PNET_DIAG_USI_STD,
+      NULL);
+   EXPECT_EQ (ret, -1);
 
-   TEST_TRACE("Test with a different USI\n");
-   PNET_DIAG_CH_PROP_MAINT_SET(ch_properties, PNET_DIAG_CH_PROP_MAINT_REQUIRED);
-   ret = pnet_diag_add(net, appdata.main_arep, TEST_API_IDENT, slot, subslot, 0, ch_properties, 0x0002, 0x0002, 0x00030004, 0, 0x1234, (uint8_t*)"Bjarne");
-   EXPECT_EQ(ret, 0);
+   TEST_TRACE ("Test with a different USI\n");
+   PNET_DIAG_CH_PROP_MAINT_SET (ch_properties, PNET_DIAG_CH_PROP_MAINT_REQUIRED);
+   ret = pnet_diag_add (
+      net,
+      appdata.main_arep,
+      TEST_API_IDENT,
+      slot,
+      subslot,
+      0,
+      ch_properties,
+      0x0002,
+      0x0002,
+      0x00030004,
+      0,
+      0x1234,
+      (uint8_t *)"Bjarne");
+   EXPECT_EQ (ret, 0);
 
-   TEST_TRACE("Remove wrong USI\n");
-   ret = pnet_diag_remove(net, appdata.main_arep, TEST_API_IDENT, slot, subslot, 0, ch_properties, 0x0002, 0x1235);
-   EXPECT_EQ(ret, -1);
+   TEST_TRACE ("Remove wrong USI\n");
+   ret = pnet_diag_remove (
+      net,
+      appdata.main_arep,
+      TEST_API_IDENT,
+      slot,
+      subslot,
+      0,
+      ch_properties,
+      0x0002,
+      0x1235);
+   EXPECT_EQ (ret, -1);
 
-   ret = pnet_diag_remove(net, appdata.main_arep, TEST_API_IDENT, slot, subslot, 0, ch_properties, 0x0002, 0x1234);
-   EXPECT_EQ(ret, 0);
+   ret = pnet_diag_remove (
+      net,
+      appdata.main_arep,
+      TEST_API_IDENT,
+      slot,
+      subslot,
+      0,
+      ch_properties,
+      0x0002,
+      0x1234);
+   EXPECT_EQ (ret, 0);
 
-   TEST_TRACE("\nGenerating mock release request\n");
-   mock_set_os_udp_recvfrom_buffer(release_req, sizeof(release_req));
-   run_stack(TEST_UDP_DELAY);
-   EXPECT_EQ(appdata.call_counters.release_calls, 1);
-   EXPECT_EQ(appdata.call_counters.state_calls, 5);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_ABORT);
+   TEST_TRACE ("\nGenerating mock release request\n");
+   mock_set_os_udp_recvfrom_buffer (release_req, sizeof (release_req));
+   run_stack (TEST_UDP_DELAY);
+   EXPECT_EQ (appdata.call_counters.release_calls, 1);
+   EXPECT_EQ (appdata.call_counters.state_calls, 5);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_ABORT);
 }

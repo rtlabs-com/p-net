@@ -17,11 +17,8 @@
 #define PF_PTCP_H
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
-
-
 
 #ifdef __cplusplus
 }

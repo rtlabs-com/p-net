@@ -17,8 +17,7 @@
 #define PF_CMDEV_H
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 /**
@@ -27,8 +26,7 @@ extern "C"
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
-typedef int (*pf_ftn_device_t)(
-      pf_device_t          *p_dev);
+typedef int (*pf_ftn_device_t) (pf_device_t * p_dev);
 
 /**
  * Do work on an API instance.
@@ -36,8 +34,7 @@ typedef int (*pf_ftn_device_t)(
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
-typedef int (*pf_ftn_api_t)(
-      pf_api_t             *p_api);
+typedef int (*pf_ftn_api_t) (pf_api_t * p_api);
 
 /**
  * Do work on a slot instance.
@@ -45,8 +42,7 @@ typedef int (*pf_ftn_api_t)(
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
-typedef int (*pf_ftn_slot_t)(
-      pf_slot_t            *p_slot);
+typedef int (*pf_ftn_slot_t) (pf_slot_t * p_slot);
 
 /**
  * Do work on a sub-slot instance.
@@ -54,23 +50,20 @@ typedef int (*pf_ftn_slot_t)(
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
-typedef int (*pf_ftn_subslot_t)(
-      pf_subslot_t         *p_subslot);
+typedef int (*pf_ftn_subslot_t) (pf_subslot_t * p_subslot);
 
 /**
  * Initialize the cmdev component.
  * @param net              InOut: The p-net stack instance
  */
-void pf_cmdev_init(
-   pnet_t                  *net);
+void pf_cmdev_init (pnet_t * net);
 
 /**
  * Un-initialize the cmdev component.
  * Delete all modules and sub-modules.
  * @param net              InOut: The p-net stack instance
  */
-void pf_cmdev_exit(
-   pnet_t                  *net);
+void pf_cmdev_exit (pnet_t * net);
 
 /**
  * Traverse the device tree.
@@ -82,12 +75,12 @@ void pf_cmdev_exit(
  * @return  0  If all provided functions return 0.
  *          -1 If any function called returns an error (!= 0)..
  */
-int pf_cmdev_cfg_traverse(
-   pnet_t                  *net,
-   pf_ftn_device_t         p_ftn_dev,
-   pf_ftn_api_t            p_ftn_api,
-   pf_ftn_slot_t           p_ftn_slot,
-   pf_ftn_subslot_t        p_ftn_sub);
+int pf_cmdev_cfg_traverse (
+   pnet_t * net,
+   pf_ftn_device_t p_ftn_dev,
+   pf_ftn_api_t p_ftn_api,
+   pf_ftn_slot_t p_ftn_slot,
+   pf_ftn_subslot_t p_ftn_sub);
 
 /**
  * Plug a module into a slot.
@@ -98,11 +91,11 @@ int pf_cmdev_cfg_traverse(
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_cmdev_plug_module(
-   pnet_t                  *net,
-   uint32_t                api_id,
-   uint16_t                slot_nbr,
-   uint32_t                module_ident_nbr);
+int pf_cmdev_plug_module (
+   pnet_t * net,
+   uint32_t api_id,
+   uint16_t slot_nbr,
+   uint32_t module_ident_nbr);
 
 /**
  * Plug a sub-module into a sub-slot.
@@ -120,17 +113,17 @@ int pf_cmdev_plug_module(
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_cmdev_plug_submodule(
-   pnet_t                  *net,
-   uint32_t                api_id,
-   uint16_t                slot_nbr,
-   uint16_t                subslot_nbr,
-   uint32_t                module_ident_nbr,
-   uint32_t                submod_ident_nbr,
-   pnet_submodule_dir_t    direction,
-   uint16_t                length_input,
-   uint16_t                length_output,
-   bool                    update);
+int pf_cmdev_plug_submodule (
+   pnet_t * net,
+   uint32_t api_id,
+   uint16_t slot_nbr,
+   uint16_t subslot_nbr,
+   uint32_t module_ident_nbr,
+   uint32_t submod_ident_nbr,
+   pnet_submodule_dir_t direction,
+   uint16_t length_input,
+   uint16_t length_output,
+   bool update);
 
 /**
  * Pull a sub-module from a sub-slot.
@@ -142,11 +135,11 @@ int pf_cmdev_plug_submodule(
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_cmdev_pull_submodule(
-   pnet_t                  *net,
-   uint32_t                api_id,
-   uint16_t                slot_nbr,
-   uint16_t                subslot_nbr);
+int pf_cmdev_pull_submodule (
+   pnet_t * net,
+   uint32_t api_id,
+   uint16_t slot_nbr,
+   uint16_t subslot_nbr);
 
 /**
  * Pull a module from a slot.
@@ -157,10 +150,7 @@ int pf_cmdev_pull_submodule(
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_cmdev_pull_module(
-   pnet_t                  *net,
-   uint32_t                api_id,
-   uint16_t                slot_nbr);
+int pf_cmdev_pull_module (pnet_t * net, uint32_t api_id, uint16_t slot_nbr);
 
 /**
  * Abort request from the application or from RPC.
@@ -169,9 +159,7 @@ int pf_cmdev_pull_module(
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_cmdev_cm_abort(
-   pnet_t                  *net,
-   pf_ar_t                 *p_ar);
+int pf_cmdev_cm_abort (pnet_t * net, pf_ar_t * p_ar);
 
 /**
  * Get a pointer to the device configuration.
@@ -179,9 +167,7 @@ int pf_cmdev_cm_abort(
  * @param pp_device        Out:  The device configuration.
  * @return  0  Always.
  */
-int pf_cmdev_get_device(
-   pnet_t                  *net,
-   pf_device_t             **pp_device);
+int pf_cmdev_get_device (pnet_t * net, pf_device_t ** pp_device);
 
 /**
  * Get an API instance by its API id.
@@ -191,13 +177,11 @@ int pf_cmdev_get_device(
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_cmdev_get_api(
-   pnet_t                  *net,
-   uint32_t                api_id,
-   pf_api_t                **pp_api);
+int pf_cmdev_get_api (pnet_t * net, uint32_t api_id, pf_api_t ** pp_api);
 
 /**
- * Get a sub-slot instance from the api ID, the slot number and the sub-slot number.
+ * Get a sub-slot instance from the api ID, the slot number and the sub-slot
+ * number.
  * @param net              InOut: The p-net stack instance
  * @param api_id           In:   The API identifier.
  * @param slot_nbr         In:   The slot number.
@@ -206,13 +190,12 @@ int pf_cmdev_get_api(
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_cmdev_get_subslot_full(
-   pnet_t                  *net,
-   uint16_t                api_id,
-   uint16_t                slot_nbr,
-   uint16_t                subslot_nbr,
-   pf_subslot_t            **pp_subslot);
-
+int pf_cmdev_get_subslot_full (
+   pnet_t * net,
+   uint16_t api_id,
+   uint16_t slot_nbr,
+   uint16_t subslot_nbr,
+   pf_subslot_t ** pp_subslot);
 
 /* Not used */
 /**
@@ -224,11 +207,11 @@ int pf_cmdev_get_subslot_full(
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_cmdev_get_slot_full(
-   pnet_t                  *net,
-   uint16_t                api_id,
-   uint16_t                slot_nbr,
-   pf_slot_t               **pp_slot);
+int pf_cmdev_get_slot_full (
+   pnet_t * net,
+   uint16_t api_id,
+   uint16_t slot_nbr,
+   pf_slot_t ** pp_slot);
 
 /**
  * Get a diag item.
@@ -238,10 +221,10 @@ int pf_cmdev_get_slot_full(
  * @return  0  If item_ix is valid.
  *          -1 If item_ix is invalid.
  */
-int pf_cmdev_get_diag_item(
-   pnet_t                  *net,
-   uint16_t                item_ix,
-   pf_diag_item_t          **pp_item);
+int pf_cmdev_get_diag_item (
+   pnet_t * net,
+   uint16_t item_ix,
+   pf_diag_item_t ** pp_item);
 
 /**
  * Allocate a new diag item entry from the free list.
@@ -250,48 +233,40 @@ int pf_cmdev_get_diag_item(
  * @return  0  If an item was allocated.
  *          -1 If out of diag items.
  */
-int pf_cmdev_new_diag(
-   pnet_t                  *net,
-   uint16_t                *p_item_ix);
+int pf_cmdev_new_diag (pnet_t * net, uint16_t * p_item_ix);
 
 /**
  * Return a diag item to the free list.
  * @param net              InOut: The p-net stack instance
  * @param item_ix          In:   Index of the item to return.
  */
-void pf_cmdev_free_diag(
-   pnet_t                  *net,
-   uint16_t                item_ix);
+void pf_cmdev_free_diag (pnet_t * net, uint16_t item_ix);
 
 /**
  * Return a string representation of the specified CMDEV state.
  * @param state            In:   The CMDEV state.
  * @return  A string representation of the CMDEV state.
  */
-const char *pf_cmdev_state_to_string(
-   pf_cmdev_state_values_t state);
+const char * pf_cmdev_state_to_string (pf_cmdev_state_values_t state);
 
 /**
  * Return a string representation of the specified CMDEV event.
  * @param event            In:   The CMDEV event.
  * @return  A string representation of the CMDEV event.
  */
-const char *pf_cmdev_event_to_string(
-   pnet_event_values_t     event);
+const char * pf_cmdev_event_to_string (pnet_event_values_t event);
 
 /**
  * Show CMDEV information of the AR.
  * @param p_ar             In:   The AR instance.
  */
-void pf_cmdev_show(
-   pf_ar_t                 *p_ar);
+void pf_cmdev_show (pf_ar_t * p_ar);
 
 /**
  * Show the plugged modules and sub-modules.
  * @param net              InOut: The p-net stack instance
  */
-void pf_cmdev_show_device(
-   pnet_t                  *net);
+void pf_cmdev_show_device (pnet_t * net);
 
 /**
  * Indicate a new state transition of the CMDEV component.
@@ -300,14 +275,12 @@ void pf_cmdev_show_device(
  *
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:    The AR instance.
- * @param state            In:    The new CMDEV state. Use PNET_EVENT_..., not PF_CMDEV_STATE_...
+ * @param state            In:    The new CMDEV state. Use PNET_EVENT_..., not
+ * PF_CMDEV_STATE_...
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_cmdev_state_ind(
-   pnet_t                  *net,
-   pf_ar_t                 *p_ar,
-   pnet_event_values_t     state);
+int pf_cmdev_state_ind (pnet_t * net, pf_ar_t * p_ar, pnet_event_values_t state);
 
 /**
  * Get the CMDEV state of the specified AR.
@@ -316,9 +289,7 @@ int pf_cmdev_state_ind(
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_cmdev_get_state(
-   pf_ar_t                 *p_ar,
-   pf_cmdev_state_values_t *p_state);
+int pf_cmdev_get_state (pf_ar_t * p_ar, pf_cmdev_state_values_t * p_state);
 
 /**
  * Handle CMIO "data_possibile" indications.
@@ -328,10 +299,7 @@ int pf_cmdev_get_state(
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_cmdev_cmio_info_ind(
-   pnet_t                  *net,
-   pf_ar_t                 *p_ar,
-   bool                    data_possible);
+int pf_cmdev_cmio_info_ind (pnet_t * net, pf_ar_t * p_ar, bool data_possible);
 
 /* ======================================================================
  *       Remote primitives
@@ -345,10 +313,10 @@ int pf_cmdev_cmio_info_ind(
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_cmdev_rm_connect_ind(
-   pnet_t                  *net,
-   pf_ar_t                 *p_ar,
-   pnet_result_t           *p_connect_result);
+int pf_cmdev_rm_connect_ind (
+   pnet_t * net,
+   pf_ar_t * p_ar,
+   pnet_result_t * p_connect_result);
 
 /**
  * Handle an RPC release request.
@@ -362,10 +330,10 @@ int pf_cmdev_rm_connect_ind(
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_cmdev_rm_release_ind(
-   pnet_t                  *net,
-   pf_ar_t                 *p_ar,
-   pnet_result_t           *p_release_result);
+int pf_cmdev_rm_release_ind (
+   pnet_t * net,
+   pf_ar_t * p_ar,
+   pnet_result_t * p_release_result);
 
 /**
  * Handle an RPC dcontrol request.
@@ -380,17 +348,17 @@ int pf_cmdev_rm_release_ind(
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_cmdev_rm_dcontrol_ind(
-   pnet_t                  *net,
-   pf_ar_t                 *p_ar,
-   pf_control_block_t      *p_control_io,
-   pnet_result_t           *p_release_result);
+int pf_cmdev_rm_dcontrol_ind (
+   pnet_t * net,
+   pf_ar_t * p_ar,
+   pf_control_block_t * p_control_io,
+   pnet_result_t * p_release_result);
 
 /**
  * Convey the APPLRDY indication from the application to the controller.
- * Ccontrol is a general mechanism, but it currently only has one purpose in the device.
- * For this reason alone it does not have an opcode parameter.
- * If this function does not see all PPM data areas are set (by the app) then it returns
+ * Ccontrol is a general mechanism, but it currently only has one purpose in the
+ * device. For this reason alone it does not have an opcode parameter. If this
+ * function does not see all PPM data areas are set (by the app) then it returns
  * error and the application must try again - otherwise the startup will hang.
  *
  * Triggers the \a pnet_state_ind() user callback with PNET_EVENT_APPLRDY.
@@ -400,9 +368,7 @@ int pf_cmdev_rm_dcontrol_ind(
  * @return  0  if a ccontrol request was sent.
  *          -1 if a ccontrol request was not sent.
  */
-int pf_cmdev_cm_ccontrol_req(
-   pnet_t                  *net,
-   pf_ar_t                 *p_ar);
+int pf_cmdev_cm_ccontrol_req (pnet_t * net, pf_ar_t * p_ar);
 
 /**
  * Handle the confirmation of the ccontrol request.
@@ -418,36 +384,31 @@ int pf_cmdev_cm_ccontrol_req(
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_cmdev_rm_ccontrol_cnf(
-   pnet_t                  *net,
-   pf_ar_t                 *p_ar,
-   pf_control_block_t      *p_control_io,
-   pnet_result_t           *p_ccontrol_result);
-
+int pf_cmdev_rm_ccontrol_cnf (
+   pnet_t * net,
+   pf_ar_t * p_ar,
+   pf_control_block_t * p_control_io,
+   pnet_result_t * p_ccontrol_result);
 
 /************ Internal functions, made available for unit testing ************/
 
-int pf_cmdev_calculate_exp_sub_data_descriptor_direction(
-   pnet_submodule_dir_t       submodule_dir,
+int pf_cmdev_calculate_exp_sub_data_descriptor_direction (
+   pnet_submodule_dir_t submodule_dir,
    pf_data_direction_values_t data_dir,
-   pf_dev_status_type_t       status_type,
-   pf_data_direction_values_t *resulting_data_dir);
+   pf_dev_status_type_t status_type,
+   pf_data_direction_values_t * resulting_data_dir);
 
-int pf_cmdev_check_zero(
-   uint8_t                 *p_start,
-   uint16_t                len);
+int pf_cmdev_check_zero (uint8_t * p_start, uint16_t len);
 
-int pf_cmdev_check_visible_string(
-   const char              *s);
+int pf_cmdev_check_visible_string (const char * s);
 
-int pf_cmdev_check_no_straddle(
-   uint16_t                start_1,
-   uint16_t                length_1,
-   uint16_t                start_2,
-   uint16_t                length_2);
+int pf_cmdev_check_no_straddle (
+   uint16_t start_1,
+   uint16_t length_1,
+   uint16_t start_2,
+   uint16_t length_2);
 
-int pf_cmdev_check_ar_type(
-   uint16_t                ar_type);
+int pf_cmdev_check_ar_type (uint16_t ar_type);
 
 #ifdef __cplusplus
 }

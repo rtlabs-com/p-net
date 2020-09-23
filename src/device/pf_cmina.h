@@ -17,8 +17,7 @@
 #define PF_CMINA_H
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 /**
@@ -32,8 +31,7 @@ extern "C"
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_cmina_init(
-   pnet_t                  *net);
+int pf_cmina_init (pnet_t * net);
 
 /**
  * Remove the stack's data files.
@@ -42,44 +40,38 @@ int pf_cmina_init(
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_cmina_remove_all_data_files(
-   const char*             file_directory);
+int pf_cmina_remove_all_data_files (const char * file_directory);
 
 /**
  * Show interface statistics
  *
  * @param net              InOut: The p-net stack instance
  */
-void pf_cmina_interface_statistics_show(
-   pnet_t                  *net);
+void pf_cmina_interface_statistics_show (pnet_t * net);
 
 /**
  * Show the CMINA status.
  * @param net              InOut: The p-net stack instance
  */
-void pf_cmina_show(
-   pnet_t                  *net);
+void pf_cmina_show (pnet_t * net);
 
 /**
  * Convert IPv4 address to string
  * @param ip               In: IP address
- * @param outputstring     Out: Resulting string. Should have length OS_INET_ADDRSTRLEN.
+ * @param outputstring     Out: Resulting string. Should have length
+ * OS_INET_ADDRSTRLEN.
  */
-void pf_cmina_ip_to_string(
-   os_ipaddr_t             ip,
-   char                    *outputstring);
-
+void pf_cmina_ip_to_string (os_ipaddr_t ip, char * outputstring);
 
 /**
  * Retrieve the path to the directory for saving files.
  * @param net                 InOut: The p-net stack instance
- * @param pp_file_directory   Out:   The absolute path to the file directory. Terminated string or NULL.
+ * @param pp_file_directory   Out:   The absolute path to the file directory.
+ * Terminated string or NULL.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_cmina_get_file_directory(
-   pnet_t                  *net,
-   const char              **pp_file_directory);
+int pf_cmina_get_file_directory (pnet_t * net, const char ** pp_file_directory);
 
 /**
  * Retrieve the current station name of the device.
@@ -88,9 +80,7 @@ int pf_cmina_get_file_directory(
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_cmina_get_station_name(
-   pnet_t                  *net,
-   const char              **pp_station_name);
+int pf_cmina_get_station_name (pnet_t * net, const char ** pp_station_name);
 
 /**
  * Retrieve the current IP address of the device.
@@ -99,9 +89,7 @@ int pf_cmina_get_station_name(
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_cmina_get_ipaddr(
-   pnet_t                  *net,
-   os_ipaddr_t             *p_ipaddr);
+int pf_cmina_get_ipaddr (pnet_t * net, os_ipaddr_t * p_ipaddr);
 
 /**
  * Retrieve the MAC address.
@@ -110,9 +98,7 @@ int pf_cmina_get_ipaddr(
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_cmina_get_macaddr(
-   pnet_t                  *net,
-   pnet_ethaddr_t          *p_macaddr);
+int pf_cmina_get_macaddr (pnet_t * net, pnet_ethaddr_t * p_macaddr);
 
 /**
  * Save one block of data for incoming DCP set command.
@@ -129,14 +115,14 @@ int pf_cmina_get_macaddr(
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_cmina_dcp_set_ind(
-   pnet_t                  *net,
-   uint8_t                 opt,
-   uint8_t                 sub,
-   uint16_t                block_qualifier,
-   uint16_t                value_length,
-   uint8_t                 *p_value,
-   uint8_t                 *p_block_error);
+int pf_cmina_dcp_set_ind (
+   pnet_t * net,
+   uint8_t opt,
+   uint8_t sub,
+   uint16_t block_qualifier,
+   uint16_t value_length,
+   uint8_t * p_value,
+   uint8_t * p_block_error);
 
 /**
  * Reset the configuration to default values.
@@ -151,8 +137,8 @@ int pf_cmina_dcp_set_ind(
  * 2:  Reset communication parameters
  * 99: Reset application and communication parameters.
  *
- * Populates net->cmina_nonvolatile_dcp_ase from file (and/or from default configuration),
- * and copies the resulting values to net->cmina_current_dcp_ase
+ * Populates net->cmina_nonvolatile_dcp_ase from file (and/or from default
+ * configuration), and copies the resulting values to net->cmina_current_dcp_ase
  *
  * In order to actually change IP etc, the function pf_cmina_dcp_set_commit()
  * must be called afterwards.
@@ -162,9 +148,7 @@ int pf_cmina_dcp_set_ind(
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_cmina_set_default_cfg(
-   pnet_t                  *net,
-   uint16_t                reset_mode);
+int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode);
 
 /**
  * Commit changes to the IP-suite.
@@ -172,8 +156,7 @@ int pf_cmina_set_default_cfg(
  * This shall be done _after_ the answer to DCP set has been sent.
  * @param net              InOut: The p-net stack instance
  */
-void pf_cmina_dcp_set_commit(
-   pnet_t                  *net);
+void pf_cmina_dcp_set_commit (pnet_t * net);
 
 /**
  * Find data and its size for use in one block in response to a DCP get command.
@@ -190,39 +173,30 @@ void pf_cmina_dcp_set_commit(
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_cmina_dcp_get_req(
-   pnet_t                  *net,
-   uint8_t                 opt,
-   uint8_t                 sub,
-   uint16_t                *p_value_length,
-   uint8_t                 **pp_value,
-   uint8_t                 *p_block_error);
-
+int pf_cmina_dcp_get_req (
+   pnet_t * net,
+   uint8_t opt,
+   uint8_t sub,
+   uint16_t * p_value_length,
+   uint8_t ** pp_value,
+   uint8_t * p_block_error);
 
 /************ Internal functions, made available for unit testing ************/
 
-bool pf_cmina_is_stationname_valid(
-   const char*             station_name,
-   uint16_t                len);
+bool pf_cmina_is_stationname_valid (const char * station_name, uint16_t len);
 
-bool pf_cmina_is_netmask_valid(
-   os_ipaddr_t            netmask);
+bool pf_cmina_is_netmask_valid (os_ipaddr_t netmask);
 
-bool pf_cmina_is_ipaddress_valid(
-   os_ipaddr_t            netmask,
-   os_ipaddr_t            ip);
+bool pf_cmina_is_ipaddress_valid (os_ipaddr_t netmask, os_ipaddr_t ip);
 
-bool pf_cmina_is_gateway_valid(
-   os_ipaddr_t             ip,
-   os_ipaddr_t             netmask,
-   os_ipaddr_t             gateway);
+bool pf_cmina_is_gateway_valid (
+   os_ipaddr_t ip,
+   os_ipaddr_t netmask,
+   os_ipaddr_t gateway);
 
-bool pf_cmina_is_ipsuite_valid(
-   pf_ip_suite_t           *p_ipsuite);
+bool pf_cmina_is_ipsuite_valid (pf_ip_suite_t * p_ipsuite);
 
-bool pf_cmina_is_full_ipsuite_valid(
-   pf_full_ip_suite_t      *p_full_ipsuite);
-
+bool pf_cmina_is_full_ipsuite_valid (pf_full_ip_suite_t * p_full_ipsuite);
 
 #ifdef __cplusplus
 }
