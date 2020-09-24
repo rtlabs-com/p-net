@@ -2187,7 +2187,8 @@ struct pnet
    atomic_int ppm_instance_cnt;
    uint16_t dcp_global_block_qualifier;
    pnet_ethaddr_t dcp_sam; /* Source address (MAC) to current DCP remote peer */
-   bool dcp_delayed_response_waiting;
+   bool dcp_delayed_response_waiting; /* A response to DCP IDENTIFY is waiting
+                                         to be sent */
    uint32_t dcp_timeout;
    uint32_t dcp_sam_timeout; /* Handle to the SAM timeout instance */
    os_eth_handle_t * eth_handle;
@@ -2218,11 +2219,14 @@ struct pnet
    uint8_t cmrpc_dcerpc_output_frame[PF_FRAME_BUFFER_SIZE];
    pf_cmsu_state_values_t cmsu_state;
    pf_cmwrr_state_values_t cmwrr_state;
-   const pnet_cfg_t * p_fspm_default_cfg; /* Used at factory reset */
-   pnet_cfg_t fspm_cfg;
+   const pnet_cfg_t * p_fspm_default_cfg; /* Default configuration from user.
+                                             Used at factory reset */
+   pnet_cfg_t fspm_cfg; /* Configuration from user. Might be updated by stack
+                           during runtime */
    pf_log_book_t fspm_log_book;
    os_mutex_t * fspm_log_book_mutex;
-   pnet_interface_stats_t interface_statistics;
+   pnet_interface_stats_t interface_statistics; /* Keeps track of number of sent
+                                                   and discarded packets */
    uint32_t lldp_timeout; /* Scheduler handle for periodic LLDP sending */
 
    pnet_lldp_peer_info_t lldp_peer_info;

@@ -13,6 +13,28 @@
  * full license information.
  ********************************************************************/
 
+/**
+ * @file
+ * @brief Implements the Discovery and basic Configuration Protocol (DCP).
+ *
+ * DCP runs over Ethernet layer 2 (not IP or UDP).
+ *
+ * The main DCP messages are:
+ *  - GET
+ *  - SET
+ *  - IDENTIFY (asking for a particular device)
+ *  - HELLO (broadcasted to indicate the presence of a device)
+ *
+ * Registers the different frame IDs for these messages with the frame handler.
+ *
+ * Responses to IDENTIFY are delayed (by an amount calculated from the
+ * MAC address), as many devices might resond to the same request.
+ *
+ * The SAM (Source Address ?) makes sure that that just a single remote
+ * MAC address is used for the communication.
+ * A timer of 3 seconds is used for the SAM.
+ */
+
 #ifdef UNIT_TEST
 #endif
 
@@ -101,6 +123,7 @@ typedef struct pf_dcp_opt_sub
    uint8_t sub;
 } pf_dcp_opt_sub_t;
 
+/* Device options to be included for example in DCP IDENTIFY responses */
 static const pf_dcp_opt_sub_t device_options[] = {
    {PF_DCP_OPT_IP, PF_DCP_SUB_IP_PAR},
    {PF_DCP_OPT_IP, PF_DCP_SUB_IP_MAC},
@@ -115,8 +138,6 @@ static const pf_dcp_opt_sub_t device_options[] = {
    {PF_DCP_OPT_CONTROL, PF_DCP_SUB_CONTROL_SIGNAL},
    {PF_DCP_OPT_CONTROL, PF_DCP_SUB_CONTROL_FACTORY_RESET},
    {PF_DCP_OPT_CONTROL, PF_DCP_SUB_CONTROL_RESET_TO_FACTORY},
-#if 1
-#endif
 #if 0
    {PF_DCP_OPT_DHCP, PF_DCP_SUB_DHCP_HOSTNAME},
    {PF_DCP_OPT_DHCP, PF_DCP_SUB_DHCP_VENDOR_SPEC},
@@ -133,7 +154,9 @@ static const pf_dcp_opt_sub_t device_options[] = {
 
 /**
  * @internal
- * Send a DCP response (to a Identify request).
+ * Send a delayed DCP response to an IDENTIFY request.
+ *
+ * The delay is important as many devices might respond to the same request.
  *
  * This is a callback for the scheduler. Arguments should fulfill
  * pf_scheduler_timeout_ftn_t
@@ -142,7 +165,7 @@ static const pf_dcp_opt_sub_t device_options[] = {
  * @param arg              In:    DCP responder data.
  * @param current_time     In:    The current system time, in microseconds,
  *                                when the scheduler is started to execute
- * stored tasks.
+ *                                stored tasks.
  */
 static void pf_dcp_responder (pnet_t * net, void * arg, uint32_t current_time)
 {
@@ -165,14 +188,15 @@ static void pf_dcp_responder (pnet_t * net, void * arg, uint32_t current_time)
 
 /**
  * @internal
- * Clear the sam.
+ * Clear the SAM (which limits the commnication to a single remote MAC address
+ * for 3 seconds).
  *
  * This is a callback for the scheduler. Arguments should fulfill
  * pf_scheduler_timeout_ftn_t
  *
- * @param net                 InOut: The p-net stack instance
- * @param arg                 In:   Not used.
- * @param current_time        In:   Not used.
+ * @param net              InOut: The p-net stack instance
+ * @param arg              In:    Not used.
+ * @param current_time     In:    Not used.
  */
 static void pf_dcp_clear_sam (pnet_t * net, void * arg, uint32_t current_time)
 {
@@ -183,15 +207,15 @@ static void pf_dcp_clear_sam (pnet_t * net, void * arg, uint32_t current_time)
  * @internal
  * Add a block to a buffer, possibly including a block_info.
  *
- * @param p_dst            In:   The destination buffer.
- * @param p_dst_pos        InOut:Position in the destination buffer.
- * @param dst_max          In:   Size of destination buffer.
- * @param opt              In:   Option key.
- * @param sub              In:   Sub-option key.
- * @param with_block_info  In:   If true then add block_info argument.
- * @param block_info       In:   The block info argument.
- * @param value_length     In:   The length in bytes of the p_value data.
- * @param p_value          In:   The source data.
+ * @param p_dst            In:    The destination buffer.
+ * @param p_dst_pos        InOut: Position in the destination buffer.
+ * @param dst_max          In:    Size of destination buffer.
+ * @param opt              In:    Option key.
+ * @param sub              In:    Sub-option key.
+ * @param with_block_info  In:    If true then add block_info argument.
+ * @param block_info       In:    The block info argument.
+ * @param value_length     In:    The length in bytes of the p_value data.
+ * @param p_value          In:    The source data.
  * @return
  */
 static int pf_dcp_put_block (
@@ -246,14 +270,14 @@ static int pf_dcp_put_block (
  * Handle one block in a DCP get request, by inserting it into the response.
  *
  * @param net                 InOut: The p-net stack instance
- * @param p_dst               In:   The destination buffer.
- * @param p_dst_pos           InOut:Position in the destination buffer.
- * @param dst_max             In:   Size of destination buffer.
- * @param opt                 In:   Option key.
- * @param sub                 In:   Sub-option key.
- * @param request_is_identify In:   Usage in response to Identify request (skips
- * some blocks)
- * @param append_alias_name   In:   Append alias name
+ * @param p_dst               In:    The destination buffer.
+ * @param p_dst_pos           InOut: Position in the destination buffer.
+ * @param dst_max             In:    Size of destination buffer.
+ * @param opt                 In:    Option key.
+ * @param sub                 In:    Sub-option key.
+ * @param request_is_identify In:    Usage in response to Identify request
+ *                                   (skips some blocks)
+ * @param append_alias_name   In:    Append alias name
  * @return
  */
 static int pf_dcp_get_req (
@@ -436,12 +460,12 @@ static int pf_dcp_get_req (
       if (skip == false)
       {
          /* GetNegResBlock consists of:
-            - option = Control                              1 byte
-            - suboption = Response                          1 byte
-            - block length                                  2 bytes
-            - type of option involved (option + suboption)  2 bytes
-            - block error                                   1 byte
-         */
+          * - option = Control                              1 byte
+          * - suboption = Response                          1 byte
+          * - block length                                  2 bytes
+          * - type of option involved (option + suboption)  2 bytes
+          * - block error                                   1 byte
+          */
          negative_response_data[0] = opt;
          negative_response_data[1] = sub;
          negative_response_data[2] = block_error;
@@ -463,19 +487,20 @@ static int pf_dcp_get_req (
 
 /**
  * @internal
- * Execute DCP control states.
-
+ * Blink Profinet signal LED.
+ *
  * This functions blinks the Profinet signal LED 3 times at 1 Hz.
  * The LED is accessed via the pnet_signal_led_ind() callback function.
  *
  * This is a callback for the scheduler. Arguments should fulfill
- pf_scheduler_timeout_ftn_t
+ * pf_scheduler_timeout_ftn_t
  *
  * @param net              InOut: The p-net stack instance
- * @param arg              In:    The current state.
+ * @param arg              In:    The current state (number of remaining
+ *                                transitions)
  * @param current_time     In:    The current system time, in microseconds,
  *                                when the scheduler is started to execute
- stored tasks.
+ *                                stored tasks.
  */
 static void pf_dcp_control_signal (
    pnet_t * net,
@@ -523,19 +548,19 @@ static void pf_dcp_control_signal (
 
 /**
  * @internal
- * Handle a DCP set request.
+ * Handle one block in a DCP set request, by inserting it into the response.
  *
  * Triggers the application callback \a pnet_reset_ind() for some values.
  *
  * @param net              InOut: The p-net stack instance
- * @param p_dst            In:   The destination buffer.
- * @param p_dst_pos        InOut:Position in the destination buffer.
- * @param dst_max          In:   Size of destination buffer.
- * @param opt              In:   Option key.
- * @param sub              In:   Sub-option key.
- * @param block_info       In:   The block info argument.
- * @param value_length     In:   The length in bytes of the p_value data.
- * @param p_value          In:   The source data.
+ * @param p_dst            In:    The destination buffer.
+ * @param p_dst_pos        InOut: Position in the destination buffer.
+ * @param dst_max          In:    Size of destination buffer.
+ * @param opt              In:    Option key.
+ * @param sub              In:    Sub-option key.
+ * @param block_info       In:    The block info argument.
+ * @param value_length     In:    The length in bytes of the p_value data.
+ * @param p_value          In:    The source data.
  * @return
  */
 static int pf_dcp_set_req (
@@ -556,11 +581,8 @@ static int pf_dcp_set_req (
 
    response_data[0] = opt;
    response_data[1] = sub;
-   response_data[2] = PF_DCP_BLOCK_ERROR_SUBOPTION_NOT_SUPPORTED; /* Assume
-                                                                     negative
-                                                                     response
-                                                                     initially
-                                                                   */
+   /* Assume negative response initially */
+   response_data[2] = PF_DCP_BLOCK_ERROR_SUBOPTION_NOT_SUPPORTED;
 
    switch (opt)
    {
@@ -747,12 +769,12 @@ static int pf_dcp_set_req (
    }
 
    /* SetResBlock and SetNegResBlock consists of:
-      - option = Control                              1 byte
-      - suboption = Response                          1 byte
-      - block length                                  2 bytes
-      - type of option involved (option + suboption)  2 bytes
-      - block error                                   1 byte  (=0 when no error)
-   */
+    * - option = Control                              1 byte
+    * - suboption = Response                          1 byte
+    * - block length                                  2 bytes
+    * - type of option involved (option + suboption)  2 bytes
+    * - block error                                   1 byte  (=0 when no error)
+    */
    (void)pf_dcp_put_block (
       p_dst,
       p_dst_pos,
@@ -778,10 +800,10 @@ static int pf_dcp_set_req (
  * pf_eth_frame_handler_t
  *
  * @param net              InOut: The p-net stack instance
- * @param frame_id         In:   The frame id.
- * @param p_buf            In:   The ethernet frame.
- * @param frame_id_pos     In:   Position of the frame id in the buffer.
- * @param p_arg            In:   Not used.
+ * @param frame_id         In:    The frame id.
+ * @param p_buf            In:    The ethernet frame.
+ * @param frame_id_pos     In:    Position of the frame id in the buffer.
+ * @param p_arg            In:    Not used.
  * @return  0     If the frame was NOT handled by this function.
  *          1     If the frame was handled and the buffer freed.
  */
@@ -998,17 +1020,19 @@ static int pf_dcp_get_set (
 
 /**
  * @internal
- * Hello indication is used by another device to find its MC peer.
+ * Handle an incoming HELLO message
+ *
+ * The HELLO indication is used by another device to find its MC peer.
  *
  * This is a callback for the frame handler. Arguments should fulfill
  * pf_eth_frame_handler_t
  *
  * ToDo: Device-device communication (MC) is not yet implemented.
  * @param net              InOut: The p-net stack instance
- * @param frame_id         In:   The frame id.
- * @param p_buf            In:   The ethernet frame.
- * @param frame_id_pos     In:   Position of the frame id in the buffer.
- * @param p_arg            In:   Not used.
+ * @param frame_id         In:    The frame id.
+ * @param p_buf            In:    The ethernet frame.
+ * @param frame_id_pos     In:    Position of the frame id in the buffer.
+ * @param p_arg            In:    Not used.
  * @return  0     If the frame was NOT handled by this function.
  *          1     If the frame was handled and the buffer freed.
  */
@@ -1256,14 +1280,17 @@ int pf_dcp_hello_req (pnet_t * net)
  * The request may contain filter conditions. Only respond if ALL conditions
  * match.
  *
+ * The response is sent with a delay, as many devices might respond to the
+ * request.
+ *
  * This is a callback for the frame handler. Arguments should fulfill
  * pf_eth_frame_handler_t
  *
  * @param net              InOut: The p-net stack instance
- * @param frame_id         In:   The frame id.
- * @param p_buf            In:   The ethernet frame.
- * @param frame_id_pos     In:   Position of the frame id in the buffer.
- * @param p_arg            In:   Not used.
+ * @param frame_id         In:    The frame id.
+ * @param p_buf            In:    The ethernet frame.
+ * @param frame_id_pos     In:    Position of the frame id in the buffer.
+ * @param p_arg            In:    Not used.
  * @return  0     If the frame was NOT handled by this function.
  *          1     If the frame was handled and the buffer freed.
  */
@@ -1457,16 +1484,23 @@ static int pf_dcp_identify_req (
             case PF_DCP_OPT_DEVICE_PROPERTIES:
                /*
                 * DeviceVendorBlock = 0x02, 0x01, DCPBlockLength,
-                * DeviceVendorValue NameOfStationBlock = 0x02, 0x02,
-                * DCPBlockLength, NameOfStationValue DeviceIDBlock = 0x02, 0x03,
-                * DCPBlockLength, VendorIDHigh, VendorIDLow, DeviceIDHigh,
-                * DeviceIDLow DeviceRoleBlock = 0x02, 0x04, DCPBlockLength,
-                * DeviceRoleValue DeviceOptionsBlock = 0x02, 0x05,
-                * DCPBlockLength, (Option, Suboption)* AliasNameBlock = 0x02,
-                * 0x06, DCPBlockLength, AliasNameValue Note: No query for
-                * options 0x07 and 0x09 OEMDeviceIDBlock = 0x02, 0x08,
-                * DCPBlockLength, VendorIDHigh, VendorIDLow, DeviceIDHigh,
-                * DeviceIDLow
+                * DeviceVendorValue
+                *
+                * NameOfStationBlock = 0x02, 0x02, DCPBlockLength,
+                * NameOfStationValue
+                *
+                * DeviceIDBlock = 0x02, 0x03, DCPBlockLength, VendorIDHigh,
+                * VendorIDLow, DeviceIDHigh, DeviceIDLow
+                *
+                * DeviceRoleBlock = 0x02, 0x04, DCPBlockLength, DeviceRoleValue
+                *
+                * DeviceOptionsBlock = 0x02, 0x05, DCPBlockLength, (Option,
+                * Suboption)
+                *
+                * AliasNameBlock = 0x02, 0x06, DCPBlockLength, AliasNameValue
+                *
+                * OEMDeviceIDBlock = 0x02, 0x08, DCPBlockLength, VendorIDHigh,
+                * VendorIDLow, DeviceIDHigh, DeviceIDLow
                 */
                switch (p_src_block_hdr->sub_option)
                {
