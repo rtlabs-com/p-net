@@ -36,9 +36,9 @@
 #include <string.h>
 
 #define PF_FILE_MAGIC 0x504E4554U /* "PNET" */
-#define PF_FILE_VERSION                                                        \
-   0x00000001U /* Increase every time the saved contents have another format   \
-                */
+
+/* Increase every time the saved contents have another format */
+#define PF_FILE_VERSION 0x00000001U
 
 /**
  * @internal
@@ -48,9 +48,9 @@
  *
  * @param directory        In:    Directory for files. Terminated string. NULL
  *                                or empty string is interpreted as current
- * directory.
- * @param filename         In:    File name
- * @param fullpath         Out:   Resulting string
+ *                                directory.
+ * @param filename         In:    File name. Terminated string.
+ * @param fullpath         Out:   Resulting string.
  * @param size             In:    Size of outputbuffer.
  * @return  0  if the operation succeeded.
  *          -1 if not found or an error occurred.
@@ -128,7 +128,7 @@ int pf_file_join_directory_filename (
 int pf_file_load (
    const char * directory,
    const char * filename,
-   void * object,
+   void * p_object,
    size_t size)
 {
    uint8_t versioning_buffer[8] = {0}; /* Two uint32_t */
@@ -159,7 +159,7 @@ int pf_file_load (
          path,
          versioning_buffer,
          sizeof (versioning_buffer),
-         object,
+         p_object,
          size) != 0)
    {
       return -1;
@@ -198,7 +198,7 @@ int pf_file_load (
 int pf_file_save (
    const char * directory,
    const char * filename,
-   void * object,
+   void * p_object,
    size_t size)
 {
    char path[PNET_MAX_FILE_FULLPATH_LEN];
@@ -232,8 +232,45 @@ int pf_file_save (
       path,
       versioning_buffer,
       sizeof (versioning_buffer),
-      object,
+      p_object,
       size);
+}
+
+int pf_file_save_if_modified (
+   const char * directory,
+   const char * filename,
+   void * p_object,
+   void * p_tempobject,
+   size_t size)
+{
+   bool save = false;
+   int ret = 0; /* Assume no changes */
+
+   memset (p_tempobject, 0, size);
+
+   if (pf_file_load (directory, filename, p_tempobject, size) == 0)
+   {
+      if (memcmp (p_tempobject, p_object, size) != 0)
+      {
+         ret = 1;
+         save = true;
+      }
+   }
+   else
+   {
+      ret = 2;
+      save = true;
+   }
+
+   if (save == true)
+   {
+      if (pf_file_save (directory, filename, p_object, size) != 0)
+      {
+         ret = -1;
+      }
+   }
+
+   return ret;
 }
 
 void pf_file_clear (const char * directory, const char * filename)

@@ -338,3 +338,73 @@ TEST_F (FileUnitTest, FileCheckMagicAndVersion)
       pf_file_load (NULL, TEST_FILE_FILENAME, &retrieved, TEST_FILE_DATA_SIZE);
    EXPECT_EQ (res, -1);
 }
+
+TEST_F (FileUnitTest, FileCheckSaveIfModified)
+{
+   uint8_t testdata[TEST_FILE_DATA_SIZE] =
+      {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'};
+   uint8_t tempobject[TEST_FILE_DATA_SIZE]; /* Not initialized on purpose */
+   uint8_t retrieved[TEST_FILE_DATA_SIZE] = {0};
+   int res = 0;
+   int i;
+
+   pf_file_clear (NULL, TEST_FILE_FILENAME);
+
+   /* First saving */
+   res = pf_file_save_if_modified (
+      TEST_FILE_DIRECTORY,
+      TEST_FILE_FILENAME,
+      &testdata,
+      &tempobject,
+      TEST_FILE_DATA_SIZE);
+   EXPECT_EQ (res, 2);
+
+   /* No update */
+   res = pf_file_save_if_modified (
+      TEST_FILE_DIRECTORY,
+      TEST_FILE_FILENAME,
+      &testdata,
+      &tempobject,
+      TEST_FILE_DATA_SIZE);
+   EXPECT_EQ (res, 0);
+
+   res = pf_file_save_if_modified (
+      TEST_FILE_DIRECTORY,
+      TEST_FILE_FILENAME,
+      &testdata,
+      &tempobject,
+      TEST_FILE_DATA_SIZE);
+   EXPECT_EQ (res, 0);
+
+   /* Updated data */
+   testdata[0] = 's';
+   res = pf_file_save_if_modified (
+      TEST_FILE_DIRECTORY,
+      TEST_FILE_FILENAME,
+      &testdata,
+      &tempobject,
+      TEST_FILE_DATA_SIZE);
+   EXPECT_EQ (res, 1);
+
+   res = pf_file_save_if_modified (
+      TEST_FILE_DIRECTORY,
+      TEST_FILE_FILENAME,
+      &testdata,
+      &tempobject,
+      TEST_FILE_DATA_SIZE);
+   EXPECT_EQ (res, 0);
+
+   /* Verify updated data */
+   res = pf_file_load (
+      TEST_FILE_DIRECTORY,
+      TEST_FILE_FILENAME,
+      &retrieved,
+      TEST_FILE_DATA_SIZE);
+   EXPECT_EQ (res, 0);
+
+   EXPECT_EQ (retrieved[0], 's');
+   for (i = 1; i < TEST_FILE_DATA_SIZE; i++)
+   {
+      EXPECT_EQ (retrieved[i], testdata[i]);
+   }
+}
