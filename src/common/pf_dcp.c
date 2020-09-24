@@ -177,7 +177,10 @@ static void pf_dcp_responder (pnet_t * net, void * arg, uint32_t current_time)
       {
          if (pf_eth_send (net, net->eth_handle, p_buf) > 0)
          {
-            LOG_DEBUG (PNET_LOG, "DCP(%d): Sent a DCP response.\n", __LINE__);
+            LOG_DEBUG (
+               PNET_LOG,
+               "DCP(%d): Sent a DCP identify response.\n",
+               __LINE__);
          }
 
          os_buf_free (p_buf);
@@ -1363,9 +1366,22 @@ static int pf_dcp_identify_req (
    uint8_t block_error;
    pnet_ethaddr_t mac_address;
 
+   /* For diagnostic logging */
+   bool identify_all = false;
+   uint16_t stationname_position = 0;
+   uint16_t stationname_len = 0;
+   uint16_t alias_position = 0;
+   uint16_t alias_len = 0;
+
+   /* Avoid non-used-variable warnings when logging is disabled */
+   (void)identify_all;
+   (void)stationname_position;
+   (void)stationname_len;
+   (void)alias_position;
+   (void)alias_len;
+
    pf_cmina_get_macaddr (net, &mac_address);
 
-   LOG_INFO (PF_DCP_LOG, "DCP(%d): Incoming DCP identify request\n", __LINE__);
    /*
     * IdentifyReqBlock = DeviceRoleBlock ^ DeviceVendorBlock ^ DeviceIDBlock ^
     * DeviceOptionsBlock ^ OEMDeviceIDBlock ^ MACAddressBlock ^ IPParameterBlock
@@ -1459,6 +1475,8 @@ static int pf_dcp_identify_req (
                switch (p_src_block_hdr->sub_option)
                {
                case PF_DCP_SUB_ALL:
+                  identify_all = true;
+
                   /* ToDo: Is there a bug in the PNIO tester? It sends
                    * src_block_len == 0! */
                   if (
@@ -1556,6 +1574,8 @@ static int pf_dcp_identify_req (
                   }
                   break;
                case PF_DCP_SUB_DEV_PROP_NAME:
+                  stationname_position = src_pos;
+                  stationname_len = src_block_len;
                   if (
                      (memcmp (p_value, &p_src[src_pos], src_block_len) == 0) &&
                      (p_value[src_block_len] == '\0'))
@@ -1636,6 +1656,8 @@ static int pf_dcp_identify_req (
                   }
                   break;
                case PF_DCP_SUB_DEV_PROP_ALIAS:
+                  alias_position = src_pos;
+                  alias_len = src_block_len;
                   if (
                      (memcmp (p_value, &p_src[src_pos], value_length) != 0) ||
                      (src_block_len != value_length))
@@ -1721,6 +1743,10 @@ static int pf_dcp_identify_req (
          }
          else
          {
+            LOG_DEBUG (
+               PF_DCP_LOG,
+               "DCP(%d): Unknown incoming DCP identify request.\n",
+               __LINE__);
             ret = -1; /* Give up on bad request */
          }
 
@@ -1729,12 +1755,6 @@ static int pf_dcp_identify_req (
 
       if ((ret == 0) && (match == true))
       {
-         LOG_DEBUG (
-            PF_DCP_LOG,
-            "DCP(%d):   Match for incoming DCP identify request. Sending "
-            "response.\n",
-            __LINE__); /* TODO Print if it is a general identity request, or
-                          just for specific name */
 
          /* Build the response */
          for (ix = 0; ix < NELEMENTS (device_options); ix++)
@@ -1758,6 +1778,18 @@ static int pf_dcp_identify_req (
          response_delay = pf_dcp_calculate_response_delay (
             &mac_address,
             ntohs (p_src_dcphdr->response_delay_factor));
+         LOG_INFO (
+            PF_DCP_LOG,
+            "DCP(%d): Responding to incoming DCP identify request. All: %d "
+            "StationName: %.*s Alias: %.*s  Delay %u us.\n",
+            __LINE__,
+            identify_all,
+            stationname_len,
+            &p_src[stationname_position], /* Not terminated */
+            alias_len,
+            &p_src[alias_position], /* Not terminated */
+            response_delay);
+
          pf_scheduler_add (
             net,
             response_delay,
@@ -1770,11 +1802,25 @@ static int pf_dcp_identify_req (
       {
          LOG_DEBUG (
             PF_DCP_LOG,
-            "DCP(%d):   No match for incoming DCP identify request.\n",
-            __LINE__); /* TODO Print if it is a general identity request, or
-                          just for specific name */
+            "DCP(%d): No match for incoming DCP identify request. All: %d "
+            "StationName: %.*s Alias: %.*s \n",
+            __LINE__,
+            identify_all,
+            stationname_len,
+            &p_src[stationname_position], /* Not terminated */
+            alias_len,
+            &p_src[alias_position] /* Not terminated */
+         );
          os_buf_free (p_rsp);
       }
+   }
+   else
+   {
+      LOG_ERROR (
+         PF_DCP_LOG,
+         "DCP(%d): Could not allocate memory for incoming DCP identify "
+         "request.\n",
+         __LINE__);
    }
 
    if (p_buf != NULL)
