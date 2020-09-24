@@ -15,7 +15,7 @@
 
 /**
  * @file
- * @brief Integration testing of DCP aspects.
+ * @brief Testing of DCP aspects.
  *
  * For example
  *   Sending hello frame
@@ -38,6 +38,10 @@
 #include <gtest/gtest.h>
 
 class DcpTest : public PnetIntegrationTest
+{
+};
+
+class DcpUnitTest : public PnetUnitTest
 {
 };
 
@@ -162,4 +166,121 @@ TEST_F (DcpTest, DcpRunTest)
    EXPECT_EQ (appdata.call_counters.ccontrol_calls, 0);
    EXPECT_EQ (appdata.call_counters.read_calls, 0);
    EXPECT_EQ (appdata.call_counters.write_calls, 0);
+}
+
+TEST_F (DcpUnitTest, DcpCalculateDelay)
+{
+   pnet_ethaddr_t mac_address = {0};
+   const uint16_t step = 10000; /* Output resolution in microseconds */
+
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 0), 0U);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 1), 0U);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 2), 0U);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 10), 0U);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 100), 0U);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 1000), 0U);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 6400), 0U);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 6401), 0U);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 0xFFFF), 0U);
+
+   mac_address.addr[5] = 0x01;
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 0), 0U);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 1), 0U);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 2), 1U * step);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 10), 1U * step);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 100), 1U * step);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 1000), 1U * step);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 6400), 1U * step);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 6401), 0U);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 0xFFFF), 0U);
+
+   mac_address.addr[5] = 0x02;
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 0), 0U);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 0), 0U);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 1), 0U);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 2), 0U);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 10), 2U * step);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 100), 2U * step);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 1000), 2U * step);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 6400), 2U * step);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 6401), 0U);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 0xFFFF), 0U);
+
+   mac_address.addr[5] = 0xC7; /* 199 */
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 100), 99U * step);
+
+   mac_address.addr[5] = 0xFF; /* 255 */
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 0), 0U);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 1), 0U);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 2), 1U * step);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 10), 5U * step);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 100), 55U * step);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 252), 3U * step);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 253), 2U * step);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 254), 1U * step);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 255), 0U);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 256), 255U * step);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 257), 255U * step);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 258), 255U * step);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 1000), 255U * step);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 6400), 255U * step);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 6401), 0U);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 0xFFFF), 0U);
+   mac_address.addr[5] = 0x00;
+
+   mac_address.addr[4] = 0x01; /* 256 */
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 0), 0U);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 1), 0U);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 2), 0U);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 10), 6U * step);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 100), 56U * step);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 253), 3U * step);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 254), 2U * step);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 255), 1U * step);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 256), 0U);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 257), 256U * step);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 258), 256U * step);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 1000), 256U * step);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 1000), 256U * step);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 6400), 256U * step);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 6401), 0U);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 0xFFFF), 0U);
+
+   mac_address.addr[4] = 0x02; /* 512 */
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 0), 0U);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 1), 0U);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 2), 0U);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 10), 2U * step);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 100), 12U * step);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 1000), 512U * step);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 6400), 512U * step);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 6401), 0U);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 0xFFFF), 0U);
+
+   mac_address.addr[4] = 0xFF; /* 65280 */
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 0), 0U);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 1), 0U);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 2), 0U);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 10), 0U);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 100), 80U * step);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 1000), 280U * step);
+   ASSERT_EQ (
+      pf_dcp_calculate_response_delay (&mac_address, 6400),
+      1280U * step);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 6401), 0U);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 0xFFFF), 0U);
+
+   mac_address.addr[4] = 0xFF;
+   mac_address.addr[5] = 0xFF; /* 65535 */
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 0), 0U);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 1), 0U);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 2), 1U * step);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 10), 5U * step);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 100), 35U * step);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 1000), 535U * step);
+   ASSERT_EQ (
+      pf_dcp_calculate_response_delay (&mac_address, 6400),
+      1535U * step);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 6401), 0U);
+   ASSERT_EQ (pf_dcp_calculate_response_delay (&mac_address, 0xFFFF), 0U);
 }

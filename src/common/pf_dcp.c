@@ -1275,7 +1275,42 @@ int pf_dcp_hello_req (pnet_t * net)
 
 /**
  * @internal
- * Handle a DCP identify request.
+ * Calculate the delay used when sending responses to DCP identify request.
+ *
+ * Given a large number of MAC addresses, the output is approximately random.
+ *
+ * The max delay will be (response_delay_factor - 1) x 10 ms.
+ *
+ * The resulting delay is in the range 0 to 64 s (in steps of 10 ms).
+ *
+ * See Profinet 2.4 Services 6.3.11.3.4
+ *     Profinet 2.4 Protocol 4.3.1.3.5 (formula)
+ *
+ * @param mac_address            In:    MAC address
+ * @param response_delay_factor  In:    Response delay factor, from the request.
+ *                                      Allowed range 1 to 6400.
+ * @return delay in microseconds
+ */
+uint32_t pf_dcp_calculate_response_delay (
+   pnet_ethaddr_t * mac_address,
+   uint16_t response_delay_factor)
+{
+   uint16_t random_number = 0;
+   uint32_t spread = 0; /* Naming from the standard */
+
+   if ((response_delay_factor == 0) || (response_delay_factor > 6400))
+   {
+      return 0;
+   }
+
+   random_number = mac_address->addr[4] * 0x100 + mac_address->addr[5];
+   spread = random_number % response_delay_factor;
+   return spread * 10 * 1000;
+}
+
+/**
+ * @internal
+ * Handle an incoming DCP identify request.
  *
  * The request may contain filter conditions. Only respond if ALL conditions
  * match.
@@ -1720,12 +1755,12 @@ static int pf_dcp_identify_req (
          p_rsp->len = dst_pos;
 
          net->dcp_delayed_response_waiting = true;
-         response_delay = ((mac_address.addr[4] * 256 + mac_address.addr[5]) %
-                           ntohs (p_src_dcphdr->response_delay_factor)) *
-                          10;
+         response_delay = pf_dcp_calculate_response_delay (
+            &mac_address,
+            ntohs (p_src_dcphdr->response_delay_factor));
          pf_scheduler_add (
             net,
-            response_delay * 1000,
+            response_delay,
             dcp_sync_name,
             pf_dcp_responder,
             p_rsp,
