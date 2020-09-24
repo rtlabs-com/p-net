@@ -104,12 +104,18 @@ typedef enum pf_dcp_block_error_values
 
 /**
  * Initialize the DCP component.
+ *
+ * Registers incoming frame IDs with the frame handler.
+ *
  * @param net              InOut: The p-net stack instance
  */
 void pf_dcp_init (pnet_t * net);
 
 /**
  * Stop the DCP component.
+ *
+ * Unregisters frame IDs from the frame handler.
+ *
  * @param net              InOut: The p-net stack instance
  */
 void pf_dcp_exit (pnet_t * net);

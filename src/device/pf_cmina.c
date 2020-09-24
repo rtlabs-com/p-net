@@ -49,8 +49,8 @@ static const char * hello_sync_name = "hello";
  * call after 1 s.
  *
  * @param net              InOut: The p-net stack instance
- * @param arg              In:   Not used.
- * @param current_time     In:   Not used.
+ * @param arg              In:    Not used.
+ * @param current_time     In:    Not used.
  */
 static void pf_cmina_send_hello (pnet_t * net, void * arg, uint32_t current_time)
 {
