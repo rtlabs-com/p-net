@@ -27,17 +27,17 @@ extern "C" {
  *
  * @param directory        In:    Directory for files. Terminated string. NULL
  *                                or empty string is interpreted as current
- * directory.
- * @param filename         In:    File name
- * @param object           Out:   Struct to load
+ *                                directory.
+ * @param filename         In:    File name. Terminated string.
+ * @param p_object         Out:   Struct to load
  * @param size             In:    Size of struct to load
  * @return  0  if the operation succeeded.
- *          -1 if not found or an error occurred.
+ *          -1 if not found or an error occurred (for example wrong version).
  */
 int pf_file_load (
    const char * directory,
    const char * filename,
-   void * object,
+   void * p_object,
    size_t size);
 
 /**
@@ -45,9 +45,9 @@ int pf_file_load (
  *
  * @param directory        In:    Directory for files. Terminated string. NULL
  *                                or empty string is interpreted as current
- * directory.
- * @param filename         In:    File name
- * @param object           In:    Struct to save
+ *                                directory.
+ * @param filename         In:    File name. Terminated string.
+ * @param p_object         In:    Struct to save
  * @param size             In:    Size of struct to save
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
@@ -55,7 +55,33 @@ int pf_file_load (
 int pf_file_save (
    const char * directory,
    const char * filename,
-   void * object,
+   void * p_object,
+   size_t size);
+
+/**
+ * Save a binary file if modified, and include version information.
+ *
+ * No saving is done if the content would be the same. This reduces the flash
+ * memory wear.
+ *
+ * @param directory        In:    Directory for files. Terminated string. NULL
+ *                                or empty string is interpreted as current
+ *                                directory.
+ * @param filename         In:    File name. Terminated string.
+ * @param p_object         In:    Struct to save
+ * @param p_tempobject     Temp:  Temporary buffer (of same size as object) for
+ *                                loading existing file.
+ * @param size             In:    Size of struct to save
+ * @return  2 First saving of file (no previous file with correct version found)
+ *          1 Updated file
+ *          0  No storing required (no changes)
+ *          -1 if an error occurred.
+ */
+int pf_file_save_if_modified (
+   const char * directory,
+   const char * filename,
+   void * p_object,
+   void * p_tempobject,
    size_t size);
 
 /**
@@ -63,8 +89,8 @@ int pf_file_save (
  *
  * @param directory        In:    Directory for files. Terminated string. NULL
  *                                or empty string is interpreted as current
- * directory.
- * @param filename         In:    File name
+ *                                directory.
+ * @param filename         In:    File name. Terminated string.
  */
 void pf_file_clear (const char * directory, const char * filename);
 

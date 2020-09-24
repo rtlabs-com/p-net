@@ -95,12 +95,12 @@ static void pf_cmina_save_ase_if_modified (
    pnet_t * net,
    pf_cmina_dcp_ase_t * p_ase)
 {
-   pf_cmina_dcp_ase_t file_ase;
-   bool save = false;
+   pf_cmina_dcp_ase_t temporary_buffer;
    char ip_string[OS_INET_ADDRSTRLEN] = {0};
    char netmask_string[OS_INET_ADDRSTRLEN] = {0};
    char gateway_string[OS_INET_ADDRSTRLEN] = {0};
    const char * p_file_directory = NULL;
+   int res = 0;
 
    (void)pf_cmina_get_file_directory (net, &p_file_directory);
 
@@ -110,41 +110,15 @@ static void pf_cmina_save_ase_if_modified (
       p_ase->full_ip_suite.ip_suite.ip_gateway,
       gateway_string);
 
-   if (
-      pf_file_load (
-         p_file_directory,
-         PNET_FILENAME_IP,
-         &file_ase,
-         sizeof (pf_cmina_dcp_ase_t)) == 0)
+   res = pf_file_save_if_modified (
+      p_file_directory,
+      PNET_FILENAME_IP,
+      p_ase,
+      &temporary_buffer,
+      sizeof (pf_cmina_dcp_ase_t));
+   switch (res)
    {
-      if (
-         memcmp (
-            &file_ase.full_ip_suite.ip_suite,
-            &p_ase->full_ip_suite.ip_suite,
-            sizeof (p_ase->full_ip_suite.ip_suite)) != 0)
-      {
-         save = true;
-      }
-      else if (strcmp (file_ase.name_of_station, p_ase->name_of_station) != 0)
-      {
-         save = true;
-      }
-
-      if (save == true)
-      {
-         LOG_DEBUG (
-            PF_DCP_LOG,
-            "CMINA(%d): Updating nvm stored IP settings. "
-            "IP: %s Netmask: %s Gateway: %s Station name: %s\n",
-            __LINE__,
-            ip_string,
-            netmask_string,
-            gateway_string,
-            p_ase->name_of_station);
-      }
-   }
-   else
-   {
+   case 2:
       LOG_DEBUG (
          PF_DCP_LOG,
          "CMINA(%d): First nvm saving of IP settings. "
@@ -154,26 +128,19 @@ static void pf_cmina_save_ase_if_modified (
          netmask_string,
          gateway_string,
          p_ase->name_of_station);
-      save = true;
-   }
-
-   if (save == true)
-   {
-      if (
-         pf_file_save (
-            p_file_directory,
-            PNET_FILENAME_IP,
-            p_ase,
-            sizeof (pf_cmina_dcp_ase_t)) != 0)
-      {
-         LOG_ERROR (
-            PF_DCP_LOG,
-            "CMINA(%d): Failed to store nvm IP settings.\n",
-            __LINE__);
-      }
-   }
-   else
-   {
+      break;
+   case 1:
+      LOG_DEBUG (
+         PF_DCP_LOG,
+         "CMINA(%d): Updating nvm stored IP settings. "
+         "IP: %s Netmask: %s Gateway: %s Station name: %s\n",
+         __LINE__,
+         ip_string,
+         netmask_string,
+         gateway_string,
+         p_ase->name_of_station);
+      break;
+   case 0:
       LOG_DEBUG (
          PF_DCP_LOG,
          "CMINA(%d): No storing of nvm IP settings (no changes). "
@@ -183,6 +150,14 @@ static void pf_cmina_save_ase_if_modified (
          netmask_string,
          gateway_string,
          p_ase->name_of_station);
+      break;
+   default:
+   case -1:
+      LOG_ERROR (
+         PF_DCP_LOG,
+         "CMINA(%d): Failed to store nvm IP settings.\n",
+         __LINE__);
+      break;
    }
 }
 

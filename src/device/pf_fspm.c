@@ -248,9 +248,9 @@ static void pf_fspm_load_im (pnet_t * net)
 static void pf_fspm_save_im_if_modified (pnet_t * net)
 {
    pnet_im_nvm_t output_im = {0};
-   pnet_im_nvm_t current_file_im = {0};
-   bool save = false;
+   pnet_im_nvm_t temporary_buffer;
    const char * p_file_directory = NULL;
+   int res = 0;
 
    memcpy (&output_im.im1, &net->fspm_cfg.im_1_data, sizeof (pnet_im_1_t));
    memcpy (&output_im.im2, &net->fspm_cfg.im_2_data, sizeof (pnet_im_2_t));
@@ -259,52 +259,39 @@ static void pf_fspm_save_im_if_modified (pnet_t * net)
 
    (void)pf_cmina_get_file_directory (net, &p_file_directory);
 
-   if (
-      pf_file_load (
-         p_file_directory,
-         PNET_FILENAME_IM,
-         &current_file_im,
-         sizeof (pnet_im_nvm_t)) == 0)
+   res = pf_file_save_if_modified (
+      p_file_directory,
+      PNET_FILENAME_IM,
+      &output_im,
+      &temporary_buffer,
+      sizeof (pnet_im_nvm_t));
+   switch (res)
    {
-      if (memcmp (&current_file_im, &output_im, sizeof (pnet_im_nvm_t)) != 0)
-      {
-         LOG_INFO (
-            PNET_LOG,
-            "FSPM(%d): Updating nvm stored I&M settings.\n",
-            __LINE__);
-         save = true;
-      }
-   }
-   else
-   {
+   case 2:
       LOG_INFO (
          PNET_LOG,
          "FSPM(%d): First nvm saving of I&M settings.\n",
          __LINE__);
-      save = true;
-   }
-
-   if (save == true)
-   {
-      if (
-         pf_file_save (
-            p_file_directory,
-            PNET_FILENAME_IM,
-            &output_im,
-            sizeof (pnet_im_nvm_t)) != 0)
-      {
-         LOG_ERROR (
-            PNET_LOG,
-            "FSPM(%d): Failed to store nvm I&M settings.\n",
-            __LINE__);
-      }
-   }
-   else
-   {
+      break;
+   case 1:
+      LOG_INFO (
+         PNET_LOG,
+         "FSPM(%d): Updating nvm stored I&M settings.\n",
+         __LINE__);
+      break;
+   case 0:
       LOG_DEBUG (
          PNET_LOG,
          "FSPM(%d): No storing of nvm I&M settings (no changes).\n",
          __LINE__);
+      break;
+   default:
+   case -1:
+      LOG_ERROR (
+         PNET_LOG,
+         "FSPM(%d): Failed to store nvm I&M settings.\n",
+         __LINE__);
+      break;
    }
 }
 
