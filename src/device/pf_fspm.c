@@ -51,6 +51,38 @@ void pf_fspm_im_show (pnet_t * net)
                                                 for now */
 }
 
+void pf_fspm_logbook_show (pnet_t * net)
+{
+   uint16_t ix;
+
+   printf ("Logbook. Has wrapped: %u\n", net->fspm_log_book.wrap);
+   printf ("ix   Next   Error code            Detail       Timestamp (s)\n");
+
+   for (ix = 0; ix < NELEMENTS (net->fspm_log_book.entries); ix++)
+   {
+      printf ("[%02u] %s      ", ix, (ix == net->fspm_log_book.put) ? "*" : " ");
+
+      if (
+         (net->fspm_log_book.entries[ix].ar_uuid.data1 != 0) ||
+         (net->fspm_log_book.entries[ix].ar_uuid.data2 != 0) ||
+         (net->fspm_log_book.entries[ix].ar_uuid.data3 != 0))
+      {
+         printf (
+            "0x%02X 0x%02X 0x%02X 0x%02X   0x%08" PRIX32 "   %" PRIu32 "\n",
+            net->fspm_log_book.entries[ix].pnio_status.error_code,
+            net->fspm_log_book.entries[ix].pnio_status.error_decode,
+            net->fspm_log_book.entries[ix].pnio_status.error_code_1,
+            net->fspm_log_book.entries[ix].pnio_status.error_code_2,
+            net->fspm_log_book.entries[ix].entry_detail,
+            net->fspm_log_book.entries[ix].time_ts.sec_lo);
+      }
+      else
+      {
+         printf ("\n");
+      }
+   }
+}
+
 void pf_fspm_option_show (pnet_t * net)
 {
    printf ("Compile time options affecting memory consumption:\n");
@@ -199,6 +231,100 @@ int pf_fspm_validate_configuration (const pnet_cfg_t * p_cfg)
 
 /**
  * @internal
+ * Load the logbook from nonvolatile memory, if existing.
+ *
+ * Uses a copy of the logbook to hold the mutex as short time as possible.
+ *
+ * @param net              InOut: The p-net stack instance
+ */
+static void pf_fspm_load_logbook (pnet_t * net)
+{
+   pf_log_book_t log_book_copy;
+   const char * p_file_directory = NULL;
+
+   (void)pf_cmina_get_file_directory (net, &p_file_directory);
+
+   if (
+      pf_file_load (
+         p_file_directory,
+         PNET_FILENAME_LOGBOOK,
+         &log_book_copy,
+         sizeof (pf_log_book_t)) == 0)
+   {
+      LOG_DEBUG (PNET_LOG, "FSPM(%d): Did read logbook from nvm.\n", __LINE__);
+      os_mutex_lock (net->fspm_log_book_mutex);
+      memcpy (
+         &net->fspm_log_book,
+         &log_book_copy,
+         sizeof (pf_log_book_t));
+      os_mutex_unlock (net->fspm_log_book_mutex);
+   }
+   else
+   {
+      LOG_DEBUG (
+         PNET_LOG,
+         "FSPM(%d): Could not yet read logbook from nvm.\n",
+         __LINE__);
+      memset (&net->fspm_log_book, 0, sizeof (pf_log_book_t));
+   }
+}
+
+/**
+ * @internal
+ * Save the logbook to nonvolatile memory, if necessary.
+ *
+ * Compares with the content of already stored logbook (in order not to
+ * wear out the flash chip)
+ *
+ * Uses a copy of the logbook to hold the mutex as short time as possible.
+ *
+ * @param net              InOut: The p-net stack instance
+ */
+static void pf_fspm_save_logbook (pnet_t * net)
+{
+   pf_log_book_t log_book_copy;
+   pf_log_book_t file_read_buffer;
+   const char * p_file_directory = NULL;
+   int res = 0;
+
+   os_mutex_lock (net->fspm_log_book_mutex);
+   memcpy (
+      &log_book_copy,
+      &net->fspm_log_book,
+      sizeof (pf_log_book_t));
+   os_mutex_unlock (net->fspm_log_book_mutex);
+
+   (void)pf_cmina_get_file_directory (net, &p_file_directory);
+
+   res = pf_file_save_if_modified (
+      p_file_directory,
+      PNET_FILENAME_LOGBOOK,
+      &log_book_copy,
+      &file_read_buffer,
+      sizeof (pf_log_book_t));
+   switch (res)
+   {
+   case 2:
+      LOG_INFO (PNET_LOG, "FSPM(%d): First nvm saving of logbook.\n", __LINE__);
+      break;
+   case 1:
+      LOG_INFO (PNET_LOG, "FSPM(%d): Updating nvm stored logbook.\n", __LINE__);
+      break;
+   case 0:
+      LOG_DEBUG (
+         PNET_LOG,
+         "FSPM(%d): No storing of nvm logbook (no changes).\n",
+         __LINE__);
+      break;
+   default:
+   case -1:
+      LOG_ERROR (PNET_LOG, "FSPM(%d): Failed to store nvm logbook.\n", __LINE__);
+      break;
+   }
+}
+
+/**
+ * @internal
  * Load the I&M settings from nonvolatile memory, if existing.
  *
  * @param net              InOut: The p-net stack instance
@@ -318,6 +444,8 @@ int pf_fspm_init (pnet_t * net, const pnet_cfg_t * p_cfg)
    {
       net->fspm_log_book_mutex = os_mutex_create();
    }
+   pf_fspm_load_logbook (net);
+   pf_fspm_save_logbook (net); /* Create file if missing */
 
    /* Turn LED off */
    if (pf_fspm_signal_led_ind (net, false) != 0)
@@ -365,6 +493,14 @@ void pf_fspm_create_log_book_entry (
       net->fspm_log_book.entries[put].pnio_status = *p_pnio_status;
       net->fspm_log_book.entries[put].entry_detail = entry_detail;
       os_mutex_unlock (net->fspm_log_book_mutex);
+
+      LOG_DEBUG (
+         PNET_LOG,
+         "FSPM(%d): Added logbook entry to position %u\n",
+         __LINE__,
+         put);
+
+      pf_fspm_save_logbook (net);
    }
 }
 
@@ -676,7 +812,7 @@ int pf_fspm_cm_read_ind (
    }
    else if (p_read_request->index == PF_IDX_DEV_LOGBOOK_DATA)
    {
-      LOG_INFO (PNET_LOG, "FSPM(%d): Read logbook data\n", __LINE__);
+      LOG_INFO (PNET_LOG, "FSPM(%d): PLC is reading logbook data\n", __LINE__);
       *pp_read_data = (uint8_t *)&net->fspm_log_book;
       *p_read_length = sizeof (net->fspm_log_book);
       ret = 0;

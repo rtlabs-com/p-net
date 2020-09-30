@@ -1218,6 +1218,46 @@ void pf_cmdev_device_show (pnet_t * net)
       pf_cmdev_cfg_subslot_show);
 }
 
+void pf_cmdev_diag_show (pnet_t * net)
+{
+   uint16_t ix = 0;
+   uint16_t total = 0;
+
+   printf ("DIAGNOSIS\n");
+   printf (
+      "Max: %u items\n",
+      (uint16_t)NELEMENTS (net->cmdev_device.diag_items));
+
+   for (ix = 0; ix < NELEMENTS (net->cmdev_device.diag_items); ix++)
+   {
+      if (net->cmdev_device.diag_items[ix].in_use == true)
+      {
+         total++;
+      }
+   }
+   printf ("Items in use: %u\n", total);
+
+   for (ix = 0; ix < NELEMENTS (net->cmdev_device.diag_items); ix++)
+   {
+      if (net->cmdev_device.diag_items[ix].in_use == true)
+      {
+         printf ("[%u] USI: 0x%04X", ix, net->cmdev_device.diag_items[ix].usi);
+         if (net->cmdev_device.diag_items[ix].usi >= 0x8000)
+         {
+            printf (
+               "  Channel: %u  Channel error type: 0x%04X\n",
+               net->cmdev_device.diag_items[ix].fmt.std.ch_nbr,
+               net->cmdev_device.diag_items[ix].fmt.std.ch_error_type);
+         }
+         else
+         {
+            printf ("\n");
+         }
+      }
+   }
+   printf ("\n");
+}
+
 /********************** CMDEV init, exit and state ****************************/
 
 void pf_cmdev_exit (pnet_t * net)
