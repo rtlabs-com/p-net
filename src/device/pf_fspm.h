@@ -53,6 +53,9 @@ int16_t pf_cmina_get_min_device_interval (pnet_t * net);
 
 /**
  * Create a LogBook entry.
+ *
+ * Logbooks are described in Profinet 2.4 Services, section 7.3.6 "LogBook ASE"
+ *
  * @param net              InOut: The p-net stack instance
  * @param arep             In:   The AREP, indentifying the AR.
  * @param p_pnio_status    In:   The PNIO status.
@@ -313,7 +316,7 @@ int pf_fspm_reset_ind (
  * @param net                       InOut: The p-net stack instance
  * @param led_state                 In:    True if the signal LED should be on.
  * @return  0  if operation succeeded.
- *          -1 if an error occurred.
+ *          -1 if an error occurred. Will trigger a log message.
  */
 int pf_fspm_signal_led_ind (pnet_t * net, bool led_state);
 
@@ -352,6 +355,13 @@ void pf_fspm_im_show (pnet_t * net);
  * @param net              InOut: The p-net stack instance
  */
 void pf_fspm_option_show (pnet_t * net);
+
+/**
+ * Show logbook.
+ *
+ * @param net              InOut: The p-net stack instance
+ */
+void pf_fspm_logbook_show (pnet_t * net);
 
 /************ Internal functions, made available for unit testing ************/
 

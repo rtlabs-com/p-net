@@ -128,6 +128,16 @@ void pnet_show (pnet_t * net, unsigned level)
 
       pf_cmrpc_show (net, level);
 
+      if (level & 0x0200)
+      {
+         pf_cmdev_diag_show (net);
+      }
+
+      if (level & 0x0400)
+      {
+         pf_fspm_logbook_show (net);
+      }
+
       if (level & 0x2000)
       {
          printf ("\n\n");

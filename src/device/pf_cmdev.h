@@ -269,6 +269,12 @@ void pf_cmdev_ar_show (pf_ar_t * p_ar);
 void pf_cmdev_device_show (pnet_t * net);
 
 /**
+ * Show diagnosis items.
+ * @param net              InOut: The p-net stack instance
+ */
+void pf_cmdev_diag_show (pnet_t * net);
+
+/**
  * Indicate a new state transition of the CMDEV component.
  *
  * Among other actions, it calls the \a pnet_state_ind() user callback.
