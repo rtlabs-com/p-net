@@ -18,7 +18,7 @@
 
 /**
  * @file
- * @brief Implements Link Layer Discovery Protocol (LLDP), for neighborhood
+ * @brief Implements Link Layer Discovery Protocol (LLDP), for neighbourhood
  * detection.
  *
  * Builds and sends LLDP frames.
@@ -71,8 +71,8 @@ typedef struct lldp_tlv
 static const char org_id_pnio[] = {0x00, 0x0e, 0xcf};
 static const char org_id_ieee_8023[] = {0x00, 0x12, 0x0f};
 
-static const char * shed_tag_tx = "lldp_broadcast_tmo";
-static const char * shed_tag_rx = "lldp_receive_tmo";
+static const char * shed_tag_tx = "lldp_tx";
+static const char * shed_tag_rx = "lldp_rx";
 
 typedef enum lldp_pnio_subtype_values
 {

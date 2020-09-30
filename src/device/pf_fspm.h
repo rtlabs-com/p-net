@@ -340,7 +340,7 @@ void pf_fspm_get_default_cfg (pnet_t * net, const pnet_cfg_t ** pp_cfg);
 int pf_fspm_clear_im_data (pnet_t * net);
 
 /**
- * Show identification & maintainance settings.
+ * Show identification & maintenance settings.
  *
  * @param net              InOut: The p-net stack instance
  */

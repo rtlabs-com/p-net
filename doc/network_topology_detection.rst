@@ -21,6 +21,10 @@ SNMP
 ----
 It is possible to ask an IO-Controller or IO-device (conformance class B or
 higher) about its neighbours, using the Simple Network Management Protocol (SNMP).
+
+SNMP agents collect information on individual devices, and the SNMP manager
+retrieves information from them.
+
 Some of the information can also be queried via the Profinet DCE/RPC.
 
 

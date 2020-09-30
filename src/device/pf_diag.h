@@ -46,20 +46,25 @@ int pf_diag_exit (void);
 
 /**
  * Add a diagnosis entry.
- * @param net              InOut: The p-net stack instance
- * @param p_ar             In:   The AR instance.
- * @param api_id           In:   The API.
- * @param slot_nbr         In:   The slot.
- * @param subslot_nbr      In:   The sub-slot.
- * @param ch_nbr           In:   The channel number
- * @param ch_properties    In:   The channel properties.
- * @param ch_error_type    In:   The channel error type.
- * @param ext_ch_error_type In:  The extended channel error type.
- * @param ext_ch_add_value In:   The extended channel error additional value.
- * @param qual_ch_qualifier In:  The qualified channel qualifier.
- * @param usi              In:   The USI.
- * @param p_manuf_data     In:   The manufacturer specific diagnosis data.
- *                               (Only needed if USI <= 0x7fff).
+ *
+ * This sends a diagnosis alarm.
+ *
+ * @param net                 InOut: The p-net stack instance
+ * @param p_ar                In:    The AR instance.
+ * @param api_id              In:    The API.
+ * @param slot_nbr            In:    The slot.
+ * @param subslot_nbr         In:    The sub-slot.
+ * @param ch_nbr              In:    The channel number
+ * @param ch_properties       In:    The channel properties (data length,
+ *                                   direction, maintenance)
+ * @param ch_error_type       In:    The channel error type.
+ * @param ext_ch_error_type   In:    The extended channel error type.
+ * @param ext_ch_add_value    In:    The extended channel error additional
+ *                                      value.
+ * @param qual_ch_qualifier   In:    The qualified channel qualifier.
+ * @param usi                 In:    The USI.
+ * @param p_manuf_data        In:    The manufacturer specific diagnosis data.
+ *                                   (Only needed if USI <= 0x7fff).
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -95,18 +100,20 @@ int pf_diag_add (
  * USI in manufacturer-specific range) or the extended channel additional
  * value is updated.
  *
+ * This sends a diagnosis alarm.
+ *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:   The AR instance.
- * @param api_id           In:   The API.
- * @param slot_nbr         In:   The slot.
- * @param subslot_nbr      In:   The sub-slot.
- * @param ch_nbr           In:   The channel number
- * @param ch_properties    In:   The channel properties.
- * @param ch_error_type    In:   The channel error type.
- * @param ext_ch_add_value In:   The extended channel error additional value.
- * @param usi              In:   The USI.
- * @param p_manuf_data     In:   The manufacturer specific diagnosis data.
- *                               (Only needed if USI <= 0x7fff).
+ * @param p_ar             In:    The AR instance.
+ * @param api_id           In:    The API.
+ * @param slot_nbr         In:    The slot.
+ * @param subslot_nbr      In:    The sub-slot.
+ * @param ch_nbr           In:    The channel number
+ * @param ch_properties    In:    The channel properties (only direction used)
+ * @param ch_error_type    In:    The channel error type.
+ * @param ext_ch_add_value In:    New extended channel error additional value.
+ * @param usi              In:    The USI.
+ * @param p_manuf_data     In:    New manufacturer specific diagnosis data.
+ *                                (Only needed if USI <= 0x7fff).
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -136,15 +143,17 @@ int pf_diag_update (
  * - Channel properties (the channel direction part only).
  * - Channel error type.
  *
+ * This sends a diagnosis alarm.
+ *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:   The AR instance.
- * @param api_id           In:   The API.
- * @param slot_nbr         In:   The slot.
- * @param subslot_nbr      In:   The sub-slot.
- * @param ch_nbr           In:   The channel number
- * @param ch_properties    In:   The channel properties.
- * @param ch_error_type    In:   The channel error type.
- * @param usi              In:   The USI.
+ * @param p_ar             In:    The AR instance.
+ * @param api_id           In:    The API.
+ * @param slot_nbr         In:    The slot.
+ * @param subslot_nbr      In:    The sub-slot.
+ * @param ch_nbr           In:    The channel number
+ * @param ch_properties    In:    The channel properties (only direction used)
+ * @param ch_error_type    In:    The channel error type.
+ * @param usi              In:    The USI.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -159,6 +168,7 @@ int pf_diag_remove (
    uint16_t ch_error_type,
    uint16_t usi);
 
+/* Not used yet */
 int pf_diag_get_maintenance_status (
    uint32_t api_id,
    uint16_t slot_nbr,

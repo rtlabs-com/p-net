@@ -46,7 +46,7 @@ Features:
 
 Limitations or not yet implemented:
 
-* Only a single Ethernet interface (no media redundancy)
+* Only a single Ethernet port (no media redundancy)
 * No startup mode legacy
 * No support for RT_CLASS_UDP
 * No support for DHCP

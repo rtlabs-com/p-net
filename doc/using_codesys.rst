@@ -57,7 +57,7 @@ tab "Device" and "Send Echo Service" to verify the communication.
 In the Codesys menu "Tools", select "Device Repository". Click "Install" and
 select the GSDML file from your hard drive.
 
-* On the "Device" in the left hand panel, right-click and select Add Device. Use "Ethernet".
+* On the “Device (CODESY Control for Raspberry Pi SL)” in the left hand panel, right-click and select Add Device. Use “Ethernet”.
 * On the "Ethernet", right-click and select Add Device. Use "Profinet IO master".
 * On the "PN_Controller", right-click and select Add Device. Use "rt-labs DEMO device".
 * On the "rt_labs_DEMO_device", right-click and select Add Device. Use "8 bits I 8 bits 0".
@@ -209,10 +209,14 @@ Click on the IO-device in the tree structure in the left part of the screen.
 Use the "Log" tab to display errors.
 
 
-Displaying alarms
------------------
-Alarms are displayed on the "Status" tabs for modules. Also the IO-device
-itself has a "Status" tab with alarms related to built-in (DAP) modules.
+Displaying alarms sent from IO-device
+-------------------------------------
+Incoming process alarms and diagnosis alarms appear on multiple places in the Codesys desktop application.
+
+* Codesys Raspberry Pi: The "Log" tab show process and diagnosis alarms.
+* PN_Controller: The "Log" tab show process and diagnosis alarms.
+* IO-device: The "Log" tab show process and diagnosis alarms. The “Status” tab shows alarms related to built-in (DAP) modules.
+* Plugged module in IO-device: Process and diagnosis alarms are displayed on the “Status” tab.
 
 
 Connection status

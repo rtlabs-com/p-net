@@ -251,7 +251,7 @@ there are communication problems to the IO-device. In the project tree > PLC_1
 errors, the hover text on the small icon is showing "Not reachable".
 
 
-Trouble shooting
-----------------
+Troubleshooting
+---------------
 Note that the PLC might complain if there is a non-Profinet switch between the
 IO-device and the IO-controller. This is probably due to wrong port names in LLDP messages.

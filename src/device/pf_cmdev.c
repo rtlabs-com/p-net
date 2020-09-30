@@ -26,6 +26,8 @@
  *
  * Collect IOCS and IOPS information.
  *
+ * Bookkeeping of diagnosis entries.
+ *
  */
 
 #ifdef UNIT_TEST
@@ -175,9 +177,9 @@ int pf_cmdev_get_api (pnet_t * net, uint32_t api_id, pf_api_t ** pp_api)
 /**
  * @internal
  * Get an slot instance of an API.
- * @param p_api            In:   The API instance.
- * @param slot_nbr         In:   The slot number.
- * @param pp_slot          Out:  The slot instance.
+ * @param p_api            In:    The API instance.
+ * @param slot_nbr         In:    The slot number.
+ * @param pp_slot          Out:   The slot instance.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -219,9 +221,9 @@ static int pf_cmdev_get_slot (
 /**
  * @internal
  * Get an sub-slot instance of a slot instance.
- * @param p_slot           In:   The slot instance.
- * @param subslot_nbr      In:   The sub-slot number.
- * @param pp_subslot       Out:  The sub-slot instance.
+ * @param p_slot           In:    The slot instance.
+ * @param subslot_nbr      In:    The sub-slot number.
+ * @param pp_subslot       Out:   The sub-slot instance.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -305,6 +307,8 @@ int pf_cmdev_get_slot_full (
    return ret;
 }
 
+/******************** Diagnosis **********************************************/
+
 int pf_cmdev_get_diag_item (
    pnet_t * net,
    uint16_t item_ix,
@@ -325,8 +329,6 @@ int pf_cmdev_get_diag_item (
 
    return ret;
 }
-
-/*************** Diagnostics **********************************************/
 
 int pf_cmdev_new_diag (pnet_t * net, uint16_t * p_item_ix)
 {
@@ -364,13 +366,15 @@ void pf_cmdev_free_diag (pnet_t * net, uint16_t item_ix)
    }
 }
 
+/*****************************************************************************/
+
 /**
  * @internal
  * Instantiate a new API structure.
  * If the API identifier already exists the the operation fails.
  * @param net              InOut: The p-net stack instance
- * @param api_id           In:   The API identifier.
- * @param pp_api           Out:  The new API instance.
+ * @param api_id           In:    The API identifier.
+ * @param pp_api           Out:   The new API instance.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -423,9 +427,9 @@ static int pf_cmdev_new_api (pnet_t * net, uint32_t api_id, pf_api_t ** pp_api)
  * @internal
  * Instantiate a new slot structure.
  * If the slot number already exists the the operation fails.
- * @param p_api            In:   The API instance.
- * @param slot_nbr         In:   The slot number.
- * @param pp_slot          Out:  The new slot instance.
+ * @param p_api            In:    The API instance.
+ * @param slot_nbr         In:    The slot number.
+ * @param pp_slot          Out:   The new slot instance.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -480,9 +484,9 @@ static int pf_cmdev_new_slot (
  * @internal
  * Instantiate a new sub-slot structure.
  * If the sub-slot number already exists the the operation fails.
- * @param p_slot           In:   The slot instance.
- * @param subslot_nbr      In:   The sub-slot number.
- * @param pp_subslot       Out:  The new sub-slot instance.
+ * @param p_slot           In:    The slot instance.
+ * @param subslot_nbr      In:    The sub-slot number.
+ * @param pp_subslot       Out:   The new sub-slot instance.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -891,7 +895,7 @@ int pf_cmdev_pull_module (pnet_t * net, uint32_t api_id, uint16_t slot_nbr)
  * @internal
  * Remove all entries that refer to the AR.
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:   The AR entries to remove.
+ * @param p_ar             In:    The AR entries to remove.
  */
 static void pf_device_clear (pnet_t * net, pf_ar_t * p_ar)
 {
@@ -1012,7 +1016,7 @@ const char * pf_cmdev_event_to_string (pnet_event_values_t event)
 /**
  * @internal
  * Return a string representation of the specified sub-module direction.
- * @param direction        In:   The direction
+ * @param direction        In:    The direction
  * @return  a string representation of the sub-module direction.
  */
 static const char * pf_cmdev_direction_to_string (pnet_submodule_dir_t direction)
@@ -1043,7 +1047,7 @@ static const char * pf_cmdev_direction_to_string (pnet_submodule_dir_t direction
 /**
  * @internal
  * Return a string representation of the specified module plug state.
- * @param plug_state       In:   The plug state
+ * @param plug_state       In:    The plug state
  * @return  a string representation of the module plug state.
  */
 static const char * pf_cmdev_mod_plug_state_to_string (
@@ -1075,7 +1079,7 @@ static const char * pf_cmdev_mod_plug_state_to_string (
 /**
  * @internal
  * Return a string representation of the specified sub-module plug state.
- * @param plug_state          In:   The plug state
+ * @param plug_state       In:    The plug state
  * @return  a string representation of the sub-module plug state.
  */
 static const char * pf_cmdev_submod_plug_state_to_string (
@@ -1113,31 +1117,31 @@ void pf_cmdev_show (pf_ar_t * p_ar)
 
 /**
  * @internal
- * Show everything about the device configuration.
- * @param p_dev            In:   The device instance.
+ * Show everything about the device instance.
+ * @param p_dev            In:    The device instance.
  * @return  0  Always
  */
 static int pf_cmdev_cfg_dev_show (pf_device_t * p_dev)
 {
+   printf (">>>DEVICE<<<\n");
    printf (
       "The device can use max %u APIs, and %u diag items.\n",
       (unsigned)PNET_MAX_API,
       (unsigned)PNET_MAX_DIAG_ITEMS);
-   printf (
-      "The device has %u diag_items_free.\n",
-      (unsigned)p_dev->diag_items_free);
+   printf ("First unused diag item: %u.\n", (unsigned)p_dev->diag_items_free);
 
    return 0;
 }
 
 /**
  * @internal
- * Show everything about the API configuration.
- * @param p_api            In:   The API instance.
+ * Show everything about the API instance.
+ * @param p_api            In:    The API instance.
  * @return  0  Always
  */
 static int pf_cmdev_cfg_api_show (pf_api_t * p_api)
 {
+   printf (">>>API<<<\n");
    printf ("device api_id         = %u\n", (unsigned)p_api->api_id);
    printf (
       "   Each API can use max %u slots (each with max %u subslots).\n",
@@ -1149,12 +1153,13 @@ static int pf_cmdev_cfg_api_show (pf_api_t * p_api)
 
 /**
  * @internal
- * Show everything about the slot configuration.
- * @param p_slot           In:   The slot instance.
+ * Show everything about the slot instance.
+ * @param p_slot           In:    The slot instance.
  * @return  0  Always
  */
 static int pf_cmdev_cfg_slot_show (pf_slot_t * p_slot)
 {
+   printf ("   >>>SLOT<<<\n");
    printf ("   slot_nbr           = %u\n", (unsigned)p_slot->slot_nbr);
    printf ("   in_use             = %u\n", (unsigned)p_slot->in_use);
    printf (
@@ -1173,12 +1178,13 @@ static int pf_cmdev_cfg_slot_show (pf_slot_t * p_slot)
 
 /**
  * @internal
- * Show everything about the subslot configuration.
- * @param p_subslot        In:   The subslot instance.
+ * Show everything about the subslot instance.
+ * @param p_subslot        In:    The subslot instance.
  * @return  0  Always
  */
 static int pf_cmdev_cfg_subslot_show (pf_subslot_t * p_subslot)
 {
+   printf ("      >>>SUBSLOT<<<\n");
    printf ("      subslot_nbr     = %u\n", (unsigned)p_subslot->subslot_nbr);
    printf ("      in_use          = %u\n", (unsigned)p_subslot->in_use);
    printf (
@@ -1197,7 +1203,6 @@ static int pf_cmdev_cfg_subslot_show (pf_subslot_t * p_subslot)
       pf_cmdev_direction_to_string (p_subslot->direction));
    printf ("      length_input    = %u\n", (unsigned)p_subslot->length_input);
    printf ("      length_output   = %u\n", (unsigned)p_subslot->length_output);
-   printf ("      .                   \n");
 
    return 0;
 }
@@ -1272,7 +1277,7 @@ int pf_cmdev_get_state (pf_ar_t * p_ar, pf_cmdev_state_values_t * p_state)
  * Request a state transition of the specified AR.
  * @param net              InOut: The p-net stack instance
  * @param p_ar
- * @param state            In:    New state. Use PF_CMDEV_STATE_...
+ * @param state            In:    New state. Use PF_CMDEV_STATE_xxx
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -1438,8 +1443,8 @@ int pf_cmdev_cm_init_req (pnet_t * net, pf_ar_t * p_ar)
 /**
  * @internal
  * Check if a buffer contains only zero bytes.
- * @param p_start          In:   Start of buffer.
- * @param len              In:   Length of buffer.
+ * @param p_start          In:    Start of buffer.
+ * @param len              In:    Length of buffer.
  * @return  0  if all bytes are zero.
  *          -1 if at least one byte is non-zero.
  */
@@ -1509,7 +1514,7 @@ static int pf_cmdev_check_cm_initiator_object_uuid (pf_uuid_t * p_uuid)
  *
  * A visible character has its ASCII value 0x20 <= x <= 0x7E.
  *
- * @param s                In:   The string to check.
+ * @param s                In:    The string to check.
  * @return  0  if the string contains only visible characters.
  *          -1 if at least one character is invalid, or string length is zero.
  */
@@ -1537,7 +1542,7 @@ int pf_cmdev_check_visible_string (const char * s)
  * Check if the Specified AR type is supported.
  *
  * ToDo: Currently only IOCAR_SINGLE and PF_ART_IOSAR is supported.
- * @param ar_type          In:   The AR type to check.
+ * @param ar_type          In:    The AR type to check.
  * @return  0  if the AR type is supported.
  *          -1 if the AR type is not supported.
  */
@@ -1556,8 +1561,8 @@ int pf_cmdev_check_ar_type (uint16_t ar_type)
 /**
  * @internal
  * Check the AR param for errors.
- * @param p_ar             In:   The AR instance.
- * @param p_stat           Out:  Detailed error information.
+ * @param p_ar             In:    The AR instance.
+ * @param p_stat           Out:   Detailed error information.
  * @return  0  if no error was detected.
  *          -1 if an error was detected.
  */
@@ -1704,9 +1709,9 @@ static int pf_cmdev_check_ar_param (pf_ar_t * p_ar, pnet_result_t * p_stat)
 
 /**
  * Find a specific expected API instance in the AR.
- * @param p_ar             In:   The AR instance.
- * @param api_id           In:   The API identifier to find.
- * @param pp_api           Out:  The expected APi instance.
+ * @param p_ar             In:    The AR instance.
+ * @param api_id           In:    The API identifier to find.
+ * @param pp_api           Out:   The expected APi instance.
  * @return  0  if a API instance was found.
  *          -1 if the API instance was not found.
  */
@@ -1738,11 +1743,11 @@ static int pf_cmdev_get_exp_api (
  * @internal
  * Find the expected sub-module struct indicated by the API identifier and the
  * slot and sub-slot numbers.
- * @param p_ar             In:   The AR instance.
- * @param api_id           In:   The API identifier.
- * @param slot_nbr         In:   The slot number.
- * @param subslot_nbr      In:   The sub-slot number.
- * @param pp_exp_sub       Out:  The sub-module instance.
+ * @param p_ar             In:    The AR instance.
+ * @param api_id           In:    The API identifier.
+ * @param slot_nbr         In:    The slot number.
+ * @param subslot_nbr      In:    The sub-slot number.
+ * @param pp_exp_sub       Out:   The sub-module instance.
  * @return  0  if a sub-module instance was found.
  *          -1 if the sub-module instance was not found.
  */
@@ -1811,10 +1816,10 @@ static int pf_cmdev_get_exp_sub (
  *
  * @param submodule_dir       In:   Whether the submodule is IN, IN+OUT etc
  * @param data_dir            In:   The data direction for the IOCR we are
- * working on (input CR or output CR)
+ *                                  working on (input CR or output CR)
  * @param status_type         In:   Whether we are interested in IOCS or IOPS
  * @param resulting_data_dir  Out:  The resulting data direction for use in the
- * search.
+ *                                  search.
  * @return  0  if the direction could be calculated.
  *          -1 for illegal input combinations.
  */
@@ -1873,10 +1878,10 @@ int pf_cmdev_calculate_exp_sub_data_descriptor_direction (
 /**
  * @internal
  * Find the data descriptor within the submodule with specified direction.
- * @param p_exp_sub           In:   The expected sub-module instance.
- * @param dir                 In:   The data direction.
- * @param status_type         In:   Whether we are interested in IOCS or IOPS
- * @param pp_desc             Out:  The data descriptor.
+ * @param p_exp_sub        In:    The expected sub-module instance.
+ * @param dir              In:    The data direction.
+ * @param status_type      In:    Whether we are interested in IOCS or IOPS
+ * @param pp_desc          Out:   The data descriptor.
  * @return  0  if the data descriptor was found.
  *          -1 if the data descriptor was not found.
  */
@@ -1920,10 +1925,10 @@ static int pf_cmdev_get_exp_sub_data_descriptor (
  * @internal
  * Collect iodata object IOCS information from IOCR param and expected
  * (sub-)modules.
- * @param p_ar                   In:      The AR instance.
- * @param p_iocr                 InOut:   The IOCR instance.
- * @param dir                    In:      The data direction to consider.
- * @param p_stat                 Out:     Detailed error information.
+ * @param p_ar             In:    The AR instance.
+ * @param p_iocr           InOut: The IOCR instance.
+ * @param dir              In:    The data direction to consider.
+ * @param p_stat           Out:   Detailed error information.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -2077,10 +2082,10 @@ static int pf_cmdev_iocr_setup_iocs (
  * @internal
  * Collect iodata object data and IOPS information from IOCR param and expected
  * (sub-)modules.
- * @param p_ar                   In:      The AR instance.
- * @param p_iocr                 InOut:   The IOCR instance.
- * @param dir                    In:      The data direction to consider.
- * @param p_stat                 Out:     Detailed error information.
+ * @param p_ar             In:    The AR instance.
+ * @param p_iocr           InOut: The IOCR instance.
+ * @param dir              In:    The data direction to consider.
+ * @param p_stat           Out:   Detailed error information.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -2261,9 +2266,9 @@ static int pf_cmdev_iocr_setup_data_iops (
  * @internal
  * Collect iodata object IOCS, data and IOPS information from IOCR param and
  * expected (sub-)modules.
- * @param p_ar             InOut:The AR instance.
- * @param crep             In:   The IOCR index.
- * @param p_stat           Out:  Detailed error information.
+ * @param p_ar             InOut: The AR instance.
+ * @param crep             In:    The IOCR index.
+ * @param p_stat           Out:   Detailed error information.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -2333,10 +2338,10 @@ static int pf_cmdev_iocr_setup_desc (
  *                 x x      No overlap
  *                   x x    No overlap
  *
- * @param start_1          In:   The start of area 1.
- * @param length_1         In:   The length of area 1.
- * @param start_2          In:   The start of area 2.
- * @param length_2         In:   The length of area 2.
+ * @param start_1          In:    The start of area 1.
+ * @param length_1         In:    The length of area 1.
+ * @param start_2          In:    The start of area 2.
+ * @param length_2         In:    The length of area 2.
  * @return  0  If the areas do NOT straddle each other.
  *          -1 If the areas do overlap.
  */
@@ -2371,9 +2376,9 @@ int pf_cmdev_check_no_straddle (
 
 /**
  * Check if a data_desc overlaps any previous data_desc in same iocrs[].
- * @param p_iocr           In:   The iocrs instance.
- * @param ix_this          In:   The data_desc index to verify.
- * @param p_stat           Out:  Detailed error information.
+ * @param p_iocr           In:    The iocrs instance.
+ * @param ix_this          In:    The data_desc index to verify.
+ * @param p_stat           Out:   Detailed error information.
  * @return  0  If this area does not overlap any previously defined area.
  *          -1 If there is overlap.
  */
@@ -2524,8 +2529,8 @@ static int pf_cmdev_check_iocr_overlap (
 /**
  * @internal
  * Perform final validation of IOCR APIs, after the data_desc has been set up.
- * @param p_ar             In:   The AR instance.
- * @param p_stat           Out:  Detailed error information.
+ * @param p_ar             In:    The AR instance.
+ * @param p_stat           Out:   Detailed error information.
  * @return  0  if no error was found.
  *          -1 if an error was found.
  */
@@ -2897,8 +2902,8 @@ static int pf_cmdev_check_iocr_apis (pf_ar_t * p_ar, pnet_result_t * p_stat)
  * @internal
  * Check the IOCR param of an AR for errors.
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:   The AR instance.
- * @param p_stat           Out:  Detailed error information.
+ * @param p_ar             In:    The AR instance.
+ * @param p_stat           Out:   Detailed error information.
  * @return  0  if no error was found
  *          -1 if an error was found.
  */
@@ -3252,11 +3257,11 @@ static int pf_cmdev_check_iocr_param (
  * Triggers user call-back \a pnet_exp_submodule_ind()
  *
  * @param net              InOut: The p-net stack instance
- * @param p_exp_api        In:   The expected API instance.
- * @param p_exp_mod        In:   The expected sub-module instance.
- * @param p_cfg_api        In:   The configured API instance.
- * @param p_cfg_slot       In:   The configured module instance.
- * @param p_stat           Out:  Detailed error information.
+ * @param p_exp_api        In:    The expected API instance.
+ * @param p_exp_mod        In:    The expected sub-module instance.
+ * @param p_cfg_api        In:    The configured API instance.
+ * @param p_cfg_slot       In:    The configured module instance.
+ * @param p_stat           Out:   Detailed error information.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -3633,11 +3638,11 @@ static int pf_cmdev_exp_submodule_configure (
  * pnet_exp_submodule_ind().
  *
  * @param net              InOut: The p-net stack instance
- * @param p_exp_api        In:   The expected API instance.
- * @param p_exp_mod        In:   The expected sub-module instance.
- * @param p_cfg_api        In:   The configured API instance.
- * @param p_cfg_slot       In:   The configured module instance.
- * @param p_stat           Out:  Detailed error information.
+ * @param p_exp_api        In:    The expected API instance.
+ * @param p_exp_mod        In:    The expected sub-module instance.
+ * @param p_cfg_api        In:    The configured API instance.
+ * @param p_cfg_slot       In:    The configured module instance.
+ * @param p_stat           Out:   Detailed error information.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -3800,8 +3805,8 @@ static int pf_cmdev_exp_modules_configure (
  * pnet_exp_submodule_ind().
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:   The AR instance.
- * @param p_stat           Out:  Detailed error information.
+ * @param p_ar             In:    The AR instance.
+ * @param p_stat           Out:   Detailed error information.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -3859,8 +3864,8 @@ static int pf_cmdev_exp_apis_configure (
 /**
  * @internal
  * Check the alarm CR block for errors.
- * @param p_ar             In:   The AR instance.
- * @param p_stat           Out:  Detailed error information.
+ * @param p_ar             In:    The AR instance.
+ * @param p_stat           Out:   Detailed error information.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -4036,8 +4041,8 @@ static int pf_cmdev_check_ar_rpc (pf_ar_t * p_ar, pnet_result_t * p_stat)
  * pnet_exp_submodule_ind().
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:   The AR instance.
- * @param p_stat           Out:  Detailed error information.
+ * @param p_ar             In:    The AR instance.
+ * @param p_stat           Out:   Detailed error information.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -4155,8 +4160,8 @@ static int pf_cmdev_check_apdu (
  * @internal
  * Generate module diffs, when needed, for the specified AR.
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:   The AR instance.
- * @param p_stat           Out:  Detailed result of the operation.
+ * @param p_ar             In:    The AR instance.
+ * @param p_stat           Out:   Detailed result of the operation.
  * @return  0  if no diff was detected.
  *          -1 if a diff was detected.
  */
@@ -4337,8 +4342,8 @@ static int pf_cmdev_generate_submodule_diff (
  * @internal
  * Verify that the frame id is not already used by this AR.
  *
- * @param p_ar             In:   The AR instance.
- * @param frame_id         In:   The frame id to check.
+ * @param p_ar             In:    The AR instance.
+ * @param frame_id         In:    The frame id to check.
  * @return  true  if the frame_id is free to use.
  *          false if the frame id is already used by this AR.
  */
@@ -4365,7 +4370,7 @@ static bool pf_cmdev_verify_free_frame_id (pf_ar_t * p_ar, uint16_t frame_id)
  * The controller may send 0xffff as the frame id for output CRs.
  * In that case we must supply a preferred frame id in the response.
  *
- * @param p_ar             In:   The AR instance.
+ * @param p_ar             In:    The AR instance.
  */
 static void pf_cmdev_fix_frame_id (pf_ar_t * p_ar)
 {
@@ -4432,8 +4437,8 @@ static void pf_cmdev_fix_frame_id (pf_ar_t * p_ar)
  * @internal
  * Handle a negative result to a connect request.
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:   The AR instance.
- * @param p_stat           Out:  Detailed error information.
+ * @param p_ar             In:    The AR instance.
+ * @param p_stat           Out:   Detailed error information.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -4461,8 +4466,8 @@ static int pf_cmdev_cm_connect_rsp_neg (
  * @internal
  * Handle a positive answer to a connect request.
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:   The AR instance.
- * @param p_stat           Out:  Detailed error information.
+ * @param p_ar             In:    The AR instance.
+ * @param p_stat           Out:   Detailed error information.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
