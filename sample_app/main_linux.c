@@ -31,8 +31,8 @@
 #include <unistd.h>
 
 #define APP_DEFAULT_ETHERNET_INTERFACE "eth0"
-#define APP_PRIORITY                   15
-#define APP_STACKSIZE                  4096 /* bytes */
+#define APP_THREAD_PRIORITY            15
+#define APP_THREAD_STACKSIZE           4096 /* bytes */
 #define APP_MAIN_SLEEPTIME_US          5000 * 1000
 
 /************************* Utilities ******************************************/
@@ -54,8 +54,9 @@ void show_usage()
            "application LED state.\n");
    printf ("It will also send a counter value (useful also without buttons and "
            "LED).\n");
-   printf ("Button1 value is sent in the periodic data. Button2 triggers an "
-           "alarm.\n");
+   printf ("Button1 value is sent in the periodic data.\n");
+   printf ("Button2 cycles through triggering an alarm, setting diagnosis and "
+           " creating logbook entries.\n");
    printf ("\n");
    printf ("Also the mandatory Profinet signal LED is controlled by this "
            "application.\n");
@@ -241,6 +242,28 @@ bool read_bool_from_file (const char * filepath)
    return ch == '1';
 }
 
+void app_get_button (const app_data_t * p_appdata, uint16_t id, bool * p_pressed)
+{
+   if (id == 0)
+   {
+      if (p_appdata->arguments.path_button1[0] != '\0')
+      {
+         *p_pressed = read_bool_from_file (p_appdata->arguments.path_button1);
+      }
+   }
+   else if (id == 1)
+   {
+      if (p_appdata->arguments.path_button2[0] != '\0')
+      {
+         *p_pressed = read_bool_from_file (p_appdata->arguments.path_button2);
+      }
+   }
+   else
+   {
+      *p_pressed = false;
+   }
+}
+
 int app_set_led (uint16_t id, bool led_state)
 {
    char * outputcommand;
@@ -271,29 +294,16 @@ int app_set_led (uint16_t id, bool led_state)
    return 0;
 }
 
-void pn_main (void * arg)
+/**
+ * Run main loop in separate thread
+ *
+ * @param arg              In:    Thread argument   app_data_and_stack_t
+ */
+void pn_main_thread (void * arg)
 {
+   pnet_t * net;
    app_data_t * p_appdata;
    app_data_and_stack_t * appdata_and_stack;
-   pnet_t * net;
-   int ret = -1;
-   uint32_t mask = EVENT_READY_FOR_DATA | EVENT_TIMER | EVENT_ALARM |
-                   EVENT_ABORT;
-   uint32_t flags = 0;
-   bool button1_pressed = false;
-   bool button2_pressed = false;
-   bool button2_pressed_previous = false;
-   bool led_state = false;
-   bool received_led_state = false;
-   uint32_t tick_ctr_buttons = 0;
-   uint32_t tick_ctr_update_data = 0;
-   static uint8_t data_ctr = 0;
-   uint16_t slot = 0;
-   uint8_t outputdata[64];
-   uint8_t outputdata_iops;
-   uint16_t outputdata_length;
-   bool outputdata_is_updated = false;
-   uint8_t alarm_payload[APP_ALARM_PAYLOAD_SIZE] = {0};
 
    appdata_and_stack = (app_data_and_stack_t *)arg;
    p_appdata = appdata_and_stack->appdata;
@@ -304,207 +314,8 @@ void pn_main (void * arg)
       printf ("Waiting for connect request from IO-controller\n\n");
    }
 
-   /* Main loop */
-   for (;;)
-   {
-      os_event_wait (p_appdata->main_events, mask, &flags, OS_WAIT_FOREVER);
-      if (flags & EVENT_READY_FOR_DATA)
-      {
-         os_event_clr (p_appdata->main_events, EVENT_READY_FOR_DATA); /* Re-arm
-                                                                       */
+   app_loop_forever (net, p_appdata);
 
-         /* Send appl ready to profinet stack. */
-         if (p_appdata->arguments.verbosity > 0)
-         {
-            printf ("Application will signal that it is ready for data.\n");
-         }
-         ret = pnet_application_ready (net, p_appdata->main_arep);
-         if (ret != 0)
-         {
-            printf ("Error returned when application telling that it is ready "
-                    "for data. Have you set IOCS or IOPS for all subslots?\n");
-         }
-
-         /*
-          * cm_ccontrol_cnf(+/-) is indicated later (app_state_ind(DATA)), when
-          * the confirmation arrives from the controller.
-          */
-      }
-      else if (flags & EVENT_ALARM)
-      {
-         pnet_pnio_status_t pnio_status = {0, 0, 0, 0};
-
-         os_event_clr (p_appdata->main_events, EVENT_ALARM); /* Re-arm */
-
-         ret = pnet_alarm_send_ack (
-            net,
-            p_appdata->main_arep,
-            &p_appdata->alarm_arg,
-            &pnio_status);
-         if (ret != 0)
-         {
-            printf ("Error when sending alarm ACK. Error: %d\n", ret);
-         }
-         else if (p_appdata->arguments.verbosity > 0)
-         {
-            printf ("Alarm ACK sent\n");
-         }
-      }
-      else if (flags & EVENT_TIMER)
-      {
-         os_event_clr (p_appdata->main_events, EVENT_TIMER); /* Re-arm */
-         tick_ctr_buttons++;
-         tick_ctr_update_data++;
-
-         /* Read buttons every 100 ms */
-         if ((p_appdata->main_arep != UINT32_MAX) && (tick_ctr_buttons > 100))
-         {
-            tick_ctr_buttons = 0;
-            if (p_appdata->arguments.path_button1[0] != '\0')
-            {
-               button1_pressed =
-                  read_bool_from_file (p_appdata->arguments.path_button1);
-            }
-            if (p_appdata->arguments.path_button2[0] != '\0')
-            {
-               button2_pressed =
-                  read_bool_from_file (p_appdata->arguments.path_button2);
-            }
-         }
-
-         /* Set input and output data every 10ms */
-         if ((p_appdata->main_arep != UINT32_MAX) && (tick_ctr_update_data > 10))
-         {
-            tick_ctr_update_data = 0;
-
-            /* Input data (for sending to IO-controller) */
-            /* Lowest 7 bits: Counter    Most significant bit: Button1 */
-            p_appdata->inputdata[0] = data_ctr++;
-            if (button1_pressed)
-            {
-               p_appdata->inputdata[0] |= 0x80;
-            }
-            else
-            {
-               p_appdata->inputdata[0] &= 0x7F;
-            }
-
-            /* Set data for custom input modules, if any */
-            for (slot = 0; slot < PNET_MAX_MODULES; slot++)
-            {
-               if (p_appdata->custom_input_slots[slot] == true)
-               {
-                  (void)pnet_input_set_data_and_iops (
-                     net,
-                     APP_API,
-                     slot,
-                     PNET_SUBMOD_CUSTOM_IDENT,
-                     p_appdata->inputdata,
-                     sizeof (p_appdata->inputdata),
-                     PNET_IOXS_GOOD);
-               }
-            }
-
-            /* Read data from first of the custom output modules, if any */
-            for (slot = 0; slot < PNET_MAX_MODULES; slot++)
-            {
-               if (p_appdata->custom_output_slots[slot] == true)
-               {
-                  outputdata_length = sizeof (outputdata);
-                  pnet_output_get_data_and_iops (
-                     net,
-                     APP_API,
-                     slot,
-                     PNET_SUBMOD_CUSTOM_IDENT,
-                     &outputdata_is_updated,
-                     outputdata,
-                     &outputdata_length,
-                     &outputdata_iops);
-                  break;
-               }
-            }
-
-            /* Set LED state */
-            if (outputdata_is_updated == true && outputdata_iops == PNET_IOXS_GOOD)
-            {
-               if (outputdata_length == APP_DATASIZE_OUTPUT)
-               {
-                  received_led_state = (outputdata[0] & 0x80) >
-                                       0; /* Use most
-                                             significant
-                                             bit */
-                  if (received_led_state != led_state)
-                  {
-                     led_state = received_led_state;
-                     if (p_appdata->arguments.verbosity > 0)
-                     {
-                        printf (
-                           "Changing application LED state: %d\n",
-                           led_state);
-                     }
-                     (void)app_set_led (APP_DATA_LED_ID, led_state);
-                  }
-               }
-               else
-               {
-                  printf ("Wrong outputdata length: %u\n", outputdata_length);
-               }
-            }
-         }
-
-         /* Create an alarm on first input slot (if any) when button 2 is
-          * pressed/released */
-         if (p_appdata->main_arep != UINT32_MAX)
-         {
-            if (
-               (button2_pressed == true) &&
-               (button2_pressed_previous == false) &&
-               (p_appdata->alarm_allowed == true))
-            {
-               alarm_payload[0]++;
-               for (slot = 0; slot < PNET_MAX_MODULES; slot++)
-               {
-                  if (p_appdata->custom_input_slots[slot] == true)
-                  {
-                     printf (
-                        "Sending process alarm from slot %u subslot %u USI %u "
-                        "to IO-controller. Payload: 0x%x\n",
-                        slot,
-                        PNET_SUBMOD_CUSTOM_IDENT,
-                        APP_ALARM_USI,
-                        alarm_payload[0]);
-                     pnet_alarm_send_process_alarm (
-                        net,
-                        p_appdata->main_arep,
-                        APP_API,
-                        slot,
-                        PNET_SUBMOD_CUSTOM_IDENT,
-                        APP_ALARM_USI,
-                        sizeof (alarm_payload),
-                        alarm_payload);
-                     break;
-                  }
-               }
-            }
-         }
-         button2_pressed_previous = button2_pressed;
-
-         pnet_handle_periodic (net);
-      }
-      else if (flags & EVENT_ABORT)
-      {
-         /* Reset main */
-         p_appdata->main_arep = UINT32_MAX;
-         p_appdata->alarm_allowed = true;
-         button1_pressed = false;
-         button2_pressed = false;
-         os_event_clr (p_appdata->main_events, EVENT_ABORT); /* Re-arm */
-         if (p_appdata->arguments.verbosity > 0)
-         {
-            printf ("Aborting the application\n\n");
-         }
-      }
-   }
    os_timer_destroy (p_appdata->main_timer);
    os_event_destroy (p_appdata->main_events);
    printf ("Ending the application\n\n");
@@ -568,16 +379,16 @@ int main (int argc, char * argv[])
 
    if (appdata.arguments.verbosity > 0)
    {
-      print_network_details (&macbuffer, ip, netmask, gateway);
+      app_print_network_details (&macbuffer, ip, netmask, gateway);
    }
 
    /* Prepare stack config with IP address, gateway, station name etc */
    app_adjust_stack_configuration (&pnet_default_cfg);
    strcpy (pnet_default_cfg.im_0_data.im_order_id, "12345");
    strcpy (pnet_default_cfg.im_0_data.im_serial_number, "00001");
-   copy_ip_to_struct (&pnet_default_cfg.ip_addr, ip);
-   copy_ip_to_struct (&pnet_default_cfg.ip_gateway, gateway);
-   copy_ip_to_struct (&pnet_default_cfg.ip_mask, netmask);
+   app_copy_ip_to_struct (&pnet_default_cfg.ip_addr, ip);
+   app_copy_ip_to_struct (&pnet_default_cfg.ip_gateway, gateway);
+   app_copy_ip_to_struct (&pnet_default_cfg.ip_mask, netmask);
    strcpy (pnet_default_cfg.station_name, appdata.arguments.station_name);
    strcpy (
       pnet_default_cfg.file_directory,
@@ -593,6 +404,7 @@ int main (int argc, char * argv[])
       printf ("Storage directory:    %s\n\n", pnet_default_cfg.file_directory);
    }
 
+   /* Validate paths */
    if (!does_file_exist (pnet_default_cfg.file_directory))
    {
       printf (
@@ -600,16 +412,6 @@ int main (int argc, char * argv[])
          pnet_default_cfg.file_directory);
       exit (EXIT_FAILURE);
    }
-
-   if (appdata.arguments.remove_files == true)
-   {
-      printf ("\nRemoving stored files\n");
-      (void)pnet_remove_data_files (pnet_default_cfg.file_directory);
-      exit (EXIT_SUCCESS);
-   }
-
-   app_set_led (APP_DATA_LED_ID, false);
-
    if (appdata.arguments.path_button1[0] != '\0')
    {
       if (!does_file_exist (appdata.arguments.path_button1))
@@ -620,7 +422,6 @@ int main (int argc, char * argv[])
          exit (EXIT_FAILURE);
       }
    }
-
    if (appdata.arguments.path_button2[0] != '\0')
    {
       if (!does_file_exist (appdata.arguments.path_button2))
@@ -630,6 +431,14 @@ int main (int argc, char * argv[])
             appdata.arguments.path_button2);
          exit (EXIT_FAILURE);
       }
+   }
+
+   /* Remove files and exit */
+   if (appdata.arguments.remove_files == true)
+   {
+      printf ("\nRemoving stored files\n");
+      (void)pnet_remove_data_files (pnet_default_cfg.file_directory);
+      exit (EXIT_SUCCESS);
    }
 
    /* Initialize profinet stack */
@@ -644,6 +453,7 @@ int main (int argc, char * argv[])
       exit (EXIT_FAILURE);
    }
 
+   /* Do factory reset and exit */
    if (appdata.arguments.factory_reset == true)
    {
       printf ("\nPerforming factory reset\n");
@@ -651,6 +461,7 @@ int main (int argc, char * argv[])
       exit (EXIT_SUCCESS);
    }
 
+   /* Show stack info and exit */
    if (appdata.arguments.show > 0)
    {
       int level = 0xFFFF;
@@ -665,25 +476,24 @@ int main (int argc, char * argv[])
       exit (EXIT_SUCCESS);
    }
 
+   app_set_led (APP_DATA_LED_ID, false);
    app_plug_dap (net, &appdata);
 
-   /* Initialize timer and Profinet stack */
+   /* Start thread and timer */
+   appdata_and_stack.appdata = &appdata;
+   appdata_and_stack.net = net;
    appdata.main_events = os_event_create();
    appdata.main_timer = os_timer_create (
       TICK_INTERVAL_US,
       main_timer_tick,
       (void *)&appdata,
       false);
-
-   appdata_and_stack.appdata = &appdata;
-   appdata_and_stack.net = net;
    os_thread_create (
-      "pn_main",
-      APP_PRIORITY,
-      APP_STACKSIZE,
-      pn_main,
+      "pn_main_thread",
+      APP_THREAD_PRIORITY,
+      APP_THREAD_STACKSIZE,
+      pn_main_thread,
       (void *)&appdata_and_stack);
-
    os_timer_start (appdata.main_timer);
 
    for (;;)
