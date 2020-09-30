@@ -425,8 +425,8 @@ int pnet_alarm_send_process_alarm (
    uint32_t api,
    uint16_t slot,
    uint16_t subslot,
-   uint16_t payload_len,
    uint16_t payload_usi,
+   uint16_t payload_len,
    uint8_t * p_payload)
 {
    int ret = -1;
