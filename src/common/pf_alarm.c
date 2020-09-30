@@ -644,44 +644,51 @@ static int pf_alarm_alpmr_apmr_a_data_ind (
    return ret;
 }
 
-/********************** Frame handler callbacks ******************************/
+/*********************** Frame handler callback ******************************/
 
 /**
  * @internal
- * Handle high-priority alarm PDUs from the controller, and puts it into the
+ * Handle an alarm frame from the IO-controller, and put it into the
  * queue (mbox).
+ *
+ * There are two instances of this handler, one for low prio alarm frames
+ * and one for high prio alarm frames (delivering to separare mboxes).
+ *
+ * All incoming Profinet frames with ID = PF_FRAME_ID_ALARM_LOW and
+ * ID = PF_FRAME_ID_ALARM_HIGH end up here.
  *
  * This is a callback for the frame handler. Arguments should fulfill
  * pf_eth_frame_handler_t
  *
- * All incoming Profinet frames with ID = PF_FRAME_ID_ALARM_HIGH end up here.
- *
  * @param net              InOut: The p-net stack instance
- * @param frame_id         In:   The Ethernet frame id.
- * @param p_buf            In:   The Ethernet frame buffer.
- * @param frame_id_pos     In:   Position in the buffer of the frame id.
- * @param p_arg            In:   The AR.
- * @return  0     If the frame was NOT handled by this function.
- *          1     If the frame was handled and the buffer freed.
+ * @param frame_id         In:    The Ethernet frame id.
+ * @param p_buf            In:    The Ethernet frame buffer.
+ * @param frame_id_pos     In:    Position in the buffer of the frame id.
+ * @param p_arg            In:    The APMX instance. Should be pf_apmx_t
+ * @return  0 if the frame was NOT handled by this function.
+ *          1 if the frame was handled and the buffer was freed.
  */
-static int pf_alarm_apmr_high_handler (
+static int pf_alarm_apmr_frame_handler (
    pnet_t * net,
    uint16_t frame_id,
    os_buf_t * p_buf,
    uint16_t frame_id_pos,
    void * p_arg)
 {
-   int ret = 1; /* Means that calling function should not free buffer,
-                   as that will be done when reading the mbox */
+   char * priotext = NULL;
    pf_apmx_t * p_apmx = (pf_apmx_t *)p_arg;
    pf_apmr_msg_t * p_apmr_msg;
    uint16_t nbr;
+   int ret = 0; /* Failed to handle frame. The calling function needs to free
+                   the buffer. */
+
+   priotext = p_apmx->high_priority ? "high" : "low";
 
    LOG_INFO (
       PF_ALARM_LOG,
-      "Alarm(%d): Received high prio alarm frame.\n",
-      __LINE__);
-
+      "Alarm(%d): Received %s prio alarm frame.\n",
+      __LINE__,
+      priotext);
    if (p_buf != NULL)
    {
       nbr = p_apmx->apmr_msg_nbr++; /* ToDo: Make atomic */
@@ -692,68 +699,35 @@ static int pf_alarm_apmr_high_handler (
       p_apmr_msg = &p_apmx->apmr_msg[nbr];
       p_apmr_msg->p_buf = p_buf;
       p_apmr_msg->frame_id_pos = frame_id_pos;
-      if (os_mbox_post (p_apmx->p_alarm_q, (void *)p_apmr_msg, 0) != 0)
+      if (p_apmx->p_alarm_q != NULL)
       {
-         LOG_ERROR (PF_ALARM_LOG, "Alarm(%d): Lost one alarm\n", __LINE__);
-         ret = 0; /* Failed to handle frame. The calling function needs to free
-                     the buffer. */
+         if (os_mbox_post (p_apmx->p_alarm_q, (void *)p_apmr_msg, 0) == 0)
+         {
+            ret = 1; /* Means that calling function should not free buffer,
+                        as that will be done when reading the mbox */
+         }
+         else
+         {
+            LOG_ERROR (
+               PF_ALARM_LOG,
+               "Alarm(%d): Failed to put incoming %s prio alarm in mbox\n",
+               __LINE__,
+               priotext);
+         }
+      }
+      else
+      {
+        LOG_ERROR (
+           PF_ALARM_LOG,
+           "Alarm(%d): Could not put incoming %s prio alarm frame in"
+               " mbox, as it is deallocated.\n",
+            __LINE__,
+            priotext);
       }
    }
-
-   return ret;
-}
-
-/**
- * @internal
- * Handle low-priority alarm PDUs from the controller, and puts it into the
- * queue (mbox).
- *
- * This is a callback for the frame handler. Arguments should fulfill
- * pf_eth_frame_handler_t
- *
- * All incoming Profinet frames with ID = PF_FRAME_ID_ALARM_LOW end up here.
- *
- * @param net              InOut: The p-net stack instance
- * @param frame_id         In:   The Ethernet frame id.
- * @param p_buf            In:   The Ethernet frame buffer.
- * @param frame_id_pos     In:   Position in the buffer of the frame id.
- * @param p_arg            In:   The AR.
- * @return  0     If the frame was NOT handled by this function.
- *          1     If the frame was handled and the buffer freed.
- */
-static int pf_alarm_apmr_low_handler (
-   pnet_t * net,
-   uint16_t frame_id,
-   os_buf_t * p_buf,
-   uint16_t frame_id_pos,
-   void * p_arg)
-{
-   int ret = 1; /* Means that calling function should not free buffer,
-                   as that will be done when reading the mbox */
-   pf_apmx_t * p_apmx = (pf_apmx_t *)p_arg;
-   pf_apmr_msg_t * p_apmr_msg;
-   uint16_t nbr;
-
-   LOG_INFO (
-      PF_ALARM_LOG,
-      "Alarm(%d): Received low prio alarm frame.\n",
-      __LINE__);
-   if (p_buf != NULL)
+   else
    {
-      nbr = p_apmx->apmr_msg_nbr++; /* ToDo: Make atomic */
-      if (p_apmx->apmr_msg_nbr >= NELEMENTS (p_apmx->apmr_msg))
-      {
-         p_apmx->apmr_msg_nbr = 0;
-      }
-      p_apmr_msg = &p_apmx->apmr_msg[nbr];
-      p_apmr_msg->p_buf = p_buf;
-      p_apmr_msg->frame_id_pos = frame_id_pos;
-      if (os_mbox_post (p_apmx->p_alarm_q, (void *)p_apmr_msg, 0) != 0)
-      {
-         LOG_ERROR (PF_ALARM_LOG, "Alarm(%d): Lost one alarm\n", __LINE__);
-         ret = 0; /* Failed to handle frame. The calling function needs to free
-                     the buffer. */
-      }
+      ret = 1; /* No need for the calling function to free p_buf */
    }
 
    return ret;
@@ -954,6 +928,7 @@ static int pf_alarm_apmx_activate (pnet_t * net, pf_ar_t * p_ar)
 
          if (ix == 0)
          {
+            p_ar->apmx[ix].high_priority = false;
             p_ar->apmx[ix].vlan_prio = ALARM_VLAN_PRIO_LOW;
             p_ar->apmx[ix].block_type_alarm_notify =
                PF_BT_ALARM_NOTIFICATION_LOW;
@@ -962,6 +937,7 @@ static int pf_alarm_apmx_activate (pnet_t * net, pf_ar_t * p_ar)
          }
          else
          {
+            p_ar->apmx[ix].high_priority = true;
             p_ar->apmx[ix].vlan_prio = ALARM_VLAN_PRIO_HIGH;
             p_ar->apmx[ix].block_type_alarm_notify =
                PF_BT_ALARM_NOTIFICATION_HIGH;
@@ -993,13 +969,13 @@ static int pf_alarm_apmx_activate (pnet_t * net, pf_ar_t * p_ar)
 
    pf_eth_frame_id_map_add (
       net,
-      PF_FRAME_ID_ALARM_LOW,
-      pf_alarm_apmr_low_handler,
+      p_ar->apmx[0].frame_id,
+      pf_alarm_apmr_frame_handler,
       &p_ar->apmx[0]);
    pf_eth_frame_id_map_add (
       net,
-      PF_FRAME_ID_ALARM_HIGH,
-      pf_alarm_apmr_high_handler,
+      p_ar->apmx[1].frame_id,
+      pf_alarm_apmr_frame_handler,
       &p_ar->apmx[1]);
 
    return ret;
@@ -1551,6 +1527,7 @@ static int pf_alarm_apmx_close (pnet_t * net, pf_ar_t * p_ar, uint8_t err_code)
          if (p_ar->apmx[ix].p_alarm_q != NULL)
          {
             os_mbox_destroy (p_ar->apmx[ix].p_alarm_q);
+            p_ar->apmx[ix].p_alarm_q = NULL;
          }
       }
    }

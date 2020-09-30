@@ -1527,6 +1527,7 @@ typedef struct pf_apmx
    /* Latest sent alarm */
    os_buf_t * p_rta;
 
+   bool high_priority; /* True for high priority APMX. For printouts. */
    uint16_t vlan_prio; /* 5 or 6 */
    uint16_t block_type_alarm_notify;
    uint16_t block_type_alarm_ack;
