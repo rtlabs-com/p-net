@@ -44,6 +44,8 @@ Modify the respective lines to::
 
    #define CFG_LWIP_GATEWAY()      IP4_ADDR (&gw, 192, 168, 0, 1)
 
+In the same file increase CFG_MAIN_STACK_SIZE to 6000.
+
 In the file rt-kernel-xmc4/bsp/xmc48relax/src/lwip.c change to::
 
     .rx_task_stack = 4000,
@@ -189,7 +191,7 @@ and then gradually reduce it to find the smallest usable value.
 
 Using the built-in rt-kernel shell
 ----------------------------------
-Press Enter key to enter the built-in rt-kernel shell via the serial consol.
+Press Enter key to enter the built-in rt-kernel shell via the serial console.
 To view a list of available commands, use::
 
    help
@@ -243,8 +245,9 @@ The flash usage is text+data, as the RAM initialization values are stored in fla
 
 Run tests on XMC4800 target
 ---------------------------
-In order to compile the test code, enable BUILD_TESTING and disable TEST_DEBUG
-in cmake. Reduce PNET_MAX_FILENAME_LENGTH to 30 bytes.
+In order to compile the test code, make sure to use BUILD_TESTING and that
+TEST_DEBUG is disabled. Set PNET_MAX_AR to 1, and reduce
+PNET_MAX_FILENAME_LENGTH to 30 bytes.
 This is done via ccmake, which should be started in the build directory::
 
     ccmake .

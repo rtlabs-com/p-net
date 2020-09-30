@@ -96,6 +96,37 @@ Real Time Class:
 This software supports Real Time Class 1.
 
 
+MAC addresses
+-------------
+If your device has two Ethernet connectors (ports), then it typically uses an Ethernet
+switch chip with three data connections::
+
+   Port X1 P1     Port X1 P2
+      |                 |
+      |                 |
+      |                 |
+   +--+-----------------+--+
+   |                       |
+   |    Ethernet Switch    |
+   |                       |
+   +----------+------------+
+              |
+              |
+              |
+     Profinet interface X1
+
+The device has one interface and two ports.
+For Profinet conformance class B and higher, there are three assigned MAC addresses:
+
+* Profinet interface X1 (main MAC address or device MAC address)
+* Port X1 P1
+* Port X1 P2
+
+The MAC addresses for X1 P1 and X1 P2 are used by the LLDP protocol for neighbor detection.
+
+There are examples of Profinet controllers with more than one interface (having more than one port each).
+
+
 Communication
 -------------
 
@@ -373,6 +404,7 @@ Examples of block identifiers:
 * 0x0002 AlarmNotificationLow
 * 0x0008 IODWriteReqHeader
 * 0x0009 IODReadReqHeader
+* 0x0019 LogBookData
 * 0x0020 I&M0
 * 0x0021 I&M1
 * 0x0101 ARBlockReq
@@ -468,23 +500,25 @@ Subslots 0x8000-0xFFFF are reserved by the Profinet standard.
 
 Subslots in the DAP module:
 
-* 0x8000 (32768) First interface
-* 0x8001 (32762) First port of first interface
-* 0x8002 (32770) Second port of first interface
+* 0x8000 (32768) First interface (typically named X1)
+* 0x8001 (32762) First port of first interface (typically named X1 P1)
+* 0x8002 (32770) Second port of first interface (typically named X1 P2)
 * 0x8100 (33024) Second interface
 * 0x8101 (33025) First port of second interface
 * 0x8102 (33026) Second port of second interface
+
 
 User defined indexes are in the range 0x?? to 0x??
 
 Examples of pre-defined indexes:
 
-* 0xaff0  I&M0
-* 0xaff1  I&M1
-* 0xaff2  I&M2
-* 0xaff3  I&M3
-* 0xf840  I&M0FilterData
-* 0xf841  PRRealData
+* 0xAFF0  I&M0
+* 0xAFF1  I&M1
+* 0xAFF2  I&M2
+* 0xAFF3  I&M3
+* 0xF830  LogBookData
+* 0xF840  I&M0FilterData
+* 0xF841  PRRealData
 
 Allowed station name
 --------------------

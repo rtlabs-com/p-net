@@ -2059,7 +2059,7 @@ typedef struct pf_log_book_entry
 
 typedef struct pf_log_book
 {
-   pf_log_book_ts_t time_ts; /* Used for what ?? */
+   pf_log_book_ts_t time_ts; /* Local timestamp when reading the logbook */
    pf_log_book_entry_t entries[PNET_MAX_LOG_BOOK_ENTRIES];
    uint16_t put; /* Points to oldest entry if wrap */
    bool wrap;    /* All entries valid */

@@ -134,7 +134,13 @@ int pf_ppm_get_iocs (
    uint8_t * p_iocs_len);
 
 /**
+ * Set the state to "Primary" or "Backup" in the cyclic data sent to the
+ * IO-Controller.
+ *
  * Implements the "Local Set State" primitive.
+ *
+ * See Profinet 2.4 Protocol, section 4.7.2.1.3 "Coding of the field DataStatus"
+ *
  * @param p_ar             In:   The AR instance.
  * @param crep             In:   The IOCR instance.
  * @param primary          In:   true if the state is "primary".
@@ -144,7 +150,15 @@ int pf_ppm_get_iocs (
 int pf_ppm_set_data_status_state (pf_ar_t * p_ar, uint32_t crep, bool primary);
 
 /**
+ * Set the redundant bit in the cyclic data sent to the IO-Controller.
+ *
+ * The interpretation of this bit is dependent on whether the state is
+ * "Primary" or "Backup" .
+ *
  * Implements the "Local Set Redundancy State" primitive.
+ *
+ * See Profinet 2.4 Protocol, section 4.7.2.1.3 "Coding of the field DataStatus"
+ *
  * @param p_ar             In:   The AR instance.
  * @param crep             In:   The IOCR instance.
  * @param redundant        In:   true if the state is "redundant".
@@ -157,7 +171,12 @@ int pf_ppm_set_data_status_redundancy (
    bool redundant);
 
 /**
+ * Set the stop/running bit in cyclic data sent to the IO-Controller.
+ *
  * Implements the "Local set Provider State" primitive.
+ *
+ * See Profinet 2.4 Protocol, section 4.7.2.1.3 "Coding of the field DataStatus"
+ *
  * @param p_ar             In:   The AR instance.
  * @param crep             In:   The IOCR instance.
  * @param run              In:   true if the application is "running".

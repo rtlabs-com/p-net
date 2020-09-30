@@ -146,6 +146,18 @@ See the "Real-time properties of Linux" page in this document for solutions, and
 the "Using Codesys soft PLC" page for workarounds.
 
 
+Troubleshooting
+---------------
+If you have problems establishing a connection to your PLC, connect it
+directly to your laptop
+and run the program Wireshark on the corresponding Ethernet interface.
+See another page in this documentation for details on Wireshark usage.
+The PLC will send LLDP frames approximately once per 5 seconds. Study one of
+these frames in Wireshark.
+The "Management Address" block shows the IP address of the PLC.
+There are also other blocks describing the MAC address and the port ID.
+
+
 Sample app data payload
 -----------------------
 The periodic data sent from the sample application IO-device to IO-controller

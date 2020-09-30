@@ -557,9 +557,9 @@ typedef int (*pnet_release_ind) (
  *
  * @param net              InOut: The p-net stack instance
  * @param arg              InOut: User-defined data (not used by p-net)
- * @param arep             In:   The AREP.
- * @param control_command  In:   The DControl command code.
- * @param p_result         Out:  Detailed error information.
+ * @param arep             In:    The AREP.
+ * @param control_command  In:    The DControl command code.
+ * @param p_result         Out:   Detailed error information.
  * @return  0  on success.
  *          -1 if an error occurred.
  */
@@ -578,15 +578,16 @@ typedef int (*pnet_dcontrol_ind) (
  * CControl confirmation from the Profinet controller.
  *
  * The application is not required to take any action.
- * In case of error the application should provide error information in \a
- * p_result.
+ * The return value from this call-back function is ignored by the Profinet
+ * stack. In case of error the application should provide error information in
+ * \a p_result.
  *
  * It is optional to implement this callback.
  *
  * @param net              InOut: The p-net stack instance
  * @param arg              InOut: User-defined data (not used by p-net)
- * @param arep             In:   The AREP.
- * @param p_result         Out:  Detailed error information.
+ * @param arep             In:    The AREP.
+ * @param p_result         Out:   Detailed error information.
  * @return  0  on success.
  *          -1 if an error occurred.
  */
@@ -804,7 +805,8 @@ typedef int (*pnet_exp_submodule_ind) (
  * indicate that the received data status has changed.
  *
  * The application is not required by the Profinet stack to take any action. It
- * may use this information as it wishes.
+ * may use this information as it wishes. The return value from this call-back
+ * function is ignored by the Profinet stack.
  *
  * @param net              InOut: The p-net stack instance
  * @param arg              InOut: User-defined data (not used by p-net)
@@ -858,11 +860,13 @@ typedef int (*pnet_alarm_ind) (
  * This functionality is used for alarms triggered by the IO-device.
  *
  * It is optional to implement this callback.
+ * The return value from this call-back function is ignored by the Profinet
+ * stack.
  *
  * @param net              InOut: The p-net stack instance
  * @param arg              InOut: User-defined data (not used by p-net)
- * @param arep             In:   The AREP.
- * @param p_pnio_status    In:   Detailed ACK information.
+ * @param arep             In:    The AREP.
+ * @param p_pnio_status    In:    Detailed ACK information.
  * @return  0  on success.
  *          -1 if an error occurred.
  */
@@ -878,6 +882,8 @@ typedef int (*pnet_alarm_cnf) (
  * This functionality is used for alarms triggered by the IO-controller.
  *
  * It is optional to implement this callback.
+ * The return value from this call-back function is ignored by the Profinet
+ * stack.
  *
  * @param net              InOut: The p-net stack instance
  * @param arg              InOut: User-defined data (not used by p-net)
@@ -952,7 +958,7 @@ typedef int (*pnet_reset_ind) (
  * @param arg                       InOut: User-defined data (not used by p-net)
  * @param led_state                 In:    True if the signal LED should be on.
  * @return  0  on success.
- *          -1 if an error occurred.
+ *          -1 if an error occurred. Will trigger a log message.
  */
 typedef int (*pnet_signal_led_ind) (pnet_t * net, void * arg, bool led_state);
 
@@ -1549,6 +1555,9 @@ PNET_EXPORT int pnet_output_set_iocs (
    uint8_t iocs);
 
 /**
+ * Set the state to "Primary" or "Backup" in the cyclic data sent to the
+ * IO-Controller.
+ *
  * Implements the "Local Set State" primitive.
  *
  * @param net              InOut: The p-net stack instance
@@ -1559,6 +1568,8 @@ PNET_EXPORT int pnet_output_set_iocs (
 PNET_EXPORT int pnet_set_state (pnet_t * net, bool primary);
 
 /**
+ * Set the state to redundant in the cyclic data sent to the IO-Controller.
+ *
  * Implements the "Local Set Redundancy State" primitive.
  *
  * @param net              InOut: The p-net stack instance
@@ -1644,12 +1655,13 @@ PNET_EXPORT int pnet_get_ar_error_codes (
  * Application creates an entry in the log book.
  *
  * This function is used to insert an entry into the Profinet log-book.
- * Controllers may read the log-book using IODRead requests.
+ * Controllers may read the entire log-book using IODRead requests.
  *
  * @param net              InOut: The p-net stack instance
- * @param arep             In:   The AREP.
- * @param p_pnio_status    In:   The PNIO status.
- * @param entry_detail     In:   Additional application information.
+ * @param arep             In:    The AREP.
+ * @param p_pnio_status    In:    The PNIO status.
+ * @param entry_detail     In:    Additional application information.
+ *                                Manufacturer specific.
  */
 PNET_EXPORT void pnet_create_log_book_entry (
    pnet_t * net,
@@ -1819,22 +1831,40 @@ typedef enum pnet_diag_ch_prop_dir_values
 /**
  * Add a diagnosis entry.
  *
- * @param net              InOut: The p-net stack instance
- * @param arep             In:   The AREP.
- * @param api              In:   The API.
- * @param slot             In:   The slot.
- * @param subslot          In:   The sub-slot.
- * @param ch               In:   The channel number
- * @param ch_properties    In:   The channel properties.
- * @param ch_error_type    In:   The channel error type.
- * @param ext_ch_error_type In:  The extended channel error type.
- * @param ext_ch_add_value In:   The extended channel error additional value.
- * @param qual_ch_qualifier In:  The qualified channel qualifier.
- * @param usi              In:   The USI.
- *                               range: 0..0x7fff for manufacturer-specific diag
- * format. 0x8000 for standard format.
- * @param p_manuf_data     In:   The manufacturer specific diagnosis data.
- *                               (Only needed if USI <= 0x7fff).
+ * The diagnosis can be in manufacturer-specific diag format or standard
+ * format. The USI determines this.
+ *
+ * USI 0x8000: standard format
+ * USI 0..0x7fff: manufacturer-specific diag format
+ *
+ * The channel error types and the extended channel error types are
+ * defined in Profinet 2.4 Services Annex F.
+ *
+ * This sends a diagnosis alarm.
+ *
+ * @param net                 InOut: The p-net stack instance
+ * @param arep                In:    The AREP.
+ * @param api                 In:    The API.
+ * @param slot                In:    The slot.
+ * @param subslot             In:    The sub-slot.
+ * @param ch                  In:    The channel number
+ * @param ch_properties       In:    The channel properties (direction,
+ *                                   data length, maintenance)
+ * @param ch_error_type       In:    The channel error type.
+ * @param ext_ch_error_type   In:    The extended channel error type
+ *                                   (more details on the channel error type)
+ * @param ext_ch_add_value    In:    The extended channel error additional
+ *                                   value (even more details).
+ *                                   Only needed for standard format.
+ * @param qual_ch_qualifier   In:    The qualified channel qualifier, describes
+ *                                   severity. Only needed for standard format,
+ *                                   only used if channel properties is
+ *                                   MAINT_QUALIFIED.
+ *                                   Max one bit should be set.
+ * @param usi                 In:    The USI. See above.
+ * @param p_manuf_data        In:    The manufacturer specific diagnosis data.
+ *                                   Only needed for manufacturer-specific
+ *                                   diag format.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -1870,20 +1900,22 @@ PNET_EXPORT int pnet_diag_add (
  * USI in manufacturer-specific range) or the extended channel additional
  * value is updated.
  *
+ * This sends a diagnosis alarm.
+ *
  * @param net              InOut: The p-net stack instance
- * @param arep             In:   The AREP.
- * @param api              In:   The API.
- * @param slot             In:   The slot.
- * @param subslot          In:   The sub-slot.
- * @param ch               In:   The channel number
- * @param ch_properties    In:   The channel properties.
- * @param ch_error_type    In:   The channel error type.
- * @param ext_ch_add_value In:   The extended channel error additional value.
- * @param usi              In:   The USI.
- *                               range: 0..0x7fff for manufacturer-specific diag
- * format. 0x8000 for standard format.
- * @param p_manuf_data     In:   The manufacturer specific diagnosis data.
- *                               (Only needed if USI <= 0x7fff).
+ * @param arep             In:    The AREP.
+ * @param api              In:    The API.
+ * @param slot             In:    The slot.
+ * @param subslot          In:    The sub-slot.
+ * @param ch               In:    The channel number
+ * @param ch_properties    In:    The channel properties (only direction used)
+ * @param ch_error_type    In:    The channel error type.
+ * @param ext_ch_add_value In:    New extended channel error additional value.
+ * @param usi              In:    The USI.
+ *                                range: 0..0x7fff for manufacturer-specific
+ *                                diag format. 0x8000 for standard format.
+ * @param p_manuf_data     In:    New manufacturer specific diagnosis data.
+ *                                (Only needed if USI <= 0x7fff).
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -1913,17 +1945,19 @@ PNET_EXPORT int pnet_diag_update (
  * - Channel properties (the channel direction part only).
  * - Channel error type.
  *
+ * This sends a diagnosis alarm.
+ *
  * @param net              InOut: The p-net stack instance
- * @param arep             In:   The AREP.
- * @param api              In:   The API.
- * @param slot             In:   The slot.
- * @param subslot          In:   The sub-slot.
- * @param ch               In:   The channel number
- * @param ch_properties    In:   The channel properties.
- * @param ch_error_type    In:   The channel error type.
- * @param usi              In:   The USI.
- *                               range: 0..0x7fff for manufacturer-specific diag
- * format. 0x8000 for standard format.
+ * @param arep             In:    The AREP.
+ * @param api              In:    The API.
+ * @param slot             In:    The slot.
+ * @param subslot          In:    The sub-slot.
+ * @param ch               In:    The channel number
+ * @param ch_properties    In:    The channel properties (only direction used)
+ * @param ch_error_type    In:    The channel error type.
+ * @param usi              In:    The USI.
+ *                                range: 0..0x7fff for manufacturer-specific
+ *                                diag format, 0x8000 for standard format.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */

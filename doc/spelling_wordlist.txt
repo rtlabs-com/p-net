@@ -37,6 +37,7 @@ hostname
 Icinga
 implementers
 Infineon
+Interoperability
 IOxS
 Ip
 IPv
@@ -45,12 +46,15 @@ Isochronous
 J-link
 kB
 libreNMS
+lldpd
 lwip
 makefiles
 Mbit
 microcontroller
 multicast
 multicore
+neighbour
+neighbourhood
 netmask
 nmap
 ns

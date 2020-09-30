@@ -186,7 +186,7 @@ LAN
 LLC
     ?
 LLDP
-    Link Layer Discovery Protocol, for neighborhood detection.
+    Link Layer Discovery Protocol, for neighbourhood detection.
 LMPM
     data Link layer Mapping Protocol Machine. Receives Ethernet frames.
 LT

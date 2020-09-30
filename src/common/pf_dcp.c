@@ -296,7 +296,7 @@ static int pf_dcp_get_req (
    uint16_t block_info = 0;
    uint16_t value_length = 0;
    uint8_t * p_value = NULL;
-   bool skip = false;
+   bool skip = false; /* When true: Do not insert block in response */
    pf_full_ip_suite_t full_ip_suite;
    uint16_t temp16;
    uint16_t ix;

@@ -82,7 +82,7 @@ Alarm related state machines
 ----------------------------
 
 * APMS: It resends the Alarm DATA frame until it gets a TACK (transport acknowledge) back.
-* APMR: Receives Alarm DATA frames, aand sends TACK.
+* APMR: Receives Alarm DATA frames, and sends TACK.
 * ALPMI: Issues an Alarm Notification PDU, and waits for the Alarm ACK PDU.
 * ALPMR: Hands over Alarm Notification PDU to the application, and waits for the application to respond to it. Waits for the sent ACK PDU to have its TACK.
 
@@ -135,6 +135,29 @@ Sections in 61158-6-10 (protocol) describing alarms:
 +---------------+-------------------------------------------------------------+
 | A.3           | Startup of Alarm transmitter and receiver                   |
 +---------------+-------------------------------------------------------------+
+
+
+Diagnosis
+---------
+The diagnosis is described in:
+
+* Profinet 2.4 Services, section 7.3.4
+* Profinet 2.4 protocol, section 5.2.9 "Coding section related to Alarm and Diagnosis Data"
+
+
+Logbook
+-------
+A logbook is a circular buffer with at least 16 entries. The controller can
+read out entire logbook. Each entry contains:
+
+* A timestamp
+* Error codes
+* A manufacturer specific entry detail
+
+For details, see:
+
+* Profinet 2.4 Services, section 7.3.6
+* Profinet 2.4 Protocol, section 5.2.38 "Coding section related to logbook"
 
 
 FSPM - Fieldbus application layer Service Protocol Machine
@@ -360,14 +383,14 @@ Registers and invokes frame handlers for incoming raw Ethernet frames.
 
 LLDP - Link Layer Discovery Protocol
 ------------------------------------
-A protocol for neighborhood detection. LLDP frames are not forwarded by managed
-switches, so the frames are useful to detect which neighbor the device is
+A protocol for neighbourhood detection. LLDP frames are not forwarded by managed
+switches, so the frames are useful to detect which neighbour the device is
 connected to.
 
 An LLDP frame is sent by p-net every 5 seconds, to indicate the IP address etc.
 
 The p-net stack also receives LLDP frames. It uses the chassis ID and the
-frame ID of the frame from its neighbor, to set the alias name.
+frame ID of the frame from its neighbour, to set the alias name.
 
 The LLDP frame is a layer 2 Ethernet frame with the payload consisting of a number
 of Type-Length-Value (TLV) blocks. The first 16 bits of each block contains info
@@ -414,6 +437,50 @@ Speed:
 * Bit 13: 10BASE‑T Full duplex
 * Bit 14: 10BASE‑T Half duplex
 * Bit 15: Unknown speed
+
+
+Simple Network Management Protocol (SNMP)
+-----------------------------------------
+
+Sections in 61158-5-10 (services) describing SNMP:
+
++---------------+-------------------------------------------------------------+
+| Section       | Description                                                 |
++===============+=============================================================+
+| 6.3.5         | Simple network management ASE                               |
++---------------+-------------------------------------------------------------+
+| 6.3.13.1      | IEEE 802.1AB ASE Overview                                   |
++---------------+-------------------------------------------------------------+
+| 7.3.3.1       | Communication Interface Management ASE Overview             |
++---------------+-------------------------------------------------------------+
+| 7.3.3.3.4     | Attributes for Communication Interface Management class     |
++---------------+-------------------------------------------------------------+
+| 7.3.3.3.5     | Services for Communication Interface Management class       |
++---------------+-------------------------------------------------------------+
+| 7.3.3.3.6.2   | Persistency                                                 |
++---------------+-------------------------------------------------------------+
+
+Sections in 61158-6-10 (protocol) describing SNMP:
+
++---------------+-------------------------------------------------------------------------+
+| Section       | Description                                                             |
++===============+=========================================================================+
+| 4.16          | Simple network management                                               |
++---------------+-------------------------------------------------------------------------+
+| 5.2.41        | Coding of the field SNMPControl, CommunityStringLength, CommunityString |
++---------------+-------------------------------------------------------------------------+
+| Annex U       | Extension to a MIB                                                      |
++---------------+-------------------------------------------------------------------------+
+| Annex W.4     | Statistic counters in SNMPv1 and SNMPv2                                 |
++---------------+-------------------------------------------------------------------------+
+
+Sections in 61784-2 (profiles) describing SNMP:
+
++---------------+-------------------------------------------------------------------------+
+| Section       | Description                                                             |
++===============+=========================================================================+
+| 7.1.4.11      | Simple Network Management Protocol                                      |
++---------------+-------------------------------------------------------------------------+
 
 
 Start up procedure
