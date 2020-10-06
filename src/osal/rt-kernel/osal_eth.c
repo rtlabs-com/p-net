@@ -18,23 +18,22 @@
 #include <dev.h>
 #include <uassert.h>
 
-#define MAX_NUMBER_OF_IF   1
-#define NET_DRIVER_NAME    "/net"
+#define MAX_NUMBER_OF_IF 1
+#define NET_DRIVER_NAME  "/net"
 
 static struct netif * interface[MAX_NUMBER_OF_IF];
 static int nic_index = 0;
 
-
-os_eth_handle_t* os_eth_init(
-   const char              *if_name,
-   os_eth_callback_t       *callback,
-   void                    *arg)
+os_eth_handle_t * os_eth_init (
+   const char * if_name,
+   os_eth_callback_t * callback,
+   void * arg)
 {
-   os_eth_handle_t         *handle;
-   struct netif            *found_if;
-   drv_t                   *drv;
+   os_eth_handle_t * handle;
+   struct netif * found_if;
+   drv_t * drv;
 
-   handle = malloc(sizeof(os_eth_handle_t));
+   handle = malloc (sizeof (os_eth_handle_t));
    UASSERT (handle != NULL, EMEM);
 
    handle->arg = arg;
@@ -46,9 +45,9 @@ os_eth_handle_t* os_eth_init(
       drv = dev_find_driver (NET_DRIVER_NAME);
       if (drv != NULL)
       {
-         eth_ioctl(drv, arg, IOCTL_NET_SET_RX_HOOK, callback);
+         eth_ioctl (drv, arg, IOCTL_NET_SET_RX_HOOK, callback);
 
-         found_if = netif_find(if_name);
+         found_if = netif_find (if_name);
          if (found_if == NULL)
          {
             interface[nic_index] = netif_default;
@@ -61,7 +60,7 @@ os_eth_handle_t* os_eth_init(
       }
       else
       {
-         os_log(LOG_LEVEL_ERROR, "Driver \"%s\" not found!\n", NET_DRIVER_NAME);
+         os_log (LOG_LEVEL_ERROR, "Driver \"%s\" not found!\n", NET_DRIVER_NAME);
       }
    }
 
@@ -71,14 +70,12 @@ os_eth_handle_t* os_eth_init(
    }
    else
    {
-      free(handle);
+      free (handle);
       return NULL;
    }
 }
 
-int os_eth_send(
-   os_eth_handle_t   *handle,
-   os_buf_t          *buf)
+int os_eth_send (os_eth_handle_t * handle, os_buf_t * buf)
 {
    int ret = -1;
 
@@ -89,7 +86,7 @@ int os_eth_send(
 
       if (interface[handle->if_id]->linkoutput != NULL)
       {
-         interface[handle->if_id]->linkoutput(interface[handle->if_id], buf);
+         interface[handle->if_id]->linkoutput (interface[handle->if_id], buf);
          ret = buf->len;
       }
    }

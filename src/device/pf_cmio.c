@@ -13,15 +13,29 @@
  * full license information.
  ********************************************************************/
 
+/**
+ * @file
+ * @brief Implements the Context Management Input Output protocol machine (CMIO)
+ *
+ * This monitors several CPM during startup, to know when there is incoming
+ * cyclic data.
+ *
+ * States are IDLE, STARTUP, WDATA and DATA.
+ *
+ * While waiting for data, it polls the CPMs every 100 ms to check if data has
+ * arrived, and tells CMDEV the result.
+ *
+ */
+
 #ifdef UNIT_TEST
 
 #endif
 
 #include "pf_includes.h"
 
-#define PF_CMIO_TIMER_PERIOD           (100*1000)  /* us */
+#define PF_CMIO_TIMER_PERIOD (100 * 1000) /* us */
 
-static const char          *cmio_sched_name = "cmio";
+static const char * cmio_sched_name = "cmio";
 
 /*************** Diagnostic strings *****************************************/
 
@@ -31,10 +45,9 @@ static const char          *cmio_sched_name = "cmio";
  * @param state            In:   The state.
  * @return  A string representation of the CMIO state.
  */
-static const char *pf_cmio_state_to_string(
-   pf_cmio_state_values_t  state)
+static const char * pf_cmio_state_to_string (pf_cmio_state_values_t state)
 {
-   const char *s = "<unknown>";
+   const char * s = "<unknown>";
 
    switch (state)
    {
@@ -55,12 +68,13 @@ static const char *pf_cmio_state_to_string(
    return s;
 }
 
-void pf_cmio_show(
-   pf_ar_t                 *p_ar)
+void pf_cmio_show (pf_ar_t * p_ar)
 {
-   printf("CMIO state            = %s\n", pf_cmio_state_to_string(p_ar->cmio_state));
-   printf("     timer            = %u\n", (unsigned)p_ar->cmio_timer);
-   printf("     timer run        = %u\n", (unsigned)p_ar->cmio_timer_run);
+   printf (
+      "CMIO state            = %s\n",
+      pf_cmio_state_to_string (p_ar->cmio_state));
+   printf ("     timer            = %u\n", (unsigned)p_ar->cmio_timer);
+   printf ("     timer run        = %u\n", (unsigned)p_ar->cmio_timer_run);
 }
 
 /****************************************************************************/
@@ -70,13 +84,15 @@ void pf_cmio_show(
  * @param p_ar             In:   The AR instance.
  * @param state            In:   The new CMIO state.
  */
-static void pf_cmio_set_state(
-   pf_ar_t                 *p_ar,
-   pf_cmio_state_values_t  state)
+static void pf_cmio_set_state (pf_ar_t * p_ar, pf_cmio_state_values_t state)
 {
    if (state != p_ar->cmio_state)
    {
-      LOG_DEBUG(PNET_LOG, "CMIO(%d): New state %s\n", __LINE__, pf_cmio_state_to_string(state));
+      LOG_DEBUG (
+         PNET_LOG,
+         "CMIO(%d): New state %s\n",
+         __LINE__,
+         pf_cmio_state_to_string (state));
       p_ar->cmio_state = state;
    }
 }
@@ -85,7 +101,8 @@ static void pf_cmio_set_state(
  * @internal
  * Poll each output IOCR (CPM) if they have received data from the controller.
  *
- * This is a callback for the scheduler. Arguments should fulfill pf_scheduler_timeout_ftn_t
+ * This is a callback for the scheduler. Arguments should fulfill
+ * pf_scheduler_timeout_ftn_t
  *
  * When in state PF_CMIO_STATE_WDATA this function polls (every 100ms) all CPM
  * to see if data has arrived from the controller.
@@ -93,25 +110,27 @@ static void pf_cmio_set_state(
  * schedule another call in 100ms.
  *
  * @param net              InOut: The p-net stack instance
- * @param arg              In:   The AR instance.
- * @param current_time     In:   The current time.
+ * @param arg              In:    The AR instance.
+ * @param current_time     In:    The current system time, in microseconds,
+ *                                when the scheduler is started to execute
+ * stored tasks.
  */
-static void pf_cmio_timer_expired(
-   pnet_t                  *net,
-   void                    *arg,
-   uint32_t                current_time)
+static void pf_cmio_timer_expired (
+   pnet_t * net,
+   void * arg,
+   uint32_t current_time)
 {
-   pf_ar_t                 *p_ar = (pf_ar_t *)arg;
-   uint16_t                crep;
-   bool                    data_possible = true;
+   pf_ar_t * p_ar = (pf_ar_t *)arg;
+   uint16_t crep;
+   bool data_possible = true;
 
-   if ((p_ar->cmio_state == PF_CMIO_STATE_WDATA) &&
-       (p_ar->cmio_timer_run == true))
+   if ((p_ar->cmio_state == PF_CMIO_STATE_WDATA) && (p_ar->cmio_timer_run == true))
    {
       for (crep = 0; crep < p_ar->nbr_iocrs; crep++)
       {
-         if ((p_ar->iocrs[crep].param.iocr_type == PF_IOCR_TYPE_OUTPUT) ||
-             (p_ar->iocrs[crep].param.iocr_type == PF_IOCR_TYPE_MC_CONSUMER))
+         if (
+            (p_ar->iocrs[crep].param.iocr_type == PF_IOCR_TYPE_OUTPUT) ||
+            (p_ar->iocrs[crep].param.iocr_type == PF_IOCR_TYPE_MC_CONSUMER))
          {
             if (p_ar->iocrs[crep].cpm.cmio_start == false)
             {
@@ -119,9 +138,14 @@ static void pf_cmio_timer_expired(
             }
          }
       }
-      pf_cmdev_cmio_info_ind(net, p_ar, data_possible);
-      pf_scheduler_add(net, PF_CMIO_TIMER_PERIOD,
-         cmio_sched_name, pf_cmio_timer_expired, p_ar, &p_ar->cmio_timer);
+      pf_cmdev_cmio_info_ind (net, p_ar, data_possible);
+      pf_scheduler_add (
+         net,
+         PF_CMIO_TIMER_PERIOD,
+         cmio_sched_name,
+         pf_cmio_timer_expired,
+         p_ar,
+         &p_ar->cmio_timer);
    }
    else
    {
@@ -130,15 +154,19 @@ static void pf_cmio_timer_expired(
    }
 }
 
-int pf_cmio_cmdev_state_ind(
-   pnet_t                  *net,
-   pf_ar_t                 *p_ar,
-   pnet_event_values_t     event)
+int pf_cmio_cmdev_state_ind (
+   pnet_t * net,
+   pf_ar_t * p_ar,
+   pnet_event_values_t event)
 {
-   uint16_t                crep;
+   uint16_t crep;
 
-   LOG_DEBUG(PNET_LOG, "CMIO(%d): Received event %s from CMDEV. Our state %s.\n", __LINE__,
-   pf_cmdev_event_to_string(event), pf_cmio_state_to_string(p_ar->cmio_state));
+   LOG_DEBUG (
+      PNET_LOG,
+      "CMIO(%d): Received event %s from CMDEV. Our state %s.\n",
+      __LINE__,
+      pf_cmdev_event_to_string (event),
+      pf_cmio_state_to_string (p_ar->cmio_state));
 
    switch (p_ar->cmio_state)
    {
@@ -149,7 +177,7 @@ int pf_cmio_cmdev_state_ind(
          p_ar->cmio_timer_run = false;
          p_ar->cmio_timer = UINT32_MAX;
 
-         pf_cmio_set_state(p_ar, PF_CMIO_STATE_STARTUP);
+         pf_cmio_set_state (p_ar, PF_CMIO_STATE_STARTUP);
       }
       else if (event == PNET_EVENT_STARTUP)
       {
@@ -159,8 +187,9 @@ int pf_cmio_cmdev_state_ind(
           */
          for (crep = 0; crep < p_ar->nbr_iocrs; crep++)
          {
-            if ((p_ar->iocrs[crep].param.iocr_type == PF_IOCR_TYPE_OUTPUT) ||
-                (p_ar->iocrs[crep].param.iocr_type == PF_IOCR_TYPE_MC_CONSUMER))
+            if (
+               (p_ar->iocrs[crep].param.iocr_type == PF_IOCR_TYPE_OUTPUT) ||
+               (p_ar->iocrs[crep].param.iocr_type == PF_IOCR_TYPE_MC_CONSUMER))
             {
                p_ar->iocrs[crep].cpm.cmio_start = false;
             }
@@ -168,7 +197,7 @@ int pf_cmio_cmdev_state_ind(
          p_ar->cmio_timer_run = false;
          p_ar->cmio_timer = UINT32_MAX;
 
-         pf_cmio_set_state(p_ar, PF_CMIO_STATE_STARTUP);
+         pf_cmio_set_state (p_ar, PF_CMIO_STATE_STARTUP);
       }
       break;
    case PF_CMIO_STATE_STARTUP:
@@ -177,27 +206,33 @@ int pf_cmio_cmdev_state_ind(
          p_ar->cmio_timer_run = false;
          p_ar->cmio_timer = UINT32_MAX;
 
-         pf_cmio_set_state(p_ar, PF_CMIO_STATE_IDLE);
+         pf_cmio_set_state (p_ar, PF_CMIO_STATE_IDLE);
       }
       else if (event == PNET_EVENT_STARTUP)
       {
          for (crep = 0; crep < p_ar->nbr_iocrs; crep++)
          {
-            if ((p_ar->iocrs[crep].param.iocr_type == PF_IOCR_TYPE_OUTPUT) ||
-                (p_ar->iocrs[crep].param.iocr_type == PF_IOCR_TYPE_MC_CONSUMER))
+            if (
+               (p_ar->iocrs[crep].param.iocr_type == PF_IOCR_TYPE_OUTPUT) ||
+               (p_ar->iocrs[crep].param.iocr_type == PF_IOCR_TYPE_MC_CONSUMER))
             {
                p_ar->iocrs[crep].cpm.cmio_start = false;
             }
          }
-         pf_cmio_set_state(p_ar, PF_CMIO_STATE_WDATA);
+         pf_cmio_set_state (p_ar, PF_CMIO_STATE_WDATA);
       }
       else if (event == PNET_EVENT_PRMEND)
       {
          p_ar->cmio_timer_run = true;
-         pf_scheduler_add(net, PF_CMIO_TIMER_PERIOD,
-            cmio_sched_name, pf_cmio_timer_expired, p_ar, &p_ar->cmio_timer);
+         pf_scheduler_add (
+            net,
+            PF_CMIO_TIMER_PERIOD,
+            cmio_sched_name,
+            pf_cmio_timer_expired,
+            p_ar,
+            &p_ar->cmio_timer);
 
-         pf_cmio_set_state(p_ar, PF_CMIO_STATE_WDATA);
+         pf_cmio_set_state (p_ar, PF_CMIO_STATE_WDATA);
       }
       break;
    case PF_CMIO_STATE_WDATA:
@@ -206,14 +241,14 @@ int pf_cmio_cmdev_state_ind(
          p_ar->cmio_timer_run = false;
          p_ar->cmio_timer = UINT32_MAX;
 
-         pf_cmio_set_state(p_ar, PF_CMIO_STATE_IDLE);
+         pf_cmio_set_state (p_ar, PF_CMIO_STATE_IDLE);
       }
       else if (event == PNET_EVENT_DATA)
       {
          p_ar->cmio_timer_run = false;
          p_ar->cmio_timer = UINT32_MAX;
 
-         pf_cmio_set_state(p_ar, PF_CMIO_STATE_DATA);
+         pf_cmio_set_state (p_ar, PF_CMIO_STATE_DATA);
       }
       break;
    case PF_CMIO_STATE_DATA:
@@ -222,7 +257,7 @@ int pf_cmio_cmdev_state_ind(
          p_ar->cmio_timer_run = false;
          p_ar->cmio_timer = UINT32_MAX;
 
-         pf_cmio_set_state(p_ar, PF_CMIO_STATE_IDLE);
+         pf_cmio_set_state (p_ar, PF_CMIO_STATE_IDLE);
       }
       break;
    }
@@ -230,13 +265,13 @@ int pf_cmio_cmdev_state_ind(
    return 0;
 }
 
-int pf_cmio_cpm_state_ind(
-   pnet_t                  *net,
-   pf_ar_t                 *p_ar,
-   uint16_t                crep,
-   bool                    start)
+int pf_cmio_cpm_state_ind (
+   pnet_t * net,
+   pf_ar_t * p_ar,
+   uint16_t crep,
+   bool start)
 {
-   int                     ret = 0;
+   int ret = 0;
    switch (p_ar->cmio_state)
    {
    case PF_CMIO_STATE_IDLE:
@@ -248,7 +283,13 @@ int pf_cmio_cpm_state_ind(
       {
          if (start != p_ar->iocrs[crep].cpm.cmio_start)
          {
-            LOG_INFO(PNET_LOG, "CMIO(%d): CPM state change. CMIO state is WDATA. crep: %u, CPM start=%s\n", __LINE__, crep, start?"true":"false");
+            LOG_INFO (
+               PNET_LOG,
+               "CMIO(%d): CPM state change. CMIO state is WDATA. crep: %u, CPM "
+               "start=%s\n",
+               __LINE__,
+               crep,
+               start ? "true" : "false");
          }
          p_ar->iocrs[crep].cpm.cmio_start = start;
       }
@@ -260,10 +301,15 @@ int pf_cmio_cpm_state_ind(
    case PF_CMIO_STATE_DATA:
       if (start == false)
       {
-         LOG_INFO(PNET_LOG, "CMIO(%d): CPM is stopping. CMIO state is DATA. Aborting. crep: %u\n", __LINE__, crep);
+         LOG_INFO (
+            PNET_LOG,
+            "CMIO(%d): CPM is stopping. CMIO state is DATA. Aborting. crep: "
+            "%u\n",
+            __LINE__,
+            crep);
 
          /* if (crep != crep.mcpm) not possible - handled elsewhere */
-         (void)pf_cmdev_state_ind(net, p_ar, PNET_EVENT_ABORT);
+         (void)pf_cmdev_state_ind (net, p_ar, PNET_EVENT_ABORT);
       }
       break;
    }
@@ -271,12 +317,9 @@ int pf_cmio_cpm_state_ind(
    return ret;
 }
 
-int pf_cmio_cpm_new_data_ind(
-   pf_ar_t                 *p_ar,
-   uint16_t                crep,
-   bool                    new_data)
+int pf_cmio_cpm_new_data_ind (pf_ar_t * p_ar, uint16_t crep, bool new_data)
 {
-   int                     ret = 0;
+   int ret = 0;
 
    switch (p_ar->cmio_state)
    {
@@ -290,7 +333,12 @@ int pf_cmio_cpm_new_data_ind(
       {
          if (new_data != p_ar->iocrs[crep].cpm.cmio_start)
          {
-            LOG_DEBUG(PNET_LOG, "CMIO(%d): New data ind from CPM. (crep=%u) new_data=%s\n", __LINE__, crep, new_data?"true":"false");
+            LOG_DEBUG (
+               PNET_LOG,
+               "CMIO(%d): New data ind from CPM. (crep=%u) new_data=%s\n",
+               __LINE__,
+               crep,
+               new_data ? "true" : "false");
          }
 
          p_ar->iocrs[crep].cpm.cmio_start = new_data;

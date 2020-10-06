@@ -24,67 +24,72 @@
 #include "pf_block_reader.h"
 
 pnet_t * pnet_init_only (
-   pnet_t                  *net,
-   const char              *netif,
-   uint32_t                tick_us,
-   const pnet_cfg_t        *p_cfg)
+   pnet_t * net,
+   const char * netif,
+   uint32_t tick_us,
+   const pnet_cfg_t * p_cfg)
 {
-   memset(net, 0, sizeof(*net));
+   memset (net, 0, sizeof (*net));
 
-   if (strlen(netif) > PNET_MAX_INTERFACE_NAME_LENGTH)
+   if (strlen (netif) > PNET_MAX_INTERFACE_NAME_LENGTH)
    {
-      LOG_ERROR(PNET_LOG, "Too long interface name. Given: %s  Max len: %d\n", netif, PNET_MAX_INTERFACE_NAME_LENGTH);
+      LOG_ERROR (
+         PNET_LOG,
+         "Too long interface name. Given: %s  Max len: %d\n",
+         netif,
+         PNET_MAX_INTERFACE_NAME_LENGTH);
       return NULL;
    }
-   strcpy(net->interface_name, netif);
+   strcpy (net->interface_name, netif);
 
-   net->cmdev_initialized = false;  /* TODO How to handle that pf_cmdev_exit() is used before pf_cmdev_init()? */
+   net->cmdev_initialized = false; /* TODO How to handle that pf_cmdev_exit() is
+                                      used before pf_cmdev_init()? */
 
-   pf_cmsu_init(net);
-   pf_cmwrr_init(net);
-   pf_cpm_init(net);
-   pf_ppm_init(net);
-   pf_alarm_init(net);
+   pf_cmsu_init (net);
+   pf_cmwrr_init (net);
+   pf_cpm_init (net);
+   pf_ppm_init (net);
+   pf_alarm_init (net);
 
    /* initialize configuration */
-   if (pf_fspm_init(net, p_cfg) != 0)
+   if (pf_fspm_init (net, p_cfg) != 0)
    {
       return NULL;
    }
 
    /* Initialize everything (and the DCP protocol) */
    /* First initialize the network interface */
-   net->eth_handle = os_eth_init(netif, pf_eth_recv, (void*)net);
+   net->eth_handle = os_eth_init (netif, pf_eth_recv, (void *)net);
    if (net->eth_handle == NULL)
    {
-       free(net);
-       return NULL;
+      free (net);
+      return NULL;
    }
 
-   pf_eth_init(net);
-   pf_scheduler_init(net, tick_us);
-   pf_cmina_init(net);  /* Read from permanent pool */
+   pf_eth_init (net);
+   pf_scheduler_init (net, tick_us);
+   pf_cmina_init (net); /* Read from permanent pool */
 
-   pf_dcp_exit(net);    /* Prepare for re-init. */
-   pf_dcp_init(net);    /* Start DCP */
-   pf_lldp_init(net);   /* Send the LLDP frame */
+   pf_dcp_exit (net);  /* Prepare for re-init. */
+   pf_dcp_init (net);  /* Start DCP */
+   pf_lldp_init (net); /* Send the LLDP frame */
 
-   pf_cmdev_exit(net);     /* Prepare for re-init */
-   pf_cmdev_init(net);
+   pf_cmdev_exit (net); /* Prepare for re-init */
+   pf_cmdev_init (net);
 
-   pf_cmrpc_init(net);
+   pf_cmrpc_init (net);
 
    return net;
 }
 
-pnet_t* pnet_init(
-   const char              *netif,
-   uint32_t                tick_us,
-   const pnet_cfg_t        *p_cfg)
+pnet_t * pnet_init (
+   const char * netif,
+   uint32_t tick_us,
+   const pnet_cfg_t * p_cfg)
 {
-   pnet_t                  *net;
+   pnet_t * net;
 
-   net = os_malloc(sizeof(*net));
+   net = os_malloc (sizeof (*net));
    if (net == NULL)
    {
       return NULL;
@@ -94,174 +99,194 @@ pnet_t* pnet_init(
    return net;
 }
 
-void pnet_handle_periodic(
-   pnet_t                  *net)
+void pnet_handle_periodic (pnet_t * net)
 {
-   pf_cmrpc_periodic(net);
-   pf_alarm_periodic(net);
+   pf_cmrpc_periodic (net);
+   pf_alarm_periodic (net);
 
    /* Handle expired timeout events */
-   pf_scheduler_tick(net);
+   pf_scheduler_tick (net);
 }
 
-void pnet_show(
-   pnet_t                  *net,
-   unsigned                level)
+void pnet_show (pnet_t * net, unsigned level)
 {
-   pnet_cfg_t              *p_cfg = NULL;
+   if (net != NULL)
+   {
+      if (level & 0x0010)
+      {
+         pf_fspm_option_show (net);
+      }
 
-   if (net != NULL){
-      pf_cmdev_show_device(net);
-      pf_cmrpc_show(net, level);
+      if (level & 0x0020)
+      {
+         pf_cmdev_show_device (net);
+      }
+
+      pf_cmrpc_show (net, level);
 
       if (level & 0x2000)
       {
-         printf("\n");
-         pf_cmina_show(net);
-         printf("\n");
+         printf ("\n\n");
+         pf_cmina_show (net);
       }
       if (level & 0x4000)
       {
-         pf_scheduler_show(net);
-         printf("\n");
+         printf ("\n\n");
+         pf_scheduler_show (net);
       }
       if (level & 0x8000)
       {
-         pf_fspm_get_cfg(net, &p_cfg);
-
-         printf("I&M1.im_tag_function     : <%s>\n", p_cfg->im_1_data.im_tag_function);
-         printf("I&M1.im_tag_location     : <%s>\n", p_cfg->im_1_data.im_tag_location);
-         printf("I&M2.date                : <%s>\n", p_cfg->im_2_data.im_date);
-         printf("I&M3.im_descriptor       : <%s>\n", p_cfg->im_3_data.im_descriptor);
-         printf("I&M4.im_signature        : <%s>\n", p_cfg->im_4_data.im_signature);    /* Should be binary data, but works for now */
-         printf("\n");
+         printf ("\n\n");
+         pf_fspm_im_show (net);
       }
    }
    else
    {
-      printf("p-net not yet initialized.\n");
+      printf ("p-net not yet initialized.\n");
    }
 }
 
-void pnet_create_log_book_entry(
-   pnet_t                     *net,
-   uint32_t                   arep,
-   const pnet_pnio_status_t   *p_pnio_status,
-   uint32_t                   entry_detail)
+void pnet_create_log_book_entry (
+   pnet_t * net,
+   uint32_t arep,
+   const pnet_pnio_status_t * p_pnio_status,
+   uint32_t entry_detail)
 {
-   pf_fspm_create_log_book_entry(net, arep, p_pnio_status, entry_detail);
+   pf_fspm_create_log_book_entry (net, arep, p_pnio_status, entry_detail);
 }
 
-int pnet_input_set_data_and_iops(
-   pnet_t                  *net,
-   uint32_t                api,
-   uint16_t                slot,
-   uint16_t                subslot,
-   uint8_t                 *p_data,
-   uint16_t                data_len,
-   uint8_t                 iops)
+int pnet_input_set_data_and_iops (
+   pnet_t * net,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
+   uint8_t * p_data,
+   uint16_t data_len,
+   uint8_t iops)
 {
-   uint8_t                 iops_len = 1;
+   uint8_t iops_len = 1;
 
-   return pf_ppm_set_data_and_iops(net, api, slot, subslot, p_data, data_len, &iops, iops_len);
+   return pf_ppm_set_data_and_iops (
+      net,
+      api,
+      slot,
+      subslot,
+      p_data,
+      data_len,
+      &iops,
+      iops_len);
 }
 
-int pnet_input_get_iocs(
-   pnet_t                  *net,
-   uint32_t                api,
-   uint16_t                slot,
-   uint16_t                subslot,
-   uint8_t                 *p_iocs)
+int pnet_input_get_iocs (
+   pnet_t * net,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
+   uint8_t * p_iocs)
 {
-   uint8_t                 iocs_len = 1;
+   uint8_t iocs_len = 1;
 
-   return pf_cpm_get_iocs(net, api, slot, subslot, p_iocs, &iocs_len);
+   return pf_cpm_get_iocs (net, api, slot, subslot, p_iocs, &iocs_len);
 }
 
-int pnet_output_get_data_and_iops(
-   pnet_t                  *net,
-   uint32_t                api,
-   uint16_t                slot,
-   uint16_t                subslot,
-   bool                    *p_new_flag,
-   uint8_t                 *p_data,
-   uint16_t                *p_data_len,
-   uint8_t                 *p_iops)
+int pnet_output_get_data_and_iops (
+   pnet_t * net,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
+   bool * p_new_flag,
+   uint8_t * p_data,
+   uint16_t * p_data_len,
+   uint8_t * p_iops)
 {
-   uint8_t                 iops_len = 1;
+   uint8_t iops_len = 1;
 
-   return pf_cpm_get_data_and_iops(net, api, slot, subslot, p_new_flag, p_data, p_data_len, p_iops, &iops_len);
+   return pf_cpm_get_data_and_iops (
+      net,
+      api,
+      slot,
+      subslot,
+      p_new_flag,
+      p_data,
+      p_data_len,
+      p_iops,
+      &iops_len);
 }
 
-int pnet_output_set_iocs(
-   pnet_t                  *net,
-   uint32_t                api,
-   uint16_t                slot,
-   uint16_t                subslot,
-   uint8_t                 iocs)
+int pnet_output_set_iocs (
+   pnet_t * net,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
+   uint8_t iocs)
 {
-   uint8_t                 iocs_len = 1;
+   uint8_t iocs_len = 1;
 
-   return pf_ppm_set_iocs(net, api, slot, subslot, &iocs, iocs_len);
+   return pf_ppm_set_iocs (net, api, slot, subslot, &iocs, iocs_len);
 }
 
-int pnet_plug_module(
-   pnet_t                  *net,
-   uint32_t                api,
-   uint16_t                slot,
-   uint32_t                module_ident)
+int pnet_plug_module (
+   pnet_t * net,
+   uint32_t api,
+   uint16_t slot,
+   uint32_t module_ident)
 {
-   return pf_cmdev_plug_module(net, api, slot, module_ident);
+   return pf_cmdev_plug_module (net, api, slot, module_ident);
 }
 
-int pnet_plug_submodule(
-   pnet_t                  *net,
-   uint32_t                api,
-   uint16_t                slot,
-   uint16_t                subslot,
-   uint32_t                module_ident,
-   uint32_t                submodule_ident,
-   pnet_submodule_dir_t    direction,
-   uint16_t                length_input,
-   uint16_t                length_output)
+int pnet_plug_submodule (
+   pnet_t * net,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
+   uint32_t module_ident,
+   uint32_t submodule_ident,
+   pnet_submodule_dir_t direction,
+   uint16_t length_input,
+   uint16_t length_output)
 {
-   return pf_cmdev_plug_submodule(net, api, slot, subslot, module_ident, submodule_ident, direction, length_input, length_output, false);
+   return pf_cmdev_plug_submodule (
+      net,
+      api,
+      slot,
+      subslot,
+      module_ident,
+      submodule_ident,
+      direction,
+      length_input,
+      length_output,
+      false);
 }
 
-int pnet_pull_module(
-   pnet_t                  *net,
-   uint32_t                api,
-   uint16_t                slot)
+int pnet_pull_module (pnet_t * net, uint32_t api, uint16_t slot)
 {
-   return pf_cmdev_pull_module(net, api, slot);
+   return pf_cmdev_pull_module (net, api, slot);
 }
 
-int pnet_pull_submodule(
-   pnet_t                  *net,
-   uint32_t                api,
-   uint16_t                slot,
-   uint16_t                subslot)
+int pnet_pull_submodule (
+   pnet_t * net,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot)
 {
-   return pf_cmdev_pull_submodule(net, api, slot, subslot);
+   return pf_cmdev_pull_submodule (net, api, slot, subslot);
 }
 
-int pnet_set_state(
-   pnet_t                  *net,
-   bool                    primary)
+int pnet_set_state (pnet_t * net, bool primary)
 {
-   int                     ret = 0;    /* Assume all goes well */
-   uint16_t                ar_ix;
-   uint16_t                cr_ix;
-   pf_ar_t                 *p_ar = NULL;
+   int ret = 0; /* Assume all goes well */
+   uint16_t ar_ix;
+   uint16_t cr_ix;
+   pf_ar_t * p_ar = NULL;
 
    for (ar_ix = 0; ar_ix < PNET_MAX_AR; ar_ix++)
    {
-      p_ar = pf_ar_find_by_index(net, ar_ix);
+      p_ar = pf_ar_find_by_index (net, ar_ix);
       if ((p_ar != NULL) && (p_ar->in_use == true))
       {
          for (cr_ix = 0; cr_ix < p_ar->nbr_iocrs; cr_ix++)
          {
-            if (pf_ppm_set_data_status_state(p_ar, cr_ix, primary) != 0)
+            if (pf_ppm_set_data_status_state (p_ar, cr_ix, primary) != 0)
             {
                ret = -1;
             }
@@ -272,23 +297,21 @@ int pnet_set_state(
    return ret;
 }
 
-int pnet_set_redundancy_state(
-   pnet_t                  *net,
-   bool                    redundant)
+int pnet_set_redundancy_state (pnet_t * net, bool redundant)
 {
-   int                     ret = 0;    /* Assume all goes well */
-   uint16_t                ar_ix;
-   uint16_t                cr_ix;
-   pf_ar_t                 *p_ar = NULL;
+   int ret = 0; /* Assume all goes well */
+   uint16_t ar_ix;
+   uint16_t cr_ix;
+   pf_ar_t * p_ar = NULL;
 
    for (ar_ix = 0; ar_ix < PNET_MAX_AR; ar_ix++)
    {
-      p_ar = pf_ar_find_by_index(net, ar_ix);
+      p_ar = pf_ar_find_by_index (net, ar_ix);
       if ((p_ar != NULL) && (p_ar->in_use == true))
       {
          for (cr_ix = 0; cr_ix < p_ar->nbr_iocrs; cr_ix++)
          {
-            if (pf_ppm_set_data_status_redundancy(p_ar, cr_ix, redundant) != 0)
+            if (pf_ppm_set_data_status_redundancy (p_ar, cr_ix, redundant) != 0)
             {
                ret = -1;
             }
@@ -299,23 +322,21 @@ int pnet_set_redundancy_state(
    return ret;
 }
 
-int pnet_set_provider_state(
-   pnet_t                  *net,
-   bool                    run)
+int pnet_set_provider_state (pnet_t * net, bool run)
 {
-   int                     ret = 0;    /* Assume all goes well */
-   uint16_t                ar_ix;
-   uint16_t                cr_ix;
-   pf_ar_t                 *p_ar = NULL;
+   int ret = 0; /* Assume all goes well */
+   uint16_t ar_ix;
+   uint16_t cr_ix;
+   pf_ar_t * p_ar = NULL;
 
    for (ar_ix = 0; ar_ix < PNET_MAX_AR; ar_ix++)
    {
-      p_ar = pf_ar_find_by_index(net, ar_ix);
+      p_ar = pf_ar_find_by_index (net, ar_ix);
       if ((p_ar != NULL) && (p_ar->in_use == true))
       {
          for (cr_ix = 0; cr_ix < p_ar->nbr_iocrs; cr_ix++)
          {
-            if (pf_ppm_set_data_status_provider(p_ar, cr_ix, run) != 0)
+            if (pf_ppm_set_data_status_provider (p_ar, cr_ix, run) != 0)
             {
                ret = -1;
             }
@@ -326,68 +347,68 @@ int pnet_set_provider_state(
    return ret;
 }
 
-int pnet_application_ready(
-   pnet_t                  *net,
-   uint32_t                arep)
+int pnet_application_ready (pnet_t * net, uint32_t arep)
 {
-   int                     ret = -1;
-   pf_ar_t                 *p_ar = NULL;
+   int ret = -1;
+   pf_ar_t * p_ar = NULL;
 
-   if (pf_ar_find_by_arep(net, arep, &p_ar) == 0)
+   if (pf_ar_find_by_arep (net, arep, &p_ar) == 0)
    {
-      ret = pf_cmdev_cm_ccontrol_req(net, p_ar);
+      ret = pf_cmdev_cm_ccontrol_req (net, p_ar);
    }
 
    return ret;
 }
 
-int pnet_ar_abort(
-   pnet_t                  *net,
-   uint32_t                arep)
+int pnet_ar_abort (pnet_t * net, uint32_t arep)
 {
-   int                     ret = -1;
-   pf_ar_t                 *p_ar = NULL;
+   int ret = -1;
+   pf_ar_t * p_ar = NULL;
 
-   if (pf_ar_find_by_arep(net, arep, &p_ar) == 0)
+   if (pf_ar_find_by_arep (net, arep, &p_ar) == 0)
    {
-      ret = pf_cmdev_cm_abort(net, p_ar);
+      ret = pf_cmdev_cm_abort (net, p_ar);
    }
 
    return ret;
 }
 
-int pnet_factory_reset(
-   pnet_t                  *net)
+int pnet_factory_reset (pnet_t * net)
 {
-   uint16_t                ix;
-   pf_ar_t                 *p_ar = NULL;
+   uint16_t ix;
+   pf_ar_t * p_ar = NULL;
 
    /* Look for active connections */
    for (ix = 0; ix < PNET_MAX_AR; ix++)
    {
-      p_ar = pf_ar_find_by_index(net, ix);
+      p_ar = pf_ar_find_by_index (net, ix);
       if ((p_ar != NULL) && (p_ar->in_use == true))
       {
-         (void) pf_cmdev_cm_abort(net, p_ar);
+         (void)pf_cmdev_cm_abort (net, p_ar);
       }
    }
 
-   (void) pf_cmina_set_default_cfg(net, 99);
-   pf_cmina_dcp_set_commit(net);
+   (void)pf_cmina_set_default_cfg (net, 99);
+   pf_cmina_dcp_set_commit (net);
 
    return 0;
 }
 
-int pnet_get_ar_error_codes(
-   pnet_t                  *net,
-   uint32_t                arep,
-   uint16_t                *p_err_cls,
-   uint16_t                *p_err_code)
+int pnet_remove_data_files (const char * file_directory)
 {
-   int                     ret = -1;
-   pf_ar_t                 *p_ar = NULL;
+   return pf_cmina_remove_all_data_files (file_directory);
+}
 
-   if (pf_ar_find_by_arep(net, arep, &p_ar) == 0)
+int pnet_get_ar_error_codes (
+   pnet_t * net,
+   uint32_t arep,
+   uint16_t * p_err_cls,
+   uint16_t * p_err_code)
+{
+   int ret = -1;
+   pf_ar_t * p_ar = NULL;
+
+   if (pf_ar_find_by_arep (net, arep, &p_ar) == 0)
    {
       *p_err_cls = p_ar->err_cls;
       *p_err_code = p_ar->err_code;
@@ -398,112 +419,153 @@ int pnet_get_ar_error_codes(
    return ret;
 }
 
-int pnet_alarm_send_process_alarm(
-   pnet_t                  *net,
-   uint32_t                arep,
-   uint32_t                api,
-   uint16_t                slot,
-   uint16_t                subslot,
-   uint16_t                payload_len,
-   uint16_t                payload_usi,
-   uint8_t                 *p_payload)
+int pnet_alarm_send_process_alarm (
+   pnet_t * net,
+   uint32_t arep,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
+   uint16_t payload_usi,
+   uint16_t payload_len,
+   uint8_t * p_payload)
 {
-   int                     ret = -1;
-   pf_ar_t                 *p_ar = NULL;
+   int ret = -1;
+   pf_ar_t * p_ar = NULL;
 
-   if (pf_ar_find_by_arep(net, arep, &p_ar) == 0)
+   if (pf_ar_find_by_arep (net, arep, &p_ar) == 0)
    {
-      ret = pf_alarm_send_process(net, p_ar, api, slot, subslot,
-         payload_usi, payload_len, p_payload);
+      ret = pf_alarm_send_process (
+         net,
+         p_ar,
+         api,
+         slot,
+         subslot,
+         payload_usi,
+         payload_len,
+         p_payload);
    }
 
    return ret;
 }
 
-int pnet_alarm_send_ack(
-   pnet_t                  *net,
-   uint32_t                arep,
-   pnet_pnio_status_t      *p_pnio_status)
+int pnet_alarm_send_ack (
+   pnet_t * net,
+   uint32_t arep,
+   pnet_alarm_argument_t * p_alarm_argument,
+   pnet_pnio_status_t * p_pnio_status)
 {
-   int                     ret = -1;
-   pf_ar_t                 *p_ar = NULL;
+   int ret = -1;
+   pf_ar_t * p_ar = NULL;
 
-   if (pf_ar_find_by_arep(net, arep, &p_ar) == 0)
+   if (pf_ar_find_by_arep (net, arep, &p_ar) == 0)
    {
-      ret = pf_alarm_alpmr_alarm_ack(net, p_ar, p_pnio_status);
+      ret =
+         pf_alarm_alpmr_alarm_ack (net, p_ar, p_alarm_argument, p_pnio_status);
    }
 
    return ret;
 }
 
-int pnet_diag_add(
-   pnet_t                  *net,
-   uint32_t                arep,
-   uint32_t                api,
-   uint16_t                slot,
-   uint16_t                subslot,
-   uint16_t                ch,
-   uint16_t                ch_properties,
-   uint16_t                ch_error_type,
-   uint16_t                ext_ch_error_type,
-   uint32_t                ext_ch_add_value,
-   uint32_t                qual_ch_qualifier,
-   uint16_t                usi,
-   uint8_t                 *p_manuf_data)
+int pnet_diag_add (
+   pnet_t * net,
+   uint32_t arep,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
+   uint16_t ch,
+   uint16_t ch_properties,
+   uint16_t ch_error_type,
+   uint16_t ext_ch_error_type,
+   uint32_t ext_ch_add_value,
+   uint32_t qual_ch_qualifier,
+   uint16_t usi,
+   uint8_t * p_manuf_data)
 {
-   int                     ret = -1;
-   pf_ar_t                 *p_ar = NULL;
+   int ret = -1;
+   pf_ar_t * p_ar = NULL;
 
-   if (pf_ar_find_by_arep(net, arep, &p_ar) == 0)
+   if (pf_ar_find_by_arep (net, arep, &p_ar) == 0)
    {
-      ret = pf_diag_add(net, p_ar, api, slot, subslot, ch, ch_properties, ch_error_type, ext_ch_error_type, ext_ch_add_value,
-         qual_ch_qualifier, usi, p_manuf_data);
+      ret = pf_diag_add (
+         net,
+         p_ar,
+         api,
+         slot,
+         subslot,
+         ch,
+         ch_properties,
+         ch_error_type,
+         ext_ch_error_type,
+         ext_ch_add_value,
+         qual_ch_qualifier,
+         usi,
+         p_manuf_data);
    }
 
    return ret;
 }
 
-int pnet_diag_update(
-   pnet_t                  *net,
-   uint32_t                arep,
-   uint32_t                api,
-   uint16_t                slot,
-   uint16_t                subslot,
-   uint16_t                ch,
-   uint16_t                ch_properties,
-   uint16_t                ch_error_type,
-   uint32_t                ext_ch_add_value,
-   uint16_t                usi,
-   uint8_t                 *p_manuf_data)
+int pnet_diag_update (
+   pnet_t * net,
+   uint32_t arep,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
+   uint16_t ch,
+   uint16_t ch_properties,
+   uint16_t ch_error_type,
+   uint32_t ext_ch_add_value,
+   uint16_t usi,
+   uint8_t * p_manuf_data)
 {
-   int                     ret = -1;
-   pf_ar_t                 *p_ar = NULL;
+   int ret = -1;
+   pf_ar_t * p_ar = NULL;
 
-   if (pf_ar_find_by_arep(net, arep, &p_ar) == 0)
+   if (pf_ar_find_by_arep (net, arep, &p_ar) == 0)
    {
-      ret = pf_diag_update(net, p_ar, api, slot, subslot, ch, ch_properties, ch_error_type, ext_ch_add_value, usi, p_manuf_data);
+      ret = pf_diag_update (
+         net,
+         p_ar,
+         api,
+         slot,
+         subslot,
+         ch,
+         ch_properties,
+         ch_error_type,
+         ext_ch_add_value,
+         usi,
+         p_manuf_data);
    }
 
    return ret;
 }
 
-int pnet_diag_remove(
-   pnet_t                  *net,
-   uint32_t                arep,
-   uint32_t                api,
-   uint16_t                slot,
-   uint16_t                subslot,
-   uint16_t                ch,
-   uint16_t                ch_properties,
-   uint16_t                ch_error_type,
-   uint16_t                usi)
+int pnet_diag_remove (
+   pnet_t * net,
+   uint32_t arep,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
+   uint16_t ch,
+   uint16_t ch_properties,
+   uint16_t ch_error_type,
+   uint16_t usi)
 {
-   int                     ret = -1;
-   pf_ar_t                 *p_ar = NULL;
+   int ret = -1;
+   pf_ar_t * p_ar = NULL;
 
-   if (pf_ar_find_by_arep(net, arep, &p_ar) == 0)
+   if (pf_ar_find_by_arep (net, arep, &p_ar) == 0)
    {
-      ret = pf_diag_remove(net, p_ar, api, slot, subslot, ch, ch_properties, ch_error_type, usi);
+      ret = pf_diag_remove (
+         net,
+         p_ar,
+         api,
+         slot,
+         subslot,
+         ch,
+         ch_properties,
+         ch_error_type,
+         usi);
    }
 
    return ret;

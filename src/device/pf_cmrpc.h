@@ -17,8 +17,7 @@
 #define PF_CMRPC_H
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 /* ================================================
@@ -32,15 +31,13 @@ extern "C"
  *
  * @param net              InOut: The p-net stack instance
  */
-void pf_cmrpc_init(
-   pnet_t                  *net);
+void pf_cmrpc_init (pnet_t * net);
 
 /**
  * Cleanup the CMRPC component.
  * @param net              InOut: The p-net stack instance
  */
-void pf_cmrpc_exit(
-   pnet_t                  *net);
+void pf_cmrpc_exit (pnet_t * net);
 
 /**
  * Handle periodic RPC tasks.
@@ -48,8 +45,7 @@ void pf_cmrpc_exit(
  * Check for DCE RPC confirmations.
  * @param net              InOut: The p-net stack instance
  */
-void pf_cmrpc_periodic(
-   pnet_t                  *net);
+void pf_cmrpc_periodic (pnet_t * net);
 
 /**
  * Find an AR by its AREP.
@@ -59,10 +55,7 @@ void pf_cmrpc_periodic(
  * @return  0              if AR is found and valid.
  *         -1              if AREP is invalid.
  */
-int pf_ar_find_by_arep(
-   pnet_t                  *net,
-   uint32_t                arep,
-   pf_ar_t                 **pp_ar);
+int pf_ar_find_by_arep (pnet_t * net, uint32_t arep, pf_ar_t ** pp_ar);
 
 /**
  * Return pointer to specific AR.
@@ -70,9 +63,7 @@ int pf_ar_find_by_arep(
  * @param ix               In:   The AR array index.
  * @return                 The AR instance.
  */
-pf_ar_t *pf_ar_find_by_index(
-   pnet_t                  *net,
-   uint16_t                ix);
+pf_ar_t * pf_ar_find_by_index (pnet_t * net, uint16_t ix);
 
 /**
  * Insert detailed error information into the result structure (of a session).
@@ -82,12 +73,12 @@ pf_ar_t *pf_ar_find_by_index(
  * @param code_1           In:   The error_code_1.
  * @param code_2           In:   The error_code_2.
  */
-void pf_set_error(
-   pnet_result_t           *p_stat,
-   uint8_t                 code,
-   uint8_t                 decode,
-   uint8_t                 code_1,
-   uint8_t                 code_2);
+void pf_set_error (
+   pnet_result_t * p_stat,
+   uint8_t code,
+   uint8_t decode,
+   uint8_t code_1,
+   uint8_t code_2);
 
 /**
  * Handle CMDEV events.
@@ -97,14 +88,15 @@ void pf_set_error(
  *
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:    The AR instance.
- * @param event            In:    The new CMDEV state. Use PNET_EVENT_..., not PF_CMDEV_STATE_...
+ * @param event            In:    The new CMDEV state. Use PNET_EVENT_..., not
+ * PF_CMDEV_STATE_...
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_cmrpc_cmdev_state_ind(
-   pnet_t                  *net,
-   pf_ar_t                 *p_ar,
-   pnet_event_values_t     event);
+int pf_cmrpc_cmdev_state_ind (
+   pnet_t * net,
+   pf_ar_t * p_ar,
+   pnet_event_values_t event);
 
 /**
  * Send a DCE RPC request to the controller.
@@ -117,9 +109,7 @@ int pf_cmrpc_cmdev_state_ind(
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_cmrpc_rm_ccontrol_req(
-   pnet_t                  *net,
-   pf_ar_t                 *p_ar);
+int pf_cmrpc_rm_ccontrol_req (pnet_t * net, pf_ar_t * p_ar);
 
 /**
  * Show AR and session information.
@@ -129,10 +119,7 @@ int pf_cmrpc_rm_ccontrol_req(
  * @param net              InOut: The p-net stack instance
  * @param level            In: Level of detail.
  */
-void pf_cmrpc_show(
-   pnet_t                  *net,
-   unsigned                level);
-
+void pf_cmrpc_show (pnet_t * net, unsigned level);
 
 /************************* Utilities ******************************************/
 
@@ -141,8 +128,8 @@ void pf_cmrpc_show(
  *
  * For example:
  *
- *    uint8_t mybuffer[18] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 0, 1, 2, 3, 4, 5};
- *    pf_show_memory(mybuffer, 18);
+ *    uint8_t mybuffer[18] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
+ * 'K', 'L', 0, 1, 2, 3, 4, 5}; pf_memory_contents_show(mybuffer, 18);
  *
  * will be displayed as:
  *
@@ -150,11 +137,10 @@ void pf_cmrpc_show(
  *    04 05                                           |..|
  *
  * @param data            In:   Buffer contents to be displayed
- * @param size            In:   Buffer size (or smaller, to only display the beginning)
+ * @param size            In:   Buffer size (or smaller, to only display the
+ * beginning)
  */
-void pf_show_memory(
-   const uint8_t           *data,
-   int                     size);
+void pf_memory_contents_show (const uint8_t * data, int size);
 
 #ifdef __cplusplus
 }

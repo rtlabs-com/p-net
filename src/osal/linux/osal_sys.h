@@ -17,8 +17,7 @@
 #define OSAL_SYS_H
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 #include <pthread.h>
@@ -68,7 +67,7 @@ typedef struct os_timer
    os_thread_t * thread;
    pid_t thread_id;
    bool exit;
-   void(*fn) (struct os_timer *, void * arg);
+   void (*fn) (struct os_timer *, void * arg);
    void * arg;
    uint32_t us;
    bool oneshot;
@@ -89,16 +88,14 @@ typedef struct os_buf
  * @return  0  If the frame was NOT handled by this function.
  *          1  If the frame was handled and the buffer freed.
  */
-typedef int (os_eth_callback_t)(
-   void                    *arg,
-   os_buf_t                *p_buf);
+typedef int (os_eth_callback_t) (void * arg, os_buf_t * p_buf);
 
 typedef struct os_eth_handle
 {
-   os_eth_callback_t       *callback;
-   void                    *arg;
-   int                     socket;
-   os_thread_t             *thread;
+   os_eth_callback_t * callback;
+   void * arg;
+   int socket;
+   os_thread_t * thread;
 } os_eth_handle_t;
 
 #ifdef __cplusplus

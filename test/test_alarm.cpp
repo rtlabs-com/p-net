@@ -20,9 +20,9 @@
 
 #include <gtest/gtest.h>
 
-
-class AlarmTest : public PnetIntegrationTest {};
-
+class AlarmTest : public PnetIntegrationTest
+{
+};
 
 TEST_F (AlarmTest, AlarmRunTest)
 {

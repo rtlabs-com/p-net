@@ -20,9 +20,9 @@
 
 #include <gtest/gtest.h>
 
-
-class CmioTest : public PnetIntegrationTest {};
-
+class CmioTest : public PnetIntegrationTest
+{
+};
 
 TEST_F (CmioTest, CmioRunTest)
 {

@@ -22,8 +22,7 @@
 #define PF_INCLUDES_H
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 #include "options.h"

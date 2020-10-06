@@ -33,14 +33,19 @@
 
 #include <gtest/gtest.h>
 
+class CmrpcUnitTest : public PnetUnitTest
+{
+};
+class CmrpcTest : public PnetIntegrationTest
+{
+};
 
-class CmrpcUnitTest : public PnetUnitTest {};
-class CmrpcTest : public PnetIntegrationTest {};
-
+// clang-format off
 
 /**
  * Connect request data
- * This is UDP payload, so the first 42 bytes (in dec) have been removed from the Wireshark output.
+ * This is UDP payload, so the first 42 bytes (in dec) have been removed from
+ * the Wireshark output.
  */
 static uint8_t connect_req[] =
 {
@@ -335,165 +340,182 @@ static uint8_t data_packet[] =
  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf3, 0x35, 0x00
 };
 
+// clang-format on
 
 TEST_F (CmrpcTest, CmrpcConnectReleaseTest)
 {
-   int                     ret;
-   uint32_t                ix;
-   EXPECT_EQ(mock_os_data.udp_sendto_len, 0);
+   int ret;
+   uint32_t ix;
+   EXPECT_EQ (mock_os_data.udp_sendto_len, 0);
 
-   TEST_TRACE("\nGenerating mock connection request\n");
-   mock_set_os_udp_recvfrom_buffer(connect_req, sizeof(connect_req));
-   run_stack(TEST_UDP_DELAY);
-   EXPECT_EQ(appdata.call_counters.state_calls, 1);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_STARTUP);
-   EXPECT_EQ(appdata.call_counters.connect_calls, 1);
-   EXPECT_GT(mock_os_data.eth_send_count, 0);
-   EXPECT_EQ(mock_os_data.udp_sendto_count, 1);
-   EXPECT_EQ(mock_os_data.udp_sendto_len, 178);
+   TEST_TRACE ("\nGenerating mock connection request\n");
+   mock_set_os_udp_recvfrom_buffer (connect_req, sizeof (connect_req));
+   run_stack (TEST_UDP_DELAY);
+   EXPECT_EQ (appdata.call_counters.state_calls, 1);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_STARTUP);
+   EXPECT_EQ (appdata.call_counters.connect_calls, 1);
+   EXPECT_GT (mock_os_data.eth_send_count, 0);
+   EXPECT_EQ (mock_os_data.udp_sendto_count, 1);
+   EXPECT_EQ (mock_os_data.udp_sendto_len, 178);
 
-   TEST_TRACE("\nGenerating mock write request\n");
-   mock_set_os_udp_recvfrom_buffer(write_req, sizeof(write_req));
-   run_stack(TEST_UDP_DELAY);
-   EXPECT_EQ(appdata.call_counters.state_calls, 1);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_STARTUP);
-   EXPECT_EQ(appdata.call_counters.write_calls, 1);
-   EXPECT_EQ(appdata.call_counters.connect_calls, 1);
-   EXPECT_EQ(mock_os_data.udp_sendto_count, 2);
-   EXPECT_EQ(mock_os_data.udp_sendto_len, 164);
+   TEST_TRACE ("\nGenerating mock write request\n");
+   mock_set_os_udp_recvfrom_buffer (write_req, sizeof (write_req));
+   run_stack (TEST_UDP_DELAY);
+   EXPECT_EQ (appdata.call_counters.state_calls, 1);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_STARTUP);
+   EXPECT_EQ (appdata.call_counters.write_calls, 1);
+   EXPECT_EQ (appdata.call_counters.connect_calls, 1);
+   EXPECT_EQ (mock_os_data.udp_sendto_count, 2);
+   EXPECT_EQ (mock_os_data.udp_sendto_len, 164);
 
-   TEST_TRACE("\nGenerating mock parameter end request\n");
-   mock_set_os_udp_recvfrom_buffer(prm_end_req, sizeof(prm_end_req));
-   run_stack(TEST_UDP_DELAY);
-   EXPECT_EQ(appdata.call_counters.state_calls, 2);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_PRMEND);
-   EXPECT_EQ(appdata.call_counters.connect_calls, 1);
-   EXPECT_EQ(appdata.call_counters.write_calls, 1);
-   EXPECT_EQ(mock_os_data.udp_sendto_count, 3);
-   EXPECT_EQ(mock_os_data.udp_sendto_len, 132);
+   TEST_TRACE ("\nGenerating mock parameter end request\n");
+   mock_set_os_udp_recvfrom_buffer (prm_end_req, sizeof (prm_end_req));
+   run_stack (TEST_UDP_DELAY);
+   EXPECT_EQ (appdata.call_counters.state_calls, 2);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_PRMEND);
+   EXPECT_EQ (appdata.call_counters.connect_calls, 1);
+   EXPECT_EQ (appdata.call_counters.write_calls, 1);
+   EXPECT_EQ (mock_os_data.udp_sendto_count, 3);
+   EXPECT_EQ (mock_os_data.udp_sendto_len, 132);
 
-   TEST_TRACE("\nSimulate application calling APPL_RDY\n");
-   ret = pnet_application_ready(net, appdata.main_arep);
-   EXPECT_EQ(ret, 0);
-   EXPECT_EQ(appdata.call_counters.state_calls, 3);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_APPLRDY);
-   EXPECT_EQ(mock_os_data.udp_sendto_count, 4);
-   EXPECT_EQ(mock_os_data.udp_sendto_len, 132);
+   TEST_TRACE ("\nSimulate application calling APPL_RDY\n");
+   ret = pnet_application_ready (net, appdata.main_arep);
+   EXPECT_EQ (ret, 0);
+   EXPECT_EQ (appdata.call_counters.state_calls, 3);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_APPLRDY);
+   EXPECT_EQ (mock_os_data.udp_sendto_count, 4);
+   EXPECT_EQ (mock_os_data.udp_sendto_len, 132);
 
-   TEST_TRACE("\nGenerating mock application ready response\n");
-   mock_set_os_udp_recvfrom_buffer(appl_rdy_rsp, sizeof(appl_rdy_rsp));
-   run_stack(TEST_UDP_DELAY);
-   EXPECT_EQ(appdata.call_counters.state_calls, 3);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_APPLRDY);
-   EXPECT_EQ(mock_os_data.udp_sendto_count, 4);
+   TEST_TRACE ("\nGenerating mock application ready response\n");
+   mock_set_os_udp_recvfrom_buffer (appl_rdy_rsp, sizeof (appl_rdy_rsp));
+   run_stack (TEST_UDP_DELAY);
+   EXPECT_EQ (appdata.call_counters.state_calls, 3);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_APPLRDY);
+   EXPECT_EQ (mock_os_data.udp_sendto_count, 4);
 
-   TEST_TRACE("\nGenerating I&M0 request\n");
-   mock_set_os_udp_recvfrom_buffer(read_im0_req, sizeof(read_im0_req));
-   run_stack(TEST_UDP_DELAY);
-   EXPECT_EQ(appdata.call_counters.state_calls, 3);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_APPLRDY);
-   EXPECT_EQ(mock_os_data.udp_sendto_count, 5);
-   EXPECT_EQ(mock_os_data.udp_sendto_len, 224);
+   TEST_TRACE ("\nGenerating I&M0 request\n");
+   mock_set_os_udp_recvfrom_buffer (read_im0_req, sizeof (read_im0_req));
+   run_stack (TEST_UDP_DELAY);
+   EXPECT_EQ (appdata.call_counters.state_calls, 3);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_APPLRDY);
+   EXPECT_EQ (mock_os_data.udp_sendto_count, 5);
+   EXPECT_EQ (mock_os_data.udp_sendto_len, 224);
 
-   TEST_TRACE("\nGenerating cyclic data\n");
+   TEST_TRACE ("\nGenerating cyclic data\n");
    for (ix = 0; ix < 100; ix++)
    {
-      send_data(data_packet, sizeof(data_packet));
+      send_data (data_packet, sizeof (data_packet));
       run_stack (TEST_DATA_DELAY);
    }
-   EXPECT_EQ(appdata.call_counters.state_calls, 4);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_DATA);
-   EXPECT_EQ(mock_os_data.udp_sendto_count, 5);
+   EXPECT_EQ (appdata.call_counters.state_calls, 4);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_DATA);
+   EXPECT_EQ (mock_os_data.udp_sendto_count, 5);
 
-   TEST_TRACE("nGenerating mock release request\n");
-   mock_set_os_udp_recvfrom_buffer(release_req, sizeof(release_req));
-   run_stack(TEST_UDP_DELAY);
-   EXPECT_EQ(appdata.call_counters.release_calls, 1);
-   EXPECT_EQ(appdata.call_counters.state_calls, 5);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_ABORT);
-   EXPECT_EQ(mock_os_data.udp_sendto_count, 6);
-   EXPECT_EQ(mock_os_data.udp_sendto_len, 132);
+   TEST_TRACE ("nGenerating mock release request\n");
+   mock_set_os_udp_recvfrom_buffer (release_req, sizeof (release_req));
+   run_stack (TEST_UDP_DELAY);
+   EXPECT_EQ (appdata.call_counters.release_calls, 1);
+   EXPECT_EQ (appdata.call_counters.state_calls, 5);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_ABORT);
+   EXPECT_EQ (mock_os_data.udp_sendto_count, 6);
+   EXPECT_EQ (mock_os_data.udp_sendto_len, 132);
 }
 
-TEST_F(CmrpcTest, CmrpcConnectionTimeoutTest)
+TEST_F (CmrpcTest, CmrpcConnectionTimeoutTest)
 {
-   int                     ret;
-   bool                    new_flag = false;
-   uint8_t                 in_data[10];
-   uint16_t                in_len = sizeof(in_data);
-   uint8_t                 out_data[] = {
-         0x33,       /* Slot 1, subslot 1 Data */
+   int ret;
+   bool new_flag = false;
+   uint8_t in_data[10];
+   uint16_t in_len = sizeof (in_data);
+   uint8_t out_data[] = {
+      0x33, /* Slot 1, subslot 1 Data */
    };
-   uint8_t                 iops = PNET_IOXS_BAD;
-   uint32_t                ix;
+   uint8_t iops = PNET_IOXS_BAD;
+   uint32_t ix;
 
-   TEST_TRACE("\nGenerating mock connection request\n");
-   mock_set_os_udp_recvfrom_buffer(connect_req, sizeof(connect_req));
-   run_stack(TEST_UDP_DELAY);
-   EXPECT_EQ(appdata.call_counters.state_calls, 1);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_STARTUP);
-   EXPECT_EQ(appdata.call_counters.connect_calls, 1);
-   EXPECT_GT(mock_os_data.eth_send_count, 0);
+   TEST_TRACE ("\nGenerating mock connection request\n");
+   mock_set_os_udp_recvfrom_buffer (connect_req, sizeof (connect_req));
+   run_stack (TEST_UDP_DELAY);
+   EXPECT_EQ (appdata.call_counters.state_calls, 1);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_STARTUP);
+   EXPECT_EQ (appdata.call_counters.connect_calls, 1);
+   EXPECT_GT (mock_os_data.eth_send_count, 0);
 
-   TEST_TRACE("\nGenerating mock write request\n");
-   mock_set_os_udp_recvfrom_buffer(write_req, sizeof(write_req));
-   run_stack(TEST_UDP_DELAY);
-   EXPECT_EQ(appdata.call_counters.state_calls, 1);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_STARTUP);
-   EXPECT_EQ(appdata.call_counters.connect_calls, 1);
+   TEST_TRACE ("\nGenerating mock write request\n");
+   mock_set_os_udp_recvfrom_buffer (write_req, sizeof (write_req));
+   run_stack (TEST_UDP_DELAY);
+   EXPECT_EQ (appdata.call_counters.state_calls, 1);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_STARTUP);
+   EXPECT_EQ (appdata.call_counters.connect_calls, 1);
 
-   TEST_TRACE("\nGenerating mock parameter end request\n");
-   mock_set_os_udp_recvfrom_buffer(prm_end_req, sizeof(prm_end_req));
-   run_stack(TEST_UDP_DELAY);
-   EXPECT_EQ(appdata.call_counters.state_calls, 2);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_PRMEND);
-   EXPECT_EQ(appdata.call_counters.connect_calls, 1);
+   TEST_TRACE ("\nGenerating mock parameter end request\n");
+   mock_set_os_udp_recvfrom_buffer (prm_end_req, sizeof (prm_end_req));
+   run_stack (TEST_UDP_DELAY);
+   EXPECT_EQ (appdata.call_counters.state_calls, 2);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_PRMEND);
+   EXPECT_EQ (appdata.call_counters.connect_calls, 1);
 
-   TEST_TRACE("\nSimulate application calling APPL_RDY\n");
-   ret = pnet_application_ready(net, appdata.main_arep);
-   EXPECT_EQ(ret, 0);
-   EXPECT_EQ(appdata.call_counters.state_calls, 3);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_APPLRDY);
+   TEST_TRACE ("\nSimulate application calling APPL_RDY\n");
+   ret = pnet_application_ready (net, appdata.main_arep);
+   EXPECT_EQ (ret, 0);
+   EXPECT_EQ (appdata.call_counters.state_calls, 3);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_APPLRDY);
 
-   TEST_TRACE("\nGenerating mock application ready response\n");
-   mock_set_os_udp_recvfrom_buffer(appl_rdy_rsp, sizeof(appl_rdy_rsp));
-   run_stack(TEST_UDP_DELAY);
-   EXPECT_EQ(appdata.call_counters.state_calls, 3);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_APPLRDY);
+   TEST_TRACE ("\nGenerating mock application ready response\n");
+   mock_set_os_udp_recvfrom_buffer (appl_rdy_rsp, sizeof (appl_rdy_rsp));
+   run_stack (TEST_UDP_DELAY);
+   EXPECT_EQ (appdata.call_counters.state_calls, 3);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_APPLRDY);
 
-   TEST_TRACE("\nGenerate a couple of data packets to move pf_cpm to RUN state\n");
+   TEST_TRACE ("\nGenerate a couple of data packets to move pf_cpm to RUN "
+               "state\n");
    for (ix = 0; ix < 100; ix++)
    {
-      send_data(data_packet, sizeof(data_packet));
+      send_data (data_packet, sizeof (data_packet));
       run_stack (TEST_DATA_DELAY);
    }
-   EXPECT_EQ(appdata.call_counters.state_calls, 4);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_DATA);
+   EXPECT_EQ (appdata.call_counters.state_calls, 4);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_DATA);
 
-   TEST_TRACE("\nRead data just to see that it works\n");
-   in_len = sizeof(in_data);
-   ret = pnet_output_get_data_and_iops(net, TEST_API_IDENT, 1, 1, &new_flag, in_data, &in_len, &iops);
-   EXPECT_EQ(ret, 0);
-   EXPECT_EQ(new_flag, true);
-   EXPECT_EQ(in_len, 1);
-   EXPECT_EQ(iops, PNET_IOXS_GOOD);
+   TEST_TRACE ("\nRead data just to see that it works\n");
+   in_len = sizeof (in_data);
+   ret = pnet_output_get_data_and_iops (
+      net,
+      TEST_API_IDENT,
+      1,
+      1,
+      &new_flag,
+      in_data,
+      &in_len,
+      &iops);
+   EXPECT_EQ (ret, 0);
+   EXPECT_EQ (new_flag, true);
+   EXPECT_EQ (in_len, 1);
+   EXPECT_EQ (iops, PNET_IOXS_GOOD);
 
-   TEST_TRACE("\nGenerate new data to move PPM to RUN state\n");
-   ret = pnet_input_set_data_and_iops(net, TEST_API_IDENT, 1, 1, out_data, sizeof(out_data), PNET_IOXS_GOOD);
-   EXPECT_EQ(ret, 0);
+   TEST_TRACE ("\nGenerate new data to move PPM to RUN state\n");
+   ret = pnet_input_set_data_and_iops (
+      net,
+      TEST_API_IDENT,
+      1,
+      1,
+      out_data,
+      sizeof (out_data),
+      PNET_IOXS_GOOD);
+   EXPECT_EQ (ret, 0);
 
-   TEST_TRACE("\nWait for timeout in CPM\n");
-   run_stack(TEST_TIMEOUT_DELAY);
-   EXPECT_EQ(appdata.call_counters.release_calls, 0);
-   EXPECT_EQ(appdata.call_counters.state_calls, 5);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_ABORT);
+   TEST_TRACE ("\nWait for timeout in CPM\n");
+   run_stack (TEST_TIMEOUT_DELAY);
+   EXPECT_EQ (appdata.call_counters.release_calls, 0);
+   EXPECT_EQ (appdata.call_counters.state_calls, 5);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_ABORT);
 
-   TEST_TRACE("\nGenerating mock release request\n");
-   mock_set_os_udp_recvfrom_buffer(release_req, sizeof(release_req));
-   run_stack(TEST_UDP_DELAY);
-   EXPECT_EQ(appdata.call_counters.release_calls, 0);
-   EXPECT_EQ(appdata.call_counters.state_calls, 5);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_ABORT);
+   TEST_TRACE ("\nGenerating mock release request\n");
+   mock_set_os_udp_recvfrom_buffer (release_req, sizeof (release_req));
+   run_stack (TEST_UDP_DELAY);
+   EXPECT_EQ (appdata.call_counters.release_calls, 0);
+   EXPECT_EQ (appdata.call_counters.state_calls, 5);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_ABORT);
 }
 
 /**
@@ -501,143 +523,160 @@ TEST_F(CmrpcTest, CmrpcConnectionTimeoutTest)
  */
 TEST_F (CmrpcTest, CmrpcSiemensConnectTest)
 {
-   EXPECT_EQ(mock_os_data.udp_sendto_len, 0);
+   EXPECT_EQ (mock_os_data.udp_sendto_len, 0);
 
-   TEST_TRACE("\nGenerating mock connection request\n");
-   mock_set_os_udp_recvfrom_buffer(connect_req_siemens, sizeof(connect_req_siemens));
-   run_stack(TEST_UDP_DELAY);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_STARTUP);
-   EXPECT_EQ(appdata.call_counters.state_calls, 1);
-   EXPECT_EQ(appdata.call_counters.connect_calls, 1);
-   EXPECT_EQ(appdata.call_counters.write_calls, 0);
-   EXPECT_EQ(appdata.call_counters.read_calls, 0);
-   EXPECT_EQ(appdata.call_counters.ccontrol_calls, 0);
-   EXPECT_EQ(appdata.call_counters.dcontrol_calls, 0);
-   EXPECT_GT(mock_os_data.eth_send_count, 0);
-   EXPECT_EQ(mock_os_data.udp_sendto_count, 1);
-   EXPECT_EQ(mock_os_data.udp_sendto_len, 178);  // Actual value. OK in Wireshark (232 bytes)
+   TEST_TRACE ("\nGenerating mock connection request\n");
+   mock_set_os_udp_recvfrom_buffer (
+      connect_req_siemens,
+      sizeof (connect_req_siemens));
+   run_stack (TEST_UDP_DELAY);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_STARTUP);
+   EXPECT_EQ (appdata.call_counters.state_calls, 1);
+   EXPECT_EQ (appdata.call_counters.connect_calls, 1);
+   EXPECT_EQ (appdata.call_counters.write_calls, 0);
+   EXPECT_EQ (appdata.call_counters.read_calls, 0);
+   EXPECT_EQ (appdata.call_counters.ccontrol_calls, 0);
+   EXPECT_EQ (appdata.call_counters.dcontrol_calls, 0);
+   EXPECT_GT (mock_os_data.eth_send_count, 0);
+   EXPECT_EQ (mock_os_data.udp_sendto_count, 1);
+   EXPECT_EQ (mock_os_data.udp_sendto_len, 178); // Actual value. OK in
+                                                 // Wireshark (232 bytes)
 
-   TEST_TRACE("\nGenerating mock write request\n");
-   mock_set_os_udp_recvfrom_buffer(write_req_siemens, sizeof(write_req_siemens));
-   run_stack(TEST_UDP_DELAY);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_STARTUP);
-   EXPECT_EQ(appdata.call_counters.state_calls, 1);
-   EXPECT_EQ(appdata.call_counters.connect_calls, 1);
-   EXPECT_EQ(appdata.call_counters.write_calls, 2);
-   EXPECT_EQ(appdata.call_counters.read_calls, 0);
-   EXPECT_EQ(appdata.call_counters.ccontrol_calls, 0);
-   EXPECT_EQ(appdata.call_counters.dcontrol_calls, 0);
-   EXPECT_EQ(mock_os_data.udp_sendto_count, 2);
-   EXPECT_EQ(mock_os_data.udp_sendto_len, 356);  // Actual value. OK in Wireshark (398 bytes)
+   TEST_TRACE ("\nGenerating mock write request\n");
+   mock_set_os_udp_recvfrom_buffer (
+      write_req_siemens,
+      sizeof (write_req_siemens));
+   run_stack (TEST_UDP_DELAY);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_STARTUP);
+   EXPECT_EQ (appdata.call_counters.state_calls, 1);
+   EXPECT_EQ (appdata.call_counters.connect_calls, 1);
+   EXPECT_EQ (appdata.call_counters.write_calls, 2);
+   EXPECT_EQ (appdata.call_counters.read_calls, 0);
+   EXPECT_EQ (appdata.call_counters.ccontrol_calls, 0);
+   EXPECT_EQ (appdata.call_counters.dcontrol_calls, 0);
+   EXPECT_EQ (mock_os_data.udp_sendto_count, 2);
+   EXPECT_EQ (mock_os_data.udp_sendto_len, 356); // Actual value. OK in
+                                                 // Wireshark (398 bytes)
 
-   TEST_TRACE("\nGenerating mock parameter end request\n");
-   mock_set_os_udp_recvfrom_buffer(prm_end_req_siemens, sizeof(prm_end_req_siemens));
-   run_stack(TEST_UDP_DELAY);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_PRMEND);
-   EXPECT_EQ(appdata.call_counters.state_calls, 2);
-   EXPECT_EQ(appdata.call_counters.connect_calls, 1);
-   EXPECT_EQ(appdata.call_counters.write_calls, 2);
-   EXPECT_EQ(appdata.call_counters.read_calls, 0);
-   EXPECT_EQ(appdata.call_counters.ccontrol_calls, 0);
-   EXPECT_EQ(appdata.call_counters.dcontrol_calls, 1);
-   EXPECT_EQ(mock_os_data.udp_sendto_count, 3);
-   EXPECT_EQ(mock_os_data.udp_sendto_len, 132);  // 20 bytes longer than sent from faulty application
+   TEST_TRACE ("\nGenerating mock parameter end request\n");
+   mock_set_os_udp_recvfrom_buffer (
+      prm_end_req_siemens,
+      sizeof (prm_end_req_siemens));
+   run_stack (TEST_UDP_DELAY);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_PRMEND);
+   EXPECT_EQ (appdata.call_counters.state_calls, 2);
+   EXPECT_EQ (appdata.call_counters.connect_calls, 1);
+   EXPECT_EQ (appdata.call_counters.write_calls, 2);
+   EXPECT_EQ (appdata.call_counters.read_calls, 0);
+   EXPECT_EQ (appdata.call_counters.ccontrol_calls, 0);
+   EXPECT_EQ (appdata.call_counters.dcontrol_calls, 1);
+   EXPECT_EQ (mock_os_data.udp_sendto_count, 3);
+   EXPECT_EQ (mock_os_data.udp_sendto_len, 132); // 20 bytes longer than sent
+                                                 // from faulty application
 }
 
 TEST_F (CmrpcTest, CmrpcConnectFragmentTest)
 {
-   int                     ret;
-   uint32_t                ix;
+   int ret;
+   uint32_t ix;
 
-   TEST_TRACE("\nGenerating mock connection request, fragment 1\n");
-   mock_set_os_udp_recvfrom_buffer(connect_frag_1_req, sizeof(connect_frag_1_req));
-   run_stack(TEST_UDP_DELAY);
-   EXPECT_EQ(appdata.call_counters.state_calls, 0);
-   EXPECT_EQ(appdata.call_counters.connect_calls, 0);
-   EXPECT_EQ(mock_os_data.eth_send_count, 0);
+   TEST_TRACE ("\nGenerating mock connection request, fragment 1\n");
+   mock_set_os_udp_recvfrom_buffer (
+      connect_frag_1_req,
+      sizeof (connect_frag_1_req));
+   run_stack (TEST_UDP_DELAY);
+   EXPECT_EQ (appdata.call_counters.state_calls, 0);
+   EXPECT_EQ (appdata.call_counters.connect_calls, 0);
+   EXPECT_EQ (mock_os_data.eth_send_count, 0);
 
-   TEST_TRACE("\nGenerating mock connection request, fragment 2\n");
-   mock_set_os_udp_recvfrom_buffer(connect_frag_2_req, sizeof(connect_frag_2_req));
-   run_stack(TEST_UDP_DELAY);
-   EXPECT_EQ(appdata.call_counters.state_calls, 1);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_STARTUP);
-   EXPECT_EQ(appdata.call_counters.connect_calls, 1);
-   EXPECT_GT(mock_os_data.eth_send_count, 0);
+   TEST_TRACE ("\nGenerating mock connection request, fragment 2\n");
+   mock_set_os_udp_recvfrom_buffer (
+      connect_frag_2_req,
+      sizeof (connect_frag_2_req));
+   run_stack (TEST_UDP_DELAY);
+   EXPECT_EQ (appdata.call_counters.state_calls, 1);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_STARTUP);
+   EXPECT_EQ (appdata.call_counters.connect_calls, 1);
+   EXPECT_GT (mock_os_data.eth_send_count, 0);
 
-   TEST_TRACE("\nGenerating mock connection write request\n");
-   mock_set_os_udp_recvfrom_buffer(write_req, sizeof(write_req));
-   run_stack(TEST_UDP_DELAY);
-   EXPECT_EQ(appdata.call_counters.state_calls, 1);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_STARTUP);
-   EXPECT_EQ(appdata.call_counters.write_calls, 1);
-   EXPECT_EQ(appdata.call_counters.connect_calls, 1);
+   TEST_TRACE ("\nGenerating mock connection write request\n");
+   mock_set_os_udp_recvfrom_buffer (write_req, sizeof (write_req));
+   run_stack (TEST_UDP_DELAY);
+   EXPECT_EQ (appdata.call_counters.state_calls, 1);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_STARTUP);
+   EXPECT_EQ (appdata.call_counters.write_calls, 1);
+   EXPECT_EQ (appdata.call_counters.connect_calls, 1);
 
-   TEST_TRACE("\nGenerating mock parameter end request\n");
-   mock_set_os_udp_recvfrom_buffer(prm_end_req, sizeof(prm_end_req));
-   run_stack(TEST_UDP_DELAY);
-   EXPECT_EQ(appdata.call_counters.state_calls, 2);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_PRMEND);
-   EXPECT_EQ(appdata.call_counters.connect_calls, 1);
+   TEST_TRACE ("\nGenerating mock parameter end request\n");
+   mock_set_os_udp_recvfrom_buffer (prm_end_req, sizeof (prm_end_req));
+   run_stack (TEST_UDP_DELAY);
+   EXPECT_EQ (appdata.call_counters.state_calls, 2);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_PRMEND);
+   EXPECT_EQ (appdata.call_counters.connect_calls, 1);
 
-   TEST_TRACE("\nSimulate application calling APPL_RDY\n");
-   ret = pnet_application_ready(net, appdata.main_arep);
-   EXPECT_EQ(ret, 0);
-   EXPECT_EQ(appdata.call_counters.state_calls, 3);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_APPLRDY);
+   TEST_TRACE ("\nSimulate application calling APPL_RDY\n");
+   ret = pnet_application_ready (net, appdata.main_arep);
+   EXPECT_EQ (ret, 0);
+   EXPECT_EQ (appdata.call_counters.state_calls, 3);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_APPLRDY);
 
-   TEST_TRACE("\nGenerating mock application ready response\n");
-   mock_set_os_udp_recvfrom_buffer(appl_rdy_rsp, sizeof(appl_rdy_rsp));
-   run_stack(TEST_UDP_DELAY);
-   EXPECT_EQ(appdata.call_counters.state_calls, 3);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_APPLRDY);
+   TEST_TRACE ("\nGenerating mock application ready response\n");
+   mock_set_os_udp_recvfrom_buffer (appl_rdy_rsp, sizeof (appl_rdy_rsp));
+   run_stack (TEST_UDP_DELAY);
+   EXPECT_EQ (appdata.call_counters.state_calls, 3);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_APPLRDY);
 
-   TEST_TRACE("\nRead I&M0\n");
-   mock_set_os_udp_recvfrom_buffer(read_im0_req, sizeof(read_im0_req));
-   run_stack(TEST_UDP_DELAY);
-   EXPECT_EQ(appdata.call_counters.state_calls, 3);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_APPLRDY);
+   TEST_TRACE ("\nRead I&M0\n");
+   mock_set_os_udp_recvfrom_buffer (read_im0_req, sizeof (read_im0_req));
+   run_stack (TEST_UDP_DELAY);
+   EXPECT_EQ (appdata.call_counters.state_calls, 3);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_APPLRDY);
 
-   TEST_TRACE("\nSending data\n");
+   TEST_TRACE ("\nSending data\n");
    for (ix = 0; ix < 100; ix++)
    {
-      send_data(data_packet, sizeof(data_packet));
+      send_data (data_packet, sizeof (data_packet));
       run_stack (TEST_DATA_DELAY);
    }
-   EXPECT_EQ(appdata.call_counters.state_calls, 4);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_DATA);
+   EXPECT_EQ (appdata.call_counters.state_calls, 4);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_DATA);
 
-   TEST_TRACE("Sending mock release request\n");
-   mock_set_os_udp_recvfrom_buffer(release_req, sizeof(release_req));
-   run_stack(TEST_UDP_DELAY);
-   EXPECT_EQ(appdata.call_counters.release_calls, 1);
-   EXPECT_EQ(appdata.call_counters.state_calls, 5);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_ABORT);
+   TEST_TRACE ("Sending mock release request\n");
+   mock_set_os_udp_recvfrom_buffer (release_req, sizeof (release_req));
+   run_stack (TEST_UDP_DELAY);
+   EXPECT_EQ (appdata.call_counters.release_calls, 1);
+   EXPECT_EQ (appdata.call_counters.state_calls, 5);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_ABORT);
 }
 
 TEST_F (CmrpcTest, CmrpcConnectReleaseIOSAR_DA)
 {
-   TEST_TRACE("\nGenerating mock connection request IOSAR_DA\n");
-   mock_set_os_udp_recvfrom_buffer(connect_req_iosar_da, sizeof(connect_req_iosar_da));
-   run_stack(TEST_UDP_DELAY);
-   EXPECT_EQ(appdata.call_counters.state_calls, 1);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_STARTUP);
-   EXPECT_EQ(appdata.call_counters.connect_calls, 1);
-   EXPECT_EQ(mock_os_data.eth_send_count, 0);
+   TEST_TRACE ("\nGenerating mock connection request IOSAR_DA\n");
+   mock_set_os_udp_recvfrom_buffer (
+      connect_req_iosar_da,
+      sizeof (connect_req_iosar_da));
+   run_stack (TEST_UDP_DELAY);
+   EXPECT_EQ (appdata.call_counters.state_calls, 1);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_STARTUP);
+   EXPECT_EQ (appdata.call_counters.connect_calls, 1);
+   EXPECT_EQ (mock_os_data.eth_send_count, 1);
 
-   TEST_TRACE("\nGenerating mock release request IOSAR_DA\n");
-   mock_set_os_udp_recvfrom_buffer(release_req_iosar_da, sizeof(release_req_iosar_da));
-   run_stack(TEST_UDP_DELAY);
-   EXPECT_EQ(appdata.call_counters.state_calls, 2);
-   EXPECT_EQ(appdata.call_counters.release_calls, 0);
-   EXPECT_EQ(appdata.cmdev_state, PNET_EVENT_ABORT);
+   TEST_TRACE ("\nGenerating mock release request IOSAR_DA\n");
+   mock_set_os_udp_recvfrom_buffer (
+      release_req_iosar_da,
+      sizeof (release_req_iosar_da));
+   run_stack (TEST_UDP_DELAY);
+   EXPECT_EQ (appdata.call_counters.state_calls, 2);
+   EXPECT_EQ (appdata.call_counters.release_calls, 0);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_ABORT);
 }
 
 TEST_F (CmrpcUnitTest, CmrpcCheckGenerateUuid)
 {
-   uint32_t                timestamp;
-   uint32_t                session_number;
-   pnet_ethaddr_t          mac_address;
-   pf_uuid_t               uuid;
+   uint32_t timestamp;
+   uint32_t session_number;
+   pnet_ethaddr_t mac_address;
+   pf_uuid_t uuid;
 
    timestamp = 0xC1C2C3C4;
    session_number = 0xB1B2B3B4;
@@ -648,7 +687,7 @@ TEST_F (CmrpcUnitTest, CmrpcCheckGenerateUuid)
    mac_address.addr[4] = 0xA5;
    mac_address.addr[5] = 0xA6;
 
-   pf_generate_uuid(timestamp, session_number, mac_address, &uuid);
+   pf_generate_uuid (timestamp, session_number, mac_address, &uuid);
 
    EXPECT_EQ (uuid.data1, timestamp);
    EXPECT_EQ (uuid.data2, 0xB1B2);

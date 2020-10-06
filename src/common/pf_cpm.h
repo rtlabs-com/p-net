@@ -17,17 +17,14 @@
 #define PF_CPM_H
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 /**
  * Initialize the CPM component.
  * @param net              InOut: The p-net stack instance
  */
-void pf_cpm_init(
-   pnet_t                  *net);
-
+void pf_cpm_init (pnet_t * net);
 
 /**
  * Create a CPM for a specific IOCR instance.
@@ -42,10 +39,7 @@ void pf_cpm_init(
  * @return  0  if the CPM instance was created.
  *          -1 if an error occurred.
  */
-int pf_cpm_create(
-   pnet_t                  *net,
-   pf_ar_t                 *p_ar,
-   uint32_t                crep);
+int pf_cpm_create (pnet_t * net, pf_ar_t * p_ar, uint32_t crep);
 
 /**
  * Close a CPM instance.
@@ -60,10 +54,7 @@ int pf_cpm_create(
  * @return  0  if the CPM instance was closed.
  *          -1 if an error occurred.
  */
-int pf_cpm_close_req(
-   pnet_t                  *net,
-   pf_ar_t                 *p_ar,
-   uint32_t                crep);
+int pf_cpm_close_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep);
 
 /**
  * Activate a CPM instance and of the specified CR instance.
@@ -76,10 +67,7 @@ int pf_cpm_close_req(
  * @return  0  if the CPM instance could be activated.
  *          -1 if an error occurred.
  */
-int pf_cpm_activate_req(
-   pnet_t                  *net,
-   pf_ar_t                 *p_ar,
-   uint32_t                crep);
+int pf_cpm_activate_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep);
 
 /**
  * Retrieve the specified sub-slot IOCS sent from the controller.
@@ -94,13 +82,13 @@ int pf_cpm_activate_req(
  *                      Out:  The length of the received IOCS.
  * @return
  */
-int pf_cpm_get_iocs(
-   pnet_t                  *net,
-   uint32_t                api_id,
-   uint16_t                slot_nbr,
-   uint16_t                subslot_nbr,
-   uint8_t                 *p_iocs,
-   uint8_t                 *p_iocs_len);
+int pf_cpm_get_iocs (
+   pnet_t * net,
+   uint32_t api_id,
+   uint16_t slot_nbr,
+   uint16_t subslot_nbr,
+   uint8_t * p_iocs,
+   uint8_t * p_iocs_len);
 
 /**
  * Retrieve the specified sub-slot data and IOPS received from the controller.
@@ -113,7 +101,8 @@ int pf_cpm_get_iocs(
  * @param api_id        In:   The API identifier.
  * @param slot_nbr      In:   The slot number.
  * @param subslot_nbr   In:   The sub-slot number.
- * @param p_new_flag    Out:  true means new valid data (and IOPS) frame available since last call.
+ * @param p_new_flag    Out:  true means new valid data (and IOPS) frame
+ * available since last call.
  * @param p_data        Out:  Copy of the received data.
  * @param p_data_len    In:   Buffer size.
  *                      Out:  Length of received data.
@@ -123,16 +112,16 @@ int pf_cpm_get_iocs(
  * @return  0  if the data and IOPS could be retrieved.
  *          -1 if an error occurred.
  */
-int pf_cpm_get_data_and_iops(
-   pnet_t                  *net,
-   uint32_t                api_id,
-   uint16_t                slot_nbr,
-   uint16_t                subslot_nbr,
-   bool                    *p_new_flag,
-   uint8_t                 *p_data,
-   uint16_t                *p_data_len,
-   uint8_t                 *p_iops,
-   uint8_t                 *p_iops_len);
+int pf_cpm_get_data_and_iops (
+   pnet_t * net,
+   uint32_t api_id,
+   uint16_t slot_nbr,
+   uint16_t subslot_nbr,
+   bool * p_new_flag,
+   uint8_t * p_data,
+   uint16_t * p_data_len,
+   uint8_t * p_iops,
+   uint8_t * p_iops_len);
 
 /**
  * Handle new UDP layer frames.
@@ -145,9 +134,7 @@ int pf_cpm_get_data_and_iops(
  * @return  0     If the frame was NOT handled by this function.
  *          1     If the frame was handled and the buffer freed.
  */
-int pf_cpm_udp_c_data_ind(
-   uint16_t                frame_id,
-   os_buf_t                *p_buf);
+int pf_cpm_udp_c_data_ind (uint16_t frame_id, os_buf_t * p_buf);
 
 /**
  * Get the data status of the CPM connection.
@@ -155,25 +142,18 @@ int pf_cpm_udp_c_data_ind(
  * @param p_data_status    Out:  The CPM data status.
  * @return
  */
-int pf_cpm_get_data_status(
-   pf_cpm_t                *p_cpm,
-   uint8_t                 *p_data_status);
+int pf_cpm_get_data_status (pf_cpm_t * p_cpm, uint8_t * p_data_status);
 
 /**
  * Show information about a CPM instance.
  * @param net              InOut: The p-net stack instance
  * @param p_cpm            In:   The CPM instance.
  */
-void pf_cpm_show(
-   pnet_t                  *net,
-   pf_cpm_t                *p_cpm);
-
+void pf_cpm_show (pnet_t * net, pf_cpm_t * p_cpm);
 
 /************ Internal functions, made available for unit testing ************/
 
-int pf_cpm_check_cycle(
-  int32_t                  prev,
-  uint16_t                 now);
+int pf_cpm_check_cycle (int32_t prev, uint16_t now);
 
 #ifdef __cplusplus
 }

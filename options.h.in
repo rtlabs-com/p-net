@@ -184,6 +184,10 @@
 #define PF_ETH_LOG              (LOG_STATE_@PF_ETH_LOG@)
 #endif
 
+#ifndef PF_LLDP_LOG
+#define PF_LLDP_LOG             (LOG_STATE_@PF_LLDP_LOG@)
+#endif
+
 #ifndef PF_CPM_LOG
 #define PF_CPM_LOG              (LOG_STATE_@PF_CPM_LOG@)
 #endif

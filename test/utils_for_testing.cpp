@@ -19,63 +19,60 @@
 
 /******************** Callbacks defined by p-net *****************************/
 
-int my_connect_ind(
-   pnet_t *net,
-   void *arg,
+int my_connect_ind (
+   pnet_t * net,
+   void * arg,
    uint32_t arep,
-   pnet_result_t *p_result)
+   pnet_result_t * p_result)
 {
-   app_data_for_testing_t     *p_appdata = (app_data_for_testing_t*)arg;
+   app_data_for_testing_t * p_appdata = (app_data_for_testing_t *)arg;
 
    p_appdata->call_counters.connect_calls++;
    return 0;
 }
 
-int my_release_ind(
-   pnet_t *net,
-   void *arg,
+int my_release_ind (
+   pnet_t * net,
+   void * arg,
    uint32_t arep,
-   pnet_result_t *p_result)
+   pnet_result_t * p_result)
 {
-   app_data_for_testing_t     *p_appdata = (app_data_for_testing_t*)arg;
+   app_data_for_testing_t * p_appdata = (app_data_for_testing_t *)arg;
 
    p_appdata->call_counters.release_calls++;
    return 0;
 }
 
-int my_dcontrol_ind(
-   pnet_t *net,
-   void *arg,
+int my_dcontrol_ind (
+   pnet_t * net,
+   void * arg,
    uint32_t arep,
    pnet_control_command_t control_command,
-   pnet_result_t *p_result)
+   pnet_result_t * p_result)
 {
-   app_data_for_testing_t     *p_appdata = (app_data_for_testing_t*)arg;
+   app_data_for_testing_t * p_appdata = (app_data_for_testing_t *)arg;
 
    p_appdata->call_counters.dcontrol_calls++;
    return 0;
 }
 
-int my_ccontrol_cnf(
-   pnet_t *net,
-   void *arg,
+int my_ccontrol_cnf (
+   pnet_t * net,
+   void * arg,
    uint32_t arep,
-   pnet_result_t *p_result)
+   pnet_result_t * p_result)
 {
-   app_data_for_testing_t     *p_appdata = (app_data_for_testing_t*)arg;
+   app_data_for_testing_t * p_appdata = (app_data_for_testing_t *)arg;
 
    p_appdata->call_counters.ccontrol_calls++;
    return 0;
 }
 
-static int my_signal_led_ind(
-   pnet_t *net,
-   void *arg,
-   bool led_state)
+static int my_signal_led_ind (pnet_t * net, void * arg, bool led_state)
 {
-   app_data_for_testing_t     *p_appdata = (app_data_for_testing_t*)arg;
+   app_data_for_testing_t * p_appdata = (app_data_for_testing_t *)arg;
 
-   TEST_TRACE("Callback on set LED state: %u\n", led_state);
+   TEST_TRACE ("Callback on set LED state: %u\n", led_state);
    if (led_state == 1)
    {
       p_appdata->call_counters.led_on_calls++;
@@ -88,30 +85,37 @@ static int my_signal_led_ind(
    return 0;
 }
 
-int my_read_ind(
-   pnet_t *net,
-   void *arg,
+int my_read_ind (
+   pnet_t * net,
+   void * arg,
    uint32_t arep,
    uint32_t api,
    uint16_t slot,
    uint16_t subslot,
    uint16_t idx,
    uint16_t sequence_number,
-   uint8_t **pp_read_data, /* Out: A pointer to the data */
-   uint16_t *p_read_length, /* Out: Size of data */
-   pnet_result_t *p_result) /* Error status if returning != 0 */
+   uint8_t ** pp_read_data,  /* Out: A pointer to the data */
+   uint16_t * p_read_length, /* Out: Size of data */
+   pnet_result_t * p_result) /* Error status if returning != 0 */
 {
-   app_data_for_testing_t     *p_appdata = (app_data_for_testing_t*)arg;
+   app_data_for_testing_t * p_appdata = (app_data_for_testing_t *)arg;
 
-   TEST_TRACE("Callback on read\n");
-   TEST_TRACE("  API: %" PRIu32 " Slot: %" PRIu16 " Subslot: %" PRIu16 " Index: %" PRIu16 " Sequence: %" PRIu16 "\n", api, slot, subslot, idx, sequence_number);
+   TEST_TRACE ("Callback on read\n");
+   TEST_TRACE (
+      "  API: %" PRIu32 " Slot: %" PRIu16 " Subslot: %" PRIu16
+      " Index: %" PRIu16 " Sequence: %" PRIu16 "\n",
+      api,
+      slot,
+      subslot,
+      idx,
+      sequence_number);
    p_appdata->call_counters.read_calls++;
    return 0;
 }
 
-int my_write_ind(
-   pnet_t *net,
-   void *arg,
+int my_write_ind (
+   pnet_t * net,
+   void * arg,
    uint32_t arep,
    uint32_t api,
    uint16_t slot,
@@ -119,65 +123,71 @@ int my_write_ind(
    uint16_t idx,
    uint16_t sequence_number,
    uint16_t write_length,
-   uint8_t *p_write_data,
-   pnet_result_t *p_result)
+   uint8_t * p_write_data,
+   pnet_result_t * p_result)
 {
-   app_data_for_testing_t     *p_appdata = (app_data_for_testing_t*)arg;
+   app_data_for_testing_t * p_appdata = (app_data_for_testing_t *)arg;
 
-   TEST_TRACE("Callback on write\n");
-   TEST_TRACE("  API: %" PRIu32 " Slot: %" PRIu16 " Subslot: %" PRIu16 " Index: %" PRIu16 " Sequence: %" PRIu16 " Len: %" PRIu16 "\n", api, slot, subslot, idx, sequence_number, write_length);
+   TEST_TRACE ("Callback on write\n");
+   TEST_TRACE (
+      "  API: %" PRIu32 " Slot: %" PRIu16 " Subslot: %" PRIu16
+      " Index: %" PRIu16 " Sequence: %" PRIu16 " Len: %" PRIu16 "\n",
+      api,
+      slot,
+      subslot,
+      idx,
+      sequence_number,
+      write_length);
    p_appdata->call_counters.write_calls++;
    return 0;
 }
 
-int my_new_data_status_ind(
-   pnet_t *net,
-   void *arg,
+int my_new_data_status_ind (
+   pnet_t * net,
+   void * arg,
    uint32_t arep,
    uint32_t crep,
    uint8_t changes,
    uint8_t data_status)
 {
-   TEST_TRACE("Callback on new data\n");
+   TEST_TRACE ("Callback on new data\n");
    return 0;
 }
 
-int my_alarm_ind(
-   pnet_t *net,
-   void *arg,
+int my_alarm_ind (
+   pnet_t * net,
+   void * arg,
    uint32_t arep,
-   uint32_t api,
-   uint16_t slot,
-   uint16_t subslot,
+   const pnet_alarm_argument_t * p_alarm_arg,
    uint16_t data_len,
    uint16_t data_usi,
-   uint8_t *p_data)
+   uint8_t * p_data)
 {
-   TEST_TRACE("Callback on alarm\n");
+   TEST_TRACE ("Callback on alarm\n");
    return 0;
 }
 
-int my_alarm_cnf(
-   pnet_t *net,
-   void *arg,
+int my_alarm_cnf (
+   pnet_t * net,
+   void * arg,
    uint32_t arep,
-   pnet_pnio_status_t *p_pnio_status)
+   pnet_pnio_status_t * p_pnio_status)
 {
-   TEST_TRACE("Callback on alarm confirmation\n");
+   TEST_TRACE ("Callback on alarm confirmation\n");
    return 0;
 }
 
-int my_state_ind(
-   pnet_t *net,
-   void *arg,
+int my_state_ind (
+   pnet_t * net,
+   void * arg,
    uint32_t arep,
    pnet_event_values_t state)
 {
-   app_data_for_testing_t     *p_appdata = (app_data_for_testing_t*)arg;
-   int                        ret;
-   uint16_t                   slot = 0;
-   uint16_t                   err_cls = 0;
-   uint16_t                   err_code = 0;
+   app_data_for_testing_t * p_appdata = (app_data_for_testing_t *)arg;
+   int ret;
+   uint16_t slot = 0;
+   uint16_t err_cls = 0;
+   uint16_t err_code = 0;
 
    p_appdata->call_counters.state_calls++;
    p_appdata->main_arep = arep;
@@ -186,54 +196,91 @@ int my_state_ind(
    if (state == PNET_EVENT_PRMEND)
    {
       /* Set IOPS for DAP slot (has same numbering as the module identifiers) */
-      ret = pnet_input_set_data_and_iops(net, TEST_API_IDENT, TEST_SLOT_DAP_IDENT, TEST_SUBMOD_DAP_IDENT,                    NULL, 0, PNET_IOXS_GOOD);
-      EXPECT_EQ(ret, 0);
-      ret = pnet_input_set_data_and_iops(net, TEST_API_IDENT, TEST_SLOT_DAP_IDENT, TEST_SUBMOD_DAP_INTERFACE_1_IDENT,        NULL, 0, PNET_IOXS_GOOD);
-      EXPECT_EQ(ret, 0);
-      ret = pnet_input_set_data_and_iops(net, TEST_API_IDENT, TEST_SLOT_DAP_IDENT, TEST_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT, NULL, 0, PNET_IOXS_GOOD);
-      EXPECT_EQ(ret, 0);
+      ret = pnet_input_set_data_and_iops (
+         net,
+         TEST_API_IDENT,
+         TEST_SLOT_DAP_IDENT,
+         TEST_SUBMOD_DAP_IDENT,
+         NULL,
+         0,
+         PNET_IOXS_GOOD);
+      EXPECT_EQ (ret, 0);
+      ret = pnet_input_set_data_and_iops (
+         net,
+         TEST_API_IDENT,
+         TEST_SLOT_DAP_IDENT,
+         TEST_SUBMOD_DAP_INTERFACE_1_IDENT,
+         NULL,
+         0,
+         PNET_IOXS_GOOD);
+      EXPECT_EQ (ret, 0);
+      ret = pnet_input_set_data_and_iops (
+         net,
+         TEST_API_IDENT,
+         TEST_SLOT_DAP_IDENT,
+         TEST_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT,
+         NULL,
+         0,
+         PNET_IOXS_GOOD);
+      EXPECT_EQ (ret, 0);
 
-      /* Set initial data and IOPS for custom input modules, and IOCS for custom output modules */
+      /* Set initial data and IOPS for custom input modules, and IOCS for custom
+       * output modules */
       for (slot = 0; slot < PNET_MAX_MODULES; slot++)
       {
          if (p_appdata->custom_input_slots[slot] == true)
          {
-            ret = pnet_input_set_data_and_iops(net, TEST_API_IDENT, slot, TEST_SUBMOD_CUSTOM_IDENT, p_appdata->inputdata, TEST_DATASIZE_INPUT, PNET_IOXS_GOOD);
-            EXPECT_EQ(ret, 0);
+            ret = pnet_input_set_data_and_iops (
+               net,
+               TEST_API_IDENT,
+               slot,
+               TEST_SUBMOD_CUSTOM_IDENT,
+               p_appdata->inputdata,
+               TEST_DATASIZE_INPUT,
+               PNET_IOXS_GOOD);
+            EXPECT_EQ (ret, 0);
          }
          if (p_appdata->custom_output_slots[slot] == true)
          {
-            ret = pnet_output_set_iocs(net, TEST_API_IDENT, slot, TEST_SUBMOD_CUSTOM_IDENT, PNET_IOXS_GOOD);
-            EXPECT_EQ(ret, 0);
+            ret = pnet_output_set_iocs (
+               net,
+               TEST_API_IDENT,
+               slot,
+               TEST_SUBMOD_CUSTOM_IDENT,
+               PNET_IOXS_GOOD);
+            EXPECT_EQ (ret, 0);
          }
       }
 
-      ret = pnet_set_provider_state(net, true);
-      EXPECT_EQ(ret, 0);
+      ret = pnet_set_provider_state (net, true);
+      EXPECT_EQ (ret, 0);
    }
    else if (state == PNET_EVENT_ABORT)
    {
-      ret = pnet_get_ar_error_codes(net, arep, &err_cls, &err_code);
-      EXPECT_EQ(ret, 0);
-      TEST_TRACE("ABORT err_cls 0x%02" PRIx16 "  err_code 0x%02" PRIx16 "\n", err_cls, err_code);
+      ret = pnet_get_ar_error_codes (net, arep, &err_cls, &err_code);
+      EXPECT_EQ (ret, 0);
+      TEST_TRACE (
+         "ABORT err_cls 0x%02" PRIx16 "  err_code 0x%02" PRIx16 "\n",
+         err_cls,
+         err_code);
    }
 
    return 0;
 }
 
-int my_exp_module_ind(
-   pnet_t *net,
-   void *arg,
+int my_exp_module_ind (
+   pnet_t * net,
+   void * arg,
    uint32_t api,
    uint16_t slot,
    uint32_t module_ident)
 {
-   app_data_for_testing_t     *p_appdata = (app_data_for_testing_t*)arg;
-   int                        ret = -1;   /* Not supported in specified slot */
-   bool                       found = false;
-   uint16_t                   ix;
+   app_data_for_testing_t * p_appdata = (app_data_for_testing_t *)arg;
+   int ret = -1; /* Not supported in specified slot */
+   bool found = false;
+   uint16_t ix;
 
-   TEST_TRACE("Callback on module\n");
+   TEST_TRACE ("Callback on module\n");
 
    /* Find it in the list of supported modules */
    ix = 0;
@@ -250,9 +297,15 @@ int my_exp_module_ind(
    if (found == true)
    {
       /* For now support any module in any slot */
-      TEST_TRACE("  Plug module.    API: %" PRIu32 " Slot: %" PRIu16 " Module ID: %" PRIu32 " Index in list of supported modules: %" PRIu16 "\n", api, slot, module_ident, ix);
-      ret = pnet_plug_module(net, api, slot, module_ident);
-      EXPECT_EQ(ret, 0);
+      TEST_TRACE (
+         "  Plug module.    API: %" PRIu32 " Slot: %" PRIu16 " Module ID: "
+         "%" PRIu32 " Index in list of supported modules: %" PRIu16 "\n",
+         api,
+         slot,
+         module_ident,
+         ix);
+      ret = pnet_plug_module (net, api, slot, module_ident);
+      EXPECT_EQ (ret, 0);
 
       /* Remember what is plugged in each slot */
       if (module_ident == TEST_MOD_8_0_IDENT || module_ident == TEST_MOD_8_8_IDENT)
@@ -266,35 +319,38 @@ int my_exp_module_ind(
    }
    else
    {
-      TEST_TRACE("  Module ident %08" PRIx32 " not found\n", module_ident);
-      EXPECT_TRUE(false);  // Fail the test
+      TEST_TRACE ("  Module ident %08" PRIx32 " not found\n", module_ident);
+      EXPECT_TRUE (false); // Fail the test
    }
 
    return ret;
 }
 
-int my_exp_submodule_ind(
-   pnet_t *net,
-   void *arg,
+int my_exp_submodule_ind (
+   pnet_t * net,
+   void * arg,
    uint32_t api,
    uint16_t slot,
    uint16_t subslot,
    uint32_t module_ident,
    uint32_t submodule_ident)
 {
-   app_data_for_testing_t     *p_appdata = (app_data_for_testing_t*)arg;
-   int                        ret = -1;
-   bool                       found = false;
-   uint16_t                   ix = 0;
+   app_data_for_testing_t * p_appdata = (app_data_for_testing_t *)arg;
+   int ret = -1;
+   bool found = false;
+   uint16_t ix = 0;
 
-   TEST_TRACE("Callback on submodule\n");
+   TEST_TRACE ("Callback on submodule\n");
 
    /* Find it in the list of supported submodules */
    ix = 0;
    while (ix < TEST_MAX_NUMBER_AVAILABLE_SUBMODULE_TYPES)
    {
-      if (p_appdata->available_submodule_types[ix].module_ident_number == module_ident &&
-         p_appdata->available_submodule_types[ix].submodule_ident_number== submodule_ident)
+      if (
+         p_appdata->available_submodule_types[ix].module_ident_number ==
+            module_ident &&
+         p_appdata->available_submodule_types[ix].submodule_ident_number ==
+            submodule_ident)
       {
          found = true;
          break;
@@ -304,37 +360,55 @@ int my_exp_submodule_ind(
 
    if (found == true)
    {
-      TEST_TRACE("  Plug submodule. API: %" PRIu32 " Slot: %" PRIu16 " Subslot: %" PRIu16 " Module ID: %" PRIu32 " Submodule ID: %" PRIu32 " (Index in available submodules: %" PRIu16 ") Direction: %u Len in: %" PRIu16 " out: %" PRIu16 "\n",
-             api, slot, subslot, module_ident, submodule_ident, ix,
-        p_appdata->available_submodule_types[ix].direction,
-        p_appdata->available_submodule_types[ix].input_length,
-        p_appdata->available_submodule_types[ix].output_length);
-      ret = pnet_plug_submodule(net, api, slot, subslot, module_ident, submodule_ident,
+      TEST_TRACE (
+         "  Plug submodule. API: %" PRIu32 " Slot: %" PRIu16 " Subslot: "
+         "%" PRIu16 " Module ID: %" PRIu32 " Submodule ID: %" PRIu32
+         " (Index in "
+         "available "
+         "submodules: %" PRIu16 ") Direction: %u Len in: %" PRIu16
+         " out: %" PRIu16 "\n",
+         api,
+         slot,
+         subslot,
+         module_ident,
+         submodule_ident,
+         ix,
          p_appdata->available_submodule_types[ix].direction,
          p_appdata->available_submodule_types[ix].input_length,
          p_appdata->available_submodule_types[ix].output_length);
-      EXPECT_EQ(ret, 0);
+      ret = pnet_plug_submodule (
+         net,
+         api,
+         slot,
+         subslot,
+         module_ident,
+         submodule_ident,
+         p_appdata->available_submodule_types[ix].direction,
+         p_appdata->available_submodule_types[ix].input_length,
+         p_appdata->available_submodule_types[ix].output_length);
+      EXPECT_EQ (ret, 0);
    }
    else
    {
-      TEST_TRACE("  Sub-module ident %08" PRIx32 " not found\n", submodule_ident);
-      EXPECT_TRUE(false);  // Fail the test
+      TEST_TRACE (
+         "  Sub-module ident %08" PRIx32 " not found\n",
+         submodule_ident);
+      EXPECT_TRUE (false); // Fail the test
    }
 
    return ret;
 }
 
-
 /*********************** Base classes for tests *****************************/
 
 void PnetIntegrationTestBase::appdata_init()
 {
-   memset(&appdata, 0, sizeof(appdata));
+   memset (&appdata, 0, sizeof (appdata));
 }
 
 void PnetIntegrationTestBase::callcounter_reset()
 {
-   memset(&appdata.call_counters, 0, sizeof(call_counters_t));
+   memset (&appdata.call_counters, 0, sizeof (call_counters_t));
 }
 
 void PnetIntegrationTestBase::available_modules_and_submodules_init()
@@ -343,32 +417,42 @@ void PnetIntegrationTestBase::available_modules_and_submodules_init()
    appdata.available_module_types[1] = TEST_MOD_8_8_IDENT;
    appdata.available_module_types[2] = TEST_MOD_8_0_IDENT;
 
-   appdata.available_submodule_types[0].module_ident_number = TEST_MOD_DAP_IDENT;
-   appdata.available_submodule_types[0].submodule_ident_number = TEST_SUBMOD_DAP_IDENT;
+   appdata.available_submodule_types[0].module_ident_number =
+      TEST_MOD_DAP_IDENT;
+   appdata.available_submodule_types[0].submodule_ident_number =
+      TEST_SUBMOD_DAP_IDENT;
    appdata.available_submodule_types[0].direction = PNET_DIR_NO_IO;
    appdata.available_submodule_types[0].input_length = 0;
    appdata.available_submodule_types[0].output_length = 0;
 
-   appdata.available_submodule_types[1].module_ident_number = TEST_MOD_DAP_IDENT;
-   appdata.available_submodule_types[1].submodule_ident_number = TEST_SUBMOD_DAP_INTERFACE_1_IDENT;
+   appdata.available_submodule_types[1].module_ident_number =
+      TEST_MOD_DAP_IDENT;
+   appdata.available_submodule_types[1].submodule_ident_number =
+      TEST_SUBMOD_DAP_INTERFACE_1_IDENT;
    appdata.available_submodule_types[1].direction = PNET_DIR_NO_IO;
    appdata.available_submodule_types[1].input_length = 0;
    appdata.available_submodule_types[1].output_length = 0;
 
-   appdata.available_submodule_types[2].module_ident_number = TEST_MOD_DAP_IDENT;
-   appdata.available_submodule_types[2].submodule_ident_number = TEST_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT;
+   appdata.available_submodule_types[2].module_ident_number =
+      TEST_MOD_DAP_IDENT;
+   appdata.available_submodule_types[2].submodule_ident_number =
+      TEST_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT;
    appdata.available_submodule_types[2].direction = PNET_DIR_NO_IO;
    appdata.available_submodule_types[2].input_length = 0;
    appdata.available_submodule_types[2].output_length = 0;
 
-   appdata.available_submodule_types[3].module_ident_number = TEST_MOD_8_8_IDENT;
-   appdata.available_submodule_types[3].submodule_ident_number = TEST_SUBMOD_CUSTOM_IDENT;
+   appdata.available_submodule_types[3].module_ident_number =
+      TEST_MOD_8_8_IDENT;
+   appdata.available_submodule_types[3].submodule_ident_number =
+      TEST_SUBMOD_CUSTOM_IDENT;
    appdata.available_submodule_types[3].direction = PNET_DIR_IO;
    appdata.available_submodule_types[3].input_length = TEST_DATASIZE_INPUT;
    appdata.available_submodule_types[3].output_length = TEST_DATASIZE_OUTPUT;
 
-   appdata.available_submodule_types[4].module_ident_number = TEST_MOD_8_0_IDENT;
-   appdata.available_submodule_types[4].submodule_ident_number = TEST_SUBMOD_CUSTOM_IDENT;
+   appdata.available_submodule_types[4].module_ident_number =
+      TEST_MOD_8_0_IDENT;
+   appdata.available_submodule_types[4].submodule_ident_number =
+      TEST_SUBMOD_CUSTOM_IDENT;
    appdata.available_submodule_types[4].direction = PNET_DIR_OUTPUT;
    appdata.available_submodule_types[4].input_length = 0;
    appdata.available_submodule_types[4].output_length = TEST_DATASIZE_OUTPUT;
@@ -402,20 +486,21 @@ void PnetIntegrationTestBase::cfg_init()
    pnet_default_cfg.oem_device_id.device_id_hi = 0xbe;
    pnet_default_cfg.oem_device_id.device_id_lo = 0xef;
 
-   strcpy(pnet_default_cfg.station_name, "");
-   strcpy(pnet_default_cfg.device_vendor, "rt-labs");
-   strcpy(pnet_default_cfg.manufacturer_specific_string, "PNET demo");
+   strcpy (pnet_default_cfg.station_name, "");
+   strcpy (pnet_default_cfg.device_vendor, "rt-labs");
+   strcpy (pnet_default_cfg.manufacturer_specific_string, "PNET demo");
 
-   strcpy(pnet_default_cfg.lldp_cfg.port_id, "port-001");
+   strcpy (pnet_default_cfg.lldp_cfg.port_id, "port-001");
    pnet_default_cfg.lldp_cfg.ttl = 20; /* seconds */
    pnet_default_cfg.lldp_cfg.rtclass_2_status = 0;
    pnet_default_cfg.lldp_cfg.rtclass_3_status = 0;
-   pnet_default_cfg.lldp_cfg.cap_aneg = 3; /* Supported (0x01) + enabled (0x02) */
-   pnet_default_cfg.lldp_cfg.cap_phy = 0x8000; /* Unknown (0x8000) */
+   pnet_default_cfg.lldp_cfg.cap_aneg = 3; /* Supported (0x01) + enabled (0x02)
+                                            */
+   pnet_default_cfg.lldp_cfg.cap_phy = 0x8000;  /* Unknown (0x8000) */
    pnet_default_cfg.lldp_cfg.mau_type = 0x0000; /* Unknown */
 
    /* Timing */
-   pnet_default_cfg.min_device_interval = 32;  /* Corresponds to 1 ms */
+   pnet_default_cfg.min_device_interval = 32; /* Corresponds to 1 ms */
 
    /* Network configuration */
    pnet_default_cfg.send_hello = 1; /* Send HELLO */
@@ -435,10 +520,11 @@ void PnetIntegrationTestBase::cfg_init()
 
    pnet_default_cfg.im_0_data.im_vendor_id_hi = 0x00;
    pnet_default_cfg.im_0_data.im_vendor_id_lo = 0x01;
-   strcpy(pnet_default_cfg.im_0_data.im_order_id, "<orderid>           ");
-   strcpy(pnet_default_cfg.im_0_data.im_serial_number, "<serial nbr>    ");
+   strcpy (pnet_default_cfg.im_0_data.im_order_id, "<orderid>           ");
+   strcpy (pnet_default_cfg.im_0_data.im_serial_number, "<serial nbr>    ");
    pnet_default_cfg.im_0_data.im_hardware_revision = 1;
-   pnet_default_cfg.im_0_data.im_sw_revision_prefix = 'P'; /* 'V', 'R', 'P', 'U', or 'T' */
+   pnet_default_cfg.im_0_data.im_sw_revision_prefix = 'P'; /* 'V', 'R', 'P',
+                                                              'U', or 'T' */
    pnet_default_cfg.im_0_data.im_sw_revision_functional_enhancement = 0;
    pnet_default_cfg.im_0_data.im_sw_revision_bug_fix = 0;
    pnet_default_cfg.im_0_data.im_sw_revision_internal_change = 0;
@@ -447,15 +533,17 @@ void PnetIntegrationTestBase::cfg_init()
    pnet_default_cfg.im_0_data.im_profile_specific_type = 0x5678;
    pnet_default_cfg.im_0_data.im_version_major = 0;
    pnet_default_cfg.im_0_data.im_version_minor = 1;
-   pnet_default_cfg.im_0_data.im_supported = 0x001e; /* Only I&M0..I&M4 supported */
-   strcpy(pnet_default_cfg.im_1_data.im_tag_function, "");
-   strcpy(pnet_default_cfg.im_1_data.im_tag_location, "");
-   strcpy(pnet_default_cfg.im_2_data.im_date, "");
-   strcpy(pnet_default_cfg.im_3_data.im_descriptor, "");
-   strcpy(pnet_default_cfg.im_4_data.im_signature, "");
+   pnet_default_cfg.im_0_data.im_supported =
+      PNET_SUPPORTED_IM1 | PNET_SUPPORTED_IM2 | PNET_SUPPORTED_IM3 |
+      PNET_SUPPORTED_IM4;
+   strcpy (pnet_default_cfg.im_1_data.im_tag_function, "");
+   strcpy (pnet_default_cfg.im_1_data.im_tag_location, "");
+   strcpy (pnet_default_cfg.im_2_data.im_date, "");
+   strcpy (pnet_default_cfg.im_3_data.im_descriptor, "");
+   strcpy (pnet_default_cfg.im_4_data.im_signature, "");
 
    /* Storage */
-   strcpy(pnet_default_cfg.file_directory, "/disk1");
+   strcpy (pnet_default_cfg.file_directory, "/disk1");
 }
 
 void PnetIntegrationTestBase::run_stack (int us)
@@ -476,7 +564,7 @@ void PnetIntegrationTestBase::run_stack (int us)
          {
             if (appdata.custom_input_slots[slot] == true)
             {
-               (void)pnet_input_set_data_and_iops(
+               (void)pnet_input_set_data_and_iops (
                   net,
                   TEST_API_IDENT,
                   slot,
@@ -489,41 +577,39 @@ void PnetIntegrationTestBase::run_stack (int us)
       }
 
       /* Run stack functionality every tick */
-      pnet_handle_periodic(net);
+      pnet_handle_periodic (net);
       mock_os_data.current_time_us += TICK_INTERVAL_US;
    }
 }
 
-void PnetIntegrationTestBase::send_data(
-   uint8_t                 *data_packet,
-   uint16_t                len)
+void PnetIntegrationTestBase::send_data (uint8_t * data_packet, uint16_t len)
 {
-   int                     ret;
-   os_buf_t                *p_buf;
-   uint8_t                 *p_ctr;
+   int ret;
+   os_buf_t * p_buf;
+   uint8_t * p_ctr;
 
-   p_buf = os_buf_alloc(PF_FRAME_BUFFER_SIZE);
+   p_buf = os_buf_alloc (PF_FRAME_BUFFER_SIZE);
    if (p_buf == NULL)
    {
-      TEST_TRACE("(%d): Out of memory in send_data\n", __LINE__);
+      TEST_TRACE ("(%d): Out of memory in send_data\n", __LINE__);
    }
    else
    {
-      memcpy(p_buf->payload, data_packet, len);
+      memcpy (p_buf->payload, data_packet, len);
 
       /* Insert frame time, store in big-endian */
       appdata.data_cycle_ctr++;
-      p_ctr = &((uint8_t*)(p_buf->payload))[len - 4];
+      p_ctr = &((uint8_t *)(p_buf->payload))[len - 4];
       *(p_ctr + 0) = (appdata.data_cycle_ctr >> 8) & 0xff;
       *(p_ctr + 1) = appdata.data_cycle_ctr & 0xff;
 
       p_buf->len = len;
-      ret = pf_eth_recv(net, p_buf);
-      EXPECT_EQ(ret, 1);
+      ret = pf_eth_recv (net, p_buf);
+      EXPECT_EQ (ret, 1);
       if (ret == 0)
       {
-         TEST_TRACE("(%d): Unhandled p_buf\n", __LINE__);
-         os_buf_free(p_buf);
+         TEST_TRACE ("(%d): Unhandled p_buf\n", __LINE__);
+         os_buf_free (p_buf);
       }
    }
 }

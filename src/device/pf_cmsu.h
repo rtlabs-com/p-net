@@ -17,32 +17,31 @@
 #define PF_CMSU_H
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
-
 
 /**
  * Initialize the CMSU component.
  */
-void pf_cmsu_init(
-   pnet_t                  *net);
+void pf_cmsu_init (pnet_t * net);
 
 /**
  * Handle CMDEV events.
  *
- * Can close CPM and PPM instances. Closes alarm instance, which triggers an alarm.
+ * Can close CPM and PPM instances. Closes alarm instance, which triggers an
+ * alarm.
  *
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:    The AR instance.
- * @param event            In:    The new CMDEV state. Use PNET_EVENT_..., not PF_CMDEV_STATE_...
+ * @param event            In:    The new CMDEV state. Use PNET_EVENT_..., not
+ * PF_CMDEV_STATE_...
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_cmsu_cmdev_state_ind(
-   pnet_t                  *net,
-   pf_ar_t                 *p_ar,
-   pnet_event_values_t     event);
+int pf_cmsu_cmdev_state_ind (
+   pnet_t * net,
+   pf_ar_t * p_ar,
+   pnet_event_values_t event);
 
 /**
  * Start all state machines for a specific AR.
@@ -52,10 +51,7 @@ int pf_cmsu_cmdev_state_ind(
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_cmsu_start_req(
-   pnet_t                  *net,
-   pf_ar_t                 *p_ar,
-   pnet_result_t           *p_stat);
+int pf_cmsu_start_req (pnet_t * net, pf_ar_t * p_ar, pnet_result_t * p_stat);
 
 /**
  * Handle CPM error indications for a specific AR.
@@ -66,11 +62,11 @@ int pf_cmsu_start_req(
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_cmsu_cpm_error_ind(
-   pnet_t                  *net,
-   pf_ar_t                 *p_ar,
-   uint8_t                 err_cls,
-   uint8_t                 err_code);
+int pf_cmsu_cpm_error_ind (
+   pnet_t * net,
+   pf_ar_t * p_ar,
+   uint8_t err_cls,
+   uint8_t err_code);
 
 /**
  * Handle PPM error indications for a specific AR.
@@ -81,11 +77,11 @@ int pf_cmsu_cpm_error_ind(
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_cmsu_ppm_error_ind(
-   pnet_t                  *net,
-   pf_ar_t                 *p_ar,
-   uint8_t                 err_cls,
-   uint8_t                 err_code);
+int pf_cmsu_ppm_error_ind (
+   pnet_t * net,
+   pf_ar_t * p_ar,
+   uint8_t err_cls,
+   uint8_t err_code);
 
 /**
  * Handle alarm error indications for a specific AR.
@@ -96,11 +92,11 @@ int pf_cmsu_ppm_error_ind(
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_cmsu_alarm_error_ind(
-   pnet_t                  *net,
-   pf_ar_t                 *p_ar,
-   uint8_t                 err_cls,
-   uint8_t                 err_code);
+int pf_cmsu_alarm_error_ind (
+   pnet_t * net,
+   pf_ar_t * p_ar,
+   uint8_t err_cls,
+   uint8_t err_code);
 
 /* Not used */
 /**
@@ -112,11 +108,11 @@ int pf_cmsu_alarm_error_ind(
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_cmsu_cmdmc_error_ind(
-   pnet_t                  *net,
-   pf_ar_t                 *p_ar,
-   uint8_t                 err_cls,
-   uint8_t                 err_code);
+int pf_cmsu_cmdmc_error_ind (
+   pnet_t * net,
+   pf_ar_t * p_ar,
+   uint8_t err_cls,
+   uint8_t err_code);
 
 #ifdef __cplusplus
 }
