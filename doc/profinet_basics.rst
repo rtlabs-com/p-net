@@ -512,6 +512,7 @@ User defined indexes are in the range 0x?? to 0x??
 
 Examples of pre-defined indexes:
 
+* 0x802B  PDPortDataCheck
 * 0xAFF0  I&M0
 * 0xAFF1  I&M1
 * 0xAFF2  I&M2
@@ -552,6 +553,7 @@ Startup modes
 The startup mode was changed in Profinet 2.3, to "Advanced". The previous
 startup mode is now called "Legacy".
 
+
 Alarm types
 -----------
 A process alarm describes conditions in the monitored process, for example
@@ -559,12 +561,63 @@ too high temperature.
 A diagnostic alarm describes conditions in the IO Device itself, for example
 a faulty channel or short circuit. Diagnostic alarms are also stored in the IO-Device.
 
+Only process alarms are sent with high prio, all other alarms use low prio.
+
 * Diagnosis alarm (0x0001): There is something wrong with the IO device itself.
 * Process alarm (0x0002): There is something wrong with the process, for example too high temperature.
 * Pull alarm (0x0003): Module/submodule pulled from slot/subslot.
 * Plug alarm (0x0004): Module/submodule plugged into slot/subslot.
-* Plug wrong alarm (0x000a): Wrong module/submodule plugged into slot/subslot.
+* Plug wrong alarm (0x000A): Wrong module/submodule plugged into slot/subslot.
+* Port data change notification alarm (0x000E)
 * etc
+
+
+
+Diagnosis
+---------
+Diagnosis alarms are sent to indicate for example short-circuit on an output.
+
+To localize the diagnosis source, these values are required:
+
+* API
+* Slot
+* Subslot
+* Channel number (Use 0x8000 for "whole submodule")
+* Direction (in or out. Use "manufacturer specific" for "whole submodule")
+* Accumulative (true when describing a channel group)
+
+
+Diagnosis payload formats
+^^^^^^^^^^^^^^^^^^^^^^^^^
+There are several formats in which the diagnosis information can be sent to
+the PLC. The formats are described by the USI value.
+
+Channel diagnosis (USI 0x8000, one of the standard formats):
+
+ * Channel number
+ * Channel properties (direction)
+ * Channel error type
+
+Extended channel diagnosis (USI 0x8002, one of the standard formats):
+
+ * Same as for "Channel diagnosis", and also
+ * ExtChannelErrorType
+ * ExtChannelErrorAddValue
+
+Qualified channel diagnosis (USI 0x8003, one of the standard formats):
+
+ * Same as for "Extended channel diagnosis", and also
+ * Qualified sub severities
+
+USI format (USI 0x0000 to 0x7FFF):
+
+  * Manufacturer data
+
+
+Storage of diagnosis info
+^^^^^^^^^^^^^^^^^^^^^^^^^
+The diagnosis info is stored between runs. There is at most one diagnosis
+entry stored for each ChannelErrortype, extChannelErrorType combination.
 
 
 Relevant standards
@@ -582,18 +635,19 @@ Relevant standards
 * IEEE 802.1Q     Virtual LANs (VLAN)
 * IEEE 802.3      Ethernet
 * IEEE 802.11     WiFi
-* IETF RFC 768    UDP
-* IETF RFC 791    IP
-* IETF RFC 792    ICMP
-* IETF RFC 826    ARP
-* IETF RFC 1034   DNS
-* IETF RFC 1157   SNMP
-* IETF RFC 1213   Management Information Base v 2 (MIB-II)
-* IETF RFC 2131   DHCP
-* IETF RFC 2132   DHCP Options
-* IETF RFC 3418   Management Information Base (MIB) for SNMP
-* IETF RFC 3635   Definitions of Managed Objects for the Ethernet-like Interface Types
-* IETF RFC 5890   Internationalized Domain Names for Applications (IDNA)
+* IETF :rfc:`768`    UDP
+* IETF :rfc:`791`    IP
+* IETF :rfc:`792`    ICMP
+* IETF :rfc:`826`    ARP
+* IETF :rfc:`1034`   DNS
+* IETF :rfc:`1157`   SNMP
+* IETF :rfc:`1213`   Management Information Base v 2 (MIB-II)
+* IETF :rfc:`2131`   DHCP
+* IETF :rfc:`2132`   DHCP Options
+* IETF :rfc:`2863`   The Interfaces Group MIB
+* IETF :rfc:`3418`   Management Information Base (MIB) for SNMP
+* IETF :rfc:`3635`   Definitions of Managed Objects for the Ethernet-like Interface Types
+* IETF :rfc:`5890`   Internationalized Domain Names for Applications (IDNA)
 * ISO/IEC 7498-1  ?
 * ISO 8859-1      ?
 * ISO 15745       ?

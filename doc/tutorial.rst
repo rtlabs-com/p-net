@@ -160,6 +160,7 @@ There are also other blocks describing the MAC address and the port ID.
 
 Sample app data payload
 -----------------------
+This example is for when using the “8 bit in + 8 bit out” module in slot 1.
 The periodic data sent from the sample application IO-device to IO-controller
 is one byte:
 

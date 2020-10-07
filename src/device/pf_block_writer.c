@@ -3156,7 +3156,7 @@ void pf_put_alarm_block (
       case PF_USI_CHANNEL_DIAGNOSIS:
       case PF_USI_EXTENDED_CHANNEL_DIAGNOSIS:
       case PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS:
-         /* Insert a maintainance item before the diagnosis item */
+         /* Insert a maintenance item before the diagnosis item */
          if (maint_status != 0)
          {
             pf_put_uint16 (

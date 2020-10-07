@@ -204,7 +204,7 @@ MCR
 MDNS
     Multicast DNS. A UDS based protocol for resolving hostname to IP address. Implemented by Bonjour and Avahi.
 MIB
-    Management Information Base. File format for SNMP?
+    Management Information Base. A text file format describing Object Identifiers (OID) for Simple Network Management Protocol (SNMP) frames.
 MRP
     Media Redundancy Protocol
 MRPD
@@ -220,7 +220,7 @@ NME
 NVM
     Non-Volatile Memory. Typically flash memory chips.
 OID
-    Object IDentifier
+    Object Identifier. Describes a field in a Simple Network Management Protocol (SNMP) frame.
 OS
     Operating System
 OUI
@@ -229,6 +229,8 @@ PA
     Process Automation (as opposed to production automation)
 PCA
     Provider, Consumer or Alarm.
+PCF
+    Polymer Clad Fiber
 PCP
     Priority Code Point, for VLAN
 PD
@@ -298,7 +300,7 @@ SOE
 ST
     Structured Text. A programming language for PLCs.
 STX
-    See ST.
+    Structured Text. See ST.
 TACK
     Transport Acknowledge. Used for alarm transmission.
 TED
@@ -320,7 +322,7 @@ TSDU
 TSN
     Time-Sensitive Networking
 TTL
-   Time to live. A field in an LLDP Ethernet frame.
+    Time to live. A field in an LLDP Ethernet frame.
 UC
     Unicast (as opposed to multicast)
 UDP

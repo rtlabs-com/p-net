@@ -7,6 +7,24 @@ This have been tested with:
 It uses a 24 V DC supply voltage.
 
 
+Using Siemens SinecPni (Primary Network Initialization)
+-------------------------------------------------------
+This is a tool for configuration of Profinet network equipment. Use it
+to adjust the IP address of PLC.
+
+Download the program from the Siemens homepage, and unzip the file.
+Start the program by double clicking the SinecPni executable.
+
+To be able to change IP address on a Siemens PLC, make sure that the
+"mode switch" on the front panel is in the "STOP" position.
+
+Click the “Settings” tab, and enable “PROFINET devices” for “Scan Protocol”, and
+click “Save”. On the “Device list” tab, click “Start network scan”.
+Select the “S7-1500” line, and click “Configure Device”. Adjust the IP address
+to 192.168.0.100 and netmask to 255.255.255.0.
+Click “Load” to store the settings.
+
+
 Install Siemens TIA on a Windows PC
 -----------------------------------
 Install TIA (SIMATIC STEP 7 and WinCC) V15.1
@@ -68,8 +86,8 @@ mask size does not seems to have an impact.
 
 In the project view, in the left menu select the PLC and the subitem "Device
 configuration". In the "Properties" tab, use the "General" sub-tab. Select
-"PROFINET interface [X1]" and "Ethernet addresses". Enter the existing IP
-address of the PLC. The subnet mask should be 255.255.255.0 and subnet
+"PROFINET interface [X1]" and "Ethernet addresses". Enter the IP address
+192.168.0.100 for the PLC. The subnet mask should be 255.255.255.0 and subnet
 "PN/IE_1". Right-click the icon of the PLC, and select "Go online". Use type of
 interface "PN/IE", your Ethernet network card and "Direct at slot 1 X1". Click
 "Start search". The table should be updated with "Device type" = "CPU 1215C
@@ -78,8 +96,8 @@ interface "PN/IE", your Ethernet network card and "Direct at slot 1 X1". Click
 To enter the IP-address of the IO-device, go to "Device view" for the IO-device
 and click the IO-device icon. in the "Properties" tab, select the "General"
 sub-tab. Select
-"PROFINET interface [X1]" and "Ethernet addresses". Enter the existing IP
-address of the IO-device.
+"PROFINET interface [X1]" and "Ethernet addresses". Enter the IP address
+192.168.0.50 for the IO-device.
 
 
 Add modules to IO-device
@@ -142,7 +160,8 @@ It should be possible to ping the PLC when the IP address is OK.
 Connect inputs and outputs
 --------------------------
 First find the address of the IO-device input byte and output byte. In the
-"Device view", look in the "Device overview" table. The module "8 bits I
+“Device view” for the IO-device, look in the “Device overview” table.
+The module "8 bits I
 8 bits O" should appear (if previously inserted). Look for the I (input)
 address and Q (output) address. The value can be for example 2.
 
@@ -158,7 +177,7 @@ the address should be for example "%Q2.7".
 In order to study the values while running, you need to create an watch table.
 In the Project tree, select PLC_1 > "Watch and force table" > "Add new watch
 table". In the first empty line, double-click on the small icon on the Name field.
-Select "button". Repeat on next line with "LEDout".
+Select "ButtonIn". Repeat on next line with "LEDout".
 
 When running, in order to study the values, connect to the PLC ("Online"). On
 the "Watch table_1" page, click the small "Monitor all" icon. The values on the
@@ -210,7 +229,7 @@ In the "Main [OB1]" block, drag the "Empty box" icon to the "Network 1" line.
 In the top of the inserted box, select "Flasher". In the pop up asking for
 data block, select "Flasher_DB".
 
-Connect the input on the "Flasher" block by double-clicking it. Select "button".
+Connect the input on the "Flasher" block by double-clicking it. Select "ButtonIn".
 Similarly connect the output to "LEDout".
 
 The block "Flasher_DB [DB1]" have been created automatically. All the input-,
