@@ -34,7 +34,7 @@
 
 void pf_fspm_im_show (pnet_t * net)
 {
-   printf ("Identification & Maintainance\n");
+   printf ("Identification & Maintenance\n");
    printf (
       "I&M1.im_tag_function     : <%s>\n",
       net->fspm_cfg.im_1_data.im_tag_function);

@@ -16,6 +16,7 @@ CControl
 Changelog
 CiR
 cmake
+Commonmark
 Codesys
 Datagram
 DControl
@@ -55,6 +56,7 @@ multicast
 multicore
 neighbour
 neighbourhood
+neighbours
 netmask
 nmap
 ns
@@ -62,7 +64,9 @@ Nutzerorganisation
 organisation
 parameterization
 Parameterization
+persistency
 picocom
+pluggable
 pnet
 Popp
 PRMEND
@@ -71,12 +75,18 @@ Profinet
 PwrCtrl
 Raspbian
 realtime
+remanence
 repo
 Responder
+reST
+reStructuredText
+rootfs
 runtime
 Scalance
 Segger
 Simatic
+snmp
+softplc
 Steuerung
 subelement
 subelements
@@ -94,6 +104,7 @@ sudo
 tcpdump
 toolchain
 uint
+unicast
 Unmount
 Virtualbox
 Wireshark

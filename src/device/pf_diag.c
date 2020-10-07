@@ -29,6 +29,9 @@
  *  - pf_cmdev_get_diag_item()
  *  - pf_cmdev_free_diag()
  *
+ * An array of PNET_MAX_DIAG_ITEMS diagnosis items is available for use.
+ * In CMDEV, each subslot uses a linked list of diagnosis items, and stores the
+ * index to the head of its (possibly empty) list.
  */
 
 #ifdef UNIT_TEST

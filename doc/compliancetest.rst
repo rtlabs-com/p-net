@@ -130,6 +130,20 @@ Some of the test cases requires additional hardware; a Profinet-enabled switch
 ("Device B") and an IO-controller ("Device A"). Also a remote controlled
 power outlet can be used to simplify the tests.
 
++-------------------------+-----------------------------+-------------------+
+| Item                    | IP address                  | Description       |
++=========================+=============================+===================+
+| Device under test (DUT) | 192.168.0.50                |                   |
++-------------------------+-----------------------------+-------------------+
+| ART tester on PC        | 192.168.0.25, 192.168.1.143 |                   |
++-------------------------+-----------------------------+-------------------+
+| PLC (“Device A”)        | 192.168.0.100               |                   |
++-------------------------+-----------------------------+-------------------+
+| Switch (“Device B”)     | 192.168.0.99                |                   |
++-------------------------+-----------------------------+-------------------+
+| Power outlet            | 192.168.1.144               | Separate network  |
++-------------------------+-----------------------------+-------------------+
+
 
 Profinet-enabled switch
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -140,7 +154,8 @@ The test specification of version V 2.41 recommends the use of a
 Siemens Scalance X204IRT (article number 6GK5204-0BA00-2BA3).
 It should have IP address 192.168.0.99, netmask 255.255.255.0 and station name "b".
 Use for example Codesys to scan for the device, and to adjust the IP settings.
-Alternatively, use SinecPni to change the IP address (see below).
+Alternatively, use SinecPni to change the IP address (see the Simatic
+page in this documentation).
 
 The switch has a web interface, but it is not necessary to do any setting
 adjustments via the web interface.
@@ -161,23 +176,6 @@ Connection of the switch ports is described in the table below:
 
 The Automated RT tester will detect "Device B" by itself. No configuration is
 required in the Automated RT tester menu.
-
-
-Using Siemens SinecPni (Primary Network Initialization)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-This is a tool for configuration of Profinet network equipment.
-Use it to adjust the IP address of the web interface for the Profinet-enabled
-switch (Scalance X204IRT).
-
-Download the program from the Siemens homepage, and unzip the file.
-Start the program by double clicking the SinecPni executable.
-
-Click the "Settings" tab, and enable "PROFINET devices" for "Scan Protocol",
-and click "Save".
-On the "Device list" tab, click "Start network scan".
-Select the "Scalance X-200" line, and click "Configure Device".
-Adjust the IP address to 192.168.0.99, netmask 255.255.255.0 and
-"PROFINET device name" to "b". Click "Load" to store the settings.
 
 
 Remote controlled power outlet
@@ -269,75 +267,75 @@ These values have large impact on test execution times:
 Relevant test cases for Automated RT Tester
 -------------------------------------------
 
-+----------------------------------------+-----------------------------------------------------+
-| Test case                              | Notes                                               |
-+========================================+=====================================================+
-| DCP_1                                  | Power cycle 8 times.                                |
-+----------------------------------------+-----------------------------------------------------+
-| DCP_2                                  | Power cycle 2 times.                                |
-+----------------------------------------+-----------------------------------------------------+
-| DCP_3                                  | Power cycle 2 times.                                |
-+----------------------------------------+-----------------------------------------------------+
-| DCP_4                                  | Fast                                                |
-+----------------------------------------+-----------------------------------------------------+
-| DCP_ALIAS                              | Requires additional hardware ("Device B")           |
-+----------------------------------------+-----------------------------------------------------+
-| DCP_IDN                                | Fast.                                               |
-+----------------------------------------+-----------------------------------------------------+
-| DCP_NAME_1                             | Power cycle 4 times.                                |
-+----------------------------------------+-----------------------------------------------------+
-| DCP_NAME_2                             | Power cycle 4 times.                                |
-+----------------------------------------+-----------------------------------------------------+
-| DCP_ResetToFactory                     |                                                     |
-+----------------------------------------+-----------------------------------------------------+
-| DCP_OPTIONS_SUBOPTIONS                 |                                                     |
-+----------------------------------------+-----------------------------------------------------+
-| DCP_Router                             |                                                     |
-+----------------------------------------+-----------------------------------------------------+
-| DCP_Access                             | Fast.                                               |
-+----------------------------------------+-----------------------------------------------------+
-| DCP_VLAN                               | Power cycle 2 times                                 |
-+----------------------------------------+-----------------------------------------------------+
-| DCP IP-parameter Remanence             | Power cycle 4 times.                                |
-+----------------------------------------+-----------------------------------------------------+
-| Behavior Scenario 1 to 9               | Power cycle                                         |
-+----------------------------------------+-----------------------------------------------------+
-| Behavior Scenario 10                   |                                                     |
-+----------------------------------------+-----------------------------------------------------+
-| Behavior Scenario 11                   |                                                     |
-+----------------------------------------+-----------------------------------------------------+
-| Different Access Ways                  | Requires additional hardware ("Device B")           |
-+----------------------------------------+-----------------------------------------------------+
-| PDEV_CHECK_ONEPORT                     | Requires additional hardware ("Device B")           |
-+----------------------------------------+-----------------------------------------------------+
-| Diagnosis                              |                                                     |
-+----------------------------------------+-----------------------------------------------------+
-| Alarm                                  | Requires additional hardware ("Device B")           |
-+----------------------------------------+-----------------------------------------------------+
-| AR-ASE                                 | Power cycle                                         |
-+----------------------------------------+-----------------------------------------------------+
-| IP_UDP_RPC_I&M_EPM                     |                                                     |
-+----------------------------------------+-----------------------------------------------------+
-| RTC                                    | Requires additional hardware ("Device B")           |
-+----------------------------------------+-----------------------------------------------------+
-| VLAN                                   | Turn off IO-controller ("device A")                 |
-+----------------------------------------+-----------------------------------------------------+
-| Different access ways port-to-port     | Use port-to-port set up                             |
-+----------------------------------------+-----------------------------------------------------+
-| Manual: DCP_Signal                     | Flash Signal LED. Fast.                             |
-+----------------------------------------+-----------------------------------------------------+
-| Manual: Behavior of ResetToFactory     |                                                     |
-+----------------------------------------+-----------------------------------------------------+
-| Manual: Checking of sending RTC frames | Fast                                                |
-+----------------------------------------+-----------------------------------------------------+
-| Manual: DataHoldTimer                  | PLC required                                        |
-+----------------------------------------+-----------------------------------------------------+
-| Security Level 1                       | PLC required                                        |
-+----------------------------------------+-----------------------------------------------------+
-| Interoperability                       | PLC required                                        |
-+----------------------------------------+-----------------------------------------------------+
-| Interoperability with controller       | PLC required                                        |
-+----------------------------------------+-----------------------------------------------------+
++------------------------------------------+-----------------------------------------------------+
+| Test case                                | Notes                                               |
++==========================================+=====================================================+
+| DCP_1                                    | Power cycle 8 times.                                |
++------------------------------------------+-----------------------------------------------------+
+| DCP_2                                    | Power cycle 2 times.                                |
++------------------------------------------+-----------------------------------------------------+
+| DCP_3                                    | Power cycle 2 times.                                |
++------------------------------------------+-----------------------------------------------------+
+| DCP_4                                    | Fast                                                |
++------------------------------------------+-----------------------------------------------------+
+| DCP_ALIAS                                | Requires additional hardware ("Device B")           |
++------------------------------------------+-----------------------------------------------------+
+| DCP_IDN                                  | Fast.                                               |
++------------------------------------------+-----------------------------------------------------+
+| DCP_NAME_1                               | Power cycle 4 times.                                |
++------------------------------------------+-----------------------------------------------------+
+| DCP_NAME_2                               | Power cycle 4 times.                                |
++------------------------------------------+-----------------------------------------------------+
+| DCP_ResetToFactory                       |                                                     |
++------------------------------------------+-----------------------------------------------------+
+| DCP_OPTIONS_SUBOPTIONS                   |                                                     |
++------------------------------------------+-----------------------------------------------------+
+| DCP_Router                               |                                                     |
++------------------------------------------+-----------------------------------------------------+
+| DCP_Access                               | Fast.                                               |
++------------------------------------------+-----------------------------------------------------+
+| DCP_VLAN                                 | Power cycle 2 times                                 |
++------------------------------------------+-----------------------------------------------------+
+| DCP IP-parameter Remanence               | Power cycle 4 times.                                |
++------------------------------------------+-----------------------------------------------------+
+| Behavior Scenario 1 to 9                 | Power cycle                                         |
++------------------------------------------+-----------------------------------------------------+
+| Behavior Scenario 10                     |                                                     |
++------------------------------------------+-----------------------------------------------------+
+| Behavior Scenario 11                     |                                                     |
++------------------------------------------+-----------------------------------------------------+
+| Different Access Ways                    | Requires additional hardware ("Device B")           |
++------------------------------------------+-----------------------------------------------------+
+| PDEV_CHECK_ONEPORT                       | Requires additional hardware ("Device B")           |
++------------------------------------------+-----------------------------------------------------+
+| Diagnosis                                |                                                     |
++------------------------------------------+-----------------------------------------------------+
+| Alarm                                    | Requires additional hardware ("Device B")           |
++------------------------------------------+-----------------------------------------------------+
+| AR-ASE                                   | Power cycle                                         |
++------------------------------------------+-----------------------------------------------------+
+| IP_UDP_RPC_I&M_EPM                       |                                                     |
++------------------------------------------+-----------------------------------------------------+
+| RTC                                      | Requires additional hardware ("Device B")           |
++------------------------------------------+-----------------------------------------------------+
+| VLAN                                     | Turn off IO-controller ("device A")                 |
++------------------------------------------+-----------------------------------------------------+
+| Different access ways port-to-port       | Use port-to-port set up                             |
++------------------------------------------+-----------------------------------------------------+
+| Manual: DCP_Signal                       | Flash Signal LED. Fast.                             |
++------------------------------------------+-----------------------------------------------------+
+| Manual: Behavior of ResetToFactory       |                                                     |
++------------------------------------------+-----------------------------------------------------+
+| Manual: Checking of sending RTC frames   | Fast                                                |
++------------------------------------------+-----------------------------------------------------+
+| Manual: DataHoldTimer                    | PLC required. Use network tap at DUT.               |
++------------------------------------------+-----------------------------------------------------+
+| Manual: Interoperability                 | PLC required                                        |
++------------------------------------------+-----------------------------------------------------+
+| Manual: Interoperability with controller | PLC required                                        |
++------------------------------------------+-----------------------------------------------------+
+| Security Level 1                         | PLC required                                        |
++------------------------------------------+-----------------------------------------------------+
 
 For multi-port devices:
 
@@ -345,15 +343,44 @@ For multi-port devices:
 
 For conformance class B:
 
-* Topology discovery check
+* Topology discovery check (Uses SNMP)
 * Topology non-PN  (Use non-Profinet-neighbour setup)
 * Port-to-port
+
+
+For legacy startup mode:
+
+* Interoperability (use another PLC)
 
 
 Other tests
 -----------
 
 * GSDMLcheck
-* Security Level 1
-* Interoperability
-* Interoperability with controller
+
+
+Test details
+------------
+
+
+Data Hold Timer
+^^^^^^^^^^^^^^^
+
+* Manual checking of LLDP frames. Should reflect real port state.
+* Check real cycle time
+* Check IOPS in startup of cyclic data
+* Disconnect controller, and study number of frames from IO device until alarm.
+  Repeat for different data exchange cycle times.
+
+Interoperability
+^^^^^^^^^^^^^^^^
+Run with PLC for 10 minutes without errors. Record startup and data exchange using Wireshark.
+
+* ExpectedIdentification is equal to the RealIdentification?
+* Additional net load?
+* Implicit read?
+
+Interoperability with controller
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Run with PLC, then switch PLC to stop. Study the outputs of the IO-device.
+Disconnect cable from PLC. Study the outputs of the IO-device.

@@ -9,7 +9,7 @@ Web resources
 * Continuous integration: [https://travis-ci.com/rtlabs-com/p-net](https://travis-ci.com/rtlabs-com/p-net)
 * rt-labs: [https://rt-labs.com](https://rt-labs.com)
 
-[![Build Status](https://travis-ci.com/rtlabs-com/p-net.svg?branch=master)](https://travis-ci.com/rtlabs-com/p-net)
+[![Build Status](https://api.travis-ci.com/rtlabs-com/p-net.svg?branch=master)](https://travis-ci.com/rtlabs-com/p-net)
 
 p-net
 -----

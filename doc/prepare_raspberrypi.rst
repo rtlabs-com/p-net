@@ -1,6 +1,7 @@
 Install Raspbian on the Raspberry Pi (by using a Linux laptop)
 ==============================================================
-Download the Raspbian image from https://www.raspberrypi.org/downloads/raspbian/
+Download the Raspberry Pi OS (previously Raspbian) image from
+https://www.raspberrypi.org/downloads/raspberry-pi-os/
 Use the full version with "recommended software". Follow the instructions on
 the page to burn a SD-card.
 

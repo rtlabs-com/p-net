@@ -115,7 +115,7 @@ os_eth_handle_t * os_eth_init (
    ifr.ifr_flags = ifr.ifr_flags | IFF_PROMISC | IFF_BROADCAST;
    ioctl (handle->socket, SIOCSIFFLAGS, &ifr);
 
-   /* bind socket to protocol, in this case Profinet */
+   /* Bind socket to all protocols */
    sll.sll_family = AF_PACKET;
    sll.sll_ifindex = ifindex;
    sll.sll_protocol = htons (ETH_P_ALL);
