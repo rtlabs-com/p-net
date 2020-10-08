@@ -805,7 +805,7 @@ int pf_cmrdr_rm_read_ind (
          if (
             (p_read_request->slot_number == PNET_SLOT_DAP_IDENT) &&
             (p_read_request->subslot_number ==
-             PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT))
+             PNET_SUBSLOT_DAP_INTERFACE_1_PORT_0_IDENT))
          {
             pf_put_pdport_data_real (
                net,
@@ -822,7 +822,7 @@ int pf_cmrdr_rm_read_ind (
          if (
             (p_read_request->slot_number == PNET_SLOT_DAP_IDENT) &&
             (p_read_request->subslot_number ==
-             PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT))
+             PNET_SUBSLOT_DAP_INTERFACE_1_PORT_0_IDENT))
          {
             if (net->port[0].adjust.active)
             {
@@ -842,7 +842,7 @@ int pf_cmrdr_rm_read_ind (
          if (
             (p_read_request->slot_number == PNET_SLOT_DAP_IDENT) &&
             (p_read_request->subslot_number ==
-             PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT))
+             PNET_SUBSLOT_DAP_INTERFACE_1_PORT_0_IDENT))
          {
             if (net->port[0].check.active)
             {
@@ -892,7 +892,7 @@ int pf_cmrdr_rm_read_ind (
          if (
             (p_read_request->slot_number == PNET_SLOT_DAP_IDENT) &&
             (p_read_request->subslot_number ==
-             PNET_SUBMOD_DAP_INTERFACE_1_IDENT))
+             PNET_SUBSLOT_DAP_INTERFACE_1_IDENT))
          {
             pf_put_pdinterface_data_real (
                net,
@@ -913,7 +913,7 @@ int pf_cmrdr_rm_read_ind (
          if (
             (p_read_request->slot_number == PNET_SLOT_DAP_IDENT) &&
             (p_read_request->subslot_number ==
-             PNET_SUBMOD_DAP_INTERFACE_1_IDENT))
+             PNET_SUBSLOT_DAP_INTERFACE_1_IDENT))
          {
             /* return ok */
             ret = 0;
@@ -923,9 +923,9 @@ int pf_cmrdr_rm_read_ind (
          if (
             (p_read_request->slot_number == PNET_SLOT_DAP_IDENT) &&
             ((p_read_request->subslot_number ==
-              PNET_SUBMOD_DAP_INTERFACE_1_IDENT) ||
+              PNET_SUBSLOT_DAP_INTERFACE_1_IDENT) ||
              (p_read_request->subslot_number ==
-              PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT)))
+              PNET_SUBSLOT_DAP_INTERFACE_1_PORT_0_IDENT)))
          {
             pf_put_pdport_statistics (
                &net->interface_statistics,

@@ -69,10 +69,12 @@ extern "C" {
  *
  * Assume that all modules only have a single submodule, with same number.
  */
-#define PNET_MOD_8_0_IDENT       0x00000030 /* 8 bit input */
-#define PNET_MOD_0_8_IDENT       0x00000031 /* 8 bit output */
-#define PNET_MOD_8_8_IDENT       0x00000032 /* 8 bit input, 8 bit output */
-#define PNET_SUBMOD_CUSTOM_IDENT 0x00000001
+#define APP_MOD_8_0_IDENT       0x00000030 /* 8 bit input */
+#define APP_MOD_0_8_IDENT       0x00000031 /* 8 bit output */
+#define APP_MOD_8_8_IDENT       0x00000032 /* 8 bit input, 8 bit output */
+#define APP_SUBMOD_CUSTOM_IDENT 0x00000001
+
+#define APP_SUBSLOT_CUSTOM 0x00000001
 
 #define APP_DATASIZE_INPUT     1 /* bytes, for digital inputs data */
 #define APP_DATASIZE_OUTPUT    1 /* bytes, for digital outputs data */
@@ -82,9 +84,9 @@ extern "C" {
 
 static const uint32_t cfg_available_module_types[] = {
    PNET_MOD_DAP_IDENT,
-   PNET_MOD_8_0_IDENT,
-   PNET_MOD_0_8_IDENT,
-   PNET_MOD_8_8_IDENT};
+   APP_MOD_8_0_IDENT,
+   APP_MOD_0_8_IDENT,
+   APP_MOD_8_8_IDENT};
 
 static const struct
 {
@@ -109,20 +111,20 @@ static const struct
     0,
     0},
    {APP_API,
-    PNET_MOD_8_0_IDENT,
-    PNET_SUBMOD_CUSTOM_IDENT,
+    APP_MOD_8_0_IDENT,
+    APP_SUBMOD_CUSTOM_IDENT,
     PNET_DIR_INPUT,
     APP_DATASIZE_INPUT,
     0},
    {APP_API,
-    PNET_MOD_0_8_IDENT,
-    PNET_SUBMOD_CUSTOM_IDENT,
+    APP_MOD_0_8_IDENT,
+    APP_SUBMOD_CUSTOM_IDENT,
     PNET_DIR_OUTPUT,
     0,
     APP_DATASIZE_OUTPUT},
    {APP_API,
-    PNET_MOD_8_8_IDENT,
-    PNET_SUBMOD_CUSTOM_IDENT,
+    APP_MOD_8_8_IDENT,
+    APP_SUBMOD_CUSTOM_IDENT,
     PNET_DIR_IO,
     APP_DATASIZE_INPUT,
     APP_DATASIZE_OUTPUT},
