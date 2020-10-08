@@ -1116,6 +1116,8 @@ typedef struct pnet_ethaddr
 #define PNET_LLDP_PORT_ID_MAX_LEN                                              \
    (PNET_STATION_NAME_MAX_LEN + PNET_PORT_ID_MAX_LEN)
 
+#define PNET_LLDP_TTL 20 /* seconds. Mandatory value */
+
 /* LLDP Autonegotiation */
 #define PNET_LLDP_AUTONEG_SUPPORTED (1u << 0)
 #define PNET_LLDP_AUTONEG_ENABLED   (1u << 1)
@@ -1148,11 +1150,10 @@ typedef struct pnet_ethaddr
  */
 typedef struct pnet_lldp_cfg
 {
-   char chassis_id[PNET_LLDP_CHASSIS_ID_MAX_LEN + 1]; /**< Terminated string. If
-                                                         len=0 the MAC address
-                                                         will be used instead.
-                                                       */
-   char port_id[PNET_LLDP_PORT_ID_MAX_LEN + 1];       /**< Terminated string */
+   /**< Terminated string. Not yet used, will be used when multiple ports
+    * are supported */
+   char chassis_id[PNET_LLDP_CHASSIS_ID_MAX_LEN + 1];
+   char port_id[PNET_LLDP_PORT_ID_MAX_LEN + 1]; /**< Terminated string */
    pnet_ethaddr_t port_addr;
    uint16_t ttl; /**< Time to live in seconds */
    uint16_t rtclass_2_status;
@@ -1223,6 +1224,7 @@ typedef struct pnet_lldp_peer_info
    pnet_lldp_peer_to_peer_boundary_t peer_boundary;
 } pnet_lldp_peer_info_t;
 
+/* Not used? */
 /**
  * Peer port information
  */

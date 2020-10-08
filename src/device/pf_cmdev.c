@@ -4575,7 +4575,6 @@ int pf_cmdev_rm_connect_ind (
       p_ar->alarm_cr_result.max_alarm_data_length = 200; /* ToDo: Add a define
                                                             for this value */
 
-      /* Get the name from cfg! */
       (void)pf_cmina_get_station_name (net, &p_station_name);
       strncpy (
          p_ar->ar_server.cm_responder_station_name,
