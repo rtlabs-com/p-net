@@ -511,7 +511,7 @@ static int app_state_ind (
          net,
          APP_API,
          PNET_SLOT_DAP_IDENT,
-         PNET_SUBMOD_DAP_INTERFACE_1_IDENT,
+         PNET_SUBSLOT_DAP_INTERFACE_1_IDENT,
          NULL,
          0,
          PNET_IOXS_GOOD);
@@ -519,7 +519,7 @@ static int app_state_ind (
          net,
          APP_API,
          PNET_SLOT_DAP_IDENT,
-         PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT,
+         PNET_SUBSLOT_DAP_INTERFACE_1_PORT_0_IDENT,
          NULL,
          0,
          PNET_IOXS_GOOD);
@@ -535,13 +535,13 @@ static int app_state_ind (
                printf (
                   "  Setting input data and IOPS for slot %2u subslot %u\n",
                   slot,
-                  PNET_SUBMOD_CUSTOM_IDENT);
+                  APP_SUBSLOT_CUSTOM);
             }
             (void)pnet_input_set_data_and_iops (
                net,
                APP_API,
                slot,
-               PNET_SUBMOD_CUSTOM_IDENT,
+               APP_SUBSLOT_CUSTOM,
                p_appdata->inputdata,
                sizeof (p_appdata->inputdata),
                PNET_IOXS_GOOD);
@@ -553,13 +553,13 @@ static int app_state_ind (
                printf (
                   "  Setting output IOCS         for slot %2u subslot %u\n",
                   slot,
-                  PNET_SUBMOD_CUSTOM_IDENT);
+                  APP_SUBSLOT_CUSTOM);
             }
             (void)pnet_output_set_iocs (
                net,
                APP_API,
                slot,
-               PNET_SUBMOD_CUSTOM_IDENT,
+               APP_SUBSLOT_CUSTOM,
                PNET_IOXS_GOOD);
          }
       }
@@ -670,14 +670,14 @@ static int app_exp_module_ind (
          if (slot < PNET_MAX_MODULES)
          {
             if (
-               module_ident == PNET_MOD_8_0_IDENT ||
-               module_ident == PNET_MOD_8_8_IDENT)
+               module_ident == APP_MOD_8_0_IDENT ||
+               module_ident == APP_MOD_8_8_IDENT)
             {
                p_appdata->custom_input_slots[slot] = true;
             }
             if (
-               module_ident == PNET_MOD_8_8_IDENT ||
-               module_ident == PNET_MOD_0_8_IDENT)
+               module_ident == APP_MOD_8_8_IDENT ||
+               module_ident == APP_MOD_0_8_IDENT)
             {
                p_appdata->custom_output_slots[slot] = true;
             }
@@ -928,7 +928,7 @@ void app_plug_dap (pnet_t * net, void * arg)
       arg,
       APP_API,
       PNET_SLOT_DAP_IDENT,
-      PNET_SUBMOD_DAP_INTERFACE_1_IDENT,
+      PNET_SUBSLOT_DAP_INTERFACE_1_IDENT,
       PNET_MOD_DAP_IDENT,
       PNET_SUBMOD_DAP_INTERFACE_1_IDENT);
    app_exp_submodule_ind (
@@ -936,7 +936,7 @@ void app_plug_dap (pnet_t * net, void * arg)
       arg,
       APP_API,
       PNET_SLOT_DAP_IDENT,
-      PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT,
+      PNET_SUBSLOT_DAP_INTERFACE_1_PORT_0_IDENT,
       PNET_MOD_DAP_IDENT,
       PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT);
 }
@@ -1166,7 +1166,7 @@ static void app_handle_cyclic_data (
             net,
             APP_API,
             slot,
-            PNET_SUBMOD_CUSTOM_IDENT,
+            APP_SUBSLOT_CUSTOM,
             p_inputdata,
             inputdata_size,
             PNET_IOXS_GOOD);
@@ -1175,7 +1175,7 @@ static void app_handle_cyclic_data (
             net,
             APP_API,
             slot,
-            PNET_SUBMOD_CUSTOM_IDENT,
+            APP_SUBSLOT_CUSTOM,
             &inputdata_iocs);
 
          if (verbosity > 0)
@@ -1205,7 +1205,7 @@ static void app_handle_cyclic_data (
             net,
             APP_API,
             slot,
-            PNET_SUBMOD_CUSTOM_IDENT,
+            APP_SUBSLOT_CUSTOM,
             &outputdata_is_updated,
             outputdata,
             &outputdata_length,
@@ -1293,7 +1293,7 @@ static void app_handle_send_alarm (
                      "Sending process alarm from slot %u subslot %u USI %u to "
                      "IO-controller. Payload: 0x%x\n",
                      slot,
-                     PNET_SUBMOD_CUSTOM_IDENT,
+                     APP_SUBSLOT_CUSTOM,
                      APP_ALARM_USI,
                      alarm_payload[0]);
                   pnet_alarm_send_process_alarm (
@@ -1301,7 +1301,7 @@ static void app_handle_send_alarm (
                      arep,
                      APP_API,
                      slot,
-                     PNET_SUBMOD_CUSTOM_IDENT,
+                     APP_SUBSLOT_CUSTOM,
                      APP_ALARM_USI,
                      APP_ALARM_PAYLOAD_SIZE,
                      alarm_payload);
@@ -1325,14 +1325,14 @@ static void app_handle_send_alarm (
                printf (
                   "Adding diagnosis to slot %u subslot %u channel %u\n",
                   slot,
-                  PNET_SUBMOD_CUSTOM_IDENT,
+                  APP_SUBSLOT_CUSTOM,
                   APP_DIAG_CHANNEL);
                pnet_diag_add (
                   net,
                   arep,
                   APP_API,
                   slot,
-                  PNET_SUBMOD_CUSTOM_IDENT,
+                  APP_SUBSLOT_CUSTOM,
                   APP_DIAG_CHANNEL,
                   ch_properties,
                   CHANNEL_ERRORTYPE_NETWORK_COMPONENT_FUNCTION_MISMATCH,
@@ -1355,14 +1355,14 @@ static void app_handle_send_alarm (
                printf (
                   "Updating diagnosis to slot %u subslot %u channel %u\n",
                   slot,
-                  PNET_SUBMOD_CUSTOM_IDENT,
+                  APP_SUBSLOT_CUSTOM,
                   APP_DIAG_CHANNEL);
                pnet_diag_update (
                   net,
                   arep,
                   APP_API,
                   slot,
-                  PNET_SUBMOD_CUSTOM_IDENT,
+                  APP_SUBSLOT_CUSTOM,
                   APP_DIAG_CHANNEL,
                   ch_properties,
                   CHANNEL_ERRORTYPE_NETWORK_COMPONENT_FUNCTION_MISMATCH,
@@ -1383,14 +1383,14 @@ static void app_handle_send_alarm (
                printf (
                   "Removing diagnosis from slot %u subslot %u channel %u\n",
                   slot,
-                  PNET_SUBMOD_CUSTOM_IDENT,
+                  APP_SUBSLOT_CUSTOM,
                   APP_DIAG_CHANNEL);
                pnet_diag_remove (
                   net,
                   arep,
                   APP_API,
                   slot,
-                  PNET_SUBMOD_CUSTOM_IDENT,
+                  APP_SUBSLOT_CUSTOM,
                   APP_DIAG_CHANNEL,
                   ch_properties,
                   CHANNEL_ERRORTYPE_NETWORK_COMPONENT_FUNCTION_MISMATCH,

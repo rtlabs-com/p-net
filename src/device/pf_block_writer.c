@@ -3482,11 +3482,11 @@ void pf_put_pdport_data_real (
    /* Two bytes padding */
    pf_put_uint16 (is_big_endian, temp_u16, res_len, p_bytes, p_pos);
 
-   /* Slot 0 and subslot 0x8001 */
+   /* Slot and subslot */
    pf_put_uint16 (is_big_endian, PNET_SLOT_DAP_IDENT, res_len, p_bytes, p_pos);
    pf_put_uint16 (
       is_big_endian,
-      PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT,
+      PNET_SUBSLOT_DAP_INTERFACE_1_PORT_0_IDENT,
       res_len,
       p_bytes,
       p_pos);
@@ -3857,11 +3857,11 @@ static void pf_put_pd_multiblock_interface_and_statistics (
    /* API */
    pf_put_uint32 (is_big_endian, p_res->api, res_len, p_bytes, p_pos);
 
-   /* Slot 0 and subslot 0x8000 */
+   /* Slot and subslot */
    pf_put_uint16 (is_big_endian, PNET_SLOT_DAP_IDENT, res_len, p_bytes, p_pos);
    pf_put_uint16 (
       is_big_endian,
-      PNET_SUBMOD_DAP_INTERFACE_1_IDENT,
+      PNET_SUBSLOT_DAP_INTERFACE_1_IDENT,
       res_len,
       p_bytes,
       p_pos);
@@ -3919,11 +3919,11 @@ static void pf_put_pd_multiblock_port_and_statistics (
    /* API */
    pf_put_uint32 (is_big_endian, p_res->api, res_len, p_bytes, p_pos);
 
-   /* Slot 0 and subslot 0x8001 */
+   /* Slot and subslot */
    pf_put_uint16 (is_big_endian, PNET_SLOT_DAP_IDENT, res_len, p_bytes, p_pos);
    pf_put_uint16 (
       is_big_endian,
-      PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT,
+      PNET_SUBSLOT_DAP_INTERFACE_1_PORT_0_IDENT,
       res_len,
       p_bytes,
       p_pos);
@@ -4070,11 +4070,11 @@ void pf_put_pdport_data_adj (
    /*2 byte padding*/
    pf_put_uint16 (is_big_endian, temp16, res_len, p_bytes, p_pos);
 
-   /* Slot 0 and subslot 0x8001 */
+   /* Slot and subslot */
    pf_put_uint16 (is_big_endian, PNET_SLOT_DAP_IDENT, res_len, p_bytes, p_pos);
    pf_put_uint16 (
       is_big_endian,
-      PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT,
+      PNET_SUBSLOT_DAP_INTERFACE_1_PORT_0_IDENT,
       res_len,
       p_bytes,
       p_pos);
