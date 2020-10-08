@@ -1020,7 +1020,7 @@ int app_adjust_stack_configuration (pnet_cfg_t * stack_config)
 
    /* LLDP settings */
    strcpy (stack_config->lldp_cfg.port_id, "port-001");
-   stack_config->lldp_cfg.ttl = 20; /* seconds */
+   stack_config->lldp_cfg.ttl = PNET_LLDP_TTL;
    stack_config->lldp_cfg.rtclass_2_status = 0;
    stack_config->lldp_cfg.rtclass_3_status = 0;
    stack_config->lldp_cfg.cap_aneg = PNET_LLDP_AUTONEG_SUPPORTED |
@@ -1031,8 +1031,8 @@ int app_adjust_stack_configuration (pnet_cfg_t * stack_config)
    stack_config->lldp_cfg.mau_type = PNET_MAU_COPPER_100BaseTX_FULL_DUPLEX;
 
    /* Network configuration */
-   stack_config->send_hello = 1;
-   stack_config->dhcp_enable = 0;
+   stack_config->send_hello = true;
+   stack_config->dhcp_enable = false;
 
    return 0;
 }
