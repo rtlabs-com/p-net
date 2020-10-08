@@ -3770,15 +3770,15 @@ void pf_put_pdinterface_data_real (
    else
    {
       pf_put_byte (
-         (uint8_t)strlen (net->cmina_current_dcp_ase.name_of_station),
+         (uint8_t)strlen (net->cmina_current_dcp_ase.station_name),
          res_len,
          p_bytes,
          p_pos);
 
       /* Owner ChassisID*/
       pf_put_mem (
-         &net->cmina_current_dcp_ase.name_of_station,
-         strlen (net->cmina_current_dcp_ase.name_of_station),
+         &net->cmina_current_dcp_ase.station_name,
+         strlen (net->cmina_current_dcp_ase.station_name),
          res_len,
          p_bytes,
          p_pos);

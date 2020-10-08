@@ -127,7 +127,7 @@ static void pf_cmina_save_ase_if_modified (
          ip_string,
          netmask_string,
          gateway_string,
-         p_ase->name_of_station);
+         p_ase->station_name);
       break;
    case 1:
       LOG_DEBUG (
@@ -138,7 +138,7 @@ static void pf_cmina_save_ase_if_modified (
          ip_string,
          netmask_string,
          gateway_string,
-         p_ase->name_of_station);
+         p_ase->station_name);
       break;
    case 0:
       LOG_DEBUG (
@@ -149,7 +149,7 @@ static void pf_cmina_save_ase_if_modified (
          ip_string,
          netmask_string,
          gateway_string,
-         p_ase->name_of_station);
+         p_ase->station_name);
       break;
    default:
    case -1:
@@ -227,11 +227,11 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
             netmask = file_ase.full_ip_suite.ip_suite.ip_mask;
             gateway = file_ase.full_ip_suite.ip_suite.ip_gateway;
             memcpy (
-               net->cmina_nonvolatile_dcp_ase.name_of_station,
-               file_ase.name_of_station,
-               sizeof (net->cmina_nonvolatile_dcp_ase.name_of_station));
-            net->cmina_nonvolatile_dcp_ase.name_of_station
-               [sizeof (net->cmina_nonvolatile_dcp_ase.name_of_station) - 1] =
+               net->cmina_nonvolatile_dcp_ase.station_name,
+               file_ase.station_name,
+               sizeof (net->cmina_nonvolatile_dcp_ase.station_name));
+            net->cmina_nonvolatile_dcp_ase.station_name
+               [sizeof (net->cmina_nonvolatile_dcp_ase.station_name) - 1] =
                '\0';
          }
          else
@@ -261,11 +261,11 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
                p_cfg->ip_gateway.c,
                p_cfg->ip_gateway.d);
             memcpy (
-               net->cmina_nonvolatile_dcp_ase.name_of_station,
+               net->cmina_nonvolatile_dcp_ase.station_name,
                p_cfg->station_name,
-               sizeof (net->cmina_nonvolatile_dcp_ase.name_of_station));
-            net->cmina_nonvolatile_dcp_ase.name_of_station
-               [sizeof (net->cmina_nonvolatile_dcp_ase.name_of_station) - 1] =
+               sizeof (net->cmina_nonvolatile_dcp_ase.station_name));
+            net->cmina_nonvolatile_dcp_ase.station_name
+               [sizeof (net->cmina_nonvolatile_dcp_ase.station_name) - 1] =
                '\0';
          }
 
@@ -286,7 +286,7 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
             ip_string,
             netmask_string,
             gateway_string,
-            net->cmina_nonvolatile_dcp_ase.name_of_station);
+            net->cmina_nonvolatile_dcp_ase.station_name);
       }
 
       if (reset_mode == 1 || reset_mode == 99) /* Reset application parameters
@@ -313,9 +313,9 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
 
          /* Clear name of station */
          memset (
-            net->cmina_nonvolatile_dcp_ase.name_of_station,
+            net->cmina_nonvolatile_dcp_ase.station_name,
             0,
-            sizeof (net->cmina_nonvolatile_dcp_ase.name_of_station));
+            sizeof (net->cmina_nonvolatile_dcp_ase.station_name));
 
          pf_file_clear (p_file_directory, PNET_FILENAME_IP);
          pf_file_clear (p_file_directory, PNET_FILENAME_DIAGNOSTICS);
@@ -382,8 +382,8 @@ void pf_cmina_dcp_set_commit (pnet_t * net)
       }
       else if (
          strcmp (
-            net->cmina_current_dcp_ase.name_of_station,
-            net->cmina_nonvolatile_dcp_ase.name_of_station) != 0)
+            net->cmina_current_dcp_ase.station_name,
+            net->cmina_nonvolatile_dcp_ase.station_name) != 0)
       {
          permanent = false;
       }
@@ -405,7 +405,7 @@ void pf_cmina_dcp_set_commit (pnet_t * net)
          ip_string,
          netmask_string,
          gateway_string,
-         net->cmina_current_dcp_ase.name_of_station,
+         net->cmina_current_dcp_ase.station_name,
          permanent);
 
       net->cmina_commit_ip_suite = false;
@@ -414,7 +414,7 @@ void pf_cmina_dcp_set_commit (pnet_t * net)
          &net->cmina_current_dcp_ase.full_ip_suite.ip_suite.ip_addr,
          &net->cmina_current_dcp_ase.full_ip_suite.ip_suite.ip_mask,
          &net->cmina_current_dcp_ase.full_ip_suite.ip_suite.ip_gateway,
-         net->cmina_current_dcp_ase.name_of_station,
+         net->cmina_current_dcp_ase.station_name,
          permanent);
       if (res != 0)
       {
@@ -446,7 +446,7 @@ int pf_cmina_init (pnet_t * net)
                                                net->cmina_current_dcp_ase and
                                                net->cmina_nonvolatile_dcp_ase */
 
-   if (strlen (net->cmina_current_dcp_ase.name_of_station) == 0)
+   if (strlen (net->cmina_current_dcp_ase.station_name) == 0)
    {
       LOG_DEBUG (
          PF_DCP_LOG,
@@ -742,7 +742,7 @@ int pf_cmina_dcp_set_ind (
       switch (sub)
       {
       case PF_DCP_SUB_DEV_PROP_NAME:
-         if (value_length < sizeof (net->cmina_current_dcp_ase.name_of_station))
+         if (value_length < sizeof (net->cmina_current_dcp_ase.station_name))
          {
             if (pf_cmina_is_stationname_valid ((char *)p_value, value_length))
             {
@@ -750,37 +750,37 @@ int pf_cmina_dcp_set_ind (
                /* Set station name */
                change_name =
                   ((strncmp (
-                       net->cmina_current_dcp_ase.name_of_station,
+                       net->cmina_current_dcp_ase.station_name,
                        (char *)p_value,
                        value_length) != 0) &&
-                   (strlen (net->cmina_current_dcp_ase.name_of_station) !=
+                   (strlen (net->cmina_current_dcp_ase.station_name) !=
                     value_length));
 
                strncpy (
-                  net->cmina_current_dcp_ase.name_of_station,
+                  net->cmina_current_dcp_ase.station_name,
                   (char *)p_value,
                   value_length);
-               net->cmina_current_dcp_ase.name_of_station[value_length] = '\0';
+               net->cmina_current_dcp_ase.station_name[value_length] = '\0';
                LOG_INFO (
                   PF_DCP_LOG,
                   "CMINA(%d): The incoming set request is about changing "
                   "station name. New name: %s  Temporary: %u\n",
                   __LINE__,
-                  net->cmina_current_dcp_ase.name_of_station,
+                  net->cmina_current_dcp_ase.station_name,
                   temp);
 
                if (temp == true)
                {
                   memset (
-                     net->cmina_nonvolatile_dcp_ase.name_of_station,
+                     net->cmina_nonvolatile_dcp_ase.station_name,
                      0,
-                     sizeof (net->cmina_nonvolatile_dcp_ase.name_of_station));
+                     sizeof (net->cmina_nonvolatile_dcp_ase.station_name));
                }
                else
                {
                   strcpy (
-                     net->cmina_nonvolatile_dcp_ase.name_of_station,
-                     net->cmina_current_dcp_ase.name_of_station); /* It always
+                     net->cmina_nonvolatile_dcp_ase.station_name,
+                     net->cmina_current_dcp_ase.station_name); /* It always
                                                                      fits */
                }
                ret = 0;
@@ -841,7 +841,7 @@ int pf_cmina_dcp_set_ind (
       pf_cmina_save_ase_if_modified (net, &net->cmina_nonvolatile_dcp_ase);
 
       /* Evaluate what we have and where to go */
-      have_name = (strlen (net->cmina_current_dcp_ase.name_of_station) > 0);
+      have_name = (strlen (net->cmina_current_dcp_ase.station_name) > 0);
       have_ip =
          ((net->cmina_current_dcp_ase.full_ip_suite.ip_suite.ip_addr != 0) ||
           (net->cmina_current_dcp_ase.full_ip_suite.ip_suite.ip_mask != 0) ||
@@ -1078,8 +1078,8 @@ int pf_cmina_dcp_get_req (
          *pp_value = (uint8_t *)net->cmina_current_dcp_ase.device_vendor;
          break;
       case PF_DCP_SUB_DEV_PROP_NAME:
-         *p_value_length = sizeof (net->cmina_current_dcp_ase.name_of_station);
-         *pp_value = (uint8_t *)net->cmina_current_dcp_ase.name_of_station;
+         *p_value_length = sizeof (net->cmina_current_dcp_ase.station_name);
+         *pp_value = (uint8_t *)net->cmina_current_dcp_ase.station_name;
          break;
       case PF_DCP_SUB_DEV_PROP_ID:
          *p_value_length = sizeof (net->cmina_current_dcp_ase.device_id);
@@ -1185,7 +1185,7 @@ int pf_cmina_get_file_directory (pnet_t * net, const char ** pp_file_directory)
 
 int pf_cmina_get_station_name (pnet_t * net, const char ** pp_station_name)
 {
-   *pp_station_name = net->cmina_current_dcp_ase.name_of_station;
+   *pp_station_name = net->cmina_current_dcp_ase.station_name;
    return 0;
 }
 
@@ -1294,13 +1294,13 @@ void pf_cmina_show (pnet_t * net)
    printf (
       "state                          : %s\n",
       pf_cmina_state_to_string (net));
-   printf ("Default name_of_station        : <%s>\n", p_cfg->station_name);
+   printf ("Default station_name        : <%s>\n", p_cfg->station_name);
    printf (
-      "Perm name_of_station           : <%s>\n",
-      net->cmina_nonvolatile_dcp_ase.name_of_station);
+      "Perm station_name           : <%s>\n",
+      net->cmina_nonvolatile_dcp_ase.station_name);
    printf (
-      "Temp name_of_station           : <%s>\n",
-      net->cmina_current_dcp_ase.name_of_station);
+      "Temp station_name           : <%s>\n",
+      net->cmina_current_dcp_ase.station_name);
    printf ("\n");
 
    printf ("Default device_vendor          : <%s>\n", p_cfg->device_vendor);

@@ -780,7 +780,7 @@ typedef struct pf_eth_frame_id_map
  */
 typedef struct pf_cmina_dcp_ase
 {
-   char name_of_station[PNET_STATION_NAME_MAX_LEN + 1]; /* Terminated */
+   char station_name[PNET_STATION_NAME_MAX_LEN + 1]; /* Terminated */
    char device_vendor[20 + 1];                          /* Terminated */
    uint8_t device_role;        /* Only value "1" supported */
    uint16_t device_initiative; /* 1: Should send hello. 0: No sending of hello
