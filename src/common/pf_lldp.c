@@ -669,7 +669,7 @@ void pf_lldp_send (pnet_t * net)
    }
 }
 
-void pf_lldp_restart (pnet_t * net, bool send)
+void pf_lldp_tx_restart (pnet_t * net, bool send)
 {
    if (net->lldp_timeout != 0)
    {
@@ -701,7 +701,7 @@ void pf_lldp_restart (pnet_t * net, bool send)
 void pf_lldp_init (pnet_t * net)
 {
    memset (&net->lldp_peer_info, 0, sizeof (net->lldp_peer_info));
-   pf_lldp_restart (net, true);
+   pf_lldp_tx_restart (net, true);
 }
 
 /**
