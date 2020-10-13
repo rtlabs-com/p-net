@@ -710,7 +710,8 @@ static int app_exp_submodule_ind (
    uint16_t slot,
    uint16_t subslot,
    uint32_t module_ident,
-   uint32_t submodule_ident)
+   uint32_t submodule_ident,
+   const pnet_data_cfg_t *p_exp_data)
 {
    int ret = -1;
    int result = 0;
@@ -758,18 +759,24 @@ static int app_exp_submodule_ind (
       {
          printf (
             "  Plug submodule.     API: %u Slot: %2u Module ID: 0x%-4x "
-            "Subslot: %u Submodule ID: 0x%x Index in supported submodules: %u "
-            "Dir: %s In: %u Out: %u bytes\n",
+            "Subslot: %u Submodule ID: 0x%x Index in supported submodules: %u\n"
+            "",
             api,
             slot,
             (unsigned)module_ident,
             subslot,
             (unsigned)submodule_ident,
-            ix,
+            ix);
+         printf(
+            "                      Data Dir: %s In: %u Out: %u (Exp Data Dir: %s In: %u Out: %u)\n",
             submodule_direction_to_string (
                cfg_available_submodule_types[ix].data_dir),
             cfg_available_submodule_types[ix].insize,
-            cfg_available_submodule_types[ix].outsize);
+            cfg_available_submodule_types[ix].outsize,
+            submodule_direction_to_string (
+               p_exp_data->data_dir),
+            p_exp_data->insize,
+            p_exp_data->outsize);
       }
       ret = pnet_plug_submodule (
          net,
@@ -922,7 +929,8 @@ void app_plug_dap (pnet_t * net, void * arg)
       PNET_SLOT_DAP_IDENT,
       PNET_SUBMOD_DAP_IDENT,
       PNET_MOD_DAP_IDENT,
-      PNET_SUBMOD_DAP_IDENT);
+      PNET_SUBMOD_DAP_IDENT,
+      &cfg_dap_data);
    app_exp_submodule_ind (
       net,
       arg,
@@ -930,7 +938,8 @@ void app_plug_dap (pnet_t * net, void * arg)
       PNET_SLOT_DAP_IDENT,
       PNET_SUBSLOT_DAP_INTERFACE_1_IDENT,
       PNET_MOD_DAP_IDENT,
-      PNET_SUBMOD_DAP_INTERFACE_1_IDENT);
+      PNET_SUBMOD_DAP_INTERFACE_1_IDENT,
+      &cfg_dap_data);
    app_exp_submodule_ind (
       net,
       arg,
@@ -938,7 +947,8 @@ void app_plug_dap (pnet_t * net, void * arg)
       PNET_SLOT_DAP_IDENT,
       PNET_SUBSLOT_DAP_INTERFACE_1_PORT_0_IDENT,
       PNET_MOD_DAP_IDENT,
-      PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT);
+      PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT,
+      &cfg_dap_data);
 }
 
 /************ Configuration of product ID, software version etc **************/

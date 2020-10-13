@@ -3285,6 +3285,8 @@ static int pf_cmdev_exp_submodule_configure (
    pf_ar_t * p_ar;
    pf_iocr_param_t * p_iocr_param;
    pf_api_entry_t * p_iocr_api;
+   uint16_t i;
+   pnet_data_cfg_t exp_data = {0};
 
    ret = 0; /* Assume all goes well */
    for (sub_ix = 0; sub_ix < p_exp_mod->nbr_submodules; sub_ix++)
@@ -3296,6 +3298,21 @@ static int pf_cmdev_exp_submodule_configure (
             p_exp_sub->subslot_number,
             &p_cfg_sub) != 0)
       {
+         memset(&exp_data, 0, sizeof(exp_data));
+         for (i = 0; i < p_exp_sub->nbr_data_descriptors; i++)
+         {
+            if (p_exp_sub->data_descriptor[i].data_direction == PF_DIRECTION_INPUT)
+            {
+               exp_data.data_dir |= PNET_DIR_INPUT;
+               exp_data.insize = p_exp_sub->data_descriptor[i].submodule_data_length;
+            }
+            if (p_exp_sub->data_descriptor[i].data_direction == PF_DIRECTION_OUTPUT)
+            {
+               exp_data.data_dir |= PNET_DIR_OUTPUT;
+               exp_data.outsize = p_exp_sub->data_descriptor[i].submodule_data_length;
+            }
+         }
+
          /*
           * Return code is not interesting here.
           */
@@ -3305,7 +3322,8 @@ static int pf_cmdev_exp_submodule_configure (
             p_exp_mod->slot_number,
             p_exp_sub->subslot_number,
             p_exp_mod->module_ident_number,
-            p_exp_sub->submodule_ident_number);
+            p_exp_sub->submodule_ident_number,
+            &exp_data);
       }
       else
       {

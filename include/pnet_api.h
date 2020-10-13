@@ -376,6 +376,7 @@ typedef enum pnet_event_values
  */
 typedef enum pnet_ioxs_values
 {
+   /* Values are important */
    PNET_IOXS_BAD = 0x00,
    PNET_IOXS_GOOD = 0x80
 } pnet_ioxs_values_t;
@@ -385,11 +386,23 @@ typedef enum pnet_ioxs_values
  */
 typedef enum pnet_submodule_dir
 {
-   PNET_DIR_NO_IO,
-   PNET_DIR_INPUT,
-   PNET_DIR_OUTPUT,
-   PNET_DIR_IO
+   /* Values are important */
+   PNET_DIR_NO_IO = 0x00,
+   PNET_DIR_INPUT = 0x01,
+   PNET_DIR_OUTPUT = 0x02,
+   PNET_DIR_IO = 0x03
 } pnet_submodule_dir_t;
+
+/*
+ * Data configuration
+ * Used when indicating an expected submodule.
+ */
+typedef struct pnet_data_cfg
+{
+   pnet_submodule_dir_t data_dir;
+   uint16_t insize;
+   uint16_t outsize;
+} pnet_data_cfg_t;
 
 /**
  * CControl command codes used in the dcontrol_cb call-back function.
@@ -786,6 +799,7 @@ typedef int (*pnet_exp_module_ind) (
  * @param subslot          In:   The sub-slot number.
  * @param module_ident     In:   The module ident number.
  * @param submodule_ident  In:   The sub-module ident number.
+ * @param p_exp_data       In:   The expected data configuration
  * @return  0  on success.
  *          -1 if an error occurred.
  */
@@ -796,7 +810,8 @@ typedef int (*pnet_exp_submodule_ind) (
    uint16_t slot,
    uint16_t subslot,
    uint32_t module_ident,
-   uint32_t submodule_ident);
+   uint32_t submodule_ident,
+   const pnet_data_cfg_t * p_exp_data);
 
 /**
  * Indication to the application that the data status received from the

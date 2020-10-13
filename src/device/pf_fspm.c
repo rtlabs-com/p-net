@@ -453,7 +453,8 @@ int pf_fspm_exp_submodule_ind (
    uint16_t slot,
    uint16_t subslot,
    uint32_t module_ident,
-   uint32_t submodule_ident)
+   uint32_t submodule_ident,
+   const pnet_data_cfg_t * p_exp_data)
 {
    int ret = -1;
 
@@ -466,7 +467,8 @@ int pf_fspm_exp_submodule_ind (
          slot,
          subslot,
          module_ident,
-         submodule_ident);
+         submodule_ident,
+         p_exp_data);
    }
 
    return ret;

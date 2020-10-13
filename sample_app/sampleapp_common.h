@@ -88,6 +88,7 @@ static const uint32_t cfg_available_module_types[] = {
    APP_MOD_0_8_IDENT,
    APP_MOD_8_8_IDENT};
 
+
 static const struct
 {
    uint32_t api;
@@ -130,6 +131,12 @@ static const struct
     APP_DATASIZE_OUTPUT},
 };
 
+static const pnet_data_cfg_t cfg_dap_data =
+{
+   .data_dir = PNET_DIR_NO_IO,
+   .insize = 0,
+   .outsize = 0,
+};
 /************************ App data storage ***********************************/
 
 struct cmd_args
