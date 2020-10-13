@@ -53,6 +53,8 @@ int pf_ppm_close_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep);
  * @param slot_nbr         In:   The slot number.
  * @param subslot_nbr      In:   The sub-slot number.
  * @param p_data           In:   The application data.
+ *                               If NULL is passed, frame data is
+ *                               not updated.
  * @param data_len         In:   The length of the application data.
  * @param iops             In:   The IOPS of the application data.
  * @param iops_len         In:   The length of the IOPS.
