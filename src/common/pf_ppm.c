@@ -570,7 +570,7 @@ int pf_ppm_set_data_and_iops (
          {
             CC_ASSERT (net->ppm_buf_lock != NULL);
             os_mutex_lock (net->ppm_buf_lock);
-            if (data_len > 0)
+            if (data_len > 0 && p_data != NULL)
             {
                memcpy (
                   &p_iocr->ppm.buffer_data[p_iodata->data_offset],
