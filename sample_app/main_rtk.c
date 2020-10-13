@@ -174,7 +174,6 @@ int main (void)
    cmdline_arguments.verbosity = (LOG_LEVEL <= LOG_LEVEL_WARNING) ? 1 : 0;
    memset (&appdata, 0, sizeof (appdata));
    appdata.alarm_allowed = true;
-   appdata.main_arep = UINT32_MAX;
    appdata.arguments = cmdline_arguments;
    appdata.main_events = os_event_create();
    appdata.main_timer =

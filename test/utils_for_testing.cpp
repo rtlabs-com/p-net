@@ -333,7 +333,8 @@ int my_exp_submodule_ind (
    uint16_t slot,
    uint16_t subslot,
    uint32_t module_ident,
-   uint32_t submodule_ident)
+   uint32_t submodule_ident,
+   const pnet_data_cfg_t * p_exp_data)
 {
    app_data_for_testing_t * p_appdata = (app_data_for_testing_t *)arg;
    int ret = -1;

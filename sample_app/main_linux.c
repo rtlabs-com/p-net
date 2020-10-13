@@ -337,7 +337,6 @@ int main (int argc, char * argv[])
 
    memset (&appdata, 0, sizeof (appdata));
    appdata.alarm_allowed = true;
-   appdata.main_arep = UINT32_MAX;
 
    /* Parse and display command line arguments */
    appdata.arguments = parse_commandline_arguments (argc, argv);

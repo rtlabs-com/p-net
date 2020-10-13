@@ -89,54 +89,63 @@ static const uint32_t cfg_available_module_types[] = {
    APP_MOD_8_8_IDENT};
 
 
-static const struct
+typedef struct cfg_submodule_type
 {
+   const char * name;
    uint32_t api;
    uint32_t module_ident_nbr;
    uint32_t submodule_ident_nbr;
    pnet_submodule_dir_t data_dir;
    uint16_t insize;  /* bytes */
    uint16_t outsize; /* bytes */
-} cfg_available_submodule_types[] = {
-   {APP_API, PNET_MOD_DAP_IDENT, PNET_SUBMOD_DAP_IDENT, PNET_DIR_NO_IO, 0, 0},
-   {APP_API,
-    PNET_MOD_DAP_IDENT,
-    PNET_SUBMOD_DAP_INTERFACE_1_IDENT,
-    PNET_DIR_NO_IO,
-    0,
-    0},
-   {APP_API,
-    PNET_MOD_DAP_IDENT,
-    PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT,
-    PNET_DIR_NO_IO,
-    0,
-    0},
-   {APP_API,
-    APP_MOD_8_0_IDENT,
-    APP_SUBMOD_CUSTOM_IDENT,
-    PNET_DIR_INPUT,
-    APP_DATASIZE_INPUT,
-    0},
-   {APP_API,
-    APP_MOD_0_8_IDENT,
-    APP_SUBMOD_CUSTOM_IDENT,
-    PNET_DIR_OUTPUT,
-    0,
-    APP_DATASIZE_OUTPUT},
-   {APP_API,
-    APP_MOD_8_8_IDENT,
-    APP_SUBMOD_CUSTOM_IDENT,
-    PNET_DIR_IO,
-    APP_DATASIZE_INPUT,
-    APP_DATASIZE_OUTPUT},
+} cfg_submodule_type_t;
+
+static const cfg_submodule_type_t cfg_available_submodule_types[] =
+{
+   {
+      "DAP Identity 1",
+      APP_API,
+      PNET_MOD_DAP_IDENT,
+      PNET_SUBMOD_DAP_IDENT,
+      PNET_DIR_NO_IO, 0, 0
+   },
+   {
+      "DAP Interface 1",
+      APP_API,
+      PNET_MOD_DAP_IDENT,
+      PNET_SUBMOD_DAP_INTERFACE_1_IDENT,
+      PNET_DIR_NO_IO, 0, 0
+   },
+   {
+      "DAP Port 1",
+      APP_API,
+      PNET_MOD_DAP_IDENT,
+      PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT,
+      PNET_DIR_NO_IO, 0, 0
+   },
+   {
+      "Input 8 bits",
+      APP_API,
+      APP_MOD_8_0_IDENT,
+      APP_SUBMOD_CUSTOM_IDENT,
+      PNET_DIR_INPUT, APP_DATASIZE_INPUT, 0
+   },
+   {
+      "Output 8 bits",
+      APP_API,
+      APP_MOD_0_8_IDENT,
+      APP_SUBMOD_CUSTOM_IDENT,
+      PNET_DIR_OUTPUT, 0, APP_DATASIZE_OUTPUT
+   },
+   {
+      "Input 8 bits output 8 bits",
+      APP_API,
+      APP_MOD_8_8_IDENT,
+      APP_SUBMOD_CUSTOM_IDENT,
+      PNET_DIR_IO, APP_DATASIZE_INPUT, APP_DATASIZE_OUTPUT
+   },
 };
 
-static const pnet_data_cfg_t cfg_dap_data =
-{
-   .data_dir = PNET_DIR_NO_IO,
-   .insize = 0,
-   .outsize = 0,
-};
 /************************ App data storage ***********************************/
 
 struct cmd_args
@@ -152,19 +161,43 @@ struct cmd_args
    bool remove_files;
 };
 
+typedef struct app_subslot
+{
+   bool used;
+   bool plugged;
+   uint16_t slot_nbr;
+   uint16_t subslot_nbr;
+   uint32_t submodule_id;
+   const char * submodule_name;
+   pnet_data_cfg_t data_cfg;
+   uint8_t * p_in_data;
+} app_subslot_t;
+
+typedef struct app_slot
+{
+   bool plugged;
+   uint32_t module_id;
+   app_subslot_t subslots[PNET_MAX_SUBMODULES];
+} app_slot_t;
+
+typedef struct app_api_t
+{
+   uint32_t api_id;
+   uint32_t arep;
+   app_slot_t slots[PNET_MAX_MODULES];
+} app_api_t;
+
 typedef struct app_data_obj
 {
    os_timer_t * main_timer;
    os_event_t * main_events;
-   uint32_t main_arep;
+   app_api_t main_api;
    bool alarm_allowed;
    pnet_alarm_argument_t alarm_arg;
    struct cmd_args arguments;
    uint32_t app_param_1;
    uint32_t app_param_2;
    uint8_t inputdata[APP_DATASIZE_INPUT];
-   bool custom_input_slots[PNET_MAX_MODULES];
-   bool custom_output_slots[PNET_MAX_MODULES];
 } app_data_t;
 
 typedef struct app_data_and_stack_obj
