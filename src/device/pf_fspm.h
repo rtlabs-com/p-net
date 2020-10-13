@@ -259,6 +259,7 @@ int pf_fspm_exp_module_ind (
  * @param subslot_nbr      In:   The sub-slot number.
  * @param module_ident     In:   The module ident number.
  * @param submodule_ident  In:   The sub-module ident number.
+ * @param p_exp_data       In:   The expected data configuration
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -268,7 +269,8 @@ int pf_fspm_exp_submodule_ind (
    uint16_t slot_nbr,
    uint16_t subslot_nbr,
    uint32_t module_ident,
-   uint32_t submodule_ident);
+   uint32_t submodule_ident,
+   const pnet_data_cfg_t * exp_data);
 
 /**
  * Notify application that the received data status has changed,
