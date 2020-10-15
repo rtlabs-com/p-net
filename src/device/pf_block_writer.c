@@ -3609,7 +3609,8 @@ void pf_put_pdport_data_real (
          p_pos);
 
       /* Get ChassisId of peer device */
-      pf_lldp_get_peer_chassis_id (net, &chassis_id);
+      pf_lldp_get_peer_chassis_id (net, 1, &chassis_id); /* TODO: Pass port
+                                                            number */
 
       /* Length ChassisID */
       pf_put_byte (chassis_id.len, res_len, p_bytes, p_pos);

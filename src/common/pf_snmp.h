@@ -181,7 +181,7 @@ typedef struct pf_snmp_system_contact
  */
 typedef struct pf_snmp_system_location
 {
-   char string[22 + 1]; /* Terminated */
+   char string[PNET_LOCATION_MAX_LEN + 1]; /* Terminated */
 } pf_snmp_system_location_t;
 
 /**
@@ -563,8 +563,6 @@ void pf_snmp_get_management_address (
  *
  * The remote management address is contained in an LLDP packet sent from a port
  * on the remote device to the local port with no intermediate switches.
- * If no LLDP packet has been received, the returned management address is
- * empty.
  *
  * The management address should usually be the IP address for the remote
  * interface the remote port belongs to. It could also be the MAC address of

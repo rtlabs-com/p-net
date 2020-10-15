@@ -2324,7 +2324,7 @@ typedef struct pf_lldp_link_status
  * Note: According to the SNMP specification, the string could be up
  * to 255 characters. The p-net stack limits it to
  * PNET_MAX_INTERFACE_NAME_LENGTH.
- * An extra byte is added as to ensure NULL-termination.
+ * An extra byte is added as to ensure null-termination.
  */
 typedef struct pf_lldp_port_description
 {
@@ -2360,7 +2360,7 @@ typedef struct pf_lldp_port_list_t
  */
 typedef struct pf_lldp_port_id
 {
-   char string[PNET_PORT_ID_MAX_LEN + 1]; /**< Terminated string */
+   char string[PNET_LLDP_PORT_ID_MAX_LEN + 1]; /**< Terminated string */
    uint8_t subtype;
    size_t len;
 } pf_lldp_port_id_t;

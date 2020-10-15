@@ -26,6 +26,8 @@
 
 #include <gtest/gtest.h>
 
+#define LOCAL_PORT 1
+
 const char * chassis_id_test_sample_1 =
    "\x53\x43\x41\x4c\x41\x4e\x43\x45\x20\x58\x2d\x32\x30\x30\x20"
    "\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x36\x47\x4b\x35\x20"
@@ -137,41 +139,220 @@ TEST_F (LldpTest, LldpGenerateAliasName)
    memset (alias, 0, sizeof (alias));
 }
 
+TEST_F (LldpTest, LldpGetPortList)
+{
+   pf_lldp_port_list_t port_list;
+
+   memset (&port_list, 0xff, sizeof (port_list));
+
+   /* TODO: Add support for multiple ports */
+   pf_lldp_get_port_list (net, &port_list);
+   EXPECT_EQ (port_list.ports[0], 0x80);
+   EXPECT_EQ (port_list.ports[1], 0x00);
+}
+
 TEST_F (LldpTest, LldpGetChassisId)
 {
    pf_lldp_chassis_id_t chassis_id;
 
-   memset (&chassis_id, 0, sizeof (chassis_id));
+   memset (&chassis_id, 0xff, sizeof (chassis_id));
 
    /* Currently, the MAC address is used as Chassis ID */
    pf_lldp_get_chassis_id (net, &chassis_id);
    EXPECT_EQ (chassis_id.subtype, PF_LLDP_SUBTYPE_MAC);
+   EXPECT_EQ (chassis_id.string[0], 0x12);
+   EXPECT_EQ (chassis_id.string[1], 0x34);
+   EXPECT_EQ (chassis_id.string[2], 0x00);
+   EXPECT_EQ (chassis_id.string[3], 0x78);
+   EXPECT_EQ (chassis_id.string[4], (char)0x90);
+   EXPECT_EQ (chassis_id.string[5], (char)0xab);
    EXPECT_EQ (chassis_id.len, 6u);
 
    /* TODO: Add test case for locally assigned Chassis ID */
 }
 
-TEST_F (LldpTest, LldpGetPeerChassisId)
+TEST_F (LldpTest, LldpGetPortId)
 {
-   pf_lldp_chassis_id_t chassis_id;
+   pf_lldp_port_id_t port_id;
 
-   memset (&chassis_id, 0, sizeof (chassis_id));
+   memset (&port_id, 0xff, sizeof (port_id));
+
+   pf_lldp_get_port_id (net, LOCAL_PORT, &port_id);
+   EXPECT_EQ (port_id.subtype, PF_LLDP_SUBTYPE_LOCALLY_ASSIGNED);
+   EXPECT_STREQ (port_id.string, "port-001");
+   EXPECT_EQ (port_id.len, strlen ("port-001"));
+}
+
+TEST_F (LldpTest, LldpGetPortDescription)
+{
+   pf_lldp_port_description_t port_desc;
+
+   memset (&port_desc, 0xff, sizeof (port_desc));
+
+   pf_lldp_get_port_description (net, LOCAL_PORT, &port_desc);
+   EXPECT_STREQ (port_desc.string, TEST_INTERFACE_NAME);
+   EXPECT_EQ (port_desc.len, strlen (TEST_INTERFACE_NAME));
+}
+
+TEST_F (LldpTest, LldpGetManagementAddress)
+{
+   pf_lldp_management_address_t man_address;
+
+   memset (&man_address, 0xff, sizeof (man_address));
+
+   pf_lldp_get_management_address (net, &man_address);
+   EXPECT_EQ (man_address.subtype, 1); /* IPv4 */
+   EXPECT_EQ (man_address.value[0], 192);
+   EXPECT_EQ (man_address.value[1], 168);
+   EXPECT_EQ (man_address.value[2], 1);
+   EXPECT_EQ (man_address.value[3], 171);
+   EXPECT_EQ (man_address.len, 4u);
+}
+
+TEST_F (LldpTest, LldpGetManagementPortIndex)
+{
+   pf_lldp_management_port_index_t man_port_index;
+
+   memset (&man_port_index, 0xff, sizeof (man_port_index));
+
+   pf_lldp_get_management_port_index (net, &man_port_index);
+   EXPECT_EQ (man_port_index.subtype, 2); /* ifIndex */
+   EXPECT_EQ (man_port_index.index, 1);   /* TODO */
+}
+
+TEST_F (LldpTest, LldpGetSignalDelays)
+{
+   pf_lldp_signal_delay_t delays;
+
+   memset (&delays, 0xff, sizeof (delays));
+
+   pf_lldp_get_signal_delays (net, LOCAL_PORT, &delays);
+   EXPECT_EQ (delays.port_tx_delay_ns, 0u);          /* Not measured */
+   EXPECT_EQ (delays.port_rx_delay_ns, 0u);          /* Not measured */
+   EXPECT_EQ (delays.line_propagation_delay_ns, 0u); /* Not measured */
+}
+
+TEST_F (LldpTest, LldpGetLinkStatus)
+{
+   pf_lldp_link_status_t link_status;
+
+   memset (&link_status, 0xff, sizeof (link_status));
+
+   pf_lldp_get_link_status (net, LOCAL_PORT, &link_status);
+   EXPECT_EQ (link_status.auto_neg_supported, true);
+   EXPECT_EQ (link_status.auto_neg_enabled, true);
+   EXPECT_EQ (
+      link_status.auto_neg_advertised_cap,
+      PNET_LLDP_AUTONEG_CAP_100BaseTX_HALF_DUPLEX |
+         PNET_LLDP_AUTONEG_CAP_100BaseTX_FULL_DUPLEX);
+   EXPECT_EQ (link_status.oper_mau_type, PNET_MAU_COPPER_100BaseTX_FULL_DUPLEX);
+}
+
+TEST_F (LldpTest, LldpGetPeerTimestamp)
+{
+   uint32_t timestamp_10ms;
+   int error;
 
    /* Nothing received */
-   pf_lldp_get_peer_chassis_id (net, &chassis_id);
-   EXPECT_EQ (chassis_id.len, 0u);
+   error = pf_lldp_get_peer_timestamp (net, LOCAL_PORT, &timestamp_10ms);
+   EXPECT_EQ (error, -1);
 
    /* TODO: Add test case for scenario where LLDP packet has been received */
 }
 
-TEST_F (LldpTest, LldpIsPeerInfoReceived)
+TEST_F (LldpTest, LldpGetPeerChassisId)
 {
-   bool is_received;
-   uint32_t last_chage;
+   pf_lldp_chassis_id_t chassis_id;
+   int error;
 
    /* Nothing received */
-   is_received = pf_lldp_is_peer_info_received (net, &last_chage);
-   EXPECT_EQ (is_received, false);
+   error = pf_lldp_get_peer_chassis_id (net, LOCAL_PORT, &chassis_id);
+   EXPECT_EQ (error, -1);
+
+   /* TODO: Add test case for scenario where LLDP packet has been received */
+}
+
+TEST_F (LldpTest, LldpGetPeerPortId)
+{
+   pf_lldp_port_id_t port_id;
+   int error;
+
+   /* Nothing received */
+   error = pf_lldp_get_peer_port_id (net, LOCAL_PORT, &port_id);
+   EXPECT_EQ (error, -1);
+
+   /* TODO: Add test case for scenario where LLDP packet has been received */
+}
+
+TEST_F (LldpTest, LldpGetPeerPortDescription)
+{
+   pf_lldp_port_description_t port_desc;
+   int error;
+
+   /* Nothing received */
+   error = pf_lldp_get_peer_port_description (net, LOCAL_PORT, &port_desc);
+   EXPECT_EQ (error, -1);
+
+   /* TODO: Add test case for scenario where LLDP packet has been received */
+}
+
+TEST_F (LldpTest, LldpGetPeerManagementAddress)
+{
+   pf_lldp_management_address_t man_address;
+   int error;
+
+   /* Nothing received */
+   error = pf_lldp_get_peer_management_address (net, LOCAL_PORT, &man_address);
+   EXPECT_EQ (error, -1);
+
+   /* TODO: Add test case for scenario where LLDP packet has been received */
+}
+
+TEST_F (LldpTest, LldpGetPeerManagementPortIndex)
+{
+   pf_lldp_management_port_index_t man_port_index;
+   int error;
+
+   /* Nothing received */
+   error =
+      pf_lldp_get_peer_management_port_index (net, LOCAL_PORT, &man_port_index);
+   EXPECT_EQ (error, -1);
+
+   /* TODO: Add test case for scenario where LLDP packet has been received */
+}
+
+TEST_F (LldpTest, LldpGetPeerStationName)
+{
+   pf_lldp_station_name_t station_name;
+   int error;
+
+   /* Nothing received */
+   error = pf_lldp_get_peer_station_name (net, LOCAL_PORT, &station_name);
+   EXPECT_EQ (error, -1);
+
+   /* TODO: Add test case for scenario where LLDP packet has been received */
+}
+
+TEST_F (LldpTest, LldpGetPeerSignalDelays)
+{
+   pf_lldp_signal_delay_t delays;
+   int error;
+
+   /* Nothing received */
+   error = pf_lldp_get_peer_signal_delays (net, LOCAL_PORT, &delays);
+   EXPECT_EQ (error, -1);
+
+   /* TODO: Add test case for scenario where LLDP packet has been received */
+}
+
+TEST_F (LldpTest, LldpGetPeerLinkStatus)
+{
+   pf_lldp_link_status_t link_status;
+   int error;
+
+   /* Nothing received */
+   error = pf_lldp_get_peer_link_status (net, LOCAL_PORT, &link_status);
+   EXPECT_EQ (error, -1);
 
    /* TODO: Add test case for scenario where LLDP packet has been received */
 }
