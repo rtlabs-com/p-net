@@ -2,5 +2,6 @@ sphinx
 recommonmark
 sphinx-rtd-theme
 breathe
+sphinxcontrib-googleanalytics
 sphinxcontrib-spelling
 rst2pdf
