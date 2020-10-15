@@ -8,6 +8,8 @@ SPHINXBUILD   ?= sphinx-build
 SOURCEDIR     = .
 BUILDDIR      = _build
 
+htmlzipfile := pnet_docs_$(shell git describe --dirty --always).zip
+
 # Put it first so that "make" without argument is like "make help".
 help:
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
@@ -29,3 +31,4 @@ help:
 	@cp ../CHANGELOG.md _copied/
 	@(test $@ != pdf) || sed -i '/Build Status/d' _copied/README.md
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+	@(test $@ != html) || cd _build; echo  "Zipping ..."; zip -r $(htmlzipfile) html/ > /dev/null
