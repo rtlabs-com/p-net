@@ -43,9 +43,6 @@
 #define LLDP_TYPE_MANAGEMENT 8
 #define LLDP_TYPE_ORG_SPEC   127
 
-#define LLDP_SUBTYPE_MAC              4
-#define LLDP_SUBTYPE_LOCALLY_ASSIGNED 7
-
 #define LLDP_IEEE_SUBTYPE_MAC_PHY 1
 
 #define LLDP_TYPE_MASK   0xFE00
@@ -202,47 +199,27 @@ static inline void pf_lldp_add_ieee_header (
  * @internal
  * Insert the mandatory chassis_id TLV into a buffer.
  *
- * Use the MAC address if the chassis ID name not is available (len == 0).
- *
- * @param chassis_id_name  In:    Locally assigned chassis ID name
- * @param p_mac_address    In:    Device MAC address.
+ * @param p_chassis_id     In:    The Chassis ID.
  * @param p_buf            InOut: The buffer.
  * @param p_pos            InOut: The position in the buffer.
  */
 static void pf_lldp_add_chassis_id_tlv (
-   const char * chassis_id_name,
-   const pnet_ethaddr_t * p_mac_address,
+   const pf_lldp_chassis_id_t * p_chassis_id,
    uint8_t * p_buf,
    uint16_t * p_pos)
 {
-   uint16_t len;
-
-   len = (uint16_t)strlen (chassis_id_name);
-   if (len == 0)
-   {
-      /* Use the MAC address */
-      pf_lldp_add_tlv_header (
-         p_buf,
-         p_pos,
-         LLDP_TYPE_CHASSIS_ID,
-         1 + sizeof (pnet_ethaddr_t));
-
-      pf_put_byte (LLDP_SUBTYPE_MAC, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
-      memcpy (&p_buf[*p_pos], p_mac_address->addr, sizeof (pnet_ethaddr_t));
-      (*p_pos) += sizeof (pnet_ethaddr_t);
-   }
-   else
-   {
-      /* Use the locally assigned chassis ID name */
-      pf_lldp_add_tlv_header (p_buf, p_pos, LLDP_TYPE_CHASSIS_ID, 1 + len);
-
-      pf_put_byte (
-         LLDP_SUBTYPE_LOCALLY_ASSIGNED,
-         PF_FRAME_BUFFER_SIZE,
-         p_buf,
-         p_pos);
-      pf_put_mem (chassis_id_name, len, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
-   }
+   pf_lldp_add_tlv_header (
+      p_buf,
+      p_pos,
+      LLDP_TYPE_CHASSIS_ID,
+      1 + p_chassis_id->len);
+   pf_put_byte (p_chassis_id->subtype, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
+   pf_put_mem (
+      p_chassis_id->string,
+      p_chassis_id->len,
+      PF_FRAME_BUFFER_SIZE,
+      p_buf,
+      p_pos);
 }
 
 /**
@@ -264,7 +241,7 @@ static void pf_lldp_add_port_id_tlv (
    pf_lldp_add_tlv_header (p_buf, p_pos, LLDP_TYPE_PORT_ID, 1 + len);
 
    pf_put_byte (
-      LLDP_SUBTYPE_LOCALLY_ASSIGNED,
+      PF_LLDP_SUBTYPE_LOCALLY_ASSIGNED,
       PF_FRAME_BUFFER_SIZE,
       p_buf,
       p_pos);
@@ -518,6 +495,61 @@ static void pf_lldp_reset_peer_timeout (pnet_t * net, uint16_t timeout_in_secs)
    }
 }
 
+void pf_lldp_get_chassis_id (pnet_t * net, pf_lldp_chassis_id_t * p_chassis_id)
+{
+   pnet_cfg_t * p_cfg = NULL;
+   const char * station_name = NULL;
+
+   /* Try to use NameOfStation as Chassis ID.
+    *
+    * FIXME: Use of pf_cmina_get_station_name() is not thread-safe, as the
+    * returned pointer points to non-constant memory shared by multiple threads.
+    * Fix this, e.g. using a mutex.
+    *
+    * TODO: Add option to use SystemIdentification as Chassis ID.
+    * See IEC61158-6-10 table 361.
+    */
+   pf_cmina_get_station_name (net, &station_name);
+   CC_ASSERT (station_name != NULL);
+
+   p_chassis_id->len = strlen (station_name);
+   if (p_chassis_id->len == 0 || p_chassis_id->len > PNET_LLDP_CHASSIS_ID_MAX_LEN)
+   {
+      pf_fspm_get_cfg (net, &p_cfg);
+      CC_ASSERT (p_cfg != NULL);
+
+      /* Use the MAC address */
+      p_chassis_id->subtype = PF_LLDP_SUBTYPE_MAC;
+      p_chassis_id->len = sizeof (pnet_ethaddr_t);
+      memcpy (
+         p_chassis_id->string,
+         p_cfg->eth_addr.addr,
+         sizeof (pnet_ethaddr_t));
+   }
+   else
+   {
+      /* Use the locally assigned chassis ID name */
+      p_chassis_id->subtype = PF_LLDP_SUBTYPE_LOCALLY_ASSIGNED;
+      memcpy (p_chassis_id->string, station_name, p_chassis_id->len);
+   }
+
+   p_chassis_id->string[p_chassis_id->len] = '\0';
+}
+
+void pf_lldp_get_peer_chassis_id (
+   pnet_t * net,
+   pf_lldp_chassis_id_t * p_chassis_id)
+{
+   /* Copy stored Chassis ID previously received from peer
+    *
+    * We lock a mutex as this function may be called from other threads,
+    * e.g. an SNMP agent.
+    */
+   os_mutex_lock (net->lldp_mutex);
+   *p_chassis_id = net->lldp_peer_info.chassis_id;
+   os_mutex_unlock (net->lldp_mutex);
+}
+
 void pf_lldp_send (pnet_t * net)
 {
    os_buf_t * p_lldp_buffer = os_buf_alloc (PF_FRAME_BUFFER_SIZE);
@@ -525,7 +557,6 @@ void pf_lldp_send (pnet_t * net)
    uint16_t pos = 0;
    pnet_cfg_t * p_cfg = NULL;
    pnet_lldp_cfg_t * p_lldp_cfg = NULL;
-   const char * p_chassis_id_name = NULL;
    os_ipaddr_t ipaddr = 0;
    char ip_string[OS_INET_ADDRSTRLEN] = {0};
 
@@ -587,16 +618,15 @@ void pf_lldp_send (pnet_t * net)
       p_lldp_cfg = &p_cfg->lldp_cfg;
       if (p_buf != NULL)
       {
-         /* TODO: Maybe we need to use p_cfg->lldp_cfg.chassis_id when
-                  supporting multiple interfaces */
-         pf_cmina_get_station_name (net, &p_chassis_id_name);
+         pf_lldp_chassis_id_t chassis_id;
 
+         pf_lldp_get_chassis_id (net, &chassis_id);
          pf_cmina_get_ipaddr (net, &ipaddr);
          pf_cmina_ip_to_string (ipaddr, ip_string);
          LOG_DEBUG (
             PF_LLDP_LOG,
             "LLDP(%d): Sending LLDP frame. MAC %02X:%02X:%02X:%02X:%02X:%02X "
-            "IP: %s Chassis ID name: %s Port ID: %s\n",
+            "IP: %s Chassis ID: %s Port ID: %s\n",
             __LINE__,
             p_cfg->eth_addr.addr[0],
             p_cfg->eth_addr.addr[1],
@@ -605,7 +635,7 @@ void pf_lldp_send (pnet_t * net)
             p_cfg->eth_addr.addr[4],
             p_cfg->eth_addr.addr[5],
             ip_string,
-            p_chassis_id_name,
+            chassis_id.string,
             p_lldp_cfg->port_id);
 
          pos = 0;
@@ -631,11 +661,7 @@ void pf_lldp_send (pnet_t * net)
             &pos);
 
          /* Add mandatory parts */
-         pf_lldp_add_chassis_id_tlv (
-            p_chassis_id_name,
-            &p_cfg->eth_addr,
-            p_buf,
-            &pos);
+         pf_lldp_add_chassis_id_tlv (&chassis_id, p_buf, &pos);
          pf_lldp_add_port_id_tlv (p_lldp_cfg, p_buf, &pos);
          pf_lldp_add_ttl_tlv (p_lldp_cfg, p_buf, &pos);
 
@@ -689,6 +715,10 @@ void pf_lldp_tx_restart (pnet_t * net, bool send)
 void pf_lldp_init (pnet_t * net)
 {
    memset (&net->lldp_peer_info, 0, sizeof (net->lldp_peer_info));
+
+   net->lldp_mutex = os_mutex_create();
+   CC_ASSERT (net->lldp_mutex != NULL);
+
    pf_lldp_tx_restart (net, true);
 }
 
@@ -723,18 +753,19 @@ int pf_lldp_parse_packet (
       {
       case LLDP_TYPE_CHASSIS_ID:
          if (
-            (tlv.len > 0) &&
-            ((size_t) (tlv.len - 1) < sizeof (lldp_peer_info->chassis_id)))
+            (tlv.len > 0) && ((size_t) (tlv.len - 1) <
+                              sizeof (lldp_peer_info->chassis_id.string)))
          {
-            lldp_peer_info->chassis_id_len = tlv.len - 1;
-            lldp_peer_info->chassis_id_subtype =
+            lldp_peer_info->chassis_id.len = tlv.len - 1;
+            lldp_peer_info->chassis_id.subtype =
                pf_get_byte (&parse_info, &offset);
             pf_get_mem (
                &parse_info,
                &offset,
-               lldp_peer_info->chassis_id_len,
-               &lldp_peer_info->chassis_id);
-            lldp_peer_info->chassis_id[lldp_peer_info->chassis_id_len] = '\0';
+               lldp_peer_info->chassis_id.len,
+               &lldp_peer_info->chassis_id.string);
+            lldp_peer_info->chassis_id.string[lldp_peer_info->chassis_id.len] =
+               '\0';
          }
          else
          {
@@ -979,6 +1010,18 @@ int pf_lldp_generate_alias_name (
    return 0;
 }
 
+bool pf_lldp_is_peer_info_received (pnet_t * net, uint32_t * timestamp_10ms)
+{
+   bool is_received;
+
+   os_mutex_lock (net->lldp_mutex);
+   is_received = net->lldp_is_peer_info_received;
+   *timestamp_10ms = net->lldp_timestamp_for_last_peer_change;
+   os_mutex_unlock (net->lldp_mutex);
+
+   return is_received;
+}
+
 /**
  * Apply updated peer information
  * @param net              InOut: p-net stack instance
@@ -1006,7 +1049,7 @@ void pf_lldp_update_peer (
 
    error = pf_lldp_generate_alias_name (
       lldp_peer_info->port_id,
-      lldp_peer_info->chassis_id,
+      lldp_peer_info->chassis_id.string,
       alias,
       sizeof (alias));
    if (!error && (strcmp (alias, net->cmina_current_dcp_ase.alias_name) != 0))
@@ -1028,7 +1071,15 @@ void pf_lldp_update_peer (
        */
    }
 
+   /* Update stored peer information
+    *
+    * We lock a mutex as other threads (e.g. an SNMP agent) may read from it.
+    */
+   os_mutex_lock (net->lldp_mutex);
+   net->lldp_is_peer_info_received = true;
+   net->lldp_timestamp_for_last_peer_change = os_get_system_uptime_10ms();
    memcpy (stored_peer_info, lldp_peer_info, sizeof (pnet_lldp_peer_info_t));
+   os_mutex_unlock (net->lldp_mutex);
 }
 
 int pf_lldp_recv (pnet_t * net, os_buf_t * p_frame_buf, uint16_t offset)
@@ -1054,7 +1105,7 @@ int pf_lldp_recv (pnet_t * net, os_buf_t * p_frame_buf, uint16_t offset)
          peer_data.mac_address.addr[4],
          peer_data.mac_address.addr[5],
          p_frame_buf->len,
-         peer_data.chassis_id,
+         peer_data.chassis_id.string,
          peer_data.port_id);
       pf_lldp_update_peer (net, &peer_data);
    }

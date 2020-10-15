@@ -1215,14 +1215,22 @@ typedef struct pnet_lldp_peer_to_peer_boundary
 } pnet_lldp_peer_to_peer_boundary_t;
 
 /**
+ * Chassis ID
+ */
+typedef struct pf_lldp_chassis_id
+{
+   char string[PNET_LLDP_CHASSIS_ID_MAX_LEN + 1]; /**< Terminated string */
+   uint8_t subtype;
+   size_t len;
+} pf_lldp_chassis_id_t;
+
+/**
  * LLDP Peer information used by the Profinet stack.
  */
 typedef struct pnet_lldp_peer_info
 {
    /* LLDP TLVs */
-   uint8_t chassis_id_subtype;
-   char chassis_id[PNET_LLDP_CHASSIS_ID_MAX_LEN + 1];
-   size_t chassis_id_len;
+   pf_lldp_chassis_id_t chassis_id;
    uint8_t port_id_subtype;
    char port_id[PNET_LLDP_PORT_ID_MAX_LEN + 1];
    size_t port_id_len;

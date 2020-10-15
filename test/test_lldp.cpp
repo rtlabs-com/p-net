@@ -136,3 +136,42 @@ TEST_F (LldpTest, LldpGenerateAliasName)
    EXPECT_EQ (strcmp (alias, port_id_test_sample_1), 0);
    memset (alias, 0, sizeof (alias));
 }
+
+TEST_F (LldpTest, LldpGetChassisId)
+{
+   pf_lldp_chassis_id_t chassis_id;
+
+   memset (&chassis_id, 0, sizeof (chassis_id));
+
+   /* Currently, the MAC address is used as Chassis ID */
+   pf_lldp_get_chassis_id (net, &chassis_id);
+   EXPECT_EQ (chassis_id.subtype, PF_LLDP_SUBTYPE_MAC);
+   EXPECT_EQ (chassis_id.len, 6u);
+
+   /* TODO: Add test case for locally assigned Chassis ID */
+}
+
+TEST_F (LldpTest, LldpGetPeerChassisId)
+{
+   pf_lldp_chassis_id_t chassis_id;
+
+   memset (&chassis_id, 0, sizeof (chassis_id));
+
+   /* Nothing received */
+   pf_lldp_get_peer_chassis_id (net, &chassis_id);
+   EXPECT_EQ (chassis_id.len, 0u);
+
+   /* TODO: Add test case for scenario where LLDP packet has been received */
+}
+
+TEST_F (LldpTest, LldpIsPeerInfoReceived)
+{
+   bool is_received;
+   uint32_t last_chage;
+
+   /* Nothing received */
+   is_received = pf_lldp_is_peer_info_received (net, &last_chage);
+   EXPECT_EQ (is_received, false);
+
+   /* TODO: Add test case for scenario where LLDP packet has been received */
+}
