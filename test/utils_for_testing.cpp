@@ -510,6 +510,12 @@ void PnetIntegrationTestBase::cfg_init()
    /* Network configuration */
    pnet_default_cfg.send_hello = 1; /* Send HELLO */
    pnet_default_cfg.dhcp_enable = 0;
+   pnet_default_cfg.eth_addr.addr[0] = 0x12;
+   pnet_default_cfg.eth_addr.addr[1] = 0x34;
+   pnet_default_cfg.eth_addr.addr[2] = 0x00;
+   pnet_default_cfg.eth_addr.addr[3] = 0x78;
+   pnet_default_cfg.eth_addr.addr[4] = 0x90;
+   pnet_default_cfg.eth_addr.addr[5] = 0xab;
    pnet_default_cfg.ip_addr.a = 192;
    pnet_default_cfg.ip_addr.b = 168;
    pnet_default_cfg.ip_addr.c = 1;

@@ -42,6 +42,7 @@ extern "C" {
 #define PNET_PRODUCT_NAME_MAX_LEN  25
 #define PNET_ORDER_ID_MAX_LEN      20
 #define PNET_SERIAL_NUMBER_MAX_LEN 16
+#define PNET_LOCATION_MAX_LEN      22
 
 #define PNET_MAX_FILE_FULLPATH_LEN                                             \
    (PNET_MAX_DIRECTORYPATH_LENGTH + PNET_MAX_FILENAME_LENGTH) /** Including    \
@@ -1069,7 +1070,7 @@ typedef struct pnet_im_0
 typedef struct pnet_im_1
 {
    char im_tag_function[32 + 1]; /**< Terminated string */
-   char im_tag_location[22 + 1]; /**< Terminated string */
+   char im_tag_location[PNET_LOCATION_MAX_LEN + 1]; /**< Terminated string */
 } pnet_im_1_t;
 
 /**
@@ -1255,6 +1256,8 @@ typedef struct pnet_lldp_peer_to_peer_boundary
 
 /**
  * Chassis ID
+ *
+ * See IEEE 802.1AB-2005 (LLDPv1) ch. 9.5.2.3 "chassis ID".
  */
 typedef struct pf_lldp_chassis_id
 {

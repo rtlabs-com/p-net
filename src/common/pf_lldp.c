@@ -503,6 +503,52 @@ void pf_lldp_get_port_config (
    *pp_port_cfg = &net->fspm_cfg.lldp_cfg.ports[loc_port_num - 1];
 }
 
+void pf_lldp_get_port_list (pnet_t * net, pf_lldp_port_list_t * p_list)
+{
+   /* TODO: Implement support for multiple ports */
+   /* TODO: Move this to some other source file, as the list of local ports is
+    * not part of any LLDP TLV sent in LLDP frames.
+    */
+   memset (p_list, 0, sizeof (*p_list));
+   p_list->ports[0] = BIT (8 - 1);
+}
+
+int pf_lldp_get_first_port (const pf_lldp_port_list_t * p_list)
+{
+   /* TODO: Implement support for multiple ports */
+   /* TODO: Move this to some other source file, as the list of local ports is
+    * not part of any LLDP TLV sent in LLDP frames.
+    */
+   return 1;
+}
+
+int pf_lldp_get_next_port (const pf_lldp_port_list_t * p_list, int loc_port_num)
+{
+   /* TODO: Implement support for multiple ports */
+   /* TODO: Move this to some other source file, as the list of local ports is
+    * not part of any LLDP TLV sent in LLDP frames.
+    */
+   return 0;
+}
+
+int pf_lldp_get_peer_timestamp (
+   pnet_t * net,
+   int loc_port_num,
+   uint32_t * timestamp_10ms)
+{
+   bool is_received;
+
+   /* TODO: Implement support for multiple ports */
+   CC_ASSERT (loc_port_num > 0);
+   os_mutex_lock (net->lldp_mutex);
+
+   *timestamp_10ms = net->lldp_timestamp_for_last_peer_change;
+   is_received = net->lldp_is_peer_info_received;
+
+   os_mutex_unlock (net->lldp_mutex);
+   return is_received ? 0 : -1;
+}
+
 void pf_lldp_get_chassis_id (pnet_t * net, pf_lldp_chassis_id_t * p_chassis_id)
 {
    pnet_cfg_t * p_cfg = NULL;
@@ -544,20 +590,290 @@ void pf_lldp_get_chassis_id (pnet_t * net, pf_lldp_chassis_id_t * p_chassis_id)
    p_chassis_id->string[p_chassis_id->len] = '\0';
 }
 
-void pf_lldp_get_peer_chassis_id (
+int pf_lldp_get_peer_chassis_id (
    pnet_t * net,
+   int loc_port_num,
    pf_lldp_chassis_id_t * p_chassis_id)
 {
-   /* Copy stored Chassis ID previously received from peer
-    *
-    * We lock a mutex as this function may be called from other threads,
-    * e.g. an SNMP agent.
-    */
+   bool is_received;
+
+   CC_ASSERT (loc_port_num > 0);
    os_mutex_lock (net->lldp_mutex);
+
+   /* TODO: Implement support for multiple ports */
    *p_chassis_id = net->lldp_peer_info.chassis_id;
+   is_received = net->lldp_is_peer_info_received;
+
+   /* TODO: Return error if received LLDP frame did not contain this TLV */
    os_mutex_unlock (net->lldp_mutex);
+   return is_received ? 0 : -1;
 }
 
+void pf_lldp_get_port_id (
+   pnet_t * net,
+   int loc_port_num,
+   pf_lldp_port_id_t * p_port_id)
+{
+   const pnet_lldp_port_cfg_t * p_port_cfg = NULL;
+
+   pf_lldp_get_port_config (net, loc_port_num, &p_port_cfg);
+   CC_ASSERT (p_port_cfg != NULL);
+
+   /* TODO: Implement support for multiple ports */
+   CC_ASSERT (loc_port_num > 0);
+   snprintf (
+      p_port_id->string,
+      sizeof (p_port_id->string),
+      "%s",
+      p_port_cfg->port_id);
+   p_port_id->subtype = PF_LLDP_SUBTYPE_LOCALLY_ASSIGNED;
+   p_port_id->len = strlen (p_port_id->string);
+}
+
+int pf_lldp_get_peer_port_id (
+   pnet_t * net,
+   int loc_port_num,
+   pf_lldp_port_id_t * p_port_id)
+{
+   bool is_received;
+   size_t len;
+
+   CC_ASSERT (loc_port_num > 0);
+   os_mutex_lock (net->lldp_mutex);
+
+   /* TODO: Implement support for multiple ports */
+   len = MIN (net->lldp_peer_info.port_id_len, sizeof (p_port_id->string) - 1);
+   memcpy (p_port_id->string, net->lldp_peer_info.port_id, len);
+   p_port_id->string[len] = '\0';
+   p_port_id->subtype = net->lldp_peer_info.port_id_subtype;
+   p_port_id->len = len;
+   is_received = net->lldp_is_peer_info_received;
+
+   /* TODO: Return error if received LLDP frame did not contain this TLV */
+   os_mutex_unlock (net->lldp_mutex);
+   return is_received ? 0 : -1;
+}
+
+void pf_lldp_get_port_description (
+   pnet_t * net,
+   int loc_port_num,
+   pf_lldp_port_description_t * p_port_descr)
+{
+   /* TODO: Implement support for multiple ports */
+   CC_ASSERT (loc_port_num > 0);
+   snprintf (
+      p_port_descr->string,
+      sizeof (p_port_descr->string),
+      "%s",
+      net->interface_name);
+   p_port_descr->len = strlen (p_port_descr->string);
+}
+
+int pf_lldp_get_peer_port_description (
+   pnet_t * net,
+   int loc_port_num,
+   pf_lldp_port_description_t * p_port_desc)
+{
+   bool is_received;
+
+   CC_ASSERT (loc_port_num > 0);
+   os_mutex_lock (net->lldp_mutex);
+
+   /* TODO: Copy data previously received in LLDP frame on this port */
+   memset (p_port_desc, 0, sizeof (*p_port_desc));
+   snprintf (
+      p_port_desc->string,
+      sizeof (p_port_desc->string),
+      "%s",
+      "peer port descr");
+   p_port_desc->len = strlen (p_port_desc->string);
+   is_received = net->lldp_is_peer_info_received;
+
+   /* TODO: Return error if received LLDP frame did not contain this TLV */
+   os_mutex_unlock (net->lldp_mutex);
+   return is_received ? 0 : -1;
+}
+
+void pf_lldp_get_management_address (
+   pnet_t * net,
+   pf_lldp_management_address_t * p_man_address)
+{
+   os_ipaddr_t ipaddr;
+
+   pf_cmina_get_ipaddr (net, &ipaddr);
+   p_man_address->subtype = 1; /* IPv4 */
+   ipaddr = CC_TO_BE32 (ipaddr);
+   memcpy (p_man_address->value, &ipaddr, sizeof (ipaddr));
+   p_man_address->len = sizeof (ipaddr);
+}
+
+int pf_lldp_get_peer_management_address (
+   pnet_t * net,
+   int loc_port_num,
+   pf_lldp_management_address_t * p_man_address)
+{
+   bool is_received;
+
+   CC_ASSERT (loc_port_num > 0);
+   os_mutex_lock (net->lldp_mutex);
+
+   /* TODO: Copy data previously received in LLDP frame on this port */
+   memset (p_man_address, 0, sizeof (*p_man_address));
+   p_man_address->subtype = 1;
+   p_man_address->value[0] = 10;
+   p_man_address->value[1] = 11;
+   p_man_address->value[2] = 12;
+   p_man_address->value[3] = 13;
+   p_man_address->len = 4;
+   is_received = net->lldp_is_peer_info_received;
+
+   /* TODO: Return error if received LLDP frame did not contain this TLV */
+   os_mutex_unlock (net->lldp_mutex);
+   return is_received ? 0 : -1;
+}
+
+void pf_lldp_get_management_port_index (
+   pnet_t * net,
+   pf_lldp_management_port_index_t * p_man_port_index)
+{
+   /* TODO: Get actual ifIndex value */
+   memset (p_man_port_index, 0, sizeof (*p_man_port_index));
+   p_man_port_index->subtype = 2; /* ifIndex */
+   p_man_port_index->index = 1;
+}
+
+int pf_lldp_get_peer_management_port_index (
+   pnet_t * net,
+   int loc_port_num,
+   pf_lldp_management_port_index_t * p_man_port_index)
+{
+   bool is_received;
+
+   CC_ASSERT (loc_port_num > 0);
+   os_mutex_lock (net->lldp_mutex);
+
+   /* TODO: Copy data previously received in LLDP frame on this port */
+   memset (p_man_port_index, 0, sizeof (*p_man_port_index));
+   p_man_port_index->subtype = 2; /* ifIndex */
+   p_man_port_index->index = 1;
+   is_received = net->lldp_is_peer_info_received;
+
+   /* TODO: Return error if received LLDP frame did not contain this TLV */
+   os_mutex_unlock (net->lldp_mutex);
+   return is_received ? 0 : -1;
+}
+
+int pf_lldp_get_peer_station_name (
+   pnet_t * net,
+   int loc_port_num,
+   pf_lldp_station_name_t * p_station_name)
+{
+   bool is_received;
+
+   CC_ASSERT (loc_port_num > 0);
+   os_mutex_lock (net->lldp_mutex);
+
+   /* TODO: Copy data previously received in LLDP frame on this port.
+    * Value should be part of either received Chassis ID or Port ID.
+    */
+   memset (p_station_name, 0, sizeof (*p_station_name));
+   snprintf (
+      p_station_name->string,
+      sizeof (p_station_name->string),
+      "%s",
+      "peer station-name");
+   p_station_name->len = strlen (p_station_name->string);
+   is_received = net->lldp_is_peer_info_received;
+
+   /* TODO: Return error if received LLDP frame did not contain this TLV */
+   os_mutex_unlock (net->lldp_mutex);
+   return is_received ? 0 : -1;
+}
+
+void pf_lldp_get_signal_delays (
+   pnet_t * net,
+   int loc_port_num,
+   pf_lldp_signal_delay_t * p_delays)
+{
+   CC_ASSERT (loc_port_num > 0);
+
+   /* Line delay measurement is not supported */
+   p_delays->line_propagation_delay_ns = 0; /* Not measured */
+   p_delays->port_rx_delay_ns = 0;          /* Not measured */
+   p_delays->port_tx_delay_ns = 0;          /* Not measured */
+}
+
+int pf_lldp_get_peer_signal_delays (
+   pnet_t * net,
+   int loc_port_num,
+   pf_lldp_signal_delay_t * p_delays)
+{
+   bool is_received;
+   const pnet_lldp_peer_info_t * peer_info;
+
+   CC_ASSERT (loc_port_num > 0);
+   os_mutex_lock (net->lldp_mutex);
+
+   /* TODO: Implement support for multiple ports */
+   peer_info = &net->lldp_peer_info;
+   p_delays->line_propagation_delay_ns =
+      peer_info->port_delay.cable_delay_local;
+   p_delays->port_rx_delay_ns = peer_info->port_delay.rx_delay_local;
+   p_delays->port_tx_delay_ns = peer_info->port_delay.tx_delay_local;
+   is_received = net->lldp_is_peer_info_received;
+
+   /* TODO: Return error if received LLDP frame did not contain this TLV */
+   os_mutex_unlock (net->lldp_mutex);
+   return is_received ? 0 : -1;
+}
+
+void pf_lldp_get_link_status (
+   pnet_t * net,
+   int loc_port_num,
+   pf_lldp_link_status_t * p_link_status)
+{
+   const pnet_lldp_port_cfg_t * p_port_cfg = NULL;
+
+   CC_ASSERT (loc_port_num > 0);
+
+   pf_lldp_get_port_config (net, loc_port_num, &p_port_cfg);
+   CC_ASSERT (p_port_cfg != NULL);
+
+   /* TODO: Get current link status from Ethernet driver */
+   /* TODO: Implement support for multiple ports */
+   p_link_status->auto_neg_supported = p_port_cfg->cap_aneg &
+                                       PNET_LLDP_AUTONEG_SUPPORTED;
+   p_link_status->auto_neg_enabled = p_port_cfg->cap_aneg &
+                                     PNET_LLDP_AUTONEG_ENABLED;
+   p_link_status->auto_neg_advertised_cap = p_port_cfg->cap_phy;
+   p_link_status->oper_mau_type = p_port_cfg->mau_type;
+}
+
+int pf_lldp_get_peer_link_status (
+   pnet_t * net,
+   int loc_port_num,
+   pf_lldp_link_status_t * p_link_status)
+{
+   bool is_received;
+   const pnet_lldp_peer_info_t * peer_info;
+
+   CC_ASSERT (loc_port_num > 0);
+   os_mutex_lock (net->lldp_mutex);
+
+   /* TODO: Implement support for multiple ports */
+   peer_info = &net->lldp_peer_info;
+   p_link_status->auto_neg_supported =
+      peer_info->phy_config.aneg_support_status & PNET_LLDP_AUTONEG_SUPPORTED;
+   p_link_status->auto_neg_enabled = peer_info->phy_config.aneg_support_status &
+                                     PNET_LLDP_AUTONEG_ENABLED;
+   p_link_status->auto_neg_advertised_cap = peer_info->phy_config.aneg_cap;
+   p_link_status->oper_mau_type = peer_info->phy_config.operational_mau_type;
+   is_received = net->lldp_is_peer_info_received;
+
+   /* TODO: Return error if received LLDP frame did not contain this TLV */
+   os_mutex_unlock (net->lldp_mutex);
+   return is_received ? 0 : -1;
+}
 /**
  * Build and send a LLDP message on a specific port.
  * @param net              InOut: The p-net stack instance
@@ -1035,18 +1351,6 @@ int pf_lldp_generate_alias_name (
       }
    }
    return 0;
-}
-
-bool pf_lldp_is_peer_info_received (pnet_t * net, uint32_t * timestamp_10ms)
-{
-   bool is_received;
-
-   os_mutex_lock (net->lldp_mutex);
-   is_received = net->lldp_is_peer_info_received;
-   *timestamp_10ms = net->lldp_timestamp_for_last_peer_change;
-   os_mutex_unlock (net->lldp_mutex);
-
-   return is_received;
 }
 
 /**
