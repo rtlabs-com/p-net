@@ -2230,7 +2230,34 @@ struct pnet
                                                    and discarded packets */
    uint32_t lldp_timeout; /* Scheduler handle for periodic LLDP sending */
 
+   /* LLDP mutex
+    *
+    * This mutex protects information about the peer device.
+    */
+   os_mutex_t * lldp_mutex;
+
+   /* Timestamp for when LLDP packet with new content was received.
+    *
+    * Units are the same as sysUptime in SNMP.
+    * Protected by LLDP mutex.
+    */
+   uint32_t lldp_timestamp_for_last_peer_change;
+
+   /* Is information about peer device received?
+    *
+    * Information is received in LLDP packets.
+    * Protected by LLDP mutex.
+    */
+   bool lldp_is_peer_info_received;
+
+   /* LLDP peer information
+    *
+    * The information may be changed anytime an incoming LLDP packet arrives.
+    *
+    * Protected by LLDP mutex.
+    */
    pnet_lldp_peer_info_t lldp_peer_info;
+
    uint32_t lldp_rx_timeout; /* Scheduler handle for LLDP timeout */
 
    pf_port_t port[PNET_MAX_PORT];

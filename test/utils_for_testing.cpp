@@ -490,6 +490,7 @@ void PnetIntegrationTestBase::cfg_init()
    strcpy (pnet_default_cfg.station_name, "");
    strcpy (pnet_default_cfg.device_vendor, "rt-labs");
    strcpy (pnet_default_cfg.manufacturer_specific_string, "PNET demo");
+   strcpy (pnet_default_cfg.product_name, "PNET unit tests");
 
    strcpy (pnet_default_cfg.lldp_cfg.port_id, "port-001");
    pnet_default_cfg.lldp_cfg.ttl = 20; /* seconds */

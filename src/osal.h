@@ -128,6 +128,20 @@ typedef struct os_ethaddr
 } os_ethaddr_t;
 
 /**
+ * Get system uptime.
+ *
+ * This is the sysUpTime, as used by SNMP:
+ * "The time (in hundredths of a second) since the network
+ *  management portion of the system was last re-initialized."
+ * - IETF RFC 3418 (SNMP MIB-2).
+ *
+ * Starts at 0, with wrap-around after ~497 days.
+ *
+ * @return System uptime, in units of 10 milliseconds.
+ */
+uint32_t os_get_system_uptime_10ms (void);
+
+/**
  * Load a binary file.
  *
  * Can load the data into two buffers.

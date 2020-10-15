@@ -352,6 +352,15 @@ void os_usleep (uint32_t usec)
    }
 }
 
+uint32_t os_get_system_uptime_10ms (void)
+{
+   uint32_t uptime;
+
+   /* TODO: Implement this */
+   uptime = 0;
+   return uptime;
+}
+
 uint32_t os_get_current_time_us (void)
 {
    struct timespec ts;
