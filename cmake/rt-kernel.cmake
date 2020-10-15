@@ -23,6 +23,9 @@ target_sources(profinet
   src/ports/rt-kernel/pnal.c
   src/ports/rt-kernel/pnal_eth.c
   src/ports/rt-kernel/pnal_udp.c
+  src/ports/rt-kernel/pnal_snmp.c
+  src/ports/rt-kernel/lldp-mib.c
+  src/ports/rt-kernel/rowindex.c
   src/ports/rt-kernel/dwmac1000.c
   )
 

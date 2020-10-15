@@ -32,23 +32,9 @@ Run (adapt paths)::
 
 Patch the source (in the root folder of the rt-kernel directory)::
 
-   patch -p1 < PATH_TO/profinet_lwip.patch
-   patch -p1 < PATH_TO/profinet_bsp.patch
+   git am PATH_TO_PNET/src/ports/rt-kernel/0001-rtkernel-for-Profinet.patch
 
-Change IP settings in ``rt-kernel-xmc4/bsp/xmc48relax/include/config.h``.
-Modify the respective lines to::
-
-   #undef CFG_LWIP_ADDRESS_DYNAMIC
-
-   #define CFG_LWIP_IPADDR()       IP4_ADDR (&ipaddr, 192, 168, 0, 50)
-
-   #define CFG_LWIP_GATEWAY()      IP4_ADDR (&gw, 192, 168, 0, 1)
-
-In the same file increase CFG_MAIN_STACK_SIZE to 6000.
-
-In the file rt-kernel-xmc4/bsp/xmc48relax/src/lwip.c change to::
-
-    .rx_task_stack = 4000,
+You may want to change IP settings in ``rt-kernel-xmc4/bsp/xmc48relax/include/config.h``.
 
 In the root folder of the rt-kernel directory::
 
@@ -76,6 +62,18 @@ following to create and configure the build::
     RTK=<PATH TO YOUR MODIFIED>/rt-kernel-xmc4 \
     BSP=xmc48relax \
     cmake -B build -S p-net \
+    -DCMAKE_TOOLCHAIN_FILE=cmake/tools/toolchain/rt-kernel.cmake \
+    -DCMAKE_ECLIPSE_EXECUTABLE=/opt/rt-tools/workbench/Workbench \
+    -DCMAKE_ECLIPSE_GENERATE_SOURCE_PROJECT=TRUE -G "Eclipse CDT4 - Unix Makefiles"
+
+If you are using Windows, start the program "Command line" found in 
+the rt-labs rt-collab Toolbox installation (adapt paths to your setup)::
+
+    cd /c/Users/rtlfrm/Documents/Profinet
+
+    RTK=/c/Users/rtlfrm/Documents/Profinet/rt-kernel-xmc4 \
+    BSP=xmc48relax \
+    /c/Program\ Files/CMake/bin/cmake.exe -B build -S p-net \
     -DCMAKE_TOOLCHAIN_FILE=cmake/tools/toolchain/rt-kernel.cmake \
     -DCMAKE_ECLIPSE_EXECUTABLE=/opt/rt-tools/workbench/Workbench \
     -DCMAKE_ECLIPSE_GENERATE_SOURCE_PROJECT=TRUE -G "Eclipse CDT4 - Unix Makefiles"
