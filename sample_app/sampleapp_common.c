@@ -1138,12 +1138,13 @@ static void app_handle_cyclic_data (
    uint16_t inputdata_size)
 {
    uint16_t slot = 0;
-   uint8_t inputdata_iocs = {0};
-   uint8_t outputdata[64];
-   uint8_t outputdata_iops = 0;
+   uint8_t inputdata_iocs = PNET_IOXS_BAD;  /* Consumer status from PLC */
+   uint8_t outputdata_iops = PNET_IOXS_BAD; /* Producer status from PLC */
+   uint8_t outputdata[APP_DATASIZE_OUTPUT];
    uint16_t outputdata_length = 0;
-   bool outputdata_is_updated = false;
-   bool received_led_state = false;
+   bool outputdata_is_updated = false; /* Not used in this application */
+   bool received_led_state = false;    /* LED for cyclic data */
+   static bool previous_led_state = false;
 
    /* Prepare input data (for sending to IO-controller) */
    /* Lowest 7 bits: Counter    Most significant bit: Button */
@@ -1201,6 +1202,8 @@ static void app_handle_cyclic_data (
       if (p_output_slots[slot] == true)
       {
          outputdata_length = sizeof (outputdata);
+         /* outputdata_length is now receive buffer size, but will be modified
+            to actual received data size */
          pnet_output_get_data_and_iops (
             net,
             APP_API,
@@ -1214,19 +1217,26 @@ static void app_handle_cyclic_data (
       }
    }
 
-   /* Set LED state */
-   if (outputdata_is_updated == true && outputdata_iops == PNET_IOXS_GOOD)
+   if (
+      (outputdata_length == APP_DATASIZE_OUTPUT) &&
+      (outputdata_iops == PNET_IOXS_GOOD))
    {
-      if (outputdata_length == APP_DATASIZE_OUTPUT)
+      /* Extract LED state from most significant bit */
+      received_led_state = (outputdata[0] & 0x80) > 0;
+
+      /* Set LED state */
+      if (received_led_state != previous_led_state)
       {
-         received_led_state = (outputdata[0] & 0x80) > 0; /* Use most
-                                                             significant bit */
          app_set_led (APP_DATA_LED_ID, received_led_state);
       }
-      else
-      {
-         printf ("Wrong outputdata length: %u\n", outputdata_length);
-      }
+      previous_led_state = received_led_state;
+   }
+   else
+   {
+      printf (
+         "Wrong outputdata length: %u or IOPS: %u\n",
+         outputdata_length,
+         outputdata_iops);
    }
 }
 
