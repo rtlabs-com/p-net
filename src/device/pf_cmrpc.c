@@ -1746,6 +1746,7 @@ static int pf_cmrpc_rm_connect_ind (
    else
    {
       net->port[0].adjust.active = false;
+      net->port[0].check.active = false;
       pf_lldp_tx_restart (net, true);
    }
 
