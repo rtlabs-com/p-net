@@ -37,20 +37,33 @@ extern "C" {
 #define TICK_INTERVAL_US   1000              /* us */
 
 #define TEST_API_IDENT                            0
+#define TEST_API_NONEXIST_IDENT                   2
+#define TEST_SLOT_IDENT                           1
+#define TEST_SLOT_NONEXIST_IDENT                  2
+#define TEST_SUBSLOT_IDENT                        1
+#define TEST_SUBSLOT_NONEXIST_IDENT               2
+#define TEST_CHANNEL_IDENT                        0
+#define TEST_CHANNEL_NONEXIST_IDENT               1
+#define TEST_CHANNEL_ILLEGAL                      0x8001
+#define TEST_CHANNEL_DIRECTION                    PNET_DIAG_CH_PROP_DIR_OUTPUT
+#define TEST_CHANNEL_NUMBER_OF_BITS               PNET_DIAG_CH_PROP_TYPE_8_BIT
+#define TEST_CHANNEL_ERRORTYPE                    0x0001
+#define TEST_CHANNEL_ERRORTYPE_B                  0x0002
+#define TEST_CHANNEL_ERRORTYPE_C                  0x0003
+#define TEST_CHANNEL_ERRORTYPE_D                  0x0004
+#define TEST_CHANNEL_ERRORTYPE_NONEXIST           0x0007
+#define TEST_DIAG_USI_CUSTOM                      0x1234
+#define TEST_DIAG_USI_NONEXIST                    0x1235
+#define TEST_DIAG_USI_INVALID                     0x8888
+#define TEST_DIAG_EXT_ERRTYPE                     0x0002
+#define TEST_DIAG_EXT_ERRTYPE_NONEXIST            0x0009
+#define TEST_DIAG_EXT_ADDVALUE                    0x00030004
+#define TEST_DIAG_EXT_ADDVALUE_B                  0x00030005
+#define TEST_DIAG_QUALIFIER                       0x00010000
+#define TEST_DIAG_QUALIFIER_NOTSET                0x00000000
 #define TEST_INTERFACE_NAME                       "en1"
 #define TEST_MAX_NUMBER_AVAILABLE_MODULE_TYPES    20
 #define TEST_MAX_NUMBER_AVAILABLE_SUBMODULE_TYPES 20
-
-/*
- * DAP Module
- */
-#define TEST_SLOT_DAP_IDENT   0x00000000
-#define TEST_MOD_DAP_IDENT    0x00000001 /* For use in slot 0 */
-#define TEST_SUBMOD_DAP_IDENT 0x00000001 /* For use in subslot 1 */
-#define TEST_SUBMOD_DAP_INTERFACE_1_IDENT                                      \
-   0x00008000 /* For use in subslot 0x8000 */
-#define TEST_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT                               \
-   0x00008001 /* For use in subslot 0x8001 */
 
 /*
  * I/O Modules. These modules and their sub-modules must be plugged by the

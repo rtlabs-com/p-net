@@ -481,55 +481,90 @@ int pnet_alarm_send_ack (
    return ret;
 }
 
-int pnet_diag_add (
+/************************** Diagnosis in standard format *********************/
+
+int pnet_diag_std_add (
    pnet_t * net,
    uint32_t arep,
-   uint32_t api,
-   uint16_t slot,
-   uint16_t subslot,
-   uint16_t ch,
-   uint16_t ch_properties,
+   const pnet_diag_source_t * p_diag_source,
+   pnet_diag_ch_prop_type_values_t ch_bits,
+   pnet_diag_ch_prop_maint_values_t severity,
    uint16_t ch_error_type,
    uint16_t ext_ch_error_type,
    uint32_t ext_ch_add_value,
-   uint32_t qual_ch_qualifier,
-   uint16_t usi,
-   uint8_t * p_manuf_data)
+   uint32_t qual_ch_qualifier)
 {
    int ret = -1;
    pf_ar_t * p_ar = NULL;
 
    if (pf_ar_find_by_arep (net, arep, &p_ar) == 0)
    {
-      ret = pf_diag_add (
+      ret = pf_diag_std_add (
          net,
          p_ar,
-         api,
-         slot,
-         subslot,
-         ch,
-         ch_properties,
+         p_diag_source,
+         ch_bits,
+         severity,
          ch_error_type,
          ext_ch_error_type,
          ext_ch_add_value,
-         qual_ch_qualifier,
-         usi,
-         p_manuf_data);
+         qual_ch_qualifier);
    }
 
    return ret;
 }
 
-int pnet_diag_update (
+int pnet_diag_std_update (
+   pnet_t * net,
+   uint32_t arep,
+   const pnet_diag_source_t * p_diag_source,
+   uint16_t ch_error_type,
+   uint16_t ext_ch_error_type,
+   uint32_t ext_ch_add_value)
+{
+   int ret = -1;
+   pf_ar_t * p_ar = NULL;
+
+   if (pf_ar_find_by_arep (net, arep, &p_ar) == 0)
+   {
+      ret = pf_diag_std_update (
+         net,
+         p_ar,
+         p_diag_source,
+         ch_error_type,
+         ext_ch_error_type,
+         ext_ch_add_value);
+   }
+
+   return ret;
+}
+
+int pnet_diag_std_remove (
+   pnet_t * net,
+   uint32_t arep,
+   const pnet_diag_source_t * p_diag_source,
+   uint16_t ch_error_type,
+   uint16_t ext_ch_error_type)
+{
+   int ret = -1;
+   pf_ar_t * p_ar = NULL;
+
+   if (pf_ar_find_by_arep (net, arep, &p_ar) == 0)
+   {
+      ret = pf_diag_std_remove (net, p_ar, p_diag_source, ch_error_type, ext_ch_error_type);
+   }
+
+   return ret;
+}
+
+/************************** Diagnosis in USI format **************************/
+
+int pnet_diag_usi_add (
    pnet_t * net,
    uint32_t arep,
    uint32_t api,
    uint16_t slot,
    uint16_t subslot,
-   uint16_t ch,
-   uint16_t ch_properties,
-   uint16_t ch_error_type,
-   uint32_t ext_ch_add_value,
    uint16_t usi,
    uint8_t * p_manuf_data)
 {
@@ -538,32 +573,39 @@ int pnet_diag_update (
 
    if (pf_ar_find_by_arep (net, arep, &p_ar) == 0)
    {
-      ret = pf_diag_update (
-         net,
-         p_ar,
-         api,
-         slot,
-         subslot,
-         ch,
-         ch_properties,
-         ch_error_type,
-         ext_ch_add_value,
-         usi,
-         p_manuf_data);
+      ret = pf_diag_usi_add (net, p_ar, api, slot, subslot, usi, p_manuf_data);
    }
 
    return ret;
 }
 
-int pnet_diag_remove (
+int pnet_diag_usi_update (
    pnet_t * net,
    uint32_t arep,
    uint32_t api,
    uint16_t slot,
    uint16_t subslot,
-   uint16_t ch,
-   uint16_t ch_properties,
-   uint16_t ch_error_type,
+   uint16_t usi,
+   uint8_t * p_manuf_data)
+{
+   int ret = -1;
+   pf_ar_t * p_ar = NULL;
+
+   if (pf_ar_find_by_arep (net, arep, &p_ar) == 0)
+   {
+      ret =
+         pf_diag_usi_update (net, p_ar, api, slot, subslot, usi, p_manuf_data);
+   }
+
+   return ret;
+}
+
+int pnet_diag_usi_remove (
+   pnet_t * net,
+   uint32_t arep,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
    uint16_t usi)
 {
    int ret = -1;
@@ -571,16 +613,7 @@ int pnet_diag_remove (
 
    if (pf_ar_find_by_arep (net, arep, &p_ar) == 0)
    {
-      ret = pf_diag_remove (
-         net,
-         p_ar,
-         api,
-         slot,
-         subslot,
-         ch,
-         ch_properties,
-         ch_error_type,
-         usi);
+      ret = pf_diag_usi_remove (net, p_ar, api, slot, subslot, usi);
    }
 
    return ret;

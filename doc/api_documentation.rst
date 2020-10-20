@@ -57,9 +57,17 @@ Alarms and diagnostics
 .. doxygenfunction:: pnet_create_log_book_entry
 .. doxygenfunction:: pnet_alarm_send_process_alarm
 .. doxygenfunction:: pnet_alarm_send_ack
-.. doxygenfunction:: pnet_diag_add
-.. doxygenfunction:: pnet_diag_update
-.. doxygenfunction:: pnet_diag_remove
+.. doxygenfunction:: pnet_diag_std_add
+.. doxygenfunction:: pnet_diag_std_update
+.. doxygenfunction:: pnet_diag_std_remove
+
+It is recommended to use the standard diagnosis format in most cases.
+Use the manufacturer specific format ("USI format") only if it's not
+possible to use the standard format.
+
+.. doxygenfunction:: pnet_diag_usi_add
+.. doxygenfunction:: pnet_diag_usi_update
+.. doxygenfunction:: pnet_diag_usi_remove
 
 
 Callbacks
@@ -95,6 +103,9 @@ Selected enums
 .. doxygenenum:: pnet_submodule_dir_t
 .. doxygenenum:: pnet_control_command_t
 .. doxygenenum:: pnet_data_status_bits_t
+.. doxygenenum:: pnet_diag_ch_prop_type_values_t
+.. doxygenenum:: pnet_diag_ch_prop_dir_values_t
+.. doxygenenum:: pnet_diag_ch_prop_maint_values_t
 
 
 Selected typedefs

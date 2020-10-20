@@ -239,9 +239,13 @@ TEST_F (CmrdrTest, CmrdrRunTest)
    uint8_t iops = PNET_IOXS_BAD;
    uint8_t iocs = PNET_IOXS_BAD;
    uint32_t ix;
-   uint16_t ch_properties = 0;
-   const uint16_t slot = 1;
-   const uint16_t subslot = 1;
+   pnet_diag_source_t diag_source = {
+      .api = TEST_API_IDENT,
+      .slot = TEST_SLOT_IDENT,
+      .subslot = TEST_SUBSLOT_IDENT,
+      .ch = TEST_CHANNEL_IDENT,
+      .ch_grouping = PNET_DIAG_CH_INDIVIDUAL_CHANNEL,
+      .ch_direction = TEST_CHANNEL_DIRECTION};
 
    TEST_TRACE ("\nGenerating mock connection request\n");
    mock_set_os_udp_recvfrom_buffer (connect_req, sizeof (connect_req));
@@ -285,8 +289,8 @@ TEST_F (CmrdrTest, CmrdrRunTest)
    ret = pnet_output_get_data_and_iops (
       net,
       TEST_API_IDENT,
-      slot,
-      subslot,
+      TEST_SLOT_IDENT,
+      TEST_SUBSLOT_IDENT,
       &new_flag,
       in_data,
       &in_len,
@@ -298,7 +302,12 @@ TEST_F (CmrdrTest, CmrdrRunTest)
    EXPECT_EQ (iops, PNET_IOXS_GOOD);
 
    iocs = 77; /* Something non-valid */
-   ret = pnet_input_get_iocs (net, TEST_API_IDENT, slot, subslot, &iocs);
+   ret = pnet_input_get_iocs (
+      net,
+      TEST_API_IDENT,
+      TEST_SLOT_IDENT,
+      TEST_SUBSLOT_IDENT,
+      &iocs);
    EXPECT_EQ (ret, 0);
    EXPECT_EQ (new_flag, true);
    EXPECT_EQ (in_len, 1);
@@ -310,16 +319,20 @@ TEST_F (CmrdrTest, CmrdrRunTest)
    ret = pnet_input_set_data_and_iops (
       net,
       TEST_API_IDENT,
-      slot,
-      subslot,
+      TEST_SLOT_IDENT,
+      TEST_SUBSLOT_IDENT,
       out_data,
       sizeof (out_data),
       PNET_IOXS_GOOD);
    EXPECT_EQ (ret, 0);
 
    TEST_TRACE ("\nAcknowledge the reception of controller data\n");
-   ret =
-      pnet_output_set_iocs (net, TEST_API_IDENT, slot, subslot, PNET_IOXS_GOOD);
+   ret = pnet_output_set_iocs (
+      net,
+      TEST_API_IDENT,
+      TEST_SLOT_IDENT,
+      TEST_SUBSLOT_IDENT,
+      PNET_IOXS_GOOD);
    EXPECT_EQ (ret, 0);
    EXPECT_EQ (appdata.call_counters.state_calls, 4);
    EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_DATA);
@@ -334,25 +347,16 @@ TEST_F (CmrdrTest, CmrdrRunTest)
    pnet_create_log_book_entry (net, appdata.main_arep, &pnio_status, 0x13245768);
 
    TEST_TRACE ("\nCreate a diag and an alarm.\n");
-   PNET_DIAG_CH_PROP_TYPE_SET (ch_properties, PNET_DIAG_CH_PROP_TYPE_8_BIT);
-   PNET_DIAG_CH_PROP_ACC_SET (ch_properties, 0);
-   PNET_DIAG_CH_PROP_MAINT_SET (ch_properties, PNET_DIAG_CH_PROP_MAINT_FAULT);
-   PNET_DIAG_CH_PROP_SPEC_SET (ch_properties, PNET_DIAG_CH_PROP_SPEC_APPEARS);
-   PNET_DIAG_CH_PROP_DIR_SET (ch_properties, PNET_DIAG_CH_PROP_DIR_OUTPUT);
-   pnet_diag_add (
+   pnet_diag_std_add (
       net,
       appdata.main_arep,
-      TEST_API_IDENT,
-      slot,
-      subslot,
-      0,
-      ch_properties,
-      0x0001,
-      0x0002,
-      0x00030004,
-      0,
-      PNET_DIAG_USI_STD,
-      NULL);
+      &diag_source,
+      TEST_CHANNEL_NUMBER_OF_BITS,
+      PNET_DIAG_CH_PROP_MAINT_FAULT,
+      TEST_CHANNEL_ERRORTYPE,
+      TEST_DIAG_EXT_ERRTYPE,
+      TEST_DIAG_EXT_ADDVALUE,
+      TEST_DIAG_QUALIFIER_NOTSET);
 
    TEST_TRACE ("Number of tests: %u\n", (unsigned)NELEMENTS (test_reads));
 
