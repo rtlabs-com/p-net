@@ -1524,9 +1524,12 @@ static void app_handle_cyclic_data (
  *
  * Alternates between these functions each time the button2 is pressed:
  *  - pnet_alarm_send_process_alarm()
- *  - pnet_diag_add()
- *  - pnet_diag_update()
- *  - pnet_diag_remove()
+ *  - pnet_diag_std_add()
+ *  - pnet_diag_std_update()
+ *  - pnet_diag_std_remove()
+ *  - pnet_diag_usi_add()
+ *  - pnet_diag_usi_update()
+ *  - pnet_diag_usi_remove()
  *  - pnet_create_log_book_entry()
  *
  * Uses first input module, if available.
@@ -1553,202 +1556,221 @@ static void app_handle_send_alarm (
    app_data_t * p_appdata,
    uint8_t * alarm_payload)
 {
-   uint16_t slot = 0;
-   uint16_t subslot = 0;
-   pnet_pnio_status_t pnio_status = {0};
-   uint16_t ch_properties = 0;
    static app_demo_state_t state = APP_DEMO_STATE_ALARM_SEND;
-   bool done = false;
+   uint16_t slot = 0;
+   bool found_inputslot = false;
+   uint16_t subslot_array_index = 0;
    app_subslot_t *p_subslot = NULL;
+   pnet_pnio_status_t pnio_status = {0};
+   pnet_diag_source_t diag_source = {
+      .api = APP_API,
+      .slot = 0,
+      .subslot = 0,
+      .ch = APP_DIAG_CHANNEL_NUMBER,
+      .ch_grouping = PNET_DIAG_CH_INDIVIDUAL_CHANNEL,
+      .ch_direction = APP_DIAG_CHANNEL_DIRECTION};
 
-   PNET_DIAG_CH_PROP_TYPE_SET (ch_properties, PNET_DIAG_CH_PROP_TYPE_8_BIT);
-   PNET_DIAG_CH_PROP_ACC_SET (ch_properties, 0);
-   PNET_DIAG_CH_PROP_MAINT_SET (
-      ch_properties,
-      PNET_DIAG_CH_PROP_MAINT_QUALIFIED);
-   PNET_DIAG_CH_PROP_SPEC_SET (ch_properties, PNET_DIAG_CH_PROP_SPEC_APPEARS);
-   PNET_DIAG_CH_PROP_DIR_SET (ch_properties, PNET_DIAG_CH_PROP_DIR_INPUT);
-
-   if ((button_pressed == true) && (button_pressed_prev == false))
+   /* Trigger only just when the button is pressed */
+   if ((button_pressed == false) || (button_pressed_prev == true))
    {
-      switch (state)
+      return;
+   }
+
+   /* Look for first input slot */
+   while (!found_inputslot && (slot < PNET_MAX_SLOTS))
+   {
+      for (subslot_array_index = 0; !found_inputslot && (subslot_array_index < PNET_MAX_SUBSLOTS); subslot_array_index++)
       {
-      case APP_DEMO_STATE_ALARM_SEND:
-         if (*alarm_allowed == true)
+         p_subslot = &p_appdata->main_api.slots[slot].subslots[subslot_array_index];
+         if (app_subslot_is_input(p_subslot))
          {
-            alarm_payload[0]++;
-            done = false;
-            for (slot = 0; !done && (slot < PNET_MAX_SLOTS); slot++)
-            {
-               for (subslot = 0; !done && (subslot < PNET_MAX_SUBSLOTS);
-                    subslot++)
-               {
-                  p_subslot = &p_appdata->main_api.slots[slot].subslots[subslot];
-                  if (app_subslot_is_input(p_subslot))
-                  {
-                     printf (
-                        "Sending process alarm from slot %u subslot %u USI %u to "
-                        "IO-controller. Payload: 0x%x\n",
-                        slot,
-                        p_subslot->subslot_nbr,
-                        APP_ALARM_USI,
-                        alarm_payload[0]);
-                     pnet_alarm_send_process_alarm (
-                        net,
-                        arep,
-                        APP_API,
-                        slot,
-                        p_subslot->subslot_nbr,
-                        APP_ALARM_USI,
-                        APP_ALARM_PAYLOAD_SIZE,
-                        alarm_payload);
-                     *alarm_allowed = false; /* Not allowed until ACK received */
-                     done = true;
-                  }
-               }
-            }
+            found_inputslot = true;
+            break;
          }
-         else
-         {
-            printf (
-               "Could not send process alarm, as alarm_allowed == false\n");
-         }
-         break;
+      }
+      if(!found_inputslot){
+         slot++;
+      }
+   }
+   if(!found_inputslot)
+   {
+      printf ("Did not find any input module in the slots. Skipping sending demo alarm.\n");
+      return;
+   }
 
-      case APP_DEMO_STATE_DIAG_ADD:
-         done = false;
-         for (slot = 0; !done && slot < PNET_MAX_SLOTS; slot++)
-         {
-            for (subslot = 0; !done && (subslot < PNET_MAX_SUBSLOTS); subslot++)
-            {
-               p_subslot = &p_appdata->main_api.slots[slot].subslots[subslot];
-               if (app_subslot_is_input(p_subslot))
-               {
-                  printf (
-                     "Adding diagnosis to slot %u subslot %u channel %u\n",
-                     slot,
-                     p_subslot->subslot_nbr,
-                     APP_DIAG_CHANNEL);
-                  pnet_diag_add (
-                     net,
-                     arep,
-                     APP_API,
-                     slot,
-                     p_subslot->subslot_nbr,
-                     APP_DIAG_CHANNEL,
-                     ch_properties,
-                     CHANNEL_ERRORTYPE_NETWORK_COMPONENT_FUNCTION_MISMATCH,
-                     EXTENDED_CHANNEL_ERRORTYPE_FRAME_DROPPED,
-                     123, /* Number of dropped frames */
-                     APP_DIAG_SEVERITY,
-                     PNET_DIAG_USI_STD,
-                     NULL /* No manufacturer specific data */
-                  );
-                  done = true;
-               }
-            }
-         }
-         break;
+   diag_source.slot = slot;
+   diag_source.subslot = p_subslot->subslot_nbr;
 
-      case APP_DEMO_STATE_DIAG_UPDATE:
-         for (slot = 0; !done && slot < PNET_MAX_SLOTS; slot++)
-         {
-            for (subslot = 0; !done && (subslot < PNET_MAX_SUBSLOTS); subslot++)
-            {
-               p_subslot = &p_appdata->main_api.slots[slot].subslots[subslot];
-               if (app_subslot_is_input(p_subslot))
-               {
-                  printf (
-                     "Updating diagnosis to slot %u subslot %u channel %u\n",
-                     slot,
-                     p_subslot->subslot_nbr,
-                     APP_DIAG_CHANNEL);
-                  pnet_diag_update (
-                     net,
-                     arep,
-                     APP_API,
-                     slot,
-                     p_subslot->subslot_nbr,
-                     APP_DIAG_CHANNEL,
-                     ch_properties,
-                     CHANNEL_ERRORTYPE_NETWORK_COMPONENT_FUNCTION_MISMATCH,
-                     1234, /* Number of dropped frames */
-                     PNET_DIAG_USI_STD,
-                     NULL /* No manufacturer specific data */
-                  );
-                  done = true;
-               }
-            }
-         }
-         break;
-
-      case APP_DEMO_STATE_DIAG_REMOVE:
-         for (slot = 0; !done && slot < PNET_MAX_SLOTS; slot++)
-         {
-            for (subslot = 0; !done && (subslot < PNET_MAX_SUBSLOTS); subslot++)
-            {
-               p_subslot = &p_appdata->main_api.slots[slot].subslots[subslot];
-               if (app_subslot_is_input(p_subslot))
-               {
-                  printf (
-                     "Removing diagnosis from slot %u subslot %u channel %u\n",
-                     slot,
-                     p_subslot->subslot_nbr,
-                     APP_DIAG_CHANNEL);
-                  pnet_diag_remove (
-                     net,
-                     arep,
-                     APP_API,
-                     slot,
-                     p_subslot->subslot_nbr,
-                     APP_DIAG_CHANNEL,
-                     ch_properties,
-                     CHANNEL_ERRORTYPE_NETWORK_COMPONENT_FUNCTION_MISMATCH,
-                     PNET_DIAG_USI_STD);
-                  break;
-               }
-            }
-         }
-         break;
-
-      case APP_DEMO_STATE_LOGBOOK_ENTRY:
+   switch (state)
+   {
+   case APP_DEMO_STATE_ALARM_SEND:
+      if (*alarm_allowed == true)
+      {
+         alarm_payload[0]++;
          printf (
-            "Writing to logbook. Error_code1: %02X Error_code2: %02X  Entry "
-            "detail: 0x%08X\n",
-            APP_LOGBOOK_ERROR_CODE_1,
-            APP_LOGBOOK_ERROR_CODE_2,
-            APP_LOGBOOK_ENTRY_DETAIL);
-         pnio_status.error_code = APP_LOGBOOK_ERROR_CODE;
-         pnio_status.error_decode = APP_LOGBOOK_ERROR_DECODE;
-         pnio_status.error_code_1 = APP_LOGBOOK_ERROR_CODE_1;
-         pnio_status.error_code_2 = APP_LOGBOOK_ERROR_CODE_2;
-         pnet_create_log_book_entry (
+            "Sending process alarm from slot %u subslot %u USI %u to "
+            "IO-controller. Payload: 0x%x\n",
+            slot,
+            p_subslot->subslot_nbr,
+            APP_ALARM_USI,
+            alarm_payload[0]);
+         pnet_alarm_send_process_alarm (
             net,
             arep,
-            &pnio_status,
-            APP_LOGBOOK_ENTRY_DETAIL);
-         break;
+            APP_API,
+            slot,
+            p_subslot->subslot_nbr,
+            APP_ALARM_USI,
+            APP_ALARM_PAYLOAD_SIZE,
+            alarm_payload);
+         *alarm_allowed = false; /* Not allowed until ACK received */
       }
-
-      switch (state)
+      else
       {
-      case APP_DEMO_STATE_ALARM_SEND:
-         state = APP_DEMO_STATE_DIAG_ADD;
-         break;
-      case APP_DEMO_STATE_DIAG_ADD:
-         state = APP_DEMO_STATE_DIAG_UPDATE;
-         break;
-      case APP_DEMO_STATE_DIAG_UPDATE:
-         state = APP_DEMO_STATE_DIAG_REMOVE;
-         break;
-      case APP_DEMO_STATE_DIAG_REMOVE:
-         state = APP_DEMO_STATE_LOGBOOK_ENTRY;
-         break;
-      default:
-      case APP_DEMO_STATE_LOGBOOK_ENTRY:
-         state = APP_DEMO_STATE_ALARM_SEND;
-         break;
+         printf (
+            "Could not send process alarm, as alarm_allowed == false\n");
       }
+      break;
+
+   case APP_DEMO_STATE_DIAG_STD_ADD:
+      printf (
+         "Adding standard diagnosis. Slot %u subslot %u channel %u\n",
+         diag_source.slot,
+         diag_source.subslot,
+         diag_source.ch);
+      pnet_diag_std_add (
+         net,
+         arep,
+         &diag_source,
+         APP_DIAG_CHANNEL_NUMBER_OF_BITS,
+         PNET_DIAG_CH_PROP_MAINT_QUALIFIED,
+         CHANNEL_ERRORTYPE_NETWORK_COMPONENT_FUNCTION_MISMATCH,
+         EXTENDED_CHANNEL_ERRORTYPE_FRAME_DROPPED,
+         123, /* Number of dropped frames */
+         APP_DIAG_QUAL_SEVERITY);
+      break;
+
+   case APP_DEMO_STATE_DIAG_STD_UPDATE:
+      printf (
+         "Updating standard diagnosis. Slot %u subslot %u channel %u\n",
+         diag_source.slot,
+         diag_source.subslot,
+         diag_source.ch);
+      pnet_diag_std_update (
+         net,
+         arep,
+         &diag_source,
+         CHANNEL_ERRORTYPE_NETWORK_COMPONENT_FUNCTION_MISMATCH,
+         EXTENDED_CHANNEL_ERRORTYPE_FRAME_DROPPED,
+         1234 /* Number of dropped frames */
+         );
+      break;
+
+   case APP_DEMO_STATE_DIAG_STD_REMOVE:
+      printf (
+         "Removing standard diagnosis. Slot %u subslot %u channel %u\n",
+         diag_source.slot,
+         diag_source.subslot,
+         diag_source.ch);
+      pnet_diag_std_remove (
+         net,
+         arep,
+         &diag_source,
+         CHANNEL_ERRORTYPE_NETWORK_COMPONENT_FUNCTION_MISMATCH,
+         EXTENDED_CHANNEL_ERRORTYPE_FRAME_DROPPED
+         );
+      break;
+
+   case APP_DEMO_STATE_DIAG_USI_ADD:
+      printf (
+         "Adding USI diagnosis. Slot %u subslot %u\n",
+         slot,
+         p_subslot->subslot_nbr);
+      pnet_diag_usi_add (
+         net,
+         arep,
+         APP_API,
+         slot,
+         p_subslot->subslot_nbr,
+         APP_DIAG_CUSTOM_USI,
+         (uint8_t *)"diagdata_1");
+      break;
+
+   case APP_DEMO_STATE_DIAG_USI_UPDATE:
+      printf (
+         "Updating USI diagnosis. Slot %u subslot %u\n",
+         slot,
+         p_subslot->subslot_nbr);
+      pnet_diag_usi_add (
+         net,
+         arep,
+         APP_API,
+         slot,
+         p_subslot->subslot_nbr,
+         APP_DIAG_CUSTOM_USI,
+         (uint8_t *)"diagdata_2");
+      break;
+
+   case APP_DEMO_STATE_DIAG_USI_REMOVE:
+      printf (
+         "Removing USI diagnosis. Slot %u subslot %u\n",
+         slot,
+         p_subslot->subslot_nbr);
+      pnet_diag_usi_remove (
+         net,
+         arep,
+         APP_API,
+         slot,
+         p_subslot->subslot_nbr,
+         APP_DIAG_CUSTOM_USI);
+      break;
+
+   case APP_DEMO_STATE_LOGBOOK_ENTRY:
+      printf (
+         "Writing to logbook. Error_code1: %02X Error_code2: %02X  Entry "
+         "detail: 0x%08X\n",
+         APP_LOGBOOK_ERROR_CODE_1,
+         APP_LOGBOOK_ERROR_CODE_2,
+         APP_LOGBOOK_ENTRY_DETAIL);
+      pnio_status.error_code = APP_LOGBOOK_ERROR_CODE;
+      pnio_status.error_decode = APP_LOGBOOK_ERROR_DECODE;
+      pnio_status.error_code_1 = APP_LOGBOOK_ERROR_CODE_1;
+      pnio_status.error_code_2 = APP_LOGBOOK_ERROR_CODE_2;
+      pnet_create_log_book_entry (
+         net,
+         arep,
+         &pnio_status,
+         APP_LOGBOOK_ENTRY_DETAIL);
+      break;
+   }
+
+   switch (state)
+   {
+   case APP_DEMO_STATE_ALARM_SEND:
+      state = APP_DEMO_STATE_DIAG_STD_ADD;
+      break;
+   case APP_DEMO_STATE_DIAG_STD_ADD:
+      state = APP_DEMO_STATE_DIAG_STD_UPDATE;
+      break;
+   case APP_DEMO_STATE_DIAG_STD_UPDATE:
+      state = APP_DEMO_STATE_DIAG_USI_ADD;
+      break;
+   case APP_DEMO_STATE_DIAG_USI_ADD:
+      state = APP_DEMO_STATE_DIAG_USI_UPDATE;
+      break;
+   case APP_DEMO_STATE_DIAG_USI_UPDATE:
+      state = APP_DEMO_STATE_DIAG_USI_REMOVE;
+      break;
+   case APP_DEMO_STATE_DIAG_USI_REMOVE:
+      state = APP_DEMO_STATE_DIAG_STD_REMOVE;
+      break;
+   case APP_DEMO_STATE_DIAG_STD_REMOVE:
+      state = APP_DEMO_STATE_LOGBOOK_ENTRY;
+      break;
+   default:
+   case APP_DEMO_STATE_LOGBOOK_ENTRY:
+      state = APP_DEMO_STATE_ALARM_SEND;
+      break;
    }
 }
 

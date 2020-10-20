@@ -62,6 +62,7 @@ extern "C" {
  * call to pnet_init.
  */
 #define PNET_SLOT_DAP_IDENT                       0x00000000
+#define PNET_SUBSLOT_DAP_IDENT                    0x00000001
 #define PNET_SUBSLOT_DAP_INTERFACE_1_IDENT        0x00008000
 #define PNET_SUBSLOT_DAP_INTERFACE_1_PORT_0_IDENT 0x00008001
 
@@ -1675,7 +1676,7 @@ PNET_EXPORT int pnet_factory_reset (pnet_t * net);
  * Mainly intended for device development and testing.
  * Applications should typically not use this function.
  *
- * Use pnet_factory_reset() instead, that uses this functionality internally.
+ * Use \a pnet_factory_reset() instead, that uses this functionality internally.
  *
  * @param file_directory   In:    File directory
  * @return  0  if the operation succeeded.
@@ -1815,6 +1816,13 @@ typedef enum pnet_diag_ch_prop_type_values
       (x) |= (v) << PNET_DIAG_CH_PROP_ACC_POS;                                 \
    } while (0)
 
+/* Channel group or individual channel. Also known as "Accumulative" */
+typedef enum pnet_diag_ch_group_values
+{
+   PNET_DIAG_CH_INDIVIDUAL_CHANNEL = 0,
+   PNET_DIAG_CH_CHANNEL_GROUP = 1
+} pnet_diag_ch_group_values_t;
+
 #define PNET_DIAG_CH_PROP_MAINT_MASK 0x0600
 #define PNET_DIAG_CH_PROP_MAINT_POS  9
 #define PNET_DIAG_CH_PROP_MAINT_GET(x)                                         \
@@ -1874,150 +1882,194 @@ typedef enum pnet_diag_ch_prop_dir_values
 #define PNET_DIAG_QUALIFIER_POS_REQUIRED 7
 #define PNET_DIAG_QUALIFIER_POS_ADVICE   3
 
-#define PNET_DIAG_USI_STD 0x8000
+#define PNET_CHANNEL_WHOLE_SUBMODULE 0x8000
+
+typedef struct pnet_diag_source
+{
+   uint32_t api;
+   uint16_t slot;
+   uint16_t subslot;
+   uint16_t ch; /* 0 - 0x7FFF manufacturer specific, 0x8000 whole submodule */
+   pnet_diag_ch_group_values_t ch_grouping;
+   pnet_diag_ch_prop_dir_values_t ch_direction;
+} pnet_diag_source_t;
 
 /**
- * Add a diagnosis entry.
- *
- * The diagnosis can be in manufacturer-specific diag format or standard
- * format. The USI determines this.
- *
- * USI 0x8000: standard format
- * USI 0..0x7fff: manufacturer-specific diag format
+ * Add a diagnosis entry, in the standard format.
  *
  * The channel error types and the extended channel error types are
  * defined in Profinet 2.4 Services Annex F.
  *
  * This sends a diagnosis alarm.
  *
- * @param net                 InOut: The p-net stack instance
+ * Uses the "Qualified channel diagnosis" format on the wire.
+ *
+ * @param net                 InOut: The p-net stack instance.
  * @param arep                In:    The AREP.
- * @param api                 In:    The API.
- * @param slot                In:    The slot.
- * @param subslot             In:    The sub-slot.
- * @param ch                  In:    The channel number
- * @param ch_properties       In:    The channel properties (direction,
- *                                   data length, maintenance)
+ * @param p_diag_source       In:    Slot, subslot, channel, direction etc.
+ * @param ch_bits             In:    Number of bits in the channel.
+ * @param severity            In:    Diagnosis severity.
  * @param ch_error_type       In:    The channel error type.
  * @param ext_ch_error_type   In:    The extended channel error type
- *                                   (more details on the channel error type)
+ *                                   (more details on the channel error type).
+ *                                   Use 0 if not given.
  * @param ext_ch_add_value    In:    The extended channel error additional
- *                                   value (even more details).
- *                                   Only needed for standard format.
- * @param qual_ch_qualifier   In:    The qualified channel qualifier, describes
- *                                   severity. Only needed for standard format,
- *                                   only used if channel properties is
- *                                   MAINT_QUALIFIED.
+ *                                   value. Typically a measurement value (for
+ *                                   example number of dropped packets) related
+ *                                   to the error.
+ * @param qual_ch_qualifier   In:    More detailed severity information. Used
+ *                                   when severity =
+ *                                   PNET_DIAG_CH_PROP_MAINT_QUALIFIED
  *                                   Max one bit should be set.
- * @param usi                 In:    The USI. See above.
- * @param p_manuf_data        In:    The manufacturer specific diagnosis data.
- *                                   Only needed for manufacturer-specific
- *                                   diag format.
+ *                                   Use 0 otherwise.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
-PNET_EXPORT int pnet_diag_add (
+PNET_EXPORT int pnet_diag_std_add (
    pnet_t * net,
    uint32_t arep,
-   uint32_t api,
-   uint16_t slot,
-   uint16_t subslot,
-   uint16_t ch,
-   uint16_t ch_properties,
+   const pnet_diag_source_t * p_diag_source,
+   pnet_diag_ch_prop_type_values_t ch_bits,
+   pnet_diag_ch_prop_maint_values_t severity,
    uint16_t ch_error_type,
    uint16_t ext_ch_error_type,
    uint32_t ext_ch_add_value,
-   uint32_t qual_ch_qualifier,
-   uint16_t usi,
-   uint8_t * p_manuf_data);
+   uint32_t qual_ch_qualifier);
 
 /**
- * Update a diagnosis entry.
- *
- * If the USI of the item is in the manufacturer-specified range then
- * the USI is used to identify the item.
- * Otherwise the other parameters are used (all must match):
- * - API id.
- * - Slot number.
- * - Sub-slot number.
- * - Channel number.
- * - Channel properties (the channel direction part only).
- * - Channel error type.
- *
- * When the item is found either the manufacturer data is updated (for
- * USI in manufacturer-specific range) or the extended channel additional
- * value is updated.
+ * Update the "extended channel error additional value", for a diagnosis entry
+ * in the standard format.
  *
  * This sends a diagnosis alarm.
  *
- * @param net              InOut: The p-net stack instance
+ * @param net               InOut: The p-net stack instance.
+ * @param arep              In:    The AREP.
+ * @param p_diag_source     In:    Slot, subslot, channel, direction etc.
+ * @param ch_error_type     In:    The channel error type.
+ * @param ext_ch_error_type In:    The extended channel error type
+ *                                 (more details on the channel error type).
+ *                                 Use 0 if not given.
+ * @param ext_ch_add_value  In:    New extended channel error additional value.
+ *                                 Typically a measurement value (for
+ *                                 example number of dropped packets) related
+ *                                 to the error.
+ * @return  0  if the operation succeeded.
+ *          -1 if an error occurred.
+ */
+PNET_EXPORT int pnet_diag_std_update (
+   pnet_t * net,
+   uint32_t arep,
+   const pnet_diag_source_t * p_diag_source,
+   uint16_t ch_error_type,
+   uint16_t ext_ch_error_type,
+   uint32_t ext_ch_add_value);
+
+/**
+ * Remove a diagnosis entry in the standard format.
+ *
+ * An error is returned if the diagnosis doesn't exist.
+ *
+ * This sends a diagnosis alarm.
+ *
+ * @param net               InOut: The p-net stack instance.
+ * @param arep              In:    The AREP.
+ * @param p_diag_source     In:    Slot, subslot, channel, direction etc.
+ * @param ch_error_type     In:    The channel error type.
+ * @param ext_ch_error_type In:    The extended channel error type
+ *                                 (more details on the channel error type).
+ *                                 Use 0 if not given.
+ * @return  0  if the operation succeeded.
+ *          -1 if an error occurred.
+ */
+PNET_EXPORT int pnet_diag_std_remove (
+   pnet_t * net,
+   uint32_t arep,
+   const pnet_diag_source_t * p_diag_source,
+   uint16_t ch_error_type,
+   uint16_t ext_ch_error_type);
+
+/**
+ * Add a diagnosis entry in manufacturer-specified ("USI") format.
+ *
+ * If the diagnosis already exists, it is updated.
+ * Use \a pnet_diag_usi_update() instead if you would like to have an error
+ * if the diagnois is missing when trying to update it.
+ *
+ * A diagnosis in USI format is assigned to the channel "whole submodule"
+ * (not individual channels). The severity is always "Fault".
+ *
+ * This sends a diagnosis alarm.
+ *
+ * @param net              InOut: The p-net stack instance.
  * @param arep             In:    The AREP.
  * @param api              In:    The API.
  * @param slot             In:    The slot.
  * @param subslot          In:    The sub-slot.
- * @param ch               In:    The channel number
- * @param ch_properties    In:    The channel properties (only direction used)
- * @param ch_error_type    In:    The channel error type.
- * @param ext_ch_add_value In:    New extended channel error additional value.
- * @param usi              In:    The USI.
- *                                range: 0..0x7fff for manufacturer-specific
- *                                diag format. 0x8000 for standard format.
+ * @param usi              In:    The USI. Range 0..0x7fff
+ * @param p_manuf_data     In:    The manufacturer specific diagnosis data.
+ * @return  0  if the operation succeeded.
+ *          -1 if an error occurred.
+ */
+PNET_EXPORT int pnet_diag_usi_add (
+   pnet_t * net,
+   uint32_t arep,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
+   uint16_t usi,
+   uint8_t * p_manuf_data);
+
+/**
+ * Update the manufacturer specific data, for a diagnosis entry in
+ * manufacturer-specified ("USI") format.
+ *
+ * An error is returned if the diagnosis doesn't exist.
+ * Use \a pnet_diag_usi_add() instead if you would like to create the
+ * missing diagnos when trying to update it.
+ *
+ * This sends a diagnosis alarm.
+ *
+ * @param net              InOut: The p-net stack instance.
+ * @param arep             In:    The AREP.
+ * @param api              In:    The API.
+ * @param slot             In:    The slot.
+ * @param subslot          In:    The sub-slot.
+ * @param usi              In:    The USI. Range 0..0x7fff
  * @param p_manuf_data     In:    New manufacturer specific diagnosis data.
- *                                (Only needed if USI <= 0x7fff).
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
-PNET_EXPORT int pnet_diag_update (
+PNET_EXPORT int pnet_diag_usi_update (
    pnet_t * net,
    uint32_t arep,
    uint32_t api,
    uint16_t slot,
    uint16_t subslot,
-   uint16_t ch,
-   uint16_t ch_properties,
-   uint16_t ch_error_type,
-   uint32_t ext_ch_add_value,
    uint16_t usi,
    uint8_t * p_manuf_data);
 
 /**
- * Remove a diagnosis entry.
+ * Remove a diagnosis entry in manufacturer-specified ("USI") format.
  *
- * If the USI of the item is in the manufacturer-specified range then
- * the USI is used to identify the item.
- * Otherwise the other parameters are used (all must match):
- * - API id.
- * - Slot number.
- * - Sub-slot number.
- * - Channel number.
- * - Channel properties (the channel direction part only).
- * - Channel error type.
+ * An error is returned if the diagnosis doesn't exist.
  *
  * This sends a diagnosis alarm.
  *
- * @param net              InOut: The p-net stack instance
+ * @param net              InOut: The p-net stack instance.
  * @param arep             In:    The AREP.
  * @param api              In:    The API.
  * @param slot             In:    The slot.
  * @param subslot          In:    The sub-slot.
- * @param ch               In:    The channel number
- * @param ch_properties    In:    The channel properties (only direction used)
- * @param ch_error_type    In:    The channel error type.
- * @param usi              In:    The USI.
- *                                range: 0..0x7fff for manufacturer-specific
- *                                diag format, 0x8000 for standard format.
+ * @param usi              In:    The USI. Range 0..0x7fff
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
-PNET_EXPORT int pnet_diag_remove (
+PNET_EXPORT int pnet_diag_usi_remove (
    pnet_t * net,
    uint32_t arep,
    uint32_t api,
    uint16_t slot,
    uint16_t subslot,
-   uint16_t ch,
-   uint16_t ch_properties,
-   uint16_t ch_error_type,
    uint16_t usi);
 
 /**

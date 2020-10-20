@@ -717,10 +717,10 @@ static int pf_alarm_apmr_frame_handler (
       }
       else
       {
-        LOG_ERROR (
-           PF_ALARM_LOG,
-           "Alarm(%d): Could not put incoming %s prio alarm frame in"
-               " mbox, as it is deallocated.\n",
+         LOG_ERROR (
+            PF_ALARM_LOG,
+            "Alarm(%d): Could not put incoming %s prio alarm frame in"
+            " mbox, as it is deallocated.\n",
             __LINE__,
             priotext);
       }
@@ -2080,6 +2080,8 @@ int pf_alarm_close (pnet_t * net, pf_ar_t * p_ar)
 
 /**
  * @internal
+ * Return the alarm specifier and maintenance status for a diagnosis item.
+ *
  * Add one diag item to the alarm digest.
  * @param p_ar             In:    The AR instance.
  * @param p_subslot        In:    The subslot instance.
@@ -2132,7 +2134,9 @@ static void pf_alarm_add_item_to_digest (
 
 /**
  * @internal
- * Return the alarm specifier for a specific sub-slot.
+ * Return the alarm specifier and maintenance status for a specific sub-slot,
+ * by looking at all diagnosis items found for that subslot.
+ *
  * Describes diagnosis alarms.
  *
  * @param net              InOut: The p-net stack instance

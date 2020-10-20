@@ -61,7 +61,7 @@ int pf_diag_exit (void)
  * @internal
  * Update the problem indicator for all input/producer CRs of a sub-slot.
  *
- * @param net              InOut: The p-net stack instance
+ * @param net              InOut: The p-net stack instance.
  * @param p_ar             In:    The AR instance.
  * @param p_subslot        In:    The sub-slot instance.
  */
@@ -103,34 +103,24 @@ static void pf_diag_update_station_problem_indicator (
  * @internal
  * Find and unlink a diag item in the specified sub-slot.
  *
- * If the USI is in the manufacturer-specified range then only match the USI.
- * Otherwise the following items must match (not the USI!):
- * - API id.
- * - Slot number.
- * - Sub-slot number.
- * - Channel number.
- * - Channel properties.
+ * If the USI of the item is in the manufacturer-specified range then
+ * the USI is used to identify the item.
+ * Otherwise the other parameters are used (all must match):
+ * - p_diag_source (all fields)
  * - Channel error type.
  *
- * @param net              InOut: The p-net stack instance
- * @param api_id           In:    The API id.
- * @param slot_nbr         In:    The slot number.
- * @param subslot_nbr      In:    The sub-slot number.
- * @param ch_nbr           In:    The channel number.
- * @param ch_properties    In:    The channel properties (only direction used)
+ * @param net              InOut: The p-net stack instance.
+ * @param p_diag_source    In:    Slot, subslot, channel, direction etc.
  * @param ch_error_type    In:    The error type.
  * @param usi              In:    The USI.
- * @param pp_subslot       Out:   The sub-slot instance.
+ * @param pp_subslot       Out:   The sub-slot instance, or NULL if not found.
  * @param p_diag_ix        Out:   The diag item index.
  */
 static void pf_diag_find_entry (
    pnet_t * net,
-   uint32_t api_id,
-   uint16_t slot_nbr,
-   uint16_t subslot_nbr,
-   uint16_t ch_nbr,
-   uint16_t ch_properties,
+   const pnet_diag_source_t * p_diag_source,
    uint16_t ch_error_type,
+   uint16_t ext_ch_error_type,
    uint16_t usi,
    pf_subslot_t ** pp_subslot,
    uint16_t * p_diag_ix)
@@ -143,8 +133,12 @@ static void pf_diag_find_entry (
    *p_diag_ix = PF_DIAG_IX_NULL;
    *pp_subslot = NULL;
    if (
-      pf_cmdev_get_subslot_full (net, api_id, slot_nbr, subslot_nbr, pp_subslot) ==
-      0)
+      pf_cmdev_get_subslot_full (
+         net,
+         p_diag_source->api,
+         p_diag_source->slot,
+         p_diag_source->subslot,
+         pp_subslot) == 0)
    {
       /* Only search valid sub-modules */
       if (
@@ -162,18 +156,23 @@ static void pf_diag_find_entry (
          {
             /* Found a match if all of:
              *    format is STD.
-             *    ch_nbr matches.
+             *    channel number matches.
+             *    individual channel or channel group
              *    direction matches.
              *    ch_error_type matches.
+             *    ext_ch_error_type matches.
              * ToDo: How do we find manuf_data diag entries??
              */
             if (p_item->usi >= PF_USI_CHANNEL_DIAGNOSIS)
             {
                if (
-                  (p_item->fmt.std.ch_nbr == ch_nbr) &&
+                  (p_item->fmt.std.ch_nbr == p_diag_source->ch) &&
                   (p_item->fmt.std.ch_error_type == ch_error_type) &&
+                  (p_item->fmt.std.ext_ch_error_type == ext_ch_error_type) &&
+                  (PNET_DIAG_CH_PROP_ACC_GET (p_item->fmt.std.ch_properties) ==
+                   p_diag_source->ch_grouping) &&
                   (PNET_DIAG_CH_PROP_DIR_GET (p_item->fmt.std.ch_properties) ==
-                   PNET_DIAG_CH_PROP_DIR_GET (ch_properties)))
+                   p_diag_source->ch_direction))
                {
                   *p_diag_ix = item_ix;
 
@@ -225,17 +224,16 @@ static void pf_diag_find_entry (
 int pf_diag_add (
    pnet_t * net,
    pf_ar_t * p_ar,
-   uint32_t api_id,
-   uint16_t slot_nbr,
-   uint16_t subslot_nbr,
-   uint16_t ch_nbr,
-   uint16_t ch_properties,
+   const pnet_diag_source_t * p_diag_source,
+   pnet_diag_ch_prop_type_values_t ch_bits,
+   pnet_diag_ch_prop_maint_values_t severity,
    uint16_t ch_error_type,
    uint16_t ext_ch_error_type,
    uint32_t ext_ch_add_value,
    uint32_t qual_ch_qualifier,
    uint16_t usi,
    uint8_t * p_manuf_data)
+
 {
    int ret = -1;
    pf_device_t * p_dev = NULL;
@@ -244,13 +242,23 @@ int pf_diag_add (
    pf_diag_item_t * p_item = NULL;
    bool overwrite = false;
    pf_diag_item_t old_item;
+   uint16_t ch_properties = 0;
 
    /* Remove reserved bits before we use it */
+   /* TODO: Validate qual_ch_qualifier */
    qual_ch_qualifier &= ~0x00000007;
 
    if (usi > PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS)
    {
       LOG_ERROR (PNET_LOG, "DIAG(%d): Bad USI\n", __LINE__);
+   }
+   else if (p_diag_source->ch > PNET_CHANNEL_WHOLE_SUBMODULE)
+   {
+      LOG_ERROR (
+         PNET_LOG,
+         "DIAG(%d): Illegal channel %u\n",
+         __LINE__,
+         p_diag_source->ch);
    }
    else if (pf_cmdev_get_device (net, &p_dev) == 0)
    {
@@ -258,12 +266,9 @@ int pf_diag_add (
 
       pf_diag_find_entry (
          net,
-         api_id,
-         slot_nbr,
-         subslot_nbr,
-         ch_nbr,
-         ch_properties,
+         p_diag_source,
          ch_error_type,
+         ext_ch_error_type,
          usi,
          &p_subslot,
          &item_ix);
@@ -307,11 +312,23 @@ int pf_diag_add (
             else
             {
                /* Standard format */
+               PNET_DIAG_CH_PROP_TYPE_SET (ch_properties, ch_bits);
+               PNET_DIAG_CH_PROP_ACC_SET (
+                  ch_properties,
+                  p_diag_source->ch_grouping == PNET_DIAG_CH_CHANNEL_GROUP);
+               PNET_DIAG_CH_PROP_MAINT_SET (ch_properties, severity);
+               PNET_DIAG_CH_PROP_DIR_SET (
+                  ch_properties,
+                  p_diag_source->ch_direction);
+               PNET_DIAG_CH_PROP_SPEC_SET (
+                  ch_properties,
+                  PNET_DIAG_CH_PROP_SPEC_APPEARS);
+
                p_item->usi = PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS;
                PNET_DIAG_CH_PROP_SPEC_SET (
                   p_item->fmt.std.ch_properties,
                   PNET_DIAG_CH_PROP_SPEC_APPEARS);
-               p_item->fmt.std.ch_nbr = ch_nbr;
+               p_item->fmt.std.ch_nbr = p_diag_source->ch;
                p_item->fmt.std.ch_properties = ch_properties;
                p_item->fmt.std.ch_error_type = ch_error_type;
                p_item->fmt.std.ext_ch_error_type = ext_ch_error_type;
@@ -322,9 +339,9 @@ int pf_diag_add (
             ret = pf_alarm_send_diagnosis (
                net,
                p_ar,
-               api_id,
-               slot_nbr,
-               subslot_nbr,
+               p_diag_source->api,
+               p_diag_source->slot,
+               p_diag_source->subslot,
                p_item);
 
             pf_diag_update_station_problem_indicator (net, p_ar, p_subslot);
@@ -348,9 +365,9 @@ int pf_diag_add (
                   ret = pf_alarm_send_diagnosis (
                      net,
                      p_ar,
-                     api_id,
-                     slot_nbr,
-                     subslot_nbr,
+                     p_diag_source->api,
+                     p_diag_source->slot,
+                     p_diag_source->subslot,
                      &old_item);
                }
             }
@@ -370,12 +387,9 @@ int pf_diag_add (
 int pf_diag_update (
    pnet_t * net,
    pf_ar_t * p_ar,
-   uint32_t api_id,
-   uint16_t slot_nbr,
-   uint16_t subslot_nbr,
-   uint16_t ch_nbr,
-   uint16_t ch_properties,
-   uint16_t ch_error_code,
+   const pnet_diag_source_t * p_diag_source,
+   uint16_t ch_error_type,
+   uint16_t ext_ch_error_type,
    uint32_t ext_ch_add_value,
    uint16_t usi,
    uint8_t * p_manuf_data)
@@ -391,18 +405,23 @@ int pf_diag_update (
    {
       LOG_ERROR (PNET_LOG, "DIAG(%d): Bad USI\n", __LINE__);
    }
+   else if (p_diag_source->ch > PNET_CHANNEL_WHOLE_SUBMODULE)
+   {
+      LOG_ERROR (
+         PNET_LOG,
+         "DIAG(%d): Illegal channel %u\n",
+         __LINE__,
+         p_diag_source->ch);
+   }
    else if (pf_cmdev_get_device (net, &p_dev) == 0)
    {
       os_mutex_lock (p_dev->diag_mutex);
 
       pf_diag_find_entry (
          net,
-         api_id,
-         slot_nbr,
-         subslot_nbr,
-         ch_nbr,
-         ch_properties,
-         ch_error_code,
+         p_diag_source,
+         ch_error_type,
+         ext_ch_error_type,
          usi,
          &p_subslot,
          &item_ix);
@@ -410,7 +429,7 @@ int pf_diag_update (
       {
          if (pf_cmdev_get_diag_item (net, item_ix, &p_item) == 0)
          {
-            /* Make a copy of it so it can be remove after inserting the new
+            /* Make a copy of it so it can be removed after inserting the new
              * entry */
             old_item = *p_item;
 
@@ -433,9 +452,9 @@ int pf_diag_update (
             ret = pf_alarm_send_diagnosis (
                net,
                p_ar,
-               api_id,
-               slot_nbr,
-               subslot_nbr,
+               p_diag_source->api,
+               p_diag_source->slot,
+               p_diag_source->subslot,
                p_item);
             if (ret == 0)
             {
@@ -453,9 +472,9 @@ int pf_diag_update (
                ret = pf_alarm_send_diagnosis (
                   net,
                   p_ar,
-                  api_id,
-                  slot_nbr,
-                  subslot_nbr,
+                  p_diag_source->api,
+                  p_diag_source->slot,
+                  p_diag_source->subslot,
                   &old_item);
             }
 
@@ -481,12 +500,9 @@ int pf_diag_update (
 int pf_diag_remove (
    pnet_t * net,
    pf_ar_t * p_ar,
-   uint32_t api_id,
-   uint16_t slot_nbr,
-   uint16_t subslot_nbr,
-   uint16_t ch_nbr,
-   uint16_t ch_properties,
+   const pnet_diag_source_t * p_diag_source,
    uint16_t ch_error_type,
+   uint16_t ext_ch_error_type,
    uint16_t usi)
 {
    int ret = -1;
@@ -499,18 +515,23 @@ int pf_diag_remove (
    {
       LOG_ERROR (PNET_LOG, "DIAG(%d): Bad USI\n", __LINE__);
    }
+   else if (p_diag_source->ch > PNET_CHANNEL_WHOLE_SUBMODULE)
+   {
+      LOG_ERROR (
+         PNET_LOG,
+         "DIAG(%d): Illegal channel %u\n",
+         __LINE__,
+         p_diag_source->ch);
+   }
    else if (pf_cmdev_get_device (net, &p_dev) == 0)
    {
       os_mutex_lock (p_dev->diag_mutex);
 
       pf_diag_find_entry (
          net,
-         api_id,
-         slot_nbr,
-         subslot_nbr,
-         ch_nbr,
-         ch_properties,
+         p_diag_source,
          ch_error_type,
+         ext_ch_error_type,
          usi,
          &p_subslot,
          &item_ix);
@@ -539,9 +560,9 @@ int pf_diag_remove (
                ret = pf_alarm_send_diagnosis (
                   net,
                   p_ar,
-                  api_id,
-                  slot_nbr,
-                  subslot_nbr,
+                  p_diag_source->api,
+                  p_diag_source->slot,
+                  p_diag_source->subslot,
                   p_item);
             }
             else
@@ -561,9 +582,9 @@ int pf_diag_remove (
                ret = pf_alarm_send_diagnosis (
                   net,
                   p_ar,
-                  api_id,
-                  slot_nbr,
-                  subslot_nbr,
+                  p_diag_source->api,
+                  p_diag_source->slot,
+                  p_diag_source->subslot,
                   p_item);
             }
          }
@@ -580,4 +601,177 @@ int pf_diag_remove (
    }
 
    return ret;
+}
+
+/************************** Diagnosis in standard format *********************/
+
+int pf_diag_std_add (
+   pnet_t * net,
+   pf_ar_t * p_ar,
+   const pnet_diag_source_t * p_diag_source,
+   pnet_diag_ch_prop_type_values_t ch_bits,
+   pnet_diag_ch_prop_maint_values_t severity,
+   uint16_t ch_error_type,
+   uint16_t ext_ch_error_type,
+   uint32_t ext_ch_add_value,
+   uint32_t qual_ch_qualifier)
+{
+   return pf_diag_add (
+      net,
+      p_ar,
+      p_diag_source,
+      ch_bits,
+      severity,
+      ch_error_type,
+      ext_ch_error_type,
+      ext_ch_add_value,
+      qual_ch_qualifier,
+      PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS,
+      NULL);
+}
+
+int pf_diag_std_update (
+   pnet_t * net,
+   pf_ar_t * p_ar,
+   const pnet_diag_source_t * p_diag_source,
+   uint16_t ch_error_type,
+   uint16_t ext_ch_error_type,
+   uint32_t ext_ch_add_value)
+{
+   return pf_diag_update (
+      net,
+      p_ar,
+      p_diag_source,
+      ch_error_type,
+      ext_ch_error_type,
+      ext_ch_add_value,
+      PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS,
+      NULL);
+}
+
+int pf_diag_std_remove (
+   pnet_t * net,
+   pf_ar_t * p_ar,
+   const pnet_diag_source_t * p_diag_source,
+   uint16_t ch_error_type,
+   uint16_t ext_ch_error_type)
+{
+   return pf_diag_remove (
+      net,
+      p_ar,
+      p_diag_source,
+      ch_error_type,
+      ext_ch_error_type,
+      PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS);
+}
+
+/************************** Diagnosis in USI format **************************/
+
+int pf_diag_usi_add (
+   pnet_t * net,
+   pf_ar_t * p_ar,
+   uint32_t api_id,
+   uint16_t slot_nbr,
+   uint16_t subslot_nbr,
+   uint16_t usi,
+   uint8_t * p_manuf_data)
+{
+   pnet_diag_source_t diag_source = {
+      .api = api_id,
+      .slot = slot_nbr,
+      .subslot = subslot_nbr,
+      .ch = PNET_CHANNEL_WHOLE_SUBMODULE,
+      .ch_grouping = PNET_DIAG_CH_INDIVIDUAL_CHANNEL,
+      .ch_direction = PNET_DIAG_CH_PROP_DIR_MANUF_SPEC};
+
+   if (usi >= PF_USI_CHANNEL_DIAGNOSIS)
+   {
+      LOG_ERROR (
+         PNET_LOG,
+         "DIAG(%d): Wrong USI given for adding diagnosis: %u Slot: %u Subslot "
+         "%u\n",
+         __LINE__,
+         usi,
+         slot_nbr,
+         subslot_nbr);
+      return -1;
+   }
+
+   return pf_diag_add (
+      net,
+      p_ar,
+      &diag_source,
+      PNET_DIAG_CH_PROP_TYPE_UNSPECIFIED,
+      PNET_DIAG_CH_PROP_MAINT_FAULT,
+      0,
+      0,
+      0,
+      0,
+      usi,
+      p_manuf_data);
+}
+
+int pf_diag_usi_update (
+   pnet_t * net,
+   pf_ar_t * p_ar,
+   uint32_t api_id,
+   uint16_t slot_nbr,
+   uint16_t subslot_nbr,
+   uint16_t usi,
+   uint8_t * p_manuf_data)
+{
+   pnet_diag_source_t diag_source = {
+      .api = api_id,
+      .slot = slot_nbr,
+      .subslot = subslot_nbr,
+      .ch = PNET_CHANNEL_WHOLE_SUBMODULE,
+      .ch_grouping = PNET_DIAG_CH_INDIVIDUAL_CHANNEL,
+      .ch_direction = PNET_DIAG_CH_PROP_DIR_MANUF_SPEC};
+
+   if (usi >= PF_USI_CHANNEL_DIAGNOSIS)
+   {
+      LOG_ERROR (
+         PNET_LOG,
+         "DIAG(%d): Wrong USI given for updating diagnosis: %u Slot: %u "
+         "Subslot %u\n",
+         __LINE__,
+         usi,
+         slot_nbr,
+         subslot_nbr);
+      return -1;
+   }
+
+   return pf_diag_update (net, p_ar, &diag_source, 0, 0, 0, usi, p_manuf_data);
+}
+
+int pf_diag_usi_remove (
+   pnet_t * net,
+   pf_ar_t * p_ar,
+   uint32_t api_id,
+   uint16_t slot_nbr,
+   uint16_t subslot_nbr,
+   uint16_t usi)
+{
+   pnet_diag_source_t diag_source = {
+      .api = api_id,
+      .slot = slot_nbr,
+      .subslot = subslot_nbr,
+      .ch = PNET_CHANNEL_WHOLE_SUBMODULE,
+      .ch_grouping = PNET_DIAG_CH_INDIVIDUAL_CHANNEL,
+      .ch_direction = PNET_DIAG_CH_PROP_DIR_MANUF_SPEC};
+
+   if (usi >= PF_USI_CHANNEL_DIAGNOSIS)
+   {
+      LOG_ERROR (
+         PNET_LOG,
+         "DIAG(%d): Wrong USI given for diagnosis removal: %u Slot: %u Subslot "
+         "%u\n",
+         __LINE__,
+         usi,
+         slot_nbr,
+         subslot_nbr);
+      return -1;
+   }
+
+   return pf_diag_remove (net, p_ar, &diag_source, 0, 0, usi);
 }

@@ -42,10 +42,12 @@ extern "C" {
 #define EVENT_ALARM                BIT (2)
 #define EVENT_ABORT                BIT (15)
 
-#define TICK_INTERVAL_US  1000 /* 1 ms */
-#define APP_ALARM_USI     0x0010
-#define APP_DIAG_CHANNEL  1
-#define APP_DIAG_SEVERITY 0x00000100UL /* Max one bit set */
+#define TICK_INTERVAL_US                1000 /* 1 ms */
+#define APP_ALARM_USI                   0x0010
+#define APP_DIAG_CHANNEL_NUMBER         1
+#define APP_DIAG_CHANNEL_DIRECTION      PNET_DIAG_CH_PROP_DIR_INPUT
+#define APP_DIAG_CHANNEL_NUMBER_OF_BITS PNET_DIAG_CH_PROP_TYPE_8_BIT
+#define APP_DIAG_QUAL_SEVERITY          0x00000100UL /* Max one bit set */
 
 #define APP_TICKS_READ_BUTTONS 10
 #define APP_TICKS_UPDATE_DATA  100
@@ -56,6 +58,8 @@ extern "C" {
 #define APP_PARAM_IDX_1          123
 #define APP_PARAM_IDX_2          124
 #define APP_API                  0
+
+#define APP_DIAG_CUSTOM_USI 0x1234
 
 #define APP_LOGBOOK_ERROR_CODE   0x20 /* Manufacturer specific */
 #define APP_LOGBOOK_ERROR_DECODE 0x82 /* Manufacturer specific */
@@ -210,9 +214,12 @@ typedef enum app_demo_state
 {
    APP_DEMO_STATE_ALARM_SEND,
    APP_DEMO_STATE_LOGBOOK_ENTRY,
-   APP_DEMO_STATE_DIAG_ADD,
-   APP_DEMO_STATE_DIAG_UPDATE,
-   APP_DEMO_STATE_DIAG_REMOVE,
+   APP_DEMO_STATE_DIAG_STD_ADD,
+   APP_DEMO_STATE_DIAG_STD_UPDATE,
+   APP_DEMO_STATE_DIAG_STD_REMOVE,
+   APP_DEMO_STATE_DIAG_USI_ADD,
+   APP_DEMO_STATE_DIAG_USI_UPDATE,
+   APP_DEMO_STATE_DIAG_USI_REMOVE,
 } app_demo_state_t;
 
 /********************* Helper function declarations ***************************/

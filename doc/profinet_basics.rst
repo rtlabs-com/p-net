@@ -583,8 +583,8 @@ To localize the diagnosis source, these values are required:
 * Slot
 * Subslot
 * Channel number (Use 0x8000 for "whole submodule")
-* Direction (in or out. Use "manufacturer specific" for "whole submodule")
 * Accumulative (true when describing a channel group)
+* Direction (in or out. Use "manufacturer specific" for "whole submodule")
 
 
 Diagnosis payload formats
