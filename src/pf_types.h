@@ -781,7 +781,7 @@ typedef struct pf_eth_frame_id_map
 typedef struct pf_cmina_dcp_ase
 {
    char station_name[PNET_STATION_NAME_MAX_LEN + 1]; /* Terminated */
-   char device_vendor[20 + 1];                          /* Terminated */
+   char device_vendor[20 + 1];                       /* Terminated */
    uint8_t device_role;        /* Only value "1" supported */
    uint16_t device_initiative; /* 1: Should send hello. 0: No sending of hello
                                 */
@@ -2238,9 +2238,18 @@ struct pnet
 
 /**
  * @internal
- * Initialise a pnet_t structure. For testing purposes.
+ * Initialise a pnet_t structure into already allocated memory.
+ *
+ * @param net              InOut: The p-net stack instance to be initialised.
+ * @param netif            In:    Name of the network interface.
+ * @param tick_us          In:    Periodic interval in us. Specify the interval
+ *                                between calls to pnet_handle_periodic().
+ * @param p_cfg            In:    Profinet configuration. These values are used
+ *                                at first startup and at factory reset.
+ * @return  0  on success.
+ *          -1 if an error occurred.
  */
-pnet_t * pnet_init_only (
+int pnet_init_only (
    pnet_t * net,
    const char * netif,
    uint32_t tick_us,
