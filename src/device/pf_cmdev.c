@@ -4500,8 +4500,8 @@ static int pf_cmdev_cm_connect_rsp_pos (
                p_stat,
                PNET_ERROR_CODE_CONNECT,
                PNET_ERROR_DECODE_PNIO,
-               PNET_ERROR_CODE_1_CMDEV,
-               PNET_ERROR_CODE_2_CMDEV_STATE_CONFLICT);
+               PNET_ERROR_CODE_1_CMRPC,
+               PNET_ERROR_CODE_2_CMRPC_PDEV_ALREADY_OWNED);
             pnet_create_log_book_entry (
                net,
                p_ar->arep,
