@@ -120,7 +120,7 @@ static void pf_cmina_save_ase (pnet_t * net, pf_cmina_dcp_ase_t * p_ase)
       LOG_DEBUG (
          PF_DCP_LOG,
          "CMINA(%d): First nvm saving of IP settings. "
-         "IP: %s Netmask: %s Gateway: %s Station name: %s\n",
+         "IP: %s Netmask: %s Gateway: %s Station name: \"%s\"\n",
          __LINE__,
          ip_string,
          netmask_string,
@@ -131,7 +131,7 @@ static void pf_cmina_save_ase (pnet_t * net, pf_cmina_dcp_ase_t * p_ase)
       LOG_DEBUG (
          PF_DCP_LOG,
          "CMINA(%d): Updating nvm stored IP settings. "
-         "IP: %s Netmask: %s Gateway: %s Station name: %s\n",
+         "IP: %s Netmask: %s Gateway: %s Station name: \"%s\"\n",
          __LINE__,
          ip_string,
          netmask_string,
@@ -142,7 +142,7 @@ static void pf_cmina_save_ase (pnet_t * net, pf_cmina_dcp_ase_t * p_ase)
       LOG_DEBUG (
          PF_DCP_LOG,
          "CMINA(%d): No storing of nvm IP settings (no changes). "
-         "IP: %s Netmask: %s Gateway: %s Station name: %s\n",
+         "IP: %s Netmask: %s Gateway: %s Station name: \"%s\"\n",
          __LINE__,
          ip_string,
          netmask_string,
@@ -279,7 +279,7 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
          LOG_DEBUG (
             PF_DCP_LOG,
             "CMINA(%d): Using "
-            "IP: %s Netmask: %s Gateway: %s Station name: %s\n",
+            "IP: %s Netmask: %s Gateway: %s Station name: \"%s\"\n",
             __LINE__,
             ip_string,
             netmask_string,
@@ -397,7 +397,7 @@ void pf_cmina_dcp_set_commit (pnet_t * net)
          gateway_string);
       LOG_DEBUG (
          PF_DCP_LOG,
-         "CMINA(%d): Setting IP: %s Netmask: %s Gateway: %s Station name: %s "
+         "CMINA(%d): Setting IP: %s Netmask: %s Gateway: %s Station name: \"%s\" "
          "Permanent: %u\n",
          __LINE__,
          ip_string,
@@ -551,6 +551,54 @@ int pf_cmina_init (pnet_t * net)
    return ret;
 }
 
+/**
+ * Abort active ARs with error code
+ * @param net        InOut: The p-net stack instance
+ * @param err_code   In: Reason ARs are aborted
+ * return Number of aborted ARs
+ */
+static int pf_cmina_abort_active_ars(
+   pnet_t * net, uint8_t err_code)
+{
+   int ix = 0;
+   pf_ar_t * p_ar = NULL;
+   int nbr_of_aborted_ars = 0;
+
+   for (ix = 0; ix < PNET_MAX_AR; ix++)
+   {
+      p_ar = pf_ar_find_by_index(net, ix);
+      if ((p_ar != NULL) && (p_ar->in_use == true))
+      {
+         p_ar->err_code = err_code;
+         pf_cmdev_state_ind (net, p_ar, PNET_EVENT_ABORT);
+         nbr_of_aborted_ars++;
+      }
+   }
+   return nbr_of_aborted_ars;
+}
+
+/**
+ * Count number of active ARs
+ * @param net        InOut: The p-net stack instance
+ * return Number of active ARs
+ */
+int pf_cmina_nbr_of_active_ars(pnet_t * net)
+{
+   int ix = 0;
+   pf_ar_t * p_ar = NULL;
+   int nbr_of_active_ars = 0;
+
+   for (ix = 0; ix < PNET_MAX_AR; ix++)
+   {
+      p_ar = pf_ar_find_by_index(net, ix);
+      if ((p_ar != NULL) && (p_ar->in_use == true))
+      {
+         nbr_of_active_ars++;
+      }
+   }
+   return nbr_of_active_ars;
+}
+
 int pf_cmina_dcp_set_ind (
    pnet_t * net,
    uint8_t opt,
@@ -574,9 +622,7 @@ int pf_cmina_dcp_set_ind (
    char ip_string[OS_INET_ADDRSTRLEN] = {0};
    char netmask_string[OS_INET_ADDRSTRLEN] = {0};
    char gateway_string[OS_INET_ADDRSTRLEN] = {0};
-   pf_ar_t * p_ar = NULL;
-   uint16_t ix;
-   bool found = false;
+
    bool temp = ((block_qualifier & 1) == 0);
    uint16_t reset_mode = block_qualifier >> 1;
 
@@ -750,7 +796,7 @@ int pf_cmina_dcp_set_ind (
                   ((strncmp (
                        net->cmina_current_dcp_ase.station_name,
                        (char *)p_value,
-                       value_length) != 0) &&
+                       value_length) != 0) ||
                    (strlen (net->cmina_current_dcp_ase.station_name) !=
                     value_length));
 
@@ -762,7 +808,7 @@ int pf_cmina_dcp_set_ind (
                LOG_INFO (
                   PF_DCP_LOG,
                   "CMINA(%d): The incoming set request is about changing "
-                  "station name. New name: %s  Temporary: %u\n",
+                  "station name. New name: \"%s\"  Temporary: %u\n",
                   __LINE__,
                   net->cmina_current_dcp_ase.station_name,
                   temp);
@@ -934,22 +980,27 @@ int pf_cmina_dcp_set_ind (
          }
          else if ((have_name == false) || (reset_to_factory == true))
          {
+            int aborted_ars = 0;
+
             /* Case 27, 30 in Profinet 2.4 Table 1096 */
             /* Reset name or reset to factory */
-            /* Any connection active ? */
-            found = false;
-            for (ix = 0; ix < PNET_MAX_AR; ix++)
+            /* Abort active ARs */
+            if (reset_to_factory == true)
             {
-               p_ar = pf_ar_find_by_index (net, ix);
-               if ((p_ar != NULL) && (p_ar->in_use == true))
-               {
-                  found = true;
-                  /* 38 */
-                  pf_cmdev_state_ind (net, p_ar, PNET_EVENT_ABORT);
-               }
+               aborted_ars =
+                  pf_cmina_abort_active_ars(
+                     net,
+                     PNET_ERROR_CODE_2_ABORT_DCP_RESET_TO_FACTORY);
+            }
+            else
+            {
+               aborted_ars =
+                  pf_cmina_abort_active_ars(
+                     net,
+                     PNET_ERROR_CODE_2_ABORT_DCP_STATION_NAME_CHANGED);
             }
 
-            if (found == false)
+            if (aborted_ars <= 0)
             {
                /* 37 */
                /* Stop IP */
@@ -957,24 +1008,16 @@ int pf_cmina_dcp_set_ind (
          }
          else if (
             ((have_name == true) && (change_name == true)) ||
-            (have_ip == false))
+             (have_ip == false))
          {
+            int aborted_ars = 0;
             /* Case 27, 28 in Profinet 2.4 Table 1096 */
             /* Change name or reset IP */
-            /* Any connection active ? */
-            found = false;
-            for (ix = 0; ix < PNET_MAX_AR; ix++)
-            {
-               p_ar = pf_ar_find_by_index (net, ix);
-               if ((p_ar != NULL) && (p_ar->in_use == true))
-               {
-                  found = true;
-                  /* 40 */
-                  pf_cmdev_state_ind (net, p_ar, PNET_EVENT_ABORT);
-               }
-            }
+            /* Abort active ARs */
+            aborted_ars =  pf_cmina_abort_active_ars(
+               net, PNET_ERROR_CODE_2_ABORT_DCP_STATION_NAME_CHANGED);
 
-            if (found == false)
+            if (aborted_ars <= 0)
             {
                /* 39 */
                net->cmina_commit_ip_suite = true;
@@ -986,19 +1029,9 @@ int pf_cmina_dcp_set_ind (
          }
          else if ((have_ip == true) && (change_ip == true))
          {
-            /* Change IP */
-            /* Any connection active ?? */
-            found = false;
-            for (ix = 0; ix < PNET_MAX_AR; ix++)
-            {
-               p_ar = pf_ar_find_by_index (net, ix);
-               if ((p_ar != NULL) && (p_ar->in_use == true))
-               {
-                  found = true;
-               }
-            }
+            /* Change IP if no active connection*/
 
-            if (found == false)
+            if (pf_cmina_nbr_of_active_ars(net) == 0)
             {
                /* Case 25 in Profinet 2.4 Table 1096 */
                /* Change IP, no active connection */
