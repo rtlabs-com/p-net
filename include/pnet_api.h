@@ -1320,11 +1320,11 @@ typedef struct pnet_cfg
  *
  * This function must be called to initialize the Profinet stack.
  *
- * @param netif            In:   Name of the network interface.
- * @param tick_us          In:   Periodic interval in us. Specify the interval
- *                               between calls to pnet_handle_periodic().
- * @param p_cfg            In:   Profinet configuration. These values are used
- * at first startup and at factory reset.
+ * @param netif            In:    Name of the network interface.
+ * @param tick_us          In:    Periodic interval in us. Specify the interval
+ *                                between calls to pnet_handle_periodic().
+ * @param p_cfg            In:    Profinet configuration. These values are used
+ *                                at first startup and at factory reset.
  * @return a handle to the stack instance, or NULL if an error occurred.
  */
 PNET_EXPORT pnet_t * pnet_init (
