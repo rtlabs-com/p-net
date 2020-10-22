@@ -260,13 +260,13 @@ const char * pf_cmdev_event_to_string (pnet_event_values_t event);
  * Show CMDEV information of the AR.
  * @param p_ar             In:    The AR instance.
  */
-void pf_cmdev_show (pf_ar_t * p_ar);
+void pf_cmdev_ar_show (pf_ar_t * p_ar);
 
 /**
  * Show the plugged modules and sub-modules.
  * @param net              InOut: The p-net stack instance
  */
-void pf_cmdev_show_device (pnet_t * net);
+void pf_cmdev_device_show (pnet_t * net);
 
 /**
  * Indicate a new state transition of the CMDEV component.

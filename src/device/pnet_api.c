@@ -123,7 +123,7 @@ void pnet_show (pnet_t * net, unsigned level)
 
       if (level & 0x0020)
       {
-         pf_cmdev_show_device (net);
+         pf_cmdev_device_show (net);
       }
 
       pf_cmrpc_show (net, level);

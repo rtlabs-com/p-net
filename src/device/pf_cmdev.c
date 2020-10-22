@@ -1108,7 +1108,7 @@ static const char * pf_cmdev_submod_plug_state_to_string (
    return s;
 }
 
-void pf_cmdev_show (pf_ar_t * p_ar)
+void pf_cmdev_ar_show (pf_ar_t * p_ar)
 {
    printf (
       "CMDEV state           = %s\n",
@@ -1207,7 +1207,7 @@ static int pf_cmdev_cfg_subslot_show (pf_subslot_t * p_subslot)
    return 0;
 }
 
-void pf_cmdev_show_device (pnet_t * net)
+void pf_cmdev_device_show (pnet_t * net)
 {
    printf ("\nCMDEV:\n");
    (void)pf_cmdev_cfg_traverse (

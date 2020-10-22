@@ -300,11 +300,11 @@ Implements these user functions (via ``pnet_api.c``):
 Show the plugged modules and sub-modules, and number of bytes sent and received
 for subslots::
 
-   pf_cmdev_show_device();
+   pf_cmdev_device_show();
 
 Show current state for CMDEV state machine::
 
-   pf_cmdev_show(p_ar);
+   pf_cmdev_ar_show(p_ar);
 
 
 CMSM - Context Management Surveillance protocol Machine
