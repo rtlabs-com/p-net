@@ -2156,6 +2156,135 @@ typedef struct pf_interface_stats
 } pnet_interface_stats_t;
 
 /**
+ * Link status
+ *
+ * See IEEE 802.1AB-2005 (LLDPv1) Annex G.2 "MAC/PHY Configuration/Status TLV".
+ */
+typedef struct pf_lldp_link_status
+{
+   bool auto_neg_supported;
+   bool auto_neg_enabled;
+   uint16_t auto_neg_advertised_cap;
+   int32_t oper_mau_type;
+} pf_lldp_link_status_t;
+
+/**
+ * Port description
+ *
+ * "The port description field shall contain an alpha-numeric string
+ * that indicates the port’s description. If RFC 2863
+ * is implemented, the ifDescr object should be used for this field."
+ * - IEEE 802.1AB (LLDP) ch. 9.5.5.2 "port description".
+ *
+ * Note: According to the SNMP specification, the string could be up
+ * to 255 characters. The p-net stack limits it to
+ * PNET_MAX_INTERFACE_NAME_LENGTH.
+ * An extra byte is added as to ensure NULL-termination.
+ */
+typedef struct pf_lldp_port_description
+{
+   char string[PNET_MAX_INTERFACE_NAME_LENGTH + 1]; /* Terminated */
+   size_t len;
+} pf_lldp_port_description_t;
+
+/**
+ * Port list
+ *
+ * "Each octet within this value specifies a set of eight ports,
+ * with the first octet specifying ports 1 through 8, the second
+ * octet specifying ports 9 through 16, etc. Within each octet,
+ * the most significant bit represents the lowest numbered port,
+ * and the least significant bit represents the highest numbered
+ * port. Thus, each port of the system is represented by a
+ * single bit within the value of this object. If that bit has
+ * a value of '1' then that port is included in the set of ports;
+ * the port is not included if its bit has a value of '0'."
+ * - IEEE 802.1AB (LLDP) ch. 12.2 "LLDP MIB module" (lldpPortList).
+ *
+ * Se also section about lldpConfigManAddrTable in PN-Topology.
+ */
+typedef struct pf_lldp_port_list_t
+{
+   uint8_t ports[2];
+} pf_lldp_port_list_t;
+
+/**
+ * Port ID
+ *
+ * See IEEE 802.1AB-2005 (LLDPv1) ch. 9.5.3 "Port ID TLV".
+ */
+typedef struct pf_lldp_port_id
+{
+   char string[PNET_PORT_ID_MAX_LEN + 1]; /**< Terminated string */
+   uint8_t subtype;
+   size_t len;
+} pf_lldp_port_id_t;
+
+/**
+ * Management address
+ *
+ * Usually, this is an IPv4 address. It may also be a MAC address
+ * or other kinds of addresses, such as IPv6.
+ *
+ * See IEEE 802.1AB-2005 (LLDPv1) ch. 9.5.9 "Management Address TLV".
+ */
+typedef struct pf_lldp_management_address
+{
+   uint8_t value[31];
+   uint8_t subtype;
+   size_t len;
+} pf_lldp_management_address_t;
+
+/**
+ * Management port index
+ *
+ * The index in IfTable for the management port.
+ *
+ * See IEEE 802.1AB-2005 (LLDPv1) ch. 9.5.9 "Management Address TLV".
+ *
+ * Also see PN-Topology ch. 6.5.1 "Mapping of Ports and PROFINET Interfaces
+ * in LLDP MIB and MIB-II".
+ */
+typedef struct pf_lldp_management_port_index
+{
+   int32_t index;
+   uint8_t subtype; /* 1 = unknown, 2 = ifIndex, 3 = systemPortNumber */
+} pf_lldp_management_port_index_t;
+
+/**
+ * Station name
+ *
+ * This is the name of an interface. It is called NameOfStation in
+ * the Profinet specification. It is usually a string, but may also
+ * be a MAC address.
+ *
+ * See IEC CDV 61158-6-10 (PN-AL-Protocol) ch. 4.3.1.4.16.
+ */
+typedef struct pf_lldp_station_name
+{
+   char string[PNET_STATION_NAME_MAX_LEN + 1]; /* Terminated */
+   size_t len;
+} pf_lldp_station_name_t;
+
+/**
+ * Measured signal delays in nanoseconds
+ *
+ * If a signal delay was not measured, its value is zero.
+ *
+ * See IEC CDV 61158-6-10 (PN-AL-Protocol) Annex U: "LLDP EXT MIB", fields
+ * lldpXPnoLocLPDValue / lldpXPnoRemLPDValue,
+ * lldpXPnoLocPortTxDValue / lldpXPnoRemPortTxDValue,
+ * lldpXPnoLocPortRxDValue / lldpXPnoRemPortRxDValue.
+ *
+ */
+typedef struct pf_lldp_signal_delay
+{
+   uint32_t port_tx_delay_ns;
+   uint32_t port_rx_delay_ns;
+   uint32_t line_propagation_delay_ns;
+} pf_lldp_signal_delay_t;
+
+/**
  * Port attributes
  *
  * Todo:
