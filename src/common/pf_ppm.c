@@ -375,8 +375,8 @@ int pf_ppm_activate_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
           (uint32_t)p_iocr->param.reduction_ratio * 1000U) /
          32U; /* us */
 
-      p_ppm->next_exec = os_get_current_time_us(); /* Will be increased before
-                                                      first time usage */
+      p_ppm->next_exec = os_get_current_time_us();
+      p_ppm->next_exec += p_ppm->control_interval;
 
       LOG_DEBUG (
          PF_PPM_LOG,
