@@ -348,7 +348,7 @@ TEST_F (FileUnitTest, FileCheckSaveIfModified)
    int res = 0;
    int i;
 
-   pf_file_clear (NULL, TEST_FILE_FILENAME);
+   pf_file_clear (TEST_FILE_DIRECTORY, TEST_FILE_FILENAME);
 
    /* First saving */
    res = pf_file_save_if_modified (
