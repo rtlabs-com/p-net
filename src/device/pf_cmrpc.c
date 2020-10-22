@@ -286,7 +286,7 @@ void pf_cmrpc_show (pnet_t * net, unsigned level)
          printf (
             "ready 4 data          = %s\n",
             p_ar->ready_4_data ? "TRUE" : "FALSE");
-         pf_cmdev_show (p_ar);
+         pf_cmdev_ar_show (p_ar);
          pf_cmpbe_show (p_ar);
          pf_cmio_show (p_ar);
          pf_cmsm_show (p_ar);
