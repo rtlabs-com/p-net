@@ -1781,7 +1781,7 @@ static int pf_dcp_identify_req (
          LOG_INFO (
             PF_DCP_LOG,
             "DCP(%d): Responding to incoming DCP identify request. All: %d "
-            "StationName: %.*s Alias: %.*s  Delay %u us.\n",
+            "StationName: %.*s Alias: %.*s  Delay %"PRIu32" us.\n",
             __LINE__,
             identify_all,
             stationname_len,
