@@ -245,7 +245,7 @@ static void pf_fspm_load_im (pnet_t * net)
  *
  * @param net              InOut: The p-net stack instance
  */
-static void pf_fspm_save_im_if_modified (pnet_t * net)
+static void pf_fspm_save_im (pnet_t * net)
 {
    pnet_im_nvm_t output_im = {0};
    pnet_im_nvm_t temporary_buffer;
@@ -311,7 +311,7 @@ int pf_fspm_init (pnet_t * net, const pnet_cfg_t * p_cfg)
 
    /* Load I&M data modifications from file, if any */
    pf_fspm_load_im (net);
-   pf_fspm_save_im_if_modified (net);
+   pf_fspm_save_im (net);
 
    /* Log book */
    if (net->fspm_log_book_mutex == NULL)
@@ -401,7 +401,7 @@ int pf_fspm_clear_im_data (pnet_t * net)
       0,
       sizeof (net->fspm_cfg.im_4_data.im_signature));
 
-   pf_fspm_save_im_if_modified (net);
+   pf_fspm_save_im (net);
 
    return 0;
 }
@@ -944,7 +944,7 @@ int pf_fspm_cm_write_ind (
          break;
       }
 
-      pf_fspm_save_im_if_modified (net);
+      pf_fspm_save_im (net);
    }
    else
    {

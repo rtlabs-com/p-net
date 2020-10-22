@@ -91,9 +91,7 @@ static void pf_cmina_send_hello (pnet_t * net, void * arg, uint32_t current_time
  * @param net              InOut: The p-net stack instance
  * @param p_ase            In:    Settings to be saved
  */
-static void pf_cmina_save_ase_if_modified (
-   pnet_t * net,
-   pf_cmina_dcp_ase_t * p_ase)
+static void pf_cmina_save_ase (pnet_t * net, pf_cmina_dcp_ase_t * p_ase)
 {
    pf_cmina_dcp_ase_t temporary_buffer;
    char ip_string[OS_INET_ADDRSTRLEN] = {0};
@@ -351,7 +349,7 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
       net->cmina_nonvolatile_dcp_ase.device_vendor[ix] = '\0';
 
       /* Save to file */
-      pf_cmina_save_ase_if_modified (net, &net->cmina_nonvolatile_dcp_ase);
+      pf_cmina_save_ase (net, &net->cmina_nonvolatile_dcp_ase);
 
       /* Init the current communication values */
       net->cmina_current_dcp_ase = net->cmina_nonvolatile_dcp_ase;
@@ -838,7 +836,7 @@ int pf_cmina_dcp_set_ind (
    if (ret == 0)
    {
       /* Save to file */
-      pf_cmina_save_ase_if_modified (net, &net->cmina_nonvolatile_dcp_ase);
+      pf_cmina_save_ase (net, &net->cmina_nonvolatile_dcp_ase);
 
       /* Evaluate what we have and where to go */
       have_name = (strlen (net->cmina_current_dcp_ase.station_name) > 0);
