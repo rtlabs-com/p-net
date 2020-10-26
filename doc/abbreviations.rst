@@ -65,6 +65,8 @@ CE
     A marking for European Union declaration of conformity
 CIDR
     Classless Inter-Domain Routing. The CIDR notation ``/24`` tells how many bits of the netmask that should be enabled.
+CIM
+    Communication Interface Management
 CiR
     Configuration in Run
 CM

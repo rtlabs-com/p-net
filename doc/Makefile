@@ -8,7 +8,7 @@ SPHINXBUILD   ?= sphinx-build
 SOURCEDIR     = .
 BUILDDIR      = _build
 
-htmlzipfile := pnet_docs_$(shell git describe --dirty --always).zip
+htmlzipfile := pnet_docs_$(shell git describe --dirty --always --tags).zip
 
 # Put it first so that "make" without argument is like "make help".
 help:

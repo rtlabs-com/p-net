@@ -91,6 +91,7 @@ pnet_t * pnet_init (
    net = os_malloc (sizeof (*net));
    if (net == NULL)
    {
+      LOG_ERROR (PNET_LOG, "Failed to allocate memory for pnet_t (%zu bytes)\n", sizeof (*net));
       return NULL;
    }
 
