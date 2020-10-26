@@ -70,6 +70,8 @@ extern "C" {
 #define PNET_SUBMOD_DAP_INTERFACE_1_IDENT        0x00008000
 #define PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT 0x00008001
 
+#define PNET_API_NO_APPLICATION_PROFILE   0
+
 /**
  * # Error Codes
  *
@@ -932,6 +934,9 @@ typedef int (
  * the device should not do a hard or soft reset for reset mode 1 or 2. It is
  * allowed for the factory reset case (but not mandatory).
  *
+ * No arep information is available, as this callback typically is triggered
+ * when there is no active connection.
+ *
  * @param net                       InOut: The p-net stack instance
  * @param arg                       InOut: User-defined data (not used by p-net)
  * @param should_reset_application  In:    True if the user should reset the
@@ -954,6 +959,9 @@ typedef int (*pnet_reset_ind) (
  *
  * It is optional to implement this callback (but a compliant Profinet device
  * must have a signal LED)
+ *
+ * No arep information is available, as this callback typically is triggered
+ * when there is no active connection.
  *
  * @param net                       InOut: The p-net stack instance
  * @param arg                       InOut: User-defined data (not used by p-net)
@@ -1050,6 +1058,8 @@ typedef struct pnet_im_3
 
 /**
  * The I&M4 data record is read-write by the controller.
+ *
+ * Used for functional safety.
  *
  * This data record is optional. If this data record is supported
  * by the application then bit 4 in the im_supported member of I&M0 shall be
@@ -1277,8 +1287,10 @@ typedef struct pnet_cfg
    pnet_cfg_device_id_t device_id;
    pnet_cfg_device_id_t oem_device_id;
    char station_name[PNET_STATION_NAME_MAX_LEN + 1]; /**< Terminated string */
-   char device_vendor[20 + 1];                       /**< Terminated string */
-   char manufacturer_specific_string[240 + 1];       /**< Terminated string */
+   char device_vendor[20 + 1];                       /**< Terminated string
+                                                          For DCP readout. */
+   char manufacturer_specific_string[240 + 1];       /**< Terminated string
+                                                          Not yet used */
 
    /* Timing */
    uint16_t min_device_interval; /** Smallest allowed data exchange interval, in

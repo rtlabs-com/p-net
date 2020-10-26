@@ -463,15 +463,23 @@ Sections in 61158-5-10 (services) describing SNMP:
 +---------------+-------------------------------------------------------------+
 | 7.3.3.3.6.2   | Persistency                                                 |
 +---------------+-------------------------------------------------------------+
+| 7.3.3.3.6.5   | Station Name / IP address. DHCP requirement.                |
++---------------+-------------------------------------------------------------+
+| 7.3.3.10      | MIB class                                                   |
++---------------+-------------------------------------------------------------+
 
 Sections in 61158-6-10 (protocol) describing SNMP:
 
 +---------------+-------------------------------------------------------------------------+
 | Section       | Description                                                             |
 +===============+=========================================================================+
+| 4.11.3.18     | Coding section related to LLDP                                          |
++---------------+-------------------------------------------------------------------------+
 | 4.16          | Simple network management                                               |
 +---------------+-------------------------------------------------------------------------+
 | 5.2.41        | Coding of the field SNMPControl, CommunityStringLength, CommunityString |
++---------------+-------------------------------------------------------------------------+
+| Annex S       | List of supported MIBs                                                  |
 +---------------+-------------------------------------------------------------------------+
 | Annex U       | Extension to a MIB                                                      |
 +---------------+-------------------------------------------------------------------------+
@@ -483,8 +491,12 @@ Sections in 61784-2 (profiles) describing SNMP:
 +---------------+-------------------------------------------------------------------------+
 | Section       | Description                                                             |
 +===============+=========================================================================+
-| 7.1.4.11      | Simple Network Management Protocol                                      |
+| 7.1.4.11      | Simple Network Management Protocol (Community strings and timeouts)     |
 +---------------+-------------------------------------------------------------------------+
+| 7.1.11        | Conformance class behaviors (Mandatory MIBs)                            |
++---------------+-------------------------------------------------------------------------+
+
+See also the list of supported OIDs in the test case specification "Topology discovery check".
 
 
 Start up procedure
@@ -602,3 +614,21 @@ Run clang-format on staged files before committing::
 
 This will format the commit using clang-format. Examine and stage
 modified files before finalizing the commit.
+
+
+Workflow
+--------
+We have chosen to host the code on Github to ease the collaboration between
+users and different developers, and we take advantage of the standard
+Github workflow:
+
+* Open a Github issue on https://github.com/rtlabs-com/p-net/ for each
+  separate bug found.
+* Fork the repository to your own account on Github, and make a local
+  clone on your work station.
+* Create a branch with a descriptive name.
+* Commit your fix to the branch. Add the line "Closes #123" (for example)
+  in the commit message, to indicate which Github issue it closes.
+* Push the branch to your Github account.
+* Create a pull request to rtlabs-com/p-net on Github.
+* After review the fix will be merged.

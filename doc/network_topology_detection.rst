@@ -71,18 +71,6 @@ To stop the daemon (to avoid sending additional LLDP packets)::
    sudo service lldpd stop
 
 
-SNMP agents
-------------
-Linux uses net-snmp as agent, see http://www.net-snmp.org/
-The package name on Debian/Ubuntu is ``snmpd``.
-
-To install it on for example a Raspberry Pi::
-
-   sudo apt install -y snmpd
-
-Include the ``snmpd`` daemon in a Yocto build by using the ``net-snmp`` recipe.
-
-
 SNMPwalk tool for querying SNMP agents
 --------------------------------------
 To install ``snmpwalk`` and standard description files on Ubuntu::
@@ -185,14 +173,281 @@ instead of the previous::
 
    iso.3.6.1.2.1.2.2.1.6.3 = Hex-STRING: 20 87 56 FF AA 86
 
-Supported SNMP OIDs
--------------------
 
-These values can be written via SNMP, and should be stored persistently:
+Read and write a single OID
+---------------------------
+Read only the "SNMPv2-MIB::sysLocation.0" OID::
 
-* sysContact
-* sysName
-* sysLocation
+   $ snmpget -v1 -c public 192.168.0.99 1.3.6.1.2.1.1.6.0
+   iso.3.6.1.2.1.1.6.0 = STRING: "sysLocation Not Set"
+
+Write a new string describing the device location::
+
+   $ snmpset -v1 -c private 192.168.0.99 1.3.6.1.2.1.1.6.0 s "My new location"
+
+
+Using more MIB files for snmpwalk
+---------------------------------
+Add any additional MIB files in the directory ``.snmp/mibs/`` in your home
+directory. For Profinet you need at least these files:
+
+* IEC-62439-2-MGMT-MIB-20140509.mib
+* IEC-62439-2-MON-MIB-20140509.mib
+* LLDP-EXT-IEC61158-TYPE10-MIB.mib
+* LLDP-MIB.my
+
+The first three files are available in the test bundle (in subdirectory
+``PN-Spec``) from the Profinet organization.
+
+The last file is available for download on several locations.
+
+
+Important SNMP subtrees and MIB files
+-------------------------------------
+The OID values are hierarchical (arranged in a tree).
+
++------------------------------+-------------------------------------------+
+| OID subtree                  | Name                                      |
++==============================+===========================================+
+| 1.0.8802.1.1.2               | LLDP-MIB::lldpMIB                         |
++------------------------------+-------------------------------------------+
+| 1.0.62439.1                  | IEC-62439-2-MIB::mrp                      |
++------------------------------+-------------------------------------------+
+| 1.3.6.1.2.1                  | SNMPv2-SMI::mib-2 (default for snmpwalk)  |
++------------------------------+-------------------------------------------+
+| 1.3.6.1.4.1.4196.1.1.5.2.100 | SNMPv2-SMI::enterprises.4196.1.1.5.2.100  |
++------------------------------+-------------------------------------------+
+| 1.3.6.1.4.1.4329.6           | SNMPv2-SMI::enterprises.4329.6            |
++------------------------------+-------------------------------------------+
+| 1.3.6.1.6                    | SNMPv2-SMI::snmpV2                        |
++------------------------------+-------------------------------------------+
+
+To convert a numerical OID to a human readable string::
+
+   $ snmptranslate -m ALL 1.0.8802.1.1.2.1
+   LLDP-MIB::lldpObjects
+
+Note that a MIB file can insert entries inside existing subtrees.
+
+Important Profinet-related MIB files:
+
++---------------------------+-----------------------------------------------------+
+| MIB file                  | Description                                         |
++===========================+=====================================================+
+| BRIDGE-MIB                | For MAC-layer bridges                               |
++---------------------------+-----------------------------------------------------+
+| DISMAN-EXPRESSION-MIB     | Distributed Management                              |
++---------------------------+-----------------------------------------------------+
+| IEC-62439-2-MIB           | Media Redundancy Protocol                           |
++---------------------------+-----------------------------------------------------+
+| IF-MIB                    | Interfaces MIB (rfc 2863)                           |
++---------------------------+-----------------------------------------------------+
+| LLDP-EXT-PNO-MIB          | Profinet extension of LLDP-MIB                      |
++---------------------------+-----------------------------------------------------+
+| LLDP-MIB                  | LLDP MIB                                            |
++---------------------------+-----------------------------------------------------+
+| RFC1213-MIB               | MIB-2                                               |
++---------------------------+-----------------------------------------------------+
+| SNMP-USER-BASED-SM-MIB    | SNMP User-based Security Model (RFC 3414)           |
++---------------------------+-----------------------------------------------------+
+| SNMP-VIEW-BASED-ACM-MIB   | View-based Access Control Model for SNMP            |
++---------------------------+-----------------------------------------------------+
+| SNMP-COMMUNITY-MIB        | Coexistence between SNMP v1, v2c, v3 (RFC 2576)     |
++---------------------------+-----------------------------------------------------+
+| SNMP-PROXY-MIB            | Parameter config of proxy forwarding (RFC 3413)     |
++---------------------------+-----------------------------------------------------+
+| SNMP-NOTIFICATION-MIB     | Logging SNMP Notifications (RFC 3014)               |
++---------------------------+-----------------------------------------------------+
+| SNMP-TARGET-MIB           | ? (RFC 3413)                                        |
++---------------------------+-----------------------------------------------------+
+| SNMP-FRAMEWORK-MIB        | ? (RFC 3411)                                        |
++---------------------------+-----------------------------------------------------+
+| SNMPv2-MIB                |                                                     |
++---------------------------+-----------------------------------------------------+
+| SNMPv2-SMI                |                                                     |
++---------------------------+-----------------------------------------------------+
+
+Other Profinet-relevant MIB files on Linux:
+
+* HOST-RESOURCES-MIB
+* IP-FORWARD-MIB
+* IP-MIB
+* NET-SNMP-AGENT-MIB
+* UDP-MIB
+
+
+Walking a subtree using snmpwalk
+--------------------------------
+By default the ``snmpwalk`` searches the SNMPv2-SMI::mib-2 subtree. You can
+seach a smaller or larger subtree by giving the OID (or the corresponding
+name) to ``snmpwalk`` as the argument after the host argument.
+
+As an example, here are the number of found variables for different
+subtrees for a Siemens Profinet switch:
+
++---------------------+------------------------------------------+-----------------+
+| OID Subtree         | Subtree name                             | Found variables |
++=====================+==========================================+=================+
+| 1.3.6.1.2.1.2.2.1.6 | IF-MIB::ifPhysAddress                    |               5 |
++---------------------+------------------------------------------+-----------------+
+| 1.3.6.1.2.1.2.2.1   | IF-MIB::ifEntry                          |             110 |
++---------------------+------------------------------------------+-----------------+
+| 1.3.6.1.2.1.2.2     | IF-MIB::ifTable                          |             110 |
++---------------------+------------------------------------------+-----------------+
+| 1.3.6.1.2.1.2       | IF-MIB::interfaces                       |             110 |
++---------------------+------------------------------------------+-----------------+
+| 1.3.6.1.2.1         | SNMPv2-SMI::mib-2 (default for snmpwalk) |             408 |
++---------------------+------------------------------------------+-----------------+
+| 1.3.6.1.2           | SNMPv2-SMI::mgmt                         |             408 |
++---------------------+------------------------------------------+-----------------+
+| 1.3.6.1             | SNMPv2-SMI::internet                     |            2397 |
++---------------------+------------------------------------------+-----------------+
+| 1.3.6               | SNMPv2-SMI::dod                          |            2397 |
++---------------------+------------------------------------------+-----------------+
+| 1.3                 | SNMPv2-SMI::org                          |            2397 |
++---------------------+------------------------------------------+-----------------+
+| 1                   | iso                                      |            2669 |
++---------------------+------------------------------------------+-----------------+
+
+In order to show all available variables when running ``snmpwalk``, use the
+OID ``1``.
+
+
+Supported SNMP variables for Profinet
+-------------------------------------
+
+Device details:
+
++--------------------------------+-----------------------------------------------------------------+
+| Field name                     | Description                                                     |
++================================+=================================================================+
+| sysDescr                       | String, max 255 char. SystemIdentification = ChassisID          |
++--------------------------------+-----------------------------------------------------------------+
+| sysObjectId                    | An OID with enterprise info. Use 1.3.6.1.4.1.24686 for Profinet |
++--------------------------------+-----------------------------------------------------------------+
+| sysUpTime                      | Uptime in 1/100 seconds                                         |
++--------------------------------+-----------------------------------------------------------------+
+| sysContact                     | String, max 255 char. Writable                                  |
++--------------------------------+-----------------------------------------------------------------+
+| sysName                        | String, max 255 char. Fully qualified domain name. Writable.    |
++--------------------------------+-----------------------------------------------------------------+
+| sysLocation                    | String, max 255 char. See also I&M1. Writable                   |
++--------------------------------+-----------------------------------------------------------------+
+| sysServices                    | 78 (dec) for Profinet devices                                   |
++--------------------------------+-----------------------------------------------------------------+
+| lldpConfigManAddrPortsTxEnable | On/off for ports. Writable                                      |
++--------------------------------+-----------------------------------------------------------------+
+
+Interface statistics, for each port?:
+
++----------------+-----------------------------------------------------------------+
+| Field name     | Description                                                     |
++================+=================================================================+
+| ifIndex        |                                                                 |
++----------------+-----------------------------------------------------------------+
+| ifDescr        | String, max 255 char. Unique within device. See lldpLocPortDesc |
++----------------+-----------------------------------------------------------------+
+| ifType         | Typically 6 = Ethernet                                          |
++----------------+-----------------------------------------------------------------+
+| ifMtu          | Max bytes per packet. Often 1500.                               |
++----------------+-----------------------------------------------------------------+
+| ifSpeed        | Bits/s. uint32. Often 100000000.                                |
++----------------+-----------------------------------------------------------------+
+| ifPhysAddress  | MAC address                                                     |
++----------------+-----------------------------------------------------------------+
+| ifAdminStatus  | Up, down etc. Writable                                          |
++----------------+-----------------------------------------------------------------+
+| ifOperStatus   | Up, down etc.                                                   |
++----------------+-----------------------------------------------------------------+
+| ifInOctets     | Input bytes. uint32                                             |
++----------------+-----------------------------------------------------------------+
+| ifInDiscards   | uint32                                                          |
++----------------+-----------------------------------------------------------------+
+| ifInErrors     | uint32                                                          |
++----------------+-----------------------------------------------------------------+
+| ifOutOctets    | Output bytes. uint32                                            |
++----------------+-----------------------------------------------------------------+
+| ifOutDiscards  | uint32                                                          |
++----------------+-----------------------------------------------------------------+
+| ifOutErrors    | uint32                                                          |
++----------------+-----------------------------------------------------------------+
+
+Readable fields related to ports and interfaces:
+
++----------------------+--------------------------------------+-----------------+------------+-------------+
+| Field                | Description                          | Local interface | Local port | Remote port |
++======================+======================================+=================+============+=============+
+| ChassisId            | Chassis ID (same for all interfaces) | x               |            | x           |
++----------------------+--------------------------------------+-----------------+------------+-------------+
+| TimeMark             | Timestamp for latest LLDP frame      |                 |            | x           |
++----------------------+--------------------------------------+-----------------+------------+-------------+
+| LocalPortNum         | Port number                          |                 | x          | x           |
++----------------------+--------------------------------------+-----------------+------------+-------------+
+| PortId               | String, max 14 char.                 |                 | x          | x           |
++----------------------+--------------------------------------+-----------------+------------+-------------+
+| PortIdSubtype        | Typically 7 = Locally assigned       |                 | x          | o           |
++----------------------+--------------------------------------+-----------------+------------+-------------+
+| PortDesc             | String, max 255 char. See ifDescr.   |                 | x          |             |
++----------------------+--------------------------------------+-----------------+------------+-------------+
+| Index                |                                      |                 |            | x           |
++----------------------+--------------------------------------+-----------------+------------+-------------+
+| ManAddrSubtype       | Typically ?=IP                       | x               |            | x           |
++----------------------+--------------------------------------+-----------------+------------+-------------+
+| ManAddr              | Management (IP) address              | x               |            | x           |
++----------------------+--------------------------------------+-----------------+------------+-------------+
+| ManAddrIfId          | See ifIndex                          | x               |            | x           |
++----------------------+--------------------------------------+-----------------+------------+-------------+
+| LPDValue             | Propagation delay in ns. uint32      |                 | x          | x           |
++----------------------+--------------------------------------+-----------------+------------+-------------+
+| PortTxDValue         | Transmission delay in ns. uint32     |                 | x          | x           |
++----------------------+--------------------------------------+-----------------+------------+-------------+
+| PortRxDValue         | Reception delay in ns. uint32        |                 | x          | x           |
++----------------------+--------------------------------------+-----------------+------------+-------------+
+| NoS                  | Station name (interface name) String | x               |            | x           |
++----------------------+--------------------------------------+-----------------+------------+-------------+
+| AutoNegSupported     | Autonegotiation supported. Bool.     |                 | x          | o           |
++----------------------+--------------------------------------+-----------------+------------+-------------+
+| AutoNegEnabled       | Autonegotiation enabled. Bool.       |                 | x          | x           |
++----------------------+--------------------------------------+-----------------+------------+-------------+
+| AutoNegAdvertisedCap |                                      |                 | o          | o           |
++----------------------+--------------------------------------+-----------------+------------+-------------+
+| OperMauType          | MAU type                             |                 | x          | x           |
++----------------------+--------------------------------------+-----------------+------------+-------------+
+
+Note that some objects are listed "Not accessible" in the standard. These
+are read indirectly via other objects, and the information must thus
+be available.
+
+See the standard for the corresponding numerical OID values.
+
+
+Installing a SNMP agent on Linux
+--------------------------------
+Linux uses net-snmp as agent, see http://www.net-snmp.org/
+The package name on Debian/Ubuntu is ``snmpd``.
+
+To install it on for example a Raspberry Pi::
+
+   sudo apt install -y snmpd
+
+In an embedded Linux Yocto build, you would include the ``snmpd`` daemon by
+using the ``net-snmp`` recipe.
+
+To enable the ``snmpd`` agent, modify the configuration file found
+at ``/etc/snmp/snmpd.conf``.
+Change the ``agentAddress`` and ``rocommunity`` lines to::
+
+   agentAddress udp:161
+
+   rocommunity public 192.168.0.0/16
+
+Restart ``snmpd``. A few useful commands::
+
+   sudo systemctl stop snmpd
+   sudo systemctl start snmpd
+   sudo systemctl status snmpd
+
+Use the ``snmpwalk`` from another computer to query the agent.
 
 
 Network topology tools

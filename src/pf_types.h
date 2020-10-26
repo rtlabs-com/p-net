@@ -880,6 +880,7 @@ typedef enum pf_priority_values
    PF_PRIORITY_FIXED
 } pf_priority_values_t;
 
+/* See also pnet_submodule_dir_t */
 typedef enum pf_data_direction_values
 {
    PF_DIRECTION_INPUT = 1,

@@ -201,6 +201,9 @@ Example commands::
    ls /disk1
    hexdump /disk1/pnet_data_ip.bin
    rm /disk1/pnet_data_ip.bin
+   pnio_factory_reset
+   pnio_remove_files
+   pnio_show
 
 
 Memory requirements for the tests

@@ -628,6 +628,7 @@ Relevant standards
 * IEC 61158-6-10  PROFINET IO: Application Layer protocol for decentralized periphery (Also known as PNO-2.722)
 * IEC 61784       Describes several fieldbuses, for example Foundation Fieldbus, Profibus and Profinet.
 * IEC 61784-2     Profiles for decentralized periphery (Also known as PNO-2.742)
+* IEC-62439-2     Media Redundancy Protocol
 * IEEE 802        LANs
 * IEEE 802.1      Higher Layer LAN Protocols
 * IEEE 802.1AB    LLDP (A topology detection protocol)
@@ -645,6 +646,7 @@ Relevant standards
 * IETF :rfc:`2131`   DHCP
 * IETF :rfc:`2132`   DHCP Options
 * IETF :rfc:`2863`   The Interfaces Group MIB
+* IETF :rfc:`3414`   ?
 * IETF :rfc:`3418`   Management Information Base (MIB) for SNMP
 * IETF :rfc:`3635`   Definitions of Managed Objects for the Ethernet-like Interface Types
 * IETF :rfc:`5890`   Internationalized Domain Names for Applications (IDNA)

@@ -54,7 +54,7 @@ set(PNET_MAX_CR                 2
 set(PNET_MAX_MODULES            5
   CACHE STRING "Per API. Should be > 1 to allow at least one I/O module")
 set(PNET_MAX_SUBMODULES         3
-  CACHE STRING "Per module (3 needed for DAP)")
+  CACHE STRING "Per slot (3 needed for DAP)")
 set(PNET_MAX_CHANNELS           1
   CACHE STRING "Per sub-slot. Used for diagnosis")
 set(PNET_MAX_DFP_IOCR           2
@@ -69,7 +69,7 @@ set(PNET_MAX_DIAG_ITEMS         200
   CACHE STRING "Total, per device. Max is 65534 items")
 
 set(PNET_MAX_MC_CR              1
-  CACHE STRING "Par AR")
+  CACHE STRING "Per AR")
 
 set(PNET_MAX_AR_VENDOR_BLOCKS   1
   CACHE STRING "Must be > 0")

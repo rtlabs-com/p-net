@@ -93,7 +93,7 @@
 #define PNET_MAX_MODULES          @PNET_MAX_MODULES@
 #endif
 
-/** Per module (3 needed for DAP). */
+/** Per slot (3 needed for DAP). */
 #if !defined (PNET_MAX_SUBMODULES)
 #define PNET_MAX_SUBMODULES       @PNET_MAX_SUBMODULES@
 #endif
@@ -129,7 +129,7 @@
 
 #if PNET_OPTION_MC_CR
 
-/**< Par AR. */
+/**< Per AR. */
 #if !defined (PNET_MAX_MC_CR)
 #define PNET_MAX_MC_CR            @PNET_MAX_MC_CR@
 #endif

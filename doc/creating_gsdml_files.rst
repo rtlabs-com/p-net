@@ -10,7 +10,8 @@ to verify its structure.
 
 Below is a brief introduction to the most common elements and attributes in
 GSDML files given. It contains simplifications and does not describe special
-cases. For full details, see the official GSDML specification.
+cases. For full details on GSDML file syntax, see the official GSDML
+specification.
 
 
 XML editors
