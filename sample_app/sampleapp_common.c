@@ -171,8 +171,7 @@ static const char * submodule_direction_to_string (
    return s;
 }
 
-static const char * ioxs_to_string (
-      pnet_ioxs_values_t ioxs)
+static const char * ioxs_to_string (pnet_ioxs_values_t ioxs)
 {
    const char * s = "<error>";
    switch (ioxs)
@@ -221,16 +220,17 @@ void app_print_network_details (
  * @return Reference to application subslot,
  *         NULL is subslot is not found/plugged.
  */
-static app_subslot_t * app_subslot_get(
+static app_subslot_t * app_subslot_get (
    app_data_t * p_appdata,
-   uint16_t    slot_nbr,
-   uint16_t    subslot_nbr)
+   uint16_t slot_nbr,
+   uint16_t subslot_nbr)
 {
    uint16_t subslot;
    for (subslot = 0; subslot < PNET_MAX_SUBSLOTS; subslot++)
    {
-      if (p_appdata->main_api.slots[slot_nbr].
-             subslots[subslot].subslot_nbr == subslot_nbr)
+      if (
+         p_appdata->main_api.slots[slot_nbr].subslots[subslot].subslot_nbr ==
+         subslot_nbr)
       {
          return &p_appdata->main_api.slots[slot_nbr].subslots[subslot];
       }
@@ -250,13 +250,13 @@ static app_subslot_t * app_subslot_get(
  * @return Reference to allocated subslot,
  *         NULL if no free subslot is available.
  */
-static app_subslot_t * app_subslot_alloc(
-      app_data_t * p_appdata,
-      uint16_t slot_nbr,
-      uint16_t subslot_nbr,
-      uint32_t submodule_ident,
-      pnet_data_cfg_t * p_data_cfg,
-      const char * submodule_name)
+static app_subslot_t * app_subslot_alloc (
+   app_data_t * p_appdata,
+   uint16_t slot_nbr,
+   uint16_t subslot_nbr,
+   uint32_t submodule_ident,
+   pnet_data_cfg_t * p_data_cfg,
+   const char * submodule_name)
 {
    uint16_t subslot;
 
@@ -267,11 +267,10 @@ static app_subslot_t * app_subslot_alloc(
 
    for (subslot = 0; subslot < PNET_MAX_SUBSLOTS; subslot++)
    {
-      if (p_appdata->main_api.slots[slot_nbr].
-             subslots[subslot].used == false)
+      if (p_appdata->main_api.slots[slot_nbr].subslots[subslot].used == false)
       {
-         app_subslot_t * p_subslot = &p_appdata->main_api.
-            slots[slot_nbr].subslots[subslot];
+         app_subslot_t * p_subslot =
+            &p_appdata->main_api.slots[slot_nbr].subslots[subslot];
 
          p_subslot->used = true;
          p_subslot->plugged = true;
@@ -294,10 +293,10 @@ static app_subslot_t * app_subslot_alloc(
  * @param subslot_nbr   In: Subslot number.
  * @return 0 on success, -1 on error.
  */
-static int app_subslot_free(
-      app_data_t * p_appdata,
-      uint16_t slot_nbr,
-      uint16_t subslot_nbr)
+static int app_subslot_free (
+   app_data_t * p_appdata,
+   uint16_t slot_nbr,
+   uint16_t subslot_nbr)
 {
    app_subslot_t * p_subslot = NULL;
 
@@ -306,13 +305,10 @@ static int app_subslot_free(
       return -1;
    }
 
-   p_subslot = app_subslot_get(p_appdata, slot_nbr, subslot_nbr);
+   p_subslot = app_subslot_get (p_appdata, slot_nbr, subslot_nbr);
    if (p_subslot != NULL)
    {
-      memset(
-         p_subslot,
-         0,
-         sizeof(app_subslot_t));
+      memset (p_subslot, 0, sizeof (app_subslot_t));
       p_subslot->used = false;
       return 0;
    }
@@ -326,12 +322,11 @@ static int app_subslot_free(
  * @return true if subslot is input or input/output.
  *         false if not.
  */
-static bool app_subslot_is_input(
-   app_subslot_t * p_subslot)
+static bool app_subslot_is_input (app_subslot_t * p_subslot)
 {
-   if (p_subslot != NULL &&
-       (p_subslot->data_cfg.data_dir == PNET_DIR_INPUT ||
-        p_subslot->data_cfg.data_dir == PNET_DIR_IO))
+   if (
+      p_subslot != NULL && (p_subslot->data_cfg.data_dir == PNET_DIR_INPUT ||
+                            p_subslot->data_cfg.data_dir == PNET_DIR_IO))
    {
       return true;
    }
@@ -348,11 +343,9 @@ static bool app_subslot_is_input(
  * @return true if subslot is input or input/output.
  *         false if not.
  */
-static bool app_subslot_is_no_io(
-   app_subslot_t * p_subslot)
+static bool app_subslot_is_no_io (app_subslot_t * p_subslot)
 {
-   if (p_subslot != NULL &&
-       p_subslot->data_cfg.data_dir == PNET_DIR_NO_IO)
+   if (p_subslot != NULL && p_subslot->data_cfg.data_dir == PNET_DIR_NO_IO)
    {
       return true;
    }
@@ -368,12 +361,11 @@ static bool app_subslot_is_no_io(
  * @return true if subslot is output or input/output,
  *         false if not.
  */
-static bool app_subslot_is_output(
-   app_subslot_t * p_subslot)
+static bool app_subslot_is_output (app_subslot_t * p_subslot)
 {
-   if (p_subslot != NULL &&
-       (p_subslot->data_cfg.data_dir == PNET_DIR_OUTPUT ||
-        p_subslot->data_cfg.data_dir == PNET_DIR_IO))
+   if (
+      p_subslot != NULL && (p_subslot->data_cfg.data_dir == PNET_DIR_OUTPUT ||
+                            p_subslot->data_cfg.data_dir == PNET_DIR_IO))
    {
       return true;
    }
@@ -622,21 +614,19 @@ static int app_read_ind (
  * @param p_subslot     In: Subslot.
  * @return 0 on success, -1 on error
  */
-static int app_set_data_and_ioxs(
-      pnet_t * net,
-      app_data_t * p_appdata,
-      app_subslot_t * p_subslot)
+static int app_set_data_and_ioxs (
+   pnet_t * net,
+   app_data_t * p_appdata,
+   app_subslot_t * p_subslot)
 {
    int ret;
    uint8_t iops = PNET_IOXS_GOOD;
 
    if (p_subslot != NULL)
    {
-      if (app_subslot_is_input(p_subslot) ||
-          app_subslot_is_no_io(p_subslot))
+      if (app_subslot_is_input (p_subslot) || app_subslot_is_no_io (p_subslot))
       {
-         if (app_subslot_is_input(p_subslot) &&
-             p_subslot->p_in_data == NULL)
+         if (app_subslot_is_input (p_subslot) && p_subslot->p_in_data == NULL)
          {
             iops = PNET_IOXS_BAD;
          }
@@ -656,8 +646,7 @@ static int app_set_data_and_ioxs(
           * This is not a problem.
           * Log message below will only be printed for active submodules.
           */
-         if (ret == 0 &&
-             p_appdata->arguments.verbosity > 0)
+         if (ret == 0 && p_appdata->arguments.verbosity > 0)
          {
             printf (
                "  Set input data and IOPS for slot %2u subslot %u \"%s\""
@@ -666,11 +655,11 @@ static int app_set_data_and_ioxs(
                p_subslot->subslot_nbr,
                p_subslot->submodule_name,
                p_subslot->data_cfg.insize,
-               ioxs_to_string(iops));
+               ioxs_to_string (iops));
          }
       }
 
-      if (app_subslot_is_output(p_subslot))
+      if (app_subslot_is_output (p_subslot))
       {
          ret = pnet_output_set_iocs (
             net,
@@ -679,8 +668,7 @@ static int app_set_data_and_ioxs(
             p_subslot->subslot_nbr,
             PNET_IOXS_GOOD);
 
-         if (ret == 0 &&
-             p_appdata->arguments.verbosity > 0)
+         if (ret == 0 && p_appdata->arguments.verbosity > 0)
          {
             printf (
                "  Set output IOCS         for slot %2u subslot %u \"%s\"\n",
@@ -772,13 +760,14 @@ static int app_state_ind (
       {
          for (subslot = 0; subslot < PNET_MAX_SUBSLOTS; subslot++)
          {
-            if (p_appdata->main_api.slots[slot].plugged &&
-                p_appdata->main_api.slots[slot].subslots[subslot].plugged)
+            if (
+               p_appdata->main_api.slots[slot].plugged &&
+               p_appdata->main_api.slots[slot].subslots[subslot].plugged)
             {
-               app_set_data_and_ioxs(
-                     net,
-                     p_appdata,
-                     &p_appdata->main_api.slots[slot].subslots[subslot]);
+               app_set_data_and_ioxs (
+                  net,
+                  p_appdata,
+                  &p_appdata->main_api.slots[slot].subslots[subslot]);
             }
          }
       }
@@ -843,7 +832,7 @@ static int app_exp_module_ind (
          slot,
          PNET_MAX_SLOTS);
       return -1;
-    }
+   }
 
    /* Find it in the list of supported modules */
    ix = 0;
@@ -862,7 +851,7 @@ static int app_exp_module_ind (
       /*
        * Needed to pass Behavior scenario 2
        */
-      printf("Plug expected module anyway\n");
+      printf ("Plug expected module anyway\n");
    }
 
    if (p_appdata->arguments.verbosity > 0)
@@ -920,7 +909,7 @@ static int app_exp_submodule_ind (
    uint16_t subslot,
    uint32_t module_ident,
    uint32_t submodule_ident,
-   const pnet_data_cfg_t *p_exp_data)
+   const pnet_data_cfg_t * p_exp_data)
 {
    int ret = -1;
    int result = 0;
@@ -950,9 +939,9 @@ static int app_exp_submodule_ind (
    if (ix < NELEMENTS (cfg_available_submodule_types))
    {
       data_cfg.data_dir = cfg_available_submodule_types[ix].data_dir;
-      data_cfg.insize   = cfg_available_submodule_types[ix].insize;
-      data_cfg.outsize  = cfg_available_submodule_types[ix].outsize;
-      if ( data_cfg.insize > 0)
+      data_cfg.insize = cfg_available_submodule_types[ix].insize;
+      data_cfg.outsize = cfg_available_submodule_types[ix].outsize;
+      if (data_cfg.insize > 0)
       {
          p_app_data = p_appdata->inputdata;
       }
@@ -973,11 +962,11 @@ static int app_exp_submodule_ind (
        * Needed for behavior scenario 2 to pass.
        * Iops will be set to bad for this subslot
        */
-      printf("  Plug expected submodule anyway \n");
+      printf ("  Plug expected submodule anyway \n");
 
       data_cfg.data_dir = p_exp_data->data_dir;
-      data_cfg.insize   = p_exp_data->insize;
-      data_cfg.outsize  = p_exp_data->outsize;
+      data_cfg.insize = p_exp_data->insize;
+      data_cfg.outsize = p_exp_data->outsize;
    }
 
    {
@@ -993,7 +982,7 @@ static int app_exp_submodule_ind (
       result = pnet_pull_submodule (net, api, slot, subslot);
       if (result == 0)
       {
-         app_subslot_free(p_appdata, slot, subslot);
+         app_subslot_free (p_appdata, slot, subslot);
       }
       if (p_appdata->arguments.verbosity > 0)
       {
@@ -1016,15 +1005,13 @@ static int app_exp_submodule_ind (
             subslot,
             (unsigned)submodule_ident,
             name);
-         printf(
+         printf (
             "                      Data Dir: %s In: %u Out: %u "
             "(Exp Data Dir: %s In: %u Out: %u)\n",
-            submodule_direction_to_string (
-               data_cfg.data_dir),
+            submodule_direction_to_string (data_cfg.data_dir),
             data_cfg.insize,
             data_cfg.outsize,
-            submodule_direction_to_string (
-               p_exp_data->data_dir),
+            submodule_direction_to_string (p_exp_data->data_dir),
             p_exp_data->insize,
             p_exp_data->outsize);
       }
@@ -1040,8 +1027,13 @@ static int app_exp_submodule_ind (
          data_cfg.outsize);
       if (ret == 0)
       {
-         p_subslot = app_subslot_alloc(
-            p_appdata, slot, subslot, submodule_ident, &data_cfg, name);
+         p_subslot = app_subslot_alloc (
+            p_appdata,
+            slot,
+            subslot,
+            submodule_ident,
+            &data_cfg,
+            name);
          if (p_subslot)
          {
             p_subslot->p_in_data = p_app_data;
@@ -1160,8 +1152,7 @@ static int app_alarm_ack_cnf (pnet_t * net, void * arg, uint32_t arep, int res)
 
 void app_plug_dap (pnet_t * net, void * arg)
 {
-   const pnet_data_cfg_t cfg_dap_data =
-   {
+   const pnet_data_cfg_t cfg_dap_data = {
       .data_dir = PNET_DIR_NO_IO,
       .insize = 0,
       .outsize = 0,
@@ -1434,11 +1425,9 @@ static void app_handle_cyclic_data (
       for (subslot = 0; subslot < PNET_MAX_SUBSLOTS; subslot++)
       {
          iops = PNET_IOXS_BAD;
-         p_subslot =
-            &p_appdata->main_api.slots[slot].subslots[subslot];
+         p_subslot = &p_appdata->main_api.slots[slot].subslots[subslot];
 
-         if (p_subslot->plugged &&
-             app_subslot_is_input(p_subslot))
+         if (p_subslot->plugged && app_subslot_is_input (p_subslot))
          {
             if (p_subslot->p_in_data != NULL)
             {
@@ -1477,8 +1466,7 @@ static void app_handle_cyclic_data (
             }
          }
 
-         if (p_subslot->plugged &&
-             app_subslot_is_output(p_subslot))
+         if (p_subslot->plugged && app_subslot_is_output (p_subslot))
          {
             outputdata_length = sizeof (outputdata);
             pnet_output_get_data_and_iops (
@@ -1492,14 +1480,15 @@ static void app_handle_cyclic_data (
                &outputdata_iops);
 
             /* Set LED state */
-            if (outputdata_length == APP_DATASIZE_OUTPUT &&
-                outputdata_iops == PNET_IOXS_GOOD)
+            if (
+               outputdata_length == APP_DATASIZE_OUTPUT &&
+               outputdata_iops == PNET_IOXS_GOOD)
             {
                if (outputdata_length == APP_DATASIZE_OUTPUT)
                {
                   /* Extract LED state from most significant bit */
                   received_led_state = (outputdata[0] & 0x80) > 0;
-                        /* Set LED state */
+                  /* Set LED state */
                   if (received_led_state != previous_led_state)
                   {
                      app_set_led (APP_DATA_LED_ID, received_led_state);
@@ -1560,7 +1549,7 @@ static void app_handle_send_alarm (
    uint16_t slot = 0;
    bool found_inputslot = false;
    uint16_t subslot_array_index = 0;
-   app_subslot_t *p_subslot = NULL;
+   app_subslot_t * p_subslot = NULL;
    pnet_pnio_status_t pnio_status = {0};
    pnet_diag_source_t diag_source = {
       .api = APP_API,
@@ -1579,22 +1568,27 @@ static void app_handle_send_alarm (
    /* Look for first input slot */
    while (!found_inputslot && (slot < PNET_MAX_SLOTS))
    {
-      for (subslot_array_index = 0; !found_inputslot && (subslot_array_index < PNET_MAX_SUBSLOTS); subslot_array_index++)
+      for (subslot_array_index = 0;
+           !found_inputslot && (subslot_array_index < PNET_MAX_SUBSLOTS);
+           subslot_array_index++)
       {
-         p_subslot = &p_appdata->main_api.slots[slot].subslots[subslot_array_index];
-         if (app_subslot_is_input(p_subslot))
+         p_subslot =
+            &p_appdata->main_api.slots[slot].subslots[subslot_array_index];
+         if (app_subslot_is_input (p_subslot))
          {
             found_inputslot = true;
             break;
          }
       }
-      if(!found_inputslot){
+      if (!found_inputslot)
+      {
          slot++;
       }
    }
-   if(!found_inputslot)
+   if (!found_inputslot)
    {
-      printf ("Did not find any input module in the slots. Skipping sending demo alarm.\n");
+      printf ("Did not find any input module in the slots. Skipping sending "
+              "demo alarm.\n");
       return;
    }
 
@@ -1627,8 +1621,7 @@ static void app_handle_send_alarm (
       }
       else
       {
-         printf (
-            "Could not send process alarm, as alarm_allowed == false\n");
+         printf ("Could not send process alarm, as alarm_allowed == false\n");
       }
       break;
 
@@ -1663,7 +1656,7 @@ static void app_handle_send_alarm (
          CHANNEL_ERRORTYPE_NETWORK_COMPONENT_FUNCTION_MISMATCH,
          EXTENDED_CHANNEL_ERRORTYPE_FRAME_DROPPED,
          1234 /* Number of dropped frames */
-         );
+      );
       break;
 
    case APP_DEMO_STATE_DIAG_STD_REMOVE:
@@ -1677,8 +1670,7 @@ static void app_handle_send_alarm (
          arep,
          &diag_source,
          CHANNEL_ERRORTYPE_NETWORK_COMPONENT_FUNCTION_MISMATCH,
-         EXTENDED_CHANNEL_ERRORTYPE_FRAME_DROPPED
-         );
+         EXTENDED_CHANNEL_ERRORTYPE_FRAME_DROPPED);
       break;
 
    case APP_DEMO_STATE_DIAG_USI_ADD:

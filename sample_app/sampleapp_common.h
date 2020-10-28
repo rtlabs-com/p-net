@@ -92,7 +92,6 @@ static const uint32_t cfg_available_module_types[] = {
    APP_MOD_0_8_IDENT,
    APP_MOD_8_8_IDENT};
 
-
 typedef struct cfg_submodule_type
 {
    const char * name;
@@ -104,50 +103,49 @@ typedef struct cfg_submodule_type
    uint16_t outsize; /* bytes */
 } cfg_submodule_type_t;
 
-static const cfg_submodule_type_t cfg_available_submodule_types[] =
-{
-   {
-      "DAP Identity 1",
-      APP_API,
-      PNET_MOD_DAP_IDENT,
-      PNET_SUBMOD_DAP_IDENT,
-      PNET_DIR_NO_IO, 0, 0
-   },
-   {
-      "DAP Interface 1",
-      APP_API,
-      PNET_MOD_DAP_IDENT,
-      PNET_SUBMOD_DAP_INTERFACE_1_IDENT,
-      PNET_DIR_NO_IO, 0, 0
-   },
-   {
-      "DAP Port 1",
-      APP_API,
-      PNET_MOD_DAP_IDENT,
-      PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT,
-      PNET_DIR_NO_IO, 0, 0
-   },
-   {
-      "Input 8 bits",
-      APP_API,
-      APP_MOD_8_0_IDENT,
-      APP_SUBMOD_CUSTOM_IDENT,
-      PNET_DIR_INPUT, APP_DATASIZE_INPUT, 0
-   },
-   {
-      "Output 8 bits",
-      APP_API,
-      APP_MOD_0_8_IDENT,
-      APP_SUBMOD_CUSTOM_IDENT,
-      PNET_DIR_OUTPUT, 0, APP_DATASIZE_OUTPUT
-   },
-   {
-      "Input 8 bits output 8 bits",
-      APP_API,
-      APP_MOD_8_8_IDENT,
-      APP_SUBMOD_CUSTOM_IDENT,
-      PNET_DIR_IO, APP_DATASIZE_INPUT, APP_DATASIZE_OUTPUT
-   },
+static const cfg_submodule_type_t cfg_available_submodule_types[] = {
+   {"DAP Identity 1",
+    APP_API,
+    PNET_MOD_DAP_IDENT,
+    PNET_SUBMOD_DAP_IDENT,
+    PNET_DIR_NO_IO,
+    0,
+    0},
+   {"DAP Interface 1",
+    APP_API,
+    PNET_MOD_DAP_IDENT,
+    PNET_SUBMOD_DAP_INTERFACE_1_IDENT,
+    PNET_DIR_NO_IO,
+    0,
+    0},
+   {"DAP Port 1",
+    APP_API,
+    PNET_MOD_DAP_IDENT,
+    PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT,
+    PNET_DIR_NO_IO,
+    0,
+    0},
+   {"Input 8 bits",
+    APP_API,
+    APP_MOD_8_0_IDENT,
+    APP_SUBMOD_CUSTOM_IDENT,
+    PNET_DIR_INPUT,
+    APP_DATASIZE_INPUT,
+    0},
+   {"Output 8 bits",
+    APP_API,
+    APP_MOD_0_8_IDENT,
+    APP_SUBMOD_CUSTOM_IDENT,
+    PNET_DIR_OUTPUT,
+    0,
+    APP_DATASIZE_OUTPUT},
+   {"Input 8 bits output 8 bits",
+    APP_API,
+    APP_MOD_8_8_IDENT,
+    APP_SUBMOD_CUSTOM_IDENT,
+    PNET_DIR_IO,
+    APP_DATASIZE_INPUT,
+    APP_DATASIZE_OUTPUT},
 };
 
 /************************ App data storage ***********************************/

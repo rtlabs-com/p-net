@@ -551,7 +551,12 @@ int pnet_diag_std_remove (
 
    if (pf_ar_find_by_arep (net, arep, &p_ar) == 0)
    {
-      ret = pf_diag_std_remove (net, p_ar, p_diag_source, ch_error_type, ext_ch_error_type);
+      ret = pf_diag_std_remove (
+         net,
+         p_ar,
+         p_diag_source,
+         ch_error_type,
+         ext_ch_error_type);
    }
 
    return ret;
