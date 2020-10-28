@@ -185,7 +185,7 @@ int main (void)
    {
       printf (
          "Number of slots:      %u (incl slot for DAP module)\n",
-         PNET_MAX_MODULES);
+         PNET_MAX_SLOTS);
       printf ("P-net log level:      %u (DEBUG=0, ERROR=3)\n", LOG_LEVEL);
       printf ("App verbosity level:  %u\n", appdata.arguments.verbosity);
       printf ("Ethernet interface:   %s\n", appdata.arguments.eth_interface);

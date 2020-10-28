@@ -199,14 +199,13 @@ static int pf_cmdev_get_slot (
    else
    {
       ix = 0;
-      while ((ix < PNET_MAX_MODULES) &&
-             ((p_api->slots[ix].in_use == false) ||
-              (slot_nbr != p_api->slots[ix].slot_nbr)))
+      while ((ix < PNET_MAX_SLOTS) && ((p_api->slots[ix].in_use == false) ||
+                                       (slot_nbr != p_api->slots[ix].slot_nbr)))
       {
          ix++;
       }
 
-      if (ix < PNET_MAX_MODULES)
+      if (ix < PNET_MAX_SLOTS)
       {
          p_slot = &p_api->slots[ix];
          ret = 0;
@@ -243,14 +242,14 @@ static int pf_cmdev_get_subslot (
    else
    {
       ix = 0;
-      while ((ix < PNET_MAX_SUBMODULES) &&
+      while ((ix < PNET_MAX_SUBSLOTS) &&
              ((p_slot->subslots[ix].in_use == false) ||
               (subslot_nbr != p_slot->subslots[ix].subslot_nbr)))
       {
          ix++;
       }
 
-      if (ix < PNET_MAX_SUBMODULES)
+      if (ix < PNET_MAX_SUBSLOTS)
       {
          p_subslot = &p_slot->subslots[ix];
          ret = 0;
@@ -458,12 +457,12 @@ static int pf_cmdev_new_slot (
    else
    {
       ix = 0;
-      while ((ix < PNET_MAX_MODULES) && (p_api->slots[ix].in_use == true))
+      while ((ix < PNET_MAX_SLOTS) && (p_api->slots[ix].in_use == true))
       {
          ix++;
       }
 
-      if (ix < PNET_MAX_MODULES)
+      if (ix < PNET_MAX_SLOTS)
       {
          p_slot = &p_api->slots[ix];
 
@@ -515,13 +514,12 @@ static int pf_cmdev_new_subslot (
    else
    {
       ix = 0;
-      while ((ix < PNET_MAX_SUBMODULES) &&
-             (p_slot->subslots[ix].in_use == true))
+      while ((ix < PNET_MAX_SUBSLOTS) && (p_slot->subslots[ix].in_use == true))
       {
          ix++;
       }
 
-      if (ix < PNET_MAX_SUBMODULES)
+      if (ix < PNET_MAX_SUBSLOTS)
       {
          p_subslot = &p_slot->subslots[ix];
 
@@ -857,7 +855,7 @@ int pf_cmdev_pull_module (pnet_t * net, uint32_t api_id, uint16_t slot_nbr)
    {
       ret = 0; /* Assume all OK */
       ix = 0;
-      while ((ix < PNET_MAX_SUBMODULES) && (ret == 0))
+      while ((ix < PNET_MAX_SUBSLOTS) && (ret == 0))
       {
          if (
             (p_slot->subslots[ix].in_use == true) &&
@@ -1145,8 +1143,8 @@ static int pf_cmdev_cfg_api_show (pf_api_t * p_api)
    printf ("device api_id         = %u\n", (unsigned)p_api->api_id);
    printf (
       "   Each API can use max %u slots (each with max %u subslots).\n",
-      (unsigned)PNET_MAX_MODULES,
-      (unsigned)PNET_MAX_SUBMODULES);
+      (unsigned)PNET_MAX_SLOTS,
+      (unsigned)PNET_MAX_SUBSLOTS);
 
    return 0;
 }

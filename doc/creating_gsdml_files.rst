@@ -194,7 +194,7 @@ The ``<DeviceAccessPointItem>`` element has the attributes:
 
 * ``ID="IDD_1"``
 * ``PNIO_Version="V2.35"`` Which version of Profinet specification it is certified against
-* ``PhysicalSlots="0..4"`` Slot 0 is always used by the DAP (bus interface) module. Relates to the PNET_MAX_MODULES value in the p-net stack.
+* ``PhysicalSlots="0..4"`` Slot 0 is always used by the DAP (bus interface) module. Relates to the PNET_MAX_SLOTS value in the p-net stack.
 * ``ModuleIdentNumber="0x00000001"`` Unsigned32hex.
 * ``MinDeviceInterval="32"`` Minimum cyclic data update interval, in number of 31.25 us ticks. A value 32 corresponds to cyclic data sending and receiving every millisecond. Unsigned16.
 * ``DNS_CompatibleName="pno-example-dap"`` (Default station name)
@@ -365,7 +365,7 @@ submodule can be removed). If only virtual submodules are available, the
 ``PhysicalSubslots`` attribute is not given in ``<ModuleItem>``.
 For details on ``<VirtualSubmoduleItem>``, see ``<SubmoduleItem>`` below.
 
-The configuration value PNET_MAX_SUBMODULES defines the maximum number of
+The configuration value PNET_MAX_SUBSLOTS defines the maximum number of
 submodules (for each module) that the p-net stack can handle.
 
 

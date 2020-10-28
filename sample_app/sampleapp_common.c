@@ -227,7 +227,7 @@ static app_subslot_t * app_subslot_get(
    uint16_t    subslot_nbr)
 {
    uint16_t subslot;
-   for (subslot = 0; subslot < PNET_MAX_SUBMODULES; subslot++)
+   for (subslot = 0; subslot < PNET_MAX_SUBSLOTS; subslot++)
    {
       if (p_appdata->main_api.slots[slot_nbr].
              subslots[subslot].subslot_nbr == subslot_nbr)
@@ -260,14 +260,12 @@ static app_subslot_t * app_subslot_alloc(
 {
    uint16_t subslot;
 
-   if (slot_nbr >= PNET_MAX_MODULES ||
-       p_appdata == NULL ||
-       p_data_cfg == NULL)
+   if (slot_nbr >= PNET_MAX_SLOTS || p_appdata == NULL || p_data_cfg == NULL)
    {
       return NULL;
    }
 
-   for (subslot = 0; subslot < PNET_MAX_SUBMODULES; subslot++)
+   for (subslot = 0; subslot < PNET_MAX_SUBSLOTS; subslot++)
    {
       if (p_appdata->main_api.slots[slot_nbr].
              subslots[subslot].used == false)
@@ -303,8 +301,7 @@ static int app_subslot_free(
 {
    app_subslot_t * p_subslot = NULL;
 
-   if (slot_nbr >= PNET_MAX_SUBMODULES ||
-       p_appdata == NULL)
+   if (slot_nbr >= PNET_MAX_SUBSLOTS || p_appdata == NULL)
    {
       return -1;
    }
@@ -771,9 +768,9 @@ static int app_state_ind (
       /* Set initial data and IOPS for input modules, and IOCS for
        * output modules
        */
-      for (slot = 0; slot < PNET_MAX_MODULES; slot++)
+      for (slot = 0; slot < PNET_MAX_SLOTS; slot++)
       {
-         for (subslot = 0; subslot < PNET_MAX_SUBMODULES; subslot++)
+         for (subslot = 0; subslot < PNET_MAX_SUBSLOTS; subslot++)
          {
             if (p_appdata->main_api.slots[slot].plugged &&
                 p_appdata->main_api.slots[slot].subslots[subslot].plugged)
@@ -839,12 +836,12 @@ static int app_exp_module_ind (
       printf ("Module plug call-back\n");
    }
 
-   if (slot >= PNET_MAX_MODULES)
+   if (slot >= PNET_MAX_SLOTS)
    {
       printf (
          "Wrong slot number recieved: %u  It should be less than %u\n",
          slot,
-         PNET_MAX_MODULES);
+         PNET_MAX_SLOTS);
       return -1;
     }
 
@@ -1432,9 +1429,9 @@ static void app_handle_cyclic_data (
    }
 
    /* Set data for custom input modules, if any */
-   for (slot = 0; slot < PNET_MAX_MODULES; slot++)
+   for (slot = 0; slot < PNET_MAX_SLOTS; slot++)
    {
-      for (subslot = 0; subslot < PNET_MAX_SUBMODULES; subslot++)
+      for (subslot = 0; subslot < PNET_MAX_SUBSLOTS; subslot++)
       {
          iops = PNET_IOXS_BAD;
          p_subslot =
@@ -1581,9 +1578,10 @@ static void app_handle_send_alarm (
          {
             alarm_payload[0]++;
             done = false;
-            for (slot = 0; !done && (slot < PNET_MAX_MODULES); slot++)
+            for (slot = 0; !done && (slot < PNET_MAX_SLOTS); slot++)
             {
-               for (subslot = 0; !done && (subslot < PNET_MAX_SUBMODULES); subslot++)
+               for (subslot = 0; !done && (subslot < PNET_MAX_SUBSLOTS);
+                    subslot++)
                {
                   p_subslot = &p_appdata->main_api.slots[slot].subslots[subslot];
                   if (app_subslot_is_input(p_subslot))
@@ -1619,9 +1617,9 @@ static void app_handle_send_alarm (
 
       case APP_DEMO_STATE_DIAG_ADD:
          done = false;
-         for (slot = 0; !done && slot < PNET_MAX_MODULES; slot++)
+         for (slot = 0; !done && slot < PNET_MAX_SLOTS; slot++)
          {
-            for (subslot = 0; !done && (subslot < PNET_MAX_SUBMODULES); subslot++)
+            for (subslot = 0; !done && (subslot < PNET_MAX_SUBSLOTS); subslot++)
             {
                p_subslot = &p_appdata->main_api.slots[slot].subslots[subslot];
                if (app_subslot_is_input(p_subslot))
@@ -1653,9 +1651,9 @@ static void app_handle_send_alarm (
          break;
 
       case APP_DEMO_STATE_DIAG_UPDATE:
-         for (slot = 0; !done && slot < PNET_MAX_MODULES; slot++)
+         for (slot = 0; !done && slot < PNET_MAX_SLOTS; slot++)
          {
-            for (subslot = 0; !done && (subslot < PNET_MAX_SUBMODULES); subslot++)
+            for (subslot = 0; !done && (subslot < PNET_MAX_SUBSLOTS); subslot++)
             {
                p_subslot = &p_appdata->main_api.slots[slot].subslots[subslot];
                if (app_subslot_is_input(p_subslot))
@@ -1685,9 +1683,9 @@ static void app_handle_send_alarm (
          break;
 
       case APP_DEMO_STATE_DIAG_REMOVE:
-         for (slot = 0; !done && slot < PNET_MAX_MODULES; slot++)
+         for (slot = 0; !done && slot < PNET_MAX_SLOTS; slot++)
          {
-            for (subslot = 0; !done && (subslot < PNET_MAX_SUBMODULES); subslot++)
+            for (subslot = 0; !done && (subslot < PNET_MAX_SUBSLOTS); subslot++)
             {
                p_subslot = &p_appdata->main_api.slots[slot].subslots[subslot];
                if (app_subslot_is_input(p_subslot))

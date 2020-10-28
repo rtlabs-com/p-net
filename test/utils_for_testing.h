@@ -100,8 +100,8 @@ typedef struct app_data_for_testing_obj
    uint32_t app_param_1;
    uint32_t app_param_2;
    uint8_t inputdata[TEST_DATASIZE_INPUT];
-   uint8_t custom_input_slots[PNET_MAX_MODULES];
-   uint8_t custom_output_slots[PNET_MAX_MODULES];
+   uint8_t custom_input_slots[PNET_MAX_SLOTS];
+   uint8_t custom_output_slots[PNET_MAX_SLOTS];
    uint32_t available_module_types[TEST_MAX_NUMBER_AVAILABLE_MODULE_TYPES];
    cfg_submodules_t
       available_submodule_types[TEST_MAX_NUMBER_AVAILABLE_SUBMODULE_TYPES];

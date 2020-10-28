@@ -89,13 +89,13 @@
 #endif
 
 /** Per API. Should be > 1 to allow at least one I/O module. */
-#if !defined (PNET_MAX_MODULES)
-#define PNET_MAX_MODULES          @PNET_MAX_MODULES@
+#if !defined (PNET_MAX_SLOTS)
+#define PNET_MAX_SLOTS          @PNET_MAX_SLOTS@
 #endif
 
 /** Per slot (3 needed for DAP). */
-#if !defined (PNET_MAX_SUBMODULES)
-#define PNET_MAX_SUBMODULES       @PNET_MAX_SUBMODULES@
+#if !defined (PNET_MAX_SUBSLOTS)
+#define PNET_MAX_SUBSLOTS       @PNET_MAX_SUBSLOTS@
 #endif
 
 /** Per sub-slot. Used for diagnosis. */

@@ -291,7 +291,7 @@ Frames sent when pressing button 2.
 
 Using more modules
 ------------------
-If necessary, increase the values for PNET_MAX_MODULES and PNET_MAX_SUBMODULES
+If necessary, increase the values for PNET_MAX_SLOTS and PNET_MAX_SUBSLOTS
 in ``include/pnet_api.h``.
 
 In the sample app, the input data is written to all input modules ("8 bit in +

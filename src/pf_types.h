@@ -1018,9 +1018,9 @@ typedef struct pf_api_entry
 {
    uint32_t api;
    uint16_t nbr_io_data;
-   pf_frame_descriptor_t io_data[PNET_MAX_MODULES * PNET_MAX_SUBMODULES];
+   pf_frame_descriptor_t io_data[PNET_MAX_SLOTS * PNET_MAX_SUBSLOTS];
    uint16_t nbr_iocs;
-   pf_frame_descriptor_t iocs[PNET_MAX_MODULES * PNET_MAX_SUBMODULES];
+   pf_frame_descriptor_t iocs[PNET_MAX_SLOTS * PNET_MAX_SUBSLOTS];
 } pf_api_entry_t;
 
 typedef struct pf_iocr_tag_header
@@ -1099,7 +1099,7 @@ typedef struct pf_exp_module
    uint16_t module_properties; /** Reserved - currently unused */
 
    uint16_t nbr_submodules;
-   pf_exp_submodule_t submodules[PNET_MAX_SUBMODULES];
+   pf_exp_submodule_t submodules[PNET_MAX_SUBSLOTS];
 } pf_exp_module_t;
 
 typedef struct pf_exp_api
@@ -1107,7 +1107,7 @@ typedef struct pf_exp_api
    bool valid;
    uint32_t api;
    uint16_t nbr_modules;
-   pf_exp_module_t modules[PNET_MAX_MODULES];
+   pf_exp_module_t modules[PNET_MAX_SLOTS];
 } pf_exp_api_t;
 
 typedef struct pf_submodule_state
@@ -1135,14 +1135,14 @@ typedef struct pf_module_diff
    uint32_t module_ident_number;
    uint16_t module_state; /** pf_module_state_values_t */
    uint16_t nbr_submodule_diffs;
-   pf_submodule_diff_t submodule_diffs[PNET_MAX_SUBMODULES];
+   pf_submodule_diff_t submodule_diffs[PNET_MAX_SUBSLOTS];
 } pf_module_diff_t;
 
 typedef struct pf_api_diff
 {
    uint32_t api;
    uint16_t nbr_module_diffs;
-   pf_module_diff_t module_diffs[PNET_MAX_MODULES];
+   pf_module_diff_t module_diffs[PNET_MAX_SLOTS];
 } pf_api_diff_t;
 
 typedef struct pf_parameter_server_properties
@@ -1445,7 +1445,7 @@ typedef struct pf_iocr
 
    uint16_t nbr_data_desc;
    pf_iodata_object_t
-      data_desc[PNET_MAX_API * PNET_MAX_MODULES * PNET_MAX_SUBMODULES];
+      data_desc[PNET_MAX_API * PNET_MAX_SLOTS * PNET_MAX_SUBSLOTS];
 
    pf_iocr_param_t param;   /* From connect.req */
    pf_iocr_result_t result; /* From connect.ind */
@@ -1920,7 +1920,7 @@ typedef struct pf_slot
    uint32_t exp_module_ident_number;
    uint32_t module_ident_number;
    pf_mod_plug_state_t plug_state;
-   pf_subslot_t subslots[PNET_MAX_SUBMODULES];
+   pf_subslot_t subslots[PNET_MAX_SUBSLOTS];
 
    /* Run-time information */
    pf_ar_t * p_ar;
@@ -1932,7 +1932,7 @@ typedef struct pf_api
    bool in_use;
    uint32_t api_id;
 
-   pf_slot_t slots[PNET_MAX_MODULES];
+   pf_slot_t slots[PNET_MAX_SLOTS];
 
    pf_ar_t * p_ar;
 } pf_api_t;
