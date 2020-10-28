@@ -177,14 +177,14 @@ typedef struct app_slot
 {
    bool plugged;
    uint32_t module_id;
-   app_subslot_t subslots[PNET_MAX_SUBMODULES];
+   app_subslot_t subslots[PNET_MAX_SUBSLOTS];
 } app_slot_t;
 
 typedef struct app_api_t
 {
    uint32_t api_id;
    uint32_t arep;
-   app_slot_t slots[PNET_MAX_MODULES];
+   app_slot_t slots[PNET_MAX_SLOTS];
 } app_api_t;
 
 typedef struct app_data_obj

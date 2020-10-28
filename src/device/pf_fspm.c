@@ -92,11 +92,11 @@ void pf_fspm_option_show (pnet_t * net)
       PNET_MAX_API);
    printf ("PNET_MAX_CR                                    : %d\n", PNET_MAX_CR);
    printf (
-      "PNET_MAX_MODULES                               : %d\n",
-      PNET_MAX_MODULES);
+      "PNET_MAX_SLOTS                               : %d\n",
+      PNET_MAX_SLOTS);
    printf (
-      "PNET_MAX_SUBMODULES                            : %d\n",
-      PNET_MAX_SUBMODULES);
+      "PNET_MAX_SUBSLOTS                            : %d\n",
+      PNET_MAX_SUBSLOTS);
    printf (
       "PNET_MAX_CHANNELS                              : %d\n",
       PNET_MAX_CHANNELS);

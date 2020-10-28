@@ -226,7 +226,7 @@ int my_state_ind (
 
       /* Set initial data and IOPS for custom input modules, and IOCS for custom
        * output modules */
-      for (slot = 0; slot < PNET_MAX_MODULES; slot++)
+      for (slot = 0; slot < PNET_MAX_SLOTS; slot++)
       {
          if (p_appdata->custom_input_slots[slot] == true)
          {
@@ -562,7 +562,7 @@ void PnetIntegrationTestBase::run_stack (int us)
          appdata.inputdata[0] = appdata.data_ctr++;
 
          /* Set data for custom input modules, if any */
-         for (slot = 0; slot < PNET_MAX_MODULES; slot++)
+         for (slot = 0; slot < PNET_MAX_SLOTS; slot++)
          {
             if (appdata.custom_input_slots[slot] == true)
             {

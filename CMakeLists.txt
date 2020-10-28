@@ -51,9 +51,9 @@ set(PNET_MAX_API                1
   CACHE STRING "Number of Application Processes. Must be > 0")
 set(PNET_MAX_CR                 2
   CACHE STRING "Per AR. 1 input and 1 output")
-set(PNET_MAX_MODULES            5
+set(PNET_MAX_SLOTS            5
   CACHE STRING "Per API. Should be > 1 to allow at least one I/O module")
-set(PNET_MAX_SUBMODULES         3
+set(PNET_MAX_SUBSLOTS         3
   CACHE STRING "Per slot (3 needed for DAP)")
 set(PNET_MAX_CHANNELS           1
   CACHE STRING "Per sub-slot. Used for diagnosis")

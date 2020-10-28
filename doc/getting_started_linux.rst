@@ -173,8 +173,8 @@ In this example we use::
    CMAKE_BUILD_TYPE Release
    LOG_LEVEL Warning
    PNET_MAX_AR 2
-   PNET_MAX_MODULES 5
-   PNET_MAX_SUBMODULES 3
+   PNET_MAX_SLOTS 5
+   PNET_MAX_SUBSLOTS 3
 
 To get an estimate of the binary size, partially link it (use release, without
 standard libraries)::
