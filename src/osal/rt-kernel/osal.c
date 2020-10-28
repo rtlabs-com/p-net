@@ -270,7 +270,7 @@ void os_usleep (uint32_t us)
 
 uint32_t os_get_system_uptime_10ms (void)
 {
-   uint32_t uptime;
+   uint32_t uptime = 0;
 
    MIB2_COPY_SYSUPTIME_TO (&uptime);
    return uptime;
