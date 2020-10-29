@@ -158,7 +158,7 @@ if (BUILD_TESTING)
 endif()
 
 # Platform configuration
-include(${CMAKE_SYSTEM_NAME})
+include(cmake/${CMAKE_SYSTEM_NAME}.cmake)
 message (STATUS "Building for ${CMAKE_SYSTEM_NAME}")
 
 generate_export_header(profinet
