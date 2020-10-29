@@ -173,6 +173,11 @@ instead of the previous::
 
    iso.3.6.1.2.1.2.2.1.6.3 = Hex-STRING: 20 87 56 FF AA 86
 
+To always load specific MIB files, you can add them to a ``.snmp/snmp.conf``
+configuration file in your home directory. For example::
+
+    mibs +LLDP-MIB
+
 
 Read and write a single OID
 ---------------------------
@@ -310,7 +315,12 @@ subtrees for a Siemens Profinet switch:
 +---------------------+------------------------------------------+-----------------+
 
 In order to show all available variables when running ``snmpwalk``, use the
-OID ``1``.
+OID ``1``. However, in this example this would result in displaying over 2600
+variables.
+
+To show relevant data only, you typically need to specify a subtree.
+This is done by giving the OID value or corresponding name, for example
+``1.0.8802.1.1.2`` or ``LLDP-MIB::lldpMIB``.
 
 
 Supported SNMP variables for Profinet
@@ -321,17 +331,20 @@ Device details:
 +--------------------------------+-----------------------------------------------------------------+
 | Field name                     | Description                                                     |
 +================================+=================================================================+
-| sysDescr                       | String, max 255 char. SystemIdentification = ChassisID          |
+| sysDescr                       | String, max 255 char. Consists of productname, serial number,   |
+|                                | hardware and software versions etc.                             |
+|                                | Also used as SystemIdentification = ChassisID ?                 |
 +--------------------------------+-----------------------------------------------------------------+
 | sysObjectId                    | An OID with enterprise info. Use 1.3.6.1.4.1.24686 for Profinet |
 +--------------------------------+-----------------------------------------------------------------+
 | sysUpTime                      | Uptime in 1/100 seconds                                         |
 +--------------------------------+-----------------------------------------------------------------+
-| sysContact                     | String, max 255 char. Writable                                  |
+| sysContact                     | String, max 255 char. Writable. Contact info to a person.       |
 +--------------------------------+-----------------------------------------------------------------+
-| sysName                        | String, max 255 char. Fully qualified domain name. Writable.    |
+| sysName                        | String, writable. Fully qualified domain name?                  |
+|                                | Here limited to OS_HOST_NAME_MAX (typically 64 char).           |
 +--------------------------------+-----------------------------------------------------------------+
-| sysLocation                    | String, max 255 char. See also I&M1. Writable                   |
+| sysLocation                    | String, writable. Here same as I&M1 location (max 22 char).     |
 +--------------------------------+-----------------------------------------------------------------+
 | sysServices                    | 78 (dec) for Profinet devices                                   |
 +--------------------------------+-----------------------------------------------------------------+
@@ -450,22 +463,31 @@ Restart ``snmpd``. A few useful commands::
 Use the ``snmpwalk`` from another computer to query the agent.
 
 
-Network topology tools
-----------------------
+Siemens PRONETA - Profinet Network Analysis tool
+------------------------------------------------
+The Proneta tool can scan the network to discover the topology of connected
+Profinet equipment.
 
-* libreNMS: https://www.librenms.org/
-* Icinga: https://icinga.com
-* Zabbix: https://www.zabbix.com/
-* nmap: https://nmap.org/
-* OpenNMS: https://www.opennms.com/
-* Cacti: https://www.cacti.net/
+Download "Proneta Basic" (free version) from the Siemens web page.
+Unzip the downloaded file onto a Windows personal computer.
+Double-click the ``PRONETA.exe`` file to start the program.
+
+On the settings page, select which Ethernet network adapter to use
+on your computer.
+On the home screen, select "Network analysis" and use the "Online" tab.
+Click the "Refresh" icon to scan the network topology.
+A graphical view with all Profinet equipment will be shown, including
+the connections between all ports.
+
+By double-clicking on a device in the graphical view, you can set the
+station name and IP address (temporarily or permanently).
 
 
 Full SNMP readout example
 -------------------------
-Here is the full data from the Siemens switch, when using the MIBs::
+Here is more data from the Siemens switch, when using the MIBs::
 
-   $ snmpwalk -v2c -c public 192.168.0.99 -m ALL
+   $ snmpwalk -v2c -c public -m ALL 192.168.0.99
    SNMPv2-MIB::sysDescr.0 = STRING: Siemens, SIMATIC NET, SCALANCE X204IRT, 6GK5 204-0BA00-2BA3, HW: Version 9, FW: Version V05.04.02, SVPL6147920
    SNMPv2-MIB::sysObjectID.0 = OID: SNMPv2-SMI::enterprises.4196.1.1.5.2.5
    DISMAN-EXPRESSION-MIB::sysUpTimeInstance = Timeticks: (756575) 2:06:05.75
@@ -918,3 +940,334 @@ Here is the full data from the Siemens switch, when using the MIBs::
    IF-MIB::ifRcvAddressType.1000 = INTEGER: nonVolatile(3)
    IF-MIB::ifTableLastChange.0 = Timeticks: (0) 0:00:00.00
    IF-MIB::ifStackLastChange.0 = Timeticks: (0) 0:00:00.00
+
+and the LLDP subtree::
+
+   $ snmpwalk -v2c -c public -m ALL 192.168.0.99 LLDP-MIB::lldpMIB
+   LLDP-MIB::lldpMessageTxInterval.0 = INTEGER: 5 seconds
+   LLDP-MIB::lldpMessageTxHoldMultiplier.0 = INTEGER: 4
+   LLDP-MIB::lldpReinitDelay.0 = INTEGER: 1 seconds
+   LLDP-MIB::lldpTxDelay.0 = INTEGER: 1 seconds
+   LLDP-MIB::lldpPortConfigAdminStatus.1 = INTEGER: txAndRx(3)
+   LLDP-MIB::lldpPortConfigAdminStatus.2 = INTEGER: txAndRx(3)
+   LLDP-MIB::lldpPortConfigAdminStatus.3 = INTEGER: txAndRx(3)
+   LLDP-MIB::lldpPortConfigAdminStatus.4 = INTEGER: txAndRx(3)
+   LLDP-MIB::lldpPortConfigNotificationEnable.1 = INTEGER: false(2)
+   LLDP-MIB::lldpPortConfigNotificationEnable.2 = INTEGER: false(2)
+   LLDP-MIB::lldpPortConfigNotificationEnable.3 = INTEGER: false(2)
+   LLDP-MIB::lldpPortConfigNotificationEnable.4 = INTEGER: false(2)
+   LLDP-MIB::lldpPortConfigTLVsTxEnable.1 = BITS: F0 portDesc(0) sysName(1) sysDesc(2) sysCap(3)
+   LLDP-MIB::lldpPortConfigTLVsTxEnable.2 = BITS: F0 portDesc(0) sysName(1) sysDesc(2) sysCap(3)
+   LLDP-MIB::lldpPortConfigTLVsTxEnable.3 = BITS: F0 portDesc(0) sysName(1) sysDesc(2) sysCap(3)
+   LLDP-MIB::lldpPortConfigTLVsTxEnable.4 = BITS: F0 portDesc(0) sysName(1) sysDesc(2) sysCap(3)
+   LLDP-MIB::lldpConfigManAddrPortsTxEnable.ipV4."...c" = Hex-STRING: F0
+   LLDP-MIB::lldpStatsRemTablesLastChangeTime.0 = Timeticks: (1200) 0:00:12.00
+   LLDP-MIB::lldpStatsRemTablesInserts.0 = Gauge32: 2 table entries
+   LLDP-MIB::lldpStatsRemTablesDeletes.0 = Gauge32: 0 table entries
+   LLDP-MIB::lldpStatsRemTablesDrops.0 = Gauge32: 0 table entries
+   LLDP-MIB::lldpStatsRemTablesAgeouts.0 = Gauge32: 0
+   LLDP-MIB::lldpStatsTxPortFramesTotal.1 = Counter32: 1072
+   LLDP-MIB::lldpStatsTxPortFramesTotal.2 = Counter32: 1072
+   LLDP-MIB::lldpStatsTxPortFramesTotal.3 = Counter32: 1072
+   LLDP-MIB::lldpStatsTxPortFramesTotal.4 = Counter32: 0
+   LLDP-MIB::lldpStatsRxPortFramesDiscardedTotal.1 = Counter32: 0
+   LLDP-MIB::lldpStatsRxPortFramesDiscardedTotal.2 = Counter32: 0
+   LLDP-MIB::lldpStatsRxPortFramesDiscardedTotal.3 = Counter32: 0
+   LLDP-MIB::lldpStatsRxPortFramesDiscardedTotal.4 = Counter32: 0
+   LLDP-MIB::lldpStatsRxPortFramesErrors.1 = Counter32: 0
+   LLDP-MIB::lldpStatsRxPortFramesErrors.2 = Counter32: 0
+   LLDP-MIB::lldpStatsRxPortFramesErrors.3 = Counter32: 0
+   LLDP-MIB::lldpStatsRxPortFramesErrors.4 = Counter32: 0
+   LLDP-MIB::lldpStatsRxPortFramesTotal.1 = Counter32: 669
+   LLDP-MIB::lldpStatsRxPortFramesTotal.2 = Counter32: 1073
+   LLDP-MIB::lldpStatsRxPortFramesTotal.3 = Counter32: 0
+   LLDP-MIB::lldpStatsRxPortFramesTotal.4 = Counter32: 0
+   LLDP-MIB::lldpStatsRxPortTLVsDiscardedTotal.1 = Counter32: 0
+   LLDP-MIB::lldpStatsRxPortTLVsDiscardedTotal.2 = Counter32: 0
+   LLDP-MIB::lldpStatsRxPortTLVsDiscardedTotal.3 = Counter32: 0
+   LLDP-MIB::lldpStatsRxPortTLVsDiscardedTotal.4 = Counter32: 0
+   LLDP-MIB::lldpStatsRxPortTLVsUnrecognizedTotal.1 = Counter32: 0
+   LLDP-MIB::lldpStatsRxPortTLVsUnrecognizedTotal.2 = Counter32: 0
+   LLDP-MIB::lldpStatsRxPortTLVsUnrecognizedTotal.3 = Counter32: 0
+   LLDP-MIB::lldpStatsRxPortTLVsUnrecognizedTotal.4 = Counter32: 0
+   LLDP-MIB::lldpStatsRxPortAgeoutsTotal.1 = Gauge32: 0
+   LLDP-MIB::lldpStatsRxPortAgeoutsTotal.2 = Gauge32: 0
+   LLDP-MIB::lldpStatsRxPortAgeoutsTotal.3 = Gauge32: 0
+   LLDP-MIB::lldpStatsRxPortAgeoutsTotal.4 = Gauge32: 0
+   LLDP-MIB::lldpLocChassisIdSubtype.0 = INTEGER: local(7)
+   LLDP-MIB::lldpLocChassisId.0 = STRING: "b"
+   LLDP-MIB::lldpLocSysName.0 = STRING: sysName Not Set
+   LLDP-MIB::lldpLocSysDesc.0 = STRING: Siemens, SIMATIC NET, SCALANCE X204IRT, 6GK5 204-0BA00-2BA3, HW: Version 9, FW: Version V05.04.02, SVPL6147920
+   LLDP-MIB::lldpLocSysCapSupported.0 = BITS: 01 stationOnly(7)
+   LLDP-MIB::lldpLocSysCapEnabled.0 = BITS: 01 stationOnly(7)
+   LLDP-MIB::lldpLocPortIdSubtype.1 = INTEGER: local(7)
+   LLDP-MIB::lldpLocPortIdSubtype.2 = INTEGER: local(7)
+   LLDP-MIB::lldpLocPortIdSubtype.3 = INTEGER: local(7)
+   LLDP-MIB::lldpLocPortIdSubtype.4 = INTEGER: local(7)
+   LLDP-MIB::lldpLocPortId.1 = STRING: "port-001"
+   LLDP-MIB::lldpLocPortId.2 = STRING: "port-002"
+   LLDP-MIB::lldpLocPortId.3 = STRING: "port-003"
+   LLDP-MIB::lldpLocPortId.4 = STRING: "port-004"
+   LLDP-MIB::lldpLocPortDesc.1 = STRING: Siemens, SIMATIC NET, Ethernet Port, X1 P1
+   LLDP-MIB::lldpLocPortDesc.2 = STRING: Siemens, SIMATIC NET, Ethernet Port, X1 P2
+   LLDP-MIB::lldpLocPortDesc.3 = STRING: Siemens, SIMATIC NET, Ethernet Port, X1 P3
+   LLDP-MIB::lldpLocPortDesc.4 = STRING: Siemens, SIMATIC NET, Ethernet Port, X1 P4
+   LLDP-MIB::lldpLocManAddrLen.ipV4."...c" = INTEGER: 5
+   LLDP-MIB::lldpLocManAddrIfSubtype.ipV4."...c" = INTEGER: ifIndex(2)
+   LLDP-MIB::lldpLocManAddrIfId.ipV4."...c" = INTEGER: 1000
+   LLDP-MIB::lldpLocManAddrOID.ipV4."...c" = OID: SNMPv2-SMI::enterprises.24686
+   LLDP-MIB::lldpRemChassisIdSubtype.400.2.2 = INTEGER: local(7)
+   LLDP-MIB::lldpRemChassisIdSubtype.1200.1.1 = INTEGER: local(7)
+   LLDP-MIB::lldpRemChassisId.400.2.2 = STRING: "3S PN-Controller          1103000032           0000000010a4b5ee     0 V  1  0  0"
+   LLDP-MIB::lldpRemChassisId.1200.1.1 = STRING: "(REMOVED)"
+   LLDP-MIB::lldpRemPortIdSubtype.400.2.2 = INTEGER: local(7)
+   LLDP-MIB::lldpRemPortIdSubtype.1200.1.1 = INTEGER: local(7)
+   LLDP-MIB::lldpRemPortId.400.2.2 = STRING: "port-001.controller"
+   LLDP-MIB::lldpRemPortId.1200.1.1 = STRING: "port-001"
+   LLDP-MIB::lldpRemSysName.1200.1.1 = STRING: (REMOVED)
+   LLDP-MIB::lldpRemSysDesc.1200.1.1 = STRING: (REMOVED)
+   LLDP-MIB::lldpRemSysCapSupported.1200.1.1 = BITS: 01 stationOnly(7)
+   LLDP-MIB::lldpRemSysCapEnabled.1200.1.1 = BITS: 01 stationOnly(7)
+   LLDP-MIB::lldpRemManAddrIfSubtype.400.2.2.ipV4."...d" = INTEGER: systemPortNumber(3)
+   LLDP-MIB::lldpRemManAddrIfSubtype.1200.1.1.ipV4."...." = INTEGER: ifIndex(2)
+   LLDP-MIB::lldpRemManAddrIfId.400.2.2.ipV4."...d" = INTEGER: 1
+   LLDP-MIB::lldpRemManAddrIfId.1200.1.1.ipV4."...." = INTEGER: 1
+   LLDP-MIB::lldpRemManAddrOID.1200.1.1.ipV4."...." = OID: SNMPv2-SMI::enterprises.24686
+   LLDP-EXT-PNO-MIB::lldpXPnoConfigSPDTxEnable.1 = INTEGER: true(1)
+   LLDP-EXT-PNO-MIB::lldpXPnoConfigSPDTxEnable.2 = INTEGER: true(1)
+   LLDP-EXT-PNO-MIB::lldpXPnoConfigSPDTxEnable.3 = INTEGER: true(1)
+   LLDP-EXT-PNO-MIB::lldpXPnoConfigSPDTxEnable.4 = INTEGER: true(1)
+   LLDP-EXT-PNO-MIB::lldpXPnoConfigPortStatusTxEnable.1 = INTEGER: true(1)
+   LLDP-EXT-PNO-MIB::lldpXPnoConfigPortStatusTxEnable.2 = INTEGER: true(1)
+   LLDP-EXT-PNO-MIB::lldpXPnoConfigPortStatusTxEnable.3 = INTEGER: true(1)
+   LLDP-EXT-PNO-MIB::lldpXPnoConfigPortStatusTxEnable.4 = INTEGER: true(1)
+   LLDP-EXT-PNO-MIB::lldpXPnoConfigAliasTxEnable.1 = INTEGER: true(1)
+   LLDP-EXT-PNO-MIB::lldpXPnoConfigAliasTxEnable.2 = INTEGER: true(1)
+   LLDP-EXT-PNO-MIB::lldpXPnoConfigAliasTxEnable.3 = INTEGER: true(1)
+   LLDP-EXT-PNO-MIB::lldpXPnoConfigAliasTxEnable.4 = INTEGER: true(1)
+   LLDP-EXT-PNO-MIB::lldpXPnoConfigMrpTxEnable.1 = INTEGER: true(1)
+   LLDP-EXT-PNO-MIB::lldpXPnoConfigMrpTxEnable.2 = INTEGER: true(1)
+   LLDP-EXT-PNO-MIB::lldpXPnoConfigMrpTxEnable.3 = INTEGER: true(1)
+   LLDP-EXT-PNO-MIB::lldpXPnoConfigMrpTxEnable.4 = INTEGER: true(1)
+   LLDP-EXT-PNO-MIB::lldpXPnoConfigPtcpTxEnable.1 = INTEGER: true(1)
+   LLDP-EXT-PNO-MIB::lldpXPnoConfigPtcpTxEnable.2 = INTEGER: true(1)
+   LLDP-EXT-PNO-MIB::lldpXPnoConfigPtcpTxEnable.3 = INTEGER: true(1)
+   LLDP-EXT-PNO-MIB::lldpXPnoConfigPtcpTxEnable.4 = INTEGER: true(1)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocLPDValue.1 = Gauge32: 0 ns
+   LLDP-EXT-PNO-MIB::lldpXPnoLocLPDValue.2 = Gauge32: 0 ns
+   LLDP-EXT-PNO-MIB::lldpXPnoLocLPDValue.3 = Gauge32: 0 ns
+   LLDP-EXT-PNO-MIB::lldpXPnoLocLPDValue.4 = Gauge32: 0 ns
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortTxDValue.1 = Gauge32: 1123 ns
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortTxDValue.2 = Gauge32: 1123 ns
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortTxDValue.3 = Gauge32: 1123 ns
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortTxDValue.4 = Gauge32: 0 ns
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortRxDValue.1 = Gauge32: 444 ns
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortRxDValue.2 = Gauge32: 444 ns
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortRxDValue.3 = Gauge32: 444 ns
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortRxDValue.4 = Gauge32: 0 ns
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortStatusRT2.1 = INTEGER: off(0)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortStatusRT2.2 = INTEGER: off(0)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortStatusRT2.3 = INTEGER: off(0)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortStatusRT2.4 = INTEGER: off(0)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortStatusRT3.1 = INTEGER: off(0)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortStatusRT3.2 = INTEGER: off(0)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortStatusRT3.3 = INTEGER: off(0)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortStatusRT3.4 = INTEGER: off(0)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortNoS.1 = STRING: b
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortNoS.2 = STRING: b
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortNoS.3 = STRING: b
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortNoS.4 = STRING: b
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortMrpUuId.1 = Hex-STRING: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortMrpUuId.2 = Hex-STRING: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortMrpUuId.3 = Hex-STRING: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortMrpUuId.4 = Hex-STRING: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortMrrtStatus.1 = INTEGER: off(0)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortMrrtStatus.2 = INTEGER: off(0)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortMrrtStatus.3 = INTEGER: off(0)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortMrrtStatus.4 = INTEGER: off(0)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortPtcpMaster.1 = STRING: 0:0:0:0:0:0
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortPtcpMaster.2 = STRING: 0:0:0:0:0:0
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortPtcpMaster.3 = STRING: 0:0:0:0:0:0
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortPtcpMaster.4 = STRING: 0:0:0:0:0:0
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortPtcpSubdomainUUID.1 = Hex-STRING: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortPtcpSubdomainUUID.2 = Hex-STRING: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortPtcpSubdomainUUID.3 = Hex-STRING: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortPtcpSubdomainUUID.4 = Hex-STRING: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortPtcpIRDataUUID.1 = Hex-STRING: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortPtcpIRDataUUID.2 = Hex-STRING: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortPtcpIRDataUUID.3 = Hex-STRING: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortPtcpIRDataUUID.4 = Hex-STRING: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortModeRT3.1 = INTEGER: standard(1)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortModeRT3.2 = INTEGER: standard(1)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortModeRT3.3 = INTEGER: standard(1)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortModeRT3.4 = INTEGER: standard(1)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortPeriodLength.1 = Wrong Type (should be Gauge32 or Unsigned32): INTEGER: 1000000
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortPeriodLength.2 = Wrong Type (should be Gauge32 or Unsigned32): INTEGER: 1000000
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortPeriodLength.3 = Wrong Type (should be Gauge32 or Unsigned32): INTEGER: 1000000
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortPeriodLength.4 = Wrong Type (should be Gauge32 or Unsigned32): INTEGER: 1000000
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortPeriodValidity.1 = INTEGER: true(1)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortPeriodValidity.2 = INTEGER: true(1)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortPeriodValidity.3 = INTEGER: true(1)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortPeriodValidity.4 = INTEGER: true(1)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortRedOffset.1 = Wrong Type (should be Gauge32 or Unsigned32): INTEGER: 0
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortRedOffset.2 = Wrong Type (should be Gauge32 or Unsigned32): INTEGER: 0
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortRedOffset.3 = Wrong Type (should be Gauge32 or Unsigned32): INTEGER: 0
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortRedOffset.4 = Wrong Type (should be Gauge32 or Unsigned32): INTEGER: 0
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortRedValidity.1 = INTEGER: false(2)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortRedValidity.2 = INTEGER: false(2)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortRedValidity.3 = INTEGER: false(2)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortRedValidity.4 = INTEGER: false(2)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortOrangeOffset.1 = Wrong Type (should be Gauge32 or Unsigned32): INTEGER: 0
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortOrangeOffset.2 = Wrong Type (should be Gauge32 or Unsigned32): INTEGER: 0
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortOrangeOffset.3 = Wrong Type (should be Gauge32 or Unsigned32): INTEGER: 0
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortOrangeOffset.4 = Wrong Type (should be Gauge32 or Unsigned32): INTEGER: 0
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortOrangeValidity.1 = INTEGER: false(2)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortOrangeValidity.2 = INTEGER: false(2)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortOrangeValidity.3 = INTEGER: false(2)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortOrangeValidity.4 = INTEGER: false(2)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortGreenOffset.1 = Wrong Type (should be Gauge32 or Unsigned32): INTEGER: 0
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortGreenOffset.2 = Wrong Type (should be Gauge32 or Unsigned32): INTEGER: 0
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortGreenOffset.3 = Wrong Type (should be Gauge32 or Unsigned32): INTEGER: 0
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortGreenOffset.4 = Wrong Type (should be Gauge32 or Unsigned32): INTEGER: 0
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortGreenValidity.1 = INTEGER: false(2)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortGreenValidity.2 = INTEGER: false(2)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortGreenValidity.3 = INTEGER: false(2)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortGreenValidity.4 = INTEGER: false(2)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortStatusRT3OptimizationSupported.1 = INTEGER: false(2)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortStatusRT3OptimizationSupported.2 = INTEGER: false(2)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortStatusRT3OptimizationSupported.3 = INTEGER: false(2)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortStatusRT3OptimizationSupported.4 = INTEGER: false(2)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortStatusRT3PreambleShorteningSupported.1 = INTEGER: false(2)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortStatusRT3PreambleShorteningSupported.2 = INTEGER: false(2)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortStatusRT3PreambleShorteningSupported.3 = INTEGER: false(2)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortStatusRT3PreambleShorteningSupported.4 = INTEGER: false(2)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortStatusRT3PreambleShortening.1 = INTEGER: false(2)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortStatusRT3PreambleShortening.2 = INTEGER: false(2)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortStatusRT3PreambleShortening.3 = INTEGER: false(2)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortStatusRT3PreambleShortening.4 = INTEGER: false(2)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortStatusRT3FragmentationSupported.1 = INTEGER: false(2)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortStatusRT3FragmentationSupported.2 = INTEGER: false(2)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortStatusRT3FragmentationSupported.3 = INTEGER: false(2)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortStatusRT3FragmentationSupported.4 = INTEGER: false(2)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortStatusRT3Fragmentation.1 = INTEGER: false(2)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortStatusRT3Fragmentation.2 = INTEGER: false(2)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortStatusRT3Fragmentation.3 = INTEGER: false(2)
+   LLDP-EXT-PNO-MIB::lldpXPnoLocPortStatusRT3Fragmentation.4 = INTEGER: false(2)
+   LLDP-EXT-PNO-MIB::lldpXPnoRemLPDValue.400.2.2 = Gauge32: 0 ns
+   LLDP-EXT-PNO-MIB::lldpXPnoRemLPDValue.1200.1.1 = Gauge32: 0 ns
+   LLDP-EXT-PNO-MIB::lldpXPnoRemPortTxDValue.400.2.2 = Gauge32: 0 ns
+   LLDP-EXT-PNO-MIB::lldpXPnoRemPortTxDValue.1200.1.1 = Gauge32: 0 ns
+   LLDP-EXT-PNO-MIB::lldpXPnoRemPortRxDValue.400.2.2 = Gauge32: 0 ns
+   LLDP-EXT-PNO-MIB::lldpXPnoRemPortRxDValue.1200.1.1 = Gauge32: 0 ns
+   LLDP-EXT-PNO-MIB::lldpXPnoRemPortStatusRT2.400.2.2 = INTEGER: off(0)
+   LLDP-EXT-PNO-MIB::lldpXPnoRemPortStatusRT2.1200.1.1 = INTEGER: off(0)
+   LLDP-EXT-PNO-MIB::lldpXPnoRemPortStatusRT3.400.2.2 = INTEGER: off(0)
+   LLDP-EXT-PNO-MIB::lldpXPnoRemPortStatusRT3.1200.1.1 = INTEGER: off(0)
+   LLDP-EXT-PNO-MIB::lldpXPnoRemPortNoS.400.2.2 = STRING: controller
+   LLDP-EXT-PNO-MIB::lldpXPnoRemPortNoS.1200.1.1 = STRING: (REMOVED)
+   LLDP-EXT-PNO-MIB::lldpXPnoRemPortMrpUuId.400.2.2 = Hex-STRING: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+   LLDP-EXT-PNO-MIB::lldpXPnoRemPortMrpUuId.1200.1.1 = Hex-STRING: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+   LLDP-EXT-PNO-MIB::lldpXPnoRemPortMrrtStatus.400.2.2 = INTEGER: off(0)
+   LLDP-EXT-PNO-MIB::lldpXPnoRemPortMrrtStatus.1200.1.1 = INTEGER: off(0)
+   LLDP-EXT-PNO-MIB::lldpXPnoRemPortPtcpMaster.400.2.2 = STRING: 0:0:0:0:0:0
+   LLDP-EXT-PNO-MIB::lldpXPnoRemPortPtcpMaster.1200.1.1 = STRING: 0:0:0:0:0:0
+   LLDP-EXT-PNO-MIB::lldpXPnoRemPortPtcpSubdomainUUID.400.2.2 = Hex-STRING: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+   LLDP-EXT-PNO-MIB::lldpXPnoRemPortPtcpSubdomainUUID.1200.1.1 = Hex-STRING: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+   LLDP-EXT-PNO-MIB::lldpXPnoRemPortPtcpIRDataUUID.400.2.2 = Hex-STRING: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+   LLDP-EXT-PNO-MIB::lldpXPnoRemPortPtcpIRDataUUID.1200.1.1 = Hex-STRING: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+   LLDP-EXT-PNO-MIB::lldpXPnoRemPortModeRT3.400.2.2 = INTEGER: standard(1)
+   LLDP-EXT-PNO-MIB::lldpXPnoRemPortModeRT3.1200.1.1 = INTEGER: standard(1)
+   LLDP-EXT-PNO-MIB::lldpXPnoRemPortPeriodLength.400.2.2 = Wrong Type (should be Gauge32 or Unsigned32): INTEGER: 0
+   LLDP-EXT-PNO-MIB::lldpXPnoRemPortPeriodLength.1200.1.1 = Wrong Type (should be Gauge32 or Unsigned32): INTEGER: 0
+   LLDP-EXT-PNO-MIB::lldpXPnoRemPortPeriodValidity.400.2.2 = INTEGER: false(2)
+   LLDP-EXT-PNO-MIB::lldpXPnoRemPortPeriodValidity.1200.1.1 = INTEGER: false(2)
+   LLDP-EXT-PNO-MIB::lldpXPnoRemPortRedOffset.400.2.2 = Wrong Type (should be Gauge32 or Unsigned32): INTEGER: 0
+   LLDP-EXT-PNO-MIB::lldpXPnoRemPortRedOffset.1200.1.1 = Wrong Type (should be Gauge32 or Unsigned32): INTEGER: 0
+   LLDP-EXT-PNO-MIB::lldpXPnoRemPortRedValidity.400.2.2 = INTEGER: false(2)
+   LLDP-EXT-PNO-MIB::lldpXPnoRemPortRedValidity.1200.1.1 = INTEGER: false(2)
+   LLDP-EXT-PNO-MIB::lldpXPnoRemPortOrangeOffset.400.2.2 = Wrong Type (should be Gauge32 or Unsigned32): INTEGER: 0
+   LLDP-EXT-PNO-MIB::lldpXPnoRemPortOrangeOffset.1200.1.1 = Wrong Type (should be Gauge32 or Unsigned32): INTEGER: 0
+   LLDP-EXT-PNO-MIB::lldpXPnoRemPortOrangeValidity.400.2.2 = INTEGER: false(2)
+   LLDP-EXT-PNO-MIB::lldpXPnoRemPortOrangeValidity.1200.1.1 = INTEGER: false(2)
+   LLDP-EXT-PNO-MIB::lldpXPnoRemPortGreenOffset.400.2.2 = Wrong Type (should be Gauge32 or Unsigned32): INTEGER: 0
+   LLDP-EXT-PNO-MIB::lldpXPnoRemPortGreenOffset.1200.1.1 = Wrong Type (should be Gauge32 or Unsigned32): INTEGER: 0
+   LLDP-EXT-PNO-MIB::lldpXPnoRemPortGreenValidity.400.2.2 = INTEGER: false(2)
+   LLDP-EXT-PNO-MIB::lldpXPnoRemPortGreenValidity.1200.1.1 = INTEGER: false(2)
+   LLDP-EXT-PNO-MIB::lldpXPnoRemPortStatusRT3PreambleShortening.400.2.2 = INTEGER: false(2)
+   LLDP-EXT-PNO-MIB::lldpXPnoRemPortStatusRT3PreambleShortening.1200.1.1 = INTEGER: false(2)
+   LLDP-EXT-PNO-MIB::lldpXPnoRemPortStatusRT3Fragmentation.400.2.2 = INTEGER: false(2)
+   LLDP-EXT-PNO-MIB::lldpXPnoRemPortStatusRT3Fragmentation.1200.1.1 = INTEGER: false(2)
+   LLDP-MIB::lldpExtensions.4623.1.1.1.1.1.1 = Hex-STRING: F0
+   LLDP-MIB::lldpExtensions.4623.1.1.1.1.1.2 = Hex-STRING: F0
+   LLDP-MIB::lldpExtensions.4623.1.1.1.1.1.3 = Hex-STRING: F0
+   LLDP-MIB::lldpExtensions.4623.1.1.1.1.1.4 = Hex-STRING: F0
+   LLDP-MIB::lldpExtensions.4623.1.2.1.1.1.1 = INTEGER: 1
+   LLDP-MIB::lldpExtensions.4623.1.2.1.1.1.2 = INTEGER: 1
+   LLDP-MIB::lldpExtensions.4623.1.2.1.1.1.3 = INTEGER: 1
+   LLDP-MIB::lldpExtensions.4623.1.2.1.1.1.4 = INTEGER: 1
+   LLDP-MIB::lldpExtensions.4623.1.2.1.1.2.1 = INTEGER: 1
+   LLDP-MIB::lldpExtensions.4623.1.2.1.1.2.2 = INTEGER: 1
+   LLDP-MIB::lldpExtensions.4623.1.2.1.1.2.3 = INTEGER: 1
+   LLDP-MIB::lldpExtensions.4623.1.2.1.1.2.4 = INTEGER: 1
+   LLDP-MIB::lldpExtensions.4623.1.2.1.1.3.1 = Hex-STRING: FF 00
+   LLDP-MIB::lldpExtensions.4623.1.2.1.1.3.2 = Hex-STRING: FF 00
+   LLDP-MIB::lldpExtensions.4623.1.2.1.1.3.3 = Hex-STRING: FF 00
+   LLDP-MIB::lldpExtensions.4623.1.2.1.1.3.4 = Hex-STRING: FF 00
+   LLDP-MIB::lldpExtensions.4623.1.2.1.1.4.1 = INTEGER: 16
+   LLDP-MIB::lldpExtensions.4623.1.2.1.1.4.2 = INTEGER: 16
+   LLDP-MIB::lldpExtensions.4623.1.2.1.1.4.3 = INTEGER: 16
+   LLDP-MIB::lldpExtensions.4623.1.2.1.1.4.4 = INTEGER: 0
+   LLDP-MIB::lldpExtensions.4623.1.2.3.1.1.1 = Hex-STRING: 00
+   LLDP-MIB::lldpExtensions.4623.1.2.3.1.1.2 = Hex-STRING: 00
+   LLDP-MIB::lldpExtensions.4623.1.2.3.1.1.3 = Hex-STRING: 00
+   LLDP-MIB::lldpExtensions.4623.1.2.3.1.1.4 = Hex-STRING: 00
+   LLDP-MIB::lldpExtensions.4623.1.2.3.1.2.1 = INTEGER: 0
+   LLDP-MIB::lldpExtensions.4623.1.2.3.1.2.2 = INTEGER: 0
+   LLDP-MIB::lldpExtensions.4623.1.2.3.1.2.3 = INTEGER: 0
+   LLDP-MIB::lldpExtensions.4623.1.2.3.1.2.4 = INTEGER: 0
+   LLDP-MIB::lldpExtensions.4623.1.2.4.1.1.1 = INTEGER: 1522
+   LLDP-MIB::lldpExtensions.4623.1.2.4.1.1.2 = INTEGER: 1522
+   LLDP-MIB::lldpExtensions.4623.1.2.4.1.1.3 = INTEGER: 1522
+   LLDP-MIB::lldpExtensions.4623.1.2.4.1.1.4 = INTEGER: 1522
+   LLDP-MIB::lldpExtensions.4623.1.3.1.1.1.400.2.2 = INTEGER: 1
+   LLDP-MIB::lldpExtensions.4623.1.3.1.1.1.1200.1.1 = INTEGER: 1
+   LLDP-MIB::lldpExtensions.4623.1.3.1.1.2.400.2.2 = INTEGER: 1
+   LLDP-MIB::lldpExtensions.4623.1.3.1.1.2.1200.1.1 = INTEGER: 1
+   LLDP-MIB::lldpExtensions.4623.1.3.1.1.3.400.2.2 = Hex-STRING: 6C 00
+   LLDP-MIB::lldpExtensions.4623.1.3.1.1.3.1200.1.1 = Hex-STRING: EC 03
+   LLDP-MIB::lldpExtensions.4623.1.3.1.1.4.400.2.2 = INTEGER: 16
+   LLDP-MIB::lldpExtensions.4623.1.3.1.1.4.1200.1.1 = INTEGER: 30
+   LLDP-MIB::lldpExtensions.32962.1.1.1.1.1.1 = INTEGER: 2
+   LLDP-MIB::lldpExtensions.32962.1.1.1.1.1.2 = INTEGER: 2
+   LLDP-MIB::lldpExtensions.32962.1.1.1.1.1.3 = INTEGER: 2
+   LLDP-MIB::lldpExtensions.32962.1.1.1.1.1.4 = INTEGER: 2
+   LLDP-MIB::lldpExtensions.32962.1.1.2.1.1.1.0 = INTEGER: 2
+   LLDP-MIB::lldpExtensions.32962.1.1.2.1.1.2.0 = INTEGER: 2
+   LLDP-MIB::lldpExtensions.32962.1.1.2.1.1.3.0 = INTEGER: 2
+   LLDP-MIB::lldpExtensions.32962.1.1.2.1.1.4.0 = INTEGER: 2
+   LLDP-MIB::lldpExtensions.32962.1.1.3.1.1.1.0 = INTEGER: 2
+   LLDP-MIB::lldpExtensions.32962.1.1.3.1.1.2.0 = INTEGER: 2
+   LLDP-MIB::lldpExtensions.32962.1.1.3.1.1.3.0 = INTEGER: 2
+   LLDP-MIB::lldpExtensions.32962.1.1.3.1.1.4.0 = INTEGER: 2
+   LLDP-MIB::lldpExtensions.32962.1.1.4.1.1.1.1 = INTEGER: 2
+   LLDP-MIB::lldpExtensions.32962.1.1.4.1.1.2.1 = INTEGER: 2
+   LLDP-MIB::lldpExtensions.32962.1.1.4.1.1.3.1 = INTEGER: 2
+   LLDP-MIB::lldpExtensions.32962.1.1.4.1.1.4.1 = INTEGER: 2
+   LLDP-MIB::lldpExtensions.32962.1.2.1.1.1.1 = INTEGER: 0
+   LLDP-MIB::lldpExtensions.32962.1.2.1.1.1.2 = INTEGER: 0
+   LLDP-MIB::lldpExtensions.32962.1.2.1.1.1.3 = INTEGER: 0
+   LLDP-MIB::lldpExtensions.32962.1.2.1.1.1.4 = INTEGER: 0
+   LLDP-MIB::lldpExtensions.32962.1.2.2.1.2.1.0 = INTEGER: 2
+   LLDP-MIB::lldpExtensions.32962.1.2.2.1.2.2.0 = INTEGER: 2
+   LLDP-MIB::lldpExtensions.32962.1.2.2.1.2.3.0 = INTEGER: 2
+   LLDP-MIB::lldpExtensions.32962.1.2.2.1.2.4.0 = INTEGER: 2
+   LLDP-MIB::lldpExtensions.32962.1.2.2.1.3.1.0 = INTEGER: 2
+   LLDP-MIB::lldpExtensions.32962.1.2.2.1.3.2.0 = INTEGER: 2
+   LLDP-MIB::lldpExtensions.32962.1.2.2.1.3.3.0 = INTEGER: 2
+   LLDP-MIB::lldpExtensions.32962.1.2.2.1.3.4.0 = INTEGER: 2
+   LLDP-MIB::lldpExtensions.32962.1.3.1.1.1.400.2.2 = INTEGER: 0
+   LLDP-MIB::lldpExtensions.32962.1.3.1.1.1.1200.1.1 = INTEGER: 0
+   LLDP-MIB::lldpExtensions.32962.1.3.2.1.2.400.2.2.0 = INTEGER: 2
+   LLDP-MIB::lldpExtensions.32962.1.3.2.1.2.1200.1.1.0 = INTEGER: 2
+   LLDP-MIB::lldpExtensions.32962.1.3.2.1.3.400.2.2.0 = INTEGER: 2
+   LLDP-MIB::lldpExtensions.32962.1.3.2.1.3.1200.1.1.0 = INTEGER: 2

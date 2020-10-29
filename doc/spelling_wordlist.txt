@@ -34,6 +34,7 @@ Fieldbus
 fieldbuses
 GByte
 gcc
+Github
 hostname
 Icinga
 implementers
@@ -72,6 +73,7 @@ Popp
 PRMEND
 Profibus
 Profinet
+Proneta
 PwrCtrl
 Raspbian
 realtime
@@ -86,6 +88,7 @@ Scalance
 Segger
 Simatic
 snmp
+snmpwalk
 softplc
 Steuerung
 subelement

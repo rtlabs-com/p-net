@@ -125,6 +125,7 @@ For Profinet conformance class B and higher, there are three assigned MAC addres
 The MAC addresses for X1 P1 and X1 P2 are used by the LLDP protocol for neighbor detection.
 
 There are examples of Profinet controllers with more than one interface (having more than one port each).
+Each interface has its own IP address. Each port has its own MAC address.
 
 
 Communication
@@ -480,6 +481,11 @@ First usable slot is slot number 1. Slot 0 is used for the IO-device itself,
 and does not have any input/output data. Instead it has diagnostic information
 for the IO-device.
 
+If compile time setting PNET_MAX_SLOTS is 5, then the slots are numbered 0-4.
+The setting PNET_MAX_SUBSLOTS controls the number of subslots per slot,
+but there is no fixed relation to which subslot numbers will be used.
+Subslot numbers in the range 0-0x9FFF might be used.
+
 The GSD file pretty much describes the hardware: slots (and subslots), and
 the modules (and submodules) that can be placed in the slots. The file does
 not describe which modules that actually have been placed in each slot for
@@ -585,6 +591,8 @@ To localize the diagnosis source, these values are required:
 * Channel number (Use 0x8000 for "whole submodule")
 * Accumulative (true when describing a channel group)
 * Direction (in or out. Use "manufacturer specific" for "whole submodule")
+
+Do not update diagnosis information at a higher frequency than 1 Hz.
 
 
 Diagnosis payload formats

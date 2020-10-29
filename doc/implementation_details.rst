@@ -139,10 +139,47 @@ Sections in 61158-6-10 (protocol) describing alarms:
 
 Diagnosis
 ---------
-The diagnosis is described in:
+Sections in 61784-2 (profiles) describing LLDP:
 
-* Profinet 2.4 Services, section 7.3.4
-* Profinet 2.4 protocol, section 5.2.9 "Coding section related to Alarm and Diagnosis Data"
++---------------+-------------------------------------------------------------+
+| Section       | Description                                                 |
++===============+=============================================================+
+| 7.1.3.2.2.1   | Diagnosis (less than 65536 octets)                          |
++---------------+-------------------------------------------------------------+
+
+
+Sections in 61158-5-10 (services) describing diagnosis:
+
++---------------+-------------------------------------------------------------+
+| Section       | Description                                                 |
++===============+=============================================================+
+| 7.1.4.5.3.6   | Channel and channel numbers                                 |
++---------------+-------------------------------------------------------------+
+| 7.3.1.6.1.2   | Alarm types attached to diagnosis ASE                       |
++---------------+-------------------------------------------------------------+
+| 7.3.1.6.5.1   | Alarm Notification                                          |
++---------------+-------------------------------------------------------------+
+| 7.3.4         | Diagnosis ASE                                               |
++---------------+-------------------------------------------------------------+
+| Annex F       | Precondition for Diagnosis                                  |
++---------------+-------------------------------------------------------------+
+
+Sections in 61158-6-10 (protocol) describing diagnosis:
+
++---------------+-------------------------------------------------------------+
+| Section       | Description                                                 |
++===============+=============================================================+
+| 5.1.2         | APDU abstract syntax                                        |
++---------------+-------------------------------------------------------------+
+| 5.2.3.2       | Coding of the field AlarmSpecifier                          |
++---------------+-------------------------------------------------------------+
+| 5.2.4.4.3     | Grouping of DiagnosisData for the diagnosis records         |
++---------------+-------------------------------------------------------------+
+| 5.2.9         | Coding section related to Alarm and Diagnosis Data          |
++---------------+-------------------------------------------------------------+
+
+See also the "Diagnosis for Profinet" Guideline published by the Profinet
+organisation.
 
 An array of PNET_MAX_DIAG_ITEMS diagnosis items is available for use. Each
 subslot uses a linked list of diagnosis items, and stores the index to the
@@ -390,6 +427,44 @@ LLDP - Link Layer Discovery Protocol
 A protocol for neighbourhood detection. LLDP frames are not forwarded by managed
 switches, so the frames are useful to detect which neighbour the device is
 connected to.
+
+Sections in 61784-2 (profiles) describing LLDP:
+
++---------------+-------------------------------------------------------------+
+| Section       | Description                                                 |
++===============+=============================================================+
+| 7.1.4.6       | Link layer discovery protocol (Transmission times)          |
++---------------+-------------------------------------------------------------+
+| 7.1.11        | Conformance class behaviors (LLDP MIBs)                     |
++---------------+-------------------------------------------------------------+
+
+Sections in 61158-5-10 (services) describing LLDP:
+
++---------------+-------------------------------------------------------------+
+| Section       | Description                                                 |
++===============+=============================================================+
+| 6.3.13.2      | IEEE 802.1AB class specification (LLDP)                     |
++---------------+-------------------------------------------------------------+
+| 6.3.13.3      | IEEE 802.1AB service specification (LLDP)                   |
++---------------+-------------------------------------------------------------+
+| 7.3.3.3       | Communication Interface Management class (LLDP blocking)    |
++---------------+-------------------------------------------------------------+
+| 7.3.3.10      | MIB class (LLDP MIB)                                        |
++---------------+-------------------------------------------------------------+
+
+Sections in 61158-6-10 (protocol) describing LLDP:
+
++---------------+-------------------------------------------------------------+
+| Section       | Description                                                 |
++===============+=============================================================+
+| 4.11          | Link layer discovery (LLDP abstract & transfer syntax)      |
++---------------+-------------------------------------------------------------+
+| 4.16.6        | MIB cross reference (LLDP MIB)                              |
++---------------+-------------------------------------------------------------+
+| 4.16.8        | LLDP EXT MIB (found in Annex U)                             |
++---------------+-------------------------------------------------------------+
+| Annex U       | LLDP EXT MIB                                                |
++---------------+-------------------------------------------------------------+
 
 An LLDP frame is sent by p-net every 5 seconds, to indicate the IP address etc.
 

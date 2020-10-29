@@ -1993,7 +1993,7 @@ PNET_EXPORT int pnet_diag_std_remove (
  *
  * If the diagnosis already exists, it is updated.
  * Use \a pnet_diag_usi_update() instead if you would like to have an error
- * if the diagnois is missing when trying to update it.
+ * if the diagnosis is missing when trying to update it.
  *
  * A diagnosis in USI format is assigned to the channel "whole submodule"
  * (not individual channels). The severity is always "Fault".
@@ -2025,7 +2025,7 @@ PNET_EXPORT int pnet_diag_usi_add (
  *
  * An error is returned if the diagnosis doesn't exist.
  * Use \a pnet_diag_usi_add() instead if you would like to create the
- * missing diagnos when trying to update it.
+ * missing diagnosis when trying to update it.
  *
  * This sends a diagnosis alarm.
  *
