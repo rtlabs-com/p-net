@@ -31,7 +31,7 @@ void pf_alarm_init (pnet_t * net);
  * Create and activate an alarm instance for the specified AR.
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:    The AR instance.
+ * @param p_ar             InOut: The AR instance.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -43,7 +43,7 @@ int pf_alarm_activate (pnet_t * net, pf_ar_t * p_ar);
  * Sends a low prio alarm.
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:    The AR instance.
+ * @param p_ar             InOut: The AR instance.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -54,14 +54,14 @@ int pf_alarm_close (pnet_t * net, pf_ar_t * p_ar);
  *
  * This is the default setting.
  *
- * @param p_ar             In:    The AR instance.
+ * @param p_ar             InOut  The AR instance.
  */
 void pf_alarm_enable (pf_ar_t * p_ar);
 
 /**
  * Disable sending of all alarms.
  *
- * @param p_ar             In:    The AR instance.
+ * @param p_ar             InOut: The AR instance.
  */
 void pf_alarm_disable (pf_ar_t * p_ar);
 
@@ -72,7 +72,7 @@ void pf_alarm_disable (pf_ar_t * p_ar);
  * @return  true if an alarm is pending.
  *          false if no alarms are pending.
  */
-bool pf_alarm_pending (pf_ar_t * p_ar);
+bool pf_alarm_pending (const pf_ar_t * p_ar);
 
 /**
  * Perform periodic tasks in the alarm component.
@@ -94,7 +94,7 @@ int pf_alarm_periodic (pnet_t * net);
  * sent.
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:    The AR instance.
+ * @param p_ar             InOut  The AR instance.
  * @param api_id           In:    The API identifier.
  * @param slot_nbr         In:    The slot number.
  * @param subslot_nbr      In:    The sub-slot number.
@@ -113,7 +113,7 @@ int pf_alarm_send_pull (
  * Send a PLUG OK alarm.
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:    The AR instance.
+ * @param p_ar             InOut: The AR instance.
  * @param api_id           In:    The API identifier.
  * @param slot_nbr         In:    The slot number.
  * @param subslot_nbr      In:    The sub-slot number.
@@ -136,7 +136,7 @@ int pf_alarm_send_plug (
  * Send a PLUG_WRONG alarm.
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:    The AR instance.
+ * @param p_ar             InOut: The AR instance.
  * @param api_id           In:    The API identifier.
  * @param slot_nbr         In:    The slot number.
  * @param subslot_nbr      In:    The sub-slot number.
@@ -162,7 +162,7 @@ int pf_alarm_send_plug_wrong (
  * These alarms are always sent as high priority alarms.
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:    The AR instance.
+ * @param p_ar             InOut: The AR instance.
  * @param api_id           In:    The API identifier.
  * @param slot_nbr         In:    The slot number.
  * @param subslot_nbr      In:    The sub-slot number.
@@ -182,7 +182,7 @@ int pf_alarm_send_process (
    uint16_t subslot_nbr,
    uint16_t payload_usi,
    uint16_t payload_len,
-   uint8_t * p_payload);
+   const uint8_t * p_payload);
 
 /**
  * Send diagnosis alarm.
@@ -191,7 +191,7 @@ int pf_alarm_send_process (
  * These alarms are always sent as low priority alarms.
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:    The AR instance.
+ * @param p_ar             InOut: The AR instance.
  * @param api_id           In:    The API identifier.
  * @param slot_nbr         In:    The slot number.
  * @param subslot_nbr      In:    The sub-slot number.
@@ -206,7 +206,7 @@ int pf_alarm_send_diagnosis (
    uint32_t api_id,
    uint16_t slot_nbr,
    uint16_t subslot_nbr,
-   pf_diag_item_t * p_diag_item);
+   const pf_diag_item_t * p_diag_item);
 
 /**
  * Send Alarm ACK (from the application)
@@ -218,7 +218,7 @@ int pf_alarm_send_diagnosis (
  *                               value)
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:    The AR instance.
+ * @param p_ar             InOut: The AR instance.
  * @param p_alarm_argument In:    The alarm argument (with slot, subslot,
  *                                alarm_type etc)
  * @param p_pnio_status    In:    Detailed ACK information.
@@ -229,15 +229,15 @@ int pf_alarm_send_diagnosis (
 int pf_alarm_alpmr_alarm_ack (
    pnet_t * net,
    pf_ar_t * p_ar,
-   pnet_alarm_argument_t * p_alarm_argument,
-   pnet_pnio_status_t * p_pnio_status);
+   const pnet_alarm_argument_t * p_alarm_argument,
+   const pnet_pnio_status_t * p_pnio_status);
 
 /**
  * Show all alarm information of the specified AR.
  *
  * @param p_ar             In:    The AR instance.
  */
-void pf_alarm_show (pf_ar_t * p_ar);
+void pf_alarm_show (const pf_ar_t * p_ar);
 
 #ifdef __cplusplus
 }

@@ -211,7 +211,7 @@ static void pf_dcp_clear_sam (pnet_t * net, void * arg, uint32_t current_time)
  * @internal
  * Add a block to a buffer, possibly including a block_info.
  *
- * @param p_dst            In:    The destination buffer.
+ * @param p_dst            Out:   The destination buffer.
  * @param p_dst_pos        InOut: Position in the destination buffer.
  * @param dst_max          In:    Size of destination buffer.
  * @param opt              In:    Option key.
@@ -274,7 +274,7 @@ static int pf_dcp_put_block (
  * Handle one block in a DCP get request, by inserting it into the response.
  *
  * @param net                 InOut: The p-net stack instance
- * @param p_dst               In:    The destination buffer.
+ * @param p_dst               Out:   The destination buffer.
  * @param p_dst_pos           InOut: Position in the destination buffer.
  * @param dst_max             In:    Size of destination buffer.
  * @param opt                 In:    Option key.
@@ -557,7 +557,7 @@ static void pf_dcp_control_signal (
  * Triggers the application callback \a pnet_reset_ind() for some values.
  *
  * @param net              InOut: The p-net stack instance
- * @param p_dst            In:    The destination buffer.
+ * @param p_dst            Out:   The destination buffer.
  * @param p_dst_pos        InOut: Position in the destination buffer.
  * @param dst_max          In:    Size of destination buffer.
  * @param opt              In:    Option key.
@@ -576,7 +576,7 @@ static int pf_dcp_set_req (
    uint8_t sub,
    uint16_t block_qualifier,
    uint16_t value_length,
-   uint8_t * p_value)
+   const uint8_t * p_value)
 {
    int ret = -1;
    uint8_t response_data[3];
@@ -805,7 +805,7 @@ static int pf_dcp_set_req (
  *
  * @param net              InOut: The p-net stack instance
  * @param frame_id         In:    The frame id.
- * @param p_buf            In:    The ethernet frame.
+ * @param p_buf            InOut: The ethernet frame. Will be freed.
  * @param frame_id_pos     In:    Position of the frame id in the buffer.
  * @param p_arg            In:    Not used.
  * @return  0     If the frame was NOT handled by this function.
@@ -1034,7 +1034,7 @@ static int pf_dcp_get_set (
  * ToDo: Device-device communication (MC) is not yet implemented.
  * @param net              InOut: The p-net stack instance
  * @param frame_id         In:    The frame id.
- * @param p_buf            In:    The ethernet frame.
+ * @param p_buf            InOut: The ethernet frame. Will be freed.
  * @param frame_id_pos     In:    Position of the frame id in the buffer.
  * @param p_arg            In:    Not used.
  * @return  0     If the frame was NOT handled by this function.
@@ -1296,7 +1296,7 @@ int pf_dcp_hello_req (pnet_t * net)
  * @return delay in microseconds
  */
 uint32_t pf_dcp_calculate_response_delay (
-   pnet_ethaddr_t * mac_address,
+   const pnet_ethaddr_t * mac_address,
    uint16_t response_delay_factor)
 {
    uint16_t random_number = 0;
@@ -1782,7 +1782,7 @@ static int pf_dcp_identify_req (
          LOG_INFO (
             PF_DCP_LOG,
             "DCP(%d): Responding to incoming DCP identify request. All: %d "
-            "StationName: %.*s Alias: %.*s  Delay %"PRIu32" us.\n",
+            "StationName: %.*s Alias: %.*s  Delay %" PRIu32 " us.\n",
             __LINE__,
             identify_all,
             stationname_len,

@@ -155,7 +155,7 @@ int pf_cmdev_pull_module (pnet_t * net, uint32_t api_id, uint16_t slot_nbr);
 /**
  * Abort request from the application or from RPC.
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:    The AR instance (or NULL).
+ * @param p_ar             InOut: The AR instance (or NULL).
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -236,7 +236,7 @@ int pf_cmdev_get_diag_item (
 int pf_cmdev_new_diag (pnet_t * net, uint16_t * p_item_ix);
 
 /**
- * Return a diag item to the free list.
+ * Put a diag item back to the free list.
  * @param net              InOut: The p-net stack instance
  * @param item_ix          In:    Index of the item to return.
  */
@@ -260,7 +260,7 @@ const char * pf_cmdev_event_to_string (pnet_event_values_t event);
  * Show CMDEV information of the AR.
  * @param p_ar             In:    The AR instance.
  */
-void pf_cmdev_ar_show (pf_ar_t * p_ar);
+void pf_cmdev_ar_show (const pf_ar_t * p_ar);
 
 /**
  * Show the plugged modules and sub-modules.
@@ -272,7 +272,7 @@ void pf_cmdev_device_show (pnet_t * net);
  * Show diagnosis items.
  * @param net              InOut: The p-net stack instance
  */
-void pf_cmdev_diag_show (pnet_t * net);
+void pf_cmdev_diag_show (const pnet_t * net);
 
 /**
  * Indicate a new state transition of the CMDEV component.
@@ -280,7 +280,7 @@ void pf_cmdev_diag_show (pnet_t * net);
  * Among other actions, it calls the \a pnet_state_ind() user callback.
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:    The AR instance.
+ * @param p_ar             InOut: The AR instance.
  * @param state            In:    The new CMDEV state. Use PNET_EVENT_xxx,
  *                                not PF_CMDEV_STATE_xxx
  * @return  0  if operation succeeded.
@@ -295,12 +295,12 @@ int pf_cmdev_state_ind (pnet_t * net, pf_ar_t * p_ar, pnet_event_values_t state)
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_cmdev_get_state (pf_ar_t * p_ar, pf_cmdev_state_values_t * p_state);
+int pf_cmdev_get_state (const pf_ar_t * p_ar, pf_cmdev_state_values_t * p_state);
 
 /**
  * Handle CMIO "data_possibile" indications.
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:    The AR instance.
+ * @param p_ar             InOut: The AR instance.
  * @param data_possible    In:    true if data exchange is possible.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
@@ -331,7 +331,7 @@ int pf_cmdev_rm_connect_ind (
  * \a pnet_state_ind() with PNET_EVENT_ABORT.
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:    The AR instance.
+ * @param p_ar             InOut: The AR instance.
  * @param p_release_result Out:   Detailed result of the connect operation.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
@@ -348,7 +348,7 @@ int pf_cmdev_rm_release_ind (
  * \a pnet_state_ind() with PNET_EVENT_PRMEND.
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:    The AR instance.
+ * @param p_ar             InOut: The AR instance.
  * @param p_control_io     In:    The control block.
  * @param p_release_result Out:   Detailed result of the connect operation.
  * @return  0  if operation succeeded.
@@ -370,7 +370,7 @@ int pf_cmdev_rm_dcontrol_ind (
  * Triggers the \a pnet_state_ind() user callback with PNET_EVENT_APPLRDY.
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:    The AR instance.
+ * @param p_ar             Inout  The AR instance.
  * @return  0  if a ccontrol request was sent.
  *          -1 if a ccontrol request was not sent.
  */
@@ -384,7 +384,7 @@ int pf_cmdev_cm_ccontrol_req (pnet_t * net, pf_ar_t * p_ar);
  * * \a pnet_ccontrol_cnf()
  *
  * @param net                 InOut: The p-net stack instance
- * @param p_ar                In:    The AR instance.
+ * @param p_ar                InOut: The AR instance.
  * @param p_control_io        In:    The control block.
  * @param p_ccontrol_result   Out:   Detailed result of the connect operation.
  * @return  0  if operation succeeded.

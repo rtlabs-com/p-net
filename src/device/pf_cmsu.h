@@ -32,9 +32,9 @@ void pf_cmsu_init (pnet_t * net);
  * alarm.
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:    The AR instance.
- * @param event            In:    The new CMDEV state. Use PNET_EVENT_..., not
- * PF_CMDEV_STATE_...
+ * @param p_ar             InOut: The AR instance.
+ * @param event            In:    The new CMDEV state. Use PNET_EVENT_xxx, not
+ *                                PF_CMDEV_STATE_xxx
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -46,8 +46,8 @@ int pf_cmsu_cmdev_state_ind (
 /**
  * Start all state machines for a specific AR.
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:   The AR instance.
- * @param p_stat           Out:  The result information.
+ * @param p_ar             InOut: The AR instance.
+ * @param p_stat           Out:   The result information.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -56,9 +56,9 @@ int pf_cmsu_start_req (pnet_t * net, pf_ar_t * p_ar, pnet_result_t * p_stat);
 /**
  * Handle CPM error indications for a specific AR.
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:   The AR instance.
- * @param err_cls          In:   ERR_CLS.
- * @param err_code         In:   ERR_CODE.
+ * @param p_ar             InOut: The AR instance.
+ * @param err_cls          In:    ERR_CLS.
+ * @param err_code         In:    ERR_CODE.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -71,9 +71,9 @@ int pf_cmsu_cpm_error_ind (
 /**
  * Handle PPM error indications for a specific AR.
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:   The AR instance.
- * @param err_cls          In:   ERR_CLS.
- * @param err_code         In:   ERR_CODE.
+ * @param p_ar             InOut: The AR instance.
+ * @param err_cls          In:    ERR_CLS.
+ * @param err_code         In:    ERR_CODE.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -86,9 +86,9 @@ int pf_cmsu_ppm_error_ind (
 /**
  * Handle alarm error indications for a specific AR.
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:   The AR instance.
- * @param err_cls          In:   ERR_CLS.
- * @param err_code         In:   ERR_CODE
+ * @param p_ar             InOut: The AR instance.
+ * @param err_cls          In:    ERR_CLS.
+ * @param err_code         In:    ERR_CODE
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -102,9 +102,9 @@ int pf_cmsu_alarm_error_ind (
 /**
  * Handle DMC error indications for a specific AR.
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:   The AR instance.
- * @param err_cls          In:   ERR_CLS
- * @param err_code         In:   ERR_CODE
+ * @param p_ar             InOut: The AR instance.
+ * @param err_cls          In:    ERR_CLS
+ * @param err_code         In:    ERR_CODE
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */

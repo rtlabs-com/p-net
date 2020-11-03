@@ -68,7 +68,7 @@ static const char * pf_cmio_state_to_string (pf_cmio_state_values_t state)
    return s;
 }
 
-void pf_cmio_show (pf_ar_t * p_ar)
+void pf_cmio_show (const pf_ar_t * p_ar)
 {
    printf (
       "CMIO state            = %s\n",
@@ -81,8 +81,8 @@ void pf_cmio_show (pf_ar_t * p_ar)
 
 /**
  * @internal
- * @param p_ar             In:   The AR instance.
- * @param state            In:   The new CMIO state.
+ * @param p_ar             InOut: The AR instance.
+ * @param state            In:    The new CMIO state.
  */
 static void pf_cmio_set_state (pf_ar_t * p_ar, pf_cmio_state_values_t state)
 {

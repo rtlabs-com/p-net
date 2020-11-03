@@ -25,7 +25,7 @@ extern "C" {
  * Triggers the \a pnet_read_ind() user callback for some values.
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:    The AR instance.
+ * @param p_ar             InOut: The AR instance.
  * @param p_read_request   In:    The read request.
  * @param p_read_status    Out:   The result information.
  * @param res_size         In:    The size of the output buffer.
@@ -37,11 +37,11 @@ extern "C" {
 int pf_cmrdr_rm_read_ind (
    pnet_t * net,
    pf_ar_t * p_ar,
-   pf_iod_read_request_t * p_read_request,
+   const pf_iod_read_request_t * p_read_request,
    pnet_result_t * p_read_status,
-   uint16_t res_size, /** sizeof(output buffer) */
-   uint8_t * p_res,   /** Output buffer */
-   uint16_t * p_pos); /** in/out: Current pos in output buffer */
+   uint16_t res_size,
+   uint8_t * p_res,
+   uint16_t * p_pos);
 
 #ifdef __cplusplus
 }

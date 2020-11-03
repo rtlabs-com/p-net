@@ -25,8 +25,8 @@ extern "C" {
 /**
  * @internal
  * Return a byte from a buffer.
- * @param p_info           In:   The parser state.
- * @param p_pos            InOut:Position in the buffer.
+ * @param p_info           InOut: The parser state.
+ * @param p_pos            InOut: Position in the buffer.
  * @return The byte from the buffer
  */
 uint8_t pf_get_byte (pf_get_info_t * p_info, uint16_t * p_pos);
@@ -34,8 +34,8 @@ uint8_t pf_get_byte (pf_get_info_t * p_info, uint16_t * p_pos);
 /**
  * @internal
  * Return a uint16_t from a buffer.
- * @param p_info           In:   The parser state.
- * @param p_pos            InOut:Position in the buffer.
+ * @param p_info           InOut: The parser state.
+ * @param p_pos            InOut: Position in the buffer.
  * @return The uint16_t from the buffer
  */
 uint16_t pf_get_uint16 (pf_get_info_t * p_info, uint16_t * p_pos);
@@ -43,18 +43,18 @@ uint16_t pf_get_uint16 (pf_get_info_t * p_info, uint16_t * p_pos);
 /**
  * @internal
  * Return a uint32_t from a buffer.
- * @param p_info           In:   The parser state.
- * @param p_pos            InOut:Position in the buffer.
+ * @param p_info           InOut: The parser state.
+ * @param p_pos            InOut: Position in the buffer.
  */
 uint32_t pf_get_uint32 (pf_get_info_t * p_info, uint16_t * p_pos);
 
 /**
  * @internal
  * Extract a sequence of bytes from a buffer.
- * @param p_info           In:   The parser state.
- * @param p_pos            InOut:Position in the buffer.
- * @param dest_size        In:   Number of bytes to copy.
- * @param p_dest           Out:  Destination buffer.
+ * @param p_info           InOut: The parser state.
+ * @param p_pos            InOut: Position in the buffer.
+ * @param dest_size        In:    Number of bytes to copy.
+ * @param p_dest           Out:   Destination buffer.
  */
 void pf_get_mem (
    pf_get_info_t * p_info,
@@ -70,9 +70,9 @@ void pf_get_mem (
  *
  * Reads args_maximum, args_length, maximum_count, offset and actual_count.
  *
- * @param p_info           In:   The parser state.
- * @param p_pos            InOut:Position in the buffer.
- * @param p_ndr            Out:  Destination buffer.
+ * @param p_info           InOut: The parser state.
+ * @param p_pos            InOut: Position in the buffer.
+ * @param p_ndr            Out:   Destination buffer.
  */
 void pf_get_ndr_data (
    pf_get_info_t * p_info,
@@ -81,9 +81,9 @@ void pf_get_ndr_data (
 
 /**
  * Extract a block header from a buffer.
- * @param p_info           In:   The parser state.
- * @param p_pos            InOut:Position in the buffer.
- * @param p_hdr            Out:  Destination buffer.
+ * @param p_info           InOut: The parser state.
+ * @param p_pos            InOut: Position in the buffer.
+ * @param p_hdr            Out:   Destination buffer.
  */
 void pf_get_block_header (
    pf_get_info_t * p_info,
@@ -94,18 +94,18 @@ void pf_get_block_header (
 
 /**
  * Extract an AR param block from a buffer.
- * @param p_info           In:   The parser state.
- * @param p_pos            InOut:Position in the buffer.
- * @param p_ar             Out:  Contains the destination structure.
+ * @param p_info           InOut: The parser state.
+ * @param p_pos            InOut: Position in the buffer.
+ * @param p_ar             Out:   Contains the destination structure.
  */
 void pf_get_ar_param (pf_get_info_t * p_info, uint16_t * p_pos, pf_ar_t * p_ar);
 
 /**
  * Extract an IOCR param block from a buffer.
- * @param p_info           In:   The parser state.
- * @param p_pos            InOut:Position in the buffer.
- * @param ix               In:   The current index into p_ar->iocr[].
- * @param p_ar             Out:  Contains the destination structure.
+ * @param p_info           Inout: The parser state.
+ * @param p_pos            InOut: Position in the buffer.
+ * @param ix               In:    The current index into p_ar->iocr[].
+ * @param p_ar             Out:   Contains the destination structure.
  */
 void pf_get_iocr_param (
    pf_get_info_t * p_info,
@@ -115,9 +115,9 @@ void pf_get_iocr_param (
 
 /**
  * Extract an expected API block from a buffer.
- * @param p_info           In:   The parser state.
- * @param p_pos            InOut:Position in the buffer.
- * @param p_ar             Out:  Contains the destination structure.
+ * @param p_info           InOut: The parser state.
+ * @param p_pos            InOut: Position in the buffer.
+ * @param p_ar             Out:   Contains the destination structure.
  */
 void pf_get_exp_api_module (
    pf_get_info_t * p_info,
@@ -126,9 +126,9 @@ void pf_get_exp_api_module (
 
 /**
  * Extract an alarm CR block from a buffer.
- * @param p_info           In:   The parser state.
- * @param p_pos            InOut:Position in the buffer.
- * @param p_ar             Out:  Contains the destination structure.
+ * @param p_info           InOut: The parser state.
+ * @param p_pos            InOut: Position in the buffer.
+ * @param p_ar             Out:   Contains the destination structure.
  */
 void pf_get_alarm_cr_request (
    pf_get_info_t * p_info,
@@ -137,9 +137,9 @@ void pf_get_alarm_cr_request (
 
 /**
  * Extract an AR RPC request block from a buffer.
- * @param p_info           In:   The parser state.
- * @param p_pos            InOut:Position in the buffer.
- * @param p_ar             Out:  Contains the destination structure.
+ * @param p_info           InOut: The parser state.
+ * @param p_pos            InOut: Position in the buffer.
+ * @param p_ar             Out:   Contains the destination structure.
  */
 void pf_get_ar_rpc_request (
    pf_get_info_t * p_info,
@@ -149,10 +149,10 @@ void pf_get_ar_rpc_request (
 #if PNET_OPTION_AR_VENDOR_BLOCKS
 /**
  * Extract an AR vendor request block from a buffer.
- * @param p_info           In:   The parser state.
- * @param p_pos            InOut:Position in the buffer.
- * @param ix               In:   The current index into p_ar->ar_vendor_xxx[].
- * @param p_ar             Out:  Contains the destination structure.
+ * @param p_info           InOut: The parser state.
+ * @param p_pos            InOut: Position in the buffer.
+ * @param ix               In:    The current index into p_ar->ar_vendor_xxx[].
+ * @param p_ar             Out:   Contains the destination structure.
  */
 void pf_get_ar_vendor_request (
    pf_get_info_t * p_info,
@@ -164,9 +164,9 @@ void pf_get_ar_vendor_request (
 #if PNET_OPTION_PARAMETER_SERVER
 /**
  * Extract a parameter server block from a buffer.
- * @param p_info           In:   The parser state.
- * @param p_pos            InOut:Position in the buffer.
- * @param p_ar             Out:  Contains the destination structure.
+ * @param p_info           Inout: The parser state.
+ * @param p_pos            InOut: Position in the buffer.
+ * @param p_ar             Out:   Contains the destination structure.
  */
 void pf_get_ar_prm_server_request (
    pf_get_info_t * p_info,
@@ -177,10 +177,10 @@ void pf_get_ar_prm_server_request (
 #if PNET_OPTION_MC_CR
 /**
  * Extract an MCR request block from a buffer.
- * @param p_info           In:   The parser state.
- * @param p_pos            InOut:Position in the buffer.
- * @param ix               In:   The current index into p_ar->ar_vendor_xxx[].
- * @param p_ar             Out:  Contains the destination structure.
+ * @param p_info           InOut: The parser state.
+ * @param p_pos            InOut: Position in the buffer.
+ * @param ix               In:    The current index into p_ar->ar_vendor_xxx[].
+ * @param p_ar             Out:   Contains the destination structure.
  */
 void pf_get_mcr_request (
    pf_get_info_t * p_info,
@@ -192,9 +192,9 @@ void pf_get_mcr_request (
 #if PNET_OPTION_IR
 /**
  * Extract an IR info request block from a buffer.
- * @param p_info           In:   The parser state.
- * @param p_pos            InOut:Position in the buffer.
- * @param p_ar             Out:  Contains the destination structure.
+ * @param p_info           InOut: The parser state.
+ * @param p_pos            InOut: Position in the buffer.
+ * @param p_ar             Out:   Contains the destination structure.
  */
 void pf_get_ir_info_request (
    pf_get_info_t * p_info,
@@ -204,10 +204,10 @@ void pf_get_ir_info_request (
 
 /**
  * Extract a DCE RPC header from a raw UDP data buffer.
- * @param p_info           InOut:The parser information. Sets
- * p_info->is_big_endian
- * @param p_pos            InOut:The current parsing position.
- * @param p_rpc            Out:  Destination struture.
+ * @param p_info           InOut: The parser information. Sets
+ *                                p_info->is_big_endian
+ * @param p_pos            InOut: The current parsing position.
+ * @param p_rpc            Out:   Destination struture.
  */
 void pf_get_dce_rpc_header (
    pf_get_info_t * p_info,
@@ -216,9 +216,9 @@ void pf_get_dce_rpc_header (
 
 /**
  * Extract a control request block from a buffer.
- * @param p_info           In:   The parser information.
- * @param p_pos            InOut:The current parsing position.
- * @param p_req            Out:  Destination structure.
+ * @param p_info           InOut: The parser information.
+ * @param p_pos            InOut: The current parsing position.
+ * @param p_req            Out:   Destination structure.
  */
 void pf_get_control (
    pf_get_info_t * p_info,
@@ -227,9 +227,9 @@ void pf_get_control (
 
 /**
  * Extract a read request block from a buffer.
- * @param p_info           In:   The parser information.
- * @param p_pos            InOut:The current parsing position.
- * @param p_req            Out:  Destination structure.
+ * @param p_info           InOut: The parser information.
+ * @param p_pos            InOut: The current parsing position.
+ * @param p_req            Out:   Destination structure.
  */
 void pf_get_read_request (
    pf_get_info_t * p_info,
@@ -238,9 +238,9 @@ void pf_get_read_request (
 
 /**
  * Extract a write request block from a buffer.
- * @param p_info           In:   The parser information.
- * @param p_pos            InOut:The current parsing position.
- * @param p_req            Out:  Destination structure.
+ * @param p_info           InOut: The parser information.
+ * @param p_pos            InOut: The current parsing position.
+ * @param p_req            Out:   Destination structure.
  */
 void pf_get_write_request (
    pf_get_info_t * p_info,
@@ -249,9 +249,9 @@ void pf_get_write_request (
 
 /**
  * Extract a I&M1 data block from a buffer.
- * @param p_info           In:   The parser information.
- * @param p_pos            InOut:The current parsing position.
- * @param p_im_1           Out:  Destination structure.
+ * @param p_info           InOut: The parser information.
+ * @param p_pos            InOut: The current parsing position.
+ * @param p_im_1           Out:   Destination structure.
  */
 void pf_get_im_1 (
    pf_get_info_t * p_info,
@@ -260,9 +260,9 @@ void pf_get_im_1 (
 
 /**
  * Extract the fixed part of an alarm frame from a buffer.
- * @param p_info           In:   The parser information.
- * @param p_pos            InOut:The current parsing position.
- * @param p_alarm_fixed    Out:  Destination structure.
+ * @param p_info           InOut: The parser information.
+ * @param p_pos            InOut: The current parsing position.
+ * @param p_alarm_fixed    Out:   Destination structure.
  */
 void pf_get_alarm_fixed (
    pf_get_info_t * p_info,
@@ -271,7 +271,7 @@ void pf_get_alarm_fixed (
 
 /**
  * Extract an alarm DATA block from a buffer.
- * @param p_info           In:    The parser information.
+ * @param p_info           InOut: The parser information.
  * @param p_pos            InOut: The current parsing position.
  * @param p_alarm_data     Out:   Destination structure. Contains slot, subslot
  * etc.
@@ -283,7 +283,7 @@ void pf_get_alarm_data (
 
 /**
  * Extract an alarm ACK block from a buffer.
- * @param p_info           In:    The parser information.
+ * @param p_info           InOut: The parser information.
  * @param p_pos            InOut: The current parsing position.
  * @param p_alarm_data     Out:   Destination structure. Contains slot, subslot
  * etc.
@@ -295,9 +295,9 @@ void pf_get_alarm_ack (
 
 /**
  * Extract a PNIO status block from a buffer.
- * @param p_info           In:   The parser information.
- * @param p_pos            InOut:The current parsing position.
- * @param p_status         Out:  Destination structure.
+ * @param p_info           Inout: The parser information.
+ * @param p_pos            InOut: The current parsing position.
+ * @param p_status         Out:   Destination structure.
  */
 void pf_get_pnio_status (
    pf_get_info_t * p_info,
@@ -309,9 +309,9 @@ void pf_get_pnio_status (
  * Use the block_header_type to identify which check is
  * contained in buffer and use corresponding parsing operation
  * to retrieve the check data. For example pf_get_port_data_check_check_peers().
- * @param p_info              In:   The parser information.
- * @param p_pos               InOut:The current parsing position.
- * @param p_port_data_check:  Out:  Destination structure
+ * @param p_info              InOut: The parser information.
+ * @param p_pos               InOut: The current parsing position.
+ * @param p_port_data_check:  Out:   Destination structure
  */
 void pf_get_port_data_check (
    pf_get_info_t * p_info,
@@ -320,10 +320,10 @@ void pf_get_port_data_check (
 
 /**
  * Extract CheckPeer data blocks from buffer.
- * @param p_info              In:   The parser information.
- * @param p_pos               InOut:The current parsing position.
- * @param max_peers:          In:   Number of elements in destination array
- * @param check_peers:        Out:  Array of destination structures
+ * @param p_info              InOut: The parser information.
+ * @param p_pos               InOut: The current parsing position.
+ * @param max_peers:          In:    Number of elements in destination array
+ * @param check_peers:        Out:   Array of destination structures
  */
 void pf_get_port_data_check_check_peers (
    pf_get_info_t * p_info,
@@ -337,9 +337,9 @@ void pf_get_port_data_check_check_peers (
  * contained in buffer and use corresponding parsing operation
  * to retrieve the data. For example
  * pf_get_port_data_adjust_peer_to_peer_boundary().
- * @param p_info                   In:   The parser information.
- * @param p_pos                    InOut:The current parsing position.
- * @param pf_port_data_adjust_t:   Out:  Destination structure
+ * @param p_info                   InOut: The parser information.
+ * @param p_pos                    InOut: The current parsing position.
+ * @param pf_port_data_adjust_t:   Out:   Destination structure
  */
 void pf_get_port_data_adjust (
    pf_get_info_t * p_info,
@@ -348,9 +348,9 @@ void pf_get_port_data_adjust (
 
 /**
  * Extract a AdjustPeerToPeerBoundary data block from a buffer.
- * @param p_info           In:   The parser information.
- * @param p_pos            InOut:The current parsing position.
- * @param p_im_1           Out:  Destination structure.
+ * @param p_info           InOut: The parser information.
+ * @param p_pos            InOut: The current parsing position.
+ * @param p_im_1           Out:   Destination structure.
  */
 void pf_get_port_data_adjust_peer_to_peer_boundary (
    pf_get_info_t * p_info,

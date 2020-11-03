@@ -126,9 +126,9 @@ int os_load_file (
  */
 int os_save_file (
    const char * fullpath,
-   void * object_1,
+   const void * object_1,
    size_t size_1,
-   void * object_2,
+   const void * object_2,
    size_t size_2);
 
 /**
@@ -149,7 +149,7 @@ uint8_t os_buf_header (os_buf_t * p, int16_t header_size_increment);
  * @param buf           In: Buffer with data to be sent
  * @return  The number of bytes sent, or -1 if an error occurred.
  */
-int os_eth_send (os_eth_handle_t * handle, os_buf_t * buf);
+int os_eth_send (os_eth_handle_t * handle, const os_buf_t * buf);
 
 /**
  * Initialize receiving of raw Ethernet frames (in separate thread)
@@ -318,9 +318,9 @@ int os_get_hostname (char * hostname);
  */
 int os_set_ip_suite (
    const char * interface_name,
-   os_ipaddr_t * p_ipaddr,
-   os_ipaddr_t * p_netmask,
-   os_ipaddr_t * p_gw,
+   const os_ipaddr_t * p_ipaddr,
+   const os_ipaddr_t * p_netmask,
+   const os_ipaddr_t * p_gw,
    const char * hostname,
    bool permanent);
 

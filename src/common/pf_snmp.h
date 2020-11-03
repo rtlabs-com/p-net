@@ -187,7 +187,7 @@ typedef struct pf_snmp_system_location
  * software. It is mandatory that this only contain
  * printable ASCII characters."
  * - IETF RFC 3418 (SNMP MIB-II) ch. 6 "Definitions".
- * 
+ *
  * Note that MIB-II's sysDescr should have the same value as LLDP's
  * lldpLocSysDesc and (preferably) as Profinet's SystemIdentification.
  * The Chassis ID may also be encoded as SystemIdentification.
@@ -243,9 +243,7 @@ void pf_snmp_get_system_name (pnet_t * net, pf_snmp_system_name_t * p_name);
  * @return  0  if the operation succeeded.
  *         -1 if an error occurred (could not store to file).
  */
-int pf_snmp_set_system_name (
-   pnet_t * net,
-   const pf_snmp_system_name_t * p_name);
+int pf_snmp_set_system_name (pnet_t * net, const pf_snmp_system_name_t * p_name);
 
 /**
  * Get system contact.
@@ -750,7 +748,7 @@ int pf_snmp_get_peer_signal_delays (
  * - lldpXdot3LocPortAutoNegAdvertisedCap,
  * - lldpXdot3LocPortOperMauType,
  * - lldpLocPortNum.
- * 
+ *
  * Note that in SNMP, bool variables (type TruthValue in SNMP) are encoded as
  * 1 if true, but 2 if false.
  *
@@ -776,7 +774,7 @@ void pf_snmp_get_link_status (
  * - lldpXdot3RemPortAutoNegAdvertisedCap,
  * - lldpXdot3RemPortOperMauType,
  * - lldpRemLocalPortNum.
- * 
+ *
  * Note that in SNMP, bool variables (type TruthValue in SNMP) are encoded as
  * 1 if true, but 2 if false.
  *

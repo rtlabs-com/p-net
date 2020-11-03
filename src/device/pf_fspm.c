@@ -33,7 +33,7 @@
 #include "pf_includes.h"
 #include "pf_block_reader.h"
 
-void pf_fspm_im_show (pnet_t * net)
+void pf_fspm_im_show (const pnet_t * net)
 {
    printf ("Identification & Maintenance\n");
    printf (
@@ -52,7 +52,7 @@ void pf_fspm_im_show (pnet_t * net)
                                                 for now */
 }
 
-void pf_fspm_logbook_show (pnet_t * net)
+void pf_fspm_logbook_show (const pnet_t * net)
 {
    uint16_t ix;
 
@@ -84,7 +84,7 @@ void pf_fspm_logbook_show (pnet_t * net)
    }
 }
 
-void pf_fspm_option_show (pnet_t * net)
+void pf_fspm_option_show (const pnet_t * net)
 {
    printf ("Compile time options affecting memory consumption:\n");
    printf ("PNET_MAX_AR                                    : %d\n", PNET_MAX_AR);
@@ -254,10 +254,7 @@ static void pf_fspm_load_logbook (pnet_t * net)
    {
       LOG_DEBUG (PNET_LOG, "FSPM(%d): Did read logbook from nvm.\n", __LINE__);
       os_mutex_lock (net->fspm_log_book_mutex);
-      memcpy (
-         &net->fspm_log_book,
-         &log_book_copy,
-         sizeof (pf_log_book_t));
+      memcpy (&net->fspm_log_book, &log_book_copy, sizeof (pf_log_book_t));
       os_mutex_unlock (net->fspm_log_book_mutex);
    }
    else
@@ -289,10 +286,7 @@ static void pf_fspm_save_logbook (pnet_t * net)
    int res = 0;
 
    os_mutex_lock (net->fspm_log_book_mutex);
-   memcpy (
-      &log_book_copy,
-      &net->fspm_log_book,
-      sizeof (pf_log_book_t));
+   memcpy (&log_book_copy, &net->fspm_log_book, sizeof (pf_log_book_t));
    os_mutex_unlock (net->fspm_log_book_mutex);
 
    (void)pf_cmina_get_file_directory (net, &p_file_directory);
@@ -559,7 +553,7 @@ void pf_fspm_get_default_cfg (pnet_t * net, const pnet_cfg_t ** pp_cfg)
    }
 }
 
-int16_t pf_cmina_get_min_device_interval (pnet_t * net)
+int16_t pf_cmina_get_min_device_interval (const pnet_t * net)
 {
    return net->fspm_cfg.min_device_interval;
 }
@@ -613,8 +607,8 @@ int pf_fspm_exp_submodule_ind (
 
 int pf_fspm_data_status_changed (
    pnet_t * net,
-   pf_ar_t * p_ar,
-   pf_iocr_t * p_iocr,
+   const pf_ar_t * p_ar,
+   const pf_iocr_t * p_iocr,
    uint8_t changes,
    uint8_t data_status)
 {
@@ -634,7 +628,10 @@ int pf_fspm_data_status_changed (
    return ret;
 }
 
-int pf_fspm_ccontrol_cnf (pnet_t * net, pf_ar_t * p_ar, pnet_result_t * p_result)
+int pf_fspm_ccontrol_cnf (
+   pnet_t * net,
+   const pf_ar_t * p_ar,
+   pnet_result_t * p_result)
 {
    int ret = 0;
 
@@ -649,8 +646,8 @@ int pf_fspm_ccontrol_cnf (pnet_t * net, pf_ar_t * p_ar, pnet_result_t * p_result
 
 int pf_fspm_cm_read_ind (
    pnet_t * net,
-   pf_ar_t * p_ar,
-   pf_iod_read_request_t * p_read_request,
+   const pf_ar_t * p_ar,
+   const pf_iod_read_request_t * p_read_request,
    uint8_t ** pp_read_data,
    uint16_t * p_read_length,
    pnet_result_t * p_read_status)
@@ -828,8 +825,8 @@ int pf_fspm_cm_read_ind (
 
 int pf_fspm_cm_write_ind (
    pnet_t * net,
-   pf_ar_t * p_ar,
-   pf_iod_write_request_t * p_write_request,
+   const pf_ar_t * p_ar,
+   const pf_iod_write_request_t * p_write_request,
    uint16_t write_length,
    uint8_t * p_write_data,
    pnet_result_t * p_write_status)
@@ -1095,7 +1092,7 @@ int pf_fspm_cm_write_ind (
 
 int pf_fspm_cm_connect_ind (
    pnet_t * net,
-   pf_ar_t * p_ar,
+   const pf_ar_t * p_ar,
    pnet_result_t * p_result)
 {
    int ret = 0;
@@ -1111,7 +1108,7 @@ int pf_fspm_cm_connect_ind (
 
 int pf_fspm_cm_release_ind (
    pnet_t * net,
-   pf_ar_t * p_ar,
+   const pf_ar_t * p_ar,
    pnet_result_t * p_result)
 {
    int ret = 0;
@@ -1127,7 +1124,7 @@ int pf_fspm_cm_release_ind (
 
 int pf_fspm_cm_dcontrol_ind (
    pnet_t * net,
-   pf_ar_t * p_ar,
+   const pf_ar_t * p_ar,
    pnet_control_command_t control_command,
    pnet_result_t * p_result)
 {
@@ -1146,7 +1143,10 @@ int pf_fspm_cm_dcontrol_ind (
    return ret;
 }
 
-int pf_fspm_state_ind (pnet_t * net, pf_ar_t * p_ar, pnet_event_values_t event)
+int pf_fspm_state_ind (
+   pnet_t * net,
+   const pf_ar_t * p_ar,
+   pnet_event_values_t event)
 {
    int ret = 0;
 
@@ -1169,11 +1169,11 @@ int pf_fspm_state_ind (pnet_t * net, pf_ar_t * p_ar, pnet_event_values_t event)
 
 int pf_fspm_alpmr_alarm_ind (
    pnet_t * net,
-   pf_ar_t * p_ar,
+   const pf_ar_t * p_ar,
    const pnet_alarm_argument_t * p_alarm_arg,
    uint16_t data_len,
    uint16_t data_usi,
-   uint8_t * p_data)
+   const uint8_t * p_data)
 {
    int ret = 0;
 
@@ -1194,8 +1194,8 @@ int pf_fspm_alpmr_alarm_ind (
 
 int pf_fspm_alpmi_alarm_cnf (
    pnet_t * net,
-   pf_ar_t * p_ar,
-   pnet_pnio_status_t * p_pnio_status)
+   const pf_ar_t * p_ar,
+   const pnet_pnio_status_t * p_pnio_status)
 {
    int ret = 0;
 
@@ -1211,7 +1211,7 @@ int pf_fspm_alpmi_alarm_cnf (
    return ret;
 }
 
-int pf_fspm_alpmr_alarm_ack_cnf (pnet_t * net, pf_ar_t * p_ar, int res)
+int pf_fspm_alpmr_alarm_ack_cnf (pnet_t * net, const pf_ar_t * p_ar, int res)
 {
    int ret = 0;
 

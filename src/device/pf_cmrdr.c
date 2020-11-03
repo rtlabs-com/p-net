@@ -39,7 +39,7 @@
 int pf_cmrdr_rm_read_ind (
    pnet_t * net,
    pf_ar_t * p_ar,
-   pf_iod_read_request_t * p_read_request,
+   const pf_iod_read_request_t * p_read_request,
    pnet_result_t * p_read_status,
    uint16_t res_size,
    uint8_t * p_res,

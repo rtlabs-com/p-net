@@ -62,13 +62,13 @@ int pf_diag_exit (void)
  * Update the problem indicator for all input/producer CRs of a sub-slot.
  *
  * @param net              InOut: The p-net stack instance.
- * @param p_ar             In:    The AR instance.
+ * @param p_ar             InOut: The AR instance.
  * @param p_subslot        In:    The sub-slot instance.
  */
 static void pf_diag_update_station_problem_indicator (
    pnet_t * net,
    pf_ar_t * p_ar,
-   pf_subslot_t * p_subslot)
+   const pf_subslot_t * p_subslot)
 {
    bool is_problem = false;
    pf_device_t * p_dev = NULL;
@@ -232,7 +232,7 @@ int pf_diag_add (
    uint32_t ext_ch_add_value,
    uint32_t qual_ch_qualifier,
    uint16_t usi,
-   uint8_t * p_manuf_data)
+   const uint8_t * p_manuf_data)
 
 {
    int ret = -1;
@@ -392,7 +392,7 @@ int pf_diag_update (
    uint16_t ext_ch_error_type,
    uint32_t ext_ch_add_value,
    uint16_t usi,
-   uint8_t * p_manuf_data)
+   const uint8_t * p_manuf_data)
 {
    int ret = -1;
    pf_device_t * p_dev = NULL;
@@ -674,7 +674,7 @@ int pf_diag_usi_add (
    uint16_t slot_nbr,
    uint16_t subslot_nbr,
    uint16_t usi,
-   uint8_t * p_manuf_data)
+   const uint8_t * p_manuf_data)
 {
    pnet_diag_source_t diag_source = {
       .api = api_id,
@@ -718,7 +718,7 @@ int pf_diag_usi_update (
    uint16_t slot_nbr,
    uint16_t subslot_nbr,
    uint16_t usi,
-   uint8_t * p_manuf_data)
+   const uint8_t * p_manuf_data)
 {
    pnet_diag_source_t diag_source = {
       .api = api_id,

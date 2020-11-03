@@ -199,7 +199,7 @@ int pf_file_load (
 int pf_file_save (
    const char * directory,
    const char * filename,
-   void * p_object,
+   const void * p_object,
    size_t size)
 {
    char path[PNET_MAX_FILE_FULLPATH_LEN];
@@ -240,7 +240,7 @@ int pf_file_save (
 int pf_file_save_if_modified (
    const char * directory,
    const char * filename,
-   void * p_object,
+   const void * p_object,
    void * p_tempobject,
    size_t size)
 {

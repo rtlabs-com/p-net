@@ -47,7 +47,7 @@ int pf_cmina_remove_all_data_files (const char * file_directory);
  *
  * @param net              InOut: The p-net stack instance
  */
-void pf_cmina_interface_statistics_show (pnet_t * net);
+void pf_cmina_interface_statistics_show (const pnet_t * net);
 
 /**
  * Show the CMINA status.
@@ -121,7 +121,7 @@ int pf_cmina_dcp_set_ind (
    uint8_t sub,
    uint16_t block_qualifier,
    uint16_t value_length,
-   uint8_t * p_value,
+   const uint8_t * p_value,
    uint8_t * p_block_error);
 
 /**
@@ -194,9 +194,9 @@ bool pf_cmina_is_gateway_valid (
    os_ipaddr_t netmask,
    os_ipaddr_t gateway);
 
-bool pf_cmina_is_ipsuite_valid (pf_ip_suite_t * p_ipsuite);
+bool pf_cmina_is_ipsuite_valid (const pf_ip_suite_t * p_ipsuite);
 
-bool pf_cmina_is_full_ipsuite_valid (pf_full_ip_suite_t * p_full_ipsuite);
+bool pf_cmina_is_full_ipsuite_valid (const pf_full_ip_suite_t * p_full_ipsuite);
 
 #ifdef __cplusplus
 }

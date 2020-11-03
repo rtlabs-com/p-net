@@ -125,7 +125,7 @@ int my_write_ind (
    uint16_t idx,
    uint16_t sequence_number,
    uint16_t write_length,
-   uint8_t * p_write_data,
+   const uint8_t * p_write_data,
    pnet_result_t * p_result)
 {
    app_data_for_testing_t * p_appdata = (app_data_for_testing_t *)arg;
@@ -163,7 +163,7 @@ int my_alarm_ind (
    const pnet_alarm_argument_t * p_alarm_arg,
    uint16_t data_len,
    uint16_t data_usi,
-   uint8_t * p_data)
+   const uint8_t * p_data)
 {
    TEST_TRACE ("Callback on alarm\n");
    return 0;
@@ -173,7 +173,7 @@ int my_alarm_cnf (
    pnet_t * net,
    void * arg,
    uint32_t arep,
-   pnet_pnio_status_t * p_pnio_status)
+   const pnet_pnio_status_t * p_pnio_status)
 {
    TEST_TRACE ("Callback on alarm confirmation\n");
    return 0;

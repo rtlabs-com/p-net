@@ -131,7 +131,7 @@ int pf_dcp_hello_req (pnet_t * net);
 /************ Internal functions, made available for unit testing ************/
 
 uint32_t pf_dcp_calculate_response_delay (
-   pnet_ethaddr_t * mac_address,
+   const pnet_ethaddr_t * mac_address,
    uint16_t response_delay_factor);
 
 #ifdef __cplusplus

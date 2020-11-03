@@ -63,9 +63,9 @@ int mock_os_get_ip_suite (
 
 int mock_os_set_ip_suite (
    const char * interface_name,
-   os_ipaddr_t * p_ipaddr,
-   os_ipaddr_t * p_netmask,
-   os_ipaddr_t * p_gw,
+   const os_ipaddr_t * p_ipaddr,
+   const os_ipaddr_t * p_netmask,
+   const os_ipaddr_t * p_gw,
    const char * hostname,
    bool permanent)
 {
@@ -73,7 +73,7 @@ int mock_os_set_ip_suite (
    return 0;
 }
 
-int mock_os_eth_send (os_eth_handle_t * handle, os_buf_t * p_buf)
+int mock_os_eth_send (os_eth_handle_t * handle, const os_buf_t * p_buf)
 {
    memcpy (mock_os_data.eth_send_copy, p_buf->payload, p_buf->len);
    mock_os_data.eth_send_len = p_buf->len;
@@ -141,9 +141,9 @@ void mock_os_udp_close (uint32_t id)
 
 int mock_os_save_file (
    const char * fullpath,
-   void * object_1,
+   const void * object_1,
    size_t size_1,
-   void * object_2,
+   const void * object_2,
    size_t size_2)
 {
    int pos = 0;

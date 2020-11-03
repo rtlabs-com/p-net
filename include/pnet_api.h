@@ -71,7 +71,7 @@ extern "C" {
 #define PNET_SUBMOD_DAP_INTERFACE_1_IDENT        0x00008000
 #define PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT 0x00008001
 
-#define PNET_API_NO_APPLICATION_PROFILE   0
+#define PNET_API_NO_APPLICATION_PROFILE 0
 
 /**
  * # Error Codes
@@ -737,7 +737,7 @@ typedef int (*pnet_write_ind) (
    uint16_t idx,
    uint16_t sequence_number,
    uint16_t write_length,
-   uint8_t * p_write_data,
+   const uint8_t * p_write_data,
    pnet_result_t * p_result);
 
 /**
@@ -859,7 +859,7 @@ typedef int (*pnet_new_data_status_ind) (
  * alarm_type etc)
  * @param data_len         In:    Data length
  * @param data_usi         In:    Alarm USI
- * @param p_data           InOut: Alarm data
+ * @param p_data           In:    Alarm data
  * @return  0  on success.
  *          -1 if an error occurred.
  */
@@ -870,7 +870,7 @@ typedef int (*pnet_alarm_ind) (
    const pnet_alarm_argument_t * p_alarm_argument,
    uint16_t data_len,
    uint16_t data_usi,
-   uint8_t * p_data);
+   const uint8_t * p_data);
 
 /**
  * The controller acknowledges the alarm sent previously.
@@ -893,7 +893,7 @@ typedef int (*pnet_alarm_cnf) (
    pnet_t * net,
    void * arg,
    uint32_t arep,
-   pnet_pnio_status_t * p_pnio_status);
+   const pnet_pnio_status_t * p_pnio_status);
 
 /**
  * The controller acknowledges the alarm ACK sent previously.
@@ -1520,7 +1520,7 @@ PNET_EXPORT int pnet_input_set_data_and_iops (
    uint32_t api,
    uint16_t slot,
    uint16_t subslot,
-   uint8_t * p_data,
+   const uint8_t * p_data,
    uint16_t data_len,
    uint8_t iops);
 
@@ -1752,7 +1752,7 @@ PNET_EXPORT int pnet_alarm_send_process_alarm (
    uint16_t subslot,
    uint16_t payload_usi,
    uint16_t payload_len,
-   uint8_t * p_payload);
+   const uint8_t * p_payload);
 
 /**
  * Application acknowledges the reception of an alarm from the controller.
@@ -1768,7 +1768,7 @@ PNET_EXPORT int pnet_alarm_send_process_alarm (
  * @param net                    InOut: The p-net stack instance
  * @param arep                   In:    The AREP.
  * @param p_alarm_argument       In:    The alarm argument (with slot, subslot,
- * alarm_type etc)
+ *                                      alarm_type etc)
  * @param p_pnio_status          In:    Detailed ACK status.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
@@ -1776,8 +1776,8 @@ PNET_EXPORT int pnet_alarm_send_process_alarm (
 PNET_EXPORT int pnet_alarm_send_ack (
    pnet_t * net,
    uint32_t arep,
-   pnet_alarm_argument_t * p_alarm_argument,
-   pnet_pnio_status_t * p_pnio_status);
+   const pnet_alarm_argument_t * p_alarm_argument,
+   const pnet_pnio_status_t * p_pnio_status);
 
 /* ****************************** Diagnosis ****************************** */
 /* Mask and position of bit fields and values within ch_properties         */
@@ -2017,7 +2017,7 @@ PNET_EXPORT int pnet_diag_usi_add (
    uint16_t slot,
    uint16_t subslot,
    uint16_t usi,
-   uint8_t * p_manuf_data);
+   const uint8_t * p_manuf_data);
 
 /**
  * Update the manufacturer specific data, for a diagnosis entry in
@@ -2046,7 +2046,7 @@ PNET_EXPORT int pnet_diag_usi_update (
    uint16_t slot,
    uint16_t subslot,
    uint16_t usi,
-   uint8_t * p_manuf_data);
+   const uint8_t * p_manuf_data);
 
 /**
  * Remove a diagnosis entry in manufacturer-specified ("USI") format.

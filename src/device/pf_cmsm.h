@@ -31,9 +31,9 @@ int pf_cmsm_activate (pf_ar_t * p_ar);
 /**
  * Handle incoming CMDEV events.
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:    The AR instance, or NULL.
- * @param event            In:    The new CMDEV state. Use PNET_EVENT_..., not
- * PF_CMDEV_STATE_...
+ * @param p_ar             InOut: The AR instance, or NULL.
+ * @param event            In:    The new CMDEV state. Use PNET_EVENT_xxx, not
+ *                                PF_CMDEV_STATE_xxx
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -47,8 +47,8 @@ int pf_cmsm_cmdev_state_ind (
  * Only if index is PF_IDX_DEV_CONN_MON_TRIGGER
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:   The AR instance, or NULL.
- * @param p_read_request   In:   The read request.
+ * @param p_ar             InOut: The AR instance, or NULL.
+ * @param p_read_request   In:    The read request.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -60,34 +60,34 @@ int pf_cmsm_rm_read_ind (
 /**
  * Handle incoming RPC read requests, by restarting the timer if running.
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:   The AR instance, or NULL.
- * @param p_read_request   In:   The read request.
+ * @param p_ar             InOut: The AR instance, or NULL.
+ * @param p_read_request   In:    The read request. not used.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
 int pf_cmsm_cm_read_ind (
    pnet_t * net,
    pf_ar_t * p_ar,
-   pf_iod_read_request_t * p_read_request);
+   const pf_iod_read_request_t * p_read_request);
 
 /**
  * Handle incoming RPC write requests, by restarting the timer if running.
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:   The AR instance, or NULL.
- * @param p_write_request  In:   The write request.
+ * @param p_ar             InOut: The AR instance, or NULL.
+ * @param p_write_request  In:    The write request. Not used.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
 int pf_cmsm_cm_write_ind (
    pnet_t * net,
    pf_ar_t * p_ar,
-   pf_iod_write_request_t * p_write_request);
+   const pf_iod_write_request_t * p_write_request);
 
 /**
  * Print information about CMSM for the specified AR.
  * @param p_ar             In:   The AR instance, or NULL.
  */
-void pf_cmsm_show (pf_ar_t * p_ar);
+void pf_cmsm_show (const pf_ar_t * p_ar);
 
 #ifdef __cplusplus
 }

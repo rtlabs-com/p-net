@@ -75,8 +75,8 @@ void pf_cpm_init (pnet_t * net)
 /**
  * @internal
  * Change the CPM state.
- * @param p_spm            In:   The CPM instance.
- * @param state            In:   The new CPM state.
+ * @param p_spm            InOut: The CPM instance.
+ * @param state            In:    The new CPM state.
  */
 static void pf_cpm_set_state (pf_cpm_t * p_cpm, pf_cpm_state_values_t state)
 {
@@ -95,7 +95,7 @@ static void pf_cpm_set_state (pf_cpm_t * p_cpm, pf_cpm_state_values_t state)
  * @internal
  * Notify other components about CPM events.
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:    The AR instance.
+ * @param p_ar             InOut: The AR instance.
  * @param crep             In:    The IOCR index
  * @param start            In:    Start/Stop indicator. True if CPM is starting.
  */
@@ -305,11 +305,11 @@ int pf_cpm_check_cycle (int32_t prev, uint16_t now)
 /**
  * @internal
  * Perform a check of the source address of the received frame.
- * @param p_cpm            In:   The CPM instance.
- * @param p_buf            In:   The frame buffer.
+ * @param p_cpm            In:    The CPM instance.
+ * @param p_buf            In:    The frame buffer.
  * @return
  */
-static int pf_cpm_check_src_addr (pf_cpm_t * p_cpm, os_buf_t * p_buf)
+static int pf_cpm_check_src_addr (const pf_cpm_t * p_cpm, const os_buf_t * p_buf)
 {
    int ret = -1;
 
@@ -330,9 +330,9 @@ static int pf_cpm_check_src_addr (pf_cpm_t * p_cpm, os_buf_t * p_buf)
  * @internal
  * Replace the current buffer with a newer one and set the new_buf flag.
  * @param net              InOut: The p-net stack instance
- * @param p_cpm            In:   The CPM instance.
- * @param pp_buf           In:   The new buffer.
- *                         Out:  The previous buffer.
+ * @param p_cpm            InOut: The CPM instance.
+ * @param pp_buf           In:    The new buffer.
+ *                         Out:   The previous buffer.
  */
 static void pf_cpm_put_buf (pnet_t * net, pf_cpm_t * p_cpm, os_buf_t ** pp_buf)
 {
@@ -350,9 +350,9 @@ static void pf_cpm_put_buf (pnet_t * net, pf_cpm_t * p_cpm, os_buf_t ** pp_buf)
  * @internal
  * Make sure that p_buffer_app points to the newest received buffer.
  * @param net              InOut: The p-net stack instance
- * @param p_cpm            In:  The CPM instance.
- * @param p_new_flag       Out: true if a new valid data frame has been
- * received.
+ * @param p_cpm            InOut: The CPM instance.
+ * @param p_new_flag       Out:   true if a new valid data frame has been
+ *                         received.
  * @param pp_buffer        Out: A pointer to the latest received data (or NULL).
  */
 static void pf_cpm_get_buf (
@@ -945,14 +945,14 @@ int pf_cpm_get_iocs (
    return ret;
 }
 
-int pf_cpm_get_data_status (pf_cpm_t * p_cpm, uint8_t * p_data_status)
+int pf_cpm_get_data_status (const pf_cpm_t * p_cpm, uint8_t * p_data_status)
 {
    *p_data_status = p_cpm->data_status;
 
    return 0;
 }
 
-void pf_cpm_show (pnet_t * net, pf_cpm_t * p_cpm)
+void pf_cpm_show (const pnet_t * net, const pf_cpm_t * p_cpm)
 {
    printf ("cpm:\n");
    printf ("   instance_cnt       = %u\n", (unsigned)net->cpm_instance_cnt);

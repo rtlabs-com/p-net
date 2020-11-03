@@ -41,7 +41,7 @@ int pf_eth_init (pnet_t * net)
    return ret;
 }
 
-int pf_eth_send (pnet_t * net, os_eth_handle_t * handle, os_buf_t * buf)
+int pf_eth_send (pnet_t * net, os_eth_handle_t * handle, const os_buf_t * buf)
 {
    int sent_len = 0;
 
@@ -65,7 +65,7 @@ int pf_eth_recv (void * arg, os_buf_t * p_buf)
    uint16_t eth_type = 0;
    uint16_t frame_id = 0;
    uint16_t frame_pos = 0;
-   uint16_t * p_data = NULL;
+   const uint16_t * p_data = NULL;
    uint16_t ix = 0;
    pnet_t * net = (pnet_t *)arg;
 

@@ -29,7 +29,7 @@
  * @param bytes      In: inputbuffer
  * @param len        In: Number of bytes to print
  */
-static void print_bytes (uint8_t * bytes, int32_t len)
+static void print_bytes (const uint8_t * bytes, int32_t len)
 {
    printf ("  Bytes: ");
    for (int i = 0; i < len; i++)
@@ -478,7 +478,7 @@ static int app_write_ind (
    uint16_t idx,
    uint16_t sequence_number,
    uint16_t write_length,
-   uint8_t * p_write_data,
+   const uint8_t * p_write_data,
    pnet_result_t * p_result)
 {
    app_data_t * p_appdata = (app_data_t *)arg;
@@ -1084,7 +1084,7 @@ static int app_alarm_ind (
    const pnet_alarm_argument_t * p_alarm_arg,
    uint16_t data_len,
    uint16_t data_usi,
-   uint8_t * p_data)
+   const uint8_t * p_data)
 {
    app_data_t * p_appdata = (app_data_t *)arg;
 
@@ -1112,7 +1112,7 @@ static int app_alarm_cnf (
    pnet_t * net,
    void * arg,
    uint32_t arep,
-   pnet_pnio_status_t * p_pnio_status)
+   const pnet_pnio_status_t * p_pnio_status)
 {
    app_data_t * p_appdata = (app_data_t *)arg;
 

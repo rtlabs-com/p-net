@@ -71,6 +71,9 @@ void pf_scheduler_tick (pnet_t * net);
 
 /**
  * Show scheduler (busy and free) instances.
+ *
+ * Locks the mutex temporarily.
+ *
  * @param net              InOut: The p-net stack instance
  */
 void pf_scheduler_show (pnet_t * net);

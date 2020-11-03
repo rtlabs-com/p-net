@@ -87,9 +87,9 @@ void pf_set_error (
  * are released, and the global RPC socket is re-opened.
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:    The AR instance.
- * @param event            In:    The new CMDEV state. Use PNET_EVENT_..., not
- * PF_CMDEV_STATE_...
+ * @param p_ar             InOut: The AR instance.
+ * @param event            In:    The new CMDEV state. Use PNET_EVENT_xxx, not
+ *                                PF_CMDEV_STATE_xxx
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -105,7 +105,7 @@ int pf_cmrpc_cmdev_state_ind (
  * Opens a new UDP socket for the session.
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:   The AR instance.
+ * @param p_ar             InOut: The AR instance.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */

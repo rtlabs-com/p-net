@@ -198,9 +198,9 @@ uint32_t pf_get_bits (uint32_t bits, uint8_t pos, uint8_t len)
 /**
  * @internal
  * Extract a frame descriptor from a buffer.
- * @param p_info           In:   The parser state.
- * @param p_pos            InOut:Position in the buffer.
- * @param p_fd             Out:  Destination buffer.
+ * @param p_info           InOut: The parser state.
+ * @param p_pos            InOut: Position in the buffer.
+ * @param p_fd             Out:   Destination buffer.
  */
 static void pf_get_frame_descriptor (
    pf_get_info_t * p_info,
@@ -215,9 +215,9 @@ static void pf_get_frame_descriptor (
 /**
  * @internal
  * Extract an IOCR API entry from a buffer.
- * @param p_info           In:   The parser state.
- * @param p_pos            InOut:Position in the buffer.
- * @param p_ae             Out:  Destination buffer.
+ * @param p_info           InOut: The parser state.
+ * @param p_pos            InOut: Position in the buffer.
+ * @param p_ae             Out:   Destination buffer.
  */
 static void pf_get_iocr_api_entry (
    pf_get_info_t * p_info,
@@ -244,9 +244,9 @@ static void pf_get_iocr_api_entry (
 /**
  * @internal
  * Extract an expected sub-module from a buffer.
- * @param p_info           In:   The parser state.
- * @param p_pos            InOut:Position in the buffer.
- * @param p_sub            Out:  Destination buffer.
+ * @param p_info           InOut: The parser state.
+ * @param p_pos            InOut: Position in the buffer.
+ * @param p_sub            Out:   Destination buffer.
  */
 static void pf_get_exp_submodule (
    pf_get_info_t * p_info,
