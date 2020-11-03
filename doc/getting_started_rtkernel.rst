@@ -61,31 +61,26 @@ Download and compile p-net
 --------------------------
 Clone the source::
 
-    mkdir profinet
-    cd profinet
-    git clone https://github.com/rtlabs-com/p-net.git
+    git clone --recurse-submodules https://github.com/rtlabs-com/p-net.git
 
-Out-of-tree builds are recommended. Create a build directory and run the
-following commands from that directory. In the following instructions, the
-root folder for the repo is assumed to be an absolute or relative path in an
-environment variable named repo.
+The CMake build files for rt-kernel need to know which BSP you want to
+use, as well as the path to your rt-kernel source tree. Run the
+following to create and configure the build::
 
-Create a build directory (on same level as p-net directory) and run cmake::
+    RTK=<PATH TO YOUR MODIFIED>/rt-kernel-xmc4 \
+    BSP=xmc48relax \
+    cmake --B build -S p-net \
+    -DCMAKE_TOOLCHAIN_FILE=cmake/tools/toolchain/rt-kernel.cmake \
+    -DCMAKE_ECLIPSE_EXECUTABLE=/opt/rt-tools/workbench/Workbench \
+    -DCMAKE_ECLIPSE_GENERATE_SOURCE_PROJECT=TRUE -G "Eclipse CDT4 - Unix Makefiles"
 
-    mkdir build
-    cd build
-    export COMPILERS=/opt/rt-tools/compilers
-    export RTK=<PATH TO YOUR MODIFIED>/rt-kernel-xmc4/
-    export BSP=xmc48relax
+Depending on how you installed cmake, you might need to run ``snap run
+cmake`` instead of ``cmake``. This creates build files in a folder
+named ``build``. You can choose any name for the build folder, for
+instance if you want to build for multiple targets.
 
-The cmake executable is assumed to be in your path. Run::
-
-    cmake ../p-net -DCMAKE_TOOLCHAIN_FILE=../p-net/cmake/toolchain/rt-kernel-xmc4.cmake -DLOG_LEVEL=DEBUG -DBUILD_TESTING=OFF -DCMAKE_ECLIPSE_EXECUTABLE=/opt/rt-tools/workbench/Workbench -DCMAKE_ECLIPSE_GENERATE_SOURCE_PROJECT=TRUE -G "Eclipse CDT4 - Unix Makefiles"
-
-Depending on how you installed cmake, you might need to run ``snap run cmake``
-instead of ``cmake``.
-
-After running ``cmake`` you can run ``ccmake`` or ``cmake-gui`` to change settings.
+After running ``cmake`` you can run ``ccmake build`` or ``cmake-gui``
+in the build folder to change settings.
 
 Start Workbench::
 
@@ -169,13 +164,16 @@ Standalone rt-kernel project
 ----------------------------
 This creates standalone makefiles.
 
-Use::
+Configure the build::
 
-    user@host:~/build$ cmake $repo \
-        -DCMAKE_TOOLCHAIN_FILE=$repo/cmake/toolchain/rt-kernel-arm9e.cmake \
-        -G "Unix Makefiles"
-    user@host:~/build$ make all
+    RTK=<PATH TO YOUR MODIFIED>/rt-kernel-xmc4 \
+    BSP=xmc48relax \
+    cmake --B build -S p-net \
+    -DCMAKE_TOOLCHAIN_FILE=cmake/tools/toolchain/rt-kernel.cmake
 
+Build the code::
+
+    cmake --build build
 
 PLC timing settings
 -------------------
@@ -217,17 +215,17 @@ Examining flash and RAM usage
 The flash and RAM usage is shown by the tool ``arm-eabi-size``.
 In this example we use::
 
-   BUILD_SHARED_LIBS ON
    CMAKE_BUILD_TYPE Release
    LOG_LEVEL Warning
    PNET_MAX_AR 1
    PNET_MAX_SLOTS 5
    PNET_MAX_SUBSLOTS 3
 
-To estimate the binary size, link partially (without standard libraries)::
+To estimate the binary size, link partially (without standard
+libraries). This example is for cortex-m4f MCU:s, such as XMC4800::
 
    build$ make all
-   build$ /opt/rt-tools/compilers/arm-eabi/bin/arm-eabi-gcc -O3 -DNDEBUG -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 CMakeFiles/pn_dev.dir/sample_app/sampleapp_common.obj CMakeFiles/pn_dev.dir/sample_app/main_rtk.obj -o pn_dev.elf libprofinet.a -nostartfiles -nostdlib -r
+   build$ /opt/rt-tools/compilers/arm-eabi/bin/arm-eabi-gcc -O3 -DNDEBUG -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 CMakeFiles/pn_dev.dir/sample_app/sampleapp_common.o CMakeFiles/pn_dev.dir/src/ports/rt-kernel/sampleapp_main.o -o pn_dev.elf libprofinet.a -nostartfiles -nostdlib -r
 
 Study the resulting executable::
 
@@ -243,7 +241,7 @@ Values in bytes (including the rt-kernel RTOS).
 * dec = text + data + bss
 * hex = text + data + bss (in hexadecimal)
 
-The flash usage is text+data, as the RAM initialization values are stored in flash.
+The flash usage is text + data, as the RAM initialization values are stored in flash.
 
 
 Run tests on XMC4800 target

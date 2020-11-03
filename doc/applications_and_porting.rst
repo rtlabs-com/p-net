@@ -18,7 +18,7 @@ You need to adapt the implementation to your specific hardware.
 
 This includes for example:
 
-* For Linux, adjust the networking and LED scripts in OSAL
+* For Linux, adjust the networking and LED scripts in PNAL
 * Implement the callback to control the "Signal" LED.
 
 
