@@ -175,7 +175,7 @@ int pnet_input_set_data_and_iops (
    uint32_t api,
    uint16_t slot,
    uint16_t subslot,
-   uint8_t * p_data,
+   const uint8_t * p_data,
    uint16_t data_len,
    uint8_t iops)
 {
@@ -442,7 +442,7 @@ int pnet_alarm_send_process_alarm (
    uint16_t subslot,
    uint16_t payload_usi,
    uint16_t payload_len,
-   uint8_t * p_payload)
+   const uint8_t * p_payload)
 {
    int ret = -1;
    pf_ar_t * p_ar = NULL;
@@ -466,8 +466,8 @@ int pnet_alarm_send_process_alarm (
 int pnet_alarm_send_ack (
    pnet_t * net,
    uint32_t arep,
-   pnet_alarm_argument_t * p_alarm_argument,
-   pnet_pnio_status_t * p_pnio_status)
+   const pnet_alarm_argument_t * p_alarm_argument,
+   const pnet_pnio_status_t * p_pnio_status)
 {
    int ret = -1;
    pf_ar_t * p_ar = NULL;
@@ -571,7 +571,7 @@ int pnet_diag_usi_add (
    uint16_t slot,
    uint16_t subslot,
    uint16_t usi,
-   uint8_t * p_manuf_data)
+   const uint8_t * p_manuf_data)
 {
    int ret = -1;
    pf_ar_t * p_ar = NULL;
@@ -591,7 +591,7 @@ int pnet_diag_usi_update (
    uint16_t slot,
    uint16_t subslot,
    uint16_t usi,
-   uint8_t * p_manuf_data)
+   const uint8_t * p_manuf_data)
 {
    int ret = -1;
    pf_ar_t * p_ar = NULL;

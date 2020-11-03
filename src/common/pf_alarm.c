@@ -212,7 +212,7 @@ static const char * pf_alarm_apmr_state_to_string (pf_apmr_state_values_t state)
    return s;
 }
 
-void pf_alarm_show (pf_ar_t * p_ar)
+void pf_alarm_show (const pf_ar_t * p_ar)
 {
    printf ("Alarms   (low)\n");
    printf (
@@ -290,7 +290,7 @@ void pf_alarm_init (pnet_t * net)
  * APMR:  APMR_Error_ind
  *
  * @param net              InOut: The p-net stack instance
- * @param p_apmx           In:    The APMX instance.
+ * @param p_apmx           InOut: The APMX instance.
  * @param err_cls          In:    The ERRCLS variable.
  * @param err_code         In:    The ERRCODE variable.
  */
@@ -326,7 +326,7 @@ static void pf_alarm_error_ind (
  * ALPMR: ALPMR_Activate_req
  * ALPMR: ALPMR_Activate_cnf(+/-) via return value and err_cls/err_code
  *
- * @param p_ar             In:    The AR instance.
+ * @param p_ar             InOut: The AR instance.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -383,7 +383,7 @@ static int pf_alarm_alpmx_activate (pf_ar_t * p_ar)
  * ALPMR: ALPMR_Close_req
  * ALPMR: ALPMR_Close_cnf    via return value and err_cls/err_code
  *
- * @param p_ar             In:    The AR instance.
+ * @param p_ar             InOut: The AR instance.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -436,7 +436,7 @@ static int pf_alarm_alpmx_close (pf_ar_t * p_ar)
  * ALPMI: APMS_A_Data.cnf(+/-)
  *
  * @param net              InOut: The p-net stack instance
- * @param p_apmx           In:    The APMS instance sending the confirmation.
+ * @param p_apmx           InOut: The APMS instance sending the confirmation.
  * @param res              In:    0  positive confirmation. This is cnf(+)
  *                                -1 negative confirmation. This is cnf(-)
  */
@@ -473,7 +473,7 @@ static void pf_alarm_alpmi_apms_a_data_cnf (
  * ALPMI: APMR_A_Data.ind  (Implements part of it)
  *
  * @param net              InOut: The p-net stack instance
- * @param p_apmx           In:    The APMS instance sending the confirmation.
+ * @param p_apmx           InOut  The APMS instance sending the confirmation.
  * @param p_pnio_status    In:    Detailed ACK information.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
@@ -481,7 +481,7 @@ static void pf_alarm_alpmi_apms_a_data_cnf (
 static int pf_alarm_alpmi_apmr_a_data_ind (
    pnet_t * net,
    pf_apmx_t * p_apmx,
-   pnet_pnio_status_t * p_pnio_status)
+   const pnet_pnio_status_t * p_pnio_status)
 {
    int ret = -1;
 
@@ -513,7 +513,7 @@ static int pf_alarm_alpmi_apmr_a_data_ind (
  * ALPMR: APMS_A_Data.cnf(+/-)
  *
  * @param net              InOut: The p-net stack instance
- * @param p_apmx           In:    The APMS instance sending the confirmation.
+ * @param p_apmx           InOut: The APMS instance sending the confirmation.
  * @param res              In:    0  positive confirmation. This is conf(+)
  *                                -1 negative confirmation. This is conf(-)
  */
@@ -580,10 +580,10 @@ static void pf_alarm_alpmr_apms_a_data_cnf (
  * ALPMR: APMR_A_Data.ind
  *
  * @param net              InOut: The p-net stack instance
- * @param p_apmx           In:    The APMR instance that received the message.
- * @param p_fixed          In:    The Fixed part of the RTA-PDU.
+ * @param p_apmx           InOut: The APMR instance that received the message.
+ * @param p_fixed          In:    The Fixed part of the RTA-PDU. Not used.
  * @param p_alarm_data     In:    The AlarmData from the RTA-PDU. (Slot, subslot
- * etc)
+ *                                etc)
  * @param data_len         In:    VarDataLen from the RTA-PDU.
  * @param data_usi         In:    The USI from the RTA-PDU.
  * @param p_data           In:    The variable part of the RTA-PDU.
@@ -592,11 +592,11 @@ static void pf_alarm_alpmr_apms_a_data_cnf (
 static int pf_alarm_alpmr_apmr_a_data_ind (
    pnet_t * net,
    pf_apmx_t * p_apmx,
-   pf_alarm_fixed_t * p_fixed,
-   pf_alarm_data_t * p_alarm_data,
+   const pf_alarm_fixed_t * p_fixed,
+   const pf_alarm_data_t * p_alarm_data,
    uint16_t data_len,
    uint16_t data_usi,
-   uint8_t * p_data)
+   const uint8_t * p_data)
 {
    pnet_alarm_argument_t alarm_arg = {0};
    int ret = -1;
@@ -883,7 +883,7 @@ static void pf_alarm_apms_timeout (
  * APMR: APMR_Activate_cnf(+/-) via return value and err_cls/err_code
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:    The AR instance.
+ * @param p_ar             InOut: The AR instance.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -990,7 +990,7 @@ static int pf_alarm_apmx_activate (pnet_t * net, pf_ar_t * p_ar)
  * Does free the incoming alarm frame buffer.
  *
  * @param net              InOut: The p-net stack instance
- * @param p_apmx           In:    The APMX instance.
+ * @param p_apmx           InOut: The APMX instance.
  * @param p_fixed          In:    The fixed part of the ALARM message.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
@@ -998,7 +998,7 @@ static int pf_alarm_apmx_activate (pnet_t * net, pf_ar_t * p_ar)
 static int pf_alarm_apms_a_data_ind (
    pnet_t * net,
    pf_apmx_t * p_apmx,
-   pf_alarm_fixed_t * p_fixed)
+   const pf_alarm_fixed_t * p_fixed)
 {
    int ret = -1;
    os_buf_t * p_rta;
@@ -1079,7 +1079,7 @@ static int pf_alarm_apms_a_data_ind (
  * APMS: A_Data_req  (This is LMPM_A_Data.req via macro)
  *
  * @param net              InOut: The p-net stack instance
- * @param p_apmx           In:    The APMX instance.
+ * @param p_apmx           InOut: The APMX instance.
  * @param p_fixed          In:    The fixed part of the RTA-PDU.
  * @param p_alarm_data     In:    Slot, subslot etc. Mandatory for DATA
  *                                messages, otherwise NULL.
@@ -1100,13 +1100,13 @@ static int pf_alarm_apms_a_data_ind (
 static int pf_alarm_apms_a_data_req (
    pnet_t * net,
    pf_apmx_t * p_apmx,
-   pf_alarm_fixed_t * p_fixed,
-   pf_alarm_data_t * p_alarm_data,
+   const pf_alarm_fixed_t * p_fixed,
+   const pf_alarm_data_t * p_alarm_data,
    uint32_t maint_status,
    uint16_t payload_usi,
    uint16_t payload_len,
-   uint8_t * p_payload,
-   pnet_pnio_status_t * p_pnio_status)
+   const uint8_t * p_payload,
+   const pnet_pnio_status_t * p_pnio_status)
 {
    int ret = -1;
    uint16_t var_part_len_pos;
@@ -1340,7 +1340,7 @@ static int pf_alarm_apms_a_data_req (
  * APMS: APMS_A_Data.req
  *
  * @param net              InOut: The p-net stack instance
- * @param p_apmx           In:    The APMS instance. Select high or low prio by
+ * @param p_apmx           InOut: The APMS instance. Select high or low prio by
  *                                using the correct instance.
  * @param p_alarm_data     In:    Alarm details (slot, subslot etc). Mandatory.
  * @param maint_status     In:    The Maintenance status used for specific USI
@@ -1357,12 +1357,12 @@ static int pf_alarm_apms_a_data_req (
 static int pf_alarm_apms_apms_a_data_req (
    pnet_t * net,
    pf_apmx_t * p_apmx,
-   pf_alarm_data_t * p_alarm_data,
+   const pf_alarm_data_t * p_alarm_data,
    uint32_t maint_status,
    uint16_t payload_usi,
    uint16_t payload_len,
-   uint8_t * p_payload,
-   pnet_pnio_status_t * p_pnio_status)
+   const uint8_t * p_payload,
+   const pnet_pnio_status_t * p_pnio_status)
 {
    int ret = -1;
    pf_alarm_fixed_t fixed;
@@ -1438,7 +1438,7 @@ static int pf_alarm_apms_apms_a_data_req (
  * APMR: APMR_Close_cnf(+)
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:    The AR instance.
+ * @param p_ar             InOut: The AR instance.
  * @param err_code         In:    Error code. See PNET_ERROR_CODE_2_*
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
@@ -1544,7 +1544,7 @@ static int pf_alarm_apmx_close (pnet_t * net, pf_ar_t * p_ar, uint8_t err_code)
  * APMR: A_Data_req  (Implements parts of it. This ia LMPM_A_Data.req via macro)
  *
  * @param net              InOut: The p-net stack instance
- * @param p_apmx           In:    The APMX instance.
+ * @param p_apmx           InOut: The APMX instance.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -1586,7 +1586,7 @@ static int pf_alarm_apmr_send_ack (pnet_t * net, pf_apmx_t * p_apmx)
  * APMR: A_Data_req  (Implements parts of it. This ia LMPM_A_Data.req via macro)
  *
  * @param net              InOut: The p-net stack instance
- * @param p_apmx           In:    The APMX instance.
+ * @param p_apmx           InOut: The APMX instance.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -1629,17 +1629,18 @@ static int pf_alarm_apmr_send_nack (pnet_t * net, pf_apmx_t * p_apmx)
  * APMR: A_Data_ind   (Implements part of it. This ia LMPM_A_Data.ind via macro)
  *
  * @param net              InOut: The p-net stack instance
- * @param p_apmx           In:    The APMX instance.
+ * @param p_apmx           InOut: The APMX instance.
  * @param p_fixed          In:    The fixed part of the RTA-DPU.
  * @param data_len         In:    Length of the variable part of the RTA-PDU.
- * @param p_data           In:    The variable part of the RTA-PDU.
+ * @param p_get_info       InOut: ?
+ * @param pos              In:    Position of ?
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
 static int pf_alarm_apmr_a_data_ind (
    pnet_t * net,
    pf_apmx_t * p_apmx,
-   pf_alarm_fixed_t * p_fixed,
+   const pf_alarm_fixed_t * p_fixed,
    uint16_t data_len,
    pf_get_info_t * p_get_info,
    uint16_t pos)
@@ -1824,7 +1825,7 @@ static int pf_alarm_apmr_a_data_ind (
  * APMR + APMS: Implementation detail
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:    The AR instance.
+ * @param p_ar             InOut: The AR instance.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -2037,7 +2038,7 @@ void pf_alarm_disable (pf_ar_t * p_ar)
    p_ar->alarm_enable = false;
 }
 
-bool pf_alarm_pending (pf_ar_t * p_ar)
+bool pf_alarm_pending (const pf_ar_t * p_ar)
 {
    /* ToDo: Handle this call from cmpbe. */
    return false;
@@ -2092,8 +2093,8 @@ int pf_alarm_close (pnet_t * net, pf_ar_t * p_ar)
  */
 static void pf_alarm_add_item_to_digest (
    pf_ar_t * p_ar,
-   pf_subslot_t * p_subslot,
-   pf_diag_item_t * p_diag_item,
+   const pf_subslot_t * p_subslot,
+   const pf_diag_item_t * p_diag_item,
    pnet_alarm_spec_t * p_alarm_spec,
    uint32_t * p_maint_status)
 {
@@ -2156,7 +2157,7 @@ static int pf_alarm_get_diag_digest (
    uint32_t api_id,
    uint16_t slot_nbr,
    uint16_t subslot_nbr,
-   pf_diag_item_t * p_diag_item,
+   const pf_diag_item_t * p_diag_item,
    pnet_alarm_spec_t * p_alarm_spec,
    uint32_t * p_maint_status)
 {
@@ -2237,8 +2238,8 @@ int pf_alarm_periodic (pnet_t * net)
 int pf_alarm_alpmr_alarm_ack (
    pnet_t * net,
    pf_ar_t * p_ar,
-   pnet_alarm_argument_t * p_alarm_argument,
-   pnet_pnio_status_t * p_pnio_status)
+   const pnet_alarm_argument_t * p_alarm_argument,
+   const pnet_pnio_status_t * p_pnio_status)
 {
    int ret = -1;
    pf_alarm_data_t alarm_data;
@@ -2303,7 +2304,7 @@ int pf_alarm_alpmr_alarm_ack (
  * ALPMI: ALPMI_Alarm_Notification.req
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:    The AR instance.
+ * @param p_ar             InOut: The AR instance.
  * @param alarm_type       In:    The alarm type.
  * @param high_prio        In:    true => Use high prio alarm.
  * @param api_id           In:    The API identifier.
@@ -2318,7 +2319,7 @@ int pf_alarm_alpmr_alarm_ack (
  *                                Custom data or pf_diag_item_t.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred (or waiting for ACK from controller: re-try
- * later).
+ *                later).
  */
 static int pf_alarm_send_alarm (
    pnet_t * net,
@@ -2328,12 +2329,12 @@ static int pf_alarm_send_alarm (
    uint32_t api_id,
    uint16_t slot_nbr,
    uint16_t subslot_nbr,
-   pf_diag_item_t * p_diag_item,
+   const pf_diag_item_t * p_diag_item,
    uint32_t module_ident,
    uint32_t submodule_ident,
    uint16_t payload_usi,
    uint16_t payload_len,
-   uint8_t * p_payload)
+   const uint8_t * p_payload)
 {
    int ret = -1;
    pf_alarm_data_t alarm_data;
@@ -2409,7 +2410,7 @@ int pf_alarm_send_process (
    uint16_t subslot_nbr,
    uint16_t payload_usi,
    uint16_t payload_len,
-   uint8_t * p_payload)
+   const uint8_t * p_payload)
 {
    LOG_INFO (
       PF_ALARM_LOG,
@@ -2443,7 +2444,7 @@ int pf_alarm_send_diagnosis (
    uint32_t api_id,
    uint16_t slot_nbr,
    uint16_t subslot_nbr,
-   pf_diag_item_t * p_diag_item)
+   const pf_diag_item_t * p_diag_item)
 {
    int ret = -1;
 

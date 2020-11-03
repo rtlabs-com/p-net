@@ -398,7 +398,8 @@ void pf_cmina_dcp_set_commit (pnet_t * net)
          gateway_string);
       LOG_DEBUG (
          PF_DCP_LOG,
-         "CMINA(%d): Setting IP: %s Netmask: %s Gateway: %s Station name: \"%s\" "
+         "CMINA(%d): Setting IP: %s Netmask: %s Gateway: %s Station name: "
+         "\"%s\" "
          "Permanent: %u\n",
          __LINE__,
          ip_string,
@@ -558,8 +559,7 @@ int pf_cmina_init (pnet_t * net)
  * @param err_code   In: Reason ARs are aborted
  * return Number of aborted ARs
  */
-static int pf_cmina_abort_active_ars(
-   pnet_t * net, uint8_t err_code)
+static int pf_cmina_abort_active_ars (pnet_t * net, uint8_t err_code)
 {
    int ix = 0;
    pf_ar_t * p_ar = NULL;
@@ -567,7 +567,7 @@ static int pf_cmina_abort_active_ars(
 
    for (ix = 0; ix < PNET_MAX_AR; ix++)
    {
-      p_ar = pf_ar_find_by_index(net, ix);
+      p_ar = pf_ar_find_by_index (net, ix);
       if ((p_ar != NULL) && (p_ar->in_use == true))
       {
          p_ar->err_code = err_code;
@@ -583,7 +583,7 @@ static int pf_cmina_abort_active_ars(
  * @param net        InOut: The p-net stack instance
  * return Number of active ARs
  */
-int pf_cmina_nbr_of_active_ars(pnet_t * net)
+int pf_cmina_nbr_of_active_ars (pnet_t * net)
 {
    int ix = 0;
    pf_ar_t * p_ar = NULL;
@@ -591,7 +591,7 @@ int pf_cmina_nbr_of_active_ars(pnet_t * net)
 
    for (ix = 0; ix < PNET_MAX_AR; ix++)
    {
-      p_ar = pf_ar_find_by_index(net, ix);
+      p_ar = pf_ar_find_by_index (net, ix);
       if ((p_ar != NULL) && (p_ar->in_use == true))
       {
          nbr_of_active_ars++;
@@ -606,7 +606,7 @@ int pf_cmina_dcp_set_ind (
    uint8_t sub,
    uint16_t block_qualifier,
    uint16_t value_length,
-   uint8_t * p_value,
+   const uint8_t * p_value,
    uint8_t * p_block_error)
 {
    int ret = -1;
@@ -988,17 +988,15 @@ int pf_cmina_dcp_set_ind (
             /* Abort active ARs */
             if (reset_to_factory == true)
             {
-               aborted_ars =
-                  pf_cmina_abort_active_ars(
-                     net,
-                     PNET_ERROR_CODE_2_ABORT_DCP_RESET_TO_FACTORY);
+               aborted_ars = pf_cmina_abort_active_ars (
+                  net,
+                  PNET_ERROR_CODE_2_ABORT_DCP_RESET_TO_FACTORY);
             }
             else
             {
-               aborted_ars =
-                  pf_cmina_abort_active_ars(
-                     net,
-                     PNET_ERROR_CODE_2_ABORT_DCP_STATION_NAME_CHANGED);
+               aborted_ars = pf_cmina_abort_active_ars (
+                  net,
+                  PNET_ERROR_CODE_2_ABORT_DCP_STATION_NAME_CHANGED);
             }
 
             if (aborted_ars <= 0)
@@ -1009,14 +1007,15 @@ int pf_cmina_dcp_set_ind (
          }
          else if (
             ((have_name == true) && (change_name == true)) ||
-             (have_ip == false))
+            (have_ip == false))
          {
             int aborted_ars = 0;
             /* Case 27, 28 in Profinet 2.4 Table 1096 */
             /* Change name or reset IP */
             /* Abort active ARs */
-            aborted_ars =  pf_cmina_abort_active_ars(
-               net, PNET_ERROR_CODE_2_ABORT_DCP_STATION_NAME_CHANGED);
+            aborted_ars = pf_cmina_abort_active_ars (
+               net,
+               PNET_ERROR_CODE_2_ABORT_DCP_STATION_NAME_CHANGED);
 
             if (aborted_ars <= 0)
             {
@@ -1032,7 +1031,7 @@ int pf_cmina_dcp_set_ind (
          {
             /* Change IP if no active connection*/
 
-            if (pf_cmina_nbr_of_active_ars(net) == 0)
+            if (pf_cmina_nbr_of_active_ars (net) == 0)
             {
                /* Case 25 in Profinet 2.4 Table 1096 */
                /* Change IP, no active connection */
@@ -1301,7 +1300,7 @@ void pf_ip_address_show (uint32_t ip)
    printf ("%s", ip_string);
 }
 
-void pf_cmina_interface_statistics_show (pnet_t * net)
+void pf_cmina_interface_statistics_show (const pnet_t * net)
 {
    printf (
       "Interface %s    In: %" PRIu32 " bytes %" PRIu32 " errors %" PRIu32
@@ -1543,7 +1542,7 @@ bool pf_cmina_is_stationname_valid (const char * station_name, uint16_t len)
  * @return  0  if the IP suite is valid
  *          -1 if the IP suite is invalid
  */
-bool pf_cmina_is_ipsuite_valid (pf_ip_suite_t * p_ipsuite)
+bool pf_cmina_is_ipsuite_valid (const pf_ip_suite_t * p_ipsuite)
 {
    if (!pf_cmina_is_netmask_valid (p_ipsuite->ip_mask))
    {
@@ -1575,7 +1574,7 @@ bool pf_cmina_is_ipsuite_valid (pf_ip_suite_t * p_ipsuite)
  * @return  0  if the IP suite is valid
  *          -1 if the IP suite is invalid
  */
-bool pf_cmina_is_full_ipsuite_valid (pf_full_ip_suite_t * p_full_ipsuite)
+bool pf_cmina_is_full_ipsuite_valid (const pf_full_ip_suite_t * p_full_ipsuite)
 {
    if (!pf_cmina_is_ipsuite_valid (&p_full_ipsuite->ip_suite))
    {

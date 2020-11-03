@@ -62,7 +62,7 @@ os_eth_handle_t * mock_os_eth_init (
    const char * if_name,
    os_eth_callback_t * callback,
    void * arg);
-int mock_os_eth_send (os_eth_handle_t * handle, os_buf_t * buf);
+int mock_os_eth_send (os_eth_handle_t * handle, const os_buf_t * buf);
 void mock_os_cpy_mac_addr (uint8_t * mac_addr);
 int mock_os_udp_open (os_ipaddr_t addr, os_ipport_t port);
 int mock_os_udp_sendto (
@@ -80,17 +80,17 @@ int mock_os_udp_recvfrom (
 void mock_os_udp_close (uint32_t id);
 int mock_os_set_ip_suite (
    const char * interface_name,
-   os_ipaddr_t * p_ipaddr,
-   os_ipaddr_t * p_netmask,
-   os_ipaddr_t * p_gw,
+   const os_ipaddr_t * p_ipaddr,
+   const os_ipaddr_t * p_netmask,
+   const os_ipaddr_t * p_gw,
    const char * hostname,
    bool permanent);
 
 int mock_os_save_file (
    const char * fullpath,
-   void * object_1,
+   const void * object_1,
    size_t size_1,
-   void * object_2,
+   const void * object_2,
    size_t size_2);
 
 void mock_os_clear_file (const char * fullpath);

@@ -56,7 +56,7 @@ int pf_diag_exit (void);
  * This sends a diagnosis alarm.
  *
  * @param net                 InOut: The p-net stack instance.
- * @param p_ar                In:    The AR instance.
+ * @param p_ar                InOut: The AR instance.
  * @param p_diag_source       In:    Slot, subslot, channel, direction etc.
  * @param ch_bits             In:    Number of bits in the channel.
  * @param severity            In:    Diagnosis severity.
@@ -82,7 +82,7 @@ int pf_diag_add (
    uint32_t ext_ch_add_value,
    uint32_t qual_ch_qualifier,
    uint16_t usi,
-   uint8_t * p_manuf_data);
+   const uint8_t * p_manuf_data);
 
 /**
  * Update a diagnosis entry, in standard or USI format.
@@ -104,7 +104,7 @@ int pf_diag_add (
  * This sends a diagnosis alarm.
  *
  * @param net               InOut: The p-net stack instance.
- * @param p_ar              In:    The AR instance.
+ * @param p_ar              InOut: The AR instance.
  * @param p_diag_source     In:    Slot, subslot, channel, direction etc.
  * @param ch_error_type     In:    The channel error type.
  * @param ext_ch_error_type In:    The extended channel error type.
@@ -123,7 +123,7 @@ int pf_diag_update (
    uint16_t ext_ch_error_type,
    uint32_t ext_ch_add_value,
    uint16_t usi,
-   uint8_t * p_manuf_data);
+   const uint8_t * p_manuf_data);
 
 /**
  * Remove a diagnosis entry, in standard or USI format.
@@ -141,7 +141,7 @@ int pf_diag_update (
  * This sends a diagnosis alarm.
  *
  * @param net               InOut: The p-net stack instance.
- * @param p_ar              In:    The AR instance.
+ * @param p_ar              InOut: The AR instance.
  * @param p_diag_source     In:    Slot, subslot, channel, direction etc.
  * @param ch_error_type     In:    The channel error type.
  * @param ext_ch_error_type In:    The extended channel error type.
@@ -165,7 +165,7 @@ int pf_diag_remove (
  * This sends a diagnosis alarm.
  *
  * @param net                 InOut: The p-net stack instance.
- * @param p_ar                In:    The AR instance.
+ * @param p_ar                InOut: The AR instance.
  * @param p_diag_source       In:    Slot, subslot, channel, direction etc.
  * @param ch_bits             In:    Number of bits in the channel.
  * @param severity            In:    Diagnosis severity.
@@ -194,7 +194,7 @@ int pf_diag_std_add (
  * This sends a diagnosis alarm.
  *
  * @param net               InOut: The p-net stack instance.
- * @param p_ar              In:    The AR instance.
+ * @param p_ar              InOut: The AR instance.
  * @param p_diag_source     In:    Slot, subslot, channel, direction etc.
  * @param ch_error_type     In:    The channel error type.
  * @param ext_ch_error_type In:    The extended channel error type.
@@ -216,7 +216,7 @@ int pf_diag_std_update (
  * This sends a diagnosis alarm.
  *
  * @param net               InOut: The p-net stack instance.
- * @param p_ar              In:    The AR instance.
+ * @param p_ar              InOut: The AR instance.
  * @param p_diag_source     In:    Slot, subslot, channel, direction etc.
  * @param ch_error_type     In:    The channel error type.
  * @param ext_ch_error_type In:    The extended channel error type.
@@ -243,7 +243,7 @@ int pf_diag_std_remove (
  * This sends a diagnosis alarm.
  *
  * @param net              InOut: The p-net stack instance.
- * @param p_ar             In:    The AR instance.
+ * @param p_ar             InOut: The AR instance.
  * @param api_id           In:    The API.
  * @param slot_nbr         In:    The slot.
  * @param subslot_nbr      In:    The sub-slot.
@@ -259,7 +259,7 @@ int pf_diag_usi_add (
    uint16_t slot_nbr,
    uint16_t subslot_nbr,
    uint16_t usi,
-   uint8_t * p_manuf_data);
+   const uint8_t * p_manuf_data);
 
 /**
  * Update a diagnosis entry in manufacturer-specified ("USI") format.
@@ -269,7 +269,7 @@ int pf_diag_usi_add (
  * This sends a diagnosis alarm.
  *
  * @param net              InOut: The p-net stack instance.
- * @param p_ar             In:    The AR instance.
+ * @param p_ar             InOut: The AR instance.
  * @param api_id           In:    The API.
  * @param slot_nbr         In:    The slot.
  * @param subslot_nbr      In:    The sub-slot.
@@ -285,7 +285,7 @@ int pf_diag_usi_update (
    uint16_t slot_nbr,
    uint16_t subslot_nbr,
    uint16_t usi,
-   uint8_t * p_manuf_data);
+   const uint8_t * p_manuf_data);
 
 /**
  * Remove a diagnosis entry in manufacturer-specified ("USI") format.
@@ -293,7 +293,7 @@ int pf_diag_usi_update (
  * This sends a diagnosis alarm.
  *
  * @param net              InOut: The p-net stack instance.
- * @param p_ar             In:    The AR instance.
+ * @param p_ar             InOut: The AR instance.
  * @param api_id           In:    The API.
  * @param slot_nbr         In:    The slot.
  * @param subslot_nbr      In:    The sub-slot.

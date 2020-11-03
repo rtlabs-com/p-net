@@ -49,7 +49,7 @@ int pf_fspm_init (pnet_t * net, const pnet_cfg_t * p_cfg);
  * @param net              InOut: The p-net stack instance
  * @return the minimum device interval.
  */
-int16_t pf_cmina_get_min_device_interval (pnet_t * net);
+int16_t pf_cmina_get_min_device_interval (const pnet_t * net);
 
 /**
  * Create a LogBook entry.
@@ -75,18 +75,18 @@ void pf_fspm_create_log_book_entry (
  * call-back \a pnet_write_ind() (if defined).
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:   The AR instance.
- * @param p_write_request  In:   The write request record.
- * @param write_length     In:   Length in bytes of write data.
- * @param p_write_data     In:   The data to write.
- * @param p_result         Out:  Result informantion.
+ * @param p_ar             In:    The AR instance.
+ * @param p_write_request  In:    The write request record.
+ * @param write_length     In:    Length in bytes of write data.
+ * @param p_write_data     In:    The data to write.
+ * @param p_result         Out:   Result informantion.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
 int pf_fspm_cm_write_ind (
    pnet_t * net,
-   pf_ar_t * p_ar,
-   pf_iod_write_request_t * p_write_request,
+   const pf_ar_t * p_ar,
+   const pf_iod_write_request_t * p_write_request,
    uint16_t write_length,
    uint8_t * p_write_data,
    pnet_result_t * p_result);
@@ -106,8 +106,8 @@ int pf_fspm_cm_write_ind (
  */
 int pf_fspm_cm_read_ind (
    pnet_t * net,
-   pf_ar_t * p_ar,
-   pf_iod_read_request_t * p_read_request,
+   const pf_ar_t * p_ar,
+   const pf_iod_read_request_t * p_read_request,
    uint8_t ** pp_read_data,
    uint16_t * p_read_length,
    pnet_result_t * p_result);
@@ -123,7 +123,7 @@ int pf_fspm_cm_read_ind (
  */
 int pf_fspm_ccontrol_cnf (
    pnet_t * net,
-   pf_ar_t * p_ar,
+   const pf_ar_t * p_ar,
    pnet_result_t * p_result);
 
 /**
@@ -136,7 +136,7 @@ int pf_fspm_ccontrol_cnf (
  */
 int pf_fspm_cm_connect_ind (
    pnet_t * net,
-   pf_ar_t * p_ar,
+   const pf_ar_t * p_ar,
    pnet_result_t * p_result);
 
 /**
@@ -149,7 +149,7 @@ int pf_fspm_cm_connect_ind (
  */
 int pf_fspm_cm_release_ind (
    pnet_t * net,
-   pf_ar_t * p_ar,
+   const pf_ar_t * p_ar,
    pnet_result_t * p_result);
 
 /**
@@ -164,7 +164,7 @@ int pf_fspm_cm_release_ind (
  */
 int pf_fspm_cm_dcontrol_ind (
    pnet_t * net,
-   pf_ar_t * p_ar,
+   const pf_ar_t * p_ar,
    pnet_control_command_t control_command,
    pnet_result_t * p_result);
 
@@ -174,12 +174,15 @@ int pf_fspm_cm_dcontrol_ind (
  *
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:    The AR instance.
- * @param event            In:    The new CMDEV state. Use PNET_EVENT_..., not
- * PF_CMDEV_STATE_...
+ * @param event            In:    The new CMDEV state. Use PNET_EVENT_xxx, not
+ *                                PF_CMDEV_STATE_xxx
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_fspm_state_ind (pnet_t * net, pf_ar_t * p_ar, pnet_event_values_t event);
+int pf_fspm_state_ind (
+   pnet_t * net,
+   const pf_ar_t * p_ar,
+   pnet_event_values_t event);
 
 /**
  * The remote side sends an alarm.
@@ -190,7 +193,7 @@ int pf_fspm_state_ind (pnet_t * net, pf_ar_t * p_ar, pnet_event_values_t event);
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:    The AR instance.
  * @param p_alarm_argument In:    The alarm argument (with slot, subslot,
- * alarm_type etc)
+ *                                alarm_type etc)
  * @param data_len         In:    Data length
  * @param data_usi         In:    USI for the alarm
  * @param p_data           InOut: Alarm data
@@ -199,11 +202,11 @@ int pf_fspm_state_ind (pnet_t * net, pf_ar_t * p_ar, pnet_event_values_t event);
  */
 int pf_fspm_alpmr_alarm_ind (
    pnet_t * net,
-   pf_ar_t * p_ar,
+   const pf_ar_t * p_ar,
    const pnet_alarm_argument_t * p_alarm_arg,
    uint16_t data_len,
    uint16_t data_usi,
-   uint8_t * p_data);
+   const uint8_t * p_data);
 
 /**
  * The remote side acknowledges the alarm sent by this side by sending an
@@ -212,15 +215,15 @@ int pf_fspm_alpmr_alarm_ind (
  * ALPMI: ALPMI_Alarm_Notification.cnf(+/-)
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:   The AR instance.
- * @param p_pnio_status    In:   Detailed ACK information.
+ * @param p_ar             In:    The AR instance.
+ * @param p_pnio_status    In:    Detailed ACK information.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
 int pf_fspm_alpmi_alarm_cnf (
    pnet_t * net,
-   pf_ar_t * p_ar,
-   pnet_pnio_status_t * p_pnio_status);
+   const pf_ar_t * p_ar,
+   const pnet_pnio_status_t * p_pnio_status);
 
 /**
  * Local side has successfully sent the AlarmAck to the remote side.
@@ -229,13 +232,15 @@ int pf_fspm_alpmi_alarm_cnf (
  * ALPMR: ALPMR_Alarm_Ack.cnf(+/-)  (Implements part of the signal)
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:   The AR instance.
- * @param res              In:   0  if ACK was received by the remote side. This
- * is cnf(+) -1 if ACK was not received by the remote side. This is cnf(-)
+ * @param p_ar             In:    The AR instance.
+ * @param res              In:    0  if ACK was received by the remote side.
+ *                                   This is cnf(+)
+ *                                -1 if ACK was not received.
+ *                                   This is cnf(-)
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_fspm_alpmr_alarm_ack_cnf (pnet_t * net, pf_ar_t * p_ar, int res);
+int pf_fspm_alpmr_alarm_ack_cnf (pnet_t * net, const pf_ar_t * p_ar, int res);
 
 /**
  * Call user call-back \a pnet_exp_module_ind() to indicate to application
@@ -288,8 +293,8 @@ int pf_fspm_exp_submodule_ind (
  */
 int pf_fspm_data_status_changed (
    pnet_t * net,
-   pf_ar_t * p_ar,
-   pf_iocr_t * p_iocr,
+   const pf_ar_t * p_ar,
+   const pf_iocr_t * p_iocr,
    uint8_t changes,
    uint8_t data_status);
 
@@ -349,21 +354,21 @@ int pf_fspm_clear_im_data (pnet_t * net);
  *
  * @param net              InOut: The p-net stack instance
  */
-void pf_fspm_im_show (pnet_t * net);
+void pf_fspm_im_show (const pnet_t * net);
 
 /**
  * Show compile time options, and memory usage.
  *
  * @param net              InOut: The p-net stack instance
  */
-void pf_fspm_option_show (pnet_t * net);
+void pf_fspm_option_show (const pnet_t * net);
 
 /**
  * Show logbook.
  *
  * @param net              InOut: The p-net stack instance
  */
-void pf_fspm_logbook_show (pnet_t * net);
+void pf_fspm_logbook_show (const pnet_t * net);
 
 /************ Internal functions, made available for unit testing ************/
 

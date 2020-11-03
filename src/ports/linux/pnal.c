@@ -39,9 +39,9 @@
 
 int os_save_file (
    const char * fullpath,
-   void * object_1,
+   const void * object_1,
    size_t size_1,
-   void * object_2,
+   const void * object_2,
    size_t size_2)
 {
    int ret = 0; /* Assume everything goes well */
@@ -200,9 +200,9 @@ static void os_ip_to_string (os_ipaddr_t ip, char * outputstring)
 
 int os_set_ip_suite (
    const char * interface_name,
-   os_ipaddr_t * p_ipaddr,
-   os_ipaddr_t * p_netmask,
-   os_ipaddr_t * p_gw,
+   const os_ipaddr_t * p_ipaddr,
+   const os_ipaddr_t * p_netmask,
+   const os_ipaddr_t * p_gw,
    const char * hostname,
    bool permanent)
 {

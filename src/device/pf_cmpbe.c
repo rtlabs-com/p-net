@@ -58,7 +58,7 @@ static const char * pf_cmpbe_state_to_string (pf_cmpbe_state_values_t state)
    return s;
 }
 
-void pf_cmpbe_show (pf_ar_t * p_ar)
+void pf_cmpbe_show (const pf_ar_t * p_ar)
 {
    const char * s = pf_cmpbe_state_to_string (p_ar->cmpbe_state);
 
@@ -71,8 +71,8 @@ void pf_cmpbe_show (pf_ar_t * p_ar)
 /**
  * @internal
  * Handle state changes in the CMPBE component.
- * @param p_ar                In:   The AR instance.
- * @param state               In:   The new state.
+ * @param p_ar             InOut: The AR instance.
+ * @param state            In:    The new state.
  */
 static void pf_cmpbe_set_state (pf_ar_t * p_ar, pf_cmpbe_state_values_t state)
 {
@@ -224,7 +224,7 @@ int pf_cmpbe_rm_dcontrol_ind (
 
 int pf_cmpbe_rm_ccontrol_cnf (
    pf_ar_t * p_ar,
-   pf_control_block_t * p_control_io,
+   const pf_control_block_t * p_control_io,
    pnet_result_t * p_result)
 {
    int ret = -1;

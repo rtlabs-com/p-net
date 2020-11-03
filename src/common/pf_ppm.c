@@ -531,9 +531,9 @@ int pf_ppm_set_data_and_iops (
    uint32_t api_id,
    uint16_t slot_nbr,
    uint16_t subslot_nbr,
-   uint8_t * p_data,
+   const uint8_t * p_data,
    uint16_t data_len,
-   uint8_t * p_iops,
+   const uint8_t * p_iops,
    uint8_t iops_len)
 {
    int ret = -1;
@@ -626,7 +626,7 @@ int pf_ppm_set_iocs (
    uint32_t api_id,
    uint16_t slot_nbr,
    uint16_t subslot_nbr,
-   uint8_t * p_iocs,
+   const uint8_t * p_iocs,
    uint8_t iocs_len)
 {
    int ret = -1;
@@ -942,7 +942,7 @@ int pf_ppm_set_data_status_provider (pf_ar_t * p_ar, uint32_t crep, bool run)
    return 0;
 }
 
-int pf_ppm_get_data_status (pf_ppm_t * p_ppm, uint8_t * p_data_status)
+int pf_ppm_get_data_status (const pf_ppm_t * p_ppm, uint8_t * p_data_status)
 {
    *p_data_status = p_ppm->data_status;
 
@@ -1038,7 +1038,7 @@ uint16_t pf_ppm_calculate_cyclecounter (
 
 /**************** Diagnostic strings *****************************************/
 
-void pf_ppm_show (pf_ppm_t * p_ppm)
+void pf_ppm_show (const pf_ppm_t * p_ppm)
 {
    printf ("ppm:\n");
    printf (

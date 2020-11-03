@@ -65,7 +65,7 @@ static const char * pf_cmwrr_state_to_string (pf_cmwrr_state_values_t state)
    return s;
 }
 
-void pf_cmwrr_show (pnet_t * net, pf_ar_t * p_ar)
+void pf_cmwrr_show (const pnet_t * net, const pf_ar_t * p_ar)
 {
    const char * s = pf_cmwrr_state_to_string (net->cmwrr_state);
 
@@ -75,7 +75,7 @@ void pf_cmwrr_show (pnet_t * net, pf_ar_t * p_ar)
 
 int pf_cmwrr_cmdev_state_ind (
    pnet_t * net,
-   pf_ar_t * p_ar,
+   const pf_ar_t * p_ar,
    pnet_event_values_t event)
 {
    switch (net->cmwrr_state)
@@ -124,11 +124,24 @@ int pf_cmwrr_cmdev_state_ind (
    return -1;
 }
 
+/**
+ * @internal
+ * Write PDPort data check
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param p_ar             In:    The AR instance.
+ * @param p_write_request  In:    The IODWrite request.
+ * @param p_bytes          In:    Input data
+ * @param p_datalength     In:    Size of the data to write.
+ * @param p_result         Out:   Detailed error information.
+ * @return  0  if operation succeeded.
+ *          -1 if an error occurred.
+ */
 static int pf_cmwrr_pdport_data_check (
    pnet_t * net,
-   pf_ar_t * p_ar,
-   pf_iod_write_request_t * p_write_request,
-   uint8_t * p_bytes,
+   const pf_ar_t * p_ar,
+   const pf_iod_write_request_t * p_write_request,
+   uint8_t * p_bytes, /* Not const as it is used in a pf_get_info_t */
    uint16_t p_datalength,
    pnet_result_t * p_result)
 {
@@ -175,11 +188,24 @@ static int pf_cmwrr_pdport_data_check (
    return ret;
 }
 
+/**
+ * @internal
+ * Write PDPort data adjust
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param p_ar             In:    The AR instance.
+ * @param p_write_request  In:    The IODWrite request.
+ * @param p_bytes          In:    Input data
+ * @param p_datalength     In:    Size of the data to write.
+ * @param p_result         Out:   Detailed error information.
+ * @return  0  if operation succeeded.
+ *          -1 if an error occurred.
+ */
 int pf_cmwrr_pdport_data_adj (
    pnet_t * net,
-   pf_ar_t * p_ar,
-   pf_iod_write_request_t * p_write_request,
-   uint8_t * p_bytes,
+   const pf_ar_t * p_ar,
+   const pf_iod_write_request_t * p_write_request,
+   uint8_t * p_bytes, /* Not const as it is used in a pf_get_info_t */
    uint16_t p_datalength,
    pnet_result_t * p_result)
 {
@@ -241,8 +267,8 @@ int pf_cmwrr_pdport_data_adj (
  */
 static int pf_cmwrr_write (
    pnet_t * net,
-   pf_ar_t * p_ar,
-   pf_iod_write_request_t * p_write_request,
+   const pf_ar_t * p_ar,
+   const pf_iod_write_request_t * p_write_request,
    uint8_t * p_req_buf,
    uint16_t data_length,
    uint16_t * p_req_pos,
@@ -307,7 +333,7 @@ static int pf_cmwrr_write (
 int pf_cmwrr_rm_write_ind (
    pnet_t * net,
    pf_ar_t * p_ar,
-   pf_iod_write_request_t * p_write_request,
+   const pf_iod_write_request_t * p_write_request,
    pf_iod_write_result_t * p_write_result,
    pnet_result_t * p_result,
    uint8_t * p_req_buf, /* request buffer */
