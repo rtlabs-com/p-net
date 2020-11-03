@@ -17,16 +17,17 @@
  * @file
  * @brief Helper functions for use by platform-dependent SNMP server (agent).
  *
- * The p-net stack does not contain any SNMP server stack. Instead, it relies
- * on external software to supply the needed SNMP services.
- * In the platform portability layer (osal), the file os_snmp.c is expected
- * to implement the glue code needed make the external SNMP server communicate
- * with the p-net stack (in particular, to get variables stored in the
- * p-net stack).
+ * The p-net stack does not contain any SNMP server stack. Instead, it
+ * relies on external software to supply the needed SNMP services. In
+ * the p-net abstraction layer (pnal), the file pnal_snmp.c is
+ * expected to implement the glue code needed make the external SNMP
+ * server communicate with the p-net stack (in particular, to get
+ * variables stored in the p-net stack).
  *
- * The purposes of this header file is to make it easier to implement the glue
- * code in os_snmp.c by declaring all needed functions in a single header file.
- * This API should not be used by other modules than the SNMP server.
+ * The purposes of this header file is to make it easier to implement
+ * the glue code in pnal_snmp.c by declaring all needed functions in a
+ * single header file.  This API should not be used by other modules
+ * than the SNMP server.
  *
  * The API assumes the following model:
  * The Profinet device has a single interface (IP address), but may have

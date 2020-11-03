@@ -13,10 +13,8 @@
  * full license information.
  ********************************************************************/
 
-#include <kern.h>
-#include <uassert.h>
-#include <eth/dwmac1000.h>
-#include <dev.h>
+#include <kern/kern.h>
+#include <drivers/eth/dwmac1000.h>
 
 #include <lwip/def.h>
 #include <lwip/mem.h>
@@ -30,7 +28,7 @@
 
 #include <string.h>
 
-#include "osal.h"
+#include "pnal.h"
 
 /* Align DMA buffer with lwIP POOL buf size
  * One RX DMA buffer will fit in one POOL buf.

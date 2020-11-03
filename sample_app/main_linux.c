@@ -17,7 +17,7 @@
 
 #include "sampleapp_common.h"
 
-#include "log.h"
+#include "osal_log.h"
 #include "osal.h"
 #include <pnet_api.h>
 

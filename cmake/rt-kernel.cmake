@@ -13,25 +13,17 @@
 # full license information.
 #*******************************************************************/
 
-# Fix inclusion order of assert.h and log.h by including our
-# definition before anything else. FIXME: these files should be
-# renamed.
-include_directories(BEFORE
-  src/osal/rt-kernel/
-  src
-  )
-
 target_include_directories(profinet
   PRIVATE
-  src/osal/rt-kernel
+  src/ports/rt-kernel
   )
 
 target_sources(profinet
   PRIVATE
-  src/osal/rt-kernel/osal.c
-  src/osal/rt-kernel/osal_eth.c
-  src/osal/rt-kernel/osal_udp.c
-  src/osal/rt-kernel/dwmac1000.c
+  src/ports/rt-kernel/pnal.c
+  src/ports/rt-kernel/pnal_eth.c
+  src/ports/rt-kernel/pnal_udp.c
+  src/ports/rt-kernel/dwmac1000.c
   )
 
 target_compile_options(profinet
@@ -44,7 +36,7 @@ target_compile_options(profinet
 
 target_include_directories(pn_dev
   PRIVATE
-  src/osal/rt-kernel
+  src/ports/rt-kernel
   )
 
 target_sources(pn_dev
@@ -56,11 +48,10 @@ target_sources(pn_dev
 if (BUILD_TESTING)
   target_sources(pf_test
     PRIVATE
-    ${PROFINET_SOURCE_DIR}/src/osal/rt-kernel/osal.c
-    ${PROFINET_SOURCE_DIR}/src/osal/rt-kernel/stubs.c
+    ${PROFINET_SOURCE_DIR}/src/ports/rt-kernel/pnal.c
     )
   target_include_directories(pf_test
     PRIVATE
-    src/osal/rt-kernel
+    src/ports/rt-kernel
     )
 endif()

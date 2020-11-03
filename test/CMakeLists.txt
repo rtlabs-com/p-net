@@ -37,7 +37,6 @@ target_sources(pf_test PRIVATE
   test_file.cpp
   test_fspm.cpp
   test_lldp.cpp
-  test_osal.cpp
   test_pnetapi.cpp
   test_ppm.cpp
   test_ptcp.cpp

@@ -23,14 +23,14 @@ endif()
 
 target_include_directories(profinet
   PRIVATE
-  src/osal/linux
+  src/ports/linux
   )
 
 target_sources(profinet
   PRIVATE
-  src/osal/linux/osal.c
-  src/osal/linux/osal_eth.c
-  src/osal/linux/osal_udp.c
+  src/ports/linux/pnal.c
+  src/ports/linux/pnal_eth.c
+  src/ports/linux/pnal_udp.c
   )
 
 target_compile_options(profinet
@@ -53,7 +53,7 @@ target_link_libraries(profinet
 
 target_include_directories(pn_dev
   PRIVATE
-  src/osal/linux
+  src/ports/linux
   )
 
 target_sources(pn_dev
@@ -63,7 +63,7 @@ target_sources(pn_dev
   )
 
 file(COPY
-  src/osal/linux/set_network_parameters
+  src/ports/linux/set_network_parameters
   sample_app/set_profinet_leds_linux
   sample_app/set_profinet_leds_linux.raspberrypi
   DESTINATION
@@ -74,10 +74,10 @@ if (BUILD_TESTING)
   set(GOOGLE_TEST_INDIVIDUAL TRUE)
   target_sources(pf_test
     PRIVATE
-    ${PROFINET_SOURCE_DIR}/src/osal/linux/osal.c
+    ${PROFINET_SOURCE_DIR}/src/ports/linux/pnal.c
     )
   target_include_directories(pf_test
     PRIVATE
-    src/osal/linux
+    src/ports/linux
     )
 endif()

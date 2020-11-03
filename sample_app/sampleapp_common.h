@@ -17,6 +17,7 @@
 #define SAMPLEAPP_COMMON_H
 
 #include "osal.h"
+#include "pnal.h"
 #include "options.h"
 #include <pnet_api.h>
 

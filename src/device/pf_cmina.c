@@ -33,6 +33,7 @@
 
 #include <string.h>
 #include <ctype.h>
+#include <inttypes.h>
 
 #include "pf_includes.h"
 

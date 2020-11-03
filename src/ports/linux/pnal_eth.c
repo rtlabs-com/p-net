@@ -13,7 +13,7 @@
  * full license information.
  ********************************************************************/
 
-#include "osal.h"
+#include "pnal.h"
 
 #include <net/ethernet.h>
 #include <net/if.h>

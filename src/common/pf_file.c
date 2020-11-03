@@ -32,6 +32,7 @@
 #include "pf_block_reader.h"
 #include "pf_block_writer.h"
 
+#include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
 
