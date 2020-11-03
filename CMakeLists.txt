@@ -46,6 +46,7 @@ option (PNET_OPTION_AR_VENDOR_BLOCKS "" ON)
 option (PNET_OPTION_RS "" ON)
 option (PNET_OPTION_MC_CR "" ON)
 option (PNET_OPTION_SRL "" OFF)
+option (PNET_OPTION_SNMP "" OFF)
 
 # TODO: this should be handled in cc.h
 option (PNET_USE_ATOMICS "Enable use of atomic operations (stdatomic.h)" OFF)
@@ -105,6 +106,9 @@ set_property(CACHE PF_ETH_LOG PROPERTY STRINGS ${LOG_STATE_VALUES})
 
 set(PF_LLDP_LOG ON CACHE STRING "pf_lldp log")
 set_property(CACHE PF_LLDP_LOG PROPERTY STRINGS ${LOG_STATE_VALUES})
+
+set(PF_SNMP_LOG ON CACHE STRING "pf_snmp log")
+set_property(CACHE PF_SNMP_LOG PROPERTY STRINGS ${LOG_STATE_VALUES})
 
 set(PF_CPM_LOG ON CACHE STRING "pf_cpm log")
 set_property(CACHE PF_CPM_LOG PROPERTY STRINGS ${LOG_STATE_VALUES})

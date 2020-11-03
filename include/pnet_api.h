@@ -39,6 +39,10 @@ extern "C" {
 #include <stdint.h>
 #include <stdio.h>
 
+#define PNET_PRODUCT_NAME_MAX_LEN  25
+#define PNET_ORDER_ID_MAX_LEN      20
+#define PNET_SERIAL_NUMBER_MAX_LEN 16
+
 #define PNET_MAX_FILE_FULLPATH_LEN                                             \
    (PNET_MAX_DIRECTORYPATH_LENGTH + PNET_MAX_FILENAME_LENGTH) /** Including    \
                                                                  separator and \
@@ -351,6 +355,7 @@ extern "C" {
 
 #define PNET_FILENAME_IP                                                       \
    "pnet_data_ip.bin" /* Max length PNET_MAX_FILENAME_LENGTH */
+#define PNET_FILENAME_SYSCONTACT  "pnet_data_syscontact.bin"
 #define PNET_FILENAME_IM          "pnet_data_im.bin"
 #define PNET_FILENAME_DIAGNOSTICS "pnet_data_diagnostics.bin"
 #define PNET_FILENAME_LOGBOOK     "pnet_data_logbook.bin"
@@ -1018,8 +1023,9 @@ typedef struct pnet_im_0
 {
    uint8_t im_vendor_id_hi;
    uint8_t im_vendor_id_lo;
-   char im_order_id[20 + 1];      /**< Terminated string */
-   char im_serial_number[16 + 1]; /**< Terminated string */
+   char im_order_id[PNET_ORDER_ID_MAX_LEN + 1]; /**< Terminated string */
+   char im_serial_number[PNET_SERIAL_NUMBER_MAX_LEN + 1]; /**< Terminated string
+                                                           */
    uint16_t im_hardware_revision;
    char im_sw_revision_prefix;
    uint8_t im_sw_revision_functional_enhancement;
@@ -1324,7 +1330,7 @@ typedef struct pnet_cfg
     * (sysDescr in SNMP). It may also be used to construct the Chassis ID.
     * See IEC CDV 61158-6-10 ch. 4.10.3.3.1.
     */
-   char product_name[25 + 1]; /**< Terminated string */
+   char product_name[PNET_PRODUCT_NAME_MAX_LEN + 1]; /**< Terminated string */
 
    /* Timing */
    uint16_t min_device_interval; /** Smallest allowed data exchange interval, in
