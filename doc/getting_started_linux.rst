@@ -27,34 +27,34 @@ Optional dependencies (for development and documentation of the p-net stack)::
         graphviz
 
 
-Download and compile source
+Download and compile p-net
 ---------------------------
 Clone the source::
 
-    mkdir profinet
-    cd profinet
-    git clone https://github.com/rtlabs-com/p-net.git
+    git clone --recurse-submodules https://github.com/rtlabs-com/p-net.git
 
-Compile::
+Create and configure the build::
 
-    cd p-net
-    mkdir build
-    cd build
-    cmake ..
-    make all
-    make install
+    cmake -B build -S p-net
 
 or maybe ::
 
-    cmake .. -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=OFF -DBUILD_SHARED_LIBS=ON -DUSE_SCHED_FIFO=ON
+    cmake -B build -S p-net -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=OFF -DBUILD_SHARED_LIBS=ON -DUSE_SCHED_FIFO=ON
+
+You can choose any name for the build folder, for instance if you want
+to build different configurations.
+
+Build the code::
+
+    cmake --build build --target install
 
 Use the ``-j`` flag to ``make`` to enable parallel build.
 
 Depending on how you installed cmake, you might need to run ``snap run cmake``
 instead of ``cmake``.
 
-The ``make install`` step is to install scripts for manipulating IP settings,
-control LEDs etc.
+Use the ``install`` target to install scripts for manipulating IP
+settings, control LEDs etc.
 
 
 Run the Linux demo application
@@ -102,10 +102,8 @@ Usage of the demo IO-device application:
 
 Run the sample application::
 
-    cd build
-    make pn_dev
     sudo ifconfig eth0 192.168.0.50 netmask 255.255.255.0 up
-    sudo ./pn_dev -v
+    sudo build/pn_dev -v
 
 On Raspberry Pi::
 
@@ -128,26 +126,23 @@ Run tests and generate documentation
 ------------------------------------
 Run tests (if you told cmake to configure it)::
 
-    cd build
-    make check
+    cmake --build build --target check
 
 Run a single test file::
 
-    cd build
-    ./pf_test --gtest_filter=CmrpcTest.CmrpcConnectReleaseTest
+    build/pf_test --gtest_filter=CmrpcTest.CmrpcConnectReleaseTest
 
 Create Doxygen documentation::
 
-    cd build
-    make docs
+    cmake --build build --target docs
 
 The Doxygen documentation ends up in ``build/html/index.html``
 
-The clang static analyzer can also be used if installed. From a clean
-build directory, run::
+The clang static analyzer can also be used if installed. Create a new
+build directory by running::
 
-   scan-build cmake ..
-   scan-build make
+   scan-build cmake -B build.scan-build -S p-net
+   scan-build cmake --build build
 
 
 Setting Linux ephemeral port range
@@ -180,7 +175,7 @@ To get an estimate of the binary size, partially link it (use release, without
 standard libraries)::
 
    p-net/build$ make all
-   p-net/build$ /usr/bin/cc -O3 -DNDEBUG CMakeFiles/pn_dev.dir/sample_app/sampleapp_common.o CMakeFiles/pn_dev.dir/sample_app/main_linux.o -o pn_dev libprofinet.a -nostdlib -r
+   p-net/build$ /usr/bin/cc -O3 -DNDEBUG CMakeFiles/pn_dev.dir/sample_app/sampleapp_common.o CMakeFiles/pn_dev.dir/src/ports/linux/sampleapp_main.o -o pn_dev libprofinet.a -nostdlib -r
 
 Resulting size::
 
