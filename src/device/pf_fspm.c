@@ -28,6 +28,7 @@
 #endif
 
 #include <string.h>
+#include <inttypes.h>
 
 #include "pf_includes.h"
 #include "pf_block_reader.h"

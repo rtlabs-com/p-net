@@ -66,7 +66,7 @@ The platform must be able to send and receive raw Ethernet Layer 2 frames,
 and the Ethernet driver must be able to handle full size frames. It
 should also avoid copying data, for performance reasons.
 
-* cmake 3.13 or later
+* cmake 3.14 or later
 
 For Linux:
 

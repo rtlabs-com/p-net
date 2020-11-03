@@ -13,8 +13,11 @@
  * full license information.
  ********************************************************************/
 
+#include "pnal.h"
+#include "osal_log.h"
+
+#include <sys/socket.h>
 #include <string.h>
-#include "pf_includes.h"
 
 int os_udp_open (os_ipaddr_t addr, os_ipport_t port)
 {

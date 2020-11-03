@@ -39,8 +39,10 @@
 #define os_get_current_time_us mock_os_get_current_time_us
 #endif
 
-#include <string.h>
 #include "pf_includes.h"
+
+#include <string.h>
+#include <inttypes.h>
 
 static const char * ppm_sync_name = "ppm";
 

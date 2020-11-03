@@ -13,9 +13,10 @@
  * full license information.
  ********************************************************************/
 
-#include <string.h>
+#include "pnal.h"
 #include "pf_includes.h"
-#include <stdio.h>
+
+#include <string.h>
 #include <unistd.h>
 
 int os_udp_open (os_ipaddr_t addr, os_ipport_t port)

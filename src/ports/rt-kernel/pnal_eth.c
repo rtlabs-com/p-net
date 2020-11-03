@@ -13,10 +13,11 @@
  * full license information.
  ********************************************************************/
 
-#include "pf_includes.h"
+#include "pnal.h"
+#include "osal_log.h"
+
 #include <lwip/netif.h>
-#include <dev.h>
-#include <uassert.h>
+#include <drivers/dev.h>
 
 #define MAX_NUMBER_OF_IF 1
 #define NET_DRIVER_NAME  "/net"

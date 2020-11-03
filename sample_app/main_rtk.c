@@ -15,12 +15,12 @@
 
 #include "sampleapp_common.h"
 
-#include "log.h"
+#include "osal_log.h"
 #include "osal.h"
 #include <pnet_api.h>
 
 #include <gpio.h>
-#include <kern.h>
+#include <kern/kern.h>
 #include <lwip/netif.h>
 #include <shell.h>
 

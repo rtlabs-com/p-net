@@ -13,42 +13,18 @@
  * full license information.
  ********************************************************************/
 
-#ifndef OSAL_SYS_H
-#define OSAL_SYS_H
+#ifndef PNAL_SYS_H
+#define PNAL_SYS_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <kern.h>
-#include <cc.h>
-#include <sys/socket.h>
+#include <drivers/dev.h>
+#include <sys/socket.h> /* For htonl etc */
 #include <lwip/pbuf.h>
-#include <dev.h>
-
-#define OS_THREAD
-#define OS_MUTEX
-#define OS_CHANNEL
-#define OS_SEM
-#define OS_EVENT
-#define OS_MBOX
-#define OS_TIMER
 
 #define OS_BUF_MAX_SIZE PBUF_POOL_BUFSIZE
-
-typedef struct
-{
-   int handle;
-   void (*callback) (void * arg);
-   void * arg;
-} os_channel_t;
-
-typedef mtx_t os_mutex_t;
-typedef task_t os_thread_t;
-typedef sem_t os_sem_t;
-typedef flags_t os_event_t;
-typedef mbox_t os_mbox_t;
-typedef tmr_t os_timer_t;
 
 /* Re-use lwIP pbuf for rt-kernel */
 typedef struct pbuf os_buf_t;
@@ -82,4 +58,4 @@ typedef struct os_eth_handle
 }
 #endif
 
-#endif /* OSAL_SYS_H */
+#endif /* PNAL_SYS_H */
