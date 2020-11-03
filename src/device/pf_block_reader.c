@@ -455,7 +455,7 @@ void pf_get_exp_api_module (
          slot_number = pf_get_uint16 (p_info, p_pos);
 
          /* Get a new module. */
-         if (p_api->nbr_modules < PNET_MAX_MODULES)
+         if (p_api->nbr_modules < PNET_MAX_SLOTS)
          {
             p_mod = &p_api->modules[p_api->nbr_modules];
             p_api->nbr_modules++;

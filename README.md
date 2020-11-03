@@ -9,7 +9,7 @@ Web resources
 * Continuous integration: [https://travis-ci.com/rtlabs-com/p-net](https://travis-ci.com/rtlabs-com/p-net)
 * rt-labs: [https://rt-labs.com](https://rt-labs.com)
 
-[![Build Status](https://travis-ci.com/rtlabs-com/p-net.svg?branch=master)](https://travis-ci.com/rtlabs-com/p-net)
+[![Build Status](https://api.travis-ci.com/rtlabs-com/p-net.svg?branch=master)](https://travis-ci.com/rtlabs-com/p-net)
 
 p-net
 -----
@@ -46,7 +46,7 @@ Features:
 
 Limitations or not yet implemented:
 
-* Only a single Ethernet interface (no media redundancy)
+* Only a single Ethernet port (no media redundancy)
 * No startup mode legacy
 * No support for RT_CLASS_UDP
 * No support for DHCP
@@ -54,6 +54,7 @@ Limitations or not yet implemented:
 * No MC multicast device-to-device
 * No iPar (parameter server) support
 * No support for time synchronization
+* No UDP frames at alarm (just the default alarm mechanism is implemented)
 
 This software is dual-licensed, with GPL version 3 and a commercial license.
 See LICENSE.md for more details.

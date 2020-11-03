@@ -23,7 +23,7 @@
 #include "pf_includes.h"
 #include "pf_block_reader.h"
 
-pnet_t * pnet_init_only (
+int pnet_init_only (
    pnet_t * net,
    const char * netif,
    uint32_t tick_us,
@@ -38,7 +38,7 @@ pnet_t * pnet_init_only (
          "Too long interface name. Given: %s  Max len: %d\n",
          netif,
          PNET_MAX_INTERFACE_NAME_LENGTH);
-      return NULL;
+      return -1;
    }
    strcpy (net->interface_name, netif);
 
@@ -54,7 +54,7 @@ pnet_t * pnet_init_only (
    /* initialize configuration */
    if (pf_fspm_init (net, p_cfg) != 0)
    {
-      return NULL;
+      return -1;
    }
 
    /* Initialize everything (and the DCP protocol) */
@@ -62,8 +62,7 @@ pnet_t * pnet_init_only (
    net->eth_handle = os_eth_init (netif, pf_eth_recv, (void *)net);
    if (net->eth_handle == NULL)
    {
-      free (net);
-      return NULL;
+      return -1;
    }
 
    pf_eth_init (net);
@@ -79,7 +78,7 @@ pnet_t * pnet_init_only (
 
    pf_cmrpc_init (net);
 
-   return net;
+   return 0;
 }
 
 pnet_t * pnet_init (
@@ -87,15 +86,21 @@ pnet_t * pnet_init (
    uint32_t tick_us,
    const pnet_cfg_t * p_cfg)
 {
-   pnet_t * net;
+   pnet_t * net = NULL;
 
    net = os_malloc (sizeof (*net));
    if (net == NULL)
    {
+      LOG_ERROR (PNET_LOG, "Failed to allocate memory for pnet_t (%zu bytes)\n", sizeof (*net));
       return NULL;
    }
 
-   pnet_init_only (net, netif, tick_us, p_cfg);
+   if (pnet_init_only (net, netif, tick_us, p_cfg) != 0)
+   {
+      free (net);
+      return NULL;
+   }
+
    return net;
 }
 
@@ -119,10 +124,20 @@ void pnet_show (pnet_t * net, unsigned level)
 
       if (level & 0x0020)
       {
-         pf_cmdev_show_device (net);
+         pf_cmdev_device_show (net);
       }
 
       pf_cmrpc_show (net, level);
+
+      if (level & 0x0200)
+      {
+         pf_cmdev_diag_show (net);
+      }
+
+      if (level & 0x0400)
+      {
+         pf_fspm_logbook_show (net);
+      }
 
       if (level & 0x2000)
       {

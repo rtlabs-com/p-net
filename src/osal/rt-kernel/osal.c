@@ -21,6 +21,8 @@
 #include <drivers/net.h>
 #include <gpio.h>
 #include <lwip/netif.h>
+#include <lwip/snmp.h>
+#include <lwip/sys.h>
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -264,6 +266,14 @@ void os_mutex_destroy (os_mutex_t * mutex)
 void os_usleep (uint32_t us)
 {
    task_delay (tick_from_ms (us / 1000));
+}
+
+uint32_t os_get_system_uptime_10ms (void)
+{
+   uint32_t uptime = 0;
+
+   MIB2_COPY_SYSUPTIME_TO (&uptime);
+   return uptime;
 }
 
 uint32_t os_get_current_time_us (void)

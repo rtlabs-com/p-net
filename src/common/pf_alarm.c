@@ -73,8 +73,8 @@ static const char * apmx_sync_name = "apmx";
 /**
  * @internal
  * Return a string representation of alarm PDU type (message type).
- * @param pdu_type            In:   alarm PDU type  See
- * pf_alarm_pdu_type_values_t
+ * @param pdu_type         In:    alarm PDU type
+ *                                See pf_alarm_pdu_type_values_t
  * @return  A string representing the alarm PDU type.
  */
 static const char * pf_alarm_pdu_type_to_string (uint8_t pdu_type)
@@ -106,7 +106,7 @@ static const char * pf_alarm_pdu_type_to_string (uint8_t pdu_type)
 /**
  * @internal
  * Return a string representation of the given ALPMI state.
- * @param state            In:   The ALPMI state.
+ * @param state            In:    The ALPMI state.
  * @return  A string representing the ALPMI state.
  */
 static const char * pf_alarm_alpmi_state_to_string (
@@ -133,7 +133,7 @@ static const char * pf_alarm_alpmi_state_to_string (
 /**
  * @internal
  * Return a string representation of the given ALPMR state.
- * @param state            In:   The ALPMR state.
+ * @param state            In:    The ALPMR state.
  * @return  A string representing the ALPMR state.
  */
 static const char * pf_alarm_alpmr_state_to_string (
@@ -163,7 +163,7 @@ static const char * pf_alarm_alpmr_state_to_string (
 /**
  * @internal
  * Return a string representation of the given APMS state.
- * @param state            In:   The APMS state.
+ * @param state            In:    The APMS state.
  * @return  A string representing the APMS state.
  */
 static const char * pf_alarm_apms_state_to_string (pf_apms_state_values_t state)
@@ -189,7 +189,7 @@ static const char * pf_alarm_apms_state_to_string (pf_apms_state_values_t state)
 /**
  * @internal
  * Return a string representation of the given APMR state.
- * @param state            In:   The APMR state.
+ * @param state            In:    The APMR state.
  * @return  A string representing the APMR state.
  */
 static const char * pf_alarm_apmr_state_to_string (pf_apmr_state_values_t state)
@@ -290,9 +290,9 @@ void pf_alarm_init (pnet_t * net)
  * APMR:  APMR_Error_ind
  *
  * @param net              InOut: The p-net stack instance
- * @param p_apmx           In:   The APMX instance.
- * @param err_cls          In:   The ERRCLS variable.
- * @param err_code         In:   The ERRCODE variable.
+ * @param p_apmx           In:    The APMX instance.
+ * @param err_cls          In:    The ERRCLS variable.
+ * @param err_code         In:    The ERRCODE variable.
  */
 static void pf_alarm_error_ind (
    pnet_t * net,
@@ -326,7 +326,7 @@ static void pf_alarm_error_ind (
  * ALPMR: ALPMR_Activate_req
  * ALPMR: ALPMR_Activate_cnf(+/-) via return value and err_cls/err_code
  *
- * @param p_ar             In:   The AR instance.
+ * @param p_ar             In:    The AR instance.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -383,7 +383,7 @@ static int pf_alarm_alpmx_activate (pf_ar_t * p_ar)
  * ALPMR: ALPMR_Close_req
  * ALPMR: ALPMR_Close_cnf    via return value and err_cls/err_code
  *
- * @param p_ar             In:   The AR instance.
+ * @param p_ar             In:    The AR instance.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -436,9 +436,9 @@ static int pf_alarm_alpmx_close (pf_ar_t * p_ar)
  * ALPMI: APMS_A_Data.cnf(+/-)
  *
  * @param net              InOut: The p-net stack instance
- * @param p_apmx           In:   The APMS instance sending the confirmation.
- * @param res              In:   0  positive confirmation. This is cnf(+)
- *                               -1 negative confirmation. This is cnf(-)
+ * @param p_apmx           In:    The APMS instance sending the confirmation.
+ * @param res              In:    0  positive confirmation. This is cnf(+)
+ *                                -1 negative confirmation. This is cnf(-)
  */
 static void pf_alarm_alpmi_apms_a_data_cnf (
    pnet_t * net,
@@ -473,8 +473,8 @@ static void pf_alarm_alpmi_apms_a_data_cnf (
  * ALPMI: APMR_A_Data.ind  (Implements part of it)
  *
  * @param net              InOut: The p-net stack instance
- * @param p_apmx           In:   The APMS instance sending the confirmation.
- * @param p_pnio_status    In:   Detailed ACK information.
+ * @param p_apmx           In:    The APMS instance sending the confirmation.
+ * @param p_pnio_status    In:    Detailed ACK information.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -513,9 +513,9 @@ static int pf_alarm_alpmi_apmr_a_data_ind (
  * ALPMR: APMS_A_Data.cnf(+/-)
  *
  * @param net              InOut: The p-net stack instance
- * @param p_apmx           In:   The APMS instance sending the confirmation.
- * @param res              In:   0  positive confirmation. This is conf(+)
- *                               -1 negative confirmation. This is conf(-)
+ * @param p_apmx           In:    The APMS instance sending the confirmation.
+ * @param res              In:    0  positive confirmation. This is conf(+)
+ *                                -1 negative confirmation. This is conf(-)
  */
 static void pf_alarm_alpmr_apms_a_data_cnf (
    pnet_t * net,
@@ -644,44 +644,51 @@ static int pf_alarm_alpmr_apmr_a_data_ind (
    return ret;
 }
 
-/********************** Frame handler callbacks ******************************/
+/*********************** Frame handler callback ******************************/
 
 /**
  * @internal
- * Handle high-priority alarm PDUs from the controller, and puts it into the
+ * Handle an alarm frame from the IO-controller, and put it into the
  * queue (mbox).
+ *
+ * There are two instances of this handler, one for low prio alarm frames
+ * and one for high prio alarm frames (delivering to separare mboxes).
+ *
+ * All incoming Profinet frames with ID = PF_FRAME_ID_ALARM_LOW and
+ * ID = PF_FRAME_ID_ALARM_HIGH end up here.
  *
  * This is a callback for the frame handler. Arguments should fulfill
  * pf_eth_frame_handler_t
  *
- * All incoming Profinet frames with ID = PF_FRAME_ID_ALARM_HIGH end up here.
- *
  * @param net              InOut: The p-net stack instance
- * @param frame_id         In:   The Ethernet frame id.
- * @param p_buf            In:   The Ethernet frame buffer.
- * @param frame_id_pos     In:   Position in the buffer of the frame id.
- * @param p_arg            In:   The AR.
- * @return  0     If the frame was NOT handled by this function.
- *          1     If the frame was handled and the buffer freed.
+ * @param frame_id         In:    The Ethernet frame id.
+ * @param p_buf            In:    The Ethernet frame buffer.
+ * @param frame_id_pos     In:    Position in the buffer of the frame id.
+ * @param p_arg            In:    The APMX instance. Should be pf_apmx_t
+ * @return  0 if the frame was NOT handled by this function.
+ *          1 if the frame was handled and the buffer was freed.
  */
-static int pf_alarm_apmr_high_handler (
+static int pf_alarm_apmr_frame_handler (
    pnet_t * net,
    uint16_t frame_id,
    os_buf_t * p_buf,
    uint16_t frame_id_pos,
    void * p_arg)
 {
-   int ret = 1; /* Means that calling function should not free buffer,
-                   as that will be done when reading the mbox */
+   char * priotext = NULL;
    pf_apmx_t * p_apmx = (pf_apmx_t *)p_arg;
    pf_apmr_msg_t * p_apmr_msg;
    uint16_t nbr;
+   int ret = 0; /* Failed to handle frame. The calling function needs to free
+                   the buffer. */
+
+   priotext = p_apmx->high_priority ? "high" : "low";
 
    LOG_INFO (
       PF_ALARM_LOG,
-      "Alarm(%d): Received high prio alarm frame.\n",
-      __LINE__);
-
+      "Alarm(%d): Received %s prio alarm frame.\n",
+      __LINE__,
+      priotext);
    if (p_buf != NULL)
    {
       nbr = p_apmx->apmr_msg_nbr++; /* ToDo: Make atomic */
@@ -692,68 +699,35 @@ static int pf_alarm_apmr_high_handler (
       p_apmr_msg = &p_apmx->apmr_msg[nbr];
       p_apmr_msg->p_buf = p_buf;
       p_apmr_msg->frame_id_pos = frame_id_pos;
-      if (os_mbox_post (p_apmx->p_alarm_q, (void *)p_apmr_msg, 0) != 0)
+      if (p_apmx->p_alarm_q != NULL)
       {
-         LOG_ERROR (PF_ALARM_LOG, "Alarm(%d): Lost one alarm\n", __LINE__);
-         ret = 0; /* Failed to handle frame. The calling function needs to free
-                     the buffer. */
+         if (os_mbox_post (p_apmx->p_alarm_q, (void *)p_apmr_msg, 0) == 0)
+         {
+            ret = 1; /* Means that calling function should not free buffer,
+                        as that will be done when reading the mbox */
+         }
+         else
+         {
+            LOG_ERROR (
+               PF_ALARM_LOG,
+               "Alarm(%d): Failed to put incoming %s prio alarm in mbox\n",
+               __LINE__,
+               priotext);
+         }
+      }
+      else
+      {
+        LOG_ERROR (
+           PF_ALARM_LOG,
+           "Alarm(%d): Could not put incoming %s prio alarm frame in"
+               " mbox, as it is deallocated.\n",
+            __LINE__,
+            priotext);
       }
    }
-
-   return ret;
-}
-
-/**
- * @internal
- * Handle low-priority alarm PDUs from the controller, and puts it into the
- * queue (mbox).
- *
- * This is a callback for the frame handler. Arguments should fulfill
- * pf_eth_frame_handler_t
- *
- * All incoming Profinet frames with ID = PF_FRAME_ID_ALARM_LOW end up here.
- *
- * @param net              InOut: The p-net stack instance
- * @param frame_id         In:   The Ethernet frame id.
- * @param p_buf            In:   The Ethernet frame buffer.
- * @param frame_id_pos     In:   Position in the buffer of the frame id.
- * @param p_arg            In:   The AR.
- * @return  0     If the frame was NOT handled by this function.
- *          1     If the frame was handled and the buffer freed.
- */
-static int pf_alarm_apmr_low_handler (
-   pnet_t * net,
-   uint16_t frame_id,
-   os_buf_t * p_buf,
-   uint16_t frame_id_pos,
-   void * p_arg)
-{
-   int ret = 1; /* Means that calling function should not free buffer,
-                   as that will be done when reading the mbox */
-   pf_apmx_t * p_apmx = (pf_apmx_t *)p_arg;
-   pf_apmr_msg_t * p_apmr_msg;
-   uint16_t nbr;
-
-   LOG_INFO (
-      PF_ALARM_LOG,
-      "Alarm(%d): Received low prio alarm frame.\n",
-      __LINE__);
-   if (p_buf != NULL)
+   else
    {
-      nbr = p_apmx->apmr_msg_nbr++; /* ToDo: Make atomic */
-      if (p_apmx->apmr_msg_nbr >= NELEMENTS (p_apmx->apmr_msg))
-      {
-         p_apmx->apmr_msg_nbr = 0;
-      }
-      p_apmr_msg = &p_apmx->apmr_msg[nbr];
-      p_apmr_msg->p_buf = p_buf;
-      p_apmr_msg->frame_id_pos = frame_id_pos;
-      if (os_mbox_post (p_apmx->p_alarm_q, (void *)p_apmr_msg, 0) != 0)
-      {
-         LOG_ERROR (PF_ALARM_LOG, "Alarm(%d): Lost one alarm\n", __LINE__);
-         ret = 0; /* Failed to handle frame. The calling function needs to free
-                     the buffer. */
-      }
+      ret = 1; /* No need for the calling function to free p_buf */
    }
 
    return ret;
@@ -779,7 +753,7 @@ static int pf_alarm_apmr_low_handler (
  * @param arg
  * @param current_time     In:    The current system time, in microseconds,
  *                                when the scheduler is started to execute
- * stored tasks.
+ *                                stored tasks.
  */
 static void pf_alarm_apms_timeout (
    pnet_t * net,
@@ -909,7 +883,7 @@ static void pf_alarm_apms_timeout (
  * APMR: APMR_Activate_cnf(+/-) via return value and err_cls/err_code
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:   The AR instance.
+ * @param p_ar             In:    The AR instance.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -954,6 +928,7 @@ static int pf_alarm_apmx_activate (pnet_t * net, pf_ar_t * p_ar)
 
          if (ix == 0)
          {
+            p_ar->apmx[ix].high_priority = false;
             p_ar->apmx[ix].vlan_prio = ALARM_VLAN_PRIO_LOW;
             p_ar->apmx[ix].block_type_alarm_notify =
                PF_BT_ALARM_NOTIFICATION_LOW;
@@ -962,6 +937,7 @@ static int pf_alarm_apmx_activate (pnet_t * net, pf_ar_t * p_ar)
          }
          else
          {
+            p_ar->apmx[ix].high_priority = true;
             p_ar->apmx[ix].vlan_prio = ALARM_VLAN_PRIO_HIGH;
             p_ar->apmx[ix].block_type_alarm_notify =
                PF_BT_ALARM_NOTIFICATION_HIGH;
@@ -993,13 +969,13 @@ static int pf_alarm_apmx_activate (pnet_t * net, pf_ar_t * p_ar)
 
    pf_eth_frame_id_map_add (
       net,
-      PF_FRAME_ID_ALARM_LOW,
-      pf_alarm_apmr_low_handler,
+      p_ar->apmx[0].frame_id,
+      pf_alarm_apmr_frame_handler,
       &p_ar->apmx[0]);
    pf_eth_frame_id_map_add (
       net,
-      PF_FRAME_ID_ALARM_HIGH,
-      pf_alarm_apmr_high_handler,
+      p_ar->apmx[1].frame_id,
+      pf_alarm_apmr_frame_handler,
       &p_ar->apmx[1]);
 
    return ret;
@@ -1014,8 +990,8 @@ static int pf_alarm_apmx_activate (pnet_t * net, pf_ar_t * p_ar)
  * Does free the incoming alarm frame buffer.
  *
  * @param net              InOut: The p-net stack instance
- * @param p_apmx           In:   The APMX instance.
- * @param p_fixed          In:   The fixed part of the ALARM message.
+ * @param p_apmx           In:    The APMX instance.
+ * @param p_fixed          In:    The fixed part of the ALARM message.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -1106,17 +1082,18 @@ static int pf_alarm_apms_a_data_ind (
  * @param p_apmx           In:    The APMX instance.
  * @param p_fixed          In:    The fixed part of the RTA-PDU.
  * @param p_alarm_data     In:    Slot, subslot etc. Mandatory for DATA
- * messages, otherwise NULL.
+ *                                messages, otherwise NULL.
  * @param maint_status     In:    The Maintenance status used for specific USI
- * values (inserted only if not zero).
+ *                                values (inserted only if not zero).
  * @param payload_usi      In:    The payload USI (may be 0).
- * @param payload_len      In:    Payload length. Must be > 0 if payload_usi >
- * 0.
+ * @param payload_len      In:    Payload length. Must be > 0 if
+ *                                payload_usi > 0.
  * @param p_payload        In:    Mandatory if payload_len > 0. May be NULL.
- * Custom data or pf_diag_item_t.
+ *                                Custom data or pf_diag_item_t.
  * @param p_pnio_status    In:    Mandatory for ERROR messages.
  *                                For DATA messages a NULL value gives an Alarm
- * Notification DATA message, otherwise an Alarm Ack DATA message.
+ *                                Notification DATA message, otherwise an
+ *                                Alarm Ack DATA message.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -1294,8 +1271,8 @@ static int pf_alarm_apms_a_data_req (
 
             LOG_INFO (
                PF_AL_BUF_LOG,
-               "Alarm(%d): Send an alarm frame %s  Frame ID: %04x  Tack: %u  "
-               "USI: %u  Payload len: %u  Send seq: %u  ACK seq: %u\n",
+               "Alarm(%d): Send an alarm frame %s  Frame ID: 0x%04X  Tack: %u  "
+               "USI: 0x%04X  Payload len: %u  Send seq: %u  ACK seq: %u\n",
                __LINE__,
                pf_alarm_pdu_type_to_string (p_fixed->pdu_type.type),
                p_apmx->frame_id,
@@ -1364,17 +1341,16 @@ static int pf_alarm_apms_a_data_req (
  *
  * @param net              InOut: The p-net stack instance
  * @param p_apmx           In:    The APMS instance. Select high or low prio by
- * using the correct instance.
+ *                                using the correct instance.
  * @param p_alarm_data     In:    Alarm details (slot, subslot etc). Mandatory.
  * @param maint_status     In:    The Maintenance status used for specific USI
- * values (inserted only if not zero).
+ *                                values (inserted only if not zero).
  * @param payload_usi      In:    The payload USI. May be 0.
- * @param payload_len      In:    Payload length. Must be > 0 if payload_usi >
- * 0.
+ * @param payload_len      In:    Payload length. Must be > 0 if
+ *                                payload_usi > 0.
  * @param p_payload        In:    Mandatory if payload_len > 0, otherwise NULL.
- * Custom data or pf_diag_item_t.
- * @param p_pnio_status    In:    Optional. Detailed error information (or
- * NULL).
+ *                                Custom data or pf_diag_item_t.
+ * @param p_pnio_status    In:    Optional. Detailed error information (or NULL)
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -1551,6 +1527,7 @@ static int pf_alarm_apmx_close (pnet_t * net, pf_ar_t * p_ar, uint8_t err_code)
          if (p_ar->apmx[ix].p_alarm_q != NULL)
          {
             os_mbox_destroy (p_ar->apmx[ix].p_alarm_q);
+            p_ar->apmx[ix].p_alarm_q = NULL;
          }
       }
    }
@@ -1567,7 +1544,7 @@ static int pf_alarm_apmx_close (pnet_t * net, pf_ar_t * p_ar, uint8_t err_code)
  * APMR: A_Data_req  (Implements parts of it. This ia LMPM_A_Data.req via macro)
  *
  * @param net              InOut: The p-net stack instance
- * @param p_apmx           In:   The APMX instance.
+ * @param p_apmx           In:    The APMX instance.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -1609,7 +1586,7 @@ static int pf_alarm_apmr_send_ack (pnet_t * net, pf_apmx_t * p_apmx)
  * APMR: A_Data_req  (Implements parts of it. This ia LMPM_A_Data.req via macro)
  *
  * @param net              InOut: The p-net stack instance
- * @param p_apmx           In:   The APMX instance.
+ * @param p_apmx           In:    The APMX instance.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -1652,10 +1629,10 @@ static int pf_alarm_apmr_send_nack (pnet_t * net, pf_apmx_t * p_apmx)
  * APMR: A_Data_ind   (Implements part of it. This ia LMPM_A_Data.ind via macro)
  *
  * @param net              InOut: The p-net stack instance
- * @param p_apmx           In:   The APMX instance.
- * @param p_fixed          In:   The fixed part of the RTA-DPU.
- * @param data_len         In:   Length of the variable part of the RTA-PDU.
- * @param p_data           In:   The variable part of the RTA-PDU.
+ * @param p_apmx           In:    The APMX instance.
+ * @param p_fixed          In:    The fixed part of the RTA-DPU.
+ * @param data_len         In:    Length of the variable part of the RTA-PDU.
+ * @param p_data           In:    The variable part of the RTA-PDU.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -1847,7 +1824,7 @@ static int pf_alarm_apmr_a_data_ind (
  * APMR + APMS: Implementation detail
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:   The AR instance.
+ * @param p_ar             In:    The AR instance.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -2104,12 +2081,12 @@ int pf_alarm_close (pnet_t * net, pf_ar_t * p_ar)
 /**
  * @internal
  * Add one diag item to the alarm digest.
- * @param p_ar             In:   The AR instance.
- * @param p_subslot        In:   The subslot instance.
- * @param p_diag_item      In:   The diag item.
- * @param p_alarm_spec     Out:  The computed alarm specifier. Describes
- * diagnosis alarms.
- * @param p_maint_status   Out:  The computed maintenance status.
+ * @param p_ar             In:    The AR instance.
+ * @param p_subslot        In:    The subslot instance.
+ * @param p_diag_item      In:    The diag item.
+ * @param p_alarm_spec     Out:   The computed alarm specifier. Describes
+ *                                diagnosis alarms.
+ * @param p_maint_status   Out:   The computed maintenance status.
  */
 static void pf_alarm_add_item_to_digest (
    pf_ar_t * p_ar,
@@ -2159,13 +2136,13 @@ static void pf_alarm_add_item_to_digest (
  * Describes diagnosis alarms.
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:   The AR instance.
- * @param api_id           In:   The API identifier.
- * @param slot_nbr         In:   The slot number.
- * @param subslot_nbr      In:   The sub-slot number.
- * @param p_diag_item      In:   The current diag item (may be NULL).
- * @param p_alarm_spec     Out:  The computed alarm specifier.
- * @param p_maint_status   Out:  The computed maintenance status.
+ * @param p_ar             In:    The AR instance.
+ * @param api_id           In:    The API identifier.
+ * @param slot_nbr         In:    The slot number.
+ * @param subslot_nbr      In:    The sub-slot number.
+ * @param p_diag_item      In:    The current diag item (may be NULL).
+ * @param p_alarm_spec     Out:   The computed alarm specifier.
+ * @param p_maint_status   Out:   The computed maintenance status.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -2334,7 +2311,7 @@ int pf_alarm_alpmr_alarm_ack (
  * @param payload_usi      In:    The USI of the payload. May be 0.
  * @param payload_len      In:    The length of the payload (if usi < 0x8000).
  * @param p_payload        In:    Mandatory if payload_len > 0, otherwise NULL.
- * Custom data or pf_diag_item_t.
+ *                                Custom data or pf_diag_item_t.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred (or waiting for ACK from controller: re-try
  * later).

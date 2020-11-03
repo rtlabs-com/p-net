@@ -286,7 +286,7 @@ void pf_cmrpc_show (pnet_t * net, unsigned level)
          printf (
             "ready 4 data          = %s\n",
             p_ar->ready_4_data ? "TRUE" : "FALSE");
-         pf_cmdev_show (p_ar);
+         pf_cmdev_ar_show (p_ar);
          pf_cmpbe_show (p_ar);
          pf_cmio_show (p_ar);
          pf_cmsm_show (p_ar);
@@ -1746,7 +1746,8 @@ static int pf_cmrpc_rm_connect_ind (
    else
    {
       net->port[0].adjust.active = false;
-      pf_lldp_restart (net, true);
+      net->port[0].check.active = false;
+      pf_lldp_tx_restart (net, true);
    }
 
    LOG_DEBUG (

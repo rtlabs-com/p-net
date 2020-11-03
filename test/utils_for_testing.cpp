@@ -226,7 +226,7 @@ int my_state_ind (
 
       /* Set initial data and IOPS for custom input modules, and IOCS for custom
        * output modules */
-      for (slot = 0; slot < PNET_MAX_MODULES; slot++)
+      for (slot = 0; slot < PNET_MAX_SLOTS; slot++)
       {
          if (p_appdata->custom_input_slots[slot] == true)
          {
@@ -333,7 +333,8 @@ int my_exp_submodule_ind (
    uint16_t slot,
    uint16_t subslot,
    uint32_t module_ident,
-   uint32_t submodule_ident)
+   uint32_t submodule_ident,
+   const pnet_data_cfg_t * p_exp_data)
 {
    app_data_for_testing_t * p_appdata = (app_data_for_testing_t *)arg;
    int ret = -1;
@@ -489,6 +490,7 @@ void PnetIntegrationTestBase::cfg_init()
    strcpy (pnet_default_cfg.station_name, "");
    strcpy (pnet_default_cfg.device_vendor, "rt-labs");
    strcpy (pnet_default_cfg.manufacturer_specific_string, "PNET demo");
+   strcpy (pnet_default_cfg.product_name, "PNET unit tests");
 
    strcpy (pnet_default_cfg.lldp_cfg.port_id, "port-001");
    pnet_default_cfg.lldp_cfg.ttl = 20; /* seconds */
@@ -560,7 +562,7 @@ void PnetIntegrationTestBase::run_stack (int us)
          appdata.inputdata[0] = appdata.data_ctr++;
 
          /* Set data for custom input modules, if any */
-         for (slot = 0; slot < PNET_MAX_MODULES; slot++)
+         for (slot = 0; slot < PNET_MAX_SLOTS; slot++)
          {
             if (appdata.custom_input_slots[slot] == true)
             {

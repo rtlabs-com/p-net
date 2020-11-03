@@ -18,7 +18,7 @@
 
 /**
  * @file
- * @brief Implements Link Layer Discovery Protocol (LLDP), for neighborhood
+ * @brief Implements Link Layer Discovery Protocol (LLDP), for neighbourhood
  * detection.
  *
  * Builds and sends LLDP frames.
@@ -42,9 +42,6 @@
 #define LLDP_TYPE_TTL        3
 #define LLDP_TYPE_MANAGEMENT 8
 #define LLDP_TYPE_ORG_SPEC   127
-
-#define LLDP_SUBTYPE_MAC              4
-#define LLDP_SUBTYPE_LOCALLY_ASSIGNED 7
 
 #define LLDP_IEEE_SUBTYPE_MAC_PHY 1
 
@@ -71,8 +68,8 @@ typedef struct lldp_tlv
 static const char org_id_pnio[] = {0x00, 0x0e, 0xcf};
 static const char org_id_ieee_8023[] = {0x00, 0x12, 0x0f};
 
-static const char * shed_tag_tx = "lldp_broadcast_tmo";
-static const char * shed_tag_rx = "lldp_receive_tmo";
+static const char * shed_tag_tx = "lldp_tx";
+static const char * shed_tag_rx = "lldp_rx";
 
 typedef enum lldp_pnio_subtype_values
 {
@@ -130,7 +127,7 @@ static inline void pf_lldp_add_tlv_header (
  * @param p_info           InOut: Parser state
  * @param p_pos            InOut: Offset in parsed buffer
  * @return parsed frame. If parsing fails, frame type is set to LLDP_TYPE_END
- * and len field set to 0.
+ *                       and len field set to 0.
  */
 lldp_tlv_t pf_lldp_get_tlv (pf_get_info_t * p_info, uint16_t * p_pos)
 {
@@ -162,7 +159,7 @@ lldp_tlv_t pf_lldp_get_tlv (pf_get_info_t * p_info, uint16_t * p_pos)
  * @param p_buf            InOut: The buffer.
  * @param p_pos            InOut: The buffer position.
  * @param len              In:    The TLV payload length (for the part after the
- * organisation identifier)
+ *                                organisation identifier)
  */
 static inline void pf_lldp_add_pnio_header (
    uint8_t * p_buf,
@@ -185,7 +182,7 @@ static inline void pf_lldp_add_pnio_header (
  * @param p_buf            InOut: The buffer.
  * @param p_pos            InOut: The buffer position.
  * @param len              In:    The TLV payload length (for the part after the
- * organisation identifier)
+ *                                organisation identifier)
  */
 static inline void pf_lldp_add_ieee_header (
    uint8_t * p_buf,
@@ -202,96 +199,69 @@ static inline void pf_lldp_add_ieee_header (
  * @internal
  * Insert the mandatory chassis_id TLV into a buffer.
  *
- * Use the MAC address if the chassis ID name not is available in the
- * configuration.
- *
- * @param p_cfg            In:    The Profinet configuration.
+ * @param p_chassis_id     In:    The Chassis ID.
  * @param p_buf            InOut: The buffer.
  * @param p_pos            InOut: The position in the buffer.
  */
 static void pf_lldp_add_chassis_id_tlv (
-   pnet_cfg_t * p_cfg,
+   const pf_lldp_chassis_id_t * p_chassis_id,
    uint8_t * p_buf,
    uint16_t * p_pos)
 {
-   uint16_t len;
-
-   len = (uint16_t)strlen (p_cfg->lldp_cfg.chassis_id);
-   if (len == 0)
-   {
-      /* Use the MAC address */
-      pf_lldp_add_tlv_header (
-         p_buf,
-         p_pos,
-         LLDP_TYPE_CHASSIS_ID,
-         1 + sizeof (pnet_ethaddr_t));
-
-      pf_put_byte (LLDP_SUBTYPE_MAC, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
-      memcpy (
-         &p_buf[*p_pos],
-         p_cfg->eth_addr.addr,
-         sizeof (pnet_ethaddr_t)); /* ToDo: Shall be device MAC */
-      (*p_pos) += sizeof (pnet_ethaddr_t);
-   }
-   else
-   {
-      /* Use the chassis_id from the cfg */
-      pf_lldp_add_tlv_header (p_buf, p_pos, LLDP_TYPE_CHASSIS_ID, 1 + len);
-
-      pf_put_byte (
-         LLDP_SUBTYPE_LOCALLY_ASSIGNED,
-         PF_FRAME_BUFFER_SIZE,
-         p_buf,
-         p_pos);
-      pf_put_mem (
-         p_cfg->lldp_cfg.chassis_id,
-         len,
-         PF_FRAME_BUFFER_SIZE,
-         p_buf,
-         p_pos);
-   }
+   pf_lldp_add_tlv_header (
+      p_buf,
+      p_pos,
+      LLDP_TYPE_CHASSIS_ID,
+      1 + p_chassis_id->len);
+   pf_put_byte (p_chassis_id->subtype, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
+   pf_put_mem (
+      p_chassis_id->string,
+      p_chassis_id->len,
+      PF_FRAME_BUFFER_SIZE,
+      p_buf,
+      p_pos);
 }
 
 /**
  * @internal
  * Insert the mandatory port_id TLV into a buffer.
- * @param p_cfg            In:    The Profinet configuration.
+ * @param p_lldp_cfg       In:    LLDP configuration for this port
  * @param p_buf            InOut: The buffer.
  * @param p_pos            InOut: The position in the buffer.
  */
 static void pf_lldp_add_port_id_tlv (
-   pnet_cfg_t * p_cfg,
+   const pnet_lldp_cfg_t * p_lldp_cfg,
    uint8_t * p_buf,
    uint16_t * p_pos)
 {
    uint16_t len;
 
-   len = (uint16_t)strlen (p_cfg->lldp_cfg.port_id);
+   len = (uint16_t)strlen (p_lldp_cfg->port_id);
 
    pf_lldp_add_tlv_header (p_buf, p_pos, LLDP_TYPE_PORT_ID, 1 + len);
 
    pf_put_byte (
-      LLDP_SUBTYPE_LOCALLY_ASSIGNED,
+      PF_LLDP_SUBTYPE_LOCALLY_ASSIGNED,
       PF_FRAME_BUFFER_SIZE,
       p_buf,
       p_pos);
-   pf_put_mem (p_cfg->lldp_cfg.port_id, len, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
+   pf_put_mem (p_lldp_cfg->port_id, len, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
 }
 
 /**
  * @internal
  * Insert the mandatory time-to-live (TTL) TLV into a buffer.
- * @param p_cfg            In:    The Profinet configuration.
+ * @param p_lldp_cfg       In:    LLDP configuration for this port
  * @param p_buf            InOut: The buffer.
  * @param p_pos            InOut: The position in the buffer.
  */
 static void pf_lldp_add_ttl_tlv (
-   pnet_cfg_t * p_cfg,
+   const pnet_lldp_cfg_t * p_lldp_cfg,
    uint8_t * p_buf,
    uint16_t * p_pos)
 {
    pf_lldp_add_tlv_header (p_buf, p_pos, LLDP_TYPE_TTL, 2);
-   pf_put_uint16 (true, p_cfg->lldp_cfg.ttl, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
+   pf_put_uint16 (true, p_lldp_cfg->ttl, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
 }
 
 /**
@@ -299,12 +269,12 @@ static void pf_lldp_add_ttl_tlv (
  * Insert the optional Profinet port status TLV into a buffer.
  *
  * The port status TLV is mandatory for ProfiNet.
- * @param p_cfg            In:    The Profinet configuration.
+ * @param p_lldp_cfg       In:    LLDP configuration for this port
  * @param p_buf            InOut: The buffer.
  * @param p_pos            InOut: The position in the buffer.
  */
 static void pf_lldp_add_port_status (
-   pnet_cfg_t * p_cfg,
+   const pnet_lldp_cfg_t * p_lldp_cfg,
    uint8_t * p_buf,
    uint16_t * p_pos)
 {
@@ -317,13 +287,13 @@ static void pf_lldp_add_port_status (
       p_pos);
    pf_put_uint16 (
       true,
-      p_cfg->lldp_cfg.rtclass_2_status,
+      p_lldp_cfg->rtclass_2_status,
       PF_FRAME_BUFFER_SIZE,
       p_buf,
       p_pos);
    pf_put_uint16 (
       true,
-      p_cfg->lldp_cfg.rtclass_3_status,
+      p_lldp_cfg->rtclass_3_status,
       PF_FRAME_BUFFER_SIZE,
       p_buf,
       p_pos);
@@ -334,12 +304,12 @@ static void pf_lldp_add_port_status (
  * Insert the optional Profinet chassis MAC TLV into a buffer.
  *
  * The chassis MAC TLV is mandatory for ProfiNet.
- * @param p_cfg            In:    The Profinet configuration.
+ * @param p_mac_address    In:    Device MAC address.
  * @param p_buf            InOut: The buffer.
  * @param p_pos            InOut: The position in the buffer.
  */
 static void pf_lldp_add_chassis_mac (
-   pnet_cfg_t * p_cfg,
+   const pnet_ethaddr_t * p_mac_address,
    uint8_t * p_buf,
    uint16_t * p_pos)
 {
@@ -350,15 +320,7 @@ static void pf_lldp_add_chassis_mac (
       PF_FRAME_BUFFER_SIZE,
       p_buf,
       p_pos);
-   memcpy (
-      &p_buf[*p_pos],
-      p_cfg->eth_addr.addr,
-      sizeof (pnet_ethaddr_t)); /* ToDo:
-                                   Should
-                                   be
-                                   device
-                                   MAC
-                                 */
+   memcpy (&p_buf[*p_pos], p_mac_address->addr, sizeof (pnet_ethaddr_t));
    (*p_pos) += sizeof (pnet_ethaddr_t);
 }
 
@@ -370,28 +332,23 @@ static void pf_lldp_add_chassis_mac (
  * type.
  *
  * The IEEE 802.3 MAC TLV is mandatory for ProfiNet on 803.2 interfaces.
- * @param p_cfg            In:    The Profinet configuration.
+ * @param p_lldp_cfg       In:    LLDP configuration for this port
  * @param p_buf            InOut: The buffer.
  * @param p_pos            InOut: The position in the buffer.
  */
 static void pf_lldp_add_ieee_mac_phy (
-   pnet_cfg_t * p_cfg,
+   const pnet_lldp_cfg_t * p_lldp_cfg,
    uint8_t * p_buf,
    uint16_t * p_pos)
 {
    pf_lldp_add_ieee_header (p_buf, p_pos, 6);
 
    pf_put_byte (LLDP_IEEE_SUBTYPE_MAC_PHY, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
-   pf_put_byte (p_cfg->lldp_cfg.cap_aneg, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
+   pf_put_byte (p_lldp_cfg->cap_aneg, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
+   pf_put_uint16 (true, p_lldp_cfg->cap_phy, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
    pf_put_uint16 (
       true,
-      p_cfg->lldp_cfg.cap_phy,
-      PF_FRAME_BUFFER_SIZE,
-      p_buf,
-      p_pos);
-   pf_put_uint16 (
-      true,
-      p_cfg->lldp_cfg.mau_type,
+      p_lldp_cfg->mau_type,
       PF_FRAME_BUFFER_SIZE,
       p_buf,
       p_pos);
@@ -403,29 +360,25 @@ static void pf_lldp_add_ieee_mac_phy (
  *
  * Contains the IP address.
  *
- * @param net              InOut: The p-net stack instance
- * @param p_cfg            In:    The Profinet configuration.
+ * @param p_ipaddr         In:    IP address
+ * @param p_lldp_cfg       In:    LLDP configuration for this port
  * @param p_buf            InOut: The buffer.
  * @param p_pos            InOut: The position in the buffer.
  */
 static void pf_lldp_add_management (
-   pnet_t * net,
-   pnet_cfg_t * p_cfg,
+   const os_ipaddr_t * p_ipaddr,
+   const pnet_lldp_cfg_t * p_lldp_cfg,
    uint8_t * p_buf,
    uint16_t * p_pos)
 {
-   os_ipaddr_t ipaddr = 0;
-
-   pf_cmina_get_ipaddr (net, &ipaddr);
-
+   /* TODO: Add more port info to the pnet_lldp_cfg_t configuration */
    pf_lldp_add_tlv_header (p_buf, p_pos, LLDP_TYPE_MANAGEMENT, 12);
 
-   /* ToDo: What shall be moved to the configuration? */
    pf_put_byte (1 + 4, PF_FRAME_BUFFER_SIZE, p_buf, p_pos); /* Address string
                                                                length (incl
                                                                type) */
    pf_put_byte (1, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);     /* Type IPV4 */
-   pf_put_uint32 (true, ipaddr, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
+   pf_put_uint32 (true, *p_ipaddr, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
    pf_put_byte (1, PF_FRAME_BUFFER_SIZE, p_buf, p_pos); /* Interface Subtype:
                                                            Unknown */
    pf_put_uint32 (true, 0, PF_FRAME_BUFFER_SIZE, p_buf, p_pos); /* Interface
@@ -542,12 +495,68 @@ static void pf_lldp_reset_peer_timeout (pnet_t * net, uint16_t timeout_in_secs)
    }
 }
 
+void pf_lldp_get_chassis_id (pnet_t * net, pf_lldp_chassis_id_t * p_chassis_id)
+{
+   pnet_cfg_t * p_cfg = NULL;
+   const char * station_name = NULL;
+
+   /* Try to use NameOfStation as Chassis ID.
+    *
+    * FIXME: Use of pf_cmina_get_station_name() is not thread-safe, as the
+    * returned pointer points to non-constant memory shared by multiple threads.
+    * Fix this, e.g. using a mutex.
+    *
+    * TODO: Add option to use SystemIdentification as Chassis ID.
+    * See IEC61158-6-10 table 361.
+    */
+   pf_cmina_get_station_name (net, &station_name);
+   CC_ASSERT (station_name != NULL);
+
+   p_chassis_id->len = strlen (station_name);
+   if (p_chassis_id->len == 0 || p_chassis_id->len > PNET_LLDP_CHASSIS_ID_MAX_LEN)
+   {
+      pf_fspm_get_cfg (net, &p_cfg);
+      CC_ASSERT (p_cfg != NULL);
+
+      /* Use the MAC address */
+      p_chassis_id->subtype = PF_LLDP_SUBTYPE_MAC;
+      p_chassis_id->len = sizeof (pnet_ethaddr_t);
+      memcpy (
+         p_chassis_id->string,
+         p_cfg->eth_addr.addr,
+         sizeof (pnet_ethaddr_t));
+   }
+   else
+   {
+      /* Use the locally assigned chassis ID name */
+      p_chassis_id->subtype = PF_LLDP_SUBTYPE_LOCALLY_ASSIGNED;
+      memcpy (p_chassis_id->string, station_name, p_chassis_id->len);
+   }
+
+   p_chassis_id->string[p_chassis_id->len] = '\0';
+}
+
+void pf_lldp_get_peer_chassis_id (
+   pnet_t * net,
+   pf_lldp_chassis_id_t * p_chassis_id)
+{
+   /* Copy stored Chassis ID previously received from peer
+    *
+    * We lock a mutex as this function may be called from other threads,
+    * e.g. an SNMP agent.
+    */
+   os_mutex_lock (net->lldp_mutex);
+   *p_chassis_id = net->lldp_peer_info.chassis_id;
+   os_mutex_unlock (net->lldp_mutex);
+}
+
 void pf_lldp_send (pnet_t * net)
 {
    os_buf_t * p_lldp_buffer = os_buf_alloc (PF_FRAME_BUFFER_SIZE);
    uint8_t * p_buf = NULL;
    uint16_t pos = 0;
    pnet_cfg_t * p_cfg = NULL;
+   pnet_lldp_cfg_t * p_lldp_cfg = NULL;
    os_ipaddr_t ipaddr = 0;
    char ip_string[OS_INET_ADDRSTRLEN] = {0};
 
@@ -606,8 +615,12 @@ void pf_lldp_send (pnet_t * net)
    if (p_lldp_buffer != NULL)
    {
       p_buf = p_lldp_buffer->payload;
+      p_lldp_cfg = &p_cfg->lldp_cfg;
       if (p_buf != NULL)
       {
+         pf_lldp_chassis_id_t chassis_id;
+
+         pf_lldp_get_chassis_id (net, &chassis_id);
          pf_cmina_get_ipaddr (net, &ipaddr);
          pf_cmina_ip_to_string (ipaddr, ip_string);
          LOG_DEBUG (
@@ -622,10 +635,11 @@ void pf_lldp_send (pnet_t * net)
             p_cfg->eth_addr.addr[4],
             p_cfg->eth_addr.addr[5],
             ip_string,
-            p_cfg->lldp_cfg.chassis_id,
-            p_cfg->lldp_cfg.port_id);
+            chassis_id.string,
+            p_lldp_cfg->port_id);
 
          pos = 0;
+
          /* Add destination MAC address */
          pf_put_mem (
             &lldp_dst_addr,
@@ -647,15 +661,15 @@ void pf_lldp_send (pnet_t * net)
             &pos);
 
          /* Add mandatory parts */
-         pf_lldp_add_chassis_id_tlv (p_cfg, p_buf, &pos);
-         pf_lldp_add_port_id_tlv (p_cfg, p_buf, &pos);
-         pf_lldp_add_ttl_tlv (p_cfg, p_buf, &pos);
+         pf_lldp_add_chassis_id_tlv (&chassis_id, p_buf, &pos);
+         pf_lldp_add_port_id_tlv (p_lldp_cfg, p_buf, &pos);
+         pf_lldp_add_ttl_tlv (p_lldp_cfg, p_buf, &pos);
 
          /* Add optional parts */
-         pf_lldp_add_port_status (p_cfg, p_buf, &pos);
-         pf_lldp_add_chassis_mac (p_cfg, p_buf, &pos);
-         pf_lldp_add_ieee_mac_phy (p_cfg, p_buf, &pos);
-         pf_lldp_add_management (net, p_cfg, p_buf, &pos);
+         pf_lldp_add_port_status (p_lldp_cfg, p_buf, &pos);
+         pf_lldp_add_chassis_mac (&p_cfg->eth_addr, p_buf, &pos);
+         pf_lldp_add_ieee_mac_phy (p_lldp_cfg, p_buf, &pos);
+         pf_lldp_add_management (&ipaddr, p_lldp_cfg, p_buf, &pos);
 
          /* Add end of LLDP-PDU marker */
          pf_lldp_add_tlv_header (p_buf, &pos, LLDP_TYPE_END, 0);
@@ -669,7 +683,7 @@ void pf_lldp_send (pnet_t * net)
    }
 }
 
-void pf_lldp_restart (pnet_t * net, bool send)
+void pf_lldp_tx_restart (pnet_t * net, bool send)
 {
    if (net->lldp_timeout != 0)
    {
@@ -701,7 +715,11 @@ void pf_lldp_restart (pnet_t * net, bool send)
 void pf_lldp_init (pnet_t * net)
 {
    memset (&net->lldp_peer_info, 0, sizeof (net->lldp_peer_info));
-   pf_lldp_restart (net, true);
+
+   net->lldp_mutex = os_mutex_create();
+   CC_ASSERT (net->lldp_mutex != NULL);
+
+   pf_lldp_tx_restart (net, true);
 }
 
 /**
@@ -735,18 +753,19 @@ int pf_lldp_parse_packet (
       {
       case LLDP_TYPE_CHASSIS_ID:
          if (
-            (tlv.len > 0) &&
-            ((size_t) (tlv.len - 1) < sizeof (lldp_peer_info->chassis_id)))
+            (tlv.len > 0) && ((size_t) (tlv.len - 1) <
+                              sizeof (lldp_peer_info->chassis_id.string)))
          {
-            lldp_peer_info->chassis_id_len = tlv.len - 1;
-            lldp_peer_info->chassis_id_subtype =
+            lldp_peer_info->chassis_id.len = tlv.len - 1;
+            lldp_peer_info->chassis_id.subtype =
                pf_get_byte (&parse_info, &offset);
             pf_get_mem (
                &parse_info,
                &offset,
-               lldp_peer_info->chassis_id_len,
-               &lldp_peer_info->chassis_id);
-            lldp_peer_info->chassis_id[lldp_peer_info->chassis_id_len] = '\0';
+               lldp_peer_info->chassis_id.len,
+               &lldp_peer_info->chassis_id.string);
+            lldp_peer_info->chassis_id.string[lldp_peer_info->chassis_id.len] =
+               '\0';
          }
          else
          {
@@ -991,6 +1010,18 @@ int pf_lldp_generate_alias_name (
    return 0;
 }
 
+bool pf_lldp_is_peer_info_received (pnet_t * net, uint32_t * timestamp_10ms)
+{
+   bool is_received;
+
+   os_mutex_lock (net->lldp_mutex);
+   is_received = net->lldp_is_peer_info_received;
+   *timestamp_10ms = net->lldp_timestamp_for_last_peer_change;
+   os_mutex_unlock (net->lldp_mutex);
+
+   return is_received;
+}
+
 /**
  * Apply updated peer information
  * @param net              InOut: p-net stack instance
@@ -1018,7 +1049,7 @@ void pf_lldp_update_peer (
 
    error = pf_lldp_generate_alias_name (
       lldp_peer_info->port_id,
-      lldp_peer_info->chassis_id,
+      lldp_peer_info->chassis_id.string,
       alias,
       sizeof (alias));
    if (!error && (strcmp (alias, net->cmina_current_dcp_ase.alias_name) != 0))
@@ -1040,7 +1071,15 @@ void pf_lldp_update_peer (
        */
    }
 
+   /* Update stored peer information
+    *
+    * We lock a mutex as other threads (e.g. an SNMP agent) may read from it.
+    */
+   os_mutex_lock (net->lldp_mutex);
+   net->lldp_is_peer_info_received = true;
+   net->lldp_timestamp_for_last_peer_change = os_get_system_uptime_10ms();
    memcpy (stored_peer_info, lldp_peer_info, sizeof (pnet_lldp_peer_info_t));
+   os_mutex_unlock (net->lldp_mutex);
 }
 
 int pf_lldp_recv (pnet_t * net, os_buf_t * p_frame_buf, uint16_t offset)
@@ -1066,7 +1105,7 @@ int pf_lldp_recv (pnet_t * net, os_buf_t * p_frame_buf, uint16_t offset)
          peer_data.mac_address.addr[4],
          peer_data.mac_address.addr[5],
          p_frame_buf->len,
-         peer_data.chassis_id,
+         peer_data.chassis_id.string,
          peer_data.port_id);
       pf_lldp_update_peer (net, &peer_data);
    }

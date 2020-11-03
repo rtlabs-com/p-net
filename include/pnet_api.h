@@ -61,13 +61,16 @@ extern "C" {
  * The DAP module and submodules must be plugged by the application after the
  * call to pnet_init.
  */
-#define PNET_SLOT_DAP_IDENT   0x00000000
-#define PNET_MOD_DAP_IDENT    0x00000001 /* For use in slot 0 */
-#define PNET_SUBMOD_DAP_IDENT 0x00000001 /* For use in subslot 1 */
-#define PNET_SUBMOD_DAP_INTERFACE_1_IDENT                                      \
-   0x00008000 /* For use in subslot 0x8000 */
-#define PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT                               \
-   0x00008001 /* For use in subslot 0x8001 */
+#define PNET_SLOT_DAP_IDENT                       0x00000000
+#define PNET_SUBSLOT_DAP_INTERFACE_1_IDENT        0x00008000
+#define PNET_SUBSLOT_DAP_INTERFACE_1_PORT_0_IDENT 0x00008001
+
+#define PNET_MOD_DAP_IDENT                       0x00000001 /* For use in PNET_SLOT_DAP_IDENT */
+#define PNET_SUBMOD_DAP_IDENT                    0x00000001
+#define PNET_SUBMOD_DAP_INTERFACE_1_IDENT        0x00008000
+#define PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT 0x00008001
+
+#define PNET_API_NO_APPLICATION_PROFILE   0
 
 /**
  * # Error Codes
@@ -375,6 +378,7 @@ typedef enum pnet_event_values
  */
 typedef enum pnet_ioxs_values
 {
+   /* Values are important */
    PNET_IOXS_BAD = 0x00,
    PNET_IOXS_GOOD = 0x80
 } pnet_ioxs_values_t;
@@ -384,11 +388,23 @@ typedef enum pnet_ioxs_values
  */
 typedef enum pnet_submodule_dir
 {
-   PNET_DIR_NO_IO,
-   PNET_DIR_INPUT,
-   PNET_DIR_OUTPUT,
-   PNET_DIR_IO
+   /* Values are important */
+   PNET_DIR_NO_IO = 0x00,
+   PNET_DIR_INPUT = 0x01,
+   PNET_DIR_OUTPUT = 0x02,
+   PNET_DIR_IO = 0x03
 } pnet_submodule_dir_t;
+
+/*
+ * Data configuration
+ * Used when indicating an expected submodule.
+ */
+typedef struct pnet_data_cfg
+{
+   pnet_submodule_dir_t data_dir;
+   uint16_t insize;
+   uint16_t outsize;
+} pnet_data_cfg_t;
 
 /**
  * CControl command codes used in the dcontrol_cb call-back function.
@@ -557,9 +573,9 @@ typedef int (*pnet_release_ind) (
  *
  * @param net              InOut: The p-net stack instance
  * @param arg              InOut: User-defined data (not used by p-net)
- * @param arep             In:   The AREP.
- * @param control_command  In:   The DControl command code.
- * @param p_result         Out:  Detailed error information.
+ * @param arep             In:    The AREP.
+ * @param control_command  In:    The DControl command code.
+ * @param p_result         Out:   Detailed error information.
  * @return  0  on success.
  *          -1 if an error occurred.
  */
@@ -578,15 +594,16 @@ typedef int (*pnet_dcontrol_ind) (
  * CControl confirmation from the Profinet controller.
  *
  * The application is not required to take any action.
- * In case of error the application should provide error information in \a
- * p_result.
+ * The return value from this call-back function is ignored by the Profinet
+ * stack. In case of error the application should provide error information in
+ * \a p_result.
  *
  * It is optional to implement this callback.
  *
  * @param net              InOut: The p-net stack instance
  * @param arg              InOut: User-defined data (not used by p-net)
- * @param arep             In:   The AREP.
- * @param p_result         Out:  Detailed error information.
+ * @param arep             In:    The AREP.
+ * @param p_result         Out:   Detailed error information.
  * @return  0  on success.
  *          -1 if an error occurred.
  */
@@ -784,6 +801,7 @@ typedef int (*pnet_exp_module_ind) (
  * @param subslot          In:   The sub-slot number.
  * @param module_ident     In:   The module ident number.
  * @param submodule_ident  In:   The sub-module ident number.
+ * @param p_exp_data       In:   The expected data configuration
  * @return  0  on success.
  *          -1 if an error occurred.
  */
@@ -794,7 +812,8 @@ typedef int (*pnet_exp_submodule_ind) (
    uint16_t slot,
    uint16_t subslot,
    uint32_t module_ident,
-   uint32_t submodule_ident);
+   uint32_t submodule_ident,
+   const pnet_data_cfg_t * p_exp_data);
 
 /**
  * Indication to the application that the data status received from the
@@ -804,7 +823,8 @@ typedef int (*pnet_exp_submodule_ind) (
  * indicate that the received data status has changed.
  *
  * The application is not required by the Profinet stack to take any action. It
- * may use this information as it wishes.
+ * may use this information as it wishes. The return value from this call-back
+ * function is ignored by the Profinet stack.
  *
  * @param net              InOut: The p-net stack instance
  * @param arg              InOut: User-defined data (not used by p-net)
@@ -858,11 +878,13 @@ typedef int (*pnet_alarm_ind) (
  * This functionality is used for alarms triggered by the IO-device.
  *
  * It is optional to implement this callback.
+ * The return value from this call-back function is ignored by the Profinet
+ * stack.
  *
  * @param net              InOut: The p-net stack instance
  * @param arg              InOut: User-defined data (not used by p-net)
- * @param arep             In:   The AREP.
- * @param p_pnio_status    In:   Detailed ACK information.
+ * @param arep             In:    The AREP.
+ * @param p_pnio_status    In:    Detailed ACK information.
  * @return  0  on success.
  *          -1 if an error occurred.
  */
@@ -878,6 +900,8 @@ typedef int (*pnet_alarm_cnf) (
  * This functionality is used for alarms triggered by the IO-controller.
  *
  * It is optional to implement this callback.
+ * The return value from this call-back function is ignored by the Profinet
+ * stack.
  *
  * @param net              InOut: The p-net stack instance
  * @param arg              InOut: User-defined data (not used by p-net)
@@ -925,6 +949,9 @@ typedef int (
  * the device should not do a hard or soft reset for reset mode 1 or 2. It is
  * allowed for the factory reset case (but not mandatory).
  *
+ * No arep information is available, as this callback typically is triggered
+ * when there is no active connection.
+ *
  * @param net                       InOut: The p-net stack instance
  * @param arg                       InOut: User-defined data (not used by p-net)
  * @param should_reset_application  In:    True if the user should reset the
@@ -948,11 +975,14 @@ typedef int (*pnet_reset_ind) (
  * It is optional to implement this callback (but a compliant Profinet device
  * must have a signal LED)
  *
+ * No arep information is available, as this callback typically is triggered
+ * when there is no active connection.
+ *
  * @param net                       InOut: The p-net stack instance
  * @param arg                       InOut: User-defined data (not used by p-net)
  * @param led_state                 In:    True if the signal LED should be on.
  * @return  0  on success.
- *          -1 if an error occurred.
+ *          -1 if an error occurred. Will trigger a log message.
  */
 typedef int (*pnet_signal_led_ind) (pnet_t * net, void * arg, bool led_state);
 
@@ -1044,6 +1074,8 @@ typedef struct pnet_im_3
 /**
  * The I&M4 data record is read-write by the controller.
  *
+ * Used for functional safety.
+ *
  * This data record is optional. If this data record is supported
  * by the application then bit 4 in the im_supported member of I&M0 shall be
  * set.
@@ -1110,6 +1142,8 @@ typedef struct pnet_ethaddr
 #define PNET_LLDP_PORT_ID_MAX_LEN                                              \
    (PNET_STATION_NAME_MAX_LEN + PNET_PORT_ID_MAX_LEN)
 
+#define PNET_LLDP_TTL 20 /* seconds. Mandatory value */
+
 /* LLDP Autonegotiation */
 #define PNET_LLDP_AUTONEG_SUPPORTED (1u << 0)
 #define PNET_LLDP_AUTONEG_ENABLED   (1u << 1)
@@ -1142,11 +1176,10 @@ typedef struct pnet_ethaddr
  */
 typedef struct pnet_lldp_cfg
 {
-   char chassis_id[PNET_LLDP_CHASSIS_ID_MAX_LEN + 1]; /**< Terminated string. If
-                                                         len=0 the MAC address
-                                                         will be used instead.
-                                                       */
-   char port_id[PNET_LLDP_PORT_ID_MAX_LEN + 1];       /**< Terminated string */
+   /**< Terminated string. Not yet used, will be used when multiple ports
+    * are supported */
+   char chassis_id[PNET_LLDP_CHASSIS_ID_MAX_LEN + 1];
+   char port_id[PNET_LLDP_PORT_ID_MAX_LEN + 1]; /**< Terminated string */
    pnet_ethaddr_t port_addr;
    uint16_t ttl; /**< Time to live in seconds */
    uint16_t rtclass_2_status;
@@ -1192,14 +1225,22 @@ typedef struct pnet_lldp_peer_to_peer_boundary
 } pnet_lldp_peer_to_peer_boundary_t;
 
 /**
+ * Chassis ID
+ */
+typedef struct pf_lldp_chassis_id
+{
+   char string[PNET_LLDP_CHASSIS_ID_MAX_LEN + 1]; /**< Terminated string */
+   uint8_t subtype;
+   size_t len;
+} pf_lldp_chassis_id_t;
+
+/**
  * LLDP Peer information used by the Profinet stack.
  */
 typedef struct pnet_lldp_peer_info
 {
    /* LLDP TLVs */
-   uint8_t chassis_id_subtype;
-   char chassis_id[PNET_LLDP_CHASSIS_ID_MAX_LEN + 1];
-   size_t chassis_id_len;
+   pf_lldp_chassis_id_t chassis_id;
    uint8_t port_id_subtype;
    char port_id[PNET_LLDP_PORT_ID_MAX_LEN + 1];
    size_t port_id_len;
@@ -1217,6 +1258,7 @@ typedef struct pnet_lldp_peer_info
    pnet_lldp_peer_to_peer_boundary_t peer_boundary;
 } pnet_lldp_peer_info_t;
 
+/* Not used? */
 /**
  * Peer port information
  */
@@ -1268,8 +1310,20 @@ typedef struct pnet_cfg
    pnet_cfg_device_id_t device_id;
    pnet_cfg_device_id_t oem_device_id;
    char station_name[PNET_STATION_NAME_MAX_LEN + 1]; /**< Terminated string */
-   char device_vendor[20 + 1];                       /**< Terminated string */
-   char manufacturer_specific_string[240 + 1];       /**< Terminated string */
+   char device_vendor[20 + 1];                       /**< Terminated string
+                                                          For DCP readout. */
+   char manufacturer_specific_string[240 + 1];       /**< Terminated string
+                                                          Not yet used */
+
+   /**
+    * Product name
+    *
+    * This is known as DeviceVendorValue and DeviceType in the Profinet
+    * specification. It constitutes the first part of SystemIdentification
+    * (sysDescr in SNMP). It may also be used to construct the Chassis ID.
+    * See IEC CDV 61158-6-10 ch. 4.10.3.3.1.
+    */
+   char product_name[25 + 1]; /**< Terminated string */
 
    /* Timing */
    uint16_t min_device_interval; /** Smallest allowed data exchange interval, in
@@ -1311,11 +1365,11 @@ typedef struct pnet_cfg
  *
  * This function must be called to initialize the Profinet stack.
  *
- * @param netif            In:   Name of the network interface.
- * @param tick_us          In:   Periodic interval in us. Specify the interval
- *                               between calls to pnet_handle_periodic().
- * @param p_cfg            In:   Profinet configuration. These values are used
- * at first startup and at factory reset.
+ * @param netif            In:    Name of the network interface.
+ * @param tick_us          In:    Periodic interval in us. Specify the interval
+ *                                between calls to pnet_handle_periodic().
+ * @param p_cfg            In:    Profinet configuration. These values are used
+ *                                at first startup and at factory reset.
  * @return a handle to the stack instance, or NULL if an error occurred.
  */
 PNET_EXPORT pnet_t * pnet_init (
@@ -1549,6 +1603,9 @@ PNET_EXPORT int pnet_output_set_iocs (
    uint8_t iocs);
 
 /**
+ * Set the state to "Primary" or "Backup" in the cyclic data sent to the
+ * IO-Controller.
+ *
  * Implements the "Local Set State" primitive.
  *
  * @param net              InOut: The p-net stack instance
@@ -1559,6 +1616,8 @@ PNET_EXPORT int pnet_output_set_iocs (
 PNET_EXPORT int pnet_set_state (pnet_t * net, bool primary);
 
 /**
+ * Set the state to redundant in the cyclic data sent to the IO-Controller.
+ *
  * Implements the "Local Set Redundancy State" primitive.
  *
  * @param net              InOut: The p-net stack instance
@@ -1644,12 +1703,13 @@ PNET_EXPORT int pnet_get_ar_error_codes (
  * Application creates an entry in the log book.
  *
  * This function is used to insert an entry into the Profinet log-book.
- * Controllers may read the log-book using IODRead requests.
+ * Controllers may read the entire log-book using IODRead requests.
  *
  * @param net              InOut: The p-net stack instance
- * @param arep             In:   The AREP.
- * @param p_pnio_status    In:   The PNIO status.
- * @param entry_detail     In:   Additional application information.
+ * @param arep             In:    The AREP.
+ * @param p_pnio_status    In:    The PNIO status.
+ * @param entry_detail     In:    Additional application information.
+ *                                Manufacturer specific.
  */
 PNET_EXPORT void pnet_create_log_book_entry (
    pnet_t * net,
@@ -1819,22 +1879,40 @@ typedef enum pnet_diag_ch_prop_dir_values
 /**
  * Add a diagnosis entry.
  *
- * @param net              InOut: The p-net stack instance
- * @param arep             In:   The AREP.
- * @param api              In:   The API.
- * @param slot             In:   The slot.
- * @param subslot          In:   The sub-slot.
- * @param ch               In:   The channel number
- * @param ch_properties    In:   The channel properties.
- * @param ch_error_type    In:   The channel error type.
- * @param ext_ch_error_type In:  The extended channel error type.
- * @param ext_ch_add_value In:   The extended channel error additional value.
- * @param qual_ch_qualifier In:  The qualified channel qualifier.
- * @param usi              In:   The USI.
- *                               range: 0..0x7fff for manufacturer-specific diag
- * format. 0x8000 for standard format.
- * @param p_manuf_data     In:   The manufacturer specific diagnosis data.
- *                               (Only needed if USI <= 0x7fff).
+ * The diagnosis can be in manufacturer-specific diag format or standard
+ * format. The USI determines this.
+ *
+ * USI 0x8000: standard format
+ * USI 0..0x7fff: manufacturer-specific diag format
+ *
+ * The channel error types and the extended channel error types are
+ * defined in Profinet 2.4 Services Annex F.
+ *
+ * This sends a diagnosis alarm.
+ *
+ * @param net                 InOut: The p-net stack instance
+ * @param arep                In:    The AREP.
+ * @param api                 In:    The API.
+ * @param slot                In:    The slot.
+ * @param subslot             In:    The sub-slot.
+ * @param ch                  In:    The channel number
+ * @param ch_properties       In:    The channel properties (direction,
+ *                                   data length, maintenance)
+ * @param ch_error_type       In:    The channel error type.
+ * @param ext_ch_error_type   In:    The extended channel error type
+ *                                   (more details on the channel error type)
+ * @param ext_ch_add_value    In:    The extended channel error additional
+ *                                   value (even more details).
+ *                                   Only needed for standard format.
+ * @param qual_ch_qualifier   In:    The qualified channel qualifier, describes
+ *                                   severity. Only needed for standard format,
+ *                                   only used if channel properties is
+ *                                   MAINT_QUALIFIED.
+ *                                   Max one bit should be set.
+ * @param usi                 In:    The USI. See above.
+ * @param p_manuf_data        In:    The manufacturer specific diagnosis data.
+ *                                   Only needed for manufacturer-specific
+ *                                   diag format.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -1870,20 +1948,22 @@ PNET_EXPORT int pnet_diag_add (
  * USI in manufacturer-specific range) or the extended channel additional
  * value is updated.
  *
+ * This sends a diagnosis alarm.
+ *
  * @param net              InOut: The p-net stack instance
- * @param arep             In:   The AREP.
- * @param api              In:   The API.
- * @param slot             In:   The slot.
- * @param subslot          In:   The sub-slot.
- * @param ch               In:   The channel number
- * @param ch_properties    In:   The channel properties.
- * @param ch_error_type    In:   The channel error type.
- * @param ext_ch_add_value In:   The extended channel error additional value.
- * @param usi              In:   The USI.
- *                               range: 0..0x7fff for manufacturer-specific diag
- * format. 0x8000 for standard format.
- * @param p_manuf_data     In:   The manufacturer specific diagnosis data.
- *                               (Only needed if USI <= 0x7fff).
+ * @param arep             In:    The AREP.
+ * @param api              In:    The API.
+ * @param slot             In:    The slot.
+ * @param subslot          In:    The sub-slot.
+ * @param ch               In:    The channel number
+ * @param ch_properties    In:    The channel properties (only direction used)
+ * @param ch_error_type    In:    The channel error type.
+ * @param ext_ch_add_value In:    New extended channel error additional value.
+ * @param usi              In:    The USI.
+ *                                range: 0..0x7fff for manufacturer-specific
+ *                                diag format. 0x8000 for standard format.
+ * @param p_manuf_data     In:    New manufacturer specific diagnosis data.
+ *                                (Only needed if USI <= 0x7fff).
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -1913,17 +1993,19 @@ PNET_EXPORT int pnet_diag_update (
  * - Channel properties (the channel direction part only).
  * - Channel error type.
  *
+ * This sends a diagnosis alarm.
+ *
  * @param net              InOut: The p-net stack instance
- * @param arep             In:   The AREP.
- * @param api              In:   The API.
- * @param slot             In:   The slot.
- * @param subslot          In:   The sub-slot.
- * @param ch               In:   The channel number
- * @param ch_properties    In:   The channel properties.
- * @param ch_error_type    In:   The channel error type.
- * @param usi              In:   The USI.
- *                               range: 0..0x7fff for manufacturer-specific diag
- * format. 0x8000 for standard format.
+ * @param arep             In:    The AREP.
+ * @param api              In:    The API.
+ * @param slot             In:    The slot.
+ * @param subslot          In:    The sub-slot.
+ * @param ch               In:    The channel number
+ * @param ch_properties    In:    The channel properties (only direction used)
+ * @param ch_error_type    In:    The channel error type.
+ * @param usi              In:    The USI.
+ *                                range: 0..0x7fff for manufacturer-specific
+ *                                diag format, 0x8000 for standard format.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -1945,6 +2027,8 @@ PNET_EXPORT int pnet_diag_remove (
  * @param level            In:   The amount of detail to show.
  *     0x0010              | Show compile time options
  *     0x0020              | Show CMDEV
+ *     0x0400              | Show logbook
+ *     0x0200              | Show diagnosis
  *     0x0800              | Show all sessions.
  *     0x1000              | Show all ARs.
  *     0x1001              |           include IOCR.
@@ -1961,6 +2045,8 @@ PNET_EXPORT int pnet_diag_remove (
  *          1                               CMINA
  *             1                            AR
  *                1                         Sessions
+ *                   1                      Logbook
+ *                     1                    Diagnosis
  *                             1            CMDEV
  *                               1          Options
  *                                     1    More IOCR info on AR

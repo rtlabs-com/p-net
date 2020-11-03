@@ -104,7 +104,7 @@ int pf_eth_recv (void * arg, os_buf_t * p_buf)
          ret = net->eth_id_map[ix].frame_handler (
             net,
             frame_id,
-            p_buf,
+            p_buf, /* This cannot be NULL, as seen above */
             frame_pos,
             net->eth_id_map[ix].p_arg);
       }

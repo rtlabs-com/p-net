@@ -14,6 +14,26 @@
  * See LICENSE file in the project root for full license information.
  ********************************************************************/
 
+/**
+ * @file
+ * @brief Diagnosis implementation
+ *
+ * Add, update and remove diagnosis items (and send alarms accordingly).
+ *
+ * Uses the alarm implementation via the pf_alarm_send_diagnosis() function.
+ *
+ * The bookkeeping of diag items is done by CMDEV via:
+ *  - pf_cmdev_get_device()
+ *  - pf_cmdev_get_subslot_full()
+ *  - pf_cmdev_new_diag()
+ *  - pf_cmdev_get_diag_item()
+ *  - pf_cmdev_free_diag()
+ *
+ * An array of PNET_MAX_DIAG_ITEMS diagnosis items is available for use.
+ * In CMDEV, each subslot uses a linked list of diagnosis items, and stores the
+ * index to the head of its (possibly empty) list.
+ */
+
 #ifdef UNIT_TEST
 #define pf_alarm_send_diagnosis mock_pf_alarm_send_diagnosis
 #endif
@@ -40,9 +60,10 @@ int pf_diag_exit (void)
 /**
  * @internal
  * Update the problem indicator for all input/producer CRs of a sub-slot.
+ *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:   The AR instance.
- * @param p_subslot        In:   The sub-slot instance.
+ * @param p_ar             In:    The AR instance.
+ * @param p_subslot        In:    The sub-slot instance.
  */
 static void pf_diag_update_station_problem_indicator (
    pnet_t * net,
@@ -92,15 +113,15 @@ static void pf_diag_update_station_problem_indicator (
  * - Channel error type.
  *
  * @param net              InOut: The p-net stack instance
- * @param api_id           In:   The API id.
- * @param slot_nbr         In:   The slot number.
- * @param subslot_nbr      In:   The sub-slot number.
- * @param ch_nbr           In:   The channel number.
- * @param ch_properties    In:   The channel properties.
- * @param ch_error_type    In:   The error type.
- * @param usi              In:   The USI.
- * @param pp_subslot       Out:  The sub-slot instance.
- * @param p_diag_ix        Out:  The diag item index.
+ * @param api_id           In:    The API id.
+ * @param slot_nbr         In:    The slot number.
+ * @param subslot_nbr      In:    The sub-slot number.
+ * @param ch_nbr           In:    The channel number.
+ * @param ch_properties    In:    The channel properties (only direction used)
+ * @param ch_error_type    In:    The error type.
+ * @param usi              In:    The USI.
+ * @param pp_subslot       Out:   The sub-slot instance.
+ * @param p_diag_ix        Out:   The diag item index.
  */
 static void pf_diag_find_entry (
    pnet_t * net,
@@ -274,9 +295,9 @@ int pf_diag_add (
             old_item = *p_item; /* In case we need to remove the old - after
                                    inserting the new */
 
-            /* Determine diag format */
             if (usi < PF_USI_CHANNEL_DIAGNOSIS)
             {
+               /* Manufacturer specific format */
                p_item->usi = usi;
                memcpy (
                   p_item->fmt.usi.manuf_data,
@@ -285,11 +306,11 @@ int pf_diag_add (
             }
             else
             {
+               /* Standard format */
                p_item->usi = PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS;
                PNET_DIAG_CH_PROP_SPEC_SET (
                   p_item->fmt.std.ch_properties,
                   PNET_DIAG_CH_PROP_SPEC_APPEARS);
-
                p_item->fmt.std.ch_nbr = ch_nbr;
                p_item->fmt.std.ch_properties = ch_properties;
                p_item->fmt.std.ch_error_type = ch_error_type;

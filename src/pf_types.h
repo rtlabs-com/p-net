@@ -780,8 +780,8 @@ typedef struct pf_eth_frame_id_map
  */
 typedef struct pf_cmina_dcp_ase
 {
-   char name_of_station[PNET_STATION_NAME_MAX_LEN + 1]; /* Terminated */
-   char device_vendor[20 + 1];                          /* Terminated */
+   char station_name[PNET_STATION_NAME_MAX_LEN + 1]; /* Terminated */
+   char device_vendor[20 + 1];                       /* Terminated */
    uint8_t device_role;        /* Only value "1" supported */
    uint16_t device_initiative; /* 1: Should send hello. 0: No sending of hello
                                 */
@@ -880,6 +880,7 @@ typedef enum pf_priority_values
    PF_PRIORITY_FIXED
 } pf_priority_values_t;
 
+/* See also pnet_submodule_dir_t */
 typedef enum pf_data_direction_values
 {
    PF_DIRECTION_INPUT = 1,
@@ -1017,9 +1018,9 @@ typedef struct pf_api_entry
 {
    uint32_t api;
    uint16_t nbr_io_data;
-   pf_frame_descriptor_t io_data[PNET_MAX_MODULES * PNET_MAX_SUBMODULES];
+   pf_frame_descriptor_t io_data[PNET_MAX_SLOTS * PNET_MAX_SUBSLOTS];
    uint16_t nbr_iocs;
-   pf_frame_descriptor_t iocs[PNET_MAX_MODULES * PNET_MAX_SUBMODULES];
+   pf_frame_descriptor_t iocs[PNET_MAX_SLOTS * PNET_MAX_SUBSLOTS];
 } pf_api_entry_t;
 
 typedef struct pf_iocr_tag_header
@@ -1098,7 +1099,7 @@ typedef struct pf_exp_module
    uint16_t module_properties; /** Reserved - currently unused */
 
    uint16_t nbr_submodules;
-   pf_exp_submodule_t submodules[PNET_MAX_SUBMODULES];
+   pf_exp_submodule_t submodules[PNET_MAX_SUBSLOTS];
 } pf_exp_module_t;
 
 typedef struct pf_exp_api
@@ -1106,7 +1107,7 @@ typedef struct pf_exp_api
    bool valid;
    uint32_t api;
    uint16_t nbr_modules;
-   pf_exp_module_t modules[PNET_MAX_MODULES];
+   pf_exp_module_t modules[PNET_MAX_SLOTS];
 } pf_exp_api_t;
 
 typedef struct pf_submodule_state
@@ -1134,14 +1135,14 @@ typedef struct pf_module_diff
    uint32_t module_ident_number;
    uint16_t module_state; /** pf_module_state_values_t */
    uint16_t nbr_submodule_diffs;
-   pf_submodule_diff_t submodule_diffs[PNET_MAX_SUBMODULES];
+   pf_submodule_diff_t submodule_diffs[PNET_MAX_SUBSLOTS];
 } pf_module_diff_t;
 
 typedef struct pf_api_diff
 {
    uint32_t api;
    uint16_t nbr_module_diffs;
-   pf_module_diff_t module_diffs[PNET_MAX_MODULES];
+   pf_module_diff_t module_diffs[PNET_MAX_SLOTS];
 } pf_api_diff_t;
 
 typedef struct pf_parameter_server_properties
@@ -1444,7 +1445,7 @@ typedef struct pf_iocr
 
    uint16_t nbr_data_desc;
    pf_iodata_object_t
-      data_desc[PNET_MAX_API * PNET_MAX_MODULES * PNET_MAX_SUBMODULES];
+      data_desc[PNET_MAX_API * PNET_MAX_SLOTS * PNET_MAX_SUBSLOTS];
 
    pf_iocr_param_t param;   /* From connect.req */
    pf_iocr_result_t result; /* From connect.ind */
@@ -1527,6 +1528,7 @@ typedef struct pf_apmx
    /* Latest sent alarm */
    os_buf_t * p_rta;
 
+   bool high_priority; /* True for high priority APMX. For printouts. */
    uint16_t vlan_prio; /* 5 or 6 */
    uint16_t block_type_alarm_notify;
    uint16_t block_type_alarm_ack;
@@ -1918,7 +1920,7 @@ typedef struct pf_slot
    uint32_t exp_module_ident_number;
    uint32_t module_ident_number;
    pf_mod_plug_state_t plug_state;
-   pf_subslot_t subslots[PNET_MAX_SUBMODULES];
+   pf_subslot_t subslots[PNET_MAX_SUBSLOTS];
 
    /* Run-time information */
    pf_ar_t * p_ar;
@@ -1930,7 +1932,7 @@ typedef struct pf_api
    bool in_use;
    uint32_t api_id;
 
-   pf_slot_t slots[PNET_MAX_MODULES];
+   pf_slot_t slots[PNET_MAX_SLOTS];
 
    pf_ar_t * p_ar;
 } pf_api_t;
@@ -2058,7 +2060,7 @@ typedef struct pf_log_book_entry
 
 typedef struct pf_log_book
 {
-   pf_log_book_ts_t time_ts; /* Used for what ?? */
+   pf_log_book_ts_t time_ts; /* Local timestamp when reading the logbook */
    pf_log_book_entry_t entries[PNET_MAX_LOG_BOOK_ENTRIES];
    uint16_t put; /* Points to oldest entry if wrap */
    bool wrap;    /* All entries valid */
@@ -2229,7 +2231,34 @@ struct pnet
                                                    and discarded packets */
    uint32_t lldp_timeout; /* Scheduler handle for periodic LLDP sending */
 
+   /* LLDP mutex
+    *
+    * This mutex protects information about the peer device.
+    */
+   os_mutex_t * lldp_mutex;
+
+   /* Timestamp for when LLDP packet with new content was received.
+    *
+    * Units are the same as sysUptime in SNMP.
+    * Protected by LLDP mutex.
+    */
+   uint32_t lldp_timestamp_for_last_peer_change;
+
+   /* Is information about peer device received?
+    *
+    * Information is received in LLDP packets.
+    * Protected by LLDP mutex.
+    */
+   bool lldp_is_peer_info_received;
+
+   /* LLDP peer information
+    *
+    * The information may be changed anytime an incoming LLDP packet arrives.
+    *
+    * Protected by LLDP mutex.
+    */
    pnet_lldp_peer_info_t lldp_peer_info;
+
    uint32_t lldp_rx_timeout; /* Scheduler handle for LLDP timeout */
 
    pf_port_t port[PNET_MAX_PORT];
@@ -2237,9 +2266,18 @@ struct pnet
 
 /**
  * @internal
- * Initialise a pnet_t structure. For testing purposes.
+ * Initialise a pnet_t structure into already allocated memory.
+ *
+ * @param net              InOut: The p-net stack instance to be initialised.
+ * @param netif            In:    Name of the network interface.
+ * @param tick_us          In:    Periodic interval in us. Specify the interval
+ *                                between calls to pnet_handle_periodic().
+ * @param p_cfg            In:    Profinet configuration. These values are used
+ *                                at first startup and at factory reset.
+ * @return  0  on success.
+ *          -1 if an error occurred.
  */
-pnet_t * pnet_init_only (
+int pnet_init_only (
    pnet_t * net,
    const char * netif,
    uint32_t tick_us,

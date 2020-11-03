@@ -55,7 +55,7 @@ int app_set_led (uint16_t id, bool led_state)
    return 0;
 }
 
-static void app_get_button (uint16_t id, bool * p_pressed)
+void app_get_button (const app_data_t * p_appdata, uint16_t id, bool * p_pressed)
 {
    if (id == 0)
    {
@@ -79,42 +79,6 @@ static void main_timer_tick (os_timer_t * timer, void * arg)
 /************************* Shell commands *************************************/
 /*  Press enter in the terminal to get to the built-in shell.                 */
 /*  Type help to see available commands.                                      */
-
-static int _cmd_pnio_alarm_ack (int argc, char * argv[])
-{
-#if 1
-   /* Make it synchronous to periodic */
-   os_event_set (gp_appdata->main_events, EVENT_ALARM);
-#else
-   int ret;
-   pnet_pnio_status_t pnio_status = {0, 0, 0, 0};
-
-   if (main_arep != UINT32_MAX)
-   {
-      ret = pnet_alarm_send_ack (main_arep, &pnio_status);
-      if (ret != 0)
-      {
-         LOG_ERROR (PNET_LOG, "APP: Alarm ACK error %d\n", ret);
-      }
-      else
-      {
-         LOG_INFO (PNET_LOG, "APP: Alarm ACK sent\n");
-      }
-   }
-   else
-   {
-      LOG_INFO (PNET_LOG, "APP: No AREP\n");
-   }
-#endif
-   return 0;
-}
-
-const shell_cmd_t cmd_pnio_alarm_ack = {
-   .cmd = _cmd_pnio_alarm_ack,
-   .name = "pnio_alarm_ack",
-   .help_short = "Send AlarmAck",
-   .help_long = "Send AlarmAck"};
-SHELL_CMD (cmd_pnio_alarm_ack);
 
 static int _cmd_pnio_show (int argc, char * argv[])
 {
@@ -194,22 +158,6 @@ SHELL_CMD (cmd_pnio_remove_files);
 int main (void)
 {
    int ret = -1;
-   uint32_t mask = EVENT_READY_FOR_DATA | EVENT_TIMER | EVENT_ALARM |
-                   EVENT_ABORT;
-   uint32_t flags = 0;
-   bool button1_pressed = false;
-   bool button2_pressed = false;
-   bool button2_pressed_previous = false;
-   bool received_led_state = false;
-   uint32_t tick_ctr_buttons = 0;
-   uint32_t tick_ctr_update_data = 0;
-   static uint8_t data_ctr = 0;
-   uint16_t slot = 0;
-   uint8_t outputdata[64];
-   uint8_t outputdata_iops;
-   uint16_t outputdata_length;
-   bool outputdata_is_updated = false;
-   uint8_t alarm_payload[APP_ALARM_PAYLOAD_SIZE] = {0};
    struct cmd_args cmdline_arguments;
    app_data_t appdata;
    os_ethaddr_t macbuffer;
@@ -219,27 +167,25 @@ int main (void)
 
    g_net = NULL;
 
+   /* Prepare appdata */
    memset (&cmdline_arguments, 0, sizeof (cmdline_arguments));
    strcpy (cmdline_arguments.eth_interface, APP_DEFAULT_ETHERNET_INTERFACE);
    strcpy (cmdline_arguments.station_name, APP_DEFAULT_STATION_NAME);
    cmdline_arguments.verbosity = (LOG_LEVEL <= LOG_LEVEL_WARNING) ? 1 : 0;
-
-   gp_appdata = &appdata;
-
    memset (&appdata, 0, sizeof (appdata));
    appdata.alarm_allowed = true;
-   appdata.main_arep = UINT32_MAX;
    appdata.arguments = cmdline_arguments;
    appdata.main_events = os_event_create();
    appdata.main_timer =
       os_timer_create (TICK_INTERVAL_US, main_timer_tick, NULL, false);
+   gp_appdata = &appdata;
 
    printf ("\n** Profinet sample application **\n");
    if (appdata.arguments.verbosity > 0)
    {
       printf (
          "Number of slots:      %u (incl slot for DAP module)\n",
-         PNET_MAX_MODULES);
+         PNET_MAX_SLOTS);
       printf ("P-net log level:      %u (DEBUG=0, ERROR=3)\n", LOG_LEVEL);
       printf ("App verbosity level:  %u\n", appdata.arguments.verbosity);
       printf ("Ethernet interface:   %s\n", appdata.arguments.eth_interface);
@@ -269,16 +215,16 @@ int main (void)
 
    if (appdata.arguments.verbosity > 0)
    {
-      print_network_details (&macbuffer, ip, netmask, gateway);
+      app_print_network_details (&macbuffer, ip, netmask, gateway);
    }
 
    /* Prepare stack config with IP address, gateway, station name etc */
    app_adjust_stack_configuration (&pnet_default_cfg);
    strcpy (pnet_default_cfg.im_0_data.im_order_id, "12345");
    strcpy (pnet_default_cfg.im_0_data.im_serial_number, "00001");
-   copy_ip_to_struct (&pnet_default_cfg.ip_addr, ip);
-   copy_ip_to_struct (&pnet_default_cfg.ip_gateway, gateway);
-   copy_ip_to_struct (&pnet_default_cfg.ip_mask, netmask);
+   app_copy_ip_to_struct (&pnet_default_cfg.ip_addr, ip);
+   app_copy_ip_to_struct (&pnet_default_cfg.ip_gateway, gateway);
+   app_copy_ip_to_struct (&pnet_default_cfg.ip_mask, netmask);
    strcpy (pnet_default_cfg.file_directory, APP_DEFAULT_FILE_DIRECTORY);
    strcpy (pnet_default_cfg.station_name, gp_appdata->arguments.station_name);
    memcpy (
@@ -287,6 +233,7 @@ int main (void)
       sizeof (pnet_ethaddr_t));
    pnet_default_cfg.cb_arg = (void *)gp_appdata;
 
+   /* Initialize Profinet stack */
    g_net = pnet_init (
       gp_appdata->arguments.eth_interface,
       TICK_INTERVAL_US,
@@ -307,188 +254,8 @@ int main (void)
       printf ("Waiting for connect request from IO-controller\n\n");
    }
 
-   /* Main loop */
-   for (;;)
-   {
-      os_event_wait (appdata.main_events, mask, &flags, OS_WAIT_FOREVER);
-      if (flags & EVENT_READY_FOR_DATA)
-      {
-         os_event_clr (appdata.main_events, EVENT_READY_FOR_DATA); /* Re-arm */
-         if (appdata.arguments.verbosity > 0)
-         {
-            printf ("Application will signal that it is ready for data.\n");
-         }
-         ret = pnet_application_ready (g_net, appdata.main_arep);
-         if (ret != 0)
-         {
-            printf ("Error returned when application telling that it is ready "
-                    "for data. Have you set IOCS or IOPS for all subslots?\n");
-         }
-         /*
-          * cm_ccontrol_cnf(+/-) is indicated later (app_state_ind(DATA)), when
-          * the confirmation arrives from the controller.
-          */
-      }
-      else if (flags & EVENT_ALARM)
-      {
-         pnet_pnio_status_t pnio_status = {0, 0, 0, 0};
+   app_loop_forever (g_net, &appdata);
 
-         os_event_clr (appdata.main_events, EVENT_ALARM); /* Re-arm */
-
-         ret = pnet_alarm_send_ack (
-            g_net,
-            appdata.main_arep,
-            &appdata.alarm_arg,
-            &pnio_status);
-
-         if (ret != 0)
-         {
-            printf ("Error when sending alarm ACK. Error: %d\n", ret);
-         }
-         else if (appdata.arguments.verbosity > 0)
-         {
-            printf ("Alarm ACK sent\n");
-         }
-      }
-      else if (flags & EVENT_TIMER)
-      {
-         os_event_clr (appdata.main_events, EVENT_TIMER); /* Re-arm */
-         tick_ctr_buttons++;
-         tick_ctr_update_data++;
-
-         /* Read buttons every 100 ms */
-         if ((appdata.main_arep != UINT32_MAX) && (tick_ctr_buttons > 100))
-         {
-            tick_ctr_buttons = 0;
-
-            app_get_button (0, &button1_pressed);
-            app_get_button (1, &button2_pressed);
-         }
-
-         /* Set input and output data every 10ms */
-         if ((appdata.main_arep != UINT32_MAX) && (tick_ctr_update_data > 10))
-         {
-            tick_ctr_update_data = 0;
-
-            /* Input data (for sending to IO-controller) */
-            /* Lowest 7 bits: Counter    Most significant bit: Button1 */
-            appdata.inputdata[0] = data_ctr++;
-            if (button1_pressed)
-            {
-               appdata.inputdata[0] |= 0x80;
-            }
-            else
-            {
-               appdata.inputdata[0] &= 0x7F;
-            }
-
-            /* Set data for custom input modules, if any */
-            for (slot = 0; slot < PNET_MAX_MODULES; slot++)
-            {
-               if (appdata.custom_input_slots[slot] == true)
-               {
-                  (void)pnet_input_set_data_and_iops (
-                     g_net,
-                     APP_API,
-                     slot,
-                     PNET_SUBMOD_CUSTOM_IDENT,
-                     appdata.inputdata,
-                     sizeof (appdata.inputdata),
-                     PNET_IOXS_GOOD);
-               }
-            }
-
-            /* Read data from first of the custom output modules, if any */
-            for (slot = 0; slot < PNET_MAX_MODULES; slot++)
-            {
-               if (appdata.custom_output_slots[slot] == true)
-               {
-                  outputdata_length = sizeof (outputdata);
-                  pnet_output_get_data_and_iops (
-                     g_net,
-                     APP_API,
-                     slot,
-                     PNET_SUBMOD_CUSTOM_IDENT,
-                     &outputdata_is_updated,
-                     outputdata,
-                     &outputdata_length,
-                     &outputdata_iops);
-                  break;
-               }
-            }
-
-            /* Set LED state */
-            if (outputdata_is_updated == true && outputdata_iops == PNET_IOXS_GOOD)
-            {
-               if (outputdata_length == APP_DATASIZE_OUTPUT)
-               {
-                  received_led_state = (outputdata[0] & 0x80) >
-                                       0; /* Use most
-                                             significant
-                                             bit */
-                  app_set_led (APP_DATA_LED_ID, received_led_state);
-               }
-               else
-               {
-                  printf ("Wrong outputdata length: %u\n", outputdata_length);
-               }
-            }
-         }
-
-         /* Create an alarm on first input slot (if any) when button 2 is
-          * pressed/released */
-         if (appdata.main_arep != UINT32_MAX)
-         {
-            if (
-               (button2_pressed == true) &&
-               (button2_pressed_previous == false) &&
-               (appdata.alarm_allowed == true))
-            {
-               alarm_payload[0]++;
-               for (slot = 0; slot < PNET_MAX_MODULES; slot++)
-               {
-                  if (appdata.custom_input_slots[slot] == true)
-                  {
-                     printf (
-                        "Sending process alarm from slot %u subslot %u USI %u "
-                        "to IO-controller. Payload: 0x%x\n",
-                        slot,
-                        PNET_SUBMOD_CUSTOM_IDENT,
-                        APP_ALARM_USI,
-                        alarm_payload[0]);
-                     pnet_alarm_send_process_alarm (
-                        g_net,
-                        appdata.main_arep,
-                        APP_API,
-                        slot,
-                        PNET_SUBMOD_CUSTOM_IDENT,
-                        APP_ALARM_USI,
-                        sizeof (alarm_payload),
-                        alarm_payload);
-                     break;
-                  }
-               }
-            }
-            button2_pressed_previous = button2_pressed;
-         }
-
-         pnet_handle_periodic (g_net);
-      }
-      else if (flags & EVENT_ABORT)
-      {
-         /* Reset main */
-         appdata.main_arep = UINT32_MAX;
-         appdata.alarm_allowed = true;
-         button1_pressed = false;
-         button2_pressed = false;
-
-         os_event_clr (appdata.main_events, EVENT_ABORT); /* Re-arm */
-         if (appdata.arguments.verbosity > 0)
-         {
-            printf ("Aborting the application\n\n");
-         }
-      }
-   }
    os_timer_destroy (appdata.main_timer);
    os_event_destroy (appdata.main_events);
    printf ("Ending the application\n");

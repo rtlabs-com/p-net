@@ -381,10 +381,7 @@ int pf_ppm_activate_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
       LOG_DEBUG (
          PF_PPM_LOG,
          "PPM(%d): Starting cyclic sending for CREP %" PRIu32 " with period "
-         "%" PRIu32 " micr"
-         "oseco"
-         "nds"
-         "\n",
+         "%" PRIu32 " microseconds\n",
          __LINE__,
          crep,
          p_ppm->control_interval);
@@ -570,7 +567,7 @@ int pf_ppm_set_data_and_iops (
          {
             CC_ASSERT (net->ppm_buf_lock != NULL);
             os_mutex_lock (net->ppm_buf_lock);
-            if (data_len > 0)
+            if (data_len > 0 && p_data != NULL)
             {
                memcpy (
                   &p_iocr->ppm.buffer_data[p_iodata->data_offset],

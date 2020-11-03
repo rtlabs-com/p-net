@@ -3156,7 +3156,7 @@ void pf_put_alarm_block (
       case PF_USI_CHANNEL_DIAGNOSIS:
       case PF_USI_EXTENDED_CHANNEL_DIAGNOSIS:
       case PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS:
-         /* Insert a maintainance item before the diagnosis item */
+         /* Insert a maintenance item before the diagnosis item */
          if (maint_status != 0)
          {
             pf_put_uint16 (
@@ -3467,6 +3467,7 @@ void pf_put_pdport_data_real (
    uint16_t temp_u16 = 0;
    uint8_t numPeers = net->lldp_peer_info.ttl ? 1 : 0;
    uint8_t temp_u8 = 0;
+   pf_lldp_chassis_id_t chassis_id;
 
    /* Block header first */
    pf_put_block_header (
@@ -3482,11 +3483,11 @@ void pf_put_pdport_data_real (
    /* Two bytes padding */
    pf_put_uint16 (is_big_endian, temp_u16, res_len, p_bytes, p_pos);
 
-   /* Slot 0 and subslot 0x8001 */
+   /* Slot and subslot */
    pf_put_uint16 (is_big_endian, PNET_SLOT_DAP_IDENT, res_len, p_bytes, p_pos);
    pf_put_uint16 (
       is_big_endian,
-      PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT,
+      PNET_SUBSLOT_DAP_INTERFACE_1_PORT_0_IDENT,
       res_len,
       p_bytes,
       p_pos);
@@ -3526,19 +3527,17 @@ void pf_put_pdport_data_real (
          p_bytes,
          p_pos);
 
+      /* Get ChassisId of peer device */
+      pf_lldp_get_peer_chassis_id (net, &chassis_id);
+
       /* Length ChassisID */
-      pf_put_byte (net->lldp_peer_info.chassis_id_len, res_len, p_bytes, p_pos);
+      pf_put_byte (chassis_id.len, res_len, p_bytes, p_pos);
 
       /* ChassisID */
-      pf_put_mem (
-         net->lldp_peer_info.chassis_id,
-         net->lldp_peer_info.chassis_id_len,
-         res_len,
-         p_bytes,
-         p_pos);
+      pf_put_mem (chassis_id.string, chassis_id.len, res_len, p_bytes, p_pos);
 
       /* 1 bytes padding if needed*/
-      if (net->lldp_peer_info.chassis_id_len % 2 != 0)
+      if (chassis_id.len % 2 != 0)
       {
          pf_put_byte (temp_u8, res_len, p_bytes, p_pos);
       }
@@ -3738,6 +3737,7 @@ void pf_put_pdinterface_data_real (
    uint16_t block_pos = *p_pos;
    uint16_t block_len = 0;
    uint16_t temp_u16 = 0;
+   pf_lldp_chassis_id_t chassis_id;
 
    /* Block header first */
    pf_put_block_header (
@@ -3750,39 +3750,14 @@ void pf_put_pdinterface_data_real (
       p_bytes,
       p_pos);
 
+   /* Get owner ChassisId */
+   pf_lldp_get_chassis_id (net, &chassis_id);
+
    /* Owner ChassisID Length */
-   if ((uint8_t)strlen (net->fspm_cfg.lldp_cfg.chassis_id) > 0)
-   {
-      pf_put_byte (
-         (uint8_t)strlen (net->fspm_cfg.lldp_cfg.chassis_id),
-         res_len,
-         p_bytes,
-         p_pos);
+   pf_put_byte ((uint8_t)chassis_id.len, res_len, p_bytes, p_pos);
 
-      /* Owner ChassisID*/
-      pf_put_mem (
-         &net->fspm_cfg.lldp_cfg.chassis_id,
-         strlen (net->fspm_cfg.lldp_cfg.chassis_id),
-         res_len,
-         p_bytes,
-         p_pos);
-   }
-   else
-   {
-      pf_put_byte (
-         (uint8_t)strlen (net->cmina_current_dcp_ase.name_of_station),
-         res_len,
-         p_bytes,
-         p_pos);
-
-      /* Owner ChassisID*/
-      pf_put_mem (
-         &net->cmina_current_dcp_ase.name_of_station,
-         strlen (net->cmina_current_dcp_ase.name_of_station),
-         res_len,
-         p_bytes,
-         p_pos);
-   }
+   /* Owner ChassisID*/
+   pf_put_mem (chassis_id.string, chassis_id.len, res_len, p_bytes, p_pos);
 
    /* Two bytes padding */
    pf_put_uint16 (is_big_endian, temp_u16, res_len, p_bytes, p_pos);
@@ -3857,11 +3832,11 @@ static void pf_put_pd_multiblock_interface_and_statistics (
    /* API */
    pf_put_uint32 (is_big_endian, p_res->api, res_len, p_bytes, p_pos);
 
-   /* Slot 0 and subslot 0x8000 */
+   /* Slot and subslot */
    pf_put_uint16 (is_big_endian, PNET_SLOT_DAP_IDENT, res_len, p_bytes, p_pos);
    pf_put_uint16 (
       is_big_endian,
-      PNET_SUBMOD_DAP_INTERFACE_1_IDENT,
+      PNET_SUBSLOT_DAP_INTERFACE_1_IDENT,
       res_len,
       p_bytes,
       p_pos);
@@ -3919,11 +3894,11 @@ static void pf_put_pd_multiblock_port_and_statistics (
    /* API */
    pf_put_uint32 (is_big_endian, p_res->api, res_len, p_bytes, p_pos);
 
-   /* Slot 0 and subslot 0x8001 */
+   /* Slot and subslot */
    pf_put_uint16 (is_big_endian, PNET_SLOT_DAP_IDENT, res_len, p_bytes, p_pos);
    pf_put_uint16 (
       is_big_endian,
-      PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT,
+      PNET_SUBSLOT_DAP_INTERFACE_1_PORT_0_IDENT,
       res_len,
       p_bytes,
       p_pos);
@@ -4070,11 +4045,11 @@ void pf_put_pdport_data_adj (
    /*2 byte padding*/
    pf_put_uint16 (is_big_endian, temp16, res_len, p_bytes, p_pos);
 
-   /* Slot 0 and subslot 0x8001 */
+   /* Slot and subslot */
    pf_put_uint16 (is_big_endian, PNET_SLOT_DAP_IDENT, res_len, p_bytes, p_pos);
    pf_put_uint16 (
       is_big_endian,
-      PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT,
+      PNET_SUBSLOT_DAP_INTERFACE_1_PORT_0_IDENT,
       res_len,
       p_bytes,
       p_pos);
