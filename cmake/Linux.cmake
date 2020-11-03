@@ -53,13 +53,14 @@ target_link_libraries(profinet
 
 target_include_directories(pn_dev
   PRIVATE
+  sample_app
   src/ports/linux
   )
 
 target_sources(pn_dev
   PRIVATE
   sample_app/sampleapp_common.c
-  sample_app/main_linux.c
+  src/ports/linux/sampleapp_main.c
   )
 
 file(COPY

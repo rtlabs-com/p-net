@@ -36,13 +36,14 @@ target_compile_options(profinet
 
 target_include_directories(pn_dev
   PRIVATE
+  sample_app
   src/ports/rt-kernel
   )
 
 target_sources(pn_dev
   PRIVATE
   sample_app/sampleapp_common.c
-  sample_app/main_rtk.c
+  src/ports/rt-kernel/sampleapp_main.c
   )
 
 if (BUILD_TESTING)
