@@ -78,6 +78,14 @@ typedef struct os_ethaddr
 } os_ethaddr_t;
 
 /**
+ * The p-net stack instance.
+ *
+ * This is needed for SNMP in order to access various stack variables,
+ * such as the location  of the device and LLDP variables.
+ */
+typedef struct pnet pnet_t;
+
+/**
  * Get system uptime.
  *
  * This is the sysUpTime, as used by SNMP:
@@ -224,6 +232,19 @@ int os_udp_recvfrom (
  * @param id               In:    Socket ID
  */
 void os_udp_close (uint32_t id);
+
+/**
+ * Configure SNMP server.
+ *
+ * This function configures a platform-specific SNMP server as to
+ * enable a connected SNMP client to read variables from the p-net stack,
+ * as well as to write some variables to it.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @return  0 if the operation succeeded.
+ *         -1 if an error occurred.
+ */
+int os_snmp_init (pnet_t * net);
 
 /**
  * Get network parameters (IP address, netmask etc)

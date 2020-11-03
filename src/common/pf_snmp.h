@@ -35,6 +35,13 @@
  * entities, where a network entity may be a Profinet Device/Controller/
  * Supervisor or an LLDP-aware network switch.
  *
+ * The SNMP variables are declared in the following MIBs:
+ * - MIB-II. See IETF RFC 3418 (SNMP MIB).
+ * - LLDP-MIB. See IEEE 802.1AB-2005 (LLDPv1).
+ * - LLDP-EXT-DOT3-MIB. See IEEE 802.1AB-2005 (LLDPv1).
+ * - LLDP-EXT-PNO-MIB. See IEC CDV 61158-6-10 (PN-AL-Protocol).
+ * The Profinet guideline PN-Topology describes usage of SNMP (see ch. 6.2).
+ *
  * Getter functions for the following variables for the local device, interface
  * and ports are provided:
  * - sysName
@@ -407,7 +414,6 @@ void pf_snmp_get_chassis_id (pnet_t * net, pf_lldp_chassis_id_t * p_chassis_id);
  *
  * The remote Chassis ID is contained in an LLDP packet sent from a port
  * on the remote device to a local port with no intermediate switches.
- * If no LLDP packet has been received, the returned Chassis ID is empty.
  *
  * See IEEE 802.1AB-2005 (LLDPv1) ch. 12.2. Relevant fields:
  * - lldpRemChassisId,
@@ -454,7 +460,6 @@ void pf_snmp_get_port_id (
  *
  * The remote Port ID is contained in an LLDP packet sent from a port
  * on the remote device to the local port with no intermediate switches.
- * If no LLDP packet has been received, the returned Port ID is empty.
  *
  * Note that the remote device may have multiple ports. Only the remote
  * port connected to the local port is relevant here.
@@ -501,6 +506,9 @@ void pf_snmp_get_port_description (
 /**
  * Get port description for remote port.
  *
+ * The remote Port description is contained in an LLDP packet sent from a port
+ * on the remote device to the local port with no intermediate switches.
+ *
  * See IEEE 802.1AB-2005 (LLDPv1) ch. 12.2. Relevant fields:
  * - lldpRemPortDesc,
  * - lldpRemLocalPortNum.
@@ -524,15 +532,23 @@ int pf_snmp_get_peer_port_description (
  * Get Management Address for local interface.
  *
  * The management address should usually be the IP address for the local
- * interface the local port belongs to. It could also be the MAC address of
+ * interface the local ports belong to. It could also be the MAC address of
  * the local interface in case no IP address has been assigned.
  *
  * Note that the local device may have multiple interfaces (such as a
  * loopback interface). Only the local interface used by the p-net stack
  * is relevant here.
  *
+ * Note that when constructing the response to the request for the variable
+ * lldpLocManAddr, the lldpLocManAddr is to be encoded as an variable length
+ * OCTET STRING, where the first element is the number of octets.
+ * If lldpLocManAddr is the IPv4 address 192.168.10.9, it should be encoded as
+ * 4.192.168.10.9 and lldpLocManAddrLen would be 5.
+ * See PN-Topology ch. 6.3.1.
+ *
  * See IEEE 802.1AB-2005 ch. 12.2. Relevant fields:
  * - lldpLocManAddr,
+ * - lldpLocManAddrLen,
  * - lldpLocManAddrSubtype.
  *
  * @param net              In:    The p-net stack instance.
@@ -557,8 +573,15 @@ void pf_snmp_get_management_address (
  * Note that the remote device may have multiple interfaces. Only the remote
  * interface connected to the local port is relevant here.
  *
+ * Note that when constructing the response to the request for the variable
+ * lldpLocManAddr, the lldpLocManAddr is to be encoded as an variable length
+ * OCTET STRING, where the first element is the number of octets.
+ * If lldpLocManAddr is the IPv4 address 192.168.10.9, it should be encoded as
+ * 4.192.168.10.9 and lldpLocManAddrLen would be 5.
+ *
  * See IEEE 802.1AB-2005 (LLDPv1) ch. 12.2. Relevant fields:
  * - lldpRemManAddr,
+ * - lldpRemManAddrLen,
  * - lldpRemManAddrSubtype,
  * - lldpRemLocalPortNum.
  *
@@ -604,8 +627,7 @@ void pf_snmp_get_management_port_index (
  * Get ManAddrIfId for remote interface connected to local port.
  *
  * The ManAddrIfId of remote device is contained in an LLDP packet sent from a
- * port on the remote device to the local port with no intermediate switches. If
- * no LLDP packet has been received, the returned ManAddrIfIdSubtype is zero.
+ * port on the remote device to the local port with no intermediate switches.
  *
  * Note that the remote device may have multiple interfaces. Only the remote
  * interface connected to the local port is relevant here.
@@ -659,7 +681,6 @@ void pf_snmp_get_station_name (
  * The remote station name (NameOfStation) is the name of the remote interface
  * and is contained in an LLDP packet sent from a port
  * on the remote device to the local port with no intermediate switches.
- * If no LLDP packet has been received, the returned station name is empty.
  *
  * The station name is usually a string, but may also be the MAC address of
  * the remote interface in case no string has been assigned.

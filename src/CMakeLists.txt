@@ -60,6 +60,7 @@ target_sources (profinet PRIVATE
   common/pf_eth.c
   common/pf_file.c
   common/pf_lldp.c
+  common/pf_snmp.c
   common/pf_udp.c
   common/pf_alarm.h
   common/pf_cpm.h
@@ -70,5 +71,6 @@ target_sources (profinet PRIVATE
   common/pf_scheduler.h
   common/pf_eth.h
   common/pf_lldp.h
+  common/pf_snmp.h
   common/pf_udp.h
   )

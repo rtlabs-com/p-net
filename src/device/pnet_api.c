@@ -73,6 +73,15 @@ int pnet_init_only (
    pf_dcp_init (net);  /* Start DCP */
    pf_lldp_init (net); /* Send the LLDP frame */
 
+   /* Configure SNMP server if enabled */
+#if PNET_OPTION_SNMP == 1
+   if (os_snmp_init (net) != 0)
+   {
+      LOG_ERROR (PNET_LOG, "Failed to configure SNMP\n");
+      return -1;
+   }
+#endif
+
    pf_cmdev_exit (net); /* Prepare for re-init */
    pf_cmdev_init (net);
 
