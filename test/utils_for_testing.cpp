@@ -17,6 +17,8 @@
 
 #include <gtest/gtest.h>
 
+#include <inttypes.h>
+
 /******************** Callbacks defined by p-net *****************************/
 
 int my_connect_ind (
