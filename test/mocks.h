@@ -62,7 +62,7 @@ os_eth_handle_t * mock_os_eth_init (
    const char * if_name,
    os_eth_callback_t * callback,
    void * arg);
-int mock_os_eth_send (os_eth_handle_t * handle, const os_buf_t * buf);
+int mock_os_eth_send (os_eth_handle_t * handle, os_buf_t * buf);
 void mock_os_cpy_mac_addr (uint8_t * mac_addr);
 int mock_os_udp_open (os_ipaddr_t addr, os_ipport_t port);
 int mock_os_udp_sendto (

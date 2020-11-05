@@ -25,6 +25,7 @@
 static struct netif * interface[MAX_NUMBER_OF_IF];
 static int nic_index = 0;
 
+
 os_eth_handle_t * os_eth_init (
    const char * if_name,
    os_eth_callback_t * callback,
@@ -76,7 +77,7 @@ os_eth_handle_t * os_eth_init (
    }
 }
 
-int os_eth_send (os_eth_handle_t * handle, const os_buf_t * buf)
+int os_eth_send (os_eth_handle_t * handle, os_buf_t * buf)
 {
    int ret = -1;
 
