@@ -461,15 +461,29 @@ typedef struct pnet_pnio_status
    uint8_t error_code_2;
 } pnet_pnio_status_t;
 
-/**
+/*
  * Alarm and Diagnosis
  *
  */
+
+/** Summary of all diagnosis items, sent in an alarm.
+   Only valid for alarms attached to the Diagnosis ASE
+   See Profinet 2.4 Services, section 7.3.1.6.5.1 Alarm Notification */
 typedef struct pnet_alarm_spec
 {
+   /** Diagnosis in standard format (any severity, appear)
+    *  on this subslot */
    bool channel_diagnosis;
+
+   /** Diagnosis in USI format (which always is FAULT) on this subslot,
+    * (USI format does not have appears/disappears) */
    bool manufacturer_diagnosis;
+
+   /** Fault or Qual27-Qual31 (standard or USI format, appear) on
+    *  this subslot */
    bool submodule_diagnosis;
+
+   /** Fault or Qual27-Qual31 (standard or USI format, appear) on this AR */
    bool ar_diagnosis;
 } pnet_alarm_spec_t;
 
@@ -1339,7 +1353,7 @@ typedef struct pnet_cfg
    pnet_cfg_ip_addr_t ip_addr;
    pnet_cfg_ip_addr_t ip_mask;
    pnet_cfg_ip_addr_t ip_gateway;
-   pnet_ethaddr_t eth_addr;
+   pnet_ethaddr_t eth_addr; /* Interface MAC address, not port MAC address */
 
    /** Storage between runs */
    char file_directory[PNET_MAX_DIRECTORYPATH_LENGTH]; /**< Terminated string
@@ -1733,8 +1747,8 @@ PNET_EXPORT void pnet_create_log_book_entry (
  * @param api              In:   The API.
  * @param slot             In:   The slot.
  * @param subslot          In:   The sub-slot.
- * @param payload_usi      In:   The USI for the payload.
- * @param payload_len      In:   Length in bytes of the payload.
+ * @param payload_usi      In:   The USI for the payload. Max 0x7fff
+ * @param payload_len      In:   Length in bytes of the payload. Max 1408.
  * @param p_payload        In:   The alarm payload (USI specific format).
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred (or waiting for ACK from controller: re-try
@@ -1991,8 +2005,8 @@ PNET_EXPORT int pnet_diag_std_remove (
  * Use \a pnet_diag_usi_update() instead if you would like to have an error
  * if the diagnosis is missing when trying to update it.
  *
- * A diagnosis in USI format is assigned to the channel "whole submodule"
- * (not individual channels). The severity is always "Fault".
+ * A diagnosis in USI format is always assigned to the channel "whole
+ * submodule" (not individual channels). The severity is always "Fault".
  *
  * This sends a diagnosis alarm.
  *
@@ -2003,6 +2017,7 @@ PNET_EXPORT int pnet_diag_std_remove (
  * @param subslot          In:    The sub-slot.
  * @param usi              In:    The USI. Range 0..0x7fff
  * @param p_manuf_data     In:    The manufacturer specific diagnosis data.
+ *                                Size PF_DIAG_MANUF_DATA_LEN.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -2032,6 +2047,7 @@ PNET_EXPORT int pnet_diag_usi_add (
  * @param subslot          In:    The sub-slot.
  * @param usi              In:    The USI. Range 0..0x7fff
  * @param p_manuf_data     In:    New manufacturer specific diagnosis data.
+ *                                Size PF_DIAG_MANUF_DATA_LEN.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */

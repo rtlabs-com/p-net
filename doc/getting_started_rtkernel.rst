@@ -75,7 +75,7 @@ following to create and configure the build::
 
     RTK=<PATH TO YOUR MODIFIED>/rt-kernel-xmc4 \
     BSP=xmc48relax \
-    cmake --B build -S p-net \
+    cmake -B build -S p-net \
     -DCMAKE_TOOLCHAIN_FILE=cmake/tools/toolchain/rt-kernel.cmake \
     -DCMAKE_ECLIPSE_EXECUTABLE=/opt/rt-tools/workbench/Workbench \
     -DCMAKE_ECLIPSE_GENERATE_SOURCE_PROJECT=TRUE -G "Eclipse CDT4 - Unix Makefiles"
@@ -177,7 +177,7 @@ Configure the build::
 
     RTK=<PATH TO YOUR MODIFIED>/rt-kernel-xmc4 \
     BSP=xmc48relax \
-    cmake --B build -S p-net \
+    cmake -B build -S p-net \
     -DCMAKE_TOOLCHAIN_FILE=cmake/tools/toolchain/rt-kernel.cmake \
     -G "Unix Makefiles"
 

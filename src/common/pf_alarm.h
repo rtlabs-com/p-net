@@ -93,6 +93,9 @@ int pf_alarm_periodic (pnet_t * net);
  * the CONNECT) then a PULL_MODULE alarm is send. Otherwise a PULL alarm is
  * sent.
  *
+ * Uses no alarm payload (not attached to diagnosis ASE.
+ * Related to whole submodule, not related to channels).
+ *
  * @param net              InOut: The p-net stack instance
  * @param p_ar             InOut  The AR instance.
  * @param api_id           In:    The API identifier.
@@ -111,6 +114,9 @@ int pf_alarm_send_pull (
 
 /**
  * Send a PLUG OK alarm.
+ *
+ * Uses no alarm payload (not attached to diagnosis ASE.
+ * Related to whole submodule, not related to channels).
  *
  * @param net              InOut: The p-net stack instance
  * @param p_ar             InOut: The AR instance.
@@ -134,6 +140,9 @@ int pf_alarm_send_plug (
 
 /**
  * Send a PLUG_WRONG alarm.
+ *
+ * Uses no alarm payload (not attached to diagnosis ASE.
+ * Related to whole submodule, not related to channels).
  *
  * @param net              InOut: The p-net stack instance
  * @param p_ar             InOut: The AR instance.
@@ -161,14 +170,18 @@ int pf_alarm_send_plug_wrong (
  * This function sends a process alarm to a controller.
  * These alarms are always sent as high priority alarms.
  *
+ * User-supplied payload. Not attached to diagnosis ASE, but might have a
+ * relation to channels.
+ *
  * @param net              InOut: The p-net stack instance
  * @param p_ar             InOut: The AR instance.
  * @param api_id           In:    The API identifier.
  * @param slot_nbr         In:    The slot number.
  * @param subslot_nbr      In:    The sub-slot number.
- * @param payload_usi      In:    The USI for the alarm (may be 0).
+ * @param payload_usi      In:    The USI for the alarm. Use 0 if no payload.
+ *                                Max 0x7fff
  * @param payload_len      In:    Length of diagnostics data (may be 0).
- * @param p_payload        In:    Diagnostics data (may be NULL if
+ * @param p_payload        In:    User supplied payload (may be NULL if
  *                                payload_usi == 0).
  * @return  0  if operation succeeded.
  *          -1 if an error occurred (or waiting for ACK from controller: re-try
@@ -189,6 +202,12 @@ int pf_alarm_send_process (
  *
  * This function sends a diagnosis alarm to a controller.
  * These alarms are always sent as low priority alarms.
+ *
+ * The alarm type is typically "Diagnosis alarm", but might be for example
+ * "Port data change notification" (based on the channel error type in the
+ * diag item).
+ *
+ * This is attached to diagnosis ASE (has a diagnosis object as payload).
  *
  * @param net              InOut: The p-net stack instance
  * @param p_ar             InOut: The AR instance.
@@ -211,7 +230,7 @@ int pf_alarm_send_diagnosis (
 /**
  * Send Alarm ACK (from the application)
  *
- * Always uses high prio.
+ * Always uses high prio, has no payload.
  *
  * ALPMR: ALPMR_Alarm_Ack.req
  * ALPMR: ALPMR_Alarm_Ack.cnf   (Implements part of that signal via the return

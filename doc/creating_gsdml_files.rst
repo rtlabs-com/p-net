@@ -250,8 +250,8 @@ The DAP (bus interface) module can have (non-removable = virtual) submodules.
 See ``<SubmoduleItem>`` below for a general description on submodules.
 One specific detail for a DAP virtual submodule is that it has the
 ``Writeable_IM_Records="1 2 3"`` attribute, which informs about writable
-Identification & Maintenance records. Note that record 0 and 5 are read only,
-so they should never appear in this list.
+Identification & Maintenance (I&M) records. Note that record 0 and 5 are
+read only, so they should never appear in this list.
 
 Other special submodules for DAP modules are ``<InterfaceSubmoduleItem>`` and
 ``<PortSubmoduleItem>``, both subelements to ``<SystemDefinedSubmoduleList>``.

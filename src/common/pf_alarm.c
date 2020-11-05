@@ -43,6 +43,9 @@
  *
  * There are convenience functions to send different types of alarms, for
  * example process alarms.
+ *
+ * a_data means acyclic data.
+ *
  */
 
 #ifdef UNIT_TEST
@@ -739,9 +742,11 @@ static int pf_alarm_apmr_frame_handler (
  * @internal
  * Timeout while waiting for an alarm TACK from the controller.
  *
- * Re-send the frame unless the number of re-transmits have been reached.
+ * Re-send the alarm frame unless the number of re-transmits have been reached.
  * If an ACK is received then the APMS state is no longer WTACK and the
  * frame is not re-sent (and the timer stops).
+ *
+ * Might free the frame buffer.
  *
  * This is a callback for the scheduler. Arguments should fulfill
  * pf_scheduler_timeout_ftn_t
@@ -852,13 +857,10 @@ static void pf_alarm_apms_timeout (
    {
       LOG_DEBUG (
          PF_ALARM_LOG,
-         "Alarm(%d): Timeout in state %s\n",
+         "Alarm(%d): No alarm retransmission as we are in in state %s. Free "
+         "saved RTA buffer %p\n",
          __LINE__,
-         pf_alarm_apms_state_to_string (p_apmx->apms_state));
-      LOG_DEBUG (
-         PF_AL_BUF_LOG,
-         "Alarm(%d): Free saved RTA buffer %p\n",
-         __LINE__,
+         pf_alarm_apms_state_to_string (p_apmx->apms_state),
          p_apmx->p_rta);
       if (p_apmx->p_rta != NULL)
       {
@@ -1073,6 +1075,13 @@ static int pf_alarm_apms_a_data_ind (
  * @internal
  * Create and send a Profinet alarm frame to the IO-controller.
  *
+ * Different frame variants:
+ *  DATA with alarm notification
+ *  DATA with ACK
+ *  ERR
+ *  NACK
+ *  ACK (used as transport ACK = TACK)
+ *
  * Messages with TACK == true are saved in the APMX instance in order
  * to handle re-transmissions.
  *
@@ -1080,15 +1089,16 @@ static int pf_alarm_apms_a_data_ind (
  *
  * @param net              InOut: The p-net stack instance
  * @param p_apmx           InOut: The APMX instance.
- * @param p_fixed          In:    The fixed part of the RTA-PDU.
- * @param p_alarm_data     In:    Slot, subslot etc. Mandatory for DATA
- *                                messages, otherwise NULL.
+ * @param p_fixed          In:    The fixed part of the RTA-PDU. PDU type,
+ *                                TACK flag, sequence counters etc.
+ * @param p_alarm_data     In:    Alarm type, slot, subslot etc.
+ *                                Mandatory for DATA messages, otherwise NULL.
  * @param maint_status     In:    The Maintenance status used for specific USI
  *                                values (inserted only if not zero).
- * @param payload_usi      In:    The payload USI (may be 0).
- * @param payload_len      In:    Payload length. Must be > 0 if
- *                                payload_usi > 0.
- * @param p_payload        In:    Mandatory if payload_len > 0. May be NULL.
+ * @param payload_usi      In:    The payload USI. Use 0 for no payload.
+ * @param payload_len      In:    Payload length. Must be > 0 for manufacturer
+ *                                specific payload ("USI format").
+ * @param p_payload        In:    Mandatory if payload_usi > 0. May be NULL.
  *                                Custom data or pf_diag_item_t.
  * @param p_pnio_status    In:    Mandatory for ERROR messages.
  *                                For DATA messages a NULL value gives an Alarm
@@ -1125,13 +1135,16 @@ static int pf_alarm_apms_a_data_req (
    }
    else
    {
-      LOG_DEBUG (PF_AL_BUF_LOG, "Alarm(%d): Allocate RTA buffer\n", __LINE__);
+      LOG_DEBUG (
+         PF_AL_BUF_LOG,
+         "Alarm(%d): Allocate RTA output buffer\n",
+         __LINE__);
       p_rta = os_buf_alloc (PF_FRAME_BUFFER_SIZE);
       if (p_rta == NULL)
       {
          LOG_ERROR (
             PF_ALARM_LOG,
-            "Alarm(%d): No buffer for alarm notification\n",
+            "Alarm(%d): No output buffer for alarm",
             __LINE__);
       }
       else
@@ -1141,7 +1154,7 @@ static int pf_alarm_apms_a_data_req (
          {
             LOG_ERROR (
                PF_ALARM_LOG,
-               "Alarm(%d): No payload buffer for alarm notification\n",
+               "Alarm(%d): No payload output buffer for alarm.\n",
                __LINE__);
          }
          else
@@ -1196,16 +1209,8 @@ static int pf_alarm_apms_a_data_req (
                &pos);
 
             var_part_len_pos = pos;
-            pf_put_uint16 (
-               true,
-               0,
-               PF_FRAME_BUFFER_SIZE,
-               p_buf,
-               &pos); /* var_part_len
-                         is
-                         unknown
-                         here
-                       */
+            /* var_part_len is not yet known */
+            pf_put_uint16 (true, 0, PF_FRAME_BUFFER_SIZE, p_buf, &pos);
 
             /* Insert variable part of alarm payload for DATA and ERR */
             if (p_fixed->pdu_type.type == PF_RTA_PDU_TYPE_DATA)
@@ -1218,8 +1223,8 @@ static int pf_alarm_apms_a_data_req (
                      p_apmx->block_type_alarm_ack,
                      p_alarm_data,
                      maint_status,
-                     0,
-                     0,
+                     0,    /* No payload */
+                     0,    /* No payload */
                      NULL, /* No payload */
                      p_pnio_status,
                      PF_FRAME_BUFFER_SIZE,
@@ -1270,7 +1275,7 @@ static int pf_alarm_apms_a_data_req (
             p_rta->len = pos;
 
             LOG_INFO (
-               PF_AL_BUF_LOG,
+               PF_ALARM_LOG,
                "Alarm(%d): Send an alarm frame %s  Frame ID: 0x%04X  Tack: %u  "
                "USI: 0x%04X  Payload len: %u  Send seq: %u  ACK seq: %u\n",
                __LINE__,
@@ -1300,7 +1305,7 @@ static int pf_alarm_apms_a_data_req (
             {
                LOG_DEBUG (
                   PF_AL_BUF_LOG,
-                  "Alarm(%d): Save RTA buffer\n",
+                  "Alarm(%d): Save RTA output buffer for later use.\n",
                   __LINE__);
                p_apmx->p_rta = p_rta;
             }
@@ -1342,13 +1347,13 @@ static int pf_alarm_apms_a_data_req (
  * @param net              InOut: The p-net stack instance
  * @param p_apmx           InOut: The APMS instance. Select high or low prio by
  *                                using the correct instance.
- * @param p_alarm_data     In:    Alarm details (slot, subslot etc). Mandatory.
+ * @param p_alarm_data     In:    Alarm details (Type, slot, subslot etc).
  * @param maint_status     In:    The Maintenance status used for specific USI
  *                                values (inserted only if not zero).
- * @param payload_usi      In:    The payload USI. May be 0.
- * @param payload_len      In:    Payload length. Must be > 0 if
- *                                payload_usi > 0.
- * @param p_payload        In:    Mandatory if payload_len > 0, otherwise NULL.
+ * @param payload_usi      In:    The payload USI. Use 0 for no payload.
+ * @param payload_len      In:    Payload length. Must be > 0 for manufacturer
+ *                                specific payload ("USI format").
+ * @param p_payload        In:    Mandatory if payload_usi > 0. May be NULL.
  *                                Custom data or pf_diag_item_t.
  * @param p_pnio_status    In:    Optional. Detailed error information (or NULL)
  * @return  0  if the operation succeeded.
@@ -2301,6 +2306,9 @@ int pf_alarm_alpmr_alarm_ack (
  *
  * It uses pf_alarm_apms_apms_a_data_req() for sending (and retransmission).
  *
+ * Also look in the diagnostics database to attach information whether
+ * there are any relevant diagnosis items.
+ *
  * ALPMI: ALPMI_Alarm_Notification.req
  *
  * @param net              InOut: The p-net stack instance
@@ -2310,16 +2318,20 @@ int pf_alarm_alpmr_alarm_ack (
  * @param api_id           In:    The API identifier.
  * @param slot_nbr         In:    The slot number.
  * @param subslot_nbr      In:    The sub-slot number.
- * @param p_diag_item      In:    The diagnosis item (may be NULL).
+ * @param p_diag_item      In:    Additional diagnosis item (may be NULL).
+ *                                Used when calculating alarm specifier and
+ *                                maintenance status.
  * @param module_ident     In:    The module ident number.
  * @param submodule_ident  In:    The sub-module ident number.
- * @param payload_usi      In:    The USI of the payload. May be 0.
- * @param payload_len      In:    The length of the payload (if usi < 0x8000).
- * @param p_payload        In:    Mandatory if payload_len > 0, otherwise NULL.
+ * @param payload_usi      In:    The payload USI. Use 0 for no payload.
+ * @param payload_len      In:    Payload length. Must be > 0 for manufacturer
+ *                                specific payload ("USI format", which is
+ *                                the payload_usi range 0x0001..0x7fff).
+ * @param p_payload        In:    Mandatory if payload_usi > 0. May be NULL.
  *                                Custom data or pf_diag_item_t.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred (or waiting for ACK from controller: re-try
- *                later).
+ *             later).
  */
 static int pf_alarm_send_alarm (
    pnet_t * net,
@@ -2346,7 +2358,7 @@ static int pf_alarm_send_alarm (
    {
       if (p_alpmx->alpmi_state == PF_ALPMI_STATE_W_ALARM)
       {
-         /* Manufacturer Data */
+         /* Prepare data */
          memset (&alarm_data, 0, sizeof (alarm_data));
          alarm_data.alarm_type = alarm_type;
          alarm_data.api_id = api_id;
@@ -2364,11 +2376,13 @@ static int pf_alarm_send_alarm (
             &alarm_data.alarm_specifier,
             &maint_status);
 
+         /* Calculate sequence numbers */
          alarm_data.sequence_number = p_alpmx->sequence_number;
          p_alpmx->prev_sequence_number = p_alpmx->sequence_number;
          p_alpmx->sequence_number++;
          p_alpmx->sequence_number %= 0x0800;
 
+         /* Create and send an DATA RTA-PDU */
          ret = pf_alarm_apms_apms_a_data_req (
             net,
             p_apmx,
@@ -2431,8 +2445,8 @@ int pf_alarm_send_process (
       slot_nbr,
       subslot_nbr,
       NULL, /* No p_diag_item */
-      0,
-      0, /* module_ident, submodule_ident */
+      0,    /* module_ident */
+      0,    /* submodule_ident */
       payload_usi,
       payload_len,
       p_payload);
@@ -2504,11 +2518,11 @@ int pf_alarm_send_pull (
       api_id,
       slot_nbr,
       subslot_nbr,
-      NULL, /* No p_diag_item */
-      0,
-      0, /* module_ident, submodule_ident */
-      0,
-      0,
+      NULL,  /* No p_diag_item */
+      0,     /* module_ident */
+      0,     /* submodule_ident */
+      0,     /* No payload */
+      0,     /* No payload */
       NULL); /* No payload */
 
    return 0;
@@ -2523,7 +2537,12 @@ int pf_alarm_send_plug (
    uint32_t module_ident,
    uint32_t submodule_ident)
 {
-   LOG_INFO (PF_ALARM_LOG, "Alarm(%d): Sending plug alarm\n", __LINE__);
+   LOG_INFO (
+      PF_ALARM_LOG,
+      "Alarm(%d): Sending plug alarm. Slot: %u  Subslot: 0x%04X\n",
+      __LINE__,
+      slot_nbr,
+      subslot_nbr);
 
    (void)pf_alarm_send_alarm (
       net,
@@ -2536,8 +2555,8 @@ int pf_alarm_send_plug (
       NULL, /* No p_diag_item */
       module_ident,
       submodule_ident,
-      0,
-      0,
+      0,     /* No payload */
+      0,     /* No payload */
       NULL); /* No payload */
 
    return 0;
@@ -2552,7 +2571,12 @@ int pf_alarm_send_plug_wrong (
    uint32_t module_ident,
    uint32_t submodule_ident)
 {
-   LOG_INFO (PF_ALARM_LOG, "Alarm(%d): Sending plug wrong alarm\n", __LINE__);
+   LOG_INFO (
+      PF_ALARM_LOG,
+      "Alarm(%d): Sending plug wrong alarm. Slot: %u  Subslot: 0x%04X\n",
+      __LINE__,
+      slot_nbr,
+      subslot_nbr);
 
    (void)pf_alarm_send_alarm (
       net,
@@ -2565,8 +2589,8 @@ int pf_alarm_send_plug_wrong (
       NULL, /* No p_diag_item */
       module_ident,
       submodule_ident,
-      0,
-      0,
+      0,     /* No payload */
+      0,     /* No payload */
       NULL); /* No payload */
 
    return 0;

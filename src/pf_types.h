@@ -329,7 +329,7 @@ typedef struct pf_rpc_handle
 } pf_rpc_handle_t;
 
 /*
- * See PN-AL-protocol (Mar20) Table 310 – RPC substitutions
+ * See PN-AL-protocol (Mar20) Table 310 RPC substitutions
  * for definitions of rpc lookup response
  */
 typedef struct pf_rpc_lookup_rsp
@@ -794,7 +794,7 @@ typedef struct pf_alarm_data
    uint16_t subslot_nbr;
    uint32_t module_ident;
    uint16_t submodule_ident;
-   pnet_alarm_spec_t alarm_specifier; /* Describes diagnosis alarms. */
+   pnet_alarm_spec_t alarm_specifier; /* Booleans for diagnosis alarms. */
    uint16_t sequence_number;
    /*
     * pf_alarm_data_t may be followed by alarm_payload:
@@ -944,7 +944,7 @@ typedef struct pf_cmina_dcp_ase
    pnet_cfg_device_id_t device_id;
    pnet_cfg_device_id_t oem_device_id;
 
-   char port_name[14 + 1]; /* Terminated */
+   char port_name[14 + 1]; /* Terminated. Not used. */
 
    char manufacturer_specific_string[240 + 1];
    pnet_ethaddr_t mac_address;
@@ -1653,7 +1653,7 @@ typedef struct pf_apmx
    pnet_ethaddr_t da; /* Destination MAC address (IO-controller) */
 
    uint16_t src_ref; /* Our ref */
-   uint16_t dst_ref; /* controller local_alarm_reference */
+   uint16_t dst_ref; /* Controller local_alarm_reference */
 
    pf_apms_state_values_t apms_state;
    pf_apmr_state_values_t apmr_state;
@@ -1964,7 +1964,7 @@ typedef struct pf_submod_state
 
 typedef enum pf_usi_values
 {
-   /* 0x0000..0x07ff    Manufacturer specific */
+   /* 0x0000..0x7fff    Manufacturer specific */
    PF_USI_CHANNEL_DIAGNOSIS = 0x8000,
    PF_USI_ALARM_MULTIPLE = 0x8001,
    PF_USI_EXTENDED_CHANNEL_DIAGNOSIS = 0x8002,
@@ -1993,11 +1993,11 @@ typedef enum pf_usi_values
  */
 typedef enum pf_diag_filter_level
 {
-   PF_DIAG_FILTER_FAULT_STD,
-   PF_DIAG_FILTER_FAULT_ALL,
-   PF_DIAG_FILTER_ALL,
-   PF_DIAG_FILTER_M_REQ,
-   PF_DIAG_FILTER_M_DEM
+   PF_DIAG_FILTER_FAULT_STD, /* Insert all non-manufacturer specific */
+   PF_DIAG_FILTER_FAULT_ALL, /* Manufacturer specific or fault */
+   PF_DIAG_FILTER_ALL,       /* Insert all diagnosis */
+   PF_DIAG_FILTER_M_REQ,     /* Manufacturer specific or maintenance required */
+   PF_DIAG_FILTER_M_DEM      /* Manufacturer specific or maintenance demanded */
 } pf_diag_filter_level_t;
 
 typedef struct pf_diag_std
@@ -2005,7 +2005,7 @@ typedef struct pf_diag_std
    uint32_t ext_ch_add_value;
    uint32_t qual_ch_qualifier;
    uint16_t ch_nbr;
-   uint16_t ch_properties;
+   uint16_t ch_properties; /* Appears, direction, channelgroup etc */
    uint16_t ch_error_type;
    uint16_t ext_ch_error_type;
 } pf_diag_std_t;
@@ -2031,7 +2031,7 @@ typedef struct pf_diag_item
 
    bool in_use;
    uint16_t usi;  /* pf_usi_values_t */
-   uint16_t next; /* Next in list */
+   uint16_t next; /* Next in list (array index) */
 } pf_diag_item_t;
 
 typedef struct pf_subslot
@@ -2054,6 +2054,8 @@ typedef struct pf_subslot
    /*
     * This is an index into device.diag_items[].
     * It points to the list of reported diag alarms for this specific sub-slot.
+    *
+    * Each subslot has its own list of diagnosis items.
     */
    uint16_t diag_list;
 } pf_subslot_t;
@@ -2097,6 +2099,9 @@ typedef struct pf_device
    /*
     * This is the pool of diag items.
     * It is used instead of dynamic memory to avoid fragmentation.
+    *
+    * Each subslot uses its own list of diag items, and stores the index to
+    * the head of its list.
     */
    os_mutex_t * diag_mutex; /* Protect the diag items */
    pf_diag_item_t diag_items[PNET_MAX_DIAG_ITEMS];
@@ -2244,7 +2249,7 @@ typedef struct pf_check_peer
 typedef struct pf_check_peers
 {
    uint8_t number_of_peers;
-   pf_check_peer_t peers[1]; /* Todo define max_peer_checks*/
+   pf_check_peer_t peers[1]; /* Todo define max_peer_checks */
 } pf_check_peers_t;
 
 /**
@@ -2432,11 +2437,19 @@ typedef struct pf_lldp_signal_delay
 /**
  * Port attributes
  *
- * Todo:
- * - Add interface statistics
+ * Note that pnet_lldp_cfg_t  (MAC address etc) is located in the config
+ * TODO Add:
+ * - Interface statistics
  * - Interface name
- * - Add lldp peer info
- * - Add LLDP client timer handles
+ * - local port number
+ * - slot (typically 0 = PNET_SLOT_DAP_IDENT)
+ * - subslot (for example 0x8001 = PNET_SUBSLOT_DAP_INTERFACE_1_PORT_0_IDENT)
+ * - module (for example PNET_MOD_DAP_IDENT)
+ * - submodule (for example PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT)
+ * - lldp_peer_info
+ * - uint32_t lldp_rx_timeout
+ * - bool lldp_is_peer_info_received
+ * - uint32_t lldp_timestamp_for_last_peer_change
  */
 typedef struct pf_port
 {
@@ -2470,7 +2483,7 @@ struct pnet
    os_mutex_t * ppm_buf_lock;
    atomic_int ppm_instance_cnt;
    uint16_t dcp_global_block_qualifier;
-   pnet_ethaddr_t dcp_sam; /* Source address (MAC) to current DCP remote peer */
+   pnet_ethaddr_t dcp_sam; /* Source address (MAC) of current DCP remote peer */
    bool dcp_delayed_response_waiting; /* A response to DCP IDENTIFY is waiting
                                          to be sent */
    uint32_t dcp_timeout;
@@ -2483,7 +2496,7 @@ struct pnet
    os_mutex_t * scheduler_timeout_mutex;
    uint32_t scheduler_tick_interval; /* microseconds */
    bool cmdev_initialized;
-   pf_device_t cmdev_device;
+   pf_device_t cmdev_device;                     /* APIs and diag items */
    pf_cmina_dcp_ase_t cmina_nonvolatile_dcp_ase; /* Reflects what is/should be
                                                     stored in nvm */
    pf_cmina_dcp_ase_t cmina_current_dcp_ase;     /* Reflects current settings

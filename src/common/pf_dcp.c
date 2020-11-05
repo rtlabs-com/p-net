@@ -163,7 +163,7 @@ static const pf_dcp_opt_sub_t device_options[] = {
  * pf_scheduler_timeout_ftn_t
  *
  * @param net              InOut: The p-net stack instance
- * @param arg              In:    DCP responder data.
+ * @param arg              In:    DCP responder data. Should be os_buf_t.
  * @param current_time     In:    The current system time, in microseconds,
  *                                when the scheduler is started to execute
  *                                stored tasks.

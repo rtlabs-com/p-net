@@ -135,6 +135,8 @@ FACK
     Fragment acknowledge
 FAL
     Fieldbus Application Layer
+FO:
+   Fiber Optics
 FSPM
     FAL Service Protocol Machines
 FSU

@@ -506,19 +506,18 @@ Subslots 0x8000-0xFFFF are reserved by the Profinet standard.
 
 Subslots in the DAP module:
 
-* 0x8000 (32768) First interface (typically named X1)
-* 0x8001 (32762) First port of first interface (typically named X1 P1)
-* 0x8002 (32770) Second port of first interface (typically named X1 P2)
-* 0x8100 (33024) Second interface
-* 0x8101 (33025) First port of second interface
-* 0x8102 (33026) Second port of second interface
-
+* 0x8000 (32768) Interface 1 (typically named X1)
+* 0x8001 (32762) Port 1 of interface 1 (typically named X1 P1)
+* 0x8002 (32770) Port 2 of interface 1 (typically named X1 P2)
+* 0x8100 (33024) Interface 2
+* 0x8101 (33025) Port 1 of interface 2
+* 0x8102 (33026) Port 2 of interface 2
 
 User defined indexes are in the range 0x?? to 0x??
 
 Examples of pre-defined indexes:
 
-* 0x802B  PDPortDataCheck
+* 0x802B  PDPortDataCheck for one subslot
 * 0xAFF0  I&M0
 * 0xAFF1  I&M1
 * 0xAFF2  I&M2
@@ -526,6 +525,7 @@ Examples of pre-defined indexes:
 * 0xF830  LogBookData
 * 0xF840  I&M0FilterData
 * 0xF841  PRRealData
+
 
 Allowed station name
 --------------------
@@ -567,16 +567,36 @@ too high temperature.
 A diagnostic alarm describes conditions in the IO Device itself, for example
 a faulty channel or short circuit. Diagnostic alarms are also stored in the IO-Device.
 
+Description of supported alarm types
+
++------------------------------------------+--------+----------------------------------------------------------+
+| Name                                     | Hex    | Description                                              |
++==========================================+========+==========================================================+
+| Diagnosis                                | 0x0001 | There is something wrong with the IO device itself       |
++------------------------------------------+--------+----------------------------------------------------------+
+| Process                                  | 0x0002 | There is something wrong with the process, for           |
+|                                          |        | example too high temperature. High priority.             |
++------------------------------------------+--------+----------------------------------------------------------+
+| Pull                                     | 0x0003 | Submodule pulled from subslot.                           |
++------------------------------------------+--------+----------------------------------------------------------+
+| Plug                                     | 0x0004 | Module/submodule plugged into slot/subslot.              |
++------------------------------------------+--------+----------------------------------------------------------+
+| Controlled by supervisor                 | 0x0008 |                                                          |
++------------------------------------------+--------+----------------------------------------------------------+
+| Released                                 | 0x0009 |                                                          |
++------------------------------------------+--------+----------------------------------------------------------+
+| Plug wrong submodule                     | 0x000A | Wrong module/submodule plugged into slot/subslot.        |
++------------------------------------------+--------+----------------------------------------------------------+
+| Return of submodule                      | 0x000B |                                                          |
++------------------------------------------+--------+----------------------------------------------------------+
+| Diagnosis disappears                     | 0x000C | A kind of diagnosis alarm                                |
++------------------------------------------+--------+----------------------------------------------------------+
+| Port data change notification            | 0x000E | Port up, or peer changes name. A kind of diagnosis alarm |
++------------------------------------------+--------+----------------------------------------------------------+
+| Pull module                              | 0x001F | Module pulled from slot.                                 |
++------------------------------------------+--------+----------------------------------------------------------+
+
 Only process alarms are sent with high prio, all other alarms use low prio.
-
-* Diagnosis alarm (0x0001): There is something wrong with the IO device itself.
-* Process alarm (0x0002): There is something wrong with the process, for example too high temperature.
-* Pull alarm (0x0003): Module/submodule pulled from slot/subslot.
-* Plug alarm (0x0004): Module/submodule plugged into slot/subslot.
-* Plug wrong alarm (0x000A): Wrong module/submodule plugged into slot/subslot.
-* Port data change notification alarm (0x000E)
-* etc
-
 
 
 Diagnosis
