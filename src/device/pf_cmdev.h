@@ -214,7 +214,8 @@ int pf_cmdev_get_slot_full (
    pf_slot_t ** pp_slot);
 
 /**
- * Get a diag item.
+ * Get a diag item, from the array of items (by using index).
+ *
  * @param net              InOut: The p-net stack instance
  * @param item_ix          In:    The diag item index.
  * @param pp_item          Out:   The diag item.
@@ -227,7 +228,7 @@ int pf_cmdev_get_diag_item (
    pf_diag_item_t ** pp_item);
 
 /**
- * Allocate a new diag item entry from the free list.
+ * Allocate a new diag item entry (already cleared) from the free list.
  * @param net              InOut: The p-net stack instance
  * @param p_item_ix        Out:   Index of the allocated item.
  * @return  0  If an item was allocated.

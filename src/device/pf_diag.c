@@ -59,7 +59,8 @@ int pf_diag_exit (void)
 
 /**
  * @internal
- * Update the problem indicator for all input/producer CRs of a sub-slot.
+ * Update the problem indicator in the PPM data status
+ * by looking at all diagnosis items of a sub-slot.
  *
  * @param net              InOut: The p-net stack instance.
  * @param p_ar             InOut: The AR instance.
@@ -108,13 +109,22 @@ static void pf_diag_update_station_problem_indicator (
  * Otherwise the other parameters are used (all must match):
  * - p_diag_source (all fields)
  * - Channel error type.
+ * - Extended error type.
  *
- * @param net              InOut: The p-net stack instance.
- * @param p_diag_source    In:    Slot, subslot, channel, direction etc.
- * @param ch_error_type    In:    The error type.
- * @param usi              In:    The USI.
- * @param pp_subslot       Out:   The sub-slot instance, or NULL if not found.
- * @param p_diag_ix        Out:   The diag item index.
+ * Note that the severity or ExtChannelErrorAddValue are not used for
+ * identification, so there could be no two diagnosis where these values
+ * differ but the values above are the same.
+ *
+ * Similarly for diagnosis in USI format, the ManufacturerData is not used
+ * for identification.
+ *
+ * @param net               InOut: The p-net stack instance.
+ * @param p_diag_source     In:    Slot, subslot, channel, direction etc.
+ * @param ch_error_type     In:    The channel error type.
+ * @param ext_ch_error_type In:    The extended channel error type, or 0.
+ * @param usi               In:    The USI.
+ * @param pp_subslot        Out:   The sub-slot instance, or NULL if not found.
+ * @param p_diag_ix         Out:   The diag item index.
  */
 static void pf_diag_find_entry (
    pnet_t * net,
@@ -233,7 +243,6 @@ int pf_diag_add (
    uint32_t qual_ch_qualifier,
    uint16_t usi,
    const uint8_t * p_manuf_data)
-
 {
    int ret = -1;
    pf_device_t * p_dev = NULL;
@@ -250,12 +259,12 @@ int pf_diag_add (
 
    if (usi > PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS)
    {
-      LOG_ERROR (PNET_LOG, "DIAG(%d): Bad USI\n", __LINE__);
+      LOG_ERROR (PF_ALARM_LOG, "DIAG(%d): The given USI is invalid\n", __LINE__);
    }
    else if (p_diag_source->ch > PNET_CHANNEL_WHOLE_SUBMODULE)
    {
       LOG_ERROR (
-         PNET_LOG,
+         PF_ALARM_LOG,
          "DIAG(%d): Illegal channel %u\n",
          __LINE__,
          p_diag_source->ch);
@@ -285,7 +294,7 @@ int pf_diag_add (
             {
                /* Diag overflow */
                /* ToDo: Handle diag overflow */
-               LOG_ERROR (PNET_LOG, "DIAG(%d): overflow\n", __LINE__);
+               LOG_ERROR (PF_ALARM_LOG, "DIAG(%d): overflow\n", __LINE__);
             }
          }
          else
@@ -294,7 +303,6 @@ int pf_diag_add (
             (void)pf_cmdev_get_diag_item (net, item_ix, &p_item);
             overwrite = true;
          }
-
          if (p_item != NULL)
          {
             old_item = *p_item; /* In case we need to remove the old - after
@@ -302,6 +310,15 @@ int pf_diag_add (
 
             if (usi < PF_USI_CHANNEL_DIAGNOSIS)
             {
+               LOG_DEBUG (
+                  PF_ALARM_LOG,
+                  "DIAG(%d): Adding manufacturer specific diag, ix %u. USI "
+                  "0x%04X Slot %u Subslot 0x%04X\n",
+                  __LINE__,
+                  item_ix,
+                  usi,
+                  p_diag_source->slot,
+                  p_diag_source->subslot);
                /* Manufacturer specific format */
                p_item->usi = usi;
                memcpy (
@@ -311,6 +328,16 @@ int pf_diag_add (
             }
             else
             {
+               LOG_DEBUG (
+                  PF_ALARM_LOG,
+                  "DIAG(%d): Adding qualified channel diagnosis, ix %u. Slot "
+                  "%u Subslot 0x%04X Channel 0x%04X\n",
+                  __LINE__,
+                  item_ix,
+                  p_diag_source->slot,
+                  p_diag_source->subslot,
+                  p_diag_source->ch);
+
                /* Standard format */
                PNET_DIAG_CH_PROP_TYPE_SET (ch_properties, ch_bits);
                PNET_DIAG_CH_PROP_ACC_SET (
@@ -375,7 +402,7 @@ int pf_diag_add (
       }
       else
       {
-         LOG_ERROR (PNET_LOG, "DIAG(%d): Unknown sub-slot\n", __LINE__);
+         LOG_ERROR (PF_ALARM_LOG, "DIAG(%d): Unknown sub-slot\n", __LINE__);
       }
 
       os_mutex_unlock (p_dev->diag_mutex);
@@ -403,12 +430,12 @@ int pf_diag_update (
 
    if (usi > PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS)
    {
-      LOG_ERROR (PNET_LOG, "DIAG(%d): Bad USI\n", __LINE__);
+      LOG_ERROR (PF_ALARM_LOG, "DIAG(%d): Bad USI\n", __LINE__);
    }
    else if (p_diag_source->ch > PNET_CHANNEL_WHOLE_SUBMODULE)
    {
       LOG_ERROR (
-         PNET_LOG,
+         PF_ALARM_LOG,
          "DIAG(%d): Illegal channel %u\n",
          __LINE__,
          p_diag_source->ch);
@@ -433,9 +460,9 @@ int pf_diag_update (
              * entry */
             old_item = *p_item;
 
-            /* Update diag entry */
             if (p_item->usi < PF_USI_CHANNEL_DIAGNOSIS)
             {
+               /* Manufacturer specific */
                memcpy (
                   p_item->fmt.usi.manuf_data,
                   p_manuf_data,
@@ -483,12 +510,12 @@ int pf_diag_update (
          else
          {
             /* Diag not found */
-            LOG_ERROR (PNET_LOG, "DIAG(%d): Diag not found\n", __LINE__);
+            LOG_ERROR (PF_ALARM_LOG, "DIAG(%d): Diag not found\n", __LINE__);
          }
       }
       else
       {
-         LOG_ERROR (PNET_LOG, "DIAG(%d): Unknown sub-slot\n", __LINE__);
+         LOG_ERROR (PF_ALARM_LOG, "DIAG(%d): Unknown sub-slot\n", __LINE__);
       }
 
       os_mutex_unlock (p_dev->diag_mutex);
@@ -513,12 +540,12 @@ int pf_diag_remove (
 
    if (usi > PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS)
    {
-      LOG_ERROR (PNET_LOG, "DIAG(%d): Bad USI\n", __LINE__);
+      LOG_ERROR (PF_ALARM_LOG, "DIAG(%d): Bad USI\n", __LINE__);
    }
    else if (p_diag_source->ch > PNET_CHANNEL_WHOLE_SUBMODULE)
    {
       LOG_ERROR (
-         PNET_LOG,
+         PF_ALARM_LOG,
          "DIAG(%d): Illegal channel %u\n",
          __LINE__,
          p_diag_source->ch);
@@ -596,7 +623,10 @@ int pf_diag_remove (
       }
       else
       {
-         LOG_ERROR (PNET_LOG, "DIAG(%d): Removable item not found\n", __LINE__);
+         LOG_ERROR (
+            PF_ALARM_LOG,
+            "DIAG(%d): Removable item not found\n",
+            __LINE__);
       }
    }
 
@@ -687,7 +717,7 @@ int pf_diag_usi_add (
    if (usi >= PF_USI_CHANNEL_DIAGNOSIS)
    {
       LOG_ERROR (
-         PNET_LOG,
+         PF_ALARM_LOG,
          "DIAG(%d): Wrong USI given for adding diagnosis: %u Slot: %u Subslot "
          "%u\n",
          __LINE__,
@@ -731,7 +761,7 @@ int pf_diag_usi_update (
    if (usi >= PF_USI_CHANNEL_DIAGNOSIS)
    {
       LOG_ERROR (
-         PNET_LOG,
+         PF_ALARM_LOG,
          "DIAG(%d): Wrong USI given for updating diagnosis: %u Slot: %u "
          "Subslot %u\n",
          __LINE__,
@@ -763,7 +793,7 @@ int pf_diag_usi_remove (
    if (usi >= PF_USI_CHANNEL_DIAGNOSIS)
    {
       LOG_ERROR (
-         PNET_LOG,
+         PF_ALARM_LOG,
          "DIAG(%d): Wrong USI given for diagnosis removal: %u Slot: %u Subslot "
          "%u\n",
          __LINE__,

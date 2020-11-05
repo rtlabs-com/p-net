@@ -96,6 +96,7 @@ int pf_diag_add (
  * Otherwise the other parameters are used (all must match):
  *  - p_diag_source (all fields)
  *  - Channel error type.
+ *  - Extended error type.
  *
  * When the item is found either the manufacturer data is updated (for
  * USI in manufacturer-specific range) or the extended channel additional
@@ -107,7 +108,7 @@ int pf_diag_add (
  * @param p_ar              InOut: The AR instance.
  * @param p_diag_source     In:    Slot, subslot, channel, direction etc.
  * @param ch_error_type     In:    The channel error type.
- * @param ext_ch_error_type In:    The extended channel error type.
+ * @param ext_ch_error_type In:    The extended channel error type, or 0.
  * @param ext_ch_add_value  In:    New extended channel error additional value.
  * @param usi               In:    The USI.
  * @param p_manuf_data      In:    New manufacturer specific diagnosis data.
@@ -137,6 +138,7 @@ int pf_diag_update (
  * Otherwise the other parameters are used (all must match):
  *  - p_diag_source (all fields)
  *  - Channel error type.
+ *  - Extended error type.
  *
  * This sends a diagnosis alarm.
  *
@@ -144,7 +146,7 @@ int pf_diag_update (
  * @param p_ar              InOut: The AR instance.
  * @param p_diag_source     In:    Slot, subslot, channel, direction etc.
  * @param ch_error_type     In:    The channel error type.
- * @param ext_ch_error_type In:    The extended channel error type.
+ * @param ext_ch_error_type In:    The extended channel error type, or 0.
  * @param usi               In:    The USI.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.

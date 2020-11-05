@@ -2530,8 +2530,9 @@ static int pf_cmrpc_rm_read_interpret_ind (
  *
  * @param net              InOut: The p-net stack instance
  * @param p_sess           InOut: The session instance.
- * @param opnum            In:    The RPC operation number.
- * PF_RPC_DEV_OPNUM_READ or PF_RPC_DEV_OPNUM_READ_IMPLICIT.
+ * @param opnum            In:    The RPC operation number. Should be
+ *                                PF_RPC_DEV_OPNUM_READ or
+ *                                PF_RPC_DEV_OPNUM_READ_IMPLICIT.
  * @param req_pos          In:    Position in the request buffer.
  * @param res_size         In:    The size of the response buffer.
  * @param p_res            Out:   The response buffer.
@@ -2656,6 +2657,7 @@ static int pf_cmrpc_rm_read_ind (
 
          start_pos = *p_res_pos; /* Start of blocks - save for last */
 
+         /* Do actual reading */
          if (
             pf_cmrdr_rm_read_ind (
                net,

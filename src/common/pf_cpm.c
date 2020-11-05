@@ -309,7 +309,8 @@ int pf_cpm_check_cycle (int32_t prev, uint16_t now)
  * Perform a check of the source address of the received frame.
  * @param p_cpm            In:    The CPM instance.
  * @param p_buf            In:    The frame buffer.
- * @return
+ * @return 0 if the source address is OK.
+ *         -1 if the source address is wrong.
  */
 static int pf_cpm_check_src_addr (const pf_cpm_t * p_cpm, const os_buf_t * p_buf)
 {

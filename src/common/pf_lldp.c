@@ -423,8 +423,8 @@ static void pf_lldp_trigger_sending (
 
 /**
  * @internal
- * Handle LLDP peer timeout. Timeout occurs if no LLDP data is received
- * on port after LLPD TTL timeout.
+ * Handle LLDP peer timeout. Timeout occurs if no peer LLDP data is received
+ * on port within the LLPD TTL timeout interval.
  *
  * This is a callback for the scheduler. Arguments should fulfill
  * pf_scheduler_timeout_ftn_t
@@ -447,7 +447,7 @@ static void pf_lldp_receive_timeout (
 
 /**
  * @internal
- * Start or restart a timer that monitors the peer LLDP sending.
+ * Start or restart a timer that monitors reception of LLDP frames from peer.
  *
  * @param net              InOut: The p-net stack instance
  * @param timeout_in_secs  In:    TTL of the peer, typically 20 seconds.
