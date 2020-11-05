@@ -16,12 +16,12 @@ Install tools on a Linux Laptop
 -------------------------------
 Install (see description elsewhere):
 
-* Workbench (Version 2017.1 or later)
+* Workbench (Version 2020.1 or later)
 * Compiler
 * rt-kernel, use variant ``rt-kernel-xmc4``
 * Segger J-link
 * Run ``pip install pyyaml``
-* cmake (version 3.13 or later)
+* cmake (version 3.14 or later)
 
 
 Copy the rt-kernel sources
@@ -63,6 +63,12 @@ Clone the source::
 
     git clone --recurse-submodules https://github.com/rtlabs-com/p-net.git
 
+This will clone the repository with submodules. If you already cloned
+the repository without the ``--recurse-submodules`` flag then run this
+in the ``p-net`` folder::
+
+    git submodule update --init --recursive
+
 The CMake build files for rt-kernel need to know which BSP you want to
 use, as well as the path to your rt-kernel source tree. Run the
 following to create and configure the build::
@@ -98,13 +104,16 @@ Use the menu "Project > Build All" to build it.
 
 More Workbench settings
 -----------------------
-If you intend to edit the p-net source code in the Workbench tool, you also
-need to import the p-net source project. The files ``.project`` and
-``.cproject`` have been created in the p-net repo by cmake.
+If you intend to edit the p-net source code in the Workbench tool, you
+should also import the p-net source project. The files ``.project``
+and ``.cproject`` have been created in the p-net repo by cmake.
 
 Use the menu "File > Import". Select "General > Existing Projects". Click
 "Browse" and select the ``p-net`` repo directory.
 
+After importing, right-click on the project and choose "New > Convert
+to a C/C++ project". This will setup the project so that the indexer
+works correctly and the Workbench revision control tools can be used.
 
 Run on target
 -------------
@@ -169,7 +178,8 @@ Configure the build::
     RTK=<PATH TO YOUR MODIFIED>/rt-kernel-xmc4 \
     BSP=xmc48relax \
     cmake --B build -S p-net \
-    -DCMAKE_TOOLCHAIN_FILE=cmake/tools/toolchain/rt-kernel.cmake
+    -DCMAKE_TOOLCHAIN_FILE=cmake/tools/toolchain/rt-kernel.cmake \
+    -G "Unix Makefiles"
 
 Build the code::
 
