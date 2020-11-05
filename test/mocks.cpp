@@ -73,7 +73,7 @@ int mock_os_set_ip_suite (
    return 0;
 }
 
-int mock_os_eth_send (os_eth_handle_t * handle, const os_buf_t * p_buf)
+int mock_os_eth_send (os_eth_handle_t * handle, os_buf_t * p_buf)
 {
    memcpy (mock_os_data.eth_send_copy, p_buf->payload, p_buf->len);
    mock_os_data.eth_send_len = p_buf->len;

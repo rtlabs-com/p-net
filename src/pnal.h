@@ -138,6 +138,12 @@ int os_save_file (
  */
 void os_clear_file (const char * fullpath);
 
+
+/* os_buf_t should at least contain:
+ *  void * payload;
+ *  uint16_t len;
+ */
+
 os_buf_t * os_buf_alloc (uint16_t length);
 void os_buf_free (os_buf_t * p);
 uint8_t os_buf_header (os_buf_t * p, int16_t header_size_increment);
@@ -149,7 +155,7 @@ uint8_t os_buf_header (os_buf_t * p, int16_t header_size_increment);
  * @param buf           In: Buffer with data to be sent
  * @return  The number of bytes sent, or -1 if an error occurred.
  */
-int os_eth_send (os_eth_handle_t * handle, const os_buf_t * buf);
+int os_eth_send (os_eth_handle_t * handle, os_buf_t * buf);
 
 /**
  * Initialize receiving of raw Ethernet frames (in separate thread)

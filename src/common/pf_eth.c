@@ -41,7 +41,7 @@ int pf_eth_init (pnet_t * net)
    return ret;
 }
 
-int pf_eth_send (pnet_t * net, os_eth_handle_t * handle, const os_buf_t * buf)
+int pf_eth_send (pnet_t * net, os_eth_handle_t * handle, os_buf_t * buf)
 {
    int sent_len = 0;
 

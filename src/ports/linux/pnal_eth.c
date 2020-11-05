@@ -134,7 +134,7 @@ os_eth_handle_t * os_eth_init (
    }
 }
 
-int os_eth_send (os_eth_handle_t * handle, const os_buf_t * buf)
+int os_eth_send (os_eth_handle_t * handle, os_buf_t * buf)
 {
    int ret = send (handle->socket, buf->payload, buf->len, 0);
 
