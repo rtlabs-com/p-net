@@ -689,7 +689,8 @@ static int app_state_ind (
    uint16_t err_code = 0;
    uint16_t slot = 0;
    uint16_t subslot = 0;
-   const char * error_description = "";
+   const char * error_class_description = "";
+   const char * error_code_description = "";
 
    app_data_t * p_appdata = (app_data_t *)arg;
 
@@ -710,29 +711,39 @@ static int app_state_ind (
             /* A few of the most common error codes */
             switch (err_cls)
             {
-            case 0:
-               error_description = "Unknown error class";
-               break;
             case PNET_ERROR_CODE_1_RTA_ERR_CLS_PROTOCOL:
+               error_class_description = "Real-Time Acyclic Protocol";
                switch (err_code)
                {
                case PNET_ERROR_CODE_2_ABORT_AR_CONSUMER_DHT_EXPIRED:
-                  error_description = "AR_CONSUMER_DHT_EXPIRED";
+                  error_code_description = "Device missed cyclic data "
+                                           "deadline, device terminated AR";
                   break;
                case PNET_ERROR_CODE_2_ABORT_AR_CMI_TIMEOUT:
-                  error_description = "ABORT_AR_CMI_TIMEOUT";
+                  error_code_description = "Communication initialization "
+                                           "timeout, device terminated AR";
                   break;
                case PNET_ERROR_CODE_2_ABORT_AR_RELEASE_IND_RECEIVED:
-                  error_description = "Controller sent release request.";
+                  error_code_description = "AR release indication received";
+                  break;
+               case PNET_ERROR_CODE_2_ABORT_DCP_STATION_NAME_CHANGED:
+                  error_code_description = "DCP station name changed, "
+                                           "device terminated AR";
+                  break;
+               case PNET_ERROR_CODE_2_ABORT_DCP_RESET_TO_FACTORY:
+                  error_code_description = "DCP reset to factory or factory "
+                                           "reset, device terminated AR";
                   break;
                }
                break;
             }
             printf (
-               "    Error class: %u Error code: %u  %s\n",
+               "    Error class: 0x%02x %s \n"
+               "    Error code:  0x%02x %s \n",
                (unsigned)err_cls,
+               error_class_description,
                (unsigned)err_code,
-               error_description);
+               error_code_description);
          }
       }
       else

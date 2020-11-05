@@ -570,6 +570,7 @@ static int pf_cmina_abort_active_ars (pnet_t * net, uint8_t err_code)
       p_ar = pf_ar_find_by_index (net, ix);
       if ((p_ar != NULL) && (p_ar->in_use == true))
       {
+         p_ar->err_cls = PNET_ERROR_CODE_1_RTA_ERR_CLS_PROTOCOL;
          p_ar->err_code = err_code;
          pf_cmdev_state_ind (net, p_ar, PNET_EVENT_ABORT);
          nbr_of_aborted_ars++;
@@ -903,13 +904,6 @@ int pf_cmina_dcp_set_ind (
          break;
       case PF_CMINA_STATE_SET_NAME:
       case PF_CMINA_STATE_SET_IP:
-         if (reset_to_factory == true)
-         {
-            /* Handle reset to factory here */
-            /* Case 15 in Profinet 2.4 Table 1096 */
-            ret = pf_cmina_set_default_cfg (net, reset_mode);
-         }
-
          if ((change_name == true) || (change_ip == true))
          {
             if ((have_name == true) && (have_ip == true))
@@ -967,14 +961,8 @@ int pf_cmina_dcp_set_ind (
          }
          break;
       case PF_CMINA_STATE_W_CONNECT:
-         if (reset_to_factory == true)
-         {
-            /* Case 30 in Profinet 2.4 Table 1096 */
-            /* Handle reset to factory here */
-            ret = pf_cmina_set_default_cfg (net, reset_mode);
-         }
-
-         if ((change_name == false) && (change_ip == false))
+         if ((change_name == false) && (change_ip == false) &&
+             (reset_to_factory == false))
          {
             /* Case 24 in Profinet 2.4 Table 1096 */
             /* No change of name or IP. All OK */
@@ -1058,6 +1046,23 @@ int pf_cmina_dcp_set_ind (
          }
          break;
       }
+   }
+
+   /*
+    * Case 5 in Profinet 2.4 Table 1096 Do_Check
+    */
+   if (((net->cmina_state == PF_CMINA_STATE_SET_IP) ||
+        (net->cmina_state == PF_CMINA_STATE_SET_NAME)) &&
+       (have_name == true) && (have_ip == true))
+   {
+      net->cmina_state = PF_CMINA_STATE_W_CONNECT;
+   }
+
+   if (reset_to_factory == true)
+   {
+      /* Handle reset to factory here */
+      /* Case 15 in Profinet 2.4 Table 1096 */
+      ret = pf_cmina_set_default_cfg (net, reset_mode);
    }
 
    return ret;
