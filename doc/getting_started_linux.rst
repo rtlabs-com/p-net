@@ -5,7 +5,7 @@ Running the IO-device application on Linux
 
 Install dependencies
 --------------------
-You need to have cmake version at least 3.13 installed. It is available in
+You need to have cmake version at least 3.14 installed. It is available in
 Ubuntu 19.04 and later.
 
 To install on Ubuntu 16.04 or 18.04, follow the instructions here:
@@ -33,7 +33,13 @@ Clone the source::
 
     git clone --recurse-submodules https://github.com/rtlabs-com/p-net.git
 
-Create and configure the build::
+This will clone the repository with submodules. If you already cloned
+the repository without the ``--recurse-submodules`` flag then run this
+in the ``p-net`` folder::
+
+    git submodule update --init --recursive
+
+Then create and configure the build::
 
     cmake -B build -S p-net
 

@@ -76,7 +76,7 @@ For Linux:
 
 For rt-kernel:
 
-* Workbench 2017.1 or later
+* Workbench 2020.1 or later
 
 An example of microcontroller we have been using is the Infineon XMC4800,
 which has an ARM Cortex-M4 running at 144 MHz, with 2 MB Flash and 352 kB RAM.
