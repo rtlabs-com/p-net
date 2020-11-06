@@ -34,6 +34,9 @@
 #include "pf_includes.h"
 #include "pf_block_writer.h"
 
+#define STRINGIFY(s)   STRINGIFIED (s)
+#define STRINGIFIED(s) #s
+
 /**
  * @internal
  * Insert a block header into a buffer.
@@ -135,6 +138,33 @@ static void pf_put_uuid (
    pf_put_mem (p_uuid->data4, sizeof (p_uuid->data4), res_len, p_bytes, p_pos);
 }
 
+/**
+ * Put rpc UUID into a buffer
+ * @param is_big_endian    In:   Endianness of the destination buffer.
+ * @param p_uuid           In:   The UUID to insert.
+ * @param res_len          In:   Size of destination buffer.
+ * @param p_bytes          Out:  Destination buffer.
+ * @param p_pos            InOut:Position in destination buffer.
+ */
+static void pf_put_rpc_uuid (
+   bool is_big_endian,
+   const pf_rpc_uuid_type_t * p_uuid,
+   uint16_t res_len,
+   uint8_t * p_bytes,
+   uint16_t * p_pos)
+{
+   pf_put_uint32 (is_big_endian, p_uuid->time_low, res_len, p_bytes, p_pos);
+   pf_put_uint16 (is_big_endian, p_uuid->time_mid, res_len, p_bytes, p_pos);
+   pf_put_uint16 (
+      is_big_endian,
+      p_uuid->time_hi_and_version,
+      res_len,
+      p_bytes,
+      p_pos);
+   pf_put_byte (p_uuid->clock_hi_and_reserved, res_len, p_bytes, p_pos);
+   pf_put_byte (p_uuid->clock_low, res_len, p_bytes, p_pos);
+   pf_put_mem (p_uuid->node, sizeof (p_uuid->node), res_len, p_bytes, p_pos);
+}
 /* ======================== Public functions */
 
 void pf_put_mem (
@@ -4108,4 +4138,444 @@ void pf_put_pdport_data_adj (
    block_pos += offsetof (pf_block_header_t, block_length); /* Point to correct
                                                                place */
    pf_put_uint16 (is_big_endian, block_len, res_len, p_bytes, &block_pos);
+}
+
+/**
+ * Put rpc epm floor count into a buffer
+ * @param is_big_endian    In:   Endianness of the destination buffer.
+ * @param count            In:   Floor count.
+ * @param res_len          In:   Size of destination buffer.
+ * @param p_bytes          Out:  Destination buffer.
+ * @param p_pos            InOut:Position in destination buffer.
+ */
+static void pf_put_rpc_floor_count (
+   bool is_big_endian,
+   uint32_t count,
+   uint16_t res_len,
+   uint8_t * p_bytes,
+   uint16_t * p_pos)
+{
+   pf_put_uint16 (is_big_endian, count, res_len, p_bytes, p_pos);
+}
+
+/**
+ * Put rpc epm floor 1 configuration into a buffer
+ * @param is_big_endian    In:   Endianness of the destination buffer.
+ * @param p_floor          In:   Floor configuration.
+ * @param res_len          In:   Size of destination buffer.
+ * @param p_bytes          Out:  Destination buffer.
+ * @param p_pos            InOut:Position in destination buffer.
+ */
+static void pf_put_rpc_floor_1_uuid (
+   bool is_big_endian,
+   const pf_floor_uuid_t * p_floor,
+   uint16_t res_len,
+   uint8_t * p_bytes,
+   uint16_t * p_pos)
+{
+   uint16_t lhs_length = (uint16_t) (
+      sizeof (p_floor->protocol_id) + sizeof (p_floor->uuid) +
+      sizeof (p_floor->version_major));
+
+   pf_put_uint16 (is_big_endian, lhs_length, res_len, p_bytes, p_pos);
+
+   pf_put_byte (p_floor->protocol_id, res_len, p_bytes, p_pos);
+
+   pf_put_rpc_uuid (is_big_endian, &p_floor->uuid, res_len, p_bytes, p_pos);
+
+   pf_put_uint16 (
+      is_big_endian,
+      p_floor->version_major,
+      res_len,
+      p_bytes,
+      p_pos);
+
+   pf_put_uint16 (
+      is_big_endian,
+      (uint16_t) (sizeof (p_floor->version_minor)),
+      res_len,
+      p_bytes,
+      p_pos);
+
+   pf_put_uint16 (
+      is_big_endian,
+      p_floor->version_minor,
+      res_len,
+      p_bytes,
+      p_pos);
+}
+
+/**
+ * Put rpc epm floor 2 configuration into a buffer
+ * @param is_big_endian    In:   Endianness of the destination buffer.
+ * @param p_floor          In:   Floor configuration.
+ * @param res_len          In:   Size of destination buffer.
+ * @param p_bytes          Out:  Destination buffer.
+ * @param p_pos            InOut:Position in destination buffer.
+ */
+static void pf_put_rpc_floor_2_uuid (
+   bool is_big_endian,
+   const pf_floor_uuid_t * p_floor,
+   uint16_t res_len,
+   uint8_t * p_bytes,
+   uint16_t * p_pos)
+{
+   pf_put_rpc_floor_1_uuid (is_big_endian, p_floor, res_len, p_bytes, p_pos);
+}
+
+/**
+ * Put rpc epm floor 3 configuration into a buffer
+ * @param is_big_endian    In:   Endianness of the destination buffer.
+ * @param p_floor          In:   Floor configuration.
+ * @param res_len          In:   Size of destination buffer.
+ * @param p_bytes          Out:  Destination buffer.
+ * @param p_pos            InOut:Position in destination buffer.
+ */
+static void pf_put_rpc_floor_3_rpc (
+   bool is_big_endian,
+   const pf_floor_3_t * p_floor,
+   uint16_t res_len,
+   uint8_t * p_bytes,
+   uint16_t * p_pos)
+{
+   pf_put_uint16 (
+      is_big_endian,
+      (uint16_t) (sizeof (p_floor->protocol_id)),
+      res_len,
+      p_bytes,
+      p_pos);
+
+   pf_put_byte (p_floor->protocol_id, res_len, p_bytes, p_pos);
+
+   pf_put_uint16 (
+      is_big_endian,
+      (uint16_t) (sizeof (p_floor->version_minor)),
+      res_len,
+      p_bytes,
+      p_pos);
+
+   pf_put_uint16 (
+      is_big_endian,
+      p_floor->version_minor,
+      res_len,
+      p_bytes,
+      p_pos);
+}
+
+/**
+ * Put rpc epm floor 4 configuration into a buffer
+ * @param is_big_endian    In:   Endianness of the destination buffer.
+ * @param p_floor          In:   Floor configuration.
+ * @param res_len          In:   Size of destination buffer.
+ * @param p_bytes          Out:  Destination buffer.
+ * @param p_pos            InOut:Position in destination buffer.
+ */
+static void pf_put_rpc_floor_4_udp (
+   bool is_big_endian,
+   const pf_floor_4_t * p_floor,
+   uint16_t res_len,
+   uint8_t * p_bytes,
+   uint16_t * p_pos)
+{
+   pf_put_uint16 (
+      is_big_endian,
+      (uint16_t) (sizeof (p_floor->protocol_id)),
+      res_len,
+      p_bytes,
+      p_pos);
+
+   pf_put_byte (p_floor->protocol_id, res_len, p_bytes, p_pos);
+
+   pf_put_uint16 (
+      is_big_endian,
+      (uint16_t) (sizeof (p_floor->port)),
+      res_len,
+      p_bytes,
+      p_pos);
+
+   pf_put_uint16 (is_big_endian, p_floor->port, res_len, p_bytes, p_pos);
+}
+
+/**
+ * Put rpc epm floor 5 configuration into a buffer
+ * @param is_big_endian    In:   Endianness of the destination buffer.
+ * @param p_floor          In:   Floor configuration.
+ * @param res_len          In:   Size of destination buffer.
+ * @param p_bytes          Out:  Destination buffer.
+ * @param p_pos            InOut:Position in destination buffer.
+ */
+static void pf_put_rpc_floor_5_ip (
+   bool is_big_endian,
+   const pf_floor_5_t * p_floor,
+   uint16_t res_len,
+   uint8_t * p_bytes,
+   uint16_t * p_pos)
+{
+   pf_put_uint16 (
+      is_big_endian,
+      (uint16_t) (sizeof (p_floor->protocol_id)),
+      res_len,
+      p_bytes,
+      p_pos);
+
+   pf_put_byte (p_floor->protocol_id, res_len, p_bytes, p_pos);
+
+   pf_put_uint16 (
+      is_big_endian,
+      (uint16_t) (sizeof (p_floor->ip_address)),
+      res_len,
+      p_bytes,
+      p_pos);
+
+   pf_put_uint32 (is_big_endian, p_floor->ip_address, res_len, p_bytes, p_pos);
+}
+
+/**
+ * Put rpc epm annotation into a buffer.
+ * The annotation string is defined in
+ * PN-AL-protocol (Mar20) Table 309 RPC Substitutions
+ * RPC Annotation
+ * Field             Type                 Section
+ * DeviceType        VisibleString[25]    4.10.3.3.1
+ * Blank
+ * OrderID           VisibleString[20]    4.10.3.3.2
+ * Blank
+ * HWRevision        VisibleString[5]     4.10.3.3.3
+ * Blank
+ * SWRevisionPrefix  VisibleString[1]     4.10.3.3.4
+ * SWRevision        VisibleString[9]     4.10.3.3.5
+ * EndTerm           '\0'
+ *
+ * Todo refactor after https://github.com/rtlabs-com/p-net/pull/211 is added
+ *
+ * @param p_im_0_data      In:   I&M data used to generate annotation .
+ * @param res_len          In:   Size of destination buffer.
+ * @param p_bytes          Out:  Destination buffer.
+ * @param p_pos            InOut:Position in destination buffer.
+ */
+static void pf_put_rpc_epm_annotation (
+   const pnet_cfg_t * p_cfg,
+   uint16_t res_len,
+   uint8_t * p_bytes,
+   uint16_t * p_pos)
+{
+   char annotation_data[RPC_EPM_ANNOTATION_LENGTH];
+
+   snprintf (
+      annotation_data,
+      sizeof (annotation_data),
+      /* clang-format off */
+      "%-" STRINGIFY (PNET_PRODUCT_NAME_MAX_LEN) "s "
+      "%-" STRINGIFY (PNET_ORDER_ID_MAX_LEN) "s "
+      "%5u "
+      "%c%3u%3u%3u",
+      /* clang-format on */
+      p_cfg->product_name,
+      p_cfg->im_0_data.im_order_id,
+      p_cfg->im_0_data.im_hardware_revision,
+      p_cfg->im_0_data.im_sw_revision_prefix,
+      p_cfg->im_0_data.im_sw_revision_functional_enhancement,
+      p_cfg->im_0_data.im_sw_revision_bug_fix,
+      p_cfg->im_0_data.im_sw_revision_internal_change);
+
+   pf_put_mem (
+      annotation_data,
+      sizeof (annotation_data),
+      res_len,
+      p_bytes,
+      p_pos);
+}
+
+/**
+ * Put rpc epm protocol tower into a buffer
+ * @param is_big_endian    In:   Endianness of the destination buffer.
+ * @param p_tower          In:   Protocol tower configuration.
+ * @param res_len          In:   Size of destination buffer.
+ * @param p_bytes          Out:  Destination buffer.
+ * @param p_pos            InOut:Position in destination buffer.
+ */
+static void pf_put_tower_entry (
+   bool is_big_endian,
+   const pf_rpc_tower_t * p_tower,
+   uint16_t res_len,
+   uint8_t * p_bytes,
+   uint16_t * p_pos)
+{
+   pf_put_uint32 (is_big_endian, RPC_TOWER_REFERENTID, res_len, p_bytes, p_pos);
+   pf_put_uint32 (
+      is_big_endian,
+      RPC_EPM_ANNOTATION_OFFSET,
+      res_len,
+      p_bytes,
+      p_pos);
+
+   pf_put_uint32 (
+      is_big_endian,
+      RPC_EPM_ANNOTATION_LENGTH,
+      res_len,
+      p_bytes,
+      p_pos);
+
+   pf_put_rpc_epm_annotation (p_tower->p_cfg, res_len, p_bytes, p_pos);
+
+   pf_put_uint32 (is_big_endian, RPC_EPM_FLOOR_LENGTH, res_len, p_bytes, p_pos);
+
+   pf_put_uint32 (is_big_endian, RPC_EPM_FLOOR_LENGTH, res_len, p_bytes, p_pos);
+
+   pf_put_rpc_floor_count (
+      is_big_endian,
+      RPC_TOWER_FLOOR_COUNT,
+      res_len,
+      p_bytes,
+      p_pos);
+
+   pf_put_rpc_floor_1_uuid (
+      is_big_endian,
+      &p_tower->floor_1,
+      res_len,
+      p_bytes,
+      p_pos);
+
+   pf_put_rpc_floor_2_uuid (
+      is_big_endian,
+      &p_tower->floor_2,
+      res_len,
+      p_bytes,
+      p_pos);
+
+   pf_put_rpc_floor_3_rpc (
+      is_big_endian,
+      &p_tower->floor_3,
+      res_len,
+      p_bytes,
+      p_pos);
+
+   pf_put_rpc_floor_4_udp (
+      is_big_endian,
+      &p_tower->floor_4,
+      res_len,
+      p_bytes,
+      p_pos);
+
+   pf_put_rpc_floor_5_ip (
+      is_big_endian,
+      &p_tower->floor_5,
+      res_len,
+      p_bytes,
+      p_pos);
+}
+
+/**
+ * Put rpc handle into a buffer
+ * @param is_big_endian    In:   Endianness of the destination buffer.
+ * @param p_handle         In:   Rpc handle
+ * @param res_len          In:   Size of destination buffer.
+ * @param p_bytes          Out:  Destination buffer.
+ * @param p_pos            InOut:Position in destination buffer.
+ */
+static void pf_put_rpc_handle (
+   bool is_big_endian,
+   const pf_rpc_handle_t * p_handle,
+   uint16_t res_len,
+   uint8_t * p_bytes,
+   uint16_t * p_pos)
+{
+   pf_put_uint32 (
+      is_big_endian,
+      p_handle->rpc_entry_handle,
+      res_len,
+      p_bytes,
+      p_pos);
+
+   pf_put_rpc_uuid (
+      is_big_endian,
+      &p_handle->handle_uuid,
+      res_len,
+      p_bytes,
+      p_pos);
+}
+
+/**
+ * Put rpc epm entry into a buffer. If no no protocol tower is
+ * configured / actual_count == 0, a empty entry is written.
+ * @param is_big_endian    In:   Endianness of the destination buffer.
+ * @param p_entry          In:   Rpc epm entry including protocol
+ *                               tower configuration.
+ * @param res_len          In:   Size of destination buffer.
+ * @param p_bytes          Out:  Destination buffer.
+ * @param p_pos            InOut:Position in destination buffer.
+ */
+static void pf_put_rpc_epm_entry (
+   bool is_big_endian,
+   const pf_rpc_entry_t * p_entry,
+   uint16_t res_len,
+   uint8_t * p_bytes,
+   uint16_t * p_pos)
+{
+   pf_put_uint32 (is_big_endian, p_entry->max_count, res_len, p_bytes, p_pos);
+
+   pf_put_uint32 (is_big_endian, p_entry->offset, res_len, p_bytes, p_pos);
+
+   pf_put_uint32 (is_big_endian, p_entry->actual_count, res_len, p_bytes, p_pos);
+
+   /* Add entry if not empty */
+   if (p_entry->actual_count > 0)
+   {
+      pf_put_rpc_uuid (
+         is_big_endian,
+         &p_entry->object_uuid,
+         res_len,
+         p_bytes,
+         p_pos);
+
+      pf_put_tower_entry (
+         is_big_endian,
+         &p_entry->tower_entry,
+         res_len,
+         p_bytes,
+         p_pos);
+   }
+}
+
+void pf_put_lookup_response_data (
+   pnet_t * net,
+   bool is_big_endian,
+   const pf_rpc_lookup_rsp_t * p_lookup_rsp,
+   uint16_t res_len,
+   uint8_t * p_bytes,
+   uint16_t * p_pos)
+{
+   pf_put_rpc_handle (
+      is_big_endian,
+      &p_lookup_rsp->rpc_handle,
+      res_len,
+      p_bytes,
+      p_pos);
+
+   pf_put_uint32 (
+      is_big_endian,
+      p_lookup_rsp->num_entry,
+      res_len,
+      p_bytes,
+      p_pos);
+
+   pf_put_rpc_epm_entry (
+      is_big_endian,
+      &p_lookup_rsp->rpc_entry,
+      res_len,
+      p_bytes,
+      p_pos);
+
+   /*Add padding if needed*/
+   if (*p_pos % 2 > 0)
+   {
+      pf_put_byte (0, res_len, p_bytes, p_pos);
+   }
+
+   pf_put_uint32 (
+      is_big_endian,
+      p_lookup_rsp->return_code,
+      res_len,
+      p_bytes,
+      p_pos);
 }
