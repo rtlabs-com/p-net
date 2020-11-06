@@ -44,6 +44,7 @@
 #endif
 
 #include "pf_includes.h"
+#include "pf_cmrpc_epm.h"
 #include "pf_block_reader.h"
 #include "pf_block_writer.h"
 
@@ -54,6 +55,18 @@
 
 static const char * rpc_sync_name = "rpc";
 static const pf_uuid_t implicit_ar = {0, 0, 0, {0, 0, 0, 0, 0, 0, 0, 0}};
+
+static const pf_uuid_t uuid_epmap_interface = {
+   0xE1AF8308,
+   0x5D1F,
+   0x11C9,
+   {0x91, 0xA4, 0x08, 0x00, 0x2B, 0x14, 0xA0, 0xFA}};
+
+static const pf_uuid_t uuid_io_device_interface = {
+   0xDEA00001,
+   0x6C97,
+   0x11D1,
+   {0x82, 0x71, 0x00, 0xA0, 0x24, 0x42, 0xDF, 0x7D}};
 
 /**************** Diagnostic strings *****************************************/
 
@@ -2709,6 +2722,63 @@ static int pf_cmrpc_rm_read_ind (
 
 /**
  * @internal
+ * Take a DCE RPC EPM  LOOKUP request and create a response.
+ * No callbacks or updates of configuration is triggered
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param p_sess           InOut: The session instance.
+ * @param p_rpc_req        In:    RPC Request
+ * @param req_pos          In:    Position in the request buffer.
+ * @param res_size         In:    The size of the response buffer.
+ * @param p_res            Out:   The response buffer.
+ * @param p_res_pos        InOut: Position within the response buffer.
+ * @return  0  if operation succeeded.
+ *          -1 if an error occurred.
+ */
+static int pf_cmrpc_lookup_ind (
+   pnet_t * net,
+   pf_session_info_t * p_sess,
+   const pf_rpc_header_t * p_rpc_req,
+   uint16_t req_pos,
+   uint16_t res_size,
+   uint8_t * p_res,
+   uint16_t * p_res_pos)
+{
+   int ret = -1;
+   pf_rpc_lookup_req_t lookup_request;
+   uint16_t p_pos = req_pos;
+
+   memset (&lookup_request, 0, sizeof (lookup_request));
+
+   if (p_sess->rpc_result.pnio_status.error_code != 0)
+   {
+      LOG_ERROR (PF_RPC_LOG, "CMRPC(%d): RPC request has error\n", __LINE__);
+      pf_set_error (
+         &p_sess->rpc_result,
+         PNET_ERROR_CODE_READ,
+         PNET_ERROR_DECODE_PNIO,
+         PNET_ERROR_CODE_1_CMRPC,
+         PNET_ERROR_CODE_2_CMRPC_STATE_CONFLICT);
+   }
+   else
+   {
+      pf_get_epm_lookup_request (&p_sess->get_info, &p_pos, &lookup_request);
+      lookup_request.udpPort = p_sess->port;
+      ret = pf_cmrpc_lookup_request (
+         net,
+         p_rpc_req,
+         &lookup_request,
+         &p_sess->rpc_result,
+         res_size,
+         p_res,
+         p_res_pos);
+   }
+
+   return ret;
+}
+
+/**
+ * @internal
  * Parse one block in a IODWrite RPC request message.
  * @param p_get_info       InOut: Parser data for the input buffer.
  * @param p_write_request  Out:   The IODWrite request block.
@@ -3867,7 +3937,8 @@ static int pf_cmrpc_dce_packet (
          /* Incoming message is a request or response contained entirely in one
           * frame */
          p_sess->in_buf_len = 0;
-
+         p_sess->ip_addr = ip_addr;
+         p_sess->port = port;
          p_sess->activity_uuid = rpc_req.activity_uuid;
          p_sess->is_big_endian = p_sess->get_info.is_big_endian;
          p_sess->in_fragment_nbr = 0;
@@ -3885,7 +3956,8 @@ static int pf_cmrpc_dce_packet (
             /* This is the first incoming fragment. */
             /* Initialize the session */
             p_sess->in_buf_len = 0;
-
+            p_sess->ip_addr = ip_addr;
+            p_sess->port = port;
             p_sess->activity_uuid = rpc_req.activity_uuid;
 
             p_sess->is_big_endian = p_sess->get_info.is_big_endian;
@@ -3973,7 +4045,7 @@ static int pf_cmrpc_dce_packet (
          p_sess->resend_timeout = 0;
       }
 
-      /* Decide to do with incoming message */
+      /* Decide what to do with incoming message */
       /* Enter here _even_if_ an error is already detected because we may need
        * to generate an error response. */
       if (
@@ -4034,19 +4106,34 @@ static int pf_cmrpc_dce_packet (
             p_sess->out_buf_send_len = 0;
             p_sess->out_fragment_nbr = 0;
 
-            pf_get_ndr_data (&p_sess->get_info, &req_pos, &p_sess->ndr_data);
-            p_sess->get_info.is_big_endian = true; /* From now on all is
-                                                      big-endian */
-
-            /* Our response is limited by the size of the requesters response
-             * buffer */
-            max_rsp_len = req_pos + p_sess->ndr_data.args_maximum;
-            if (max_rsp_len > sizeof (p_sess->out_buffer))
+            /*Check what type of request this is EPMv4 or PNIO?*/
+            if (
+               memcmp (
+                  &rpc_req.interface_uuid,
+                  &uuid_epmap_interface,
+                  sizeof (rpc_req.object_uuid)) != 0)
             {
-               /* Our response is also limited by what our buffer can
-                * accommodate */
+               pf_get_ndr_data (&p_sess->get_info, &req_pos, &p_sess->ndr_data);
+               /* From now on all is big-endian */
+               p_sess->get_info.is_big_endian = true;
+
+               /* Our response is limited by the size of the requesters response
+                * buffer */
+               max_rsp_len = req_pos + p_sess->ndr_data.args_maximum;
+               if (max_rsp_len > sizeof (p_sess->out_buffer))
+               {
+                  /* Our response is also limited by what our buffer can
+                   * accommodate */
+                  max_rsp_len = sizeof (p_sess->out_buffer);
+               }
+            }
+            else
+            {
+               /* EPM requirement is little endian*/
+               p_sess->get_info.is_big_endian = false;
                max_rsp_len = sizeof (p_sess->out_buffer);
             }
+
             /* Prepare the response */
             rpc_res = rpc_req;
             rpc_res.packet_type = PF_RPC_PT_RESPONSE;
@@ -4076,15 +4163,50 @@ static int pf_cmrpc_dce_packet (
                *p_is_release = true;               /* Tell caller */
             }
 
-            /* Handle the RPC request */
-            ret = pf_cmrpc_rpc_request (
-               net,
-               p_sess,
-               req_pos,
-               &rpc_req,
-               max_rsp_len,
-               p_sess->out_buffer,
-               &p_sess->out_buf_len);
+            if (
+               memcmp (
+                  &rpc_req.interface_uuid,
+                  &uuid_io_device_interface,
+                  sizeof (rpc_req.object_uuid)) == 0)
+            {
+               /* Handle PNIO requests */
+               ret = pf_cmrpc_rpc_request (
+                  net,
+                  p_sess,
+                  req_pos,
+                  &rpc_req,
+                  max_rsp_len,
+                  p_sess->out_buffer,
+                  &p_sess->out_buf_len);
+            }
+            else if (
+               memcmp (
+                  &rpc_req.interface_uuid,
+                  &uuid_epmap_interface,
+                  sizeof (rpc_req.object_uuid)) == 0)
+            {
+               rpc_res.fragment_nmb = 0;
+               rpc_res.flags.idempotent = false;
+
+               /* Handle Endpoint Map request */
+               ret = pf_cmrpc_lookup_ind (
+                  net,
+                  p_sess,
+                  &rpc_req,
+                  req_pos,
+                  max_rsp_len,
+                  p_sess->out_buffer,
+                  &p_sess->out_buf_len);
+               *p_is_release = true;
+            }
+            else
+            {
+               LOG_ERROR (
+                  PF_RPC_LOG,
+                  "CMRPC(%d): Unhandled Object or Interface UUID!\n",
+                  __LINE__);
+               /*ToDo: Report NULL endpoint with proper error code*/
+            }
 
             if (p_sess->out_buf_len < PF_MAX_UDP_PAYLOAD_SIZE)
             {
