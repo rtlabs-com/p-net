@@ -762,6 +762,24 @@ void pf_put_pd_real_data (
    uint8_t * p_bytes,
    uint16_t * p_pos);
 
+/**
+ * Insert epm lookup response data block into a buffer.
+ * @param net              InOut: The p-net stack instance
+ * @param is_big_endian    In:    Endianness of the destination buffer.
+ * @param p_lookup_rsp     In:    Epm lookup response including entry and
+ *                                protocol tower configuration.
+ * @param res_len          In:    Size of destination buffer.
+ * @param p_bytes          Out:   Destination buffer.
+ * @param p_pos            InOut: Position in destination buffer.
+ */
+void pf_put_lookup_response_data (
+   pnet_t * net,
+   bool is_big_endian,
+   const pf_rpc_lookup_rsp_t * p_lookup_rsp,
+   uint16_t res_len,
+   uint8_t * p_bytes,
+   uint16_t * p_pos);
+
 #ifdef __cplusplus
 }
 #endif

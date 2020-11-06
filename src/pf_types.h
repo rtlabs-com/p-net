@@ -216,6 +216,145 @@ typedef enum pf_write_req_ext_error_type_values
    PF_WRT_ERROR_NO_PEER_DETECTED = 0x8005
 } pf_write_req_ext_error_type_t;
 
+/*
+ * RPC and EPM implementation
+ * PN-AL-protocol (Mar20) Section 4.10.3
+ */
+
+#define PF_RPC_TOWER_REFERENTID  3
+#define PF_RPC_TOWER_FLOOR_COUNT 5
+
+#define PF_RPC_FLOOR_VERSION_EPMv4 3
+#define PF_RPC_FLOOR_VERSION_NPR   2
+#define PF_RPC_FLOOR_VERSION_PNIO  1
+#define PF_RPC_FLOOR_VERSION_MINOR 0
+
+#define PF_RPC_EPM_ANNOTATION_OFFSET 0
+#define PF_RPC_EPM_ANNOTATION_LENGTH 64
+#define PF_RPC_EPM_FLOOR_LENGTH      75
+
+typedef enum pf_rpc_protocol_type
+{
+   PF_RPC_PROTOCOL_DOD_UDP = 0x08,
+   PF_RPC_PROTOCOL_DOD_IP = 0x09,
+   PF_RPC_PROTOCOL_CONNECTIONLESS = 0x0a,
+   PF_RPC_PROTOCOL_UUID = 0x0d
+} pf_rpc_protocol_type_t;
+
+/* PN-AL-protocol (Mar20) Table 328 */
+typedef enum pf_rpc_inquiry_type
+{
+   PF_RPC_INQUIRY_READ_ALL_REGISTERED_INTERFACES = 0,        /*mandatory*/
+   PF_RPC_INQUIRY_READ_ALL_OBJECTS_FOR_ONE_INTERFACE = 1,    /*optional*/
+   PF_RPC_INQUIRY_READ_ALL_INTERFACES_INCLUDING_OBJECTS = 2, /*optional*/
+   PF_RPC_INQUIRY_READ_ONE_INTERFACE_WITH_ONE_OBJECT = 3     /*optional*/
+} pf_rpc_inquiry_type_t;
+
+/* PN-AL-protocol (Mar20) Table 329 */
+typedef enum pf_rpc_error_value
+{
+   PF_RPC_OK = 0,
+   PF_RPC_NOT_REGISTERED = 0x16c9a0d6, /* Endpoint not registered */
+} pf_rpc_error_value_t;
+
+typedef enum
+{
+   PF_EPM_TYPE_NONE = 0,
+   PF_EPM_TYPE_EPMV4,
+   PF_EPM_TYPE_PNIO
+} pf_rpc_epm_type_t;
+
+/* Described in DCP 1.1 Appendix A */
+typedef struct pf_rpc_uuid_type
+{
+   uint32_t time_low;
+   uint16_t time_mid;
+   uint16_t time_hi_and_version;
+   uint8_t clock_hi_and_reserved;
+   uint8_t clock_low;
+   uint8_t node[6];
+} pf_rpc_uuid_type_t;
+
+/* Used for definition of epm protocol tower floors 1 and 2. */
+typedef struct pf_floor_uuid_t
+{
+   uint8_t protocol_id;
+   pf_rpc_uuid_type_t uuid;
+   uint16_t version_major;
+   uint16_t version_minor;
+} pf_floor_uuid_t;
+
+typedef struct pf_floor_3_t
+{
+   uint8_t protocol_id;
+   uint16_t version_minor;
+} pf_floor_3_t;
+
+typedef struct pf_floor_4_t
+{
+   uint8_t protocol_id;
+   uint16_t port;
+} pf_floor_4_t;
+
+typedef struct pf_floor_5_t
+{
+   uint8_t protocol_id;
+   uint32_t ip_address;
+} pf_floor_5_t;
+
+typedef struct pf_rpc_tower
+{
+   pf_floor_uuid_t floor_1;
+   pf_floor_uuid_t floor_2;
+   pf_floor_3_t floor_3;
+   pf_floor_4_t floor_4;
+   pf_floor_5_t floor_5;
+   pnet_cfg_t * p_cfg; /* Used for generation of annotation string*/
+} pf_rpc_tower_t;
+
+typedef struct pf_rpc_entry
+{
+   pf_rpc_epm_type_t epm_type;
+   uint32_t max_count;
+   uint32_t offset;
+   uint32_t actual_count;
+   pf_rpc_uuid_type_t object_uuid;
+   pf_rpc_tower_t tower_entry;
+} pf_rpc_entry_t;
+
+typedef struct pf_rpc_handle
+{
+   uint32_t rpc_entry_handle;
+   pf_rpc_uuid_type_t handle_uuid;
+} pf_rpc_handle_t;
+
+/*
+ * See PN-AL-protocol (Mar20) Table 310 – RPC substitutions
+ * for definitions of rpc lookup response
+ */
+typedef struct pf_rpc_lookup_rsp
+{
+   pf_rpc_handle_t rpc_handle;
+   uint32_t num_entry;
+   pf_rpc_entry_t rpc_entry;
+   uint32_t return_code;
+} pf_rpc_lookup_rsp_t;
+
+typedef struct pf_rpc_lookup_req
+{
+   uint32_t inquiry_type;
+   uint32_t object_id;
+   pf_uuid_t object_uuid;
+   uint32_t interface_id;
+   pf_uuid_t interface_uuid;
+   uint16_t interface_ver_major;
+   uint16_t interface_ver_minor;
+   uint32_t version_option;
+   pf_rpc_handle_t rpc_handle;
+   uint32_t max_entries;
+   uint16_t udpPort;
+} pf_rpc_lookup_req_t;
+
 /************************** Block header *************************************/
 
 typedef enum pf_block_type_values

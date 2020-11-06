@@ -142,7 +142,7 @@ uint32_t pf_get_uint32 (pf_get_info_t * p_info, uint16_t * p_pos)
 /**
  * @internal
  * Extract a UUID from a buffer.
- * @param p_info           In:   The parser state.
+ * @param p_info           InOut:   The parser state.
  * @param p_pos            InOut:Position in the buffer.
  * @param p_dest           Out:  Destination buffer.
  */
@@ -155,6 +155,31 @@ static void pf_get_uuid (
    p_dest->data2 = pf_get_uint16 (p_info, p_pos);
    p_dest->data3 = pf_get_uint16 (p_info, p_pos);
    pf_get_mem (p_info, p_pos, sizeof (p_dest->data4), p_dest->data4);
+}
+
+/**
+ * @internal
+ * Extract a rpc epm handle from a buffer.
+ * @param p_info           InOut:The parser state.
+ * @param p_pos            InOut:Position in the buffer.
+ * @param p_handle         Out:  Destination buffer.
+ */
+static void pf_get_handle (
+   pf_get_info_t * p_info,
+   uint16_t * p_pos,
+   pf_rpc_handle_t * p_handle)
+{
+   p_handle->rpc_entry_handle = pf_get_uint32 (p_info, p_pos);
+   p_handle->handle_uuid.time_low = pf_get_uint32 (p_info, p_pos);
+   p_handle->handle_uuid.time_mid = pf_get_uint16 (p_info, p_pos);
+   p_handle->handle_uuid.time_hi_and_version = pf_get_uint16 (p_info, p_pos);
+   p_handle->handle_uuid.clock_hi_and_reserved = pf_get_byte (p_info, p_pos);
+   p_handle->handle_uuid.clock_low = pf_get_byte (p_info, p_pos);
+   pf_get_mem (
+      p_info,
+      p_pos,
+      sizeof (p_handle->handle_uuid.node),
+      p_handle->handle_uuid.node);
 }
 
 /**
@@ -734,6 +759,23 @@ void pf_get_read_request (
    {
       p_req->rw_padding[ix] = pf_get_byte (p_info, p_pos);
    }
+}
+
+void pf_get_epm_lookup_request (
+   pf_get_info_t * p_info,
+   uint16_t * p_pos,
+   pf_rpc_lookup_req_t * p_req)
+{
+   p_req->inquiry_type = pf_get_uint32 (p_info, p_pos);
+   p_req->object_id = pf_get_uint32 (p_info, p_pos);
+   pf_get_uuid (p_info, p_pos, &p_req->object_uuid);
+   p_req->interface_id = pf_get_uint32 (p_info, p_pos);
+   pf_get_uuid (p_info, p_pos, &p_req->interface_uuid);
+   p_req->interface_ver_major = pf_get_uint16 (p_info, p_pos);
+   p_req->interface_ver_minor = pf_get_uint16 (p_info, p_pos);
+   p_req->version_option = pf_get_uint32 (p_info, p_pos);
+   pf_get_handle (p_info, p_pos, &p_req->rpc_handle);
+   p_req->max_entries = pf_get_uint32 (p_info, p_pos);
 }
 
 void pf_get_write_request (
