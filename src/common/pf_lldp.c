@@ -251,17 +251,15 @@ static void pf_lldp_add_port_id_tlv (
 /**
  * @internal
  * Insert the mandatory time-to-live (TTL) TLV into a buffer.
- * @param p_lldp_cfg       In:    LLDP configuration for this port
  * @param p_buf            InOut: The buffer.
  * @param p_pos            InOut: The position in the buffer.
  */
 static void pf_lldp_add_ttl_tlv (
-   const pnet_lldp_cfg_t * p_lldp_cfg,
    uint8_t * p_buf,
    uint16_t * p_pos)
 {
    pf_lldp_add_tlv_header (p_buf, p_pos, LLDP_TYPE_TTL, 2);
-   pf_put_uint16 (true, p_lldp_cfg->ttl, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
+   pf_put_uint16 (true, PNET_LLDP_TTL, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
 }
 
 /**
@@ -663,7 +661,7 @@ void pf_lldp_send (pnet_t * net)
          /* Add mandatory parts */
          pf_lldp_add_chassis_id_tlv (&chassis_id, p_buf, &pos);
          pf_lldp_add_port_id_tlv (p_lldp_cfg, p_buf, &pos);
-         pf_lldp_add_ttl_tlv (p_lldp_cfg, p_buf, &pos);
+         pf_lldp_add_ttl_tlv (p_buf, &pos);
 
          /* Add optional parts */
          pf_lldp_add_port_status (p_lldp_cfg, p_buf, &pos);

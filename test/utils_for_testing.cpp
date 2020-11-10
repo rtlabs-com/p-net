@@ -495,7 +495,6 @@ void PnetIntegrationTestBase::cfg_init()
    strcpy (pnet_default_cfg.product_name, "PNET unit tests");
 
    strcpy (pnet_default_cfg.lldp_cfg.port_id, "port-001");
-   pnet_default_cfg.lldp_cfg.ttl = 20; /* seconds */
    pnet_default_cfg.lldp_cfg.rtclass_2_status = 0;
    pnet_default_cfg.lldp_cfg.rtclass_3_status = 0;
    pnet_default_cfg.lldp_cfg.cap_aneg = 3; /* Supported (0x01) + enabled (0x02)
