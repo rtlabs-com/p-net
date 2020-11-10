@@ -1289,7 +1289,6 @@ int app_adjust_stack_configuration (pnet_cfg_t * stack_config)
 
    /* LLDP settings */
    strcpy (stack_config->lldp_cfg.port_id, "port-001");
-   stack_config->lldp_cfg.ttl = PNET_LLDP_TTL;
    stack_config->lldp_cfg.rtclass_2_status = 0;
    stack_config->lldp_cfg.rtclass_3_status = 0;
    stack_config->lldp_cfg.cap_aneg = PNET_LLDP_AUTONEG_SUPPORTED |
