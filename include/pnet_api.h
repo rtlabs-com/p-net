@@ -1183,9 +1183,6 @@ typedef struct pnet_ethaddr
  */
 typedef struct pnet_lldp_cfg
 {
-   /**< Terminated string. Not yet used, will be used when multiple ports
-    * are supported */
-   char chassis_id[PNET_LLDP_CHASSIS_ID_MAX_LEN + 1];
    char port_id[PNET_LLDP_PORT_ID_MAX_LEN + 1]; /**< Terminated string */
    pnet_ethaddr_t port_addr;
    uint16_t rtclass_2_status;
@@ -1263,22 +1260,6 @@ typedef struct pnet_lldp_peer_info
    pnet_ieee_macphy_t phy_config;
    pnet_lldp_peer_to_peer_boundary_t peer_boundary;
 } pnet_lldp_peer_info_t;
-
-/* Not used? */
-/**
- * Peer port information
- */
-typedef struct pnet_lldp_peer_req
-{
-   uint8_t chassis_id_subtype;
-   char chassis_id[PNET_LLDP_CHASSIS_ID_MAX_LEN + 1];
-   size_t chassis_id_len;
-   uint8_t port_id_subtype;
-   char port_id[PNET_LLDP_PORT_ID_MAX_LEN + 1];
-   size_t port_id_len;
-   uint16_t ttl;
-   pnet_lldp_peer_to_peer_boundary_t peer_boundary;
-} pnet_lldp_peer_req_t;
 
 /**
  * This is all the configuration needed to use the Profinet stack.
