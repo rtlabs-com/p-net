@@ -46,6 +46,7 @@ extern "C" {
 #include "pf_ptcp.h"
 #include "pf_scheduler.h"
 #include "pf_udp.h"
+#include "pf_pdport.h"
 
 /* device */
 #include "pf_cmdev.h"

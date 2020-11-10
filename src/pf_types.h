@@ -2446,6 +2446,11 @@ typedef struct pf_port
    } adjust;
 } pf_port_t;
 
+typedef struct pnet_port_nvm
+{
+   pf_check_peer_t peer;
+} pnet_pdport_nvm_t;
+
 struct pnet
 {
    char interface_name[PNET_MAX_INTERFACE_NAME_LENGTH]; /** Terminated */

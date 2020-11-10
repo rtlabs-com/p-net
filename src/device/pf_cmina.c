@@ -165,7 +165,7 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
    int ret = -1;
    const pnet_cfg_t * p_cfg = NULL;
    uint16_t ix;
-   bool should_reset_user_application = false;
+   bool reset_user_application = false;
    pf_cmina_dcp_ase_t file_ase;
    char ip_string[OS_INET_ADDRSTRLEN] = {0};
    char netmask_string[OS_INET_ADDRSTRLEN] = {0};
@@ -288,18 +288,23 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
             net->cmina_nonvolatile_dcp_ase.station_name);
       }
 
-      if (reset_mode == 1 || reset_mode == 99) /* Reset application parameters
-                                                */
+      if (reset_mode == 1 || reset_mode >= 3)
       {
-         should_reset_user_application = true;
+         /* Reset application parameters */
+         reset_user_application = true;
+
+         LOG_DEBUG (
+            PF_DCP_LOG,
+            "CMINA(%d): Reset application parameters.\n",
+            __LINE__);
 
          /* Reset I&M data */
          ret = pf_fspm_clear_im_data (net);
       }
 
-      if (reset_mode == 2 || reset_mode == 99) /* Reset communication parameters
-                                                */
+      if (reset_mode == 2 || reset_mode >= 3)
       {
+         /* Reset communication parameters */
          LOG_DEBUG (
             PF_DCP_LOG,
             "CMINA(%d): Reset communication parameters.\n",
@@ -320,13 +325,13 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
          pf_file_clear (p_file_directory, PNET_FILENAME_DIAGNOSTICS);
          pf_file_clear (p_file_directory, PNET_FILENAME_LOGBOOK);
          pf_file_clear (p_file_directory, PNET_FILENAME_SYSCONTACT);
+         pf_pdport_reset_all (net);
       }
 
       if (reset_mode > 0)
       {
          /* User callback */
-         (void)
-            pf_fspm_reset_ind (net, should_reset_user_application, reset_mode);
+         (void)pf_fspm_reset_ind (net, reset_user_application, reset_mode);
       }
 
       net->cmina_nonvolatile_dcp_ase.standard_gw_value = 0; /* Means: OwnIP is
@@ -627,7 +632,7 @@ int pf_cmina_dcp_set_ind (
    char gateway_string[OS_INET_ADDRSTRLEN] = {0};
 
    bool temp = ((block_qualifier & 1) == 0);
-   uint16_t reset_mode = block_qualifier >> 1;
+   uint16_t reset_mode = 0;
 
    /* Stop sending Hello packets */
    if (net->cmina_hello_timeout != UINT32_MAX)
@@ -870,6 +875,15 @@ int pf_cmina_dcp_set_ind (
       }
       else if (sub == PF_DCP_SUB_CONTROL_RESET_TO_FACTORY)
       {
+         /* For additional information on reset modes see
+          * PN-AL-protocol (Mar20) Table 85
+          * BlockQualifier with option ControlOption and suboption
+          * SuboptionResetToFactory.
+          * Note that these values does not match the
+          * wireshark decoding which includes bit 0.
+          */
+         reset_mode = block_qualifier >> 1;
+
          /* Case 15, 30 in Profinet 2.4 Table 1096 */
          reset_to_factory = true;
 
@@ -1247,6 +1261,7 @@ int pf_cmina_remove_all_data_files (const char * file_directory)
    pf_file_clear (file_directory, PNET_FILENAME_DIAGNOSTICS);
    pf_file_clear (file_directory, PNET_FILENAME_LOGBOOK);
    pf_file_clear (file_directory, PNET_FILENAME_SYSCONTACT);
+    pf_file_clear (file_directory, PNET_FILENAME_PDPORT);
 
    return 0;
 }
