@@ -1298,8 +1298,6 @@ typedef struct pnet_cfg
    pnet_cfg_device_id_t device_id;
    pnet_cfg_device_id_t oem_device_id;
    char station_name[PNET_STATION_NAME_MAX_LEN + 1]; /**< Terminated string */
-   char device_vendor[20 + 1];                       /**< Terminated string
-                                                          For DCP readout. */
    char manufacturer_specific_string[240 + 1];       /**< Terminated string
                                                           Not yet used */
 

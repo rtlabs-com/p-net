@@ -781,7 +781,13 @@ typedef struct pf_eth_frame_id_map
 typedef struct pf_cmina_dcp_ase
 {
    char station_name[PNET_STATION_NAME_MAX_LEN + 1]; /* Terminated */
-   char device_vendor[20 + 1];                       /* Terminated */
+
+   /*
+    * DCP DeviceVendorValue is set to configured product_name
+    * See PN-AL-protocol (Mar20) ch 4.3.1.4.26
+    * product_name is also known as DeviceType
+    */
+   char product_name[PNET_PRODUCT_NAME_MAX_LEN + 1]; /* Terminated */
    uint8_t device_role;        /* Only value "1" supported */
    uint16_t device_initiative; /* 1: Should send hello. 0: No sending of hello
                                 */
