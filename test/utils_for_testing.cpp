@@ -490,7 +490,6 @@ void PnetIntegrationTestBase::cfg_init()
    pnet_default_cfg.oem_device_id.device_id_lo = 0xef;
 
    strcpy (pnet_default_cfg.station_name, "");
-   strcpy (pnet_default_cfg.device_vendor, "rt-labs");
    strcpy (pnet_default_cfg.manufacturer_specific_string, "PNET demo");
    strcpy (pnet_default_cfg.product_name, "PNET unit tests");
 

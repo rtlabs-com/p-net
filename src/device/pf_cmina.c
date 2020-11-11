@@ -336,19 +336,20 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
       net->cmina_nonvolatile_dcp_ase.instance_id.low = 0;
 
       strncpy (
-         net->cmina_nonvolatile_dcp_ase.device_vendor,
-         p_cfg->device_vendor,
-         sizeof (net->cmina_nonvolatile_dcp_ase.device_vendor));
-      net->cmina_nonvolatile_dcp_ase.device_vendor
-         [sizeof (net->cmina_nonvolatile_dcp_ase.device_vendor) - 1] = '\0';
+         net->cmina_nonvolatile_dcp_ase.product_name,
+         p_cfg->product_name,
+         sizeof (net->cmina_nonvolatile_dcp_ase.product_name));
+      net->cmina_nonvolatile_dcp_ase
+         .product_name[sizeof (net->cmina_nonvolatile_dcp_ase.product_name) - 1] =
+         '\0';
       /* Remove trailing spaces */
-      ix = (uint16_t)strlen (net->cmina_nonvolatile_dcp_ase.device_vendor);
+      ix = (uint16_t)strlen (net->cmina_nonvolatile_dcp_ase.product_name);
       while ((ix > 1) &&
-             (net->cmina_nonvolatile_dcp_ase.device_vendor[ix] == ' '))
+             (net->cmina_nonvolatile_dcp_ase.product_name[ix] == ' '))
       {
          ix--;
       }
-      net->cmina_nonvolatile_dcp_ase.device_vendor[ix] = '\0';
+      net->cmina_nonvolatile_dcp_ase.product_name[ix] = '\0';
 
       /* Save to file */
       pf_cmina_save_ase (net, &net->cmina_nonvolatile_dcp_ase);
@@ -1110,9 +1111,9 @@ int pf_cmina_dcp_get_req (
       switch (sub)
       {
       case PF_DCP_SUB_DEV_PROP_VENDOR:
-         *p_value_length = sizeof (net->cmina_current_dcp_ase.device_vendor) -
+         *p_value_length = sizeof (net->cmina_current_dcp_ase.product_name) -
                            1; /* Skip terminator */
-         *pp_value = (uint8_t *)net->cmina_current_dcp_ase.device_vendor;
+         *pp_value = (uint8_t *)net->cmina_current_dcp_ase.product_name;
          break;
       case PF_DCP_SUB_DEV_PROP_NAME:
          *p_value_length = sizeof (net->cmina_current_dcp_ase.station_name);
@@ -1341,13 +1342,13 @@ void pf_cmina_show (pnet_t * net)
       net->cmina_current_dcp_ase.station_name);
    printf ("\n");
 
-   printf ("Default device_vendor          : <%s>\n", p_cfg->device_vendor);
+   printf ("Default product_name          : <%s>\n", p_cfg->product_name);
    printf (
-      "Perm device_vendor             : <%s>\n",
-      net->cmina_nonvolatile_dcp_ase.device_vendor);
+      "Perm product_name             : <%s>\n",
+      net->cmina_nonvolatile_dcp_ase.product_name);
    printf (
-      "Temp device_vendor             : <%s>\n",
-      net->cmina_current_dcp_ase.device_vendor);
+      "Temp product_name             : <%s>\n",
+      net->cmina_current_dcp_ase.product_name);
    printf ("\n");
 
    printf (
