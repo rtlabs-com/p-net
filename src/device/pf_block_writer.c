@@ -2485,6 +2485,13 @@ void pf_put_log_book_data (
 /**
  * @internal
  * Insert one diagnosis item to a buffer.
+ *
+ * The resulting format is controlled by the USI of the diagnosis item:
+ *  - Manufacturer specific format
+ *  - Channel diagnosis (standard format)
+ *  - Extended channel diagnosis (standard format)
+ *  - Qualified channel diagnosis (standard format)
+ *
  * @param is_big_endian    In:   true if buffer is big-endian.
  * @param p_item           In:   The diag item to insert.
  * @param res_len          In:   Size of destination buffer.
@@ -2589,6 +2596,7 @@ static void pf_put_diag_item (
          res_len,
          p_bytes,
          p_pos);
+
       pf_put_uint32 (
          is_big_endian,
          p_item->fmt.std.qual_ch_qualifier,
@@ -2609,16 +2617,19 @@ static void pf_put_diag_item (
 
 /**
  * @internal
- * Insert a diagnosis item list into a buffer.
+ * Insert a diagnosis item list (for a subslot) into a buffer.
+ *
+ * Insertion is done via pf_put_diag_item()
+ *
  * @param net              InOut: The p-net stack instance
- * @param is_big_endian    In:   true if buffer is big-endian.
- * @param diag_filter      In:   Type of diag items to insert.
- * @param slot_nbr         In:   The slot number.
- * @param subslot_nbr      In:   The sub-slot number.
- * @param list_head        In:   The first item in the list to insert.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
- * @param p_pos            InOut:Position in destination buffer.
+ * @param is_big_endian    In:    true if buffer is big-endian.
+ * @param diag_filter      In:    Type of diag items to insert.
+ * @param slot_nbr         In:    The slot number to write to buffer.
+ * @param subslot_nbr      In:    The sub-slot number to write to buffer.
+ * @param list_head        In:    Index of first item in the list to insert.
+ * @param res_len          In:    Size of destination buffer.
+ * @param p_bytes          Out:   Destination buffer.
+ * @param p_pos            InOut: Position in destination buffer.
  */
 static void pf_put_diag_list (
    pnet_t * net,
@@ -2641,8 +2652,13 @@ static void pf_put_diag_list (
    {
       pf_put_uint16 (is_big_endian, slot_nbr, res_len, p_bytes, p_pos);
       pf_put_uint16 (is_big_endian, subslot_nbr, res_len, p_bytes, p_pos);
-      pf_put_uint16 (is_big_endian, 0x8000, res_len, p_bytes, p_pos); /* ch_nbr
-                                                                       */
+      pf_put_uint16 (
+         is_big_endian,
+         PNET_CHANNEL_WHOLE_SUBMODULE,
+         res_len,
+         p_bytes,
+         p_pos);
+
       /*
        * The list only contains APPEARS, so it can be hardcoded here.
        * ToDo: More info into ch_properties here!
@@ -2652,6 +2668,7 @@ static void pf_put_diag_list (
 
       while (p_item != NULL)
       {
+         /* Filter based on diagnosis type */
          insert = false;
          switch (diag_filter)
          {
@@ -2692,6 +2709,7 @@ static void pf_put_diag_list (
             }
             break;
          }
+
          if (insert == true)
          {
             pf_put_diag_item (is_big_endian, p_item, res_len, p_bytes, p_pos);
@@ -2705,17 +2723,19 @@ static void pf_put_diag_list (
 /**
  * @internal
  * Insert diagnosis items of a slot into a buffer.
+ *
+ * This is done by calling pf_put_diag_list() for all matching subslots.
+ *
  * @param net              InOut: The p-net stack instance
- * @param is_big_endian    In:   true if buffer is big-endian.
- * @param filter_level     In:   The filter ending level.
- * @param diag_filter      In:   The types of diag to insert.
- * @param p_ar             In:   If != NULL then filter by AR.
- * @param p_slot           In:   The slot instance.
- * @param slot_nbr         In:   The slot number.
- * @param subslot_nbr      In:   The sub-slot number.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
- * @param p_pos            InOut:Position in destination buffer.
+ * @param is_big_endian    In:    true if buffer is big-endian.
+ * @param filter_level     In:    The filter ending level.
+ * @param diag_filter      In:    The types of diag to insert.
+ * @param p_ar             In:    If != NULL then filter by AR.
+ * @param p_slot           In:    The slot instance.
+ * @param subslot_nbr      In:    The sub-slot number to filter by.
+ * @param res_len          In:    Size of destination buffer.
+ * @param p_bytes          Out:   Destination buffer.
+ * @param p_pos            InOut: Position in destination buffer.
  */
 static void pf_put_diag_slot (
    pnet_t * net,
@@ -2724,7 +2744,6 @@ static void pf_put_diag_slot (
    pf_diag_filter_level_t diag_filter,
    const pf_ar_t * p_ar,
    const pf_slot_t * p_slot,
-   uint16_t slot_nbr,
    uint16_t subslot_nbr,
    uint16_t res_len,
    uint8_t * p_bytes,
@@ -2736,6 +2755,7 @@ static void pf_put_diag_slot (
    /* Include at least API ID information */
    for (ix = 0; ix < NELEMENTS (p_slot->subslots); ix++)
    {
+
       p_subslot = &p_slot->subslots[ix];
       if (p_subslot->in_use == true)
       {
@@ -2750,8 +2770,8 @@ static void pf_put_diag_slot (
                      net,
                      is_big_endian,
                      diag_filter,
-                     slot_nbr,
-                     subslot_nbr,
+                     p_slot->slot_nbr,
+                     p_subslot->subslot_nbr,
                      p_subslot->diag_list,
                      res_len,
                      p_bytes,
@@ -2765,8 +2785,8 @@ static void pf_put_diag_slot (
                   net,
                   is_big_endian,
                   diag_filter,
-                  slot_nbr,
-                  subslot_nbr,
+                  p_slot->slot_nbr,
+                  p_subslot->subslot_nbr,
                   p_subslot->diag_list,
                   res_len,
                   p_bytes,
@@ -2780,17 +2800,20 @@ static void pf_put_diag_slot (
 /**
  * @internal
  * Insert diagnosis items of an API into a buffer.
+ *
+ * This is done by calling pf_put_diag_slot() for all matching slots.
+ *
  * @param net              InOut: The p-net stack instance
- * @param is_big_endian    In:   true if buffer is big-endian.
- * @param filter_level     In:   The filter ending level.
- * @param diag_filter      In:   The types of diag to insert.
- * @param p_ar             In:   If != NULL then filter by AR.
- * @param p_api            In:   The API instance.
- * @param slot_nbr         In:   The slot number.
- * @param subslot_nbr      In:   The sub-slot number.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
- * @param p_pos            InOut:Position in destination buffer.
+ * @param is_big_endian    In:    true if buffer is big-endian.
+ * @param filter_level     In:    The filter ending level.
+ * @param diag_filter      In:    The types of diag to insert.
+ * @param p_ar             In:    If != NULL then filter by AR.
+ * @param p_api            In:    The API instance.
+ * @param slot_nbr         In:    The slot number to filter by.
+ * @param subslot_nbr      In:    The sub-slot number to filter by.
+ * @param res_len          In:    Size of destination buffer.
+ * @param p_bytes          Out:   Destination buffer.
+ * @param p_pos            InOut: Position in destination buffer.
  */
 static void pf_put_diag_api (
    pnet_t * net,
@@ -2828,7 +2851,6 @@ static void pf_put_diag_api (
                      diag_filter,
                      p_ar,
                      p_slot,
-                     slot_nbr,
                      subslot_nbr,
                      res_len,
                      p_bytes,
@@ -2845,7 +2867,6 @@ static void pf_put_diag_api (
                   diag_filter,
                   p_ar,
                   p_slot,
-                  slot_nbr,
                   subslot_nbr,
                   res_len,
                   p_bytes,
@@ -2859,18 +2880,21 @@ static void pf_put_diag_api (
 /**
  * @internal
  * Insert diagnosis items of a device into a buffer.
+ *
+ * This is done by calling pf_put_diag_api() for all APIs.
+ *
  * @param net              InOut: The p-net stack instance
- * @param is_big_endian    In:   true if buffer is big-endian.
- * @param filter_level     In:   The filter ending level.
- * @param diag_filter      In:   The types of diag to insert.
- * @param p_ar             In:   If != NULL then filter by AR.
- * @param p_device         In:   The device instance.
- * @param api_id           In:   The API id.
- * @param slot_nbr         In:   The slot number.
- * @param subslot_nbr      In:   The sub-slot number.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
- * @param p_pos            InOut:Position in destination buffer.
+ * @param is_big_endian    In:    true if buffer is big-endian.
+ * @param filter_level     In:    The filter ending level.
+ * @param diag_filter      In:    The types of diag to insert.
+ * @param p_ar             In:    If != NULL then filter by AR.
+ * @param p_device         In:    The device instance.
+ * @param api_id           In:    The API id to filter by.
+ * @param slot_nbr         In:    The slot number to filter by.
+ * @param subslot_nbr      In:    The sub-slot number to filter by.
+ * @param res_len          In:    Size of destination buffer.
+ * @param p_bytes          Out:   Destination buffer.
+ * @param p_pos            InOut: Position in destination buffer.
  */
 static void pf_put_diag_device (
    pnet_t * net,
@@ -3057,6 +3081,51 @@ void pf_put_alarm_fixed (
       p_pos);
 }
 
+/**
+ * @internal
+ * Insert maint_status into a buffer
+ *
+ * @param is_big_endian    In:    true if buffer is big-endian.
+ * @param maint_status     In:    Maintainance status.
+ * @param res_len          In:    Size of destination buffer.
+ * @param p_bytes          Out:   Destination buffer.
+ * @param p_pos            InOut: Position in destination buffer.
+ */
+void pf_put_maint_status (
+   bool is_big_endian,
+   uint32_t maint_status,
+   uint16_t res_len,
+   uint8_t * p_bytes,
+   uint16_t * p_pos)
+{
+   uint16_t block_pos = 0;
+   uint16_t block_len = 0;
+
+   pf_put_uint16 (is_big_endian, PF_USI_MAINTENANCE, res_len, p_bytes, p_pos);
+
+   block_pos = *p_pos;
+   pf_put_block_header (
+      is_big_endian,
+      PF_BT_MAINTENANCE_ITEM,
+      0, /* Dont know block_len yet */
+      PNET_BLOCK_VERSION_HIGH,
+      PNET_BLOCK_VERSION_LOW,
+      res_len,
+      p_bytes,
+      p_pos);
+
+   pf_put_byte (0, res_len, p_bytes, p_pos);
+   pf_put_byte (0, res_len, p_bytes, p_pos);
+
+   pf_put_uint32 (is_big_endian, maint_status, res_len, p_bytes, p_pos);
+
+   /* Finally insert the block length into the block header */
+   block_len = *p_pos - (block_pos + 4);
+   /* Point to correct place */
+   block_pos += offsetof (pf_block_header_t, block_length);
+   pf_put_uint16 (is_big_endian, block_len, res_len, p_bytes, &block_pos);
+}
+
 void pf_put_alarm_block (
    bool is_big_endian,
    pf_block_type_values_t bh_type,
@@ -3074,7 +3143,6 @@ void pf_put_alarm_block (
    uint16_t block_len = 0;
    uint32_t temp_u16;
    uint32_t temp_u32;
-   uint16_t block_pos_2;
 
    /* Insert block header for the alarm block */
    pf_put_block_header (
@@ -3087,12 +3155,15 @@ void pf_put_alarm_block (
       p_bytes,
       p_pos);
 
+   /* Insert alarm type */
    pf_put_uint16 (
       is_big_endian,
       p_alarm_data->alarm_type,
       res_len,
       p_bytes,
       p_pos);
+
+   /* Insert API, slot and subslot */
    pf_put_uint32 (is_big_endian, p_alarm_data->api_id, res_len, p_bytes, p_pos);
    pf_put_uint16 (
       is_big_endian,
@@ -3127,6 +3198,7 @@ void pf_put_alarm_block (
          p_pos);
    }
 
+   /* Insert sequence number and boolean flags */
    temp_u32 = 0;
    pf_put_bits (p_alarm_data->sequence_number, 11, 0, &temp_u32);
    pf_put_bits (
@@ -3169,45 +3241,13 @@ void pf_put_alarm_block (
          /* Insert a maintenance item before the diagnosis item */
          if (maint_status != 0)
          {
-            pf_put_uint16 (
+            pf_put_maint_status (
                is_big_endian,
-               PF_USI_MAINTENANCE,
+               maint_status,
                res_len,
                p_bytes,
                p_pos);
-
-            block_pos_2 = *p_pos;
-            pf_put_block_header (
-               is_big_endian,
-               PF_BT_MAINTENANCE_ITEM,
-               0, /* Dont know block_len yet */
-               PNET_BLOCK_VERSION_HIGH,
-               PNET_BLOCK_VERSION_LOW,
-               res_len,
-               p_bytes,
-               p_pos);
-
-            pf_put_byte (0, res_len, p_bytes, p_pos);
-            pf_put_byte (0, res_len, p_bytes, p_pos);
-
-            pf_put_uint32 (is_big_endian, maint_status, res_len, p_bytes, p_pos);
-
-            /* Finally insert the block length into the block header */
-            block_len = *p_pos - (block_pos_2 + 4);
-            block_pos_2 +=
-               offsetof (pf_block_header_t, block_length); /* Point
-                                                              to
-                                                              correct
-                                                              place
-                                                            */
-            pf_put_uint16 (
-               is_big_endian,
-               block_len,
-               res_len,
-               p_bytes,
-               &block_pos_2);
          }
-
          pf_put_diag_item (
             is_big_endian,
             (pf_diag_item_t *)p_payload,
