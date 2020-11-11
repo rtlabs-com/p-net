@@ -3548,6 +3548,11 @@ void pf_put_pdport_data_real (
    uint8_t numPeers = net->lldp_peer_info.ttl ? 1 : 0;
    uint8_t temp_u8 = 0;
    pf_lldp_chassis_id_t chassis_id;
+   const pnet_lldp_port_cfg_t * p_port_config = NULL;
+   const pnet_lldp_peer_info_t * p_peer_info = &net->lldp_peer_info;
+
+   pf_lldp_get_port_config (net, PNET_PORT_1, &p_port_config);
+   CC_ASSERT (p_port_config != NULL);
 
    /* Block header first */
    pf_put_block_header (
@@ -3573,16 +3578,12 @@ void pf_put_pdport_data_real (
       p_pos);
 
    /* Length OwnerPortID */
-   pf_put_byte (
-      strlen (net->fspm_cfg.lldp_cfg.port_id),
-      res_len,
-      p_bytes,
-      p_pos);
+   pf_put_byte (strlen (p_port_config->port_id), res_len, p_bytes, p_pos);
 
    /* OwnerPortID */
    pf_put_mem (
-      net->fspm_cfg.lldp_cfg.port_id,
-      strlen (net->fspm_cfg.lldp_cfg.port_id),
+      p_port_config->port_id,
+      strlen (p_port_config->port_id),
       res_len,
       p_bytes,
       p_pos);
@@ -3597,12 +3598,12 @@ void pf_put_pdport_data_real (
       pf_put_uint16 (is_big_endian, temp_u16, res_len, p_bytes, p_pos);
 
       /* Length peer_id */
-      pf_put_byte (net->lldp_peer_info.port_id_len, res_len, p_bytes, p_pos);
+      pf_put_byte (p_peer_info->port_id_len, res_len, p_bytes, p_pos);
 
       /* peer_id */
       pf_put_mem (
-         net->lldp_peer_info.port_id,
-         net->lldp_peer_info.port_id_len,
+         p_peer_info->port_id,
+         p_peer_info->port_id_len,
          res_len,
          p_bytes,
          p_pos);
@@ -3625,15 +3626,15 @@ void pf_put_pdport_data_real (
       /* Line Delay */
       pf_put_uint32 (
          is_big_endian,
-         net->lldp_peer_info.line_delay,
+         p_peer_info->line_delay,
          res_len,
          p_bytes,
          p_pos);
 
       /* PeerMAC Addr */
       pf_put_mem (
-         net->lldp_peer_info.mac_address.addr,
-         sizeof (net->lldp_peer_info.mac_address.addr),
+         p_peer_info->mac_address.addr,
+         sizeof (p_peer_info->mac_address.addr),
          res_len,
          p_bytes,
          p_pos);
@@ -3644,7 +3645,7 @@ void pf_put_pdport_data_real (
       /* MAUType */
       pf_put_uint16 (
          is_big_endian,
-         net->lldp_peer_info.phy_config.operational_mau_type,
+         p_peer_info->phy_config.operational_mau_type,
          res_len,
          p_bytes,
          p_pos);
@@ -3655,7 +3656,7 @@ void pf_put_pdport_data_real (
       /* Domain Boundary */
       pf_put_uint32 (
          is_big_endian,
-         net->lldp_peer_info.domain_boundary,
+         p_peer_info->domain_boundary,
          res_len,
          p_bytes,
          p_pos);
@@ -3663,13 +3664,13 @@ void pf_put_pdport_data_real (
       /* Multicast Boundary */
       pf_put_uint32 (
          is_big_endian,
-         net->lldp_peer_info.multicast_boundary,
+         p_peer_info->multicast_boundary,
          res_len,
          p_bytes,
          p_pos);
 
       /* LinkState.Port */
-      pf_put_byte (net->lldp_peer_info.link_state_port, res_len, p_bytes, p_pos);
+      pf_put_byte (p_peer_info->link_state_port, res_len, p_bytes, p_pos);
 
       /* LinkState.Link  */
       /* TODO currently always set to up */
@@ -3681,7 +3682,7 @@ void pf_put_pdport_data_real (
       /* MediaType (Decode what type it is and report it out per
        * PROFINET AL Protocol Table 717
        */
-      switch (net->lldp_peer_info.phy_config.operational_mau_type)
+      switch (p_peer_info->phy_config.operational_mau_type)
       {
       case PNET_MAU_RADIO:
          /* Radio */

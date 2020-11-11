@@ -47,6 +47,21 @@ extern "C" {
 bool pf_lldp_is_peer_info_received (pnet_t * net, uint32_t * timestamp_10ms);
 
 /**
+ * Get LLDP port configuration for a port.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param loc_port_num     In:    Local port number.
+ *                                Valid range: 1 .. N, where N is the total
+ *                                number of local ports used by p-net stack.
+ * @param pp_port_cfg      Out:   LLDP port configuration, or NULL if not
+ *                                found.
+ */
+void pf_lldp_get_port_config (
+   pnet_t * net,
+   int loc_port_num,
+   const pnet_lldp_port_cfg_t ** pp_port_cfg);
+
+/**
  * Get Chassis ID of local device.
  *
  * @param net              In:    The p-net stack instance
@@ -79,7 +94,7 @@ void pf_lldp_get_peer_chassis_id (
 void pf_lldp_init (pnet_t * net);
 
 /**
- * Build and send an LLDP message.
+ * Build and send LLDP message on relevant ports.
  * @param net              InOut: The p-net stack instance
  */
 void pf_lldp_send (pnet_t * net);

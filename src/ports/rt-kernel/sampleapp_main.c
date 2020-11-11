@@ -231,6 +231,10 @@ int main (void)
       pnet_default_cfg.eth_addr.addr,
       macbuffer.addr,
       sizeof (pnet_ethaddr_t));
+   memcpy (
+      pnet_default_cfg.lldp_cfg.ports[0].port_addr.addr,
+      macbuffer.addr,
+      sizeof (pnet_ethaddr_t));
    pnet_default_cfg.cb_arg = (void *)gp_appdata;
 
    /* Initialize Profinet stack */

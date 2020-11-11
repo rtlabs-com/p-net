@@ -77,6 +77,8 @@ extern "C" {
 
 #define PNET_API_NO_APPLICATION_PROFILE 0
 
+#define PNET_PORT_1 1
+
 /**
  * # Error Codes
  *
@@ -1179,9 +1181,9 @@ typedef struct pnet_ethaddr
 #define PNET_MAU_FIBER_1000BaseX_FULL_DUPLEX  0x0016
 
 /**
- * LLDP information used by the Profinet stack.
+ * LLDP configuration for a single port.
  */
-typedef struct pnet_lldp_cfg
+typedef struct pnet_lldp_port_cfg
 {
    char port_id[PNET_LLDP_PORT_ID_MAX_LEN + 1]; /**< Terminated string */
    pnet_ethaddr_t port_addr;
@@ -1190,6 +1192,14 @@ typedef struct pnet_lldp_cfg
    uint8_t cap_aneg;  /**< Autonegotiation supported and enabled */
    uint16_t cap_phy;  /**< Autonegotiation speeds */
    uint16_t mau_type; /**< Cable MAU type */
+} pnet_lldp_port_cfg_t;
+
+/**
+ * LLDP configuration used by the Profinet stack.
+ */
+typedef struct pnet_lldp_cfg
+{
+   pnet_lldp_port_cfg_t ports[PNET_MAX_PORT];
 } pnet_lldp_cfg_t;
 
 /**

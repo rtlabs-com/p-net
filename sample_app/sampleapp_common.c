@@ -1288,15 +1288,16 @@ int app_adjust_stack_configuration (pnet_cfg_t * stack_config)
    stack_config->min_device_interval = 32; /* Corresponds to 1 ms */
 
    /* LLDP settings */
-   strcpy (stack_config->lldp_cfg.port_id, "port-001");
-   stack_config->lldp_cfg.rtclass_2_status = 0;
-   stack_config->lldp_cfg.rtclass_3_status = 0;
-   stack_config->lldp_cfg.cap_aneg = PNET_LLDP_AUTONEG_SUPPORTED |
-                                     PNET_LLDP_AUTONEG_ENABLED;
-   stack_config->lldp_cfg.cap_phy =
+   strcpy (stack_config->lldp_cfg.ports[0].port_id, "port-001");
+   stack_config->lldp_cfg.ports[0].rtclass_2_status = 0;
+   stack_config->lldp_cfg.ports[0].rtclass_3_status = 0;
+   stack_config->lldp_cfg.ports[0].cap_aneg = PNET_LLDP_AUTONEG_SUPPORTED |
+                                              PNET_LLDP_AUTONEG_ENABLED;
+   stack_config->lldp_cfg.ports[0].cap_phy =
       PNET_LLDP_AUTONEG_CAP_100BaseTX_HALF_DUPLEX |
       PNET_LLDP_AUTONEG_CAP_100BaseTX_FULL_DUPLEX;
-   stack_config->lldp_cfg.mau_type = PNET_MAU_COPPER_100BaseTX_FULL_DUPLEX;
+   stack_config->lldp_cfg.ports[0].mau_type =
+      PNET_MAU_COPPER_100BaseTX_FULL_DUPLEX;
 
    /* Network configuration */
    stack_config->send_hello = true;
