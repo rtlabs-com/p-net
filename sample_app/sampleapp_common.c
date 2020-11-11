@@ -1263,8 +1263,7 @@ int app_adjust_stack_configuration (pnet_cfg_t * stack_config)
    stack_config->im_0_data.im_version_major = 1;
    stack_config->im_0_data.im_version_minor = 1;
    stack_config->im_0_data.im_supported =
-      PNET_SUPPORTED_IM1 | PNET_SUPPORTED_IM2 | PNET_SUPPORTED_IM3 |
-      PNET_SUPPORTED_IM4;
+      PNET_SUPPORTED_IM1 | PNET_SUPPORTED_IM2 | PNET_SUPPORTED_IM3;
    strcpy (stack_config->im_1_data.im_tag_function, "my function");
    strcpy (stack_config->im_1_data.im_tag_location, "my location");
    strcpy (stack_config->im_2_data.im_date, "2020-09-03 13:53");

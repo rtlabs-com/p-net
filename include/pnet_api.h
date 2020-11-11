@@ -1013,7 +1013,8 @@ typedef enum pnet_im_supported_value
    PNET_SUPPORTED_IM1 = 0x0002,
    PNET_SUPPORTED_IM2 = 0x0004,
    PNET_SUPPORTED_IM3 = 0x0008,
-   PNET_SUPPORTED_IM4 = 0x0010,
+   PNET_SUPPORTED_IM4 = 0x0010, /* Should only be used together with Functional
+                                   Safety*/
 } pnet_im_supported_values_t;
 
 /**
