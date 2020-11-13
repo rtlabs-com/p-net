@@ -146,11 +146,20 @@ if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 endif()
 message(STATUS "Current install path is: ${CMAKE_INSTALL_PREFIX}")
 
-# Generate version numbers
+# Get git revision if available
+find_package(Git QUIET)
+execute_process(COMMAND
+  "${GIT_EXECUTABLE}" describe --tags --always --dirty
+  WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+  OUTPUT_VARIABLE PNET_VERSION_GIT
+  ERROR_QUIET
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
 configure_file (
   version.h.in
   ${PROFINET_BINARY_DIR}/src/version.h
   )
+
 # Generate config options
 configure_file (
   options.h.in

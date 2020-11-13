@@ -20,6 +20,7 @@
 #include "osal_log.h"
 #include "osal.h"
 #include <pnet_api.h>
+#include "version.h"
 
 #include <net/if.h>
 #include <sys/ioctl.h>
@@ -92,6 +93,8 @@ void show_usage()
            "Defaults to not read button2.\n");
    printf ("   -p PATH      Absolute path to storage directory. Defaults to "
            "use current directory.\n");
+   printf ("\n");
+   printf ("p-net revision: " PNET_VERSION "\n");
 }
 
 /**

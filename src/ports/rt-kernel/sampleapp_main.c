@@ -18,6 +18,7 @@
 #include "osal_log.h"
 #include "osal.h"
 #include <pnet_api.h>
+#include "version.h"
 
 #include <gpio.h>
 #include <kern/kern.h>
@@ -84,6 +85,7 @@ static int _cmd_pnio_show (int argc, char * argv[])
 {
    unsigned long level = 0;
    char * end = NULL;
+   extern char * os_kernel_revision;
 
    if (argc == 1)
    {
@@ -112,6 +114,9 @@ static int _cmd_pnio_show (int argc, char * argv[])
    printf (
       "App parameter 2 = 0x%08x\n",
       (unsigned)ntohl (gp_appdata->app_param_2));
+   printf ("\n");
+   printf ("p-net revision: " PNET_VERSION "\n");
+   printf ("rt-kernel revision: %s\n", os_kernel_revision);
 
    return 0;
 }
