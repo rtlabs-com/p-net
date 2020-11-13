@@ -18,6 +18,7 @@
 #include "osal.h"
 #include "pnal.h"
 #include <pnet_api.h>
+#include "version.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -212,11 +213,13 @@ void app_print_network_details (
    printf ("Current Gateway:      %s\n", gateway_string);
 }
 
+/************************** Subslot data *************************************/
+
 /**
  * Get subslot application information.
- * @param p_appdata     InOut: Application state.
- * @param slot_nbr      In: Slot number.
- * @param subslot_nbr   In: Subslot number.
+ * @param p_appdata        InOut: Application state.
+ * @param slot_nbr         In:    Slot number.
+ * @param subslot_nbr      In:    Subslot number.
  * @return Reference to application subslot,
  *         NULL is subslot is not found/plugged.
  */
@@ -241,12 +244,12 @@ static app_subslot_t * app_subslot_get (
 /**
  * Alloc/reserve application subslot.
  * @param p_appdata        InOut: Application state.
- * @param slot_nbr         In: Slot number.
- * @param subslot_nbr      In: Subslot number.
- * @param submodule_ident  In: Submodule identity.
- * @param p_data_cfg       In: Data configuration,
- *                             direction, in and out sizes.
- * @param submodule_name   In: Submodule name
+ * @param slot_nbr         In:    Slot number.
+ * @param subslot_nbr      In:    Subslot number.
+ * @param submodule_ident  In:    Submodule identity.
+ * @param p_data_cfg       In:    Data configuration,
+ *                                direction, in and out sizes.
+ * @param submodule_name   In:    Submodule name
  * @return Reference to allocated subslot,
  *         NULL if no free subslot is available.
  */
@@ -255,7 +258,7 @@ static app_subslot_t * app_subslot_alloc (
    uint16_t slot_nbr,
    uint16_t subslot_nbr,
    uint32_t submodule_ident,
-   pnet_data_cfg_t * p_data_cfg,
+   const pnet_data_cfg_t * p_data_cfg,
    const char * submodule_name)
 {
    uint16_t subslot;
@@ -288,9 +291,10 @@ static app_subslot_t * app_subslot_alloc (
 
 /**
  * Free application subslot.
- * @param p_appdata     InOut: Application state.
- * @param slot_nbr      In: Slot number.
- * @param subslot_nbr   In: Subslot number.
+ *
+ * @param p_appdata        InOut: Application state.
+ * @param slot_nbr         In:    Slot number.
+ * @param subslot_nbr      In:    Subslot number.
  * @return 0 on success, -1 on error.
  */
 static int app_subslot_free (
@@ -317,12 +321,13 @@ static int app_subslot_free (
 }
 
 /**
- * Return subslot input configuration.
- * @param p_subslot     In: Reference to subslot.
+ * Return true if subslot is input.
+ *
+ * @param p_subslot        In:    Reference to subslot.
  * @return true if subslot is input or input/output.
  *         false if not.
  */
-static bool app_subslot_is_input (app_subslot_t * p_subslot)
+static bool app_subslot_is_input (const app_subslot_t * p_subslot)
 {
    if (
       p_subslot != NULL && (p_subslot->data_cfg.data_dir == PNET_DIR_INPUT ||
@@ -338,12 +343,13 @@ static bool app_subslot_is_input (app_subslot_t * p_subslot)
 
 /**
  * Return true if subslot is neither input or output.
+ *
  * This is applies for DAP submodules/slots
  * @param p_subslot     In: Reference to subslot.
  * @return true if subslot is input or input/output.
  *         false if not.
  */
-static bool app_subslot_is_no_io (app_subslot_t * p_subslot)
+static bool app_subslot_is_no_io (const app_subslot_t * p_subslot)
 {
    if (p_subslot != NULL && p_subslot->data_cfg.data_dir == PNET_DIR_NO_IO)
    {
@@ -356,12 +362,13 @@ static bool app_subslot_is_no_io (app_subslot_t * p_subslot)
 }
 
 /**
- * Return subslot output configuration.
+ * Return true if subslot is output.
+ *
  * @param p_subslot     In: Reference to subslot.
  * @return true if subslot is output or input/output,
  *         false if not.
  */
-static bool app_subslot_is_output (app_subslot_t * p_subslot)
+static bool app_subslot_is_output (const app_subslot_t * p_subslot)
 {
    if (
       p_subslot != NULL && (p_subslot->data_cfg.data_dir == PNET_DIR_OUTPUT ||
@@ -373,6 +380,39 @@ static bool app_subslot_is_output (app_subslot_t * p_subslot)
    {
       return false;
    }
+}
+
+/********************************* Set outputs ********************************/
+
+/* Set LED state.
+ *
+ * Compares new state with previous state to avoid disk operations.
+ *
+ * @param led_state        In:    New LED state
+ * @param verbosity        In:    Verbosity
+ */
+static void app_handle_data_led_state (bool led_state, int verbosity)
+{
+   static bool previous_led_state = false;
+
+   if (led_state != previous_led_state)
+   {
+      app_set_led (APP_DATA_LED_ID, led_state, verbosity);
+   }
+   previous_led_state = led_state;
+}
+
+/* Set outputs to default value.
+ *
+ * @param verbosity        In:    Verbosity
+ */
+static void app_set_outputs_default_value (int verbosity)
+{
+   if (verbosity > 0)
+   {
+      printf ("Setting outputs to default values.\n");
+   }
+   app_handle_data_led_state (false, verbosity);
 }
 
 /*********************************** Callbacks ********************************/
@@ -423,6 +463,8 @@ static int app_release_ind (
          p_result->pnio_status.error_code_1,
          p_result->pnio_status.error_code_2);
    }
+
+   app_set_outputs_default_value (p_appdata->arguments.verbosity);
 
    return 0;
 }
@@ -607,17 +649,17 @@ static int app_read_ind (
 }
 
 /**
- * Set input data, provider and consumer status
- * for a subslot.
- * @param net           InOut: The p-net stack instance.
- * @param p_appdata     In: Application state.
- * @param p_subslot     In: Subslot.
+ * Set initial input data, provider and consumer status for a subslot.
+ *
+ * @param net              InOut: The p-net stack instance.
+ * @param p_appdata        In:    Application state.
+ * @param p_subslot        In:    Subslot.
  * @return 0 on success, -1 on error
  */
-static int app_set_data_and_ioxs (
+static int app_set_initial_data_and_ioxs (
    pnet_t * net,
-   app_data_t * p_appdata,
-   app_subslot_t * p_subslot)
+   const app_data_t * p_appdata,
+   const app_subslot_t * p_subslot)
 {
    int ret;
    uint8_t iops = PNET_IOXS_GOOD;
@@ -755,14 +797,18 @@ static int app_state_ind (
             printf ("    No error status available\n");
          }
       }
+
+      /* Set output values */
+      app_set_outputs_default_value (p_appdata->arguments.verbosity);
+
       /* Only abort AR with correct session key */
-      os_event_set (p_appdata->main_events, EVENT_ABORT);
+      os_event_set (p_appdata->main_events, APP_EVENT_ABORT);
    }
    else if (state == PNET_EVENT_PRMEND)
    {
       /* Save the arep for later use */
       p_appdata->main_api.arep = arep;
-      os_event_set (p_appdata->main_events, EVENT_READY_FOR_DATA);
+      os_event_set (p_appdata->main_events, APP_EVENT_READY_FOR_DATA);
 
       /* Set initial data and IOPS for input modules, and IOCS for
        * output modules
@@ -775,7 +821,7 @@ static int app_state_ind (
                p_appdata->main_api.slots[slot].plugged &&
                p_appdata->main_api.slots[slot].subslots[subslot].plugged)
             {
-               app_set_data_and_ioxs (
+               app_set_initial_data_and_ioxs (
                   net,
                   p_appdata,
                   &p_appdata->main_api.slots[slot].subslots[subslot]);
@@ -816,7 +862,10 @@ static int app_signal_led_ind (pnet_t * net, void * arg, bool led_state)
    {
       printf ("Profinet signal LED call-back. New state: %u\n", led_state);
    }
-   return app_set_led (APP_PROFINET_SIGNAL_LED_ID, led_state);
+   return app_set_led (
+      APP_PROFINET_SIGNAL_LED_ID,
+      led_state,
+      p_appdata->arguments.verbosity);
 }
 
 static int app_exp_module_ind (
@@ -1076,6 +1125,8 @@ static int app_new_data_status_ind (
    uint8_t data_status)
 {
    app_data_t * p_appdata = (app_data_t *)arg;
+   bool is_running = data_status & BIT (PNET_DATA_STATUS_BIT_PROVIDER_STATE);
+   bool is_valid = data_status & BIT (PNET_DATA_STATUS_BIT_DATA_VALID);
 
    if (p_appdata->arguments.verbosity > 0)
    {
@@ -1085,6 +1136,23 @@ static int app_new_data_status_ind (
          arep,
          changes,
          data_status);
+      printf (
+         "   %s, %s, %s, %s, %s\n",
+         is_running ? "Run" : "Stop",
+         is_valid ? "Valid" : "Invalid",
+         (data_status & BIT (PNET_DATA_STATUS_BIT_STATE)) ? "Primary"
+                                                          : "Backup",
+         (data_status & BIT (PNET_DATA_STATUS_BIT_STATION_PROBLEM_INDICATOR))
+            ? "Normal operation"
+            : "Problem",
+         (data_status & BIT (PNET_DATA_STATUS_BIT_IGNORE))
+            ? "Ignore data status"
+            : "Evaluate data status");
+   }
+
+   if (is_running == false || is_valid == false)
+   {
+      app_set_outputs_default_value (p_appdata->arguments.verbosity);
    }
 
    return 0;
@@ -1116,7 +1184,7 @@ static int app_alarm_ind (
          data_usi);
    }
    p_appdata->alarm_arg = *p_alarm_arg;
-   os_event_set (p_appdata->main_events, EVENT_ALARM);
+   os_event_set (p_appdata->main_events, APP_EVENT_ALARM);
 
    return 0;
 }
@@ -1253,9 +1321,10 @@ int app_adjust_stack_configuration (pnet_cfg_t * stack_config)
    stack_config->im_0_data.im_hardware_revision = 1;
    stack_config->im_0_data.im_sw_revision_prefix = 'V'; /* 'V', 'R', 'P', 'U',
                                                            or 'T' */
-   stack_config->im_0_data.im_sw_revision_functional_enhancement = 0;
-   stack_config->im_0_data.im_sw_revision_bug_fix = 0;
-   stack_config->im_0_data.im_sw_revision_internal_change = 0;
+   stack_config->im_0_data.im_sw_revision_functional_enhancement =
+      PNET_VERSION_MAJOR;
+   stack_config->im_0_data.im_sw_revision_bug_fix = PNET_VERSION_MINOR;
+   stack_config->im_0_data.im_sw_revision_internal_change = PNET_VERSION_PATCH;
    stack_config->im_0_data.im_revision_counter = 0; /* Only 0 allowed according
                                                        to standard */
    stack_config->im_0_data.im_profile_id = 0x1234;
@@ -1362,7 +1431,7 @@ static void app_handle_send_alarm_ack (
    pnet_t * net,
    uint32_t arep,
    int verbosity,
-   pnet_alarm_argument_t * p_alarm_arg)
+   const pnet_alarm_argument_t * p_alarm_arg)
 {
    pnet_pnio_status_t pnio_status = {0, 0, 0, 0};
    int ret = -1;
@@ -1385,20 +1454,16 @@ static void app_handle_send_alarm_ack (
  * and the value in a counter.
  *
  * @param net              InOut: p-net stack instance
- * @param verbosity        In:    Verbosity
+ * @param p_appdata        In:    Application data
  * @param button_pressed   In:    True if button is pressed.
  * @param data_ctr         In:    Data counter.
- * @param p_input_slots    In:    Array describing if there is a plugged input
- *                                module in corresponding slot.
- * @param p_output_slots   In:    Array describing if there is a plugged output
- *                                module in corresponding slot.
  * @param p_inputdata      InOut: Inputdata for sending to the controller. Will
  *                                be modified by this function.
  * @param inputdata_size   In:    Size of inputdata. Should be > 0.
  */
 static void app_handle_cyclic_data (
    pnet_t * net,
-   app_data_t * p_appdata,
+   const app_data_t * p_appdata,
    bool button_pressed,
    uint8_t data_ctr,
    uint8_t * p_inputdata,
@@ -1411,10 +1476,9 @@ static void app_handle_cyclic_data (
    uint8_t outputdata[APP_DATASIZE_OUTPUT];
    uint16_t outputdata_length = 0;
    uint8_t iops = PNET_IOXS_BAD;
-   app_subslot_t * p_subslot = NULL;
+   const app_subslot_t * p_subslot = NULL;
    bool outputdata_is_updated = false; /* Not used in this application */
-   bool received_led_state = false;    /* LED for cyclic data */
-   static bool previous_led_state = false;
+   bool led_state = false;             /* LED for cyclic data */
 
    /* Prepare input data (for sending to IO-controller) */
    /* Lowest 7 bits: Counter    Most significant bit: Button */
@@ -1428,7 +1492,6 @@ static void app_handle_cyclic_data (
       p_inputdata[0] &= 0x7F;
    }
 
-   /* Set data for custom input modules, if any */
    for (slot = 0; slot < PNET_MAX_SLOTS; slot++)
    {
       for (subslot = 0; subslot < PNET_MAX_SUBSLOTS; subslot++)
@@ -1436,6 +1499,7 @@ static void app_handle_cyclic_data (
          iops = PNET_IOXS_BAD;
          p_subslot = &p_appdata->main_api.slots[slot].subslots[subslot];
 
+         /* Set data for custom input modules, if any */
          if (p_subslot->plugged && app_subslot_is_input (p_subslot))
          {
             if (p_subslot->p_in_data != NULL)
@@ -1459,22 +1523,26 @@ static void app_handle_cyclic_data (
                p_subslot->subslot_nbr,
                &inputdata_iocs);
 
-            if (p_appdata->arguments.verbosity > 0)
+            if (p_appdata->arguments.verbosity > 1)
             {
                if (inputdata_iocs == PNET_IOXS_BAD)
                {
-                  printf ("The controller reports IOCS_BAD for slot %u\n", slot);
+                  printf (
+                     "The controller reports IOCS_BAD for input slot %u\n",
+                     slot);
                }
                else if (inputdata_iocs != PNET_IOXS_GOOD)
                {
                   printf (
-                     "The controller reports IOCS %u for slot %u\n",
+                     "The controller reports IOCS %u for input slot %u. Is it "
+                     "in STOP mode?\n",
                      inputdata_iocs,
                      slot);
                }
             }
          }
 
+         /* Set data for custom output modules, if any */
          if (p_subslot->plugged && app_subslot_is_output (p_subslot))
          {
             outputdata_length = sizeof (outputdata);
@@ -1489,28 +1557,26 @@ static void app_handle_cyclic_data (
                &outputdata_iops);
 
             /* Set LED state */
-            if (
-               outputdata_length == APP_DATASIZE_OUTPUT &&
-               outputdata_iops == PNET_IOXS_GOOD)
+            if (outputdata_length != APP_DATASIZE_OUTPUT)
             {
-               if (outputdata_length == APP_DATASIZE_OUTPUT)
+               printf ("Wrong outputdata length: %u\n", outputdata_length);
+               app_set_outputs_default_value (p_appdata->arguments.verbosity);
+            }
+            else if (outputdata_iops == PNET_IOXS_GOOD)
+            {
+               /* Extract LED state from most significant bit */
+               led_state = (outputdata[0] & 0x80) > 0;
+               app_handle_data_led_state (
+                  led_state,
+                  p_appdata->arguments.verbosity);
+            }
+            else
+            {
+               if (p_appdata->arguments.verbosity > 1)
                {
-                  /* Extract LED state from most significant bit */
-                  received_led_state = (outputdata[0] & 0x80) > 0;
-                  /* Set LED state */
-                  if (received_led_state != previous_led_state)
-                  {
-                     app_set_led (APP_DATA_LED_ID, received_led_state);
-                  }
-                  previous_led_state = received_led_state;
+                  printf ("Wrong IOPS: %u\n", outputdata_iops);
                }
-               else
-               {
-                  printf (
-                     "Wrong outputdata length: %u or IOPS: %u\n",
-                     outputdata_length,
-                     outputdata_iops);
-               }
+               app_set_outputs_default_value (p_appdata->arguments.verbosity);
             }
          }
       }
@@ -1523,42 +1589,38 @@ static void app_handle_cyclic_data (
  * Alternates between these functions each time the button2 is pressed:
  *  - pnet_alarm_send_process_alarm()
  *  - pnet_diag_std_add()
+ *  - pnet_set_redundancy_state()
+ *  - pnet_set_state()
  *  - pnet_diag_std_update()
  *  - pnet_diag_usi_add()
  *  - pnet_diag_usi_update()
  *  - pnet_diag_usi_remove()
  *  - pnet_diag_std_remove()
  *  - pnet_create_log_book_entry()
+ *  - pnet_ar_abort()
  *
  * Uses first input module, if available.
  *
- * @param net                    InOut: p-net stack instance
- * @param arep                   In:    Arep
- * @param button_pressed         In:    True if button is pressed.
- * @param button_pressed_prev    In:    True if button was pressed last time.
- * @param alarm_allowed          InOut: True if alarm can be sent, false if
- *                                      waiting for alarm ACK.
- * @param data_ctr               In:    Data counter.
- * @param p_input_slots          In:    Array describing if there is a plugged
- *                                      input module in corresponding slot.
- * @param alarm_payload          InOut: Alarm payload for sending to the
- *                                      controller. Will be modified by this
- *                                      function.
+ * @param net              InOut: p-net stack instance
+ * @param arep             In:    Arep
+ * @param p_alarm_allowed  InOut: True if alarm can be sent, false if
+ *                                waiting for alarm ACK.
+ * @param p_appdata        In:    Application data.
+ * @param alarm_payload    InOut: Alarm payload for sending to the
+ *                                controller. Will be modified by this function.
  */
 static void app_handle_send_alarm (
    pnet_t * net,
    uint32_t arep,
-   bool button_pressed,
-   bool button_pressed_prev,
-   bool * alarm_allowed,
-   app_data_t * p_appdata,
+   bool * p_alarm_allowed,
+   const app_data_t * p_appdata,
    uint8_t * alarm_payload)
 {
    static app_demo_state_t state = APP_DEMO_STATE_ALARM_SEND;
    uint16_t slot = 0;
    bool found_inputslot = false;
    uint16_t subslot_array_index = 0;
-   app_subslot_t * p_subslot = NULL;
+   const app_subslot_t * p_subslot = NULL;
    pnet_pnio_status_t pnio_status = {0};
    pnet_diag_source_t diag_source = {
       .api = APP_API,
@@ -1567,12 +1629,6 @@ static void app_handle_send_alarm (
       .ch = APP_DIAG_CHANNEL_NUMBER,
       .ch_grouping = PNET_DIAG_CH_INDIVIDUAL_CHANNEL,
       .ch_direction = APP_DIAG_CHANNEL_DIRECTION};
-
-   /* Trigger only just when the button is pressed */
-   if ((button_pressed == false) || (button_pressed_prev == true))
-   {
-      return;
-   }
 
    /* Look for first input slot */
    while (!found_inputslot && (slot < PNET_MAX_SLOTS))
@@ -1596,8 +1652,7 @@ static void app_handle_send_alarm (
    }
    if (!found_inputslot)
    {
-      printf ("Did not find any input module in the slots. Skipping sending "
-              "demo alarm.\n");
+      printf ("Did not find any input module in the slots. Skipping.\n");
       return;
    }
 
@@ -1607,7 +1662,7 @@ static void app_handle_send_alarm (
    switch (state)
    {
    case APP_DEMO_STATE_ALARM_SEND:
-      if (*alarm_allowed == true)
+      if (*p_alarm_allowed == true && arep != UINT32_MAX)
       {
          alarm_payload[0]++;
          printf (
@@ -1626,29 +1681,58 @@ static void app_handle_send_alarm (
             APP_ALARM_USI,
             APP_ALARM_PAYLOAD_SIZE,
             alarm_payload);
-         *alarm_allowed = false; /* Not allowed until ACK received */
+         *p_alarm_allowed = false; /* Not allowed until ACK received */
       }
       else
       {
-         printf ("Could not send process alarm, as alarm_allowed == false\n");
+         printf ("Could not send process alarm, as alarm_allowed == false or "
+                 "no connection available\n");
+      }
+      break;
+
+   case APP_DEMO_STATE_CYCLIC_REDUNDANT:
+      printf (
+         "Setting cyclic data to backup and to redundant. See Wireshark.\n");
+      if (pnet_set_primary_state (net, false) != 0)
+      {
+         printf ("   Could not set cyclic data state to backup.\n");
+      }
+      if (pnet_set_redundancy_state (net, true) != 0)
+      {
+         printf ("   Could not set cyclic data state to reundant.\n");
+      }
+      break;
+
+   case APP_DEMO_STATE_CYCLIC_NORMAL:
+      printf ("Setting cyclic data back to primary and non-redundant. See "
+              "Wireshark.\n");
+      if (pnet_set_primary_state (net, true) != 0)
+      {
+         printf ("   Could not set cyclic data state to primary.\n");
+      }
+      if (pnet_set_redundancy_state (net, false) != 0)
+      {
+         printf ("   Could not set cyclic data state to non-reundant.\n");
       }
       break;
 
    case APP_DEMO_STATE_DIAG_STD_ADD:
       printf (
-         "Adding standard diagnosis. Slot %u subslot %u channel %u\n",
+         "Adding standard diagnosis. Slot %u subslot %u channel %u Errortype "
+         "%u\n",
          diag_source.slot,
          diag_source.subslot,
-         diag_source.ch);
-      pnet_diag_std_add (
+         diag_source.ch,
+         APP_DIAG_CHANNEL_ERRORTYPE);
+      (void)pnet_diag_std_add (
          net,
          &diag_source,
          APP_DIAG_CHANNEL_NUMBER_OF_BITS,
-         PNET_DIAG_CH_PROP_MAINT_QUALIFIED,
-         CHANNEL_ERRORTYPE_NETWORK_COMPONENT_FUNCTION_MISMATCH,
-         EXTENDED_CHANNEL_ERRORTYPE_FRAME_DROPPED,
-         123, /* Number of dropped frames */
-         APP_DIAG_QUAL_SEVERITY);
+         APP_DIAG_CHANNEL_SEVERITY,
+         APP_DIAG_CHANNEL_ERRORTYPE,
+         APP_DIAG_CHANNEL_EXTENDED_ERRORTYPE,
+         APP_DIAG_CHANNEL_ADDVALUE_A,
+         APP_DIAG_CHANNEL_QUAL_SEVERITY);
       break;
 
    case APP_DEMO_STATE_DIAG_STD_UPDATE:
@@ -1660,10 +1744,9 @@ static void app_handle_send_alarm (
       pnet_diag_std_update (
          net,
          &diag_source,
-         CHANNEL_ERRORTYPE_NETWORK_COMPONENT_FUNCTION_MISMATCH,
-         EXTENDED_CHANNEL_ERRORTYPE_FRAME_DROPPED,
-         1234 /* Number of dropped frames */
-      );
+         APP_DIAG_CHANNEL_ERRORTYPE,
+         APP_DIAG_CHANNEL_EXTENDED_ERRORTYPE,
+         APP_DIAG_CHANNEL_ADDVALUE_B);
       break;
 
    case APP_DEMO_STATE_DIAG_STD_REMOVE:
@@ -1675,8 +1758,8 @@ static void app_handle_send_alarm (
       pnet_diag_std_remove (
          net,
          &diag_source,
-         CHANNEL_ERRORTYPE_NETWORK_COMPONENT_FUNCTION_MISMATCH,
-         EXTENDED_CHANNEL_ERRORTYPE_FRAME_DROPPED);
+         APP_DIAG_CHANNEL_ERRORTYPE,
+         APP_DIAG_CHANNEL_EXTENDED_ERRORTYPE);
       break;
 
    case APP_DEMO_STATE_DIAG_USI_ADD:
@@ -1721,27 +1804,56 @@ static void app_handle_send_alarm (
       break;
 
    case APP_DEMO_STATE_LOGBOOK_ENTRY:
-      printf (
-         "Writing to logbook. Error_code1: %02X Error_code2: %02X  Entry "
-         "detail: 0x%08X\n",
-         APP_LOGBOOK_ERROR_CODE_1,
-         APP_LOGBOOK_ERROR_CODE_2,
-         APP_LOGBOOK_ENTRY_DETAIL);
-      pnio_status.error_code = APP_LOGBOOK_ERROR_CODE;
-      pnio_status.error_decode = APP_LOGBOOK_ERROR_DECODE;
-      pnio_status.error_code_1 = APP_LOGBOOK_ERROR_CODE_1;
-      pnio_status.error_code_2 = APP_LOGBOOK_ERROR_CODE_2;
-      pnet_create_log_book_entry (
-         net,
-         arep,
-         &pnio_status,
-         APP_LOGBOOK_ENTRY_DETAIL);
+      if (arep != UINT32_MAX)
+      {
+         printf (
+            "Writing to logbook. Error_code1: %02X Error_code2: %02X  Entry "
+            "detail: 0x%08X\n",
+            APP_LOGBOOK_ERROR_CODE_1,
+            APP_LOGBOOK_ERROR_CODE_2,
+            APP_LOGBOOK_ENTRY_DETAIL);
+         pnio_status.error_code = APP_LOGBOOK_ERROR_CODE;
+         pnio_status.error_decode = APP_LOGBOOK_ERROR_DECODE;
+         pnio_status.error_code_1 = APP_LOGBOOK_ERROR_CODE_1;
+         pnio_status.error_code_2 = APP_LOGBOOK_ERROR_CODE_2;
+         pnet_create_log_book_entry (
+            net,
+            arep,
+            &pnio_status,
+            APP_LOGBOOK_ENTRY_DETAIL);
+      }
+      else
+      {
+         printf ("Could not add logbook entry as no connection is available\n");
+      }
+      break;
+
+   case APP_DEMO_STATE_ABORT_AR:
+      if (arep != UINT32_MAX)
+      {
+         printf (
+            "Sample app will disconnect and reconnect. Executing "
+            "pnet_ar_abort()  AREP: %u\n",
+            arep);
+         (void)pnet_ar_abort (net, arep);
+      }
+      else
+      {
+         printf ("Could not execute pnet_ar_abort(), as no connection is "
+                 "available\n");
+      }
       break;
    }
 
    switch (state)
    {
    case APP_DEMO_STATE_ALARM_SEND:
+      state = APP_DEMO_STATE_CYCLIC_REDUNDANT;
+      break;
+   case APP_DEMO_STATE_CYCLIC_REDUNDANT:
+      state = APP_DEMO_STATE_CYCLIC_NORMAL;
+      break;
+   case APP_DEMO_STATE_CYCLIC_NORMAL:
       state = APP_DEMO_STATE_DIAG_STD_ADD;
       break;
    case APP_DEMO_STATE_DIAG_STD_ADD:
@@ -1762,8 +1874,11 @@ static void app_handle_send_alarm (
    case APP_DEMO_STATE_DIAG_STD_REMOVE:
       state = APP_DEMO_STATE_LOGBOOK_ENTRY;
       break;
-   default:
    case APP_DEMO_STATE_LOGBOOK_ENTRY:
+      state = APP_DEMO_STATE_ABORT_AR;
+      break;
+   default:
+   case APP_DEMO_STATE_ABORT_AR:
       state = APP_DEMO_STATE_ALARM_SEND;
       break;
    }
@@ -1771,8 +1886,8 @@ static void app_handle_send_alarm (
 
 void app_loop_forever (pnet_t * net, app_data_t * p_appdata)
 {
-   uint32_t mask = EVENT_READY_FOR_DATA | EVENT_TIMER | EVENT_ALARM |
-                   EVENT_ABORT;
+   uint32_t mask = APP_EVENT_READY_FOR_DATA | APP_EVENT_TIMER |
+                   APP_EVENT_ALARM | APP_EVENT_ABORT;
    uint32_t flags = 0;
    bool button1_pressed = false;
    bool button2_pressed = false;
@@ -1783,6 +1898,9 @@ void app_loop_forever (pnet_t * net, app_data_t * p_appdata)
    uint8_t alarm_payload[APP_ALARM_PAYLOAD_SIZE] = {0};
    p_appdata->main_api.arep = UINT32_MAX;
 
+   app_set_led (APP_DATA_LED_ID, false, p_appdata->arguments.verbosity);
+   app_plug_dap (net, p_appdata);
+
    if (p_appdata->arguments.verbosity > 0)
    {
       printf ("Waiting for connect request from IO-controller\n\n");
@@ -1792,18 +1910,18 @@ void app_loop_forever (pnet_t * net, app_data_t * p_appdata)
    for (;;)
    {
       os_event_wait (p_appdata->main_events, mask, &flags, OS_WAIT_FOREVER);
-      if (flags & EVENT_READY_FOR_DATA)
+      if (flags & APP_EVENT_READY_FOR_DATA)
       {
-         os_event_clr (p_appdata->main_events, EVENT_READY_FOR_DATA);
+         os_event_clr (p_appdata->main_events, APP_EVENT_READY_FOR_DATA);
 
          app_handle_send_application_ready (
             net,
             p_appdata->main_api.arep,
             p_appdata->arguments.verbosity);
       }
-      else if (flags & EVENT_ALARM)
+      else if (flags & APP_EVENT_ALARM)
       {
-         os_event_clr (p_appdata->main_events, EVENT_ALARM); /* Re-arm */
+         os_event_clr (p_appdata->main_events, APP_EVENT_ALARM); /* Re-arm */
 
          app_handle_send_alarm_ack (
             net,
@@ -1811,16 +1929,14 @@ void app_loop_forever (pnet_t * net, app_data_t * p_appdata)
             p_appdata->arguments.verbosity,
             &p_appdata->alarm_arg);
       }
-      else if (flags & EVENT_TIMER)
+      else if (flags & APP_EVENT_TIMER)
       {
-         os_event_clr (p_appdata->main_events, EVENT_TIMER); /* Re-arm */
+         os_event_clr (p_appdata->main_events, APP_EVENT_TIMER); /* Re-arm */
          tick_ctr_buttons++;
          tick_ctr_update_data++;
 
          /* Read buttons */
-         if (
-            (p_appdata->main_api.arep != UINT32_MAX) &&
-            (tick_ctr_buttons > APP_TICKS_READ_BUTTONS))
+         if (tick_ctr_buttons > APP_TICKS_READ_BUTTONS)
          {
             tick_ctr_buttons = 0;
 
@@ -1844,36 +1960,34 @@ void app_loop_forever (pnet_t * net, app_data_t * p_appdata)
                sizeof (p_appdata->inputdata));
          }
 
-         /* Create alarm on first input slot (if any) when button2 is pressed */
-         if (p_appdata->main_api.arep != UINT32_MAX)
+         /* Create alarm, diagnosis etc on first input slot (if any)
+          * when button2 is pressed */
+         if ((button2_pressed == true) && (button2_pressed_previous == false))
          {
             app_handle_send_alarm (
                net,
                p_appdata->main_api.arep,
-               button2_pressed,
-               button2_pressed_previous,
                &p_appdata->alarm_allowed,
                p_appdata,
                alarm_payload);
-            button2_pressed_previous = button2_pressed;
          }
+         button2_pressed_previous = button2_pressed;
 
+         /* Run p-net stack internals */
          pnet_handle_periodic (net);
       }
-      else if (flags & EVENT_ABORT)
+      else if (flags & APP_EVENT_ABORT)
       {
-         os_event_clr (p_appdata->main_events, EVENT_ABORT); /* Re-arm */
+         os_event_clr (p_appdata->main_events, APP_EVENT_ABORT); /* Re-arm */
 
          if (p_appdata->arguments.verbosity > 0)
          {
-            printf ("Aborting the application\n\n");
+            printf ("Aborting the sample application\n\n");
          }
 
          /* Reset main */
          p_appdata->main_api.arep = UINT32_MAX;
          p_appdata->alarm_allowed = true;
-         button1_pressed = false;
-         button2_pressed = false;
       }
    }
 }
