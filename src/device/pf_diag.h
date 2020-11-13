@@ -56,7 +56,6 @@ int pf_diag_exit (void);
  * This sends a diagnosis alarm.
  *
  * @param net                 InOut: The p-net stack instance.
- * @param p_ar                InOut: The AR instance.
  * @param p_diag_source       In:    Slot, subslot, channel, direction etc.
  * @param ch_bits             In:    Number of bits in the channel.
  * @param severity            In:    Diagnosis severity.
@@ -73,7 +72,6 @@ int pf_diag_exit (void);
  */
 int pf_diag_add (
    pnet_t * net,
-   pf_ar_t * p_ar,
    const pnet_diag_source_t * p_diag_source,
    pnet_diag_ch_prop_type_values_t ch_bits,
    pnet_diag_ch_prop_maint_values_t severity,
@@ -105,7 +103,6 @@ int pf_diag_add (
  * This sends a diagnosis alarm.
  *
  * @param net               InOut: The p-net stack instance.
- * @param p_ar              InOut: The AR instance.
  * @param p_diag_source     In:    Slot, subslot, channel, direction etc.
  * @param ch_error_type     In:    The channel error type.
  * @param ext_ch_error_type In:    The extended channel error type, or 0.
@@ -118,7 +115,6 @@ int pf_diag_add (
  */
 int pf_diag_update (
    pnet_t * net,
-   pf_ar_t * p_ar,
    const pnet_diag_source_t * p_diag_source,
    uint16_t ch_error_type,
    uint16_t ext_ch_error_type,
@@ -143,7 +139,6 @@ int pf_diag_update (
  * This sends a diagnosis alarm.
  *
  * @param net               InOut: The p-net stack instance.
- * @param p_ar              InOut: The AR instance.
  * @param p_diag_source     In:    Slot, subslot, channel, direction etc.
  * @param ch_error_type     In:    The channel error type.
  * @param ext_ch_error_type In:    The extended channel error type, or 0.
@@ -153,7 +148,6 @@ int pf_diag_update (
  */
 int pf_diag_remove (
    pnet_t * net,
-   pf_ar_t * p_ar,
    const pnet_diag_source_t * p_diag_source,
    uint16_t ch_error_type,
    uint16_t ext_ch_error_type,
@@ -167,7 +161,6 @@ int pf_diag_remove (
  * This sends a diagnosis alarm.
  *
  * @param net                 InOut: The p-net stack instance.
- * @param p_ar                InOut: The AR instance.
  * @param p_diag_source       In:    Slot, subslot, channel, direction etc.
  * @param ch_bits             In:    Number of bits in the channel.
  * @param severity            In:    Diagnosis severity.
@@ -181,7 +174,6 @@ int pf_diag_remove (
  */
 int pf_diag_std_add (
    pnet_t * net,
-   pf_ar_t * p_ar,
    const pnet_diag_source_t * p_diag_source,
    pnet_diag_ch_prop_type_values_t ch_bits,
    pnet_diag_ch_prop_maint_values_t severity,
@@ -196,7 +188,6 @@ int pf_diag_std_add (
  * This sends a diagnosis alarm.
  *
  * @param net               InOut: The p-net stack instance.
- * @param p_ar              InOut: The AR instance.
  * @param p_diag_source     In:    Slot, subslot, channel, direction etc.
  * @param ch_error_type     In:    The channel error type.
  * @param ext_ch_error_type In:    The extended channel error type.
@@ -206,7 +197,6 @@ int pf_diag_std_add (
  */
 int pf_diag_std_update (
    pnet_t * net,
-   pf_ar_t * p_ar,
    const pnet_diag_source_t * p_diag_source,
    uint16_t ch_error_type,
    uint16_t ext_ch_error_type,
@@ -218,7 +208,6 @@ int pf_diag_std_update (
  * This sends a diagnosis alarm.
  *
  * @param net               InOut: The p-net stack instance.
- * @param p_ar              InOut: The AR instance.
  * @param p_diag_source     In:    Slot, subslot, channel, direction etc.
  * @param ch_error_type     In:    The channel error type.
  * @param ext_ch_error_type In:    The extended channel error type.
@@ -227,7 +216,6 @@ int pf_diag_std_update (
  */
 int pf_diag_std_remove (
    pnet_t * net,
-   pf_ar_t * p_ar,
    const pnet_diag_source_t * p_diag_source,
    uint16_t ch_error_type,
    uint16_t ext_ch_error_type);
@@ -245,7 +233,6 @@ int pf_diag_std_remove (
  * This sends a diagnosis alarm.
  *
  * @param net              InOut: The p-net stack instance.
- * @param p_ar             InOut: The AR instance.
  * @param api_id           In:    The API.
  * @param slot_nbr         In:    The slot.
  * @param subslot_nbr      In:    The sub-slot.
@@ -256,7 +243,6 @@ int pf_diag_std_remove (
  */
 int pf_diag_usi_add (
    pnet_t * net,
-   pf_ar_t * p_ar,
    uint32_t api_id,
    uint16_t slot_nbr,
    uint16_t subslot_nbr,
@@ -271,7 +257,6 @@ int pf_diag_usi_add (
  * This sends a diagnosis alarm.
  *
  * @param net              InOut: The p-net stack instance.
- * @param p_ar             InOut: The AR instance.
  * @param api_id           In:    The API.
  * @param slot_nbr         In:    The slot.
  * @param subslot_nbr      In:    The sub-slot.
@@ -282,7 +267,6 @@ int pf_diag_usi_add (
  */
 int pf_diag_usi_update (
    pnet_t * net,
-   pf_ar_t * p_ar,
    uint32_t api_id,
    uint16_t slot_nbr,
    uint16_t subslot_nbr,
@@ -295,7 +279,6 @@ int pf_diag_usi_update (
  * This sends a diagnosis alarm.
  *
  * @param net              InOut: The p-net stack instance.
- * @param p_ar             InOut: The AR instance.
  * @param api_id           In:    The API.
  * @param slot_nbr         In:    The slot.
  * @param subslot_nbr      In:    The sub-slot.
@@ -305,7 +288,6 @@ int pf_diag_usi_update (
  */
 int pf_diag_usi_remove (
    pnet_t * net,
-   pf_ar_t * p_ar,
    uint32_t api_id,
    uint16_t slot_nbr,
    uint16_t subslot_nbr,

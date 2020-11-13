@@ -1261,7 +1261,7 @@ typedef struct pnet_lldp_peer_to_peer_boundary
 typedef struct pf_lldp_chassis_id
 {
    char string[PNET_LLDP_CHASSIS_ID_MAX_LEN + 1]; /**< Terminated string */
-   uint8_t subtype;
+   uint8_t subtype; /* PF_LLDP_SUBTYPE_xxx */
    size_t len;
 } pf_lldp_chassis_id_t;
 
@@ -1894,6 +1894,15 @@ typedef enum pnet_diag_ch_prop_dir_values
 #define PNET_DIAG_QUALIFIER_POS_REQUIRED 7
 #define PNET_DIAG_QUALIFIER_POS_ADVICE   3
 
+/** Qualifier 31..27 */
+#define PNET_DIAG_QUALIFIER_MASK_FAULT 0xF8000000
+/** Qualifier 26..17 */
+#define PNET_DIAG_QUALIFIER_MASK_DEMANDED 0x07FE0000
+/** Qualifier 16..7 */
+#define PNET_DIAG_QUALIFIER_MASK_REQUIRED 0x0001FF80
+/** Qualifier 6..3 */
+#define PNET_DIAG_QUALIFIER_MASK_ADVICE 0x00000078
+
 #define PNET_CHANNEL_WHOLE_SUBMODULE 0x8000
 
 typedef struct pnet_diag_source
@@ -1917,7 +1926,6 @@ typedef struct pnet_diag_source
  * Uses the "Qualified channel diagnosis" format on the wire.
  *
  * @param net                 InOut: The p-net stack instance.
- * @param arep                In:    The AREP.
  * @param p_diag_source       In:    Slot, subslot, channel, direction etc.
  * @param ch_bits             In:    Number of bits in the channel.
  * @param severity            In:    Diagnosis severity.
@@ -1939,7 +1947,6 @@ typedef struct pnet_diag_source
  */
 PNET_EXPORT int pnet_diag_std_add (
    pnet_t * net,
-   uint32_t arep,
    const pnet_diag_source_t * p_diag_source,
    pnet_diag_ch_prop_type_values_t ch_bits,
    pnet_diag_ch_prop_maint_values_t severity,
@@ -1955,7 +1962,6 @@ PNET_EXPORT int pnet_diag_std_add (
  * This sends a diagnosis alarm.
  *
  * @param net               InOut: The p-net stack instance.
- * @param arep              In:    The AREP.
  * @param p_diag_source     In:    Slot, subslot, channel, direction etc.
  * @param ch_error_type     In:    The channel error type.
  * @param ext_ch_error_type In:    The extended channel error type
@@ -1970,7 +1976,6 @@ PNET_EXPORT int pnet_diag_std_add (
  */
 PNET_EXPORT int pnet_diag_std_update (
    pnet_t * net,
-   uint32_t arep,
    const pnet_diag_source_t * p_diag_source,
    uint16_t ch_error_type,
    uint16_t ext_ch_error_type,
@@ -1984,7 +1989,6 @@ PNET_EXPORT int pnet_diag_std_update (
  * This sends a diagnosis alarm.
  *
  * @param net               InOut: The p-net stack instance.
- * @param arep              In:    The AREP.
  * @param p_diag_source     In:    Slot, subslot, channel, direction etc.
  * @param ch_error_type     In:    The channel error type.
  * @param ext_ch_error_type In:    The extended channel error type
@@ -1995,7 +1999,6 @@ PNET_EXPORT int pnet_diag_std_update (
  */
 PNET_EXPORT int pnet_diag_std_remove (
    pnet_t * net,
-   uint32_t arep,
    const pnet_diag_source_t * p_diag_source,
    uint16_t ch_error_type,
    uint16_t ext_ch_error_type);
@@ -2013,7 +2016,6 @@ PNET_EXPORT int pnet_diag_std_remove (
  * This sends a diagnosis alarm.
  *
  * @param net              InOut: The p-net stack instance.
- * @param arep             In:    The AREP.
  * @param api              In:    The API.
  * @param slot             In:    The slot.
  * @param subslot          In:    The sub-slot.
@@ -2025,7 +2027,6 @@ PNET_EXPORT int pnet_diag_std_remove (
  */
 PNET_EXPORT int pnet_diag_usi_add (
    pnet_t * net,
-   uint32_t arep,
    uint32_t api,
    uint16_t slot,
    uint16_t subslot,
@@ -2043,7 +2044,6 @@ PNET_EXPORT int pnet_diag_usi_add (
  * This sends a diagnosis alarm.
  *
  * @param net              InOut: The p-net stack instance.
- * @param arep             In:    The AREP.
  * @param api              In:    The API.
  * @param slot             In:    The slot.
  * @param subslot          In:    The sub-slot.
@@ -2055,7 +2055,6 @@ PNET_EXPORT int pnet_diag_usi_add (
  */
 PNET_EXPORT int pnet_diag_usi_update (
    pnet_t * net,
-   uint32_t arep,
    uint32_t api,
    uint16_t slot,
    uint16_t subslot,
@@ -2070,7 +2069,6 @@ PNET_EXPORT int pnet_diag_usi_update (
  * This sends a diagnosis alarm.
  *
  * @param net              InOut: The p-net stack instance.
- * @param arep             In:    The AREP.
  * @param api              In:    The API.
  * @param slot             In:    The slot.
  * @param subslot          In:    The sub-slot.
@@ -2080,7 +2078,6 @@ PNET_EXPORT int pnet_diag_usi_update (
  */
 PNET_EXPORT int pnet_diag_usi_remove (
    pnet_t * net,
-   uint32_t arep,
    uint32_t api,
    uint16_t slot,
    uint16_t subslot,

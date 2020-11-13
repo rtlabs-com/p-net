@@ -24,6 +24,8 @@
  * Builds and sends LLDP frames.
  * Receives and parses LLDP frames.
  *
+ * This file should not have any knowledge of Profinet slots, subslots etc.
+ *
  * ToDo: Differentiate between device and port MAC addresses.
  * ToDo: Handle PNET_MAX_PORT ports.
  */
@@ -850,11 +852,15 @@ static void pf_lldp_send_port (pnet_t * net, int loc_port_num)
    uint8_t * p_buf = NULL;
    uint16_t pos = 0;
    pnal_ipaddr_t ipaddr = 0;
-   char ip_string[PNAL_INET_ADDRSTRLEN] = {0};
    pnet_ethaddr_t device_mac_address;
    pf_lldp_chassis_id_t chassis_id;
    const pnet_lldp_port_cfg_t * p_port_cfg =
       pf_lldp_get_port_config (net, loc_port_num);
+
+#if LOG_DEBUG_ENABLED(PF_LLDP_LOG)
+   char ip_string[PNAL_INET_ADDRSTRLEN] = {0};
+   const char * chassis_id_description = "<MAC address>";
+#endif
 
    /*
     * LLDP-PDU ::=  LLDPChassis, LLDPPort, LLDPTTL, LLDP-PNIO-PDU, LLDPEnd
@@ -915,6 +921,7 @@ static void pf_lldp_send_port (pnet_t * net, int loc_port_num)
          pf_cmina_get_device_macaddr (net, &device_mac_address);
          pf_lldp_get_chassis_id (net, &chassis_id);
          pf_cmina_get_ipaddr (net, &ipaddr);
+#if LOG_DEBUG_ENABLED(PF_LLDP_LOG)
          pf_cmina_ip_to_string (ipaddr, ip_string);
          LOG_DEBUG (
             PF_LLDP_LOG,
@@ -932,6 +939,7 @@ static void pf_lldp_send_port (pnet_t * net, int loc_port_num)
             chassis_id.string,
             loc_port_num,
             p_port_cfg->port_id);
+#endif
 
          pos = 0;
 
@@ -1327,6 +1335,10 @@ int pf_lldp_generate_alias_name (
 
 /**
  * Apply updated peer information
+ *
+ * Trigger an alarm if the peer information not is as expected.
+ * Resets the peer watchdog timer.
+ *
  * @param net              InOut: p-net stack instance
  * @param loc_port_num     In:    Local port number.
  *                                Valid range: 1 .. PNET_MAX_PORT
@@ -1372,9 +1384,7 @@ void pf_lldp_update_peer (
          alias,
          sizeof (net->cmina_current_dcp_ase.alias_name));
 
-      /*
-       * TODO - pf_lldp_send_remote_mismatch_alarm(net);
-       */
+      pf_pdport_peer_indication (net, loc_port_num, lldp_peer_info);
    }
 
    /* Update stored peer information
