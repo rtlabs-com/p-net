@@ -101,6 +101,22 @@ int pf_pdport_write_req (
    uint16_t data_length,
    pnet_result_t * p_result);
 
+/**
+ * Verify that correct peer is connected to the port.
+ *
+ * Triggers an alarm if wrong peer is connected.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param loc_port_num     In:    Local port number.
+ *                                Valid range: 1 .. N, where N is the total
+ *                                number of local ports used by p-net stack.
+ * @param p_lldp_peer_info In:    Peer info
+ */
+void pf_pdport_peer_indication (
+   pnet_t * net,
+   int loc_port_num,
+   const pnet_lldp_peer_info_t * p_lldp_peer_info);
+
 #ifdef __cplusplus
 }
 #endif

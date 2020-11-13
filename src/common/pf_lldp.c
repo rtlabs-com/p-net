@@ -24,6 +24,8 @@
  * Builds and sends LLDP frames.
  * Receives and parses LLDP frames.
  *
+ * This file should not have any knowledge of Profinet slots, subslots etc.
+ *
  * ToDo: Differentiate between device and port MAC addresses.
  * ToDo: Handle PNET_MAX_PORT ports.
  */
@@ -889,8 +891,12 @@ static void pf_lldp_send_port (pnet_t * net, int loc_port_num)
    pnet_cfg_t * p_cfg = NULL;
    const pnet_lldp_port_cfg_t * p_port_cfg = NULL;
    os_ipaddr_t ipaddr = 0;
-   char ip_string[OS_INET_ADDRSTRLEN] = {0};
    pf_lldp_chassis_id_t chassis_id;
+
+#if LOG_DEBUG_ENABLED(PF_LLDP_LOG)
+   char ip_string[OS_INET_ADDRSTRLEN] = {0};
+   const char * chassis_id_description = "<MAC address>";
+#endif
 
    pf_fspm_get_cfg (net, &p_cfg);
    /*
@@ -954,7 +960,13 @@ static void pf_lldp_send_port (pnet_t * net, int loc_port_num)
          {
             pf_lldp_get_chassis_id (net, &chassis_id);
             pf_cmina_get_ipaddr (net, &ipaddr);
+
+#if LOG_DEBUG_ENABLED(PF_LLDP_LOG)
             pf_cmina_ip_to_string (ipaddr, ip_string);
+            if (chassis_id.subtype == PF_LLDP_SUBTYPE_LOCALLY_ASSIGNED)
+            {
+               chassis_id_description = chassis_id.string;
+            }
             LOG_DEBUG (
                PF_LLDP_LOG,
                "LLDP(%d): Sending LLDP frame. MAC "
@@ -968,9 +980,10 @@ static void pf_lldp_send_port (pnet_t * net, int loc_port_num)
                p_cfg->eth_addr.addr[4],
                p_cfg->eth_addr.addr[5],
                ip_string,
-               chassis_id.string,
+               chassis_id_description,
                loc_port_num,
                p_port_cfg->port_id);
+#endif
 
             pos = 0;
 
@@ -1355,16 +1368,26 @@ int pf_lldp_generate_alias_name (
 
 /**
  * Apply updated peer information
+ *
+ * Trigger an alarm if the peer information not is as expected.
+ * Resets the peer watchdog timer.
+ *
  * @param net              InOut: p-net stack instance
+ * @param loc_port_num     In:    Local port number.
+ *                                Valid range: 1 .. N, where N is the total
+ *                                number of local ports used by p-net stack.
  * @param lldp_peer_info   In:    Peer data to be applied
  */
 void pf_lldp_update_peer (
    pnet_t * net,
+   int loc_port_num,
    const pnet_lldp_peer_info_t * lldp_peer_info)
 {
    int error = 0;
    char alias[sizeof (net->cmina_current_dcp_ase.alias_name)];
    pnet_lldp_peer_info_t * stored_peer_info = &net->lldp_peer_info;
+
+   /* TODO Handle more aspects of loc_port_num */
 
    pf_lldp_reset_peer_timeout (net, lldp_peer_info->ttl);
 
@@ -1397,9 +1420,7 @@ void pf_lldp_update_peer (
          alias,
          sizeof (net->cmina_current_dcp_ase.alias_name));
 
-      /*
-       * TODO - pf_lldp_send_remote_mismatch_alarm(net);
-       */
+      pf_pdport_peer_indication (net, loc_port_num, lldp_peer_info);
    }
 
    /* Update stored peer information
@@ -1438,7 +1459,7 @@ int pf_lldp_recv (pnet_t * net, os_buf_t * p_frame_buf, uint16_t offset)
          p_frame_buf->len,
          peer_data.chassis_id.string,
          peer_data.port_id);
-      pf_lldp_update_peer (net, &peer_data);
+      pf_lldp_update_peer (net, PNET_PORT_1, &peer_data);
    }
 
    if (p_frame_buf != NULL)

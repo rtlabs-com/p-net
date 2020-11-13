@@ -349,7 +349,6 @@ TEST_F (CmrdrTest, CmrdrRunTest)
    TEST_TRACE ("\nCreate a diag and an alarm.\n");
    pnet_diag_std_add (
       net,
-      appdata.main_arep,
       &diag_source,
       TEST_CHANNEL_NUMBER_OF_BITS,
       PNET_DIAG_CH_PROP_MAINT_FAULT,

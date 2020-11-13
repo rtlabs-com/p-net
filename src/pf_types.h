@@ -216,8 +216,8 @@ typedef enum pf_write_req_error_type_values
 
 typedef enum pf_write_req_ext_error_type_values
 {
-   PF_WRT_ERROR_PORTID_MISMATCH = 0x8000,
-   PF_WRT_ERROR_CHASSISID_MISMATCH = 0x8001,
+   PF_WRT_ERROR_PEER_STATIONNAME_MISMATCH = 0x8000,
+   PF_WRT_ERROR_PEER_PORTNAME_MISMATCH = 0x8001,
    PF_WRT_ERROR_NO_PEER_DETECTED = 0x8005
 } pf_write_req_ext_error_type_t;
 

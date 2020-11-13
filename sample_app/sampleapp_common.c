@@ -1522,10 +1522,10 @@ static void app_handle_cyclic_data (
  *  - pnet_alarm_send_process_alarm()
  *  - pnet_diag_std_add()
  *  - pnet_diag_std_update()
- *  - pnet_diag_std_remove()
  *  - pnet_diag_usi_add()
  *  - pnet_diag_usi_update()
  *  - pnet_diag_usi_remove()
+ *  - pnet_diag_std_remove()
  *  - pnet_create_log_book_entry()
  *
  * Uses first input module, if available.
@@ -1640,7 +1640,6 @@ static void app_handle_send_alarm (
          diag_source.ch);
       pnet_diag_std_add (
          net,
-         arep,
          &diag_source,
          APP_DIAG_CHANNEL_NUMBER_OF_BITS,
          PNET_DIAG_CH_PROP_MAINT_QUALIFIED,
@@ -1658,7 +1657,6 @@ static void app_handle_send_alarm (
          diag_source.ch);
       pnet_diag_std_update (
          net,
-         arep,
          &diag_source,
          CHANNEL_ERRORTYPE_NETWORK_COMPONENT_FUNCTION_MISMATCH,
          EXTENDED_CHANNEL_ERRORTYPE_FRAME_DROPPED,
@@ -1674,7 +1672,6 @@ static void app_handle_send_alarm (
          diag_source.ch);
       pnet_diag_std_remove (
          net,
-         arep,
          &diag_source,
          CHANNEL_ERRORTYPE_NETWORK_COMPONENT_FUNCTION_MISMATCH,
          EXTENDED_CHANNEL_ERRORTYPE_FRAME_DROPPED);
@@ -1687,7 +1684,6 @@ static void app_handle_send_alarm (
          p_subslot->subslot_nbr);
       pnet_diag_usi_add (
          net,
-         arep,
          APP_API,
          slot,
          p_subslot->subslot_nbr,
@@ -1702,7 +1698,6 @@ static void app_handle_send_alarm (
          p_subslot->subslot_nbr);
       pnet_diag_usi_add (
          net,
-         arep,
          APP_API,
          slot,
          p_subslot->subslot_nbr,
@@ -1717,7 +1712,6 @@ static void app_handle_send_alarm (
          p_subslot->subslot_nbr);
       pnet_diag_usi_remove (
          net,
-         arep,
          APP_API,
          slot,
          p_subslot->subslot_nbr,

@@ -484,3 +484,87 @@ int pf_pdport_write_req (
    }
    return ret;
 }
+
+void pf_pdport_peer_indication (
+   pnet_t * net,
+   int loc_port_num,
+   const pnet_lldp_peer_info_t * p_lldp_peer_info)
+{
+   bool peer_stationname_is_correct = false;
+   bool peer_portname_is_correct = false;
+   pnet_diag_source_t diag_source = {0};
+   pf_check_peer_t * p_wanted_peer = &net->port[0].check.peer;
+
+   /* TODO Handle loc_port_num */
+
+   if (net->port[0].check.active == true)
+   {
+      if (
+         strncmp (
+            p_lldp_peer_info->chassis_id.string,
+            (char *)p_wanted_peer->peer_station_name,
+            p_lldp_peer_info->chassis_id.len) == 0)
+      {
+         peer_stationname_is_correct = true;
+      }
+
+      // TODO Update also peer_portname_is_correct
+
+      diag_source.api = PNET_API_NO_APPLICATION_PROFILE;
+      diag_source.slot = PNET_SLOT_DAP_IDENT;
+      diag_source.subslot = PNET_SUBSLOT_DAP_INTERFACE_1_PORT_0_IDENT;
+      diag_source.ch = PNET_CHANNEL_WHOLE_SUBMODULE;
+      diag_source.ch_grouping = PNET_DIAG_CH_INDIVIDUAL_CHANNEL;
+      diag_source.ch_direction = PNET_DIAG_CH_PROP_DIR_MANUF_SPEC;
+
+      if (peer_stationname_is_correct == false)
+      {
+         LOG_DEBUG (
+            PNET_LOG,
+            "PDPORT(%d): Sending peer station name mismatch alarm: %s (Port: "
+            "%s) "
+            "Wanted peer station name: %.*s (Port: %.*s)\n",
+            __LINE__,
+            p_lldp_peer_info->chassis_id.string,
+            p_lldp_peer_info->port_id,
+            p_wanted_peer->length_peer_station_name,
+            p_wanted_peer->peer_station_name,
+            p_wanted_peer->length_peer_port_name,
+            p_wanted_peer->peer_port_name);
+         (void)pf_diag_std_add (
+            net,
+            &diag_source,
+            PNET_DIAG_CH_PROP_TYPE_UNSPECIFIED,
+            PNET_DIAG_CH_PROP_MAINT_FAULT,
+            PF_WRT_ERROR_REMOTE_MISMATCH,
+            PF_WRT_ERROR_PEER_STATIONNAME_MISMATCH,
+            0,
+            0);
+      }
+      else
+      {
+         LOG_DEBUG (
+            PNET_LOG,
+            "PDPORT(%d): Peer station name is correct: %s (Port: "
+            "%s). Remove diagnosis.\n",
+            __LINE__,
+            p_lldp_peer_info->chassis_id.string,
+            p_lldp_peer_info->port_id);
+         (void)pf_diag_std_remove (
+            net,
+            &diag_source,
+            PF_WRT_ERROR_REMOTE_MISMATCH,
+            PF_WRT_ERROR_PEER_STATIONNAME_MISMATCH);
+      }
+
+      (void)peer_portname_is_correct; /* TODO use in the decision making */
+   }
+   else
+   {
+      LOG_DEBUG (
+         PNET_LOG,
+         "PDPORT(%d): We do not check peer name and portID, so no port change "
+         "alarm is sent.\n",
+         __LINE__);
+   }
+}
