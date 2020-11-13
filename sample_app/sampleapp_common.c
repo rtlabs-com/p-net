@@ -1220,8 +1220,6 @@ int app_adjust_stack_configuration (pnet_cfg_t * stack_config)
     *
     * Note that these members are set by the sample_app main:
     *    cb_arg
-    *    im_0_data.im_order_id
-    *    im_0_data.im_serial_number
     *    eth_addr.addr
     *    ip_addr
     *    ip_gateway
@@ -1264,6 +1262,8 @@ int app_adjust_stack_configuration (pnet_cfg_t * stack_config)
    stack_config->im_0_data.im_version_minor = 1;
    stack_config->im_0_data.im_supported =
       PNET_SUPPORTED_IM1 | PNET_SUPPORTED_IM2 | PNET_SUPPORTED_IM3;
+   strcpy (stack_config->im_0_data.im_order_id, "12345");
+   strcpy (stack_config->im_0_data.im_serial_number, "00001");
    strcpy (stack_config->im_1_data.im_tag_function, "my function");
    strcpy (stack_config->im_1_data.im_tag_location, "my location");
    strcpy (stack_config->im_2_data.im_date, "2020-09-03 13:53");
@@ -1786,6 +1786,11 @@ void app_loop_forever (pnet_t * net, app_data_t * p_appdata)
    static uint8_t data_ctr = 0;
    uint8_t alarm_payload[APP_ALARM_PAYLOAD_SIZE] = {0};
    p_appdata->main_api.arep = UINT32_MAX;
+
+   if (p_appdata->arguments.verbosity > 0)
+   {
+      printf ("Waiting for connect request from IO-controller\n\n");
+   }
 
    /* Main loop */
    for (;;)
