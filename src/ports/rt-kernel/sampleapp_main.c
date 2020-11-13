@@ -220,8 +220,6 @@ int main (void)
 
    /* Prepare stack config with IP address, gateway, station name etc */
    app_adjust_stack_configuration (&pnet_default_cfg);
-   strcpy (pnet_default_cfg.im_0_data.im_order_id, "12345");
-   strcpy (pnet_default_cfg.im_0_data.im_serial_number, "00001");
    app_copy_ip_to_struct (&pnet_default_cfg.ip_addr, ip);
    app_copy_ip_to_struct (&pnet_default_cfg.ip_gateway, gateway);
    app_copy_ip_to_struct (&pnet_default_cfg.ip_mask, netmask);
@@ -251,12 +249,6 @@ int main (void)
    app_set_led (APP_DATA_LED_ID, false);
    app_plug_dap (g_net, gp_appdata);
    os_timer_start (gp_appdata->main_timer);
-
-   if (gp_appdata->arguments.verbosity > 0)
-   {
-      printf ("Initialized p-net sample application.\n");
-      printf ("Waiting for connect request from IO-controller\n\n");
-   }
 
    app_loop_forever (g_net, &appdata);
 

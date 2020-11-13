@@ -309,11 +309,6 @@ void pn_main_thread (void * arg)
    p_appdata = appdata_and_stack->appdata;
    net = appdata_and_stack->net;
 
-   if (p_appdata->arguments.verbosity > 0)
-   {
-      printf ("Waiting for connect request from IO-controller\n\n");
-   }
-
    app_loop_forever (net, p_appdata);
 
    os_timer_destroy (p_appdata->main_timer);
@@ -383,8 +378,6 @@ int main (int argc, char * argv[])
 
    /* Prepare stack config with IP address, gateway, station name etc */
    app_adjust_stack_configuration (&pnet_default_cfg);
-   strcpy (pnet_default_cfg.im_0_data.im_order_id, "12345");
-   strcpy (pnet_default_cfg.im_0_data.im_serial_number, "00001");
    app_copy_ip_to_struct (&pnet_default_cfg.ip_addr, ip);
    app_copy_ip_to_struct (&pnet_default_cfg.ip_gateway, gateway);
    app_copy_ip_to_struct (&pnet_default_cfg.ip_mask, netmask);
@@ -472,7 +465,7 @@ int main (int argc, char * argv[])
       printf ("\nShowing stack information.\n\n");
       if (appdata.arguments.show == 1)
       {
-         level = 0x2010; /*  See documentation for pnet_show()  */
+         level = 0x2010; /* See documentation for pnet_show() */
       }
 
       pnet_show (net, level);
