@@ -296,6 +296,7 @@ static int pf_pdport_write_data_check (
    uint16_t pos = 0;
    pf_get_info_t get_info;
    pf_port_data_check_t port_data_check = {0};
+   pf_check_peers_t check_peers = {0};
 
    get_info.result = PF_PARSE_OK;
    get_info.p_buf = p_bytes;
@@ -307,25 +308,64 @@ static int pf_pdport_write_data_check (
    switch (port_data_check.block_header.block_type)
    {
    case PF_BT_CHECKPEERS:
-   {
-      pf_check_peers_t check_peer[1];
-      pf_get_port_data_check_check_peers (&get_info, &pos, 1, check_peer);
+      pf_get_port_data_check_check_peers (
+         &get_info,
+         &pos,
+         PF_CHECK_PEERS_PER_PORT,
+         &check_peers);
       if (get_info.result == PF_PARSE_OK)
       {
-         /* ToDo - Map request to port based on slot information in
-          * port_data_check variable */
-         net->port[0].check.peer = check_peer->peers[0];
-         net->port[0].check.active = true;
-         ret = 0;
+         if (check_peers.number_of_peers >= 1)
+         {
+            /* ToDo - Map request to port based on slot information in
+             * port_data_check variable */
 
-         /* TODO Generate alarm on mismatch */
+            /* There is max one peer in the check_peers */
+            net->port[0].check.peer = check_peers.peers[0];
+            net->port[0].check.active = true;
+
+            LOG_INFO (
+               PNET_LOG,
+               "PDPORT(%d): PLC is writing PDPort data check. Slot: %u "
+               "Subslot: "
+               "0x%04x Peers: %u First peer station name: %.*s Port: %.*s\n",
+               __LINE__,
+               port_data_check.slot_number,
+               port_data_check.subslot_number,
+               check_peers.number_of_peers,
+               check_peers.peers[0].length_peer_station_name,
+               check_peers.peers[0].peer_station_name,
+               check_peers.peers[0].length_peer_port_name,
+               check_peers.peers[0].peer_port_name);
+
+            /* Todo -  Generate Alarm on mismatch*/
+
+            ret = 0;
+         }
+         else
+         {
+            LOG_ERROR (
+               PNET_LOG,
+               "PDPORT(%d): Wrong incoming PDPort data check number of peers: "
+               "%u. Slot: %u Subslot: 0x%04x\n",
+               __LINE__,
+               check_peers.number_of_peers,
+               port_data_check.slot_number,
+               port_data_check.subslot_number);
+         }
       }
-   }
-   break;
+      else
+      {
+         LOG_ERROR (
+            PNET_LOG,
+            "PDPORT(%d): Failed to parse incoming PDPort data check.\n",
+            __LINE__);
+      }
+      break;
    default:
       LOG_ERROR (
          PF_RPC_LOG,
-         "CMWRR(%d): Unsupported port data check block type 0x%x\n",
+         "PDPORT(%d): Unsupported port data check block type 0x%x\n",
          __LINE__,
          port_data_check.block_header.block_type);
       break;
@@ -358,6 +398,7 @@ static int pf_pdport_write_data_adj (
    uint16_t pos = 0;
    pf_get_info_t get_info;
    pf_port_data_adjust_t port_data_adjust = {0};
+   pf_adjust_peer_to_peer_boundary_t boundary = {0};
 
    get_info.result = PF_PARSE_OK;
    get_info.p_buf = p_bytes;
@@ -369,21 +410,33 @@ static int pf_pdport_write_data_adj (
    switch (port_data_adjust.block_header.block_type)
    {
    case PF_BT_PEER_TO_PEER_BOUNDARY:
-   {
-      pf_adjust_peer_to_peer_boundary_t boundary;
       pf_get_port_data_adjust_peer_to_peer_boundary (&get_info, &pos, &boundary);
       if (get_info.result == PF_PARSE_OK)
       {
          net->port[0].adjust.active = true;
          net->port[0].adjust.peer_to_peer_boundary = boundary;
+
+         LOG_INFO (
+            PNET_LOG,
+            "PDPORT(%d): PLC is writing PDPort data adjust. Do not send LLDP: "
+            "%u\n",
+            __LINE__,
+            boundary.peer_to_peer_boundary.do_not_send_LLDP_frames);
+
          ret = 0;
       }
-   }
-   break;
+      else
+      {
+         LOG_ERROR (
+            PNET_LOG,
+            "CPDPORT(%d): Failed to parse incoming PDPort data adjust.\n",
+            __LINE__);
+      }
+      break;
    default:
       LOG_ERROR (
          PF_RPC_LOG,
-         "CMWRR(%d): Unsupported port data adjust block type 0x%x\n",
+         "PDPORT(%d): Unsupported incoming port data adjust block type 0x%x\n",
          __LINE__,
          port_data_adjust.block_header.block_type);
       break;

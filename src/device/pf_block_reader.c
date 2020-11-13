@@ -940,7 +940,7 @@ void pf_get_port_data_check_check_peers (
    pf_get_info_t * p_info,
    uint16_t * p_pos,
    uint8_t max_peers,
-   pf_check_peers_t p_check_peers[])
+   pf_check_peers_t * p_check_peers)
 {
    uint8_t i;
 
