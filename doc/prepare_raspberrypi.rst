@@ -7,10 +7,10 @@ has been tested with:
 To avoid problems it is recommended to start with a fresh
 Raspberry Pi OS image.
 
-When running the Raspberry Pi as a profinet IO-device using p-net, the 
-network settings of the Raspberry Pi will be changed by Profinet. 
-Therefore it is highly recommended to use the serial console and not ssh 
-or you may end up in a situation were you have difficulties connecting to, 
+When running the Raspberry Pi as a profinet IO-device using p-net, the
+network settings of the Raspberry Pi will be changed by Profinet.
+Therefore it is highly recommended to use the serial console and not ssh
+or you may end up in a situation were you have difficulties connecting to,
 or recovering your device. If you currently do not have a suitable serial
 dongle you can still build and run p-net with the sample application but
 you will run into problem when a PLC is used for configuration.
@@ -73,12 +73,12 @@ Enter the password mentioned just above.
 Installation using Windows
 --------------------------
 This section describes how to install the Raspberry Pi OS
-and how to enable ssh and serial console so that the Raspberry Pi can be 
+and how to enable ssh and serial console so that the Raspberry Pi can be
 used in headless mode without a display and keyboard connected.
 
 Step 1. Write Raspberry Pi OS image to SD card using Raspberry Pi Imager.
 
-* Download and install Raspberry Pi Imager from 
+* Download and install Raspberry Pi Imager from
   https://www.raspberrypi.org/software/
 * Start Raspberry Pi Imager
 * In the Select OS dialog choose full version
@@ -87,12 +87,12 @@ Step 1. Write Raspberry Pi OS image to SD card using Raspberry Pi Imager.
 
 Step 2. Initial configuration of Raspberry Pi OS.
 
-* Eject SD-card 
+* Eject SD-card
 * Reinsert SD-card in windows PC. The SD-card will be shown as external drive named ``boot``.
-* Enable ssh by creating an empty file named ``ssh`` in the root folder of ``boot``. 
+* Enable ssh by creating an empty file named ``ssh`` in the root folder of ``boot``.
   The windows file explorer can be used for this.
   Note that the file ``ssh`` shall not have a txt file extension.
-* Enable serial port console. 
+* Enable serial port console.
   Open ``config.txt`` in root folder of ``boot`` using Notepad.
   Add the line ``enable_uart=1`` to the end of the file.
   Save file and close Notepad.
@@ -105,7 +105,7 @@ Step 3. Start Raspberry Pi
 
 Step 4. Network configuration.
 
-Use the nano editor to edit the configuration files as described below. 
+Use the nano editor to edit the configuration files as described below.
 For example to edit the ``/etc/dhcpcd.conf``::
 
     sudo nano /etc/dhcpcd.conf
@@ -176,9 +176,9 @@ You need these components:
 +=======================+=================+
 | LED                   | 2               |
 +-----------------------+-----------------+
-| Resistor 220 Ohm      | 4               |
-+-----------------------+-----------------+
 | Button switch         | 2               |
++-----------------------+-----------------+
+| Resistor 220 Ohm      | 4               |
 +-----------------------+-----------------+
 
 Connect them like:
@@ -188,13 +188,13 @@ Connect them like:
 +======+=========+=====================================================+
 | 9    | GND     |                                                     |
 +------+---------+-----------------------------------------------------+
-| 11   | GPIO17  | Connect application data LED to GND via 220 Ohm     |
+| 11   | GPIO17  | Connect LED1 (application data) to GND via 220 Ohm  |
 +------+---------+-----------------------------------------------------+
-| 13   | GPIO27  | Connect button1 to 3.3V via 220 Ohm                 |
+| 13   | GPIO27  | Connect Button1 to 3.3V via 220 Ohm                 |
 +------+---------+-----------------------------------------------------+
-| 15   | GPIO22  | Connect button2 to 3.3V via 220 Ohm                 |
+| 15   | GPIO22  | Connect Button2 to 3.3V via 220 Ohm                 |
 +------+---------+-----------------------------------------------------+
-| 16   | GPIO23  | Connect Profinet status LED to GND via 220 Ohm      |
+| 16   | GPIO23  | Connect LED2 (Profinet signal) to GND via 220 Ohm   |
 +------+---------+-----------------------------------------------------+
 | 17   | 3.3V    |                                                     |
 +------+---------+-----------------------------------------------------+

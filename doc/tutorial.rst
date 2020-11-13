@@ -22,11 +22,11 @@ order to identify a particular IO-device if you have many devices.
 
 .. image:: illustrations/TutorialOverview.png
 
-The "data LED" on the IO-device is controlled by the IO-controller (PLC), and
-is normally flashing. With button 1 on the IO-device it is possible to tell
-the PLC to turn on and off the flashing of the LED.
+The LED1 ("data LED") on the IO-device is controlled by the IO-controller
+(PLC), and is normally flashing.  With Button1 on the IO-device it is
+possible to tell the PLC to turn on and off the flashing of the LED.
 
-Button 2 triggers sending an alarm from the IO-device to the PLC.
+Button2 triggers sending an alarm from the IO-device to the PLC.
 
 The resulting Ethernet traffic can be studied (see below).
 
@@ -215,8 +215,8 @@ Usage of the demo IO-device application:
         -i INTERF    Name of Ethernet interface to use. Defaults to eth0
         -s NAME      Set station name. Defaults to rt-labs-dev  Only used
                      if not already available in storage file.
-        -b FILE      Path (absolute or relative) to read button1. Defaults to not read button1.
-        -d FILE      Path (absolute or relative) to read button2. Defaults to not read button2.
+        -b FILE      Path (absolute or relative) to read Button1. Defaults to not read Button1.
+        -d FILE      Path (absolute or relative) to read Button2. Defaults to not read Button2.
         -p PATH      Absolute path to storage directory. Defaults to use current directory.
 
     p-net revision: 0.1.0+5965c46
@@ -358,10 +358,10 @@ you enable verbose output::
 
 Study the resulting communication
 ---------------------------------
-Press button1 to see the LED1 start flashing. Press it again to stop the
+Press Button1 to see the LED1 start flashing. Press it again to stop the
 flashing.
 
-By pressing button2 you can trigger alarms, add diagnosis etc. See the
+By pressing Button2 you can trigger alarms, add diagnosis etc. See the
 printout in the console.
 
 On the page "Capturing and analyzing Ethernet packets" is a description given

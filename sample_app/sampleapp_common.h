@@ -36,19 +36,24 @@ extern "C" {
 
 /********************** Settings **********************************************/
 
-#define APP_PROFINET_SIGNAL_LED_ID 0
 #define APP_DATA_LED_ID            1
-#define EVENT_READY_FOR_DATA       BIT (0)
-#define EVENT_TIMER                BIT (1)
-#define EVENT_ALARM                BIT (2)
-#define EVENT_ABORT                BIT (15)
+#define APP_PROFINET_SIGNAL_LED_ID 2
+#define APP_EVENT_READY_FOR_DATA   BIT (0)
+#define APP_EVENT_TIMER            BIT (1)
+#define APP_EVENT_ALARM            BIT (2)
+#define APP_EVENT_ABORT            BIT (15)
 
-#define TICK_INTERVAL_US                1000 /* 1 ms */
-#define APP_ALARM_USI                   0x0010
-#define APP_DIAG_CHANNEL_NUMBER         1
-#define APP_DIAG_CHANNEL_DIRECTION      PNET_DIAG_CH_PROP_DIR_INPUT
-#define APP_DIAG_CHANNEL_NUMBER_OF_BITS PNET_DIAG_CH_PROP_TYPE_8_BIT
-#define APP_DIAG_QUAL_SEVERITY          0x00000100UL /* Max one bit set */
+#define TICK_INTERVAL_US                    1000 /* 1 ms */
+#define APP_ALARM_USI                       0x0010
+#define APP_DIAG_CHANNEL_NUMBER             4
+#define APP_DIAG_CHANNEL_DIRECTION          PNET_DIAG_CH_PROP_DIR_INPUT
+#define APP_DIAG_CHANNEL_NUMBER_OF_BITS     PNET_DIAG_CH_PROP_TYPE_1_BIT
+#define APP_DIAG_CHANNEL_SEVERITY           PNET_DIAG_CH_PROP_MAINT_FAULT
+#define APP_DIAG_CHANNEL_ERRORTYPE          CHANNEL_ERRORTYPE_SHORT_CIRCUIT
+#define APP_DIAG_CHANNEL_ADDVALUE_A         0
+#define APP_DIAG_CHANNEL_ADDVALUE_B         1234
+#define APP_DIAG_CHANNEL_EXTENDED_ERRORTYPE 0
+#define APP_DIAG_CHANNEL_QUAL_SEVERITY      0 /* Not used (Max one bit set) */
 
 #define APP_TICKS_READ_BUTTONS 10
 #define APP_TICKS_UPDATE_DATA  100
@@ -213,6 +218,9 @@ typedef enum app_demo_state
 {
    APP_DEMO_STATE_ALARM_SEND,
    APP_DEMO_STATE_LOGBOOK_ENTRY,
+   APP_DEMO_STATE_ABORT_AR,
+   APP_DEMO_STATE_CYCLIC_REDUNDANT,
+   APP_DEMO_STATE_CYCLIC_NORMAL,
    APP_DEMO_STATE_DIAG_STD_ADD,
    APP_DEMO_STATE_DIAG_STD_UPDATE,
    APP_DEMO_STATE_DIAG_STD_REMOVE,
@@ -285,10 +293,11 @@ void app_loop_forever (pnet_t * net, app_data_t * p_appdata);
  *
  * @param id               In:    LED number, starting from 0.
  * @param led_state        In:    LED state. Use true for on and false for off.
+ * @param verbosity        In:    Print new led_state, if verbosity > 0
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
-int app_set_led (uint16_t id, bool led_state);
+int app_set_led (uint16_t id, bool led_state, int verbosity);
 
 /**
  * Read a button.

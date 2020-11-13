@@ -42,7 +42,7 @@ static pnet_cfg_t pnet_default_cfg;
 
 /************************* Utilities ******************************************/
 
-int app_set_led (uint16_t id, bool led_state)
+int app_set_led (uint16_t id, bool led_state, int verbosity)
 {
    if (id == APP_DATA_LED_ID)
    {
@@ -74,7 +74,7 @@ void app_get_button (const app_data_t * p_appdata, uint16_t id, bool * p_pressed
 
 static void main_timer_tick (os_timer_t * timer, void * arg)
 {
-   os_event_set (gp_appdata->main_events, EVENT_TIMER);
+   os_event_set (gp_appdata->main_events, APP_EVENT_TIMER);
 }
 
 /************************* Shell commands *************************************/
@@ -251,15 +251,13 @@ int main (void)
       return -1;
    }
 
-   app_set_led (APP_DATA_LED_ID, false);
-   app_plug_dap (g_net, gp_appdata);
    os_timer_start (gp_appdata->main_timer);
 
    app_loop_forever (g_net, &appdata);
 
    os_timer_destroy (appdata.main_timer);
    os_event_destroy (appdata.main_events);
-   printf ("Ending the application\n");
+   printf ("Quitting the sample application\n\n");
 
    return 0;
 }

@@ -1552,8 +1552,10 @@ PNET_EXPORT int pnet_output_set_iocs (
  *
  * Implements the "Local Set State" primitive.
  *
+ * By default the cyclic communication is "Primary".
+ *
  * @param net              InOut: The p-net stack instance
- * @param primary          In:    true to set state to "primary".
+ * @param primary          In:    true to set state to "Primary".
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -1563,6 +1565,8 @@ PNET_EXPORT int pnet_set_primary_state (pnet_t * net, bool primary);
  * Set the state to redundant in the cyclic data sent to the IO-Controller.
  *
  * Implements the "Local Set Redundancy State" primitive.
+ *
+ * By default the cyclic communication is not in redundant state.
  *
  * @param net              InOut: The p-net stack instance
  * @param redundant        In:    true to set state to "redundant".

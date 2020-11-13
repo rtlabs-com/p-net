@@ -45,7 +45,7 @@ static void main_timer_tick (os_timer_t * timer, void * arg)
 {
    app_data_t * p_appdata = (app_data_t *)arg;
 
-   os_event_set (p_appdata->main_events, EVENT_TIMER);
+   os_event_set (p_appdata->main_events, APP_EVENT_TIMER);
 }
 
 void show_usage()
@@ -77,7 +77,7 @@ void show_usage()
    printf ("Optional arguments:\n");
    printf ("   --help       Show this help text and exit\n");
    printf ("   -h           Show this help text and exit\n");
-   printf ("   -v           Incresase verbosity\n");
+   printf ("   -v           Incresase verbosity. Can be repeated.\n");
    printf ("   -f           Reset to factory settings, and store to file. "
            "Exit.\n");
    printf ("   -r           Remove stored files and exit.\n");
@@ -90,10 +90,10 @@ void show_usage()
       "   -s NAME      Set station name. Defaults to %s  Only used\n",
       APP_DEFAULT_STATION_NAME);
    printf ("                if not already available in storage file.\n");
-   printf ("   -b FILE      Path (absolute or relative) to read button1. "
-           "Defaults to not read button1.\n");
-   printf ("   -d FILE      Path (absolute or relative) to read button2. "
-           "Defaults to not read button2.\n");
+   printf ("   -b FILE      Path (absolute or relative) to read Button1. "
+           "Defaults to not read Button1.\n");
+   printf ("   -d FILE      Path (absolute or relative) to read Button2. "
+           "Defaults to not read Button2.\n");
    printf ("   -p PATH      Absolute path to storage directory. Defaults to "
            "use current directory.\n");
    printf ("\n");
@@ -256,7 +256,7 @@ void app_get_button (const app_data_t * p_appdata, uint16_t id, bool * p_pressed
    }
 }
 
-int app_set_led (uint16_t id, bool led_state)
+int app_set_led (uint16_t id, bool led_state, int verbosity)
 {
    char id_str[7] = {0}; /** Terminated string */
    const char * argv[4];
@@ -296,7 +296,7 @@ void pn_main_thread (void * arg)
 
    os_timer_destroy (p_appdata->main_timer);
    os_event_destroy (p_appdata->main_events);
-   printf ("Ending the application\n\n");
+   printf ("Quitting the sample application\n\n");
 }
 
 /****************************** Main ******************************************/
@@ -315,6 +315,10 @@ int main (int argc, char * argv[])
 
    memset (&appdata, 0, sizeof (appdata));
    appdata.alarm_allowed = true;
+
+   /* Enable line buffering for printouts, especially when logging to
+      the journal (which is default when running as a systemd job) */
+   setvbuf (stdout, NULL, _IOLBF, 0);
 
    /* Parse and display command line arguments */
    appdata.arguments = parse_commandline_arguments (argc, argv);
@@ -396,7 +400,7 @@ int main (int argc, char * argv[])
       if (!pnal_does_file_exist (appdata.arguments.path_button1))
       {
          printf (
-            "Error: The given input file for button1 does not exist: %s\n",
+            "Error: The given input file for Button1 does not exist: %s\n",
             appdata.arguments.path_button1);
          exit (EXIT_FAILURE);
       }
@@ -406,7 +410,7 @@ int main (int argc, char * argv[])
       if (!pnal_does_file_exist (appdata.arguments.path_button2))
       {
          printf (
-            "Error: The given input file for button2 does not exist: %s\n",
+            "Error: The given input file for Button2 does not exist: %s\n",
             appdata.arguments.path_button2);
          exit (EXIT_FAILURE);
       }
@@ -454,9 +458,6 @@ int main (int argc, char * argv[])
       pnet_show (net, level);
       exit (EXIT_SUCCESS);
    }
-
-   app_set_led (APP_DATA_LED_ID, false);
-   app_plug_dap (net, &appdata);
 
    /* Start thread and timer */
    appdata_and_stack.appdata = &appdata;
