@@ -245,7 +245,6 @@ TEST_F (DiagTest, DiagRunTest)
                "remove it.\n");
    ret = pnet_diag_std_add (
       net,
-      appdata.main_arep,
       &diag_source,
       TEST_CHANNEL_NUMBER_OF_BITS,
       PNET_DIAG_CH_PROP_MAINT_FAULT,
@@ -257,7 +256,6 @@ TEST_F (DiagTest, DiagRunTest)
 
    ret = pnet_diag_std_update (
       net,
-      appdata.main_arep,
       &diag_source,
       TEST_CHANNEL_ERRORTYPE,
       TEST_DIAG_EXT_ERRTYPE,
@@ -266,7 +264,6 @@ TEST_F (DiagTest, DiagRunTest)
 
    ret = pnet_diag_std_remove (
       net,
-      appdata.main_arep,
       &diag_source,
       TEST_CHANNEL_ERRORTYPE,
       TEST_DIAG_EXT_ERRTYPE);
@@ -276,7 +273,6 @@ TEST_F (DiagTest, DiagRunTest)
                "remove them.\n");
    ret = pnet_diag_std_add (
       net,
-      appdata.main_arep,
       &diag_source,
       TEST_CHANNEL_NUMBER_OF_BITS,
       PNET_DIAG_CH_PROP_MAINT_FAULT,
@@ -288,7 +284,6 @@ TEST_F (DiagTest, DiagRunTest)
 
    ret = pnet_diag_std_add (
       net,
-      appdata.main_arep,
       &diag_source,
       TEST_CHANNEL_NUMBER_OF_BITS,
       PNET_DIAG_CH_PROP_MAINT_REQUIRED,
@@ -300,7 +295,6 @@ TEST_F (DiagTest, DiagRunTest)
 
    ret = pnet_diag_std_add (
       net,
-      appdata.main_arep,
       &diag_source,
       TEST_CHANNEL_NUMBER_OF_BITS,
       PNET_DIAG_CH_PROP_MAINT_DEMANDED,
@@ -312,7 +306,6 @@ TEST_F (DiagTest, DiagRunTest)
 
    ret = pnet_diag_std_add (
       net,
-      appdata.main_arep,
       &diag_source,
       TEST_CHANNEL_NUMBER_OF_BITS,
       PNET_DIAG_CH_PROP_MAINT_QUALIFIED,
@@ -324,7 +317,6 @@ TEST_F (DiagTest, DiagRunTest)
 
    ret = pnet_diag_std_remove (
       net,
-      appdata.main_arep,
       &diag_source,
       TEST_CHANNEL_ERRORTYPE,
       TEST_DIAG_EXT_ERRTYPE);
@@ -332,7 +324,6 @@ TEST_F (DiagTest, DiagRunTest)
 
    ret = pnet_diag_std_remove (
       net,
-      appdata.main_arep,
       &diag_source,
       TEST_CHANNEL_ERRORTYPE_B,
       TEST_DIAG_EXT_ERRTYPE);
@@ -340,7 +331,6 @@ TEST_F (DiagTest, DiagRunTest)
 
    ret = pnet_diag_std_remove (
       net,
-      appdata.main_arep,
       &diag_source,
       TEST_CHANNEL_ERRORTYPE_C,
       TEST_DIAG_EXT_ERRTYPE);
@@ -348,7 +338,6 @@ TEST_F (DiagTest, DiagRunTest)
 
    ret = pnet_diag_std_remove (
       net,
-      appdata.main_arep,
       &diag_source,
       TEST_CHANNEL_ERRORTYPE_D,
       TEST_DIAG_EXT_ERRTYPE);
@@ -357,7 +346,6 @@ TEST_F (DiagTest, DiagRunTest)
    TEST_TRACE ("Try to remove it again\n");
    ret = pnet_diag_std_remove (
       net,
-      appdata.main_arep,
       &diag_source,
       TEST_CHANNEL_ERRORTYPE,
       TEST_DIAG_EXT_ERRTYPE);
@@ -366,7 +354,6 @@ TEST_F (DiagTest, DiagRunTest)
    TEST_TRACE ("Remove non-existing errortype\n");
    ret = pnet_diag_std_remove (
       net,
-      appdata.main_arep,
       &diag_source,
       TEST_CHANNEL_ERRORTYPE_NONEXIST,
       TEST_DIAG_EXT_ERRTYPE);
@@ -375,7 +362,6 @@ TEST_F (DiagTest, DiagRunTest)
    TEST_TRACE ("Try to add two of the same kind\n");
    ret = pnet_diag_std_add (
       net,
-      appdata.main_arep,
       &diag_source,
       TEST_CHANNEL_NUMBER_OF_BITS,
       PNET_DIAG_CH_PROP_MAINT_REQUIRED,
@@ -389,7 +375,6 @@ TEST_F (DiagTest, DiagRunTest)
     * overwritten. */
    ret = pnet_diag_std_add (
       net,
-      appdata.main_arep,
       &diag_source,
       TEST_CHANNEL_NUMBER_OF_BITS,
       PNET_DIAG_CH_PROP_MAINT_REQUIRED,
@@ -401,7 +386,6 @@ TEST_F (DiagTest, DiagRunTest)
 
    ret = pnet_diag_std_remove (
       net,
-      appdata.main_arep,
       &diag_source,
       TEST_CHANNEL_ERRORTYPE,
       TEST_DIAG_EXT_ERRTYPE);
@@ -410,7 +394,6 @@ TEST_F (DiagTest, DiagRunTest)
    TEST_TRACE ("Update with the same value\n");
    ret = pnet_diag_std_add (
       net,
-      appdata.main_arep,
       &diag_source,
       TEST_CHANNEL_NUMBER_OF_BITS,
       PNET_DIAG_CH_PROP_MAINT_REQUIRED,
@@ -422,7 +405,6 @@ TEST_F (DiagTest, DiagRunTest)
 
    ret = pnet_diag_std_update (
       net,
-      appdata.main_arep,
       &diag_source,
       TEST_CHANNEL_ERRORTYPE,
       TEST_DIAG_EXT_ERRTYPE,
@@ -431,7 +413,6 @@ TEST_F (DiagTest, DiagRunTest)
 
    ret = pnet_diag_std_remove (
       net,
-      appdata.main_arep,
       &diag_source,
       TEST_CHANNEL_ERRORTYPE,
       TEST_DIAG_EXT_ERRTYPE);
@@ -440,7 +421,6 @@ TEST_F (DiagTest, DiagRunTest)
    TEST_TRACE ("Try to update a diag entry that does not exist\n");
    ret = pnet_diag_std_update (
       net,
-      appdata.main_arep,
       &diag_source,
       TEST_CHANNEL_ERRORTYPE,
       TEST_DIAG_EXT_ERRTYPE,
@@ -449,7 +429,6 @@ TEST_F (DiagTest, DiagRunTest)
 
    ret = pnet_diag_std_update (
       net,
-      appdata.main_arep,
       &diag_source,
       TEST_CHANNEL_ERRORTYPE_NONEXIST,
       TEST_DIAG_EXT_ERRTYPE,
@@ -460,7 +439,6 @@ TEST_F (DiagTest, DiagRunTest)
    diag_source.slot = TEST_SUBSLOT_NONEXIST_IDENT;
    ret = pnet_diag_std_add (
       net,
-      appdata.main_arep,
       &diag_source,
       TEST_CHANNEL_NUMBER_OF_BITS,
       PNET_DIAG_CH_PROP_MAINT_REQUIRED,
@@ -475,7 +453,6 @@ TEST_F (DiagTest, DiagRunTest)
    diag_source.ch = TEST_CHANNEL_ILLEGAL;
    ret = pnet_diag_std_add (
       net,
-      appdata.main_arep,
       &diag_source,
       TEST_CHANNEL_NUMBER_OF_BITS,
       PNET_DIAG_CH_PROP_MAINT_REQUIRED,
@@ -487,7 +464,6 @@ TEST_F (DiagTest, DiagRunTest)
 
    ret = pnet_diag_std_update (
       net,
-      appdata.main_arep,
       &diag_source,
       TEST_CHANNEL_ERRORTYPE,
       TEST_DIAG_EXT_ERRTYPE,
@@ -496,7 +472,6 @@ TEST_F (DiagTest, DiagRunTest)
 
    ret = pnet_diag_std_remove (
       net,
-      appdata.main_arep,
       &diag_source,
       TEST_CHANNEL_ERRORTYPE,
       TEST_DIAG_EXT_ERRTYPE);
@@ -507,7 +482,6 @@ TEST_F (DiagTest, DiagRunTest)
                "before removing the diagnosis.\n");
    ret = pnet_diag_std_add (
       net,
-      appdata.main_arep,
       &diag_source,
       TEST_CHANNEL_NUMBER_OF_BITS,
       PNET_DIAG_CH_PROP_MAINT_FAULT,
@@ -520,7 +494,6 @@ TEST_F (DiagTest, DiagRunTest)
    diag_source.api = TEST_API_NONEXIST_IDENT;
    ret = pnet_diag_std_remove (
       net,
-      appdata.main_arep,
       &diag_source,
       TEST_CHANNEL_ERRORTYPE,
       TEST_DIAG_EXT_ERRTYPE);
@@ -530,7 +503,6 @@ TEST_F (DiagTest, DiagRunTest)
    diag_source.slot = TEST_SLOT_NONEXIST_IDENT;
    ret = pnet_diag_std_remove (
       net,
-      appdata.main_arep,
       &diag_source,
       TEST_CHANNEL_ERRORTYPE,
       TEST_DIAG_EXT_ERRTYPE);
@@ -540,7 +512,6 @@ TEST_F (DiagTest, DiagRunTest)
    diag_source.subslot = TEST_SUBSLOT_NONEXIST_IDENT;
    ret = pnet_diag_std_remove (
       net,
-      appdata.main_arep,
       &diag_source,
       TEST_CHANNEL_ERRORTYPE,
       TEST_DIAG_EXT_ERRTYPE);
@@ -550,7 +521,6 @@ TEST_F (DiagTest, DiagRunTest)
    diag_source.ch = TEST_CHANNEL_NONEXIST_IDENT;
    ret = pnet_diag_std_remove (
       net,
-      appdata.main_arep,
       &diag_source,
       TEST_CHANNEL_ERRORTYPE,
       TEST_DIAG_EXT_ERRTYPE);
@@ -560,7 +530,6 @@ TEST_F (DiagTest, DiagRunTest)
    diag_source.ch_grouping = PNET_DIAG_CH_CHANNEL_GROUP;
    ret = pnet_diag_std_remove (
       net,
-      appdata.main_arep,
       &diag_source,
       TEST_CHANNEL_ERRORTYPE,
       TEST_DIAG_EXT_ERRTYPE);
@@ -570,7 +539,6 @@ TEST_F (DiagTest, DiagRunTest)
    diag_source.ch_direction = PNET_DIAG_CH_PROP_DIR_INPUT;
    ret = pnet_diag_std_remove (
       net,
-      appdata.main_arep,
       &diag_source,
       TEST_CHANNEL_ERRORTYPE,
       TEST_DIAG_EXT_ERRTYPE);
@@ -579,7 +547,6 @@ TEST_F (DiagTest, DiagRunTest)
 
    ret = pnet_diag_std_remove (
       net,
-      appdata.main_arep,
       &diag_source,
       TEST_CHANNEL_ERRORTYPE_NONEXIST,
       TEST_DIAG_EXT_ERRTYPE);
@@ -587,7 +554,6 @@ TEST_F (DiagTest, DiagRunTest)
 
    ret = pnet_diag_std_remove (
       net,
-      appdata.main_arep,
       &diag_source,
       TEST_CHANNEL_ERRORTYPE,
       TEST_DIAG_EXT_ERRTYPE_NONEXIST);
@@ -595,7 +561,6 @@ TEST_F (DiagTest, DiagRunTest)
 
    ret = pnet_diag_std_remove (
       net,
-      appdata.main_arep,
       &diag_source,
       TEST_CHANNEL_ERRORTYPE,
       TEST_DIAG_EXT_ERRTYPE);
@@ -604,7 +569,6 @@ TEST_F (DiagTest, DiagRunTest)
    TEST_TRACE ("Test with a manufacturer specific USI\n");
    ret = pnet_diag_usi_add (
       net,
-      appdata.main_arep,
       TEST_API_IDENT,
       TEST_SLOT_IDENT,
       TEST_SUBSLOT_IDENT,
@@ -615,7 +579,6 @@ TEST_F (DiagTest, DiagRunTest)
    TEST_TRACE ("Update data for a manufacturer specific USI, via add()\n");
    ret = pnet_diag_usi_add (
       net,
-      appdata.main_arep,
       TEST_API_IDENT,
       TEST_SLOT_IDENT,
       TEST_SUBSLOT_IDENT,
@@ -626,7 +589,6 @@ TEST_F (DiagTest, DiagRunTest)
    TEST_TRACE ("Update data for a manufacturer specific USI, via update()\n");
    ret = pnet_diag_usi_update (
       net,
-      appdata.main_arep,
       TEST_API_IDENT,
       TEST_SLOT_IDENT,
       TEST_SUBSLOT_IDENT,
@@ -637,7 +599,6 @@ TEST_F (DiagTest, DiagRunTest)
    TEST_TRACE ("Update for wrong USI and wrong subslot\n");
    ret = pnet_diag_usi_update (
       net,
-      appdata.main_arep,
       TEST_API_IDENT,
       TEST_SLOT_IDENT,
       TEST_SUBSLOT_IDENT,
@@ -647,7 +608,6 @@ TEST_F (DiagTest, DiagRunTest)
 
    ret = pnet_diag_usi_update (
       net,
-      appdata.main_arep,
       TEST_API_IDENT,
       TEST_SLOT_IDENT,
       TEST_SUBSLOT_NONEXIST_IDENT,
@@ -658,7 +618,6 @@ TEST_F (DiagTest, DiagRunTest)
    TEST_TRACE ("Remove wrong USI\n");
    ret = pnet_diag_usi_remove (
       net,
-      appdata.main_arep,
       TEST_API_IDENT,
       TEST_SLOT_IDENT,
       TEST_SUBSLOT_IDENT,
@@ -668,7 +627,6 @@ TEST_F (DiagTest, DiagRunTest)
    TEST_TRACE ("Remove correct USI\n");
    ret = pnet_diag_usi_remove (
       net,
-      appdata.main_arep,
       TEST_API_IDENT,
       TEST_SLOT_IDENT,
       TEST_SUBSLOT_IDENT,
@@ -678,7 +636,6 @@ TEST_F (DiagTest, DiagRunTest)
    TEST_TRACE ("Add for invalid subslot\n");
    ret = pnet_diag_usi_add (
       net,
-      appdata.main_arep,
       TEST_API_IDENT,
       TEST_SLOT_IDENT,
       TEST_SUBSLOT_NONEXIST_IDENT,
@@ -689,7 +646,6 @@ TEST_F (DiagTest, DiagRunTest)
    TEST_TRACE ("Add, update and remove diagnosis for invalid USI\n");
    ret = pnet_diag_usi_add (
       net,
-      appdata.main_arep,
       TEST_API_IDENT,
       TEST_SLOT_IDENT,
       TEST_SUBSLOT_IDENT,
@@ -699,7 +655,6 @@ TEST_F (DiagTest, DiagRunTest)
 
    ret = pnet_diag_usi_update (
       net,
-      appdata.main_arep,
       TEST_API_IDENT,
       TEST_SLOT_IDENT,
       TEST_SUBSLOT_IDENT,
@@ -709,7 +664,6 @@ TEST_F (DiagTest, DiagRunTest)
 
    ret = pnet_diag_usi_remove (
       net,
-      appdata.main_arep,
       TEST_API_IDENT,
       TEST_SLOT_IDENT,
       TEST_SUBSLOT_IDENT,
