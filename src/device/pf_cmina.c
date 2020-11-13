@@ -325,6 +325,7 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
          pf_file_clear (p_file_directory, PNET_FILENAME_DIAGNOSTICS);
          pf_file_clear (p_file_directory, PNET_FILENAME_LOGBOOK);
          pf_file_clear (p_file_directory, PNET_FILENAME_SYSCONTACT);
+         pf_pdport_reset_all (net);
       }
 
       if (reset_mode > 0)
@@ -1261,6 +1262,7 @@ int pf_cmina_remove_all_data_files (const char * file_directory)
    pf_file_clear (file_directory, PNET_FILENAME_DIAGNOSTICS);
    pf_file_clear (file_directory, PNET_FILENAME_LOGBOOK);
    pf_file_clear (file_directory, PNET_FILENAME_SYSCONTACT);
+   pf_file_clear (file_directory, PNET_FILENAME_PDPORT);
 
    return 0;
 }

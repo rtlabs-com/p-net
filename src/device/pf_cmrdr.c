@@ -802,91 +802,21 @@ int pf_cmrdr_rm_read_ind (
          break;
 
       case PF_IDX_SUB_PDPORT_DATA_REAL:
-         if (
-            (p_read_request->slot_number == PNET_SLOT_DAP_IDENT) &&
-            (p_read_request->subslot_number ==
-             PNET_SUBSLOT_DAP_INTERFACE_1_PORT_0_IDENT))
-         {
-            pf_put_pdport_data_real (
-               net,
-               true,
-               &read_result,
-               res_size,
-               p_res,
-               p_pos);
-            ret = 0;
-         }
-         break;
       case PF_IDX_SUB_PDPORT_DATA_ADJ:
-         /* Only check if this is the port subslot */
-         if (
-            (p_read_request->slot_number == PNET_SLOT_DAP_IDENT) &&
-            (p_read_request->subslot_number ==
-             PNET_SUBSLOT_DAP_INTERFACE_1_PORT_0_IDENT))
-         {
-            if (net->port[0].adjust.active)
-            {
-               pf_put_pdport_data_adj (
-                  &net->port[0].adjust.peer_to_peer_boundary,
-                  true,
-                  &read_result,
-                  res_size,
-                  p_res,
-                  p_pos);
-            }
-            ret = 0;
-         }
-         break;
       case PF_IDX_SUB_PDPORT_DATA_CHECK:
-         /* Only check if this is the port subslot */
-         if (
-            (p_read_request->slot_number == PNET_SLOT_DAP_IDENT) &&
-            (p_read_request->subslot_number ==
-             PNET_SUBSLOT_DAP_INTERFACE_1_PORT_0_IDENT))
-         {
-            if (net->port[0].check.active)
-            {
-               pf_put_pdport_data_check (
-                  &net->port[0].check.peer,
-                  true,
-                  &read_result,
-                  res_size,
-                  p_res,
-                  p_pos);
-            }
-            ret = 0;
-         }
-         break;
       case PF_IDX_DEV_PDREAL_DATA:
-         if (
-            (p_read_request->slot_number == PNET_SLOT_DAP_IDENT) && /* Slot 0x0
-                                                                     */
-            ((p_read_request->subslot_number ==
-              PNET_SLOT_DAP_IDENT) || /* Subslot
-                                         0x0
-                                       */
-             (p_read_request->subslot_number ==
-              PNET_SUBMOD_DAP_IDENT)) /* Subslot 0x1 */)
-         {
-            pf_put_pd_real_data (net, true, &read_result, res_size, p_res, p_pos);
-            ret = 0;
-         }
-         break;
       case PF_IDX_DEV_PDEXP_DATA:
-         /* ToDo: Implement when LLDP is done */
-         /*
-          * MultipleBlockHeader, { [PDPortDataCheck] a, [PDPortDataAdjust] a,
-          *                        [PDInterfaceMrpDataAdjust],
-          * [PDInterfaceMrpDataCheck], [PDPortMrpDataAdjust],
-          * [PDPortFODataAdjust], [PDPortFODataCheck], [PDNCDataCheck],
-          *                        [PDInterface-FSUDataAdjust],
-          * [PDInterfaceAdjust], [PDPortMrpIcDataAdjust], [PDPortMrpIcDataCheck]
-          * } a The fields SlotNumber and SubslotNumber shall be ignored b Each
-          * submodule's data (for example interface or port) need its own
-          * MultipleBlockHeader
-          */
-         ret = 0;
+      case PF_IDX_SUB_PDPORT_STATISTIC:
+         ret = pf_pdport_read_ind (
+            net,
+            p_ar,
+            p_read_request,
+            &read_result,
+            res_size,
+            p_res,
+            p_pos);
          break;
+
       case PF_IDX_SUB_PDINTF_REAL:
          /* Only check if this is the port subslot */
          if (
@@ -916,24 +846,6 @@ int pf_cmrdr_rm_read_ind (
              PNET_SUBSLOT_DAP_INTERFACE_1_IDENT))
          {
             /* return ok */
-            ret = 0;
-         }
-         break;
-      case PF_IDX_SUB_PDPORT_STATISTIC:
-         if (
-            (p_read_request->slot_number == PNET_SLOT_DAP_IDENT) &&
-            ((p_read_request->subslot_number ==
-              PNET_SUBSLOT_DAP_INTERFACE_1_IDENT) ||
-             (p_read_request->subslot_number ==
-              PNET_SUBSLOT_DAP_INTERFACE_1_PORT_0_IDENT)))
-         {
-            pf_put_pdport_statistics (
-               &net->interface_statistics,
-               true,
-               &read_result,
-               res_size,
-               p_res,
-               p_pos);
             ret = 0;
          }
          break;
