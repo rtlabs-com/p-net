@@ -330,17 +330,17 @@ void pf_get_port_data_check (
    pf_port_data_check_t * p_port_data_check);
 
 /**
- * Extract CheckPeer data blocks from buffer.
+ * Extract CheckPeers data blocks from buffer.
  * @param p_info              InOut: The parser information.
  * @param p_pos               InOut: The current parsing position.
  * @param max_peers:          In:    Number of elements in destination array
- * @param check_peers:        Out:   Array of destination structures
+ * @param check_peers:        Out:   Destination structure
  */
 void pf_get_port_data_check_check_peers (
    pf_get_info_t * p_info,
    uint16_t * p_pos,
    uint8_t max_peers,
-   pf_check_peers_t check_peers[]);
+   pf_check_peers_t * check_peers);
 
 /**
  * Extract PortDataAdjust data block from buffer.

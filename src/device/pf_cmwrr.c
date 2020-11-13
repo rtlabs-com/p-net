@@ -125,8 +125,6 @@ int pf_cmwrr_cmdev_state_ind (
    return -1;
 }
 
-
-
 /**
  * @internal
  * Write one data record.
@@ -157,8 +155,9 @@ static int pf_cmwrr_write (
 {
    int ret = -1;
 
-   if (p_write_request->index < 0x7fff)
+   if (p_write_request->index <= PF_IDX_USER_MAX)
    {
+      /* User defined indexes */
       ret = pf_fspm_cm_write_ind (
          net,
          p_ar,
@@ -171,6 +170,7 @@ static int pf_cmwrr_write (
       (PF_IDX_SUB_IM_0 <= p_write_request->index) &&
       (p_write_request->index <= PF_IDX_SUB_IM_15))
    {
+      /* I&M data */
       ret = pf_fspm_cm_write_ind (
          net,
          p_ar,

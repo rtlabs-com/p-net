@@ -70,6 +70,11 @@ static inline uint32_t atomic_fetch_sub (atomic_int * p, uint32_t v)
 #define PF_CCONTROL_TIMEOUT 2000
 #define PF_FRAG_TIMEOUT     2000
 
+/** One neighbour shall be checked for PDPortDataCheck
+ *  See Profinet 2.4 protocol, section 5.2.13.3
+ */
+#define PF_CHECK_PEERS_PER_PORT 1
+
 /*********************** RPC header ******************************************/
 
 /** Magic UUID values */
@@ -2262,7 +2267,7 @@ typedef struct pf_check_peer
 typedef struct pf_check_peers
 {
    uint8_t number_of_peers;
-   pf_check_peer_t peers[1]; /* Todo define max_peer_checks */
+   pf_check_peer_t peers[PF_CHECK_PEERS_PER_PORT];
 } pf_check_peers_t;
 
 /**

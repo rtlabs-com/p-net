@@ -58,6 +58,10 @@ int pf_cmrdr_rm_read_ind (
    uint16_t data_len = 0;
    bool new_flag = false;
 
+#if LOG_INFO_ENABLED(PNET_LOG)
+   char * index_range_text = NULL;
+#endif
+
    read_result.sequence_number = p_read_request->sequence_number;
    read_result.ar_uuid = p_read_request->ar_uuid;
    read_result.api = p_read_request->api;
@@ -123,10 +127,59 @@ int pf_cmrdr_rm_read_ind (
    }
    else
    {
+
+#if LOG_INFO_ENABLED(PNET_LOG)
+      /* Logging */
+      if (
+         (p_read_request->index >= PF_IDX_SUB_DIAGNOSIS_CH) &&
+         (p_read_request->index <= PF_IDX_SUB_DIAG_MAINT_DEM_ALL))
+      {
+         index_range_text = "subslot";
+      }
+      else if (
+         (p_read_request->index >= PF_IDX_SLOT_DIAGNOSIS_CH) &&
+         (p_read_request->index <= PF_IDX_SLOT_DIAG_MAINT_DEM_ALL))
+      {
+         index_range_text = "slot";
+      }
+      else if (
+         (p_read_request->index >= PF_IDX_API_DIAGNOSIS_CH) &&
+         (p_read_request->index <= PF_IDX_API_DIAG_MAINT_DEM_ALL))
+      {
+         index_range_text = "api";
+      }
+      else if (
+         (p_read_request->index >= PF_IDX_AR_DIAGNOSIS_CH) &&
+         (p_read_request->index <= PF_IDX_AR_DIAG_MAINT_DEM_ALL))
+      {
+         index_range_text = "ar";
+      }
+      else if (p_read_request->index == PF_IDX_DEV_DIAGNOSIS_DMQS)
+      {
+         index_range_text = "device";
+      }
+
+      if (index_range_text != NULL)
+      {
+         LOG_INFO (
+            PNET_LOG,
+            "CMRDR(%d): PLC is reading %s diagnosis. Slot %u subslot 0x%04X "
+            "index 0x%04X\n",
+            __LINE__,
+            index_range_text,
+            p_read_request->slot_number,
+            p_read_request->subslot_number,
+            p_read_request->index);
+      }
+#endif
+
       switch (p_read_request->index)
       {
       case PF_IDX_DEV_IM_0_FILTER_DATA:
-         LOG_INFO (PNET_LOG, "CMRDR(%d): Read I&M0 filter-data\n", __LINE__);
+         LOG_INFO (
+            PNET_LOG,
+            "CMRDR(%d): PLC is reading I&M0 filter-data\n",
+            __LINE__);
          /* Block-writer knows where to fetch and how to build the answer. */
          pf_put_im_0_filter_data (net, true, res_size, p_res, p_pos);
          ret = 0;
@@ -294,7 +347,10 @@ int pf_cmrdr_rm_read_ind (
          ret = 0;
          break;
       case PF_IDX_API_REAL_ID_DATA:
-         LOG_INFO (PNET_LOG, "CMRDR(%d): Read real ID data\n", __LINE__);
+         LOG_INFO (
+            PNET_LOG,
+            "CMRDR(%d): PLC is reading real ID data\n",
+            __LINE__);
          pf_put_ident_data (
             net,
             true,
@@ -313,7 +369,7 @@ int pf_cmrdr_rm_read_ind (
          break;
 
       case PF_IDX_DEV_API_DATA:
-         LOG_INFO (PNET_LOG, "CMRDR(%d): Read API data\n", __LINE__);
+         LOG_INFO (PNET_LOG, "CMRDR(%d): PLC is reading API data\n", __LINE__);
          pf_put_ident_data (
             net,
             true,
@@ -332,6 +388,12 @@ int pf_cmrdr_rm_read_ind (
          break;
 
       case PF_IDX_SUB_INPUT_DATA:
+         LOG_INFO (
+            PNET_LOG,
+            "CMRDR(%d): PLC is reading inputdata. Slot %u subslot 0x%04X\n",
+            __LINE__,
+            p_read_request->slot_number,
+            p_read_request->subslot_number);
          /* Sub-module data to the controller */
          data_len = sizeof (subslot_data);
          iops_len = sizeof (iops);
@@ -387,6 +449,12 @@ int pf_cmrdr_rm_read_ind (
          }
          break;
       case PF_IDX_SUB_OUTPUT_DATA:
+         LOG_INFO (
+            PNET_LOG,
+            "CMRDR(%d): PLC is reading outputdata. Slot %u subslot 0x%04X\n",
+            __LINE__,
+            p_read_request->slot_number,
+            p_read_request->subslot_number);
          /* Sub-module data from the controller. */
          data_len = sizeof (subslot_data);
          iops_len = sizeof (iops);
@@ -767,10 +835,10 @@ int pf_cmrdr_rm_read_ind (
             true,
             PF_DEV_FILTER_LEVEL_DEVICE,
             PF_DIAG_FILTER_ALL,
-            NULL,
-            0,
-            0,
-            0,
+            NULL, /* Do not filter by AR */
+            0,    /* API */
+            0,    /* Slot */
+            0,    /* Subslot */
             res_size,
             p_res,
             p_pos);
