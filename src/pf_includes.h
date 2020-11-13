@@ -41,10 +41,11 @@ extern "C" {
 #include "pf_eth.h"
 #include "pf_file.h"
 #include "pf_lldp.h"
-#include "pf_snmp.h"
+#include "pf_pdport.h"
 #include "pf_ppm.h"
 #include "pf_ptcp.h"
 #include "pf_scheduler.h"
+#include "pf_snmp.h"
 #include "pf_udp.h"
 
 /* device */

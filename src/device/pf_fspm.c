@@ -442,6 +442,8 @@ int pf_fspm_init (pnet_t * net, const pnet_cfg_t * p_cfg)
    pf_fspm_load_logbook (net);
    pf_fspm_save_logbook (net); /* Create file if missing */
 
+   pf_pdport_init (net);
+
    /* Turn LED off */
    if (pf_fspm_signal_led_ind (net, false) != 0)
    {
