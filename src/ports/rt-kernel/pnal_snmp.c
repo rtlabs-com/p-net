@@ -22,6 +22,8 @@
 #include "pnal_snmp.h"
 
 #include "lldp-mib.h"
+#include "lldp-ext-pno-mib.h"
+#include "lldp-ext-dot3-mib.h"
 
 #include <lwip/apps/snmp.h>
 #include <lwip/apps/snmp_mib2.h>
@@ -86,6 +88,8 @@ int pnal_snmp_init (pnet_t * net)
    static const struct snmp_mib * mibs[] = {
       &mib2,
       &lldpmib,
+      &lldpxpnomib,
+      &lldpxdot3mib,
    };
 
    /* Store reference to Profinet device instance */

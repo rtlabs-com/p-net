@@ -284,7 +284,7 @@ regenerate code.
  * ----------------------------------------------------- */
 
 /**
- * Get cell in table lldpConfigManAddrTable
+ * Get cell in table lldpConfigManAddrTable.
  *
  * Called when an SNMP Get request is received for this table.
  * If cell is found, the SNMP stack may call the corresponding get_value()
@@ -360,8 +360,10 @@ static s16_t lldpconfigmanaddrtable_get_value (
    void * value)
 {
    s16_t value_len;
+   u32_t column =
+      SNMP_TABLE_GET_COLUMN_FROM_OID (cell_instance->instance_oid.id);
 
-   switch (SNMP_TABLE_GET_COLUMN_FROM_OID (cell_instance->instance_oid.id))
+   switch (column)
    {
    case 1:
    {
@@ -375,15 +377,16 @@ static s16_t lldpconfigmanaddrtable_get_value (
    break;
    default:
    {
-      /* TODO: Use osal logging */
-      LWIP_DEBUGF (
-         SNMP_MIB_DEBUG,
-         ("lldpconfigmanaddrtable_get_value(): unknown id: %" S32_F "\n",
-          SNMP_TABLE_GET_COLUMN_FROM_OID (cell_instance->instance_oid.id)));
+      LOG_ERROR (
+         PF_SNMP_LOG,
+         "LLDP-MIB(%d): Unknown table column: %" PRIu32 ".\n",
+         __LINE__,
+         column);
       value_len = 0;
    }
    break;
    }
+
    return value_len;
 }
 
@@ -391,7 +394,7 @@ static s16_t lldpconfigmanaddrtable_get_value (
  * ----------------------------------------------------- */
 
 /**
- * Get cell in table lldpLocPortTable
+ * Get cell in table lldpLocPortTable.
  *
  * Called when an SNMP Get request is received for this table.
  * If cell is found, the SNMP stack may call the corresponding get_value()
@@ -470,8 +473,10 @@ static s16_t lldplocporttable_get_value (
 {
    s16_t value_len;
    int port = cell_instance->reference.s32;
+   u32_t column =
+      SNMP_TABLE_GET_COLUMN_FROM_OID (cell_instance->instance_oid.id);
 
-   switch (SNMP_TABLE_GET_COLUMN_FROM_OID (cell_instance->instance_oid.id))
+   switch (column)
    {
    case 2:
    {
@@ -494,11 +499,11 @@ static s16_t lldplocporttable_get_value (
       value_len = port_id.len;
       if ((size_t)value_len > SNMP_MAX_VALUE_SIZE)
       {
-         LWIP_DEBUGF (
-            SNMP_MIB_DEBUG,
-            ("value is to large (%u > %u)\n",
-             (size_t)value_len,
-             SNMP_MAX_VALUE_SIZE));
+         LOG_ERROR (
+            PF_SNMP_LOG,
+            "LLDP-MIB(%d): Value is too large: %" PRId16 "\n",
+            __LINE__,
+            value_len);
          value_len = 0;
       }
       else
@@ -517,11 +522,11 @@ static s16_t lldplocporttable_get_value (
       value_len = port_desc.len;
       if ((size_t)value_len > SNMP_MAX_VALUE_SIZE)
       {
-         LWIP_DEBUGF (
-            SNMP_MIB_DEBUG,
-            ("value is to large (%u > %u)\n",
-             (size_t)value_len,
-             SNMP_MAX_VALUE_SIZE));
+         LOG_ERROR (
+            PF_SNMP_LOG,
+            "LLDP-MIB(%d): Value is too large: %" PRId16 "\n",
+            __LINE__,
+            value_len);
          value_len = 0;
       }
       else
@@ -532,14 +537,16 @@ static s16_t lldplocporttable_get_value (
    break;
    default:
    {
-      LWIP_DEBUGF (
-         SNMP_MIB_DEBUG,
-         ("lldplocporttable_get_value(): unknown id: %" S32_F "\n",
-          SNMP_TABLE_GET_COLUMN_FROM_OID (cell_instance->instance_oid.id)));
+      LOG_ERROR (
+         PF_SNMP_LOG,
+         "LLDP-MIB(%d): Unknown table column: %" PRIu32 ".\n",
+         __LINE__,
+         column);
       value_len = 0;
    }
    break;
    }
+
    return value_len;
 }
 
@@ -620,8 +627,10 @@ static s16_t lldplocmanaddrtable_get_value (
    void * value)
 {
    s16_t value_len;
+   u32_t column =
+      SNMP_TABLE_GET_COLUMN_FROM_OID (cell_instance->instance_oid.id);
 
-   switch (SNMP_TABLE_GET_COLUMN_FROM_OID (cell_instance->instance_oid.id))
+   switch (column)
    {
    case 3:
    {
@@ -659,14 +668,16 @@ static s16_t lldplocmanaddrtable_get_value (
    break;
    default:
    {
-      LWIP_DEBUGF (
-         SNMP_MIB_DEBUG,
-         ("lldplocmanaddrtable_get_value(): unknown id: %" S32_F "\n",
-          SNMP_TABLE_GET_COLUMN_FROM_OID (cell_instance->instance_oid.id)));
+      LOG_ERROR (
+         PF_SNMP_LOG,
+         "LLDP-MIB(%d): Unknown table column: %" PRIu32 ".\n",
+         __LINE__,
+         column);
       value_len = 0;
    }
    break;
    }
+
    return value_len;
 }
 
@@ -687,8 +698,9 @@ static s16_t lldplocalsystemdata_treenode_get_value (
    void * value)
 {
    s16_t value_len;
+   u32_t column = instance->node->oid;
 
-   switch (instance->node->oid)
+   switch (column)
    {
    case 1:
    {
@@ -711,11 +723,11 @@ static s16_t lldplocalsystemdata_treenode_get_value (
       value_len = chassis_id.len;
       if ((size_t)value_len > SNMP_MAX_VALUE_SIZE)
       {
-         LWIP_DEBUGF (
-            SNMP_MIB_DEBUG,
-            ("value is to large (%u > %u)\n",
-             (size_t)value_len,
-             SNMP_MAX_VALUE_SIZE));
+         LOG_ERROR (
+            PF_SNMP_LOG,
+            "LLDP-MIB(%d): Value is too large: %" PRId16 "\n",
+            __LINE__,
+            value_len);
          value_len = 0;
       }
       else
@@ -726,14 +738,16 @@ static s16_t lldplocalsystemdata_treenode_get_value (
    break;
    default:
    {
-      LWIP_DEBUGF (
-         SNMP_MIB_DEBUG,
-         ("lldplocalsystemdata_treenode_get_value(): unknown id: %" S32_F "\n",
-          instance->node->oid));
+      LOG_ERROR (
+         PF_SNMP_LOG,
+         "LLDP-MIB(%d): Unknown table column: %" PRIu32 ".\n",
+         __LINE__,
+         column);
       value_len = 0;
    }
    break;
    }
+
    return value_len;
 }
 
@@ -741,7 +755,7 @@ static s16_t lldplocalsystemdata_treenode_get_value (
  * ----------------------------------------------------- */
 
 /**
- * Get cell in table lldpRemTable
+ * Get cell in table lldpRemTable.
  *
  * Called when an SNMP Get request is received for this table.
  * If cell is found, the SNMP stack may call the corresponding get_value()
@@ -820,8 +834,10 @@ static s16_t lldpremtable_get_value (
 {
    s16_t value_len;
    int port = cell_instance->reference.s32;
+   u32_t column =
+      SNMP_TABLE_GET_COLUMN_FROM_OID (cell_instance->instance_oid.id);
 
-   switch (SNMP_TABLE_GET_COLUMN_FROM_OID (cell_instance->instance_oid.id))
+   switch (column)
    {
    case 4:
    {
@@ -851,13 +867,17 @@ static s16_t lldpremtable_get_value (
 
       error = pf_snmp_get_peer_chassis_id (pnal_snmp.net, port, &chassis_id);
       value_len = chassis_id.len;
-      if (error || (size_t)value_len > SNMP_MAX_VALUE_SIZE)
+      if (error)
       {
-         LWIP_DEBUGF (
-            SNMP_MIB_DEBUG,
-            ("value is to large (%u > %u)\n",
-             (size_t)value_len,
-             SNMP_MAX_VALUE_SIZE));
+         value_len = 0;
+      }
+      else if ((size_t)value_len > SNMP_MAX_VALUE_SIZE)
+      {
+         LOG_ERROR (
+            PF_SNMP_LOG,
+            "LLDP-MIB(%d): Value is too large: %" PRId16 "\n",
+            __LINE__,
+            value_len);
          value_len = 0;
       }
       else
@@ -877,11 +897,6 @@ static s16_t lldpremtable_get_value (
       value_len = sizeof (s32_t);
       if (error)
       {
-         LWIP_DEBUGF (
-            SNMP_MIB_DEBUG,
-            ("value is to large (%u > %u)\n",
-             (size_t)value_len,
-             SNMP_MAX_VALUE_SIZE));
          value_len = 0;
       }
       else
@@ -899,13 +914,17 @@ static s16_t lldpremtable_get_value (
 
       error = pf_snmp_get_peer_port_id (pnal_snmp.net, port, &port_id);
       value_len = port_id.len;
-      if (error || (size_t)value_len > SNMP_MAX_VALUE_SIZE)
+      if (error)
       {
-         LWIP_DEBUGF (
-            SNMP_MIB_DEBUG,
-            ("value is to large (%u > %u)\n",
-             (size_t)value_len,
-             SNMP_MAX_VALUE_SIZE));
+         value_len = 0;
+      }
+      else if ((size_t)value_len > SNMP_MAX_VALUE_SIZE)
+      {
+         LOG_ERROR (
+            PF_SNMP_LOG,
+            "LLDP-MIB(%d): Value is too large: %" PRId16 "\n",
+            __LINE__,
+            value_len);
          value_len = 0;
       }
       else
@@ -924,13 +943,17 @@ static s16_t lldpremtable_get_value (
       error =
          pf_snmp_get_peer_port_description (pnal_snmp.net, port, &port_desc);
       value_len = port_desc.len;
-      if (error || (size_t)value_len > SNMP_MAX_VALUE_SIZE)
+      if (error)
       {
-         LWIP_DEBUGF (
-            SNMP_MIB_DEBUG,
-            ("value is to large (%u > %u)\n",
-             (size_t)value_len,
-             SNMP_MAX_VALUE_SIZE));
+         value_len = 0;
+      }
+      else if ((size_t)value_len > SNMP_MAX_VALUE_SIZE)
+      {
+         LOG_ERROR (
+            PF_SNMP_LOG,
+            "LLDP-MIB(%d): Value is too large: %" PRId16 "\n",
+            __LINE__,
+            value_len);
          value_len = 0;
       }
       else
@@ -941,19 +964,21 @@ static s16_t lldpremtable_get_value (
    break;
    default:
    {
-      LWIP_DEBUGF (
-         SNMP_MIB_DEBUG,
-         ("lldpremtable_get_value(): unknown id: %" S32_F "\n",
-          SNMP_TABLE_GET_COLUMN_FROM_OID (cell_instance->instance_oid.id)));
+      LOG_ERROR (
+         PF_SNMP_LOG,
+         "LLDP-MIB(%d): Unknown table column: %" PRIu32 ".\n",
+         __LINE__,
+         column);
       value_len = 0;
    }
    break;
    }
+
    return value_len;
 }
 
 /**
- * Get cell in table lldpRemManAddrTable
+ * Get cell in table lldpRemManAddrTable.
  *
  * Called when an SNMP Get request is received for this table.
  * If cell is found, the SNMP stack may call the corresponding get_value()
@@ -1032,8 +1057,10 @@ static s16_t lldpremmanaddrtable_get_value (
 {
    s16_t value_len;
    int port = cell_instance->reference.s32;
+   u32_t column =
+      SNMP_TABLE_GET_COLUMN_FROM_OID (cell_instance->instance_oid.id);
 
-   switch (SNMP_TABLE_GET_COLUMN_FROM_OID (cell_instance->instance_oid.id))
+   switch (column)
    {
    case 3:
    {
@@ -1081,14 +1108,16 @@ static s16_t lldpremmanaddrtable_get_value (
    break;
    default:
    {
-      LWIP_DEBUGF (
-         SNMP_MIB_DEBUG,
-         ("lldpremmanaddrtable_get_value(): unknown id: %" S32_F "\n",
-          SNMP_TABLE_GET_COLUMN_FROM_OID (cell_instance->instance_oid.id)));
+      LOG_ERROR (
+         PF_SNMP_LOG,
+         "LLDP-MIB(%d): Unknown table column: %" PRIu32 ".\n",
+         __LINE__,
+         column);
       value_len = 0;
    }
    break;
    }
+
    return value_len;
 }
 
