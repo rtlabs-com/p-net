@@ -22,8 +22,8 @@
  * API, pf_snmp.h. Supported MIBs:
  * - MIB-II,
  * - LLDP-MIB,
- * - LLDP-EXT-DOT3-MIB (TODO),
- * - LLDP-EXT-PNO-MIB (TODO).
+ * - LLDP-EXT-DOT3-MIB,
+ * - LLDP-EXT-PNO-MIB.
  *
  * Note that the rt-kernel tree needs to be patched to support SNMP etc.
  * See supplied patch file.

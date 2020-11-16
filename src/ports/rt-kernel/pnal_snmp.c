@@ -22,6 +22,8 @@
 #include "pnal_snmp.h"
 
 #include "lldp-mib.h"
+#include "lldp-ext-pno-mib.h"
+#include "lldp-ext-dot3-mib.h"
 
 #include <lwip/apps/snmp.h>
 #include <lwip/apps/snmp_mib2.h>
@@ -32,7 +34,7 @@ pnal_snmp_t pnal_snmp;
 
 /**
  * Called right after writing a variable
- * 
+ *
  * This is a callback function for SNMP in lwip. It conforms to
  * the type snmp_write_callback_fct.
  *
@@ -86,6 +88,8 @@ int os_snmp_init (pnet_t * net)
    static const struct snmp_mib * mibs[] = {
       &mib2,
       &lldpmib,
+      &lldpxpnomib,
+      &lldpxdot3mib,
    };
 
    /* Store reference to Profinet device instance */
