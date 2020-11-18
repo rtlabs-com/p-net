@@ -361,7 +361,6 @@ extern "C" {
 #define PNET_FILENAME_SYSCONTACT  "pnet_data_syscontact.bin"
 #define PNET_FILENAME_IM          "pnet_data_im.bin"
 #define PNET_FILENAME_DIAGNOSTICS "pnet_data_diagnostics.bin"
-#define PNET_FILENAME_LOGBOOK     "pnet_data_logbook.bin"
 #define PNET_FILENAME_PDPORT      "pnet_data_pdport.bin"
 
 /**
