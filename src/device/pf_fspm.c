@@ -802,7 +802,7 @@ int pf_fspm_cm_read_ind (
          break;
       default:
          /* Nothing if data not available here */
-         LOG_ERROR (
+         LOG_DEBUG (
             PNET_LOG,
             "FSPM(%d): Request to read non-implemented I&M data. Index %u\n",
             __LINE__,
