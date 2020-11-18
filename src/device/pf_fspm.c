@@ -1105,6 +1105,12 @@ int pf_fspm_cm_connect_ind (
                .connect_cb (net, net->fspm_cfg.cb_arg, p_ar->arep, p_result);
    }
 
+   pf_fspm_create_log_book_entry (
+      net,
+      p_ar->arep,
+      &p_result->pnio_status,
+      PF_LOG_BOOK_AR_CONNECT);
+
    return ret;
 }
 
@@ -1120,6 +1126,12 @@ int pf_fspm_cm_release_ind (
       ret = net->fspm_cfg
                .release_cb (net, net->fspm_cfg.cb_arg, p_ar->arep, p_result);
    }
+
+   pf_fspm_create_log_book_entry (
+      net,
+      p_ar->arep,
+      &p_result->pnio_status,
+      PF_LOG_BOOK_AR_RELEASE);
 
    return ret;
 }
@@ -1141,6 +1153,12 @@ int pf_fspm_cm_dcontrol_ind (
          control_command,
          p_result);
    }
+
+   pf_fspm_create_log_book_entry (
+      net,
+      p_ar->arep,
+      &p_result->pnio_status,
+      PF_LOG_BOOK_DCONTROL);
 
    return ret;
 }

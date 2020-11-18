@@ -2200,6 +2200,19 @@ typedef struct pf_log_book_ts
    uint32_t nano_sec;
 } pf_log_book_ts_t;
 
+/*
+ * p-net stack specific log book entry detail values.
+ * Values are not defined by Profinet specification
+ * but device/stack specific.
+ * See PN-AL-protocol (Mar20) 7.3.6 LogBook ASE
+ */
+typedef enum
+{
+   PF_LOG_BOOK_AR_CONNECT = 1,
+   PF_LOG_BOOK_AR_RELEASE,
+   PF_LOG_BOOK_DCONTROL
+} pf_log_book_entry_detail_values_t;
+
 typedef struct pf_log_book_entry
 {
    pf_log_book_ts_t time_ts;
