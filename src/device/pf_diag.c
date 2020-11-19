@@ -107,6 +107,72 @@ static void pf_diag_update_station_problem_indicator (
 
 /**
  * @internal
+ * Update the submodule diff state
+ *
+ * @param net              InOut: The p-net stack instance.
+ * @param p_ar             InOut: The AR instance.
+ * @param p_subslot        In:    The sub-slot instance.
+ */
+static void pf_diag_update_submodule_state (
+   pnet_t * net,
+   pf_ar_t * p_ar,
+   pf_subslot_t * p_subslot)
+{
+   pf_device_t * p_dev = NULL;
+   uint16_t ix;
+   pf_diag_item_t * p_item;
+   pf_submod_state_t submodule_state;
+   pnet_alarm_spec_t alarm_spec = {0};
+   uint32_t maint_status = 0;
+
+   memset (&submodule_state, 0, sizeof (submodule_state));
+
+   if (pf_cmdev_get_device (net, &p_dev) == 0)
+   {
+      ix = p_subslot->diag_list;
+      pf_cmdev_get_diag_item (net, ix, &p_item);
+      while (p_item != NULL)
+      {
+         if ((p_item->in_use == true))
+         {
+            pf_alarm_add_diag_item_to_summary (
+               p_ar,
+               p_subslot,
+               p_item,
+               &alarm_spec,
+               &maint_status);
+
+            if (alarm_spec.submodule_diagnosis == true)
+            {
+               submodule_state.fault = true;
+            }
+
+            if (maint_status & BIT (0))
+            {
+               submodule_state.maintenance_required = true;
+            }
+
+            if (maint_status & BIT (1))
+            {
+               submodule_state.maintenance_demanded = true;
+            }
+         }
+
+         ix = p_item->next;
+         pf_cmdev_get_diag_item (net, ix, &p_item);
+      }
+
+      p_subslot->submodule_state.fault = submodule_state.fault;
+      p_subslot->submodule_state.maintenance_required =
+         submodule_state.maintenance_required;
+      p_subslot->submodule_state.maintenance_demanded =
+         submodule_state.maintenance_demanded;
+
+   }
+}
+
+/**
+ * @internal
  * Find and unlink a diag item in the specified sub-slot.
  *
  * If the USI of the item is in the manufacturer-specified range then
@@ -394,6 +460,8 @@ int pf_diag_add (
             /* Link it into the sub-slot reported list */
             p_item->next = p_subslot->diag_list;
             p_subslot->diag_list = item_ix;
+
+            pf_diag_update_submodule_state (net, p_ar, p_subslot);
 
             /* TODO Use better strategy to find AR */
             if (pf_diag_find_first_ar (net, &p_ar) == 0)

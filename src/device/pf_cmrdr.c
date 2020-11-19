@@ -865,6 +865,7 @@ int pf_cmrdr_rm_read_ind (
          ret = 0;
          break;
       case PF_IDX_AR_MOD_DIFF:
+         pf_cmdev_generate_submodule_diff (net, p_ar);
          pf_put_ar_diff (true, p_ar, res_size, p_res, p_pos);
          ret = 0;
          break;
