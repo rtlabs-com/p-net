@@ -107,11 +107,11 @@ static int rowindex_construct_for_remote_interface (
 
 int rowindex_match_with_local_port (const u32_t * row_oid, u8_t row_oid_len)
 {
-   pf_lldp_port_list_t port_list;
+   pf_port_iterator_t port_iterator;
    int port;
 
-   pf_snmp_get_port_list (pnal_snmp.net, &port_list);
-   port = pf_snmp_get_first_port (&port_list);
+   pf_snmp_init_port_iterator (pnal_snmp.net, &port_iterator);
+   port = pf_snmp_get_next_port (&port_iterator);
    while (port != 0)
    {
       struct snmp_obj_id port_oid;
@@ -122,7 +122,7 @@ int rowindex_match_with_local_port (const u32_t * row_oid, u8_t row_oid_len)
          return port;
       }
 
-      port = pf_snmp_get_next_port (&port_list, port);
+      port = pf_snmp_get_next_port (&port_iterator);
    }
 
    return 0;
@@ -132,7 +132,7 @@ int rowindex_update_with_next_local_port (struct snmp_obj_id * row_oid)
 {
    struct snmp_next_oid_state state;
    u32_t next_oid[SNMP_MAX_OBJ_ID_LEN];
-   pf_lldp_port_list_t port_list;
+   pf_port_iterator_t port_iterator;
    int port;
 
    snmp_next_oid_init (
@@ -141,8 +141,8 @@ int rowindex_update_with_next_local_port (struct snmp_obj_id * row_oid)
       row_oid->len,
       next_oid,
       SNMP_MAX_OBJ_ID_LEN);
-   pf_snmp_get_port_list (pnal_snmp.net, &port_list);
-   port = pf_snmp_get_first_port (&port_list);
+   pf_snmp_init_port_iterator (pnal_snmp.net, &port_iterator);
+   port = pf_snmp_get_next_port (&port_iterator);
    while (port != 0)
    {
       struct snmp_obj_id port_oid;
@@ -150,7 +150,7 @@ int rowindex_update_with_next_local_port (struct snmp_obj_id * row_oid)
       rowindex_construct_for_local_port (&port_oid, port);
       snmp_next_oid_check (&state, port_oid.id, port_oid.len, (void *)port);
 
-      port = pf_snmp_get_next_port (&port_list, port);
+      port = pf_snmp_get_next_port (&port_iterator);
    }
 
    if (state.status == SNMP_NEXT_OID_STATUS_SUCCESS)
@@ -216,11 +216,11 @@ snmp_err_t rowindex_update_with_next_local_interface (
 
 int rowindex_match_with_remote_device (const u32_t * row_oid, u8_t row_oid_len)
 {
-   pf_lldp_port_list_t port_list;
+   pf_port_iterator_t port_iterator;
    int port;
 
-   pf_snmp_get_port_list (pnal_snmp.net, &port_list);
-   port = pf_snmp_get_first_port (&port_list);
+   pf_snmp_init_port_iterator (pnal_snmp.net, &port_iterator);
+   port = pf_snmp_get_next_port (&port_iterator);
    while (port != 0)
    {
       struct snmp_obj_id port_oid;
@@ -234,7 +234,7 @@ int rowindex_match_with_remote_device (const u32_t * row_oid, u8_t row_oid_len)
          return port;
       }
 
-      port = pf_snmp_get_next_port (&port_list, port);
+      port = pf_snmp_get_next_port (&port_iterator);
    }
 
    return 0;
@@ -244,7 +244,7 @@ int rowindex_update_with_next_remote_device (struct snmp_obj_id * row_oid)
 {
    struct snmp_next_oid_state state;
    u32_t next_oid[SNMP_MAX_OBJ_ID_LEN];
-   pf_lldp_port_list_t port_list;
+   pf_port_iterator_t port_iterator;
    int port;
 
    snmp_next_oid_init (
@@ -253,8 +253,8 @@ int rowindex_update_with_next_remote_device (struct snmp_obj_id * row_oid)
       row_oid->len,
       next_oid,
       SNMP_MAX_OBJ_ID_LEN);
-   pf_snmp_get_port_list (pnal_snmp.net, &port_list);
-   port = pf_snmp_get_first_port (&port_list);
+   pf_snmp_init_port_iterator (pnal_snmp.net, &port_iterator);
+   port = pf_snmp_get_next_port (&port_iterator);
    while (port != 0)
    {
       int error;
@@ -266,7 +266,7 @@ int rowindex_update_with_next_remote_device (struct snmp_obj_id * row_oid)
          snmp_next_oid_check (&state, port_oid.id, port_oid.len, (void *)port);
       }
 
-      port = pf_snmp_get_next_port (&port_list, port);
+      port = pf_snmp_get_next_port (&port_iterator);
    }
 
    if (state.status == SNMP_NEXT_OID_STATUS_SUCCESS)
@@ -286,11 +286,11 @@ int rowindex_match_with_remote_interface (
    const u32_t * row_oid,
    u8_t row_oid_len)
 {
-   pf_lldp_port_list_t port_list;
+   pf_port_iterator_t port_iterator;
    int port;
 
-   pf_snmp_get_port_list (pnal_snmp.net, &port_list);
-   port = pf_snmp_get_first_port (&port_list);
+   pf_snmp_init_port_iterator (pnal_snmp.net, &port_iterator);
+   port = pf_snmp_get_next_port (&port_iterator);
    while (port != 0)
    {
       int error;
@@ -304,7 +304,7 @@ int rowindex_match_with_remote_interface (
          return port;
       }
 
-      port = pf_snmp_get_next_port (&port_list, port);
+      port = pf_snmp_get_next_port (&port_iterator);
    }
 
    return 0;
@@ -314,7 +314,7 @@ int rowindex_update_with_next_remote_interface (struct snmp_obj_id * row_oid)
 {
    struct snmp_next_oid_state state;
    u32_t next_oid[SNMP_MAX_OBJ_ID_LEN];
-   pf_lldp_port_list_t port_list;
+   pf_port_iterator_t port_iterator;
    int port;
 
    snmp_next_oid_init (
@@ -323,8 +323,8 @@ int rowindex_update_with_next_remote_interface (struct snmp_obj_id * row_oid)
       row_oid->len,
       next_oid,
       SNMP_MAX_OBJ_ID_LEN);
-   pf_snmp_get_port_list (pnal_snmp.net, &port_list);
-   port = pf_snmp_get_first_port (&port_list);
+   pf_snmp_init_port_iterator (pnal_snmp.net, &port_iterator);
+   port = pf_snmp_get_next_port (&port_iterator);
    while (port != 0)
    {
       int error;
@@ -336,7 +336,7 @@ int rowindex_update_with_next_remote_interface (struct snmp_obj_id * row_oid)
          snmp_next_oid_check (&state, port_oid.id, port_oid.len, (void *)port);
       }
 
-      port = pf_snmp_get_next_port (&port_list, port);
+      port = pf_snmp_get_next_port (&port_iterator);
    }
 
    if (state.status == SNMP_NEXT_OID_STATUS_SUCCESS)
