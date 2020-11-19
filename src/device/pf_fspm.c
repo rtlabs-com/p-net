@@ -168,7 +168,7 @@ void pf_fspm_option_show (const pnet_t * net)
    printf (
       "PNET_OPTION_SRL                                : %d\n",
       PNET_OPTION_SRL);
-   printf ("LOG_LEVEL (DEBUG=0, ERROR=3)                   : %d\n", LOG_LEVEL);
+   printf ("LOG_LEVEL (DEBUG=0, FATAL=4)                   : %d\n", LOG_LEVEL);
    printf (
       "sizeof(pnet_t) : %" PRIu32 " bytes (for currently selected option "
       "values)\n",

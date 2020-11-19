@@ -96,9 +96,9 @@ set(PNET_MAX_FILENAME_LENGTH 30
   CACHE STRING "Max length of filenames, including termination. Should be larger than the PNET_FILENAME_ constants.")
 
 set(LOG_STATE_VALUES "ON;OFF")
-set(LOG_LEVEL_VALUES "DEBUG;INFO;WARNING;ERROR")
+set(LOG_LEVEL_VALUES "DEBUG;INFO;WARNING;ERROR;FATAL")
 
-set(LOG_LEVEL ERROR CACHE STRING "default log level")
+set(LOG_LEVEL FATAL CACHE STRING "default log level")
 set_property(CACHE LOG_LEVEL PROPERTY STRINGS ${LOG_LEVEL_VALUES})
 
 set(PF_ETH_LOG ON CACHE STRING "pf_eth log")
