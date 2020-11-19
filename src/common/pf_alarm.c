@@ -2454,7 +2454,8 @@ static int pf_alarm_send_alarm (
    pf_apmx_t * p_apmx = &p_ar->apmx[high_prio ? 1 : 0];
    pf_alpmx_t * p_alpmx = &p_ar->alpmx[high_prio ? 1 : 0];
 
-   if (net->global_alarm_enable == true)
+   if ((net->global_alarm_enable == true) &&
+       (p_ar->alarm_enable == true))
    {
       if (p_alpmx->alpmi_state == PF_ALPMI_STATE_W_ALARM)
       {
