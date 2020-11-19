@@ -211,40 +211,6 @@ int pf_lldp_get_peer_management_address (
    pf_lldp_management_address_t * p_man_address);
 
 /**
- * Get ManAddrIfId for local interface.
- *
- * See IEEE 802.1AB-2005 (LLDPv1) ch. 9.5.9 "Management Address TLV".
- *
- * @param net              In:    The p-net stack instance.
- * @param p_man_port_index Out:   Index in IfTable for Management port.
- */
-void pf_lldp_get_management_port_index (
-   pnet_t * net,
-   pf_lldp_management_port_index_t * p_man_port_index);
-
-/**
- * Get ManAddrIfId for remote interface connected to local port.
- *
- * Note that the remote device may have multiple interfaces. Only the remote
- * interface connected to the local port is relevant here.
- *
- * See IEEE 802.1AB-2005 (LLDPv1) ch. 9.5.9 "Management Address TLV".
- *
- * @param net              In:    The p-net stack instance.
- * @param loc_port_num     In:    Local port number for port directly
- *                                connected to the remote device.
- *                                Valid range: 1 .. PNET_MAX_PORT
- *                                See pf_port_get_list_of_ports().
- * @param p_man_port_index Out:   Index in remote IfTable for Management port.
- * @return  0 if the operation succeeded.
- *         -1 if an error occurred (no info from remote device received).
- */
-int pf_lldp_get_peer_management_port_index (
-   pnet_t * net,
-   int loc_port_num,
-   pf_lldp_management_port_index_t * p_man_port_index);
-
-/**
  * Get remote station name for remote interface connected to local port.
  *
  * The station name is usually a string, but may also be the MAC address of
@@ -384,13 +350,13 @@ void pf_lldp_send_enable (pnet_t * net, int loc_port_num);
 void pf_lldp_send_disable (pnet_t * net, int loc_port_num);
 
 /**
- * Receive an LLDP message.
+ * Process received LLDP message.
  *
  * Parse LLDP tlv format and store selected information.
  * Trigger alarms if needed.
- * @param net              InOut: The p-net stack instance
- * @param p_frame_buf      In:    The Ethernet frame
- * @param offset           In:    The offset to start of LLDP data
+ * @param net              InOut: The p-net stack instance.
+ * @param p_frame_buf      InOut: The Ethernet frame.
+ * @param offset           In:    The offset to start of LLDP data.
  * @return  0     If the frame was NOT handled by this function.
  *          1     If the frame was handled and the buffer freed.
  */
@@ -403,6 +369,16 @@ int pf_lldp_generate_alias_name (
    const char * chassis_id,
    char * alias,
    uint16_t len);
+
+int pf_lldp_parse_packet (
+   const uint8_t buf[],
+   uint16_t len,
+   pf_lldp_peer_info_t * peer_info);
+
+void pf_lldp_store_peer_info (
+   pnet_t * net,
+   int loc_port_num,
+   const pf_lldp_peer_info_t * new_info);
 
 #ifdef __cplusplus
 }

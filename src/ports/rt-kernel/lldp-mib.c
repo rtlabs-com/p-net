@@ -647,7 +647,7 @@ static s16_t lldplocmanaddrtable_get_value (
    {
       /* lldpLocManAddrIfSubtype */
       s32_t * v = (s32_t *)value;
-      pf_lldp_management_port_index_t port_index;
+      pf_lldp_interface_number_t port_index;
 
       pf_snmp_get_management_port_index (pnal_snmp.net, &port_index);
       value_len = sizeof (s32_t);
@@ -658,12 +658,12 @@ static s16_t lldplocmanaddrtable_get_value (
    {
       /* lldpLocManAddrIfId */
       s32_t * v = (s32_t *)value;
-      pf_lldp_management_port_index_t port_index;
+      pf_lldp_interface_number_t port_index;
 
       pf_snmp_get_management_port_index (pnal_snmp.net, &port_index);
 
       value_len = sizeof (s32_t);
-      *v = port_index.index;
+      *v = port_index.value;
    }
    break;
    default:
@@ -1066,7 +1066,7 @@ static s16_t lldpremmanaddrtable_get_value (
    {
       /* lldpRemManAddrIfSubtype */
       s32_t * v = (s32_t *)value;
-      pf_lldp_management_port_index_t port_index;
+      pf_lldp_interface_number_t port_index;
       int error;
 
       error = pf_snmp_get_peer_management_port_index (
@@ -1088,7 +1088,7 @@ static s16_t lldpremmanaddrtable_get_value (
    {
       /* lldpRemManAddrIfId */
       s32_t * v = (s32_t *)value;
-      pf_lldp_management_port_index_t port_index;
+      pf_lldp_interface_number_t port_index;
       int error;
 
       error = pf_snmp_get_peer_management_port_index (
@@ -1102,7 +1102,7 @@ static s16_t lldpremmanaddrtable_get_value (
       else
       {
          value_len = sizeof (s32_t);
-         *v = port_index.index;
+         *v = port_index.value;
       }
    }
    break;

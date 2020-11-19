@@ -2408,13 +2408,6 @@ typedef struct pf_interface_stats
    uint32_t if_out_errors;
 } pf_interface_stats_t;
 
-typedef struct pf_ieee_macphy_config
-{
-   uint8_t aneg_support_status; /**< Autonegotiation status */
-   uint16_t aneg_cap;           /**< Autonegotiation capabilites */
-   uint16_t operational_mau_type;
-} pf_ieee_macphy_t;
-
 /**
  * Link status
  *
@@ -2422,10 +2415,11 @@ typedef struct pf_ieee_macphy_config
  */
 typedef struct pf_lldp_link_status
 {
-   bool auto_neg_supported;
-   bool auto_neg_enabled;
-   uint16_t auto_neg_advertised_cap;
-   int32_t oper_mau_type;
+   bool is_autonegotiation_supported;
+   bool is_autonegotiation_enabled;
+   uint16_t autonegotiation_advertised_capabilities;
+   uint16_t operational_mau_type;
+   bool is_valid;
 } pf_lldp_link_status_t;
 
 /**
@@ -2444,6 +2438,7 @@ typedef struct pf_lldp_link_status
 typedef struct pf_lldp_port_description
 {
    char string[PNET_MAX_INTERFACE_NAME_LENGTH + 1]; /* Terminated */
+   bool is_valid;
    size_t len;
 } pf_lldp_port_description_t;
 
@@ -2488,6 +2483,7 @@ typedef struct pf_lldp_chassis_id
 {
    char string[PNET_LLDP_CHASSIS_ID_MAX_LEN + 1]; /**< Terminated string */
    uint8_t subtype;                               /* PF_LLDP_SUBTYPE_xxx */
+   bool is_valid;
    size_t len;
 } pf_lldp_chassis_id_t;
 
@@ -2500,8 +2496,27 @@ typedef struct pf_lldp_port_id
 {
    char string[PNET_LLDP_PORT_ID_MAX_LEN + 1]; /**< Terminated string */
    uint8_t subtype;
+   bool is_valid;
    size_t len;
 } pf_lldp_port_id_t;
+
+/**
+ * Interface number
+ *
+ * "The interface number field shall contain the assigned number within
+ * the system that identifies the specific interface associated with this
+ * management address. If the value of the interface subtype is unknown,
+ * this field shall be set to zero."
+ * - IEEE 802.1AB-2005 (LLDPv1) ch. 9.5.9 "Management Address TLV".
+ *
+ * Also see PN-Topology ch. 6.5.1 "Mapping of Ports and PROFINET Interfaces
+ * in LLDP MIB and MIB-II".
+ */
+typedef struct pf_lldp_interface_number
+{
+   int32_t value;
+   uint8_t subtype; /* 1 = unknown, 2 = ifIndex, 3 = systemPortNumber */
+} pf_lldp_interface_number_t;
 
 /**
  * Management address
@@ -2516,23 +2531,9 @@ typedef struct pf_lldp_management_address
    uint8_t value[31];
    uint8_t subtype;
    size_t len;
+   pf_lldp_interface_number_t interface_number;
+   bool is_valid;
 } pf_lldp_management_address_t;
-
-/**
- * Management port index
- *
- * The index in IfTable for the management port.
- *
- * See IEEE 802.1AB-2005 (LLDPv1) ch. 9.5.9 "Management Address TLV".
- *
- * Also see PN-Topology ch. 6.5.1 "Mapping of Ports and PROFINET Interfaces
- * in LLDP MIB and MIB-II".
- */
-typedef struct pf_lldp_management_port_index
-{
-   int32_t index;
-   uint8_t subtype; /* 1 = unknown, 2 = ifIndex, 3 = systemPortNumber */
-} pf_lldp_management_port_index_t;
 
 /**
  * Station name
@@ -2550,34 +2551,24 @@ typedef struct pf_lldp_station_name
 } pf_lldp_station_name_t;
 
 /**
- * All delays in nano seconds
+ * Measured signal delays in nanoseconds
+ *
+ * Valid range is 0x1 - 0xFFF.
+ * If a signal delay was not measured, its value is zero.
+ *
+ * See IEC CDV 61158-6-10 (PN-AL-Protocol) ch. 4.11.2.2: "LLDP APDU
+ * abstract syntax", element "LLDP_PNIO_DELAY".
+ *
+ * See also pf_snmp_signal_delay_t.
  */
-typedef struct pf_profibus_delay_valus
+typedef struct pf_lldp_signal_delay
 {
    uint32_t rx_delay_local;
    uint32_t rx_delay_remote;
    uint32_t tx_delay_local;
    uint32_t tx_delay_remote;
    uint32_t cable_delay_local;
-} pf_profibus_delay_t;
-
-/**
- * Measured signal delays in nanoseconds
- *
- * If a signal delay was not measured, its value is zero.
- *
- * See IEC CDV 61158-6-10 (PN-AL-Protocol) Annex U: "LLDP EXT MIB", fields
- * lldpXPnoLocLPDValue / lldpXPnoRemLPDValue,
- * lldpXPnoLocPortTxDValue / lldpXPnoRemPortTxDValue,
- * lldpXPnoLocPortRxDValue / lldpXPnoRemPortRxDValue.
- *
- * See also pf_profibus_delay_t
- */
-typedef struct pf_lldp_signal_delay
-{
-   uint32_t port_tx_delay_ns;
-   uint32_t port_rx_delay_ns;
-   uint32_t line_propagation_delay_ns;
+   bool is_valid;
 } pf_lldp_signal_delay_t;
 
 typedef struct pf_lldp_boundary
@@ -2603,12 +2594,12 @@ typedef struct pf_lldp_peer_info
 {
    /* LLDP TLVs */
    pf_lldp_chassis_id_t chassis_id;
-   uint8_t port_id_subtype;
-   char port_id[PNET_LLDP_PORT_ID_MAX_LEN + 1];
-   size_t port_id_len;
+   pf_lldp_port_id_t port_id;
    uint16_t ttl;
+   pf_lldp_port_description_t port_description;
+   pf_lldp_management_address_t management_address;
    /* PROFIBUS TLVs */
-   pf_profibus_delay_t port_delay;
+   pf_lldp_signal_delay_t port_delay;
    uint8_t port_status[4];
    pnet_ethaddr_t mac_address;
    uint16_t media_type;
@@ -2616,7 +2607,7 @@ typedef struct pf_lldp_peer_info
    uint32_t domain_boundary;
    uint32_t multicast_boundary;
    uint8_t link_state_port;
-   pf_ieee_macphy_t phy_config;
+   pf_lldp_link_status_t phy_config;
    pf_lldp_peer_to_peer_boundary_t peer_boundary;
 } pf_lldp_peer_info_t;
 
