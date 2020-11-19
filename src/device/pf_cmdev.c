@@ -4243,19 +4243,8 @@ static int pf_cmdev_check_apdu (
    return ret;
 }
 
-/**
- * @internal
- * Generate module diffs, when needed, for the specified AR.
- * @param net              InOut: The p-net stack instance
- * @param p_ar             InOut: The AR instance.
- * @param p_stat           Out:   Detailed result of the operation.
- * @return  0  if no diff was detected.
- *          -1 if a diff was detected.
- */
-static int pf_cmdev_generate_submodule_diff (
-   pnet_t * net,
-   pf_ar_t * p_ar,
-   pnet_result_t * p_stat)
+
+int pf_cmdev_generate_submodule_diff (pnet_t * net, pf_ar_t * p_ar)
 {
    int ret = 0;
    uint16_t exp_api_ix;
@@ -4272,8 +4261,13 @@ static int pf_cmdev_generate_submodule_diff (
    bool has_api_diff = false;
    bool has_mod_diff = false;
    bool has_sub_diff = false;
+   pf_submodule_state_t * p_submodule_state;
 
-   /* Generate a diff if needed */
+   if (p_ar == NULL)
+   {
+      return -1;
+   }
+   /* Generate a diff including all expected (sub)modules */
    for (exp_api_ix = 0; exp_api_ix < p_ar->nbr_exp_apis; exp_api_ix++)
    {
       p_ar->api_diffs[nbr_api_diffs].api = p_ar->exp_apis[exp_api_ix].api;
@@ -4386,6 +4380,34 @@ static int pf_cmdev_generate_submodule_diff (
                            .module_diffs[nbr_mod_diffs]
                            .submodule_diffs[nbr_sub_diffs]
                            .submodule_state.ident_info = PF_SUBMOD_PLUG_WRONG;
+                        has_sub_diff = true;
+                     }
+
+                     /* Check submodule diagnosis state and update diff. */
+                     p_submodule_state = &p_ar->api_diffs[nbr_api_diffs]
+                                             .module_diffs[nbr_mod_diffs]
+                                             .submodule_diffs[nbr_sub_diffs]
+                                             .submodule_state;
+
+                     if (
+                        (p_cfg_subslot->submodule_state.fault == true) ||
+                        (p_cfg_subslot->submodule_state.maintenance_demanded ==
+                         true) ||
+                        (p_cfg_subslot->submodule_state.maintenance_required ==
+                         true))
+                     {
+                        p_ar->api_diffs[nbr_api_diffs]
+                           .module_diffs[nbr_mod_diffs]
+                           .submodule_diffs[nbr_sub_diffs]
+                           .submodule_ident_number =
+                           p_cfg_subslot->submodule_ident_number;
+
+                        p_submodule_state->fault =
+                           p_cfg_subslot->submodule_state.fault;
+                        p_submodule_state->maintenance_demanded =
+                           p_cfg_subslot->submodule_state.maintenance_demanded;
+                        p_submodule_state->maintenance_required =
+                           p_cfg_subslot->submodule_state.maintenance_required;
                         has_sub_diff = true;
                      }
                   }
@@ -4639,7 +4661,7 @@ int pf_cmdev_rm_connect_ind (
    /* RM_Connect.ind */
    if (
       (pf_cmdev_check_apdu (net, p_ar, p_connect_result) == 0) &&
-      (pf_cmdev_generate_submodule_diff (net, p_ar, p_connect_result) == 0))
+      (pf_cmdev_generate_submodule_diff (net, p_ar) == 0))
    {
       /* Start building the response to the connect request. */
       memcpy (
