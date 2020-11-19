@@ -2340,7 +2340,7 @@ typedef struct pf_lldp_link_status
  * Port description
  *
  * "The port description field shall contain an alpha-numeric string
- * that indicates the port’s description. If RFC 2863
+ * that indicates the port's description. If RFC 2863
  * is implemented, the ifDescr object should be used for this field."
  * - IEEE 802.1AB (LLDP) ch. 9.5.5.2 "port description".
  *
@@ -2375,6 +2375,17 @@ typedef struct pf_lldp_port_list_t
 {
    uint8_t ports[2];
 } pf_lldp_port_list_t;
+
+/**
+ * Port iterator
+ *
+ * This iterator may be used for iterating over all physical ports
+ * on the local interface. The management port is not included.
+ */
+typedef struct pf_port_iterator
+{
+   int next_port;
+} pf_port_iterator_t;
 
 /**
  * Port ID

@@ -513,22 +513,26 @@ void pf_lldp_get_port_list (pnet_t * net, pf_lldp_port_list_t * p_list)
    p_list->ports[0] = BIT (8 - 1);
 }
 
-int pf_lldp_get_first_port (const pf_lldp_port_list_t * p_list)
+void pf_lldp_init_port_iterator (pnet_t * net, pf_port_iterator_t * p_iterator)
 {
    /* TODO: Implement support for multiple ports */
-   /* TODO: Move this to some other source file, as the list of local ports is
-    * not part of any LLDP TLV sent in LLDP frames.
-    */
-   return 1;
+   /* TODO: Move this to some other source file */
+   p_iterator->next_port = 1;
 }
 
-int pf_lldp_get_next_port (const pf_lldp_port_list_t * p_list, int loc_port_num)
+int pf_lldp_get_next_port (pf_port_iterator_t * p_iterator)
 {
    /* TODO: Implement support for multiple ports */
-   /* TODO: Move this to some other source file, as the list of local ports is
-    * not part of any LLDP TLV sent in LLDP frames.
-    */
-   return 0;
+   /* TODO: Move this to some other source file */
+   if (p_iterator->next_port == 1)
+   {
+      p_iterator->next_port = 0;
+      return 1;
+   }
+   else
+   {
+      return 0;
+   }
 }
 
 int pf_lldp_get_peer_timestamp (

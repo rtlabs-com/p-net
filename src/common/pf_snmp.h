@@ -327,27 +327,25 @@ int pf_snmp_set_system_location (
  * See IEEE 802.1AB-2005 (LLDPv1) ch. 12.2. Relevant fields:
  * - lldpConfigManAddrPortsTxEnable.
  *
- * See pf_snmp_get_first_port() and pf_snmp_get_next_port().
- *
  * @param net              In:    The p-net stack instance.
  * @param p_list           Out:   List of local ports.
  */
 void pf_snmp_get_port_list (pnet_t * net, pf_lldp_port_list_t * p_list);
 
 /**
- * Get first port in list of local ports.
+ * Initialise iterator for iterating over local ports.
  *
- * See IEEE 802.1AB-2005 (LLDPv1) ch. 12.2. Relevant fields:
- * - lldpLocPortNum,
- * - lldpRemLocalPortNum.
+ * This iterator may be used for iterating over all physical ports
+ * on the local interface. The management port is not included.
+ * See pf_snmp_get_next_port().
  *
- * @param p_list           In:    List of local ports.
- * @return Local port index for first port on local interface.
+ * @param net              In:    The p-net stack instance.
+ * @param p_iterator       Out:   Port iterator.
  */
-int pf_snmp_get_first_port (const pf_lldp_port_list_t * p_list);
+void pf_snmp_init_port_iterator (pnet_t * net, pf_port_iterator_t * p_iterator);
 
 /**
- * Get next port in list of local ports.
+ * Get next local port.
  *
  * If no more ports are available, 0 is returned.
  *
@@ -355,14 +353,11 @@ int pf_snmp_get_first_port (const pf_lldp_port_list_t * p_list);
  * - lldpLocPortNum,
  * - lldpRemLocalPortNum.
  *
- * @param p_list           In:    List of local ports.
- * @param loc_port_num     In:    Local port number.
- *                                Valid range: 1 .. N, where N is the total
- *                                number of local ports used by p-net stack.
- * @return Local port index for next port on local interface.
+ * @param p_iterator       InOut: Port iterator.
+ * @return Local port number for next port on local interface.
  *         If no more ports are available, 0 is returned.
  */
-int pf_snmp_get_next_port (const pf_lldp_port_list_t * p_list, int loc_port_num);
+int pf_snmp_get_next_port (pf_port_iterator_t * p_iterator);
 
 /**
  * Get time when new information about remote device was received.
