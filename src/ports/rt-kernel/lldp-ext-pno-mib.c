@@ -253,7 +253,7 @@ static s16_t lldpxpnoloctable_get_value (
    {
       /* lldpXPnoLocLPDValue */
       u32_t * v = (u32_t *)value;
-      pf_lldp_signal_delay_t delays;
+      pf_snmp_signal_delay_t delays;
 
       pf_snmp_get_signal_delays (pnal_snmp.net, port, &delays);
       *v = delays.line_propagation_delay_ns;
@@ -264,7 +264,7 @@ static s16_t lldpxpnoloctable_get_value (
    {
       /* lldpXPnoLocPortTxDValue */
       u32_t * v = (u32_t *)value;
-      pf_lldp_signal_delay_t delays;
+      pf_snmp_signal_delay_t delays;
 
       pf_snmp_get_signal_delays (pnal_snmp.net, port, &delays);
       *v = delays.port_tx_delay_ns;
@@ -275,7 +275,7 @@ static s16_t lldpxpnoloctable_get_value (
    {
       /* lldpXPnoLocPortRxDValue */
       u32_t * v = (u32_t *)value;
-      pf_lldp_signal_delay_t delays;
+      pf_snmp_signal_delay_t delays;
 
       pf_snmp_get_signal_delays (pnal_snmp.net, port, &delays);
       *v = delays.port_rx_delay_ns;
@@ -412,7 +412,7 @@ static s16_t lldpxpnoremtable_get_value (
    {
       /* lldpXPnoRemLPDValue */
       u32_t * v = (u32_t *)value;
-      pf_lldp_signal_delay_t delays;
+      pf_snmp_signal_delay_t delays;
       int error;
 
       error = pf_snmp_get_peer_signal_delays (pnal_snmp.net, port, &delays);
@@ -431,7 +431,7 @@ static s16_t lldpxpnoremtable_get_value (
    {
       /* lldpXPnoRemPortTxDValue */
       u32_t * v = (u32_t *)value;
-      pf_lldp_signal_delay_t delays;
+      pf_snmp_signal_delay_t delays;
       int error;
 
       error = pf_snmp_get_peer_signal_delays (pnal_snmp.net, port, &delays);
@@ -450,7 +450,7 @@ static s16_t lldpxpnoremtable_get_value (
    {
       /* lldpXPnoRemPortRxDValue */
       u32_t * v = (u32_t *)value;
-      pf_lldp_signal_delay_t delays;
+      pf_snmp_signal_delay_t delays;
       int error;
 
       error = pf_snmp_get_peer_signal_delays (pnal_snmp.net, port, &delays);

@@ -3618,12 +3618,12 @@ void pf_put_pdport_data_real (
       pf_put_padding (2, res_len, p_bytes, p_pos);
 
       /* Length peer_id */
-      pf_put_byte (p_peer_info->port_id_len, res_len, p_bytes, p_pos);
+      pf_put_byte (p_peer_info->port_id.len, res_len, p_bytes, p_pos);
 
       /* peer_id */
       pf_put_mem (
-         p_peer_info->port_id,
-         p_peer_info->port_id_len,
+         p_peer_info->port_id.string,
+         p_peer_info->port_id.len,
          res_len,
          p_bytes,
          p_pos);

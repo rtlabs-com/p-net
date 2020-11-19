@@ -14,6 +14,7 @@
  ********************************************************************/
 
 #ifdef UNIT_TEST
+#define pnal_get_system_uptime_10ms mock_pnal_get_system_uptime_10ms
 #endif
 
 /**
@@ -38,12 +39,13 @@
 #include <string.h>
 #include <ctype.h>
 
-#define LLDP_TYPE_END        0
-#define LLDP_TYPE_CHASSIS_ID 1
-#define LLDP_TYPE_PORT_ID    2
-#define LLDP_TYPE_TTL        3
-#define LLDP_TYPE_MANAGEMENT 8
-#define LLDP_TYPE_ORG_SPEC   127
+#define LLDP_TYPE_END              0
+#define LLDP_TYPE_CHASSIS_ID       1
+#define LLDP_TYPE_PORT_ID          2
+#define LLDP_TYPE_TTL              3
+#define LLDP_TYPE_PORT_DESCRIPTION 4
+#define LLDP_TYPE_MANAGEMENT       8
+#define LLDP_TYPE_ORG_SPEC         127
 
 #define LLDP_IEEE_SUBTYPE_MAC_PHY 1
 
@@ -469,7 +471,7 @@ int pf_lldp_get_peer_timestamp (
    uint32_t * timestamp_10ms)
 {
    bool is_received;
-   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
+   const pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
    os_mutex_lock (net->lldp_mutex);
 
@@ -517,6 +519,7 @@ void pf_lldp_get_chassis_id (pnet_t * net, pf_lldp_chassis_id_t * p_chassis_id)
    }
 
    p_chassis_id->string[p_chassis_id->len] = '\0';
+   p_chassis_id->is_valid = true;
 }
 
 int pf_lldp_get_peer_chassis_id (
@@ -524,17 +527,13 @@ int pf_lldp_get_peer_chassis_id (
    int loc_port_num,
    pf_lldp_chassis_id_t * p_chassis_id)
 {
-   bool is_received;
-   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
+   const pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
    os_mutex_lock (net->lldp_mutex);
-
    *p_chassis_id = p_port_data->lldp.peer_info.chassis_id;
-   is_received = p_port_data->lldp.is_peer_info_received;
-
-   /* TODO: Return error if received LLDP frame did not contain this TLV */
    os_mutex_unlock (net->lldp_mutex);
-   return is_received ? 0 : -1;
+
+   return p_chassis_id->is_valid ? 0 : -1;
 }
 
 void pf_lldp_get_port_id (
@@ -552,6 +551,7 @@ void pf_lldp_get_port_id (
       p_port_cfg->port_id);
    p_port_id->subtype = PF_LLDP_SUBTYPE_LOCALLY_ASSIGNED;
    p_port_id->len = strlen (p_port_id->string);
+   p_port_id->is_valid = true;
 }
 
 int pf_lldp_get_peer_port_id (
@@ -559,24 +559,13 @@ int pf_lldp_get_peer_port_id (
    int loc_port_num,
    pf_lldp_port_id_t * p_port_id)
 {
-   bool is_received;
-   size_t len;
-   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
+   const pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
    os_mutex_lock (net->lldp_mutex);
-
-   len = MIN (
-      p_port_data->lldp.peer_info.port_id_len,
-      sizeof (p_port_id->string) - 1);
-   memcpy (p_port_id->string, p_port_data->lldp.peer_info.port_id, len);
-   p_port_id->string[len] = '\0';
-   p_port_id->subtype = p_port_data->lldp.peer_info.port_id_subtype;
-   p_port_id->len = len;
-   is_received = p_port_data->lldp.is_peer_info_received;
-
-   /* TODO: Return error if received LLDP frame did not contain this TLV */
+   *p_port_id = p_port_data->lldp.peer_info.port_id;
    os_mutex_unlock (net->lldp_mutex);
-   return is_received ? 0 : -1;
+
+   return p_port_id->is_valid ? 0 : -1;
 }
 
 void pf_lldp_get_port_description (
@@ -591,6 +580,7 @@ void pf_lldp_get_port_description (
       "%s",
       net->interface_name);
    p_port_descr->len = strlen (p_port_descr->string);
+   p_port_descr->is_valid = true;
 }
 
 int pf_lldp_get_peer_port_description (
@@ -598,24 +588,13 @@ int pf_lldp_get_peer_port_description (
    int loc_port_num,
    pf_lldp_port_description_t * p_port_desc)
 {
-   bool is_received;
-   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
+   const pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
    os_mutex_lock (net->lldp_mutex);
-
-   /* TODO: Copy data previously received in LLDP frame on this port */
-   memset (p_port_desc, 0, sizeof (*p_port_desc));
-   snprintf (
-      p_port_desc->string,
-      sizeof (p_port_desc->string),
-      "%s",
-      "peer port descr");
-   p_port_desc->len = strlen (p_port_desc->string);
-   is_received = p_port_data->lldp.is_peer_info_received;
-
-   /* TODO: Return error if received LLDP frame did not contain this TLV */
+   *p_port_desc = p_port_data->lldp.peer_info.port_description;
    os_mutex_unlock (net->lldp_mutex);
-   return is_received ? 0 : -1;
+
+   return p_port_desc->is_valid ? 0 : -1;
 }
 
 void pf_lldp_get_management_address (
@@ -629,6 +608,12 @@ void pf_lldp_get_management_address (
    ipaddr = CC_TO_BE32 (ipaddr);
    memcpy (p_man_address->value, &ipaddr, sizeof (ipaddr));
    p_man_address->len = sizeof (ipaddr);
+
+   /* TODO: Get actual ifIndex value */
+   p_man_address->interface_number.subtype = 2; /* ifIndex */
+   p_man_address->interface_number.value = 1;
+
+   p_man_address->is_valid = true;
 }
 
 int pf_lldp_get_peer_management_address (
@@ -636,55 +621,13 @@ int pf_lldp_get_peer_management_address (
    int loc_port_num,
    pf_lldp_management_address_t * p_man_address)
 {
-   bool is_received;
-   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
+   const pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
    os_mutex_lock (net->lldp_mutex);
-
-   /* TODO: Copy data previously received in LLDP frame on this port */
-   memset (p_man_address, 0, sizeof (*p_man_address));
-   p_man_address->subtype = 1;
-   p_man_address->value[0] = 10;
-   p_man_address->value[1] = 11;
-   p_man_address->value[2] = 12;
-   p_man_address->value[3] = 13;
-   p_man_address->len = 4;
-   is_received = p_port_data->lldp.is_peer_info_received;
-
-   /* TODO: Return error if received LLDP frame did not contain this TLV */
+   *p_man_address = p_port_data->lldp.peer_info.management_address;
    os_mutex_unlock (net->lldp_mutex);
-   return is_received ? 0 : -1;
-}
 
-void pf_lldp_get_management_port_index (
-   pnet_t * net,
-   pf_lldp_management_port_index_t * p_man_port_index)
-{
-   /* TODO: Get actual ifIndex value */
-   memset (p_man_port_index, 0, sizeof (*p_man_port_index));
-   p_man_port_index->subtype = 2; /* ifIndex */
-   p_man_port_index->index = 1;
-}
-
-int pf_lldp_get_peer_management_port_index (
-   pnet_t * net,
-   int loc_port_num,
-   pf_lldp_management_port_index_t * p_man_port_index)
-{
-   bool is_received;
-   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
-
-   os_mutex_lock (net->lldp_mutex);
-
-   /* TODO: Copy data previously received in LLDP frame on this port */
-   memset (p_man_port_index, 0, sizeof (*p_man_port_index));
-   p_man_port_index->subtype = 2; /* ifIndex */
-   p_man_port_index->index = 1;
-   is_received = p_port_data->lldp.is_peer_info_received;
-
-   /* TODO: Return error if received LLDP frame did not contain this TLV */
-   os_mutex_unlock (net->lldp_mutex);
-   return is_received ? 0 : -1;
+   return p_man_address->is_valid ? 0 : -1;
 }
 
 int pf_lldp_get_peer_station_name (
@@ -693,11 +636,12 @@ int pf_lldp_get_peer_station_name (
    pf_lldp_station_name_t * p_station_name)
 {
    bool is_received;
-   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
+   const pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
    os_mutex_lock (net->lldp_mutex);
 
-   /* TODO: Copy data previously received in LLDP frame on this port.
+   /* Assume that peer's NameOfStation is the same as its ChassisId.
+    * TODO: Find out the correct way to choose what value to return.
     * Value should be part of either received Chassis ID or Port ID.
     */
    memset (p_station_name, 0, sizeof (*p_station_name));
@@ -707,9 +651,8 @@ int pf_lldp_get_peer_station_name (
       "%s",
       p_port_data->lldp.peer_info.chassis_id.string);
    p_station_name->len = strlen (p_station_name->string);
-   is_received = p_port_data->lldp.is_peer_info_received;
+   is_received = p_port_data->lldp.peer_info.chassis_id.is_valid;
 
-   /* TODO: Return error if received LLDP frame did not contain this TLV */
    os_mutex_unlock (net->lldp_mutex);
    return is_received ? 0 : -1;
 }
@@ -720,9 +663,12 @@ void pf_lldp_get_signal_delays (
    pf_lldp_signal_delay_t * p_delays)
 {
    /* Line delay measurement is not supported */
-   p_delays->line_propagation_delay_ns = 0; /* Not measured */
-   p_delays->port_rx_delay_ns = 0;          /* Not measured */
-   p_delays->port_tx_delay_ns = 0;          /* Not measured */
+   p_delays->cable_delay_local = 0; /* Not measured */
+   p_delays->rx_delay_local = 0;    /* Not measured */
+   p_delays->tx_delay_local = 0;    /* Not measured */
+   p_delays->rx_delay_remote = 0;   /* Not measured */
+   p_delays->tx_delay_remote = 0;   /* Not measured */
+   p_delays->is_valid = true;
 }
 
 int pf_lldp_get_peer_signal_delays (
@@ -730,22 +676,13 @@ int pf_lldp_get_peer_signal_delays (
    int loc_port_num,
    pf_lldp_signal_delay_t * p_delays)
 {
-   bool is_received;
-   const pf_lldp_peer_info_t * peer_info;
-   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
+   const pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
    os_mutex_lock (net->lldp_mutex);
-
-   peer_info = &p_port_data->lldp.peer_info;
-   p_delays->line_propagation_delay_ns =
-      peer_info->port_delay.cable_delay_local;
-   p_delays->port_rx_delay_ns = peer_info->port_delay.rx_delay_local;
-   p_delays->port_tx_delay_ns = peer_info->port_delay.tx_delay_local;
-   is_received = p_port_data->lldp.is_peer_info_received;
-
-   /* TODO: Return error if received LLDP frame did not contain this TLV */
+   *p_delays = p_port_data->lldp.peer_info.port_delay;
    os_mutex_unlock (net->lldp_mutex);
-   return is_received ? 0 : -1;
+
+   return p_delays->is_valid ? 0 : -1;
 }
 
 void pf_lldp_get_link_status (
@@ -757,13 +694,13 @@ void pf_lldp_get_link_status (
       pf_lldp_get_port_config (net, loc_port_num);
 
    /* TODO: Get current link status from Ethernet driver */
-   /* TODO: Implement support for multiple ports */
-   p_link_status->auto_neg_supported = p_port_cfg->cap_aneg &
-                                       PNET_LLDP_AUTONEG_SUPPORTED;
-   p_link_status->auto_neg_enabled = p_port_cfg->cap_aneg &
-                                     PNET_LLDP_AUTONEG_ENABLED;
-   p_link_status->auto_neg_advertised_cap = p_port_cfg->cap_phy;
-   p_link_status->oper_mau_type = p_port_cfg->mau_type;
+   p_link_status->is_autonegotiation_supported = p_port_cfg->cap_aneg &
+                                                 PNET_LLDP_AUTONEG_SUPPORTED;
+   p_link_status->is_autonegotiation_enabled = p_port_cfg->cap_aneg &
+                                               PNET_LLDP_AUTONEG_ENABLED;
+   p_link_status->autonegotiation_advertised_capabilities = p_port_cfg->cap_phy;
+   p_link_status->operational_mau_type = p_port_cfg->mau_type;
+   p_link_status->is_valid = true;
 }
 
 int pf_lldp_get_peer_link_status (
@@ -771,24 +708,13 @@ int pf_lldp_get_peer_link_status (
    int loc_port_num,
    pf_lldp_link_status_t * p_link_status)
 {
-   bool is_received;
-   const pf_lldp_peer_info_t * peer_info;
-   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
+   const pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
    os_mutex_lock (net->lldp_mutex);
-
-   peer_info = &p_port_data->lldp.peer_info;
-   p_link_status->auto_neg_supported =
-      peer_info->phy_config.aneg_support_status & PNET_LLDP_AUTONEG_SUPPORTED;
-   p_link_status->auto_neg_enabled = peer_info->phy_config.aneg_support_status &
-                                     PNET_LLDP_AUTONEG_ENABLED;
-   p_link_status->auto_neg_advertised_cap = peer_info->phy_config.aneg_cap;
-   p_link_status->oper_mau_type = peer_info->phy_config.operational_mau_type;
-   is_received = p_port_data->lldp.is_peer_info_received;
-
-   /* TODO: Return error if received LLDP frame did not contain this TLV */
+   *p_link_status = p_port_data->lldp.peer_info.phy_config;
    os_mutex_unlock (net->lldp_mutex);
-   return is_received ? 0 : -1;
+
+   return p_link_status->is_valid ? 0 : -1;
 }
 
 /**
@@ -1070,6 +996,149 @@ void pf_lldp_send_disable (pnet_t * net, int loc_port_num)
 }
 
 /**
+ * Get port description from received packet
+ *
+ * Layout of Port description TLV:
+ * 2     TLV header (already processed)
+ * 0-255 Port description
+ *
+ * @param parse_info       InOut: Parsing information.
+ * @param offet            InOut: Byte offset in buffer.
+ * @param tlv_len          In:    Length of TLV in bytes.
+ * @param port_description Out:   Parsed port description.
+ */
+static void pf_lldp_get_port_description_from_packet (
+   pf_get_info_t * parse_info,
+   uint16_t * offset,
+   size_t tlv_len,
+   pf_lldp_port_description_t * port_description)
+{
+   size_t max_len = sizeof (port_description->string) - 1;
+
+   if (tlv_len > max_len)
+   {
+      *offset += tlv_len;
+      LOG_ERROR (
+         PF_LLDP_LOG,
+         "LLDP(%d): Port Description too long (%zu)\n",
+         __LINE__,
+         tlv_len);
+      return;
+   }
+
+   port_description->len = tlv_len;
+   pf_get_mem (parse_info, offset, tlv_len, port_description->string);
+   port_description->string[tlv_len] = '\0';
+
+   port_description->is_valid = true;
+}
+
+/**
+ * Get management address from received packet
+ *
+ * Layout of Management address TLV:
+ * 2     TLV header (already processed)
+ * 1     Management address string length
+ * 1     Management address subtype
+ * 1-31  Management address
+ * 1     Interface numbering subtype
+ * 4     Interface number
+ * 1     OID string length
+ * 0-128 Object identifier
+ *
+ * @param parse_info       InOut: Parsing information.
+ * @param offet            InOut: Byte offset in buffer.
+ * @param tlv_len          In:    Length of TLV in bytes.
+ * @param management_address Out: Parsed management address.
+ */
+static void pf_lldp_get_management_address_from_packet (
+   pf_get_info_t * parse_info,
+   uint16_t * offset,
+   size_t tlv_len,
+   pf_lldp_management_address_t * management_address)
+{
+   size_t oid_len;
+
+   memset (management_address, 0, sizeof (*management_address));
+
+   management_address->len = pf_get_byte (parse_info, offset) - 1;
+   if (management_address->len < 1 || management_address->len > 31)
+   {
+      *offset += tlv_len - 1;
+      LOG_ERROR (
+         PF_LLDP_LOG,
+         "LLDP(%d): Invalid management address length (%d)\n",
+         __LINE__,
+         (int)management_address->len);
+      return;
+   }
+   management_address->subtype = pf_get_byte (parse_info, offset);
+   pf_get_mem (
+      parse_info,
+      offset,
+      management_address->len,
+      management_address->value);
+
+   management_address->interface_number.subtype =
+      pf_get_byte (parse_info, offset);
+   management_address->interface_number.value =
+      pf_get_uint32 (parse_info, offset);
+
+   /* We don't save the Object ID */
+   oid_len = pf_get_byte (parse_info, offset);
+   *offset += oid_len;
+
+   management_address->is_valid = true;
+}
+
+/**
+ * Get link status from received packet
+ *
+ * Layout of MAC/PHY Configuration/Status TLV:
+ * 2     TLV header (already processed)
+ * 4     802.3 header (already processed)
+ * 1     Auto-negotiation support/status:
+ *       Bit 0: Auto-negotiation support
+ *       Bit 1: Auto-negotiation status
+ * 2     PMD auto-negotiation advertised capability
+ * 2     Operational MAU typ
+ *
+ * @param parse_info       InOut: Parsing information.
+ * @param offet            InOut: Byte offset in buffer.
+ * @param tlv_len          In:    Length of TLV in bytes.
+ * @param link_status      Out:   Parsed link status.
+ */
+static void pf_lldp_get_link_status_from_packet (
+   pf_get_info_t * parse_info,
+   uint16_t * offset,
+   size_t tlv_len,
+   pf_lldp_link_status_t * link_status)
+{
+   uint8_t aneg_support_status;
+
+   memset (link_status, 0, sizeof (*link_status));
+
+   if (tlv_len != LLDP_IEEE_SUBTYPE_MAC_PHY_TLV_LEN)
+   {
+      parse_info->result = PF_PARSE_ERROR;
+      return;
+   }
+
+   aneg_support_status = pf_get_byte (parse_info, offset);
+   link_status->is_autonegotiation_supported = aneg_support_status &
+                                               PNET_LLDP_AUTONEG_SUPPORTED;
+   link_status->is_autonegotiation_enabled = aneg_support_status &
+                                             PNET_LLDP_AUTONEG_ENABLED;
+
+   link_status->autonegotiation_advertised_capabilities =
+      pf_get_uint16 (parse_info, offset);
+
+   link_status->operational_mau_type = pf_get_uint16 (parse_info, offset);
+
+   link_status->is_valid = true;
+}
+
+/**
  * @internal
  * Parse LLDP frame buffer
  *
@@ -1087,6 +1156,8 @@ int pf_lldp_parse_packet (
    pf_get_info_t parse_info;
    uint16_t offset = 0;
 
+   memset (lldp_peer_info, 0, sizeof (*lldp_peer_info));
+
    parse_info.result = PF_PARSE_OK;
    parse_info.is_big_endian = true;
    parse_info.len = len;
@@ -1099,6 +1170,7 @@ int pf_lldp_parse_packet (
       switch (tlv.type)
       {
       case LLDP_TYPE_CHASSIS_ID:
+         /* TODO: Move this to its own function */
          if (
             (tlv.len > 0) && ((size_t) (tlv.len - 1) <
                               sizeof (lldp_peer_info->chassis_id.string)))
@@ -1113,6 +1185,7 @@ int pf_lldp_parse_packet (
                &lldp_peer_info->chassis_id.string);
             lldp_peer_info->chassis_id.string[lldp_peer_info->chassis_id.len] =
                '\0';
+            lldp_peer_info->chassis_id.is_valid = true;
          }
          else
          {
@@ -1138,19 +1211,21 @@ int pf_lldp_parse_packet (
          }
          break;
       case LLDP_TYPE_PORT_ID:
+         /* TODO: Move this to its own function */
          if (
             (tlv.len > 0) &&
-            ((size_t) (tlv.len - 1) < sizeof (lldp_peer_info->port_id)))
+            ((size_t) (tlv.len - 1) < sizeof (lldp_peer_info->port_id.string)))
          {
-            lldp_peer_info->port_id_len = tlv.len - 1;
-            lldp_peer_info->port_id_subtype =
+            lldp_peer_info->port_id.len = tlv.len - 1;
+            lldp_peer_info->port_id.subtype =
                pf_get_byte (&parse_info, &offset);
             pf_get_mem (
                &parse_info,
                &offset,
-               lldp_peer_info->port_id_len,
-               &lldp_peer_info->port_id);
-            lldp_peer_info->port_id[lldp_peer_info->port_id_len] = '\0';
+               lldp_peer_info->port_id.len,
+               &lldp_peer_info->port_id.string);
+            lldp_peer_info->port_id.string[lldp_peer_info->port_id.len] = '\0';
+            lldp_peer_info->port_id.is_valid = true;
          }
          else
          {
@@ -1176,6 +1251,7 @@ int pf_lldp_parse_packet (
          }
          break;
       case LLDP_TYPE_TTL:
+         /* TODO: Move this to its own function */
          if (tlv.len == 2)
          {
             lldp_peer_info->ttl = pf_get_uint16 (&parse_info, &offset);
@@ -1190,6 +1266,20 @@ int pf_lldp_parse_packet (
                tlv.len);
          }
          break;
+      case LLDP_TYPE_PORT_DESCRIPTION:
+         pf_lldp_get_port_description_from_packet (
+            &parse_info,
+            &offset,
+            tlv.len,
+            &lldp_peer_info->port_description);
+         break;
+      case LLDP_TYPE_MANAGEMENT:
+         pf_lldp_get_management_address_from_packet (
+            &parse_info,
+            &offset,
+            tlv.len,
+            &lldp_peer_info->management_address);
+         break;
       case LLDP_TYPE_ORG_SPEC:
       {
          uint8_t org_id[3];
@@ -1202,6 +1292,7 @@ int pf_lldp_parse_packet (
             switch (org_subtype)
             {
             case LLDP_PNIO_SUBTYPE_MEAS_DELAY_VALUES:
+               /* TODO: Move this to its own function */
                if (tlv.len == LLDP_PNIO_SUBTYPE_MEAS_DELAY_VALUES_TLV_LEN)
                {
                   lldp_peer_info->port_delay.rx_delay_local =
@@ -1214,6 +1305,7 @@ int pf_lldp_parse_packet (
                      pf_get_uint32 (&parse_info, &offset);
                   lldp_peer_info->port_delay.cable_delay_local =
                      pf_get_uint32 (&parse_info, &offset);
+                  lldp_peer_info->port_delay.is_valid = true;
                }
                else
                {
@@ -1221,6 +1313,7 @@ int pf_lldp_parse_packet (
                }
                break;
             case LLDP_PNIO_SUBTYPE_PORT_STATUS:
+               /* TODO: Move this to its own function */
                if (tlv.len == LLDP_PNIO_SUBTYPE_PORT_STATUS_TLV_LEN)
                {
                   pf_get_mem (
@@ -1235,6 +1328,7 @@ int pf_lldp_parse_packet (
                }
                break;
             case LLDP_PNIO_SUBTYPE_CHASSIS_MAC:
+               /* TODO: Move this to its own function */
                if (tlv.len == LLDP_PNIO_SUBTYPE_CHASSIS_MAC_TLV_LEN)
                {
                   pf_get_mem (
@@ -1258,19 +1352,11 @@ int pf_lldp_parse_packet (
             switch (org_subtype)
             {
             case LLDP_IEEE_SUBTYPE_MAC_PHY:
-               if (tlv.len == LLDP_IEEE_SUBTYPE_MAC_PHY_TLV_LEN)
-               {
-                  lldp_peer_info->phy_config.aneg_support_status =
-                     pf_get_byte (&parse_info, &offset);
-                  lldp_peer_info->phy_config.aneg_cap =
-                     pf_get_uint16 (&parse_info, &offset);
-                  lldp_peer_info->phy_config.operational_mau_type =
-                     pf_get_uint16 (&parse_info, &offset);
-               }
-               else
-               {
-                  parse_info.result = PF_PARSE_ERROR;
-               }
+               pf_lldp_get_link_status_from_packet (
+                  &parse_info,
+                  &offset,
+                  tlv.len,
+                  &lldp_peer_info->phy_config);
                break;
             default:
                offset += (tlv.len - 4);
@@ -1358,6 +1444,37 @@ int pf_lldp_generate_alias_name (
 }
 
 /**
+ * @internal
+ * Store peer information
+ *
+ * Information is stored atomically (by means of the LLDP mutex).
+ * This ensures that other threads (e.g. SNMP) will read consistent data.
+ *
+ * A timestamp is also generated and stored.
+ *
+ * @param net              InOut: p-net stack instance
+ * @param loc_port_num     In:    Local port number.
+ *                                Valid range: 1 .. PNET_MAX_PORT
+ * @param new_info         In:    Peer data to be stored
+ */
+void pf_lldp_store_peer_info (
+   pnet_t * net,
+   int loc_port_num,
+   const pf_lldp_peer_info_t * new_info)
+{
+   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
+   uint32_t timestamp = pnal_get_system_uptime_10ms();
+
+   os_mutex_lock (net->lldp_mutex);
+
+   p_port_data->lldp.is_peer_info_received = true;
+   p_port_data->lldp.timestamp_for_last_peer_change = timestamp;
+   p_port_data->lldp.peer_info = *new_info,
+
+   os_mutex_unlock (net->lldp_mutex);
+}
+
+/**
  * Apply updated peer information
  *
  * Trigger an alarm if the peer information not is as expected.
@@ -1390,7 +1507,7 @@ void pf_lldp_update_peer (
    }
 
    error = pf_lldp_generate_alias_name (
-      lldp_peer_info->port_id,
+      lldp_peer_info->port_id.string,
       lldp_peer_info->chassis_id.string,
       alias,
       sizeof (alias));
@@ -1411,26 +1528,14 @@ void pf_lldp_update_peer (
       pf_pdport_peer_indication (net, loc_port_num, lldp_peer_info);
    }
 
-   /* Update stored peer information
-    *
-    * We lock a mutex as other threads (e.g. an SNMP agent) may read from it.
-    */
-   os_mutex_lock (net->lldp_mutex);
-   p_port_data->lldp.is_peer_info_received = true;
-   p_port_data->lldp.timestamp_for_last_peer_change =
-      pnal_get_system_uptime_10ms();
-   memcpy (
-      &p_port_data->lldp.peer_info,
-      lldp_peer_info,
-      sizeof (pf_lldp_peer_info_t));
-   os_mutex_unlock (net->lldp_mutex);
+   pf_lldp_store_peer_info (net, loc_port_num, lldp_peer_info);
 }
 
 int pf_lldp_recv (pnet_t * net, pnal_buf_t * p_frame_buf, uint16_t offset)
 {
    uint8_t * buf = p_frame_buf->payload + offset;
    uint16_t buf_len = p_frame_buf->len - offset;
-   pf_lldp_peer_info_t peer_data = {0};
+   pf_lldp_peer_info_t peer_data;
    int err = 0;
 
    err = pf_lldp_parse_packet (buf, buf_len, &peer_data);
@@ -1450,7 +1555,7 @@ int pf_lldp_recv (pnet_t * net, pnal_buf_t * p_frame_buf, uint16_t offset)
          peer_data.mac_address.addr[5],
          p_frame_buf->len,
          peer_data.chassis_id.string,
-         peer_data.port_id);
+         peer_data.port_id.string);
 
       pf_lldp_update_peer (net, PNET_PORT_1, &peer_data);
    }

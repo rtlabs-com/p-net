@@ -155,7 +155,7 @@ int lldpXPnoRemTable_handler (
    netsnmp_table_request_info * table_info;
    pnet_t * pnet = reginfo->my_reg_void;
    void * my_data_context;
-   pf_lldp_signal_delay_t delays;
+   pf_snmp_signal_delay_t delays;
    pf_lldp_station_name_t station_name;
    int port;
    int error;

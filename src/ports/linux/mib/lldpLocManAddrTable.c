@@ -122,7 +122,7 @@ int lldpLocManAddrTable_handler (
    pnet_t * pnet = reginfo->my_reg_void;
    void * my_data_context;
    pf_snmp_management_address_t address;
-   pf_lldp_management_port_index_t port_index;
+   pf_lldp_interface_number_t port_index;
 
    LOG_DEBUG (PF_SNMP_LOG, "lldpLocManAddrTable(%d): handler entry\n", __LINE__);
 
@@ -176,7 +176,7 @@ int lldpLocManAddrTable_handler (
             snmp_set_var_typed_integer (
                request->requestvb,
                ASN_INTEGER,
-               port_index.index);
+               port_index.value);
             break;
          default:
             netsnmp_set_request_error (reqinfo, request, SNMP_NOSUCHOBJECT);

@@ -43,6 +43,7 @@ typedef struct mock_os_data_obj
    uint16_t set_ip_suite_count;
 
    uint32_t current_time_us;
+   uint32_t system_uptime_10ms;
 
    char file_fullpath[100]; /* Full file path at latest save operation */
    uint16_t file_size;
@@ -64,6 +65,7 @@ extern mock_os_data_t mock_os_data;
 extern mock_lldp_data_t mock_lldp_data;
 
 uint32_t mock_os_get_current_time_us (void);
+uint32_t mock_pnal_get_system_uptime_10ms (void);
 
 void mock_init (void);
 void mock_clear (void);

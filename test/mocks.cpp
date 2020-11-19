@@ -41,6 +41,11 @@ uint32_t mock_os_get_current_time_us (void)
    return mock_os_data.current_time_us;
 }
 
+uint32_t mock_pnal_get_system_uptime_10ms (void)
+{
+   return mock_os_data.system_uptime_10ms;
+}
+
 pnal_eth_handle_t * mock_pnal_eth_init (
    const char * if_name,
    pnal_eth_callback_t * callback,

@@ -213,14 +213,14 @@ typedef struct pf_snmp_system_description
 /**
  * Encoded management address.
  *
- * Contains the same information as pf_lldp_management_address_t, but the
+ * Contains similar information as pf_lldp_management_address_t, but the
  * fields have been encoded so they may be immediately placed in SNMP response.
  */
 typedef struct pf_snmp_management_address
 {
-   uint8_t value[31]; /**< First byte is size of actual address */
-   uint8_t subtype;   /**< 1 for IPv4 */
-   size_t len;        /**< 5 for IPv4 */
+   uint8_t value[1 + 31]; /**< First byte is size of actual address */
+   uint8_t subtype;       /**< 1 for IPv4 */
+   size_t len;            /**< 5 for IPv4 */
 } pf_snmp_management_address_t;
 
 /**
@@ -236,6 +236,25 @@ typedef struct pf_snmp_link_status
    uint8_t auto_neg_advertised_cap[2]; /**< OCTET STRING encoding of BITS */
    int32_t oper_mau_type;
 } pf_snmp_link_status_t;
+
+/**
+ * Measured signal delays in nanoseconds
+ *
+ * If a signal delay was not measured, its value is zero.
+ *
+ * See IEC CDV 61158-6-10 (PN-AL-Protocol) Annex U: "LLDP EXT MIB", fields
+ * lldpXPnoLocLPDValue / lldpXPnoRemLPDValue,
+ * lldpXPnoLocPortTxDValue / lldpXPnoRemPortTxDValue,
+ * lldpXPnoLocPortRxDValue / lldpXPnoRemPortRxDValue.
+ *
+ * See also pf_lldp_signal_delay_t.
+ */
+typedef struct pf_snmp_signal_delay
+{
+   uint32_t port_tx_delay_ns;
+   uint32_t port_rx_delay_ns;
+   uint32_t line_propagation_delay_ns;
+} pf_snmp_signal_delay_t;
 
 /**
  * Get system description.
@@ -609,7 +628,7 @@ int pf_snmp_get_peer_management_address (
  */
 void pf_snmp_get_management_port_index (
    pnet_t * net,
-   pf_lldp_management_port_index_t * p_man_port_index);
+   pf_lldp_interface_number_t * p_man_port_index);
 
 /**
  * Get ManAddrIfId for remote interface connected to local port.
@@ -637,7 +656,7 @@ void pf_snmp_get_management_port_index (
 int pf_snmp_get_peer_management_port_index (
    pnet_t * net,
    int loc_port_num,
-   pf_lldp_management_port_index_t * p_man_port_index);
+   pf_lldp_interface_number_t * p_man_port_index);
 
 /**
  * Get local station name.
@@ -713,7 +732,7 @@ int pf_snmp_get_peer_station_name (
 void pf_snmp_get_signal_delays (
    pnet_t * net,
    int loc_port_num,
-   pf_lldp_signal_delay_t * p_delays);
+   pf_snmp_signal_delay_t * p_delays);
 
 /**
  * Get measured signal delays on remote port.
@@ -737,7 +756,7 @@ void pf_snmp_get_signal_delays (
 int pf_snmp_get_peer_signal_delays (
    pnet_t * net,
    int loc_port_num,
-   pf_lldp_signal_delay_t * p_delays);
+   pf_snmp_signal_delay_t * p_delays);
 
 /**
  * Get encoded link status of local port.
