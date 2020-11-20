@@ -492,7 +492,19 @@ static s16_t lldplocporttable_get_value (
 
       pf_snmp_get_port_id (pnal_snmp.net, port, &port_id);
       value_len = port_id.len;
-      strncpy (v, port_id.string, SNMP_MAX_VALUE_SIZE);
+      if ((size_t)value_len > SNMP_MAX_VALUE_SIZE)
+      {
+         LWIP_DEBUGF (
+            SNMP_MIB_DEBUG,
+            ("value is to large (%u > %u)\n",
+             (size_t)value_len,
+             SNMP_MAX_VALUE_SIZE));
+         value_len = 0;
+      }
+      else
+      {
+         memcpy (v, port_id.string, value_len);
+      }
    }
    break;
    case 4:
@@ -503,7 +515,19 @@ static s16_t lldplocporttable_get_value (
 
       pf_snmp_get_port_description (pnal_snmp.net, port, &port_desc);
       value_len = port_desc.len;
-      strncpy (v, port_desc.string, SNMP_MAX_VALUE_SIZE);
+      if ((size_t)value_len > SNMP_MAX_VALUE_SIZE)
+      {
+         LWIP_DEBUGF (
+            SNMP_MIB_DEBUG,
+            ("value is to large (%u > %u)\n",
+             (size_t)value_len,
+             SNMP_MAX_VALUE_SIZE));
+         value_len = 0;
+      }
+      else
+      {
+         memcpy (v, port_desc.string, value_len);
+      }
    }
    break;
    default:
