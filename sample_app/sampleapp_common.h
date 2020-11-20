@@ -234,10 +234,10 @@ typedef enum app_demo_state
  *          -1 if an error occurred.
  */
 void app_print_network_details (
-   os_ethaddr_t * p_macbuffer,
-   os_ipaddr_t ip,
-   os_ipaddr_t netmask,
-   os_ipaddr_t gateway);
+   pnal_ethaddr_t * p_macbuffer,
+   pnal_ipaddr_t ip,
+   pnal_ipaddr_t netmask,
+   pnal_ipaddr_t gateway);
 
 /**
  * Adjust some members of the p-net configuration object.
@@ -265,7 +265,7 @@ void app_plug_dap (pnet_t * net, void * arg);
  */
 void app_copy_ip_to_struct (
    pnet_cfg_ip_addr_t * destination_struct,
-   os_ipaddr_t ip);
+   pnal_ipaddr_t ip);
 
 /**
  * Sample app main loop.

@@ -43,13 +43,13 @@ static void print_bytes (const uint8_t * bytes, int32_t len)
  * Convert IPv4 address to string
  * @param ip               In:    IP address
  * @param outputstring     Out:   Resulting string. Should have length
- *                                OS_INET_ADDRSTRLEN.
+ *                                PNAL_INET_ADDRSTRLEN.
  */
-static void ip_to_string (os_ipaddr_t ip, char * outputstring)
+static void ip_to_string (pnal_ipaddr_t ip, char * outputstring)
 {
    snprintf (
       outputstring,
-      OS_INET_ADDRSTRLEN,
+      PNAL_INET_ADDRSTRLEN,
       "%u.%u.%u.%u",
       (uint8_t) ((ip >> 24) & 0xFF),
       (uint8_t) ((ip >> 16) & 0xFF),
@@ -61,13 +61,13 @@ static void ip_to_string (os_ipaddr_t ip, char * outputstring)
  * Convert MAC address to string
  * @param mac              In:    MAC address
  * @param outputstring     Out:   Resulting string. Should have length
- *                                OS_ETH_ADDRSTRLEN.
+ *                                PNAL_ETH_ADDRSTRLEN.
  */
-static void mac_to_string (os_ethaddr_t mac, char * outputstring)
+static void mac_to_string (pnal_ethaddr_t mac, char * outputstring)
 {
    snprintf (
       outputstring,
-      OS_ETH_ADDRSTRLEN,
+      PNAL_ETH_ADDRSTRLEN,
       "%02X:%02X:%02X:%02X:%02X:%02X",
       mac.addr[0],
       mac.addr[1],
@@ -186,22 +186,22 @@ static const char * ioxs_to_string (pnet_ioxs_values_t ioxs)
 }
 
 void app_print_network_details (
-   os_ethaddr_t * p_macbuffer,
-   os_ipaddr_t ip,
-   os_ipaddr_t netmask,
-   os_ipaddr_t gateway)
+   pnal_ethaddr_t * p_macbuffer,
+   pnal_ipaddr_t ip,
+   pnal_ipaddr_t netmask,
+   pnal_ipaddr_t gateway)
 {
-   char ip_string[OS_INET_ADDRSTRLEN];
-   char netmask_string[OS_INET_ADDRSTRLEN];
-   char gateway_string[OS_INET_ADDRSTRLEN];
-   char mac_string[OS_ETH_ADDRSTRLEN];
-   char hostname_string[OS_HOST_NAME_MAX];
+   char ip_string[PNAL_INET_ADDRSTRLEN];
+   char netmask_string[PNAL_INET_ADDRSTRLEN];
+   char gateway_string[PNAL_INET_ADDRSTRLEN];
+   char mac_string[PNAL_ETH_ADDRSTRLEN];
+   char hostname_string[PNAL_HOST_NAME_MAX];
 
    mac_to_string (*p_macbuffer, mac_string);
    ip_to_string (ip, ip_string);
    ip_to_string (netmask, netmask_string);
    ip_to_string (gateway, gateway_string);
-   os_get_hostname (hostname_string);
+   pnal_get_hostname (hostname_string);
 
    printf ("MAC address:          %s\n", mac_string);
    printf ("Current hostname:     %s\n", hostname_string);
@@ -1308,7 +1308,7 @@ int app_adjust_stack_configuration (pnet_cfg_t * stack_config)
 
 void app_copy_ip_to_struct (
    pnet_cfg_ip_addr_t * destination_struct,
-   os_ipaddr_t ip)
+   pnal_ipaddr_t ip)
 {
    destination_struct->a = ((ip >> 24) & 0xFF);
    destination_struct->b = ((ip >> 16) & 0xFF);

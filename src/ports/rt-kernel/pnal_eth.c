@@ -25,17 +25,16 @@
 static struct netif * interface[MAX_NUMBER_OF_IF];
 static int nic_index = 0;
 
-
-os_eth_handle_t * os_eth_init (
+pnal_eth_handle_t * pnal_eth_init (
    const char * if_name,
-   os_eth_callback_t * callback,
+   pnal_eth_callback_t * callback,
    void * arg)
 {
-   os_eth_handle_t * handle;
+   pnal_eth_handle_t * handle;
    struct netif * found_if;
    drv_t * drv;
 
-   handle = malloc (sizeof (os_eth_handle_t));
+   handle = malloc (sizeof (pnal_eth_handle_t));
    UASSERT (handle != NULL, EMEM);
 
    handle->arg = arg;
@@ -77,7 +76,7 @@ os_eth_handle_t * os_eth_init (
    }
 }
 
-int os_eth_send (os_eth_handle_t * handle, os_buf_t * buf)
+int pnal_eth_send (pnal_eth_handle_t * handle, pnal_buf_t * buf)
 {
    int ret = -1;
 

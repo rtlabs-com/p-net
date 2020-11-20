@@ -37,7 +37,7 @@
 #include <time.h>
 #include <unistd.h>
 
-int os_save_file (
+int pnal_save_file (
    const char * fullpath,
    const void * object_1,
    size_t size_1,
@@ -83,13 +83,13 @@ int os_save_file (
    return ret;
 }
 
-void os_clear_file (const char * fullpath)
+void pnal_clear_file (const char * fullpath)
 {
    os_log (LOG_LEVEL_DEBUG, "Clearing file %s\n", fullpath);
    (void)remove (fullpath);
 }
 
-int os_load_file (
+int pnal_load_file (
    const char * fullpath,
    void * object_1,
    size_t size_1,
@@ -135,7 +135,7 @@ int os_load_file (
    return ret;
 }
 
-uint32_t os_get_system_uptime_10ms (void)
+uint32_t pnal_get_system_uptime_10ms (void)
 {
    uint32_t uptime;
 
@@ -144,21 +144,21 @@ uint32_t os_get_system_uptime_10ms (void)
    return uptime;
 }
 
-uint32_t os_buf_alloc_cnt = 0; /* Count outstanding buffers */
+uint32_t pnal_buf_alloc_cnt = 0; /* Count outstanding buffers */
 
-os_buf_t * os_buf_alloc (uint16_t length)
+pnal_buf_t * pnal_buf_alloc (uint16_t length)
 {
-   os_buf_t * p = malloc (sizeof (os_buf_t) + length);
+   pnal_buf_t * p = malloc (sizeof (pnal_buf_t) + length);
 
    if (p != NULL)
    {
 #if 1
-      p->payload = (void *)((uint8_t *)p + sizeof (os_buf_t)); /* Payload
+      p->payload = (void *)((uint8_t *)p + sizeof (pnal_buf_t)); /* Payload
                                                                   follows header
                                                                   struct */
       p->len = length;
 #endif
-      os_buf_alloc_cnt++;
+      pnal_buf_alloc_cnt++;
    }
    else
    {
@@ -168,14 +168,14 @@ os_buf_t * os_buf_alloc (uint16_t length)
    return p;
 }
 
-void os_buf_free (os_buf_t * p)
+void pnal_buf_free (pnal_buf_t * p)
 {
    free (p);
-   os_buf_alloc_cnt--;
+   pnal_buf_alloc_cnt--;
    return;
 }
 
-uint8_t os_buf_header (os_buf_t * p, int16_t header_size_increment)
+uint8_t pnal_buf_header (pnal_buf_t * p, int16_t header_size_increment)
 {
    return 255;
 }
@@ -184,13 +184,13 @@ uint8_t os_buf_header (os_buf_t * p, int16_t header_size_increment)
  * Convert IPv4 address to string
  * @param ip               In: IP address
  * @param outputstring     Out: Resulting string. Should have length
- * OS_INET_ADDRSTRLEN.
+ * PNAL_INET_ADDRSTRLEN.
  */
-static void os_ip_to_string (os_ipaddr_t ip, char * outputstring)
+static void os_ip_to_string (pnal_ipaddr_t ip, char * outputstring)
 {
    snprintf (
       outputstring,
-      OS_INET_ADDRSTRLEN,
+      PNAL_INET_ADDRSTRLEN,
       "%u.%u.%u.%u",
       (uint8_t) ((ip >> 24) & 0xFF),
       (uint8_t) ((ip >> 16) & 0xFF),
@@ -198,17 +198,17 @@ static void os_ip_to_string (os_ipaddr_t ip, char * outputstring)
       (uint8_t) (ip & 0xFF));
 }
 
-int os_set_ip_suite (
+int pnal_set_ip_suite (
    const char * interface_name,
-   const os_ipaddr_t * p_ipaddr,
-   const os_ipaddr_t * p_netmask,
-   const os_ipaddr_t * p_gw,
+   const pnal_ipaddr_t * p_ipaddr,
+   const pnal_ipaddr_t * p_netmask,
+   const pnal_ipaddr_t * p_gw,
    const char * hostname,
    bool permanent)
 {
-   char ip_string[OS_INET_ADDRSTRLEN];
-   char netmask_string[OS_INET_ADDRSTRLEN];
-   char gateway_string[OS_INET_ADDRSTRLEN];
+   char ip_string[PNAL_INET_ADDRSTRLEN];
+   char netmask_string[PNAL_INET_ADDRSTRLEN];
+   char gateway_string[PNAL_INET_ADDRSTRLEN];
    char * permanent_string;
    char * outputcommand;
    int textlen = -1;
@@ -247,7 +247,7 @@ int os_set_ip_suite (
    return 0;
 }
 
-int os_get_macaddress (const char * interface_name, os_ethaddr_t * mac_addr)
+int pnal_get_macaddress (const char * interface_name, pnal_ethaddr_t * mac_addr)
 {
    int fd;
    int ret = 0;
@@ -267,11 +267,11 @@ int os_get_macaddress (const char * interface_name, os_ethaddr_t * mac_addr)
    return ret;
 }
 
-os_ipaddr_t os_get_ip_address (const char * interface_name)
+pnal_ipaddr_t pnal_get_ip_address (const char * interface_name)
 {
    int fd;
    struct ifreq ifr;
-   os_ipaddr_t ip;
+   pnal_ipaddr_t ip;
 
    fd = socket (AF_INET, SOCK_DGRAM, 0);
    ifr.ifr_addr.sa_family = AF_INET;
@@ -283,11 +283,11 @@ os_ipaddr_t os_get_ip_address (const char * interface_name)
    return ip;
 }
 
-os_ipaddr_t os_get_netmask (const char * interface_name)
+pnal_ipaddr_t pnal_get_netmask (const char * interface_name)
 {
    int fd;
    struct ifreq ifr;
-   os_ipaddr_t netmask;
+   pnal_ipaddr_t netmask;
 
    fd = socket (AF_INET, SOCK_DGRAM, 0);
 
@@ -300,42 +300,42 @@ os_ipaddr_t os_get_netmask (const char * interface_name)
    return netmask;
 }
 
-os_ipaddr_t os_get_gateway (const char * interface_name)
+pnal_ipaddr_t pnal_get_gateway (const char * interface_name)
 {
    /* TODO Read the actual default gateway (somewhat complicated) */
 
-   os_ipaddr_t ip;
-   os_ipaddr_t gateway;
+   pnal_ipaddr_t ip;
+   pnal_ipaddr_t gateway;
 
-   ip = os_get_ip_address (interface_name);
+   ip = pnal_get_ip_address (interface_name);
    gateway = (ip & 0xFFFFFF00) | 0x00000001;
 
    return gateway;
 }
 
-int os_get_hostname (char * hostname)
+int pnal_get_hostname (char * hostname)
 {
    int ret = -1;
 
-   ret = gethostname (hostname, OS_HOST_NAME_MAX);
-   hostname[OS_HOST_NAME_MAX - 1] = '\0';
+   ret = gethostname (hostname, PNAL_HOST_NAME_MAX);
+   hostname[PNAL_HOST_NAME_MAX - 1] = '\0';
 
    return ret;
 }
 
-int os_get_ip_suite (
+int pnal_get_ip_suite (
    const char * interface_name,
-   os_ipaddr_t * p_ipaddr,
-   os_ipaddr_t * p_netmask,
-   os_ipaddr_t * p_gw,
+   pnal_ipaddr_t * p_ipaddr,
+   pnal_ipaddr_t * p_netmask,
+   pnal_ipaddr_t * p_gw,
    char * hostname)
 {
    int ret = -1;
 
-   *p_ipaddr = os_get_ip_address (interface_name);
-   *p_netmask = os_get_netmask (interface_name);
-   *p_gw = os_get_gateway (interface_name);
-   ret = os_get_hostname (hostname);
+   *p_ipaddr = pnal_get_ip_address (interface_name);
+   *p_netmask = pnal_get_netmask (interface_name);
+   *p_gw = pnal_get_gateway (interface_name);
+   ret = pnal_get_hostname (hostname);
 
    return ret;
 }

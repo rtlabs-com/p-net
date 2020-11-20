@@ -674,7 +674,7 @@ static int pf_alarm_alpmr_apmr_a_data_ind (
 static int pf_alarm_apmr_frame_handler (
    pnet_t * net,
    uint16_t frame_id,
-   os_buf_t * p_buf,
+   pnal_buf_t * p_buf,
    uint16_t frame_id_pos,
    void * p_arg)
 {
@@ -766,7 +766,7 @@ static void pf_alarm_apms_timeout (
    uint32_t current_time)
 {
    pf_apmx_t * p_apmx = (pf_apmx_t *)arg;
-   os_buf_t * p_rta;
+   pnal_buf_t * p_rta;
 
    p_apmx->timeout_id = UINT32_MAX;
    if (p_apmx->apms_state == PF_APMS_STATE_WTACK)
@@ -832,7 +832,7 @@ static void pf_alarm_apms_timeout (
          {
             p_rta = p_apmx->p_rta;
             p_apmx->p_rta = NULL;
-            os_buf_free(p_rta);
+            pnal_buf_free(p_rta);
          }
 
          pf_alarm_alpmi_apms_a_data_cnf(net, p_apmx, -1);
@@ -866,7 +866,7 @@ static void pf_alarm_apms_timeout (
       {
          p_rta = p_apmx->p_rta;
          p_apmx->p_rta = NULL;
-         os_buf_free (p_rta);
+         pnal_buf_free (p_rta);
       }
    }
 }
@@ -1003,7 +1003,7 @@ static int pf_alarm_apms_a_data_ind (
    const pf_alarm_fixed_t * p_fixed)
 {
    int ret = -1;
-   os_buf_t * p_rta;
+   pnal_buf_t * p_rta;
 
    if (
       (p_fixed->pdu_type.type == PF_RTA_PDU_TYPE_ACK) ||
@@ -1025,7 +1025,7 @@ static int pf_alarm_apms_a_data_ind (
             {
                p_rta = p_apmx->p_rta;
                p_apmx->p_rta = NULL;
-               os_buf_free (p_rta);
+               pnal_buf_free (p_rta);
             }
 
             pf_alarm_alpmi_apms_a_data_cnf (
@@ -1121,7 +1121,7 @@ static int pf_alarm_apms_a_data_req (
    int ret = -1;
    uint16_t var_part_len_pos;
    uint16_t var_part_len;
-   os_buf_t * p_rta;
+   pnal_buf_t * p_rta;
    uint8_t * p_buf = NULL;
    uint16_t pos = 0;
    pnet_ethaddr_t mac_address;
@@ -1139,7 +1139,7 @@ static int pf_alarm_apms_a_data_req (
          PF_AL_BUF_LOG,
          "Alarm(%d): Allocate RTA output buffer\n",
          __LINE__);
-      p_rta = os_buf_alloc (PF_FRAME_BUFFER_SIZE);
+      p_rta = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE);
       if (p_rta == NULL)
       {
          LOG_ERROR (
@@ -1174,7 +1174,7 @@ static int pf_alarm_apms_a_data_req (
             /* Insert VLAN Tag protocol identifier (TPID) */
             pf_put_uint16 (
                true,
-               OS_ETHTYPE_VLAN,
+               PNAL_ETHTYPE_VLAN,
                PF_FRAME_BUFFER_SIZE,
                p_buf,
                &pos);
@@ -1186,7 +1186,7 @@ static int pf_alarm_apms_a_data_req (
             /* Insert EtherType */
             pf_put_uint16 (
                true,
-               OS_ETHTYPE_PROFINET,
+               PNAL_ETHTYPE_PROFINET,
                PF_FRAME_BUFFER_SIZE,
                p_buf,
                &pos);
@@ -1290,7 +1290,7 @@ static int pf_alarm_apms_a_data_req (
             {
                LOG_ERROR (
                   PF_ALARM_LOG,
-                  "Alarm(%d): Error from os_eth_send(rta)\n",
+                  "Alarm(%d): Error from pnal_eth_send(rta)\n",
                   __LINE__);
             }
             else
@@ -1315,7 +1315,7 @@ static int pf_alarm_apms_a_data_req (
                   PF_ALARM_LOG,
                   "Alarm(%d): RTA buffer with TACK lost!!\n",
                   __LINE__);
-               os_buf_free (p_rta);
+               pnal_buf_free (p_rta);
             }
          }
          else
@@ -1325,7 +1325,7 @@ static int pf_alarm_apms_a_data_req (
                PF_AL_BUF_LOG,
                "Alarm(%d): Free unsaved RTA buffer\n",
                __LINE__);
-            os_buf_free (p_rta);
+            pnal_buf_free (p_rta);
          }
       }
    }
@@ -1452,7 +1452,7 @@ static int pf_alarm_apmx_close (pnet_t * net, pf_ar_t * p_ar, uint8_t err_code)
 {
    uint16_t ix;
    pnet_pnio_status_t pnio_status;
-   os_buf_t * p_rta;
+   pnal_buf_t * p_rta;
    pf_alarm_fixed_t fixed;
 
    /* Send CLOSE alarm first, with low prio by using p_ar->apmx[0] */
@@ -1521,7 +1521,7 @@ static int pf_alarm_apmx_close (pnet_t * net, pf_ar_t * p_ar, uint8_t err_code)
       {
          p_rta = p_ar->apmx[ix].p_rta;
          p_ar->apmx[ix].p_rta = NULL;
-         os_buf_free (p_rta);
+         pnal_buf_free (p_rta);
       }
 
       /* Close APMR */
@@ -1840,7 +1840,7 @@ static int pf_alarm_apmr_periodic (pnet_t * net, pf_ar_t * p_ar)
    pf_apmx_t * p_apmx;
    uint16_t ix;
    pf_apmr_msg_t * p_alarm_msg;
-   os_buf_t * p_buf;
+   pnal_buf_t * p_buf;
    pf_alarm_fixed_t fixed;
    uint16_t var_part_len;
    pnet_pnio_status_t pnio_status;
@@ -2015,7 +2015,7 @@ static int pf_alarm_apmr_periodic (pnet_t * net, pf_ar_t * p_ar)
                PF_AL_BUF_LOG,
                "Alarm(%d): Free received buffer\n",
                __LINE__);
-            os_buf_free (p_buf);
+            pnal_buf_free (p_buf);
             p_buf = NULL;
          }
          else

@@ -342,7 +342,7 @@ Device details:
 | sysContact                     | String, max 255 char. Writable. Contact info to a person.       |
 +--------------------------------+-----------------------------------------------------------------+
 | sysName                        | String, writable. Fully qualified domain name?                  |
-|                                | Here limited to OS_HOST_NAME_MAX (typically 64 char).           |
+|                                | Here limited to PNAL_HOST_NAME_MAX (typically 64 char).         |
 +--------------------------------+-----------------------------------------------------------------+
 | sysLocation                    | String, writable. Here same as I&M1 location (max 22 char).     |
 +--------------------------------+-----------------------------------------------------------------+

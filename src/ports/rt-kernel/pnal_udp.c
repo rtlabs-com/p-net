@@ -19,7 +19,7 @@
 #include <sys/socket.h>
 #include <string.h>
 
-int os_udp_open (os_ipaddr_t addr, os_ipport_t port)
+int pnal_udp_open (pnal_ipaddr_t addr, pnal_ipport_t port)
 {
    int ret = -1;
    struct sockaddr_in local;
@@ -53,10 +53,10 @@ int os_udp_open (os_ipaddr_t addr, os_ipport_t port)
    return ret;
 }
 
-int os_udp_sendto (
+int pnal_udp_sendto (
    uint32_t id,
-   os_ipaddr_t dst_addr,
-   os_ipport_t dst_port,
+   pnal_ipaddr_t dst_addr,
+   pnal_ipport_t dst_port,
    const uint8_t * data,
    int size)
 {
@@ -74,10 +74,10 @@ int os_udp_sendto (
    return len;
 }
 
-int os_udp_recvfrom (
+int pnal_udp_recvfrom (
    uint32_t id,
-   os_ipaddr_t * src_addr,
-   os_ipport_t * src_port,
+   pnal_ipaddr_t * src_addr,
+   pnal_ipport_t * src_port,
    uint8_t * data,
    int size)
 {
@@ -102,7 +102,7 @@ int os_udp_recvfrom (
    return len;
 }
 
-void os_udp_close (uint32_t id)
+void pnal_udp_close (uint32_t id)
 {
    close (id);
 }

@@ -14,7 +14,7 @@
  ********************************************************************/
 
 #ifdef UNIT_TEST
-#define os_eth_init mock_os_eth_init
+#define pnal_eth_init mock_pnal_eth_init
 #endif
 
 #include <stdlib.h>
@@ -59,7 +59,7 @@ int pnet_init_only (
 
    /* Initialize everything (and the DCP protocol) */
    /* First initialize the network interface */
-   net->eth_handle = os_eth_init (netif, pf_eth_recv, (void *)net);
+   net->eth_handle = pnal_eth_init (netif, pf_eth_recv, (void *)net);
    if (net->eth_handle == NULL)
    {
       return -1;
@@ -75,7 +75,7 @@ int pnet_init_only (
 
    /* Configure SNMP server if enabled */
 #if PNET_OPTION_SNMP == 1
-   if (os_snmp_init (net) != 0)
+   if (pnal_snmp_init (net) != 0)
    {
       LOG_ERROR (PNET_LOG, "Failed to configure SNMP\n");
       return -1;

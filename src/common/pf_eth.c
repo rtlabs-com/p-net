@@ -25,8 +25,8 @@
  */
 
 #ifdef UNIT_TEST
-#define os_eth_init mock_os_eth_init
-#define os_eth_send mock_os_eth_send
+#define pnal_eth_init mock_pnal_eth_init
+#define pnal_eth_send mock_pnal_eth_send
 #endif
 
 #include <string.h>
@@ -41,14 +41,14 @@ int pf_eth_init (pnet_t * net)
    return ret;
 }
 
-int pf_eth_send (pnet_t * net, os_eth_handle_t * handle, os_buf_t * buf)
+int pf_eth_send (pnet_t * net, pnal_eth_handle_t * handle, pnal_buf_t * buf)
 {
    int sent_len = 0;
 
-   sent_len = os_eth_send (handle, buf);
+   sent_len = pnal_eth_send (handle, buf);
    if (sent_len <= 0)
    {
-      LOG_ERROR (PF_ETH_LOG, "ETH(%d): Error from os_eth_send\n", __LINE__);
+      LOG_ERROR (PF_ETH_LOG, "ETH(%d): Error from pnal_eth_send\n", __LINE__);
       net->interface_statistics.if_out_errors++;
    }
    else
@@ -58,7 +58,7 @@ int pf_eth_send (pnet_t * net, os_eth_handle_t * handle, os_buf_t * buf)
    return sent_len;
 }
 
-int pf_eth_recv (void * arg, os_buf_t * p_buf)
+int pf_eth_recv (void * arg, pnal_buf_t * p_buf)
 {
    int ret = 0; /* Means: "Not handled" */
    uint16_t eth_type_pos = 2 * sizeof (pnet_ethaddr_t);
@@ -72,7 +72,7 @@ int pf_eth_recv (void * arg, os_buf_t * p_buf)
    /* Skip ALL VLAN tags */
    p_data = (uint16_t *)(&((uint8_t *)p_buf->payload)[eth_type_pos]);
    eth_type = ntohs (p_data[0]);
-   while (eth_type == OS_ETHTYPE_VLAN)
+   while (eth_type == PNAL_ETHTYPE_VLAN)
    {
       eth_type_pos += 4; /* Sizeof VLAN tag */
 
@@ -84,7 +84,7 @@ int pf_eth_recv (void * arg, os_buf_t * p_buf)
 
    switch (eth_type)
    {
-   case OS_ETHTYPE_PROFINET:
+   case PNAL_ETHTYPE_PROFINET:
       net->interface_statistics.if_in_octets += p_buf->len;
 
       p_data = (uint16_t *)(&((uint8_t *)p_buf->payload)[frame_pos]);
@@ -109,12 +109,12 @@ int pf_eth_recv (void * arg, os_buf_t * p_buf)
             net->eth_id_map[ix].p_arg);
       }
       break;
-   case OS_ETHTYPE_LLDP:
+   case PNAL_ETHTYPE_LLDP:
       net->interface_statistics.if_in_octets += p_buf->len;
 
       ret = pf_lldp_recv (net, p_buf, frame_pos);
       break;
-   case OS_ETHTYPE_IP:
+   case PNAL_ETHTYPE_IP:
       /* IP-packets (UDP) are also received via the UDP sockets. Do not count
        * statistics here. */
       ret = 0;

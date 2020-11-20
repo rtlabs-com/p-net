@@ -361,7 +361,7 @@ static void pf_lldp_add_ieee_mac_phy (
  * @param p_pos            InOut: The position in the buffer.
  */
 static void pf_lldp_add_management (
-   const os_ipaddr_t * p_ipaddr,
+   const pnal_ipaddr_t * p_ipaddr,
    uint8_t * p_buf,
    uint16_t * p_pos)
 {
@@ -698,7 +698,7 @@ void pf_lldp_get_management_address (
    pnet_t * net,
    pf_lldp_management_address_t * p_man_address)
 {
-   os_ipaddr_t ipaddr;
+   pnal_ipaddr_t ipaddr;
 
    pf_cmina_get_ipaddr (net, &ipaddr);
    p_man_address->subtype = 1; /* IPv4 */
@@ -883,13 +883,13 @@ int pf_lldp_get_peer_link_status (
  */
 static void pf_lldp_send_port (pnet_t * net, int loc_port_num)
 {
-   os_buf_t * p_lldp_buffer = os_buf_alloc (PF_FRAME_BUFFER_SIZE);
+   pnal_buf_t * p_lldp_buffer = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE);
    uint8_t * p_buf = NULL;
    uint16_t pos = 0;
    pnet_cfg_t * p_cfg = NULL;
    const pnet_lldp_port_cfg_t * p_port_cfg = NULL;
-   os_ipaddr_t ipaddr = 0;
-   char ip_string[OS_INET_ADDRSTRLEN] = {0};
+   pnal_ipaddr_t ipaddr = 0;
+   char ip_string[PNAL_INET_ADDRSTRLEN] = {0};
    pf_lldp_chassis_id_t chassis_id;
 
    pf_fspm_get_cfg (net, &p_cfg);
@@ -992,7 +992,7 @@ static void pf_lldp_send_port (pnet_t * net, int loc_port_num)
             /* Add Ethertype for LLDP */
             pf_put_uint16 (
                true,
-               OS_ETHTYPE_LLDP,
+               PNAL_ETHTYPE_LLDP,
                PF_FRAME_BUFFER_SIZE,
                p_buf,
                &pos);
@@ -1017,7 +1017,7 @@ static void pf_lldp_send_port (pnet_t * net, int loc_port_num)
          }
       }
 
-      os_buf_free (p_lldp_buffer);
+      pnal_buf_free (p_lldp_buffer);
    }
 }
 
@@ -1408,12 +1408,12 @@ void pf_lldp_update_peer (
     */
    os_mutex_lock (net->lldp_mutex);
    net->lldp_is_peer_info_received = true;
-   net->lldp_timestamp_for_last_peer_change = os_get_system_uptime_10ms();
+   net->lldp_timestamp_for_last_peer_change = pnal_get_system_uptime_10ms();
    memcpy (stored_peer_info, lldp_peer_info, sizeof (pnet_lldp_peer_info_t));
    os_mutex_unlock (net->lldp_mutex);
 }
 
-int pf_lldp_recv (pnet_t * net, os_buf_t * p_frame_buf, uint16_t offset)
+int pf_lldp_recv (pnet_t * net, pnal_buf_t * p_frame_buf, uint16_t offset)
 {
    uint8_t * buf = p_frame_buf->payload + offset;
    uint16_t buf_len = p_frame_buf->len - offset;
@@ -1443,7 +1443,7 @@ int pf_lldp_recv (pnet_t * net, os_buf_t * p_frame_buf, uint16_t offset)
 
    if (p_frame_buf != NULL)
    {
-      os_buf_free (p_frame_buf);
+      pnal_buf_free (p_frame_buf);
    }
 
    return 1; /* Means: handled */

@@ -248,7 +248,7 @@ TEST_F (CmrdrTest, CmrdrRunTest)
       .ch_direction = TEST_CHANNEL_DIRECTION};
 
    TEST_TRACE ("\nGenerating mock connection request\n");
-   mock_set_os_udp_recvfrom_buffer (connect_req, sizeof (connect_req));
+   mock_set_pnal_udp_recvfrom_buffer (connect_req, sizeof (connect_req));
    run_stack (TEST_UDP_DELAY);
    EXPECT_EQ (appdata.call_counters.state_calls, 1);
    EXPECT_EQ (appdata.call_counters.connect_calls, 1);
@@ -256,7 +256,7 @@ TEST_F (CmrdrTest, CmrdrRunTest)
    EXPECT_GT (mock_os_data.eth_send_count, 0);
 
    TEST_TRACE ("\nGenerating mock parameter end request\n");
-   mock_set_os_udp_recvfrom_buffer (prm_end_req, sizeof (prm_end_req));
+   mock_set_pnal_udp_recvfrom_buffer (prm_end_req, sizeof (prm_end_req));
    run_stack (TEST_UDP_DELAY);
    EXPECT_EQ (appdata.call_counters.state_calls, 2);
    EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_PRMEND);
@@ -270,7 +270,7 @@ TEST_F (CmrdrTest, CmrdrRunTest)
    EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_APPLRDY);
 
    TEST_TRACE ("\nGenerating mock application ready response\n");
-   mock_set_os_udp_recvfrom_buffer (appl_rdy_rsp, sizeof (appl_rdy_rsp));
+   mock_set_pnal_udp_recvfrom_buffer (appl_rdy_rsp, sizeof (appl_rdy_rsp));
    run_stack (TEST_UDP_DELAY);
    EXPECT_EQ (appdata.call_counters.state_calls, 3);
    EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_APPLRDY);
@@ -368,7 +368,7 @@ TEST_F (CmrdrTest, CmrdrRunTest)
    EXPECT_EQ (appdata.read_fails, 62); // Currently expected number of fails.
 
    TEST_TRACE ("\nGenerating mock release request\n");
-   mock_set_os_udp_recvfrom_buffer (release_req, sizeof (release_req));
+   mock_set_pnal_udp_recvfrom_buffer (release_req, sizeof (release_req));
    run_stack (TEST_UDP_DELAY);
    EXPECT_EQ (appdata.call_counters.release_calls, 1);
    EXPECT_EQ (appdata.call_counters.state_calls, 5);
@@ -396,7 +396,7 @@ TEST_F (CmrdrTest, CmrdrModDiffTest)
    // for the test result
 
    TEST_TRACE ("\nGenerating mock connection request\n");
-   mock_set_os_udp_recvfrom_buffer (connect_req, sizeof (connect_req));
+   mock_set_pnal_udp_recvfrom_buffer (connect_req, sizeof (connect_req));
    run_stack (TEST_UDP_DELAY);
    EXPECT_EQ (appdata.call_counters.state_calls, 1);
    EXPECT_EQ (appdata.call_counters.connect_calls, 1);
@@ -404,7 +404,7 @@ TEST_F (CmrdrTest, CmrdrModDiffTest)
    EXPECT_GT (mock_os_data.eth_send_count, 0);
 
    TEST_TRACE ("\nGenerating mock parameter end request\n");
-   mock_set_os_udp_recvfrom_buffer (prm_end_req, sizeof (prm_end_req));
+   mock_set_pnal_udp_recvfrom_buffer (prm_end_req, sizeof (prm_end_req));
    run_stack (TEST_UDP_DELAY);
    EXPECT_EQ (appdata.call_counters.state_calls, 2);
    EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_PRMEND);
@@ -417,7 +417,7 @@ TEST_F (CmrdrTest, CmrdrModDiffTest)
    EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_APPLRDY);
 
    TEST_TRACE ("\nGenerating mock application ready response\n");
-   mock_set_os_udp_recvfrom_buffer (appl_rdy_rsp, sizeof (appl_rdy_rsp));
+   mock_set_pnal_udp_recvfrom_buffer (appl_rdy_rsp, sizeof (appl_rdy_rsp));
    run_stack (TEST_UDP_DELAY);
    EXPECT_EQ (appdata.call_counters.state_calls, 3);
    EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_APPLRDY);
@@ -492,7 +492,7 @@ TEST_F (CmrdrTest, CmrdrModDiffTest)
    EXPECT_EQ (appdata.read_fails, 0);
 
    TEST_TRACE ("\nGenerating mock release request\n");
-   mock_set_os_udp_recvfrom_buffer (release_req, sizeof (release_req));
+   mock_set_pnal_udp_recvfrom_buffer (release_req, sizeof (release_req));
    run_stack (TEST_UDP_DELAY);
    EXPECT_EQ (appdata.call_counters.release_calls, 1);
    EXPECT_EQ (appdata.call_counters.state_calls, 5);

@@ -31,15 +31,15 @@
  * This is a function to be passed into os_thread_create()
  * Do not change the argument types.
  *
- * @param thread_arg     InOut: Will be converted to os_eth_handle_t
+ * @param thread_arg     InOut: Will be converted to pnal_eth_handle_t
  */
 static void os_eth_task (void * thread_arg)
 {
-   os_eth_handle_t * eth_handle = thread_arg;
+   pnal_eth_handle_t * eth_handle = thread_arg;
    ssize_t readlen;
    int handled = 0;
 
-   os_buf_t * p = os_buf_alloc (OS_BUF_MAX_SIZE);
+   pnal_buf_t * p = pnal_buf_alloc (OS_BUF_MAX_SIZE);
    assert (p != NULL);
 
    while (1)
@@ -60,25 +60,25 @@ static void os_eth_task (void * thread_arg)
 
       if (handled == 1)
       {
-         p = os_buf_alloc (OS_BUF_MAX_SIZE);
+         p = pnal_buf_alloc (OS_BUF_MAX_SIZE);
          assert (p != NULL);
       }
    }
 }
 
-os_eth_handle_t * os_eth_init (
+pnal_eth_handle_t * pnal_eth_init (
    const char * if_name,
-   os_eth_callback_t * callback,
+   pnal_eth_callback_t * callback,
    void * arg)
 {
-   os_eth_handle_t * handle;
+   pnal_eth_handle_t * handle;
    int i;
    struct ifreq ifr;
    struct sockaddr_ll sll;
    int ifindex;
    struct timeval timeout;
 
-   handle = malloc (sizeof (os_eth_handle_t));
+   handle = malloc (sizeof (pnal_eth_handle_t));
    if (handle == NULL)
    {
       return NULL;
@@ -134,7 +134,7 @@ os_eth_handle_t * os_eth_init (
    }
 }
 
-int os_eth_send (os_eth_handle_t * handle, os_buf_t * buf)
+int pnal_eth_send (pnal_eth_handle_t * handle, pnal_buf_t * buf)
 {
    int ret = send (handle->socket, buf->payload, buf->len, 0);
 

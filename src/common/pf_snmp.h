@@ -118,7 +118,7 @@ extern "C" {
  * See PN-Topology Annex A.
  *
  * Note: According to the SNMP specification, the string could be up
- * to 255 characters. The p-net stack limits it to OS_HOST_NAME_MAX.
+ * to 255 characters. The p-net stack limits it to PNAL_HOST_NAME_MAX.
  * An extra byte is added as to ensure null-termination.
  *
  * This is a writable variable. As such it is be in persistent memory.
@@ -128,7 +128,7 @@ extern "C" {
  */
 typedef struct pf_snmp_system_name
 {
-   char string[OS_HOST_NAME_MAX + 1]; /* Terminated */
+   char string[PNAL_HOST_NAME_MAX + 1]; /* Terminated */
 } pf_snmp_system_name_t;
 
 /**

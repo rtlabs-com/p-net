@@ -673,16 +673,16 @@ typedef struct pf_control_block
 typedef struct pf_ip_suite
 {
    /* Order is important!! */
-   os_ipaddr_t ip_addr;
-   os_ipaddr_t ip_mask;
-   os_ipaddr_t ip_gateway;
+   pnal_ipaddr_t ip_addr;
+   pnal_ipaddr_t ip_mask;
+   pnal_ipaddr_t ip_gateway;
 } pf_ip_suite_t;
 
 typedef struct pf_full_ip_suite
 {
    /* Order is important!! */
    pf_ip_suite_t ip_suite;
-   os_ipaddr_t dns_addr[4];
+   pnal_ipaddr_t dns_addr[4];
 } pf_full_ip_suite_t;
 
 /*
@@ -905,7 +905,7 @@ typedef struct pf_scheduler_timeouts
 typedef int (*pf_eth_frame_handler_t) (
    pnet_t * net,
    uint16_t frame_id,
-   os_buf_t * p_buf,
+   pnal_buf_t * p_buf,
    uint16_t frame_id_pos,
    void * p_arg);
 
@@ -1643,7 +1643,7 @@ typedef enum pf_apmr_state_values
 typedef struct pf_apmr_msg
 {
    uint16_t frame_id_pos;
-   os_buf_t * p_buf;
+   pnal_buf_t * p_buf;
 } pf_apmr_msg_t;
 
 /*
@@ -1676,7 +1676,7 @@ typedef struct pf_apmx
    uint16_t apmr_msg_nbr;
 
    /* Latest sent alarm */
-   os_buf_t * p_rta;
+   pnal_buf_t * p_rta;
 
    bool high_priority; /* True for high priority APMX. For printouts. */
    uint16_t vlan_prio; /* 5 or 6 */
@@ -1756,13 +1756,13 @@ typedef struct pf_session_info
    bool kill_session; /* On error or when done. This will kill the session at
                          the end of handling the incoming RPC frame. */
    int socket;
-   os_eth_handle_t * eth_handle;
+   pnal_eth_handle_t * eth_handle;
    struct pf_ar * p_ar; /* Parent AR */
    bool from_me;        /* True if the session originates from the device (i.e.
                            CControl requests and responses). */
    pf_uuid_t activity_uuid;
    uint32_t ip_addr;
-   os_ipport_t port; /* Source port on incoming message, destination port on
+   pnal_ipport_t port; /* Source port on incoming message, destination port on
                         outgoing message */
    uint32_t sequence_nmb_send; /* rm_ccontrol_req */
 
@@ -2494,7 +2494,7 @@ typedef struct pnet_pdport_nvm
 struct pnet
 {
    char interface_name[PNET_MAX_INTERFACE_NAME_LENGTH]; /** Terminated */
-   uint32_t os_buf_alloc_cnt;
+   uint32_t pnal_buf_alloc_cnt;
    bool global_alarm_enable;
    os_mutex_t * cpm_buf_lock;
    atomic_int cpm_instance_cnt;
@@ -2506,7 +2506,7 @@ struct pnet
                                          to be sent */
    uint32_t dcp_timeout;
    uint32_t dcp_sam_timeout; /* Handle to the SAM timeout instance */
-   os_eth_handle_t * eth_handle;
+   pnal_eth_handle_t * eth_handle;
    pf_eth_frame_id_map_t eth_id_map[PF_ETH_MAX_MAP];
    volatile pf_scheduler_timeouts_t scheduler_timeouts[PF_MAX_TIMEOUTS];
    volatile uint32_t scheduler_timeout_first;

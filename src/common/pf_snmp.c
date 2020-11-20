@@ -32,9 +32,9 @@ void pf_snmp_get_system_name (pnet_t * net, pf_snmp_system_name_t * name)
 {
    int error;
 
-   CC_STATIC_ASSERT (sizeof (name->string) >= OS_HOST_NAME_MAX);
+   CC_STATIC_ASSERT (sizeof (name->string) >= PNAL_HOST_NAME_MAX);
 
-   error = os_get_hostname (name->string);
+   error = pnal_get_hostname (name->string);
    if (error)
    {
       name->string[0] = '\0';
@@ -44,7 +44,7 @@ void pf_snmp_get_system_name (pnet_t * net, pf_snmp_system_name_t * name)
 
 int pf_snmp_set_system_name (pnet_t * net, const pf_snmp_system_name_t * name)
 {
-   /* TODO: Set new hostname permanently. Perhaps call os_set_ip_suite()? */
+   /* TODO: Set new hostname permanently. Perhaps call pnal_set_ip_suite()? */
    return -1;
 }
 

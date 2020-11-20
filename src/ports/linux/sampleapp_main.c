@@ -327,10 +327,10 @@ int main (int argc, char * argv[])
    pnet_cfg_t pnet_default_cfg;
    app_data_and_stack_t appdata_and_stack;
    app_data_t appdata;
-   os_ethaddr_t macbuffer;
-   os_ipaddr_t ip;
-   os_ipaddr_t netmask;
-   os_ipaddr_t gateway;
+   pnal_ethaddr_t macbuffer;
+   pnal_ipaddr_t ip;
+   pnal_ipaddr_t netmask;
+   pnal_ipaddr_t gateway;
    int ret = 0;
 
    memset (&appdata, 0, sizeof (appdata));
@@ -354,7 +354,7 @@ int main (int argc, char * argv[])
    }
 
    /* Read IP, netmask, gateway and MAC address from operating system */
-   ret = os_get_macaddress (appdata.arguments.eth_interface, &macbuffer);
+   ret = pnal_get_macaddress (appdata.arguments.eth_interface, &macbuffer);
    if (ret != 0)
    {
       printf (
@@ -363,9 +363,9 @@ int main (int argc, char * argv[])
       exit (EXIT_FAILURE);
    }
 
-   ip = os_get_ip_address (appdata.arguments.eth_interface);
-   netmask = os_get_netmask (appdata.arguments.eth_interface);
-   gateway = os_get_gateway (appdata.arguments.eth_interface);
+   ip = pnal_get_ip_address (appdata.arguments.eth_interface);
+   netmask = pnal_get_netmask (appdata.arguments.eth_interface);
+   gateway = pnal_get_gateway (appdata.arguments.eth_interface);
    if (gateway == IP_INVALID)
    {
       printf (
@@ -391,11 +391,11 @@ int main (int argc, char * argv[])
    memcpy (
       pnet_default_cfg.eth_addr.addr,
       macbuffer.addr,
-      sizeof (os_ethaddr_t));
+      sizeof (pnal_ethaddr_t));
    memcpy (
       pnet_default_cfg.lldp_cfg.ports[0].port_addr.addr,
       macbuffer.addr,
-      sizeof (os_ethaddr_t));
+      sizeof (pnal_ethaddr_t));
    pnet_default_cfg.cb_arg = (void *)&appdata;
 
    if (appdata.arguments.verbosity > 0)

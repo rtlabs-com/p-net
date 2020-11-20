@@ -59,9 +59,9 @@ void pf_cmina_show (pnet_t * net);
  * Convert IPv4 address to string
  * @param ip               In: IP address
  * @param outputstring     Out: Resulting string. Should have length
- * OS_INET_ADDRSTRLEN.
+ * PNAL_INET_ADDRSTRLEN.
  */
-void pf_cmina_ip_to_string (os_ipaddr_t ip, char * outputstring);
+void pf_cmina_ip_to_string (pnal_ipaddr_t ip, char * outputstring);
 
 /**
  * Retrieve the path to the directory for saving files.
@@ -89,7 +89,7 @@ int pf_cmina_get_station_name (pnet_t * net, const char ** pp_station_name);
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_cmina_get_ipaddr (pnet_t * net, os_ipaddr_t * p_ipaddr);
+int pf_cmina_get_ipaddr (pnet_t * net, pnal_ipaddr_t * p_ipaddr);
 
 /**
  * Retrieve the MAC address.
@@ -185,14 +185,14 @@ int pf_cmina_dcp_get_req (
 
 bool pf_cmina_is_stationname_valid (const char * station_name, uint16_t len);
 
-bool pf_cmina_is_netmask_valid (os_ipaddr_t netmask);
+bool pf_cmina_is_netmask_valid (pnal_ipaddr_t netmask);
 
-bool pf_cmina_is_ipaddress_valid (os_ipaddr_t netmask, os_ipaddr_t ip);
+bool pf_cmina_is_ipaddress_valid (pnal_ipaddr_t netmask, pnal_ipaddr_t ip);
 
 bool pf_cmina_is_gateway_valid (
-   os_ipaddr_t ip,
-   os_ipaddr_t netmask,
-   os_ipaddr_t gateway);
+   pnal_ipaddr_t ip,
+   pnal_ipaddr_t netmask,
+   pnal_ipaddr_t gateway);
 
 bool pf_cmina_is_ipsuite_valid (const pf_ip_suite_t * p_ipsuite);
 

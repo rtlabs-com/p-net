@@ -2991,7 +2991,7 @@ static int pf_cmdev_check_iocr_param (
       /* Defer IOCReference checks to below. */
       else if (
          (p_iocr->iocr_properties.rt_class != PF_RT_CLASS_UDP) &&
-         (p_iocr->lt_field != OS_ETHTYPE_PROFINET))
+         (p_iocr->lt_field != PNAL_ETHTYPE_PROFINET))
       {
          pf_set_error (
             p_stat,
@@ -3003,7 +3003,7 @@ static int pf_cmdev_check_iocr_param (
       }
       else if (
          (p_iocr->iocr_properties.rt_class == PF_RT_CLASS_UDP) &&
-         (p_iocr->lt_field != OS_ETHTYPE_IP))
+         (p_iocr->lt_field != PNAL_ETHTYPE_IP))
       {
          pf_set_error (
             p_stat,
@@ -3959,9 +3959,9 @@ static int pf_cmdev_check_alarm_cr (pf_ar_t * p_ar, pnet_result_t * p_stat)
    }
    else if (
       ((p_ar->alarm_cr_request.alarm_cr_properties.transport_udp == false) &&
-       (p_ar->alarm_cr_request.lt_field != OS_ETHTYPE_PROFINET)) ||
+       (p_ar->alarm_cr_request.lt_field != PNAL_ETHTYPE_PROFINET)) ||
       ((p_ar->alarm_cr_request.alarm_cr_properties.transport_udp == true) &&
-       (p_ar->alarm_cr_request.lt_field != OS_ETHTYPE_IP)))
+       (p_ar->alarm_cr_request.lt_field != PNAL_ETHTYPE_IP)))
    {
       pf_set_error (
          p_stat,
