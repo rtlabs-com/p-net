@@ -28,7 +28,7 @@
  */
 
 #ifdef UNIT_TEST
-#define os_set_ip_suite mock_os_set_ip_suite
+#define pnal_set_ip_suite mock_pnal_set_ip_suite
 #endif
 
 #include <string.h>
@@ -95,9 +95,9 @@ static void pf_cmina_send_hello (pnet_t * net, void * arg, uint32_t current_time
 static void pf_cmina_save_ase (pnet_t * net, pf_cmina_dcp_ase_t * p_ase)
 {
    pf_cmina_dcp_ase_t temporary_buffer;
-   char ip_string[OS_INET_ADDRSTRLEN] = {0};
-   char netmask_string[OS_INET_ADDRSTRLEN] = {0};
-   char gateway_string[OS_INET_ADDRSTRLEN] = {0};
+   char ip_string[PNAL_INET_ADDRSTRLEN] = {0};
+   char netmask_string[PNAL_INET_ADDRSTRLEN] = {0};
+   char gateway_string[PNAL_INET_ADDRSTRLEN] = {0};
    const char * p_file_directory = NULL;
    int res = 0;
 
@@ -167,9 +167,9 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
    uint16_t ix;
    bool reset_user_application = false;
    pf_cmina_dcp_ase_t file_ase;
-   char ip_string[OS_INET_ADDRSTRLEN] = {0};
-   char netmask_string[OS_INET_ADDRSTRLEN] = {0};
-   char gateway_string[OS_INET_ADDRSTRLEN] = {0};
+   char ip_string[PNAL_INET_ADDRSTRLEN] = {0};
+   char netmask_string[PNAL_INET_ADDRSTRLEN] = {0};
+   char gateway_string[PNAL_INET_ADDRSTRLEN] = {0};
    uint32_t ip = 0;
    uint32_t netmask = 0;
    uint32_t gateway = 0;
@@ -241,19 +241,19 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
                "CMINA(%d): Could not yet read IP parameters from nvm. Use "
                "values from user configuration.\n",
                __LINE__);
-            OS_IP4_ADDR_TO_U32 (
+            PNAL_IP4_ADDR_TO_U32 (
                ip,
                p_cfg->ip_addr.a,
                p_cfg->ip_addr.b,
                p_cfg->ip_addr.c,
                p_cfg->ip_addr.d);
-            OS_IP4_ADDR_TO_U32 (
+            PNAL_IP4_ADDR_TO_U32 (
                netmask,
                p_cfg->ip_mask.a,
                p_cfg->ip_mask.b,
                p_cfg->ip_mask.c,
                p_cfg->ip_mask.d);
-            OS_IP4_ADDR_TO_U32 (
+            PNAL_IP4_ADDR_TO_U32 (
                gateway,
                p_cfg->ip_gateway.a,
                p_cfg->ip_gateway.b,
@@ -370,9 +370,9 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
 void pf_cmina_dcp_set_commit (pnet_t * net)
 {
    int res = 0;
-   char ip_string[OS_INET_ADDRSTRLEN] = {0};
-   char netmask_string[OS_INET_ADDRSTRLEN] = {0};
-   char gateway_string[OS_INET_ADDRSTRLEN] = {0};
+   char ip_string[PNAL_INET_ADDRSTRLEN] = {0};
+   char netmask_string[PNAL_INET_ADDRSTRLEN] = {0};
+   char gateway_string[PNAL_INET_ADDRSTRLEN] = {0};
    bool permanent = true;
 
    if (net->cmina_commit_ip_suite == true)
@@ -415,7 +415,7 @@ void pf_cmina_dcp_set_commit (pnet_t * net)
          permanent);
 
       net->cmina_commit_ip_suite = false;
-      res = os_set_ip_suite (
+      res = pnal_set_ip_suite (
          net->interface_name,
          &net->cmina_current_dcp_ase.full_ip_suite.ip_suite.ip_addr,
          &net->cmina_current_dcp_ase.full_ip_suite.ip_suite.ip_mask,
@@ -627,9 +627,9 @@ int pf_cmina_dcp_set_ind (
    bool change_dhcp = false; /* We have got a request to change DHCP settings */
    bool reset_to_factory = false; /* We have got a request to do a factory reset
                                    */
-   char ip_string[OS_INET_ADDRSTRLEN] = {0};
-   char netmask_string[OS_INET_ADDRSTRLEN] = {0};
-   char gateway_string[OS_INET_ADDRSTRLEN] = {0};
+   char ip_string[PNAL_INET_ADDRSTRLEN] = {0};
+   char netmask_string[PNAL_INET_ADDRSTRLEN] = {0};
+   char gateway_string[PNAL_INET_ADDRSTRLEN] = {0};
 
    bool temp = ((block_qualifier & 1) == 0);
    uint16_t reset_mode = 0;
@@ -976,8 +976,9 @@ int pf_cmina_dcp_set_ind (
          }
          break;
       case PF_CMINA_STATE_W_CONNECT:
-         if ((change_name == false) && (change_ip == false) &&
-             (reset_to_factory == false))
+         if (
+            (change_name == false) && (change_ip == false) &&
+            (reset_to_factory == false))
          {
             /* Case 24 in Profinet 2.4 Table 1096 */
             /* No change of name or IP. All OK */
@@ -1066,9 +1067,10 @@ int pf_cmina_dcp_set_ind (
    /*
     * Case 5 in Profinet 2.4 Table 1096 Do_Check
     */
-   if (((net->cmina_state == PF_CMINA_STATE_SET_IP) ||
-        (net->cmina_state == PF_CMINA_STATE_SET_NAME)) &&
-       (have_name == true) && (have_ip == true))
+   if (
+      ((net->cmina_state == PF_CMINA_STATE_SET_IP) ||
+       (net->cmina_state == PF_CMINA_STATE_SET_NAME)) &&
+      (have_name == true) && (have_ip == true))
    {
       net->cmina_state = PF_CMINA_STATE_W_CONNECT;
    }
@@ -1240,7 +1242,7 @@ int pf_cmina_get_station_name (pnet_t * net, const char ** pp_station_name)
    return 0;
 }
 
-int pf_cmina_get_ipaddr (pnet_t * net, os_ipaddr_t * p_ipaddr)
+int pf_cmina_get_ipaddr (pnet_t * net, pnal_ipaddr_t * p_ipaddr)
 {
    *p_ipaddr = net->cmina_current_dcp_ase.full_ip_suite.ip_suite.ip_addr;
    return 0;
@@ -1267,11 +1269,11 @@ int pf_cmina_remove_all_data_files (const char * file_directory)
 
 /*************** Diagnostic strings *****************************************/
 
-void pf_cmina_ip_to_string (os_ipaddr_t ip, char * outputstring)
+void pf_cmina_ip_to_string (pnal_ipaddr_t ip, char * outputstring)
 {
    snprintf (
       outputstring,
-      OS_INET_ADDRSTRLEN,
+      PNAL_INET_ADDRSTRLEN,
       "%u.%u.%u.%u",
       (uint8_t) ((ip >> 24) & 0xFF),
       (uint8_t) ((ip >> 16) & 0xFF),
@@ -1315,7 +1317,7 @@ static const char * pf_cmina_state_to_string (pnet_t * net)
  */
 void pf_ip_address_show (uint32_t ip)
 {
-   char ip_string[OS_INET_ADDRSTRLEN] = {0};
+   char ip_string[PNAL_INET_ADDRSTRLEN] = {0};
 
    pf_cmina_ip_to_string (ip, ip_string);
    printf ("%s", ip_string);
@@ -1618,7 +1620,7 @@ bool pf_cmina_is_full_ipsuite_valid (const pf_full_ip_suite_t * p_full_ipsuite)
  * @return  0  if the IP address is valid
  *          -1 if the IP address is invalid
  */
-bool pf_cmina_is_ipaddress_valid (os_ipaddr_t netmask, os_ipaddr_t ip)
+bool pf_cmina_is_ipaddress_valid (pnal_ipaddr_t netmask, pnal_ipaddr_t ip)
 {
    uint32_t host_part = ip & ~netmask;
 
@@ -1634,25 +1636,25 @@ bool pf_cmina_is_ipaddress_valid (os_ipaddr_t netmask, os_ipaddr_t ip)
    {
       return false;
    }
-   if (ip <= OS_MAKEU32 (0, 255, 255, 255))
+   if (ip <= PNAL_MAKEU32 (0, 255, 255, 255))
    {
       return false;
    }
    else if (
-      (ip >= OS_MAKEU32 (127, 0, 0, 0)) &&
-      (ip <= OS_MAKEU32 (127, 255, 255, 255)))
+      (ip >= PNAL_MAKEU32 (127, 0, 0, 0)) &&
+      (ip <= PNAL_MAKEU32 (127, 255, 255, 255)))
    {
       return false;
    }
    else if (
-      (ip >= OS_MAKEU32 (224, 0, 0, 0)) &&
-      (ip <= OS_MAKEU32 (239, 255, 255, 255)))
+      (ip >= PNAL_MAKEU32 (224, 0, 0, 0)) &&
+      (ip <= PNAL_MAKEU32 (239, 255, 255, 255)))
    {
       return false;
    }
    else if (
-      (ip >= OS_MAKEU32 (240, 0, 0, 0)) &&
-      (ip <= OS_MAKEU32 (255, 255, 255, 255)))
+      (ip >= PNAL_MAKEU32 (240, 0, 0, 0)) &&
+      (ip <= PNAL_MAKEU32 (255, 255, 255, 255)))
    {
       return false;
    }
@@ -1669,7 +1671,7 @@ bool pf_cmina_is_ipaddress_valid (os_ipaddr_t netmask, os_ipaddr_t ip)
  * @return  0  if the netmask is valid
  *          -1 if the netmask is invalid
  */
-bool pf_cmina_is_netmask_valid (os_ipaddr_t netmask)
+bool pf_cmina_is_netmask_valid (pnal_ipaddr_t netmask)
 {
    if (!(netmask & (~netmask >> 1)))
    {
@@ -1694,9 +1696,9 @@ bool pf_cmina_is_netmask_valid (os_ipaddr_t netmask)
  *          -1 if the gateway address is invalid
  */
 bool pf_cmina_is_gateway_valid (
-   os_ipaddr_t ip,
-   os_ipaddr_t netmask,
-   os_ipaddr_t gateway)
+   pnal_ipaddr_t ip,
+   pnal_ipaddr_t netmask,
+   pnal_ipaddr_t gateway)
 {
    if ((gateway != 0) && ((ip & netmask) != (gateway & netmask)))
    {

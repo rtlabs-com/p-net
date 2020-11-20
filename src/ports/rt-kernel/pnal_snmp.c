@@ -32,7 +32,7 @@ pnal_snmp_t pnal_snmp;
 
 /**
  * Called right after writing a variable
- * 
+ *
  * This is a callback function for SNMP in lwip. It conforms to
  * the type snmp_write_callback_fct.
  *
@@ -81,7 +81,7 @@ static void pnal_snmp_configure_mib2 (void)
    snmp_set_device_enterprise_oid (&enterprise_oid);
 }
 
-int os_snmp_init (pnet_t * net)
+int pnal_snmp_init (pnet_t * net)
 {
    static const struct snmp_mib * mibs[] = {
       &mib2,

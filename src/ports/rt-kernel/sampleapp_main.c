@@ -165,10 +165,10 @@ int main (void)
    int ret = -1;
    struct cmd_args cmdline_arguments;
    app_data_t appdata;
-   os_ethaddr_t macbuffer;
-   os_ipaddr_t ip;
-   os_ipaddr_t netmask;
-   os_ipaddr_t gateway;
+   pnal_ethaddr_t macbuffer;
+   pnal_ipaddr_t ip;
+   pnal_ipaddr_t netmask;
+   pnal_ipaddr_t gateway;
 
    g_net = NULL;
 
@@ -198,7 +198,7 @@ int main (void)
    }
 
    /* Read IP, netmask, gateway and MAC address from operating system */
-   ret = os_get_macaddress (appdata.arguments.eth_interface, &macbuffer);
+   ret = pnal_get_macaddress (appdata.arguments.eth_interface, &macbuffer);
    if (ret != 0)
    {
       printf (
@@ -207,9 +207,9 @@ int main (void)
       return -1;
    }
 
-   ip = os_get_ip_address (appdata.arguments.eth_interface);
-   netmask = os_get_netmask (appdata.arguments.eth_interface);
-   gateway = os_get_gateway (appdata.arguments.eth_interface);
+   ip = pnal_get_ip_address (appdata.arguments.eth_interface);
+   netmask = pnal_get_netmask (appdata.arguments.eth_interface);
+   gateway = pnal_get_gateway (appdata.arguments.eth_interface);
    if (gateway == IP_INVALID)
    {
       printf (

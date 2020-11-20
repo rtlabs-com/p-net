@@ -135,7 +135,7 @@ int pf_cpm_get_data_and_iops (
  * @return  0     If the frame was NOT handled by this function.
  *          1     If the frame was handled and the buffer freed.
  */
-int pf_cpm_udp_c_data_ind (uint16_t frame_id, os_buf_t * p_buf);
+int pf_cpm_udp_c_data_ind (uint16_t frame_id, pnal_buf_t * p_buf);
 
 /**
  * Get the data status of the CPM connection.

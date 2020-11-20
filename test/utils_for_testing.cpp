@@ -596,10 +596,10 @@ void PnetIntegrationTestBase::run_stack (int us)
 void PnetIntegrationTestBase::send_data (uint8_t * data_packet, uint16_t len)
 {
    int ret;
-   os_buf_t * p_buf;
+   pnal_buf_t * p_buf;
    uint8_t * p_ctr;
 
-   p_buf = os_buf_alloc (PF_FRAME_BUFFER_SIZE);
+   p_buf = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE);
    if (p_buf == NULL)
    {
       TEST_TRACE ("(%d): Out of memory in send_data\n", __LINE__);
@@ -620,7 +620,7 @@ void PnetIntegrationTestBase::send_data (uint8_t * data_packet, uint16_t len)
       if (ret == 0)
       {
          TEST_TRACE ("(%d): Unhandled p_buf\n", __LINE__);
-         os_buf_free (p_buf);
+         pnal_buf_free (p_buf);
       }
    }
 }

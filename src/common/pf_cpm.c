@@ -143,8 +143,7 @@ static void pf_cpm_control_interval_expired (
          if (p_iocr->cpm.dht >= p_iocr->cpm.data_hold_factor)
          {
             /* dht expired */
-            p_iocr->p_ar->err_cls =
-               PNET_ERROR_CODE_1_RTA_ERR_CLS_PROTOCOL;
+            p_iocr->p_ar->err_cls = PNET_ERROR_CODE_1_RTA_ERR_CLS_PROTOCOL;
             p_iocr->p_ar->err_code =
                PNET_ERROR_CODE_2_ABORT_AR_CONSUMER_DHT_EXPIRED;
 
@@ -256,11 +255,11 @@ int pf_cpm_close_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
    }
    if (p_cpm->p_buffer_cpm != NULL)
    {
-      os_buf_free (p_cpm->p_buffer_cpm);
+      pnal_buf_free (p_cpm->p_buffer_cpm);
    }
    if (p_cpm->p_buffer_app != NULL)
    {
-      os_buf_free (p_cpm->p_buffer_app);
+      pnal_buf_free (p_cpm->p_buffer_app);
    }
 
    cnt = atomic_fetch_sub (&net->cpm_instance_cnt, 1);
@@ -312,7 +311,9 @@ int pf_cpm_check_cycle (int32_t prev, uint16_t now)
  * @return 0 if the source address is OK.
  *         -1 if the source address is wrong.
  */
-static int pf_cpm_check_src_addr (const pf_cpm_t * p_cpm, const os_buf_t * p_buf)
+static int pf_cpm_check_src_addr (
+   const pf_cpm_t * p_cpm,
+   const pnal_buf_t * p_buf)
 {
    int ret = -1;
 
@@ -337,7 +338,7 @@ static int pf_cpm_check_src_addr (const pf_cpm_t * p_cpm, const os_buf_t * p_buf
  * @param pp_buf           In:    The new buffer.
  *                         Out:   The previous buffer.
  */
-static void pf_cpm_put_buf (pnet_t * net, pf_cpm_t * p_cpm, os_buf_t ** pp_buf)
+static void pf_cpm_put_buf (pnet_t * net, pf_cpm_t * p_cpm, pnal_buf_t ** pp_buf)
 {
    void * p;
 
@@ -383,7 +384,7 @@ static void pf_cpm_get_buf (
 
    if (p_cpm->p_buffer_app != NULL)
    {
-      *pp_buffer = &((uint8_t *)((os_buf_t *)p_cpm->p_buffer_app)
+      *pp_buffer = &((uint8_t *)((pnal_buf_t *)p_cpm->p_buffer_app)
                         ->payload)[p_cpm->buffer_pos];
    }
    else
@@ -413,7 +414,7 @@ static void pf_cpm_get_buf (
 static int pf_cpm_c_data_ind (
    pnet_t * net,
    uint16_t frame_id,
-   os_buf_t * p_buf,
+   pnal_buf_t * p_buf,
    uint16_t frame_id_pos,
    void * p_arg)
 {
@@ -545,14 +546,14 @@ static int pf_cpm_c_data_ind (
       if (p_buf != NULL)
       {
          p_cpm->free_cnt++;
-         os_buf_free (p_buf);
+         pnal_buf_free (p_buf);
       }
    }
 
    return ret;
 }
 
-int pf_cpm_udp_c_data_ind (uint16_t frame_id, os_buf_t * p_buf)
+int pf_cpm_udp_c_data_ind (uint16_t frame_id, pnal_buf_t * p_buf)
 {
    /* ToDo: Handle RT_CLASS_UDP */
    return 0;
@@ -976,7 +977,7 @@ void pf_cpm_show (const pnet_t * net, const pf_cpm_t * p_cpm)
    printf ("   p_buffer_cpm       = %p\n", p_cpm->p_buffer_cpm);
    printf (
       "   p_buffer->len      = %u\n",
-      p_cpm->p_buffer_cpm ? ((os_buf_t *)(p_cpm->p_buffer_cpm))->len : 0);
+      p_cpm->p_buffer_cpm ? ((pnal_buf_t *)(p_cpm->p_buffer_cpm))->len : 0);
    printf ("   new_buf            = %u\n", (unsigned)p_cpm->new_buf);
    printf ("   ci_running         = %u\n", (unsigned)p_cpm->ci_running);
    printf ("   ci_timer           = %u\n", (unsigned)p_cpm->ci_timer);

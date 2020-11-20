@@ -27,7 +27,7 @@ extern "C" {
 #define OS_BUF_MAX_SIZE PBUF_POOL_BUFSIZE
 
 /* Re-use lwIP pbuf for rt-kernel */
-typedef struct pbuf os_buf_t;
+typedef struct pbuf pnal_buf_t;
 
 /* TODO: Integrate in standard drivers?
  * Local handling to enable the NIC drivers to support a RX hook
@@ -45,14 +45,14 @@ int eth_ioctl (drv_t * drv, void * arg, int req, void * param);
  * @return  0  If the frame was NOT handled by this function.
  *          1  If the frame was handled and the buffer freed.
  */
-typedef int (os_eth_callback_t) (void * arg, os_buf_t * p_buf);
+typedef int (pnal_eth_callback_t) (void * arg, pnal_buf_t * p_buf);
 
 typedef struct os_eth_handle
 {
-   os_eth_callback_t * callback;
+   pnal_eth_callback_t * callback;
    void * arg;
    int if_id;
-} os_eth_handle_t;
+} pnal_eth_handle_t;
 
 #ifdef __cplusplus
 }

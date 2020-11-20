@@ -29,11 +29,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-int os_set_ip_suite (
+int pnal_set_ip_suite (
    const char * interface_name,
-   const os_ipaddr_t * p_ipaddr,
-   const os_ipaddr_t * p_netmask,
-   const os_ipaddr_t * p_gw,
+   const pnal_ipaddr_t * p_ipaddr,
+   const pnal_ipaddr_t * p_netmask,
+   const pnal_ipaddr_t * p_gw,
    const char * hostname,
    bool permanent)
 {
@@ -49,54 +49,54 @@ int os_set_ip_suite (
    return 0;
 }
 
-int os_get_macaddress (const char * interface_name, os_ethaddr_t * mac_addr)
+int pnal_get_macaddress (const char * interface_name, pnal_ethaddr_t * mac_addr)
 {
-   memcpy (mac_addr, netif_default->hwaddr, sizeof (os_ethaddr_t));
+   memcpy (mac_addr, netif_default->hwaddr, sizeof (pnal_ethaddr_t));
    return 0;
 }
 
-os_ipaddr_t os_get_ip_address (const char * interface_name)
+pnal_ipaddr_t pnal_get_ip_address (const char * interface_name)
 {
    return htonl (netif_default->ip_addr.addr);
 }
 
-os_ipaddr_t os_get_netmask (const char * interface_name)
+pnal_ipaddr_t pnal_get_netmask (const char * interface_name)
 {
    return htonl (netif_default->netmask.addr);
 }
 
-os_ipaddr_t os_get_gateway (const char * interface_name)
+pnal_ipaddr_t pnal_get_gateway (const char * interface_name)
 {
    /* TODO Read the actual default gateway */
 
-   os_ipaddr_t ip;
-   os_ipaddr_t gateway;
+   pnal_ipaddr_t ip;
+   pnal_ipaddr_t gateway;
 
-   ip = os_get_ip_address (interface_name);
+   ip = pnal_get_ip_address (interface_name);
    gateway = (ip & 0xFFFFFF00) | 0x00000001;
 
    return gateway;
 }
 
-int os_get_hostname (char * hostname)
+int pnal_get_hostname (char * hostname)
 {
    strcpy (hostname, netif_default->hostname);
    return 0;
 }
 
-int os_get_ip_suite (
+int pnal_get_ip_suite (
    const char * interface_name,
-   os_ipaddr_t * p_ipaddr,
-   os_ipaddr_t * p_netmask,
-   os_ipaddr_t * p_gw,
+   pnal_ipaddr_t * p_ipaddr,
+   pnal_ipaddr_t * p_netmask,
+   pnal_ipaddr_t * p_gw,
    char * hostname)
 {
    int ret = -1;
 
-   *p_ipaddr = os_get_ip_address (interface_name);
-   *p_netmask = os_get_netmask (interface_name);
-   *p_gw = os_get_gateway (interface_name);
-   ret = os_get_hostname (hostname);
+   *p_ipaddr = pnal_get_ip_address (interface_name);
+   *p_netmask = pnal_get_netmask (interface_name);
+   *p_gw = pnal_get_gateway (interface_name);
+   ret = pnal_get_hostname (hostname);
 
    return ret;
 }
@@ -112,7 +112,7 @@ int os_snprintf (char * str, size_t size, const char * fmt, ...)
    return ret;
 }
 
-int os_save_file (
+int pnal_save_file (
    const char * fullpath,
    const void * object_1,
    size_t size_1,
@@ -153,13 +153,13 @@ int os_save_file (
    return ret;
 }
 
-void os_clear_file (const char * fullpath)
+void pnal_clear_file (const char * fullpath)
 {
    os_log (LOG_LEVEL_DEBUG, "Clearing file %s\n", fullpath);
    (void)remove (fullpath);
 }
 
-int os_load_file (
+int pnal_load_file (
    const char * fullpath,
    void * object_1,
    size_t size_1,
@@ -201,7 +201,7 @@ int os_load_file (
    return ret;
 }
 
-uint32_t os_get_system_uptime_10ms (void)
+uint32_t pnal_get_system_uptime_10ms (void)
 {
    uint32_t uptime = 0;
 
@@ -209,17 +209,17 @@ uint32_t os_get_system_uptime_10ms (void)
    return uptime;
 }
 
-os_buf_t * os_buf_alloc (uint16_t length)
+pnal_buf_t * pnal_buf_alloc (uint16_t length)
 {
    return pbuf_alloc (PBUF_RAW, length, PBUF_POOL);
 }
 
-void os_buf_free (os_buf_t * p)
+void pnal_buf_free (pnal_buf_t * p)
 {
    ASSERT (pbuf_free (p) == 1);
 }
 
-uint8_t os_buf_header (os_buf_t * p, int16_t header_size_increment)
+uint8_t pnal_buf_header (pnal_buf_t * p, int16_t header_size_increment)
 {
    return pbuf_header (p, header_size_increment);
 }

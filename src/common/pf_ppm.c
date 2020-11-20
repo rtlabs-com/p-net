@@ -135,7 +135,7 @@ static void pf_ppm_set_state (pf_ppm_t * p_ppm, pf_ppm_state_values_t state)
  */
 static void pf_ppm_init_buf (
    pf_ppm_t * p_ppm,
-   os_buf_t * p_buf,
+   pnal_buf_t * p_buf,
    uint16_t frame_id,
    pf_iocr_tag_header_t * p_header)
 {
@@ -156,7 +156,7 @@ static void pf_ppm_init_buf (
    pos += sizeof (p_ppm->sa);
 
    /* Insert VLAN Tag protocol identifier (TPID) */
-   u16 = OS_ETHTYPE_VLAN;
+   u16 = PNAL_ETHTYPE_VLAN;
    u16 = htons (u16);
    memcpy (&p_payload[pos], &u16, sizeof (u16));
    pos += sizeof (u16);
@@ -170,7 +170,7 @@ static void pf_ppm_init_buf (
    pos += sizeof (u16);
 
    /* Insert EtherType */
-   u16 = OS_ETHTYPE_PROFINET;
+   u16 = PNAL_ETHTYPE_PROFINET;
    u16 = htons (u16);
    memcpy (&p_payload[pos], &u16, sizeof (u16));
    pos += sizeof (u16);
@@ -196,7 +196,7 @@ static void pf_ppm_finish_buffer (
    pf_ppm_t * p_ppm,
    uint16_t data_length)
 {
-   uint8_t * p_payload = ((os_buf_t *)p_ppm->p_send_buffer)->payload;
+   uint8_t * p_payload = ((pnal_buf_t *)p_ppm->p_send_buffer)->payload;
    uint16_t u16;
 
    p_ppm->cycle = pf_ppm_calculate_cyclecounter (
@@ -361,7 +361,7 @@ int pf_ppm_activate_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
          BIT (PNET_DATA_STATUS_BIT_STATION_PROBLEM_INDICATOR); /* Normal */
 
       /* Get the buffer to store the outgoing frame into. */
-      p_ppm->p_send_buffer = os_buf_alloc (PF_FRAME_BUFFER_SIZE);
+      p_ppm->p_send_buffer = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE);
 
       /* Default_values: Set buffer to zero and IOxS to BAD (=0) */
       /* Default_status: Set cycle_counter to invalid, transfer_status = 0,
@@ -426,7 +426,7 @@ int pf_ppm_close_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
       p_ppm->ci_timer = UINT32_MAX;
    }
 
-   os_buf_free (p_ppm->p_send_buffer);
+   pnal_buf_free (p_ppm->p_send_buffer);
    pf_ppm_set_state (p_ppm, PF_PPM_STATE_W_START);
 
    cnt = atomic_fetch_sub (&net->ppm_instance_cnt, 1);
@@ -1053,7 +1053,7 @@ void pf_ppm_show (const pf_ppm_t * p_ppm)
    printf ("   p_send_buffer                = %p\n", p_ppm->p_send_buffer);
    printf (
       "   p_send_buffer->len           = %u\n",
-      p_ppm->p_send_buffer ? ((os_buf_t *)(p_ppm->p_send_buffer))->len : 0);
+      p_ppm->p_send_buffer ? ((pnal_buf_t *)(p_ppm->p_send_buffer))->len : 0);
    printf ("   new_buf                      = %u\n", (unsigned)p_ppm->new_buf);
    printf (
       "   control_interval             = %u\n",

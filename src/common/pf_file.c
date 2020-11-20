@@ -23,9 +23,9 @@
  */
 
 #ifdef UNIT_TEST
-#define os_clear_file mock_os_clear_file
-#define os_load_file  mock_os_load_file
-#define os_save_file  mock_os_save_file
+#define pnal_clear_file mock_pnal_clear_file
+#define pnal_load_file  mock_pnal_load_file
+#define pnal_save_file  mock_pnal_save_file
 #endif
 
 #include "pf_includes.h"
@@ -156,7 +156,7 @@ int pf_file_load (
 
    /* Read file */
    if (
-      os_load_file (
+      pnal_load_file (
          path,
          versioning_buffer,
          sizeof (versioning_buffer),
@@ -229,7 +229,7 @@ int pf_file_save (
       versioning_buffer,
       &pos); /* Big endian */
 
-   return os_save_file (
+   return pnal_save_file (
       path,
       versioning_buffer,
       sizeof (versioning_buffer),
@@ -288,5 +288,5 @@ void pf_file_clear (const char * directory, const char * filename)
       return;
    }
 
-   return os_clear_file (path);
+   return pnal_clear_file (path);
 }

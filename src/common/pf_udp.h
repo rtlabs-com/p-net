@@ -21,13 +21,13 @@ extern "C" {
 #endif
 
 /**
- * Open an UDP socket. Listens to all IP addresses (OS_IPADDR_ANY).
+ * Open an UDP socket. Listens to all IP addresses (PNAL_IPADDR_ANY).
  *
  * @param net              InOut: The p-net stack instance
  * @param port             In:    UDP port to listen to.
  * @return Socket ID, or -1 if an error occurred.
  */
-int pf_udp_open (pnet_t * net, os_ipport_t port);
+int pf_udp_open (pnet_t * net, pnal_ipport_t port);
 
 /**
  * Send UDP data
@@ -45,8 +45,8 @@ int pf_udp_open (pnet_t * net, os_ipport_t port);
 int pf_udp_sendto (
    pnet_t * net,
    uint32_t id,
-   os_ipaddr_t dst_addr,
-   os_ipport_t dst_port,
+   pnal_ipaddr_t dst_addr,
+   pnal_ipport_t dst_port,
    const uint8_t * data,
    int size);
 
@@ -69,8 +69,8 @@ int pf_udp_sendto (
 int pf_udp_recvfrom (
    pnet_t * net,
    uint32_t id,
-   os_ipaddr_t * src_addr,
-   os_ipport_t * src_port,
+   pnal_ipaddr_t * src_addr,
+   pnal_ipport_t * src_port,
    uint8_t * data,
    int size);
 

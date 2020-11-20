@@ -421,7 +421,7 @@ void pf_lldp_tx_restart (pnet_t * net, bool send);
  * @return  0     If the frame was NOT handled by this function.
  *          1     If the frame was handled and the buffer freed.
  */
-int pf_lldp_recv (pnet_t * net, os_buf_t * p_frame_buf, uint16_t offset);
+int pf_lldp_recv (pnet_t * net, pnal_buf_t * p_frame_buf, uint16_t offset);
 
 /************ Internal functions, made available for unit testing ************/
 

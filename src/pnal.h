@@ -26,56 +26,58 @@ extern "C" {
 
 #include "pnal_sys.h"
 
-#define OS_MAKEU32(a, b, c, d)                                                 \
+#define PNAL_MAKEU32(a, b, c, d)                                               \
    (((uint32_t) ((a)&0xff) << 24) | ((uint32_t) ((b)&0xff) << 16) |            \
     ((uint32_t) ((c)&0xff) << 8) | (uint32_t) ((d)&0xff))
 
-#define OS_MAKEU16(a, b) (((uint16_t) ((a)&0xff) << 8) | (uint16_t) ((b)&0xff))
+#define PNAL_MAKEU16(a, b)                                                     \
+   (((uint16_t) ((a)&0xff) << 8) | (uint16_t) ((b)&0xff))
 
-#define OS_INET_ADDRSTRLEN 16
-#define OS_ETH_ADDRSTRLEN  18
-#define OS_HOST_NAME_MAX   64 /* Value from Linux */
+#define PNAL_INET_ADDRSTRLEN 16
+#define PNAL_ETH_ADDRSTRLEN  18
+#define PNAL_HOST_NAME_MAX   64 /* Value from Linux */
 
 /** Set an IP address given by the four byte-parts */
-#define OS_IP4_ADDR_TO_U32(ipaddr, a, b, c, d) ipaddr = OS_MAKEU32 (a, b, c, d)
+#define PNAL_IP4_ADDR_TO_U32(ipaddr, a, b, c, d)                               \
+   ipaddr = PNAL_MAKEU32 (a, b, c, d)
 
-enum os_eth_type
+enum pnal_eth_type
 {
-   OS_ETHTYPE_IP = 0x0800U,
-   OS_ETHTYPE_ARP = 0x0806U,
-   OS_ETHTYPE_VLAN = 0x8100U,
-   OS_ETHTYPE_PROFINET = 0x8892U,
-   OS_ETHTYPE_ETHERCAT = 0x88A4U,
-   OS_ETHTYPE_LLDP = 0x88CCU,
+   PNAL_ETHTYPE_IP = 0x0800U,
+   PNAL_ETHTYPE_ARP = 0x0806U,
+   PNAL_ETHTYPE_VLAN = 0x8100U,
+   PNAL_ETHTYPE_PROFINET = 0x8892U,
+   PNAL_ETHTYPE_ETHERCAT = 0x88A4U,
+   PNAL_ETHTYPE_LLDP = 0x88CCU,
 };
 
 /* 255.255.255.255 */
-#ifndef OS_IPADDR_NONE
-#define OS_IPADDR_NONE ((uint32_t)0xffffffffUL)
+#ifndef PNAL_IPADDR_NONE
+#define PNAL_IPADDR_NONE ((uint32_t)0xffffffffUL)
 #endif
 /* 127.0.0.1 */
-#ifndef OS_IPADDR_LOOPBACK
-#define OS_IPADDR_LOOPBACK ((uint32_t)0x7f000001UL)
+#ifndef PNAL_IPADDR_LOOPBACK
+#define PNAL_IPADDR_LOOPBACK ((uint32_t)0x7f000001UL)
 #endif
 /* 0.0.0.0 */
-#ifndef OS_IPADDR_ANY
-#define OS_IPADDR_ANY ((uint32_t)0x00000000UL)
+#ifndef PNAL_IPADDR_ANY
+#define PNAL_IPADDR_ANY ((uint32_t)0x00000000UL)
 #endif
 /* 255.255.255.255 */
-#ifndef OS_IPADDR_BROADCAST
-#define OS_IPADDR_BROADCAST ((uint32_t)0xffffffffUL)
+#ifndef PNAL_IPADDR_BROADCAST
+#define PNAL_IPADDR_BROADCAST ((uint32_t)0xffffffffUL)
 #endif
 
-typedef uint32_t os_ipaddr_t;
-typedef uint16_t os_ipport_t;
+typedef uint32_t pnal_ipaddr_t;
+typedef uint16_t pnal_ipport_t;
 
 /**
  * The Ethernet MAC address.
  */
-typedef struct os_ethaddr
+typedef struct pnal_ethaddr
 {
    uint8_t addr[6];
-} os_ethaddr_t;
+} pnal_ethaddr_t;
 
 /**
  * The p-net stack instance.
@@ -97,7 +99,7 @@ typedef struct pnet pnet_t;
  *
  * @return System uptime, in units of 10 milliseconds.
  */
-uint32_t os_get_system_uptime_10ms (void);
+uint32_t pnal_get_system_uptime_10ms (void);
 
 /**
  * Load a binary file.
@@ -112,7 +114,7 @@ uint32_t os_get_system_uptime_10ms (void);
  * @return  0  if the operation succeeded.
  *          -1 if not found or an error occurred.
  */
-int os_load_file (
+int pnal_load_file (
    const char * fullpath,
    void * object_1,
    size_t size_1,
@@ -132,7 +134,7 @@ int os_load_file (
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
-int os_save_file (
+int pnal_save_file (
    const char * fullpath,
    const void * object_1,
    size_t size_1,
@@ -144,17 +146,16 @@ int os_save_file (
  *
  * @param fullpath         In:    Full path to the file
  */
-void os_clear_file (const char * fullpath);
+void pnal_clear_file (const char * fullpath);
 
-
-/* os_buf_t should at least contain:
+/* pnal_buf_t should at least contain:
  *  void * payload;
  *  uint16_t len;
  */
 
-os_buf_t * os_buf_alloc (uint16_t length);
-void os_buf_free (os_buf_t * p);
-uint8_t os_buf_header (os_buf_t * p, int16_t header_size_increment);
+pnal_buf_t * pnal_buf_alloc (uint16_t length);
+void pnal_buf_free (pnal_buf_t * p);
+uint8_t pnal_buf_header (pnal_buf_t * p, int16_t header_size_increment);
 
 /**
  * Send raw Ethernet data
@@ -163,7 +164,7 @@ uint8_t os_buf_header (os_buf_t * p, int16_t header_size_increment);
  * @param buf           In: Buffer with data to be sent
  * @return  The number of bytes sent, or -1 if an error occurred.
  */
-int os_eth_send (os_eth_handle_t * handle, os_buf_t * buf);
+int pnal_eth_send (pnal_eth_handle_t * handle, pnal_buf_t * buf);
 
 /**
  * Initialize receiving of raw Ethernet frames (in separate thread)
@@ -174,20 +175,20 @@ int os_eth_send (os_eth_handle_t * handle, os_buf_t * buf);
  *
  * @return  the Ethernet handle, or NULL if an error occurred.
  */
-os_eth_handle_t * os_eth_init (
+pnal_eth_handle_t * pnal_eth_init (
    const char * if_name,
-   os_eth_callback_t * callback,
+   pnal_eth_callback_t * callback,
    void * arg);
 
 /**
  * Open an UDP socket
  *
  * @param addr             In:    IP address to listen to. Typically used with
- * OS_IPADDR_ANY.
+ * PNAL_IPADDR_ANY.
  * @param port             In:    UDP port to listen to.
  * @return Socket ID, or -1 if an error occurred.
  */
-int os_udp_open (os_ipaddr_t addr, os_ipport_t port);
+int pnal_udp_open (pnal_ipaddr_t addr, pnal_ipport_t port);
 
 /**
  * Send UDP data
@@ -199,10 +200,10 @@ int os_udp_open (os_ipaddr_t addr, os_ipport_t port);
  * @param size             In:    Size of data
  * @return  The number of bytes sent, or -1 if an error occurred.
  */
-int os_udp_sendto (
+int pnal_udp_sendto (
    uint32_t id,
-   os_ipaddr_t dst_addr,
-   os_ipport_t dst_port,
+   pnal_ipaddr_t dst_addr,
+   pnal_ipport_t dst_port,
    const uint8_t * data,
    int size);
 
@@ -219,10 +220,10 @@ int os_udp_sendto (
  * @param size             In:    Size of buffer for received data
  * @return  The number of bytes received, or -1 if an error occurred.
  */
-int os_udp_recvfrom (
+int pnal_udp_recvfrom (
    uint32_t id,
-   os_ipaddr_t * src_addr,
-   os_ipport_t * src_port,
+   pnal_ipaddr_t * src_addr,
+   pnal_ipport_t * src_port,
    uint8_t * data,
    int size);
 
@@ -231,7 +232,7 @@ int os_udp_recvfrom (
  *
  * @param id               In:    Socket ID
  */
-void os_udp_close (uint32_t id);
+void pnal_udp_close (uint32_t id);
 
 /**
  * Configure SNMP server.
@@ -244,7 +245,7 @@ void os_udp_close (uint32_t id);
  * @return  0 if the operation succeeded.
  *         -1 if an error occurred.
  */
-int os_snmp_init (pnet_t * net);
+int pnal_snmp_init (pnet_t * net);
 
 /**
  * Get network parameters (IP address, netmask etc)
@@ -260,15 +261,15 @@ int os_snmp_init (pnet_t * net);
  * @param p_netmask           Out: Netmask
  * @param p_gw                Out: Default gateway
  * @param hostname            Out: Host name, for example my_laptop_4. Existing
- * buffer should have length OS_HOST_NAME_MAX.
+ *                            buffer should have length PNAL_HOST_NAME_MAX.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
-int os_get_ip_suite (
+int pnal_get_ip_suite (
    const char * interface_name,
-   os_ipaddr_t * p_ipaddr,
-   os_ipaddr_t * p_netmask,
-   os_ipaddr_t * p_gw,
+   pnal_ipaddr_t * p_ipaddr,
+   pnal_ipaddr_t * p_netmask,
+   pnal_ipaddr_t * p_gw,
    char * hostname);
 
 /**
@@ -284,7 +285,7 @@ int os_get_ip_suite (
  * @return IP address on success and
  *         0 if an error occurred
  */
-os_ipaddr_t os_get_ip_address (const char * interface_name);
+pnal_ipaddr_t pnal_get_ip_address (const char * interface_name);
 
 /**
  * Read the netmask as an integer. For IPv4.
@@ -292,7 +293,7 @@ os_ipaddr_t os_get_ip_address (const char * interface_name);
  * @param interface_name      In: Name of network interface
  * @return netmask
  */
-os_ipaddr_t os_get_netmask (const char * interface_name);
+pnal_ipaddr_t pnal_get_netmask (const char * interface_name);
 
 /**
  * Read the default gateway address as an integer. For IPv4.
@@ -302,7 +303,7 @@ os_ipaddr_t os_get_netmask (const char * interface_name);
  * @param interface_name      In: Name of network interface
  * @return netmask
  */
-os_ipaddr_t os_get_gateway (const char * interface_name);
+pnal_ipaddr_t pnal_get_gateway (const char * interface_name);
 
 /**
  * Read the MAC address.
@@ -313,17 +314,17 @@ os_ipaddr_t os_get_gateway (const char * interface_name);
  * @return 0 on success and
  *         -1 if an error occurred
  */
-int os_get_macaddress (const char * interface_name, os_ethaddr_t * p_mac);
+int pnal_get_macaddress (const char * interface_name, pnal_ethaddr_t * p_mac);
 
 /**
  * Read the current host name
  *
  * @param hostname            Out: Host name, for example my_laptop_4. Existing
- * buffer should have length OS_HOST_NAME_MAX.
+ * buffer should have length PNAL_HOST_NAME_MAX.
  * @return 0 on success and
  *         -1 if an error occurred
  */
-int os_get_hostname (char * hostname);
+int pnal_get_hostname (char * hostname);
 
 /**
  * Set network parameters (IP address, netmask etc)
@@ -343,11 +344,11 @@ int os_get_hostname (char * hostname);
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
-int os_set_ip_suite (
+int pnal_set_ip_suite (
    const char * interface_name,
-   const os_ipaddr_t * p_ipaddr,
-   const os_ipaddr_t * p_netmask,
-   const os_ipaddr_t * p_gw,
+   const pnal_ipaddr_t * p_ipaddr,
+   const pnal_ipaddr_t * p_netmask,
+   const pnal_ipaddr_t * p_gw,
    const char * hostname,
    bool permanent);
 
