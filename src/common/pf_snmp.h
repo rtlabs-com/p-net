@@ -374,8 +374,7 @@ int pf_snmp_get_next_port (pf_port_iterator_t * p_iterator);
  * @param net              In:    The p-net stack instance.
  * @param loc_port_num     In:    Local port number for port directly
  *                                connected to the remote device.
- *                                Valid range: 1 .. N, where N is the total
- *                                number of local ports used by p-net stack.
+ *                                Valid range: 1 .. PNET_MAX_PORT
  *                                See pf_snmp_get_port_list().
  * @param p_timestamp_10ms Out:   Time when the LLDP packet with the info
  *                                was first received, in units of
@@ -418,8 +417,7 @@ void pf_snmp_get_chassis_id (pnet_t * net, pf_lldp_chassis_id_t * p_chassis_id);
  * @param net              In:    The p-net stack instance.
  * @param loc_port_num     In:    Local port number for port directly
  *                                connected to the remote device.
- *                                Valid range: 1 .. N, where N is the total
- *                                number of local ports used by p-net stack.
+ *                                Valid range: 1 .. PNET_MAX_PORT
  *                                See pf_snmp_get_port_list().
  * @param p_chassis_id     Out:   Chassis ID of remote device.
  * @return  0 if the operation succeeded.
@@ -440,8 +438,7 @@ int pf_snmp_get_peer_chassis_id (
  *
  * @param net              In:    The p-net stack instance.
  * @param loc_port_num     In:    Local port number.
- *                                Valid range: 1 .. N, where N is the total
- *                                number of local ports used by p-net stack.
+ *                                Valid range: 1 .. PNET_MAX_PORT
  *                                See pf_snmp_get_port_list().
  * @param p_port_id        Out:   Port ID of local port.
  */
@@ -467,8 +464,7 @@ void pf_snmp_get_port_id (
  * @param net              In:    The p-net stack instance.
  * @param loc_port_num     In:    Local port number for port directly
  *                                connected to the remote device.
- *                                Valid range: 1 .. N, where N is the total
- *                                number of local ports used by p-net stack.
+ *                                Valid range: 1 .. PNET_MAX_PORT
  *                                See pf_snmp_get_port_list().
  * @param p_port_id        Out:   Port ID of remote port.
  * @return  0 if the operation succeeded.
@@ -488,8 +484,7 @@ int pf_snmp_get_peer_port_id (
  *
  * @param net              In:    The p-net stack instance.
  * @param loc_port_num     In:    Local port number.
- *                                Valid range: 1 .. N, where N is the total
- *                                number of local ports used by p-net stack.
+ *                                Valid range: 1 .. PNET_MAX_PORT
  *                                See pf_snmp_get_port_list().
  * @param p_port_desc      Out:   Port description of local port.
  */
@@ -511,8 +506,7 @@ void pf_snmp_get_port_description (
  * @param net              In:    The p-net stack instance.
  * @param loc_port_num     In:    Local port number for port directly
  *                                connected to the remote device.
- *                                Valid range: 1 .. N, where N is the total
- *                                number of local ports used by p-net stack.
+ *                                Valid range: 1 .. PNET_MAX_PORT
  *                                See pf_snmp_get_port_list().
  * @param p_port_desc      Out:   Port description of remote port.
  * @return  0 if the operation succeeded.
@@ -581,8 +575,7 @@ void pf_snmp_get_management_address (
  * @param net              In:    The p-net stack instance.
  * @param loc_port_num     In:    Local port number for port directly
  *                                connected to the remote device.
- *                                Valid range: 1 .. N, where N is the total
- *                                number of local ports used by p-net stack.
+ *                                Valid range: 1 .. PNET_MAX_PORT
  *                                See pf_snmp_get_port_list().
  * @param p_man_address    Out:   Management address of remote interface.
  * @return  0 if the operation succeeded.
@@ -633,8 +626,7 @@ void pf_snmp_get_management_port_index (
  * @param net              In:    The p-net stack instance.
  * @param loc_port_num     In:    Local port number for port directly
  *                                connected to the remote device.
- *                                Valid range: 1 .. N, where N is the total
- *                                number of local ports used by p-net stack.
+ *                                Valid range: 1 .. PNET_MAX_PORT
  *                                See pf_snmp_get_port_list().
  * @param p_man_port_index Out:   Index in remote IfTable for Management port.
  * @return  0 if the operation succeeded.
@@ -689,8 +681,7 @@ void pf_snmp_get_station_name (
  * @param net              In:    The p-net stack instance.
  * @param loc_port_num     In:    Local port number for port directly
  *                                connected to the remote device.
- *                                Valid range: 1 .. N, where N is the total
- *                                number of local ports used by p-net stack.
+ *                                Valid range: 1 .. PNET_MAX_PORT
  *                                See pf_snmp_get_port_list().
  * @param p_station_name   Out:   Station name of remote interface.
  * @return  0 if the operation succeeded.
@@ -715,8 +706,7 @@ int pf_snmp_get_peer_station_name (
  *
  * @param net              In:    The p-net stack instance.
  * @param loc_port_num     In:    Local port number.
- *                                Valid range: 1 .. N, where N is the total
- *                                number of local ports used by p-net stack.
+ *                                Valid range: 1 .. PNET_MAX_PORT
  *                                See pf_snmp_get_port_list().
  * @param p_delays         Out:   Measured signal delays on local port.
  */
@@ -740,8 +730,7 @@ void pf_snmp_get_signal_delays (
  * @param net              In:    The p-net stack instance.
  * @param loc_port_num     In:    Local port number for port directly
  *                                connected to the remote device.
- *                                Valid range: 1 .. N, where N is the total
- *                                number of local ports used by p-net stack.
+ *                                Valid range: 1 .. PNET_MAX_PORT
  *                                See pf_snmp_get_port_list().
  * @param p_delays         Out:   Measured signal delays on remote port.
  * @return  0 if the operation succeeded.
@@ -768,8 +757,7 @@ int pf_snmp_get_peer_signal_delays (
  *
  * @param net              In:    The p-net stack instance.
  * @param loc_port_num     In:    Local port number.
- *                                Valid range: 1 .. N, where N is the total
- *                                number of local ports used by p-net stack.
+ *                                Valid range: 1 .. PNET_MAX_PORT
  *                                See pf_snmp_get_port_list().
  * @param p_link_status    Out:   Link status of local port.
  */
@@ -795,8 +783,7 @@ void pf_snmp_get_link_status (
  * @param net              In:    The p-net stack instance.
  * @param loc_port_num     In:    Local port number for port directly
  *                                connected to the remote device.
- *                                Valid range: 1 .. N, where N is the total
- *                                number of local ports used by p-net stack.
+ *                                Valid range: 1 .. PNET_MAX_PORT
  *                                See pf_snmp_get_port_list().
  * @param p_link_status    Out:   Link status of remote port.
  * @return  0 if the operation succeeded.
