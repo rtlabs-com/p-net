@@ -56,9 +56,11 @@ Limitations or not yet implemented:
 * No support for time synchronization
 * No UDP frames at alarm (just the default alarm mechanism is implemented)
 
+License
+-------
 This software is dual-licensed, with GPL version 3 and a commercial license.
+You typically need a commercial license if you use p-net in a product.
 See LICENSE.md for more details.
-
 
 Requirements
 ------------
