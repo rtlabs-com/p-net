@@ -183,17 +183,17 @@ void pf_snmp_get_system_description (
 
 void pf_snmp_get_port_list (pnet_t * net, pf_lldp_port_list_t * p_list)
 {
-   pf_lldp_get_port_list (net, p_list);
+   pf_port_get_list_of_ports (net, p_list);
 }
 
 void pf_snmp_init_port_iterator (pnet_t * net, pf_port_iterator_t * p_iterator)
 {
-   pf_lldp_init_port_iterator (net, p_iterator);
+   pf_port_init_iterator_over_ports (net, p_iterator);
 }
 
 int pf_snmp_get_next_port (pf_port_iterator_t * p_iterator)
 {
-   return pf_lldp_get_next_port (p_iterator);
+   return pf_port_get_next (p_iterator);
 }
 
 int pf_snmp_get_peer_timestamp (

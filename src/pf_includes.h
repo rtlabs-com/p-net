@@ -41,7 +41,6 @@ extern "C" {
 #include "pf_eth.h"
 #include "pf_file.h"
 #include "pf_lldp.h"
-#include "pf_pdport.h"
 #include "pf_ppm.h"
 #include "pf_ptcp.h"
 #include "pf_scheduler.h"
@@ -63,6 +62,8 @@ extern "C" {
 #include "pf_cmwrr.h"
 #include "pf_diag.h"
 #include "pf_fspm.h"
+#include "pf_pdport.h"
+#include "pf_port.h"
 
 #ifdef __cplusplus
 }

@@ -38,6 +38,7 @@ target_sources(pf_test PRIVATE
   test_fspm.cpp
   test_lldp.cpp
   test_pnetapi.cpp
+  test_port.cpp
   test_ppm.cpp
   test_ptcp.cpp
   test_scheduler.cpp

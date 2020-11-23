@@ -2455,6 +2455,7 @@ typedef struct pf_lldp_station_name
  * lldpXPnoLocPortTxDValue / lldpXPnoRemPortTxDValue,
  * lldpXPnoLocPortRxDValue / lldpXPnoRemPortRxDValue.
  *
+ * See also pnet_profibus_delay_t
  */
 typedef struct pf_lldp_signal_delay
 {
@@ -2463,24 +2464,7 @@ typedef struct pf_lldp_signal_delay
    uint32_t line_propagation_delay_ns;
 } pf_lldp_signal_delay_t;
 
-/**
- * Port attributes
- *
- * Note that pnet_lldp_cfg_t  (MAC address etc) is located in the config
- * TODO Add:
- * - Interface statistics
- * - Interface name
- * - local port number
- * - slot (typically 0 = PNET_SLOT_DAP_IDENT)
- * - subslot (for example 0x8001 = PNET_SUBSLOT_DAP_INTERFACE_1_PORT_0_IDENT)
- * - module (for example PNET_MOD_DAP_IDENT)
- * - submodule (for example PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT)
- * - lldp_peer_info
- * - uint32_t lldp_rx_timeout
- * - bool lldp_is_peer_info_received
- * - uint32_t lldp_timestamp_for_last_peer_change
- */
-typedef struct pf_port
+typedef struct pf_pdport
 {
    struct
    {
@@ -2492,6 +2476,53 @@ typedef struct pf_port
       bool active; /* Todo maybe a bitmask for different checks*/
       pf_adjust_peer_to_peer_boundary_t peer_to_peer_boundary;
    } adjust;
+} pf_pdport_t;
+
+typedef struct pf_lldp_port
+{
+   /* LLDP peer information
+    *
+    * The information may be changed anytime as incoming LLDP packet arrives.
+    *
+    * Protected by LLDP mutex.
+    */
+   pnet_lldp_peer_info_t peer_info;
+
+   /* Timestamp for when LLDP packet with new content was received.
+    *
+    * Units are the same as sysUptime in SNMP.
+    * Protected by LLDP mutex.
+    */
+   uint32_t timestamp_for_last_peer_change;
+
+   /* Scheduler handle for LLDP timeout */
+   uint32_t rx_timeout;
+
+   /* Is information about peer device received?
+    *
+    * Information is received in LLDP packets.
+    * Protected by LLDP mutex.
+    */
+   bool is_peer_info_received;
+} pf_lldp_port_t;
+
+/**
+ * Port runtime data
+ * Note that pnet_lldp_cfg_t  (MAC address etc) is located in the config
+ *
+ * TODO Add:
+ * - Interface statistics
+ * - Interface name
+ * - local port number
+ * - slot (typically 0 = PNET_SLOT_DAP_IDENT)
+ * - subslot (for example 0x8001 = PNET_SUBSLOT_DAP_INTERFACE_1_PORT_0_IDENT)
+ * - module (for example PNET_MOD_DAP_IDENT)
+ * - submodule (for example PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT)
+ */
+typedef struct pf_port
+{
+   pf_pdport_t pdport;
+   pf_lldp_port_t lldp;
 } pf_port_t;
 
 /**
@@ -2560,30 +2591,6 @@ struct pnet
     * This mutex protects information about the peer device.
     */
    os_mutex_t * lldp_mutex;
-
-   /* Timestamp for when LLDP packet with new content was received.
-    *
-    * Units are the same as sysUptime in SNMP.
-    * Protected by LLDP mutex.
-    */
-   uint32_t lldp_timestamp_for_last_peer_change;
-
-   /* Is information about peer device received?
-    *
-    * Information is received in LLDP packets.
-    * Protected by LLDP mutex.
-    */
-   bool lldp_is_peer_info_received;
-
-   /* LLDP peer information
-    *
-    * The information may be changed anytime an incoming LLDP packet arrives.
-    *
-    * Protected by LLDP mutex.
-    */
-   pnet_lldp_peer_info_t lldp_peer_info;
-
-   uint32_t lldp_rx_timeout; /* Scheduler handle for LLDP timeout */
 
    pf_port_t port[PNET_MAX_PORT];
 };

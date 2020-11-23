@@ -87,6 +87,8 @@ int pf_pdport_read_ind (
  * @param net              InOut:The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param p_write_req      In:   The IODWrite request.
+ * @param loc_port_num     In:    Local port number.
+ *                                Valid range: 1 .. PNET_MAX_PORT
  * @param p_req_buf        In:   The request buffer.
  * @param data_length      In:   Size of the data to write.
  * @param p_result         Out:  Detailed error information.
@@ -97,6 +99,7 @@ int pf_pdport_write_req (
    pnet_t * net,
    const pf_ar_t * p_ar,
    const pf_iod_write_request_t * p_write_req,
+   int loc_port_num,
    uint8_t * p_req_buf,
    uint16_t data_length,
    pnet_result_t * p_result);

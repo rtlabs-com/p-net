@@ -30,48 +30,13 @@ extern "C" {
 #define PF_LLDP_SUBTYPE_LOCALLY_ASSIGNED 7
 
 /**
- * Get list of local ports.
- *
- * This is the list of physical ports on the local interface.
- * The management port is not included.
- *
- * @param net              In:    The p-net stack instance.
- * @param p_list           Out:   List of local ports.
- */
-void pf_lldp_get_port_list (pnet_t * net, pf_lldp_port_list_t * p_list);
-
-/**
- * Initialise iterator for iterating over local ports.
- *
- * This iterator may be used for iterating over all physical ports
- * on the local interface. The management port is not included.
- * See pf_lldp_get_next_port().
- *
- * @param net              In:    The p-net stack instance.
- * @param p_iterator       Out:   Port iterator.
- */
-void pf_lldp_init_port_iterator (pnet_t * net, pf_port_iterator_t * p_iterator);
-
-/**
- * Get next local port.
- *
- * If no more ports are available, 0 is returned.
- *
- * @param p_iterator       InOut: Port iterator.
- * @return Local port number for next port on local interface.
- *         If no more ports are available, 0 is returned.
- */
-int pf_lldp_get_next_port (pf_port_iterator_t * p_iterator);
-
-/**
  * Get time when new information about remote device was received.
  *
  * @param net              In:    The p-net stack instance.
  * @param loc_port_num     In:    Local port number for port directly
  *                                connected to the remote device.
- *                                Valid range: 1 .. N, where N is the total
- *                                number of local ports used by p-net stack.
- *                                See pf_lldp_get_port_list().
+ *                                Valid range: 1 .. PNET_MAX_PORT
+ *                                See pf_port_get_list_of_ports().
  * @param p_timestamp_10ms Out:   Time when the LLDP packet with the info
  *                                was first received, in units of
  *                                10 milliseconds with system startup
@@ -92,8 +57,7 @@ int pf_lldp_get_peer_timestamp (
  *
  * @param net              InOut: The p-net stack instance
  * @param loc_port_num     In:    Local port number.
- *                                Valid range: 1 .. N, where N is the total
- *                                number of local ports used by p-net stack.
+ *                                Valid range: 1 .. PNET_MAX_PORT
  * @param pp_port_cfg      Out:   LLDP port configuration, or NULL if not
  *                                found.
  */
@@ -120,9 +84,8 @@ void pf_lldp_get_chassis_id (pnet_t * net, pf_lldp_chassis_id_t * p_chassis_id);
  * @param net              In:    The p-net stack instance.
  * @param loc_port_num     In:    Local port number for port directly
  *                                connected to the remote device.
- *                                Valid range: 1 .. N, where N is the total
- *                                number of local ports used by p-net stack.
- *                                See pf_lldp_get_port_list().
+ *                                Valid range: 1 .. PNET_MAX_PORT
+ *                                See pf_port_get_list_of_ports().
  * @param p_chassis_id     Out:   Chassis ID of remote device.
  * @return  0 if the operation succeeded.
  *         -1 if an error occurred (no info from remote device received).
@@ -139,9 +102,8 @@ int pf_lldp_get_peer_chassis_id (
  *
  * @param net              In:    The p-net stack instance.
  * @param loc_port_num     In:    Local port number.
- *                                Valid range: 1 .. N, where N is the total
- *                                number of local ports used by p-net stack.
- *                                See pf_lldp_get_port_list().
+ *                                Valid range: 1 .. PNET_MAX_PORT
+ *                                See pf_port_get_list_of_ports().
  * @param p_port_id        Out:   Port ID of local port.
  */
 void pf_lldp_get_port_id (
@@ -160,9 +122,8 @@ void pf_lldp_get_port_id (
  * @param net              In:    The p-net stack instance.
  * @param loc_port_num     In:    Local port number for port directly
  *                                connected to the remote device.
- *                                Valid range: 1 .. N, where N is the total
- *                                number of local ports used by p-net stack.
- *                                See pf_lldp_get_port_list().
+ *                                Valid range: 1 .. PNET_MAX_PORT
+ *                                See pf_port_get_list_of_ports().
  * @param p_port_id        Out:   Port ID of remote port.
  * @return  0 if the operation succeeded.
  *         -1 if an error occurred (no info from remote device received).
@@ -179,9 +140,8 @@ int pf_lldp_get_peer_port_id (
  *
  * @param net              In:    The p-net stack instance.
  * @param loc_port_num     In:    Local port number.
- *                                Valid range: 1 .. N, where N is the total
- *                                number of local ports used by p-net stack.
- *                                See pf_lldp_get_port_list().
+ *                                Valid range: 1 .. PNET_MAX_PORT
+ *                                See pf_port_get_list_of_ports().
  * @param p_port_desc      Out:   Port description of local port.
  */
 void pf_lldp_get_port_description (
@@ -197,9 +157,8 @@ void pf_lldp_get_port_description (
  * @param net              In:    The p-net stack instance.
  * @param loc_port_num     In:    Local port number for port directly
  *                                connected to the remote device.
- *                                Valid range: 1 .. N, where N is the total
- *                                number of local ports used by p-net stack.
- *                                See pf_lldp_get_port_list().
+ *                                Valid range: 1 .. PNET_MAX_PORT
+ *                                See pf_port_get_list_of_ports().
  * @param p_port_desc      Out:   Port description of remote port.
  * @return  0 if the operation succeeded.
  *         -1 if an error occurred (no info from remote device received).
@@ -240,9 +199,8 @@ void pf_lldp_get_management_address (
  * @param net              In:    The p-net stack instance.
  * @param loc_port_num     In:    Local port number for port directly
  *                                connected to the remote device.
- *                                Valid range: 1 .. N, where N is the total
- *                                number of local ports used by p-net stack.
- *                                See pf_lldp_get_port_list().
+ *                                Valid range: 1 .. PNET_MAX_PORT
+ *                                See pf_port_get_list_of_ports().
  * @param p_man_address    Out:   Management address of remote interface.
  * @return  0 if the operation succeeded.
  *         -1 if an error occurred (no info from remote device received).
@@ -275,9 +233,8 @@ void pf_lldp_get_management_port_index (
  * @param net              In:    The p-net stack instance.
  * @param loc_port_num     In:    Local port number for port directly
  *                                connected to the remote device.
- *                                Valid range: 1 .. N, where N is the total
- *                                number of local ports used by p-net stack.
- *                                See pf_lldp_get_port_list().
+ *                                Valid range: 1 .. PNET_MAX_PORT
+ *                                See pf_port_get_list_of_ports().
  * @param p_man_port_index Out:   Index in remote IfTable for Management port.
  * @return  0 if the operation succeeded.
  *         -1 if an error occurred (no info from remote device received).
@@ -299,9 +256,8 @@ int pf_lldp_get_peer_management_port_index (
  * @param net              In:    The p-net stack instance.
  * @param loc_port_num     In:    Local port number for port directly
  *                                connected to the remote device.
- *                                Valid range: 1 .. N, where N is the total
- *                                number of local ports used by p-net stack.
- *                                See pf_lldp_get_port_list().
+ *                                Valid range: 1 .. PNET_MAX_PORT
+ *                                See pf_port_get_list_of_ports().
  * @param p_station_name   Out:   Station name of remote interface.
  * @return  0 if the operation succeeded.
  *         -1 if an error occurred (no info from remote device received).
@@ -320,9 +276,8 @@ int pf_lldp_get_peer_station_name (
  *
  * @param net              In:    The p-net stack instance.
  * @param loc_port_num     In:    Local port number.
- *                                Valid range: 1 .. N, where N is the total
- *                                number of local ports used by p-net stack.
- *                                See pf_lldp_get_port_list().
+ *                                Valid range: 1 .. PNET_MAX_PORT
+ *                                See pf_port_get_list_of_ports().
  * @param p_delays         Out:   Measured signal delays on local port.
  */
 void pf_lldp_get_signal_delays (
@@ -340,9 +295,8 @@ void pf_lldp_get_signal_delays (
  * @param net              In:    The p-net stack instance.
  * @param loc_port_num     In:    Local port number for port directly
  *                                connected to the remote device.
- *                                Valid range: 1 .. N, where N is the total
- *                                number of local ports used by p-net stack.
- *                                See pf_lldp_get_port_list().
+ *                                Valid range: 1 .. PNET_MAX_PORT
+ *                                See pf_port_get_list_of_ports().
  * @param p_delays         Out:   Measured signal delays on remote port.
  * @return  0 if the operation succeeded.
  *         -1 if an error occurred (no info from remote device received).
@@ -359,9 +313,8 @@ int pf_lldp_get_peer_signal_delays (
  *
  * @param net              In:    The p-net stack instance.
  * @param loc_port_num     In:    Local port number.
- *                                Valid range: 1 .. N, where N is the total
- *                                number of local ports used by p-net stack.
- *                                See pf_lldp_get_port_list().
+ *                                Valid range: 1 .. PNET_MAX_PORT
+ *                                See pf_port_get_list_of_ports().
  * @param p_link_status    Out:   Link status of local port.
  */
 void pf_lldp_get_link_status (
@@ -377,9 +330,8 @@ void pf_lldp_get_link_status (
  * @param net              In:    The p-net stack instance.
  * @param loc_port_num     In:    Local port number for port directly
  *                                connected to the remote device.
- *                                Valid range: 1 .. N, where N is the total
- *                                number of local ports used by p-net stack.
- *                                See pf_lldp_get_port_list().
+ *                                Valid range: 1 .. PNET_MAX_PORT
+ *                                See pf_port_get_list_of_ports().
  * @param p_link_status    Out:   Link status of remote port.
  * @return  0 if the operation succeeded.
  *         -1 if an error occurred (no info from remote device received).

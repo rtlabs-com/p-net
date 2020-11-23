@@ -3537,6 +3537,7 @@ void pf_put_pdport_data_check (
 void pf_put_pdport_data_real (
    pnet_t * net,
    bool is_big_endian,
+   int loc_port_num,
    const pf_iod_read_result_t * p_res,
    uint16_t res_len,
    uint8_t * p_bytes,
@@ -3545,14 +3546,19 @@ void pf_put_pdport_data_real (
    uint16_t block_pos = *p_pos;
    uint16_t block_len = 0;
    uint16_t temp_u16 = 0;
-   uint8_t numPeers = net->lldp_peer_info.ttl ? 1 : 0;
+   uint8_t numPeers = 0;
    uint8_t temp_u8 = 0;
    pf_lldp_chassis_id_t chassis_id;
    const pnet_lldp_port_cfg_t * p_port_config = NULL;
-   const pnet_lldp_peer_info_t * p_peer_info = &net->lldp_peer_info;
+   const pnet_lldp_peer_info_t * p_peer_info = NULL;
+   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
-   pf_lldp_get_port_config (net, PNET_PORT_1, &p_port_config);
+   pf_lldp_get_port_config (net, loc_port_num, &p_port_config);
    CC_ASSERT (p_port_config != NULL);
+
+   p_peer_info = &p_port_data->lldp.peer_info;
+
+   numPeers = p_peer_info->ttl ? 1 : 0;
 
    /* Block header first */
    pf_put_block_header (
@@ -3962,6 +3968,8 @@ static void pf_put_pd_multiblock_interface_and_statistics (
  * Insert multiblock port and statistics
  * @param net              InOut: The p-net stack instance
  * @param is_big_endian    In:    Endianness of the destination buffer.
+ * @param loc_port_num     In:    Local port number.
+ *                                Valid range: 1 .. PNET_MAX_PORT
  * @param p_res            In:    The entity to insert
  * @param res_len          In:    Size of destination buffer.
  * @param p_bytes          Out:   Destination buffer.
@@ -3970,6 +3978,7 @@ static void pf_put_pd_multiblock_interface_and_statistics (
 static void pf_put_pd_multiblock_port_and_statistics (
    pnet_t * net,
    bool is_big_endian,
+   int loc_port_num,
    const pf_iod_read_result_t * p_res,
    uint16_t res_len,
    uint8_t * p_bytes,
@@ -4006,7 +4015,14 @@ static void pf_put_pd_multiblock_port_and_statistics (
       p_pos);
 
    /*PDPortDataReal*/
-   pf_put_pdport_data_real (net, is_big_endian, p_res, res_len, p_bytes, p_pos);
+   pf_put_pdport_data_real (
+      net,
+      is_big_endian,
+      loc_port_num,
+      p_res,
+      res_len,
+      p_bytes,
+      p_pos);
 
    /*PDPortStatistics*/
    pf_put_pdport_statistics (
@@ -4027,6 +4043,7 @@ static void pf_put_pd_multiblock_port_and_statistics (
 void pf_put_pd_real_data (
    pnet_t * net,
    bool is_big_endian,
+   int loc_port_num,
    const pf_iod_read_result_t * p_res,
    uint16_t res_len,
    uint8_t * p_bytes,
@@ -4048,6 +4065,7 @@ void pf_put_pd_real_data (
    pf_put_pd_multiblock_port_and_statistics (
       net,
       is_big_endian,
+      loc_port_num,
       p_res,
       res_len,
       p_bytes,

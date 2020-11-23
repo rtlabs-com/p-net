@@ -139,18 +139,6 @@ TEST_F (LldpTest, LldpGenerateAliasName)
    memset (alias, 0, sizeof (alias));
 }
 
-TEST_F (LldpTest, LldpGetPortList)
-{
-   pf_lldp_port_list_t port_list;
-
-   memset (&port_list, 0xff, sizeof (port_list));
-
-   /* TODO: Add support for multiple ports */
-   pf_lldp_get_port_list (net, &port_list);
-   EXPECT_EQ (port_list.ports[0], 0x80);
-   EXPECT_EQ (port_list.ports[1], 0x00);
-}
-
 TEST_F (LldpTest, LldpGetChassisId)
 {
    pf_lldp_chassis_id_t chassis_id;
