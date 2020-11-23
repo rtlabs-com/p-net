@@ -1,3 +1,5 @@
+.. _network-topology-detection:
+
 Network topology detection
 ==========================
 

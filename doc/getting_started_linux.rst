@@ -219,3 +219,28 @@ Run a test case until the problem occurs (in the build directory)::
 Study the resulting core::
 
     gdb pf_test core
+
+SNMP (Conformance class B)
+--------------------------
+
+Conformance class B requires SNMP support. P-Net for Linux implements
+a Net-SNMP subagent that handles the Profinet mandatory MIB:s. Also
+see :ref:`network-topology-detection` for information regarding SNMP.
+
+Enable SNMP by setting PNET_OPTION_SMP to ON. Net-SNMP also needs to
+be installed. On Ubuntu you can install the required packages using::
+
+    sudo apt install -y snmpd libsnmp-dev
+
+The file snmpd.conf controls access to the snmp agent. The following
+needs to be set::
+
+    master  agentx
+    agentaddress  0.0.0.0,[::1]
+    view   systemonly  included   .1.3.6.1.2.1.1
+    view   systemonly  included   .1.3.6.1.2.1.25.1
+    view   systemonly  included   .1.0.8802.1.1.
+    rocommunity  public default -V systemonly
+
+This enables agentx support, listens on all interfaces and allows
+read-only access to the Profinet MIB:s.
