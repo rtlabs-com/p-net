@@ -21,9 +21,26 @@ if (USE_SCHED_FIFO)
   add_compile_definitions(USE_SCHED_FIFO)
 endif()
 
+if (PNET_OPTION_SNMP)
+  find_package(NetSNMP REQUIRED)
+  find_package(NetSNMPAgent REQUIRED)
+endif()
+
+set(PNET_SNMP_PRIO 1
+  CACHE STRING "SNMP thread priority")
+set(PNET_SNMP_STACK_SIZE 256*1024
+  CACHE STRING "SNMP thread stack size")
+
+# Generate PNAL options
+configure_file (
+  src/ports/linux/pnal_options.h.in
+  ${PROFINET_BINARY_DIR}/src/ports/linux/pnal_options.h
+  )
+
 target_include_directories(profinet
   PRIVATE
   src/ports/linux
+  ${PROFINET_BINARY_DIR}/src/ports/linux
   )
 
 target_sources(profinet
@@ -31,6 +48,17 @@ target_sources(profinet
   src/ports/linux/pnal.c
   src/ports/linux/pnal_eth.c
   src/ports/linux/pnal_udp.c
+  $<$<BOOL:${PNET_OPTION_SNMP}>:src/ports/linux/pnal_snmp.c>
+  $<$<BOOL:${PNET_OPTION_SNMP}>:src/ports/linux/mib/lldpLocalSystemData.c>
+  $<$<BOOL:${PNET_OPTION_SNMP}>:src/ports/linux/mib/lldpLocPortTable.c>
+  $<$<BOOL:${PNET_OPTION_SNMP}>:src/ports/linux/mib/lldpConfigManAddrTable.c>
+  $<$<BOOL:${PNET_OPTION_SNMP}>:src/ports/linux/mib/lldpLocManAddrTable.c>
+  $<$<BOOL:${PNET_OPTION_SNMP}>:src/ports/linux/mib/lldpRemTable.c>
+  $<$<BOOL:${PNET_OPTION_SNMP}>:src/ports/linux/mib/lldpRemManAddrTable.c>
+  $<$<BOOL:${PNET_OPTION_SNMP}>:src/ports/linux/mib/lldpXdot3LocPortTable.c>
+  $<$<BOOL:${PNET_OPTION_SNMP}>:src/ports/linux/mib/lldpXdot3RemPortTable.c>
+  $<$<BOOL:${PNET_OPTION_SNMP}>:src/ports/linux/mib/lldpXPnoLocTable.c>
+  $<$<BOOL:${PNET_OPTION_SNMP}>:src/ports/linux/mib/lldpXPnoRemTable.c>
   )
 
 target_compile_options(profinet
@@ -47,6 +75,8 @@ target_link_libraries(profinet
   PUBLIC
   pthread
   rt
+  $<$<BOOL:${PNET_OPTION_SNMP}>:NetSNMP::NetSNMPAgent>
+  $<$<BOOL:${PNET_OPTION_SNMP}>:NetSNMP::NetSNMP>
   INTERFACE
   $<$<CONFIG:Coverage>:--coverage>
   )

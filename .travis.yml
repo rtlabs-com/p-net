@@ -6,6 +6,7 @@ addons:
   apt:
     packages:
       - doxygen
+      - libsnmp-dev
 
 # Add latest cmake
 before_install:
@@ -15,5 +16,5 @@ before_install:
   - sudo apt-get -y install cmake
 
 script:
-  - /usr/bin/cmake -B build -S . -DCMAKE_BUILD_TYPE=Debug
+  - /usr/bin/cmake -B build -S . -DCMAKE_BUILD_TYPE=Debug -DPNET_OPTION_SNMP=ON
   - /usr/bin/cmake --build build --target all check docs install -j4
