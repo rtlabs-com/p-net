@@ -35,6 +35,7 @@ int pf_pdport_init (pnet_t * net);
 /**
  * Reset PDPort configuration data for all ports.
  * Clear DPPort configuration in nvm.
+ * Remove all active diagnostics items related to DPPort.
  *
  * @param net              InOut: The p-net stack instance
  * @return  0  if the operation succeeded.
