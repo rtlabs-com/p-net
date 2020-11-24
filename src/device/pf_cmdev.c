@@ -4638,6 +4638,22 @@ static int pf_cmdev_cm_connect_rsp_pos (
    return ret;
 }
 
+/**
+ * @internal
+ * Reset observers / configurable checks
+ * - Disable configurable checks / observers
+ * - Observers should remove active diagnostics
+ *   from diagnostics ASE
+ *
+ * Todo: Only observers submodules within a certain AR should be reset.
+ *
+ * @param net              InOut: The p-net stack instance
+ */
+static void pf_cmdev_reset_observers (pnet_t * net)
+{
+   pf_pdport_reset_all (net);
+}
+
 /* ================================================
  *       Remote primitives
  */
@@ -4655,46 +4671,50 @@ int pf_cmdev_rm_connect_ind (
    pf_cmina_get_device_macaddr (net, &mac_address);
 
    /* RM_Connect.ind */
-   if (
-      (pf_cmdev_check_apdu (net, p_ar, p_connect_result) == 0) &&
-      (pf_cmdev_generate_submodule_diff (net, p_ar) == 0))
+   if (pf_cmdev_check_apdu (net, p_ar, p_connect_result) == 0)
    {
-      /* Start building the response to the connect request. */
-      memcpy (
-         p_ar->ar_result.cm_responder_mac_add.addr,
-         mac_address.addr,
-         sizeof (pnet_ethaddr_t));
-      p_ar->ar_result.responder_udp_rt_port = PF_UDP_UNICAST_PORT;
+      pf_cmdev_reset_observers (net);
 
-      pf_cmdev_fix_frame_id (p_ar);
-
-      for (ix = 0; ix < p_ar->nbr_iocrs; ix++)
+      if (pf_cmdev_generate_submodule_diff (net, p_ar) == 0)
       {
-         p_ar->iocrs[ix].result.iocr_type = p_ar->iocrs[ix].param.iocr_type;
-         p_ar->iocrs[ix].result.iocr_reference =
-            p_ar->iocrs[ix].param.iocr_reference;
-         p_ar->iocrs[ix].result.frame_id = p_ar->iocrs[ix].param.frame_id;
+         /* Start building the response to the connect request. */
+         memcpy (
+            p_ar->ar_result.cm_responder_mac_add.addr,
+            mac_address.addr,
+            sizeof (pnet_ethaddr_t));
+         p_ar->ar_result.responder_udp_rt_port = PF_UDP_UNICAST_PORT;
+
+         pf_cmdev_fix_frame_id (p_ar);
+
+         for (ix = 0; ix < p_ar->nbr_iocrs; ix++)
+         {
+            p_ar->iocrs[ix].result.iocr_type = p_ar->iocrs[ix].param.iocr_type;
+            p_ar->iocrs[ix].result.iocr_reference =
+               p_ar->iocrs[ix].param.iocr_reference;
+            p_ar->iocrs[ix].result.frame_id = p_ar->iocrs[ix].param.frame_id;
+         }
+         p_ar->alarm_cr_result.alarm_cr_type =
+            p_ar->alarm_cr_request.alarm_cr_type;
+         p_ar->alarm_cr_result.remote_alarm_reference =
+            p_ar->alarm_cr_request.local_alarm_reference;
+         p_ar->alarm_cr_result.max_alarm_data_length = 200; /* ToDo: Add a
+                                                               define for this
+                                                               value */
+
+         (void)pf_cmina_get_station_name (net, &p_station_name);
+         strncpy (
+            p_ar->ar_server.cm_responder_station_name,
+            p_station_name,
+            sizeof (p_ar->ar_server.cm_responder_station_name));
+         p_ar->ar_server.cm_responder_station_name
+            [sizeof (p_ar->ar_server.cm_responder_station_name) - 1] = '\0';
+         p_ar->ar_server.length_cm_responder_station_name =
+            (uint16_t)strlen (p_station_name);
+
+         p_ar->ready_4_data = false;
+
+         ret = pf_fspm_cm_connect_ind (net, p_ar, p_connect_result);
       }
-      p_ar->alarm_cr_result.alarm_cr_type =
-         p_ar->alarm_cr_request.alarm_cr_type;
-      p_ar->alarm_cr_result.remote_alarm_reference =
-         p_ar->alarm_cr_request.local_alarm_reference;
-      p_ar->alarm_cr_result.max_alarm_data_length = 200; /* ToDo: Add a define
-                                                            for this value */
-
-      (void)pf_cmina_get_station_name (net, &p_station_name);
-      strncpy (
-         p_ar->ar_server.cm_responder_station_name,
-         p_station_name,
-         sizeof (p_ar->ar_server.cm_responder_station_name));
-      p_ar->ar_server.cm_responder_station_name
-         [sizeof (p_ar->ar_server.cm_responder_station_name) - 1] = '\0';
-      p_ar->ar_server.length_cm_responder_station_name =
-         (uint16_t)strlen (p_station_name);
-
-      p_ar->ready_4_data = false;
-
-      ret = pf_fspm_cm_connect_ind (net, p_ar, p_connect_result);
    }
 
    if (ret == 0)
