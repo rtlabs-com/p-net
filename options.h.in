@@ -220,6 +220,10 @@
 #define PF_AL_BUF_LOG           (LOG_STATE_@PF_AL_BUF_LOG@)
 #endif
 
+#ifndef PF_PNAL_LOG
+#define PF_PNAL_LOG             (LOG_STATE_@PF_PNAL_LOG@)
+#endif
+
 #ifndef PNET_LOG
 #define PNET_LOG                (LOG_STATE_@PNET_LOG@)
 #endif

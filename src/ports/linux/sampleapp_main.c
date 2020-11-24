@@ -282,16 +282,13 @@ int app_set_led (uint16_t id, bool led_state)
    {
       return -1;
    }
-   os_log (
-      LOG_LEVEL_DEBUG,
-      "Command for setting LED state: %s\n",
-      outputcommand);
+   printf ("Command for setting LED state: %s\n", outputcommand);
 
    status = system (outputcommand);
    free (outputcommand);
    if (status != 0)
    {
-      os_log (LOG_LEVEL_ERROR, "Failed to set LED state\n");
+      printf ("Failed to set LED state\n");
       return -1;
    }
    return 0;
