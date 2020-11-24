@@ -1668,8 +1668,6 @@ static int pf_cmrpc_rm_connect_ind (
    int ret = -1;
    pf_ar_t * p_ar = NULL;
    pf_ar_t * p_ar_2 = NULL; /* When looking for duplicate */
-   int loc_port_num = PNET_PORT_1;
-   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
    if (p_sess->rpc_result.pnio_status.error_code != 0)
    {
@@ -1760,8 +1758,6 @@ static int pf_cmrpc_rm_connect_ind (
    }
    else
    {
-      p_port_data->pdport.adjust.active = false;
-      p_port_data->pdport.check.active = false;
       pf_lldp_tx_restart (net, true);
    }
 
