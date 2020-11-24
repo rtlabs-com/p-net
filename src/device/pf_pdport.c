@@ -128,8 +128,75 @@ static int pf_pdport_save (pnet_t * net)
 }
 
 /**
+ * @internal
+ * Get DAP subslot for using local port number
+ * @param loc_port_num     In:    Local port number.
+ *                                Valid range: 1 .. N, where N is the total
+ *                                number of local ports used by p-net stack.
+ * @return DAP subslot number for port identity
+ */
+static uint16_t pf_pdport_loc_port_num_to_dap_subslot (int loc_port_num)
+{
+   CC_ASSERT (loc_port_num == PNET_PORT_1);
+   return PNET_SUBSLOT_DAP_INTERFACE_1_PORT_0_IDENT;
+}
+
+/**
+ * @internal
+ * Initialize pdport diagnostic source
+ * @param diag_source      InOut: Diag source to be initialized
+ * @param loc_port_num     In:    Local port number.
+ *                                Valid range: 1 .. N, where N is the total
+ *                                number of local ports used by p-net stack.
+ * @return Index in port array
+ */
+static void pf_pdport_init_diag_source (
+   pnet_diag_source_t * diag_source,
+   int loc_port_num)
+{
+   diag_source->api = PNET_API_NO_APPLICATION_PROFILE;
+   diag_source->slot = PNET_SLOT_DAP_IDENT;
+   diag_source->subslot = pf_pdport_loc_port_num_to_dap_subslot (loc_port_num);
+   diag_source->ch = PNET_CHANNEL_WHOLE_SUBMODULE;
+   diag_source->ch_grouping = PNET_DIAG_CH_INDIVIDUAL_CHANNEL;
+   diag_source->ch_direction = PNET_DIAG_CH_PROP_DIR_MANUF_SPEC;
+}
+
+/**
+ * Delete all active diagnostics handled by pdport
+ * @param net              InOut: The p-net stack instance
+ */
+static void pf_pdport_remove_all_diag (pnet_t * net)
+{
+   pnet_diag_source_t diag_source = {0};
+
+   pf_pdport_init_diag_source (&diag_source, PNET_PORT_1);
+
+   (void)pf_diag_std_remove (
+      net,
+      &diag_source,
+      PF_WRT_ERROR_REMOTE_MISMATCH,
+      PF_WRT_ERROR_PEER_STATIONNAME_MISMATCH);
+
+   (void)pf_diag_std_remove (
+      net,
+      &diag_source,
+      PF_WRT_ERROR_REMOTE_MISMATCH,
+      PF_WRT_ERROR_PEER_PORTNAME_MISMATCH);
+
+   (void)pf_diag_std_remove (
+      net,
+      &diag_source,
+      PF_WRT_ERROR_REMOTE_MISMATCH,
+      PF_WRT_ERROR_NO_PEER_DETECTED);
+}
+
+/**
  * Init PDPort data.
  * Load port configuration from nvm.
+
+ * If a check is loaded it will be run when pdport receives
+ * data from lldp.
  *
  * @param net              InOut: The p-net stack instance
  * @return  0  if the operation succeeded.
@@ -148,6 +215,7 @@ int pf_pdport_init (pnet_t * net)
 /**
  * Reset port configuration data for all ports.
  * Clear configuration in nvm.
+ * Remove diagnosis
  *
  * @param net              InOut: The p-net stack instance
  * @return  0  if the operation succeeded.
@@ -162,6 +230,8 @@ int pf_pdport_reset_all (pnet_t * net)
    pf_file_clear (p_file_directory, PNET_FILENAME_PDPORT);
 
    memset (&p_port_data->pdport, 0, sizeof (p_port_data->pdport));
+   pf_pdport_remove_all_diag (net);
+
    return 0;
 }
 
@@ -295,10 +365,12 @@ int pf_pdport_read_ind (
 }
 
 /**
- * Run peer check
+ * @internal
+ * Run peer station name check
  *
  * Compare llpd peer information with configured pdport peer.
  * Trigger an alarm if wrong peer is connected.
+ * Remove diagnosis if expected peer data is received.
  *
  * @param net              InOut: The p-net stack instance
  * @param loc_port_num     In:    Local port number.
@@ -306,85 +378,182 @@ int pf_pdport_read_ind (
  *                                number of local ports used by p-net stack.
  * @param p_lldp_peer_info In:    Currently received peer info
  */
-static void pf_pdport_run_peer_check (
+static void pf_pdport_check_peer_station_name (
    pnet_t * net,
    int loc_port_num,
    const pnet_lldp_peer_info_t * p_lldp_peer_info)
 {
    bool peer_stationname_is_correct = false;
-
-   bool peer_portname_is_correct = false;
    pnet_diag_source_t diag_source = {0};
    pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
    pf_check_peer_t * p_wanted_peer = &p_port_data->pdport.check.peer;
 
+   pf_pdport_init_diag_source (&diag_source, loc_port_num);
+
    if (p_port_data->pdport.check.active == true)
+
+   if (
+      strncmp (
+         p_lldp_peer_info->chassis_id.string,
+         (char *)p_wanted_peer->peer_station_name,
+         p_lldp_peer_info->chassis_id.len) == 0)
    {
-      if (
-         strncmp (
-            p_lldp_peer_info->chassis_id.string,
-            (char *)p_wanted_peer->peer_station_name,
-            p_lldp_peer_info->chassis_id.len) == 0)
-      {
-         peer_stationname_is_correct = true;
-      }
+      peer_stationname_is_correct = true;
+   }
 
-      // TODO Update also peer_portname_is_correct
+   if (peer_stationname_is_correct == false)
+   {
+      LOG_DEBUG (
+         PNET_LOG,
+         "PDPORT(%d): Sending peer station name mismatch alarm: %s (Port: "
+         "%s) "
+         "Wanted peer station name: %.*s (Port: %.*s)\n",
+         __LINE__,
+         p_lldp_peer_info->chassis_id.string,
+         p_lldp_peer_info->port_id,
+         p_wanted_peer->length_peer_station_name,
+         p_wanted_peer->peer_station_name,
+         p_wanted_peer->length_peer_port_name,
+         p_wanted_peer->peer_port_name);
 
-      diag_source.api = PNET_API_NO_APPLICATION_PROFILE;
-      diag_source.slot = PNET_SLOT_DAP_IDENT;
-      diag_source.subslot = PNET_SUBSLOT_DAP_INTERFACE_1_PORT_0_IDENT; /* TODO should depend on port number */
-      diag_source.ch = PNET_CHANNEL_WHOLE_SUBMODULE;
-      diag_source.ch_grouping = PNET_DIAG_CH_INDIVIDUAL_CHANNEL;
-      diag_source.ch_direction = PNET_DIAG_CH_PROP_DIR_MANUF_SPEC;
-
-      if (peer_stationname_is_correct == false)
-      {
-         LOG_DEBUG (
-            PNET_LOG,
-            "PDPORT(%d): Sending peer station name mismatch alarm: %s (Port: "
-            "%s) "
-            "Wanted peer station name: %.*s (Port: %.*s)\n",
-            __LINE__,
-            p_lldp_peer_info->chassis_id.string,
-            p_lldp_peer_info->port_id,
-            p_wanted_peer->length_peer_station_name,
-            p_wanted_peer->peer_station_name,
-            p_wanted_peer->length_peer_port_name,
-            p_wanted_peer->peer_port_name);
-         (void)pf_diag_std_add (
-            net,
-            &diag_source,
-            PNET_DIAG_CH_PROP_TYPE_UNSPECIFIED,
-            PNET_DIAG_CH_PROP_MAINT_FAULT,
-            PF_WRT_ERROR_REMOTE_MISMATCH,
-            PF_WRT_ERROR_PEER_STATIONNAME_MISMATCH,
-            0,
-            0);
-      }
-      else
-      {
-         LOG_DEBUG (
-            PNET_LOG,
-            "PDPORT(%d): Peer station name is correct: %s (Port: "
-            "%s). Remove diagnosis.\n",
-            __LINE__,
-            p_lldp_peer_info->chassis_id.string,
-            p_lldp_peer_info->port_id);
-         (void)pf_diag_std_remove (
-            net,
-            &diag_source,
-            PF_WRT_ERROR_REMOTE_MISMATCH,
-            PF_WRT_ERROR_PEER_STATIONNAME_MISMATCH);
-      }
-
-      (void)peer_portname_is_correct; /* TODO use in the decision making */
+      (void)pf_diag_std_add (
+         net,
+         &diag_source,
+         PNET_DIAG_CH_PROP_TYPE_UNSPECIFIED,
+         PNET_DIAG_CH_PROP_MAINT_FAULT,
+         PF_WRT_ERROR_REMOTE_MISMATCH,
+         PF_WRT_ERROR_PEER_STATIONNAME_MISMATCH,
+         0,
+         0);
    }
    else
    {
       LOG_DEBUG (
          PNET_LOG,
-         "PDPORT(%d): We do not check peer name and portID, so no port change "
+         "PDPORT(%d): Peer station name is correct: %s (Port: "
+         "%s). Remove diagnosis.\n",
+         __LINE__,
+         p_lldp_peer_info->chassis_id.string,
+         p_lldp_peer_info->port_id);
+      (void)pf_diag_std_remove (
+         net,
+         &diag_source,
+         PF_WRT_ERROR_REMOTE_MISMATCH,
+         PF_WRT_ERROR_PEER_STATIONNAME_MISMATCH);
+   }
+}
+
+/**
+ * @internal
+ * Run peer port name check
+ *
+ * Compare llpd peer information with configured pdport peer.
+ * Trigger an diagnosis if unexpected peer data is connected.
+ * Remove diagnosis if expected peer data is received.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param loc_port_num     In:    Local port number.
+ *                                Valid range: 1 .. N, where N is the total
+ *                                number of local ports used by p-net stack.
+ * @param p_lldp_peer_info In:    Peer info
+ */
+static void pf_pdport_check_peer_port_name (
+   pnet_t * net,
+   int loc_port_num,
+   const pnet_lldp_peer_info_t * p_lldp_peer_info)
+{
+   bool peer_portname_is_correct = false;
+   pnet_diag_source_t diag_source = {0};
+   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
+   pf_check_peer_t * p_wanted_peer = &p_port_data->pdport.check.peer;
+
+   pf_pdport_init_diag_source (&diag_source, loc_port_num);
+
+   if (
+      strncmp (
+         p_lldp_peer_info->port_id,
+         (char *)p_wanted_peer->peer_port_name,
+         p_wanted_peer->length_peer_port_name) == 0)
+   {
+      peer_portname_is_correct = true;
+   }
+
+   pf_pdport_init_diag_source (&diag_source, loc_port_num);
+
+   if (peer_portname_is_correct == false)
+   {
+      LOG_DEBUG (
+         PNET_LOG,
+         "PDPORT(%d): Sending peer port name mismatch alarm: %s (Port: "
+         "%s) "
+         "Wanted peer station name: %.*s (Port: %.*s)\n",
+         __LINE__,
+         p_lldp_peer_info->chassis_id.string,
+         p_lldp_peer_info->port_id,
+         p_wanted_peer->length_peer_station_name,
+         p_wanted_peer->peer_station_name,
+         p_wanted_peer->length_peer_port_name,
+         p_wanted_peer->peer_port_name);
+
+      (void)pf_diag_std_add (
+         net,
+         &diag_source,
+         PNET_DIAG_CH_PROP_TYPE_UNSPECIFIED,
+         PNET_DIAG_CH_PROP_MAINT_FAULT,
+         PF_WRT_ERROR_REMOTE_MISMATCH,
+         PF_WRT_ERROR_PEER_PORTNAME_MISMATCH,
+         0,
+         0);
+   }
+   else
+   {
+      LOG_DEBUG (
+         PNET_LOG,
+         "PDPORT(%d): Peer port name is correct: %s (Port: "
+         "%s). Remove diagnosis.\n",
+         __LINE__,
+         p_lldp_peer_info->chassis_id.string,
+         p_lldp_peer_info->port_id);
+      (void)pf_diag_std_remove (
+         net,
+         &diag_source,
+         PF_WRT_ERROR_REMOTE_MISMATCH,
+         PF_WRT_ERROR_PEER_PORTNAME_MISMATCH);
+   }
+}
+
+/**
+ * @internal
+ * Run peer check
+ *
+ * Compare llpd peer information with configured pdport peer.
+ * Trigger an diagnosis if unexpected peer data is connected.
+ * Remove diagnosis if expected peer data is received.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param loc_port_num     In:    Local port number.
+ *                                Valid range: 1 .. N, where N is the total
+ *                                number of local ports used by p-net stack.
+ * @param p_lldp_peer_info In:    Peer info
+ */
+static void pf_pdport_run_peer_check (
+   pnet_t * net,
+   int loc_port_num,
+   const pnet_lldp_peer_info_t * p_lldp_peer_info)
+{
+   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
+
+   if (p_port_data->pdport.check.active == true)
+   {
+      pf_pdport_check_peer_port_name (net, loc_port_num, p_lldp_peer_info);
+
+      pf_pdport_check_peer_station_name (net, loc_port_num, p_lldp_peer_info);
+   }
+   else
+   {
+      LOG_DEBUG (
+         PNET_LOG,
+         "PDPORT(%d): We do not check peer name or portID, so no port change "
          "alarm is sent.\n",
          __LINE__);
    }
