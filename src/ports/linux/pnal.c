@@ -51,18 +51,26 @@ int pnal_save_file (
    outputfile = fopen (fullpath, "wb");
    if (outputfile == NULL)
    {
-      os_log (LOG_LEVEL_ERROR, "Could not open file %s\n", fullpath);
+      LOG_ERROR (
+         PF_PNAL_LOG,
+         "PNAL(%d): Could not open file %s\n",
+         __LINE__,
+         fullpath);
       return -1;
    }
 
    /* Write file contents */
-   os_log (LOG_LEVEL_DEBUG, "Saving to file %s\n", fullpath);
+   LOG_DEBUG (PF_PNAL_LOG, "PNAL(%d): Saving to file %s\n", __LINE__, fullpath);
    if (size_1 > 0)
    {
       if (fwrite (object_1, size_1, 1, outputfile) != 1)
       {
          ret = -1;
-         os_log (LOG_LEVEL_ERROR, "Failed to write file %s\n", fullpath);
+         LOG_ERROR (
+            PF_PNAL_LOG,
+            "PNAL(%d): Failed to write file %s\n",
+            __LINE__,
+            fullpath);
       }
    }
    if (size_2 > 0 && ret == 0)
@@ -70,9 +78,10 @@ int pnal_save_file (
       if (fwrite (object_2, size_2, 1, outputfile) != 1)
       {
          ret = -1;
-         os_log (
-            LOG_LEVEL_ERROR,
-            "Failed to write file %s\n (second buffer)",
+         LOG_ERROR (
+            PF_PNAL_LOG,
+            "PNAL(%d): Failed to write file %s (second buffer)\n",
+            __LINE__,
             fullpath);
       }
    }
@@ -85,7 +94,7 @@ int pnal_save_file (
 
 void pnal_clear_file (const char * fullpath)
 {
-   os_log (LOG_LEVEL_DEBUG, "Clearing file %s\n", fullpath);
+   LOG_DEBUG (PF_PNAL_LOG, "PNAL(%d): Clearing file %s\n", __LINE__, fullpath);
    (void)remove (fullpath);
 }
 
@@ -103,7 +112,11 @@ int pnal_load_file (
    inputfile = fopen (fullpath, "rb");
    if (inputfile == NULL)
    {
-      os_log (LOG_LEVEL_DEBUG, "Could not yet open file %s\n", fullpath);
+      LOG_DEBUG (
+         PF_PNAL_LOG,
+         "PNAL(%d): Could not yet open file %s\n",
+         __LINE__,
+         fullpath);
       return -1;
    }
 
@@ -113,7 +126,11 @@ int pnal_load_file (
       if (fread (object_1, size_1, 1, inputfile) != 1)
       {
          ret = -1;
-         os_log (LOG_LEVEL_ERROR, "Failed to read file %s\n", fullpath);
+         LOG_ERROR (
+            PF_PNAL_LOG,
+            "PNAL(%d): Failed to read file %s\n",
+            __LINE__,
+            fullpath);
       }
    }
 
@@ -122,9 +139,10 @@ int pnal_load_file (
       if (fread (object_2, size_2, 1, inputfile) != 1)
       {
          ret = -1;
-         os_log (
-            LOG_LEVEL_ERROR,
-            "Failed to read file %s\n (second buffer)",
+         LOG_ERROR (
+            PF_PNAL_LOG,
+            "PNAL(%d): Failed to read file %s (second buffer)\n",
+            __LINE__,
             fullpath);
       }
    }
@@ -233,9 +251,10 @@ int pnal_set_ip_suite (
       return -1;
    }
 
-   os_log (
-      LOG_LEVEL_DEBUG,
-      "Command for setting network parameters: %s\n",
+   LOG_DEBUG (
+      PF_PNAL_LOG,
+      "PNAL(%d): Command for setting network parameters: %s\n",
+      __LINE__,
       outputcommand);
 
    status = system (outputcommand);

@@ -126,17 +126,26 @@ int pnal_save_file (
    outputfile = open (fullpath, O_WRONLY | O_CREAT);
    if (outputfile < 0)
    {
+      LOG_ERROR (
+         PF_PNAL_LOG,
+         "PNAL(%d): Could not open file %s\n",
+         __LINE__,
+         fullpath);
       return -1;
    }
 
    /* Write file contents */
-   os_log (LOG_LEVEL_DEBUG, "Saving to file %s\n", fullpath);
+   LOG_DEBUG (PF_PNAL_LOG, "PNAL(%d): Saving to file %s\n", __LINE__, fullpath);
    if (size_1 > 0)
    {
       if (write (outputfile, object_1, size_1) != (int)size_1)
       {
          ret = -1;
-         os_log (LOG_LEVEL_ERROR, "Failed to write file %s\n", fullpath);
+         LOG_ERROR (
+            PF_PNAL_LOG,
+            "PNAL(%d): Failed to write file %s\n",
+            __LINE__,
+            fullpath);
       }
    }
    if (size_2 > 0 && ret == 0)
@@ -144,7 +153,11 @@ int pnal_save_file (
       if (write (outputfile, object_2, size_2) != (int)size_2)
       {
          ret = -1;
-         os_log (LOG_LEVEL_ERROR, "Failed to write file %s\n", fullpath);
+         LOG_ERROR (
+            PF_PNAL_LOG,
+            "PNAL(%d): Failed to write file %s (second buffer)\n",
+            __LINE__,
+            fullpath);
       }
    }
 
@@ -155,7 +168,7 @@ int pnal_save_file (
 
 void pnal_clear_file (const char * fullpath)
 {
-   os_log (LOG_LEVEL_DEBUG, "Clearing file %s\n", fullpath);
+   LOG_DEBUG (PF_PNAL_LOG, "PNAL(%d): Clearing file %s\n", __LINE__, fullpath);
    (void)remove (fullpath);
 }
 
@@ -173,7 +186,11 @@ int pnal_load_file (
    inputfile = open (fullpath, O_RDONLY);
    if (inputfile < 0)
    {
-      os_log (LOG_LEVEL_DEBUG, "Could not yet open file %s\n", fullpath);
+      LOG_DEBUG (
+         PF_PNAL_LOG,
+         "PNAL(%d): Could not yet open file %s\n",
+         __LINE__,
+         fullpath);
       return -1;
    }
 
@@ -183,7 +200,11 @@ int pnal_load_file (
       if (read (inputfile, object_1, size_1) != (int)size_1)
       {
          ret = -1;
-         os_log (LOG_LEVEL_ERROR, "Failed to read file %s\n", fullpath);
+         LOG_ERROR (
+            PF_PNAL_LOG,
+            "PNAL(%d): Failed to read file %s\n",
+            __LINE__,
+            fullpath);
       }
    }
    if (size_2 > 0 && ret == 0)
@@ -191,7 +212,11 @@ int pnal_load_file (
       if (read (inputfile, object_2, size_2) != (int)size_2)
       {
          ret = -1;
-         os_log (LOG_LEVEL_ERROR, "Failed to write file %s\n", fullpath);
+         LOG_ERROR (
+            PF_PNAL_LOG,
+            "PNAL(%d): Failed to read file %s (second buffer)\n",
+            __LINE__,
+            fullpath);
       }
    }
 
