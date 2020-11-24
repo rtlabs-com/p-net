@@ -588,6 +588,8 @@ int pf_diag_update (
             p_item->next = p_subslot->diag_list;
             p_subslot->diag_list = item_ix;
 
+            pf_diag_update_submodule_state (net, p_ar, p_subslot);
+
             /* TODO Use better strategy to find AR */
             if (pf_diag_find_first_ar (net, &p_ar) == 0)
             {
@@ -743,6 +745,7 @@ int pf_diag_remove (
                   "DIAG(%d): No active connection, so no alarm is sent.\n",
                   __LINE__);
             }
+            pf_diag_update_submodule_state (net, p_ar, p_subslot);
          }
 
          /* Free diag entry */
