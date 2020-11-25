@@ -870,9 +870,10 @@ typedef int (*pnet_new_data_status_ind) (
 /**
  * The IO-controller has sent an alarm to the device.
  *
- * This functionality is used for alarms triggered by the IO-controller.
- *
- * It is optional to implement this callback.
+ * When receiving this indication, the application shall
+ * respond with pnet_alarm_send_ack.
+ * pnet_alarm_send_ack may be called in the context of this
+ * callback.
  *
  * @param net              InOut: The p-net stack instance
  * @param arg              InOut: User-defined data (not used by p-net)
@@ -883,7 +884,7 @@ typedef int (*pnet_new_data_status_ind) (
  * @param data_usi         In:    Alarm USI
  * @param p_data           In:    Alarm data
  * @return  0  on success.
- *          -1 if an error occurred.
+ *          Other values are ignored.
  */
 typedef int (*pnet_alarm_ind) (
    pnet_t * net,
