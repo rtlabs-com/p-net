@@ -623,16 +623,20 @@ static int pf_alarm_alpmr_apmr_a_data_ind (
       alarm_arg.alarm_specifier = p_alarm_data->alarm_specifier;
       alarm_arg.sequence_number = p_alarm_data->sequence_number;
 
-      ret = pf_fspm_alpmr_alarm_ind (
+      p_apmx->p_alpmx->alpmr_state = PF_ALPMR_STATE_W_USER_ACK;
+
+      /*
+       * Indicate alarm to app. App must respond to callback
+       * using pnet_alarm_send_ack()
+       */
+      (void)pf_fspm_alpmr_alarm_ind (
          net,
          p_apmx->p_ar,
          &alarm_arg,
          data_len,
          data_usi,
          p_data);
-
-      /* App must now send an ACK or a NACK */
-      p_apmx->p_alpmx->alpmr_state = PF_ALPMR_STATE_W_USER_ACK;
+      ret = 0;
       break;
    case PF_ALPMR_STATE_W_USER_ACK:
       /* ToDo: "Combine data for the RTA error request */
