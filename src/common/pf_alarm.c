@@ -498,7 +498,7 @@ static int pf_alarm_alpmi_apmr_a_data_ind (
    case PF_ALPMI_STATE_W_ACK:
       /* This function is only called for DATA = ACK */
       p_apmx->p_alpmx->alpmi_state = PF_ALPMI_STATE_W_ALARM;
-      (void)pf_fspm_alpmi_alarm_cnf (net, p_apmx->p_ar, p_pnio_status);
+      pf_fspm_alpmi_alarm_cnf (net, p_apmx->p_ar, p_pnio_status);
       ret = 0;
       break;
    }
@@ -563,7 +563,7 @@ static void pf_alarm_alpmr_apms_a_data_cnf (
       else
       {
          /* Handle pos cnf */
-         (void)pf_fspm_alpmr_alarm_ack_cnf (
+         pf_fspm_alpmr_alarm_ack_cnf (
             net,
             p_apmx->p_ar,
             res); /* ALPMR:

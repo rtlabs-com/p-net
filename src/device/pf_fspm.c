@@ -515,18 +515,16 @@ int pf_fspm_exp_submodule_ind (
    return ret;
 }
 
-int pf_fspm_data_status_changed (
+void pf_fspm_data_status_changed (
    pnet_t * net,
    const pf_ar_t * p_ar,
    const pf_iocr_t * p_iocr,
    uint8_t changes,
    uint8_t data_status)
 {
-   int ret = -1;
-
    if (net->fspm_cfg.new_data_status_cb != NULL)
    {
-      ret = net->fspm_cfg.new_data_status_cb (
+      (void)net->fspm_cfg.new_data_status_cb (
          net,
          net->fspm_cfg.cb_arg,
          p_ar->arep,
@@ -534,24 +532,18 @@ int pf_fspm_data_status_changed (
          changes,
          data_status);
    }
-
-   return ret;
 }
 
-int pf_fspm_ccontrol_cnf (
+void pf_fspm_ccontrol_cnf (
    pnet_t * net,
    const pf_ar_t * p_ar,
    pnet_result_t * p_result)
 {
-   int ret = 0;
-
    if (net->fspm_cfg.ccontrol_cb != NULL)
    {
-      ret = net->fspm_cfg
-               .ccontrol_cb (net, net->fspm_cfg.cb_arg, p_ar->arep, p_result);
+      (void)net->fspm_cfg
+         .ccontrol_cb (net, net->fspm_cfg.cb_arg, p_ar->arep, p_result);
    }
-
-   return ret;
 }
 
 int pf_fspm_cm_read_ind (
@@ -1071,13 +1063,11 @@ int pf_fspm_cm_dcontrol_ind (
    return ret;
 }
 
-int pf_fspm_state_ind (
+void pf_fspm_state_ind (
    pnet_t * net,
    const pf_ar_t * p_ar,
    pnet_event_values_t event)
 {
-   int ret = 0;
-
    CC_ASSERT (p_ar != NULL);
 
    LOG_DEBUG (
@@ -1088,11 +1078,9 @@ int pf_fspm_state_ind (
 
    if (net->fspm_cfg.state_cb != NULL)
    {
-      ret =
+      (void)
          net->fspm_cfg.state_cb (net, net->fspm_cfg.cb_arg, p_ar->arep, event);
    }
-
-   return ret;
 }
 
 int pf_fspm_alpmr_alarm_ind (
@@ -1120,55 +1108,40 @@ int pf_fspm_alpmr_alarm_ind (
    return ret;
 }
 
-int pf_fspm_alpmi_alarm_cnf (
+void pf_fspm_alpmi_alarm_cnf (
    pnet_t * net,
    const pf_ar_t * p_ar,
    const pnet_pnio_status_t * p_pnio_status)
 {
-   int ret = 0;
-
    if (net->fspm_cfg.alarm_cnf_cb != NULL)
    {
-      ret = net->fspm_cfg.alarm_cnf_cb (
-         net,
-         net->fspm_cfg.cb_arg,
-         p_ar->arep,
-         p_pnio_status);
+      (void)net->fspm_cfg
+         .alarm_cnf_cb (net, net->fspm_cfg.cb_arg, p_ar->arep, p_pnio_status);
    }
-
-   return ret;
 }
 
-int pf_fspm_alpmr_alarm_ack_cnf (pnet_t * net, const pf_ar_t * p_ar, int res)
+void pf_fspm_alpmr_alarm_ack_cnf (pnet_t * net, const pf_ar_t * p_ar, int res)
 {
-   int ret = 0;
-
    if (net->fspm_cfg.alarm_ack_cnf_cb != NULL)
    {
-      ret = net->fspm_cfg
-               .alarm_ack_cnf_cb (net, net->fspm_cfg.cb_arg, p_ar->arep, res);
+      (void)net->fspm_cfg
+         .alarm_ack_cnf_cb (net, net->fspm_cfg.cb_arg, p_ar->arep, res);
    }
-
-   return ret;
 }
 
-int pf_fspm_reset_ind (
+void pf_fspm_reset_ind (
    pnet_t * net,
    bool should_reset_application,
    uint16_t reset_mode)
 {
-   int ret = 0;
-
    if (net->fspm_cfg.reset_cb != NULL)
    {
-      ret = net->fspm_cfg.reset_cb (
+      (void)net->fspm_cfg.reset_cb (
          net,
          net->fspm_cfg.cb_arg,
          should_reset_application,
          reset_mode);
    }
-
-   return ret;
 }
 
 int pf_fspm_signal_led_ind (pnet_t * net, bool led_state)
