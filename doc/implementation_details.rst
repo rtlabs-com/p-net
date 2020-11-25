@@ -90,6 +90,14 @@ Overview of alarm communication: (right-click "View Image" to magnify)
 
 .. image:: illustrations/AlarmStateMachines.png
 
+Sections in 61784-2 (profiles) describing alarms:
+
++---------------+------------------------------------------------------------------------+
+| Section       | Description                                                            |
++===============+========================================================================+
+| 7.1.3.2.1     | Communication (Class D should support one additional Device Access AR) |
++---------------+------------------------------------------------------------------------+
+
 Sections in 61158-5-10 (services) describing alarms:
 
 +---------------+-------------------------------------------------------------+
@@ -99,7 +107,7 @@ Sections in 61158-5-10 (services) describing alarms:
 +---------------+-------------------------------------------------------------+
 | 7.3.1.3.6.2.5 | State table DEVSM (Multicast Communication Mismatch Alarm)  |
 +---------------+-------------------------------------------------------------+
-| 7.3.1.4.6.1.5 | Behavior on transitions  Alarms on IOCS/IOPS                |
+| 7.3.1.4.6.1.5 | Behavior on transitions (Alarms on IOCS/IOPS)               |
 +---------------+-------------------------------------------------------------+
 | 7.3.1.6       | Alarm class                                                 |
 +---------------+-------------------------------------------------------------+
@@ -191,13 +199,6 @@ head of its list.
 
 Logbook
 -------
-A logbook is a circular buffer with at least 16 entries. The controller can
-read out entire logbook. Each entry contains:
-
-* A timestamp
-* Error codes
-* A manufacturer specific entry detail
-
 For details, see:
 
 * Profinet 2.4 Services, section 7.3.6
@@ -427,10 +428,6 @@ Registers and invokes frame handlers for incoming raw Ethernet frames.
 
 LLDP - Link Layer Discovery Protocol
 ------------------------------------
-A protocol for neighbourhood detection. LLDP frames are not forwarded by managed
-switches, so the frames are useful to detect which neighbour the device is
-connected to.
-
 Sections in 61784-2 (profiles) describing LLDP:
 
 +---------------+-------------------------------------------------------------+
@@ -469,56 +466,6 @@ Sections in 61158-6-10 (protocol) describing LLDP:
 | Annex U       | LLDP EXT MIB                                                |
 +---------------+-------------------------------------------------------------+
 
-An LLDP frame is sent by p-net every 5 seconds, to indicate the IP address etc.
-
-The p-net stack also receives LLDP frames. It uses the chassis ID and the
-frame ID of the frame from its neighbour, to set the alias name.
-
-The LLDP frame is a layer 2 Ethernet frame with the payload consisting of a number
-of Type-Length-Value (TLV) blocks. The first 16 bits of each block contains info
-on the block type and block payload length. It is followed by the block payload
-data. Different TLV block types may have subtypes defined (within the payload).
-
-The frame is broadcasted to MAC address 01:80:c2:00:00:0e, and has an Ethertype
-of 0x88cc.
-
-TLV types:
-
-* 0: (End of LLDP frame indicator)
-* 1: Chassis ID. Subtypes 4: MAC address. 7: Locally assigned name
-* 2: Port ID. Subtype 7: Local
-* 3: Time to live in seconds
-* 8: Management address (optional for LLDP, mandatory in Profinet). Includes IP
-  address and interface number.
-* 127: Organisation specific (optional for LLDP. See below.). Has an
-  organisation unique code, and a subtype.
-
-Organisation unique code 00:0e:cf belongs to Profibus Nutzerorganisation, and
-supports these subtypes:
-
-* 2: Port status. Contains RTClass2 and RTClass3 port status.
-* 5: Chassis MAC address
-
-Organisation unique code 00:12:0f belongs to the IEEE 802.3 organisation, and
-supports these subtypes:
-
-* 1: MAC/PHY configuration status. Shows autonegotiation support, and which
-  speeds are supported. Also MAU type.
-
-Autonegotiation:
-
-* Bit 0: Supported
-* Bit 1: Enabled
-
-Speed:
-
-* Bit 0: 1000BASE-T Full duplex
-* Bit 1: 1000BASE-T Half duplex
-* Bit 10: 100BASE-TX Full duplex
-* Bit 11: 100BASE-TX Half duplex
-* Bit 13: 10BASE-T Full duplex
-* Bit 14: 10BASE-T Half duplex
-* Bit 15: Unknown speed
 
 
 Simple Network Management Protocol (SNMP)
@@ -575,6 +522,12 @@ Sections in 61784-2 (profiles) describing SNMP:
 +---------------+-------------------------------------------------------------------------+
 
 See also the list of supported OIDs in the test case specification "Topology discovery check".
+
+
+Conformance class D
+-------------------
+
+7.1.3.2.1 Communication (Class D should support one additional Device Access AR)
 
 
 Start up procedure
@@ -684,6 +637,18 @@ Use C-style comments in C files, C or C++ comments in C++ files::
    /* C style comment */
 
    // C++ style comment
+
+Declare (and initialize) internal variables in the beginning of a function.
+
+Function names should start with the file name, for example functions in
+``src/common/pf_ppm.c`` are named ``pf_ppm_xxx``.
+
+Typically functions should return 0 on success and -1 on error.
+
+Name functions and variables using "snake_case", for example
+``pf_lldp_get_chassis_id ()`` and ``min_device_interval``.
+
+Pointer names start with ``p_``, for example ``p_data_status``.
 
 Run clang-format on staged files before committing::
 

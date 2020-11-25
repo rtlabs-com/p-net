@@ -184,7 +184,9 @@ void pf_fspm_state_ind (
 
 /**
  * The remote side sends an alarm.
+ *
  * Calls user call-back \a pnet_alarm_ind().
+ * We have already sent the transport acknowledge ("TACK") frame.
  *
  * ALPMR: ALPMR_Alarm_Notification.ind
  *

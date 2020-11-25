@@ -158,6 +158,9 @@ used to configure it.
 Remember that you need to power cycle the Raspberry Pi running the softplc every
 two hours, if using the trial version.
 
+The remaining text on this page is about advanced topics, and not necessary
+for running the sample app in the tutorial.
+
 
 Adjust PLC timing settings
 --------------------------

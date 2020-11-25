@@ -1,47 +1,63 @@
 Tutorial
 ========
 
+In this tutorial we will run the p-net Profinet device stack and its
+sample application on a Raspberry Pi, which is an embedded Linux board.
+You can optionally connect two LEDs and two buttons to the Raspberry Pi
+for easier interaction with the sample application.
+
+We will use a second Raspberry Pi as a PLC (Programmable Logic Controller =
+IO controller) running Codesys soft PLC.
+
+
 Sample app description
 ----------------------
 The sample application implements a Profinet IO-device, having an
-IO-module with 8 digital inputs and 8 digital outputs. If running the sample
-application on a Raspberry Pi or some other embedded board, the example uses
-two buttons connected to inputs and one LED connected to one of the outputs.
+IO-module with 8 digital inputs and 8 digital outputs. The example uses
+two buttons connected to inputs and one LED connected to one of the outputs
+(we call this the "data LED").
 
-The IO-device sample application can be running on:
-
-* Raspberry Pi
-* Some other embedded Linux board
-* A Linux laptop (or a Linux guest in Virtualbox)
-* An embedded board running RT-kernel
-
-A PLC (Programmable Logic Controller) is used as a Profinet IO-controller. It
-could be a Siemens Simatic PLC, or a Codesys soft PLC.
-It is possible to run the Codesys commercial soft PLC software on a (second)
-Raspberry Pi.
+A second LED is connected as the Profinet "Signal LED", which can be flashed in
+order to identify a particular IO-device if you have many devices.
 
 .. image:: illustrations/TutorialOverview.png
 
+The "data LED" on the IO-device is controlled by the IO-controller (PLC), and
+is normally flashing. With button 1 on the IO-device it is possible to tell
+the PLC to turn on and off the flashing of the LED.
 
-Functionality
--------------
-The LED on the IO-device is controlled by the IO-controller (PLC), and is
-normally flashing. With button 1 on the IO-device it is possible to turn on
-and off the flashing of the LED. Button 2 triggers sending an alarm from the
-IO-device.
+Button 2 triggers sending an alarm from the IO-device to the PLC.
 
 The resulting Ethernet traffic can be studied (see below).
 
 
+Notes to advanced users
+-----------------------
+The IO-device sample application can be running on:
+
+* Raspberry Pi (as described in this tutorial)
+* Some other embedded Linux board
+* A Linux laptop (or a Linux guest in Virtualbox)
+* An embedded board running an RTOS, such as RT-kernel
+
+Instead of a Codesys soft PLC running on a second Raspberry Pi, you can
+use a Siemens Simatic PLC. See another page of this documentation.
+
+
 Available files
 ---------------
-The ``sample_app`` directory in the repository contains the source code for
-this example. It also contains a GSD file (written in GSDML), which tells the
-IO-controller how to communicate with the IO-device.
+The ``sample_app`` directory in the p-net repository contains the source code
+for this example. It also contains a GSD file (written in GSDML), which tells
+the IO-controller how to communicate with the IO-device.
+
+Those parts of the sample application that are dependent on whether you run
+Linux or an RTOS are located in ``src/ports``.
 
 
 Modules and slots
 -----------------
+Slots are locations where you can put modules.
+
 The GSDML file for the sample app defines these modules:
 
 +----------------------+-------------------------------+----------------------------------+
@@ -55,37 +71,216 @@ The GSDML file for the sample app defines these modules:
 +----------------------+-------------------------------+----------------------------------+
 
 There are 4 slots for the sample app (in addition to slot 0 which is used by the
-DAP module), and the modules fit in any of the slots 1 to 4. In this example we
-will use the "8 bit in + 8 bit out" module in slot 1.
+DAP module), and for this sample app any of the modules fit in any of
+the slots 1 to 4.
+
+In this example we will use the "8 bit in + 8 bit out" module in slot 1.
 
 
-Set up the nodes
-----------------
-To setup Raspbian on a Raspberry Pi, and connect buttons and a LED, see
-"Install Raspbian on the Raspberry Pi (by using a Linux laptop)"
+Set up the Raspberry Pi for running p-net
+-----------------------------------------
+As the PLC typically will change the IP address of the IO-device,
+we recommend that you use a serial cable for communicating with the Raspberry
+Pi running the p-net sample application.
 
-See "Getting started on Linux" to set up the sample application as a Profinet
-IO-device (possibly on a Raspberry Pi). See "Using Codesys soft PLC" for how
-to setup another Raspberry Pi as an IO-controller (PLC).
+To setup Raspbian on a Raspberry Pi, and optionally connect buttons and LEDs,
+see "Install Raspbian on the Raspberry Pi (by using a Linux laptop)".
 
-On the page "Capturing and analyzing Ethernet packets" is a description given
-on how to study the network traffic.
-
-For the sample application usage instructions, see the See "Getting started on
-Linux".
-
-The LED is controlled by the Linux IO-device by writing to a file, for example
+A LED is controlled by the Linux sample app by writing to a file, for example
 ``/sys/class/gpio/gpio17/value``. A ``0`` or ``1`` will be written to the
 file upon LED state changes. This is done by a script, for easy adaptation to
 your hardware.
 
 If you do not have a physical LED, you can use an alternate script that
-writes to plain text files instead. To watch the output::
+writes to plain text files instead. Usage is described below.
 
-    watch -n 0.1 cat profinet_led_0.txt
 
-Also the button files can be plain text files. Manually write ``0`` or ``1``
-in a file to simulate the button state.
+Install dependencies
+--------------------
+Your Raspberry Pi needs to be connected to Internet via LAN or Wifi to be
+able to download software.
+
+In order to compile p-net on Raspberry Pi, you need a recent version of cmake.
+Install it::
+
+    sudo apt update
+    sudo apt install snapd
+    sudo reboot
+    sudo snap install cmake --classic
+
+Verify the installed version::
+
+    cmake --version
+
+Compare the installed version with the minimum version required for p-net
+(see first page).
+
+You also need ``git`` to download p-net. Install it using::
+
+   sudo apt install git
+
+
+Download and compile p-net
+--------------------------
+Create a directory::
+
+    mkdir /home/pi/profinet/
+    cd /home/pi/profinet/
+
+Clone the source::
+
+    git clone --recurse-submodules https://github.com/rtlabs-com/p-net.git
+
+This will clone the repository with submodules.
+
+Then create and configure the build::
+
+    cmake -B build -S p-net
+
+Build the code::
+
+    cmake --build build --target install
+
+We used the ``install`` target to install scripts for manipulating IP
+settings, control LEDs etc.
+
+Instead of controlling real LEDs, the default behavior is to write LED output
+to regular files. If you have connected real LEDs to your Raspberry Pi,
+enable the LED control script::
+
+    mv build/set_profinet_leds_linux build/set_profinet_leds_linux.disabled
+    mv build/set_profinet_leds_linux.raspberrypi build/set_profinet_leds_linux
+
+
+Notes to advanced users
+-----------------------
+If you already cloned the repository without the ``--recurse-submodules``
+flag then run this in the ``p-net`` folder::
+
+    git submodule update --init --recursive
+
+Alternate cmake command to also adjust some settings::
+
+    cmake -B build -S p-net -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=OFF -DBUILD_SHARED_LIBS=ON -DUSE_SCHED_FIFO=ON
+
+You can choose any name for the build folder, for instance if you want
+to build different configurations.
+
+You can use the ``-j`` flag to ``make`` if you like to enable parallel build.
+
+Depending on how you installed cmake, you might need to run ``snap run cmake``
+instead of ``cmake``.
+
+It is possible to specify the location of the submodule repositories.
+See the end of this page for details.
+
+
+Run the sample application
+------------------------------
+Run the sample app in the build directory::
+
+    cd build
+
+Usage of the demo IO-device application:
+
+.. code-block:: none
+
+    $ ./pn_dev --help
+
+    Demo application for p-net Profinet device stack.
+
+    Wait for connection from IO-controller.
+    Then read buttons (input) and send to controller.
+    Listen for application LED output (from controller) and set application LED state.
+    It will also send a counter value (useful also without buttons and LED).
+    Button1 value is sent in the periodic data.
+    Button2 cycles through triggering an alarm, setting diagnosis and creating logbook entries.
+
+    Also the mandatory Profinet signal LED is controlled by this application.
+
+    The LEDs are controlled by the script set_profinet_leds_linux
+    located in the same directory as the application binary.
+    A version for Raspberry Pi is available, and also a version writing
+    to plain text files (useful for demo if no LEDs are available).
+
+    Assumes the default gateway is found on .1 on same subnet as the IP address.
+
+    Optional arguments:
+        --help       Show this help text and exit
+        -h           Show this help text and exit
+        -v           Incresase verbosity
+        -f           Reset to factory settings, and store to file. Exit.
+        -r           Remove stored files and exit.
+        -g           Show stack details and exit. Repeat for more details.
+        -i INTERF    Name of Ethernet interface to use. Defaults to eth0
+        -s NAME      Set station name. Defaults to rt-labs-dev  Only used
+                     if not already available in storage file.
+        -b FILE      Path (absolute or relative) to read button1. Defaults to not read button1.
+        -d FILE      Path (absolute or relative) to read button2. Defaults to not read button2.
+        -p PATH      Absolute path to storage directory. Defaults to use current directory.
+
+    p-net revision: 0.1.0+5965c46
+
+Enable the Ethernet interface and set the initial IP address::
+
+    sudo ifconfig eth0 192.168.0.50 netmask 255.255.255.0 up
+
+Run the sample application::
+
+    sudo ./pn_dev -v
+
+The IP settings are stored to file. If you accidentally have run the application
+when IP settings were wrong, use this command to remove the stored settings::
+
+    sudo ./pn_dev -r
+
+Input buttons
+^^^^^^^^^^^^^
+If you would like to use physical input buttons you must set up the
+GPIO files for buttons properly first::
+
+    echo 22 > /sys/class/gpio/export
+    echo 27 > /sys/class/gpio/export
+
+Then::
+
+    sudo ./pn_dev -v -b /sys/class/gpio/gpio22/value -d /sys/class/gpio/gpio27/value
+
+It is possible to use plain files as inputs instead of physical buttons::
+
+   touch /home/pi/profinet/build/button1.txt
+   touch /home/pi/profinet/build/button2.txt
+   sudo ./pn_dev -v -b /home/pi/profinet/build/button1.txt -d /home/pi/profinet/build/button2.txt
+
+Manually write ``1`` or ``0`` to a file to simulate the button press and
+release::
+
+   echo 1 > /home/pi/profinet/build/button1.txt
+   echo 0 > /home/pi/profinet/build/button1.txt
+
+If you only have one terminal, you need to run ``pn_dev`` in the background
+to be able to run these commands.
+That is done by adding a ``&`` at the end of the command to start ``pn_dev`` .
+Later on kill the ``pn_dev`` process by using ``sudo pkill pn_dev``.
+
+LEDs
+^^^^
+If you use plain files as output instead of LED, use this to study the file
+for the "Data LED":
+
+    watch -n 0.1 cat /home/pi/profinet/build/pnet_led_1.txt
+
+
+Set up the PLC
+--------------
+Now you have installed the sample app on the Raspberry Pi, congratulations!
+In order to see it in action, you need to connect it to a PLC.
+
+We suggest that you use Codesys soft PLC.
+Install Raspberry Pi OS on the second Raspberry Pi. No serial cable or LEDs are
+required.
+
+See "Using Codesys soft PLC" for how to set it up as an IO-controller (PLC).
 
 
 Print-out from Linux sample application
@@ -93,45 +288,124 @@ Print-out from Linux sample application
 
 .. highlight:: none
 
-This is the typical output from the Linux sample application at startup::
+This is the typical output from the Linux sample application at startup if
+you enable verbose output::
+
+   sudo ./pn_dev -v -b /sys/class/gpio/gpio22/value -d /sys/class/gpio/gpio27/value
 
     ** Starting Profinet demo application **
-    Verbosity level:    1
-    Ethernet interface: eth0
-    MAC address:        08:00:27:6E:99:77
-    Station name:       rt-labs-dev
-    Button1 file:       /sys/class/gpio/gpio22/value
-    Button2 file:       /sys/class/gpio/gpio27/value
-    IP address:         192.168.0.50
-    Netmask:            255.255.255.0
-    Gateway:            192.168.0.1
+    Number of slots:      5 (incl slot for DAP module)
+    P-net log level:      4 (DEBUG=0, FATAL=4)
+    App verbosity level:  1
+    Ethernet interface:   eth0
+    Button1 file:         /sys/class/gpio/gpio22/value
+    Button2 file:         /sys/class/gpio/gpio27/value
+    Default station name: rt-labs-dev
+    MAC address:          B8:27:EB:F3:9A:B2
+    Current hostname:     pndevice-pi
+    Current IP address:   192.168.0.50
+    Current Netmask:      255.255.255.0
+    Current Gateway:      192.168.0.1
+    Storage directory:    /home/pi/profinet/build
 
+    Profinet signal LED call-back. New state: 0
+    Network script for eth0:  Set IP 192.168.0.50   Netmask 255.255.255.0   Gateway 192.168.0.1   Permanent: 1   Hostname: rt-labs-dev   Skip setting hostname: true
+    Module plug call-back
+    Pull old module.    API: 0 Slot:  0    Slot was empty.
+    Plug module.        API: 0 Slot:  0 Module ID: 0x1
+    Submodule plug call-back.
+    Pull old submodule. API: 0 Slot:  0                   Subslot: 1      Subslot was empty.
+    Plug submodule.     API: 0 Slot:  0 Module ID: 0x1    Subslot: 1 Submodule ID: 0x1 "DAP Identity 1"
+                        Data Dir: NO_IO In: 0 Out: 0 (Exp Data Dir: NO_IO In: 0 Out: 0)
+    Submodule plug call-back.
+    Pull old submodule. API: 0 Slot:  0                   Subslot: 32768      Subslot was empty.
+    Plug submodule.     API: 0 Slot:  0 Module ID: 0x1    Subslot: 32768 Submodule ID: 0x8000 "DAP Interface 1"
+                        Data Dir: NO_IO In: 0 Out: 0 (Exp Data Dir: NO_IO In: 0 Out: 0)
+    Submodule plug call-back.
+    Pull old submodule. API: 0 Slot:  0                   Subslot: 32769      Subslot was empty.
+    Plug submodule.     API: 0 Slot:  0 Module ID: 0x1    Subslot: 32769 Submodule ID: 0x8001 "DAP Port 1"
+                        Data Dir: NO_IO In: 0 Out: 0 (Exp Data Dir: NO_IO In: 0 Out: 0)
     Waiting for connect request from IO-controller
+
+    Network script for eth0:  Set IP 192.168.0.50   Netmask 255.255.255.0   Gateway 192.168.0.50   Permanent: 0   Hostname: rt-labs-dev   Skip setting hostname: true
     Module plug call-back
-      Plug module.    API: 0 Slot: 0 Module ID: 0x1 Index in supported modules: 0
+    Pull old module.    API: 0 Slot:  1    Slot was empty.
+    Plug module.        API: 0 Slot:  1 Module ID: 0x32
     Submodule plug call-back.
-      Plug submodule. API: 0 Slot: 0 Module ID: 0x1 Subslot: 0x1 Submodule ID: 0x1 Index in supported submodules: 0
-    Submodule plug call-back.
-      Plug submodule. API: 0 Slot: 0 Module ID: 0x1 Subslot: 0x8000 Submodule ID: 0x8000 Index in supported submodules: 1
-    Submodule plug call-back.
-      Plug submodule. API: 0 Slot: 0 Module ID: 0x1 Subslot: 0x8001 Submodule ID: 0x8001 Index in supported submodules: 2
-    Module plug call-back
-      Plug module.    API: 0 Slot: 1 Module ID: 0x32 Index in supported modules: 3
-    Submodule plug call-back.
-      Plug submodule. API: 0 Slot: 1 Module ID: 0x32 Subslot: 0x1 Submodule ID: 0x1 Index in supported submodules: 3
-    Connect call-back. Status codes: 0 0 0 0
-    Callback on event PNET_EVENT_STARTUP
-    New data callback. Status: 0x35
-    Write call-back. API: 0 Slot: 1 Subslot: 1 Index: 123 Sequence: 2 Length: 4
-      Bytes: 00 00 00 00
-    Write call-back. API: 0 Slot: 1 Subslot: 1 Index: 124 Sequence: 3 Length: 4
-      Bytes: 00 00 00 00
-    Dcontrol call-back. Command: 1  Status codes: 0 0 0 0
-    Callback on event PNET_EVENT_PRMEND
-    Callback on event PNET_EVENT_APPLRDY
-    Application signalled that it is ready for data. Return value: 0
-    Ccontrol confirmation call-back. Status codes: 0 0 0 0
-    Callback on event PNET_EVENT_DATA
+    Pull old submodule. API: 0 Slot:  1                   Subslot: 1      Subslot was empty.
+    Plug submodule.     API: 0 Slot:  1 Module ID: 0x32   Subslot: 1 Submodule ID: 0x1 "Input 8 bits output 8 bits"
+                        Data Dir: INPUT_OUTPUT In: 1 Out: 1 (Exp Data Dir: INPUT_OUTPUT In: 1 Out: 1)
+    Connect call-back. AREP: 1  Status codes: 0 0 0 0
+    Callback on event PNET_EVENT_STARTUP   AREP: 1
+    New data status callback. AREP: 1  Data status changes: 0x35  Data status: 0x35
+    Parameter write call-back. AREP: 1 API: 0 Slot:  1 Subslot: 1 Index: 123 Sequence:  2 Length: 4
+    Bytes: 00 00 00 00
+    Parameter write call-back. AREP: 1 API: 0 Slot:  1 Subslot: 1 Index: 124 Sequence:  3 Length: 4
+    Bytes: 00 00 00 00
+    Dcontrol call-back. AREP: 1  Command: PRM_END
+    Callback on event PNET_EVENT_PRMEND   AREP: 1
+    Set input data and IOPS for slot  0 subslot 1 "DAP Identity 1"  size 0 IOXS_GOOD
+    Set input data and IOPS for slot  0 subslot 32768 "DAP Interface 1"  size 0 IOXS_GOOD
+    Set input data and IOPS for slot  0 subslot 32769 "DAP Port 1"  size 0 IOXS_GOOD
+    Set input data and IOPS for slot  1 subslot 1 "Input 8 bits output 8 bits"  size 1 IOXS_GOOD
+    Set output IOCS         for slot  1 subslot 1 "Input 8 bits output 8 bits"
+    Application will signal that it is ready for data.
+    Callback on event PNET_EVENT_APPLRDY   AREP: 1
+    The controller reports IOCS 96 for slot 1
+    Ccontrol confirmation call-back. AREP: 1  Status codes: 0 0 0 0
+    Callback on event PNET_EVENT_DATA   AREP: 1
+
+
+Study the resulting communication
+---------------------------------
+Press button1 to see the LED1 start flashing. Press it again to stop the
+flashing.
+
+By pressing button2 you can trigger alarms, add diagnosis etc. See the
+printout in the console.
+
+On the page "Capturing and analyzing Ethernet packets" is a description given
+on how to study the network traffic. If you are interested in the different
+packets sent during startup or the cyclic data payload, see the page
+"Sample app details".
+
+
+Adjust log level
+----------------
+There is logging available in the p-net stack describing the interaction
+with the PLC.
+
+If you would like to change the p-net stack log level, run ``ccmake .`` in
+the ``build`` directory. It will start a menu program. Move to the
+LOG_LEVEL entry, and press Enter to change to DEBUG. Press ``c`` to save
+and ``q`` to exit.
+
+You need to re-build the project for the changes to take effect.
+
+
+Next steps
+----------
+Great! You managed to get the sample application running.
+
+To enable autostart of the sample application on power on, see the page
+"Install Raspberry Pi OS on the Raspberry Pi".
+
+For Profinet members the "ART tester" tool is available for conformance
+testing. Run the conformance tests against the sample app to verify that the
+stack is compliant. See a separate page on conformance testing in this
+documentation.
+
+To experiment with the SNMP features of conformance class B, see the page
+"Network topology detection".
+
+Now it is time for you to start developing your own applications. You can use
+the sample app as a starting template.
+Experiment by modifying the available modules, and the data types they send
+and receive. Modify your GSDML file accordingly to explain the IO-device
+behavior to the PLC configuration tool.
+
+A separate page is available with a few ideas on how to write you application.
+Remember to run the "ART tester" now and then to verify that you stay compliant.
 
 
 Timing issues
@@ -149,184 +423,51 @@ the "Using Codesys soft PLC" page for workarounds.
 Troubleshooting
 ---------------
 If you have problems establishing a connection to your PLC, connect it
-directly to your laptop
-and run the program Wireshark on the corresponding Ethernet interface.
-See another page in this documentation for details on Wireshark usage.
-The PLC will send LLDP frames approximately once per 5 seconds. Study one of
-these frames in Wireshark.
-The "Management Address" block shows the IP address of the PLC.
+directly to your laptop and run the program Wireshark on the corresponding
+Ethernet interface. See another page in this documentation for details on
+Wireshark usage.
+
+The PLC will send LLDP frames once per 5 seconds. Study one of these frames
+in Wireshark. The "Management Address" block shows the IP address of the PLC.
 There are also other blocks describing the MAC address and the port ID.
 
 
-Sample app data payload
------------------------
-This example is for when using the “8 bit in + 8 bit out” module in slot 1.
-The periodic data sent from the sample application IO-device to IO-controller
-is one byte:
+Advanced users: OSAL
+--------------------
+OSAL is a generic OS abstraction library that may be used by multiple
+projects in a system. To avoid issues with multiple copies of the
+library, possibly of conflicting versions, it has been moved to its
+own repository.
 
-* Lowest 7 bits: A counter which has its value updated every 10 ms
-* Most significant bit: Button1
+``cmake-tools`` is a repository that contains common CMake utilities for
+RT-Labs projects. It contains a CMake script ``AddOsal.cmake`` that
+simplifies use of OSAL. It supports two different use-cases:
 
-When looking in Wireshark, look at the "Profinet IO Cyclic Service Data Unit",
-which is 40 bytes. The relevant byte it the fourth byte from left in this
-block.
+1) Automatic download and build of OSAL
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+During CMake configuration, if OSAL is not found in the system it will
+be downloaded and built automatically. For most users this will be the
+default.
+Run CMake configuration by issuing e.g.::
 
-Details of the 40 bytes from IO-device to IO-controller:
+    cmake -B build -S p-net
 
-* IOPS from slot 0, subslot 1
-* IOPS from slot 0, subslot 0x8000
-* IOPS from slot 0, subslot 0x8001
-* IO data from slot 1, subslot 1 (input part of the module)
-* IOPS from slot 1, subslot 1 (input part of the module)
-* IOCS from slot 1, subslot 1 (output part of the module)
-* (Then 34 bytes of padding, which is 0)
+2) External OSAL
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+During CMake configuration, if OSAL is found then p-net will just link
+against the external library.
+CMake will find the external OSAL library if it is installed in a
+default location such as ``/usr/include`` or ``/usr/local/include``. This
+could be the case for a native build or a cross-compiled Linux system
+with a staging folder.
 
-From the IO-controller to IO-device is one data byte sent:
+CMake can also be told of the path to an installed version of OSAL by
+setting ``Osal_DIR`` during configuration, like so::
 
-* Most significant bit: LED
+    cmake -B build -S p-net -DOsal_DIR=/path/to/osal/install/cmake
 
-When looking in Wireshark, look at the "Profinet IO Cyclic Service Data Unit",
-which is 40 bytes. The relevant byte is the fifth byte from left in this
-block. The value toggles between 0x80 and 0x00.
+The install folder is produced when running::
 
-Details of the 40 bytes from IO-controller to IO-device:
+    make install
 
-* IOCS to slot 0, subslot 1
-* IOCS to slot 0, subslot 0x8000
-* IOCS to slot 0, subslot 0x8001
-* IOCS to slot 1, subslot 1 (input part of the module)
-* IO data to slot 1, subslot 1 (output part of the module)
-* IOPS to slot 1, subslot 1 (output part of the module)
-* (Then 34 bytes of padding, which is 0)
-
-Note that Wireshark can help parsing the cyclic data by using the GSDML file.
-See the Wireshark page in this document.
-
-
-Ethernet frames sent during start-up
-------------------------------------
-For this example, the IO-controller is started first, and then the IO-device.
-
-+---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
-| Sender                    | Protocol | Content                                                                                                              |
-+===========================+==========+======================================================================================================================+
-| IO-controller (broadcast) | LLDP     | Name, MAC, IP address, port name (sent every 5 seconds)                                                              |
-+---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
-| IO-controller (broadcast) | PN-DCP   | "Ident req". Looking for "rt-labs-dev" (sent every 2.5 seconds)                                                      |
-+---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
-| IO-controller (broadcast) | ARP      | Is someone else using my IP?                                                                                         |
-+---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
-| IO-device (broadcast)     | LLDP     | Name, MAC, IP address, port name (sent every 5 seconds??)                                                            |
-+---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
-| IO-device (broadcast)     | PN-DCP   | "Hello req". Station name "rt-labs-dev", IP address, gateway, vendor, device (sent every 3 seconds)                  |
-+---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
-| IO-device                 | PN-DCP   | "Ident Ok" Identify response. Station name "rt-labs-dev", IP address, netmask, gateway, VendorID, DeviceID, options  |
-+---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
-| IO-controller             | PN-DCP   | "Set Req" Set IP request. Use IP address and gateway.                                                                |
-+---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
-| IO-device                 | PN-DCP   | "Set Ok" Status.                                                                                                     |
-+---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
-| IO-controller (broadcast) | ARP      | Who has <IO-device IP address>?                                                                                      |
-+---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
-| IO-device                 | ARP      | IP <IO-device IP address> is at <IO-device MAC address>                                                              |
-+---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
-| IO-controller             | PNIO-CM  | "Connect request" Controller MAC, timeout, input + output data (CR), modules + submodules in slots                   |
-+---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
-| IO-device                 | PNIO-CM  | "Connect response" MAC address, UDP port, input + output + alarm CR, station name                                    |
-+---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
-| IO-device                 | PNIO-PS  | FrameID 0x8001. Cycle counter, provider stopped. 40 bytes data.                                                      |
-+---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
-| IO-controller             | PNIO-PS  | FrameID 0x8000. Cycle counter, provider running. 40 bytes data.                                                      |
-+---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
-| IO-controller             | PNIO-CM  | "Write request" API, slot, subslot, data.                                                                            |
-+---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
-| IO-device                 | PNIO-CM  | "Write response" API, slot, subslot, status.                                                                         |
-+---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
-| IO-controller             | PNIO-CM  | "Control request" (DControl). Command: ParameterEnd.                                                                 |
-+---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
-| IO-device                 | PNIO-CM  | "Control response" Command: Done                                                                                     |
-+---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
-| IO-device                 | PNIO-PS  | FrameID 0x8001. Cycle counter, provider running. 40 bytes data.                                                      |
-+---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
-| IO-device                 | PNIO-CM  | "Control request" (CControl). Command: ApplicationReady                                                              |
-+---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
-| IO-controller             | PNIO-CM  | "Control response" Command: ApplicationReadyDone                                                                     |
-+---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
-
-The order of the PNIO-PS frames is somewhat random in relation to PNIO-CM frames.
-
-+------------+---------------------------------+
-| Protocol   | Description                     |
-+============+=================================+
-| LLDP       |                                 |
-+------------+---------------------------------+
-| ARP        |                                 |
-+------------+---------------------------------+
-| PN-DCP     | Acyclic real-time data          |
-+------------+---------------------------------+
-| PNIO-PS    | Cyclic real-time data           |
-+------------+---------------------------------+
-| PNIO-AL    | Acyclic real-time alarm         |
-+------------+---------------------------------+
-| PNIO-CM    | UDP, port 34964 = 0x8892        |
-+------------+---------------------------------+
-
-
-Ethernet frames sent at alarm
------------------------------
-Frames sent when pressing button 2.
-
-+---------------+----------+----------------------------------------------------------------------------------------+
-| Sender        | Protocol | Content                                                                                |
-+===============+==========+========================================================================================+
-| IO-device     | PN-AL    | Alarm notification high, slot, subslot, module, submodule, sequence, 1 byte user data  |
-+---------------+----------+----------------------------------------------------------------------------------------+
-| IO-controller | PN-AL    | ACK-RTA-PDU                                                                            |
-+---------------+----------+----------------------------------------------------------------------------------------+
-| IO-controller | PN-AL    | Alarm ack high, alarm type Process, slot, subslot, Status OK                           |
-+---------------+----------+----------------------------------------------------------------------------------------+
-| IO-device     | PN-AL    | ACK-RTA-PDU                                                                            |
-+---------------+----------+----------------------------------------------------------------------------------------+
-
-
-Using more modules
-------------------
-If necessary, increase the values for PNET_MAX_SLOTS and PNET_MAX_SUBSLOTS
-in ``include/pnet_api.h``.
-
-In the sample app, the input data is written to all input modules ("8 bit in +
-8 bit out" and "8 bit in"). The LED is controlled by the output module ("8 bit
-in + 8 bit out" or "8 bit out") with lowest slot number.
-
-The alarm triggered by button 2 is sent from the input module with lowest slot
-number (if any).
-
-In order to handle larger incoming DCE/RPC messages (split in several frames),
-you might need to increase PNET_MAX_SESSION_BUFFER_SIZE. Note that this will
-increase the memory consumption.
-
-
-Cyclic data for the different slots
------------------------------------
-This is an example if you populate slot 1 to 3 with different modules.
-
-+------+---------+--------------------------------------------+-----------------------------------------+--------------------------------------------+
-| Slot | Subslot | Description                                | | Contents of Input CR                  | | Contents of Output CR                    |
-|      |         |                                            | | (to IO-controller)                    | | (from IO-controller)                     |
-+======+=========+============================================+=========================================+============================================+
-| 0    | 1       | The IO-Device itself                       | (data) + IOPS                           | IOCS                                       |
-+------+---------+--------------------------------------------+-----------------------------------------+--------------------------------------------+
-| 0    | 0x8000  | Interface 1                                | (data) + IOPS                           | IOCS                                       |
-+------+---------+--------------------------------------------+-----------------------------------------+--------------------------------------------+
-| 0    | 0x8001  | Port 0 of interface 1                      | (data) + IOPS                           | IOCS                                       |
-+------+---------+--------------------------------------------+-----------------------------------------+--------------------------------------------+
-| 1    | 1       | Input part of "8-bit in 8-bit out" module  | data (1 byte) + IOPS                    | IOCS                                       |
-|      |         +--------------------------------------------+-----------------------------------------+--------------------------------------------+
-|      |         | Output part of "8-bit in 8-bit out" module | IOCS                                    | data (1 byte) + IOPS                       |
-+------+---------+--------------------------------------------+-----------------------------------------+--------------------------------------------+
-| 2    | 1       | "8-bit in" module                          | data (1 byte) + IOPS                    | IOCS                                       |
-+------+---------+--------------------------------------------+-----------------------------------------+--------------------------------------------+
-| 3    | 1       | "8-bit out" module                         | IOCS                                    | data (1 byte) + IOPS                       |
-+------+---------+--------------------------------------------+-----------------------------------------+--------------------------------------------+
-
-Note that the submodules (in subslots) in slot 0 do not send any cyclic data, but they behave as inputs (as they send cyclic IOPS).
+or similar in the OSAL build directory.

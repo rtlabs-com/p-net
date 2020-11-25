@@ -19,7 +19,8 @@ fi
 LED_NUMBER=$1
 LED_STATE=$2
 
-echo "Script for Profinet LEDs on RPi. LED number ${LED_NUMBER}, new state ${LED_STATE}"
+# Uncomment next line for debugging
+#echo "Script for Profinet LEDs on RPi. LED number ${LED_NUMBER}, new state ${LED_STATE}"
 
 if ! [ ${LED_STATE} == "0" -o ${LED_STATE} == "1" ]; then
    echo "Wrong LED state: ${LED_STATE}"

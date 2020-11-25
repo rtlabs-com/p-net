@@ -16,11 +16,13 @@ documentation.
    _copied/README.md
    profinet_basics.rst
    tutorial.rst
-   getting_started_linux.rst
+   additional_linux_details.rst
    getting_started_rtkernel.rst
    using_codesys.rst
    use_with_siematic.rst
    capturing_packets.rst
+   sampleapp_details.rst
+   profinet_details.rst
    prepare_raspberrypi.rst
    creating_gsdml_files.rst
    network_topology_detection.rst

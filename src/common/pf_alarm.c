@@ -580,6 +580,10 @@ static void pf_alarm_alpmr_apms_a_data_cnf (
  * The APMR has received an Alarm Notification DATA message over wire, and tells
  * ALPMR about the result.
  *
+ * We have already sent the transport acknowledge ("TACK") frame.
+ *
+ * Will trigger the user callback \a pnet_alarm_ind().
+ *
  * ALPMR: APMR_A_Data.ind
  *
  * @param net              InOut: The p-net stack instance

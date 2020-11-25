@@ -333,7 +333,7 @@ Device details:
 +--------------------------------+-----------------------------------------------------------------+
 | Field name                     | Description                                                     |
 +================================+=================================================================+
-| sysDescr                       | String, max 255 char. Consists of productname, serial number,   |
+| sysDescr                       | String, max 255 char. Consists of product name, serial number,  |
 |                                | hardware and software versions etc.                             |
 |                                | Also used as SystemIdentification = ChassisID ?                 |
 +--------------------------------+-----------------------------------------------------------------+
@@ -481,8 +481,10 @@ Click the "Refresh" icon to scan the network topology.
 A graphical view with all Profinet equipment will be shown, including
 the connections between all ports.
 
-By double-clicking on a device in the graphical view, you can set the
+By right-clicking on a device in the graphical view, you can set the
 station name and IP address (temporarily or permanently).
+It is also possible to edit the I&M information, to flash the signal LED and
+to do a factory reset.
 
 
 Full SNMP readout example

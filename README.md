@@ -7,29 +7,35 @@ Web resources
 * Source repository: [https://github.com/rtlabs-com/p-net](https://github.com/rtlabs-com/p-net)
 * Documentation: [https://rt-labs.com/docs/p-net](https://rt-labs.com/docs/p-net)
 * Continuous integration: [https://travis-ci.com/rtlabs-com/p-net](https://travis-ci.com/rtlabs-com/p-net)
-* rt-labs: [https://rt-labs.com](https://rt-labs.com)
+* RT-Labs: [https://rt-labs.com](https://rt-labs.com)
 
 [![Build Status](https://api.travis-ci.com/rtlabs-com/p-net.svg?branch=master)](https://travis-ci.com/rtlabs-com/p-net)
 
 p-net
 -----
-The rt-labs Profinet stack p-net is used for Profinet device
+Profinet device stack implementation. Key features:
+* Profinet v2.4
+  * Conformance Class A and B
+  * Real Time Class 1
+* Easy to use
+  * Extensive documentation and instructions on how to get started.
+  * Build and run sample application on Raspberry Pi in 30 minutes.
+* Portable
+  * Written in C.
+  * Linux, RTOS or bare metal.
+  * Sources for supported port layers provided.
+
+The RT-Labs Profinet stack p-net is used for Profinet device
 implementations. It is easy to use and provides a small footprint. It
 is especially well suited for embedded systems where resources are
 limited and efficiency is crucial.
+The stack is supplied with full sources including porting
+layers and a sample application.
 
-It is written in C and can be run on bare-metal hardware, an RTOS such as
-rt-kernel, or on Linux. The main requirement is that the
-platform can send and receive raw Ethernet Layer 2 frames. The
-p-net stack is supplied with full sources including a porting
-layer.
+Also C++ (any version) is supported for application development.
 
-Also C++ (any version) is supported.
-
-rt-labs p-net is developed according to specification 2.3:
-
- * Conformance Class A (Class B upon request)
- * Real Time Class 1
+The main requirement on the platform
+is that it can send and receive raw Ethernet Layer 2 frames.
 
 Features:
 

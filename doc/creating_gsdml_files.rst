@@ -81,8 +81,8 @@ Entering values
 ---------------
 Values are written in double quotes. Different attributes have different types:
 
-* ValueList: To enter several values (including a range of values), write "0..4 7 9"
-* TokenList1: Semicolon separated values, for example "Legacy;Advanced"
+* ValueList: To enter several values (including a range of values), write ``"0..4 7 9"``.
+* TokenList1: Semicolon separated values, for example ``"Legacy;Advanced"``.
 
 
 File structure
@@ -474,7 +474,7 @@ ValueList element hierarchy::
 Each enum is described in a ``<ValueItem>`` element with an ``ID`` attribute.
 Each enum value is then given in an ``<Assign>`` element with attributes
 ``TextId`` and ``Content`` (with a numerical value given as a string,
-for example "5").
+for example ``"5"``).
 It is also possible to give a help text by using the ``<Help>`` element with
 a ``TextId`` attribute.
 
@@ -560,7 +560,87 @@ Only ``<PrimaryLanguage>`` is mandatory. If ``<Language>`` is given, the actual
 language is set by for example a ``xml:lang="fr"`` attribute.
 
 
-Diagnosis
----------
+Details on diagnosis
+--------------------
 The elements ``<ChannelDiagList>`` and ``<UnitDiagTypeList>`` (with
 subelements) are used to specify diagnosis functionality.
+
+Use the ``<ChannelDiagList>`` element to describe diagnosis sent in the
+standard format::
+
+    ChannelDiagList
+    |
+    +--ChannelDiagItem
+    |  |
+    |  +--Name
+    |  +--ExtChannelDiagList
+    |     |
+    |     +--ExtChannelDiagItem
+    |        |
+    |        +--Name
+    |
+    +--SystemDefinedChannelDiagItem
+    |  |
+    |  +--ExtChannelDiagList
+    |     |
+    |     +--ExtChannelDiagItem
+    |     |  |
+    |     |  +--Name
+    |     |  +--ExtChannelAddValue
+    |     |     |
+    |     |     +--DataItem
+    |     |
+    |     +--ProfileExtChannelDiagItem
+    |        |
+    |        +--Name
+    |
+    +--ProfileChannelDiagItem
+       |
+       +--Name
+       +--ExtChannelDiagList
+          |
+          +--ProfileExtChannelDiagItem
+             |
+             +--Name
+
+To add a diagnosis with ChannelErrorType in the manufacturer specific range,
+use the ``<ChannelDiagItem>`` element. Set the ChannelErrorType with the
+attribute ``ErrorType="999"``, for example. Describe it using the
+``<Name>`` element. In the ``<ExtChannelDiagItem>`` element, use the
+``ErrorType`` attribute for the ExtChannelErrorType. Describe the
+ExtChannelErrorType using the ``<Name>`` element.
+
+It is also possible to add your own ExtChannelErrorType to a standard
+ChannelErrorType. Use the ``<SystemDefinedChannelDiagItem>`` element,
+with the attribute ``ErrorType`` to specify the ChannelErrorType. Add
+``<ExtChannelDiagItem>`` elements as we described in the previous paragraph.
+The ExtChannelAddValue is specified with the ``<ExtChannelAddValue>`` element,
+and ``<DataItem>`` subelements. Use ``Id`` and ``DataType`` attributes in the
+subelements.
+
+Similarly use the ``<ProfileChannelDiagItem>`` element to add
+ExtChannelErrorType to diagnosis items defined in a profile.
+
+For diagnosis sent in the USI format (also known as manufacturer specific
+format), use the ``<UnitDiagTypeList>`` element::
+
+    UnitDiagTypeList
+    |
+    +--UnitDiagTypeItem
+    |  |
+    |  +--Name
+    |  +--Ref
+    |
+    +--ProfileUnitDiagTypeItem
+    |
+    +--Name
+    +--Ref
+
+Add the USI value to the ``<UnitDiagTypeItem>`` element by using the
+``UserStructureIdentifier`` attribute.
+Specify the data content by setting attributes to the ``<Ref>`` element,
+for example ``ByteOffset``, ``DataType``, ``DefaultValue`` and ``TextId``.
+
+It is also possible to add diagnosis in USI format for profiles, by using
+the ``<ProfileUnitDiagTypeItem>`` element. Set the ``UserStructureIdentifier``
+and ``API`` attributes.

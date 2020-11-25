@@ -66,7 +66,7 @@ following to create and configure the build::
     -DCMAKE_ECLIPSE_EXECUTABLE=/opt/rt-tools/workbench/Workbench \
     -DCMAKE_ECLIPSE_GENERATE_SOURCE_PROJECT=TRUE -G "Eclipse CDT4 - Unix Makefiles"
 
-If you are using Windows, start the program "Command line" found in 
+If you are using Windows, start the program "Command line" found in
 the rt-labs rt-collab Toolbox installation (adapt paths to your setup)::
 
     cd /c/Users/rtlfrm/Documents/Profinet
@@ -98,6 +98,10 @@ Use the menu "File > Import". Select "General > Existing Projects". Click
 "Browse" and select the ``build`` directory that was created earlier.
 
 Use the menu "Project > Build All" to build it.
+
+An OSAL layer hosted in a separate directory is used by p-net, and is installed
+automatically during setup. For details see the tutorial page
+in this documentation.
 
 
 More Workbench settings
@@ -158,7 +162,7 @@ Adjust log level
 ----------------
 In order to learn the Profinet communication model, it is very informative to
 adjust the log level to see the incoming and outgoing messages. See the
-"Getting started on Linux" page for details on how to adjust the log level.
+tutorial page for details on how to adjust the log level.
 
 However note that printing out log strings is slow, so you probably need
 to decrease the cyclic data frequency (see PLC timing settings below).
@@ -182,6 +186,14 @@ Configure the build::
 Build the code::
 
     cmake --build build
+
+
+Serial port baud rate
+---------------------
+If you like to increase the baud rate of the serial port, change the value in
+the file ``bsp/xmc48relax/src/xmc48relax.c``. For example change
+``.baudrate = 115200,`` to ``.baudrate = 460800,``.
+
 
 PLC timing settings
 -------------------

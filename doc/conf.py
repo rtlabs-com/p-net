@@ -80,7 +80,8 @@ breathe_default_project = project
 
 html_css_files = [
     '../../css/custom_rtd.css',  # Requested by web developer
-    'css/fix_table_width.css'
+    'css/fix_table_width.css',
+    'css/change_header_size.css'
     ]
 
 
