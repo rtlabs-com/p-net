@@ -49,6 +49,7 @@ target_sources(profinet
   src/ports/linux/pnal_eth.c
   src/ports/linux/pnal_udp.c
   $<$<BOOL:${PNET_OPTION_SNMP}>:src/ports/linux/pnal_snmp.c>
+  $<$<BOOL:${PNET_OPTION_SNMP}>:src/ports/linux/mib/system_mib.c>
   $<$<BOOL:${PNET_OPTION_SNMP}>:src/ports/linux/mib/lldpLocalSystemData.c>
   $<$<BOOL:${PNET_OPTION_SNMP}>:src/ports/linux/mib/lldpLocPortTable.c>
   $<$<BOOL:${PNET_OPTION_SNMP}>:src/ports/linux/mib/lldpConfigManAddrTable.c>
