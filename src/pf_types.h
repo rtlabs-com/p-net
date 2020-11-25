@@ -790,6 +790,58 @@ typedef struct pf_alarm_fixed
     */
 } pf_alarm_fixed_t;
 
+typedef struct pf_alarm_err
+{
+   pnet_pnio_status_t pnio_status;
+   /*
+    * pf_alarm_err_t may be followed by alarm_payload:
+    *    vendor_device_error_info = VendorId, DeviceId, data*
+    */
+} pf_alarm_err_t;
+
+typedef struct pf_diag_std
+{
+   uint32_t ext_ch_add_value;
+   uint32_t qual_ch_qualifier;
+   uint16_t ch_nbr;
+   uint16_t ch_properties; /* Appears, direction, channelgroup etc */
+   uint16_t ch_error_type;
+   uint16_t ext_ch_error_type;
+} pf_diag_std_t;
+
+/* Make pf_diag_usi_t equal in size to pf_diag_std_t */
+#define PF_DIAG_MANUF_DATA_LEN sizeof (pf_diag_std_t)
+typedef struct pf_diag_usi
+{
+   uint8_t manuf_data[PF_DIAG_MANUF_DATA_LEN];
+} pf_diag_usi_t;
+
+/* This is the end of list designator. */
+#define PF_DIAG_IX_NULL UINT16_MAX
+
+typedef struct pf_diag_item
+{
+   /* The selector is the usi member (0x0000..0x7fff => usi, else std) */
+   union fmt
+   {
+      pf_diag_std_t std;
+      pf_diag_usi_t usi;
+   } fmt;
+
+   bool in_use;
+   uint16_t usi;  /* pf_usi_values_t */
+   uint16_t next; /* Next in list (array index) */
+} pf_diag_item_t;
+
+#define PF_ALARM_MAX_PAYLOAD_DATA_LEN sizeof (pf_diag_item_t)
+
+typedef struct pf_alarm_payload
+{
+   uint16_t usi;
+   uint16_t len;
+   uint8_t data[PF_ALARM_MAX_PAYLOAD_DATA_LEN];
+} pf_alarm_payload_t;
+
 /* See also pnet_alarm_argument_t for a subset */
 typedef struct pf_alarm_data
 {
@@ -805,16 +857,17 @@ typedef struct pf_alarm_data
     * pf_alarm_data_t may be followed by alarm_payload:
     *    RTA-SDU = alarm_noftification_pdu | alarm_ack_pdu
     */
+   pf_alarm_payload_t payload;
 } pf_alarm_data_t;
 
-typedef struct pf_alarm_err
+typedef struct pf_alarm_queue
 {
-   pnet_pnio_status_t pnio_status;
-   /*
-    * pf_alarm_err_t may be followed by alarm_payload:
-    *    vendor_device_error_info = VendorId, DeviceId, data*
-    */
-} pf_alarm_err_t;
+   pf_alarm_data_t items[PNET_MAX_ALARMS];
+   uint16_t write_index;
+   uint16_t read_index;
+   uint16_t count;
+} pf_alarm_queue_t;
+
 
 #define PF_MAX_SESSION (2 * (PNET_MAX_AR) + 1) /* 2 per ar, and one spare. */
 
@@ -1830,6 +1883,10 @@ typedef struct pf_ar
     * (1) prio. */
    pf_apmx_t apmx[2];
 
+   /* Alarm queues for outgoing alarms: one for LOW (0) prio and one for HIGH
+    * (1) prio. */
+   pf_alarm_queue_t alarm_send_q[2];
+
    uint16_t nbr_ar_rpc;
    pf_ar_rpc_request_t ar_rpc_request; /* From connect.req */
    pf_ar_rpc_result_t ar_rpc_result;   /* From connect.ind */
@@ -2005,39 +2062,7 @@ typedef enum pf_diag_filter_level
    PF_DIAG_FILTER_M_DEM      /* Manufacturer specific or maintenance demanded */
 } pf_diag_filter_level_t;
 
-typedef struct pf_diag_std
-{
-   uint32_t ext_ch_add_value;
-   uint32_t qual_ch_qualifier;
-   uint16_t ch_nbr;
-   uint16_t ch_properties; /* Appears, direction, channelgroup etc */
-   uint16_t ch_error_type;
-   uint16_t ext_ch_error_type;
-} pf_diag_std_t;
 
-/* Make pf_diag_usi_t equal in size to pf_diag_std_t */
-#define PF_DIAG_MANUF_DATA_LEN sizeof (pf_diag_std_t)
-typedef struct pf_diag_usi
-{
-   uint8_t manuf_data[PF_DIAG_MANUF_DATA_LEN];
-} pf_diag_usi_t;
-
-/* This is the end of list designator. */
-#define PF_DIAG_IX_NULL UINT16_MAX
-
-typedef struct pf_diag_item
-{
-   /* The selector is the usi member (0x0000..0x7fff => usi, else std) */
-   union fmt
-   {
-      pf_diag_std_t std;
-      pf_diag_usi_t usi;
-   } fmt;
-
-   bool in_use;
-   uint16_t usi;  /* pf_usi_values_t */
-   uint16_t next; /* Next in list (array index) */
-} pf_diag_item_t;
 
 typedef struct pf_subslot
 {
