@@ -230,17 +230,35 @@ see :ref:`network-topology-detection` for information regarding SNMP.
 Enable SNMP by setting PNET_OPTION_SMP to ON. Net-SNMP also needs to
 be installed. On Ubuntu you can install the required packages using::
 
-    sudo apt install -y snmpd libsnmp-dev
+  sudo apt install -y snmpd libsnmp-dev
 
-The file snmpd.conf controls access to the snmp agent. The following
-needs to be set::
+The p-net SNMP subagent will handle the system objects so the default
+SNMP system module should be disabled by adding the snmpd argument
+``-I -system_mib``. On Ubuntu Linux you should change
+``/lib/systemd/system/snmpd.service`` to read::
 
-    master  agentx
-    agentaddress  0.0.0.0,[::1]
-    view   systemonly  included   .1.3.6.1.2.1.1
-    view   systemonly  included   .1.3.6.1.2.1.25.1
-    view   systemonly  included   .1.0.8802.1.1.
-    rocommunity  public default -V systemonly
+  [Unit]
+  Description=Simple Network Management Protocol (SNMP) Daemon.
+  After=network.target
+  ConditionPathExists=/etc/snmp/snmpd.conf
 
-This enables agentx support, listens on all interfaces and allows
-read-only access to the Profinet MIB:s.
+  [Service]
+  Type=simple
+  ExecStartPre=/bin/mkdir -p /var/run/agentx
+  ExecStart=/usr/sbin/snmpd -LOw -u Debian-snmp -g Debian-snmp -I -system_mib,smux,mteTrigger,mteTriggerConf -f -p /run/snmpd.pid
+  ExecReload=/bin/kill -HUP $MAINPID
+
+  [Install]
+  WantedBy=multi-user.target
+
+The file snmpd.conf controls access to the snmp agent. It should be
+set to listen on all interfaces and allow read-write access to the
+Profinet MIB:s. On Ubuntu Linux you should change
+``/etc/snmp/snmpd.conf`` to read::
+
+  master  agentx
+  agentaddress  0.0.0.0,[::1]
+  view   systemonly  included   .1.3.6.1.2.1.1
+  view   systemonly  included   .1.0.8802.1.1.2
+  rwcommunity  public default -V systemonly
+  rwcommunity6 public default -V systemonly

@@ -33,6 +33,7 @@
 #include "mib/lldpXdot3RemPortTable.h"
 #include "mib/lldpXPnoLocTable.h"
 #include "mib/lldpXPnoRemTable.h"
+#include "mib/system_mib.h"
 
 static void pnal_snmp_thread (void * arg)
 {
@@ -44,7 +45,8 @@ static void pnal_snmp_thread (void * arg)
    /* initialize the agent library */
    init_agent ("lldpMIB");
 
-   /* init lldpMIB mib code */
+   /* init mib code */
+   init_system_mib (pnet);
    init_lldpLocalSystemData (pnet);
    init_lldpLocPortTable (pnet);
    init_lldpConfigManAddrTable (pnet);
