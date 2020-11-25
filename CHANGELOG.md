@@ -5,6 +5,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## 2020-11-16
+### Added
+- Support for multiple ports in configuration
+
+## 2020-11-10
+### Changed
+- Remove LLDP TTL from configuration
+- Remove LLDP chassis ID from configuration
+
+## 2020-11-03
+### Changed
+- Improve API for adding diagnosis
+- Use rtlabs-com/osal and rtlabs-com/cmake-tools as submodules
+
+## 2020-10-28
+### Changed
+- Rename compile time constants for number of slots and subslots
+
+## 2020-09-19
+### Changed
+- Modified public API for sending alarm ACK.
 
 ## 2020-08-24
 

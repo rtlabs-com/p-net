@@ -1,7 +1,9 @@
 Capturing and analyzing Ethernet packets
 ========================================
 In order to understand the Profinet traffic, it is useful to capture network
-packets and analyze them in a tool like Wireshark.
+packets and analyze them in a tool like Wireshark. You typically run
+Wireshark on your laptop, but in order to capture packets on for example
+a Raspberry Pi you can use the program tcpdump (described below).
 
 
 Wireshark
@@ -21,8 +23,8 @@ For details on how to add yourself to the ``wireshark`` user group, see
 https://linuxhint.com/install_wireshark_ubuntu/
 
 
-Parsing Profinet data with Wireshark
-------------------------------------
+Parsing Profinet cyclic data with Wireshark
+-------------------------------------------
 It is possible to load a GSDML file into recent versions of Wireshark, for
 parsing the cyclic data.
 In the Wireshark menu, select Edit > Preferences > Protocols > PNIO.
@@ -31,6 +33,13 @@ Enter the directory where you have your GSDML file.
 For this functionality to work, the Wireshark capture must include the start-up
 sequence. When a packet is interpreted according to a GSDML file, the name of
 the GSDML file is displayed in the detail view of the packet.
+
+
+Diagnosis data in Wireshark
+---------------------------
+Note that Wireshark can not yet decode QualifiedChannelDiagnosisData.
+See the ``dissect_AlarmUserStructure ()`` function in
+the ``packet-dcerpc-pn-io.c`` file in the source code for Wireshark.
 
 
 Show wall time in Wireshark
@@ -88,12 +97,13 @@ Run it with::
 
     sudo tcpdump -i enp0s31f6 -n -w outputfile.pcap
 
-
 Use the ``-i`` argument to specify Ethernet interface.
 
+Transfer the resulting file to your laptop, where you can open it in Wireshark.
 
-Capturing packets on network
-----------------------------
+
+Hardware for capturing packets on network
+-----------------------------------------
 Profinet is a point-to-point protocol. If the Profinet controller or device
 software is running on your machine, you can use Wireshark (or tcpdump)
 directly to capture the packets.

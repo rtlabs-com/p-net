@@ -270,6 +270,17 @@ there are communication problems to the IO-device. In the project tree > PLC_1
 errors, the hover text on the small icon is showing "Not reachable".
 
 
+Display diagnosis in the PLC
+----------------------------
+In order to display diagnosis, you must be connected to the PLC. Press the
+"Go online" in the menu bar.
+In the Project tree on the "PLC_1", right-click and select "Online & diagnostics".
+Select Diagnostics -> "Diagnostics buffer" in the left part of the new window,
+and click on relevant row to see details.
+There is also a "Diagnosis status" page that shows a summary of the current
+status.
+
+
 Troubleshooting
 ---------------
 Note that the PLC might complain if there is a non-Profinet switch between the

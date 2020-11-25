@@ -57,7 +57,7 @@ void show_usage()
            "LED).\n");
    printf ("Button1 value is sent in the periodic data.\n");
    printf ("Button2 cycles through triggering an alarm, setting diagnosis and "
-           " creating logbook entries.\n");
+           "creating logbook entries.\n");
    printf ("\n");
    printf ("Also the mandatory Profinet signal LED is controlled by this "
            "application.\n");
@@ -282,7 +282,8 @@ int app_set_led (uint16_t id, bool led_state)
    {
       return -1;
    }
-   printf ("Command for setting LED state: %s\n", outputcommand);
+   /* TODO control by verbosity argument
+   printf ("Command for setting LED state: %s\n", outputcommand); */
 
    status = system (outputcommand);
    free (outputcommand);

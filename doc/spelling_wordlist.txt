@@ -16,6 +16,7 @@ CControl
 Changelog
 CiR
 cmake
+CMake
 Commonmark
 Codesys
 Datagram
@@ -47,6 +48,7 @@ IPv4
 Isochronous
 J-link
 kB
+libprofinet
 libreNMS
 lldpd
 lwip
@@ -88,9 +90,12 @@ Scalance
 Segger
 Simatic
 snmp
+snmpd
 snmpwalk
 softplc
 Steuerung
+subagent
+subdirectory
 subelement
 subelements
 subframes
@@ -103,6 +108,7 @@ suboptions
 subslot
 subslots
 subtab
+subtree
 sudo
 tcpdump
 toolchain

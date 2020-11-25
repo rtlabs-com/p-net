@@ -1,10 +1,11 @@
-Getting started on Linux
+Additional Linux Details
 ========================
-Running the IO-device application on Linux
+The tutorial gives most information required for getting started on a Linux
+machine. Some additional information is given here.
 
 
-Install dependencies
---------------------
+Detailed dependency installation info
+-------------------------------------
 You need to have cmake version at least 3.14 installed. It is available in
 Ubuntu 19.04 and later.
 
@@ -23,109 +24,9 @@ Optional dependencies (for development and documentation of the p-net stack)::
 
     sudo apt install -y \
         clang-tools \
+        clang-format-10 \
         doxygen \
         graphviz
-
-
-Download and compile p-net
----------------------------
-Clone the source::
-
-    git clone --recurse-submodules https://github.com/rtlabs-com/p-net.git
-
-This will clone the repository with submodules. If you already cloned
-the repository without the ``--recurse-submodules`` flag then run this
-in the ``p-net`` folder::
-
-    git submodule update --init --recursive
-
-Then create and configure the build::
-
-    cmake -B build -S p-net
-
-or maybe ::
-
-    cmake -B build -S p-net -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=OFF -DBUILD_SHARED_LIBS=ON -DUSE_SCHED_FIFO=ON
-
-You can choose any name for the build folder, for instance if you want
-to build different configurations.
-
-Build the code::
-
-    cmake --build build --target install
-
-Use the ``-j`` flag to ``make`` to enable parallel build.
-
-Depending on how you installed cmake, you might need to run ``snap run cmake``
-instead of ``cmake``.
-
-Use the ``install`` target to install scripts for manipulating IP
-settings, control LEDs etc.
-
-
-Run the Linux demo application
-------------------------------
-If you need to set a static IP-address (adapt IP address and network adapter name)::
-
-   sudo ifconfig eth0 192.168.0.50 netmask 255.255.255.0 up
-
-Usage of the demo IO-device application:
-
-.. code-block:: none
-
-    $ ./pn_dev --help
-
-    Demo application for p-net Profinet device stack.
-
-    Wait for connection from IO-controller.
-    Then read buttons (input) and send to controller.
-    Listen for application LED output (from controller) and set application LED state.
-    It will also send a counter value (useful also without buttons and LED).
-    Button1 value is sent in the periodic data. Button2 triggers an alarm.
-
-    Also the mandatory Profinet signal LED is controlled by this application.
-
-    The LEDs are controlled by the script set_profinet_leds_linux
-    located in the same directory as the application binary.
-    A version for Raspberry Pi is available, and also a version writing
-    to plain text files (useful for demo if no LEDs are available).
-
-    Assumes the default gateway is found on .1 on same subnet as the IP address.
-
-    Optional arguments:
-        --help       Show this help text and exit
-        -h           Show this help text and exit
-        -v           Incresase verbosity
-        -f           Reset to factory settings, and store to file. Exit.
-        -r           Remove stored files and exit.
-        -g           Show stack details and exit. Repeat for more details.
-        -i INTERF    Name of Ethernet interface to use. Defaults to eth0
-        -s NAME      Set station name. Defaults to rt-labs-dev  Only used
-                     if not already available in storage file.
-        -b FILE      Path (absolute or relative) to read button1. Defaults to not read button1.
-        -d FILE      Path (absolute or relative) to read button2. Defaults to not read button2.
-        -p PATH      Absolute path to storage directory. Defaults to use current directory.
-
-Run the sample application::
-
-    sudo ifconfig eth0 192.168.0.50 netmask 255.255.255.0 up
-    sudo build/pn_dev -v
-
-On Raspberry Pi::
-
-    sudo build/pn_dev -v -b /sys/class/gpio/gpio22/value -d /sys/class/gpio/gpio27/value
-
-Note that you must set up the GPIO files properly first (see the Raspberry Pi
-page).
-
-
-Adjust log level
-----------------
-If you would like to change the log level, run ``ccmake .`` in the ``build``
-directory. It will start a menu program. Move to the LOG_LEVEL entry, and
-press Enter to change to DEBUG. Press c to save and q to exit.
-
-You need to re-build the project for the changes to take effect.
 
 
 Run tests and generate documentation
@@ -143,6 +44,9 @@ Create Doxygen documentation::
     cmake --build build --target docs
 
 The Doxygen documentation ends up in ``build/html/index.html``
+
+See the "Writing documentation" page if you would like to install
+the toolchain to build the entire Sphinx documentation.
 
 The clang static analyzer can also be used if installed. Create a new
 build directory by running::
@@ -207,7 +111,6 @@ compile time options (for example the maximum number of modules allowed).
 
 Debug intermittent segmentation faults during tests on Linux
 ------------------------------------------------------------
-
 Enable core dumps::
 
     ulimit -c unlimited

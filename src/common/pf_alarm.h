@@ -232,6 +232,8 @@ int pf_alarm_send_diagnosis (
  *
  * Always uses high prio, has no payload.
  *
+ * This is the "Alarm notification" service.
+ *
  * ALPMR: ALPMR_Alarm_Ack.req
  * ALPMR: ALPMR_Alarm_Ack.cnf   (Implements part of that signal via the return
  *                               value)

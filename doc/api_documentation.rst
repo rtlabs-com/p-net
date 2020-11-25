@@ -6,15 +6,14 @@ structs etc in the public API for the p-net Profinet stack.
 For detailed documentation, read the ``include/pnet_api.h`` header file. It
 also contains error code definitions etc.
 
-You can also build the full Doxygen documentation by running ``make docs`` in
-the build directory. The resulting HTML files will end up in
-``build/html/index.html``.
+You can also build the Doxygen documentation for all functions by following
+the instructions given on the page "Additional Linux Details".
 
 Study the sample_app to get more information on how to use the API.
 
 General
 -------
-All functions return either 0 (zero) for a successful call or -1 for an
+All functions return either ``0`` (zero) for a successful call or ``-1`` for an
 unsuccessful call.
 
 
@@ -61,10 +60,6 @@ Alarms and diagnostics
 .. doxygenfunction:: pnet_diag_std_update
 .. doxygenfunction:: pnet_diag_std_remove
 
-It is recommended to use the standard diagnosis format in most cases.
-Use the manufacturer specific format ("USI format") only if it's not
-possible to use the standard format.
-
 .. doxygenfunction:: pnet_diag_usi_add
 .. doxygenfunction:: pnet_diag_usi_update
 .. doxygenfunction:: pnet_diag_usi_remove
@@ -76,7 +71,7 @@ The application should define call-back functions which are called by
 the stack when specific events occurs within the stack.
 
 Note that most of these functions are mandatory in the sense that they must
-exist and return 0 (zero) for a functioning stack. Some functions are required
+exist and return ``0`` for a functioning stack. Some functions are required
 to perform specific functionality.
 
 .. doxygentypedef:: pnet_connect_ind
