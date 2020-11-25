@@ -330,7 +330,7 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
       if (reset_mode > 0)
       {
          /* User callback */
-         (void)pf_fspm_reset_ind (net, reset_user_application, reset_mode);
+         pf_fspm_reset_ind (net, reset_user_application, reset_mode);
       }
 
       net->cmina_nonvolatile_dcp_ase.standard_gw_value = 0; /* Means: OwnIP is

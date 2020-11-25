@@ -4860,7 +4860,7 @@ int pf_cmdev_rm_ccontrol_cnf (
                ret = pf_cmdev_set_state (net, p_ar, PF_CMDEV_STATE_WDATA);
             }
             /* Send result to application */
-            (void)pf_fspm_ccontrol_cnf (net, p_ar, p_ccontrol_result);
+            pf_fspm_ccontrol_cnf (net, p_ar, p_ccontrol_result);
          }
          else
          {
@@ -4876,7 +4876,7 @@ int pf_cmdev_rm_ccontrol_cnf (
             (p_ccontrol_result->add_data_1 << 16) +
                (p_ccontrol_result->add_data_2));
          /* Send result to application */
-         (void)pf_fspm_ccontrol_cnf (net, p_ar, p_ccontrol_result);
+         pf_fspm_ccontrol_cnf (net, p_ar, p_ccontrol_result);
          (void)pf_cmdev_set_state (net, p_ar, PF_CMDEV_STATE_ABORT);
       }
    }
