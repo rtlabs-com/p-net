@@ -4870,6 +4870,12 @@ int pf_cmdev_rm_ccontrol_cnf (
           */
          if (p_control_io->control_command == BIT (PF_CONTROL_COMMAND_BIT_DONE))
          {
+            /*
+             * Alarm transmitter enabled on APPLRDY CNF.
+             * PN-AL-protocol (Mar20) Figure A.7
+             */
+            pf_alarm_enable (p_ar);
+
             if (p_ar->ready_4_data == true)
             {
                (void)pf_cmdev_state_ind (net, p_ar, PNET_EVENT_DATA);
