@@ -145,6 +145,8 @@ int mock_pf_lldp_get_peer_link_status (
    int loc_port_num,
    pf_lldp_link_status_t * p_link_status);
 
+int mock_pnal_snmp_init (pnet_t * pnet);
+
 #ifdef __cplusplus
 }
 #endif

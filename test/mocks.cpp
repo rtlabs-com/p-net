@@ -277,3 +277,8 @@ int mock_pf_lldp_get_peer_link_status (
    *p_link_status = mock_lldp_data.peer_link_status;
    return mock_lldp_data.error;
 }
+
+int mock_pnal_snmp_init (pnet_t * pnet)
+{
+   return 0;
+}
