@@ -15,6 +15,7 @@
 
 #ifdef UNIT_TEST
 #define pnal_eth_init mock_pnal_eth_init
+#define pnal_snmp_init mock_pnal_snmp_init
 #endif
 
 #include <stdlib.h>

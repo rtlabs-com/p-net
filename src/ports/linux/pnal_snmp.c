@@ -39,6 +39,8 @@ static void pnal_snmp_thread (void * arg)
 {
    struct pnet * pnet = arg;
 
+   snmp_disable_log();
+
    /* make us an agentx client. */
    netsnmp_enable_subagent();
 
