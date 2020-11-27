@@ -26,6 +26,23 @@
  * @brief Manage runtime data for multiple ports
  */
 
+void pf_port_init(pnet_t * net)
+{
+   int port;
+   pf_port_iterator_t port_iterator;
+   pf_port_t * p_port_data = NULL;
+
+   pf_port_init_iterator_over_ports (net, &port_iterator);
+   port = pf_port_get_next (&port_iterator);
+
+   while (port != 0)
+   {
+      p_port_data = pf_port_get_state (net, port);
+      p_port_data->port_num = port;
+      port = pf_port_get_next (&port_iterator);
+   }
+}
+
 void pf_port_get_list_of_ports (pnet_t * net, pf_lldp_port_list_t * p_list)
 {
    /* TODO: Implement support for multiple ports */

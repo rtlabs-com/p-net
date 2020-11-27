@@ -2334,7 +2334,8 @@ typedef struct pf_peer_to_peer_boundary
 typedef struct pf_port_data_adjust_peer_to_peer_boundary
 {
    pf_peer_to_peer_boundary_t peer_to_peer_boundary;
-   uint16_t adjust_properties;
+   uint16_t adjust_properties; /* Always 0, See PN-AL-protocol (Mar20)
+                                  Ch.5.2.13.14 */
 } pf_adjust_peer_to_peer_boundary_t;
 
 /* See Profinet 2.4 section 5.2.28 and appendix W */
@@ -2492,6 +2493,7 @@ typedef struct pf_lldp_signal_delay
 typedef struct pf_pdport
 {
    bool lldp_peer_info_updated;
+   bool lldp_peer_timeout;
    struct
    {
       bool active; /* Todo maybe a bitmask for different checks*/
@@ -2521,8 +2523,11 @@ typedef struct pf_lldp_port
     */
    uint32_t timestamp_for_last_peer_change;
 
-   /* Scheduler handle for LLDP timeout */
+   /* Scheduler handle for LLDP receive timeout */
    uint32_t rx_timeout;
+
+   /* Scheduler handle for periodic LLDP sending */
+   uint32_t tx_timeout;
 
    /* Is information about peer device received?
     *
@@ -2547,17 +2552,10 @@ typedef struct pf_lldp_port
  */
 typedef struct pf_port
 {
+   uint8_t port_num;
    pf_pdport_t pdport;
    pf_lldp_port_t lldp;
 } pf_port_t;
-
-/**
- * PDPort nvm entry.
- */
-typedef struct pnet_pdport_nvm
-{
-   pf_check_peer_t peer;
-} pnet_pdport_nvm_t;
 
 struct pnet
 {
@@ -2610,7 +2608,6 @@ struct pnet
    os_mutex_t * fspm_log_book_mutex;
    pnet_interface_stats_t interface_statistics; /* Keeps track of number of sent
                                                    and discarded packets */
-   uint32_t lldp_timeout; /* Scheduler handle for periodic LLDP sending */
 
    /* LLDP mutex
     *
