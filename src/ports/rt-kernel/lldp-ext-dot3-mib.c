@@ -253,41 +253,40 @@ static s16_t lldpxdot3locporttable_get_value (
    {
       /* lldpXdot3LocPortAutoNegSupported */
       s32_t * v = (s32_t *)value;
-      pf_lldp_link_status_t link_status;
+      pf_snmp_link_status_t link_status;
 
       pf_snmp_get_link_status (pnal_snmp.net, port, &link_status);
-      value_len = snmp_encode_truthvalue (v, link_status.auto_neg_supported);
+      value_len = sizeof (s32_t);
+      *v = link_status.auto_neg_supported;
    }
    break;
    case 2:
    {
       /* lldpXdot3LocPortAutoNegEnabled */
       s32_t * v = (s32_t *)value;
-      pf_lldp_link_status_t link_status;
+      pf_snmp_link_status_t link_status;
 
       pf_snmp_get_link_status (pnal_snmp.net, port, &link_status);
-      value_len = snmp_encode_truthvalue (v, link_status.auto_neg_enabled);
+      value_len = sizeof (s32_t);
+      *v = link_status.auto_neg_enabled;
    }
    break;
    case 3:
    {
       /* lldpXdot3LocPortAutoNegAdvertisedCap */
       u8_t * v = (u8_t *)value;
-      pf_lldp_link_status_t link_status;
+      pf_snmp_link_status_t link_status;
 
       pf_snmp_get_link_status (pnal_snmp.net, port, &link_status);
-      value_len = snmp_encode_bits (
-         v,
-         SNMP_MAX_VALUE_SIZE,
-         link_status.auto_neg_advertised_cap,
-         16);
+      value_len = 2;
+      memcpy (v, link_status.auto_neg_advertised_cap, 2);
    }
    break;
    case 4:
    {
       /* lldpXdot3LocPortOperMauType */
       s32_t * v = (s32_t *)value;
-      pf_lldp_link_status_t link_status;
+      pf_snmp_link_status_t link_status;
 
       pf_snmp_get_link_status (pnal_snmp.net, port, &link_status);
       value_len = sizeof (s32_t);
@@ -401,7 +400,7 @@ static s16_t lldpxdot3remporttable_get_value (
    {
       /* lldpXdot3RemPortAutoNegSupported */
       s32_t * v = (s32_t *)value;
-      pf_lldp_link_status_t link_status;
+      pf_snmp_link_status_t link_status;
       int error;
 
       error = pf_snmp_get_peer_link_status (pnal_snmp.net, port, &link_status);
@@ -411,7 +410,8 @@ static s16_t lldpxdot3remporttable_get_value (
       }
       else
       {
-         value_len = snmp_encode_truthvalue (v, link_status.auto_neg_supported);
+         value_len = sizeof (s32_t);
+         *v = link_status.auto_neg_supported;
       }
    }
    break;
@@ -419,7 +419,7 @@ static s16_t lldpxdot3remporttable_get_value (
    {
       /* lldpXdot3RemPortAutoNegEnabled */
       s32_t * v = (s32_t *)value;
-      pf_lldp_link_status_t link_status;
+      pf_snmp_link_status_t link_status;
       int error;
 
       error = pf_snmp_get_peer_link_status (pnal_snmp.net, port, &link_status);
@@ -429,7 +429,8 @@ static s16_t lldpxdot3remporttable_get_value (
       }
       else
       {
-         value_len = snmp_encode_truthvalue (v, link_status.auto_neg_enabled);
+         value_len = sizeof (s32_t);
+         *v = link_status.auto_neg_enabled;
       }
    }
    break;
@@ -437,7 +438,7 @@ static s16_t lldpxdot3remporttable_get_value (
    {
       /* lldpXdot3RemPortAutoNegAdvertisedCap */
       u8_t * v = (u8_t *)value;
-      pf_lldp_link_status_t link_status;
+      pf_snmp_link_status_t link_status;
       int error;
 
       error = pf_snmp_get_peer_link_status (pnal_snmp.net, port, &link_status);
@@ -447,11 +448,8 @@ static s16_t lldpxdot3remporttable_get_value (
       }
       else
       {
-         value_len = snmp_encode_bits (
-            v,
-            SNMP_MAX_VALUE_SIZE,
-            link_status.auto_neg_advertised_cap,
-            16);
+         value_len = 2;
+         memcpy (v, link_status.auto_neg_advertised_cap, 2);
       }
    }
    break;
@@ -459,7 +457,7 @@ static s16_t lldpxdot3remporttable_get_value (
    {
       /* lldpXdot3RemPortOperMauType */
       s32_t * v = (s32_t *)value;
-      pf_lldp_link_status_t link_status;
+      pf_snmp_link_status_t link_status;
       int error;
 
       error = pf_snmp_get_peer_link_status (pnal_snmp.net, port, &link_status);

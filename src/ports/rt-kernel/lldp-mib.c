@@ -636,11 +636,11 @@ static s16_t lldplocmanaddrtable_get_value (
    {
       /* lldpLocManAddrLen */
       s32_t * v = (s32_t *)value;
-      pf_lldp_management_address_t address;
+      pf_snmp_management_address_t address;
 
       pf_snmp_get_management_address (pnal_snmp.net, &address);
       value_len = sizeof (s32_t);
-      *v = address.len + 1;
+      *v = address.len;
    }
    break;
    case 4:

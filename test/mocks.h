@@ -50,7 +50,18 @@ typedef struct mock_os_data_obj
 
 } mock_os_data_t;
 
+typedef struct mock_lldp_data
+{
+   pf_lldp_management_address_t management_address;
+   pf_lldp_management_address_t peer_management_address;
+   pf_lldp_link_status_t link_status;
+   pf_lldp_link_status_t peer_link_status;
+   int error;
+
+} mock_lldp_data_t;
+
 extern mock_os_data_t mock_os_data;
+extern mock_lldp_data_t mock_lldp_data;
 
 uint32_t mock_os_get_current_time_us (void);
 
@@ -114,6 +125,25 @@ void mock_pf_generate_uuid (
    uint32_t session_number,
    pnet_ethaddr_t mac_address,
    pf_uuid_t * p_uuid);
+
+void mock_pf_lldp_get_management_address (
+   pnet_t * net,
+   pf_lldp_management_address_t * p_man_address);
+
+int mock_pf_lldp_get_peer_management_address (
+   pnet_t * net,
+   int loc_port_num,
+   pf_lldp_management_address_t * p_man_address);
+
+void mock_pf_lldp_get_link_status (
+   pnet_t * net,
+   int loc_port_num,
+   pf_lldp_link_status_t * p_link_status);
+
+int mock_pf_lldp_get_peer_link_status (
+   pnet_t * net,
+   int loc_port_num,
+   pf_lldp_link_status_t * p_link_status);
 
 #ifdef __cplusplus
 }

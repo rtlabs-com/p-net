@@ -22,10 +22,12 @@ uint8_t pnet_log_level;
 
 os_mutex_t * mock_mutex;
 mock_os_data_t mock_os_data;
+mock_lldp_data_t mock_lldp_data;
 
 void mock_clear (void)
 {
    memset (&mock_os_data, 0, sizeof (mock_os_data));
+   memset (&mock_lldp_data, 0, sizeof (mock_lldp_data));
 }
 
 void mock_init (void)
@@ -241,4 +243,37 @@ void mock_pf_generate_uuid (
    p_uuid->data4[5] = 0x06;
    p_uuid->data4[6] = 0x07;
    p_uuid->data4[7] = 0x08;
+}
+
+void mock_pf_lldp_get_management_address (
+   pnet_t * net,
+   pf_lldp_management_address_t * p_man_address)
+{
+   *p_man_address = mock_lldp_data.management_address;
+}
+
+int mock_pf_lldp_get_peer_management_address (
+   pnet_t * net,
+   int loc_port_num,
+   pf_lldp_management_address_t * p_man_address)
+{
+   *p_man_address = mock_lldp_data.peer_management_address;
+   return mock_lldp_data.error;
+}
+
+void mock_pf_lldp_get_link_status (
+   pnet_t * net,
+   int loc_port_num,
+   pf_lldp_link_status_t * p_link_status)
+{
+   *p_link_status = mock_lldp_data.link_status;
+}
+
+int mock_pf_lldp_get_peer_link_status (
+   pnet_t * net,
+   int loc_port_num,
+   pf_lldp_link_status_t * p_link_status)
+{
+   *p_link_status = mock_lldp_data.peer_link_status;
+   return mock_lldp_data.error;
 }

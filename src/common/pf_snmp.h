@@ -211,6 +211,33 @@ typedef struct pf_snmp_system_description
 } pf_snmp_system_description_t;
 
 /**
+ * Encoded management address.
+ *
+ * Contains the same information as pf_lldp_management_address_t, but the
+ * fields have been encoded so they may be immediately placed in SNMP response.
+ */
+typedef struct pf_snmp_management_address
+{
+   uint8_t value[31]; /**< First byte is size of actual address */
+   uint8_t subtype;   /**< 1 for IPv4 */
+   size_t len;        /**< 5 for IPv4 */
+} pf_snmp_management_address_t;
+
+/**
+ * Encoded link status.
+ *
+ * Contains the same information as pf_lldp_link_status_t, but the fields
+ * have been encoded so they may be immediately placed in SNMP response.
+ */
+typedef struct pf_snmp_link_status
+{
+   int32_t auto_neg_supported;         /**< 1 if true, 2 if false */
+   int32_t auto_neg_enabled;           /**< 1 if true, 2 if false */
+   uint8_t auto_neg_advertised_cap[2]; /**< OCTET STRING encoding of BITS */
+   int32_t oper_mau_type;
+} pf_snmp_link_status_t;
+
+/**
  * Get system description.
  *
  * See IETF RFC 3418 (SNMP MIB-II) ch. 2 "Definitions". Relevant fields:
@@ -374,8 +401,8 @@ int pf_snmp_get_next_port (pf_port_iterator_t * p_iterator);
  * @param net              In:    The p-net stack instance.
  * @param loc_port_num     In:    Local port number for port directly
  *                                connected to the remote device.
- *                                Valid range: 1 .. PNET_MAX_PORT
- *                                See pf_snmp_get_port_list().
+ *                                Valid range: 1 .. PNET_MAX_PORT.
+ *                                See pf_snmp_get_next_port().
  * @param p_timestamp_10ms Out:   Time when the LLDP packet with the info
  *                                was first received, in units of
  *                                10 milliseconds with system startup
@@ -417,8 +444,8 @@ void pf_snmp_get_chassis_id (pnet_t * net, pf_lldp_chassis_id_t * p_chassis_id);
  * @param net              In:    The p-net stack instance.
  * @param loc_port_num     In:    Local port number for port directly
  *                                connected to the remote device.
- *                                Valid range: 1 .. PNET_MAX_PORT
- *                                See pf_snmp_get_port_list().
+ *                                Valid range: 1 .. PNET_MAX_PORT.
+ *                                See pf_snmp_get_next_port().
  * @param p_chassis_id     Out:   Chassis ID of remote device.
  * @return  0 if the operation succeeded.
  *         -1 if an error occurred (no info from remote device received).
@@ -438,8 +465,8 @@ int pf_snmp_get_peer_chassis_id (
  *
  * @param net              In:    The p-net stack instance.
  * @param loc_port_num     In:    Local port number.
- *                                Valid range: 1 .. PNET_MAX_PORT
- *                                See pf_snmp_get_port_list().
+ *                                Valid range: 1 .. PNET_MAX_PORT.
+ *                                See pf_snmp_get_next_port().
  * @param p_port_id        Out:   Port ID of local port.
  */
 void pf_snmp_get_port_id (
@@ -464,8 +491,8 @@ void pf_snmp_get_port_id (
  * @param net              In:    The p-net stack instance.
  * @param loc_port_num     In:    Local port number for port directly
  *                                connected to the remote device.
- *                                Valid range: 1 .. PNET_MAX_PORT
- *                                See pf_snmp_get_port_list().
+ *                                Valid range: 1 .. PNET_MAX_PORT.
+ *                                See pf_snmp_get_next_port().
  * @param p_port_id        Out:   Port ID of remote port.
  * @return  0 if the operation succeeded.
  *         -1 if an error occurred (no info from remote device received).
@@ -484,8 +511,8 @@ int pf_snmp_get_peer_port_id (
  *
  * @param net              In:    The p-net stack instance.
  * @param loc_port_num     In:    Local port number.
- *                                Valid range: 1 .. PNET_MAX_PORT
- *                                See pf_snmp_get_port_list().
+ *                                Valid range: 1 .. PNET_MAX_PORT.
+ *                                See pf_snmp_get_next_port().
  * @param p_port_desc      Out:   Port description of local port.
  */
 void pf_snmp_get_port_description (
@@ -506,8 +533,8 @@ void pf_snmp_get_port_description (
  * @param net              In:    The p-net stack instance.
  * @param loc_port_num     In:    Local port number for port directly
  *                                connected to the remote device.
- *                                Valid range: 1 .. PNET_MAX_PORT
- *                                See pf_snmp_get_port_list().
+ *                                Valid range: 1 .. PNET_MAX_PORT.
+ *                                See pf_snmp_get_next_port().
  * @param p_port_desc      Out:   Port description of remote port.
  * @return  0 if the operation succeeded.
  *         -1 if an error occurred (no info from remote device received).
@@ -518,21 +545,9 @@ int pf_snmp_get_peer_port_description (
    pf_lldp_port_description_t * p_port_desc);
 
 /**
- * Get Management Address for local interface.
+ * Get encoded Management Address for local interface.
  *
- * The management address should usually be the IP address for the local
- * interface the local ports belong to. It could also be the MAC address of
- * the local interface in case no IP address has been assigned.
- *
- * Note that the local device may have multiple interfaces (such as a
- * loopback interface). Only the local interface used by the p-net stack
- * is relevant here.
- *
- * Note that when constructing the response to the request for the variable
- * lldpLocManAddr, the lldpLocManAddr is to be encoded as an variable length
- * OCTET STRING, where the first element is the number of octets.
- * If lldpLocManAddr is the IPv4 address 192.168.10.9, it should be encoded as
- * 4.192.168.10.9 and lldpLocManAddrLen would be 5.
+ * The returned management address is encoded for use in SNMP response.
  * See PN-Topology ch. 6.3.1.
  *
  * See IEEE 802.1AB-2005 ch. 12.2. Relevant fields:
@@ -545,26 +560,13 @@ int pf_snmp_get_peer_port_description (
  */
 void pf_snmp_get_management_address (
    pnet_t * net,
-   pf_lldp_management_address_t * p_man_address);
+   pf_snmp_management_address_t * p_man_address);
 
 /**
- * Get Management Address for remote interface connected to local port.
+ * Get encoded Management Address for remote interface connected to local port.
  *
- * The remote management address is contained in an LLDP packet sent from a port
- * on the remote device to the local port with no intermediate switches.
- *
- * The management address should usually be the IP address for the remote
- * interface the remote port belongs to. It could also be the MAC address of
- * the remote interface in case no IP address has been assigned.
- *
- * Note that the remote device may have multiple interfaces. Only the remote
- * interface connected to the local port is relevant here.
- *
- * Note that when constructing the response to the request for the variable
- * lldpLocManAddr, the lldpLocManAddr is to be encoded as an variable length
- * OCTET STRING, where the first element is the number of octets.
- * If lldpLocManAddr is the IPv4 address 192.168.10.9, it should be encoded as
- * 4.192.168.10.9 and lldpLocManAddrLen would be 5.
+ * The returned management address is encoded for use in SNMP response.
+ * See PN-Topology ch. 6.3.1.
  *
  * See IEEE 802.1AB-2005 (LLDPv1) ch. 12.2. Relevant fields:
  * - lldpRemManAddr,
@@ -575,8 +577,8 @@ void pf_snmp_get_management_address (
  * @param net              In:    The p-net stack instance.
  * @param loc_port_num     In:    Local port number for port directly
  *                                connected to the remote device.
- *                                Valid range: 1 .. PNET_MAX_PORT
- *                                See pf_snmp_get_port_list().
+ *                                Valid range: 1 .. PNET_MAX_PORT.
+ *                                See pf_snmp_get_next_port().
  * @param p_man_address    Out:   Management address of remote interface.
  * @return  0 if the operation succeeded.
  *         -1 if an error occurred (no info from remote device received).
@@ -584,7 +586,7 @@ void pf_snmp_get_management_address (
 int pf_snmp_get_peer_management_address (
    pnet_t * net,
    int loc_port_num,
-   pf_lldp_management_address_t * p_man_address);
+   pf_snmp_management_address_t * p_man_address);
 
 /**
  * Get ManAddrIfId for local interface.
@@ -626,8 +628,8 @@ void pf_snmp_get_management_port_index (
  * @param net              In:    The p-net stack instance.
  * @param loc_port_num     In:    Local port number for port directly
  *                                connected to the remote device.
- *                                Valid range: 1 .. PNET_MAX_PORT
- *                                See pf_snmp_get_port_list().
+ *                                Valid range: 1 .. PNET_MAX_PORT.
+ *                                See pf_snmp_get_next_port().
  * @param p_man_port_index Out:   Index in remote IfTable for Management port.
  * @return  0 if the operation succeeded.
  *         -1 if an error occurred (no info from remote device received).
@@ -681,8 +683,8 @@ void pf_snmp_get_station_name (
  * @param net              In:    The p-net stack instance.
  * @param loc_port_num     In:    Local port number for port directly
  *                                connected to the remote device.
- *                                Valid range: 1 .. PNET_MAX_PORT
- *                                See pf_snmp_get_port_list().
+ *                                Valid range: 1 .. PNET_MAX_PORT.
+ *                                See pf_snmp_get_next_port().
  * @param p_station_name   Out:   Station name of remote interface.
  * @return  0 if the operation succeeded.
  *         -1 if an error occurred (no info from remote device received).
@@ -695,8 +697,6 @@ int pf_snmp_get_peer_station_name (
 /**
  * Get measured signal delays on local port.
  *
- * If a signal delay was not measured, its value is zero.
- *
  * See IEC CDV 61158-6-10 (PN-AL-Protocol) Annex U: "LLDP EXT MIB". Relevant
  * fields:
  * - lldpXPnoLocLPDValue,
@@ -706,8 +706,8 @@ int pf_snmp_get_peer_station_name (
  *
  * @param net              In:    The p-net stack instance.
  * @param loc_port_num     In:    Local port number.
- *                                Valid range: 1 .. PNET_MAX_PORT
- *                                See pf_snmp_get_port_list().
+ *                                Valid range: 1 .. PNET_MAX_PORT.
+ *                                See pf_snmp_get_next_port().
  * @param p_delays         Out:   Measured signal delays on local port.
  */
 void pf_snmp_get_signal_delays (
@@ -717,8 +717,6 @@ void pf_snmp_get_signal_delays (
 
 /**
  * Get measured signal delays on remote port.
- *
- * If a signal delay was not measured, its value is zero.
  *
  * See IEC CDV 61158-6-10 (PN-AL-Protocol) Annex U: "LLDP EXT MIB". Relevant
  * fields:
@@ -730,8 +728,8 @@ void pf_snmp_get_signal_delays (
  * @param net              In:    The p-net stack instance.
  * @param loc_port_num     In:    Local port number for port directly
  *                                connected to the remote device.
- *                                Valid range: 1 .. PNET_MAX_PORT
- *                                See pf_snmp_get_port_list().
+ *                                Valid range: 1 .. PNET_MAX_PORT.
+ *                                See pf_snmp_get_next_port().
  * @param p_delays         Out:   Measured signal delays on remote port.
  * @return  0 if the operation succeeded.
  *         -1 if an error occurred (no info from remote device received).
@@ -742,49 +740,47 @@ int pf_snmp_get_peer_signal_delays (
    pf_lldp_signal_delay_t * p_delays);
 
 /**
- * Get link status of local port.
+ * Get encoded link status of local port.
+ *
+ * The returned fields are encoded and ready to be put in SNMP response.
  *
  * See IEEE 802.1AB-2005 (LLDPv1) Annex G.7.1: "IEEE 802.3 LLDP extension
  * MIB module". Relevant fields:
- * - lldpXdot3LocPortAutoNegSupported
+ * - lldpXdot3LocPortAutoNegSupported,
  * - lldpXdot3LocPortAutoNegEnabled,
  * - lldpXdot3LocPortAutoNegAdvertisedCap,
  * - lldpXdot3LocPortOperMauType,
  * - lldpLocPortNum.
  *
- * Note that in SNMP, bool variables (type TruthValue in SNMP) are encoded as
- * 1 if true, but 2 if false.
- *
  * @param net              In:    The p-net stack instance.
  * @param loc_port_num     In:    Local port number.
- *                                Valid range: 1 .. PNET_MAX_PORT
- *                                See pf_snmp_get_port_list().
+ *                                Valid range: 1 .. PNET_MAX_PORT.
+ *                                See pf_snmp_get_next_port().
  * @param p_link_status    Out:   Link status of local port.
  */
 void pf_snmp_get_link_status (
    pnet_t * net,
    int loc_port_num,
-   pf_lldp_link_status_t * p_link_status);
+   pf_snmp_link_status_t * p_link_status);
 
 /**
- * Get link status of remote port.
+ * Get encoded link status of remote port.
+ *
+ * The returned fields are encoded and ready to be put in SNMP response.
  *
  * See IEEE 802.1AB-2005 (LLDPv1) annex G.7.1: "IEEE 802.3 LLDP extension
  * MIB module". Relevant fields:
- * - lldpXdot3RemPortAutoNegSupported
+ * - lldpXdot3RemPortAutoNegSupported,
  * - lldpXdot3RemPortAutoNegEnabled,
  * - lldpXdot3RemPortAutoNegAdvertisedCap,
  * - lldpXdot3RemPortOperMauType,
  * - lldpRemLocalPortNum.
  *
- * Note that in SNMP, bool variables (type TruthValue in SNMP) are encoded as
- * 1 if true, but 2 if false.
- *
  * @param net              In:    The p-net stack instance.
  * @param loc_port_num     In:    Local port number for port directly
  *                                connected to the remote device.
- *                                Valid range: 1 .. PNET_MAX_PORT
- *                                See pf_snmp_get_port_list().
+ *                                Valid range: 1 .. PNET_MAX_PORT.
+ *                                See pf_snmp_get_next_port().
  * @param p_link_status    Out:   Link status of remote port.
  * @return  0 if the operation succeeded.
  *         -1 if an error occurred (no info from remote device received).
@@ -792,7 +788,7 @@ void pf_snmp_get_link_status (
 int pf_snmp_get_peer_link_status (
    pnet_t * net,
    int loc_port_num,
-   pf_lldp_link_status_t * p_link_status);
+   pf_snmp_link_status_t * p_link_status);
 
 #ifdef __cplusplus
 }

@@ -13,20 +13,109 @@
  * full license information.
  ********************************************************************/
 
-#ifdef UNIT_TEST
-#endif
-
 /**
  * @file
  * @brief Helper functions for use by platform-dependent SNMP server (agent).
  *
  */
 
+#ifdef UNIT_TEST
+#define pf_lldp_get_management_address mock_pf_lldp_get_management_address
+#define pf_lldp_get_peer_management_address                                    \
+   mock_pf_lldp_get_peer_management_address
+#define pf_lldp_get_link_status      mock_pf_lldp_get_link_status
+#define pf_lldp_get_peer_link_status mock_pf_lldp_get_peer_link_status
+#endif
+
 #include "pf_includes.h"
 #include <string.h>
 
 #define STRINGIFY(s)   STRINGIFIED (s)
 #define STRINGIFIED(s) #s
+
+/**
+ * Reverse bits in byte.
+ *
+ * @param byte             In:    Byte with bit pattern to reverse.
+ * @return Bit pattern in reversed order.
+ */
+static uint8_t pf_snmp_bit_reversed_byte (const uint8_t byte)
+{
+   uint8_t reversed = 0x00;
+
+   reversed |= (byte & BIT (7)) >> 7;
+   reversed |= (byte & BIT (0)) << 7;
+
+   reversed |= (byte & BIT (6)) >> 5;
+   reversed |= (byte & BIT (1)) << 5;
+
+   reversed |= (byte & BIT (5)) >> 3;
+   reversed |= (byte & BIT (2)) << 3;
+
+   reversed |= (byte & BIT (4)) >> 1;
+   reversed |= (byte & BIT (3)) << 1;
+
+   return reversed;
+}
+
+/**
+ * Encode link status for use in SNMP response.
+ *
+ * @param encoded          Out:   Encoded link status.
+ * @param plain            In:    Unencoded link status.
+ */
+static void pf_snmp_encode_link_status (
+   pf_snmp_link_status_t * encoded,
+   const pf_lldp_link_status_t * plain)
+{
+   /* See RFC 2579 "Textual Conventions for SMIv2": "TruthValue" */
+   encoded->auto_neg_supported = plain->auto_neg_supported ? 1 : 2;
+   encoded->auto_neg_enabled = plain->auto_neg_enabled ? 1 : 2;
+
+   encoded->oper_mau_type = plain->oper_mau_type;
+
+   /* See RFC 1906 "Transport Mappings for Version 2 of the
+    *  Simple Network Management Protocol (SNMPv2)", ch. 8:
+    * "Serialization using the Basic Encoding Rules", clause 3:
+    * "When encoding an object whose syntax is described using the BITS
+    *  construct, the value is encoded as an OCTET STRING, in which all
+    *  the named bits in (the definition of) the bitstring, commencing
+    *  with the first bit and proceeding to the last bit, are placed in
+    *  bits 8 to 1 of the first octet, followed by bits 8 to 1 of each
+    *  subsequent octet in turn, followed by as many bits as are needed of
+    *  the final subsequent octet, commencing with bit 8.  Remaining bits,
+    *  if any, of the final octet are set to zero on generation and
+    *  ignored on receipt."
+    */
+   encoded->auto_neg_advertised_cap[0] =
+      pf_snmp_bit_reversed_byte ((plain->auto_neg_advertised_cap >> 0) & 0xff);
+   encoded->auto_neg_advertised_cap[1] =
+      pf_snmp_bit_reversed_byte ((plain->auto_neg_advertised_cap >> 8) & 0xff);
+}
+
+/**
+ * Encode management address for use in SNMP response.
+ *
+ * @param encoded          Out:   Encoded management address.
+ * @param plain            In:    Unencoded management address.
+ */
+static void pf_snmp_encode_management_address (
+   pf_snmp_management_address_t * encoded,
+   const pf_lldp_management_address_t * plain)
+{
+   encoded->subtype = plain->subtype;
+
+   /* See RFC 2578 "Structure of Management Information Version 2 (SMIv2)",
+    * section 7.7, clause 3:
+    * "string-valued, variable-length strings (not preceded by the IMPLIED
+    * keyword):  `n+1' sub-identifiers, where `n' is the length of the
+    * string (the first sub-identifier is `n' itself, following this,
+    * each octet of the string is encoded in a separate sub-identifier);""
+    */
+   encoded->len = plain->len + 1;
+   encoded->value[0] = plain->len;
+   memcpy (&encoded->value[1], plain->value, plain->len);
+}
 
 void pf_snmp_get_system_name (pnet_t * net, pf_snmp_system_name_t * name)
 {
@@ -251,17 +340,30 @@ int pf_snmp_get_peer_port_description (
 
 void pf_snmp_get_management_address (
    pnet_t * net,
-   pf_lldp_management_address_t * p_man_address)
+   pf_snmp_management_address_t * p_man_address)
 {
-   pf_lldp_get_management_address (net, p_man_address);
+   pf_lldp_management_address_t man_address;
+
+   pf_lldp_get_management_address (net, &man_address);
+   pf_snmp_encode_management_address (p_man_address, &man_address);
 }
 
 int pf_snmp_get_peer_management_address (
    pnet_t * net,
    int loc_port_num,
-   pf_lldp_management_address_t * p_man_address)
+   pf_snmp_management_address_t * p_man_address)
 {
-   return pf_lldp_get_peer_management_address (net, loc_port_num, p_man_address);
+   pf_lldp_management_address_t man_address;
+   int error;
+
+   error =
+      pf_lldp_get_peer_management_address (net, loc_port_num, &man_address);
+   if (error == false)
+   {
+      pf_snmp_encode_management_address (p_man_address, &man_address);
+   }
+
+   return error;
 }
 
 void pf_snmp_get_management_port_index (
@@ -330,15 +432,27 @@ int pf_snmp_get_peer_signal_delays (
 void pf_snmp_get_link_status (
    pnet_t * net,
    int loc_port_num,
-   pf_lldp_link_status_t * p_link_status)
+   pf_snmp_link_status_t * p_link_status)
 {
-   pf_lldp_get_link_status (net, loc_port_num, p_link_status);
+   pf_lldp_link_status_t link_status;
+
+   pf_lldp_get_link_status (net, loc_port_num, &link_status);
+   pf_snmp_encode_link_status (p_link_status, &link_status);
 }
 
 int pf_snmp_get_peer_link_status (
    pnet_t * net,
    int loc_port_num,
-   pf_lldp_link_status_t * p_link_status)
+   pf_snmp_link_status_t * p_link_status)
 {
-   return pf_lldp_get_peer_link_status (net, loc_port_num, p_link_status);
+   pf_lldp_link_status_t link_status;
+   int error;
+
+   error = pf_lldp_get_peer_link_status (net, loc_port_num, &link_status);
+   if (error == false)
+   {
+      pf_snmp_encode_link_status (p_link_status, &link_status);
+   }
+
+   return error;
 }

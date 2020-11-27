@@ -37,17 +37,16 @@ static void rowindex_construct_for_local_port (
 static void rowindex_construct_for_local_interface (
    struct snmp_obj_id * row_index)
 {
-   pf_lldp_management_address_t address;
+   pf_snmp_management_address_t address;
    size_t i;
 
    pf_snmp_get_management_address (pnal_snmp.net, &address);
    row_index->id[0] = address.subtype; /* lldpLocManAddrSubtype */
-   row_index->id[1] = address.len;     /* lldpLocManAddr length */
    for (i = 0; i < address.len; i++)
    {
-      row_index->id[2 + i] = address.value[i]; /* lldpLocManAddr value */
+      row_index->id[1 + i] = address.value[i]; /* lldpLocManAddr */
    }
-   row_index->len = 2 + address.len;
+   row_index->len = 1 + address.len;
 }
 
 static int rowindex_construct_for_remote_device (
@@ -65,7 +64,7 @@ static int rowindex_construct_for_remote_device (
 
    row_index->id[0] = timestamp; /* lldpRemTimeMark */
    row_index->id[1] = port;      /* lldpRemLocalPortNum */
-   row_index->id[2] = port;      /* lldpRemIndex TODO: Increment this  */
+   row_index->id[2] = port;      /* lldpRemIndex */
    row_index->len = 3;
 
    return error;
@@ -76,7 +75,7 @@ static int rowindex_construct_for_remote_interface (
    int port)
 {
    uint32_t timestamp;
-   pf_lldp_management_address_t address;
+   pf_snmp_management_address_t address;
    int error;
    size_t i;
 
@@ -93,14 +92,13 @@ static int rowindex_construct_for_remote_interface (
 
    row_index->id[0] = timestamp;       /* lldpRemTimeMark */
    row_index->id[1] = port;            /* lldpRemLocalPortNum */
-   row_index->id[2] = port;            /* lldpRemIndex TODO: Increment this  */
+   row_index->id[2] = port;            /* lldpRemIndex */
    row_index->id[3] = address.subtype; /* lldpRemManAddrSubtype */
-   row_index->id[4] = address.len;     /* lldpRemManAddr length */
    for (i = 0; i < address.len; i++)
    {
-      row_index->id[5 + i] = address.value[i]; /* lldpRemManAddr value */
+      row_index->id[4 + i] = address.value[i]; /* lldpRemManAddr */
    }
-   row_index->len = 5 + address.len;
+   row_index->len = 4 + address.len;
 
    return error;
 }
