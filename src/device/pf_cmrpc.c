@@ -459,7 +459,7 @@ static int pf_session_allocate (pnet_t * net, pf_session_info_t ** pp_sess)
    pf_session_info_t * p_sess = NULL;
    pnet_ethaddr_t mac_address;
 
-   pf_cmina_get_macaddr (net, &mac_address);
+   pf_cmina_get_device_macaddr (net, &mac_address);
 
    os_mutex_lock (net->p_cmrpc_rpc_mutex);
    while ((ix < NELEMENTS (net->cmrpc_session_info)) &&

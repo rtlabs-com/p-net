@@ -1127,7 +1127,7 @@ static int pf_alarm_apms_a_data_req (
    pnet_ethaddr_t mac_address;
    uint16_t u16 = 0;
 
-   pf_cmina_get_macaddr (net, &mac_address);
+   pf_cmina_get_device_macaddr (net, &mac_address);
 
    if (p_apmx->p_ar->alarm_cr_request.alarm_cr_properties.transport_udp == true)
    {

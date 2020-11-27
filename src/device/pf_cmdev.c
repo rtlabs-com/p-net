@@ -4611,7 +4611,7 @@ int pf_cmdev_rm_connect_ind (
    const char * p_station_name = NULL;
    pnet_ethaddr_t mac_address;
 
-   pf_cmina_get_macaddr (net, &mac_address);
+   pf_cmina_get_device_macaddr (net, &mac_address);
 
    /* RM_Connect.ind */
    if (

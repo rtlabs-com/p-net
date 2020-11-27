@@ -834,7 +834,7 @@ static int pf_dcp_get_set (
    pf_dcp_header_t * p_dst_dcphdr;
    pnet_ethaddr_t mac_address;
 
-   pf_cmina_get_macaddr (net, &mac_address);
+   pf_cmina_get_device_macaddr (net, &mac_address);
 
    if (p_buf != NULL)
    {
@@ -1120,7 +1120,7 @@ int pf_dcp_hello_req (pnet_t * net)
    pf_ip_suite_t ip_suite;
    pnet_ethaddr_t mac_address;
 
-   pf_cmina_get_macaddr (net, &mac_address);
+   pf_cmina_get_device_macaddr (net, &mac_address);
 
    if (p_buf != NULL)
    {
@@ -1381,7 +1381,7 @@ static int pf_dcp_identify_req (
    (void)alias_position;
    (void)alias_len;
 
-   pf_cmina_get_macaddr (net, &mac_address);
+   pf_cmina_get_device_macaddr (net, &mac_address);
 
    /*
     * IdentifyReqBlock = DeviceRoleBlock ^ DeviceVendorBlock ^ DeviceIDBlock ^
