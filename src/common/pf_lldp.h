@@ -55,16 +55,16 @@ int pf_lldp_get_peer_timestamp (
 /**
  * Get LLDP port configuration for a port.
  *
+ * If the local port number is out of range this operation will assert.
+ * NULL will never be returned.
+ *
  * @param net              InOut: The p-net stack instance
  * @param loc_port_num     In:    Local port number.
  *                                Valid range: 1 .. PNET_MAX_PORT
- * @param pp_port_cfg      Out:   LLDP port configuration, or NULL if not
- *                                found.
  */
-void pf_lldp_get_port_config (
+const pnet_lldp_port_cfg_t * pf_lldp_get_port_config (
    pnet_t * net,
-   int loc_port_num,
-   const pnet_lldp_port_cfg_t ** pp_port_cfg);
+   int loc_port_num);
 
 /**
  * Get Chassis ID of local device.

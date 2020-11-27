@@ -1248,7 +1248,7 @@ int pf_cmina_get_ipaddr (pnet_t * net, pnal_ipaddr_t * p_ipaddr)
    return 0;
 }
 
-int pf_cmina_get_macaddr (pnet_t * net, pnet_ethaddr_t * p_macaddr)
+int pf_cmina_get_device_macaddr (pnet_t * net, pnet_ethaddr_t * p_macaddr)
 {
    *p_macaddr = net->cmina_current_dcp_ase.mac_address;
    return 0;

@@ -57,9 +57,9 @@ void pf_cmina_show (pnet_t * net);
 
 /**
  * Convert IPv4 address to string
- * @param ip               In: IP address
- * @param outputstring     Out: Resulting string. Should have length
- * PNAL_INET_ADDRSTRLEN.
+ * @param ip               In:    IP address
+ * @param outputstring     Out:   Resulting string. Should have length
+ *                                PNAL_INET_ADDRSTRLEN.
  */
 void pf_cmina_ip_to_string (pnal_ipaddr_t ip, char * outputstring);
 
@@ -67,7 +67,7 @@ void pf_cmina_ip_to_string (pnal_ipaddr_t ip, char * outputstring);
  * Retrieve the path to the directory for saving files.
  * @param net                 InOut: The p-net stack instance
  * @param pp_file_directory   Out:   The absolute path to the file directory.
- * Terminated string or NULL.
+ *                                   Terminated string or NULL.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -85,20 +85,20 @@ int pf_cmina_get_station_name (pnet_t * net, const char ** pp_station_name);
 /**
  * Retrieve the current IP address of the device.
  * @param net              InOut: The p-net stack instance
- * @param p_ipaddr         Out:  The ip_address.
+ * @param p_ipaddr         Out:   The ip_address.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
 int pf_cmina_get_ipaddr (pnet_t * net, pnal_ipaddr_t * p_ipaddr);
 
 /**
- * Retrieve the MAC address.
+ * Retrieve the device MAC address.
  * @param net              InOut: The p-net stack instance
- * @param p_macaddr        Out:  The MAC address.
+ * @param p_macaddr        Out:   The MAC address.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_cmina_get_macaddr (pnet_t * net, pnet_ethaddr_t * p_macaddr);
+int pf_cmina_get_device_macaddr (pnet_t * net, pnet_ethaddr_t * p_macaddr);
 
 /**
  * Save one block of data for incoming DCP set command.
@@ -106,12 +106,12 @@ int pf_cmina_get_macaddr (pnet_t * net, pnet_ethaddr_t * p_macaddr);
  * Triggers the \a pnet_reset_ind() callback for some incoming DCP set commands.
  *
  * @param net              InOut: The p-net stack instance
- * @param opt              In:   The option key.
- * @param sub              In:   The sub-option key.
- * @param block_qualifier  In:   The block qualifier.
- * @param value_length     In:   The length of the data to set.
- * @param p_value          In:   The data to set.
- * @param p_block_error    Out:  The block error code, if any.
+ * @param opt              In:    The option key.
+ * @param sub              In:    The sub-option key.
+ * @param block_qualifier  In:    The block qualifier.
+ * @param value_length     In:    The length of the data to set.
+ * @param p_value          In:    The data to set.
+ * @param p_block_error    Out:   The block error code, if any.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -144,7 +144,7 @@ int pf_cmina_dcp_set_ind (
  * must be called afterwards.
  *
  * @param net              InOut: The p-net stack instance
- * @param reset_mode       In:   Reset mode.
+ * @param reset_mode       In:    Reset mode.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -164,12 +164,12 @@ void pf_cmina_dcp_set_commit (pnet_t * net);
  * Also used in DCP Hello and DCP Identify.
  *
  * @param net              InOut: The p-net stack instance
- * @param opt              In:   The option key.
- * @param sub              In:   The sub-option key.
- * @param value_length     In:   The length of the pp_value buffer.
- *                         Out:  The length of the read data.
- * @param pp_value         Out:  The retrieved data.
- * @param p_block_error    Out:  The block error code, if any.
+ * @param opt              In:    The option key.
+ * @param sub              In:    The sub-option key.
+ * @param value_length     In:    The length of the pp_value buffer.
+ *                         Out:   The length of the read data.
+ * @param pp_value         Out:   The retrieved data.
+ * @param p_block_error    Out:   The block error code, if any.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */

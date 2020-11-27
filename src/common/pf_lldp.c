@@ -503,18 +503,12 @@ static void pf_lldp_reset_peer_timeout (
    }
 }
 
-void pf_lldp_get_port_config (
+const pnet_lldp_port_cfg_t * pf_lldp_get_port_config (
    pnet_t * net,
-   int loc_port_num,
-   const pnet_lldp_port_cfg_t ** pp_port_cfg)
+   int loc_port_num)
 {
-   if (loc_port_num < 1 || loc_port_num > PNET_MAX_PORT)
-   {
-      *pp_port_cfg = NULL;
-      return;
-   }
-
-   *pp_port_cfg = &net->fspm_cfg.lldp_cfg.ports[loc_port_num - 1];
+   CC_ASSERT (loc_port_num > 0 && loc_port_num <= PNET_MAX_PORT);
+   return &net->fspm_cfg.lldp_cfg.ports[loc_port_num - 1];
 }
 
 int pf_lldp_get_peer_timestamp (
@@ -536,7 +530,7 @@ int pf_lldp_get_peer_timestamp (
 
 void pf_lldp_get_chassis_id (pnet_t * net, pf_lldp_chassis_id_t * p_chassis_id)
 {
-   pnet_cfg_t * p_cfg = NULL;
+   pnet_ethaddr_t device_mac_address;
    const char * station_name = NULL;
 
    /* Try to use NameOfStation as Chassis ID.
@@ -554,15 +548,13 @@ void pf_lldp_get_chassis_id (pnet_t * net, pf_lldp_chassis_id_t * p_chassis_id)
    p_chassis_id->len = strlen (station_name);
    if (p_chassis_id->len == 0 || p_chassis_id->len > PNET_LLDP_CHASSIS_ID_MAX_LEN)
    {
-      pf_fspm_get_cfg (net, &p_cfg);
-      CC_ASSERT (p_cfg != NULL);
-
-      /* Use the MAC address */
+      /* Use the device MAC address */
+      pf_cmina_get_device_macaddr (net, &device_mac_address);
       p_chassis_id->subtype = PF_LLDP_SUBTYPE_MAC;
       p_chassis_id->len = sizeof (pnet_ethaddr_t);
       memcpy (
          p_chassis_id->string,
-         p_cfg->eth_addr.addr,
+         device_mac_address.addr,
          sizeof (pnet_ethaddr_t));
    }
    else
@@ -598,10 +590,8 @@ void pf_lldp_get_port_id (
    int loc_port_num,
    pf_lldp_port_id_t * p_port_id)
 {
-   const pnet_lldp_port_cfg_t * p_port_cfg = NULL;
-
-   pf_lldp_get_port_config (net, loc_port_num, &p_port_cfg);
-   CC_ASSERT (p_port_cfg != NULL);
+   const pnet_lldp_port_cfg_t * p_port_cfg =
+      pf_lldp_get_port_config (net, loc_port_num);
 
    snprintf (
       p_port_id->string,
@@ -811,12 +801,8 @@ void pf_lldp_get_link_status (
    int loc_port_num,
    pf_lldp_link_status_t * p_link_status)
 {
-   const pnet_lldp_port_cfg_t * p_port_cfg = NULL;
-
-   CC_ASSERT (loc_port_num > 0);
-
-   pf_lldp_get_port_config (net, loc_port_num, &p_port_cfg);
-   CC_ASSERT (p_port_cfg != NULL);
+   const pnet_lldp_port_cfg_t * p_port_cfg =
+      pf_lldp_get_port_config (net, loc_port_num);
 
    /* TODO: Get current link status from Ethernet driver */
    /* TODO: Implement support for multiple ports */
@@ -863,13 +849,13 @@ static void pf_lldp_send_port (pnet_t * net, int loc_port_num)
    pnal_buf_t * p_lldp_buffer = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE);
    uint8_t * p_buf = NULL;
    uint16_t pos = 0;
-   pnet_cfg_t * p_cfg = NULL;
-   const pnet_lldp_port_cfg_t * p_port_cfg = NULL;
    pnal_ipaddr_t ipaddr = 0;
    char ip_string[PNAL_INET_ADDRSTRLEN] = {0};
+   pnet_ethaddr_t device_mac_address;
    pf_lldp_chassis_id_t chassis_id;
+   const pnet_lldp_port_cfg_t * p_port_cfg =
+      pf_lldp_get_port_config (net, loc_port_num);
 
-   pf_fspm_get_cfg (net, &p_cfg);
    /*
     * LLDP-PDU ::=  LLDPChassis, LLDPPort, LLDPTTL, LLDP-PNIO-PDU, LLDPEnd
     *
@@ -926,72 +912,69 @@ static void pf_lldp_send_port (pnet_t * net, int loc_port_num)
       p_buf = p_lldp_buffer->payload;
       if (p_buf != NULL)
       {
-         pf_lldp_get_port_config (net, loc_port_num, &p_port_cfg);
-         if (p_port_cfg != NULL)
-         {
-            pf_lldp_get_chassis_id (net, &chassis_id);
-            pf_cmina_get_ipaddr (net, &ipaddr);
-            pf_cmina_ip_to_string (ipaddr, ip_string);
-            LOG_DEBUG (
-               PF_LLDP_LOG,
-               "LLDP(%d): Sending LLDP frame. MAC "
-               "%02X:%02X:%02X:%02X:%02X:%02X "
-               "IP: %s Chassis ID: %s Port number: %u Port ID: %s\n",
-               __LINE__,
-               p_cfg->eth_addr.addr[0],
-               p_cfg->eth_addr.addr[1],
-               p_cfg->eth_addr.addr[2],
-               p_cfg->eth_addr.addr[3],
-               p_cfg->eth_addr.addr[4],
-               p_cfg->eth_addr.addr[5],
-               ip_string,
-               chassis_id.string,
-               loc_port_num,
-               p_port_cfg->port_id);
+         pf_cmina_get_device_macaddr (net, &device_mac_address);
+         pf_lldp_get_chassis_id (net, &chassis_id);
+         pf_cmina_get_ipaddr (net, &ipaddr);
+         pf_cmina_ip_to_string (ipaddr, ip_string);
+         LOG_DEBUG (
+            PF_LLDP_LOG,
+            "LLDP(%d): Sending LLDP frame. MAC "
+            "%02X:%02X:%02X:%02X:%02X:%02X "
+            "IP: %s Chassis ID: %s Port number: %u Port ID: %s\n",
+            __LINE__,
+            device_mac_address.addr[0],
+            device_mac_address.addr[1],
+            device_mac_address.addr[2],
+            device_mac_address.addr[3],
+            device_mac_address.addr[4],
+            device_mac_address.addr[5],
+            ip_string,
+            chassis_id.string,
+            loc_port_num,
+            p_port_cfg->port_id);
 
-            pos = 0;
+         pos = 0;
 
-            /* Add destination MAC address */
-            pf_put_mem (
-               &lldp_dst_addr,
-               sizeof (lldp_dst_addr),
-               PF_FRAME_BUFFER_SIZE,
-               p_buf,
-               &pos);
+         /* Add destination MAC address */
+         pf_put_mem (
+            &lldp_dst_addr,
+            sizeof (lldp_dst_addr),
+            PF_FRAME_BUFFER_SIZE,
+            p_buf,
+            &pos);
 
-            /* Add source MAC address.  */
-            memcpy (
-               &p_buf[pos],
-               p_port_cfg->port_addr.addr,
-               sizeof (pnet_ethaddr_t));
-            pos += sizeof (pnet_ethaddr_t);
+         /* Add source port MAC address.  */
+         memcpy (
+            &p_buf[pos],
+            p_port_cfg->port_addr.addr,
+            sizeof (pnet_ethaddr_t));
+         pos += sizeof (pnet_ethaddr_t);
 
-            /* Add Ethertype for LLDP */
-            pf_put_uint16 (
-               true,
-               PNAL_ETHTYPE_LLDP,
-               PF_FRAME_BUFFER_SIZE,
-               p_buf,
-               &pos);
+         /* Add Ethertype for LLDP */
+         pf_put_uint16 (
+            true,
+            PNAL_ETHTYPE_LLDP,
+            PF_FRAME_BUFFER_SIZE,
+            p_buf,
+            &pos);
 
-            /* Add mandatory parts */
-            pf_lldp_add_chassis_id_tlv (&chassis_id, p_buf, &pos);
-            pf_lldp_add_port_id_tlv (p_port_cfg, p_buf, &pos);
-            pf_lldp_add_ttl_tlv (p_buf, &pos);
+         /* Add mandatory parts */
+         pf_lldp_add_chassis_id_tlv (&chassis_id, p_buf, &pos);
+         pf_lldp_add_port_id_tlv (p_port_cfg, p_buf, &pos);
+         pf_lldp_add_ttl_tlv (p_buf, &pos);
 
-            /* Add optional parts */
-            pf_lldp_add_port_status (p_port_cfg, p_buf, &pos);
-            pf_lldp_add_chassis_mac (&p_cfg->eth_addr, p_buf, &pos);
-            pf_lldp_add_ieee_mac_phy (p_port_cfg, p_buf, &pos);
-            pf_lldp_add_management (&ipaddr, p_buf, &pos);
+         /* Add optional parts */
+         pf_lldp_add_port_status (p_port_cfg, p_buf, &pos);
+         pf_lldp_add_chassis_mac (&device_mac_address, p_buf, &pos);
+         pf_lldp_add_ieee_mac_phy (p_port_cfg, p_buf, &pos);
+         pf_lldp_add_management (&ipaddr, p_buf, &pos);
 
-            /* Add end of LLDP-PDU marker */
-            pf_lldp_add_tlv_header (p_buf, &pos, LLDP_TYPE_END, 0);
+         /* Add end of LLDP-PDU marker */
+         pf_lldp_add_tlv_header (p_buf, &pos, LLDP_TYPE_END, 0);
 
-            p_lldp_buffer->len = pos;
+         p_lldp_buffer->len = pos;
 
-            (void)pf_eth_send (net, net->eth_handle, p_lldp_buffer);
-         }
+         (void)pf_eth_send (net, net->eth_handle, p_lldp_buffer);
       }
 
       pnal_buf_free (p_lldp_buffer);
