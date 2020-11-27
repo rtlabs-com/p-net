@@ -42,6 +42,7 @@ target_sources(pf_test PRIVATE
   test_ppm.cpp
   test_ptcp.cpp
   test_scheduler.cpp
+  test_snmp.cpp
   utils_for_testing.h
   utils_for_testing.cpp
 
@@ -83,6 +84,7 @@ target_sources(pf_test PRIVATE
   ${PROFINET_SOURCE_DIR}/src/common/pf_ppm.c
   ${PROFINET_SOURCE_DIR}/src/common/pf_ptcp.c
   ${PROFINET_SOURCE_DIR}/src/common/pf_scheduler.c
+  ${PROFINET_SOURCE_DIR}/src/common/pf_snmp.c
   ${PROFINET_SOURCE_DIR}/src/common/pf_udp.c
   )
 
