@@ -21,6 +21,13 @@ extern "C" {
 #endif
 
 /**
+ * Init port data
+ *
+ * @param net              In:    The p-net stack instance.
+ */
+void pf_port_init(pnet_t * net);
+
+/**
  * Get list of local ports.
  *
  * This is the list of physical ports on the local interface.

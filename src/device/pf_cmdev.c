@@ -4649,7 +4649,8 @@ static int pf_cmdev_cm_connect_rsp_pos (
  * - Observers should remove active diagnostics
  *   from diagnostics ASE
  *
- * Todo: Only observers submodules within a certain AR should be reset.
+ * Todo: Only observers for submodules used within a
+ * certain AR should be reset.
  *
  * @param net              InOut: The p-net stack instance
  */
@@ -4678,6 +4679,7 @@ int pf_cmdev_rm_connect_ind (
    if (pf_cmdev_check_apdu (net, p_ar, p_connect_result) == 0)
    {
       pf_cmdev_reset_observers (net);
+      pf_pdport_ar_connected (net, p_ar);
 
       if (pf_cmdev_generate_submodule_diff (net, p_ar) == 0)
       {

@@ -352,8 +352,6 @@ int pf_fspm_init (pnet_t * net, const pnet_cfg_t * p_cfg)
       net->fspm_log_book_mutex = os_mutex_create();
    }
 
-   pf_pdport_init (net);
-
    /* Turn LED off */
    if (pf_fspm_signal_led_ind (net, false) != 0)
    {

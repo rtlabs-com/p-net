@@ -1006,7 +1006,7 @@ static int pf_dcp_get_set (
          }
 
          /* Send LLDP _after_ the response in order to pass I/O-tester tests. */
-         pf_lldp_send (net);
+         pf_pdport_lldp_restart (net);
       }
    }
 

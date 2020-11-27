@@ -72,7 +72,9 @@ int pnet_init_only (
 
    pf_dcp_exit (net);  /* Prepare for re-init. */
    pf_dcp_init (net);  /* Start DCP */
-   pf_lldp_init (net); /* Send the LLDP frame */
+   pf_port_init(net);
+   pf_lldp_init (net);
+   pf_pdport_init (net);
 
    /* Configure SNMP server if enabled */
 #if PNET_OPTION_SNMP == 1

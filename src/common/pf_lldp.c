@@ -396,7 +396,7 @@ static void pf_lldp_add_management (
  * Re-schedules itself after 5 s.
  *
  * @param net              InOut: The p-net stack instance
- * @param arg              In:    Not used.
+ * @param arg              In:    Reference to port_data
  * @param current_time     In:    Not used.
  */
 static void pf_lldp_trigger_sending (
@@ -404,17 +404,18 @@ static void pf_lldp_trigger_sending (
    void * arg,
    uint32_t current_time)
 {
-   pf_lldp_send (net);
+   pf_port_t * p_port_data = (pf_port_t *)arg;
 
-   /* Reschedule */
+   pf_lldp_send (net, p_port_data->port_num);
+
    if (
       pf_scheduler_add (
          net,
          PF_LLDP_SEND_INTERVAL * 1000,
          shed_tag_tx,
          pf_lldp_trigger_sending,
-         NULL,
-         &net->lldp_timeout) != 0)
+         p_port_data,
+         &p_port_data->lldp.tx_timeout) != 0)
    {
       LOG_ERROR (
          PF_LLDP_LOG,
@@ -432,7 +433,7 @@ static void pf_lldp_trigger_sending (
  * pf_scheduler_timeout_ftn_t
  *
  * @param net              InOut: The p-net stack instance
- * @param arg              In:    Not used
+ * @param arg              In:    Port instance, p_port_data
  * @param current_time     In:    Not used
  */
 static void pf_lldp_receive_timeout (
@@ -440,28 +441,15 @@ static void pf_lldp_receive_timeout (
    void * arg,
    uint32_t current_time)
 {
-   pf_port_t * p_port_data = pf_port_get_state (net, PNET_PORT_1);
-
-   /* TODO Make sure the scheduling works for multiple ports
-      Find out which port is timing out. */
+   pf_port_t * p_port_data = (pf_port_t *)arg;
 
    p_port_data->lldp.rx_timeout = 0;
-   LOG_WARNING (
-      PF_LLDP_LOG,
-      "LLDP(%d): Receive timeout expired - TODO trig alarm\n",
-      __LINE__);
+   LOG_WARNING (PF_LLDP_LOG, "LLDP(%d): Receive timeout expired\n", __LINE__);
+
+   pf_pdport_peer_lldp_timeout (net, p_port_data->port_num);
 }
 
-/**
- * @internal
- * Start or restart a timer that monitors reception of LLDP frames from peer.
- *
- * @param net              InOut: The p-net stack instance
- * @param loc_port_num     In:    Local port number.
- *                                Valid range: 1 .. PNET_MAX_PORT
- * @param timeout_in_secs  In:    TTL of the peer, typically 20 seconds.
- */
-static void pf_lldp_reset_peer_timeout (
+void pf_lldp_reset_peer_timeout (
    pnet_t * net,
    int loc_port_num,
    uint16_t timeout_in_secs)
@@ -494,7 +482,7 @@ static void pf_lldp_reset_peer_timeout (
             timeout_in_secs * 1000000,
             shed_tag_rx,
             pf_lldp_receive_timeout,
-            NULL,
+            p_port_data,
             &p_port_data->lldp.rx_timeout) != 0)
       {
          LOG_ERROR (
@@ -840,13 +828,8 @@ int pf_lldp_get_peer_link_status (
    os_mutex_unlock (net->lldp_mutex);
    return is_received ? 0 : -1;
 }
-/**
- * Build and send a LLDP message on a specific port.
- * @param net              InOut: The p-net stack instance
- * @param loc_port_num     In:    Local port number.
- *                                Valid range: 1 .. PNET_MAX_PORT
- */
-static void pf_lldp_send_port (pnet_t * net, int loc_port_num)
+
+void pf_lldp_send (pnet_t * net, int loc_port_num)
 {
    pnal_buf_t * p_lldp_buffer = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE);
    uint8_t * p_buf = NULL;
@@ -993,17 +976,14 @@ static void pf_lldp_send_port (pnet_t * net, int loc_port_num)
    }
 }
 
-void pf_lldp_send (pnet_t * net)
+void pf_lldp_tx_restart (pnet_t * net, int loc_port_num, bool send)
 {
-   pf_lldp_send_port (net, PNET_PORT_1);
-}
+   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
-void pf_lldp_tx_restart (pnet_t * net, bool send)
-{
-   if (net->lldp_timeout != 0)
+   if (p_port_data->lldp.tx_timeout != 0)
    {
-      pf_scheduler_remove (net, shed_tag_tx, net->lldp_timeout);
-      net->lldp_timeout = 0;
+      pf_scheduler_remove (net, shed_tag_tx, p_port_data->lldp.tx_timeout);
+      p_port_data->lldp.tx_timeout = 0;
    }
 
    if (
@@ -1012,18 +992,19 @@ void pf_lldp_tx_restart (pnet_t * net, bool send)
          PF_LLDP_SEND_INTERVAL * 1000,
          shed_tag_tx,
          pf_lldp_trigger_sending,
-         NULL,
-         &net->lldp_timeout) != 0)
+         p_port_data,
+         &p_port_data->lldp.tx_timeout) != 0)
    {
       LOG_ERROR (
          PF_ETH_LOG,
-         "LLDP(%d): Failed to schedule LLDP sending\n",
-         __LINE__);
+         "LLDP(%d): Failed to schedule LLDP sending for port %d\n",
+         __LINE__,
+         loc_port_num);
    }
 
    if (send)
    {
-      pf_lldp_send (net);
+      pf_lldp_send (net, loc_port_num);
    }
 }
 
@@ -1045,8 +1026,21 @@ void pf_lldp_init (pnet_t * net)
 
    net->lldp_mutex = os_mutex_create();
    CC_ASSERT (net->lldp_mutex != NULL);
+}
 
-   pf_lldp_tx_restart (net, true);
+void pf_lldp_send_enable (pnet_t * net, int loc_port_num)
+{
+   pf_lldp_tx_restart (net, loc_port_num, true);
+}
+
+void pf_lldp_send_disable (pnet_t * net, int loc_port_num)
+{
+   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
+   if (p_port_data->lldp.tx_timeout != 0)
+   {
+      pf_scheduler_remove (net, shed_tag_tx, p_port_data->lldp.tx_timeout);
+      p_port_data->lldp.tx_timeout = 0;
+   }
 }
 
 /**
@@ -1431,6 +1425,7 @@ int pf_lldp_recv (pnet_t * net, pnal_buf_t * p_frame_buf, uint16_t offset)
          p_frame_buf->len,
          peer_data.chassis_id.string,
          peer_data.port_id);
+
       pf_lldp_update_peer (net, PNET_PORT_1, &peer_data);
    }
 

@@ -1758,7 +1758,7 @@ static int pf_cmrpc_rm_connect_ind (
    }
    else
    {
-      pf_lldp_tx_restart (net, true);
+      pf_pdport_lldp_restart (net);
    }
 
    LOG_DEBUG (
