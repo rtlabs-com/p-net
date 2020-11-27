@@ -124,6 +124,8 @@ void pnet_handle_periodic (pnet_t * net)
 
    /* Handle expired timeout events */
    pf_scheduler_tick (net);
+
+   pf_pdport_periodic (net);
 }
 
 void pnet_show (pnet_t * net, unsigned level)

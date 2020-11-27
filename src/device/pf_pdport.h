@@ -121,6 +121,8 @@ void pf_pdport_peer_indication (
    int loc_port_num,
    const pnet_lldp_peer_info_t * p_lldp_peer_info);
 
+void pf_pdport_periodic (pnet_t * net);
+
 #ifdef __cplusplus
 }
 #endif
