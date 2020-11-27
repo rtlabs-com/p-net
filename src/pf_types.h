@@ -2491,6 +2491,7 @@ typedef struct pf_lldp_signal_delay
 
 typedef struct pf_pdport
 {
+   bool lldp_peer_info_updated;
    struct
    {
       bool active; /* Todo maybe a bitmask for different checks*/
