@@ -2524,6 +2524,7 @@ void pf_put_log_book_data (
  *
  * @param is_big_endian    In:   true if buffer is big-endian.
  * @param p_item           In:   The diag item to insert.
+ * @param insert_usi       In:   Insert USI field if true.
  * @param res_len          In:   Size of destination buffer.
  * @param p_bytes          Out:  Destination buffer.
  * @param p_pos            InOut:Position in destination buffer.
@@ -2531,11 +2532,16 @@ void pf_put_log_book_data (
 static void pf_put_diag_item (
    bool is_big_endian,
    const pf_diag_item_t * p_item,
+   bool insert_usi,
    uint16_t res_len,
    uint8_t * p_bytes,
    uint16_t * p_pos)
 {
-   pf_put_uint16 (is_big_endian, p_item->usi, res_len, p_bytes, p_pos);
+   if (insert_usi == true)
+   {
+      pf_put_uint16 (is_big_endian, p_item->usi, res_len, p_bytes, p_pos);
+   }
+
    switch (p_item->usi)
    {
    case PF_USI_CHANNEL_DIAGNOSIS:
@@ -2696,6 +2702,9 @@ static void pf_put_diag_list (
       PNET_DIAG_CH_PROP_SPEC_SET (ch_properties, PNET_DIAG_CH_PROP_SPEC_APPEARS);
       pf_put_uint16 (is_big_endian, ch_properties, res_len, p_bytes, p_pos);
 
+      /* Todo: order diagitems by usi */
+      pf_put_uint16 (is_big_endian, p_item->usi, res_len, p_bytes, p_pos);
+
       while (p_item != NULL)
       {
          /* Filter based on diagnosis type */
@@ -2742,7 +2751,13 @@ static void pf_put_diag_list (
 
          if (insert == true)
          {
-            pf_put_diag_item (is_big_endian, p_item, res_len, p_bytes, p_pos);
+            pf_put_diag_item (
+               is_big_endian,
+               p_item,
+               false /*Do not insert usi item */,
+               res_len,
+               p_bytes,
+               p_pos);
          }
 
          pf_cmdev_get_diag_item (net, p_item->next, &p_item);
@@ -3281,6 +3296,7 @@ void pf_put_alarm_block (
          pf_put_diag_item (
             is_big_endian,
             (pf_diag_item_t *)p_payload,
+            true, /* Insert the USI field */
             res_len,
             p_bytes,
             p_pos);
