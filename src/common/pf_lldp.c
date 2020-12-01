@@ -743,7 +743,7 @@ int pf_lldp_get_peer_station_name (
       p_station_name->string,
       sizeof (p_station_name->string),
       "%s",
-      "peer station-name");
+      p_port_data->lldp.peer_info.chassis_id.string);
    p_station_name->len = strlen (p_station_name->string);
    is_received = p_port_data->lldp.is_peer_info_received;
 
