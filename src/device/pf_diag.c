@@ -497,7 +497,7 @@ int pf_diag_add (
             }
             else
             {
-               LOG_ERROR (
+               LOG_DEBUG (
                   PNET_LOG,
                   "DIAG(%d): No active connection, so no alarm is sent.\n",
                   __LINE__);
@@ -740,7 +740,7 @@ int pf_diag_remove (
             }
             else
             {
-               LOG_ERROR (
+               LOG_DEBUG (
                   PNET_LOG,
                   "DIAG(%d): No active connection, so no alarm is sent.\n",
                   __LINE__);
@@ -758,7 +758,7 @@ int pf_diag_remove (
       }
       else
       {
-         LOG_ERROR (
+         LOG_DEBUG (
             PF_ALARM_LOG,
             "DIAG(%d): Removable item not found\n",
             __LINE__);
