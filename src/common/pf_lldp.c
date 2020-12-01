@@ -24,6 +24,8 @@
  * Builds and sends LLDP frames.
  * Receives and parses LLDP frames.
  *
+ * This file should not have any knowledge of Profinet slots, subslots etc.
+ *
  * ToDo: Differentiate between device and port MAC addresses.
  * ToDo: Handle PNET_MAX_PORT ports.
  */
@@ -225,18 +227,18 @@ static void pf_lldp_add_chassis_id_tlv (
 /**
  * @internal
  * Insert the mandatory port_id TLV into a buffer.
- * @param p_lldp_cfg       In:    LLDP configuration for this port
+ * @param p_port_cfg       In:    LLDP configuration for this port
  * @param p_buf            InOut: The buffer.
  * @param p_pos            InOut: The position in the buffer.
  */
 static void pf_lldp_add_port_id_tlv (
-   const pnet_lldp_cfg_t * p_lldp_cfg,
+   const pnet_lldp_port_cfg_t * p_port_cfg,
    uint8_t * p_buf,
    uint16_t * p_pos)
 {
    uint16_t len;
 
-   len = (uint16_t)strlen (p_lldp_cfg->port_id);
+   len = (uint16_t)strlen (p_port_cfg->port_id);
 
    pf_lldp_add_tlv_header (p_buf, p_pos, LLDP_TYPE_PORT_ID, 1 + len);
 
@@ -245,23 +247,19 @@ static void pf_lldp_add_port_id_tlv (
       PF_FRAME_BUFFER_SIZE,
       p_buf,
       p_pos);
-   pf_put_mem (p_lldp_cfg->port_id, len, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
+   pf_put_mem (p_port_cfg->port_id, len, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
 }
 
 /**
  * @internal
  * Insert the mandatory time-to-live (TTL) TLV into a buffer.
- * @param p_lldp_cfg       In:    LLDP configuration for this port
  * @param p_buf            InOut: The buffer.
  * @param p_pos            InOut: The position in the buffer.
  */
-static void pf_lldp_add_ttl_tlv (
-   const pnet_lldp_cfg_t * p_lldp_cfg,
-   uint8_t * p_buf,
-   uint16_t * p_pos)
+static void pf_lldp_add_ttl_tlv (uint8_t * p_buf, uint16_t * p_pos)
 {
    pf_lldp_add_tlv_header (p_buf, p_pos, LLDP_TYPE_TTL, 2);
-   pf_put_uint16 (true, p_lldp_cfg->ttl, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
+   pf_put_uint16 (true, PNET_LLDP_TTL, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
 }
 
 /**
@@ -269,12 +267,12 @@ static void pf_lldp_add_ttl_tlv (
  * Insert the optional Profinet port status TLV into a buffer.
  *
  * The port status TLV is mandatory for ProfiNet.
- * @param p_lldp_cfg       In:    LLDP configuration for this port
+ * @param p_port_cfg       In:    LLDP configuration for this port
  * @param p_buf            InOut: The buffer.
  * @param p_pos            InOut: The position in the buffer.
  */
 static void pf_lldp_add_port_status (
-   const pnet_lldp_cfg_t * p_lldp_cfg,
+   const pnet_lldp_port_cfg_t * p_port_cfg,
    uint8_t * p_buf,
    uint16_t * p_pos)
 {
@@ -287,13 +285,13 @@ static void pf_lldp_add_port_status (
       p_pos);
    pf_put_uint16 (
       true,
-      p_lldp_cfg->rtclass_2_status,
+      p_port_cfg->rtclass_2_status,
       PF_FRAME_BUFFER_SIZE,
       p_buf,
       p_pos);
    pf_put_uint16 (
       true,
-      p_lldp_cfg->rtclass_3_status,
+      p_port_cfg->rtclass_3_status,
       PF_FRAME_BUFFER_SIZE,
       p_buf,
       p_pos);
@@ -332,23 +330,23 @@ static void pf_lldp_add_chassis_mac (
  * type.
  *
  * The IEEE 802.3 MAC TLV is mandatory for ProfiNet on 803.2 interfaces.
- * @param p_lldp_cfg       In:    LLDP configuration for this port
+ * @param p_port_cfg       In:    LLDP configuration for this port
  * @param p_buf            InOut: The buffer.
  * @param p_pos            InOut: The position in the buffer.
  */
 static void pf_lldp_add_ieee_mac_phy (
-   const pnet_lldp_cfg_t * p_lldp_cfg,
+   const pnet_lldp_port_cfg_t * p_port_cfg,
    uint8_t * p_buf,
    uint16_t * p_pos)
 {
    pf_lldp_add_ieee_header (p_buf, p_pos, 6);
 
    pf_put_byte (LLDP_IEEE_SUBTYPE_MAC_PHY, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
-   pf_put_byte (p_lldp_cfg->cap_aneg, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
-   pf_put_uint16 (true, p_lldp_cfg->cap_phy, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
+   pf_put_byte (p_port_cfg->cap_aneg, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
+   pf_put_uint16 (true, p_port_cfg->cap_phy, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
    pf_put_uint16 (
       true,
-      p_lldp_cfg->mau_type,
+      p_port_cfg->mau_type,
       PF_FRAME_BUFFER_SIZE,
       p_buf,
       p_pos);
@@ -361,17 +359,15 @@ static void pf_lldp_add_ieee_mac_phy (
  * Contains the IP address.
  *
  * @param p_ipaddr         In:    IP address
- * @param p_lldp_cfg       In:    LLDP configuration for this port
  * @param p_buf            InOut: The buffer.
  * @param p_pos            InOut: The position in the buffer.
  */
 static void pf_lldp_add_management (
-   const os_ipaddr_t * p_ipaddr,
-   const pnet_lldp_cfg_t * p_lldp_cfg,
+   const pnal_ipaddr_t * p_ipaddr,
    uint8_t * p_buf,
    uint16_t * p_pos)
 {
-   /* TODO: Add more port info to the pnet_lldp_cfg_t configuration */
+   /* TODO: Add more port info to the pnet_lldp_port_cfg_t configuration */
    pf_lldp_add_tlv_header (p_buf, p_pos, LLDP_TYPE_MANAGEMENT, 12);
 
    pf_put_byte (1 + 4, PF_FRAME_BUFFER_SIZE, p_buf, p_pos); /* Address string
@@ -429,8 +425,8 @@ static void pf_lldp_trigger_sending (
 
 /**
  * @internal
- * Handle LLDP peer timeout. Timeout occurs if no LLDP data is received
- * on port after LLPD TTL timeout.
+ * Handle LLDP peer timeout. Timeout occurs if no peer LLDP data is received
+ * on port within the LLPD TTL timeout interval.
  *
  * This is a callback for the scheduler. Arguments should fulfill
  * pf_scheduler_timeout_ftn_t
@@ -444,7 +440,12 @@ static void pf_lldp_receive_timeout (
    void * arg,
    uint32_t current_time)
 {
-   net->lldp_rx_timeout = 0;
+   pf_port_t * p_port_data = pf_port_get_state (net, PNET_PORT_1);
+
+   /* TODO Make sure the scheduling works for multiple ports
+      Find out which port is timing out. */
+
+   p_port_data->lldp.rx_timeout = 0;
    LOG_WARNING (
       PF_LLDP_LOG,
       "LLDP(%d): Receive timeout expired - TODO trig alarm\n",
@@ -453,17 +454,26 @@ static void pf_lldp_receive_timeout (
 
 /**
  * @internal
- * Start or restart a timer that monitors the peer LLDP sending.
+ * Start or restart a timer that monitors reception of LLDP frames from peer.
  *
  * @param net              InOut: The p-net stack instance
+ * @param loc_port_num     In:    Local port number.
+ *                                Valid range: 1 .. PNET_MAX_PORT
  * @param timeout_in_secs  In:    TTL of the peer, typically 20 seconds.
  */
-static void pf_lldp_reset_peer_timeout (pnet_t * net, uint16_t timeout_in_secs)
+static void pf_lldp_reset_peer_timeout (
+   pnet_t * net,
+   int loc_port_num,
+   uint16_t timeout_in_secs)
 {
-   if (net->lldp_rx_timeout != 0)
+   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
+
+   /* TODO Make sure the scheduling works for multiple ports */
+
+   if (p_port_data->lldp.rx_timeout != 0)
    {
-      pf_scheduler_remove (net, shed_tag_rx, net->lldp_rx_timeout);
-      net->lldp_rx_timeout = 0;
+      pf_scheduler_remove (net, shed_tag_rx, p_port_data->lldp.rx_timeout);
+      p_port_data->lldp.rx_timeout = 0;
    }
 
    /*
@@ -485,7 +495,7 @@ static void pf_lldp_reset_peer_timeout (pnet_t * net, uint16_t timeout_in_secs)
             shed_tag_rx,
             pf_lldp_receive_timeout,
             NULL,
-            &net->lldp_rx_timeout) != 0)
+            &p_port_data->lldp.rx_timeout) != 0)
       {
          LOG_ERROR (
             PF_LLDP_LOG,
@@ -495,9 +505,34 @@ static void pf_lldp_reset_peer_timeout (pnet_t * net, uint16_t timeout_in_secs)
    }
 }
 
+const pnet_lldp_port_cfg_t * pf_lldp_get_port_config (
+   pnet_t * net,
+   int loc_port_num)
+{
+   CC_ASSERT (loc_port_num > 0 && loc_port_num <= PNET_MAX_PORT);
+   return &net->fspm_cfg.lldp_cfg.ports[loc_port_num - 1];
+}
+
+int pf_lldp_get_peer_timestamp (
+   pnet_t * net,
+   int loc_port_num,
+   uint32_t * timestamp_10ms)
+{
+   bool is_received;
+   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
+
+   os_mutex_lock (net->lldp_mutex);
+
+   *timestamp_10ms = p_port_data->lldp.timestamp_for_last_peer_change;
+   is_received = p_port_data->lldp.is_peer_info_received;
+
+   os_mutex_unlock (net->lldp_mutex);
+   return is_received ? 0 : -1;
+}
+
 void pf_lldp_get_chassis_id (pnet_t * net, pf_lldp_chassis_id_t * p_chassis_id)
 {
-   pnet_cfg_t * p_cfg = NULL;
+   pnet_ethaddr_t device_mac_address;
    const char * station_name = NULL;
 
    /* Try to use NameOfStation as Chassis ID.
@@ -515,15 +550,13 @@ void pf_lldp_get_chassis_id (pnet_t * net, pf_lldp_chassis_id_t * p_chassis_id)
    p_chassis_id->len = strlen (station_name);
    if (p_chassis_id->len == 0 || p_chassis_id->len > PNET_LLDP_CHASSIS_ID_MAX_LEN)
    {
-      pf_fspm_get_cfg (net, &p_cfg);
-      CC_ASSERT (p_cfg != NULL);
-
-      /* Use the MAC address */
+      /* Use the device MAC address */
+      pf_cmina_get_device_macaddr (net, &device_mac_address);
       p_chassis_id->subtype = PF_LLDP_SUBTYPE_MAC;
       p_chassis_id->len = sizeof (pnet_ethaddr_t);
       memcpy (
          p_chassis_id->string,
-         p_cfg->eth_addr.addr,
+         device_mac_address.addr,
          sizeof (pnet_ethaddr_t));
    }
    else
@@ -536,31 +569,299 @@ void pf_lldp_get_chassis_id (pnet_t * net, pf_lldp_chassis_id_t * p_chassis_id)
    p_chassis_id->string[p_chassis_id->len] = '\0';
 }
 
-void pf_lldp_get_peer_chassis_id (
+int pf_lldp_get_peer_chassis_id (
    pnet_t * net,
+   int loc_port_num,
    pf_lldp_chassis_id_t * p_chassis_id)
 {
-   /* Copy stored Chassis ID previously received from peer
-    *
-    * We lock a mutex as this function may be called from other threads,
-    * e.g. an SNMP agent.
-    */
+   bool is_received;
+   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
+
    os_mutex_lock (net->lldp_mutex);
-   *p_chassis_id = net->lldp_peer_info.chassis_id;
+
+   *p_chassis_id = p_port_data->lldp.peer_info.chassis_id;
+   is_received = p_port_data->lldp.is_peer_info_received;
+
+   /* TODO: Return error if received LLDP frame did not contain this TLV */
    os_mutex_unlock (net->lldp_mutex);
+   return is_received ? 0 : -1;
 }
 
-void pf_lldp_send (pnet_t * net)
+void pf_lldp_get_port_id (
+   pnet_t * net,
+   int loc_port_num,
+   pf_lldp_port_id_t * p_port_id)
 {
-   os_buf_t * p_lldp_buffer = os_buf_alloc (PF_FRAME_BUFFER_SIZE);
+   const pnet_lldp_port_cfg_t * p_port_cfg =
+      pf_lldp_get_port_config (net, loc_port_num);
+
+   snprintf (
+      p_port_id->string,
+      sizeof (p_port_id->string),
+      "%s",
+      p_port_cfg->port_id);
+   p_port_id->subtype = PF_LLDP_SUBTYPE_LOCALLY_ASSIGNED;
+   p_port_id->len = strlen (p_port_id->string);
+}
+
+int pf_lldp_get_peer_port_id (
+   pnet_t * net,
+   int loc_port_num,
+   pf_lldp_port_id_t * p_port_id)
+{
+   bool is_received;
+   size_t len;
+   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
+
+   os_mutex_lock (net->lldp_mutex);
+
+   len = MIN (
+      p_port_data->lldp.peer_info.port_id_len,
+      sizeof (p_port_id->string) - 1);
+   memcpy (p_port_id->string, p_port_data->lldp.peer_info.port_id, len);
+   p_port_id->string[len] = '\0';
+   p_port_id->subtype = p_port_data->lldp.peer_info.port_id_subtype;
+   p_port_id->len = len;
+   is_received = p_port_data->lldp.is_peer_info_received;
+
+   /* TODO: Return error if received LLDP frame did not contain this TLV */
+   os_mutex_unlock (net->lldp_mutex);
+   return is_received ? 0 : -1;
+}
+
+void pf_lldp_get_port_description (
+   pnet_t * net,
+   int loc_port_num,
+   pf_lldp_port_description_t * p_port_descr)
+{
+   /* TODO: Implement support for multiple ports */
+   snprintf (
+      p_port_descr->string,
+      sizeof (p_port_descr->string),
+      "%s",
+      net->interface_name);
+   p_port_descr->len = strlen (p_port_descr->string);
+}
+
+int pf_lldp_get_peer_port_description (
+   pnet_t * net,
+   int loc_port_num,
+   pf_lldp_port_description_t * p_port_desc)
+{
+   bool is_received;
+   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
+
+   os_mutex_lock (net->lldp_mutex);
+
+   /* TODO: Copy data previously received in LLDP frame on this port */
+   memset (p_port_desc, 0, sizeof (*p_port_desc));
+   snprintf (
+      p_port_desc->string,
+      sizeof (p_port_desc->string),
+      "%s",
+      "peer port descr");
+   p_port_desc->len = strlen (p_port_desc->string);
+   is_received = p_port_data->lldp.is_peer_info_received;
+
+   /* TODO: Return error if received LLDP frame did not contain this TLV */
+   os_mutex_unlock (net->lldp_mutex);
+   return is_received ? 0 : -1;
+}
+
+void pf_lldp_get_management_address (
+   pnet_t * net,
+   pf_lldp_management_address_t * p_man_address)
+{
+   pnal_ipaddr_t ipaddr;
+
+   pf_cmina_get_ipaddr (net, &ipaddr);
+   p_man_address->subtype = 1; /* IPv4 */
+   ipaddr = CC_TO_BE32 (ipaddr);
+   memcpy (p_man_address->value, &ipaddr, sizeof (ipaddr));
+   p_man_address->len = sizeof (ipaddr);
+}
+
+int pf_lldp_get_peer_management_address (
+   pnet_t * net,
+   int loc_port_num,
+   pf_lldp_management_address_t * p_man_address)
+{
+   bool is_received;
+   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
+
+   os_mutex_lock (net->lldp_mutex);
+
+   /* TODO: Copy data previously received in LLDP frame on this port */
+   memset (p_man_address, 0, sizeof (*p_man_address));
+   p_man_address->subtype = 1;
+   p_man_address->value[0] = 10;
+   p_man_address->value[1] = 11;
+   p_man_address->value[2] = 12;
+   p_man_address->value[3] = 13;
+   p_man_address->len = 4;
+   is_received = p_port_data->lldp.is_peer_info_received;
+
+   /* TODO: Return error if received LLDP frame did not contain this TLV */
+   os_mutex_unlock (net->lldp_mutex);
+   return is_received ? 0 : -1;
+}
+
+void pf_lldp_get_management_port_index (
+   pnet_t * net,
+   pf_lldp_management_port_index_t * p_man_port_index)
+{
+   /* TODO: Get actual ifIndex value */
+   memset (p_man_port_index, 0, sizeof (*p_man_port_index));
+   p_man_port_index->subtype = 2; /* ifIndex */
+   p_man_port_index->index = 1;
+}
+
+int pf_lldp_get_peer_management_port_index (
+   pnet_t * net,
+   int loc_port_num,
+   pf_lldp_management_port_index_t * p_man_port_index)
+{
+   bool is_received;
+   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
+
+   os_mutex_lock (net->lldp_mutex);
+
+   /* TODO: Copy data previously received in LLDP frame on this port */
+   memset (p_man_port_index, 0, sizeof (*p_man_port_index));
+   p_man_port_index->subtype = 2; /* ifIndex */
+   p_man_port_index->index = 1;
+   is_received = p_port_data->lldp.is_peer_info_received;
+
+   /* TODO: Return error if received LLDP frame did not contain this TLV */
+   os_mutex_unlock (net->lldp_mutex);
+   return is_received ? 0 : -1;
+}
+
+int pf_lldp_get_peer_station_name (
+   pnet_t * net,
+   int loc_port_num,
+   pf_lldp_station_name_t * p_station_name)
+{
+   bool is_received;
+   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
+
+   os_mutex_lock (net->lldp_mutex);
+
+   /* TODO: Copy data previously received in LLDP frame on this port.
+    * Value should be part of either received Chassis ID or Port ID.
+    */
+   memset (p_station_name, 0, sizeof (*p_station_name));
+   snprintf (
+      p_station_name->string,
+      sizeof (p_station_name->string),
+      "%s",
+      "peer station-name");
+   p_station_name->len = strlen (p_station_name->string);
+   is_received = p_port_data->lldp.is_peer_info_received;
+
+   /* TODO: Return error if received LLDP frame did not contain this TLV */
+   os_mutex_unlock (net->lldp_mutex);
+   return is_received ? 0 : -1;
+}
+
+void pf_lldp_get_signal_delays (
+   pnet_t * net,
+   int loc_port_num,
+   pf_lldp_signal_delay_t * p_delays)
+{
+   /* Line delay measurement is not supported */
+   p_delays->line_propagation_delay_ns = 0; /* Not measured */
+   p_delays->port_rx_delay_ns = 0;          /* Not measured */
+   p_delays->port_tx_delay_ns = 0;          /* Not measured */
+}
+
+int pf_lldp_get_peer_signal_delays (
+   pnet_t * net,
+   int loc_port_num,
+   pf_lldp_signal_delay_t * p_delays)
+{
+   bool is_received;
+   const pnet_lldp_peer_info_t * peer_info;
+   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
+
+   os_mutex_lock (net->lldp_mutex);
+
+   peer_info = &p_port_data->lldp.peer_info;
+   p_delays->line_propagation_delay_ns =
+      peer_info->port_delay.cable_delay_local;
+   p_delays->port_rx_delay_ns = peer_info->port_delay.rx_delay_local;
+   p_delays->port_tx_delay_ns = peer_info->port_delay.tx_delay_local;
+   is_received = p_port_data->lldp.is_peer_info_received;
+
+   /* TODO: Return error if received LLDP frame did not contain this TLV */
+   os_mutex_unlock (net->lldp_mutex);
+   return is_received ? 0 : -1;
+}
+
+void pf_lldp_get_link_status (
+   pnet_t * net,
+   int loc_port_num,
+   pf_lldp_link_status_t * p_link_status)
+{
+   const pnet_lldp_port_cfg_t * p_port_cfg =
+      pf_lldp_get_port_config (net, loc_port_num);
+
+   /* TODO: Get current link status from Ethernet driver */
+   /* TODO: Implement support for multiple ports */
+   p_link_status->auto_neg_supported = p_port_cfg->cap_aneg &
+                                       PNET_LLDP_AUTONEG_SUPPORTED;
+   p_link_status->auto_neg_enabled = p_port_cfg->cap_aneg &
+                                     PNET_LLDP_AUTONEG_ENABLED;
+   p_link_status->auto_neg_advertised_cap = p_port_cfg->cap_phy;
+   p_link_status->oper_mau_type = p_port_cfg->mau_type;
+}
+
+int pf_lldp_get_peer_link_status (
+   pnet_t * net,
+   int loc_port_num,
+   pf_lldp_link_status_t * p_link_status)
+{
+   bool is_received;
+   const pnet_lldp_peer_info_t * peer_info;
+   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
+
+   os_mutex_lock (net->lldp_mutex);
+
+   peer_info = &p_port_data->lldp.peer_info;
+   p_link_status->auto_neg_supported =
+      peer_info->phy_config.aneg_support_status & PNET_LLDP_AUTONEG_SUPPORTED;
+   p_link_status->auto_neg_enabled = peer_info->phy_config.aneg_support_status &
+                                     PNET_LLDP_AUTONEG_ENABLED;
+   p_link_status->auto_neg_advertised_cap = peer_info->phy_config.aneg_cap;
+   p_link_status->oper_mau_type = peer_info->phy_config.operational_mau_type;
+   is_received = p_port_data->lldp.is_peer_info_received;
+
+   /* TODO: Return error if received LLDP frame did not contain this TLV */
+   os_mutex_unlock (net->lldp_mutex);
+   return is_received ? 0 : -1;
+}
+/**
+ * Build and send a LLDP message on a specific port.
+ * @param net              InOut: The p-net stack instance
+ * @param loc_port_num     In:    Local port number.
+ *                                Valid range: 1 .. PNET_MAX_PORT
+ */
+static void pf_lldp_send_port (pnet_t * net, int loc_port_num)
+{
+   pnal_buf_t * p_lldp_buffer = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE);
    uint8_t * p_buf = NULL;
    uint16_t pos = 0;
-   pnet_cfg_t * p_cfg = NULL;
-   pnet_lldp_cfg_t * p_lldp_cfg = NULL;
-   os_ipaddr_t ipaddr = 0;
-   char ip_string[OS_INET_ADDRSTRLEN] = {0};
+   pnal_ipaddr_t ipaddr = 0;
+   pnet_ethaddr_t device_mac_address;
+   pf_lldp_chassis_id_t chassis_id;
+   const pnet_lldp_port_cfg_t * p_port_cfg =
+      pf_lldp_get_port_config (net, loc_port_num);
 
-   pf_fspm_get_cfg (net, &p_cfg);
+#if LOG_DEBUG_ENABLED(PF_LLDP_LOG)
+   char ip_string[PNAL_INET_ADDRSTRLEN] = {0};
+   const char * chassis_id_description = "<MAC address>";
+#endif
+
    /*
     * LLDP-PDU ::=  LLDPChassis, LLDPPort, LLDPTTL, LLDP-PNIO-PDU, LLDPEnd
     *
@@ -615,28 +916,34 @@ void pf_lldp_send (pnet_t * net)
    if (p_lldp_buffer != NULL)
    {
       p_buf = p_lldp_buffer->payload;
-      p_lldp_cfg = &p_cfg->lldp_cfg;
       if (p_buf != NULL)
       {
-         pf_lldp_chassis_id_t chassis_id;
-
+         pf_cmina_get_device_macaddr (net, &device_mac_address);
          pf_lldp_get_chassis_id (net, &chassis_id);
          pf_cmina_get_ipaddr (net, &ipaddr);
+#if LOG_DEBUG_ENABLED(PF_LLDP_LOG)
          pf_cmina_ip_to_string (ipaddr, ip_string);
+         if (chassis_id.subtype == PF_LLDP_SUBTYPE_LOCALLY_ASSIGNED)
+         {
+            chassis_id_description = chassis_id.string;
+         }
          LOG_DEBUG (
             PF_LLDP_LOG,
-            "LLDP(%d): Sending LLDP frame. MAC %02X:%02X:%02X:%02X:%02X:%02X "
-            "IP: %s Chassis ID: %s Port ID: %s\n",
+            "LLDP(%d): Sending LLDP frame. MAC "
+            "%02X:%02X:%02X:%02X:%02X:%02X "
+            "IP: %s Chassis ID: %s Port number: %u Port ID: %s\n",
             __LINE__,
-            p_cfg->eth_addr.addr[0],
-            p_cfg->eth_addr.addr[1],
-            p_cfg->eth_addr.addr[2],
-            p_cfg->eth_addr.addr[3],
-            p_cfg->eth_addr.addr[4],
-            p_cfg->eth_addr.addr[5],
+            device_mac_address.addr[0],
+            device_mac_address.addr[1],
+            device_mac_address.addr[2],
+            device_mac_address.addr[3],
+            device_mac_address.addr[4],
+            device_mac_address.addr[5],
             ip_string,
-            chassis_id.string,
-            p_lldp_cfg->port_id);
+            chassis_id_description,
+            loc_port_num,
+            p_port_cfg->port_id);
+#endif
 
          pos = 0;
 
@@ -648,28 +955,31 @@ void pf_lldp_send (pnet_t * net)
             p_buf,
             &pos);
 
-         /* Add source MAC address. ToDo: Shall be port MAC address */
-         memcpy (&p_buf[pos], p_cfg->eth_addr.addr, sizeof (pnet_ethaddr_t));
+         /* Add source port MAC address.  */
+         memcpy (
+            &p_buf[pos],
+            p_port_cfg->port_addr.addr,
+            sizeof (pnet_ethaddr_t));
          pos += sizeof (pnet_ethaddr_t);
 
          /* Add Ethertype for LLDP */
          pf_put_uint16 (
             true,
-            OS_ETHTYPE_LLDP,
+            PNAL_ETHTYPE_LLDP,
             PF_FRAME_BUFFER_SIZE,
             p_buf,
             &pos);
 
          /* Add mandatory parts */
          pf_lldp_add_chassis_id_tlv (&chassis_id, p_buf, &pos);
-         pf_lldp_add_port_id_tlv (p_lldp_cfg, p_buf, &pos);
-         pf_lldp_add_ttl_tlv (p_lldp_cfg, p_buf, &pos);
+         pf_lldp_add_port_id_tlv (p_port_cfg, p_buf, &pos);
+         pf_lldp_add_ttl_tlv (p_buf, &pos);
 
          /* Add optional parts */
-         pf_lldp_add_port_status (p_lldp_cfg, p_buf, &pos);
-         pf_lldp_add_chassis_mac (&p_cfg->eth_addr, p_buf, &pos);
-         pf_lldp_add_ieee_mac_phy (p_lldp_cfg, p_buf, &pos);
-         pf_lldp_add_management (&ipaddr, p_lldp_cfg, p_buf, &pos);
+         pf_lldp_add_port_status (p_port_cfg, p_buf, &pos);
+         pf_lldp_add_chassis_mac (&device_mac_address, p_buf, &pos);
+         pf_lldp_add_ieee_mac_phy (p_port_cfg, p_buf, &pos);
+         pf_lldp_add_management (&ipaddr, p_buf, &pos);
 
          /* Add end of LLDP-PDU marker */
          pf_lldp_add_tlv_header (p_buf, &pos, LLDP_TYPE_END, 0);
@@ -679,8 +989,13 @@ void pf_lldp_send (pnet_t * net)
          (void)pf_eth_send (net, net->eth_handle, p_lldp_buffer);
       }
 
-      os_buf_free (p_lldp_buffer);
+      pnal_buf_free (p_lldp_buffer);
    }
+}
+
+void pf_lldp_send (pnet_t * net)
+{
+   pf_lldp_send_port (net, PNET_PORT_1);
 }
 
 void pf_lldp_tx_restart (pnet_t * net, bool send)
@@ -714,7 +1029,19 @@ void pf_lldp_tx_restart (pnet_t * net, bool send)
 
 void pf_lldp_init (pnet_t * net)
 {
-   memset (&net->lldp_peer_info, 0, sizeof (net->lldp_peer_info));
+   int port;
+   pf_port_iterator_t port_iterator;
+   pf_port_t * p_port_data = NULL;
+
+   pf_port_init_iterator_over_ports (net, &port_iterator);
+   port = pf_port_get_next (&port_iterator);
+   while (port != 0)
+   {
+      p_port_data = pf_port_get_state (net, port);
+      memset (&p_port_data->lldp, 0, sizeof (p_port_data->lldp));
+
+      port = pf_port_get_next (&port_iterator);
+   }
 
    net->lldp_mutex = os_mutex_create();
    CC_ASSERT (net->lldp_mutex != NULL);
@@ -1010,37 +1337,32 @@ int pf_lldp_generate_alias_name (
    return 0;
 }
 
-bool pf_lldp_is_peer_info_received (pnet_t * net, uint32_t * timestamp_10ms)
-{
-   bool is_received;
-
-   os_mutex_lock (net->lldp_mutex);
-   is_received = net->lldp_is_peer_info_received;
-   *timestamp_10ms = net->lldp_timestamp_for_last_peer_change;
-   os_mutex_unlock (net->lldp_mutex);
-
-   return is_received;
-}
-
 /**
  * Apply updated peer information
+ *
+ * Trigger an alarm if the peer information not is as expected.
+ * Resets the peer watchdog timer.
+ *
  * @param net              InOut: p-net stack instance
+ * @param loc_port_num     In:    Local port number.
+ *                                Valid range: 1 .. PNET_MAX_PORT
  * @param lldp_peer_info   In:    Peer data to be applied
  */
 void pf_lldp_update_peer (
    pnet_t * net,
+   int loc_port_num,
    const pnet_lldp_peer_info_t * lldp_peer_info)
 {
    int error = 0;
    char alias[sizeof (net->cmina_current_dcp_ase.alias_name)];
-   pnet_lldp_peer_info_t * stored_peer_info = &net->lldp_peer_info;
+   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
-   pf_lldp_reset_peer_timeout (net, lldp_peer_info->ttl);
+   pf_lldp_reset_peer_timeout (net, loc_port_num, lldp_peer_info->ttl);
 
    if (
       memcmp (
          lldp_peer_info,
-         stored_peer_info,
+         &p_port_data->lldp.peer_info,
          sizeof (pnet_lldp_peer_info_t)) == 0)
    {
       /* No changes */
@@ -1066,9 +1388,7 @@ void pf_lldp_update_peer (
          alias,
          sizeof (net->cmina_current_dcp_ase.alias_name));
 
-      /*
-       * TODO - pf_lldp_send_remote_mismatch_alarm(net);
-       */
+      pf_pdport_peer_indication (net, loc_port_num, lldp_peer_info);
    }
 
    /* Update stored peer information
@@ -1076,13 +1396,17 @@ void pf_lldp_update_peer (
     * We lock a mutex as other threads (e.g. an SNMP agent) may read from it.
     */
    os_mutex_lock (net->lldp_mutex);
-   net->lldp_is_peer_info_received = true;
-   net->lldp_timestamp_for_last_peer_change = os_get_system_uptime_10ms();
-   memcpy (stored_peer_info, lldp_peer_info, sizeof (pnet_lldp_peer_info_t));
+   p_port_data->lldp.is_peer_info_received = true;
+   p_port_data->lldp.timestamp_for_last_peer_change =
+      pnal_get_system_uptime_10ms();
+   memcpy (
+      &p_port_data->lldp.peer_info,
+      lldp_peer_info,
+      sizeof (pnet_lldp_peer_info_t));
    os_mutex_unlock (net->lldp_mutex);
 }
 
-int pf_lldp_recv (pnet_t * net, os_buf_t * p_frame_buf, uint16_t offset)
+int pf_lldp_recv (pnet_t * net, pnal_buf_t * p_frame_buf, uint16_t offset)
 {
    uint8_t * buf = p_frame_buf->payload + offset;
    uint16_t buf_len = p_frame_buf->len - offset;
@@ -1107,12 +1431,12 @@ int pf_lldp_recv (pnet_t * net, os_buf_t * p_frame_buf, uint16_t offset)
          p_frame_buf->len,
          peer_data.chassis_id.string,
          peer_data.port_id);
-      pf_lldp_update_peer (net, &peer_data);
+      pf_lldp_update_peer (net, PNET_PORT_1, &peer_data);
    }
 
    if (p_frame_buf != NULL)
    {
-      os_buf_free (p_frame_buf);
+      pnal_buf_free (p_frame_buf);
    }
 
    return 1; /* Means: handled */

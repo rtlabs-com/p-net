@@ -51,6 +51,10 @@
 #cmakedefine01 PNET_OPTION_SRL
 #endif
 
+#if !defined (PNET_OPTION_SNMP)
+#cmakedefine01 PNET_OPTION_SNMP
+#endif
+
 /**
  * Disable use of atomic operations (stdatomic.h).
  * If the compiler supports it then set this define to 1.
@@ -188,6 +192,10 @@
 #define PF_LLDP_LOG             (LOG_STATE_@PF_LLDP_LOG@)
 #endif
 
+#ifndef PF_SNMP_LOG
+#define PF_SNMP_LOG             (LOG_STATE_@PF_SNMP_LOG@)
+#endif
+
 #ifndef PF_CPM_LOG
 #define PF_CPM_LOG              (LOG_STATE_@PF_CPM_LOG@)
 #endif
@@ -210,6 +218,10 @@
 
 #ifndef PF_AL_BUF_LOG
 #define PF_AL_BUF_LOG           (LOG_STATE_@PF_AL_BUF_LOG@)
+#endif
+
+#ifndef PF_PNAL_LOG
+#define PF_PNAL_LOG             (LOG_STATE_@PF_PNAL_LOG@)
 #endif
 
 #ifndef PNET_LOG

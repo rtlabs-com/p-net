@@ -27,7 +27,8 @@ extern "C" {
 
 #include "options.h"
 #include "osal.h"
-#include "log.h"
+#include "osal_log.h"
+#include "pnal.h"
 
 #include "pnet_api.h"
 
@@ -43,6 +44,7 @@ extern "C" {
 #include "pf_ppm.h"
 #include "pf_ptcp.h"
 #include "pf_scheduler.h"
+#include "pf_snmp.h"
 #include "pf_udp.h"
 
 /* device */
@@ -60,6 +62,8 @@ extern "C" {
 #include "pf_cmwrr.h"
 #include "pf_diag.h"
 #include "pf_fspm.h"
+#include "pf_pdport.h"
+#include "pf_port.h"
 
 #ifdef __cplusplus
 }

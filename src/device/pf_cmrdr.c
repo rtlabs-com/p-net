@@ -39,7 +39,7 @@
 int pf_cmrdr_rm_read_ind (
    pnet_t * net,
    pf_ar_t * p_ar,
-   pf_iod_read_request_t * p_read_request,
+   const pf_iod_read_request_t * p_read_request,
    pnet_result_t * p_read_status,
    uint16_t res_size,
    uint8_t * p_res,
@@ -57,6 +57,10 @@ int pf_cmrdr_rm_read_ind (
    uint8_t iops_len = 0;
    uint16_t data_len = 0;
    bool new_flag = false;
+
+#if LOG_INFO_ENABLED(PNET_LOG)
+   char * index_range_text = NULL;
+#endif
 
    read_result.sequence_number = p_read_request->sequence_number;
    read_result.ar_uuid = p_read_request->ar_uuid;
@@ -114,7 +118,7 @@ int pf_cmrdr_rm_read_ind (
    if (p_read_request->index <= PF_IDX_USER_MAX)
    {
       /* Provided by application - accept whatever it says. */
-      if (*p_pos + data_len < res_size)
+      if (*p_pos + data_len <= res_size)
       {
          memcpy (&p_res[*p_pos], p_data, data_len);
          *p_pos += data_len;
@@ -123,10 +127,59 @@ int pf_cmrdr_rm_read_ind (
    }
    else
    {
+
+#if LOG_INFO_ENABLED(PNET_LOG)
+      /* Logging */
+      if (
+         (p_read_request->index >= PF_IDX_SUB_DIAGNOSIS_CH) &&
+         (p_read_request->index <= PF_IDX_SUB_DIAG_MAINT_DEM_ALL))
+      {
+         index_range_text = "subslot";
+      }
+      else if (
+         (p_read_request->index >= PF_IDX_SLOT_DIAGNOSIS_CH) &&
+         (p_read_request->index <= PF_IDX_SLOT_DIAG_MAINT_DEM_ALL))
+      {
+         index_range_text = "slot";
+      }
+      else if (
+         (p_read_request->index >= PF_IDX_API_DIAGNOSIS_CH) &&
+         (p_read_request->index <= PF_IDX_API_DIAG_MAINT_DEM_ALL))
+      {
+         index_range_text = "api";
+      }
+      else if (
+         (p_read_request->index >= PF_IDX_AR_DIAGNOSIS_CH) &&
+         (p_read_request->index <= PF_IDX_AR_DIAG_MAINT_DEM_ALL))
+      {
+         index_range_text = "ar";
+      }
+      else if (p_read_request->index == PF_IDX_DEV_DIAGNOSIS_DMQS)
+      {
+         index_range_text = "device";
+      }
+
+      if (index_range_text != NULL)
+      {
+         LOG_INFO (
+            PNET_LOG,
+            "CMRDR(%d): PLC is reading %s diagnosis. Slot %u subslot 0x%04X "
+            "index 0x%04X\n",
+            __LINE__,
+            index_range_text,
+            p_read_request->slot_number,
+            p_read_request->subslot_number,
+            p_read_request->index);
+      }
+#endif
+
       switch (p_read_request->index)
       {
       case PF_IDX_DEV_IM_0_FILTER_DATA:
-         LOG_INFO (PNET_LOG, "CMRDR(%d): Read I&M0 filter-data\n", __LINE__);
+         LOG_INFO (
+            PNET_LOG,
+            "CMRDR(%d): PLC is reading I&M0 filter-data\n",
+            __LINE__);
          /* Block-writer knows where to fetch and how to build the answer. */
          pf_put_im_0_filter_data (net, true, res_size, p_res, p_pos);
          ret = 0;
@@ -294,7 +347,10 @@ int pf_cmrdr_rm_read_ind (
          ret = 0;
          break;
       case PF_IDX_API_REAL_ID_DATA:
-         LOG_INFO (PNET_LOG, "CMRDR(%d): Read real ID data\n", __LINE__);
+         LOG_INFO (
+            PNET_LOG,
+            "CMRDR(%d): PLC is reading real ID data\n",
+            __LINE__);
          pf_put_ident_data (
             net,
             true,
@@ -313,7 +369,7 @@ int pf_cmrdr_rm_read_ind (
          break;
 
       case PF_IDX_DEV_API_DATA:
-         LOG_INFO (PNET_LOG, "CMRDR(%d): Read API data\n", __LINE__);
+         LOG_INFO (PNET_LOG, "CMRDR(%d): PLC is reading API data\n", __LINE__);
          pf_put_ident_data (
             net,
             true,
@@ -332,6 +388,12 @@ int pf_cmrdr_rm_read_ind (
          break;
 
       case PF_IDX_SUB_INPUT_DATA:
+         LOG_INFO (
+            PNET_LOG,
+            "CMRDR(%d): PLC is reading inputdata. Slot %u subslot 0x%04X\n",
+            __LINE__,
+            p_read_request->slot_number,
+            p_read_request->subslot_number);
          /* Sub-module data to the controller */
          data_len = sizeof (subslot_data);
          iops_len = sizeof (iops);
@@ -387,6 +449,12 @@ int pf_cmrdr_rm_read_ind (
          }
          break;
       case PF_IDX_SUB_OUTPUT_DATA:
+         LOG_INFO (
+            PNET_LOG,
+            "CMRDR(%d): PLC is reading outputdata. Slot %u subslot 0x%04X\n",
+            __LINE__,
+            p_read_request->slot_number,
+            p_read_request->subslot_number);
          /* Sub-module data from the controller. */
          data_len = sizeof (subslot_data);
          iops_len = sizeof (iops);
@@ -767,10 +835,10 @@ int pf_cmrdr_rm_read_ind (
             true,
             PF_DEV_FILTER_LEVEL_DEVICE,
             PF_DIAG_FILTER_ALL,
-            NULL,
-            0,
-            0,
-            0,
+            NULL, /* Do not filter by AR */
+            0,    /* API */
+            0,    /* Slot */
+            0,    /* Subslot */
             res_size,
             p_res,
             p_pos);
@@ -797,96 +865,31 @@ int pf_cmrdr_rm_read_ind (
          ret = 0;
          break;
       case PF_IDX_AR_MOD_DIFF:
+         /* On implicit with p_ar == NULL pf_cmdev_generate_submodule_diff
+          * will return -1
+          * In this case pf_put_ar_diff will not give an empty response
+          */
+         (void)pf_cmdev_generate_submodule_diff (net, p_ar);
          pf_put_ar_diff (true, p_ar, res_size, p_res, p_pos);
          ret = 0;
          break;
 
       case PF_IDX_SUB_PDPORT_DATA_REAL:
-         if (
-            (p_read_request->slot_number == PNET_SLOT_DAP_IDENT) &&
-            (p_read_request->subslot_number ==
-             PNET_SUBSLOT_DAP_INTERFACE_1_PORT_0_IDENT))
-         {
-            pf_put_pdport_data_real (
-               net,
-               true,
-               &read_result,
-               res_size,
-               p_res,
-               p_pos);
-            ret = 0;
-         }
-         break;
       case PF_IDX_SUB_PDPORT_DATA_ADJ:
-         /* Only check if this is the port subslot */
-         if (
-            (p_read_request->slot_number == PNET_SLOT_DAP_IDENT) &&
-            (p_read_request->subslot_number ==
-             PNET_SUBSLOT_DAP_INTERFACE_1_PORT_0_IDENT))
-         {
-            if (net->port[0].adjust.active)
-            {
-               pf_put_pdport_data_adj (
-                  &net->port[0].adjust.peer_to_peer_boundary,
-                  true,
-                  &read_result,
-                  res_size,
-                  p_res,
-                  p_pos);
-            }
-            ret = 0;
-         }
-         break;
       case PF_IDX_SUB_PDPORT_DATA_CHECK:
-         /* Only check if this is the port subslot */
-         if (
-            (p_read_request->slot_number == PNET_SLOT_DAP_IDENT) &&
-            (p_read_request->subslot_number ==
-             PNET_SUBSLOT_DAP_INTERFACE_1_PORT_0_IDENT))
-         {
-            if (net->port[0].check.active)
-            {
-               pf_put_pdport_data_check (
-                  &net->port[0].check.peer,
-                  true,
-                  &read_result,
-                  res_size,
-                  p_res,
-                  p_pos);
-            }
-            ret = 0;
-         }
-         break;
       case PF_IDX_DEV_PDREAL_DATA:
-         if (
-            (p_read_request->slot_number == PNET_SLOT_DAP_IDENT) && /* Slot 0x0
-                                                                     */
-            ((p_read_request->subslot_number ==
-              PNET_SLOT_DAP_IDENT) || /* Subslot
-                                         0x0
-                                       */
-             (p_read_request->subslot_number ==
-              PNET_SUBMOD_DAP_IDENT)) /* Subslot 0x1 */)
-         {
-            pf_put_pd_real_data (net, true, &read_result, res_size, p_res, p_pos);
-            ret = 0;
-         }
-         break;
       case PF_IDX_DEV_PDEXP_DATA:
-         /* ToDo: Implement when LLDP is done */
-         /*
-          * MultipleBlockHeader, { [PDPortDataCheck] a, [PDPortDataAdjust] a,
-          *                        [PDInterfaceMrpDataAdjust],
-          * [PDInterfaceMrpDataCheck], [PDPortMrpDataAdjust],
-          * [PDPortFODataAdjust], [PDPortFODataCheck], [PDNCDataCheck],
-          *                        [PDInterface-FSUDataAdjust],
-          * [PDInterfaceAdjust], [PDPortMrpIcDataAdjust], [PDPortMrpIcDataCheck]
-          * } a The fields SlotNumber and SubslotNumber shall be ignored b Each
-          * submodule's data (for example interface or port) need its own
-          * MultipleBlockHeader
-          */
-         ret = 0;
+      case PF_IDX_SUB_PDPORT_STATISTIC:
+         ret = pf_pdport_read_ind (
+            net,
+            p_ar,
+            p_read_request,
+            &read_result,
+            res_size,
+            p_res,
+            p_pos);
          break;
+
       case PF_IDX_SUB_PDINTF_REAL:
          /* Only check if this is the port subslot */
          if (
@@ -916,24 +919,6 @@ int pf_cmrdr_rm_read_ind (
              PNET_SUBSLOT_DAP_INTERFACE_1_IDENT))
          {
             /* return ok */
-            ret = 0;
-         }
-         break;
-      case PF_IDX_SUB_PDPORT_STATISTIC:
-         if (
-            (p_read_request->slot_number == PNET_SLOT_DAP_IDENT) &&
-            ((p_read_request->subslot_number ==
-              PNET_SUBSLOT_DAP_INTERFACE_1_IDENT) ||
-             (p_read_request->subslot_number ==
-              PNET_SUBSLOT_DAP_INTERFACE_1_PORT_0_IDENT)))
-         {
-            pf_put_pdport_statistics (
-               &net->interface_statistics,
-               true,
-               &read_result,
-               res_size,
-               p_res,
-               p_pos);
             ret = 0;
          }
          break;

@@ -28,11 +28,12 @@
  */
 
 #ifdef UNIT_TEST
-#define os_set_ip_suite mock_os_set_ip_suite
+#define pnal_set_ip_suite mock_pnal_set_ip_suite
 #endif
 
 #include <string.h>
 #include <ctype.h>
+#include <inttypes.h>
 
 #include "pf_includes.h"
 
@@ -94,9 +95,9 @@ static void pf_cmina_send_hello (pnet_t * net, void * arg, uint32_t current_time
 static void pf_cmina_save_ase (pnet_t * net, pf_cmina_dcp_ase_t * p_ase)
 {
    pf_cmina_dcp_ase_t temporary_buffer;
-   char ip_string[OS_INET_ADDRSTRLEN] = {0};
-   char netmask_string[OS_INET_ADDRSTRLEN] = {0};
-   char gateway_string[OS_INET_ADDRSTRLEN] = {0};
+   char ip_string[PNAL_INET_ADDRSTRLEN] = {0};
+   char netmask_string[PNAL_INET_ADDRSTRLEN] = {0};
+   char gateway_string[PNAL_INET_ADDRSTRLEN] = {0};
    const char * p_file_directory = NULL;
    int res = 0;
 
@@ -120,7 +121,7 @@ static void pf_cmina_save_ase (pnet_t * net, pf_cmina_dcp_ase_t * p_ase)
       LOG_DEBUG (
          PF_DCP_LOG,
          "CMINA(%d): First nvm saving of IP settings. "
-         "IP: %s Netmask: %s Gateway: %s Station name: %s\n",
+         "IP: %s Netmask: %s Gateway: %s Station name: \"%s\"\n",
          __LINE__,
          ip_string,
          netmask_string,
@@ -131,7 +132,7 @@ static void pf_cmina_save_ase (pnet_t * net, pf_cmina_dcp_ase_t * p_ase)
       LOG_DEBUG (
          PF_DCP_LOG,
          "CMINA(%d): Updating nvm stored IP settings. "
-         "IP: %s Netmask: %s Gateway: %s Station name: %s\n",
+         "IP: %s Netmask: %s Gateway: %s Station name: \"%s\"\n",
          __LINE__,
          ip_string,
          netmask_string,
@@ -142,7 +143,7 @@ static void pf_cmina_save_ase (pnet_t * net, pf_cmina_dcp_ase_t * p_ase)
       LOG_DEBUG (
          PF_DCP_LOG,
          "CMINA(%d): No storing of nvm IP settings (no changes). "
-         "IP: %s Netmask: %s Gateway: %s Station name: %s\n",
+         "IP: %s Netmask: %s Gateway: %s Station name: \"%s\"\n",
          __LINE__,
          ip_string,
          netmask_string,
@@ -164,11 +165,11 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
    int ret = -1;
    const pnet_cfg_t * p_cfg = NULL;
    uint16_t ix;
-   bool should_reset_user_application = false;
+   bool reset_user_application = false;
    pf_cmina_dcp_ase_t file_ase;
-   char ip_string[OS_INET_ADDRSTRLEN] = {0};
-   char netmask_string[OS_INET_ADDRSTRLEN] = {0};
-   char gateway_string[OS_INET_ADDRSTRLEN] = {0};
+   char ip_string[PNAL_INET_ADDRSTRLEN] = {0};
+   char netmask_string[PNAL_INET_ADDRSTRLEN] = {0};
+   char gateway_string[PNAL_INET_ADDRSTRLEN] = {0};
    uint32_t ip = 0;
    uint32_t netmask = 0;
    uint32_t gateway = 0;
@@ -240,19 +241,19 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
                "CMINA(%d): Could not yet read IP parameters from nvm. Use "
                "values from user configuration.\n",
                __LINE__);
-            OS_IP4_ADDR_TO_U32 (
+            PNAL_IP4_ADDR_TO_U32 (
                ip,
                p_cfg->ip_addr.a,
                p_cfg->ip_addr.b,
                p_cfg->ip_addr.c,
                p_cfg->ip_addr.d);
-            OS_IP4_ADDR_TO_U32 (
+            PNAL_IP4_ADDR_TO_U32 (
                netmask,
                p_cfg->ip_mask.a,
                p_cfg->ip_mask.b,
                p_cfg->ip_mask.c,
                p_cfg->ip_mask.d);
-            OS_IP4_ADDR_TO_U32 (
+            PNAL_IP4_ADDR_TO_U32 (
                gateway,
                p_cfg->ip_gateway.a,
                p_cfg->ip_gateway.b,
@@ -279,7 +280,7 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
          LOG_DEBUG (
             PF_DCP_LOG,
             "CMINA(%d): Using "
-            "IP: %s Netmask: %s Gateway: %s Station name: %s\n",
+            "IP: %s Netmask: %s Gateway: %s Station name: \"%s\"\n",
             __LINE__,
             ip_string,
             netmask_string,
@@ -287,18 +288,23 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
             net->cmina_nonvolatile_dcp_ase.station_name);
       }
 
-      if (reset_mode == 1 || reset_mode == 99) /* Reset application parameters
-                                                */
+      if (reset_mode == 1 || reset_mode >= 3)
       {
-         should_reset_user_application = true;
+         /* Reset application parameters */
+         reset_user_application = true;
+
+         LOG_DEBUG (
+            PF_DCP_LOG,
+            "CMINA(%d): Reset application parameters.\n",
+            __LINE__);
 
          /* Reset I&M data */
          ret = pf_fspm_clear_im_data (net);
       }
 
-      if (reset_mode == 2 || reset_mode == 99) /* Reset communication parameters
-                                                */
+      if (reset_mode == 2 || reset_mode >= 3)
       {
+         /* Reset communication parameters */
          LOG_DEBUG (
             PF_DCP_LOG,
             "CMINA(%d): Reset communication parameters.\n",
@@ -317,14 +323,14 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
 
          pf_file_clear (p_file_directory, PNET_FILENAME_IP);
          pf_file_clear (p_file_directory, PNET_FILENAME_DIAGNOSTICS);
-         pf_file_clear (p_file_directory, PNET_FILENAME_LOGBOOK);
+         pf_file_clear (p_file_directory, PNET_FILENAME_SYSCONTACT);
+         pf_pdport_reset_all (net);
       }
 
       if (reset_mode > 0)
       {
          /* User callback */
-         (void)
-            pf_fspm_reset_ind (net, should_reset_user_application, reset_mode);
+         (void)pf_fspm_reset_ind (net, reset_user_application, reset_mode);
       }
 
       net->cmina_nonvolatile_dcp_ase.standard_gw_value = 0; /* Means: OwnIP is
@@ -334,19 +340,20 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
       net->cmina_nonvolatile_dcp_ase.instance_id.low = 0;
 
       strncpy (
-         net->cmina_nonvolatile_dcp_ase.device_vendor,
-         p_cfg->device_vendor,
-         sizeof (net->cmina_nonvolatile_dcp_ase.device_vendor));
-      net->cmina_nonvolatile_dcp_ase.device_vendor
-         [sizeof (net->cmina_nonvolatile_dcp_ase.device_vendor) - 1] = '\0';
+         net->cmina_nonvolatile_dcp_ase.product_name,
+         p_cfg->product_name,
+         sizeof (net->cmina_nonvolatile_dcp_ase.product_name));
+      net->cmina_nonvolatile_dcp_ase
+         .product_name[sizeof (net->cmina_nonvolatile_dcp_ase.product_name) - 1] =
+         '\0';
       /* Remove trailing spaces */
-      ix = (uint16_t)strlen (net->cmina_nonvolatile_dcp_ase.device_vendor);
+      ix = (uint16_t)strlen (net->cmina_nonvolatile_dcp_ase.product_name);
       while ((ix > 1) &&
-             (net->cmina_nonvolatile_dcp_ase.device_vendor[ix] == ' '))
+             (net->cmina_nonvolatile_dcp_ase.product_name[ix] == ' '))
       {
          ix--;
       }
-      net->cmina_nonvolatile_dcp_ase.device_vendor[ix] = '\0';
+      net->cmina_nonvolatile_dcp_ase.product_name[ix] = '\0';
 
       /* Save to file */
       pf_cmina_save_ase (net, &net->cmina_nonvolatile_dcp_ase);
@@ -363,9 +370,9 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
 void pf_cmina_dcp_set_commit (pnet_t * net)
 {
    int res = 0;
-   char ip_string[OS_INET_ADDRSTRLEN] = {0};
-   char netmask_string[OS_INET_ADDRSTRLEN] = {0};
-   char gateway_string[OS_INET_ADDRSTRLEN] = {0};
+   char ip_string[PNAL_INET_ADDRSTRLEN] = {0};
+   char netmask_string[PNAL_INET_ADDRSTRLEN] = {0};
+   char gateway_string[PNAL_INET_ADDRSTRLEN] = {0};
    bool permanent = true;
 
    if (net->cmina_commit_ip_suite == true)
@@ -397,7 +404,8 @@ void pf_cmina_dcp_set_commit (pnet_t * net)
          gateway_string);
       LOG_DEBUG (
          PF_DCP_LOG,
-         "CMINA(%d): Setting IP: %s Netmask: %s Gateway: %s Station name: %s "
+         "CMINA(%d): Setting IP: %s Netmask: %s Gateway: %s Station name: "
+         "\"%s\" "
          "Permanent: %u\n",
          __LINE__,
          ip_string,
@@ -407,7 +415,7 @@ void pf_cmina_dcp_set_commit (pnet_t * net)
          permanent);
 
       net->cmina_commit_ip_suite = false;
-      res = os_set_ip_suite (
+      res = pnal_set_ip_suite (
          net->interface_name,
          &net->cmina_current_dcp_ase.full_ip_suite.ip_suite.ip_addr,
          &net->cmina_current_dcp_ase.full_ip_suite.ip_suite.ip_mask,
@@ -551,13 +559,61 @@ int pf_cmina_init (pnet_t * net)
    return ret;
 }
 
+/**
+ * Abort active ARs with error code
+ * @param net        InOut: The p-net stack instance
+ * @param err_code   In: Reason ARs are aborted
+ * return Number of aborted ARs
+ */
+static int pf_cmina_abort_active_ars (pnet_t * net, uint8_t err_code)
+{
+   int ix = 0;
+   pf_ar_t * p_ar = NULL;
+   int nbr_of_aborted_ars = 0;
+
+   for (ix = 0; ix < PNET_MAX_AR; ix++)
+   {
+      p_ar = pf_ar_find_by_index (net, ix);
+      if ((p_ar != NULL) && (p_ar->in_use == true))
+      {
+         p_ar->err_cls = PNET_ERROR_CODE_1_RTA_ERR_CLS_PROTOCOL;
+         p_ar->err_code = err_code;
+         pf_cmdev_state_ind (net, p_ar, PNET_EVENT_ABORT);
+         nbr_of_aborted_ars++;
+      }
+   }
+   return nbr_of_aborted_ars;
+}
+
+/**
+ * Count number of active ARs
+ * @param net        InOut: The p-net stack instance
+ * return Number of active ARs
+ */
+int pf_cmina_nbr_of_active_ars (pnet_t * net)
+{
+   int ix = 0;
+   pf_ar_t * p_ar = NULL;
+   int nbr_of_active_ars = 0;
+
+   for (ix = 0; ix < PNET_MAX_AR; ix++)
+   {
+      p_ar = pf_ar_find_by_index (net, ix);
+      if ((p_ar != NULL) && (p_ar->in_use == true))
+      {
+         nbr_of_active_ars++;
+      }
+   }
+   return nbr_of_active_ars;
+}
+
 int pf_cmina_dcp_set_ind (
    pnet_t * net,
    uint8_t opt,
    uint8_t sub,
    uint16_t block_qualifier,
    uint16_t value_length,
-   uint8_t * p_value,
+   const uint8_t * p_value,
    uint8_t * p_block_error)
 {
    int ret = -1;
@@ -571,14 +627,12 @@ int pf_cmina_dcp_set_ind (
    bool change_dhcp = false; /* We have got a request to change DHCP settings */
    bool reset_to_factory = false; /* We have got a request to do a factory reset
                                    */
-   char ip_string[OS_INET_ADDRSTRLEN] = {0};
-   char netmask_string[OS_INET_ADDRSTRLEN] = {0};
-   char gateway_string[OS_INET_ADDRSTRLEN] = {0};
-   pf_ar_t * p_ar = NULL;
-   uint16_t ix;
-   bool found = false;
+   char ip_string[PNAL_INET_ADDRSTRLEN] = {0};
+   char netmask_string[PNAL_INET_ADDRSTRLEN] = {0};
+   char gateway_string[PNAL_INET_ADDRSTRLEN] = {0};
+
    bool temp = ((block_qualifier & 1) == 0);
-   uint16_t reset_mode = block_qualifier >> 1;
+   uint16_t reset_mode = 0;
 
    /* Stop sending Hello packets */
    if (net->cmina_hello_timeout != UINT32_MAX)
@@ -750,7 +804,7 @@ int pf_cmina_dcp_set_ind (
                   ((strncmp (
                        net->cmina_current_dcp_ase.station_name,
                        (char *)p_value,
-                       value_length) != 0) &&
+                       value_length) != 0) ||
                    (strlen (net->cmina_current_dcp_ase.station_name) !=
                     value_length));
 
@@ -762,7 +816,7 @@ int pf_cmina_dcp_set_ind (
                LOG_INFO (
                   PF_DCP_LOG,
                   "CMINA(%d): The incoming set request is about changing "
-                  "station name. New name: %s  Temporary: %u\n",
+                  "station name. New name: \"%s\"  Temporary: %u\n",
                   __LINE__,
                   net->cmina_current_dcp_ase.station_name,
                   temp);
@@ -821,6 +875,15 @@ int pf_cmina_dcp_set_ind (
       }
       else if (sub == PF_DCP_SUB_CONTROL_RESET_TO_FACTORY)
       {
+         /* For additional information on reset modes see
+          * PN-AL-protocol (Mar20) Table 85
+          * BlockQualifier with option ControlOption and suboption
+          * SuboptionResetToFactory.
+          * Note that these values does not match the
+          * wireshark decoding which includes bit 0.
+          */
+         reset_mode = block_qualifier >> 1;
+
          /* Case 15, 30 in Profinet 2.4 Table 1096 */
          reset_to_factory = true;
 
@@ -856,13 +919,6 @@ int pf_cmina_dcp_set_ind (
          break;
       case PF_CMINA_STATE_SET_NAME:
       case PF_CMINA_STATE_SET_IP:
-         if (reset_to_factory == true)
-         {
-            /* Handle reset to factory here */
-            /* Case 15 in Profinet 2.4 Table 1096 */
-            ret = pf_cmina_set_default_cfg (net, reset_mode);
-         }
-
          if ((change_name == true) || (change_ip == true))
          {
             if ((have_name == true) && (have_ip == true))
@@ -920,36 +976,34 @@ int pf_cmina_dcp_set_ind (
          }
          break;
       case PF_CMINA_STATE_W_CONNECT:
-         if (reset_to_factory == true)
-         {
-            /* Case 30 in Profinet 2.4 Table 1096 */
-            /* Handle reset to factory here */
-            ret = pf_cmina_set_default_cfg (net, reset_mode);
-         }
-
-         if ((change_name == false) && (change_ip == false))
+         if (
+            (change_name == false) && (change_ip == false) &&
+            (reset_to_factory == false))
          {
             /* Case 24 in Profinet 2.4 Table 1096 */
             /* No change of name or IP. All OK */
          }
          else if ((have_name == false) || (reset_to_factory == true))
          {
+            int aborted_ars = 0;
+
             /* Case 27, 30 in Profinet 2.4 Table 1096 */
             /* Reset name or reset to factory */
-            /* Any connection active ? */
-            found = false;
-            for (ix = 0; ix < PNET_MAX_AR; ix++)
+            /* Abort active ARs */
+            if (reset_to_factory == true)
             {
-               p_ar = pf_ar_find_by_index (net, ix);
-               if ((p_ar != NULL) && (p_ar->in_use == true))
-               {
-                  found = true;
-                  /* 38 */
-                  pf_cmdev_state_ind (net, p_ar, PNET_EVENT_ABORT);
-               }
+               aborted_ars = pf_cmina_abort_active_ars (
+                  net,
+                  PNET_ERROR_CODE_2_ABORT_DCP_RESET_TO_FACTORY);
+            }
+            else
+            {
+               aborted_ars = pf_cmina_abort_active_ars (
+                  net,
+                  PNET_ERROR_CODE_2_ABORT_DCP_STATION_NAME_CHANGED);
             }
 
-            if (found == false)
+            if (aborted_ars <= 0)
             {
                /* 37 */
                /* Stop IP */
@@ -959,22 +1013,15 @@ int pf_cmina_dcp_set_ind (
             ((have_name == true) && (change_name == true)) ||
             (have_ip == false))
          {
+            int aborted_ars = 0;
             /* Case 27, 28 in Profinet 2.4 Table 1096 */
             /* Change name or reset IP */
-            /* Any connection active ? */
-            found = false;
-            for (ix = 0; ix < PNET_MAX_AR; ix++)
-            {
-               p_ar = pf_ar_find_by_index (net, ix);
-               if ((p_ar != NULL) && (p_ar->in_use == true))
-               {
-                  found = true;
-                  /* 40 */
-                  pf_cmdev_state_ind (net, p_ar, PNET_EVENT_ABORT);
-               }
-            }
+            /* Abort active ARs */
+            aborted_ars = pf_cmina_abort_active_ars (
+               net,
+               PNET_ERROR_CODE_2_ABORT_DCP_STATION_NAME_CHANGED);
 
-            if (found == false)
+            if (aborted_ars <= 0)
             {
                /* 39 */
                net->cmina_commit_ip_suite = true;
@@ -986,19 +1033,9 @@ int pf_cmina_dcp_set_ind (
          }
          else if ((have_ip == true) && (change_ip == true))
          {
-            /* Change IP */
-            /* Any connection active ?? */
-            found = false;
-            for (ix = 0; ix < PNET_MAX_AR; ix++)
-            {
-               p_ar = pf_ar_find_by_index (net, ix);
-               if ((p_ar != NULL) && (p_ar->in_use == true))
-               {
-                  found = true;
-               }
-            }
+            /* Change IP if no active connection*/
 
-            if (found == false)
+            if (pf_cmina_nbr_of_active_ars (net) == 0)
             {
                /* Case 25 in Profinet 2.4 Table 1096 */
                /* Change IP, no active connection */
@@ -1025,6 +1062,24 @@ int pf_cmina_dcp_set_ind (
          }
          break;
       }
+   }
+
+   /*
+    * Case 5 in Profinet 2.4 Table 1096 Do_Check
+    */
+   if (
+      ((net->cmina_state == PF_CMINA_STATE_SET_IP) ||
+       (net->cmina_state == PF_CMINA_STATE_SET_NAME)) &&
+      (have_name == true) && (have_ip == true))
+   {
+      net->cmina_state = PF_CMINA_STATE_W_CONNECT;
+   }
+
+   if (reset_to_factory == true)
+   {
+      /* Handle reset to factory here */
+      /* Case 15 in Profinet 2.4 Table 1096 */
+      ret = pf_cmina_set_default_cfg (net, reset_mode);
    }
 
    return ret;
@@ -1071,9 +1126,9 @@ int pf_cmina_dcp_get_req (
       switch (sub)
       {
       case PF_DCP_SUB_DEV_PROP_VENDOR:
-         *p_value_length = sizeof (net->cmina_current_dcp_ase.device_vendor) -
+         *p_value_length = sizeof (net->cmina_current_dcp_ase.product_name) -
                            1; /* Skip terminator */
-         *pp_value = (uint8_t *)net->cmina_current_dcp_ase.device_vendor;
+         *pp_value = (uint8_t *)net->cmina_current_dcp_ase.product_name;
          break;
       case PF_DCP_SUB_DEV_PROP_NAME:
          *p_value_length = sizeof (net->cmina_current_dcp_ase.station_name);
@@ -1187,13 +1242,13 @@ int pf_cmina_get_station_name (pnet_t * net, const char ** pp_station_name)
    return 0;
 }
 
-int pf_cmina_get_ipaddr (pnet_t * net, os_ipaddr_t * p_ipaddr)
+int pf_cmina_get_ipaddr (pnet_t * net, pnal_ipaddr_t * p_ipaddr)
 {
    *p_ipaddr = net->cmina_current_dcp_ase.full_ip_suite.ip_suite.ip_addr;
    return 0;
 }
 
-int pf_cmina_get_macaddr (pnet_t * net, pnet_ethaddr_t * p_macaddr)
+int pf_cmina_get_device_macaddr (pnet_t * net, pnet_ethaddr_t * p_macaddr)
 {
    *p_macaddr = net->cmina_current_dcp_ase.mac_address;
    return 0;
@@ -1206,18 +1261,19 @@ int pf_cmina_remove_all_data_files (const char * file_directory)
    pf_file_clear (file_directory, PNET_FILENAME_IM);
    pf_file_clear (file_directory, PNET_FILENAME_IP);
    pf_file_clear (file_directory, PNET_FILENAME_DIAGNOSTICS);
-   pf_file_clear (file_directory, PNET_FILENAME_LOGBOOK);
+   pf_file_clear (file_directory, PNET_FILENAME_SYSCONTACT);
+   pf_file_clear (file_directory, PNET_FILENAME_PDPORT);
 
    return 0;
 }
 
 /*************** Diagnostic strings *****************************************/
 
-void pf_cmina_ip_to_string (os_ipaddr_t ip, char * outputstring)
+void pf_cmina_ip_to_string (pnal_ipaddr_t ip, char * outputstring)
 {
    snprintf (
       outputstring,
-      OS_INET_ADDRSTRLEN,
+      PNAL_INET_ADDRSTRLEN,
       "%u.%u.%u.%u",
       (uint8_t) ((ip >> 24) & 0xFF),
       (uint8_t) ((ip >> 16) & 0xFF),
@@ -1261,13 +1317,13 @@ static const char * pf_cmina_state_to_string (pnet_t * net)
  */
 void pf_ip_address_show (uint32_t ip)
 {
-   char ip_string[OS_INET_ADDRSTRLEN] = {0};
+   char ip_string[PNAL_INET_ADDRSTRLEN] = {0};
 
    pf_cmina_ip_to_string (ip, ip_string);
    printf ("%s", ip_string);
 }
 
-void pf_cmina_interface_statistics_show (pnet_t * net)
+void pf_cmina_interface_statistics_show (const pnet_t * net)
 {
    printf (
       "Interface %s    In: %" PRIu32 " bytes %" PRIu32 " errors %" PRIu32
@@ -1301,13 +1357,13 @@ void pf_cmina_show (pnet_t * net)
       net->cmina_current_dcp_ase.station_name);
    printf ("\n");
 
-   printf ("Default device_vendor          : <%s>\n", p_cfg->device_vendor);
+   printf ("Default product_name          : <%s>\n", p_cfg->product_name);
    printf (
-      "Perm device_vendor             : <%s>\n",
-      net->cmina_nonvolatile_dcp_ase.device_vendor);
+      "Perm product_name             : <%s>\n",
+      net->cmina_nonvolatile_dcp_ase.product_name);
    printf (
-      "Temp device_vendor             : <%s>\n",
-      net->cmina_current_dcp_ase.device_vendor);
+      "Temp product_name             : <%s>\n",
+      net->cmina_current_dcp_ase.product_name);
    printf ("\n");
 
    printf (
@@ -1509,7 +1565,7 @@ bool pf_cmina_is_stationname_valid (const char * station_name, uint16_t len)
  * @return  0  if the IP suite is valid
  *          -1 if the IP suite is invalid
  */
-bool pf_cmina_is_ipsuite_valid (pf_ip_suite_t * p_ipsuite)
+bool pf_cmina_is_ipsuite_valid (const pf_ip_suite_t * p_ipsuite)
 {
    if (!pf_cmina_is_netmask_valid (p_ipsuite->ip_mask))
    {
@@ -1541,7 +1597,7 @@ bool pf_cmina_is_ipsuite_valid (pf_ip_suite_t * p_ipsuite)
  * @return  0  if the IP suite is valid
  *          -1 if the IP suite is invalid
  */
-bool pf_cmina_is_full_ipsuite_valid (pf_full_ip_suite_t * p_full_ipsuite)
+bool pf_cmina_is_full_ipsuite_valid (const pf_full_ip_suite_t * p_full_ipsuite)
 {
    if (!pf_cmina_is_ipsuite_valid (&p_full_ipsuite->ip_suite))
    {
@@ -1564,7 +1620,7 @@ bool pf_cmina_is_full_ipsuite_valid (pf_full_ip_suite_t * p_full_ipsuite)
  * @return  0  if the IP address is valid
  *          -1 if the IP address is invalid
  */
-bool pf_cmina_is_ipaddress_valid (os_ipaddr_t netmask, os_ipaddr_t ip)
+bool pf_cmina_is_ipaddress_valid (pnal_ipaddr_t netmask, pnal_ipaddr_t ip)
 {
    uint32_t host_part = ip & ~netmask;
 
@@ -1580,25 +1636,25 @@ bool pf_cmina_is_ipaddress_valid (os_ipaddr_t netmask, os_ipaddr_t ip)
    {
       return false;
    }
-   if (ip <= OS_MAKEU32 (0, 255, 255, 255))
+   if (ip <= PNAL_MAKEU32 (0, 255, 255, 255))
    {
       return false;
    }
    else if (
-      (ip >= OS_MAKEU32 (127, 0, 0, 0)) &&
-      (ip <= OS_MAKEU32 (127, 255, 255, 255)))
+      (ip >= PNAL_MAKEU32 (127, 0, 0, 0)) &&
+      (ip <= PNAL_MAKEU32 (127, 255, 255, 255)))
    {
       return false;
    }
    else if (
-      (ip >= OS_MAKEU32 (224, 0, 0, 0)) &&
-      (ip <= OS_MAKEU32 (239, 255, 255, 255)))
+      (ip >= PNAL_MAKEU32 (224, 0, 0, 0)) &&
+      (ip <= PNAL_MAKEU32 (239, 255, 255, 255)))
    {
       return false;
    }
    else if (
-      (ip >= OS_MAKEU32 (240, 0, 0, 0)) &&
-      (ip <= OS_MAKEU32 (255, 255, 255, 255)))
+      (ip >= PNAL_MAKEU32 (240, 0, 0, 0)) &&
+      (ip <= PNAL_MAKEU32 (255, 255, 255, 255)))
    {
       return false;
    }
@@ -1615,7 +1671,7 @@ bool pf_cmina_is_ipaddress_valid (os_ipaddr_t netmask, os_ipaddr_t ip)
  * @return  0  if the netmask is valid
  *          -1 if the netmask is invalid
  */
-bool pf_cmina_is_netmask_valid (os_ipaddr_t netmask)
+bool pf_cmina_is_netmask_valid (pnal_ipaddr_t netmask)
 {
    if (!(netmask & (~netmask >> 1)))
    {
@@ -1640,9 +1696,9 @@ bool pf_cmina_is_netmask_valid (os_ipaddr_t netmask)
  *          -1 if the gateway address is invalid
  */
 bool pf_cmina_is_gateway_valid (
-   os_ipaddr_t ip,
-   os_ipaddr_t netmask,
-   os_ipaddr_t gateway)
+   pnal_ipaddr_t ip,
+   pnal_ipaddr_t netmask,
+   pnal_ipaddr_t gateway)
 {
    if ((gateway != 0) && ((ip & netmask) != (gateway & netmask)))
    {

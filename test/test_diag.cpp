@@ -18,9 +18,12 @@
  * @brief Integration testing of diagnostics.
  *
  * For example:
- *   pnet_diag_add()
- *   pnet_diag_update()
- *   pnet_diag_remove()
+ *  - pnet_diag_std_add()
+ *  - pnet_diag_std_update()
+ *  - pnet_diag_std_remove()
+ *  - pnet_diag_usi_add()
+ *  - pnet_diag_usi_update()
+ *  - pnet_diag_usi_remove()
  *
  */
 
@@ -132,12 +135,16 @@ TEST_F (DiagTest, DiagRunTest)
    uint8_t iops = PNET_IOXS_BAD;
    uint8_t iocs = PNET_IOXS_BAD;
    uint32_t ix;
-   uint16_t ch_properties = 0;
-   const uint16_t slot = 1;
-   const uint16_t subslot = 1;
+   pnet_diag_source_t diag_source = {
+      .api = TEST_API_IDENT,
+      .slot = TEST_SLOT_IDENT,
+      .subslot = TEST_SUBSLOT_IDENT,
+      .ch = TEST_CHANNEL_IDENT,
+      .ch_grouping = PNET_DIAG_CH_INDIVIDUAL_CHANNEL,
+      .ch_direction = TEST_CHANNEL_DIRECTION};
 
    TEST_TRACE ("\nGenerating mock connection request\n");
-   mock_set_os_udp_recvfrom_buffer (connect_req, sizeof (connect_req));
+   mock_set_pnal_udp_recvfrom_buffer (connect_req, sizeof (connect_req));
    run_stack (TEST_UDP_DELAY);
    EXPECT_EQ (appdata.call_counters.state_calls, 1);
    EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_STARTUP);
@@ -145,7 +152,7 @@ TEST_F (DiagTest, DiagRunTest)
    EXPECT_GT (mock_os_data.eth_send_count, 0);
 
    TEST_TRACE ("\nGenerating mock parameter end request\n");
-   mock_set_os_udp_recvfrom_buffer (prm_end_req, sizeof (prm_end_req));
+   mock_set_pnal_udp_recvfrom_buffer (prm_end_req, sizeof (prm_end_req));
    run_stack (TEST_UDP_DELAY);
    EXPECT_EQ (appdata.call_counters.state_calls, 2);
    EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_PRMEND);
@@ -158,7 +165,7 @@ TEST_F (DiagTest, DiagRunTest)
    EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_APPLRDY);
 
    TEST_TRACE ("\nGenerating mock application ready response\n");
-   mock_set_os_udp_recvfrom_buffer (appl_rdy_rsp, sizeof (appl_rdy_rsp));
+   mock_set_pnal_udp_recvfrom_buffer (appl_rdy_rsp, sizeof (appl_rdy_rsp));
    run_stack (TEST_UDP_DELAY);
    EXPECT_EQ (appdata.call_counters.state_calls, 3);
    EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_APPLRDY);
@@ -178,8 +185,8 @@ TEST_F (DiagTest, DiagRunTest)
    ret = pnet_output_get_data_and_iops (
       net,
       TEST_API_IDENT,
-      slot,
-      subslot,
+      TEST_SLOT_IDENT,
+      TEST_SUBSLOT_IDENT,
       &new_flag,
       in_data,
       &in_len,
@@ -192,7 +199,12 @@ TEST_F (DiagTest, DiagRunTest)
 
    TEST_TRACE ("\nTesting pnet_input_get_iocs()\n");
    iocs = 77; /* Something non-valid */
-   ret = pnet_input_get_iocs (net, TEST_API_IDENT, slot, subslot, &iocs);
+   ret = pnet_input_get_iocs (
+      net,
+      TEST_API_IDENT,
+      TEST_SLOT_IDENT,
+      TEST_SUBSLOT_IDENT,
+      &iocs);
    EXPECT_EQ (ret, 0);
    EXPECT_EQ (new_flag, true);
    EXPECT_EQ (in_len, 1);
@@ -205,16 +217,20 @@ TEST_F (DiagTest, DiagRunTest)
    ret = pnet_input_set_data_and_iops (
       net,
       TEST_API_IDENT,
-      slot,
-      subslot,
+      TEST_SLOT_IDENT,
+      TEST_SUBSLOT_IDENT,
       out_data,
       sizeof (out_data),
       PNET_IOXS_GOOD);
    EXPECT_EQ (ret, 0);
 
    TEST_TRACE ("\nAcknowledge the reception of controller data\n");
-   ret =
-      pnet_output_set_iocs (net, TEST_API_IDENT, slot, subslot, PNET_IOXS_GOOD);
+   ret = pnet_output_set_iocs (
+      net,
+      TEST_API_IDENT,
+      TEST_SLOT_IDENT,
+      TEST_SUBSLOT_IDENT,
+      PNET_IOXS_GOOD);
    EXPECT_EQ (ret, 0);
    EXPECT_EQ (appdata.call_counters.state_calls, 4);
    EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_DATA);
@@ -225,341 +241,437 @@ TEST_F (DiagTest, DiagRunTest)
       sizeof (data_packet_good_iops_good_iocs));
    run_stack (TEST_DATA_DELAY);
 
-   TEST_TRACE (
-      "\nCreate a STD diag entry. Then update it and finally remove it.\n");
-   PNET_DIAG_CH_PROP_TYPE_SET (ch_properties, PNET_DIAG_CH_PROP_TYPE_8_BIT);
-   PNET_DIAG_CH_PROP_ACC_SET (ch_properties, 0);
-   PNET_DIAG_CH_PROP_MAINT_SET (ch_properties, PNET_DIAG_CH_PROP_MAINT_FAULT);
-   PNET_DIAG_CH_PROP_SPEC_SET (ch_properties, PNET_DIAG_CH_PROP_SPEC_APPEARS);
-   PNET_DIAG_CH_PROP_DIR_SET (ch_properties, PNET_DIAG_CH_PROP_DIR_OUTPUT);
-
-   ret = pnet_diag_add (
+   TEST_TRACE ("\nCreate a standard diag entry. Then update it and finally "
+               "remove it.\n");
+   ret = pnet_diag_std_add (
       net,
-      appdata.main_arep,
-      TEST_API_IDENT,
-      slot,
-      subslot,
-      0,
-      ch_properties,
-      0x0001,
-      0x0002,
-      0x00030004,
-      0,
-      PNET_DIAG_USI_STD,
-      NULL);
+      &diag_source,
+      TEST_CHANNEL_NUMBER_OF_BITS,
+      PNET_DIAG_CH_PROP_MAINT_FAULT,
+      TEST_CHANNEL_ERRORTYPE,
+      TEST_DIAG_EXT_ERRTYPE,
+      TEST_DIAG_EXT_ADDVALUE,
+      TEST_DIAG_QUALIFIER_NOTSET);
    EXPECT_EQ (ret, 0);
 
-   ret = pnet_diag_update (
+   ret = pnet_diag_std_update (
       net,
-      appdata.main_arep,
-      TEST_API_IDENT,
-      slot,
-      subslot,
-      0,
-      ch_properties,
-      0x0001,     /* ch_error_type */
-      0x00030004, /* add_value */
-      PNET_DIAG_USI_STD,
-      NULL);
+      &diag_source,
+      TEST_CHANNEL_ERRORTYPE,
+      TEST_DIAG_EXT_ERRTYPE,
+      TEST_DIAG_EXT_ADDVALUE_B);
    EXPECT_EQ (ret, 0);
 
-   ret = pnet_diag_remove (
+   ret = pnet_diag_std_remove (
       net,
-      appdata.main_arep,
-      TEST_API_IDENT,
-      slot,
-      subslot,
-      0,
-      ch_properties,
-      0x0001,
-      PNET_DIAG_USI_STD);
+      &diag_source,
+      TEST_CHANNEL_ERRORTYPE,
+      TEST_DIAG_EXT_ERRTYPE);
    EXPECT_EQ (ret, 0);
 
    TEST_TRACE ("\nCreate several different severity STD diag entries. Then "
                "remove them.\n");
-   PNET_DIAG_CH_PROP_TYPE_SET (ch_properties, PNET_DIAG_CH_PROP_TYPE_8_BIT);
-   PNET_DIAG_CH_PROP_ACC_SET (ch_properties, 0);
-   PNET_DIAG_CH_PROP_MAINT_SET (ch_properties, PNET_DIAG_CH_PROP_MAINT_FAULT);
-   PNET_DIAG_CH_PROP_SPEC_SET (ch_properties, PNET_DIAG_CH_PROP_SPEC_APPEARS);
-   PNET_DIAG_CH_PROP_DIR_SET (ch_properties, PNET_DIAG_CH_PROP_DIR_OUTPUT);
-
-   ret = pnet_diag_add (
+   ret = pnet_diag_std_add (
       net,
-      appdata.main_arep,
-      TEST_API_IDENT,
-      slot,
-      subslot,
-      0,
-      ch_properties,
-      0x0001,
-      0x0002,
-      0x00030004,
-      0,
-      PNET_DIAG_USI_STD,
-      NULL);
+      &diag_source,
+      TEST_CHANNEL_NUMBER_OF_BITS,
+      PNET_DIAG_CH_PROP_MAINT_FAULT,
+      TEST_CHANNEL_ERRORTYPE,
+      TEST_DIAG_EXT_ERRTYPE,
+      TEST_DIAG_EXT_ADDVALUE,
+      TEST_DIAG_QUALIFIER_NOTSET);
    EXPECT_EQ (ret, 0);
 
-   PNET_DIAG_CH_PROP_MAINT_SET (ch_properties, PNET_DIAG_CH_PROP_MAINT_REQUIRED);
-   ret = pnet_diag_add (
+   ret = pnet_diag_std_add (
       net,
-      appdata.main_arep,
-      TEST_API_IDENT,
-      slot,
-      subslot,
-      0,
-      ch_properties,
-      0x0002,
-      0x0002,
-      0x00030004,
-      0,
-      PNET_DIAG_USI_STD,
-      NULL);
+      &diag_source,
+      TEST_CHANNEL_NUMBER_OF_BITS,
+      PNET_DIAG_CH_PROP_MAINT_REQUIRED,
+      TEST_CHANNEL_ERRORTYPE_B,
+      TEST_DIAG_EXT_ERRTYPE,
+      TEST_DIAG_EXT_ADDVALUE,
+      TEST_DIAG_QUALIFIER_NOTSET);
    EXPECT_EQ (ret, 0);
 
-   PNET_DIAG_CH_PROP_MAINT_SET (ch_properties, PNET_DIAG_CH_PROP_MAINT_DEMANDED);
-   ret = pnet_diag_add (
+   ret = pnet_diag_std_add (
       net,
-      appdata.main_arep,
-      TEST_API_IDENT,
-      slot,
-      subslot,
-      0,
-      ch_properties,
-      0x0003,
-      0x0002,
-      0x00030004,
-      0,
-      PNET_DIAG_USI_STD,
-      NULL);
+      &diag_source,
+      TEST_CHANNEL_NUMBER_OF_BITS,
+      PNET_DIAG_CH_PROP_MAINT_DEMANDED,
+      TEST_CHANNEL_ERRORTYPE_C,
+      TEST_DIAG_EXT_ERRTYPE,
+      TEST_DIAG_EXT_ADDVALUE,
+      TEST_DIAG_QUALIFIER_NOTSET);
    EXPECT_EQ (ret, 0);
 
-   PNET_DIAG_CH_PROP_MAINT_SET (
-      ch_properties,
-      PNET_DIAG_CH_PROP_MAINT_QUALIFIED);
-   ret = pnet_diag_add (
+   ret = pnet_diag_std_add (
       net,
-      appdata.main_arep,
-      TEST_API_IDENT,
-      slot,
-      subslot,
-      0,
-      ch_properties,
-      0x0004,
-      0x0002,
-      0x00030004,
-      0x00010000,
-      PNET_DIAG_USI_STD,
-      NULL);
+      &diag_source,
+      TEST_CHANNEL_NUMBER_OF_BITS,
+      PNET_DIAG_CH_PROP_MAINT_QUALIFIED,
+      TEST_CHANNEL_ERRORTYPE_D,
+      TEST_DIAG_EXT_ERRTYPE,
+      TEST_DIAG_EXT_ADDVALUE,
+      TEST_DIAG_QUALIFIER);
    EXPECT_EQ (ret, 0);
 
-   PNET_DIAG_CH_PROP_MAINT_SET (
-      ch_properties,
-      PNET_DIAG_CH_PROP_MAINT_QUALIFIED);
-   ret = pnet_diag_remove (
+   ret = pnet_diag_std_remove (
       net,
-      appdata.main_arep,
-      TEST_API_IDENT,
-      slot,
-      subslot,
-      0,
-      ch_properties,
-      0x0005,
-      PNET_DIAG_USI_STD);
-   EXPECT_EQ (ret, -1);
+      &diag_source,
+      TEST_CHANNEL_ERRORTYPE,
+      TEST_DIAG_EXT_ERRTYPE);
+   EXPECT_EQ (ret, 0);
 
-   PNET_DIAG_CH_PROP_MAINT_SET (ch_properties, PNET_DIAG_CH_PROP_MAINT_FAULT);
-   ret = pnet_diag_remove (
+   ret = pnet_diag_std_remove (
       net,
-      appdata.main_arep,
-      TEST_API_IDENT,
-      slot,
-      subslot,
-      0,
-      ch_properties,
-      0x0001,
-      PNET_DIAG_USI_STD);
+      &diag_source,
+      TEST_CHANNEL_ERRORTYPE_B,
+      TEST_DIAG_EXT_ERRTYPE);
+   EXPECT_EQ (ret, 0);
+
+   ret = pnet_diag_std_remove (
+      net,
+      &diag_source,
+      TEST_CHANNEL_ERRORTYPE_C,
+      TEST_DIAG_EXT_ERRTYPE);
+   EXPECT_EQ (ret, 0);
+
+   ret = pnet_diag_std_remove (
+      net,
+      &diag_source,
+      TEST_CHANNEL_ERRORTYPE_D,
+      TEST_DIAG_EXT_ERRTYPE);
    EXPECT_EQ (ret, 0);
 
    TEST_TRACE ("Try to remove it again\n");
-   ret = pnet_diag_remove (
+   ret = pnet_diag_std_remove (
       net,
-      appdata.main_arep,
-      TEST_API_IDENT,
-      slot,
-      subslot,
-      0,
-      ch_properties,
-      0x0001,
-      PNET_DIAG_USI_STD);
+      &diag_source,
+      TEST_CHANNEL_ERRORTYPE,
+      TEST_DIAG_EXT_ERRTYPE);
    EXPECT_EQ (ret, -1);
 
-   PNET_DIAG_CH_PROP_MAINT_SET (ch_properties, PNET_DIAG_CH_PROP_MAINT_REQUIRED);
-   ret = pnet_diag_remove (
+   TEST_TRACE ("Remove non-existing errortype\n");
+   ret = pnet_diag_std_remove (
       net,
-      appdata.main_arep,
-      TEST_API_IDENT,
-      slot,
-      subslot,
-      0,
-      ch_properties,
-      0x0002,
-      PNET_DIAG_USI_STD);
-   EXPECT_EQ (ret, 0);
-
-   PNET_DIAG_CH_PROP_MAINT_SET (ch_properties, PNET_DIAG_CH_PROP_MAINT_DEMANDED);
-   ret = pnet_diag_remove (
-      net,
-      appdata.main_arep,
-      TEST_API_IDENT,
-      slot,
-      subslot,
-      0,
-      ch_properties,
-      0x0003,
-      PNET_DIAG_USI_STD);
-   EXPECT_EQ (ret, 0);
-
-   PNET_DIAG_CH_PROP_MAINT_SET (
-      ch_properties,
-      PNET_DIAG_CH_PROP_MAINT_QUALIFIED);
-   ret = pnet_diag_remove (
-      net,
-      appdata.main_arep,
-      TEST_API_IDENT,
-      slot,
-      subslot,
-      0,
-      ch_properties,
-      0x0004,
-      PNET_DIAG_USI_STD);
-   EXPECT_EQ (ret, 0);
+      &diag_source,
+      TEST_CHANNEL_ERRORTYPE_NONEXIST,
+      TEST_DIAG_EXT_ERRTYPE);
+   EXPECT_EQ (ret, -1);
 
    TEST_TRACE ("Try to add two of the same kind\n");
-   PNET_DIAG_CH_PROP_MAINT_SET (ch_properties, PNET_DIAG_CH_PROP_MAINT_REQUIRED);
-   ret = pnet_diag_add (
+   ret = pnet_diag_std_add (
       net,
-      appdata.main_arep,
-      TEST_API_IDENT,
-      slot,
-      subslot,
-      0,
-      ch_properties,
-      0x0002,
-      0x0002,
-      0x00030004,
-      0,
-      PNET_DIAG_USI_STD,
-      NULL);
+      &diag_source,
+      TEST_CHANNEL_NUMBER_OF_BITS,
+      PNET_DIAG_CH_PROP_MAINT_REQUIRED,
+      TEST_CHANNEL_ERRORTYPE,
+      TEST_DIAG_EXT_ERRTYPE,
+      TEST_DIAG_EXT_ADDVALUE,
+      TEST_DIAG_QUALIFIER_NOTSET);
    EXPECT_EQ (ret, 0);
 
    /* This is expected to succeed as the same entry will be re-used and
     * overwritten. */
-   ret = pnet_diag_add (
+   ret = pnet_diag_std_add (
       net,
-      appdata.main_arep,
-      TEST_API_IDENT,
-      slot,
-      subslot,
-      0,
-      ch_properties,
-      0x0002,
-      0x0002,
-      0x00030004,
-      0,
-      PNET_DIAG_USI_STD,
-      NULL);
+      &diag_source,
+      TEST_CHANNEL_NUMBER_OF_BITS,
+      PNET_DIAG_CH_PROP_MAINT_REQUIRED,
+      TEST_CHANNEL_ERRORTYPE,
+      TEST_DIAG_EXT_ERRTYPE,
+      TEST_DIAG_EXT_ADDVALUE,
+      TEST_DIAG_QUALIFIER_NOTSET);
    EXPECT_EQ (ret, 0);
 
-   ret = pnet_diag_remove (
+   ret = pnet_diag_std_remove (
       net,
-      appdata.main_arep,
-      TEST_API_IDENT,
-      slot,
-      subslot,
-      0,
-      ch_properties,
-      0x0002,
-      PNET_DIAG_USI_STD);
+      &diag_source,
+      TEST_CHANNEL_ERRORTYPE,
+      TEST_DIAG_EXT_ERRTYPE);
+   EXPECT_EQ (ret, 0);
+
+   TEST_TRACE ("Update with the same value\n");
+   ret = pnet_diag_std_add (
+      net,
+      &diag_source,
+      TEST_CHANNEL_NUMBER_OF_BITS,
+      PNET_DIAG_CH_PROP_MAINT_REQUIRED,
+      TEST_CHANNEL_ERRORTYPE,
+      TEST_DIAG_EXT_ERRTYPE,
+      TEST_DIAG_EXT_ADDVALUE,
+      TEST_DIAG_QUALIFIER_NOTSET);
+   EXPECT_EQ (ret, 0);
+
+   ret = pnet_diag_std_update (
+      net,
+      &diag_source,
+      TEST_CHANNEL_ERRORTYPE,
+      TEST_DIAG_EXT_ERRTYPE,
+      TEST_DIAG_EXT_ADDVALUE);
+   EXPECT_EQ (ret, 0);
+
+   ret = pnet_diag_std_remove (
+      net,
+      &diag_source,
+      TEST_CHANNEL_ERRORTYPE,
+      TEST_DIAG_EXT_ERRTYPE);
    EXPECT_EQ (ret, 0);
 
    TEST_TRACE ("Try to update a diag entry that does not exist\n");
-   PNET_DIAG_CH_PROP_MAINT_SET (ch_properties, PNET_DIAG_CH_PROP_MAINT_REQUIRED);
-   ret = pnet_diag_update (
+   ret = pnet_diag_std_update (
       net,
-      appdata.main_arep,
-      TEST_API_IDENT,
-      slot,
-      subslot,
-      0,
-      ch_properties,
-      0x0007,
-      0x00030004,
-      PNET_DIAG_USI_STD,
-      NULL);
+      &diag_source,
+      TEST_CHANNEL_ERRORTYPE,
+      TEST_DIAG_EXT_ERRTYPE,
+      TEST_DIAG_EXT_ADDVALUE);
+   EXPECT_EQ (ret, -1);
+
+   ret = pnet_diag_std_update (
+      net,
+      &diag_source,
+      TEST_CHANNEL_ERRORTYPE_NONEXIST,
+      TEST_DIAG_EXT_ERRTYPE,
+      TEST_DIAG_EXT_ADDVALUE);
    EXPECT_EQ (ret, -1);
 
    TEST_TRACE ("Add diag to non-existing sub-slot\n");
-   ret = pnet_diag_add (
+   diag_source.slot = TEST_SUBSLOT_NONEXIST_IDENT;
+   ret = pnet_diag_std_add (
       net,
-      appdata.main_arep,
-      TEST_API_IDENT,
-      slot,
-      2,
-      0,
-      ch_properties,
-      0x0002,
-      0x0002,
-      0x00030004,
-      0,
-      PNET_DIAG_USI_STD,
-      NULL);
+      &diag_source,
+      TEST_CHANNEL_NUMBER_OF_BITS,
+      PNET_DIAG_CH_PROP_MAINT_REQUIRED,
+      TEST_CHANNEL_ERRORTYPE,
+      TEST_DIAG_EXT_ERRTYPE,
+      TEST_DIAG_EXT_ADDVALUE,
+      TEST_DIAG_QUALIFIER_NOTSET);
+   EXPECT_EQ (ret, -1);
+   diag_source.slot = TEST_SUBSLOT_IDENT;
+
+   TEST_TRACE ("Try adding, updating and remove diag for illegal channel\n");
+   diag_source.ch = TEST_CHANNEL_ILLEGAL;
+   ret = pnet_diag_std_add (
+      net,
+      &diag_source,
+      TEST_CHANNEL_NUMBER_OF_BITS,
+      PNET_DIAG_CH_PROP_MAINT_REQUIRED,
+      TEST_CHANNEL_ERRORTYPE,
+      TEST_DIAG_EXT_ERRTYPE,
+      TEST_DIAG_EXT_ADDVALUE,
+      TEST_DIAG_QUALIFIER_NOTSET);
    EXPECT_EQ (ret, -1);
 
-   TEST_TRACE ("Test with a different USI\n");
-   PNET_DIAG_CH_PROP_MAINT_SET (ch_properties, PNET_DIAG_CH_PROP_MAINT_REQUIRED);
-   ret = pnet_diag_add (
+   ret = pnet_diag_std_update (
       net,
-      appdata.main_arep,
+      &diag_source,
+      TEST_CHANNEL_ERRORTYPE,
+      TEST_DIAG_EXT_ERRTYPE,
+      TEST_DIAG_EXT_ADDVALUE);
+   EXPECT_EQ (ret, -1);
+
+   ret = pnet_diag_std_remove (
+      net,
+      &diag_source,
+      TEST_CHANNEL_ERRORTYPE,
+      TEST_DIAG_EXT_ERRTYPE);
+   EXPECT_EQ (ret, -1);
+   diag_source.ch = TEST_CHANNEL_IDENT;
+
+   TEST_TRACE ("\nMake sure that all parts of the diag_source are correct "
+               "before removing the diagnosis.\n");
+   ret = pnet_diag_std_add (
+      net,
+      &diag_source,
+      TEST_CHANNEL_NUMBER_OF_BITS,
+      PNET_DIAG_CH_PROP_MAINT_FAULT,
+      TEST_CHANNEL_ERRORTYPE,
+      TEST_DIAG_EXT_ERRTYPE,
+      TEST_DIAG_EXT_ADDVALUE,
+      TEST_DIAG_QUALIFIER_NOTSET);
+   EXPECT_EQ (ret, 0);
+
+   diag_source.api = TEST_API_NONEXIST_IDENT;
+   ret = pnet_diag_std_remove (
+      net,
+      &diag_source,
+      TEST_CHANNEL_ERRORTYPE,
+      TEST_DIAG_EXT_ERRTYPE);
+   EXPECT_EQ (ret, -1);
+   diag_source.api = TEST_API_IDENT;
+
+   diag_source.slot = TEST_SLOT_NONEXIST_IDENT;
+   ret = pnet_diag_std_remove (
+      net,
+      &diag_source,
+      TEST_CHANNEL_ERRORTYPE,
+      TEST_DIAG_EXT_ERRTYPE);
+   EXPECT_EQ (ret, -1);
+   diag_source.slot = TEST_SLOT_IDENT;
+
+   diag_source.subslot = TEST_SUBSLOT_NONEXIST_IDENT;
+   ret = pnet_diag_std_remove (
+      net,
+      &diag_source,
+      TEST_CHANNEL_ERRORTYPE,
+      TEST_DIAG_EXT_ERRTYPE);
+   EXPECT_EQ (ret, -1);
+   diag_source.subslot = TEST_SUBSLOT_IDENT;
+
+   diag_source.ch = TEST_CHANNEL_NONEXIST_IDENT;
+   ret = pnet_diag_std_remove (
+      net,
+      &diag_source,
+      TEST_CHANNEL_ERRORTYPE,
+      TEST_DIAG_EXT_ERRTYPE);
+   EXPECT_EQ (ret, -1);
+   diag_source.ch = TEST_CHANNEL_IDENT;
+
+   diag_source.ch_grouping = PNET_DIAG_CH_CHANNEL_GROUP;
+   ret = pnet_diag_std_remove (
+      net,
+      &diag_source,
+      TEST_CHANNEL_ERRORTYPE,
+      TEST_DIAG_EXT_ERRTYPE);
+   EXPECT_EQ (ret, -1);
+   diag_source.ch_grouping = PNET_DIAG_CH_INDIVIDUAL_CHANNEL;
+
+   diag_source.ch_direction = PNET_DIAG_CH_PROP_DIR_INPUT;
+   ret = pnet_diag_std_remove (
+      net,
+      &diag_source,
+      TEST_CHANNEL_ERRORTYPE,
+      TEST_DIAG_EXT_ERRTYPE);
+   EXPECT_EQ (ret, -1);
+   diag_source.ch_direction = TEST_CHANNEL_DIRECTION;
+
+   ret = pnet_diag_std_remove (
+      net,
+      &diag_source,
+      TEST_CHANNEL_ERRORTYPE_NONEXIST,
+      TEST_DIAG_EXT_ERRTYPE);
+   EXPECT_EQ (ret, -1);
+
+   ret = pnet_diag_std_remove (
+      net,
+      &diag_source,
+      TEST_CHANNEL_ERRORTYPE,
+      TEST_DIAG_EXT_ERRTYPE_NONEXIST);
+   EXPECT_EQ (ret, -1);
+
+   ret = pnet_diag_std_remove (
+      net,
+      &diag_source,
+      TEST_CHANNEL_ERRORTYPE,
+      TEST_DIAG_EXT_ERRTYPE);
+   EXPECT_EQ (ret, 0);
+
+   TEST_TRACE ("Test with a manufacturer specific USI\n");
+   ret = pnet_diag_usi_add (
+      net,
       TEST_API_IDENT,
-      slot,
-      subslot,
-      0,
-      ch_properties,
-      0x0002,
-      0x0002,
-      0x00030004,
-      0,
-      0x1234,
+      TEST_SLOT_IDENT,
+      TEST_SUBSLOT_IDENT,
+      TEST_DIAG_USI_CUSTOM,
       (uint8_t *)"Bjarne");
    EXPECT_EQ (ret, 0);
 
-   TEST_TRACE ("Remove wrong USI\n");
-   ret = pnet_diag_remove (
+   TEST_TRACE ("Update data for a manufacturer specific USI, via add()\n");
+   ret = pnet_diag_usi_add (
       net,
-      appdata.main_arep,
       TEST_API_IDENT,
-      slot,
-      subslot,
-      0,
-      ch_properties,
-      0x0002,
-      0x1235);
-   EXPECT_EQ (ret, -1);
-
-   ret = pnet_diag_remove (
-      net,
-      appdata.main_arep,
-      TEST_API_IDENT,
-      slot,
-      subslot,
-      0,
-      ch_properties,
-      0x0002,
-      0x1234);
+      TEST_SLOT_IDENT,
+      TEST_SUBSLOT_IDENT,
+      TEST_DIAG_USI_CUSTOM,
+      (uint8_t *)"Bjarn1");
    EXPECT_EQ (ret, 0);
 
+   TEST_TRACE ("Update data for a manufacturer specific USI, via update()\n");
+   ret = pnet_diag_usi_update (
+      net,
+      TEST_API_IDENT,
+      TEST_SLOT_IDENT,
+      TEST_SUBSLOT_IDENT,
+      TEST_DIAG_USI_CUSTOM,
+      (uint8_t *)"Bjarn2");
+   EXPECT_EQ (ret, 0);
+
+   TEST_TRACE ("Update for wrong USI and wrong subslot\n");
+   ret = pnet_diag_usi_update (
+      net,
+      TEST_API_IDENT,
+      TEST_SLOT_IDENT,
+      TEST_SUBSLOT_IDENT,
+      TEST_DIAG_USI_NONEXIST,
+      (uint8_t *)"Bjarn2");
+   EXPECT_EQ (ret, -1);
+
+   ret = pnet_diag_usi_update (
+      net,
+      TEST_API_IDENT,
+      TEST_SLOT_IDENT,
+      TEST_SUBSLOT_NONEXIST_IDENT,
+      TEST_DIAG_USI_CUSTOM,
+      (uint8_t *)"Bjarn2");
+   EXPECT_EQ (ret, -1);
+
+   TEST_TRACE ("Remove wrong USI\n");
+   ret = pnet_diag_usi_remove (
+      net,
+      TEST_API_IDENT,
+      TEST_SLOT_IDENT,
+      TEST_SUBSLOT_IDENT,
+      TEST_DIAG_USI_NONEXIST);
+   EXPECT_EQ (ret, -1);
+
+   TEST_TRACE ("Remove correct USI\n");
+   ret = pnet_diag_usi_remove (
+      net,
+      TEST_API_IDENT,
+      TEST_SLOT_IDENT,
+      TEST_SUBSLOT_IDENT,
+      TEST_DIAG_USI_CUSTOM);
+   EXPECT_EQ (ret, 0);
+
+   TEST_TRACE ("Add for invalid subslot\n");
+   ret = pnet_diag_usi_add (
+      net,
+      TEST_API_IDENT,
+      TEST_SLOT_IDENT,
+      TEST_SUBSLOT_NONEXIST_IDENT,
+      TEST_DIAG_USI_CUSTOM,
+      (uint8_t *)"Bjarne");
+   EXPECT_EQ (ret, -1);
+
+   TEST_TRACE ("Add, update and remove diagnosis for invalid USI\n");
+   ret = pnet_diag_usi_add (
+      net,
+      TEST_API_IDENT,
+      TEST_SLOT_IDENT,
+      TEST_SUBSLOT_IDENT,
+      TEST_DIAG_USI_INVALID,
+      (uint8_t *)"Bjarne");
+   EXPECT_EQ (ret, -1);
+
+   ret = pnet_diag_usi_update (
+      net,
+      TEST_API_IDENT,
+      TEST_SLOT_IDENT,
+      TEST_SUBSLOT_IDENT,
+      TEST_DIAG_USI_INVALID,
+      (uint8_t *)"Bjarn3");
+   EXPECT_EQ (ret, -1);
+
+   ret = pnet_diag_usi_remove (
+      net,
+      TEST_API_IDENT,
+      TEST_SLOT_IDENT,
+      TEST_SUBSLOT_IDENT,
+      TEST_DIAG_USI_INVALID);
+   EXPECT_EQ (ret, -1);
+
    TEST_TRACE ("\nGenerating mock release request\n");
-   mock_set_os_udp_recvfrom_buffer (release_req, sizeof (release_req));
+   mock_set_pnal_udp_recvfrom_buffer (release_req, sizeof (release_req));
    run_stack (TEST_UDP_DELAY);
    EXPECT_EQ (appdata.call_counters.release_calls, 1);
    EXPECT_EQ (appdata.call_counters.state_calls, 5);

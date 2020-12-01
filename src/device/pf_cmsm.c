@@ -75,7 +75,7 @@ static const char * pf_cmsm_state_to_string (pf_cmsm_state_values_t state)
    return s;
 }
 
-void pf_cmsm_show (pf_ar_t * p_ar)
+void pf_cmsm_show (const pf_ar_t * p_ar)
 {
    if (p_ar == NULL)
    {
@@ -92,8 +92,8 @@ void pf_cmsm_show (pf_ar_t * p_ar)
 /**
  * @internal
  * Set the state of the CMSM component.
- * @param p_ar             In:   The AR instance (not NULL)
- * @param state            In:   The new state.
+ * @param p_ar             InOut: The AR instance (not NULL)
+ * @param state            In:    The new state.
  */
 static void pf_cmsm_set_state (pf_ar_t * p_ar, pf_cmsm_state_values_t state)
 {
@@ -119,11 +119,11 @@ static void pf_cmsm_set_state (pf_ar_t * p_ar, pf_cmsm_state_values_t state)
  * pf_scheduler_timeout_ftn_t
  *
  * @param net              InOut: The p-net stack instance
- * @param arg              In:    The AR instance (not NULL). Void pointer
- * converted to pf_ar_t
+ * @param arg              InOut: The AR instance (not NULL). Void pointer
+ *                                converted to pf_ar_t
  * @param current_time     In:    The current system time, in microseconds,
  *                                when the scheduler is started to execute
- * stored tasks.
+ *                                stored tasks.
  */
 static void pf_cmsm_timeout (pnet_t * net, void * arg, uint32_t current_time)
 {
@@ -285,7 +285,7 @@ int pf_cmsm_rm_read_ind (
 int pf_cmsm_cm_read_ind (
    pnet_t * net,
    pf_ar_t * p_ar,
-   pf_iod_read_request_t * p_read_request)
+   const pf_iod_read_request_t * p_read_request)
 {
    int ret = -1;
 
@@ -328,7 +328,7 @@ int pf_cmsm_cm_read_ind (
 int pf_cmsm_cm_write_ind (
    pnet_t * net,
    pf_ar_t * p_ar,
-   pf_iod_write_request_t * p_write_request)
+   const pf_iod_write_request_t * p_write_request)
 {
    int ret = -1;
 

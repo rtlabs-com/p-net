@@ -13,6 +13,17 @@
  * full license information.
  ********************************************************************/
 
+/**
+ * @file
+ * @brief Implements Context Management Startup Protocol Machine
+ * Device (CMSU) The CMSU of an IO device arranges the start of the
+ * underlying protocol machines.
+ * The startup of the CPM and PPM state machines shall be done between
+ * the reception of the connect request service and of the Application
+ * ready service. The startup shall be finished before issuing the
+ * Application ready request service.
+ */
+
 #ifdef UNIT_TEST
 
 #endif

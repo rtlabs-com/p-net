@@ -50,52 +50,63 @@ typedef struct mock_os_data_obj
 
 } mock_os_data_t;
 
+typedef struct mock_lldp_data
+{
+   pf_lldp_management_address_t management_address;
+   pf_lldp_management_address_t peer_management_address;
+   pf_lldp_link_status_t link_status;
+   pf_lldp_link_status_t peer_link_status;
+   int error;
+
+} mock_lldp_data_t;
+
 extern mock_os_data_t mock_os_data;
+extern mock_lldp_data_t mock_lldp_data;
 
 uint32_t mock_os_get_current_time_us (void);
 
 void mock_init (void);
 void mock_clear (void);
-void mock_set_os_udp_recvfrom_buffer (uint8_t * p_src, uint16_t len);
+void mock_set_pnal_udp_recvfrom_buffer (uint8_t * p_src, uint16_t len);
 
-os_eth_handle_t * mock_os_eth_init (
+pnal_eth_handle_t * mock_pnal_eth_init (
    const char * if_name,
-   os_eth_callback_t * callback,
+   pnal_eth_callback_t * callback,
    void * arg);
-int mock_os_eth_send (os_eth_handle_t * handle, os_buf_t * buf);
+int mock_pnal_eth_send (pnal_eth_handle_t * handle, pnal_buf_t * buf);
 void mock_os_cpy_mac_addr (uint8_t * mac_addr);
-int mock_os_udp_open (os_ipaddr_t addr, os_ipport_t port);
-int mock_os_udp_sendto (
+int mock_pnal_udp_open (pnal_ipaddr_t addr, pnal_ipport_t port);
+int mock_pnal_udp_sendto (
    uint32_t id,
-   os_ipaddr_t dst_addr,
-   os_ipport_t dst_port,
+   pnal_ipaddr_t dst_addr,
+   pnal_ipport_t dst_port,
    const uint8_t * data,
    int size);
-int mock_os_udp_recvfrom (
+int mock_pnal_udp_recvfrom (
    uint32_t id,
-   os_ipaddr_t * dst_addr,
-   os_ipport_t * dst_port,
+   pnal_ipaddr_t * dst_addr,
+   pnal_ipport_t * dst_port,
    uint8_t * data,
    int size);
-void mock_os_udp_close (uint32_t id);
-int mock_os_set_ip_suite (
+void mock_pnal_udp_close (uint32_t id);
+int mock_pnal_set_ip_suite (
    const char * interface_name,
-   os_ipaddr_t * p_ipaddr,
-   os_ipaddr_t * p_netmask,
-   os_ipaddr_t * p_gw,
+   const pnal_ipaddr_t * p_ipaddr,
+   const pnal_ipaddr_t * p_netmask,
+   const pnal_ipaddr_t * p_gw,
    const char * hostname,
    bool permanent);
 
-int mock_os_save_file (
+int mock_pnal_save_file (
    const char * fullpath,
-   void * object_1,
+   const void * object_1,
    size_t size_1,
-   void * object_2,
+   const void * object_2,
    size_t size_2);
 
-void mock_os_clear_file (const char * fullpath);
+void mock_pnal_clear_file (const char * fullpath);
 
-int mock_os_load_file (
+int mock_pnal_load_file (
    const char * fullpath,
    void * object_1,
    size_t size_1,
@@ -114,6 +125,27 @@ void mock_pf_generate_uuid (
    uint32_t session_number,
    pnet_ethaddr_t mac_address,
    pf_uuid_t * p_uuid);
+
+void mock_pf_lldp_get_management_address (
+   pnet_t * net,
+   pf_lldp_management_address_t * p_man_address);
+
+int mock_pf_lldp_get_peer_management_address (
+   pnet_t * net,
+   int loc_port_num,
+   pf_lldp_management_address_t * p_man_address);
+
+void mock_pf_lldp_get_link_status (
+   pnet_t * net,
+   int loc_port_num,
+   pf_lldp_link_status_t * p_link_status);
+
+int mock_pf_lldp_get_peer_link_status (
+   pnet_t * net,
+   int loc_port_num,
+   pf_lldp_link_status_t * p_link_status);
+
+int mock_pnal_snmp_init (pnet_t * pnet);
 
 #ifdef __cplusplus
 }

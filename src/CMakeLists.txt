@@ -30,11 +30,14 @@ target_sources (profinet PRIVATE
   device/pf_cmpbe.c
   device/pf_cmrdr.c
   device/pf_cmrpc.c
+  device/pf_cmrpc_epm.c
   device/pf_cmrpc_helpers.c
   device/pf_cmrs.c
   device/pf_cmsm.c
   device/pf_cmsu.c
   device/pf_cmwrr.c
+  device/pf_pdport.c
+  device/pf_port.c
   device/pf_block_reader.h
   device/pf_block_writer.h
   device/pf_fspm.h
@@ -46,11 +49,14 @@ target_sources (profinet PRIVATE
   device/pf_cmpbe.h
   device/pf_cmrdr.h
   device/pf_cmrpc.h
+  device/pf_cmrpc_epm.h
   device/pf_cmrpc_helpers.h
   device/pf_cmrs.h
   device/pf_cmsm.h
   device/pf_cmsu.h
   device/pf_cmwrr.h
+  device/pf_pdport.h
+  device/pf_port.h
   common/pf_alarm.c
   common/pf_cpm.c
   common/pf_dcp.c
@@ -60,6 +66,7 @@ target_sources (profinet PRIVATE
   common/pf_eth.c
   common/pf_file.c
   common/pf_lldp.c
+  common/pf_snmp.c
   common/pf_udp.c
   common/pf_alarm.h
   common/pf_cpm.h
@@ -70,5 +77,6 @@ target_sources (profinet PRIVATE
   common/pf_scheduler.h
   common/pf_eth.h
   common/pf_lldp.h
+  common/pf_snmp.h
   common/pf_udp.h
   )

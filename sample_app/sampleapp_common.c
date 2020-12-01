@@ -15,9 +15,7 @@
 
 #include "sampleapp_common.h"
 
-#include "log.h"
-#include "osal.h"
-#include <pnet_api.h>
+#include "pnet_api.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,7 +29,7 @@
  * @param bytes      In: inputbuffer
  * @param len        In: Number of bytes to print
  */
-static void print_bytes (uint8_t * bytes, int32_t len)
+static void print_bytes (const uint8_t * bytes, int32_t len)
 {
    printf ("  Bytes: ");
    for (int i = 0; i < len; i++)
@@ -45,13 +43,13 @@ static void print_bytes (uint8_t * bytes, int32_t len)
  * Convert IPv4 address to string
  * @param ip               In:    IP address
  * @param outputstring     Out:   Resulting string. Should have length
- *                                OS_INET_ADDRSTRLEN.
+ *                                PNAL_INET_ADDRSTRLEN.
  */
-static void ip_to_string (os_ipaddr_t ip, char * outputstring)
+static void ip_to_string (pnal_ipaddr_t ip, char * outputstring)
 {
    snprintf (
       outputstring,
-      OS_INET_ADDRSTRLEN,
+      PNAL_INET_ADDRSTRLEN,
       "%u.%u.%u.%u",
       (uint8_t) ((ip >> 24) & 0xFF),
       (uint8_t) ((ip >> 16) & 0xFF),
@@ -63,13 +61,13 @@ static void ip_to_string (os_ipaddr_t ip, char * outputstring)
  * Convert MAC address to string
  * @param mac              In:    MAC address
  * @param outputstring     Out:   Resulting string. Should have length
- *                                OS_ETH_ADDRSTRLEN.
+ *                                PNAL_ETH_ADDRSTRLEN.
  */
-static void mac_to_string (os_ethaddr_t mac, char * outputstring)
+static void mac_to_string (pnal_ethaddr_t mac, char * outputstring)
 {
    snprintf (
       outputstring,
-      OS_ETH_ADDRSTRLEN,
+      PNAL_ETH_ADDRSTRLEN,
       "%02X:%02X:%02X:%02X:%02X:%02X",
       mac.addr[0],
       mac.addr[1],
@@ -171,8 +169,7 @@ static const char * submodule_direction_to_string (
    return s;
 }
 
-static const char * ioxs_to_string (
-      pnet_ioxs_values_t ioxs)
+static const char * ioxs_to_string (pnet_ioxs_values_t ioxs)
 {
    const char * s = "<error>";
    switch (ioxs)
@@ -189,22 +186,22 @@ static const char * ioxs_to_string (
 }
 
 void app_print_network_details (
-   os_ethaddr_t * p_macbuffer,
-   os_ipaddr_t ip,
-   os_ipaddr_t netmask,
-   os_ipaddr_t gateway)
+   pnal_ethaddr_t * p_macbuffer,
+   pnal_ipaddr_t ip,
+   pnal_ipaddr_t netmask,
+   pnal_ipaddr_t gateway)
 {
-   char ip_string[OS_INET_ADDRSTRLEN];
-   char netmask_string[OS_INET_ADDRSTRLEN];
-   char gateway_string[OS_INET_ADDRSTRLEN];
-   char mac_string[OS_ETH_ADDRSTRLEN];
-   char hostname_string[OS_HOST_NAME_MAX];
+   char ip_string[PNAL_INET_ADDRSTRLEN];
+   char netmask_string[PNAL_INET_ADDRSTRLEN];
+   char gateway_string[PNAL_INET_ADDRSTRLEN];
+   char mac_string[PNAL_ETH_ADDRSTRLEN];
+   char hostname_string[PNAL_HOST_NAME_MAX];
 
    mac_to_string (*p_macbuffer, mac_string);
    ip_to_string (ip, ip_string);
    ip_to_string (netmask, netmask_string);
    ip_to_string (gateway, gateway_string);
-   os_get_hostname (hostname_string);
+   pnal_get_hostname (hostname_string);
 
    printf ("MAC address:          %s\n", mac_string);
    printf ("Current hostname:     %s\n", hostname_string);
@@ -221,16 +218,17 @@ void app_print_network_details (
  * @return Reference to application subslot,
  *         NULL is subslot is not found/plugged.
  */
-static app_subslot_t * app_subslot_get(
+static app_subslot_t * app_subslot_get (
    app_data_t * p_appdata,
-   uint16_t    slot_nbr,
-   uint16_t    subslot_nbr)
+   uint16_t slot_nbr,
+   uint16_t subslot_nbr)
 {
    uint16_t subslot;
    for (subslot = 0; subslot < PNET_MAX_SUBSLOTS; subslot++)
    {
-      if (p_appdata->main_api.slots[slot_nbr].
-             subslots[subslot].subslot_nbr == subslot_nbr)
+      if (
+         p_appdata->main_api.slots[slot_nbr].subslots[subslot].subslot_nbr ==
+         subslot_nbr)
       {
          return &p_appdata->main_api.slots[slot_nbr].subslots[subslot];
       }
@@ -250,13 +248,13 @@ static app_subslot_t * app_subslot_get(
  * @return Reference to allocated subslot,
  *         NULL if no free subslot is available.
  */
-static app_subslot_t * app_subslot_alloc(
-      app_data_t * p_appdata,
-      uint16_t slot_nbr,
-      uint16_t subslot_nbr,
-      uint32_t submodule_ident,
-      pnet_data_cfg_t * p_data_cfg,
-      const char * submodule_name)
+static app_subslot_t * app_subslot_alloc (
+   app_data_t * p_appdata,
+   uint16_t slot_nbr,
+   uint16_t subslot_nbr,
+   uint32_t submodule_ident,
+   pnet_data_cfg_t * p_data_cfg,
+   const char * submodule_name)
 {
    uint16_t subslot;
 
@@ -267,11 +265,10 @@ static app_subslot_t * app_subslot_alloc(
 
    for (subslot = 0; subslot < PNET_MAX_SUBSLOTS; subslot++)
    {
-      if (p_appdata->main_api.slots[slot_nbr].
-             subslots[subslot].used == false)
+      if (p_appdata->main_api.slots[slot_nbr].subslots[subslot].used == false)
       {
-         app_subslot_t * p_subslot = &p_appdata->main_api.
-            slots[slot_nbr].subslots[subslot];
+         app_subslot_t * p_subslot =
+            &p_appdata->main_api.slots[slot_nbr].subslots[subslot];
 
          p_subslot->used = true;
          p_subslot->plugged = true;
@@ -294,10 +291,10 @@ static app_subslot_t * app_subslot_alloc(
  * @param subslot_nbr   In: Subslot number.
  * @return 0 on success, -1 on error.
  */
-static int app_subslot_free(
-      app_data_t * p_appdata,
-      uint16_t slot_nbr,
-      uint16_t subslot_nbr)
+static int app_subslot_free (
+   app_data_t * p_appdata,
+   uint16_t slot_nbr,
+   uint16_t subslot_nbr)
 {
    app_subslot_t * p_subslot = NULL;
 
@@ -306,13 +303,10 @@ static int app_subslot_free(
       return -1;
    }
 
-   p_subslot = app_subslot_get(p_appdata, slot_nbr, subslot_nbr);
+   p_subslot = app_subslot_get (p_appdata, slot_nbr, subslot_nbr);
    if (p_subslot != NULL)
    {
-      memset(
-         p_subslot,
-         0,
-         sizeof(app_subslot_t));
+      memset (p_subslot, 0, sizeof (app_subslot_t));
       p_subslot->used = false;
       return 0;
    }
@@ -326,12 +320,11 @@ static int app_subslot_free(
  * @return true if subslot is input or input/output.
  *         false if not.
  */
-static bool app_subslot_is_input(
-   app_subslot_t * p_subslot)
+static bool app_subslot_is_input (app_subslot_t * p_subslot)
 {
-   if (p_subslot != NULL &&
-       (p_subslot->data_cfg.data_dir == PNET_DIR_INPUT ||
-        p_subslot->data_cfg.data_dir == PNET_DIR_IO))
+   if (
+      p_subslot != NULL && (p_subslot->data_cfg.data_dir == PNET_DIR_INPUT ||
+                            p_subslot->data_cfg.data_dir == PNET_DIR_IO))
    {
       return true;
    }
@@ -348,11 +341,9 @@ static bool app_subslot_is_input(
  * @return true if subslot is input or input/output.
  *         false if not.
  */
-static bool app_subslot_is_no_io(
-   app_subslot_t * p_subslot)
+static bool app_subslot_is_no_io (app_subslot_t * p_subslot)
 {
-   if (p_subslot != NULL &&
-       p_subslot->data_cfg.data_dir == PNET_DIR_NO_IO)
+   if (p_subslot != NULL && p_subslot->data_cfg.data_dir == PNET_DIR_NO_IO)
    {
       return true;
    }
@@ -368,12 +359,11 @@ static bool app_subslot_is_no_io(
  * @return true if subslot is output or input/output,
  *         false if not.
  */
-static bool app_subslot_is_output(
-   app_subslot_t * p_subslot)
+static bool app_subslot_is_output (app_subslot_t * p_subslot)
 {
-   if (p_subslot != NULL &&
-       (p_subslot->data_cfg.data_dir == PNET_DIR_OUTPUT ||
-        p_subslot->data_cfg.data_dir == PNET_DIR_IO))
+   if (
+      p_subslot != NULL && (p_subslot->data_cfg.data_dir == PNET_DIR_OUTPUT ||
+                            p_subslot->data_cfg.data_dir == PNET_DIR_IO))
    {
       return true;
    }
@@ -488,7 +478,7 @@ static int app_write_ind (
    uint16_t idx,
    uint16_t sequence_number,
    uint16_t write_length,
-   uint8_t * p_write_data,
+   const uint8_t * p_write_data,
    pnet_result_t * p_result)
 {
    app_data_t * p_appdata = (app_data_t *)arg;
@@ -622,21 +612,19 @@ static int app_read_ind (
  * @param p_subslot     In: Subslot.
  * @return 0 on success, -1 on error
  */
-static int app_set_data_and_ioxs(
-      pnet_t * net,
-      app_data_t * p_appdata,
-      app_subslot_t * p_subslot)
+static int app_set_data_and_ioxs (
+   pnet_t * net,
+   app_data_t * p_appdata,
+   app_subslot_t * p_subslot)
 {
    int ret;
    uint8_t iops = PNET_IOXS_GOOD;
 
    if (p_subslot != NULL)
    {
-      if (app_subslot_is_input(p_subslot) ||
-          app_subslot_is_no_io(p_subslot))
+      if (app_subslot_is_input (p_subslot) || app_subslot_is_no_io (p_subslot))
       {
-         if (app_subslot_is_input(p_subslot) &&
-             p_subslot->p_in_data == NULL)
+         if (app_subslot_is_input (p_subslot) && p_subslot->p_in_data == NULL)
          {
             iops = PNET_IOXS_BAD;
          }
@@ -656,8 +644,7 @@ static int app_set_data_and_ioxs(
           * This is not a problem.
           * Log message below will only be printed for active submodules.
           */
-         if (ret == 0 &&
-             p_appdata->arguments.verbosity > 0)
+         if (ret == 0 && p_appdata->arguments.verbosity > 0)
          {
             printf (
                "  Set input data and IOPS for slot %2u subslot %u \"%s\""
@@ -666,11 +653,11 @@ static int app_set_data_and_ioxs(
                p_subslot->subslot_nbr,
                p_subslot->submodule_name,
                p_subslot->data_cfg.insize,
-               ioxs_to_string(iops));
+               ioxs_to_string (iops));
          }
       }
 
-      if (app_subslot_is_output(p_subslot))
+      if (app_subslot_is_output (p_subslot))
       {
          ret = pnet_output_set_iocs (
             net,
@@ -679,8 +666,7 @@ static int app_set_data_and_ioxs(
             p_subslot->subslot_nbr,
             PNET_IOXS_GOOD);
 
-         if (ret == 0 &&
-             p_appdata->arguments.verbosity > 0)
+         if (ret == 0 && p_appdata->arguments.verbosity > 0)
          {
             printf (
                "  Set output IOCS         for slot %2u subslot %u \"%s\"\n",
@@ -703,7 +689,8 @@ static int app_state_ind (
    uint16_t err_code = 0;
    uint16_t slot = 0;
    uint16_t subslot = 0;
-   const char * error_description = "";
+   const char * error_class_description = "";
+   const char * error_code_description = "";
 
    app_data_t * p_appdata = (app_data_t *)arg;
 
@@ -724,29 +711,39 @@ static int app_state_ind (
             /* A few of the most common error codes */
             switch (err_cls)
             {
-            case 0:
-               error_description = "Unknown error class";
-               break;
             case PNET_ERROR_CODE_1_RTA_ERR_CLS_PROTOCOL:
+               error_class_description = "Real-Time Acyclic Protocol";
                switch (err_code)
                {
                case PNET_ERROR_CODE_2_ABORT_AR_CONSUMER_DHT_EXPIRED:
-                  error_description = "AR_CONSUMER_DHT_EXPIRED";
+                  error_code_description = "Device missed cyclic data "
+                                           "deadline, device terminated AR";
                   break;
                case PNET_ERROR_CODE_2_ABORT_AR_CMI_TIMEOUT:
-                  error_description = "ABORT_AR_CMI_TIMEOUT";
+                  error_code_description = "Communication initialization "
+                                           "timeout, device terminated AR";
                   break;
                case PNET_ERROR_CODE_2_ABORT_AR_RELEASE_IND_RECEIVED:
-                  error_description = "Controller sent release request.";
+                  error_code_description = "AR release indication received";
+                  break;
+               case PNET_ERROR_CODE_2_ABORT_DCP_STATION_NAME_CHANGED:
+                  error_code_description = "DCP station name changed, "
+                                           "device terminated AR";
+                  break;
+               case PNET_ERROR_CODE_2_ABORT_DCP_RESET_TO_FACTORY:
+                  error_code_description = "DCP reset to factory or factory "
+                                           "reset, device terminated AR";
                   break;
                }
                break;
             }
             printf (
-               "    Error class: %u Error code: %u  %s\n",
+               "    Error class: 0x%02x %s \n"
+               "    Error code:  0x%02x %s \n",
                (unsigned)err_cls,
+               error_class_description,
                (unsigned)err_code,
-               error_description);
+               error_code_description);
          }
       }
       else
@@ -772,13 +769,14 @@ static int app_state_ind (
       {
          for (subslot = 0; subslot < PNET_MAX_SUBSLOTS; subslot++)
          {
-            if (p_appdata->main_api.slots[slot].plugged &&
-                p_appdata->main_api.slots[slot].subslots[subslot].plugged)
+            if (
+               p_appdata->main_api.slots[slot].plugged &&
+               p_appdata->main_api.slots[slot].subslots[subslot].plugged)
             {
-               app_set_data_and_ioxs(
-                     net,
-                     p_appdata,
-                     &p_appdata->main_api.slots[slot].subslots[subslot]);
+               app_set_data_and_ioxs (
+                  net,
+                  p_appdata,
+                  &p_appdata->main_api.slots[slot].subslots[subslot]);
             }
          }
       }
@@ -843,7 +841,7 @@ static int app_exp_module_ind (
          slot,
          PNET_MAX_SLOTS);
       return -1;
-    }
+   }
 
    /* Find it in the list of supported modules */
    ix = 0;
@@ -862,7 +860,7 @@ static int app_exp_module_ind (
       /*
        * Needed to pass Behavior scenario 2
        */
-      printf("Plug expected module anyway\n");
+      printf ("Plug expected module anyway\n");
    }
 
    if (p_appdata->arguments.verbosity > 0)
@@ -920,7 +918,7 @@ static int app_exp_submodule_ind (
    uint16_t subslot,
    uint32_t module_ident,
    uint32_t submodule_ident,
-   const pnet_data_cfg_t *p_exp_data)
+   const pnet_data_cfg_t * p_exp_data)
 {
    int ret = -1;
    int result = 0;
@@ -950,9 +948,9 @@ static int app_exp_submodule_ind (
    if (ix < NELEMENTS (cfg_available_submodule_types))
    {
       data_cfg.data_dir = cfg_available_submodule_types[ix].data_dir;
-      data_cfg.insize   = cfg_available_submodule_types[ix].insize;
-      data_cfg.outsize  = cfg_available_submodule_types[ix].outsize;
-      if ( data_cfg.insize > 0)
+      data_cfg.insize = cfg_available_submodule_types[ix].insize;
+      data_cfg.outsize = cfg_available_submodule_types[ix].outsize;
+      if (data_cfg.insize > 0)
       {
          p_app_data = p_appdata->inputdata;
       }
@@ -973,11 +971,11 @@ static int app_exp_submodule_ind (
        * Needed for behavior scenario 2 to pass.
        * Iops will be set to bad for this subslot
        */
-      printf("  Plug expected submodule anyway \n");
+      printf ("  Plug expected submodule anyway \n");
 
       data_cfg.data_dir = p_exp_data->data_dir;
-      data_cfg.insize   = p_exp_data->insize;
-      data_cfg.outsize  = p_exp_data->outsize;
+      data_cfg.insize = p_exp_data->insize;
+      data_cfg.outsize = p_exp_data->outsize;
    }
 
    {
@@ -993,7 +991,7 @@ static int app_exp_submodule_ind (
       result = pnet_pull_submodule (net, api, slot, subslot);
       if (result == 0)
       {
-         app_subslot_free(p_appdata, slot, subslot);
+         app_subslot_free (p_appdata, slot, subslot);
       }
       if (p_appdata->arguments.verbosity > 0)
       {
@@ -1016,15 +1014,13 @@ static int app_exp_submodule_ind (
             subslot,
             (unsigned)submodule_ident,
             name);
-         printf(
+         printf (
             "                      Data Dir: %s In: %u Out: %u "
             "(Exp Data Dir: %s In: %u Out: %u)\n",
-            submodule_direction_to_string (
-               data_cfg.data_dir),
+            submodule_direction_to_string (data_cfg.data_dir),
             data_cfg.insize,
             data_cfg.outsize,
-            submodule_direction_to_string (
-               p_exp_data->data_dir),
+            submodule_direction_to_string (p_exp_data->data_dir),
             p_exp_data->insize,
             p_exp_data->outsize);
       }
@@ -1040,8 +1036,13 @@ static int app_exp_submodule_ind (
          data_cfg.outsize);
       if (ret == 0)
       {
-         p_subslot = app_subslot_alloc(
-            p_appdata, slot, subslot, submodule_ident, &data_cfg, name);
+         p_subslot = app_subslot_alloc (
+            p_appdata,
+            slot,
+            subslot,
+            submodule_ident,
+            &data_cfg,
+            name);
          if (p_subslot)
          {
             p_subslot->p_in_data = p_app_data;
@@ -1094,7 +1095,7 @@ static int app_alarm_ind (
    const pnet_alarm_argument_t * p_alarm_arg,
    uint16_t data_len,
    uint16_t data_usi,
-   uint8_t * p_data)
+   const uint8_t * p_data)
 {
    app_data_t * p_appdata = (app_data_t *)arg;
 
@@ -1122,7 +1123,7 @@ static int app_alarm_cnf (
    pnet_t * net,
    void * arg,
    uint32_t arep,
-   pnet_pnio_status_t * p_pnio_status)
+   const pnet_pnio_status_t * p_pnio_status)
 {
    app_data_t * p_appdata = (app_data_t *)arg;
 
@@ -1160,8 +1161,7 @@ static int app_alarm_ack_cnf (pnet_t * net, void * arg, uint32_t arep, int res)
 
 void app_plug_dap (pnet_t * net, void * arg)
 {
-   const pnet_data_cfg_t cfg_dap_data =
-   {
+   const pnet_data_cfg_t cfg_dap_data = {
       .data_dir = PNET_DIR_NO_IO,
       .insize = 0,
       .outsize = 0,
@@ -1220,8 +1220,6 @@ int app_adjust_stack_configuration (pnet_cfg_t * stack_config)
     *
     * Note that these members are set by the sample_app main:
     *    cb_arg
-    *    im_0_data.im_order_id
-    *    im_0_data.im_serial_number
     *    eth_addr.addr
     *    ip_addr
     *    ip_gateway
@@ -1263,8 +1261,9 @@ int app_adjust_stack_configuration (pnet_cfg_t * stack_config)
    stack_config->im_0_data.im_version_major = 1;
    stack_config->im_0_data.im_version_minor = 1;
    stack_config->im_0_data.im_supported =
-      PNET_SUPPORTED_IM1 | PNET_SUPPORTED_IM2 | PNET_SUPPORTED_IM3 |
-      PNET_SUPPORTED_IM4;
+      PNET_SUPPORTED_IM1 | PNET_SUPPORTED_IM2 | PNET_SUPPORTED_IM3;
+   strcpy (stack_config->im_0_data.im_order_id, "12345");
+   strcpy (stack_config->im_0_data.im_serial_number, "00001");
    strcpy (stack_config->im_1_data.im_tag_function, "my function");
    strcpy (stack_config->im_1_data.im_tag_location, "my location");
    strcpy (stack_config->im_2_data.im_date, "2020-09-03 13:53");
@@ -1280,7 +1279,6 @@ int app_adjust_stack_configuration (pnet_cfg_t * stack_config)
    stack_config->oem_device_id.vendor_id_lo = 0xff;
    stack_config->oem_device_id.device_id_hi = 0xee;
    stack_config->oem_device_id.device_id_lo = 0x01;
-   strcpy (stack_config->device_vendor, "rt-labs");
    strcpy (stack_config->manufacturer_specific_string, "PNET demo");
    strcpy (stack_config->product_name, "rt-labs PNET demo");
 
@@ -1288,16 +1286,16 @@ int app_adjust_stack_configuration (pnet_cfg_t * stack_config)
    stack_config->min_device_interval = 32; /* Corresponds to 1 ms */
 
    /* LLDP settings */
-   strcpy (stack_config->lldp_cfg.port_id, "port-001");
-   stack_config->lldp_cfg.ttl = PNET_LLDP_TTL;
-   stack_config->lldp_cfg.rtclass_2_status = 0;
-   stack_config->lldp_cfg.rtclass_3_status = 0;
-   stack_config->lldp_cfg.cap_aneg = PNET_LLDP_AUTONEG_SUPPORTED |
-                                     PNET_LLDP_AUTONEG_ENABLED;
-   stack_config->lldp_cfg.cap_phy =
+   strcpy (stack_config->lldp_cfg.ports[0].port_id, "port-001");
+   stack_config->lldp_cfg.ports[0].rtclass_2_status = 0;
+   stack_config->lldp_cfg.ports[0].rtclass_3_status = 0;
+   stack_config->lldp_cfg.ports[0].cap_aneg = PNET_LLDP_AUTONEG_SUPPORTED |
+                                              PNET_LLDP_AUTONEG_ENABLED;
+   stack_config->lldp_cfg.ports[0].cap_phy =
       PNET_LLDP_AUTONEG_CAP_100BaseTX_HALF_DUPLEX |
       PNET_LLDP_AUTONEG_CAP_100BaseTX_FULL_DUPLEX;
-   stack_config->lldp_cfg.mau_type = PNET_MAU_COPPER_100BaseTX_FULL_DUPLEX;
+   stack_config->lldp_cfg.ports[0].mau_type =
+      PNET_MAU_COPPER_100BaseTX_FULL_DUPLEX;
 
    /* Network configuration */
    stack_config->send_hello = true;
@@ -1310,7 +1308,7 @@ int app_adjust_stack_configuration (pnet_cfg_t * stack_config)
 
 void app_copy_ip_to_struct (
    pnet_cfg_ip_addr_t * destination_struct,
-   os_ipaddr_t ip)
+   pnal_ipaddr_t ip)
 {
    destination_struct->a = ((ip >> 24) & 0xFF);
    destination_struct->b = ((ip >> 16) & 0xFF);
@@ -1434,11 +1432,9 @@ static void app_handle_cyclic_data (
       for (subslot = 0; subslot < PNET_MAX_SUBSLOTS; subslot++)
       {
          iops = PNET_IOXS_BAD;
-         p_subslot =
-            &p_appdata->main_api.slots[slot].subslots[subslot];
+         p_subslot = &p_appdata->main_api.slots[slot].subslots[subslot];
 
-         if (p_subslot->plugged &&
-             app_subslot_is_input(p_subslot))
+         if (p_subslot->plugged && app_subslot_is_input (p_subslot))
          {
             if (p_subslot->p_in_data != NULL)
             {
@@ -1477,8 +1473,7 @@ static void app_handle_cyclic_data (
             }
          }
 
-         if (p_subslot->plugged &&
-             app_subslot_is_output(p_subslot))
+         if (p_subslot->plugged && app_subslot_is_output (p_subslot))
          {
             outputdata_length = sizeof (outputdata);
             pnet_output_get_data_and_iops (
@@ -1492,14 +1487,15 @@ static void app_handle_cyclic_data (
                &outputdata_iops);
 
             /* Set LED state */
-            if (outputdata_length == APP_DATASIZE_OUTPUT &&
-                outputdata_iops == PNET_IOXS_GOOD)
+            if (
+               outputdata_length == APP_DATASIZE_OUTPUT &&
+               outputdata_iops == PNET_IOXS_GOOD)
             {
                if (outputdata_length == APP_DATASIZE_OUTPUT)
                {
                   /* Extract LED state from most significant bit */
                   received_led_state = (outputdata[0] & 0x80) > 0;
-                        /* Set LED state */
+                  /* Set LED state */
                   if (received_led_state != previous_led_state)
                   {
                      app_set_led (APP_DATA_LED_ID, received_led_state);
@@ -1524,9 +1520,12 @@ static void app_handle_cyclic_data (
  *
  * Alternates between these functions each time the button2 is pressed:
  *  - pnet_alarm_send_process_alarm()
- *  - pnet_diag_add()
- *  - pnet_diag_update()
- *  - pnet_diag_remove()
+ *  - pnet_diag_std_add()
+ *  - pnet_diag_std_update()
+ *  - pnet_diag_usi_add()
+ *  - pnet_diag_usi_update()
+ *  - pnet_diag_usi_remove()
+ *  - pnet_diag_std_remove()
  *  - pnet_create_log_book_entry()
  *
  * Uses first input module, if available.
@@ -1553,202 +1552,218 @@ static void app_handle_send_alarm (
    app_data_t * p_appdata,
    uint8_t * alarm_payload)
 {
-   uint16_t slot = 0;
-   uint16_t subslot = 0;
-   pnet_pnio_status_t pnio_status = {0};
-   uint16_t ch_properties = 0;
    static app_demo_state_t state = APP_DEMO_STATE_ALARM_SEND;
-   bool done = false;
-   app_subslot_t *p_subslot = NULL;
+   uint16_t slot = 0;
+   bool found_inputslot = false;
+   uint16_t subslot_array_index = 0;
+   app_subslot_t * p_subslot = NULL;
+   pnet_pnio_status_t pnio_status = {0};
+   pnet_diag_source_t diag_source = {
+      .api = APP_API,
+      .slot = 0,
+      .subslot = 0,
+      .ch = APP_DIAG_CHANNEL_NUMBER,
+      .ch_grouping = PNET_DIAG_CH_INDIVIDUAL_CHANNEL,
+      .ch_direction = APP_DIAG_CHANNEL_DIRECTION};
 
-   PNET_DIAG_CH_PROP_TYPE_SET (ch_properties, PNET_DIAG_CH_PROP_TYPE_8_BIT);
-   PNET_DIAG_CH_PROP_ACC_SET (ch_properties, 0);
-   PNET_DIAG_CH_PROP_MAINT_SET (
-      ch_properties,
-      PNET_DIAG_CH_PROP_MAINT_QUALIFIED);
-   PNET_DIAG_CH_PROP_SPEC_SET (ch_properties, PNET_DIAG_CH_PROP_SPEC_APPEARS);
-   PNET_DIAG_CH_PROP_DIR_SET (ch_properties, PNET_DIAG_CH_PROP_DIR_INPUT);
-
-   if ((button_pressed == true) && (button_pressed_prev == false))
+   /* Trigger only just when the button is pressed */
+   if ((button_pressed == false) || (button_pressed_prev == true))
    {
-      switch (state)
+      return;
+   }
+
+   /* Look for first input slot */
+   while (!found_inputslot && (slot < PNET_MAX_SLOTS))
+   {
+      for (subslot_array_index = 0;
+           !found_inputslot && (subslot_array_index < PNET_MAX_SUBSLOTS);
+           subslot_array_index++)
       {
-      case APP_DEMO_STATE_ALARM_SEND:
-         if (*alarm_allowed == true)
+         p_subslot =
+            &p_appdata->main_api.slots[slot].subslots[subslot_array_index];
+         if (app_subslot_is_input (p_subslot))
          {
-            alarm_payload[0]++;
-            done = false;
-            for (slot = 0; !done && (slot < PNET_MAX_SLOTS); slot++)
-            {
-               for (subslot = 0; !done && (subslot < PNET_MAX_SUBSLOTS);
-                    subslot++)
-               {
-                  p_subslot = &p_appdata->main_api.slots[slot].subslots[subslot];
-                  if (app_subslot_is_input(p_subslot))
-                  {
-                     printf (
-                        "Sending process alarm from slot %u subslot %u USI %u to "
-                        "IO-controller. Payload: 0x%x\n",
-                        slot,
-                        p_subslot->subslot_nbr,
-                        APP_ALARM_USI,
-                        alarm_payload[0]);
-                     pnet_alarm_send_process_alarm (
-                        net,
-                        arep,
-                        APP_API,
-                        slot,
-                        p_subslot->subslot_nbr,
-                        APP_ALARM_USI,
-                        APP_ALARM_PAYLOAD_SIZE,
-                        alarm_payload);
-                     *alarm_allowed = false; /* Not allowed until ACK received */
-                     done = true;
-                  }
-               }
-            }
+            found_inputslot = true;
+            break;
          }
-         else
-         {
-            printf (
-               "Could not send process alarm, as alarm_allowed == false\n");
-         }
-         break;
+      }
+      if (!found_inputslot)
+      {
+         slot++;
+      }
+   }
+   if (!found_inputslot)
+   {
+      printf ("Did not find any input module in the slots. Skipping sending "
+              "demo alarm.\n");
+      return;
+   }
 
-      case APP_DEMO_STATE_DIAG_ADD:
-         done = false;
-         for (slot = 0; !done && slot < PNET_MAX_SLOTS; slot++)
-         {
-            for (subslot = 0; !done && (subslot < PNET_MAX_SUBSLOTS); subslot++)
-            {
-               p_subslot = &p_appdata->main_api.slots[slot].subslots[subslot];
-               if (app_subslot_is_input(p_subslot))
-               {
-                  printf (
-                     "Adding diagnosis to slot %u subslot %u channel %u\n",
-                     slot,
-                     p_subslot->subslot_nbr,
-                     APP_DIAG_CHANNEL);
-                  pnet_diag_add (
-                     net,
-                     arep,
-                     APP_API,
-                     slot,
-                     p_subslot->subslot_nbr,
-                     APP_DIAG_CHANNEL,
-                     ch_properties,
-                     CHANNEL_ERRORTYPE_NETWORK_COMPONENT_FUNCTION_MISMATCH,
-                     EXTENDED_CHANNEL_ERRORTYPE_FRAME_DROPPED,
-                     123, /* Number of dropped frames */
-                     APP_DIAG_SEVERITY,
-                     PNET_DIAG_USI_STD,
-                     NULL /* No manufacturer specific data */
-                  );
-                  done = true;
-               }
-            }
-         }
-         break;
+   diag_source.slot = slot;
+   diag_source.subslot = p_subslot->subslot_nbr;
 
-      case APP_DEMO_STATE_DIAG_UPDATE:
-         for (slot = 0; !done && slot < PNET_MAX_SLOTS; slot++)
-         {
-            for (subslot = 0; !done && (subslot < PNET_MAX_SUBSLOTS); subslot++)
-            {
-               p_subslot = &p_appdata->main_api.slots[slot].subslots[subslot];
-               if (app_subslot_is_input(p_subslot))
-               {
-                  printf (
-                     "Updating diagnosis to slot %u subslot %u channel %u\n",
-                     slot,
-                     p_subslot->subslot_nbr,
-                     APP_DIAG_CHANNEL);
-                  pnet_diag_update (
-                     net,
-                     arep,
-                     APP_API,
-                     slot,
-                     p_subslot->subslot_nbr,
-                     APP_DIAG_CHANNEL,
-                     ch_properties,
-                     CHANNEL_ERRORTYPE_NETWORK_COMPONENT_FUNCTION_MISMATCH,
-                     1234, /* Number of dropped frames */
-                     PNET_DIAG_USI_STD,
-                     NULL /* No manufacturer specific data */
-                  );
-                  done = true;
-               }
-            }
-         }
-         break;
-
-      case APP_DEMO_STATE_DIAG_REMOVE:
-         for (slot = 0; !done && slot < PNET_MAX_SLOTS; slot++)
-         {
-            for (subslot = 0; !done && (subslot < PNET_MAX_SUBSLOTS); subslot++)
-            {
-               p_subslot = &p_appdata->main_api.slots[slot].subslots[subslot];
-               if (app_subslot_is_input(p_subslot))
-               {
-                  printf (
-                     "Removing diagnosis from slot %u subslot %u channel %u\n",
-                     slot,
-                     p_subslot->subslot_nbr,
-                     APP_DIAG_CHANNEL);
-                  pnet_diag_remove (
-                     net,
-                     arep,
-                     APP_API,
-                     slot,
-                     p_subslot->subslot_nbr,
-                     APP_DIAG_CHANNEL,
-                     ch_properties,
-                     CHANNEL_ERRORTYPE_NETWORK_COMPONENT_FUNCTION_MISMATCH,
-                     PNET_DIAG_USI_STD);
-                  break;
-               }
-            }
-         }
-         break;
-
-      case APP_DEMO_STATE_LOGBOOK_ENTRY:
+   switch (state)
+   {
+   case APP_DEMO_STATE_ALARM_SEND:
+      if (*alarm_allowed == true)
+      {
+         alarm_payload[0]++;
          printf (
-            "Writing to logbook. Error_code1: %02X Error_code2: %02X  Entry "
-            "detail: 0x%08X\n",
-            APP_LOGBOOK_ERROR_CODE_1,
-            APP_LOGBOOK_ERROR_CODE_2,
-            APP_LOGBOOK_ENTRY_DETAIL);
-         pnio_status.error_code = APP_LOGBOOK_ERROR_CODE;
-         pnio_status.error_decode = APP_LOGBOOK_ERROR_DECODE;
-         pnio_status.error_code_1 = APP_LOGBOOK_ERROR_CODE_1;
-         pnio_status.error_code_2 = APP_LOGBOOK_ERROR_CODE_2;
-         pnet_create_log_book_entry (
+            "Sending process alarm from slot %u subslot %u USI %u to "
+            "IO-controller. Payload: 0x%x\n",
+            slot,
+            p_subslot->subslot_nbr,
+            APP_ALARM_USI,
+            alarm_payload[0]);
+         pnet_alarm_send_process_alarm (
             net,
             arep,
-            &pnio_status,
-            APP_LOGBOOK_ENTRY_DETAIL);
-         break;
+            APP_API,
+            slot,
+            p_subslot->subslot_nbr,
+            APP_ALARM_USI,
+            APP_ALARM_PAYLOAD_SIZE,
+            alarm_payload);
+         *alarm_allowed = false; /* Not allowed until ACK received */
       }
-
-      switch (state)
+      else
       {
-      case APP_DEMO_STATE_ALARM_SEND:
-         state = APP_DEMO_STATE_DIAG_ADD;
-         break;
-      case APP_DEMO_STATE_DIAG_ADD:
-         state = APP_DEMO_STATE_DIAG_UPDATE;
-         break;
-      case APP_DEMO_STATE_DIAG_UPDATE:
-         state = APP_DEMO_STATE_DIAG_REMOVE;
-         break;
-      case APP_DEMO_STATE_DIAG_REMOVE:
-         state = APP_DEMO_STATE_LOGBOOK_ENTRY;
-         break;
-      default:
-      case APP_DEMO_STATE_LOGBOOK_ENTRY:
-         state = APP_DEMO_STATE_ALARM_SEND;
-         break;
+         printf ("Could not send process alarm, as alarm_allowed == false\n");
       }
+      break;
+
+   case APP_DEMO_STATE_DIAG_STD_ADD:
+      printf (
+         "Adding standard diagnosis. Slot %u subslot %u channel %u\n",
+         diag_source.slot,
+         diag_source.subslot,
+         diag_source.ch);
+      pnet_diag_std_add (
+         net,
+         &diag_source,
+         APP_DIAG_CHANNEL_NUMBER_OF_BITS,
+         PNET_DIAG_CH_PROP_MAINT_QUALIFIED,
+         CHANNEL_ERRORTYPE_NETWORK_COMPONENT_FUNCTION_MISMATCH,
+         EXTENDED_CHANNEL_ERRORTYPE_FRAME_DROPPED,
+         123, /* Number of dropped frames */
+         APP_DIAG_QUAL_SEVERITY);
+      break;
+
+   case APP_DEMO_STATE_DIAG_STD_UPDATE:
+      printf (
+         "Updating standard diagnosis. Slot %u subslot %u channel %u\n",
+         diag_source.slot,
+         diag_source.subslot,
+         diag_source.ch);
+      pnet_diag_std_update (
+         net,
+         &diag_source,
+         CHANNEL_ERRORTYPE_NETWORK_COMPONENT_FUNCTION_MISMATCH,
+         EXTENDED_CHANNEL_ERRORTYPE_FRAME_DROPPED,
+         1234 /* Number of dropped frames */
+      );
+      break;
+
+   case APP_DEMO_STATE_DIAG_STD_REMOVE:
+      printf (
+         "Removing standard diagnosis. Slot %u subslot %u channel %u\n",
+         diag_source.slot,
+         diag_source.subslot,
+         diag_source.ch);
+      pnet_diag_std_remove (
+         net,
+         &diag_source,
+         CHANNEL_ERRORTYPE_NETWORK_COMPONENT_FUNCTION_MISMATCH,
+         EXTENDED_CHANNEL_ERRORTYPE_FRAME_DROPPED);
+      break;
+
+   case APP_DEMO_STATE_DIAG_USI_ADD:
+      printf (
+         "Adding USI diagnosis. Slot %u subslot %u\n",
+         slot,
+         p_subslot->subslot_nbr);
+      pnet_diag_usi_add (
+         net,
+         APP_API,
+         slot,
+         p_subslot->subslot_nbr,
+         APP_DIAG_CUSTOM_USI,
+         (uint8_t *)"diagdata_1");
+      break;
+
+   case APP_DEMO_STATE_DIAG_USI_UPDATE:
+      printf (
+         "Updating USI diagnosis. Slot %u subslot %u\n",
+         slot,
+         p_subslot->subslot_nbr);
+      pnet_diag_usi_add (
+         net,
+         APP_API,
+         slot,
+         p_subslot->subslot_nbr,
+         APP_DIAG_CUSTOM_USI,
+         (uint8_t *)"diagdata_2");
+      break;
+
+   case APP_DEMO_STATE_DIAG_USI_REMOVE:
+      printf (
+         "Removing USI diagnosis. Slot %u subslot %u\n",
+         slot,
+         p_subslot->subslot_nbr);
+      pnet_diag_usi_remove (
+         net,
+         APP_API,
+         slot,
+         p_subslot->subslot_nbr,
+         APP_DIAG_CUSTOM_USI);
+      break;
+
+   case APP_DEMO_STATE_LOGBOOK_ENTRY:
+      printf (
+         "Writing to logbook. Error_code1: %02X Error_code2: %02X  Entry "
+         "detail: 0x%08X\n",
+         APP_LOGBOOK_ERROR_CODE_1,
+         APP_LOGBOOK_ERROR_CODE_2,
+         APP_LOGBOOK_ENTRY_DETAIL);
+      pnio_status.error_code = APP_LOGBOOK_ERROR_CODE;
+      pnio_status.error_decode = APP_LOGBOOK_ERROR_DECODE;
+      pnio_status.error_code_1 = APP_LOGBOOK_ERROR_CODE_1;
+      pnio_status.error_code_2 = APP_LOGBOOK_ERROR_CODE_2;
+      pnet_create_log_book_entry (
+         net,
+         arep,
+         &pnio_status,
+         APP_LOGBOOK_ENTRY_DETAIL);
+      break;
+   }
+
+   switch (state)
+   {
+   case APP_DEMO_STATE_ALARM_SEND:
+      state = APP_DEMO_STATE_DIAG_STD_ADD;
+      break;
+   case APP_DEMO_STATE_DIAG_STD_ADD:
+      state = APP_DEMO_STATE_DIAG_STD_UPDATE;
+      break;
+   case APP_DEMO_STATE_DIAG_STD_UPDATE:
+      state = APP_DEMO_STATE_DIAG_USI_ADD;
+      break;
+   case APP_DEMO_STATE_DIAG_USI_ADD:
+      state = APP_DEMO_STATE_DIAG_USI_UPDATE;
+      break;
+   case APP_DEMO_STATE_DIAG_USI_UPDATE:
+      state = APP_DEMO_STATE_DIAG_USI_REMOVE;
+      break;
+   case APP_DEMO_STATE_DIAG_USI_REMOVE:
+      state = APP_DEMO_STATE_DIAG_STD_REMOVE;
+      break;
+   case APP_DEMO_STATE_DIAG_STD_REMOVE:
+      state = APP_DEMO_STATE_LOGBOOK_ENTRY;
+      break;
+   default:
+   case APP_DEMO_STATE_LOGBOOK_ENTRY:
+      state = APP_DEMO_STATE_ALARM_SEND;
+      break;
    }
 }
 
@@ -1765,6 +1780,11 @@ void app_loop_forever (pnet_t * net, app_data_t * p_appdata)
    static uint8_t data_ctr = 0;
    uint8_t alarm_payload[APP_ALARM_PAYLOAD_SIZE] = {0};
    p_appdata->main_api.arep = UINT32_MAX;
+
+   if (p_appdata->arguments.verbosity > 0)
+   {
+      printf ("Waiting for connect request from IO-controller\n\n");
+   }
 
    /* Main loop */
    for (;;)

@@ -14,7 +14,8 @@
  ********************************************************************/
 
 #ifdef UNIT_TEST
-#define os_eth_init mock_os_eth_init
+#define pnal_eth_init mock_pnal_eth_init
+#define pnal_snmp_init mock_pnal_snmp_init
 #endif
 
 #include <stdlib.h>
@@ -59,7 +60,7 @@ int pnet_init_only (
 
    /* Initialize everything (and the DCP protocol) */
    /* First initialize the network interface */
-   net->eth_handle = os_eth_init (netif, pf_eth_recv, (void *)net);
+   net->eth_handle = pnal_eth_init (netif, pf_eth_recv, (void *)net);
    if (net->eth_handle == NULL)
    {
       return -1;
@@ -72,6 +73,15 @@ int pnet_init_only (
    pf_dcp_exit (net);  /* Prepare for re-init. */
    pf_dcp_init (net);  /* Start DCP */
    pf_lldp_init (net); /* Send the LLDP frame */
+
+   /* Configure SNMP server if enabled */
+#if PNET_OPTION_SNMP == 1
+   if (pnal_snmp_init (net) != 0)
+   {
+      LOG_ERROR (PNET_LOG, "Failed to configure SNMP\n");
+      return -1;
+   }
+#endif
 
    pf_cmdev_exit (net); /* Prepare for re-init */
    pf_cmdev_init (net);
@@ -91,7 +101,10 @@ pnet_t * pnet_init (
    net = os_malloc (sizeof (*net));
    if (net == NULL)
    {
-      LOG_ERROR (PNET_LOG, "Failed to allocate memory for pnet_t (%zu bytes)\n", sizeof (*net));
+      LOG_ERROR (
+         PNET_LOG,
+         "Failed to allocate memory for pnet_t (%zu bytes)\n",
+         sizeof (*net));
       return NULL;
    }
 
@@ -175,7 +188,7 @@ int pnet_input_set_data_and_iops (
    uint32_t api,
    uint16_t slot,
    uint16_t subslot,
-   uint8_t * p_data,
+   const uint8_t * p_data,
    uint16_t data_len,
    uint8_t iops)
 {
@@ -442,7 +455,7 @@ int pnet_alarm_send_process_alarm (
    uint16_t subslot,
    uint16_t payload_usi,
    uint16_t payload_len,
-   uint8_t * p_payload)
+   const uint8_t * p_payload)
 {
    int ret = -1;
    pf_ar_t * p_ar = NULL;
@@ -466,8 +479,8 @@ int pnet_alarm_send_process_alarm (
 int pnet_alarm_send_ack (
    pnet_t * net,
    uint32_t arep,
-   pnet_alarm_argument_t * p_alarm_argument,
-   pnet_pnio_status_t * p_pnio_status)
+   const pnet_alarm_argument_t * p_alarm_argument,
+   const pnet_pnio_status_t * p_pnio_status)
 {
    int ret = -1;
    pf_ar_t * p_ar = NULL;
@@ -481,107 +494,87 @@ int pnet_alarm_send_ack (
    return ret;
 }
 
-int pnet_diag_add (
+/************************** Diagnosis in standard format *********************/
+
+int pnet_diag_std_add (
    pnet_t * net,
-   uint32_t arep,
-   uint32_t api,
-   uint16_t slot,
-   uint16_t subslot,
-   uint16_t ch,
-   uint16_t ch_properties,
+   const pnet_diag_source_t * p_diag_source,
+   pnet_diag_ch_prop_type_values_t ch_bits,
+   pnet_diag_ch_prop_maint_values_t severity,
    uint16_t ch_error_type,
    uint16_t ext_ch_error_type,
    uint32_t ext_ch_add_value,
-   uint32_t qual_ch_qualifier,
-   uint16_t usi,
-   uint8_t * p_manuf_data)
+   uint32_t qual_ch_qualifier)
 {
-   int ret = -1;
-   pf_ar_t * p_ar = NULL;
-
-   if (pf_ar_find_by_arep (net, arep, &p_ar) == 0)
-   {
-      ret = pf_diag_add (
-         net,
-         p_ar,
-         api,
-         slot,
-         subslot,
-         ch,
-         ch_properties,
-         ch_error_type,
-         ext_ch_error_type,
-         ext_ch_add_value,
-         qual_ch_qualifier,
-         usi,
-         p_manuf_data);
-   }
-
-   return ret;
+   return pf_diag_std_add (
+      net,
+      p_diag_source,
+      ch_bits,
+      severity,
+      ch_error_type,
+      ext_ch_error_type,
+      ext_ch_add_value,
+      qual_ch_qualifier);
 }
 
-int pnet_diag_update (
+int pnet_diag_std_update (
    pnet_t * net,
-   uint32_t arep,
+   const pnet_diag_source_t * p_diag_source,
+   uint16_t ch_error_type,
+   uint16_t ext_ch_error_type,
+   uint32_t ext_ch_add_value)
+{
+   return pf_diag_std_update (
+      net,
+      p_diag_source,
+      ch_error_type,
+      ext_ch_error_type,
+      ext_ch_add_value);
+}
+
+int pnet_diag_std_remove (
+   pnet_t * net,
+   const pnet_diag_source_t * p_diag_source,
+   uint16_t ch_error_type,
+   uint16_t ext_ch_error_type)
+{
+   return pf_diag_std_remove (
+      net,
+      p_diag_source,
+      ch_error_type,
+      ext_ch_error_type);
+}
+
+/************************** Diagnosis in USI format **************************/
+
+int pnet_diag_usi_add (
+   pnet_t * net,
    uint32_t api,
    uint16_t slot,
    uint16_t subslot,
-   uint16_t ch,
-   uint16_t ch_properties,
-   uint16_t ch_error_type,
-   uint32_t ext_ch_add_value,
    uint16_t usi,
-   uint8_t * p_manuf_data)
+   const uint8_t * p_manuf_data)
 {
-   int ret = -1;
-   pf_ar_t * p_ar = NULL;
-
-   if (pf_ar_find_by_arep (net, arep, &p_ar) == 0)
-   {
-      ret = pf_diag_update (
-         net,
-         p_ar,
-         api,
-         slot,
-         subslot,
-         ch,
-         ch_properties,
-         ch_error_type,
-         ext_ch_add_value,
-         usi,
-         p_manuf_data);
-   }
-
-   return ret;
+   return pf_diag_usi_add (net, api, slot, subslot, usi, p_manuf_data);
 }
 
-int pnet_diag_remove (
+int pnet_diag_usi_update (
    pnet_t * net,
-   uint32_t arep,
    uint32_t api,
    uint16_t slot,
    uint16_t subslot,
-   uint16_t ch,
-   uint16_t ch_properties,
-   uint16_t ch_error_type,
+   uint16_t usi,
+   const uint8_t * p_manuf_data)
+{
+   return pf_diag_usi_update (net, api, slot, subslot, usi, p_manuf_data);
+}
+
+int pnet_diag_usi_remove (
+   pnet_t * net,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
    uint16_t usi)
 {
-   int ret = -1;
-   pf_ar_t * p_ar = NULL;
-
-   if (pf_ar_find_by_arep (net, arep, &p_ar) == 0)
-   {
-      ret = pf_diag_remove (
-         net,
-         p_ar,
-         api,
-         slot,
-         subslot,
-         ch,
-         ch_properties,
-         ch_error_type,
-         usi);
-   }
-
-   return ret;
+   return pf_diag_usi_remove (net, api, slot, subslot, usi);
 }

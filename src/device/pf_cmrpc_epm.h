@@ -13,31 +13,29 @@
  * full license information.
  ********************************************************************/
 
-#ifndef PF_CMRDR_H
-#define PF_CMRDR_H
+#ifndef PF_CMRPC_EPM_H
+#define PF_CMRPC_EPM_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /**
- * Handle a RPC read request.
- * Triggers the \a pnet_read_ind() user callback for some values.
- *
+ * Handle rpc lookup request
  * @param net              InOut: The p-net stack instance
- * @param p_ar             InOut: The AR instance.
- * @param p_read_request   In:    The read request.
- * @param p_read_status    Out:   The result information.
+ * @param p_rpc_req        In:    Rpc header.
+ * @param p_lookup_req     In:    Lookup request.
+ * @param p_read_status    Out:   Read pnio status
  * @param res_size         In:    The size of the output buffer.
  * @param p_res            Out:   The output buffer.
  * @param p_pos            InOut: Position in the output buffer.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_cmrdr_rm_read_ind (
+int pf_cmrpc_lookup_request (
    pnet_t * net,
-   pf_ar_t * p_ar,
-   const pf_iod_read_request_t * p_read_request,
+   const pf_rpc_header_t * p_rpc_req,
+   const pf_rpc_lookup_req_t * p_lookup_req,
    pnet_result_t * p_read_status,
    uint16_t res_size,
    uint8_t * p_res,
@@ -47,4 +45,4 @@ int pf_cmrdr_rm_read_ind (
 }
 #endif
 
-#endif /* PF_CMRDR_H */
+#endif /* PF_CMRPC_HELPERS_H */

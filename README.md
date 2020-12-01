@@ -66,7 +66,7 @@ The platform must be able to send and receive raw Ethernet Layer 2 frames,
 and the Ethernet driver must be able to handle full size frames. It
 should also avoid copying data, for performance reasons.
 
-* cmake 3.13 or later
+* cmake 3.14 or later
 
 For Linux:
 
@@ -76,7 +76,7 @@ For Linux:
 
 For rt-kernel:
 
-* Workbench 2017.1 or later
+* Workbench 2020.1 or later
 
 An example of microcontroller we have been using is the Infineon XMC4800,
 which has an ARM Cortex-M4 running at 144 MHz, with 2 MB Flash and 352 kB RAM.

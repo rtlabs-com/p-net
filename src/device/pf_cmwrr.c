@@ -20,6 +20,7 @@
 #include "pf_includes.h"
 #include "pf_block_reader.h"
 #include "pf_block_writer.h"
+#include "pf_block_reader.h"
 
 /**
  * @file
@@ -65,7 +66,7 @@ static const char * pf_cmwrr_state_to_string (pf_cmwrr_state_values_t state)
    return s;
 }
 
-void pf_cmwrr_show (pnet_t * net, pf_ar_t * p_ar)
+void pf_cmwrr_show (const pnet_t * net, const pf_ar_t * p_ar)
 {
    const char * s = pf_cmwrr_state_to_string (net->cmwrr_state);
 
@@ -75,7 +76,7 @@ void pf_cmwrr_show (pnet_t * net, pf_ar_t * p_ar)
 
 int pf_cmwrr_cmdev_state_ind (
    pnet_t * net,
-   pf_ar_t * p_ar,
+   const pf_ar_t * p_ar,
    pnet_event_values_t event)
 {
    switch (net->cmwrr_state)
@@ -124,102 +125,6 @@ int pf_cmwrr_cmdev_state_ind (
    return -1;
 }
 
-static int pf_cmwrr_pdport_data_check (
-   pnet_t * net,
-   pf_ar_t * p_ar,
-   pf_iod_write_request_t * p_write_request,
-   uint8_t * p_bytes,
-   uint16_t p_datalength,
-   pnet_result_t * p_result)
-{
-   int ret = -1;
-   uint16_t pos = 0;
-   pf_get_info_t get_info;
-   pf_port_data_check_t port_data_check = {0};
-
-   get_info.result = PF_PARSE_OK;
-   get_info.p_buf = p_bytes;
-   get_info.is_big_endian = true;
-   get_info.len = p_datalength;
-
-   pf_get_port_data_check (&get_info, &pos, &port_data_check);
-
-   switch (port_data_check.block_header.block_type)
-   {
-   case PF_BT_CHECKPEERS:
-   {
-      pf_check_peers_t check_peer[1];
-      pf_get_port_data_check_check_peers (&get_info, &pos, 1, check_peer);
-      if (get_info.result == PF_PARSE_OK)
-      {
-         /* ToDo - Map request to port based on slot information in
-          * port_data_check variable */
-         net->port[0].check.peer = check_peer->peers[0];
-         net->port[0].check.active = true;
-         ret = 0;
-
-         /* Todo -  Generate Alarm on mismatch*/
-
-         /* ToDo - Store peer check information*/
-      }
-   }
-   break;
-   default:
-      LOG_ERROR (
-         PF_RPC_LOG,
-         "CMWRR(%d): Unsupported port data check block type 0x%x\n",
-         __LINE__,
-         port_data_check.block_header.block_type);
-      break;
-   }
-   return ret;
-}
-
-int pf_cmwrr_pdport_data_adj (
-   pnet_t * net,
-   pf_ar_t * p_ar,
-   pf_iod_write_request_t * p_write_request,
-   uint8_t * p_bytes,
-   uint16_t p_datalength,
-   pnet_result_t * p_result)
-{
-   int ret = -1;
-   uint16_t pos = 0;
-   pf_get_info_t get_info;
-   pf_port_data_adjust_t port_data_adjust = {0};
-
-   get_info.result = PF_PARSE_OK;
-   get_info.p_buf = p_bytes;
-   get_info.is_big_endian = true;
-   get_info.len = p_datalength;
-
-   pf_get_port_data_adjust (&get_info, &pos, &port_data_adjust);
-
-   switch (port_data_adjust.block_header.block_type)
-   {
-   case PF_BT_PEER_TO_PEER_BOUNDARY:
-   {
-      pf_adjust_peer_to_peer_boundary_t boundary;
-      pf_get_port_data_adjust_peer_to_peer_boundary (&get_info, &pos, &boundary);
-      if (get_info.result == PF_PARSE_OK)
-      {
-         net->port[0].adjust.active = true;
-         net->port[0].adjust.peer_to_peer_boundary = boundary;
-         ret = 0;
-      }
-   }
-   break;
-   default:
-      LOG_ERROR (
-         PF_RPC_LOG,
-         "CMWRR(%d): Unsupported port data adjust block type 0x%x\n",
-         __LINE__,
-         port_data_adjust.block_header.block_type);
-      break;
-   }
-   return ret;
-}
-
 /**
  * @internal
  * Write one data record.
@@ -241,8 +146,8 @@ int pf_cmwrr_pdport_data_adj (
  */
 static int pf_cmwrr_write (
    pnet_t * net,
-   pf_ar_t * p_ar,
-   pf_iod_write_request_t * p_write_request,
+   const pf_ar_t * p_ar,
+   const pf_iod_write_request_t * p_write_request,
    uint8_t * p_req_buf,
    uint16_t data_length,
    uint16_t * p_req_pos,
@@ -250,8 +155,9 @@ static int pf_cmwrr_write (
 {
    int ret = -1;
 
-   if (p_write_request->index < 0x7fff)
+   if (p_write_request->index <= PF_IDX_USER_MAX)
    {
+      /* User defined indexes */
       ret = pf_fspm_cm_write_ind (
          net,
          p_ar,
@@ -264,6 +170,7 @@ static int pf_cmwrr_write (
       (PF_IDX_SUB_IM_0 <= p_write_request->index) &&
       (p_write_request->index <= PF_IDX_SUB_IM_15))
    {
+      /* I&M data */
       ret = pf_fspm_cm_write_ind (
          net,
          p_ar,
@@ -277,19 +184,12 @@ static int pf_cmwrr_write (
       switch (p_write_request->index)
       {
       case PF_IDX_SUB_PDPORT_DATA_CHECK:
-         ret = pf_cmwrr_pdport_data_check (
-            net,
-            p_ar,
-            p_write_request,
-            &p_req_buf[*p_req_pos],
-            data_length,
-            p_result);
-         break;
       case PF_IDX_SUB_PDPORT_DATA_ADJ:
-         ret = pf_cmwrr_pdport_data_adj (
+         ret = pf_pdport_write_req (
             net,
             p_ar,
             p_write_request,
+            PNET_PORT_1,
             &p_req_buf[*p_req_pos],
             data_length,
             p_result);
@@ -307,7 +207,7 @@ static int pf_cmwrr_write (
 int pf_cmwrr_rm_write_ind (
    pnet_t * net,
    pf_ar_t * p_ar,
-   pf_iod_write_request_t * p_write_request,
+   const pf_iod_write_request_t * p_write_request,
    pf_iod_write_result_t * p_write_result,
    pnet_result_t * p_result,
    uint8_t * p_req_buf, /* request buffer */

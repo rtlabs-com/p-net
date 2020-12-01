@@ -17,6 +17,7 @@
 #define SAMPLEAPP_COMMON_H
 
 #include "osal.h"
+#include "pnal.h"
 #include "options.h"
 #include <pnet_api.h>
 
@@ -42,10 +43,12 @@ extern "C" {
 #define EVENT_ALARM                BIT (2)
 #define EVENT_ABORT                BIT (15)
 
-#define TICK_INTERVAL_US  1000 /* 1 ms */
-#define APP_ALARM_USI     0x0010
-#define APP_DIAG_CHANNEL  1
-#define APP_DIAG_SEVERITY 0x00000100UL /* Max one bit set */
+#define TICK_INTERVAL_US                1000 /* 1 ms */
+#define APP_ALARM_USI                   0x0010
+#define APP_DIAG_CHANNEL_NUMBER         1
+#define APP_DIAG_CHANNEL_DIRECTION      PNET_DIAG_CH_PROP_DIR_INPUT
+#define APP_DIAG_CHANNEL_NUMBER_OF_BITS PNET_DIAG_CH_PROP_TYPE_8_BIT
+#define APP_DIAG_QUAL_SEVERITY          0x00000100UL /* Max one bit set */
 
 #define APP_TICKS_READ_BUTTONS 10
 #define APP_TICKS_UPDATE_DATA  100
@@ -56,6 +59,8 @@ extern "C" {
 #define APP_PARAM_IDX_1          123
 #define APP_PARAM_IDX_2          124
 #define APP_API                  0
+
+#define APP_DIAG_CUSTOM_USI 0x1234
 
 #define APP_LOGBOOK_ERROR_CODE   0x20 /* Manufacturer specific */
 #define APP_LOGBOOK_ERROR_DECODE 0x82 /* Manufacturer specific */
@@ -88,7 +93,6 @@ static const uint32_t cfg_available_module_types[] = {
    APP_MOD_0_8_IDENT,
    APP_MOD_8_8_IDENT};
 
-
 typedef struct cfg_submodule_type
 {
    const char * name;
@@ -100,50 +104,49 @@ typedef struct cfg_submodule_type
    uint16_t outsize; /* bytes */
 } cfg_submodule_type_t;
 
-static const cfg_submodule_type_t cfg_available_submodule_types[] =
-{
-   {
-      "DAP Identity 1",
-      APP_API,
-      PNET_MOD_DAP_IDENT,
-      PNET_SUBMOD_DAP_IDENT,
-      PNET_DIR_NO_IO, 0, 0
-   },
-   {
-      "DAP Interface 1",
-      APP_API,
-      PNET_MOD_DAP_IDENT,
-      PNET_SUBMOD_DAP_INTERFACE_1_IDENT,
-      PNET_DIR_NO_IO, 0, 0
-   },
-   {
-      "DAP Port 1",
-      APP_API,
-      PNET_MOD_DAP_IDENT,
-      PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT,
-      PNET_DIR_NO_IO, 0, 0
-   },
-   {
-      "Input 8 bits",
-      APP_API,
-      APP_MOD_8_0_IDENT,
-      APP_SUBMOD_CUSTOM_IDENT,
-      PNET_DIR_INPUT, APP_DATASIZE_INPUT, 0
-   },
-   {
-      "Output 8 bits",
-      APP_API,
-      APP_MOD_0_8_IDENT,
-      APP_SUBMOD_CUSTOM_IDENT,
-      PNET_DIR_OUTPUT, 0, APP_DATASIZE_OUTPUT
-   },
-   {
-      "Input 8 bits output 8 bits",
-      APP_API,
-      APP_MOD_8_8_IDENT,
-      APP_SUBMOD_CUSTOM_IDENT,
-      PNET_DIR_IO, APP_DATASIZE_INPUT, APP_DATASIZE_OUTPUT
-   },
+static const cfg_submodule_type_t cfg_available_submodule_types[] = {
+   {"DAP Identity 1",
+    APP_API,
+    PNET_MOD_DAP_IDENT,
+    PNET_SUBMOD_DAP_IDENT,
+    PNET_DIR_NO_IO,
+    0,
+    0},
+   {"DAP Interface 1",
+    APP_API,
+    PNET_MOD_DAP_IDENT,
+    PNET_SUBMOD_DAP_INTERFACE_1_IDENT,
+    PNET_DIR_NO_IO,
+    0,
+    0},
+   {"DAP Port 1",
+    APP_API,
+    PNET_MOD_DAP_IDENT,
+    PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT,
+    PNET_DIR_NO_IO,
+    0,
+    0},
+   {"Input 8 bits",
+    APP_API,
+    APP_MOD_8_0_IDENT,
+    APP_SUBMOD_CUSTOM_IDENT,
+    PNET_DIR_INPUT,
+    APP_DATASIZE_INPUT,
+    0},
+   {"Output 8 bits",
+    APP_API,
+    APP_MOD_0_8_IDENT,
+    APP_SUBMOD_CUSTOM_IDENT,
+    PNET_DIR_OUTPUT,
+    0,
+    APP_DATASIZE_OUTPUT},
+   {"Input 8 bits output 8 bits",
+    APP_API,
+    APP_MOD_8_8_IDENT,
+    APP_SUBMOD_CUSTOM_IDENT,
+    PNET_DIR_IO,
+    APP_DATASIZE_INPUT,
+    APP_DATASIZE_OUTPUT},
 };
 
 /************************ App data storage ***********************************/
@@ -210,9 +213,12 @@ typedef enum app_demo_state
 {
    APP_DEMO_STATE_ALARM_SEND,
    APP_DEMO_STATE_LOGBOOK_ENTRY,
-   APP_DEMO_STATE_DIAG_ADD,
-   APP_DEMO_STATE_DIAG_UPDATE,
-   APP_DEMO_STATE_DIAG_REMOVE,
+   APP_DEMO_STATE_DIAG_STD_ADD,
+   APP_DEMO_STATE_DIAG_STD_UPDATE,
+   APP_DEMO_STATE_DIAG_STD_REMOVE,
+   APP_DEMO_STATE_DIAG_USI_ADD,
+   APP_DEMO_STATE_DIAG_USI_UPDATE,
+   APP_DEMO_STATE_DIAG_USI_REMOVE,
 } app_demo_state_t;
 
 /********************* Helper function declarations ***************************/
@@ -228,10 +234,10 @@ typedef enum app_demo_state
  *          -1 if an error occurred.
  */
 void app_print_network_details (
-   os_ethaddr_t * p_macbuffer,
-   os_ipaddr_t ip,
-   os_ipaddr_t netmask,
-   os_ipaddr_t gateway);
+   pnal_ethaddr_t * p_macbuffer,
+   pnal_ipaddr_t ip,
+   pnal_ipaddr_t netmask,
+   pnal_ipaddr_t gateway);
 
 /**
  * Adjust some members of the p-net configuration object.
@@ -259,7 +265,7 @@ void app_plug_dap (pnet_t * net, void * arg);
  */
 void app_copy_ip_to_struct (
    pnet_cfg_ip_addr_t * destination_struct,
-   os_ipaddr_t ip);
+   pnal_ipaddr_t ip);
 
 /**
  * Sample app main loop.

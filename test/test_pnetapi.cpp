@@ -178,7 +178,7 @@ TEST_F (PnetapiTest, PnetapiRunTest)
    const uint16_t subslot = 1;
 
    TEST_TRACE ("\nGenerating mock connection request\n");
-   mock_set_os_udp_recvfrom_buffer (connect_req, sizeof (connect_req));
+   mock_set_pnal_udp_recvfrom_buffer (connect_req, sizeof (connect_req));
    run_stack (TEST_UDP_DELAY);
    EXPECT_EQ (appdata.call_counters.state_calls, 1);
    EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_STARTUP);
@@ -186,14 +186,14 @@ TEST_F (PnetapiTest, PnetapiRunTest)
    EXPECT_GT (mock_os_data.eth_send_count, 0);
 
    TEST_TRACE ("\nGenerating mock write request\n");
-   mock_set_os_udp_recvfrom_buffer (write_req, sizeof (write_req));
+   mock_set_pnal_udp_recvfrom_buffer (write_req, sizeof (write_req));
    run_stack (TEST_UDP_DELAY);
    EXPECT_EQ (appdata.call_counters.state_calls, 1);
    EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_STARTUP);
    EXPECT_EQ (appdata.call_counters.connect_calls, 1);
 
    TEST_TRACE ("\nGenerating mock parameter end request\n");
-   mock_set_os_udp_recvfrom_buffer (prm_end_req, sizeof (prm_end_req));
+   mock_set_pnal_udp_recvfrom_buffer (prm_end_req, sizeof (prm_end_req));
    run_stack (TEST_UDP_DELAY);
    EXPECT_EQ (appdata.call_counters.state_calls, 2);
    EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_PRMEND);
@@ -206,7 +206,7 @@ TEST_F (PnetapiTest, PnetapiRunTest)
    EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_APPLRDY);
 
    TEST_TRACE ("\nGenerating mock application ready response\n");
-   mock_set_os_udp_recvfrom_buffer (appl_rdy_rsp, sizeof (appl_rdy_rsp));
+   mock_set_pnal_udp_recvfrom_buffer (appl_rdy_rsp, sizeof (appl_rdy_rsp));
    run_stack (TEST_UDP_DELAY);
    EXPECT_EQ (appdata.call_counters.state_calls, 3);
    EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_APPLRDY);
@@ -402,7 +402,7 @@ TEST_F (PnetapiTest, PnetapiRunTest)
    pnet_create_log_book_entry (net, appdata.main_arep, &pnio_status, 0x13245768);
 
    TEST_TRACE ("\nGenerating mock release request\n");
-   mock_set_os_udp_recvfrom_buffer (release_req, sizeof (release_req));
+   mock_set_pnal_udp_recvfrom_buffer (release_req, sizeof (release_req));
    run_stack (TEST_UDP_DELAY);
    EXPECT_EQ (appdata.call_counters.release_calls, 1);
    EXPECT_EQ (appdata.call_counters.state_calls, 5);
@@ -411,7 +411,7 @@ TEST_F (PnetapiTest, PnetapiRunTest)
 
 TEST_F (PnetapiTest, PnetapiShowTest)
 {
-   mock_set_os_udp_recvfrom_buffer (connect_req, sizeof (connect_req));
+   mock_set_pnal_udp_recvfrom_buffer (connect_req, sizeof (connect_req));
    run_stack (TEST_UDP_DELAY);
    EXPECT_EQ (appdata.call_counters.state_calls, 1);
    EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_STARTUP);
@@ -420,7 +420,7 @@ TEST_F (PnetapiTest, PnetapiShowTest)
 
    pnet_show (net, 0x7fffffff);
 
-   mock_set_os_udp_recvfrom_buffer (release_req, sizeof (release_req));
+   mock_set_pnal_udp_recvfrom_buffer (release_req, sizeof (release_req));
    run_stack (TEST_UDP_DELAY);
 
    EXPECT_EQ (appdata.call_counters.release_calls, 1);

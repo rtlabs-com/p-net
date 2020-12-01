@@ -17,6 +17,8 @@
 
 #include <gtest/gtest.h>
 
+#include <inttypes.h>
+
 /******************** Callbacks defined by p-net *****************************/
 
 int my_connect_ind (
@@ -123,7 +125,7 @@ int my_write_ind (
    uint16_t idx,
    uint16_t sequence_number,
    uint16_t write_length,
-   uint8_t * p_write_data,
+   const uint8_t * p_write_data,
    pnet_result_t * p_result)
 {
    app_data_for_testing_t * p_appdata = (app_data_for_testing_t *)arg;
@@ -161,7 +163,7 @@ int my_alarm_ind (
    const pnet_alarm_argument_t * p_alarm_arg,
    uint16_t data_len,
    uint16_t data_usi,
-   uint8_t * p_data)
+   const uint8_t * p_data)
 {
    TEST_TRACE ("Callback on alarm\n");
    return 0;
@@ -171,7 +173,7 @@ int my_alarm_cnf (
    pnet_t * net,
    void * arg,
    uint32_t arep,
-   pnet_pnio_status_t * p_pnio_status)
+   const pnet_pnio_status_t * p_pnio_status)
 {
    TEST_TRACE ("Callback on alarm confirmation\n");
    return 0;
@@ -199,8 +201,8 @@ int my_state_ind (
       ret = pnet_input_set_data_and_iops (
          net,
          TEST_API_IDENT,
-         TEST_SLOT_DAP_IDENT,
-         TEST_SUBMOD_DAP_IDENT,
+         PNET_SLOT_DAP_IDENT,
+         PNET_SUBSLOT_DAP_IDENT,
          NULL,
          0,
          PNET_IOXS_GOOD);
@@ -208,8 +210,8 @@ int my_state_ind (
       ret = pnet_input_set_data_and_iops (
          net,
          TEST_API_IDENT,
-         TEST_SLOT_DAP_IDENT,
-         TEST_SUBMOD_DAP_INTERFACE_1_IDENT,
+         PNET_SLOT_DAP_IDENT,
+         PNET_SUBSLOT_DAP_INTERFACE_1_IDENT,
          NULL,
          0,
          PNET_IOXS_GOOD);
@@ -217,8 +219,8 @@ int my_state_ind (
       ret = pnet_input_set_data_and_iops (
          net,
          TEST_API_IDENT,
-         TEST_SLOT_DAP_IDENT,
-         TEST_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT,
+         PNET_SLOT_DAP_IDENT,
+         PNET_SUBSLOT_DAP_INTERFACE_1_PORT_0_IDENT,
          NULL,
          0,
          PNET_IOXS_GOOD);
@@ -414,30 +416,30 @@ void PnetIntegrationTestBase::callcounter_reset()
 
 void PnetIntegrationTestBase::available_modules_and_submodules_init()
 {
-   appdata.available_module_types[0] = TEST_MOD_DAP_IDENT;
+   appdata.available_module_types[0] = PNET_MOD_DAP_IDENT;
    appdata.available_module_types[1] = TEST_MOD_8_8_IDENT;
    appdata.available_module_types[2] = TEST_MOD_8_0_IDENT;
 
    appdata.available_submodule_types[0].module_ident_number =
-      TEST_MOD_DAP_IDENT;
+      PNET_MOD_DAP_IDENT;
    appdata.available_submodule_types[0].submodule_ident_number =
-      TEST_SUBMOD_DAP_IDENT;
+      PNET_SUBMOD_DAP_IDENT;
    appdata.available_submodule_types[0].direction = PNET_DIR_NO_IO;
    appdata.available_submodule_types[0].input_length = 0;
    appdata.available_submodule_types[0].output_length = 0;
 
    appdata.available_submodule_types[1].module_ident_number =
-      TEST_MOD_DAP_IDENT;
+      PNET_MOD_DAP_IDENT;
    appdata.available_submodule_types[1].submodule_ident_number =
-      TEST_SUBMOD_DAP_INTERFACE_1_IDENT;
+      PNET_SUBMOD_DAP_INTERFACE_1_IDENT;
    appdata.available_submodule_types[1].direction = PNET_DIR_NO_IO;
    appdata.available_submodule_types[1].input_length = 0;
    appdata.available_submodule_types[1].output_length = 0;
 
    appdata.available_submodule_types[2].module_ident_number =
-      TEST_MOD_DAP_IDENT;
+      PNET_MOD_DAP_IDENT;
    appdata.available_submodule_types[2].submodule_ident_number =
-      TEST_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT;
+      PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT;
    appdata.available_submodule_types[2].direction = PNET_DIR_NO_IO;
    appdata.available_submodule_types[2].input_length = 0;
    appdata.available_submodule_types[2].output_length = 0;
@@ -488,18 +490,19 @@ void PnetIntegrationTestBase::cfg_init()
    pnet_default_cfg.oem_device_id.device_id_lo = 0xef;
 
    strcpy (pnet_default_cfg.station_name, "");
-   strcpy (pnet_default_cfg.device_vendor, "rt-labs");
    strcpy (pnet_default_cfg.manufacturer_specific_string, "PNET demo");
    strcpy (pnet_default_cfg.product_name, "PNET unit tests");
 
-   strcpy (pnet_default_cfg.lldp_cfg.port_id, "port-001");
-   pnet_default_cfg.lldp_cfg.ttl = 20; /* seconds */
-   pnet_default_cfg.lldp_cfg.rtclass_2_status = 0;
-   pnet_default_cfg.lldp_cfg.rtclass_3_status = 0;
-   pnet_default_cfg.lldp_cfg.cap_aneg = 3; /* Supported (0x01) + enabled (0x02)
-                                            */
-   pnet_default_cfg.lldp_cfg.cap_phy = 0x8000;  /* Unknown (0x8000) */
-   pnet_default_cfg.lldp_cfg.mau_type = 0x0000; /* Unknown */
+   strcpy (pnet_default_cfg.lldp_cfg.ports[0].port_id, "port-001");
+   pnet_default_cfg.lldp_cfg.ports[0].rtclass_2_status = 0;
+   pnet_default_cfg.lldp_cfg.ports[0].rtclass_3_status = 0;
+   pnet_default_cfg.lldp_cfg.ports[0].cap_aneg = PNET_LLDP_AUTONEG_SUPPORTED |
+                                                 PNET_LLDP_AUTONEG_ENABLED;
+   pnet_default_cfg.lldp_cfg.ports[0].cap_phy =
+      PNET_LLDP_AUTONEG_CAP_100BaseTX_HALF_DUPLEX |
+      PNET_LLDP_AUTONEG_CAP_100BaseTX_FULL_DUPLEX;
+   pnet_default_cfg.lldp_cfg.ports[0].mau_type =
+      PNET_MAU_COPPER_100BaseTX_FULL_DUPLEX;
 
    /* Timing */
    pnet_default_cfg.min_device_interval = 32; /* Corresponds to 1 ms */
@@ -507,6 +510,12 @@ void PnetIntegrationTestBase::cfg_init()
    /* Network configuration */
    pnet_default_cfg.send_hello = 1; /* Send HELLO */
    pnet_default_cfg.dhcp_enable = 0;
+   pnet_default_cfg.eth_addr.addr[0] = 0x12;
+   pnet_default_cfg.eth_addr.addr[1] = 0x34;
+   pnet_default_cfg.eth_addr.addr[2] = 0x00;
+   pnet_default_cfg.eth_addr.addr[3] = 0x78;
+   pnet_default_cfg.eth_addr.addr[4] = 0x90;
+   pnet_default_cfg.eth_addr.addr[5] = 0xab;
    pnet_default_cfg.ip_addr.a = 192;
    pnet_default_cfg.ip_addr.b = 168;
    pnet_default_cfg.ip_addr.c = 1;
@@ -587,10 +596,10 @@ void PnetIntegrationTestBase::run_stack (int us)
 void PnetIntegrationTestBase::send_data (uint8_t * data_packet, uint16_t len)
 {
    int ret;
-   os_buf_t * p_buf;
+   pnal_buf_t * p_buf;
    uint8_t * p_ctr;
 
-   p_buf = os_buf_alloc (PF_FRAME_BUFFER_SIZE);
+   p_buf = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE);
    if (p_buf == NULL)
    {
       TEST_TRACE ("(%d): Out of memory in send_data\n", __LINE__);
@@ -611,7 +620,7 @@ void PnetIntegrationTestBase::send_data (uint8_t * data_packet, uint16_t len)
       if (ret == 0)
       {
          TEST_TRACE ("(%d): Unhandled p_buf\n", __LINE__);
-         os_buf_free (p_buf);
+         pnal_buf_free (p_buf);
       }
    }
 }

@@ -107,7 +107,7 @@ void pf_put_uint32 (
  */
 void pf_put_ar_result (
    bool is_big_endian,
-   pf_ar_t * p_ar,
+   const pf_ar_t * p_ar,
    uint16_t res_len,
    uint8_t * p_bytes,
    uint16_t * p_pos);
@@ -123,7 +123,7 @@ void pf_put_ar_result (
  */
 void pf_put_iocr_result (
    bool is_big_endian,
-   pf_ar_t * p_ar,
+   const pf_ar_t * p_ar,
    uint16_t ix,
    uint16_t res_len,
    uint8_t * p_bytes,
@@ -139,7 +139,7 @@ void pf_put_iocr_result (
  */
 void pf_put_alarm_cr_result (
    bool is_big_endian,
-   pf_ar_t * p_ar,
+   const pf_ar_t * p_ar,
    uint16_t res_len,
    uint8_t * p_bytes,
    uint16_t * p_pos);
@@ -154,7 +154,7 @@ void pf_put_alarm_cr_result (
  */
 void pf_put_ar_diff (
    bool is_big_endian,
-   pf_ar_t * p_ar,
+   const pf_ar_t * p_ar,
    uint16_t res_len,
    uint8_t * p_bytes,
    uint16_t * p_pos);
@@ -169,7 +169,7 @@ void pf_put_ar_diff (
  */
 void pf_put_ar_rpc_result (
    bool is_big_endian,
-   pf_ar_t * p_ar,
+   const pf_ar_t * p_ar,
    uint16_t res_len,
    uint8_t * p_bytes,
    uint16_t * p_pos);
@@ -184,7 +184,7 @@ void pf_put_ar_rpc_result (
  */
 void pf_put_ar_server_result (
    bool is_big_endian,
-   pf_ar_t * p_ar,
+   const pf_ar_t * p_ar,
    uint16_t res_len,
    uint8_t * p_bytes,
    uint16_t * p_pos);
@@ -200,7 +200,7 @@ void pf_put_ar_server_result (
  */
 void pf_put_ar_vendor_result (
    bool is_big_endian,
-   pf_ar_t * p_ar,
+   const pf_ar_t * p_ar,
    uint16_t ix,
    uint16_t res_len,
    uint8_t * p_bytes,
@@ -219,7 +219,7 @@ void pf_put_ar_vendor_result (
 void pf_put_ar_data (
    pnet_t * net,
    bool is_big_endian,
-   pf_ar_t * p_ar,
+   const pf_ar_t * p_ar,
    uint32_t api_id,
    uint16_t res_len,
    uint8_t * p_bytes,
@@ -237,7 +237,7 @@ void pf_put_ar_data (
 void pf_put_control (
    bool is_big_endian,
    pf_block_type_values_t block_type,
-   pf_control_block_t * p_res,
+   const pf_control_block_t * p_res,
    uint16_t res_len,
    uint8_t * p_bytes,
    uint16_t * p_pos);
@@ -255,7 +255,7 @@ void pf_put_control (
  */
 void pf_put_read_result (
    bool is_big_endian,
-   pf_iod_read_result_t * p_res,
+   const pf_iod_read_result_t * p_res,
    uint16_t res_len,
    uint8_t * p_bytes,
    uint16_t * p_pos,
@@ -276,7 +276,7 @@ void pf_put_record_data_read (
    bool is_big_endian,
    pf_block_type_values_t block_type,
    uint16_t raw_length,
-   uint8_t * p_raw_data,
+   const uint8_t * p_raw_data,
    uint16_t res_len,
    uint8_t * p_bytes,
    uint16_t * p_pos);
@@ -306,7 +306,7 @@ void pf_put_im_0_filter_data (
  */
 void pf_put_im_0 (
    bool is_big_endian,
-   pnet_im_0_t * p_im_0,
+   const pnet_im_0_t * p_im_0,
    uint16_t res_len,
    uint8_t * p_bytes,
    uint16_t * p_pos);
@@ -321,7 +321,7 @@ void pf_put_im_0 (
  */
 void pf_put_im_1 (
    bool is_big_endian,
-   pnet_im_1_t * p_im_1,
+   const pnet_im_1_t * p_im_1,
    uint16_t res_len,
    uint8_t * p_bytes,
    uint16_t * p_pos);
@@ -336,7 +336,7 @@ void pf_put_im_1 (
  */
 void pf_put_im_2 (
    bool is_big_endian,
-   pnet_im_2_t * p_im_2,
+   const pnet_im_2_t * p_im_2,
    uint16_t res_len,
    uint8_t * p_bytes,
    uint16_t * p_pos);
@@ -351,7 +351,7 @@ void pf_put_im_2 (
  */
 void pf_put_im_3 (
    bool is_big_endian,
-   pnet_im_3_t * p_im_3,
+   const pnet_im_3_t * p_im_3,
    uint16_t res_len,
    uint8_t * p_bytes,
    uint16_t * p_pos);
@@ -396,7 +396,7 @@ void pf_put_ident_data (
    pf_block_type_values_t block_type,
    pf_dev_filter_level_t filter_level,
    pf_dev_filter_level_t stop_level,
-   pf_ar_t * p_ar,
+   const pf_ar_t * p_ar,
    uint32_t api_id,
    uint16_t slot_nbr,
    uint16_t subslot_nbr,
@@ -447,7 +447,7 @@ void pf_put_dce_rpc_header (
  */
 void pf_put_write_result (
    bool is_big_endian,
-   pf_iod_write_result_t * p_res,
+   const pf_iod_write_result_t * p_res,
    uint16_t res_len,
    uint8_t * p_bytes,
    uint16_t * p_pos);
@@ -462,7 +462,7 @@ void pf_put_write_result (
  */
 void pf_put_log_book_data (
    bool is_big_endian,
-   pf_log_book_t * p_log_book,
+   const pf_log_book_t * p_log_book,
    uint16_t res_len,
    uint8_t * p_bytes,
    uint16_t * p_pos);
@@ -477,29 +477,29 @@ void pf_put_log_book_data (
  */
 void pf_put_alarm_fixed (
    bool is_big_endian,
-   pf_alarm_fixed_t * p_alarm_fixed,
+   const pf_alarm_fixed_t * p_alarm_fixed,
    uint16_t res_len,
    uint8_t * p_bytes,
    uint16_t * p_pos);
 
 /**
- * Insert an AlarmNotification block into a buffer.
+ * Insert an AlarmNotification or AlarmAck block into a buffer.
  *
- * This function inserts a complete AlarmNotification-PDU.
+ * This function can insert a complete AlarmNotification-PDU.
  *
  * @param is_big_endian    In:    Endianness of the destination buffer.
  * @param bh_type          In:    The block type.
- * @param p_alarm_data     In:    Slot, subslot etc. Mandatory.
+ * @param p_alarm_data     In:    Alarm type, slot, subslot etc. Mandatory.
  * @param maint_status     In:    The Maintenance status used for specific USI
- * values (inserted only if not zero).
+ *                                values (inserted only if not zero).
  * @param payload_usi      In:    The payload USI (may be 0). Only used for
- * block type = alarm notify.
+ *                                block type = alarm notify.
  * @param payload_len      In:    Payload length. Must be > 0 if payload_usi >
- * 0.
+ *                                0.
  * @param p_payload        In:    Mandatory if payload_len > 0. May be NULL.
- * Custom data or pf_diag_item_t.
+ *                                Custom data or pf_diag_item_t.
  * @param p_status         In:    PNIO status. Only used for block type = alarm
- * ack.
+ *                                ack.
  * @param res_len          In:    Size of destination buffer.
  * @param p_bytes          Out:   Destination buffer.
  * @param p_pos            InOut: Position in destination buffer.
@@ -507,11 +507,11 @@ void pf_put_alarm_fixed (
 void pf_put_alarm_block (
    bool is_big_endian,
    pf_block_type_values_t bh_type,
-   pf_alarm_data_t * p_alarm_data,
+   const pf_alarm_data_t * p_alarm_data,
    uint32_t maint_status,
    uint16_t payload_usi,
    uint16_t payload_len,
-   uint8_t * p_payload,
+   const uint8_t * p_payload,
    const pnet_pnio_status_t * p_status,
    uint16_t res_len,
    uint8_t * p_bytes,
@@ -535,9 +535,9 @@ void pf_put_substitute_data (
    bool is_big_endian,
    uint16_t sub_mode,
    uint8_t iocs_len,
-   uint8_t * p_iocs,
+   const uint8_t * p_iocs,
    uint8_t iops_len,
-   uint8_t * p_iops,
+   const uint8_t * p_iops,
    uint16_t data_len,
    const uint8_t * p_data,
    uint16_t res_len,
@@ -570,11 +570,11 @@ void pf_put_output_data (
    bool is_big_endian,
    bool sub_active,
    uint8_t iocs_len,
-   uint8_t * p_iocs,
+   const uint8_t * p_iocs,
    uint8_t iops_len,
-   uint8_t * p_iops,
+   const uint8_t * p_iops,
    uint16_t data_len,
-   uint8_t * p_data,
+   const uint8_t * p_data,
    uint16_t sub_mode,
    const uint8_t * p_sub_data,
    uint16_t res_len,
@@ -601,11 +601,11 @@ void pf_put_output_data (
 void pf_put_input_data (
    bool is_big_endian,
    uint8_t iocs_len,
-   uint8_t * p_iocs,
+   const uint8_t * p_iocs,
    uint8_t iops_len,
-   uint8_t * p_iops,
+   const uint8_t * p_iops,
    uint16_t data_len,
-   uint8_t * p_data,
+   const uint8_t * p_data,
    uint16_t res_len,
    uint8_t * p_bytes,
    uint16_t * p_pos);
@@ -618,38 +618,47 @@ void pf_put_input_data (
  *
  * filter_level specifies what is being filtered:
  *    If p_ar is != NULL then only select items that belong to this AR.
- *    PF_DEV_FILTER_LEVEL_SUBSLOT   : Only include sub-slot specified by api_id,
- * slot_nbr and subslot_nbr. PF_DEV_FILTER_LEVEL_SLOT      : Include all
- * sub-slots of slot specified by api_id and slot_nbr. PF_DEV_FILTER_LEVEL_API
- * : Include all slots and sub-slots of API id specified by api_id.
- *    PF_DEV_FILTER_LEVEL_DEVICE    : No filtering on API id, slot_nbr or
- * subslot_nbr, i.e.: All diags
+ *    PF_DEV_FILTER_LEVEL_SUBSLOT:  Only include sub-slot specified by api_id,
+ *                                  slot_nbr and subslot_nbr.
+ *    PF_DEV_FILTER_LEVEL_SLOT:     Include all sub-slots of slot specified by
+ *                                  api_id and slot_nbr.
+ *    PF_DEV_FILTER_LEVEL_API:      Include all slots and sub-slots of API id
+ *                                  specified by api_id.
+ *    PF_DEV_FILTER_LEVEL_DEVICE:   No filtering on API id, slot_nbr or
+ *                                  subslot_nbr (i.e. all diags)
  *
  * diag_filter is an ortogonal filter that selects only specific diag types:
- *    PF_DIAG_FILTER_FAULT_STD      : Only STD, severity FAULT.
- *    PF_DIAG_FILTER_FAULT_ALL      : Both USI and STD, severity FAULT.
- *    PF_DIAG_FILTER_ALL            : All types of diag, both USI and STD.
- *    PF_DIAG_FILTER_M_REQ          : Only Maintenance required.
- *    PF_DIAG_FILTER_M_DEM          : Only Maintenance demanded.
+ *    PF_DIAG_FILTER_FAULT_STD:  Only STD, severity FAULT.
+ *    PF_DIAG_FILTER_FAULT_ALL:  Both USI and STD, severity FAULT.
+ *    PF_DIAG_FILTER_ALL:        All types of diag, both USI and STD.
+ *    PF_DIAG_FILTER_M_REQ:      Only Maintenance required.
+ *    PF_DIAG_FILTER_M_DEM:      Only Maintenance demanded.
+ *
+ * Implemented using:
+ *    pf_put_diag_device()
+ *       pf_put_diag_api()            for all APIs
+ *          pf_put_diag_slot()        for all slots
+ *             pf_put_diag_list()     for all subslots
+ *                pf_put_diag_item()  Does actual insertion
  *
  * @param net              InOut: The p-net stack instance
- * @param is_big_endian    In:   Endianness of the destination buffer.
- * @param filter_level     In:   The filter level.
- * @param diag_filter      In:   The diag type filter.
- * @param p_ar             In:   If != NULL then filter by AR.
- * @param api_id           In:   The API id.
- * @param slot_nbr         In:   The slot number.
- * @param subslot_nbr      In:   The sub-slot number.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
- * @param p_pos            InOut:Position in destination buffer.
+ * @param is_big_endian    In:    Endianness of the destination buffer.
+ * @param filter_level     In:    The filter level.
+ * @param diag_filter      In:    The diag type filter.
+ * @param p_ar             In:    If != NULL then filter by AR.
+ * @param api_id           In:    The API id to filter by.
+ * @param slot_nbr         In:    The slot number to filter by.
+ * @param subslot_nbr      In:    The sub-slot number to filter by.
+ * @param res_len          In:    Size of destination buffer.
+ * @param p_bytes          Out:   Destination buffer.
+ * @param p_pos            InOut: Position in destination buffer.
  */
 void pf_put_diag_data (
    pnet_t * net,
    bool is_big_endian,
    pf_dev_filter_level_t filter_level,
    pf_diag_filter_level_t diag_filter,
-   pf_ar_t * p_ar, /* If != NULL only include those belonging to p_ar */
+   const pf_ar_t * p_ar, /* If != NULL only include those belonging to p_ar */
    uint32_t api_id,
    uint16_t slot_nbr,
    uint16_t subslot_nbr,
@@ -660,16 +669,17 @@ void pf_put_diag_data (
 /**
  * Insert pd port data check block into a buffer.
  * @param check_peer       In:    check_peer data. ToDo - add support for misc
- * port data checks
+ *                                port data checks
  * @param is_big_endian    In:    Endianness of the destination buffer.
+ * @param p_res            In:    Read result
  * @param res_len          In:    Size of destination buffer.
  * @param p_bytes          Out:   Destination buffer.
  * @param p_pos            InOut: Position in destination buffer.
  */
 void pf_put_pdport_data_check (
-   pf_check_peer_t * check_peer,
+   const pf_check_peer_t * check_peer,
    bool is_big_endian,
-   pf_iod_read_result_t * p_res,
+   const pf_iod_read_result_t * p_res,
    uint16_t res_len,
    uint8_t * p_bytes,
    uint16_t * p_pos);
@@ -677,16 +687,17 @@ void pf_put_pdport_data_check (
 /**
  * Insert pd port data adjust block into a buffer.
  * @param p_peer_to_peer_boundary   In:    Peer to peer boundary ToDo - Add
- * support for other adjust properties
+ *                                         support for other adjust properties
  * @param is_big_endian             In:    Endianness of the destination buffer.
+ * @param p_res                     In:    Read result
  * @param res_len                   In:    Size of destination buffer.
  * @param p_bytes                   Out:   Destination buffer.
  * @param p_pos                     InOut: Position in destination buffer.
  */
 void pf_put_pdport_data_adj (
-   pf_adjust_peer_to_peer_boundary_t * p_peer_to_peer_boundary,
+   const pf_adjust_peer_to_peer_boundary_t * p_peer_to_peer_boundary,
    bool is_big_endian,
-   pf_iod_read_result_t * p_res,
+   const pf_iod_read_result_t * p_res,
    uint16_t res_len,
    uint8_t * p_bytes,
    uint16_t * p_pos);
@@ -695,6 +706,9 @@ void pf_put_pdport_data_adj (
  * Insert pd port real data block into a buffer.
  * @param net              InOut: The p-net stack instance
  * @param is_big_endian    In:    Endianness of the destination buffer.
+ * @param loc_port_num     In:    Local port number.
+ *                                Valid range: 1 .. PNET_MAX_PORT
+ * @param p_res            In:    Read result
  * @param res_len          In:    Size of destination buffer.
  * @param p_bytes          Out:   Destination buffer.
  * @param p_pos            InOut: Position in destination buffer.
@@ -702,7 +716,8 @@ void pf_put_pdport_data_adj (
 void pf_put_pdport_data_real (
    pnet_t * net,
    bool is_big_endian,
-   pf_iod_read_result_t * p_res,
+   int loc_port_num,
+   const pf_iod_read_result_t * p_res,
    uint16_t res_len,
    uint8_t * p_bytes,
    uint16_t * p_pos);
@@ -711,15 +726,16 @@ void pf_put_pdport_data_real (
  * Insert pd port statistics block into a buffer.
  * @param p_if_stats       In:    Interface statistics
  * @param is_big_endian    In:    Endianness of the destination buffer.
+ * @param p_res            In:    Read result
  * @param res_len          In:    Size of destination buffer.
  * @param p_bytes          Out:   Destination buffer.
  * @param p_pos            InOut: Position in destination buffer.
  */
 
 void pf_put_pdport_statistics (
-   pnet_interface_stats_t * p_if_stats,
+   const pnet_interface_stats_t * p_if_stats,
    bool is_big_endian,
-   pf_iod_read_result_t * p_res,
+   const pf_iod_read_result_t * p_res,
    uint16_t res_len,
    uint8_t * p_bytes,
    uint16_t * p_pos);
@@ -728,6 +744,7 @@ void pf_put_pdport_statistics (
  * Insert dp interface real data block into a buffer.
  * @param net              InOut: The p-net stack instance
  * @param is_big_endian    In:    Endianness of the destination buffer.
+ * @param p_res            In:    Read result
  * @param res_len          In:    Size of destination buffer.
  * @param p_bytes          Out:   Destination buffer.
  * @param p_pos            InOut: Position in destination buffer.
@@ -735,7 +752,7 @@ void pf_put_pdport_statistics (
 void pf_put_pdinterface_data_real (
    pnet_t * net,
    bool is_big_endian,
-   pf_iod_read_result_t * p_res,
+   const pf_iod_read_result_t * p_res,
    uint16_t res_len,
    uint8_t * p_bytes,
    uint16_t * p_pos);
@@ -744,6 +761,9 @@ void pf_put_pdinterface_data_real (
  * Insert dp real data block into a buffer.
  * @param net              InOut: The p-net stack instance
  * @param is_big_endian    In:    Endianness of the destination buffer.
+ * @param loc_port_num     In:    Local port number.
+ *                                Valid range: 1 .. PNET_MAX_PORT
+ * @param p_res            In:    Read result
  * @param res_len          In:    Size of destination buffer.
  * @param p_bytes          Out:   Destination buffer.
  * @param p_pos            InOut: Position in destination buffer.
@@ -751,7 +771,26 @@ void pf_put_pdinterface_data_real (
 void pf_put_pd_real_data (
    pnet_t * net,
    bool is_big_endian,
-   pf_iod_read_result_t * p_res,
+   int loc_port_num,
+   const pf_iod_read_result_t * p_res,
+   uint16_t res_len,
+   uint8_t * p_bytes,
+   uint16_t * p_pos);
+
+/**
+ * Insert epm lookup response data block into a buffer.
+ * @param net              InOut: The p-net stack instance
+ * @param is_big_endian    In:    Endianness of the destination buffer.
+ * @param p_lookup_rsp     In:    Epm lookup response including entry and
+ *                                protocol tower configuration.
+ * @param res_len          In:    Size of destination buffer.
+ * @param p_bytes          Out:   Destination buffer.
+ * @param p_pos            InOut: Position in destination buffer.
+ */
+void pf_put_lookup_response_data (
+   pnet_t * net,
+   bool is_big_endian,
+   const pf_rpc_lookup_rsp_t * p_lookup_rsp,
    uint16_t res_len,
    uint8_t * p_bytes,
    uint16_t * p_pos);

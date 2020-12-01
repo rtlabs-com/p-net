@@ -34,8 +34,8 @@ void pf_cpm_init (pnet_t * net);
  * Allocate the buffer mutex on first call.
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:   The AR instance.
- * @param crep             In:   The IOCR index.
+ * @param p_ar             InOut: The AR instance.
+ * @param crep             In:    The IOCR index.
  * @return  0  if the CPM instance was created.
  *          -1 if an error occurred.
  */
@@ -49,8 +49,8 @@ int pf_cpm_create (pnet_t * net, pf_ar_t * p_ar, uint32_t crep);
  * The buffer mutex is destroyed on the last call.
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:   The AR instance.
- * @param crep             In:   The IOCR index.
+ * @param p_ar             InOut: The AR instance.
+ * @param crep             In:    The IOCR index.
  * @return  0  if the CPM instance was closed.
  *          -1 if an error occurred.
  */
@@ -62,8 +62,8 @@ int pf_cpm_close_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep);
  * Registers a frame handler for incoming Ethernet frames.
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:   The AR instance.
- * @param crep             In:   The IOCR index.
+ * @param p_ar             InOut: The AR instance.
+ * @param crep             In:    The IOCR index.
  * @return  0  if the CPM instance could be activated.
  *          -1 if an error occurred.
  */
@@ -123,6 +123,7 @@ int pf_cpm_get_data_and_iops (
    uint8_t * p_iops,
    uint8_t * p_iops_len);
 
+/* Not yet used */
 /**
  * Handle new UDP layer frames.
  *
@@ -134,7 +135,7 @@ int pf_cpm_get_data_and_iops (
  * @return  0     If the frame was NOT handled by this function.
  *          1     If the frame was handled and the buffer freed.
  */
-int pf_cpm_udp_c_data_ind (uint16_t frame_id, os_buf_t * p_buf);
+int pf_cpm_udp_c_data_ind (uint16_t frame_id, pnal_buf_t * p_buf);
 
 /**
  * Get the data status of the CPM connection.
@@ -142,14 +143,14 @@ int pf_cpm_udp_c_data_ind (uint16_t frame_id, os_buf_t * p_buf);
  * @param p_data_status    Out:  The CPM data status.
  * @return
  */
-int pf_cpm_get_data_status (pf_cpm_t * p_cpm, uint8_t * p_data_status);
+int pf_cpm_get_data_status (const pf_cpm_t * p_cpm, uint8_t * p_data_status);
 
 /**
  * Show information about a CPM instance.
- * @param net              InOut: The p-net stack instance
+ * @param net              In:    The p-net stack instance
  * @param p_cpm            In:   The CPM instance.
  */
-void pf_cpm_show (pnet_t * net, pf_cpm_t * p_cpm);
+void pf_cpm_show (const pnet_t * net, const pf_cpm_t * p_cpm);
 
 /************ Internal functions, made available for unit testing ************/
 

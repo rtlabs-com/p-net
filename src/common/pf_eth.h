@@ -38,7 +38,7 @@ int pf_eth_init (pnet_t * net);
  * @param buf              In:    Buffer with data to be sent
  * @return  The number of bytes sent, or -1 if an error occurred.
  */
-int pf_eth_send (pnet_t * net, os_eth_handle_t * handle, os_buf_t * buf);
+int pf_eth_send (pnet_t * net, pnal_eth_handle_t * handle, pnal_buf_t * buf);
 
 /**
  * Add a frame_id entry to the frame id filter map.
@@ -77,11 +77,11 @@ void pf_eth_frame_id_map_remove (pnet_t * net, uint16_t frame_id);
  * prototype os_raw_frame_handler_t
  *
  * @param arg              InOut: User argument, will be converted to pnet_t
- * @param p_buf            In:   The Ethernet frame.
+ * @param p_buf            In:    The Ethernet frame. Might be freed.
  * @return  0  If the frame was NOT handled by this function.
  *          1  If the frame was handled and the buffer freed.
  */
-int pf_eth_recv (void * arg, os_buf_t * p_buf);
+int pf_eth_recv (void * arg, pnal_buf_t * p_buf);
 
 #ifdef __cplusplus
 }

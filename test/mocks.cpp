@@ -22,10 +22,12 @@ uint8_t pnet_log_level;
 
 os_mutex_t * mock_mutex;
 mock_os_data_t mock_os_data;
+mock_lldp_data_t mock_lldp_data;
 
 void mock_clear (void)
 {
    memset (&mock_os_data, 0, sizeof (mock_os_data));
+   memset (&mock_lldp_data, 0, sizeof (mock_lldp_data));
 }
 
 void mock_init (void)
@@ -39,33 +41,33 @@ uint32_t mock_os_get_current_time_us (void)
    return mock_os_data.current_time_us;
 }
 
-os_eth_handle_t * mock_os_eth_init (
+pnal_eth_handle_t * mock_pnal_eth_init (
    const char * if_name,
-   os_eth_callback_t * callback,
+   pnal_eth_callback_t * callback,
    void * arg)
 {
-   os_eth_handle_t * handle;
+   pnal_eth_handle_t * handle;
 
-   handle = (os_eth_handle_t *)calloc (1, sizeof (os_eth_handle_t));
+   handle = (pnal_eth_handle_t *)calloc (1, sizeof (pnal_eth_handle_t));
 
    return handle;
 }
 
-int mock_os_get_ip_suite (
+int mock_pnal_get_ip_suite (
    const char * interface_name,
-   os_ipaddr_t * p_ipaddr,
-   os_ipaddr_t * p_netmask,
-   os_ipaddr_t * p_gw,
+   pnal_ipaddr_t * p_ipaddr,
+   pnal_ipaddr_t * p_netmask,
+   pnal_ipaddr_t * p_gw,
    const char ** p_device_name)
 {
    return 0;
 }
 
-int mock_os_set_ip_suite (
+int mock_pnal_set_ip_suite (
    const char * interface_name,
-   os_ipaddr_t * p_ipaddr,
-   os_ipaddr_t * p_netmask,
-   os_ipaddr_t * p_gw,
+   const pnal_ipaddr_t * p_ipaddr,
+   const pnal_ipaddr_t * p_netmask,
+   const pnal_ipaddr_t * p_gw,
    const char * hostname,
    bool permanent)
 {
@@ -73,7 +75,7 @@ int mock_os_set_ip_suite (
    return 0;
 }
 
-int mock_os_eth_send (os_eth_handle_t * handle, os_buf_t * p_buf)
+int mock_pnal_eth_send (pnal_eth_handle_t * handle, pnal_buf_t * p_buf)
 {
    memcpy (mock_os_data.eth_send_copy, p_buf->payload, p_buf->len);
    mock_os_data.eth_send_len = p_buf->len;
@@ -82,16 +84,16 @@ int mock_os_eth_send (os_eth_handle_t * handle, os_buf_t * p_buf)
    return p_buf->len;
 }
 
-int mock_os_udp_open (os_ipaddr_t addr, os_ipport_t port)
+int mock_pnal_udp_open (pnal_ipaddr_t addr, pnal_ipport_t port)
 {
    int ret = 2;
    return ret;
 }
 
-int mock_os_udp_sendto (
+int mock_pnal_udp_sendto (
    uint32_t id,
-   os_ipaddr_t dst_addr,
-   os_ipport_t dst_port,
+   pnal_ipaddr_t dst_addr,
+   pnal_ipport_t dst_port,
    const uint8_t * data,
    int size)
 {
@@ -101,7 +103,7 @@ int mock_os_udp_sendto (
    return size;
 }
 
-void mock_set_os_udp_recvfrom_buffer (uint8_t * p_src, uint16_t len)
+void mock_set_pnal_udp_recvfrom_buffer (uint8_t * p_src, uint16_t len)
 {
    os_mutex_lock (mock_mutex);
 
@@ -112,10 +114,10 @@ void mock_set_os_udp_recvfrom_buffer (uint8_t * p_src, uint16_t len)
    os_mutex_unlock (mock_mutex);
 }
 
-int mock_os_udp_recvfrom (
+int mock_pnal_udp_recvfrom (
    uint32_t id,
-   os_ipaddr_t * p_dst_addr,
-   os_ipport_t * p_dst_port,
+   pnal_ipaddr_t * p_dst_addr,
+   pnal_ipport_t * p_dst_port,
    uint8_t * data,
    int size)
 {
@@ -135,15 +137,15 @@ int mock_os_udp_recvfrom (
    return len;
 }
 
-void mock_os_udp_close (uint32_t id)
+void mock_pnal_udp_close (uint32_t id)
 {
 }
 
-int mock_os_save_file (
+int mock_pnal_save_file (
    const char * fullpath,
-   void * object_1,
+   const void * object_1,
    size_t size_1,
-   void * object_2,
+   const void * object_2,
    size_t size_2)
 {
    int pos = 0;
@@ -173,7 +175,7 @@ int mock_os_save_file (
    return 0;
 }
 
-void mock_os_clear_file (const char * fullpath)
+void mock_pnal_clear_file (const char * fullpath)
 {
    if (strcmp (fullpath, mock_os_data.file_fullpath) == 0)
    {
@@ -182,7 +184,7 @@ void mock_os_clear_file (const char * fullpath)
    }
 }
 
-int mock_os_load_file (
+int mock_pnal_load_file (
    const char * fullpath,
    void * object_1,
    size_t size_1,
@@ -241,4 +243,42 @@ void mock_pf_generate_uuid (
    p_uuid->data4[5] = 0x06;
    p_uuid->data4[6] = 0x07;
    p_uuid->data4[7] = 0x08;
+}
+
+void mock_pf_lldp_get_management_address (
+   pnet_t * net,
+   pf_lldp_management_address_t * p_man_address)
+{
+   *p_man_address = mock_lldp_data.management_address;
+}
+
+int mock_pf_lldp_get_peer_management_address (
+   pnet_t * net,
+   int loc_port_num,
+   pf_lldp_management_address_t * p_man_address)
+{
+   *p_man_address = mock_lldp_data.peer_management_address;
+   return mock_lldp_data.error;
+}
+
+void mock_pf_lldp_get_link_status (
+   pnet_t * net,
+   int loc_port_num,
+   pf_lldp_link_status_t * p_link_status)
+{
+   *p_link_status = mock_lldp_data.link_status;
+}
+
+int mock_pf_lldp_get_peer_link_status (
+   pnet_t * net,
+   int loc_port_num,
+   pf_lldp_link_status_t * p_link_status)
+{
+   *p_link_status = mock_lldp_data.peer_link_status;
+   return mock_lldp_data.error;
+}
+
+int mock_pnal_snmp_init (pnet_t * pnet)
+{
+   return 0;
 }

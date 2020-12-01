@@ -44,6 +44,7 @@
 #endif
 
 #include "pf_includes.h"
+#include "pf_cmrpc_epm.h"
 #include "pf_block_reader.h"
 #include "pf_block_writer.h"
 
@@ -54,6 +55,18 @@
 
 static const char * rpc_sync_name = "rpc";
 static const pf_uuid_t implicit_ar = {0, 0, 0, {0, 0, 0, 0, 0, 0, 0, 0}};
+
+static const pf_uuid_t uuid_epmap_interface = {
+   0xE1AF8308,
+   0x5D1F,
+   0x11C9,
+   {0x91, 0xA4, 0x08, 0x00, 0x2B, 0x14, 0xA0, 0xFA}};
+
+static const pf_uuid_t uuid_io_device_interface = {
+   0xDEA00001,
+   0x6C97,
+   0x11D1,
+   {0x82, 0x71, 0x00, 0xA0, 0x24, 0x42, 0xDF, 0x7D}};
 
 /**************** Diagnostic strings *****************************************/
 
@@ -446,7 +459,7 @@ static int pf_session_allocate (pnet_t * net, pf_session_info_t ** pp_sess)
    pf_session_info_t * p_sess = NULL;
    pnet_ethaddr_t mac_address;
 
-   pf_cmina_get_macaddr (net, &mac_address);
+   pf_cmina_get_device_macaddr (net, &mac_address);
 
    os_mutex_lock (net->p_cmrpc_rpc_mutex);
    while ((ix < NELEMENTS (net->cmrpc_session_info)) &&
@@ -494,7 +507,7 @@ static int pf_session_allocate (pnet_t * net, pf_session_info_t ** pp_sess)
  * Close the corresponding UDP socket if necessary.
  *
  * @param net              InOut: The p-net stack instance
- * @param p_sess           In:    The session instance.
+ * @param p_sess           InOut: The session instance.
  */
 static void pf_session_release (pnet_t * net, pf_session_info_t * p_sess)
 {
@@ -544,7 +557,7 @@ static void pf_session_release (pnet_t * net, pf_session_info_t * p_sess)
  */
 static int pf_session_locate_by_uuid (
    pnet_t * net,
-   pf_uuid_t * p_uuid,
+   const pf_uuid_t * p_uuid,
    pf_session_info_t ** pp_sess)
 {
    int ret = -1;
@@ -583,7 +596,7 @@ static int pf_session_locate_by_uuid (
  */
 static int pf_session_locate_by_ar (
    pnet_t * net,
-   pf_ar_t * p_ar,
+   const pf_ar_t * p_ar,
    pf_session_info_t ** pp_sess)
 {
    int ret = -1;
@@ -648,7 +661,7 @@ static int pf_ar_allocate (pnet_t * net, pf_ar_t ** pp_ar)
 /**
  * @internal
  * Free the AR.
- * @param p_ar             In:   The AR instance.
+ * @param p_ar             InOut: The AR instance.
  */
 static void pf_ar_release (pf_ar_t * p_ar)
 {
@@ -678,14 +691,14 @@ static void pf_ar_release (pf_ar_t * p_ar)
  * @internal
  * Find an AR by its UUID. The AR must be in a "used" state (not POWER_ON).
  * @param net              InOut: The p-net stack instance
- * @param p_uuid           In:  The AR_UUID.
- * @param pp_ar            Out: The AR (or NULL).
+ * @param p_uuid           In:    The AR_UUID.
+ * @param pp_ar            Out:   The AR (or NULL).
  * @return  0  if AR is found and in "used" state.
  *         -1  if the AR_UUID is invalid.
  */
 static int pf_ar_find_by_uuid (
    pnet_t * net,
-   pf_uuid_t * p_uuid,
+   const pf_uuid_t * p_uuid,
    pf_ar_t ** pp_ar)
 {
    int ret = -1;
@@ -785,7 +798,7 @@ static int pf_cmrpc_send_once_from_buffer (
    const char * payload_description)
 {
    int ret = -1;
-   char ip_string[OS_INET_ADDRSTRLEN] = {0};
+   char ip_string[PNAL_INET_ADDRSTRLEN] = {0};
 
    if (size != 0)
    {
@@ -978,7 +991,7 @@ static void pf_cmrpc_send_with_timeout (
  */
 static int pf_check_block_header (
    uint16_t block_length,
-   pf_block_header_t * p_block_header,
+   const pf_block_header_t * p_block_header,
    uint8_t err_code_1,
    pnet_result_t * p_stat)
 {
@@ -1021,9 +1034,9 @@ static int pf_check_block_header (
 /**
  * @internal
  * Parse all blocks in a connect RPC request message.
- * @param p_sess           In:   The RPC session instance.
- * @param p_pos            InOut:Position in the input buffer.
- * @param p_ar             InOut:The AR instance.
+ * @param p_sess           InOut: The RPC session instance.
+ * @param p_pos            InOut: Position in the input buffer.
+ * @param p_ar             InOut: The AR instance.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -1436,17 +1449,17 @@ static int pf_cmrpc_rm_connect_interpret_ind (
 /**
  * @internal
  * Create all blocks in a connect response (inside an existing DCE/RPC buffer).
- * @param p_sess           In:   The RPC session instance.
- * @param ret              In:   result of the connect request.
- * @param p_ar             In:   The AR instance.
- * @param res_size         In:   Size of the response buffer.
- * @param p_res            InOut:Response buffer.
- * @param p_res_pos        InOut:Position in the response buffer.
+ * @param p_sess           InOut: The RPC session instance.
+ * @param ret              In:    result of the connect request.
+ * @param p_ar             In:    The AR instance.
+ * @param res_size         In:    Size of the response buffer.
+ * @param p_res            InOut: Response buffer.
+ * @param p_res_pos        InOut: Position in the response buffer.
  */
 static void pf_cmrpc_rm_connect_rsp (
    pf_session_info_t * p_sess,
    int ret,
-   pf_ar_t * p_ar,
+   const pf_ar_t * p_ar,
    uint16_t res_size,
    uint8_t * p_res,
    uint16_t * p_res_pos)
@@ -1655,6 +1668,8 @@ static int pf_cmrpc_rm_connect_ind (
    int ret = -1;
    pf_ar_t * p_ar = NULL;
    pf_ar_t * p_ar_2 = NULL; /* When looking for duplicate */
+   int loc_port_num = PNET_PORT_1;
+   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
    if (p_sess->rpc_result.pnio_status.error_code != 0)
    {
@@ -1745,8 +1760,8 @@ static int pf_cmrpc_rm_connect_ind (
    }
    else
    {
-      net->port[0].adjust.active = false;
-      net->port[0].check.active = false;
+      p_port_data->pdport.adjust.active = false;
+      p_port_data->pdport.check.active = false;
       pf_lldp_tx_restart (net, true);
    }
 
@@ -1880,14 +1895,14 @@ static int pf_cmrpc_rm_release_interpret_req (
  * @internal
  * Create all blocks in a release RPC response (inside an existing DCE/RPC
  * buffer).
- * @param p_sess           In:   The RPC session instance.
- * @param p_release_io     In:   The release control block.
- * @param res_size         In:   The size of the response buffer.
- * @param p_res            Out:  The response buffer. Already filled with
- * DCE/RPC header.
- * @param p_res_pos        InOut:Position within the response buffer.
- * @param p_status_pos     Out:  Position of the status within the response
- * buffer.
+ * @param p_sess           InOut: The RPC session instance.
+ * @param p_release_io     InOut: The release control block.
+ * @param res_size         In:    The size of the response buffer.
+ * @param p_res            Out:   The response buffer. Already filled with
+ *                                DCE/RPC header.
+ * @param p_res_pos        InOut: Position within the response buffer.
+ * @param p_status_pos     Out:   Position of the status within the response
+ *                                buffer.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -1990,7 +2005,7 @@ static void pf_cmrpc_rm_release_rsp (
  * @param req_pos          In:    Position in the request buffer.
  * @param res_size         In:    The size of the response buffer.
  * @param p_res            Out:   The response buffer. Already filled with
- * DCE/RPC header.
+ *                                DCE/RPC header.
  * @param p_res_pos        InOut: Position within the response buffer.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
@@ -2210,7 +2225,7 @@ static int pf_cmrpc_rm_dcontrol_interpret_req (
  * buffer).
  * @param p_sess           InOut: The RPC session instance.
  * @param ret              In:    Result of the release operation.
- * @param p_control_io     In:    The DControl control block.
+ * @param p_control_io     InOut: The DControl control block.
  * @param res_size         In:    The size of the response buffer.
  * @param p_res            Out:   The response buffer.
  * @param p_pos            InOut: Position within the response buffer.
@@ -2318,6 +2333,7 @@ static void pf_cmrpc_rm_dcontrol_rsp (
  *
  * @param net              InOut: The p-net stack instance
  * @param p_sess           InOut: The RPC session instance.
+ * @param p_rpc            In:    The RPC header.
  * @param req_pos          In:    Position in the request buffer.
  * @param res_size         In:    The size of the response buffer.
  * @param p_res            Out:   The response buffer.
@@ -2328,7 +2344,7 @@ static void pf_cmrpc_rm_dcontrol_rsp (
 static int pf_cmrpc_rm_dcontrol_ind (
    pnet_t * net,
    pf_session_info_t * p_sess,
-   pf_rpc_header_t * p_rpc,
+   const pf_rpc_header_t * p_rpc,
    uint16_t req_pos,
    uint16_t res_size,
    uint8_t * p_res,
@@ -2409,9 +2425,9 @@ static int pf_cmrpc_rm_dcontrol_ind (
 /**
  * @internal
  * Parse all blocks in a IODRead RPC request message.
- * @param p_sess           In:   The RPC session instance.
- * @param req_pos          In:   Position in the request buffer.
- * @param p_read_request   In:   The IODRead request block.
+ * @param p_sess           InOut: The RPC session instance.
+ * @param req_pos          In:    Position in the request buffer.
+ * @param p_read_request   Out:   The IODRead request block.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -2516,8 +2532,9 @@ static int pf_cmrpc_rm_read_interpret_ind (
  *
  * @param net              InOut: The p-net stack instance
  * @param p_sess           InOut: The session instance.
- * @param opnum            In:    The RPC operation number.
- * PF_RPC_DEV_OPNUM_READ or PF_RPC_DEV_OPNUM_READ_IMPLICIT.
+ * @param opnum            In:    The RPC operation number. Should be
+ *                                PF_RPC_DEV_OPNUM_READ or
+ *                                PF_RPC_DEV_OPNUM_READ_IMPLICIT.
  * @param req_pos          In:    Position in the request buffer.
  * @param res_size         In:    The size of the response buffer.
  * @param p_res            Out:   The response buffer.
@@ -2642,6 +2659,7 @@ static int pf_cmrpc_rm_read_ind (
 
          start_pos = *p_res_pos; /* Start of blocks - save for last */
 
+         /* Do actual reading */
          if (
             pf_cmrdr_rm_read_ind (
                net,
@@ -2708,11 +2726,68 @@ static int pf_cmrpc_rm_read_ind (
 
 /**
  * @internal
+ * Take a DCE RPC EPM  LOOKUP request and create a response.
+ * No callbacks or updates of configuration is triggered
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param p_sess           InOut: The session instance.
+ * @param p_rpc_req        In:    RPC Request
+ * @param req_pos          In:    Position in the request buffer.
+ * @param res_size         In:    The size of the response buffer.
+ * @param p_res            Out:   The response buffer.
+ * @param p_res_pos        InOut: Position within the response buffer.
+ * @return  0  if operation succeeded.
+ *          -1 if an error occurred.
+ */
+static int pf_cmrpc_lookup_ind (
+   pnet_t * net,
+   pf_session_info_t * p_sess,
+   const pf_rpc_header_t * p_rpc_req,
+   uint16_t req_pos,
+   uint16_t res_size,
+   uint8_t * p_res,
+   uint16_t * p_res_pos)
+{
+   int ret = -1;
+   pf_rpc_lookup_req_t lookup_request;
+   uint16_t p_pos = req_pos;
+
+   memset (&lookup_request, 0, sizeof (lookup_request));
+
+   if (p_sess->rpc_result.pnio_status.error_code != 0)
+   {
+      LOG_ERROR (PF_RPC_LOG, "CMRPC(%d): RPC request has error\n", __LINE__);
+      pf_set_error (
+         &p_sess->rpc_result,
+         PNET_ERROR_CODE_READ,
+         PNET_ERROR_DECODE_PNIO,
+         PNET_ERROR_CODE_1_CMRPC,
+         PNET_ERROR_CODE_2_CMRPC_STATE_CONFLICT);
+   }
+   else
+   {
+      pf_get_epm_lookup_request (&p_sess->get_info, &p_pos, &lookup_request);
+      lookup_request.udpPort = p_sess->port;
+      ret = pf_cmrpc_lookup_request (
+         net,
+         p_rpc_req,
+         &lookup_request,
+         &p_sess->rpc_result,
+         res_size,
+         p_res,
+         p_res_pos);
+   }
+
+   return ret;
+}
+
+/**
+ * @internal
  * Parse one block in a IODWrite RPC request message.
- * @param p_get_info       In:   Parser data for the input buffer.
- * @param p_write_request  Out:  The IODWrite request block.
- * @param p_pos            InOut:Position in the input buffer.
- * @param p_stat           Out:  Detailed error information.
+ * @param p_get_info       InOut: Parser data for the input buffer.
+ * @param p_write_request  Out:   The IODWrite request block.
+ * @param p_pos            InOut: Position in the input buffer.
+ * @param p_stat           Out:   Detailed error information.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -2780,7 +2855,7 @@ static int pf_cmrpc_rm_write_interpret_ind (
 static int pf_cmrpc_perform_one_write (
    pnet_t * net,
    pf_session_info_t * p_sess,
-   pf_iod_write_request_t * p_write_request,
+   const pf_iod_write_request_t * p_write_request,
    pf_iod_write_result_t * p_write_result,
    pnet_result_t * p_stat,
    uint16_t * p_req_pos)
@@ -3170,13 +3245,13 @@ static int pf_cmrpc_rm_write_ind (
  * Take a DCE RPC request and create a DCE RPC response.
  * @param net              InOut: The p-net stack instance
  * @param p_sess           InOut: The session instance. Will be released on
- * error.
- * @param req_pos          In:   Position in the input buffer.
- * @param p_rpc            In:   The RPC header.
- * @param res_size         In:   The size of the response buffer.
- * @param p_res            Out:  The response buffer. Already filled with a
- * DCE/RPC header.
- * @param p_res_pos        InOut:Position in the response buffer.
+ *                                error.
+ * @param req_pos          In:    Position in the input buffer.
+ * @param p_rpc            In:    The RPC header.
+ * @param res_size         In:    The size of the response buffer.
+ * @param p_res            Out:   The response buffer. Already filled with a
+ *                                 DCE/RPC header.
+ * @param p_res_pos        InOut: Position in the response buffer.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -3184,7 +3259,7 @@ static int pf_cmrpc_rpc_request (
    pnet_t * net,
    pf_session_info_t * p_sess,
    uint16_t req_pos,
-   pf_rpc_header_t * p_rpc,
+   const pf_rpc_header_t * p_rpc,
    uint16_t res_size,
    uint8_t * p_res,
    uint16_t * p_res_pos)
@@ -3536,9 +3611,9 @@ int pf_cmrpc_rm_ccontrol_req (pnet_t * net, pf_ar_t * p_ar)
 /**
  * @internal
  * Parse all blocks in a CControl RPC response message.
- * @param p_sess           In:   The session instance.
- * @param req_pos          In:   The position in the input buffer.
- * @param p_control_io     Out:  The CControl control block.
+ * @param p_sess           InOut: The session instance.
+ * @param req_pos          In:    The position in the input buffer.
+ * @param p_control_io     Out:   The CControl control block.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -3667,9 +3742,9 @@ static int pf_cmrpc_rm_ccontrol_interpret_cnf (
  * * \a pnet_ccontrol_cnf()
  *
  * @param net              InOut: The p-net stack instance
- * @param p_sess           In:   The session instance. This is the outgoing
- * CControl session.
- * @param req_pos          In:   Position in the input buffer.
+ * @param p_sess           InOut: The session instance. This is the outgoing
+ *                                CControl session.
+ * @param req_pos          In:    Position in the input buffer.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -3748,9 +3823,9 @@ static int pf_cmrpc_rm_ccontrol_cnf (
  * @internal
  * Handle one incoming DCE RPC response type message.
  * @param net              InOut: The p-net stack instance.
- * @param p_sess           In:   The session instance.
- * @param req_pos          In:   The response length.
- * @param p_rpc            In:   The RPC header.
+ * @param p_sess           InOut: The session instance.
+ * @param req_pos          In:    The response length.
+ * @param p_rpc            In:    The RPC header.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -3758,7 +3833,7 @@ static int pf_cmrpc_rpc_response (
    pnet_t * net,
    pf_session_info_t * p_sess,
    uint16_t req_pos,
-   pf_rpc_header_t * p_rpc)
+   const pf_rpc_header_t * p_rpc)
 {
    int ret = -1;
 
@@ -3788,24 +3863,26 @@ static int pf_cmrpc_rpc_response (
  * \a pf_cmrpc_rpc_request().
  *
  * @param net              InOut: The p-net stack instance
- * @param ip_addr          In:   The IP address of the originator
- * @param port             In:   The port of the originator.
- * @param p_req            In:   The input message buffer.
- * @param req_len          In:   The input message length.
- * @param p_res            Out:  The output buffer.
- * @param p_res_len        In:   The size of the output UDP buffer.
- *                         Out:  The length of the output message. If set to 0
- * the caller will typically not send any UDP response.
- * @param p_is_release     Out:  Set to true if operation is a release op. The
- * caller will then typically close and reopen the corresponding UDP socket.
- * @return  0  if operation succeeded.           (Typically not used by the
- * caller) -1 if an error occurred.
+ * @param ip_addr          In:    The IP address of the originator
+ * @param port             In:    The port of the originator.
+ * @param p_req            In:    The input message buffer.
+ * @param req_len          In:    The input message length.
+ * @param p_res            Out:   The output buffer.
+ * @param p_res_len        In:    The size of the output UDP buffer.
+ *                         Out:   The length of the output message. If set to 0
+ *                                the caller will typically not send any UDP
+ *                                response.
+ * @param p_is_release     Out:   Set to true if operation is a release op. The
+ *                                caller will then typically close and reopen
+ *                                the corresponding UDP socket.
+ * @return  0  if operation succeeded.  (Typically not used by the caller)
+ *          -1 if an error occurred.
  */
 static int pf_cmrpc_dce_packet (
    pnet_t * net,
    uint32_t ip_addr,
    uint16_t port,
-   uint8_t * p_req,
+   uint8_t * p_req, /* Not const as it is used in a pf_get_info_t */
    uint32_t req_len,
    uint8_t * p_res,
    uint16_t * p_res_len,
@@ -3864,7 +3941,8 @@ static int pf_cmrpc_dce_packet (
          /* Incoming message is a request or response contained entirely in one
           * frame */
          p_sess->in_buf_len = 0;
-
+         p_sess->ip_addr = ip_addr;
+         p_sess->port = port;
          p_sess->activity_uuid = rpc_req.activity_uuid;
          p_sess->is_big_endian = p_sess->get_info.is_big_endian;
          p_sess->in_fragment_nbr = 0;
@@ -3882,7 +3960,8 @@ static int pf_cmrpc_dce_packet (
             /* This is the first incoming fragment. */
             /* Initialize the session */
             p_sess->in_buf_len = 0;
-
+            p_sess->ip_addr = ip_addr;
+            p_sess->port = port;
             p_sess->activity_uuid = rpc_req.activity_uuid;
 
             p_sess->is_big_endian = p_sess->get_info.is_big_endian;
@@ -3970,7 +4049,7 @@ static int pf_cmrpc_dce_packet (
          p_sess->resend_timeout = 0;
       }
 
-      /* Decide to do with incoming message */
+      /* Decide what to do with incoming message */
       /* Enter here _even_if_ an error is already detected because we may need
        * to generate an error response. */
       if (
@@ -4031,19 +4110,34 @@ static int pf_cmrpc_dce_packet (
             p_sess->out_buf_send_len = 0;
             p_sess->out_fragment_nbr = 0;
 
-            pf_get_ndr_data (&p_sess->get_info, &req_pos, &p_sess->ndr_data);
-            p_sess->get_info.is_big_endian = true; /* From now on all is
-                                                      big-endian */
-
-            /* Our response is limited by the size of the requesters response
-             * buffer */
-            max_rsp_len = req_pos + p_sess->ndr_data.args_maximum;
-            if (max_rsp_len > sizeof (p_sess->out_buffer))
+            /*Check what type of request this is EPMv4 or PNIO?*/
+            if (
+               memcmp (
+                  &rpc_req.interface_uuid,
+                  &uuid_epmap_interface,
+                  sizeof (rpc_req.object_uuid)) != 0)
             {
-               /* Our response is also limited by what our buffer can
-                * accommodate */
+               pf_get_ndr_data (&p_sess->get_info, &req_pos, &p_sess->ndr_data);
+               /* From now on all is big-endian */
+               p_sess->get_info.is_big_endian = true;
+
+               /* Our response is limited by the size of the requesters response
+                * buffer */
+               max_rsp_len = req_pos + p_sess->ndr_data.args_maximum;
+               if (max_rsp_len > sizeof (p_sess->out_buffer))
+               {
+                  /* Our response is also limited by what our buffer can
+                   * accommodate */
+                  max_rsp_len = sizeof (p_sess->out_buffer);
+               }
+            }
+            else
+            {
+               /* EPM requirement is little endian*/
+               p_sess->get_info.is_big_endian = false;
                max_rsp_len = sizeof (p_sess->out_buffer);
             }
+
             /* Prepare the response */
             rpc_res = rpc_req;
             rpc_res.packet_type = PF_RPC_PT_RESPONSE;
@@ -4073,15 +4167,50 @@ static int pf_cmrpc_dce_packet (
                *p_is_release = true;               /* Tell caller */
             }
 
-            /* Handle the RPC request */
-            ret = pf_cmrpc_rpc_request (
-               net,
-               p_sess,
-               req_pos,
-               &rpc_req,
-               max_rsp_len,
-               p_sess->out_buffer,
-               &p_sess->out_buf_len);
+            if (
+               memcmp (
+                  &rpc_req.interface_uuid,
+                  &uuid_io_device_interface,
+                  sizeof (rpc_req.object_uuid)) == 0)
+            {
+               /* Handle PNIO requests */
+               ret = pf_cmrpc_rpc_request (
+                  net,
+                  p_sess,
+                  req_pos,
+                  &rpc_req,
+                  max_rsp_len,
+                  p_sess->out_buffer,
+                  &p_sess->out_buf_len);
+            }
+            else if (
+               memcmp (
+                  &rpc_req.interface_uuid,
+                  &uuid_epmap_interface,
+                  sizeof (rpc_req.object_uuid)) == 0)
+            {
+               rpc_res.fragment_nmb = 0;
+               rpc_res.flags.idempotent = false;
+
+               /* Handle Endpoint Map request */
+               ret = pf_cmrpc_lookup_ind (
+                  net,
+                  p_sess,
+                  &rpc_req,
+                  req_pos,
+                  max_rsp_len,
+                  p_sess->out_buffer,
+                  &p_sess->out_buf_len);
+               *p_is_release = true;
+            }
+            else
+            {
+               LOG_ERROR (
+                  PF_RPC_LOG,
+                  "CMRPC(%d): Unhandled Object or Interface UUID!\n",
+                  __LINE__);
+               /*ToDo: Report NULL endpoint with proper error code*/
+            }
 
             if (p_sess->out_buf_len < PF_MAX_UDP_PAYLOAD_SIZE)
             {
@@ -4456,7 +4585,7 @@ void pf_cmrpc_periodic (pnet_t * net)
    uint16_t dcerpc_resp_len = 0;
    uint16_t ix;
    bool is_release = false;
-   char ip_string[OS_INET_ADDRSTRLEN] = {0};
+   char ip_string[PNAL_INET_ADDRSTRLEN] = {0};
 
    /* TODO Use a common function to avoid code duplication, remove some
     * arguments for pf_cmrpc_dce_packet() */

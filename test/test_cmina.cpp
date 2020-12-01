@@ -76,43 +76,43 @@ TEST_F (CminaUnitTest, CmdevCheckIsStationNameValid)
 
 TEST_F (CminaUnitTest, CmdevCheckIsNetmaskValid)
 {
-   EXPECT_TRUE (pf_cmina_is_netmask_valid (OS_MAKEU32 (0, 0, 0, 0)));
-   EXPECT_TRUE (pf_cmina_is_netmask_valid (OS_MAKEU32 (255, 255, 255, 255)));
-   EXPECT_TRUE (pf_cmina_is_netmask_valid (OS_MAKEU32 (255, 255, 255, 254)));
-   EXPECT_TRUE (pf_cmina_is_netmask_valid (OS_MAKEU32 (255, 255, 255, 252)));
-   EXPECT_TRUE (pf_cmina_is_netmask_valid (OS_MAKEU32 (255, 255, 255, 248)));
-   EXPECT_TRUE (pf_cmina_is_netmask_valid (OS_MAKEU32 (255, 255, 255, 240)));
-   EXPECT_TRUE (pf_cmina_is_netmask_valid (OS_MAKEU32 (255, 255, 255, 224)));
-   EXPECT_TRUE (pf_cmina_is_netmask_valid (OS_MAKEU32 (255, 255, 255, 192)));
-   EXPECT_TRUE (pf_cmina_is_netmask_valid (OS_MAKEU32 (255, 255, 255, 128)));
-   EXPECT_TRUE (pf_cmina_is_netmask_valid (OS_MAKEU32 (255, 255, 255, 000)));
-   EXPECT_TRUE (pf_cmina_is_netmask_valid (OS_MAKEU32 (255, 255, 254, 000)));
-   EXPECT_TRUE (pf_cmina_is_netmask_valid (OS_MAKEU32 (255, 255, 252, 000)));
-   EXPECT_TRUE (pf_cmina_is_netmask_valid (OS_MAKEU32 (255, 255, 248, 000)));
-   EXPECT_TRUE (pf_cmina_is_netmask_valid (OS_MAKEU32 (255, 255, 240, 000)));
-   EXPECT_TRUE (pf_cmina_is_netmask_valid (OS_MAKEU32 (255, 255, 224, 000)));
-   EXPECT_TRUE (pf_cmina_is_netmask_valid (OS_MAKEU32 (255, 255, 192, 000)));
-   EXPECT_TRUE (pf_cmina_is_netmask_valid (OS_MAKEU32 (255, 255, 128, 000)));
-   EXPECT_TRUE (pf_cmina_is_netmask_valid (OS_MAKEU32 (255, 255, 000, 000)));
-   EXPECT_TRUE (pf_cmina_is_netmask_valid (OS_MAKEU32 (255, 254, 000, 000)));
-   EXPECT_TRUE (pf_cmina_is_netmask_valid (OS_MAKEU32 (255, 252, 000, 000)));
-   EXPECT_TRUE (pf_cmina_is_netmask_valid (OS_MAKEU32 (255, 248, 000, 000)));
-   EXPECT_TRUE (pf_cmina_is_netmask_valid (OS_MAKEU32 (255, 240, 000, 000)));
-   EXPECT_TRUE (pf_cmina_is_netmask_valid (OS_MAKEU32 (255, 224, 000, 000)));
-   EXPECT_TRUE (pf_cmina_is_netmask_valid (OS_MAKEU32 (255, 192, 000, 000)));
-   EXPECT_TRUE (pf_cmina_is_netmask_valid (OS_MAKEU32 (255, 128, 000, 000)));
-   EXPECT_TRUE (pf_cmina_is_netmask_valid (OS_MAKEU32 (255, 000, 000, 000)));
-   EXPECT_TRUE (pf_cmina_is_netmask_valid (OS_MAKEU32 (254, 000, 000, 000)));
-   EXPECT_TRUE (pf_cmina_is_netmask_valid (OS_MAKEU32 (252, 000, 000, 000)));
-   EXPECT_TRUE (pf_cmina_is_netmask_valid (OS_MAKEU32 (248, 000, 000, 000)));
-   EXPECT_TRUE (pf_cmina_is_netmask_valid (OS_MAKEU32 (240, 000, 000, 000)));
-   EXPECT_TRUE (pf_cmina_is_netmask_valid (OS_MAKEU32 (224, 000, 000, 000)));
-   EXPECT_TRUE (pf_cmina_is_netmask_valid (OS_MAKEU32 (192, 000, 000, 000)));
-   EXPECT_TRUE (pf_cmina_is_netmask_valid (OS_MAKEU32 (128, 000, 000, 000)));
+   EXPECT_TRUE (pf_cmina_is_netmask_valid (PNAL_MAKEU32 (0, 0, 0, 0)));
+   EXPECT_TRUE (pf_cmina_is_netmask_valid (PNAL_MAKEU32 (255, 255, 255, 255)));
+   EXPECT_TRUE (pf_cmina_is_netmask_valid (PNAL_MAKEU32 (255, 255, 255, 254)));
+   EXPECT_TRUE (pf_cmina_is_netmask_valid (PNAL_MAKEU32 (255, 255, 255, 252)));
+   EXPECT_TRUE (pf_cmina_is_netmask_valid (PNAL_MAKEU32 (255, 255, 255, 248)));
+   EXPECT_TRUE (pf_cmina_is_netmask_valid (PNAL_MAKEU32 (255, 255, 255, 240)));
+   EXPECT_TRUE (pf_cmina_is_netmask_valid (PNAL_MAKEU32 (255, 255, 255, 224)));
+   EXPECT_TRUE (pf_cmina_is_netmask_valid (PNAL_MAKEU32 (255, 255, 255, 192)));
+   EXPECT_TRUE (pf_cmina_is_netmask_valid (PNAL_MAKEU32 (255, 255, 255, 128)));
+   EXPECT_TRUE (pf_cmina_is_netmask_valid (PNAL_MAKEU32 (255, 255, 255, 000)));
+   EXPECT_TRUE (pf_cmina_is_netmask_valid (PNAL_MAKEU32 (255, 255, 254, 000)));
+   EXPECT_TRUE (pf_cmina_is_netmask_valid (PNAL_MAKEU32 (255, 255, 252, 000)));
+   EXPECT_TRUE (pf_cmina_is_netmask_valid (PNAL_MAKEU32 (255, 255, 248, 000)));
+   EXPECT_TRUE (pf_cmina_is_netmask_valid (PNAL_MAKEU32 (255, 255, 240, 000)));
+   EXPECT_TRUE (pf_cmina_is_netmask_valid (PNAL_MAKEU32 (255, 255, 224, 000)));
+   EXPECT_TRUE (pf_cmina_is_netmask_valid (PNAL_MAKEU32 (255, 255, 192, 000)));
+   EXPECT_TRUE (pf_cmina_is_netmask_valid (PNAL_MAKEU32 (255, 255, 128, 000)));
+   EXPECT_TRUE (pf_cmina_is_netmask_valid (PNAL_MAKEU32 (255, 255, 000, 000)));
+   EXPECT_TRUE (pf_cmina_is_netmask_valid (PNAL_MAKEU32 (255, 254, 000, 000)));
+   EXPECT_TRUE (pf_cmina_is_netmask_valid (PNAL_MAKEU32 (255, 252, 000, 000)));
+   EXPECT_TRUE (pf_cmina_is_netmask_valid (PNAL_MAKEU32 (255, 248, 000, 000)));
+   EXPECT_TRUE (pf_cmina_is_netmask_valid (PNAL_MAKEU32 (255, 240, 000, 000)));
+   EXPECT_TRUE (pf_cmina_is_netmask_valid (PNAL_MAKEU32 (255, 224, 000, 000)));
+   EXPECT_TRUE (pf_cmina_is_netmask_valid (PNAL_MAKEU32 (255, 192, 000, 000)));
+   EXPECT_TRUE (pf_cmina_is_netmask_valid (PNAL_MAKEU32 (255, 128, 000, 000)));
+   EXPECT_TRUE (pf_cmina_is_netmask_valid (PNAL_MAKEU32 (255, 000, 000, 000)));
+   EXPECT_TRUE (pf_cmina_is_netmask_valid (PNAL_MAKEU32 (254, 000, 000, 000)));
+   EXPECT_TRUE (pf_cmina_is_netmask_valid (PNAL_MAKEU32 (252, 000, 000, 000)));
+   EXPECT_TRUE (pf_cmina_is_netmask_valid (PNAL_MAKEU32 (248, 000, 000, 000)));
+   EXPECT_TRUE (pf_cmina_is_netmask_valid (PNAL_MAKEU32 (240, 000, 000, 000)));
+   EXPECT_TRUE (pf_cmina_is_netmask_valid (PNAL_MAKEU32 (224, 000, 000, 000)));
+   EXPECT_TRUE (pf_cmina_is_netmask_valid (PNAL_MAKEU32 (192, 000, 000, 000)));
+   EXPECT_TRUE (pf_cmina_is_netmask_valid (PNAL_MAKEU32 (128, 000, 000, 000)));
 
-   EXPECT_FALSE (pf_cmina_is_netmask_valid (OS_MAKEU32 (255, 0, 255, 255)));
-   EXPECT_FALSE (pf_cmina_is_netmask_valid (OS_MAKEU32 (0, 255, 255, 255)));
-   EXPECT_FALSE (pf_cmina_is_netmask_valid (OS_MAKEU32 (255, 254, 255, 0)));
+   EXPECT_FALSE (pf_cmina_is_netmask_valid (PNAL_MAKEU32 (255, 0, 255, 255)));
+   EXPECT_FALSE (pf_cmina_is_netmask_valid (PNAL_MAKEU32 (0, 255, 255, 255)));
+   EXPECT_FALSE (pf_cmina_is_netmask_valid (PNAL_MAKEU32 (255, 254, 255, 0)));
 }
 
 TEST_F (CminaUnitTest, CmdevCheckIsIPaddressValid)
@@ -121,81 +121,81 @@ TEST_F (CminaUnitTest, CmdevCheckIsIPaddressValid)
       Special case: No IPsuite assigned in conjunction with
       SubnetMask and StandardGateway set to zero */
    EXPECT_TRUE (pf_cmina_is_ipaddress_valid (
-      OS_MAKEU32 (0, 0, 0, 0),
-      OS_MAKEU32 (0, 0, 0, 0)));
+      PNAL_MAKEU32 (0, 0, 0, 0),
+      PNAL_MAKEU32 (0, 0, 0, 0)));
 
    /* 0.0.0.0 /8 Invalid 0.0.0.0 up to 0.255.255.255
       Reserved according to IETF RFC 6890 */
    EXPECT_FALSE (pf_cmina_is_ipaddress_valid (
-      OS_MAKEU32 (255, 0, 0, 0),
-      OS_MAKEU32 (0, 255, 1, 1)));
+      PNAL_MAKEU32 (255, 0, 0, 0),
+      PNAL_MAKEU32 (0, 255, 1, 1)));
 
    /* 127.0.0.0 /8 Invalid 127.0.0.0 up to 127.255.255.255
       Reserved according to IETF RFC 6890 loopback address */
    EXPECT_FALSE (pf_cmina_is_ipaddress_valid (
-      OS_MAKEU32 (255, 0, 0, 0),
-      OS_MAKEU32 (127, 0, 0, 1)));
+      PNAL_MAKEU32 (255, 0, 0, 0),
+      PNAL_MAKEU32 (127, 0, 0, 1)));
 
    /* 224.0.0.0 /4 Invalid 224.0.0.0 up to 239.255.255.255
       Reserved according to IETF RFC 6890; IPv4 multicast address assignments */
    EXPECT_FALSE (pf_cmina_is_ipaddress_valid (
-      OS_MAKEU32 (0xF0, 0, 0, 0),
-      OS_MAKEU32 (224, 0, 0, 34)));
+      PNAL_MAKEU32 (0xF0, 0, 0, 0),
+      PNAL_MAKEU32 (224, 0, 0, 34)));
 
    /* 240.0.0.0 /4 Invalid 240.0.0.0 up to 255.255.255.255
       Reserved according to IETF RFC 6890; reserved for future addressing */
    EXPECT_FALSE (pf_cmina_is_ipaddress_valid (
-      OS_MAKEU32 (0xF0, 0, 0, 0),
-      OS_MAKEU32 (240, 0, 0, 34)));
+      PNAL_MAKEU32 (0xF0, 0, 0, 0),
+      PNAL_MAKEU32 (240, 0, 0, 34)));
 
    /*  Invalid — Subnet part of the IPAddress is “0” */
    EXPECT_FALSE (pf_cmina_is_ipaddress_valid (
-      OS_MAKEU32 (255, 255, 0, 0),
-      OS_MAKEU32 (0, 0, 1, 10)));
+      PNAL_MAKEU32 (255, 255, 0, 0),
+      PNAL_MAKEU32 (0, 0, 1, 10)));
 
    /* Invalid Host part of the IPAddress is a series of consecutive “1”
      (subnet broadcast address)
      IPAddress may be accepted but should be invalid.*/
    EXPECT_FALSE (pf_cmina_is_ipaddress_valid (
-      OS_MAKEU32 (255, 255, 0, 0),
-      OS_MAKEU32 (192, 168, 255, 255)));
+      PNAL_MAKEU32 (255, 255, 0, 0),
+      PNAL_MAKEU32 (192, 168, 255, 255)));
 
    /* Invalid — Host part of the IPAddress is a series of consecutive “0”
       (subnet address)
       IPAddress may be accepted but should be invalid. */
    EXPECT_FALSE (pf_cmina_is_ipaddress_valid (
-      OS_MAKEU32 (255, 255, 0, 0),
-      OS_MAKEU32 (192, 168, 0, 0)));
+      PNAL_MAKEU32 (255, 255, 0, 0),
+      PNAL_MAKEU32 (192, 168, 0, 0)));
 
    /* Other Mandatory — IP address assigned */
    EXPECT_TRUE (pf_cmina_is_ipaddress_valid (
-      OS_MAKEU32 (255, 255, 0, 0),
-      OS_MAKEU32 (192, 168, 1, 1)));
+      PNAL_MAKEU32 (255, 255, 0, 0),
+      PNAL_MAKEU32 (192, 168, 1, 1)));
 
    EXPECT_TRUE (pf_cmina_is_ipaddress_valid (
-      OS_MAKEU32 (255, 255, 255, 0),
-      OS_MAKEU32 (10, 10, 0, 35)));
+      PNAL_MAKEU32 (255, 255, 255, 0),
+      PNAL_MAKEU32 (10, 10, 0, 35)));
 }
 
 TEST_F (CminaUnitTest, CmdevCheckIsGatewayValid)
 {
    EXPECT_TRUE (pf_cmina_is_gateway_valid (
-      OS_MAKEU32 (192, 168, 1, 4),
-      OS_MAKEU32 (255, 255, 255, 0),
-      OS_MAKEU32 (192, 168, 1, 1)));
+      PNAL_MAKEU32 (192, 168, 1, 4),
+      PNAL_MAKEU32 (255, 255, 255, 0),
+      PNAL_MAKEU32 (192, 168, 1, 1)));
 
    EXPECT_TRUE (pf_cmina_is_gateway_valid (
-      OS_MAKEU32 (192, 168, 1, 4),
-      OS_MAKEU32 (255, 255, 255, 0),
-      OS_MAKEU32 (0, 0, 0, 0)));
+      PNAL_MAKEU32 (192, 168, 1, 4),
+      PNAL_MAKEU32 (255, 255, 255, 0),
+      PNAL_MAKEU32 (0, 0, 0, 0)));
 
    EXPECT_FALSE (pf_cmina_is_gateway_valid (
-      OS_MAKEU32 (192, 168, 1, 4),
-      OS_MAKEU32 (255, 255, 255, 0),
-      OS_MAKEU32 (192, 169, 1, 1)));
+      PNAL_MAKEU32 (192, 168, 1, 4),
+      PNAL_MAKEU32 (255, 255, 255, 0),
+      PNAL_MAKEU32 (192, 169, 1, 1)));
 
    EXPECT_FALSE (pf_cmina_is_gateway_valid (
-      OS_MAKEU32 (192, 168, 1, 4),
-      OS_MAKEU32 (255, 255, 255, 0),
-      OS_MAKEU32 (192, 168, 0, 1)));
+      PNAL_MAKEU32 (192, 168, 1, 4),
+      PNAL_MAKEU32 (255, 255, 255, 0),
+      PNAL_MAKEU32 (192, 168, 0, 1)));
 }

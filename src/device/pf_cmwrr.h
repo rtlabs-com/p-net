@@ -31,20 +31,20 @@ void pf_cmwrr_init (pnet_t * net);
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  */
-void pf_cmwrr_show (pnet_t * net, pf_ar_t * p_ar);
+void pf_cmwrr_show (const pnet_t * net, const pf_ar_t * p_ar);
 
 /**
  * Handle CMDEV events.
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:    The AR instance.
- * @param event            In:    The new CMDEV state. Use PNET_EVENT_..., not
- * PF_CMDEV_STATE_...
+ * @param p_ar             In:    The AR instance. Not used,
+ * @param event            In:    The new CMDEV state. Use PNET_EVENT_xxx, not
+ *                                PF_CMDEV_STATE_xxx
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
 int pf_cmwrr_cmdev_state_ind (
    pnet_t * net,
-   pf_ar_t * p_ar,
+   const pf_ar_t * p_ar,
    pnet_event_values_t event);
 
 /**
@@ -53,20 +53,20 @@ int pf_cmwrr_cmdev_state_ind (
  * Triggers the \a pnet_write_ind() user callback for some values.
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:   The AR instance.
- * @param p_write_request  In:   The write request block.
- * @param p_write_result   Out:  The write result block.
- * @param p_result         In:   The result codes.
- * @param p_req_buf        In:   The RPC request buffer.
- * @param data_length      In:   The length of the data to write.
- * @param p_req_pos        In:   Position in p_req_buf.
+ * @param p_ar             InOut: The AR instance.
+ * @param p_write_request  In:    The write request block.
+ * @param p_write_result   Out:   The write result block.
+ * @param p_result         Out:   The result codes.
+ * @param p_req_buf        In:    The RPC request buffer.
+ * @param data_length      In:    The length of the data to write.
+ * @param p_req_pos        In:    Position in p_req_buf.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
 int pf_cmwrr_rm_write_ind (
    pnet_t * net,
    pf_ar_t * p_ar,
-   pf_iod_write_request_t * p_write_request,
+   const pf_iod_write_request_t * p_write_request,
    pf_iod_write_result_t * p_write_result,
    pnet_result_t * p_result,
    uint8_t * p_req_buf,

@@ -70,6 +70,11 @@ static inline uint32_t atomic_fetch_sub (atomic_int * p, uint32_t v)
 #define PF_CCONTROL_TIMEOUT 2000
 #define PF_FRAG_TIMEOUT     2000
 
+/** One neighbour shall be checked for PDPortDataCheck
+ *  See Profinet 2.4 protocol, section 5.2.13.3
+ */
+#define PF_CHECK_PEERS_PER_PORT 1
+
 /*********************** RPC header ******************************************/
 
 /** Magic UUID values */
@@ -211,10 +216,149 @@ typedef enum pf_write_req_error_type_values
 
 typedef enum pf_write_req_ext_error_type_values
 {
-   PF_WRT_ERROR_PORTID_MISMATCH = 0x8000,
-   PF_WRT_ERROR_CHASSISID_MISMATCH = 0x8001,
+   PF_WRT_ERROR_PEER_STATIONNAME_MISMATCH = 0x8000,
+   PF_WRT_ERROR_PEER_PORTNAME_MISMATCH = 0x8001,
    PF_WRT_ERROR_NO_PEER_DETECTED = 0x8005
 } pf_write_req_ext_error_type_t;
+
+/*
+ * RPC and EPM implementation
+ * PN-AL-protocol (Mar20) Section 4.10.3
+ */
+
+#define PF_RPC_TOWER_REFERENTID  3
+#define PF_RPC_TOWER_FLOOR_COUNT 5
+
+#define PF_RPC_FLOOR_VERSION_EPMv4 3
+#define PF_RPC_FLOOR_VERSION_NPR   2
+#define PF_RPC_FLOOR_VERSION_PNIO  1
+#define PF_RPC_FLOOR_VERSION_MINOR 0
+
+#define PF_RPC_EPM_ANNOTATION_OFFSET 0
+#define PF_RPC_EPM_ANNOTATION_LENGTH 64
+#define PF_RPC_EPM_FLOOR_LENGTH      75
+
+typedef enum pf_rpc_protocol_type
+{
+   PF_RPC_PROTOCOL_DOD_UDP = 0x08,
+   PF_RPC_PROTOCOL_DOD_IP = 0x09,
+   PF_RPC_PROTOCOL_CONNECTIONLESS = 0x0a,
+   PF_RPC_PROTOCOL_UUID = 0x0d
+} pf_rpc_protocol_type_t;
+
+/* PN-AL-protocol (Mar20) Table 328 */
+typedef enum pf_rpc_inquiry_type
+{
+   PF_RPC_INQUIRY_READ_ALL_REGISTERED_INTERFACES = 0,        /*mandatory*/
+   PF_RPC_INQUIRY_READ_ALL_OBJECTS_FOR_ONE_INTERFACE = 1,    /*optional*/
+   PF_RPC_INQUIRY_READ_ALL_INTERFACES_INCLUDING_OBJECTS = 2, /*optional*/
+   PF_RPC_INQUIRY_READ_ONE_INTERFACE_WITH_ONE_OBJECT = 3     /*optional*/
+} pf_rpc_inquiry_type_t;
+
+/* PN-AL-protocol (Mar20) Table 329 */
+typedef enum pf_rpc_error_value
+{
+   PF_RPC_OK = 0,
+   PF_RPC_NOT_REGISTERED = 0x16c9a0d6, /* Endpoint not registered */
+} pf_rpc_error_value_t;
+
+typedef enum
+{
+   PF_EPM_TYPE_NONE = 0,
+   PF_EPM_TYPE_EPMV4,
+   PF_EPM_TYPE_PNIO
+} pf_rpc_epm_type_t;
+
+/* Described in DCP 1.1 Appendix A */
+typedef struct pf_rpc_uuid_type
+{
+   uint32_t time_low;
+   uint16_t time_mid;
+   uint16_t time_hi_and_version;
+   uint8_t clock_hi_and_reserved;
+   uint8_t clock_low;
+   uint8_t node[6];
+} pf_rpc_uuid_type_t;
+
+/* Used for definition of epm protocol tower floors 1 and 2. */
+typedef struct pf_floor_uuid_t
+{
+   uint8_t protocol_id;
+   pf_rpc_uuid_type_t uuid;
+   uint16_t version_major;
+   uint16_t version_minor;
+} pf_floor_uuid_t;
+
+typedef struct pf_floor_3_t
+{
+   uint8_t protocol_id;
+   uint16_t version_minor;
+} pf_floor_3_t;
+
+typedef struct pf_floor_4_t
+{
+   uint8_t protocol_id;
+   uint16_t port;
+} pf_floor_4_t;
+
+typedef struct pf_floor_5_t
+{
+   uint8_t protocol_id;
+   uint32_t ip_address;
+} pf_floor_5_t;
+
+typedef struct pf_rpc_tower
+{
+   pf_floor_uuid_t floor_1;
+   pf_floor_uuid_t floor_2;
+   pf_floor_3_t floor_3;
+   pf_floor_4_t floor_4;
+   pf_floor_5_t floor_5;
+   pnet_cfg_t * p_cfg; /* Used for generation of annotation string*/
+} pf_rpc_tower_t;
+
+typedef struct pf_rpc_entry
+{
+   pf_rpc_epm_type_t epm_type;
+   uint32_t max_count;
+   uint32_t offset;
+   uint32_t actual_count;
+   pf_rpc_uuid_type_t object_uuid;
+   pf_rpc_tower_t tower_entry;
+} pf_rpc_entry_t;
+
+typedef struct pf_rpc_handle
+{
+   uint32_t rpc_entry_handle;
+   pf_rpc_uuid_type_t handle_uuid;
+} pf_rpc_handle_t;
+
+/*
+ * See PN-AL-protocol (Mar20) Table 310 RPC substitutions
+ * for definitions of rpc lookup response
+ */
+typedef struct pf_rpc_lookup_rsp
+{
+   pf_rpc_handle_t rpc_handle;
+   uint32_t num_entry;
+   pf_rpc_entry_t rpc_entry;
+   uint32_t return_code;
+} pf_rpc_lookup_rsp_t;
+
+typedef struct pf_rpc_lookup_req
+{
+   uint32_t inquiry_type;
+   uint32_t object_id;
+   pf_uuid_t object_uuid;
+   uint32_t interface_id;
+   pf_uuid_t interface_uuid;
+   uint16_t interface_ver_major;
+   uint16_t interface_ver_minor;
+   uint32_t version_option;
+   pf_rpc_handle_t rpc_handle;
+   uint32_t max_entries;
+   uint16_t udpPort;
+} pf_rpc_lookup_req_t;
 
 /************************** Block header *************************************/
 
@@ -529,16 +673,16 @@ typedef struct pf_control_block
 typedef struct pf_ip_suite
 {
    /* Order is important!! */
-   os_ipaddr_t ip_addr;
-   os_ipaddr_t ip_mask;
-   os_ipaddr_t ip_gateway;
+   pnal_ipaddr_t ip_addr;
+   pnal_ipaddr_t ip_mask;
+   pnal_ipaddr_t ip_gateway;
 } pf_ip_suite_t;
 
 typedef struct pf_full_ip_suite
 {
    /* Order is important!! */
    pf_ip_suite_t ip_suite;
-   os_ipaddr_t dns_addr[4];
+   pnal_ipaddr_t dns_addr[4];
 } pf_full_ip_suite_t;
 
 /*
@@ -655,7 +799,7 @@ typedef struct pf_alarm_data
    uint16_t subslot_nbr;
    uint32_t module_ident;
    uint16_t submodule_ident;
-   pnet_alarm_spec_t alarm_specifier; /* Describes diagnosis alarms. */
+   pnet_alarm_spec_t alarm_specifier; /* Booleans for diagnosis alarms. */
    uint16_t sequence_number;
    /*
     * pf_alarm_data_t may be followed by alarm_payload:
@@ -761,7 +905,7 @@ typedef struct pf_scheduler_timeouts
 typedef int (*pf_eth_frame_handler_t) (
    pnet_t * net,
    uint16_t frame_id,
-   os_buf_t * p_buf,
+   pnal_buf_t * p_buf,
    uint16_t frame_id_pos,
    void * p_arg);
 
@@ -781,7 +925,13 @@ typedef struct pf_eth_frame_id_map
 typedef struct pf_cmina_dcp_ase
 {
    char station_name[PNET_STATION_NAME_MAX_LEN + 1]; /* Terminated */
-   char device_vendor[20 + 1];                       /* Terminated */
+
+   /*
+    * DCP DeviceVendorValue is set to configured product_name
+    * See PN-AL-protocol (Mar20) ch 4.3.1.4.26
+    * product_name is also known as DeviceType
+    */
+   char product_name[PNET_PRODUCT_NAME_MAX_LEN + 1]; /* Terminated */
    uint8_t device_role;        /* Only value "1" supported */
    uint16_t device_initiative; /* 1: Should send hello. 0: No sending of hello
                                 */
@@ -799,7 +949,7 @@ typedef struct pf_cmina_dcp_ase
    pnet_cfg_device_id_t device_id;
    pnet_cfg_device_id_t oem_device_id;
 
-   char port_name[14 + 1]; /* Terminated */
+   char port_name[14 + 1]; /* Terminated. Not used. */
 
    char manufacturer_specific_string[240 + 1];
    pnet_ethaddr_t mac_address;
@@ -1493,7 +1643,7 @@ typedef enum pf_apmr_state_values
 typedef struct pf_apmr_msg
 {
    uint16_t frame_id_pos;
-   os_buf_t * p_buf;
+   pnal_buf_t * p_buf;
 } pf_apmr_msg_t;
 
 /*
@@ -1508,7 +1658,7 @@ typedef struct pf_apmx
    pnet_ethaddr_t da; /* Destination MAC address (IO-controller) */
 
    uint16_t src_ref; /* Our ref */
-   uint16_t dst_ref; /* controller local_alarm_reference */
+   uint16_t dst_ref; /* Controller local_alarm_reference */
 
    pf_apms_state_values_t apms_state;
    pf_apmr_state_values_t apmr_state;
@@ -1526,7 +1676,7 @@ typedef struct pf_apmx
    uint16_t apmr_msg_nbr;
 
    /* Latest sent alarm */
-   os_buf_t * p_rta;
+   pnal_buf_t * p_rta;
 
    bool high_priority; /* True for high priority APMX. For printouts. */
    uint16_t vlan_prio; /* 5 or 6 */
@@ -1606,13 +1756,13 @@ typedef struct pf_session_info
    bool kill_session; /* On error or when done. This will kill the session at
                          the end of handling the incoming RPC frame. */
    int socket;
-   os_eth_handle_t * eth_handle;
+   pnal_eth_handle_t * eth_handle;
    struct pf_ar * p_ar; /* Parent AR */
    bool from_me;        /* True if the session originates from the device (i.e.
                            CControl requests and responses). */
    pf_uuid_t activity_uuid;
    uint32_t ip_addr;
-   os_ipport_t port; /* Source port on incoming message, destination port on
+   pnal_ipport_t port; /* Source port on incoming message, destination port on
                         outgoing message */
    uint32_t sequence_nmb_send; /* rm_ccontrol_req */
 
@@ -1819,7 +1969,7 @@ typedef struct pf_submod_state
 
 typedef enum pf_usi_values
 {
-   /* 0x0000..0x07ff    Manufacturer specific */
+   /* 0x0000..0x7fff    Manufacturer specific */
    PF_USI_CHANNEL_DIAGNOSIS = 0x8000,
    PF_USI_ALARM_MULTIPLE = 0x8001,
    PF_USI_EXTENDED_CHANNEL_DIAGNOSIS = 0x8002,
@@ -1848,11 +1998,11 @@ typedef enum pf_usi_values
  */
 typedef enum pf_diag_filter_level
 {
-   PF_DIAG_FILTER_FAULT_STD,
-   PF_DIAG_FILTER_FAULT_ALL,
-   PF_DIAG_FILTER_ALL,
-   PF_DIAG_FILTER_M_REQ,
-   PF_DIAG_FILTER_M_DEM
+   PF_DIAG_FILTER_FAULT_STD, /* Insert all non-manufacturer specific */
+   PF_DIAG_FILTER_FAULT_ALL, /* Manufacturer specific or fault */
+   PF_DIAG_FILTER_ALL,       /* Insert all diagnosis */
+   PF_DIAG_FILTER_M_REQ,     /* Manufacturer specific or maintenance required */
+   PF_DIAG_FILTER_M_DEM      /* Manufacturer specific or maintenance demanded */
 } pf_diag_filter_level_t;
 
 typedef struct pf_diag_std
@@ -1860,7 +2010,7 @@ typedef struct pf_diag_std
    uint32_t ext_ch_add_value;
    uint32_t qual_ch_qualifier;
    uint16_t ch_nbr;
-   uint16_t ch_properties;
+   uint16_t ch_properties; /* Appears, direction, channelgroup etc */
    uint16_t ch_error_type;
    uint16_t ext_ch_error_type;
 } pf_diag_std_t;
@@ -1886,7 +2036,7 @@ typedef struct pf_diag_item
 
    bool in_use;
    uint16_t usi;  /* pf_usi_values_t */
-   uint16_t next; /* Next in list */
+   uint16_t next; /* Next in list (array index) */
 } pf_diag_item_t;
 
 typedef struct pf_subslot
@@ -1909,6 +2059,8 @@ typedef struct pf_subslot
    /*
     * This is an index into device.diag_items[].
     * It points to the list of reported diag alarms for this specific sub-slot.
+    *
+    * Each subslot has its own list of diagnosis items.
     */
    uint16_t diag_list;
 } pf_subslot_t;
@@ -1952,6 +2104,9 @@ typedef struct pf_device
    /*
     * This is the pool of diag items.
     * It is used instead of dynamic memory to avoid fragmentation.
+    *
+    * Each subslot uses its own list of diag items, and stores the index to
+    * the head of its list.
     */
    os_mutex_t * diag_mutex; /* Protect the diag items */
    pf_diag_item_t diag_items[PNET_MAX_DIAG_ITEMS];
@@ -2050,6 +2205,19 @@ typedef struct pf_log_book_ts
    uint32_t nano_sec;
 } pf_log_book_ts_t;
 
+/*
+ * p-net stack specific log book entry detail values.
+ * Values are not defined by Profinet specification
+ * but device/stack specific.
+ * See PN-AL-protocol (Mar20) 7.3.6 LogBook ASE
+ */
+typedef enum
+{
+   PF_LOG_BOOK_AR_CONNECT = 1,
+   PF_LOG_BOOK_AR_RELEASE,
+   PF_LOG_BOOK_DCONTROL
+} pf_log_book_entry_detail_values_t;
+
 typedef struct pf_log_book_entry
 {
    pf_log_book_ts_t time_ts;
@@ -2099,7 +2267,7 @@ typedef struct pf_check_peer
 typedef struct pf_check_peers
 {
    uint8_t number_of_peers;
-   pf_check_peer_t peers[1]; /* Todo define max_peer_checks*/
+   pf_check_peer_t peers[PF_CHECK_PEERS_PER_PORT];
 } pf_check_peers_t;
 
 /**
@@ -2156,15 +2324,147 @@ typedef struct pf_interface_stats
 } pnet_interface_stats_t;
 
 /**
- * Port attributes
+ * Link status
  *
- * Todo:
- * - Add interface statistics
- * - Interface name
- * - Add lldp peer info
- * - Add LLDP client timer handles
+ * See IEEE 802.1AB-2005 (LLDPv1) Annex G.2 "MAC/PHY Configuration/Status TLV".
  */
-typedef struct pf_port
+typedef struct pf_lldp_link_status
+{
+   bool auto_neg_supported;
+   bool auto_neg_enabled;
+   uint16_t auto_neg_advertised_cap;
+   int32_t oper_mau_type;
+} pf_lldp_link_status_t;
+
+/**
+ * Port description
+ *
+ * "The port description field shall contain an alpha-numeric string
+ * that indicates the port's description. If RFC 2863
+ * is implemented, the ifDescr object should be used for this field."
+ * - IEEE 802.1AB (LLDP) ch. 9.5.5.2 "port description".
+ *
+ * Note: According to the SNMP specification, the string could be up
+ * to 255 characters. The p-net stack limits it to
+ * PNET_MAX_INTERFACE_NAME_LENGTH.
+ * An extra byte is added as to ensure null-termination.
+ */
+typedef struct pf_lldp_port_description
+{
+   char string[PNET_MAX_INTERFACE_NAME_LENGTH + 1]; /* Terminated */
+   size_t len;
+} pf_lldp_port_description_t;
+
+/**
+ * Port list
+ *
+ * "Each octet within this value specifies a set of eight ports,
+ * with the first octet specifying ports 1 through 8, the second
+ * octet specifying ports 9 through 16, etc. Within each octet,
+ * the most significant bit represents the lowest numbered port,
+ * and the least significant bit represents the highest numbered
+ * port. Thus, each port of the system is represented by a
+ * single bit within the value of this object. If that bit has
+ * a value of '1' then that port is included in the set of ports;
+ * the port is not included if its bit has a value of '0'."
+ * - IEEE 802.1AB (LLDP) ch. 12.2 "LLDP MIB module" (lldpPortList).
+ *
+ * Se also section about lldpConfigManAddrTable in PN-Topology.
+ */
+typedef struct pf_lldp_port_list_t
+{
+   uint8_t ports[2];
+} pf_lldp_port_list_t;
+
+/**
+ * Port iterator
+ *
+ * This iterator may be used for iterating over all physical ports
+ * on the local interface. The management port is not included.
+ */
+typedef struct pf_port_iterator
+{
+   int next_port;
+} pf_port_iterator_t;
+
+/**
+ * Port ID
+ *
+ * See IEEE 802.1AB-2005 (LLDPv1) ch. 9.5.3 "Port ID TLV".
+ */
+typedef struct pf_lldp_port_id
+{
+   char string[PNET_LLDP_PORT_ID_MAX_LEN + 1]; /**< Terminated string */
+   uint8_t subtype;
+   size_t len;
+} pf_lldp_port_id_t;
+
+/**
+ * Management address
+ *
+ * Usually, this is an IPv4 address. It may also be a MAC address
+ * or other kinds of addresses, such as IPv6.
+ *
+ * See IEEE 802.1AB-2005 (LLDPv1) ch. 9.5.9 "Management Address TLV".
+ */
+typedef struct pf_lldp_management_address
+{
+   uint8_t value[31];
+   uint8_t subtype;
+   size_t len;
+} pf_lldp_management_address_t;
+
+/**
+ * Management port index
+ *
+ * The index in IfTable for the management port.
+ *
+ * See IEEE 802.1AB-2005 (LLDPv1) ch. 9.5.9 "Management Address TLV".
+ *
+ * Also see PN-Topology ch. 6.5.1 "Mapping of Ports and PROFINET Interfaces
+ * in LLDP MIB and MIB-II".
+ */
+typedef struct pf_lldp_management_port_index
+{
+   int32_t index;
+   uint8_t subtype; /* 1 = unknown, 2 = ifIndex, 3 = systemPortNumber */
+} pf_lldp_management_port_index_t;
+
+/**
+ * Station name
+ *
+ * This is the name of an interface. It is called NameOfStation in
+ * the Profinet specification. It is usually a string, but may also
+ * be a MAC address.
+ *
+ * See IEC CDV 61158-6-10 (PN-AL-Protocol) ch. 4.3.1.4.16.
+ */
+typedef struct pf_lldp_station_name
+{
+   char string[PNET_STATION_NAME_MAX_LEN + 1]; /* Terminated */
+   size_t len;
+} pf_lldp_station_name_t;
+
+/**
+ * Measured signal delays in nanoseconds
+ *
+ * If a signal delay was not measured, its value is zero.
+ *
+ * See IEC CDV 61158-6-10 (PN-AL-Protocol) Annex U: "LLDP EXT MIB", fields
+ * lldpXPnoLocLPDValue / lldpXPnoRemLPDValue,
+ * lldpXPnoLocPortTxDValue / lldpXPnoRemPortTxDValue,
+ * lldpXPnoLocPortRxDValue / lldpXPnoRemPortRxDValue.
+ *
+ * See also pnet_profibus_delay_t
+ */
+typedef struct pf_lldp_signal_delay
+{
+   uint32_t port_tx_delay_ns;
+   uint32_t port_rx_delay_ns;
+   uint32_t line_propagation_delay_ns;
+} pf_lldp_signal_delay_t;
+
+typedef struct pf_pdport
 {
    struct
    {
@@ -2176,24 +2476,79 @@ typedef struct pf_port
       bool active; /* Todo maybe a bitmask for different checks*/
       pf_adjust_peer_to_peer_boundary_t peer_to_peer_boundary;
    } adjust;
+} pf_pdport_t;
+
+typedef struct pf_lldp_port
+{
+   /* LLDP peer information
+    *
+    * The information may be changed anytime as incoming LLDP packet arrives.
+    *
+    * Protected by LLDP mutex.
+    */
+   pnet_lldp_peer_info_t peer_info;
+
+   /* Timestamp for when LLDP packet with new content was received.
+    *
+    * Units are the same as sysUptime in SNMP.
+    * Protected by LLDP mutex.
+    */
+   uint32_t timestamp_for_last_peer_change;
+
+   /* Scheduler handle for LLDP timeout */
+   uint32_t rx_timeout;
+
+   /* Is information about peer device received?
+    *
+    * Information is received in LLDP packets.
+    * Protected by LLDP mutex.
+    */
+   bool is_peer_info_received;
+} pf_lldp_port_t;
+
+/**
+ * Port runtime data
+ * Note that pnet_lldp_cfg_t  (MAC address etc) is located in the config
+ *
+ * TODO Add:
+ * - Interface statistics
+ * - Interface name
+ * - local port number
+ * - slot (typically 0 = PNET_SLOT_DAP_IDENT)
+ * - subslot (for example 0x8001 = PNET_SUBSLOT_DAP_INTERFACE_1_PORT_0_IDENT)
+ * - module (for example PNET_MOD_DAP_IDENT)
+ * - submodule (for example PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT)
+ */
+typedef struct pf_port
+{
+   pf_pdport_t pdport;
+   pf_lldp_port_t lldp;
 } pf_port_t;
+
+/**
+ * PDPort nvm entry.
+ */
+typedef struct pnet_pdport_nvm
+{
+   pf_check_peer_t peer;
+} pnet_pdport_nvm_t;
 
 struct pnet
 {
    char interface_name[PNET_MAX_INTERFACE_NAME_LENGTH]; /** Terminated */
-   uint32_t os_buf_alloc_cnt;
+   uint32_t pnal_buf_alloc_cnt;
    bool global_alarm_enable;
    os_mutex_t * cpm_buf_lock;
    atomic_int cpm_instance_cnt;
    os_mutex_t * ppm_buf_lock;
    atomic_int ppm_instance_cnt;
    uint16_t dcp_global_block_qualifier;
-   pnet_ethaddr_t dcp_sam; /* Source address (MAC) to current DCP remote peer */
+   pnet_ethaddr_t dcp_sam; /* Source address (MAC) of current DCP remote peer */
    bool dcp_delayed_response_waiting; /* A response to DCP IDENTIFY is waiting
                                          to be sent */
    uint32_t dcp_timeout;
    uint32_t dcp_sam_timeout; /* Handle to the SAM timeout instance */
-   os_eth_handle_t * eth_handle;
+   pnal_eth_handle_t * eth_handle;
    pf_eth_frame_id_map_t eth_id_map[PF_ETH_MAX_MAP];
    volatile pf_scheduler_timeouts_t scheduler_timeouts[PF_MAX_TIMEOUTS];
    volatile uint32_t scheduler_timeout_first;
@@ -2201,7 +2556,7 @@ struct pnet
    os_mutex_t * scheduler_timeout_mutex;
    uint32_t scheduler_tick_interval; /* microseconds */
    bool cmdev_initialized;
-   pf_device_t cmdev_device;
+   pf_device_t cmdev_device;                     /* APIs and diag items */
    pf_cmina_dcp_ase_t cmina_nonvolatile_dcp_ase; /* Reflects what is/should be
                                                     stored in nvm */
    pf_cmina_dcp_ase_t cmina_current_dcp_ase;     /* Reflects current settings
@@ -2236,30 +2591,6 @@ struct pnet
     * This mutex protects information about the peer device.
     */
    os_mutex_t * lldp_mutex;
-
-   /* Timestamp for when LLDP packet with new content was received.
-    *
-    * Units are the same as sysUptime in SNMP.
-    * Protected by LLDP mutex.
-    */
-   uint32_t lldp_timestamp_for_last_peer_change;
-
-   /* Is information about peer device received?
-    *
-    * Information is received in LLDP packets.
-    * Protected by LLDP mutex.
-    */
-   bool lldp_is_peer_info_received;
-
-   /* LLDP peer information
-    *
-    * The information may be changed anytime an incoming LLDP packet arrives.
-    *
-    * Protected by LLDP mutex.
-    */
-   pnet_lldp_peer_info_t lldp_peer_info;
-
-   uint32_t lldp_rx_timeout; /* Scheduler handle for LLDP timeout */
 
    pf_port_t port[PNET_MAX_PORT];
 };

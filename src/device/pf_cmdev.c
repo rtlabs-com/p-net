@@ -177,8 +177,8 @@ int pf_cmdev_get_api (pnet_t * net, uint32_t api_id, pf_api_t ** pp_api)
 /**
  * @internal
  * Get an slot instance of an API.
- * @param p_api            In:    The API instance.
- * @param slot_nbr         In:    The slot number.
+ * @param p_api            InOut: The API instance.
+ * @param slot_nbr         In:    The slot number (must be in_use)
  * @param pp_slot          Out:   The slot instance.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
@@ -220,8 +220,8 @@ static int pf_cmdev_get_slot (
 /**
  * @internal
  * Get an sub-slot instance of a slot instance.
- * @param p_slot           In:    The slot instance.
- * @param subslot_nbr      In:    The sub-slot number.
+ * @param p_slot           InOut: The slot instance.
+ * @param subslot_nbr      In:    The sub-slot number (must be in_use).
  * @param pp_subslot       Out:   The sub-slot instance.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
@@ -426,7 +426,7 @@ static int pf_cmdev_new_api (pnet_t * net, uint32_t api_id, pf_api_t ** pp_api)
  * @internal
  * Instantiate a new slot structure.
  * If the slot number already exists the the operation fails.
- * @param p_api            In:    The API instance.
+ * @param p_api            InOut: The API instance.
  * @param slot_nbr         In:    The slot number.
  * @param pp_slot          Out:   The new slot instance.
  * @return  0  if operation succeeded.
@@ -483,7 +483,7 @@ static int pf_cmdev_new_slot (
  * @internal
  * Instantiate a new sub-slot structure.
  * If the sub-slot number already exists the the operation fails.
- * @param p_slot           In:    The slot instance.
+ * @param p_slot           InOut: The slot instance.
  * @param subslot_nbr      In:    The sub-slot number.
  * @param pp_subslot       Out:   The new sub-slot instance.
  * @return  0  if operation succeeded.
@@ -893,7 +893,7 @@ int pf_cmdev_pull_module (pnet_t * net, uint32_t api_id, uint16_t slot_nbr)
  * @internal
  * Remove all entries that refer to the AR.
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:    The AR entries to remove.
+ * @param p_ar             InOut: The AR entries to remove.
  */
 static void pf_device_clear (pnet_t * net, pf_ar_t * p_ar)
 {
@@ -1106,7 +1106,7 @@ static const char * pf_cmdev_submod_plug_state_to_string (
    return s;
 }
 
-void pf_cmdev_ar_show (pf_ar_t * p_ar)
+void pf_cmdev_ar_show (const pf_ar_t * p_ar)
 {
    printf (
       "CMDEV state           = %s\n",
@@ -1183,7 +1183,7 @@ static int pf_cmdev_cfg_slot_show (pf_slot_t * p_slot)
 static int pf_cmdev_cfg_subslot_show (pf_subslot_t * p_subslot)
 {
    printf ("      >>>SUBSLOT<<<\n");
-   printf ("      subslot_nbr     = %u\n", (unsigned)p_subslot->subslot_nbr);
+   printf ("      subslot_nbr     = 0x%04X\n", (unsigned)p_subslot->subslot_nbr);
    printf ("      in_use          = %u\n", (unsigned)p_subslot->in_use);
    printf (
       "      plug_state      = %s\n",
@@ -1191,16 +1191,25 @@ static int pf_cmdev_cfg_subslot_show (pf_subslot_t * p_subslot)
          p_subslot->submodule_state.ident_info));
    printf ("      AR              = %p\n", p_subslot->p_ar);
    printf (
-      "      submod_ident    = %u\n",
+      "      submod_ident    = 0x%08X\n",
       (unsigned)p_subslot->submodule_ident_number);
    printf (
-      "      exp_sub_ident   = %u\n",
+      "      exp_sub_ident   = 0x%08X\n",
       (unsigned)p_subslot->exp_submodule_ident_number);
    printf (
       "      direction       = %s\n",
       pf_cmdev_direction_to_string (p_subslot->direction));
    printf ("      length_input    = %u\n", (unsigned)p_subslot->length_input);
    printf ("      length_output   = %u\n", (unsigned)p_subslot->length_output);
+   printf ("      diag list start = ");
+   if (p_subslot->diag_list == PF_DIAG_IX_NULL)
+   {
+      printf ("PF_DIAG_IX_NULL (no diagnosis items)\n");
+   }
+   else
+   {
+      printf ("%u\n", (unsigned)p_subslot->diag_list);
+   }
 
    return 0;
 }
@@ -1216,10 +1225,11 @@ void pf_cmdev_device_show (pnet_t * net)
       pf_cmdev_cfg_subslot_show);
 }
 
-void pf_cmdev_diag_show (pnet_t * net)
+void pf_cmdev_diag_show (const pnet_t * net)
 {
    uint16_t ix = 0;
    uint16_t total = 0;
+   const pf_diag_item_t * p_diag;
 
    printf ("DIAGNOSIS\n");
    printf (
@@ -1237,15 +1247,28 @@ void pf_cmdev_diag_show (pnet_t * net)
 
    for (ix = 0; ix < NELEMENTS (net->cmdev_device.diag_items); ix++)
    {
-      if (net->cmdev_device.diag_items[ix].in_use == true)
+      p_diag = &net->cmdev_device.diag_items[ix];
+      if (p_diag->in_use == true)
       {
-         printf ("[%u] USI: 0x%04X", ix, net->cmdev_device.diag_items[ix].usi);
-         if (net->cmdev_device.diag_items[ix].usi >= 0x8000)
+         printf ("[%3u] USI: 0x%04X ", ix, p_diag->usi);
+         if (p_diag->next == UINT16_MAX)
+         {
+            printf (" [Last]  ");
+         }
+         else
+         {
+            printf ("Next: %3u", p_diag->next);
+         }
+
+         if (p_diag->usi >= PF_USI_CHANNEL_DIAGNOSIS)
          {
             printf (
-               "  Channel: %u  Channel error type: 0x%04X\n",
-               net->cmdev_device.diag_items[ix].fmt.std.ch_nbr,
-               net->cmdev_device.diag_items[ix].fmt.std.ch_error_type);
+               "  Channel: 0x%04X  Ch.error: 0x%04X  Ext.error 0x%04X  "
+               "Add.value 0x%08" PRIX32 "\n",
+               p_diag->fmt.std.ch_nbr,
+               p_diag->fmt.std.ch_error_type,
+               p_diag->fmt.std.ext_ch_error_type,
+               p_diag->fmt.std.ext_ch_add_value);
          }
          else
          {
@@ -1297,7 +1320,7 @@ void pf_cmdev_init (pnet_t * net)
    }
 }
 
-int pf_cmdev_get_state (pf_ar_t * p_ar, pf_cmdev_state_values_t * p_state)
+int pf_cmdev_get_state (const pf_ar_t * p_ar, pf_cmdev_state_values_t * p_state)
 {
    int ret = -1;
 
@@ -1314,7 +1337,7 @@ int pf_cmdev_get_state (pf_ar_t * p_ar, pf_cmdev_state_values_t * p_state)
  * @internal
  * Request a state transition of the specified AR.
  * @param net              InOut: The p-net stack instance
- * @param p_ar
+ * @param p_ar             InOut: The AR instance.
  * @param state            In:    New state. Use PF_CMDEV_STATE_xxx
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
@@ -1454,6 +1477,14 @@ int pf_cmdev_cm_abort (pnet_t * net, pf_ar_t * p_ar)
    return res;
 }
 
+/**
+ * @internal
+ * ?
+ * @param net              InOut: The p-net stack instance
+ * @param p_ar             InOut: The AR entries to remove.
+ * @return  0  if the operation succeeded.
+ *          -1 if an error occurred.
+ */
 int pf_cmdev_cm_init_req (pnet_t * net, pf_ar_t * p_ar)
 {
    int res = -1;
@@ -1531,7 +1562,7 @@ static int pf_cmdev_check_pdev (void)
  * @return  0  if the UUID is correct.
  *          -1 if the UUID is not correct.
  */
-static int pf_cmdev_check_cm_initiator_object_uuid (pf_uuid_t * p_uuid)
+static int pf_cmdev_check_cm_initiator_object_uuid (const pf_uuid_t * p_uuid)
 {
    int ret = -1;
 
@@ -1599,7 +1630,7 @@ int pf_cmdev_check_ar_type (uint16_t ar_type)
 /**
  * @internal
  * Check the AR param for errors.
- * @param p_ar             In:    The AR instance.
+ * @param p_ar             InOut: The AR instance.
  * @param p_stat           Out:   Detailed error information.
  * @return  0  if no error was detected.
  *          -1 if an error was detected.
@@ -2940,7 +2971,7 @@ static int pf_cmdev_check_iocr_apis (pf_ar_t * p_ar, pnet_result_t * p_stat)
  * @internal
  * Check the IOCR param of an AR for errors.
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:    The AR instance.
+ * @param p_ar             InOut: The AR instance.
  * @param p_stat           Out:   Detailed error information.
  * @return  0  if no error was found
  *          -1 if an error was found.
@@ -2983,7 +3014,7 @@ static int pf_cmdev_check_iocr_param (
       /* Defer IOCReference checks to below. */
       else if (
          (p_iocr->iocr_properties.rt_class != PF_RT_CLASS_UDP) &&
-         (p_iocr->lt_field != OS_ETHTYPE_PROFINET))
+         (p_iocr->lt_field != PNAL_ETHTYPE_PROFINET))
       {
          pf_set_error (
             p_stat,
@@ -2995,7 +3026,7 @@ static int pf_cmdev_check_iocr_param (
       }
       else if (
          (p_iocr->iocr_properties.rt_class == PF_RT_CLASS_UDP) &&
-         (p_iocr->lt_field != OS_ETHTYPE_IP))
+         (p_iocr->lt_field != PNAL_ETHTYPE_IP))
       {
          pf_set_error (
             p_stat,
@@ -3296,17 +3327,17 @@ static int pf_cmdev_check_iocr_param (
  *
  * @param net              InOut: The p-net stack instance
  * @param p_exp_api        In:    The expected API instance.
- * @param p_exp_mod        In:    The expected sub-module instance.
- * @param p_cfg_api        In:    The configured API instance.
- * @param p_cfg_slot       In:    The configured module instance.
+ * @param p_exp_mod        In:   The expected sub-module instance.
+ * @param p_cfg_api        InOut: The configured API instance.
+ * @param p_cfg_slot       InOut: The configured module instance.
  * @param p_stat           Out:   Detailed error information.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
 static int pf_cmdev_exp_submodule_configure (
    pnet_t * net,
-   pf_exp_api_t * p_exp_api,
-   pf_exp_module_t * p_exp_mod,
+   const pf_exp_api_t * p_exp_api,
+   const pf_exp_module_t * p_exp_mod,
    pf_api_t * p_cfg_api,
    pf_slot_t * p_cfg_slot,
    pnet_result_t * p_stat)
@@ -3314,7 +3345,7 @@ static int pf_cmdev_exp_submodule_configure (
    int ret = -1;
    uint16_t sub_ix;
    uint16_t subslot_nbr;
-   pf_exp_submodule_t * p_exp_sub = NULL;
+   const pf_exp_submodule_t * p_exp_sub = NULL;
    pf_subslot_t * p_cfg_sub = NULL;
    uint16_t api_ix;
    uint16_t ix;
@@ -3336,18 +3367,20 @@ static int pf_cmdev_exp_submodule_configure (
             p_exp_sub->subslot_number,
             &p_cfg_sub) != 0)
       {
-         memset(&exp_data, 0, sizeof(exp_data));
+         memset (&exp_data, 0, sizeof (exp_data));
          for (i = 0; i < p_exp_sub->nbr_data_descriptors; i++)
          {
             if (p_exp_sub->data_descriptor[i].data_direction == PF_DIRECTION_INPUT)
             {
                exp_data.data_dir |= PNET_DIR_INPUT;
-               exp_data.insize = p_exp_sub->data_descriptor[i].submodule_data_length;
+               exp_data.insize =
+                  p_exp_sub->data_descriptor[i].submodule_data_length;
             }
             if (p_exp_sub->data_descriptor[i].data_direction == PF_DIRECTION_OUTPUT)
             {
                exp_data.data_dir |= PNET_DIR_OUTPUT;
-               exp_data.outsize = p_exp_sub->data_descriptor[i].submodule_data_length;
+               exp_data.outsize =
+                  p_exp_sub->data_descriptor[i].submodule_data_length;
             }
          }
 
@@ -3695,22 +3728,20 @@ static int pf_cmdev_exp_submodule_configure (
  *
  * @param net              InOut: The p-net stack instance
  * @param p_exp_api        In:    The expected API instance.
- * @param p_exp_mod        In:    The expected sub-module instance.
- * @param p_cfg_api        In:    The configured API instance.
- * @param p_cfg_slot       In:    The configured module instance.
+ * @param p_cfg_api        InOut: The configured API instance.
  * @param p_stat           Out:   Detailed error information.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
 static int pf_cmdev_exp_modules_configure (
    pnet_t * net,
-   pf_exp_api_t * p_exp_api,
+   const pf_exp_api_t * p_exp_api,
    pf_api_t * p_cfg_api,
    pnet_result_t * p_stat)
 {
    int ret = -1;
    uint16_t mod_ix;
-   pf_exp_module_t * p_exp_mod = NULL;
+   const pf_exp_module_t * p_exp_mod = NULL;
    pf_slot_t * p_cfg_slot = NULL;
    uint16_t slot;
    uint16_t cnt;
@@ -3861,7 +3892,7 @@ static int pf_cmdev_exp_modules_configure (
  * pnet_exp_submodule_ind().
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:    The AR instance.
+ * @param p_ar             InOut: The AR instance.
  * @param p_stat           Out:   Detailed error information.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
@@ -3920,7 +3951,7 @@ static int pf_cmdev_exp_apis_configure (
 /**
  * @internal
  * Check the alarm CR block for errors.
- * @param p_ar             In:    The AR instance.
+ * @param p_ar             InOut: The AR instance.
  * @param p_stat           Out:   Detailed error information.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
@@ -3951,9 +3982,9 @@ static int pf_cmdev_check_alarm_cr (pf_ar_t * p_ar, pnet_result_t * p_stat)
    }
    else if (
       ((p_ar->alarm_cr_request.alarm_cr_properties.transport_udp == false) &&
-       (p_ar->alarm_cr_request.lt_field != OS_ETHTYPE_PROFINET)) ||
+       (p_ar->alarm_cr_request.lt_field != PNAL_ETHTYPE_PROFINET)) ||
       ((p_ar->alarm_cr_request.alarm_cr_properties.transport_udp == true) &&
-       (p_ar->alarm_cr_request.lt_field != OS_ETHTYPE_IP)))
+       (p_ar->alarm_cr_request.lt_field != PNAL_ETHTYPE_IP)))
    {
       pf_set_error (
          p_stat,
@@ -4059,8 +4090,8 @@ static int pf_cmdev_check_alarm_cr (pf_ar_t * p_ar, pnet_result_t * p_stat)
 /**
  * @internal
  * Check the AR RPC block for errors.
- * @param p_ar             In:   The AR instance.
- * @param p_stat           Out:  Detailed error information.
+ * @param p_ar             InOut: The AR instance.
+ * @param p_stat           Out:   Detailed error information.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -4097,7 +4128,7 @@ static int pf_cmdev_check_ar_rpc (pf_ar_t * p_ar, pnet_result_t * p_stat)
  * pnet_exp_submodule_ind().
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:    The AR instance.
+ * @param p_ar             InOut: The AR instance.
  * @param p_stat           Out:   Detailed error information.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
@@ -4212,19 +4243,8 @@ static int pf_cmdev_check_apdu (
    return ret;
 }
 
-/**
- * @internal
- * Generate module diffs, when needed, for the specified AR.
- * @param net              InOut: The p-net stack instance
- * @param p_ar             In:    The AR instance.
- * @param p_stat           Out:   Detailed result of the operation.
- * @return  0  if no diff was detected.
- *          -1 if a diff was detected.
- */
-static int pf_cmdev_generate_submodule_diff (
-   pnet_t * net,
-   pf_ar_t * p_ar,
-   pnet_result_t * p_stat)
+
+int pf_cmdev_generate_submodule_diff (pnet_t * net, pf_ar_t * p_ar)
 {
    int ret = 0;
    uint16_t exp_api_ix;
@@ -4241,8 +4261,13 @@ static int pf_cmdev_generate_submodule_diff (
    bool has_api_diff = false;
    bool has_mod_diff = false;
    bool has_sub_diff = false;
+   pf_submodule_state_t * p_submodule_state;
 
-   /* Generate a diff if needed */
+   if (p_ar == NULL)
+   {
+      return -1;
+   }
+   /* Generate a diff including all expected (sub)modules */
    for (exp_api_ix = 0; exp_api_ix < p_ar->nbr_exp_apis; exp_api_ix++)
    {
       p_ar->api_diffs[nbr_api_diffs].api = p_ar->exp_apis[exp_api_ix].api;
@@ -4357,6 +4382,34 @@ static int pf_cmdev_generate_submodule_diff (
                            .submodule_state.ident_info = PF_SUBMOD_PLUG_WRONG;
                         has_sub_diff = true;
                      }
+
+                     /* Check submodule diagnosis state and update diff. */
+                     p_submodule_state = &p_ar->api_diffs[nbr_api_diffs]
+                                             .module_diffs[nbr_mod_diffs]
+                                             .submodule_diffs[nbr_sub_diffs]
+                                             .submodule_state;
+
+                     if (
+                        (p_cfg_subslot->submodule_state.fault == true) ||
+                        (p_cfg_subslot->submodule_state.maintenance_demanded ==
+                         true) ||
+                        (p_cfg_subslot->submodule_state.maintenance_required ==
+                         true))
+                     {
+                        p_ar->api_diffs[nbr_api_diffs]
+                           .module_diffs[nbr_mod_diffs]
+                           .submodule_diffs[nbr_sub_diffs]
+                           .submodule_ident_number =
+                           p_cfg_subslot->submodule_ident_number;
+
+                        p_submodule_state->fault =
+                           p_cfg_subslot->submodule_state.fault;
+                        p_submodule_state->maintenance_demanded =
+                           p_cfg_subslot->submodule_state.maintenance_demanded;
+                        p_submodule_state->maintenance_required =
+                           p_cfg_subslot->submodule_state.maintenance_required;
+                        has_sub_diff = true;
+                     }
                   }
 
                   if (has_sub_diff == true)
@@ -4403,11 +4456,13 @@ static int pf_cmdev_generate_submodule_diff (
  * @return  true  if the frame_id is free to use.
  *          false if the frame id is already used by this AR.
  */
-static bool pf_cmdev_verify_free_frame_id (pf_ar_t * p_ar, uint16_t frame_id)
+static bool pf_cmdev_verify_free_frame_id (
+   const pf_ar_t * p_ar,
+   uint16_t frame_id)
 {
    bool is_free = true;
    uint16_t ix;
-   pf_iocr_param_t * p_iocr_param;
+   const pf_iocr_param_t * p_iocr_param;
 
    for (ix = 0; ix < p_ar->nbr_iocrs; ix++)
    {
@@ -4426,7 +4481,7 @@ static bool pf_cmdev_verify_free_frame_id (pf_ar_t * p_ar, uint16_t frame_id)
  * The controller may send 0xffff as the frame id for output CRs.
  * In that case we must supply a preferred frame id in the response.
  *
- * @param p_ar             In:    The AR instance.
+ * @param p_ar             InOut: The AR instance.
  */
 static void pf_cmdev_fix_frame_id (pf_ar_t * p_ar)
 {
@@ -4493,7 +4548,7 @@ static void pf_cmdev_fix_frame_id (pf_ar_t * p_ar)
  * @internal
  * Handle a negative result to a connect request.
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:    The AR instance.
+ * @param p_ar             InOut: The AR instance.
  * @param p_stat           Out:   Detailed error information.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
@@ -4522,7 +4577,7 @@ static int pf_cmdev_cm_connect_rsp_neg (
  * @internal
  * Handle a positive answer to a connect request.
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:    The AR instance.
+ * @param p_ar             InOut: The AR instance.
  * @param p_stat           Out:   Detailed error information.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
@@ -4556,8 +4611,8 @@ static int pf_cmdev_cm_connect_rsp_pos (
                p_stat,
                PNET_ERROR_CODE_CONNECT,
                PNET_ERROR_DECODE_PNIO,
-               PNET_ERROR_CODE_1_CMDEV,
-               PNET_ERROR_CODE_2_CMDEV_STATE_CONFLICT);
+               PNET_ERROR_CODE_1_CMRPC,
+               PNET_ERROR_CODE_2_CMRPC_PDEV_ALREADY_OWNED);
             pnet_create_log_book_entry (
                net,
                p_ar->arep,
@@ -4601,12 +4656,12 @@ int pf_cmdev_rm_connect_ind (
    const char * p_station_name = NULL;
    pnet_ethaddr_t mac_address;
 
-   pf_cmina_get_macaddr (net, &mac_address);
+   pf_cmina_get_device_macaddr (net, &mac_address);
 
    /* RM_Connect.ind */
    if (
       (pf_cmdev_check_apdu (net, p_ar, p_connect_result) == 0) &&
-      (pf_cmdev_generate_submodule_diff (net, p_ar, p_connect_result) == 0))
+      (pf_cmdev_generate_submodule_diff (net, p_ar) == 0))
    {
       /* Start building the response to the connect request. */
       memcpy (
