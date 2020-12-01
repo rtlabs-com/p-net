@@ -258,6 +258,15 @@ int pf_alarm_alpmr_alarm_ack (
  */
 void pf_alarm_show (const pf_ar_t * p_ar);
 
+/************ Internal functions, made available for unit testing ************/
+
+void pf_alarm_add_diag_item_to_summary (
+   const pf_ar_t * p_ar,
+   const pf_subslot_t * p_subslot,
+   const pf_diag_item_t * p_diag_item,
+   pnet_alarm_spec_t * p_alarm_spec,
+   uint32_t * p_maint_status);
+
 #ifdef __cplusplus
 }
 #endif

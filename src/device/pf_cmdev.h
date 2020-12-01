@@ -244,6 +244,15 @@ int pf_cmdev_new_diag (pnet_t * net, uint16_t * p_item_ix);
 void pf_cmdev_free_diag (pnet_t * net, uint16_t item_ix);
 
 /**
+ * Generate module diffs, when needed, for the specified AR.
+ * @param net              InOut: The p-net stack instance
+ * @param p_ar             InOut: The AR instance.
+ * @return  0  if operation succeeded.
+ *          -1 if an error occurred.
+ */
+int pf_cmdev_generate_submodule_diff (pnet_t * net, pf_ar_t * p_ar);
+
+/**
  * Return a string representation of the specified CMDEV state.
  * @param state            In:    The CMDEV state.
  * @return  A string representation of the CMDEV state.

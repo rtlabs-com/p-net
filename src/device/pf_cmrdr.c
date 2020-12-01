@@ -865,6 +865,11 @@ int pf_cmrdr_rm_read_ind (
          ret = 0;
          break;
       case PF_IDX_AR_MOD_DIFF:
+         /* On implicit with p_ar == NULL pf_cmdev_generate_submodule_diff
+          * will return -1
+          * In this case pf_put_ar_diff will not give an empty response
+          */
+         (void)pf_cmdev_generate_submodule_diff (net, p_ar);
          pf_put_ar_diff (true, p_ar, res_size, p_res, p_pos);
          ret = 0;
          break;

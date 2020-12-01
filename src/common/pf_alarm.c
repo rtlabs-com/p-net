@@ -844,7 +844,7 @@ static void pf_alarm_apms_timeout (
          p_apmx->apms_state = PF_APMS_STATE_OPEN;
 
          p_apmx->p_ar->err_cls = PNET_ERROR_CODE_1_APMS;
-         p_apmx->p_ar->err_code = PNET_ERROR_CODE_2_APMS_TIMEOUT;
+         p_apmx->p_ar->err_code = PNET_ERROR_CODE_2_ABORT_AR_ALARM_SEND_CNF_NEG;
          pf_alarm_error_ind (
             net,
             p_apmx,
@@ -2086,55 +2086,149 @@ int pf_alarm_close (pnet_t * net, pf_ar_t * p_ar)
 
 /**
  * @internal
- * Return the alarm specifier and maintenance status for a diagnosis item.
+ * Update the alarm specifier and maintenance status from a diagnosis item.
  *
- * Add one diag item to the alarm digest.
+ * Add one diag item to the alarm summary (this function is typically executed
+ * several times on different diagnosis items to update the same alarm
+ * specifier and maintenance status values).
+ *
+ * Looks at:
+ *   p_diag_item->usi
+ *   p_diag_item->fmt.std.ch_properties
+ *   p_diag_item->fmt.std.qual_ch_qualifier
+ *
  * @param p_ar             In:    The AR instance.
  * @param p_subslot        In:    The subslot instance.
  * @param p_diag_item      In:    The diag item.
- * @param p_alarm_spec     Out:   The computed alarm specifier. Describes
- *                                diagnosis alarms.
- * @param p_maint_status   Out:   The computed maintenance status.
+ * @param p_alarm_spec     InOut: The updated alarm specifier.
+ *                                Describes diagnosis alarms.
+ * @param p_maint_status   InOut: The updated maintenance status.
+ *                                Describes diagnosis alarms.
  */
-static void pf_alarm_add_item_to_digest (
-   pf_ar_t * p_ar,
+void pf_alarm_add_diag_item_to_summary (
+   const pf_ar_t * p_ar,
    const pf_subslot_t * p_subslot,
    const pf_diag_item_t * p_diag_item,
    pnet_alarm_spec_t * p_alarm_spec,
    uint32_t * p_maint_status)
 {
+   bool is_fault = false;
+   bool is_maintenance_demanded = false;
+   bool is_maintenance_required = false;
+   bool is_appears = false;
+   bool is_same_ar = false;
+   uint32_t severity_qualifier = 0;
+
+   /* Is the diagnosis on the same AR? */
+   if (p_subslot->p_ar == p_ar)
+   {
+      is_same_ar = true;
+   }
+
    if (p_diag_item->usi < PF_USI_CHANNEL_DIAGNOSIS)
    {
+      /* Diagnosis in manufacturer specific format (always FAULT) */
+
       p_alarm_spec->manufacturer_diagnosis = true;
+      p_alarm_spec->submodule_diagnosis = true;
+      if (is_same_ar == true)
+      {
+         p_alarm_spec->ar_diagnosis = true;
+      }
    }
    else
    {
-      *p_maint_status |= p_diag_item->fmt.std.qual_ch_qualifier;
+      /* Diagnosis in standard format */
+
+      severity_qualifier =
+         (p_diag_item->fmt.std.qual_ch_qualifier &
+          PNET_DIAG_QUALIFIED_SEVERITY_MASK);
+
+      /* Severity "Maintenance required" */
       if (
          PNET_DIAG_CH_PROP_MAINT_GET (p_diag_item->fmt.std.ch_properties) ==
          PNET_DIAG_CH_PROP_MAINT_REQUIRED)
       {
-         *p_maint_status |= BIT (0); /* Set MaintenanceRequired bit */
+         is_maintenance_required = true;
       }
+      else if (
+         PNET_DIAG_CH_PROP_MAINT_GET (p_diag_item->fmt.std.ch_properties) ==
+         PNET_DIAG_CH_PROP_MAINT_QUALIFIED)
+      {
+         if ((severity_qualifier & PNET_DIAG_QUALIFIER_MASK_REQUIRED) > 0)
+         {
+            is_maintenance_required = true;
+         }
+      }
+
+      /* Severity "Maintenance demanded"  */
       if (
          PNET_DIAG_CH_PROP_MAINT_GET (p_diag_item->fmt.std.ch_properties) ==
          PNET_DIAG_CH_PROP_MAINT_DEMANDED)
       {
-         *p_maint_status |= BIT (1); /* Set MaintenanceDemanded bit */
+         is_maintenance_demanded = true;
+      }
+      else if (
+         PNET_DIAG_CH_PROP_MAINT_GET (p_diag_item->fmt.std.ch_properties) ==
+         PNET_DIAG_CH_PROP_MAINT_QUALIFIED)
+      {
+         if ((severity_qualifier & PNET_DIAG_QUALIFIER_MASK_DEMANDED) > 0)
+         {
+            is_maintenance_demanded = true;
+         }
       }
 
+      /* Severity "Fault" */
       if (
          PNET_DIAG_CH_PROP_MAINT_GET (p_diag_item->fmt.std.ch_properties) ==
          PNET_DIAG_CH_PROP_MAINT_FAULT)
       {
-         p_alarm_spec->submodule_diagnosis = true;
-         if (p_subslot->p_ar == p_ar)
+         is_fault = true;
+      }
+      else if (
+         PNET_DIAG_CH_PROP_MAINT_GET (p_diag_item->fmt.std.ch_properties) ==
+         PNET_DIAG_CH_PROP_MAINT_QUALIFIED)
+      {
+         if ((severity_qualifier & PNET_DIAG_QUALIFIER_MASK_FAULT) > 0)
          {
-            /* We found a FAULT that belongs to a specific AR */
-            p_alarm_spec->ar_diagnosis = true;
+            is_fault = true;
          }
       }
-      p_alarm_spec->channel_diagnosis = true;
+
+      /* Is the diagnosis appearing */
+      if (
+         PNET_DIAG_CH_PROP_SPEC_GET (p_diag_item->fmt.std.ch_properties) ==
+         PNET_DIAG_CH_PROP_SPEC_APPEARS)
+      {
+         is_appears = true;
+      }
+
+      /* Maintenance qualifier bits */
+      *p_maint_status |= severity_qualifier;
+
+      /* MaintenanceRequired and MaintenanceDemanded bits */
+      if (is_maintenance_required == true)
+      {
+         *p_maint_status |= PNET_DIAG_BIT_MAINTENANCE_REQUIRED;
+      }
+      if (is_maintenance_demanded == true)
+      {
+         *p_maint_status |= PNET_DIAG_BIT_MAINTENANCE_DEMANDED;
+      }
+
+      /* Alarm specifiers for diagnosis in standard format */
+      if (is_appears == true)
+      {
+         p_alarm_spec->channel_diagnosis = true;
+      }
+      if (is_appears == true && is_fault == true)
+      {
+         p_alarm_spec->submodule_diagnosis = true;
+      }
+      if (is_appears == true && is_fault == true && is_same_ar == true)
+      {
+         p_alarm_spec->ar_diagnosis = true;
+      }
    }
 }
 
@@ -2143,7 +2237,12 @@ static void pf_alarm_add_item_to_digest (
  * Return the alarm specifier and maintenance status for a specific sub-slot,
  * by looking at all diagnosis items found for that subslot.
  *
+ * Also includes the "current diag item" in the analysis.
+ *
  * Describes diagnosis alarms.
+ *
+ * This corresponds to the "BuildSummarizedAlarmSpecifier" and
+ * "BuildSummarizedMaintenanceStatus" functions mentioned in the standard.
  *
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:    The AR instance.
@@ -2156,9 +2255,9 @@ static void pf_alarm_add_item_to_digest (
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
-static int pf_alarm_get_diag_digest (
+static int pf_alarm_get_diag_summary (
    pnet_t * net,
-   pf_ar_t * p_ar,
+   const pf_ar_t * p_ar,
    uint32_t api_id,
    uint16_t slot_nbr,
    uint16_t subslot_nbr,
@@ -2190,7 +2289,7 @@ static int pf_alarm_get_diag_digest (
          /* First handle the "current" (unreported) item. */
          if (p_diag_item != NULL)
          {
-            pf_alarm_add_item_to_digest (
+            pf_alarm_add_diag_item_to_summary (
                p_ar,
                p_subslot,
                p_diag_item,
@@ -2204,7 +2303,7 @@ static int pf_alarm_get_diag_digest (
          while (p_item != NULL)
          {
             /* Collect all diags into maintenanceStatus*/
-            pf_alarm_add_item_to_digest (
+            pf_alarm_add_diag_item_to_summary (
                p_ar,
                p_subslot,
                p_item,
@@ -2327,7 +2426,8 @@ int pf_alarm_alpmr_alarm_ack (
  * @param payload_len      In:    Payload length. Must be > 0 for manufacturer
  *                                specific payload ("USI format", which is
  *                                the payload_usi range 0x0001..0x7fff).
- * @param p_payload        In:    Mandatory if payload_usi > 0. May be NULL.
+ * @param p_payload        In:    Mandatory if payload_len > 0, or if sending
+ *                                a diagnosis alarm. Otherwise NULL.
  *                                Custom data or pf_diag_item_t.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred (or waiting for ACK from controller: re-try
@@ -2354,7 +2454,8 @@ static int pf_alarm_send_alarm (
    pf_apmx_t * p_apmx = &p_ar->apmx[high_prio ? 1 : 0];
    pf_alpmx_t * p_alpmx = &p_ar->alpmx[high_prio ? 1 : 0];
 
-   if (net->global_alarm_enable == true)
+   if ((net->global_alarm_enable == true) &&
+       (p_ar->alarm_enable == true))
    {
       if (p_alpmx->alpmi_state == PF_ALPMI_STATE_W_ALARM)
       {
@@ -2366,7 +2467,9 @@ static int pf_alarm_send_alarm (
          alarm_data.subslot_nbr = subslot_nbr;
          alarm_data.module_ident = module_ident;
          alarm_data.submodule_ident = submodule_ident;
-         (void)pf_alarm_get_diag_digest (
+
+         /* Check if there is any (other) diagnosis for this subslot */
+         (void)pf_alarm_get_diag_summary (
             net,
             p_ar,
             api_id,
@@ -2436,6 +2539,19 @@ int pf_alarm_send_process (
       payload_len,
       payload_usi);
 
+   if (payload_usi >= PF_USI_CHANNEL_DIAGNOSIS)
+   {
+      LOG_ERROR (
+         PNET_LOG,
+         "DIAG(%d): Wrong USI given for process alarm: %u Slot: %u "
+         "Subslot %u\n",
+         __LINE__,
+         payload_usi,
+         slot_nbr,
+         subslot_nbr);
+      return -1;
+   }
+
    return pf_alarm_send_alarm (
       net,
       p_ar,
@@ -2461,24 +2577,62 @@ int pf_alarm_send_diagnosis (
    const pf_diag_item_t * p_diag_item)
 {
    int ret = -1;
+   pf_alarm_type_values_t alarm_type = PF_ALARM_TYPE_DIAGNOSIS;
+   uint32_t module_ident = PNET_MOD_DAP_IDENT;
+   uint32_t submodule_ident = PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT;
 
-   LOG_INFO (PF_ALARM_LOG, "Alarm(%d): Sending diagnosis alarm\n", __LINE__);
    if (p_diag_item != NULL)
    {
+
+      /* Calculate alarm type */
+      if (p_diag_item->usi >= PF_USI_CHANNEL_DIAGNOSIS)
+      {
+         switch (p_diag_item->fmt.std.ch_error_type)
+         {
+         case PF_WRT_ERROR_REMOTE_MISMATCH:
+            alarm_type = PF_ALARM_TYPE_PORT_DATA_CHANGE;
+            break;
+         default:
+            break;
+         }
+      }
+
+      // TODO Calculate module_ident, submodule_ident
+      // The ModuleIdentNumber of the portsubmodule which is connected to device
+      // ‘b’ The SubModuleIdentNumber of the portsubmodule which is connected to
+      // device ‘b’
+
+      LOG_INFO (
+         PF_ALARM_LOG,
+         "Alarm(%d): Sending diagnosis alarm (type 0x%04X) Slot: %u  Subslot: "
+         "0x%04X  USI: 0x%04X\n",
+         __LINE__,
+         alarm_type,
+         slot_nbr,
+         subslot_nbr,
+         p_diag_item->usi);
+
       ret = pf_alarm_send_alarm (
          net,
          p_ar,
-         PF_ALARM_TYPE_DIAGNOSIS,
+         alarm_type,
          false, /* Low prio */
          api_id,
          slot_nbr,
          subslot_nbr,
          p_diag_item,
-         0,
-         0, /* module_ident, submodule_ident */
+         module_ident,
+         submodule_ident,
          p_diag_item->usi,
-         sizeof (*p_diag_item),
+         0, /* Not using manufacturer specific payload */
          (uint8_t *)p_diag_item);
+   }
+   else
+   {
+      LOG_ERROR (
+         PF_ALARM_LOG,
+         "Alarm(%d): The diagnosis item is NULL\n",
+         __LINE__);
    }
 
    return ret;
@@ -2491,23 +2645,20 @@ int pf_alarm_send_pull (
    uint16_t slot_nbr,
    uint16_t subslot_nbr)
 {
-   uint16_t alarm_type;
+   uint16_t alarm_type = PF_ALARM_TYPE_PULL;
 
-   LOG_INFO (PF_ALARM_LOG, "Alarm(%d): Sending pull alarm\n", __LINE__);
+   LOG_INFO (
+      PF_ALARM_LOG,
+      "Alarm(%d): Sending pull alarm. Slot: %u  Subslot: 0x%04X\n",
+      __LINE__,
+      slot_nbr,
+      subslot_nbr);
    if (subslot_nbr == 0)
    {
       if (p_ar->ar_param.ar_properties.pull_module_alarm_allowed == true)
       {
          alarm_type = PF_ALARM_TYPE_PULL_MODULE;
       }
-      else
-      {
-         alarm_type = PF_ALARM_TYPE_PULL;
-      }
-   }
-   else
-   {
-      alarm_type = PF_ALARM_TYPE_PULL;
    }
 
    (void)pf_alarm_send_alarm (

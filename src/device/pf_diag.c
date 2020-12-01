@@ -47,6 +47,11 @@
 #include "pf_block_reader.h"
 #include "pf_block_writer.h"
 
+/** Which diagnosis mechanism to use when messaging the PLC.
+ *  Normally PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS would be used as it has
+ *  more features, but it does not yet seem fully supported by Wireshark. */
+#define PF_DIAG_PREFERRED_DIAGNOSIS_USI PF_USI_EXTENDED_CHANNEL_DIAGNOSIS
+
 int pf_diag_init (void)
 {
    return 0;
@@ -98,6 +103,72 @@ static void pf_diag_update_station_problem_indicator (
    }
 
    pf_ppm_set_problem_indicator (p_ar, is_problem);
+}
+
+/**
+ * @internal
+ * Update the submodule diff state
+ *
+ * @param net              InOut: The p-net stack instance.
+ * @param p_ar             InOut: The AR instance.
+ * @param p_subslot        In:    The sub-slot instance.
+ */
+static void pf_diag_update_submodule_state (
+   pnet_t * net,
+   pf_ar_t * p_ar,
+   pf_subslot_t * p_subslot)
+{
+   pf_device_t * p_dev = NULL;
+   uint16_t ix;
+   pf_diag_item_t * p_item;
+   pf_submod_state_t submodule_state;
+   pnet_alarm_spec_t alarm_spec = {0};
+   uint32_t maint_status = 0;
+
+   memset (&submodule_state, 0, sizeof (submodule_state));
+
+   if (pf_cmdev_get_device (net, &p_dev) == 0)
+   {
+      ix = p_subslot->diag_list;
+      pf_cmdev_get_diag_item (net, ix, &p_item);
+      while (p_item != NULL)
+      {
+         if ((p_item->in_use == true))
+         {
+            pf_alarm_add_diag_item_to_summary (
+               p_ar,
+               p_subslot,
+               p_item,
+               &alarm_spec,
+               &maint_status);
+
+            if (alarm_spec.submodule_diagnosis == true)
+            {
+               submodule_state.fault = true;
+            }
+
+            if (maint_status & PNET_DIAG_BIT_MAINTENANCE_REQUIRED)
+            {
+               submodule_state.maintenance_required = true;
+            }
+
+            if (maint_status & PNET_DIAG_BIT_MAINTENANCE_DEMANDED)
+            {
+               submodule_state.maintenance_demanded = true;
+            }
+         }
+
+         ix = p_item->next;
+         pf_cmdev_get_diag_item (net, ix, &p_item);
+      }
+
+      p_subslot->submodule_state.fault = submodule_state.fault;
+      p_subslot->submodule_state.maintenance_required =
+         submodule_state.maintenance_required;
+      p_subslot->submodule_state.maintenance_demanded =
+         submodule_state.maintenance_demanded;
+
+   }
 }
 
 /**
@@ -231,9 +302,34 @@ static void pf_diag_find_entry (
    }
 }
 
+/**
+ * @internal
+ * Find first used ar.
+ *
+ * @param net              InOut: The p-net stack instance.
+ * @param pp_ar            Out:   Resulting ar
+ * @return 0 on success, -1 on error.
+ */
+static int pf_diag_find_first_ar (pnet_t * net, pf_ar_t ** pp_ar)
+{
+   int ret = -1;
+   uint16_t ix;
+
+   for (ix = 0; ix < NELEMENTS (net->cmrpc_ar); ix++)
+   {
+      if (net->cmrpc_ar[ix].in_use == true)
+      {
+         *pp_ar = &net->cmrpc_ar[ix];
+         ret = 0;
+         break;
+      }
+   }
+
+   return ret;
+}
+
 int pf_diag_add (
    pnet_t * net,
-   pf_ar_t * p_ar,
    const pnet_diag_source_t * p_diag_source,
    pnet_diag_ch_prop_type_values_t ch_bits,
    pnet_diag_ch_prop_maint_values_t severity,
@@ -252,10 +348,11 @@ int pf_diag_add (
    bool overwrite = false;
    pf_diag_item_t old_item;
    uint16_t ch_properties = 0;
+   pf_ar_t * p_ar = NULL;
 
    /* Remove reserved bits before we use it */
    /* TODO: Validate qual_ch_qualifier */
-   qual_ch_qualifier &= ~0x00000007;
+   qual_ch_qualifier &= PNET_DIAG_QUALIFIED_SEVERITY_MASK;
 
    if (usi > PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS)
    {
@@ -351,10 +448,7 @@ int pf_diag_add (
                   ch_properties,
                   PNET_DIAG_CH_PROP_SPEC_APPEARS);
 
-               p_item->usi = PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS;
-               PNET_DIAG_CH_PROP_SPEC_SET (
-                  p_item->fmt.std.ch_properties,
-                  PNET_DIAG_CH_PROP_SPEC_APPEARS);
+               p_item->usi = PF_DIAG_PREFERRED_DIAGNOSIS_USI;
                p_item->fmt.std.ch_nbr = p_diag_source->ch;
                p_item->fmt.std.ch_properties = ch_properties;
                p_item->fmt.std.ch_error_type = ch_error_type;
@@ -363,21 +457,24 @@ int pf_diag_add (
                p_item->fmt.std.qual_ch_qualifier = qual_ch_qualifier;
             }
 
-            ret = pf_alarm_send_diagnosis (
-               net,
-               p_ar,
-               p_diag_source->api,
-               p_diag_source->slot,
-               p_diag_source->subslot,
-               p_item);
+            /* Link it into the sub-slot reported list */
+            p_item->next = p_subslot->diag_list;
+            p_subslot->diag_list = item_ix;
 
-            pf_diag_update_station_problem_indicator (net, p_ar, p_subslot);
+            pf_diag_update_submodule_state (net, p_ar, p_subslot);
 
-            if (ret == 0)
+            /* TODO Use better strategy to find AR */
+            if (pf_diag_find_first_ar (net, &p_ar) == 0)
             {
-               /* Link it into the sub-slot reported list */
-               p_item->next = p_subslot->diag_list;
-               p_subslot->diag_list = item_ix;
+               ret = pf_alarm_send_diagnosis (
+                  net,
+                  p_ar,
+                  p_diag_source->api,
+                  p_diag_source->slot,
+                  p_diag_source->subslot,
+                  p_item);
+
+               pf_diag_update_station_problem_indicator (net, p_ar, p_subslot);
 
                if (overwrite == true)
                {
@@ -398,6 +495,17 @@ int pf_diag_add (
                      &old_item);
                }
             }
+            else
+            {
+               LOG_ERROR (
+                  PNET_LOG,
+                  "DIAG(%d): No active connection, so no alarm is sent.\n",
+                  __LINE__);
+            }
+         }
+         else
+         {
+            LOG_ERROR (PNET_LOG, "DIAG(%d): p_item is NULL\n", __LINE__);
          }
       }
       else
@@ -413,7 +521,6 @@ int pf_diag_add (
 
 int pf_diag_update (
    pnet_t * net,
-   pf_ar_t * p_ar,
    const pnet_diag_source_t * p_diag_source,
    uint16_t ch_error_type,
    uint16_t ext_ch_error_type,
@@ -427,6 +534,7 @@ int pf_diag_update (
    pf_diag_item_t * p_item = NULL;
    pf_diag_item_t old_item;
    uint16_t item_ix = PF_DIAG_IX_NULL;
+   pf_ar_t * p_ar = NULL;
 
    if (usi > PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS)
    {
@@ -476,26 +584,30 @@ int pf_diag_update (
                p_item->fmt.std.ext_ch_add_value = ext_ch_add_value;
             }
 
-            ret = pf_alarm_send_diagnosis (
-               net,
-               p_ar,
-               p_diag_source->api,
-               p_diag_source->slot,
-               p_diag_source->subslot,
-               p_item);
-            if (ret == 0)
-            {
-               /* Link it into the sub-slot diag list */
-               p_item->next = p_subslot->diag_list;
-               p_subslot->diag_list = item_ix;
+            /* Link it into the sub-slot diag list */
+            p_item->next = p_subslot->diag_list;
+            p_subslot->diag_list = item_ix;
 
+            /* TODO Use better strategy to find AR */
+            if (pf_diag_find_first_ar (net, &p_ar) == 0)
+            {
+               ret = pf_alarm_send_diagnosis (
+                  net,
+                  p_ar,
+                  p_diag_source->api,
+                  p_diag_source->slot,
+                  p_diag_source->subslot,
+                  p_item);
+
+               pf_diag_update_station_problem_indicator (net, p_ar, p_subslot);
+
+               /* Remove the old diag by sending a disappear alarm */
                if (old_item.usi >= PF_USI_CHANNEL_DIAGNOSIS)
                {
                   PNET_DIAG_CH_PROP_SPEC_SET (
                      old_item.fmt.std.ch_properties,
                      PNET_DIAG_CH_PROP_SPEC_DIS_OTHERS_REMAIN);
                }
-               /* Remove the old diag by sending a disappear alarm */
                ret = pf_alarm_send_diagnosis (
                   net,
                   p_ar,
@@ -504,8 +616,13 @@ int pf_diag_update (
                   p_diag_source->subslot,
                   &old_item);
             }
-
-            pf_diag_update_station_problem_indicator (net, p_ar, p_subslot);
+            else
+            {
+               LOG_ERROR (
+                  PNET_LOG,
+                  "DIAG(%d): No active connection, so no alarm is sent.\n",
+                  __LINE__);
+            }
          }
          else
          {
@@ -526,7 +643,6 @@ int pf_diag_update (
 
 int pf_diag_remove (
    pnet_t * net,
-   pf_ar_t * p_ar,
    const pnet_diag_source_t * p_diag_source,
    uint16_t ch_error_type,
    uint16_t ext_ch_error_type,
@@ -537,6 +653,7 @@ int pf_diag_remove (
    pf_subslot_t * p_subslot = NULL;
    uint16_t item_ix = PF_DIAG_IX_NULL;
    pf_diag_item_t * p_item = NULL;
+   pf_ar_t * p_ar = NULL;
 
    if (usi > PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS)
    {
@@ -569,57 +686,72 @@ int pf_diag_remove (
       {
          if (pf_cmdev_get_diag_item (net, item_ix, &p_item) == 0)
          {
-            if (p_subslot->diag_list != PF_DIAG_IX_NULL)
+            /* TODO Use better strategy to find AR */
+            if (pf_diag_find_first_ar (net, &p_ar) == 0)
             {
-               /*
-                * If diagnosis information is removed a diagnosis alarm with
-                * specifier DISAPPEARS is queued into the alarm queue. ToDo: If
-                * the channel has other diagnosis information of the same
-                * severity, the specifier PNET_DIAG_CH_SPEC_DIS_OTHERS_REMAIN is
-                * used instead.
-                */
-               if (p_item->usi >= PF_USI_CHANNEL_DIAGNOSIS)
+               if (p_subslot->diag_list != PF_DIAG_IX_NULL)
                {
+                  /*
+                   * If diagnosis information is removed a diagnosis alarm with
+                   * specifier DISAPPEARS is queued into the alarm queue. ToDo:
+                   * If the channel has other diagnosis information of the same
+                   * severity, the specifier PNET_DIAG_CH_SPEC_DIS_OTHERS_REMAIN
+                   * is used instead.
+                   */
+                  if (p_item->usi >= PF_USI_CHANNEL_DIAGNOSIS)
+                  {
+                     PNET_DIAG_CH_PROP_SPEC_SET (
+                        p_item->fmt.std.ch_properties,
+                        PNET_DIAG_CH_PROP_SPEC_DISAPPEARS);
+                  }
+                  ret = pf_alarm_send_diagnosis (
+                     net,
+                     p_ar,
+                     p_diag_source->api,
+                     p_diag_source->slot,
+                     p_diag_source->subslot,
+                     p_item);
+               }
+               else
+               {
+                  /* If the channel has no diagnosis information of any
+                   * severity,
+                   * the specifier PNET_DIAG_CH_SPEC_ALL_DISAPPEARS is used. */
+                  /* Overwrite the item to remove with correct cr_properties for
+                   * this diag message. */
+                  p_item->usi = PF_USI_EXTENDED_CHANNEL_DIAGNOSIS;
+                  PNET_DIAG_CH_PROP_MAINT_SET (
+                     p_item->fmt.std.ch_properties,
+                     PNET_DIAG_CH_PROP_MAINT_FAULT);
                   PNET_DIAG_CH_PROP_SPEC_SET (
                      p_item->fmt.std.ch_properties,
-                     PNET_DIAG_CH_PROP_SPEC_DISAPPEARS);
+                     PNET_DIAG_CH_PROP_SPEC_ALL_DISAPPEARS);
+
+                  ret = pf_alarm_send_diagnosis (
+                     net,
+                     p_ar,
+                     p_diag_source->api,
+                     p_diag_source->slot,
+                     p_diag_source->subslot,
+                     p_item);
                }
-               ret = pf_alarm_send_diagnosis (
-                  net,
-                  p_ar,
-                  p_diag_source->api,
-                  p_diag_source->slot,
-                  p_diag_source->subslot,
-                  p_item);
             }
             else
             {
-               /* If the channel has no diagnosis information of any severity,
-                * the specifier PNET_DIAG_CH_SPEC_ALL_DISAPPEARS is used. */
-               /* Overwrite the item to remove with correct cr_properties for
-                * this diag message. */
-               p_item->usi = PF_USI_CHANNEL_DIAGNOSIS;
-               PNET_DIAG_CH_PROP_MAINT_SET (
-                  p_item->fmt.std.ch_properties,
-                  PNET_DIAG_CH_PROP_MAINT_FAULT);
-               PNET_DIAG_CH_PROP_SPEC_SET (
-                  p_item->fmt.std.ch_properties,
-                  PNET_DIAG_CH_PROP_SPEC_ALL_DISAPPEARS);
-
-               ret = pf_alarm_send_diagnosis (
-                  net,
-                  p_ar,
-                  p_diag_source->api,
-                  p_diag_source->slot,
-                  p_diag_source->subslot,
-                  p_item);
+               LOG_ERROR (
+                  PNET_LOG,
+                  "DIAG(%d): No active connection, so no alarm is sent.\n",
+                  __LINE__);
             }
          }
 
          /* Free diag entry */
          pf_cmdev_free_diag (net, item_ix);
 
-         pf_diag_update_station_problem_indicator (net, p_ar, p_subslot);
+         if (p_ar != NULL)
+         {
+            pf_diag_update_station_problem_indicator (net, p_ar, p_subslot);
+         }
       }
       else
       {
@@ -637,7 +769,6 @@ int pf_diag_remove (
 
 int pf_diag_std_add (
    pnet_t * net,
-   pf_ar_t * p_ar,
    const pnet_diag_source_t * p_diag_source,
    pnet_diag_ch_prop_type_values_t ch_bits,
    pnet_diag_ch_prop_maint_values_t severity,
@@ -648,7 +779,6 @@ int pf_diag_std_add (
 {
    return pf_diag_add (
       net,
-      p_ar,
       p_diag_source,
       ch_bits,
       severity,
@@ -656,13 +786,12 @@ int pf_diag_std_add (
       ext_ch_error_type,
       ext_ch_add_value,
       qual_ch_qualifier,
-      PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS,
+      PF_DIAG_PREFERRED_DIAGNOSIS_USI,
       NULL);
 }
 
 int pf_diag_std_update (
    pnet_t * net,
-   pf_ar_t * p_ar,
    const pnet_diag_source_t * p_diag_source,
    uint16_t ch_error_type,
    uint16_t ext_ch_error_type,
@@ -670,36 +799,32 @@ int pf_diag_std_update (
 {
    return pf_diag_update (
       net,
-      p_ar,
       p_diag_source,
       ch_error_type,
       ext_ch_error_type,
       ext_ch_add_value,
-      PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS,
+      PF_DIAG_PREFERRED_DIAGNOSIS_USI,
       NULL);
 }
 
 int pf_diag_std_remove (
    pnet_t * net,
-   pf_ar_t * p_ar,
    const pnet_diag_source_t * p_diag_source,
    uint16_t ch_error_type,
    uint16_t ext_ch_error_type)
 {
    return pf_diag_remove (
       net,
-      p_ar,
       p_diag_source,
       ch_error_type,
       ext_ch_error_type,
-      PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS);
+      PF_DIAG_PREFERRED_DIAGNOSIS_USI);
 }
 
 /************************** Diagnosis in USI format **************************/
 
 int pf_diag_usi_add (
    pnet_t * net,
-   pf_ar_t * p_ar,
    uint32_t api_id,
    uint16_t slot_nbr,
    uint16_t subslot_nbr,
@@ -729,7 +854,6 @@ int pf_diag_usi_add (
 
    return pf_diag_add (
       net,
-      p_ar,
       &diag_source,
       PNET_DIAG_CH_PROP_TYPE_UNSPECIFIED,
       PNET_DIAG_CH_PROP_MAINT_FAULT,
@@ -743,7 +867,6 @@ int pf_diag_usi_add (
 
 int pf_diag_usi_update (
    pnet_t * net,
-   pf_ar_t * p_ar,
    uint32_t api_id,
    uint16_t slot_nbr,
    uint16_t subslot_nbr,
@@ -771,12 +894,11 @@ int pf_diag_usi_update (
       return -1;
    }
 
-   return pf_diag_update (net, p_ar, &diag_source, 0, 0, 0, usi, p_manuf_data);
+   return pf_diag_update (net, &diag_source, 0, 0, 0, usi, p_manuf_data);
 }
 
 int pf_diag_usi_remove (
    pnet_t * net,
-   pf_ar_t * p_ar,
    uint32_t api_id,
    uint16_t slot_nbr,
    uint16_t subslot_nbr,
@@ -803,5 +925,5 @@ int pf_diag_usi_remove (
       return -1;
    }
 
-   return pf_diag_remove (net, p_ar, &diag_source, 0, 0, usi);
+   return pf_diag_remove (net, &diag_source, 0, 0, usi);
 }

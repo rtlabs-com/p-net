@@ -178,7 +178,7 @@ int pf_cmdev_get_api (pnet_t * net, uint32_t api_id, pf_api_t ** pp_api)
  * @internal
  * Get an slot instance of an API.
  * @param p_api            InOut: The API instance.
- * @param slot_nbr         In:    The slot number.
+ * @param slot_nbr         In:    The slot number (must be in_use)
  * @param pp_slot          Out:   The slot instance.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
@@ -221,7 +221,7 @@ static int pf_cmdev_get_slot (
  * @internal
  * Get an sub-slot instance of a slot instance.
  * @param p_slot           InOut: The slot instance.
- * @param subslot_nbr      In:    The sub-slot number.
+ * @param subslot_nbr      In:    The sub-slot number (must be in_use).
  * @param pp_subslot       Out:   The sub-slot instance.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
@@ -1183,7 +1183,7 @@ static int pf_cmdev_cfg_slot_show (pf_slot_t * p_slot)
 static int pf_cmdev_cfg_subslot_show (pf_subslot_t * p_subslot)
 {
    printf ("      >>>SUBSLOT<<<\n");
-   printf ("      subslot_nbr     = %u\n", (unsigned)p_subslot->subslot_nbr);
+   printf ("      subslot_nbr     = 0x%04X\n", (unsigned)p_subslot->subslot_nbr);
    printf ("      in_use          = %u\n", (unsigned)p_subslot->in_use);
    printf (
       "      plug_state      = %s\n",
@@ -1191,16 +1191,25 @@ static int pf_cmdev_cfg_subslot_show (pf_subslot_t * p_subslot)
          p_subslot->submodule_state.ident_info));
    printf ("      AR              = %p\n", p_subslot->p_ar);
    printf (
-      "      submod_ident    = %u\n",
+      "      submod_ident    = 0x%08X\n",
       (unsigned)p_subslot->submodule_ident_number);
    printf (
-      "      exp_sub_ident   = %u\n",
+      "      exp_sub_ident   = 0x%08X\n",
       (unsigned)p_subslot->exp_submodule_ident_number);
    printf (
       "      direction       = %s\n",
       pf_cmdev_direction_to_string (p_subslot->direction));
    printf ("      length_input    = %u\n", (unsigned)p_subslot->length_input);
    printf ("      length_output   = %u\n", (unsigned)p_subslot->length_output);
+   printf ("      diag list start = ");
+   if (p_subslot->diag_list == PF_DIAG_IX_NULL)
+   {
+      printf ("PF_DIAG_IX_NULL (no diagnosis items)\n");
+   }
+   else
+   {
+      printf ("%u\n", (unsigned)p_subslot->diag_list);
+   }
 
    return 0;
 }
@@ -1220,6 +1229,7 @@ void pf_cmdev_diag_show (const pnet_t * net)
 {
    uint16_t ix = 0;
    uint16_t total = 0;
+   const pf_diag_item_t * p_diag;
 
    printf ("DIAGNOSIS\n");
    printf (
@@ -1237,15 +1247,28 @@ void pf_cmdev_diag_show (const pnet_t * net)
 
    for (ix = 0; ix < NELEMENTS (net->cmdev_device.diag_items); ix++)
    {
-      if (net->cmdev_device.diag_items[ix].in_use == true)
+      p_diag = &net->cmdev_device.diag_items[ix];
+      if (p_diag->in_use == true)
       {
-         printf ("[%u] USI: 0x%04X", ix, net->cmdev_device.diag_items[ix].usi);
-         if (net->cmdev_device.diag_items[ix].usi >= 0x8000)
+         printf ("[%3u] USI: 0x%04X ", ix, p_diag->usi);
+         if (p_diag->next == UINT16_MAX)
+         {
+            printf (" [Last]  ");
+         }
+         else
+         {
+            printf ("Next: %3u", p_diag->next);
+         }
+
+         if (p_diag->usi >= PF_USI_CHANNEL_DIAGNOSIS)
          {
             printf (
-               "  Channel: %u  Channel error type: 0x%04X\n",
-               net->cmdev_device.diag_items[ix].fmt.std.ch_nbr,
-               net->cmdev_device.diag_items[ix].fmt.std.ch_error_type);
+               "  Channel: 0x%04X  Ch.error: 0x%04X  Ext.error 0x%04X  "
+               "Add.value 0x%08" PRIX32 "\n",
+               p_diag->fmt.std.ch_nbr,
+               p_diag->fmt.std.ch_error_type,
+               p_diag->fmt.std.ext_ch_error_type,
+               p_diag->fmt.std.ext_ch_add_value);
          }
          else
          {
@@ -4220,19 +4243,8 @@ static int pf_cmdev_check_apdu (
    return ret;
 }
 
-/**
- * @internal
- * Generate module diffs, when needed, for the specified AR.
- * @param net              InOut: The p-net stack instance
- * @param p_ar             InOut: The AR instance.
- * @param p_stat           Out:   Detailed result of the operation.
- * @return  0  if no diff was detected.
- *          -1 if a diff was detected.
- */
-static int pf_cmdev_generate_submodule_diff (
-   pnet_t * net,
-   pf_ar_t * p_ar,
-   pnet_result_t * p_stat)
+
+int pf_cmdev_generate_submodule_diff (pnet_t * net, pf_ar_t * p_ar)
 {
    int ret = 0;
    uint16_t exp_api_ix;
@@ -4249,8 +4261,13 @@ static int pf_cmdev_generate_submodule_diff (
    bool has_api_diff = false;
    bool has_mod_diff = false;
    bool has_sub_diff = false;
+   pf_submodule_state_t * p_submodule_state;
 
-   /* Generate a diff if needed */
+   if (p_ar == NULL)
+   {
+      return -1;
+   }
+   /* Generate a diff including all expected (sub)modules */
    for (exp_api_ix = 0; exp_api_ix < p_ar->nbr_exp_apis; exp_api_ix++)
    {
       p_ar->api_diffs[nbr_api_diffs].api = p_ar->exp_apis[exp_api_ix].api;
@@ -4363,6 +4380,34 @@ static int pf_cmdev_generate_submodule_diff (
                            .module_diffs[nbr_mod_diffs]
                            .submodule_diffs[nbr_sub_diffs]
                            .submodule_state.ident_info = PF_SUBMOD_PLUG_WRONG;
+                        has_sub_diff = true;
+                     }
+
+                     /* Check submodule diagnosis state and update diff. */
+                     p_submodule_state = &p_ar->api_diffs[nbr_api_diffs]
+                                             .module_diffs[nbr_mod_diffs]
+                                             .submodule_diffs[nbr_sub_diffs]
+                                             .submodule_state;
+
+                     if (
+                        (p_cfg_subslot->submodule_state.fault == true) ||
+                        (p_cfg_subslot->submodule_state.maintenance_demanded ==
+                         true) ||
+                        (p_cfg_subslot->submodule_state.maintenance_required ==
+                         true))
+                     {
+                        p_ar->api_diffs[nbr_api_diffs]
+                           .module_diffs[nbr_mod_diffs]
+                           .submodule_diffs[nbr_sub_diffs]
+                           .submodule_ident_number =
+                           p_cfg_subslot->submodule_ident_number;
+
+                        p_submodule_state->fault =
+                           p_cfg_subslot->submodule_state.fault;
+                        p_submodule_state->maintenance_demanded =
+                           p_cfg_subslot->submodule_state.maintenance_demanded;
+                        p_submodule_state->maintenance_required =
+                           p_cfg_subslot->submodule_state.maintenance_required;
                         has_sub_diff = true;
                      }
                   }
@@ -4616,7 +4661,7 @@ int pf_cmdev_rm_connect_ind (
    /* RM_Connect.ind */
    if (
       (pf_cmdev_check_apdu (net, p_ar, p_connect_result) == 0) &&
-      (pf_cmdev_generate_submodule_diff (net, p_ar, p_connect_result) == 0))
+      (pf_cmdev_generate_submodule_diff (net, p_ar) == 0))
    {
       /* Start building the response to the connect request. */
       memcpy (
