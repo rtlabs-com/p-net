@@ -146,7 +146,7 @@ void pf_snmp_get_system_contact (
 
    error = pf_file_load (
       directory,
-      PNET_FILENAME_SYSCONTACT,
+      PF_FILENAME_SYSCONTACT,
       contact,
       sizeof (*contact));
    if (error)
@@ -177,7 +177,7 @@ int pf_snmp_set_system_contact (
 
    res = pf_file_save_if_modified (
       directory,
-      PNET_FILENAME_SYSCONTACT,
+      PF_FILENAME_SYSCONTACT,
       contact,
       &temporary_buffer,
       sizeof (*contact));

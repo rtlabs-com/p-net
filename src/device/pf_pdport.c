@@ -43,7 +43,7 @@ static int pf_pdport_load (pnet_t * net)
    if (
       pf_file_load (
          p_file_directory,
-         PNET_FILENAME_PDPORT,
+         PF_FILENAME_PDPORT,
          &pdport_config,
          sizeof (pdport_config)) == 0)
    {
@@ -110,7 +110,7 @@ static int pf_pdport_save (pnet_t * net)
 
    save_result = pf_file_save_if_modified (
       p_file_directory,
-      PNET_FILENAME_PDPORT,
+      PF_FILENAME_PDPORT,
       &pdport_config,
       &temporary_buffer,
       sizeof (pf_pdport_t));
@@ -237,7 +237,7 @@ int pf_pdport_reset_all (pnet_t * net)
    pf_port_t * p_port_data = pf_port_get_state (net, PNET_PORT_1);
 
    (void)pf_cmina_get_file_directory (net, &p_file_directory);
-   pf_file_clear (p_file_directory, PNET_FILENAME_PDPORT);
+   pf_file_clear (p_file_directory, PF_FILENAME_PDPORT);
 
    memset (&p_port_data->pdport, 0, sizeof (p_port_data->pdport));
    pf_pdport_remove_all_diag (net);
@@ -886,7 +886,7 @@ int pf_pdport_write_req (
 void pf_pdport_peer_indication (
    pnet_t * net,
    int loc_port_num,
-   const pnet_lldp_peer_info_t * p_lldp_peer_info)
+   const pf_lldp_peer_info_t * p_lldp_peer_info)
 {
    pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
    p_port_data->pdport.lldp_peer_info_updated = true;

@@ -33,13 +33,13 @@
 #include "pf_includes.h"
 #include "pf_block_reader.h"
 
-typedef struct pnet_im_nvm
+typedef struct pf_im_nvm
 {
    pnet_im_1_t im1;
    pnet_im_2_t im2;
    pnet_im_3_t im3;
    pnet_im_4_t im4;
-} pnet_im_nvm_t;
+} pf_im_nvm_t;
 
 void pf_fspm_im_show (const pnet_t * net)
 {
@@ -246,7 +246,7 @@ int pf_fspm_validate_configuration (const pnet_cfg_t * p_cfg)
  */
 static void pf_fspm_load_im (pnet_t * net)
 {
-   pnet_im_nvm_t file_im;
+   pf_im_nvm_t file_im;
    const char * p_file_directory = NULL;
 
    (void)pf_cmina_get_file_directory (net, &p_file_directory);
@@ -254,9 +254,9 @@ static void pf_fspm_load_im (pnet_t * net)
    if (
       pf_file_load (
          p_file_directory,
-         PNET_FILENAME_IM,
+         PF_FILENAME_IM,
          &file_im,
-         sizeof (pnet_im_nvm_t)) == 0)
+         sizeof (pf_im_nvm_t)) == 0)
    {
       LOG_DEBUG (
          PNET_LOG,
@@ -288,8 +288,8 @@ static void pf_fspm_load_im (pnet_t * net)
  */
 static void pf_fspm_save_im (pnet_t * net)
 {
-   pnet_im_nvm_t output_im = {0};
-   pnet_im_nvm_t temporary_buffer;
+   pf_im_nvm_t output_im = {0};
+   pf_im_nvm_t temporary_buffer;
    const char * p_file_directory = NULL;
    int res = 0;
 
@@ -302,10 +302,10 @@ static void pf_fspm_save_im (pnet_t * net)
 
    res = pf_file_save_if_modified (
       p_file_directory,
-      PNET_FILENAME_IM,
+      PF_FILENAME_IM,
       &output_im,
       &temporary_buffer,
-      sizeof (pnet_im_nvm_t));
+      sizeof (pf_im_nvm_t));
    switch (res)
    {
    case 2:

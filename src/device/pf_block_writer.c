@@ -3568,7 +3568,7 @@ void pf_put_pdport_data_real (
    const pnet_lldp_port_cfg_t * p_port_config =
       pf_lldp_get_port_config (net, loc_port_num);
    pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
-   const pnet_lldp_peer_info_t * p_peer_info = &p_port_data->lldp.peer_info;
+   const pf_lldp_peer_info_t * p_peer_info = &p_port_data->lldp.peer_info;
 
    numPeers = p_peer_info->ttl ? 1 : 0;
 
@@ -3757,7 +3757,7 @@ void pf_put_pdport_data_real (
 }
 
 void pf_put_pdport_statistics (
-   const pnet_interface_stats_t * p_if_stats,
+   const pf_interface_stats_t * p_if_stats,
    bool is_big_endian,
    const pf_iod_read_result_t * p_res,
    uint16_t res_len,

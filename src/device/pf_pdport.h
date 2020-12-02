@@ -134,7 +134,7 @@ int pf_pdport_write_req (
 void pf_pdport_peer_indication (
    pnet_t * net,
    int loc_port_num,
-   const pnet_lldp_peer_info_t * p_lldp_peer_info);
+   const pf_lldp_peer_info_t * p_lldp_peer_info);
 
 /**
  * Notify that the lldp receive timeout has expired
