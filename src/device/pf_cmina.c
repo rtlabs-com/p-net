@@ -111,7 +111,7 @@ static void pf_cmina_save_ase (pnet_t * net, pf_cmina_dcp_ase_t * p_ase)
 
    res = pf_file_save_if_modified (
       p_file_directory,
-      PNET_FILENAME_IP,
+      PF_FILENAME_IP,
       p_ase,
       &temporary_buffer,
       sizeof (pf_cmina_dcp_ase_t));
@@ -214,7 +214,7 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
          if (
             pf_file_load (
                p_file_directory,
-               PNET_FILENAME_IP,
+               PF_FILENAME_IP,
                &file_ase,
                sizeof (file_ase)) == 0)
          {
@@ -321,9 +321,9 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
             0,
             sizeof (net->cmina_nonvolatile_dcp_ase.station_name));
 
-         pf_file_clear (p_file_directory, PNET_FILENAME_IP);
-         pf_file_clear (p_file_directory, PNET_FILENAME_DIAGNOSTICS);
-         pf_file_clear (p_file_directory, PNET_FILENAME_SYSCONTACT);
+         pf_file_clear (p_file_directory, PF_FILENAME_IP);
+         pf_file_clear (p_file_directory, PF_FILENAME_DIAGNOSTICS);
+         pf_file_clear (p_file_directory, PF_FILENAME_SYSCONTACT);
          pf_pdport_reset_all (net);
       }
 
@@ -1258,11 +1258,11 @@ int pf_cmina_get_device_macaddr (pnet_t * net, pnet_ethaddr_t * p_macaddr)
 
 int pf_cmina_remove_all_data_files (const char * file_directory)
 {
-   pf_file_clear (file_directory, PNET_FILENAME_IM);
-   pf_file_clear (file_directory, PNET_FILENAME_IP);
-   pf_file_clear (file_directory, PNET_FILENAME_DIAGNOSTICS);
-   pf_file_clear (file_directory, PNET_FILENAME_SYSCONTACT);
-   pf_file_clear (file_directory, PNET_FILENAME_PDPORT);
+   pf_file_clear (file_directory, PF_FILENAME_IM);
+   pf_file_clear (file_directory, PF_FILENAME_IP);
+   pf_file_clear (file_directory, PF_FILENAME_DIAGNOSTICS);
+   pf_file_clear (file_directory, PF_FILENAME_SYSCONTACT);
+   pf_file_clear (file_directory, PF_FILENAME_PDPORT);
 
    return 0;
 }

@@ -769,7 +769,7 @@ int pf_lldp_get_peer_signal_delays (
    pf_lldp_signal_delay_t * p_delays)
 {
    bool is_received;
-   const pnet_lldp_peer_info_t * peer_info;
+   const pf_lldp_peer_info_t * peer_info;
    pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
    os_mutex_lock (net->lldp_mutex);
@@ -810,7 +810,7 @@ int pf_lldp_get_peer_link_status (
    pf_lldp_link_status_t * p_link_status)
 {
    bool is_received;
-   const pnet_lldp_peer_info_t * peer_info;
+   const pf_lldp_peer_info_t * peer_info;
    pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
    os_mutex_lock (net->lldp_mutex);
@@ -1055,7 +1055,7 @@ void pf_lldp_send_disable (pnet_t * net, int loc_port_num)
 int pf_lldp_parse_packet (
    uint8_t buf[],
    uint16_t len,
-   pnet_lldp_peer_info_t * lldp_peer_info)
+   pf_lldp_peer_info_t * lldp_peer_info)
 {
    lldp_tlv_t tlv;
    pf_get_info_t parse_info;
@@ -1345,7 +1345,7 @@ int pf_lldp_generate_alias_name (
 void pf_lldp_update_peer (
    pnet_t * net,
    int loc_port_num,
-   const pnet_lldp_peer_info_t * lldp_peer_info)
+   const pf_lldp_peer_info_t * lldp_peer_info)
 {
    int error = 0;
    char alias[sizeof (net->cmina_current_dcp_ase.alias_name)];
@@ -1357,7 +1357,7 @@ void pf_lldp_update_peer (
       memcmp (
          lldp_peer_info,
          &p_port_data->lldp.peer_info,
-         sizeof (pnet_lldp_peer_info_t)) == 0)
+         sizeof (pf_lldp_peer_info_t)) == 0)
    {
       /* No changes */
       return;
@@ -1396,7 +1396,7 @@ void pf_lldp_update_peer (
    memcpy (
       &p_port_data->lldp.peer_info,
       lldp_peer_info,
-      sizeof (pnet_lldp_peer_info_t));
+      sizeof (pf_lldp_peer_info_t));
    os_mutex_unlock (net->lldp_mutex);
 }
 
@@ -1404,7 +1404,7 @@ int pf_lldp_recv (pnet_t * net, pnal_buf_t * p_frame_buf, uint16_t offset)
 {
    uint8_t * buf = p_frame_buf->payload + offset;
    uint16_t buf_len = p_frame_buf->len - offset;
-   pnet_lldp_peer_info_t peer_data = {0};
+   pf_lldp_peer_info_t peer_data = {0};
    int err = 0;
 
    err = pf_lldp_parse_packet (buf, buf_len, &peer_data);

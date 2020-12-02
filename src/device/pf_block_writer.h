@@ -733,7 +733,7 @@ void pf_put_pdport_data_real (
  */
 
 void pf_put_pdport_statistics (
-   const pnet_interface_stats_t * p_if_stats,
+   const pf_interface_stats_t * p_if_stats,
    bool is_big_endian,
    const pf_iod_read_result_t * p_res,
    uint16_t res_len,
