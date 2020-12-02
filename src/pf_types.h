@@ -2349,6 +2349,13 @@ typedef struct pf_interface_stats
    uint32_t if_out_errors;
 } pnet_interface_stats_t;
 
+typedef struct pnet_ieee_macphy_config
+{
+   uint8_t aneg_support_status; /**< Autonegotiation status */
+   uint16_t aneg_cap;           /**< Autonegotiation capabilites */
+   uint16_t operational_mau_type;
+} pnet_ieee_macphy_t;
+
 /**
  * Link status
  *
@@ -2414,6 +2421,18 @@ typedef struct pf_port_iterator
 } pf_port_iterator_t;
 
 /**
+ * Chassis ID
+ *
+ * See IEEE 802.1AB-2005 (LLDPv1) ch. 9.5.2.3 "chassis ID".
+ */
+typedef struct pf_lldp_chassis_id
+{
+   char string[PNET_LLDP_CHASSIS_ID_MAX_LEN + 1]; /**< Terminated string */
+   uint8_t subtype;                               /* PF_LLDP_SUBTYPE_xxx */
+   size_t len;
+} pf_lldp_chassis_id_t;
+
+/**
  * Port ID
  *
  * See IEEE 802.1AB-2005 (LLDPv1) ch. 9.5.3 "Port ID TLV".
@@ -2472,6 +2491,18 @@ typedef struct pf_lldp_station_name
 } pf_lldp_station_name_t;
 
 /**
+ * All delays in nano seconds
+ */
+typedef struct pnet_profibus_delay_valus
+{
+   uint32_t rx_delay_local;
+   uint32_t rx_delay_remote;
+   uint32_t tx_delay_local;
+   uint32_t tx_delay_remote;
+   uint32_t cable_delay_local;
+} pnet_profibus_delay_t;
+
+/**
  * Measured signal delays in nanoseconds
  *
  * If a signal delay was not measured, its value is zero.
@@ -2489,6 +2520,46 @@ typedef struct pf_lldp_signal_delay
    uint32_t port_rx_delay_ns;
    uint32_t line_propagation_delay_ns;
 } pf_lldp_signal_delay_t;
+
+typedef struct pnet_lldp_boundary
+{
+   bool not_send_LLDP_Frames;
+   bool send_PTCP_Delay;
+   bool send_PATH_Delay;
+   bool reserved_bit4;
+   uint8_t reserved_8;
+   uint16_t rserved_16;
+} pnet_lldp_boundary_t;
+
+typedef struct pnet_lldp_peer_to_peer_boundary
+{
+   pnet_lldp_boundary_t boundary;
+   uint16_t properites;
+} pnet_lldp_peer_to_peer_boundary_t;
+
+/**
+ * LLDP Peer information used by the Profinet stack.
+ */
+typedef struct pnet_lldp_peer_info
+{
+   /* LLDP TLVs */
+   pf_lldp_chassis_id_t chassis_id;
+   uint8_t port_id_subtype;
+   char port_id[PNET_LLDP_PORT_ID_MAX_LEN + 1];
+   size_t port_id_len;
+   uint16_t ttl;
+   /* PROFIBUS TLVs */
+   pnet_profibus_delay_t port_delay;
+   uint8_t port_status[4];
+   pnet_ethaddr_t mac_address;
+   uint16_t media_type;
+   uint32_t line_delay;
+   uint32_t domain_boundary;
+   uint32_t multicast_boundary;
+   uint8_t link_state_port;
+   pnet_ieee_macphy_t phy_config;
+   pnet_lldp_peer_to_peer_boundary_t peer_boundary;
+} pnet_lldp_peer_info_t;
 
 typedef struct pf_pdport
 {
