@@ -22,6 +22,13 @@ extern "C" {
 
 #include <stddef.h>
 
+#define PNET_FILENAME_IP                                                       \
+   "pnet_data_ip.bin" /* Max length PNET_MAX_FILENAME_LENGTH */
+#define PNET_FILENAME_SYSCONTACT  "pnet_data_syscontact.bin"
+#define PNET_FILENAME_IM          "pnet_data_im.bin"
+#define PNET_FILENAME_DIAGNOSTICS "pnet_data_diagnostics.bin"
+#define PNET_FILENAME_PDPORT      "pnet_data_pdport.bin"
+
 /**
  * Load a binary file, and verify the file version.
  *

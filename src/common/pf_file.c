@@ -41,6 +41,16 @@
 /* Increase every time the saved contents have another format */
 #define PF_FILE_VERSION 0x00000001U
 
+/* The configurable constant PNET_MAX_FILENAME_LENGTH should be at least
+ * as large as the longest file name used, including termination.
+ */
+CC_STATIC_ASSERT (PNET_MAX_FILENAME_LENGTH >= sizeof (PNET_FILENAME_IP));
+CC_STATIC_ASSERT (PNET_MAX_FILENAME_LENGTH >= sizeof (PNET_FILENAME_SYSCONTACT));
+CC_STATIC_ASSERT (PNET_MAX_FILENAME_LENGTH >= sizeof (PNET_FILENAME_IM));
+CC_STATIC_ASSERT (
+   PNET_MAX_FILENAME_LENGTH >= sizeof (PNET_FILENAME_DIAGNOSTICS));
+CC_STATIC_ASSERT (PNET_MAX_FILENAME_LENGTH >= sizeof (PNET_FILENAME_PDPORT));
+
 /**
  * @internal
  * Join directory and filename into a full path

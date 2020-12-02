@@ -33,6 +33,14 @@
 #include "pf_includes.h"
 #include "pf_block_reader.h"
 
+typedef struct pnet_im_nvm
+{
+   pnet_im_1_t im1;
+   pnet_im_2_t im2;
+   pnet_im_3_t im3;
+   pnet_im_4_t im4;
+} pnet_im_nvm_t;
+
 void pf_fspm_im_show (const pnet_t * net)
 {
    printf ("Identification & Maintenance\n");

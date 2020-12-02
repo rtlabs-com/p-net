@@ -356,13 +356,6 @@ extern "C" {
 #define PNET_ERROR_CODE_2_ABORT_DCP_RESET_TO_FACTORY       0x20
 #define PNET_ERROR_CODE_2_ABORT_PDEV_CHECK_FAILED          0x24
 
-#define PNET_FILENAME_IP                                                       \
-   "pnet_data_ip.bin" /* Max length PNET_MAX_FILENAME_LENGTH */
-#define PNET_FILENAME_SYSCONTACT  "pnet_data_syscontact.bin"
-#define PNET_FILENAME_IM          "pnet_data_im.bin"
-#define PNET_FILENAME_DIAGNOSTICS "pnet_data_diagnostics.bin"
-#define PNET_FILENAME_PDPORT      "pnet_data_pdport.bin"
-
 /**
  * # List of error_code_2 values, for
  * PNET_ERROR_CODE_1_DCTRL_FAULTY_CONNECT (not exhaustive).
@@ -1112,14 +1105,6 @@ typedef struct pnet_im_4
                            */
 } pnet_im_4_t;
 
-typedef struct pnet_im_nvm
-{
-   pnet_im_1_t im1;
-   pnet_im_2_t im2;
-   pnet_im_3_t im3;
-   pnet_im_4_t im4;
-} pnet_im_nvm_t;
-
 /**
  * The device-specific vendor and device identities.
  *
@@ -1218,77 +1203,6 @@ typedef struct pnet_lldp_cfg
 {
    pnet_lldp_port_cfg_t ports[PNET_MAX_PORT];
 } pnet_lldp_cfg_t;
-
-/**
- * All delays in nano seconds
- */
-typedef struct pnet_profibus_delay_valus
-{
-   uint32_t rx_delay_local;
-   uint32_t rx_delay_remote;
-   uint32_t tx_delay_local;
-   uint32_t tx_delay_remote;
-   uint32_t cable_delay_local;
-} pnet_profibus_delay_t;
-
-typedef struct pnet_ieee_macphy_config
-{
-   uint8_t aneg_support_status; /**< Autonegotiation status */
-   uint16_t aneg_cap;           /**< Autonegotiation capabilites */
-   uint16_t operational_mau_type;
-} pnet_ieee_macphy_t;
-
-typedef struct pnet_lldp_boundary
-{
-   bool not_send_LLDP_Frames;
-   bool send_PTCP_Delay;
-   bool send_PATH_Delay;
-   bool reserved_bit4;
-   uint8_t reserved_8;
-   uint16_t rserved_16;
-} pnet_lldp_boundary_t;
-
-typedef struct pnet_lldp_peer_to_peer_boundary
-{
-   pnet_lldp_boundary_t boundary;
-   uint16_t properites;
-} pnet_lldp_peer_to_peer_boundary_t;
-
-/**
- * Chassis ID
- *
- * See IEEE 802.1AB-2005 (LLDPv1) ch. 9.5.2.3 "chassis ID".
- */
-typedef struct pf_lldp_chassis_id
-{
-   char string[PNET_LLDP_CHASSIS_ID_MAX_LEN + 1]; /**< Terminated string */
-   uint8_t subtype; /* PF_LLDP_SUBTYPE_xxx */
-   size_t len;
-} pf_lldp_chassis_id_t;
-
-/**
- * LLDP Peer information used by the Profinet stack.
- */
-typedef struct pnet_lldp_peer_info
-{
-   /* LLDP TLVs */
-   pf_lldp_chassis_id_t chassis_id;
-   uint8_t port_id_subtype;
-   char port_id[PNET_LLDP_PORT_ID_MAX_LEN + 1];
-   size_t port_id_len;
-   uint16_t ttl;
-   /* PROFIBUS TLVs */
-   pnet_profibus_delay_t port_delay;
-   uint8_t port_status[4];
-   pnet_ethaddr_t mac_address;
-   uint16_t media_type;
-   uint32_t line_delay;
-   uint32_t domain_boundary;
-   uint32_t multicast_boundary;
-   uint8_t link_state_port;
-   pnet_ieee_macphy_t phy_config;
-   pnet_lldp_peer_to_peer_boundary_t peer_boundary;
-} pnet_lldp_peer_info_t;
 
 /**
  * This is all the configuration needed to use the Profinet stack.
