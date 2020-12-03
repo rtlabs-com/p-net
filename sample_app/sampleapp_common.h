@@ -62,10 +62,11 @@ extern "C" {
 
 #define APP_DIAG_CUSTOM_USI 0x1234
 
+/* See "Specification for GSDML" 8.26 LogBookEntryItem for allowed values */
 #define APP_LOGBOOK_ERROR_CODE   0x20 /* Manufacturer specific */
 #define APP_LOGBOOK_ERROR_DECODE 0x82 /* Manufacturer specific */
 #define APP_LOGBOOK_ERROR_CODE_1 PNET_ERROR_CODE_1_FSPM
-#define APP_LOGBOOK_ERROR_CODE_2 0xFF       /* Manufacturer specific */
+#define APP_LOGBOOK_ERROR_CODE_2 0x00      /* Manufacturer specific */
 #define APP_LOGBOOK_ENTRY_DETAIL 0xFEE1DEAD /* Manufacturer specific */
 
 /*

@@ -285,3 +285,14 @@ Troubleshooting
 ---------------
 Note that the PLC might complain if there is a non-Profinet switch between the
 IO-device and the IO-controller. This is probably due to wrong port names in LLDP messages.
+
+
+Upgrade firmware on a Siemens PLC
+---------------------------------
+Select the proper firmware to use for your PLC from the Siemens downloads
+page. With the latest firmware you need a recent version of the STEP7 software.
+Download the file, which is in ``.zip`` format. Unzip the file.
+
+In TIA Portal, right-click the PLC and select "Online and Diagnostics". In
+the "Functions" sections, use "Firmware update". Browse to the downloaded file
+(in ``.upd`` format) and start the update.

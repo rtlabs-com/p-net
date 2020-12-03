@@ -426,7 +426,7 @@ int pf_diag_add (
             {
                LOG_DEBUG (
                   PF_ALARM_LOG,
-                  "DIAG(%d): Adding qualified channel diagnosis, ix %u. Slot "
+                  "DIAG(%d): Adding standard format diagnosis, ix %u. Slot "
                   "%u Subslot 0x%04X Channel 0x%04X\n",
                   __LINE__,
                   item_ix,
@@ -759,7 +759,7 @@ int pf_diag_remove (
       {
          LOG_DEBUG (
             PF_ALARM_LOG,
-            "DIAG(%d): Removable item not found\n",
+            "DIAG(%d): Did not find the diagnosis to remove.\n",
             __LINE__);
       }
    }

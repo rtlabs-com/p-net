@@ -869,7 +869,7 @@ static void pf_alarm_apms_timeout (
    {
       LOG_DEBUG (
          PF_ALARM_LOG,
-         "Alarm(%d): No alarm retransmission as we are in in state %s. Free "
+         "Alarm(%d): Skip scheduled alarm retransmission as we are in in state %s. Free "
          "saved RTA buffer %p\n",
          __LINE__,
          pf_alarm_apms_state_to_string (p_apmx->apms_state),
@@ -1156,7 +1156,7 @@ static int pf_alarm_apms_a_data_req (
       {
          LOG_ERROR (
             PF_ALARM_LOG,
-            "Alarm(%d): No output buffer for alarm",
+            "Alarm(%d): Failed to allocate output buffer for alarm",
             __LINE__);
       }
       else
@@ -1166,7 +1166,7 @@ static int pf_alarm_apms_a_data_req (
          {
             LOG_ERROR (
                PF_ALARM_LOG,
-               "Alarm(%d): No payload output buffer for alarm.\n",
+               "Alarm(%d): Failed to allocate payload output buffer for alarm.\n",
                __LINE__);
          }
          else
@@ -1317,7 +1317,7 @@ static int pf_alarm_apms_a_data_req (
             {
                LOG_DEBUG (
                   PF_AL_BUF_LOG,
-                  "Alarm(%d): Save RTA output buffer for later use.\n",
+                  "Alarm(%d): Save RTA alarm output buffer for later use.\n",
                   __LINE__);
                p_apmx->p_rta = p_rta;
             }
@@ -1325,7 +1325,7 @@ static int pf_alarm_apms_a_data_req (
             {
                LOG_ERROR (
                   PF_ALARM_LOG,
-                  "Alarm(%d): RTA buffer with TACK lost!!\n",
+                  "Alarm(%d): RTA alarm output buffer with TACK lost!!\n",
                   __LINE__);
                pnal_buf_free (p_rta);
             }
@@ -1335,7 +1335,7 @@ static int pf_alarm_apms_a_data_req (
             /* ACK, NAK and ERR buffers are not saved for retransmission. */
             LOG_DEBUG (
                PF_AL_BUF_LOG,
-               "Alarm(%d): Free unsaved RTA buffer\n",
+               "Alarm(%d): Free unsaved RTA alarm output buffer\n",
                __LINE__);
             pnal_buf_free (p_rta);
          }
@@ -2599,7 +2599,8 @@ int pf_alarm_alpmr_alarm_ack (
  * @param payload_usi      In:    The payload USI. Use 0 for no payload.
  * @param payload_len      In:    Payload length. Must be > 0 for manufacturer
  *                                specific payload ("USI format", which is
- *                                the payload_usi range 0x0001..0x7fff).
+ *                                the payload_usi range 0x0001..0x7fff),
+ *                                or when sending a diagnosis alarm.
  * @param p_payload        In:    Mandatory if payload_len > 0, or if sending
  *                                a diagnosis alarm. Otherwise NULL.
  *                                Custom data or pf_diag_item_t.

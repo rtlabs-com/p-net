@@ -28,6 +28,11 @@ the PLC to turn on and off the flashing of the LED.
 
 Button 2 triggers sending an alarm from the IO-device to the PLC.
 
+* Button1: Setting cyclic data value
+* Button2: Trigger alarm, setting diagnosis etc
+* LED1: Data LED
+* LED2: Signal LED
+
 The resulting Ethernet traffic can be studied (see below).
 
 
@@ -97,7 +102,7 @@ writes to plain text files instead. Usage is described below.
 
 Install dependencies
 --------------------
-Your Raspberry Pi needs to be connected to Internet via LAN or Wifi to be
+Your Raspberry Pi needs to be connected to Internet via LAN or WiFi to be
 able to download software.
 
 In order to compile p-net on Raspberry Pi, you need a recent version of cmake.
@@ -265,7 +270,7 @@ Later on kill the ``pn_dev`` process by using ``sudo pkill pn_dev``.
 
 LEDs
 ^^^^
-If you use plain files as output instead of LED, use this to study the file
+If you use plain files as output instead of LEDs, use this to study the file
 for the "Data LED":
 
     watch -n 0.1 cat /home/pi/profinet/build/pnet_led_1.txt
@@ -358,10 +363,10 @@ you enable verbose output::
 
 Study the resulting communication
 ---------------------------------
-Press button1 to see the LED1 start flashing. Press it again to stop the
+Press Button1 to see the LED1 start flashing. Press it again to stop the
 flashing.
 
-By pressing button2 you can trigger alarms, add diagnosis etc. See the
+By pressing Button2 you can trigger alarms, add diagnosis etc. See the
 printout in the console.
 
 On the page "Capturing and analyzing Ethernet packets" is a description given
@@ -387,7 +392,10 @@ Next steps
 ----------
 Great! You managed to get the sample application running.
 
-To enable autostart of the sample application on power on, see the page
+Try flashing the Profinet signal LED. See description on the page "Using
+Codesys soft PLC".
+
+To enable automatic start of the sample application on power on, see the page
 "Install Raspberry Pi OS on the Raspberry Pi".
 
 For Profinet members the "ART tester" tool is available for conformance
@@ -443,6 +451,7 @@ own repository.
 RT-Labs projects. It contains a CMake script ``AddOsal.cmake`` that
 simplifies use of OSAL. It supports two different use-cases:
 
+
 1) Automatic download and build of OSAL
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 During CMake configuration, if OSAL is not found in the system it will
@@ -451,6 +460,7 @@ default.
 Run CMake configuration by issuing e.g.::
 
     cmake -B build -S p-net
+
 
 2) External OSAL
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

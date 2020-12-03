@@ -287,6 +287,21 @@ You might need to press the Play button in the Workbench if you have enabled
 breakpoints.
 
 
+SNMP
+----
+To enable SNMP support, set the ``PNET_OPTION_SNMP`` value to ``ON``.
+
+To verify the SNMP capabilities, first use ``ping`` to make sure you have a
+connection to the device, and then use ``snmpwalk``::
+
+   ping 192.168.0.50
+   snmpwalk -v1 -c public 192.168.0.50 1
+   snmpget -v1 -c public 192.168.0.50 1.3.6.1.2.1.1.4.0
+   snmpset -v1 -c private 192.168.0.50 1.3.6.1.2.1.1.4.0 s "My new sys contact"
+
+For more details on SNMP and its usage, see :ref:`network-topology-detection`.
+
+
 IP-stack lwip
 -------------
 The rt-kernel uses the "lwip" IP stack.

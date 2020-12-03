@@ -187,6 +187,8 @@ IRT
     Isochronous Real-Time
 LAN
     Local Area Network
+LED
+    Light Emitting Diode
 LLC
     ?
 LLDP
@@ -241,6 +243,8 @@ PD
     Physical Device. This is information related to an Ethernet port.
 PDEV
     Physical Device management. Physical interface and switch ports of a Profinet field device.
+PDF
+    Portable Document Format
 PDU
     Protocol Data Unit
 PI

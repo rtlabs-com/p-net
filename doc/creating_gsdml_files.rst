@@ -51,7 +51,7 @@ features.
 
 File name
 ---------
-The current GSD version (as of writing) is 2.35.
+The current GSD version (as of writing) is 2.4.
 
 The file name format is specified in section 5.1 of the GSD specification. For example
 ``GSDML-V2.35-Vendor-Device-20171231.xml``. You can give it an optional timestamp
@@ -112,6 +112,7 @@ The GSD files are structured like::
           +--LogBookEntryList
           +--CategoryList
           +--ChannelDiagList
+          +--ChannelProcessAlarmList
           +--UnitDiagTypeList
           +--ExternalTextList
 
@@ -355,6 +356,10 @@ separated list of its subslot numbers.
 The element ``<ModuleInfo>`` has information on the module name in its
 subelements. The elements ``<HardwareRelease>`` and ``<SoftwareRelease>`` have
 ``Value`` attributes.
+
+The value for <SoftwareRelease> should correspond to the configuration values
+``im_sw_revision_prefix``, ``im_sw_revision_functional_enhancement``,
+``im_sw_revision_bug_fix`` and ``im_sw_revision_internal_change``.
 
 Each ``<SubmoduleItemRef>`` element has the attributes ``SubmoduleItemTarget``
 (which is a reference to a submodule) and ``AllowedInSubslots`` (which is a
@@ -644,3 +649,44 @@ for example ``ByteOffset``, ``DataType``, ``DefaultValue`` and ``TextId``.
 It is also possible to add diagnosis in USI format for profiles, by using
 the ``<ProfileUnitDiagTypeItem>`` element. Set the ``UserStructureIdentifier``
 and ``API`` attributes.
+
+
+Details on the process alarm list
+---------------------------------
+This is optional, and is used to give human-readable descriptions to
+manufacturer-specific process alarms.
+
+ChannelProcessAlarmList element hierarchy::
+
+    ChannelProcessAlarmList
+    |
+    +--ChannelProcessAlarmItem
+    |  |
+    |  +--Name
+    |  +--Help
+    |  +--ExtChannelProcessAlarmList
+    |     |
+    |     +--ExtChannelProcessAlarmItem
+    |
+    +--SystemDefinedChannelProcessAlarmItem
+    |  |
+    |  +--ExtChannelProcessAlarmList
+    |     |
+    |     +--ExtChannelProcessAlarmItem
+    |     +--ProfileExtChannelProcessAlarmItem
+    |
+    +--ProfileChannelProcessAlarmItem
+       |
+       +--Name
+       +--Help
+       +--ExtChannelProcessAlarmList
+          |
+          +--ExtChannelProcessAlarmItem
+          +--ProfileExtChannelProcessAlarmItem
+
+The element ``<ChannelProcessAlarmItem>`` is used to describe custom process
+alarms.
+
+An extension to system defined process alarms is created by the element
+``<SystemDefinedChannelProcessAlarmItem>``. Profiles can define process alarms
+using the ``<ProfileChannelProcessAlarmItem>`` element.

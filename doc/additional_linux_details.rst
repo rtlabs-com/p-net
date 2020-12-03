@@ -125,12 +125,12 @@ Study the resulting core::
 
 SNMP (Conformance class B)
 --------------------------
-
-Conformance class B requires SNMP support. P-Net for Linux implements
+Conformance class B requires SNMP support. Linux uses net-snmp as agent,
+see http://www.net-snmp.org/. P-Net for Linux implements
 a Net-SNMP subagent that handles the Profinet mandatory MIB:s. Also
 see :ref:`network-topology-detection` for information regarding SNMP.
 
-Enable SNMP by setting PNET_OPTION_SMP to ON. Net-SNMP also needs to
+Enable SNMP by setting ``PNET_OPTION_SNMP`` to ``ON``. Net-SNMP also needs to
 be installed. On Ubuntu you can install the required packages using::
 
   sudo apt install -y snmpd libsnmp-dev
@@ -154,14 +154,40 @@ SNMP system module should be disabled by adding the snmpd argument
   [Install]
   WantedBy=multi-user.target
 
+To see the status of the service::
+
+   systemctl status snmpd.service
+   journalctl -u snmpd.service -f
+
+To restart the service after modification::
+
+   sudo systemctl daemon-reload
+   sudo systemctl restart snmpd.service
+
 The file snmpd.conf controls access to the snmp agent. It should be
 set to listen on all interfaces and allow read-write access to the
 Profinet MIB:s. On Ubuntu Linux you should change
 ``/etc/snmp/snmpd.conf`` to read::
 
-  master  agentx
-  agentaddress  0.0.0.0,[::1]
-  view   systemonly  included   .1.3.6.1.2.1.1
-  view   systemonly  included   .1.0.8802.1.1.2
-  rwcommunity  public default -V systemonly
-  rwcommunity6 public default -V systemonly
+   master  agentx
+   agentaddress  0.0.0.0,[::1]
+   view   systemonly  included   .1.3.6.1.2.1.1
+   view   systemonly  included   .1.0.8802.1.1.2
+   rocommunity  public  default -V systemonly
+   rwcommunity  private default -V systemonly
+
+To verify the SNMP capabilities, first use ``ping`` to make sure you have a
+connection to the device, and then use ``snmpwalk``::
+
+   ping 192.168.0.50
+   snmpwalk -v1 -c public 192.168.0.50 1
+   snmpget -v1 -c public 192.168.0.50 1.3.6.1.2.1.1.4.0
+   snmpset -v1 -c private 192.168.0.50 1.3.6.1.2.1.1.4.0 s "My new sys contact"
+
+See :ref:`network-topology-detection` for more details on SNMP.
+
+
+snmpd in a Yocto build
+----------------------
+In an embedded Linux Yocto build, you would include the ``snmpd`` daemon by
+using the ``net-snmp`` recipe.

@@ -1095,6 +1095,16 @@ static int pf_cmrpc_rm_connect_interpret_ind (
          case PF_BT_IOCR_BLOCK_REQ:
             pf_get_iocr_param (&p_sess->get_info, p_pos, p_ar->nbr_iocrs, p_ar);
 
+            LOG_DEBUG (
+               PF_RPC_LOG,
+               "CMRPC(%d): Requested send cycle time %u (in 1/32 of millisec) "
+               "Reduction ratio:%u  Watchdog factor:%u  Data hold factor:%u\n",
+               __LINE__,
+               p_ar->iocrs[p_ar->nbr_iocrs].param.send_clock_factor,
+               p_ar->iocrs[p_ar->nbr_iocrs].param.reduction_ratio,
+               p_ar->iocrs[p_ar->nbr_iocrs].param.watchdog_factor,
+               p_ar->iocrs[p_ar->nbr_iocrs].param.data_hold_factor);
+
             /* Count the types for error discovery */
             if (p_ar->iocrs[p_ar->nbr_iocrs].param.iocr_type == PF_IOCR_TYPE_INPUT)
             {
@@ -1650,10 +1660,10 @@ static void pf_cmrpc_rm_connect_rsp (
  * @param net              InOut: The p-net stack instance
  * @param p_sess           InOut: The session instance. Will be released on
  * error.
- * @param req_pos          In:   Position in the request buffer.
- * @param res_size         In:   The size of the response buffer.
- * @param p_res            Out:  The response buffer.
- * @param p_res_pos        InOut:Position within the response buffer.
+ * @param req_pos          In:    Position in the request buffer.
+ * @param res_size         In:    The size of the response buffer.
+ * @param p_res            Out:   The response buffer.
+ * @param p_res_pos        InOut: Position within the response buffer.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -2886,7 +2896,7 @@ static int pf_cmrpc_perform_one_write (
       (*p_req_pos + p_write_request->record_data_length) <=
       p_sess->get_info.len)
    {
-      if (p_write_request->index < 0x8000)
+      if (p_write_request->index <= PF_IDX_USER_MAX)
       {
          /* This is a write of a GSDML param. No block header in this case. */
          if (

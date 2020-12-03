@@ -3547,7 +3547,9 @@ static int pf_cmdev_exp_submodule_configure (
                10);
             ret = -1;
          }
-         else if ((p_exp_sub->subslot_number >= 0x8000) && (p_exp_api->api != 0))
+         else if (
+            (p_exp_sub->subslot_number >= PNET_SUBSLOT_DAP_INTERFACE_1_IDENT) &&
+            (p_exp_api->api != 0))
          {
             pf_set_error (
                p_stat,
@@ -4275,7 +4277,6 @@ static int pf_cmdev_check_apdu (
 
    return ret;
 }
-
 
 int pf_cmdev_generate_submodule_diff (pnet_t * net, pf_ar_t * p_ar)
 {

@@ -286,7 +286,7 @@ Other Profinet-relevant MIB files on Linux:
 Walking a subtree using snmpwalk
 --------------------------------
 By default the ``snmpwalk`` searches the SNMPv2-SMI::mib-2 subtree. You can
-seach a smaller or larger subtree by giving the OID (or the corresponding
+search a smaller or larger subtree by giving the OID (or the corresponding
 name) to ``snmpwalk`` as the argument after the host argument.
 
 As an example, here are the number of found variables for different
@@ -430,39 +430,10 @@ Readable fields related to ports and interfaces:
 +----------------------+--------------------------------------+-----------------+------------+-------------+
 
 Note that some objects are listed "Not accessible" in the standard. These
-are read indirectly via other objects, and the information must thus
-be available.
+are read indirectly via other objects, so the information must thus be
+available.
 
 See the standard for the corresponding numerical OID values.
-
-
-Installing a SNMP agent on Linux
---------------------------------
-Linux uses net-snmp as agent, see http://www.net-snmp.org/
-The package name on Debian/Ubuntu is ``snmpd``.
-
-To install it on for example a Raspberry Pi::
-
-   sudo apt install -y snmpd
-
-In an embedded Linux Yocto build, you would include the ``snmpd`` daemon by
-using the ``net-snmp`` recipe.
-
-To enable the ``snmpd`` agent, modify the configuration file found
-at ``/etc/snmp/snmpd.conf``.
-Change the ``agentAddress`` and ``rocommunity`` lines to::
-
-   agentAddress udp:161
-
-   rocommunity public 192.168.0.0/16
-
-Restart ``snmpd``. A few useful commands::
-
-   sudo systemctl stop snmpd
-   sudo systemctl start snmpd
-   sudo systemctl status snmpd
-
-Use the ``snmpwalk`` from another computer to query the agent.
 
 
 Siemens PRONETA - Profinet Network Analysis tool

@@ -101,10 +101,10 @@ void pf_fspm_option_show (const pnet_t * net)
       PNET_MAX_API);
    printf ("PNET_MAX_CR                                    : %d\n", PNET_MAX_CR);
    printf (
-      "PNET_MAX_SLOTS                               : %d\n",
+      "PNET_MAX_SLOTS                                 : %d\n",
       PNET_MAX_SLOTS);
    printf (
-      "PNET_MAX_SUBSLOTS                            : %d\n",
+      "PNET_MAX_SUBSLOTS                              : %d\n",
       PNET_MAX_SUBSLOTS);
    printf (
       "PNET_MAX_CHANNELS                              : %d\n",
@@ -176,6 +176,9 @@ void pf_fspm_option_show (const pnet_t * net)
    printf (
       "PNET_OPTION_SRL                                : %d\n",
       PNET_OPTION_SRL);
+   printf (
+      "PNET_OPTION_SNMP                               : %d\n",
+      PNET_OPTION_SNMP);
    printf ("LOG_LEVEL (DEBUG=0, FATAL=4)                   : %d\n", LOG_LEVEL);
    printf (
       "sizeof(pnet_t) : %" PRIu32 " bytes (for currently selected option "

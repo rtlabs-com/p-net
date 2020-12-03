@@ -203,6 +203,8 @@ For details, see:
 
 * Profinet 2.4 Services, section 7.3.6
 * Profinet 2.4 Protocol, section 5.2.38 "Coding section related to logbook"
+* "Specification for GSDML", section 8.26 "LogBookEntryItem"
+  (allowed error codes)
 
 
 FSPM - Fieldbus application layer Service Protocol Machine
@@ -521,7 +523,9 @@ Sections in 61784-2 (profiles) describing SNMP:
 | 7.1.11        | Conformance class behaviors (Mandatory MIBs)                            |
 +---------------+-------------------------------------------------------------------------+
 
-See also the list of supported OIDs in the test case specification "Topology discovery check".
+See also the "Topology and Asset Discovery" guideline published by the Profinet
+organisation, and the list of supported OIDs in the test case specification
+"Topology discovery check".
 
 
 Conformance class D
