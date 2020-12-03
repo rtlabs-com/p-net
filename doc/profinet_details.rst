@@ -345,7 +345,7 @@ contains info on the block type and block payload length.
 It is followed by the block payload data.
 Different TLV block types may have subtypes defined (within the payload).
 
-The frame is broadcasted to MAC address ``01:80:c2:00:00:0e`` and
+The frame is broadcast to MAC address ``01:80:c2:00:00:0e`` and
 has an Ethertype of 0x88cc.
 
 TLV types:

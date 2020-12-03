@@ -23,7 +23,7 @@
  *  - GET
  *  - SET
  *  - IDENTIFY (asking for a particular device)
- *  - HELLO (broadcasted to indicate the presence of a device)
+ *  - HELLO (broadcast to indicate the presence of a device)
  *
  * Registers the different frame IDs for these messages with the frame handler.
  *

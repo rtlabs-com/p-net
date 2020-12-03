@@ -100,11 +100,11 @@ For this example, the IO-controller is started first, and then the IO-device.
 +---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
 | IO-device (broadcast)     | PN-DCP   | "Hello req". Station name "rt-labs-dev", IP address, gateway, vendor, device (sent every 3 seconds)                  |
 +---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
-| IO-device                 | PN-DCP   | "Ident Ok" Identify response. Station name "rt-labs-dev", IP address, netmask, gateway, VendorID, DeviceID, options  |
+| IO-device                 | PN-DCP   | "Ident OK" Identify response. Station name "rt-labs-dev", IP address, netmask, gateway, VendorID, DeviceID, options  |
 +---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
 | IO-controller             | PN-DCP   | "Set Req" Set IP request. Use IP address and gateway.                                                                |
 +---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
-| IO-device                 | PN-DCP   | "Set Ok" Status.                                                                                                     |
+| IO-device                 | PN-DCP   | "Set OK" Status.                                                                                                     |
 +---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+
 | IO-controller (broadcast) | ARP      | Who has <IO-device IP address>?                                                                                      |
 +---------------------------+----------+----------------------------------------------------------------------------------------------------------------------+

@@ -382,7 +382,7 @@ int pf_ppm_activate_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
 
       LOG_DEBUG (
          PF_PPM_LOG,
-         "PPM(%d): Starting cyclic sending for CREP %" PRIu32 " with period "
+         "PPM(%d): Starting cyclic data transmission for CREP %" PRIu32 ", period "
          "%" PRIu32 " microseconds\n",
          __LINE__,
          crep,

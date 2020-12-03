@@ -123,6 +123,8 @@ Project > Run.
 
 When communication is verified, enable all relevant test cases.
 
+The ART tester tool stores Wireshark files (.pcap files) in the
+project directory. See the ``EthernetDump`` subdirectory.
 
 Additional hardware
 -------------------
@@ -267,75 +269,75 @@ These values have large impact on test execution times:
 Relevant test cases for conformance class A
 -------------------------------------------
 
-+-------------------------------------------------+---------------------------------------------------------------+
-| Test case                                       | Notes                                                         |
-+=================================================+===============================================================+
-| DCP_1                                           | Power cycle 8 times.                                          |
-+-------------------------------------------------+---------------------------------------------------------------+
-| DCP_2                                           | Power cycle 2 times.                                          |
-+-------------------------------------------------+---------------------------------------------------------------+
-| DCP_3                                           | Power cycle 2 times.                                          |
-+-------------------------------------------------+---------------------------------------------------------------+
-| DCP_4                                           | Fast                                                          |
-+-------------------------------------------------+---------------------------------------------------------------+
-| DCP_ALIAS                                       | Requires additional hardware ("Device B")                     |
-+-------------------------------------------------+---------------------------------------------------------------+
-| DCP_IDN                                         | Fast.                                                         |
-+-------------------------------------------------+---------------------------------------------------------------+
-| DCP_NAME_1                                      | Power cycle 4 times.                                          |
-+-------------------------------------------------+---------------------------------------------------------------+
-| DCP_NAME_2                                      | Power cycle 4 times.                                          |
-+-------------------------------------------------+---------------------------------------------------------------+
-| DCP_ResetToFactory                              |                                                               |
-+-------------------------------------------------+---------------------------------------------------------------+
-| DCP_OPTIONS_SUBOPTIONS                          |                                                               |
-+-------------------------------------------------+---------------------------------------------------------------+
-| DCP_Router                                      |                                                               |
-+-------------------------------------------------+---------------------------------------------------------------+
-| DCP_Access                                      | Fast.                                                         |
-+-------------------------------------------------+---------------------------------------------------------------+
-| DCP_VLAN                                        | Power cycle 2 times                                           |
-+-------------------------------------------------+---------------------------------------------------------------+
-| DCP IP-parameter Remanence                      | Power cycle 4 times.                                          |
-+-------------------------------------------------+---------------------------------------------------------------+
-| Behavior Scenario 1 to 9                        | Power cycle                                                   |
-+-------------------------------------------------+---------------------------------------------------------------+
-| Behavior Scenario 10                            |                                                               |
-+-------------------------------------------------+---------------------------------------------------------------+
-| Behavior Scenario 11                            |                                                               |
-+-------------------------------------------------+---------------------------------------------------------------+
-| Different Access Ways                           | Requires additional hardware ("Device B")                     |
-+-------------------------------------------------+---------------------------------------------------------------+
-| PDEV_CHECK_ONEPORT                              | Requires additional hardware ("Device B"). Power cycle twice. |
-+-------------------------------------------------+---------------------------------------------------------------+
-| Diagnosis                                       | Power cycle.                                                  |
-+-------------------------------------------------+---------------------------------------------------------------+
-| Alarm                                           | Requires additional hardware ("Device B")                     |
-+-------------------------------------------------+---------------------------------------------------------------+
-| AR-ASE                                          | Power cycle                                                   |
-+-------------------------------------------------+---------------------------------------------------------------+
-| IP_UDP_RPC_I&M_EPM                              |                                                               |
-+-------------------------------------------------+---------------------------------------------------------------+
-| RTC                                             | Requires additional hardware ("Device B")                     |
-+-------------------------------------------------+---------------------------------------------------------------+
-| VLAN                                            | Turn off IO-controller ("device A")                           |
-+-------------------------------------------------+---------------------------------------------------------------+
-| Different access ways port-to-port              | Use port-to-port set up                                       |
-+-------------------------------------------------+---------------------------------------------------------------+
-| Manual: DCP_Signal                              | Flash Signal LED. Fast.                                       |
-+-------------------------------------------------+---------------------------------------------------------------+
-| Manual: Behavior of ResetToFactory              |                                                               |
-+-------------------------------------------------+---------------------------------------------------------------+
-| Manual: Checking of sending RTC frames          | Fast                                                          |
-+-------------------------------------------------+---------------------------------------------------------------+
-| Not automated: DataHoldTimer                    | PLC required. Use network tap at DUT.                         |
-+-------------------------------------------------+---------------------------------------------------------------+
-| Not automated: Interoperability                 | PLC required                                                  |
-+-------------------------------------------------+---------------------------------------------------------------+
-| Not automated: Interoperability with controller | PLC required                                                  |
-+-------------------------------------------------+---------------------------------------------------------------+
-| Security Level 1                                | PLC required                                                  |
-+-------------------------------------------------+---------------------------------------------------------------+
++-------------------------------------------------+-----------------------------------------------------------------+
+| Test case                                       | Notes                                                           |
++=================================================+=================================================================+
+| DCP_1                                           | Power cycle 8 times.                                            |
++-------------------------------------------------+-----------------------------------------------------------------+
+| DCP_2                                           | Power cycle 2 times.                                            |
++-------------------------------------------------+-----------------------------------------------------------------+
+| DCP_3                                           | Power cycle 2 times.                                            |
++-------------------------------------------------+-----------------------------------------------------------------+
+| DCP_4                                           | Fast                                                            |
++-------------------------------------------------+-----------------------------------------------------------------+
+| DCP_ALIAS                                       | Requires additional hardware ("Device B")                       |
++-------------------------------------------------+-----------------------------------------------------------------+
+| DCP_IDN                                         | Fast.                                                           |
++-------------------------------------------------+-----------------------------------------------------------------+
+| DCP_NAME_1                                      | Power cycle 4 times.                                            |
++-------------------------------------------------+-----------------------------------------------------------------+
+| DCP_NAME_2                                      | Power cycle 4 times.                                            |
++-------------------------------------------------+-----------------------------------------------------------------+
+| DCP_ResetToFactory                              |                                                                 |
++-------------------------------------------------+-----------------------------------------------------------------+
+| DCP_OPTIONS_SUBOPTIONS                          |                                                                 |
++-------------------------------------------------+-----------------------------------------------------------------+
+| DCP_Router                                      |                                                                 |
++-------------------------------------------------+-----------------------------------------------------------------+
+| DCP_Access                                      | Fast.                                                           |
++-------------------------------------------------+-----------------------------------------------------------------+
+| DCP_VLAN                                        | Power cycle 2 times                                             |
++-------------------------------------------------+-----------------------------------------------------------------+
+| DCP IP-parameter Remanence                      | Power cycle 4 times.                                            |
++-------------------------------------------------+-----------------------------------------------------------------+
+| Behavior Scenario 1 to 9                        | Power cycle                                                     |
++-------------------------------------------------+-----------------------------------------------------------------+
+| Behavior Scenario 10                            |                                                                 |
++-------------------------------------------------+-----------------------------------------------------------------+
+| Behavior Scenario 11                            |                                                                 |
++-------------------------------------------------+-----------------------------------------------------------------+
+| Different Access Ways                           | Requires additional hardware ("Device B")                       |
++-------------------------------------------------+-----------------------------------------------------------------+
+| PDEV_CHECK_ONEPORT                              | Requires additional hardware ("Device B"). Power cycle 3 times. |
++-------------------------------------------------+-----------------------------------------------------------------+
+| Diagnosis                                       | Requires additional hardware ("Device B"). Power cycle.         |
++-------------------------------------------------+-----------------------------------------------------------------+
+| Alarm                                           | Requires additional hardware ("Device B")                       |
++-------------------------------------------------+-----------------------------------------------------------------+
+| AR-ASE                                          | Power cycle                                                     |
++-------------------------------------------------+-----------------------------------------------------------------+
+| IP_UDP_RPC_I&M_EPM                              | Power cycle                                                     |
++-------------------------------------------------+-----------------------------------------------------------------+
+| RTC                                             | Requires additional hardware ("Device B")                       |
++-------------------------------------------------+-----------------------------------------------------------------+
+| VLAN                                            | Turn off IO-controller ("device A")                             |
++-------------------------------------------------+-----------------------------------------------------------------+
+| Different access ways port-to-port              | Use port-to-port set up                                         |
++-------------------------------------------------+-----------------------------------------------------------------+
+| Manual: DCP_Signal                              | Flash Signal LED. Fast.                                         |
++-------------------------------------------------+-----------------------------------------------------------------+
+| Manual: Behavior of ResetToFactory              |                                                                 |
++-------------------------------------------------+-----------------------------------------------------------------+
+| Manual: Checking of sending RTC frames          | Fast                                                            |
++-------------------------------------------------+-----------------------------------------------------------------+
+| Not automated: DataHoldTimer                    | PLC required. Use network tap at DUT.                           |
++-------------------------------------------------+-----------------------------------------------------------------+
+| Not automated: Interoperability                 | PLC required                                                    |
++-------------------------------------------------+-----------------------------------------------------------------+
+| Not automated: Interoperability with controller | PLC required                                                    |
++-------------------------------------------------+-----------------------------------------------------------------+
+| Security Level 1                                | PLC required                                                    |
++-------------------------------------------------+-----------------------------------------------------------------+
 
 
 Relevant test cases for conformance class B
@@ -363,6 +365,7 @@ behavior.
 
 * SM_Legacy
 * Different Access Ways
+* Different Access Ways port-to-port
 * DCP
 * AR-ASE
 * IP_UDP_RPC_I&M_EPM
@@ -391,22 +394,43 @@ Set the ``AddressAssignment`` attribute to ``DHCP``.
 
 Other tests
 -----------
+Your GSDML file should pass the verification with the "GSDMLcheck" tool.
 
-* GSDMLcheck
 
+Details on tests with PLC
+-------------------------
 
-Test details
-------------
+Load PLC program
+^^^^^^^^^^^^^^^^
+Verify that the sample application PLC program is working properly with your
+IO-device. Button1 should be able to control the state of data LED (LED1).
 
 
 Data Hold Timer
 ^^^^^^^^^^^^^^^
+Unplug network cable from the PLC while recording the cyclic data (use Wireshark).
+Count the number of cyclic data frames before the alarm from the IO-device is sent.
+It is allowed that 3-6 data frames are sent before sending the alarm frame.
 
-* Manual checking of LLDP frames. Should reflect real port state.
-* Check real cycle time
-* Check IOPS in startup of cyclic data
-* Disconnect controller, and study number of frames from IO device until alarm.
-  Repeat for different data exchange cycle times.
+Perform the cable unplugging measurements with reduction ratios 1, 2, 4, 8 and 16.
+The data hold time should be 3x the frame interval.
+With a cycle time of 1 ms this corresponds to a frame send interval of
+1 ms to 16 ms, and a data hold time of 3 ms to 48 ms.
+
+In Siemens TIA portal, set the update time to for example 2 ms (values
+1, 2, 4, 8, and 16 ms should be used).
+The "Accepted update cycles without IO data" should be set to 3.
+
+At startup the first valid data frame should be sent within the data hold time.
+Check IOPS.
+
+Verify the data cycle time.
+
+Check that a LLDP frame is sent within 5 seconds, and then every 5 seconds.
+The TTL value in the LLDP frame should be 20 seconds.
+The MAUtype, "autonegotiation supported" and "autonegotiation enabled" must
+be correct.
+
 
 Interoperability
 ^^^^^^^^^^^^^^^^
@@ -418,5 +442,8 @@ Run with PLC for 10 minutes without errors. Record startup and data exchange usi
 
 Interoperability with controller
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Run with PLC, then switch PLC to stop. Study the outputs of the IO-device.
-Disconnect cable from PLC. Study the outputs of the IO-device.
+Run with PLC, and verify that the outputs are according to the manual of your
+IO-device.
+
+* Switch the PLC to stop. Study the outputs of the IO-device.
+* Disconnect cable from PLC. Study the outputs of the IO-device.

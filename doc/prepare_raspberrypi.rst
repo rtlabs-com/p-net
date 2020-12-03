@@ -51,8 +51,8 @@ name to something informative, for example::
     touch home/pi/IAmAProfinetDevice
 
 Unmount the SD-card, and plug it in into your Raspberry Pi. Power up the
-Raspberry Pi. Log in to it via a serial cable. Use the username ``pi`` and
-the default password ``raspberry``.
+Raspberry Pi. Log in to it via a serial cable (see below).
+Use the username ``pi`` and the default password ``raspberry``.
 
 If you do not have any serial cable (and not have disabled DCHP), connect
 the Raspberry Pi to your local network.
@@ -240,8 +240,8 @@ You can still ping the <hostname>.local address to find it on the network.
 To re-enable DHCP, remove the lines again from ``/etc/dhcpcd.conf``.
 
 
-Advanced users only: Autostart of sample application
-----------------------------------------------------
+Advanced users only: Automatic start of sample application
+----------------------------------------------------------
 Use systemd to automatically start the p-net sample application on startup.
 Place a systemd unit file here: ``/lib/systemd/system/pnet-sampleapp.service``
 
