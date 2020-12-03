@@ -2714,7 +2714,7 @@ int pf_alarm_send_diagnosis (
    int ret = -1;
    pf_alarm_type_values_t alarm_type = PF_ALARM_TYPE_DIAGNOSIS;
    uint32_t module_ident = PNET_MOD_DAP_IDENT;
-   uint32_t submodule_ident = PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT;
+   uint32_t submodule_ident = PNET_SUBMOD_DAP_INTERFACE_1_PORT_1_IDENT;
 
    if (p_diag_item != NULL)
    {

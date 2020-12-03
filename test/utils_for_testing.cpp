@@ -220,7 +220,7 @@ int my_state_ind (
          net,
          TEST_API_IDENT,
          PNET_SLOT_DAP_IDENT,
-         PNET_SUBSLOT_DAP_INTERFACE_1_PORT_0_IDENT,
+         PNET_SUBSLOT_DAP_INTERFACE_1_PORT_1_IDENT,
          NULL,
          0,
          PNET_IOXS_GOOD);
@@ -439,7 +439,7 @@ void PnetIntegrationTestBase::available_modules_and_submodules_init()
    appdata.available_submodule_types[2].module_ident_number =
       PNET_MOD_DAP_IDENT;
    appdata.available_submodule_types[2].submodule_ident_number =
-      PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT;
+      PNET_SUBMOD_DAP_INTERFACE_1_PORT_1_IDENT;
    appdata.available_submodule_types[2].direction = PNET_DIR_NO_IO;
    appdata.available_submodule_types[2].input_length = 0;
    appdata.available_submodule_types[2].output_length = 0;

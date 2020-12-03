@@ -122,7 +122,7 @@ static const cfg_submodule_type_t cfg_available_submodule_types[] = {
    {"DAP Port 1",
     APP_API,
     PNET_MOD_DAP_IDENT,
-    PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT,
+    PNET_SUBMOD_DAP_INTERFACE_1_PORT_1_IDENT,
     PNET_DIR_NO_IO,
     0,
     0},
