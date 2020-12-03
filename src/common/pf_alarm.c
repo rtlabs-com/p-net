@@ -2405,20 +2405,20 @@ void pf_alarm_add_diag_item_to_summary (
 
       severity_qualifier =
          (p_diag_item->fmt.std.qual_ch_qualifier &
-          PNET_DIAG_QUALIFIED_SEVERITY_MASK);
+          PF_DIAG_QUALIFIED_SEVERITY_MASK);
 
       /* Severity "Maintenance required" */
       if (
-         PNET_DIAG_CH_PROP_MAINT_GET (p_diag_item->fmt.std.ch_properties) ==
+         PF_DIAG_CH_PROP_MAINT_GET (p_diag_item->fmt.std.ch_properties) ==
          PNET_DIAG_CH_PROP_MAINT_REQUIRED)
       {
          is_maintenance_required = true;
       }
       else if (
-         PNET_DIAG_CH_PROP_MAINT_GET (p_diag_item->fmt.std.ch_properties) ==
+         PF_DIAG_CH_PROP_MAINT_GET (p_diag_item->fmt.std.ch_properties) ==
          PNET_DIAG_CH_PROP_MAINT_QUALIFIED)
       {
-         if ((severity_qualifier & PNET_DIAG_QUALIFIER_MASK_REQUIRED) > 0)
+         if ((severity_qualifier & PF_DIAG_QUALIFIER_MASK_REQUIRED) > 0)
          {
             is_maintenance_required = true;
          }
@@ -2426,16 +2426,16 @@ void pf_alarm_add_diag_item_to_summary (
 
       /* Severity "Maintenance demanded"  */
       if (
-         PNET_DIAG_CH_PROP_MAINT_GET (p_diag_item->fmt.std.ch_properties) ==
+         PF_DIAG_CH_PROP_MAINT_GET (p_diag_item->fmt.std.ch_properties) ==
          PNET_DIAG_CH_PROP_MAINT_DEMANDED)
       {
          is_maintenance_demanded = true;
       }
       else if (
-         PNET_DIAG_CH_PROP_MAINT_GET (p_diag_item->fmt.std.ch_properties) ==
+         PF_DIAG_CH_PROP_MAINT_GET (p_diag_item->fmt.std.ch_properties) ==
          PNET_DIAG_CH_PROP_MAINT_QUALIFIED)
       {
-         if ((severity_qualifier & PNET_DIAG_QUALIFIER_MASK_DEMANDED) > 0)
+         if ((severity_qualifier & PF_DIAG_QUALIFIER_MASK_DEMANDED) > 0)
          {
             is_maintenance_demanded = true;
          }
@@ -2443,16 +2443,16 @@ void pf_alarm_add_diag_item_to_summary (
 
       /* Severity "Fault" */
       if (
-         PNET_DIAG_CH_PROP_MAINT_GET (p_diag_item->fmt.std.ch_properties) ==
+         PF_DIAG_CH_PROP_MAINT_GET (p_diag_item->fmt.std.ch_properties) ==
          PNET_DIAG_CH_PROP_MAINT_FAULT)
       {
          is_fault = true;
       }
       else if (
-         PNET_DIAG_CH_PROP_MAINT_GET (p_diag_item->fmt.std.ch_properties) ==
+         PF_DIAG_CH_PROP_MAINT_GET (p_diag_item->fmt.std.ch_properties) ==
          PNET_DIAG_CH_PROP_MAINT_QUALIFIED)
       {
-         if ((severity_qualifier & PNET_DIAG_QUALIFIER_MASK_FAULT) > 0)
+         if ((severity_qualifier & PF_DIAG_QUALIFIER_MASK_FAULT) > 0)
          {
             is_fault = true;
          }
@@ -2460,8 +2460,8 @@ void pf_alarm_add_diag_item_to_summary (
 
       /* Is the diagnosis appearing */
       if (
-         PNET_DIAG_CH_PROP_SPEC_GET (p_diag_item->fmt.std.ch_properties) ==
-         PNET_DIAG_CH_PROP_SPEC_APPEARS)
+         PF_DIAG_CH_PROP_SPEC_GET (p_diag_item->fmt.std.ch_properties) ==
+         PF_DIAG_CH_PROP_SPEC_APPEARS)
       {
          is_appears = true;
       }
@@ -2472,11 +2472,11 @@ void pf_alarm_add_diag_item_to_summary (
       /* MaintenanceRequired and MaintenanceDemanded bits */
       if (is_maintenance_required == true)
       {
-         *p_maint_status |= PNET_DIAG_BIT_MAINTENANCE_REQUIRED;
+         *p_maint_status |= PF_DIAG_BIT_MAINTENANCE_REQUIRED;
       }
       if (is_maintenance_demanded == true)
       {
-         *p_maint_status |= PNET_DIAG_BIT_MAINTENANCE_DEMANDED;
+         *p_maint_status |= PF_DIAG_BIT_MAINTENANCE_DEMANDED;
       }
 
       /* Alarm specifiers for diagnosis in standard format */
