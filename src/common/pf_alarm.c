@@ -68,6 +68,10 @@
 #define ALARM_VLAN_PRIO_LOW  5
 #define ALARM_VLAN_PRIO_HIGH 6
 
+#if PNET_MAX_ALARMS < 1
+#error "PNET_MAX_ALARMS needs to be at least 1"
+#endif
+
 /* The scheduler identifier */
 static const char * apmx_sync_name = "apmx";
 
@@ -2198,7 +2202,7 @@ static int pf_alarm_reset_send_queues (pnet_t * net, pf_ar_t * p_ar)
  * @return 0  is returned if an alarm is put into the queue
  *         -1 is returned if queue is full
  */
-static int pf_alarm_add_send_queue (
+int pf_alarm_add_send_queue (
    pf_alarm_queue_t * q,
    const pf_alarm_data_t * p_alarm_data)
 {
@@ -2230,7 +2234,7 @@ static int pf_alarm_add_send_queue (
  * @return 0  is returned if an alarm is fetched from the queue
  *         -1 is returned if queue is empty
  */
-static int pf_alarm_fetch_send_queue (
+int pf_alarm_fetch_send_queue (
    pf_alarm_queue_t * q,
    pf_alarm_data_t * p_alarm_data)
 {

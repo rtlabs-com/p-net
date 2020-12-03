@@ -293,3 +293,61 @@ TEST_F (AlarmUnitTest, AlarmCheckAddDiagItemToSummary)
       diag_item.fmt.std.ch_properties,
       PNET_DIAG_CH_PROP_MAINT_FAULT);
 }
+
+
+TEST_F (AlarmUnitTest, AlarmCheckQueueHandling)
+{
+   pf_alarm_queue_t queue;
+   pf_alarm_data_t alarm_input;
+   pf_alarm_data_t alarm_output;
+   int ix = 0;
+   int err = 0;
+   const uint16_t SEQUENCE_START_NUMBER = 100;
+
+   /* Prepare default data */
+   memset (&queue, 0, sizeof (queue));
+   memset (&alarm_input, 0, sizeof (alarm_input));
+   memset (&alarm_output, 0, sizeof (alarm_output));
+   EXPECT_EQ (queue.count, 0);
+
+   /* Fill the queue */
+   for (ix = 0; ix < PNET_MAX_ALARMS; ix++)
+   {
+      alarm_input.sequence_number = SEQUENCE_START_NUMBER + ix;
+      err = pf_alarm_add_send_queue(&queue, &alarm_input);
+      EXPECT_EQ (err, 0);
+   }
+   EXPECT_EQ (queue.count, PNET_MAX_ALARMS);
+
+   /* Add to full queue */
+   alarm_input.sequence_number += 1;
+   err = pf_alarm_add_send_queue(&queue, &alarm_input);
+   EXPECT_EQ (err, -1);
+   EXPECT_EQ (queue.count, PNET_MAX_ALARMS);
+
+   /* Fetch from the queue */
+   for (ix = 0; ix < PNET_MAX_ALARMS; ix++)
+   {
+      err = pf_alarm_fetch_send_queue(&queue, &alarm_output);
+      EXPECT_EQ (err, 0);
+      EXPECT_EQ (alarm_output.sequence_number, SEQUENCE_START_NUMBER + ix);
+   }
+   EXPECT_EQ (queue.count, 0);
+
+   /* Fetch from empty queue */
+   err = pf_alarm_fetch_send_queue(&queue, &alarm_output);
+   EXPECT_EQ (err, -1);
+   EXPECT_EQ (queue.count, 0);
+
+   /* Wrap read_index and write_index */
+   for (ix = 0; ix < PNET_MAX_ALARMS * 5; ix++)
+   {
+      err = pf_alarm_add_send_queue(&queue, &alarm_input);
+      EXPECT_EQ (err, 0);
+      EXPECT_EQ (queue.count, 1);
+
+      err = pf_alarm_fetch_send_queue(&queue, &alarm_output);
+      EXPECT_EQ (err, 0);
+      EXPECT_EQ (queue.count, 0);
+   }
+}
