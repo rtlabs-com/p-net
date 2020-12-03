@@ -2617,9 +2617,9 @@ typedef struct pf_lldp_port
  * - Interface name
  * - local port number
  * - slot (typically 0 = PNET_SLOT_DAP_IDENT)
- * - subslot (for example 0x8001 = PNET_SUBSLOT_DAP_INTERFACE_1_PORT_0_IDENT)
+ * - subslot (for example 0x8001 = PNET_SUBSLOT_DAP_INTERFACE_1_PORT_1_IDENT)
  * - module (for example PNET_MOD_DAP_IDENT)
- * - submodule (for example PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT)
+ * - submodule (for example PNET_SUBMOD_DAP_INTERFACE_1_PORT_1_IDENT)
  */
 typedef struct pf_port
 {

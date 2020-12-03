@@ -158,7 +158,7 @@ static int pf_pdport_save (pnet_t * net)
 static uint16_t pf_pdport_loc_port_num_to_dap_subslot (int loc_port_num)
 {
    CC_ASSERT (loc_port_num == PNET_PORT_1);
-   return PNET_SUBSLOT_DAP_INTERFACE_1_PORT_0_IDENT;
+   return PNET_SUBSLOT_DAP_INTERFACE_1_PORT_1_IDENT;
 }
 
 /**
@@ -308,7 +308,7 @@ int pf_pdport_read_ind (
       if (
          (p_read_req->slot_number == PNET_SLOT_DAP_IDENT) &&
          (p_read_req->subslot_number ==
-          PNET_SUBSLOT_DAP_INTERFACE_1_PORT_0_IDENT))
+          PNET_SUBSLOT_DAP_INTERFACE_1_PORT_1_IDENT))
       {
          pf_put_pdport_data_real (
             net,
@@ -326,7 +326,7 @@ int pf_pdport_read_ind (
       if (
          (p_read_req->slot_number == PNET_SLOT_DAP_IDENT) &&
          (p_read_req->subslot_number ==
-          PNET_SUBSLOT_DAP_INTERFACE_1_PORT_0_IDENT))
+          PNET_SUBSLOT_DAP_INTERFACE_1_PORT_1_IDENT))
       {
          if (p_port_data->pdport.adjust.active)
          {
@@ -346,7 +346,7 @@ int pf_pdport_read_ind (
       if (
          (p_read_req->slot_number == PNET_SLOT_DAP_IDENT) &&
          (p_read_req->subslot_number ==
-          PNET_SUBSLOT_DAP_INTERFACE_1_PORT_0_IDENT))
+          PNET_SUBSLOT_DAP_INTERFACE_1_PORT_1_IDENT))
       {
          /* Todo map subslot to port */
          if (p_port_data->pdport.check.active)
@@ -399,7 +399,7 @@ int pf_pdport_read_ind (
          (p_read_req->slot_number == PNET_SLOT_DAP_IDENT) &&
          ((p_read_req->subslot_number == PNET_SUBSLOT_DAP_INTERFACE_1_IDENT) ||
           (p_read_req->subslot_number ==
-           PNET_SUBSLOT_DAP_INTERFACE_1_PORT_0_IDENT)))
+           PNET_SUBSLOT_DAP_INTERFACE_1_PORT_1_IDENT)))
       {
          pf_put_pdport_statistics (
             &net->interface_statistics,

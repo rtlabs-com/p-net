@@ -1203,9 +1203,9 @@ void app_plug_dap (pnet_t * net, void * arg)
       arg,
       APP_API,
       PNET_SLOT_DAP_IDENT,
-      PNET_SUBSLOT_DAP_INTERFACE_1_PORT_0_IDENT,
+      PNET_SUBSLOT_DAP_INTERFACE_1_PORT_1_IDENT,
       PNET_MOD_DAP_IDENT,
-      PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT,
+      PNET_SUBMOD_DAP_INTERFACE_1_PORT_1_IDENT,
       &cfg_dap_data);
 }
 
