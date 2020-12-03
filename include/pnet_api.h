@@ -1062,7 +1062,7 @@ typedef struct pnet_im_0
  */
 typedef struct pnet_im_1
 {
-   char im_tag_function[32 + 1]; /**< Terminated string */
+   char im_tag_function[32 + 1];                    /**< Terminated string */
    char im_tag_location[PNET_LOCATION_MAX_LEN + 1]; /**< Terminated string */
 } pnet_im_1_t;
 
@@ -1710,18 +1710,9 @@ PNET_EXPORT int pnet_alarm_send_ack (
    const pnet_pnio_status_t * p_pnio_status);
 
 /* ****************************** Diagnosis ****************************** */
-/* Mask and position of bit fields and values within ch_properties         */
 
-#define PNET_DIAG_CH_PROP_TYPE_MASK 0x00ff
-#define PNET_DIAG_CH_PROP_TYPE_POS  0
-#define PNET_DIAG_CH_PROP_TYPE_GET(x)                                          \
-   (((X)&PNET_DIAG_CH_PROP_TYPE_MASK) >> PNET_DIAG_CH_PROP_TYPE_POS)
-#define PNET_DIAG_CH_PROP_TYPE_SET(x, v)                                       \
-   do                                                                          \
-   {                                                                           \
-      (x) &= ~PNET_DIAG_CH_PROP_TYPE_MASK;                                     \
-      (x) |= (v) << PNET_DIAG_CH_PROP_TYPE_POS;                                \
-   } while (0)
+#define PNET_CHANNEL_WHOLE_SUBMODULE 0x8000
+
 /**
  * Channel size in bits.
  */
@@ -1738,73 +1729,12 @@ typedef enum pnet_diag_ch_prop_type_values
    /* 8..255 Reserved */
 } pnet_diag_ch_prop_type_values_t;
 
-#define PNET_DIAG_CH_PROP_ACC_MASK 0x0100
-#define PNET_DIAG_CH_PROP_ACC_POS  8
-#define PNET_DIAG_CH_PROP_ACC_GET(x)                                           \
-   (((x)&PNET_DIAG_CH_PROP_ACC_MASK) >> PNET_DIAG_CH_PROP_ACC_POS)
-#define PNET_DIAG_CH_PROP_ACC_SET(x, v)                                        \
-   do                                                                          \
-   {                                                                           \
-      (x) &= ~PNET_DIAG_CH_PROP_ACC_MASK;                                      \
-      (x) |= (v) << PNET_DIAG_CH_PROP_ACC_POS;                                 \
-   } while (0)
-
 /* Channel group or individual channel. Also known as "Accumulative" */
 typedef enum pnet_diag_ch_group_values
 {
    PNET_DIAG_CH_INDIVIDUAL_CHANNEL = 0,
    PNET_DIAG_CH_CHANNEL_GROUP = 1
 } pnet_diag_ch_group_values_t;
-
-#define PNET_DIAG_CH_PROP_MAINT_MASK 0x0600
-#define PNET_DIAG_CH_PROP_MAINT_POS  9
-#define PNET_DIAG_CH_PROP_MAINT_GET(x)                                         \
-   (((x)&PNET_DIAG_CH_PROP_MAINT_MASK) >> PNET_DIAG_CH_PROP_MAINT_POS)
-#define PNET_DIAG_CH_PROP_MAINT_SET(x, v)                                      \
-   do                                                                          \
-   {                                                                           \
-      (x) &= ~PNET_DIAG_CH_PROP_MAINT_MASK;                                    \
-      (x) |= (v) << PNET_DIAG_CH_PROP_MAINT_POS;                               \
-   } while (0)
-/**
- * Diagnosis severity.
- */
-typedef enum pnet_diag_ch_prop_maint_values
-{
-   PNET_DIAG_CH_PROP_MAINT_FAULT = 0,
-   PNET_DIAG_CH_PROP_MAINT_REQUIRED = 1,
-   PNET_DIAG_CH_PROP_MAINT_DEMANDED = 2,
-   PNET_DIAG_CH_PROP_MAINT_QUALIFIED = 3,
-} pnet_diag_ch_prop_maint_values_t;
-
-#define PNET_DIAG_CH_PROP_SPEC_MASK 0x1800
-#define PNET_DIAG_CH_PROP_SPEC_POS  11
-#define PNET_DIAG_CH_PROP_SPEC_GET(x)                                          \
-   (((x)&PNET_DIAG_CH_PROP_SPEC_MASK) >> PNET_DIAG_CH_PROP_SPEC_POS)
-#define PNET_DIAG_CH_PROP_SPEC_SET(x, v)                                       \
-   do                                                                          \
-   {                                                                           \
-      (x) &= ~PNET_DIAG_CH_PROP_SPEC_MASK;                                     \
-      (x) |= (v) << PNET_DIAG_CH_PROP_SPEC_POS;                                \
-   } while (0)
-typedef enum pnet_diag_ch_prop_spec_values
-{
-   PNET_DIAG_CH_PROP_SPEC_ALL_DISAPPEARS = 0,
-   PNET_DIAG_CH_PROP_SPEC_APPEARS = 1,
-   PNET_DIAG_CH_PROP_SPEC_DISAPPEARS = 2,
-   PNET_DIAG_CH_PROP_SPEC_DIS_OTHERS_REMAIN = 3,
-} pnet_diag_ch_prop_spec_values_t;
-
-#define PNET_DIAG_CH_PROP_DIR_MASK 0xe000
-#define PNET_DIAG_CH_PROP_DIR_POS  13
-#define PNET_DIAG_CH_PROP_DIR_GET(x)                                           \
-   (((x)&PNET_DIAG_CH_PROP_DIR_MASK) >> PNET_DIAG_CH_PROP_DIR_POS)
-#define PNET_DIAG_CH_PROP_DIR_SET(x, v)                                        \
-   do                                                                          \
-   {                                                                           \
-      (x) &= ~PNET_DIAG_CH_PROP_DIR_MASK;                                      \
-      (x) |= (v) << PNET_DIAG_CH_PROP_DIR_POS;                                 \
-   } while (0)
 
 /**
  * Channel direction.
@@ -1817,25 +1747,16 @@ typedef enum pnet_diag_ch_prop_dir_values
    PNET_DIAG_CH_PROP_DIR_INOUT = 3,
 } pnet_diag_ch_prop_dir_values_t;
 
-#define PNET_DIAG_QUALIFIED_SEVERITY_MASK  ~0x00000007
-#define PNET_DIAG_BIT_MAINTENANCE_REQUIRED BIT (0)
-#define PNET_DIAG_BIT_MAINTENANCE_DEMANDED BIT (1)
-
-#define PNET_DIAG_QUALIFIER_POS_FAULT    27
-#define PNET_DIAG_QUALIFIER_POS_DEMANDED 17
-#define PNET_DIAG_QUALIFIER_POS_REQUIRED 7
-#define PNET_DIAG_QUALIFIER_POS_ADVICE   3
-
-/** Qualifier 31..27 */
-#define PNET_DIAG_QUALIFIER_MASK_FAULT 0xF8000000
-/** Qualifier 26..17 */
-#define PNET_DIAG_QUALIFIER_MASK_DEMANDED 0x07FE0000
-/** Qualifier 16..7 */
-#define PNET_DIAG_QUALIFIER_MASK_REQUIRED 0x0001FF80
-/** Qualifier 6..3 */
-#define PNET_DIAG_QUALIFIER_MASK_ADVICE 0x00000078
-
-#define PNET_CHANNEL_WHOLE_SUBMODULE 0x8000
+/**
+ * Diagnosis severity.
+ */
+typedef enum pnet_diag_ch_prop_maint_values
+{
+   PNET_DIAG_CH_PROP_MAINT_FAULT = 0,
+   PNET_DIAG_CH_PROP_MAINT_REQUIRED = 1,
+   PNET_DIAG_CH_PROP_MAINT_DEMANDED = 2,
+   PNET_DIAG_CH_PROP_MAINT_QUALIFIED = 3,
+} pnet_diag_ch_prop_maint_values_t;
 
 typedef struct pnet_diag_source
 {
@@ -2018,6 +1939,8 @@ PNET_EXPORT int pnet_diag_usi_remove (
    uint16_t slot,
    uint16_t subslot,
    uint16_t usi);
+
+/******************** Show Profinet stack info ********************************/
 
 /**
  * Show information from the Profinet stack.

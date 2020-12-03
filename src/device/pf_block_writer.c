@@ -2699,7 +2699,7 @@ static void pf_put_diag_list (
        * The list only contains APPEARS, so it can be hardcoded here.
        * ToDo: More info into ch_properties here!
        */
-      PNET_DIAG_CH_PROP_SPEC_SET (ch_properties, PNET_DIAG_CH_PROP_SPEC_APPEARS);
+      PF_DIAG_CH_PROP_SPEC_SET (ch_properties, PF_DIAG_CH_PROP_SPEC_APPEARS);
       pf_put_uint16 (is_big_endian, ch_properties, res_len, p_bytes, p_pos);
 
       /* Todo: order diagitems by usi */
@@ -2720,7 +2720,7 @@ static void pf_put_diag_list (
          case PF_DIAG_FILTER_FAULT_ALL:
             if (
                (p_item->usi < PF_USI_CHANNEL_DIAGNOSIS) ||
-               (PNET_DIAG_CH_PROP_MAINT_GET (p_item->fmt.std.ch_properties) ==
+               (PF_DIAG_CH_PROP_MAINT_GET (p_item->fmt.std.ch_properties) ==
                 PNET_DIAG_CH_PROP_MAINT_FAULT))
             {
                insert = true;
@@ -2732,7 +2732,7 @@ static void pf_put_diag_list (
          case PF_DIAG_FILTER_M_REQ:
             if (
                (p_item->usi < PF_USI_CHANNEL_DIAGNOSIS) ||
-               (PNET_DIAG_CH_PROP_MAINT_GET (p_item->fmt.std.ch_properties) ==
+               (PF_DIAG_CH_PROP_MAINT_GET (p_item->fmt.std.ch_properties) ==
                 PNET_DIAG_CH_PROP_MAINT_REQUIRED))
             {
                insert = true;
@@ -2741,7 +2741,7 @@ static void pf_put_diag_list (
          case PF_DIAG_FILTER_M_DEM:
             if (
                (p_item->usi < PF_USI_CHANNEL_DIAGNOSIS) ||
-               (PNET_DIAG_CH_PROP_MAINT_GET (p_item->fmt.std.ch_properties) ==
+               (PF_DIAG_CH_PROP_MAINT_GET (p_item->fmt.std.ch_properties) ==
                 PNET_DIAG_CH_PROP_MAINT_DEMANDED))
             {
                insert = true;

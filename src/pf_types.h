@@ -75,27 +75,86 @@ static inline uint32_t atomic_fetch_sub (atomic_int * p, uint32_t v)
  */
 #define PF_CHECK_PEERS_PER_PORT 1
 
+/************************* Diagnosis ******************************************/
+
+#define PF_DIAG_QUALIFIED_SEVERITY_MASK  ~0x00000007
+#define PF_DIAG_BIT_MAINTENANCE_REQUIRED BIT (0)
+#define PF_DIAG_BIT_MAINTENANCE_DEMANDED BIT (1)
+
+/** Qualifier 31..27 */
+#define PF_DIAG_QUALIFIER_MASK_FAULT 0xF8000000
+/** Qualifier 26..17 */
+#define PF_DIAG_QUALIFIER_MASK_DEMANDED 0x07FE0000
+/** Qualifier 16..7 */
+#define PF_DIAG_QUALIFIER_MASK_REQUIRED 0x0001FF80
+/** Qualifier 6..3 */
+#define PF_DIAG_QUALIFIER_MASK_ADVICE 0x00000078
+
+/* Mask and position of bit fields and values within ch_properties */
+#define PF_DIAG_CH_PROP_TYPE_MASK 0x00ff
+#define PF_DIAG_CH_PROP_TYPE_POS  0
+#define PF_DIAG_CH_PROP_TYPE_GET(x)                                            \
+   (((X)&PF_DIAG_CH_PROP_TYPE_MASK) >> PF_DIAG_CH_PROP_TYPE_POS)
+#define PF_DIAG_CH_PROP_TYPE_SET(x, v)                                         \
+   do                                                                          \
+   {                                                                           \
+      (x) &= ~PF_DIAG_CH_PROP_TYPE_MASK;                                       \
+      (x) |= (v) << PF_DIAG_CH_PROP_TYPE_POS;                                  \
+   } while (0)
+
+#define PF_DIAG_CH_PROP_ACC_MASK 0x0100
+#define PF_DIAG_CH_PROP_ACC_POS  8
+#define PF_DIAG_CH_PROP_ACC_GET(x)                                             \
+   (((x)&PF_DIAG_CH_PROP_ACC_MASK) >> PF_DIAG_CH_PROP_ACC_POS)
+#define PF_DIAG_CH_PROP_ACC_SET(x, v)                                          \
+   do                                                                          \
+   {                                                                           \
+      (x) &= ~PF_DIAG_CH_PROP_ACC_MASK;                                        \
+      (x) |= (v) << PF_DIAG_CH_PROP_ACC_POS;                                   \
+   } while (0)
+
+#define PF_DIAG_CH_PROP_MAINT_MASK 0x0600
+#define PF_DIAG_CH_PROP_MAINT_POS  9
+#define PF_DIAG_CH_PROP_MAINT_GET(x)                                           \
+   (((x)&PF_DIAG_CH_PROP_MAINT_MASK) >> PF_DIAG_CH_PROP_MAINT_POS)
+#define PF_DIAG_CH_PROP_MAINT_SET(x, v)                                        \
+   do                                                                          \
+   {                                                                           \
+      (x) &= ~PF_DIAG_CH_PROP_MAINT_MASK;                                      \
+      (x) |= (v) << PF_DIAG_CH_PROP_MAINT_POS;                                 \
+   } while (0)
+
+#define PF_DIAG_CH_PROP_SPEC_MASK 0x1800
+#define PF_DIAG_CH_PROP_SPEC_POS  11
+#define PF_DIAG_CH_PROP_SPEC_GET(x)                                            \
+   (((x)&PF_DIAG_CH_PROP_SPEC_MASK) >> PF_DIAG_CH_PROP_SPEC_POS)
+#define PF_DIAG_CH_PROP_SPEC_SET(x, v)                                         \
+   do                                                                          \
+   {                                                                           \
+      (x) &= ~PF_DIAG_CH_PROP_SPEC_MASK;                                       \
+      (x) |= (v) << PF_DIAG_CH_PROP_SPEC_POS;                                  \
+   } while (0)
+
+typedef enum pf_diag_ch_prop_spec_values
+{
+   PF_DIAG_CH_PROP_SPEC_ALL_DISAPPEARS = 0,
+   PF_DIAG_CH_PROP_SPEC_APPEARS = 1,
+   PF_DIAG_CH_PROP_SPEC_DISAPPEARS = 2,
+   PF_DIAG_CH_PROP_SPEC_DIS_OTHERS_REMAIN = 3,
+} pf_diag_ch_prop_spec_values_t;
+
+#define PF_DIAG_CH_PROP_DIR_MASK 0xe000
+#define PF_DIAG_CH_PROP_DIR_POS  13
+#define PF_DIAG_CH_PROP_DIR_GET(x)                                             \
+   (((x)&PF_DIAG_CH_PROP_DIR_MASK) >> PF_DIAG_CH_PROP_DIR_POS)
+#define PF_DIAG_CH_PROP_DIR_SET(x, v)                                          \
+   do                                                                          \
+   {                                                                           \
+      (x) &= ~PF_DIAG_CH_PROP_DIR_MASK;                                        \
+      (x) |= (v) << PF_DIAG_CH_PROP_DIR_POS;                                   \
+   } while (0)
+
 /*********************** RPC header ******************************************/
-
-/** Magic UUID values */
-#define PNET_UUID_NIL_OBJECT "00000000-0000-0000-0000-000000000000"
-
-#define PNET_RPC_DATA_REPRESENTATION                                           \
-   "8A885D04-1CEB-11C9-9FE8-08002B104860" /* Used by the EPMAP service */
-#define PNET_UUID_EPMAP_INTERFACE                                              \
-   "E1AF8308-5D1F-11C9-91A4-08002B14A0FA" /* RPC interface version 3.0 */
-#define PNET_UUID_EPMAP_OBJECT                                                 \
-   "00000000-0000-0000-0000-000000000000" /* RPC interface version 3.0 */
-
-#define PROFINET_IO_CONSTANT_VALUE "DEA00000-6C97-11D1-8271"
-#define PNET_UUID_IO_DEVICE_INTERFACE                                          \
-   "DEA00001-6C97-11D1-8271-00A02442DF7D" /* RPC interface version 1.0 */
-#define PNET_UUID_IO_CONTROLLER_INTERFACE                                      \
-   "DEA00002-6C97-11D1-8271-00A02442DF7D" /* RPC interface version 1.0 */
-#define PNET_UUID_IO_SUPERVISOR_INTERFACE                                      \
-   "DEA00003-6C97-11D1-8271-00A02442DF7D" /* RPC interface version 1.0 */
-#define PNET_UUID_IO_PRM_SERVER_INTERFACE                                      \
-   "DEA00004-6C97-11D1-8271-00A02442DF7D" /* RPC interface version 1.0 */
 
 typedef enum pf_rpc_packet_type_values
 {
@@ -1995,8 +2054,8 @@ typedef enum pf_mod_plug_state
 
 typedef enum pf_submod_add_info
 {
-   PNET_SUBMOD_ADD_INFO_NONE,
-   PNET_SUBMOD_ADD_INFO_TAKEOVER_NOT_ALLOWED
+   PF_SUBMOD_ADD_INFO_NONE,
+   PF_SUBMOD_ADD_INFO_TAKEOVER_NOT_ALLOWED
 } pf_submod_add_info_t;
 
 typedef enum pf_submod_ar_info
