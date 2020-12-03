@@ -269,6 +269,14 @@ void pf_alarm_add_diag_item_to_summary (
    pnet_alarm_spec_t * p_alarm_spec,
    uint32_t * p_maint_status);
 
+int pf_alarm_add_send_queue (
+   pf_alarm_queue_t * q,
+   const pf_alarm_data_t * p_alarm_data);
+
+int pf_alarm_fetch_send_queue (
+   pf_alarm_queue_t * q,
+   pf_alarm_data_t * p_alarm_data);
+
 #ifdef __cplusplus
 }
 #endif
