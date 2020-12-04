@@ -388,44 +388,6 @@ static void pf_lldp_add_management (
 
 /**
  * @internal
- * Trigger sending a LLDP frame.
- *
- * This is a callback for the scheduler. Arguments should fulfill
- * pf_scheduler_timeout_ftn_t
- *
- * Re-schedules itself after 5 s.
- *
- * @param net              InOut: The p-net stack instance
- * @param arg              In:    Reference to port_data
- * @param current_time     In:    Not used.
- */
-static void pf_lldp_trigger_sending (
-   pnet_t * net,
-   void * arg,
-   uint32_t current_time)
-{
-   pf_port_t * p_port_data = (pf_port_t *)arg;
-
-   pf_lldp_send (net, p_port_data->port_num);
-
-   if (
-      pf_scheduler_add (
-         net,
-         PF_LLDP_SEND_INTERVAL * 1000,
-         shed_tag_tx,
-         pf_lldp_trigger_sending,
-         p_port_data,
-         &p_port_data->lldp.tx_timeout) != 0)
-   {
-      LOG_ERROR (
-         PF_LLDP_LOG,
-         "LLDP(%d): Failed to reschedule LLDP sending\n",
-         __LINE__);
-   }
-}
-
-/**
- * @internal
  * Handle LLDP peer timeout. Timeout occurs if no peer LLDP data is received
  * on port within the LLPD TTL timeout interval.
  *
@@ -829,7 +791,14 @@ int pf_lldp_get_peer_link_status (
    return is_received ? 0 : -1;
 }
 
-void pf_lldp_send (pnet_t * net, int loc_port_num)
+/**
+ * Build and send a LLDP message on a specific port.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param loc_port_num     In:    Local port number.
+ *                                Valid range: 1 .. PNET_MAX_PORT
+ */
+static void pf_lldp_send (pnet_t * net, int loc_port_num)
 {
    pnal_buf_t * p_lldp_buffer = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE);
    uint8_t * p_buf = NULL;
@@ -914,7 +883,7 @@ void pf_lldp_send (pnet_t * net, int loc_port_num)
             PF_LLDP_LOG,
             "LLDP(%d): Sending LLDP frame. MAC "
             "%02X:%02X:%02X:%02X:%02X:%02X "
-            "IP: %s Chassis ID: %s Port number: %u Port ID: %s\n",
+            "IP: %s Chassis ID: \"%s\" Port number: %u Port ID: \"%s\"\n",
             __LINE__,
             device_mac_address.addr[0],
             device_mac_address.addr[1],
@@ -976,7 +945,54 @@ void pf_lldp_send (pnet_t * net, int loc_port_num)
    }
 }
 
-void pf_lldp_tx_restart (pnet_t * net, int loc_port_num, bool send)
+/**
+ * @internal
+ * Trigger sending a LLDP frame.
+ *
+ * This is a callback for the scheduler. Arguments should fulfill
+ * pf_scheduler_timeout_ftn_t
+ *
+ * Re-schedules itself after 5 s.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param arg              In:    Reference to port_data
+ * @param current_time     In:    Not used.
+ */
+static void pf_lldp_trigger_sending (
+   pnet_t * net,
+   void * arg,
+   uint32_t current_time)
+{
+   pf_port_t * p_port_data = (pf_port_t *)arg;
+
+   pf_lldp_send (net, p_port_data->port_num);
+
+   if (
+      pf_scheduler_add (
+         net,
+         PF_LLDP_SEND_INTERVAL * 1000,
+         shed_tag_tx,
+         pf_lldp_trigger_sending,
+         p_port_data,
+         &p_port_data->lldp.tx_timeout) != 0)
+   {
+      LOG_ERROR (
+         PF_LLDP_LOG,
+         "LLDP(%d): Failed to reschedule LLDP sending\n",
+         __LINE__);
+   }
+}
+
+/**
+ * @internal
+ * Restart LLDP transmission timer and optionally send LLDP frame.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param loc_port_num     In:    Local port number.
+ *                                Valid range: 1 .. PNET_MAX_PORT
+ * @param send             In:    Send LLDP message
+ */
+static void pf_lldp_tx_restart (pnet_t * net, int loc_port_num, bool send)
 {
    pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
@@ -1030,11 +1046,21 @@ void pf_lldp_init (pnet_t * net)
 
 void pf_lldp_send_enable (pnet_t * net, int loc_port_num)
 {
+   LOG_DEBUG (
+      PF_LLDP_LOG,
+      "LLDP(%d): Enabling LLDP transmission for port %d\n",
+      __LINE__,
+      loc_port_num);
    pf_lldp_tx_restart (net, loc_port_num, true);
 }
 
 void pf_lldp_send_disable (pnet_t * net, int loc_port_num)
 {
+   LOG_DEBUG (
+      PF_LLDP_LOG,
+      "LLDP(%d): Disabling LLDP transmission for port %d\n",
+      __LINE__,
+      loc_port_num);
    pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
    if (p_port_data->lldp.tx_timeout != 0)
    {

@@ -360,9 +360,9 @@ void pf_lldp_init (pnet_t * net);
  * @param timeout_in_secs  In:    TTL of the peer, typically 20 seconds.
  */
 void pf_lldp_reset_peer_timeout (
-      pnet_t * net,
-      int loc_port_num,
-      uint16_t timeout_in_secs);
+   pnet_t * net,
+   int loc_port_num,
+   uint16_t timeout_in_secs);
 
 /**
  * Enable send of lldp frames on local port
@@ -382,24 +382,6 @@ void pf_lldp_send_enable (pnet_t * net, int loc_port_num);
  *                                Valid range: 1 .. PNET_MAX_PORT
  */
 void pf_lldp_send_disable (pnet_t * net, int loc_port_num);
-
-/**
- * Build and send a LLDP message on a specific port.
- *
- * @param net              InOut: The p-net stack instance
- * @param loc_port_num     In:    Local port number.
- *                                Valid range: 1 .. PNET_MAX_PORT
- */
-void pf_lldp_send (pnet_t * net, int loc_port_num);
-
-/**
- * Restart LLDP transmission timer and optionally send LLDP frame.
- * @param net              InOut: The p-net stack instance
- * @param loc_port_num     In:    Local port number.
- *                                Valid range: 1 .. PNET_MAX_PORT
- * @param send             In:    Send LLDP message
- */
-void pf_lldp_tx_restart (pnet_t * net, int loc_port_num, bool send);
 
 /**
  * Receive an LLDP message.
