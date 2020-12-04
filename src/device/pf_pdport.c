@@ -61,7 +61,7 @@ static int pf_pdport_load (pnet_t * net)
       if (p_port_data->pdport.check.active)
       {
          p_port_data->pdport.check.active = true;
-         pf_lldp_reset_peer_timeout(net, PNET_PORT_1, PNET_LLDP_TTL);
+         pf_lldp_reset_peer_timeout (net, PNET_PORT_1, PNET_LLDP_TTL);
       }
 
       if (p_port_data->pdport.adjust.active == true)
@@ -77,6 +77,11 @@ static int pf_pdport_load (pnet_t * net)
             pf_lldp_send_enable (net, PNET_PORT_1);
          }
       }
+      else
+      {
+         pf_lldp_send_enable (net, PNET_PORT_1);
+      }
+
       ret = 0;
    }
    else
