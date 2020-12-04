@@ -17,10 +17,13 @@
 
 #include "sampleapp_common.h"
 
-#include "osal_log.h"
+#include "options.h" /* Rename/remove when #224 is solved */
 #include "osal.h"
+#include "osal_log.h" /* For LOG_LEVEL */
+#include "pnal.h"
+#include "pnal_filetools.h"
 #include <pnet_api.h>
-#include "version.h"
+#include "version.h" /* Rename/remove when #224 is solved */
 
 #include <net/if.h>
 #include <sys/ioctl.h>
@@ -203,20 +206,6 @@ struct cmd_args parse_commandline_arguments (int argc, char * argv[])
 }
 
 /**
- * Check if a file or directory exists
- *
- * @param filepath         In:    Path to file or directory. Trailing slash
- *                                is optional for directories.
- * @return true if file exists
- */
-bool does_file_exist (const char * filepath)
-{
-   struct stat statbuffer;
-
-   return (stat (filepath, &statbuffer) == 0);
-}
-
-/**
  * Read a bool from a file
  *
  * @param filepath      In: Path to file
@@ -269,25 +258,18 @@ void app_get_button (const app_data_t * p_appdata, uint16_t id, bool * p_pressed
 
 int app_set_led (uint16_t id, bool led_state)
 {
-   char * outputcommand;
-   int textlen = -1;
-   int status = -1;
+   char id_str[7] = {0};
+   const char * argv[4];
 
-   textlen = asprintf (
-      &outputcommand,
-      "./set_profinet_leds_linux %u %u",
-      id,
-      led_state);
-   if (textlen < 0)
-   {
-      return -1;
-   }
-   /* TODO control by verbosity argument
-   printf ("Command for setting LED state: %s\n", outputcommand); */
+   sprintf (id_str, "%u", id);
+   id_str[sizeof (id_str) - 1] = '\0';
 
-   status = system (outputcommand);
-   free (outputcommand);
-   if (status != 0)
+   argv[0] = "set_profinet_leds_linux";
+   argv[1] = (char *)&id_str;
+   argv[2] = (led_state == 1) ? "1" : "0";
+   argv[3] = NULL;
+
+   if (pnal_execute_script (argv) != 0)
    {
       printf ("Failed to set LED state\n");
       return -1;
@@ -402,7 +384,7 @@ int main (int argc, char * argv[])
    }
 
    /* Validate paths */
-   if (!does_file_exist (pnet_default_cfg.file_directory))
+   if (!pnal_does_file_exist (pnet_default_cfg.file_directory))
    {
       printf (
          "Error: The given storage directory does not exist: %s\n",
@@ -411,7 +393,7 @@ int main (int argc, char * argv[])
    }
    if (appdata.arguments.path_button1[0] != '\0')
    {
-      if (!does_file_exist (appdata.arguments.path_button1))
+      if (!pnal_does_file_exist (appdata.arguments.path_button1))
       {
          printf (
             "Error: The given input file for button1 does not exist: %s\n",
@@ -421,7 +403,7 @@ int main (int argc, char * argv[])
    }
    if (appdata.arguments.path_button2[0] != '\0')
    {
-      if (!does_file_exist (appdata.arguments.path_button2))
+      if (!pnal_does_file_exist (appdata.arguments.path_button2))
       {
          printf (
             "Error: The given input file for button2 does not exist: %s\n",
