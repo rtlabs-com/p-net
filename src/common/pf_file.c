@@ -55,15 +55,15 @@ CC_STATIC_ASSERT (PNET_MAX_FILENAME_LENGTH >= sizeof (PF_FILENAME_PDPORT_4));
 
 /**
  * @internal
- * Join directory and filename into a full path
+ * Join directory and filename into a full path.
  *
  * If no directory is given, use only the filename.
  *
- * @param directory        In:    Directory for files. Terminated string. NULL
- *                                or empty string is interpreted as current
- *                                directory.
+ * @param directory        In:    Directory for files. Terminated string.
+ *                                NULL or empty string is interpreted as
+ *                                current directory.
  * @param filename         In:    File name. Terminated string.
- * @param fullpath         Out:   Resulting string.
+ * @param fullpath         Out:   Resulting string. Terminated.
  * @param size             In:    Size of outputbuffer.
  * @return  0  if the operation succeeded.
  *          -1 if not found or an error occurred.

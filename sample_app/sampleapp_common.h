@@ -16,9 +16,9 @@
 #ifndef SAMPLEAPP_COMMON_H
 #define SAMPLEAPP_COMMON_H
 
+#include "options.h" /* Remove when #224 is solved */
 #include "osal.h"
 #include "pnal.h"
-#include "options.h"
 #include <pnet_api.h>
 
 #ifdef __cplusplus

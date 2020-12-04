@@ -16,9 +16,11 @@
 #define _GNU_SOURCE /* For asprintf() */
 
 #include "pnal.h"
+
 #include "osal.h"
 #include "options.h"
 #include "osal_log.h"
+#include "pnal_filetools.h"
 
 #include <arpa/inet.h>
 #include <net/if.h>
@@ -227,43 +229,22 @@ int pnal_set_ip_suite (
    char ip_string[PNAL_INET_ADDRSTRLEN];
    char netmask_string[PNAL_INET_ADDRSTRLEN];
    char gateway_string[PNAL_INET_ADDRSTRLEN];
-   char * permanent_string;
-   char * outputcommand;
-   int textlen = -1;
-   int status = -1;
+   const char * argv[8];
 
    os_ip_to_string (*p_ipaddr, ip_string);
    os_ip_to_string (*p_netmask, netmask_string);
    os_ip_to_string (*p_gw, gateway_string);
-   permanent_string = permanent ? "1" : "0";
 
-   textlen = asprintf (
-      &outputcommand,
-      "./set_network_parameters %s %s %s %s '%s' %s",
-      interface_name,
-      ip_string,
-      netmask_string,
-      gateway_string,
-      hostname,
-      permanent_string);
-   if (textlen < 0)
-   {
-      return -1;
-   }
+   argv[0] = "set_network_parameters";
+   argv[1] = interface_name;
+   argv[2] = (char *)&ip_string;
+   argv[3] = (char *)&netmask_string;
+   argv[4] = (char *)&gateway_string;
+   argv[5] = hostname;
+   argv[6] = permanent ? "1" : "0";
+   argv[7] = NULL;
 
-   LOG_DEBUG (
-      PF_PNAL_LOG,
-      "PNAL(%d): Command for setting network parameters: %s\n",
-      __LINE__,
-      outputcommand);
-
-   status = system (outputcommand);
-   free (outputcommand);
-   if (status != 0)
-   {
-      return -1;
-   }
-   return 0;
+   return pnal_execute_script (argv);
 }
 
 int pnal_get_macaddress (const char * interface_name, pnal_ethaddr_t * mac_addr)
