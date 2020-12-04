@@ -47,7 +47,7 @@ Periodic data
 
 Redundant state etc
 -------------------
-.. doxygenfunction:: pnet_set_state
+.. doxygenfunction:: pnet_set_primary_state
 .. doxygenfunction:: pnet_set_redundancy_state
 
 

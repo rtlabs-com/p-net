@@ -410,7 +410,7 @@ Implements these user functions (via ``pnet_api.c``):
 
 * ``pnet_input_set_data_and_iops()``
 * ``pnet_output_set_iocs()``
-* ``pnet_set_state()``
+* ``pnet_set_primary_state()``
 * ``pnet_set_redundancy_state()``
 * ``pnet_set_provider_state()``
 

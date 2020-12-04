@@ -304,7 +304,7 @@ int pnet_pull_submodule (
    return pf_cmdev_pull_submodule (net, api, slot, subslot);
 }
 
-int pnet_set_state (pnet_t * net, bool primary)
+int pnet_set_primary_state (pnet_t * net, bool primary)
 {
    int ret = 0; /* Assume all goes well */
    uint16_t ar_ix;

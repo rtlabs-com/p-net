@@ -1542,7 +1542,7 @@ PNET_EXPORT int pnet_output_set_iocs (
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
-PNET_EXPORT int pnet_set_state (pnet_t * net, bool primary);
+PNET_EXPORT int pnet_set_primary_state (pnet_t * net, bool primary);
 
 /**
  * Set the state to redundant in the cyclic data sent to the IO-Controller.
