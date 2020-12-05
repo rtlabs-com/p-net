@@ -69,7 +69,7 @@ int pf_cmwrr_rm_write_ind (
    const pf_iod_write_request_t * p_write_request,
    pf_iod_write_result_t * p_write_result,
    pnet_result_t * p_result,
-   uint8_t * p_req_buf,
+   const uint8_t * p_req_buf,
    uint16_t data_length,
    uint16_t * p_req_pos);
 

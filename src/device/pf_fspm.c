@@ -728,7 +728,7 @@ int pf_fspm_cm_write_ind (
    const pf_ar_t * p_ar,
    const pf_iod_write_request_t * p_write_request,
    uint16_t write_length,
-   uint8_t * p_write_data,
+   const uint8_t * p_write_data,
    pnet_result_t * p_write_status)
 {
    int ret = -1;
