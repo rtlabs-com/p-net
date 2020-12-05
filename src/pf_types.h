@@ -1790,7 +1790,7 @@ typedef struct pf_get_info
 {
    pf_get_result_t result;
    bool is_big_endian;
-   uint8_t * p_buf;
+   const uint8_t * p_buf;
    uint16_t len;
 } pf_get_info_t;
 

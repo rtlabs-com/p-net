@@ -64,7 +64,7 @@ typedef struct lldp_tlv
 {
    uint8_t type;
    uint16_t len;
-   uint8_t * p_data;
+   const uint8_t * p_data;
 } lldp_tlv_t;
 
 static const char org_id_pnio[] = {0x00, 0x0e, 0xcf};
@@ -1079,7 +1079,7 @@ void pf_lldp_send_disable (pnet_t * net, int loc_port_num)
  * @return 0 if parsing is successful, -1 on error.
  */
 int pf_lldp_parse_packet (
-   uint8_t buf[],
+   const uint8_t buf[],
    uint16_t len,
    pf_lldp_peer_info_t * lldp_peer_info)
 {

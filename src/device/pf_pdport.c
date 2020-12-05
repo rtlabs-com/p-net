@@ -672,7 +672,7 @@ static int pf_pdport_write_data_check (
    const pf_ar_t * p_ar,
    const pf_iod_write_request_t * p_write_req,
    int loc_port_num,
-   uint8_t * p_bytes, /* Not const as it is used in a pf_get_info_t */
+   const uint8_t * p_bytes,
    uint16_t p_datalength,
    pnet_result_t * p_result)
 {
@@ -778,7 +778,7 @@ static int pf_pdport_write_data_adj (
    const pf_ar_t * p_ar,
    const pf_iod_write_request_t * p_write_req,
    int loc_port_num,
-   uint8_t * p_bytes, /* Not const as it is used in a pf_get_info_t */
+   const uint8_t * p_bytes,
    uint16_t p_datalength,
    pnet_result_t * p_result)
 {
@@ -849,7 +849,7 @@ int pf_pdport_write_req (
    const pf_ar_t * p_ar,
    const pf_iod_write_request_t * p_write_req,
    int loc_port_num,
-   uint8_t * p_bytes,
+   const uint8_t * p_bytes,
    uint16_t data_length,
    pnet_result_t * p_result)
 {

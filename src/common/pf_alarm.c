@@ -1660,7 +1660,7 @@ static int pf_alarm_apmr_a_data_ind (
    pf_alarm_data_t alarm_data;
    pnet_pnio_status_t pnio_status;
    uint16_t data_usi;
-   uint8_t * p_data;
+   const uint8_t * p_data;
 
    switch (p_apmx->apmr_state)
    {

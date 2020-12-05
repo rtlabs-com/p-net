@@ -3878,7 +3878,7 @@ static int pf_cmrpc_dce_packet (
    pnet_t * net,
    uint32_t ip_addr,
    uint16_t port,
-   uint8_t * p_req, /* Not const as it is used in a pf_get_info_t */
+   const uint8_t * p_req,
    uint32_t req_len,
    uint8_t * p_res,
    uint16_t * p_res_len,
