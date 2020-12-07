@@ -1,5 +1,22 @@
-Install Raspberry Pi OS on the Raspberry Pi (by using a Linux laptop)
-=====================================================================
+Installation and configuration of Raspberry Pi
+==============================================
+The p-net stack and sample application
+has been tested with:
+* Raspberry Pi 3 Model B+
+
+To avoid problems it is recommended to start with a fresh
+Raspberry Pi OS image.
+
+When running the Raspberry Pi as a profinet IO-device using p-net, the 
+network settings of the Raspberry Pi will be changed by Profinet. 
+Therefore it is highly recommended to use the serial console and not ssh 
+or you may end up in a situation were you have difficulties connecting to, 
+or recovering your device. If you currently do not have a suitable serial
+dongle you can still build and run p-net with the sample application but
+you will run into problem when a PLC is used for configuration.
+
+Installation using Linux
+------------------------
 Download the Raspberry Pi OS (previously Raspbian) image from
 https://www.raspberrypi.org/software/operating-systems/
 Use the full version with "recommended software". Follow the instructions on
@@ -23,7 +40,7 @@ in the root file system::
 
     denyinterfaces eth*
 
-If you would like to change hostname from "raspberrypi" to "pndevice-pi", change
+If you would like to change hostname from ``raspberrypi`` to ``pndevice-pi``, change
 the texts in the files ``etc/hostname`` and ``etc/hosts`` in the rootfs
 partition.
 
@@ -52,6 +69,68 @@ Log in to it::
     ssh pi@<IP>
 
 Enter the password mentioned just above.
+
+Installation using Windows
+--------------------------
+This section describes how to install the Raspberry Pi OS
+and how to enable ssh and serial console so that the Raspberry Pi can be 
+used in headless mode without a display and keyboard connected.
+
+Step 1. Write Raspberry Pi OS image to SD card using Raspberry Pi Imager.
+
+* Download and install Raspberry Pi Imager from 
+  https://www.raspberrypi.org/software/
+* Start Raspberry Pi Imager
+* In the Select OS dialog choose full version
+* Select SD-card
+* Press Write
+
+Step 2. Initial configuration of Raspberry Pi OS.
+
+* Eject SD-card 
+* Reinsert SD-card in windows PC. The SD-card will be shown as external drive named ``boot``.
+* Enable ssh by creating an empty file named ``ssh`` in the root folder of ``boot``. 
+  The windows file explorer can be used for this.
+  Note that the file ``ssh`` shall not have a txt file extension.
+* Enable serial port console. 
+  Open ``config.txt`` in root folder of ``boot`` using Notepad.
+  Add the line ``enable_uart=1`` to the end of the file.
+  Save file and close Notepad.
+* Eject SD-card
+
+Step 3. Start Raspberry Pi
+
+* Insert SD-card and power on Raspberry Pi.
+* Login (preferably using serial console) with default user ``pi`` and password ``raspberry``.
+
+Step 4. Network configuration.
+
+Use the nano editor to edit the configuration files as described below. 
+For example to edit the ``/etc/dhcpcd.conf``::
+
+    sudo nano /etc/dhcpcd.conf
+
+Save the file in nano by pressing ``CTRL-X``, then ``Y`` and ``Enter``.
+
+The DHCP client daemon will adjust the network interface settings automatically.
+This interferes with the p-net control of the Ethernet interface. So if you
+run your Raspberry Pi as a Profinet IO-Device (NOT if you use it as a PLC)
+and have a serial cable, you should add the line below to ``/etc/dhcpcd.conf``::
+
+    denyinterfaces eth*
+
+Optionally, to change hostname from ``raspberrypi`` to ``pndevice-pi``, change
+the configuration in the files ``/etc/hostname`` and ``/etc/hosts``.
+
+To make sure that you subsequently are logging in to the correct Raspberry Pi,
+you can create a file in the home directory in the rootfs partition. Change
+name to something informative, for example::
+
+    touch /home/pi/IAmAProfinetDevice
+
+Reboot and the Raspberry Pi is now ready to run the p-net sample application.
+
+    sudo reboot
 
 
 Connect a serial cable to Raspberry Pi
@@ -180,11 +259,15 @@ Enable automatic startup::
     sudo systemctl daemon-reload
     sudo systemctl enable pnet-sampleapp.service
 
+Start service::
+
+    sudo systemctl start pnet-sampleapp.service
+
 To see the status of the process, and the log output::
 
     systemctl status pnet-sampleapp.service
 
-    journalctl -u pnet-sampleapp -b
+    journalctl -u pnet-sampleapp -f
 
 If using a serial cable, you might need to adjust the number of visible columns::
 
