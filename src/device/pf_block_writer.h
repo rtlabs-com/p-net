@@ -98,6 +98,36 @@ void pf_put_uint32 (
    uint16_t * p_pos);
 
 /**
+ * Insert fixed length zero padding into a buffer.
+ * @param n_bytes          In:   The number of bytes byte to insert.
+ * @param res_len          In:   Size of destination buffer.
+ * @param p_bytes          Out:  Destination buffer.
+ * @param p_pos            InOut:Position in destination buffer.
+ */
+void pf_put_padding (
+   uint16_t n_bytes,
+   uint16_t res_len,
+   uint8_t * p_bytes,
+   uint16_t * p_pos);
+
+/**
+ * Pad a buffer with zeroes until block length is aligned
+ *
+ * @param start_position   In:   Start of block to align.
+ * @param align            In:   Alignment. 2 for 16 bit alignment,
+ *                               4 for 32bit alignment
+ * @param res_len          In:   Size of destination buffer.
+ * @param p_bytes          Out:  Destination buffer.
+ * @param p_pos            InOut:Position in destination buffer.
+ */
+void pf_put_padding_align (
+   uint16_t start_postion,
+   uint16_t align,
+   uint16_t res_len,
+   uint8_t * p_bytes,
+   uint16_t * p_pos);
+
+/**
  * Insert an AR result block into a buffer.
  * @param is_big_endian    In:   Endianness of the destination buffer.
  * @param p_ar             In:   Contains the AR result to insert.

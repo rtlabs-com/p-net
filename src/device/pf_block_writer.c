@@ -271,6 +271,32 @@ void pf_put_uint32 (
    }
 }
 
+void pf_put_padding (
+   uint16_t n_bytes,
+   uint16_t res_len,
+   uint8_t * p_bytes,
+   uint16_t * p_pos)
+{
+   uint16_t i;
+   for (i = 0; i < n_bytes; i++)
+   {
+      pf_put_byte (0, res_len, p_bytes, p_pos);
+   }
+}
+
+void pf_put_padding_align (
+   uint16_t start_position,
+   uint16_t align,
+   uint16_t res_len,
+   uint8_t * p_bytes,
+   uint16_t * p_pos)
+{
+   while (((*p_pos) - start_position) % align != 0)
+   {
+      pf_put_byte (0, res_len, p_bytes, p_pos);
+   }
+}
+
 /**
  * @internal
  * Insert timestamp
@@ -723,10 +749,7 @@ void pf_put_ar_server_result (
       p_pos);
 
    /* Pad with zeroes until block length is a multiple of 4 bytes */
-   while (((*p_pos) - block_pos) % 4 != 0)
-   {
-      pf_put_byte (0, res_len, p_bytes, p_pos);
-   }
+   pf_put_padding_align (block_pos, 4, res_len, p_bytes, p_pos);
 
    /* Finally insert the block length into the block header */
    block_len = *p_pos - (block_pos + 4);
@@ -783,10 +806,7 @@ void pf_put_ar_vendor_result (
       p_pos);
 
    /* Pad with zeroes until block length is a multiple of 4 bytes */
-   while (((*p_pos) - block_pos) % 4 != 0)
-   {
-      pf_put_byte (0, res_len, p_bytes, p_pos);
-   }
+   pf_put_padding_align (block_pos, 4, res_len, p_bytes, p_pos);
 
    /* Finally insert the block length into the block header */
    block_len = *p_pos - (block_pos + 4);
@@ -1550,7 +1570,6 @@ void pf_put_read_result (
 {
    uint16_t block_pos = *p_pos;
    uint16_t block_len = 0;
-   uint16_t ix;
 
    /* Insert block header for the read operation */
    pf_put_block_header (
@@ -1585,10 +1604,7 @@ void pf_put_read_result (
       p_pos);
    pf_put_uint16 (is_big_endian, p_res->add_data_1, res_len, p_bytes, p_pos);
    pf_put_uint16 (is_big_endian, p_res->add_data_2, res_len, p_bytes, p_pos);
-   for (ix = 0; ix < NELEMENTS (p_res->rw_padding); ix++)
-   {
-      pf_put_byte (0, res_len, p_bytes, p_pos);
-   }
+   pf_put_padding (NELEMENTS (p_res->rw_padding), res_len, p_bytes, p_pos);
 
    /* Finally insert the block length into the block header */
    block_len = *p_pos - (block_pos + 4);
@@ -2364,7 +2380,6 @@ void pf_put_write_result (
 {
    uint16_t block_pos = *p_pos;
    uint16_t block_len = 0;
-   uint16_t ix;
 
    /* Insert block header for the write operation */
    pf_put_block_header (
@@ -2404,10 +2419,8 @@ void pf_put_write_result (
       res_len,
       p_bytes,
       p_pos);
-   for (ix = 0; ix < NELEMENTS (p_res->rw_padding); ix++)
-   {
-      pf_put_byte (0, res_len, p_bytes, p_pos);
-   }
+
+   pf_put_padding (NELEMENTS (p_res->rw_padding), res_len, p_bytes, p_pos);
 
    /* Finally insert the block length into the block header */
    block_len = *p_pos - (block_pos + 4);
@@ -3484,7 +3497,6 @@ void pf_put_pdport_data_check (
 {
    uint16_t block_pos = *p_pos;
    uint16_t block_len = 0;
-   uint16_t temp_u16 = 0;
 
    /* Block header first */
    pf_put_block_header (
@@ -3497,8 +3509,7 @@ void pf_put_pdport_data_check (
       p_bytes,
       p_pos);
 
-   /* Two bytes padding */
-   pf_put_uint16 (is_big_endian, temp_u16, res_len, p_bytes, p_pos);
+   pf_put_padding (2, res_len, p_bytes, p_pos);
 
    /* Slot and subslot info */
    pf_put_uint16 (is_big_endian, p_res->slot_number, res_len, p_bytes, p_pos);
@@ -3540,8 +3551,7 @@ void pf_put_pdport_data_check (
       p_bytes,
       p_pos);
 
-   /* Two bytes padding */
-   pf_put_uint16 (is_big_endian, temp_u16, res_len, p_bytes, p_pos);
+   pf_put_padding_align (block_pos, 4, res_len, p_bytes, p_pos);
 
    /* Finally insert the block length into the block header */
    block_len = *p_pos - (block_pos + 4);
@@ -3561,9 +3571,7 @@ void pf_put_pdport_data_real (
 {
    uint16_t block_pos = *p_pos;
    uint16_t block_len = 0;
-   uint16_t temp_u16 = 0;
    uint8_t numPeers = 0;
-   uint8_t temp_u8 = 0;
    pf_lldp_chassis_id_t chassis_id;
    const pnet_lldp_port_cfg_t * p_port_config =
       pf_lldp_get_port_config (net, loc_port_num);
@@ -3583,8 +3591,7 @@ void pf_put_pdport_data_real (
       p_bytes,
       p_pos);
 
-   /* Two bytes padding */
-   pf_put_uint16 (is_big_endian, temp_u16, res_len, p_bytes, p_pos);
+   pf_put_padding (2, res_len, p_bytes, p_pos);
 
    /* Slot and subslot */
    pf_put_uint16 (is_big_endian, PNET_SLOT_DAP_IDENT, res_len, p_bytes, p_pos);
@@ -3612,8 +3619,7 @@ void pf_put_pdport_data_real (
    /*Input only the number if it's there */
    if (numPeers > 0)
    {
-      /* Two bytes padding */
-      pf_put_uint16 (is_big_endian, temp_u16, res_len, p_bytes, p_pos);
+      pf_put_padding (2, res_len, p_bytes, p_pos);
 
       /* Length peer_id */
       pf_put_byte (p_peer_info->port_id_len, res_len, p_bytes, p_pos);
@@ -3636,11 +3642,7 @@ void pf_put_pdport_data_real (
       /* ChassisID */
       pf_put_mem (chassis_id.string, chassis_id.len, res_len, p_bytes, p_pos);
 
-      /* 1 bytes padding if needed*/
-      if (chassis_id.len % 2 != 0)
-      {
-         pf_put_byte (temp_u8, res_len, p_bytes, p_pos);
-      }
+      pf_put_padding_align (block_pos, 4, res_len, p_bytes, p_pos);
 
       /* Line Delay */
       pf_put_uint32 (
@@ -3658,8 +3660,7 @@ void pf_put_pdport_data_real (
          p_bytes,
          p_pos);
 
-      /* Two bytes padding */
-      pf_put_uint16 (is_big_endian, temp_u16, res_len, p_bytes, p_pos);
+      pf_put_padding (2, res_len, p_bytes, p_pos);
 
       /* MAUType */
       pf_put_uint16 (
@@ -3669,8 +3670,7 @@ void pf_put_pdport_data_real (
          p_bytes,
          p_pos);
 
-      /* Two bytes padding */
-      pf_put_uint16 (is_big_endian, temp_u16, res_len, p_bytes, p_pos);
+      pf_put_padding (2, res_len, p_bytes, p_pos);
 
       /* Domain Boundary */
       pf_put_uint32 (
@@ -3695,8 +3695,7 @@ void pf_put_pdport_data_real (
       /* TODO currently always set to up */
       pf_put_byte (1, res_len, p_bytes, p_pos);
 
-      /* Two bytes padding */
-      pf_put_uint16 (is_big_endian, temp_u16, res_len, p_bytes, p_pos);
+      pf_put_padding (2, res_len, p_bytes, p_pos);
 
       /* MediaType (Decode what type it is and report it out per
        * PROFINET AL Protocol Table 717
@@ -3766,7 +3765,6 @@ void pf_put_pdport_statistics (
 {
    uint16_t block_pos = *p_pos;
    uint16_t block_len = 0;
-   uint16_t temp_u16 = 0;
 
    /* Block header first */
    pf_put_block_header (
@@ -3779,8 +3777,7 @@ void pf_put_pdport_statistics (
       p_bytes,
       p_pos);
 
-   /* Two bytes padding */
-   pf_put_uint16 (is_big_endian, temp_u16, res_len, p_bytes, p_pos);
+   pf_put_padding (2, res_len, p_bytes, p_pos);
 
    pf_put_uint32 (
       is_big_endian,
@@ -3836,7 +3833,6 @@ void pf_put_pdinterface_data_real (
 {
    uint16_t block_pos = *p_pos;
    uint16_t block_len = 0;
-   uint16_t temp_u16 = 0;
    pf_lldp_chassis_id_t chassis_id;
 
    /* Block header first */
@@ -3859,8 +3855,7 @@ void pf_put_pdinterface_data_real (
    /* Owner ChassisID*/
    pf_put_mem (chassis_id.string, chassis_id.len, res_len, p_bytes, p_pos);
 
-   /* Two bytes padding */
-   pf_put_uint16 (is_big_endian, temp_u16, res_len, p_bytes, p_pos);
+   pf_put_padding (2, res_len, p_bytes, p_pos);
 
    /* Owner MAC Address  */
    pf_put_mem (
@@ -3870,8 +3865,7 @@ void pf_put_pdinterface_data_real (
       p_bytes,
       p_pos);
 
-   /* Two bytes padding */
-   pf_put_uint16 (is_big_endian, temp_u16, res_len, p_bytes, p_pos);
+   pf_put_padding (2, res_len, p_bytes, p_pos);
 
    /* IP Address */
    pf_put_uint32 (
@@ -3924,7 +3918,6 @@ static void pf_put_pd_multiblock_interface_and_statistics (
 {
    uint16_t block_pos = *p_pos;
    uint16_t block_len = 0;
-   uint16_t temp16 = 0;
 
    /* Block header first */
    pf_put_block_header (
@@ -3936,8 +3929,8 @@ static void pf_put_pd_multiblock_interface_and_statistics (
       res_len,
       p_bytes,
       p_pos);
-   /*2 byte padding*/
-   pf_put_uint16 (is_big_endian, temp16, res_len, p_bytes, p_pos);
+
+   pf_put_padding (2, res_len, p_bytes, p_pos);
 
    /* API */
    pf_put_uint32 (is_big_endian, p_res->api, res_len, p_bytes, p_pos);
@@ -3998,7 +3991,6 @@ static void pf_put_pd_multiblock_port_and_statistics (
 {
    uint16_t block_pos = *p_pos;
    uint16_t block_len = 0;
-   uint16_t temp16 = 0;
 
    /* Block header first */
    pf_put_block_header (
@@ -4011,8 +4003,7 @@ static void pf_put_pd_multiblock_port_and_statistics (
       p_bytes,
       p_pos);
 
-   /*2 byte padding*/
-   pf_put_uint16 (is_big_endian, temp16, res_len, p_bytes, p_pos);
+   pf_put_padding (2, res_len, p_bytes, p_pos);
 
    /* API */
    pf_put_uint32 (is_big_endian, p_res->api, res_len, p_bytes, p_pos);
@@ -4104,7 +4095,6 @@ void pf_put_peer_to_peer_boundary (
 {
    uint16_t block_pos = *p_pos;
    uint16_t block_len = 0;
-   uint16_t temp_u16 = 0;
    uint32_t temp_u32 = 0;
 
    /* Block header first */
@@ -4118,8 +4108,7 @@ void pf_put_peer_to_peer_boundary (
       p_bytes,
       p_pos);
 
-   /* Two bytes padding */
-   pf_put_uint16 (is_big_endian, temp_u16, res_len, p_bytes, p_pos);
+   pf_put_padding (2, res_len, p_bytes, p_pos);
 
    /* Adjusted Peer to Peer Boundary */
    temp_u32 = 0;
@@ -4151,8 +4140,7 @@ void pf_put_peer_to_peer_boundary (
       p_bytes,
       p_pos);
 
-   /*2 byte padding*/
-   pf_put_uint16 (is_big_endian, temp_u16, res_len, p_bytes, p_pos);
+   pf_put_padding (2, res_len, p_bytes, p_pos);
 
    /* Finally insert the block length into the block header */
    block_len = *p_pos - (block_pos + 4);
@@ -4171,7 +4159,6 @@ void pf_put_pdport_data_adj (
 {
    uint16_t block_pos = *p_pos;
    uint16_t block_len = 0;
-   uint16_t temp16 = 0;
 
    /* Block header first */
    pf_put_block_header (
@@ -4184,8 +4171,7 @@ void pf_put_pdport_data_adj (
       p_bytes,
       p_pos);
 
-   /*2 byte padding*/
-   pf_put_uint16 (is_big_endian, temp16, res_len, p_bytes, p_pos);
+   pf_put_padding (2, res_len, p_bytes, p_pos);
 
    /* Slot and subslot */
    pf_put_uint16 (is_big_endian, PNET_SLOT_DAP_IDENT, res_len, p_bytes, p_pos);
@@ -4631,6 +4617,7 @@ void pf_put_lookup_response_data (
    uint8_t * p_bytes,
    uint16_t * p_pos)
 {
+   uint16_t block_position = *p_pos;
    pf_put_rpc_handle (
       is_big_endian,
       &p_lookup_rsp->rpc_handle,
@@ -4652,11 +4639,7 @@ void pf_put_lookup_response_data (
       p_bytes,
       p_pos);
 
-   /*Add padding if needed*/
-   if (*p_pos % 2 > 0)
-   {
-      pf_put_byte (0, res_len, p_bytes, p_pos);
-   }
+   pf_put_padding_align (2, block_position, res_len, p_bytes, p_pos);
 
    pf_put_uint32 (
       is_big_endian,
