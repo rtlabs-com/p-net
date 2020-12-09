@@ -28,7 +28,7 @@
  * Registers the different frame IDs for these messages with the frame handler.
  *
  * Responses to IDENTIFY are delayed (by an amount calculated from the
- * MAC address), as many devices might resond to the same request.
+ * MAC address), as many devices might respond to the same request.
  *
  * The SAM (Source Address ?) makes sure that that just a single remote
  * MAC address is used for the communication.
@@ -65,6 +65,10 @@
 #define PF_DCP_GET_SET_FRAME_ID 0xfefd
 #define PF_DCP_ID_REQ_FRAME_ID  0xfefe
 #define PF_DCP_ID_RES_FRAME_ID  0xfeff
+
+/* Client hold time, 3 seconds.
+   See Profinet 2.4 Services, section 6.3.11.2.2 */
+#define PF_DCP_SAM_TIMEOUT 3000000 /* microseconds */
 
 CC_PACKED_BEGIN
 typedef struct CC_PACKED pf_ethhdr
@@ -192,8 +196,9 @@ static void pf_dcp_responder (pnet_t * net, void * arg, uint32_t current_time)
 
 /**
  * @internal
- * Clear the SAM (which limits the commnication to a single remote MAC address
- * for 3 seconds).
+ * Clear SAM
+ * SAM limits the communication to a single remote MAC address
+ * for 3 seconds. This operation implements the timeout callback.
  *
  * This is a callback for the scheduler. Arguments should fulfill
  * pf_scheduler_timeout_ftn_t
@@ -204,7 +209,55 @@ static void pf_dcp_responder (pnet_t * net, void * arg, uint32_t current_time)
  */
 static void pf_dcp_clear_sam (pnet_t * net, void * arg, uint32_t current_time)
 {
+   LOG_DEBUG (PF_DCP_LOG, "DCP(%d): SAM timeout, clear stored mac\n", __LINE__);
    net->dcp_sam = mac_nil;
+}
+
+/**
+ * @internal
+ * Restart SAM timeout
+ * SAM limits the communication to a single remote MAC address
+ * for 3 seconds.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param mac              In: Remote MAC address
+ */
+static void pf_dcp_restart_sam_timeout (pnet_t * net, const pnet_ethaddr_t * mac)
+{
+   /* Make sure no other MAC address is used in the DCP communication
+    * for 3 seconds */
+   LOG_DEBUG (
+      PF_DCP_LOG,
+      "DCP(%d): Update SAM mac and reset timeout\n",
+      __LINE__);
+
+   memcpy (&net->dcp_sam, mac, sizeof (net->dcp_sam));
+   (void)pf_scheduler_remove (net, dcp_sync_name, net->dcp_sam_timeout);
+   net->dcp_sam_timeout = 0;
+   (void)pf_scheduler_add (
+      net,
+      PF_DCP_SAM_TIMEOUT,
+      dcp_sync_name,
+      pf_dcp_clear_sam,
+      NULL,
+      &net->dcp_sam_timeout);
+}
+
+/**
+ * @internal
+ * Check SAM
+ * SAM limits the communication to a single remote MAC address
+ * for 3 seconds.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param mac              In: Remote MAC address
+ * @return true if DDP communication is allowed with respect to SAM.
+ *         false if not.
+ */
+static bool pf_dcp_check_sam (pnet_t * net, const pnet_ethaddr_t * mac)
+{
+   return ((memcmp (&net->dcp_sam, &mac_nil, sizeof (net->dcp_sam))) == 0) ||
+          (memcmp (&net->dcp_sam, mac, sizeof (net->dcp_sam)) == 0);
 }
 
 /**
@@ -854,9 +907,7 @@ static int pf_dcp_get_set (
                                                       for the response */
       if (
          (p_rsp != NULL) &&
-         ((memcmp (&net->dcp_sam, &mac_nil, sizeof (net->dcp_sam)) == 0) ||
-          (memcmp (&net->dcp_sam, &p_src_ethhdr->src, sizeof (net->dcp_sam)) ==
-           0)) &&
+         (pf_dcp_check_sam (net, &p_src_ethhdr->src) == true) &&
          ((p_src_ethhdr->dest.addr[0] & 1) == 0)) /* Not multi-cast */
       {
          /* Prepare the response */
@@ -933,16 +984,7 @@ static int pf_dcp_get_set (
                src_block_len = ntohs (p_src_block_hdr->block_length);
             }
 
-            /* Make sure no other MAC address is used in the DCP communication
-             * for 3 seconds */
-            memcpy (&net->dcp_sam, &p_src_ethhdr->src, sizeof (net->dcp_sam));
-            (void)pf_scheduler_add (
-               net,
-               3 * 1000 * 1000, /* 3s */
-               dcp_sync_name,
-               pf_dcp_clear_sam,
-               NULL,
-               &net->dcp_sam_timeout);
+            pf_dcp_restart_sam_timeout (net, &p_src_ethhdr->src);
          }
          else if (p_src_dcphdr->service_id == PF_DCP_SERVICE_GET)
          {
@@ -967,16 +1009,7 @@ static int pf_dcp_get_set (
                src_pos += sizeof (uint8_t) + sizeof (uint8_t);
             }
 
-            /* Make sure no other MAC address is used in the DCP communication
-             * for 3 seconds */
-            memcpy (&net->dcp_sam, &p_src_ethhdr->src, sizeof (net->dcp_sam));
-            (void)pf_scheduler_add (
-               net,
-               3 * 1000 * 1000, /* 3s */
-               dcp_sync_name,
-               pf_dcp_clear_sam,
-               NULL,
-               &net->dcp_sam_timeout);
+            pf_dcp_restart_sam_timeout (net, &p_src_ethhdr->src);
          }
          else
          {
