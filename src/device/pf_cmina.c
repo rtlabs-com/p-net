@@ -1262,7 +1262,7 @@ int pf_cmina_remove_all_data_files (const char * file_directory)
    pf_file_clear (file_directory, PF_FILENAME_IP);
    pf_file_clear (file_directory, PF_FILENAME_DIAGNOSTICS);
    pf_file_clear (file_directory, PF_FILENAME_SYSCONTACT);
-   pf_file_clear (file_directory, PF_FILENAME_PDPORT);
+   pf_pdport_remove_data_files (file_directory);
 
    return 0;
 }

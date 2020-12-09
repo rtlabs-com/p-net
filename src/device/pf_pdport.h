@@ -44,6 +44,13 @@ int pf_pdport_init (pnet_t * net);
 int pf_pdport_reset_all (pnet_t * net);
 
 /**
+ * Remove configuration files for all ports.
+ *
+ * @param  * @param file_directory   In:    File directory
+ */
+void pf_pdport_remove_data_files (const char * file_directory);
+
+/**
  * Notity PDPort that a new AR has been set up.
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In: The AR instance.

@@ -79,6 +79,9 @@ extern "C" {
 #define PNET_API_NO_APPLICATION_PROFILE 0
 
 #define PNET_PORT_1 1
+#define PNET_PORT_2 2
+#define PNET_PORT_3 3
+#define PNET_PORT_4 4
 
 /**
  * # Error Codes
