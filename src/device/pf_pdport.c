@@ -24,14 +24,45 @@
  */
 
 /**
- * Load PDPort data from nvm
+ * Get configuration file name for one port
+ *
+ * @param loc_port_num      In:   Local port number.
+ *                                Valid range: 1 .. PNET_MAX_PORT
+ * @return  The configuration file name
+ */
+static const char * pf_pdport_get_filename (int loc_port_num)
+{
+   const char *filename = NULL;
+   switch (loc_port_num)
+   {
+   case PNET_PORT_1:
+      filename = PF_FILENAME_PDPORT_1;
+      break;
+   case PNET_PORT_2:
+      filename = PF_FILENAME_PDPORT_2;
+      break;
+   case PNET_PORT_3:
+      filename = PF_FILENAME_PDPORT_3;
+      break;
+   case PNET_PORT_4:
+      filename = PF_FILENAME_PDPORT_4;
+      break;
+   default:
+      CC_ASSERT (false);
+   }
+   return filename;
+}
+
+/**
+ * Load PDPort data for one port from nvm
  *
  * @param net              InOut: The p-net stack instance
- *
+ * @param loc_port_num     In:    Local port number.
+ *                                Valid range: 1 .. PNET_MAX_PORT
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
-static int pf_pdport_load (pnet_t * net)
+static int pf_pdport_load (pnet_t * net, int loc_port_num)
 {
    int ret = -1;
    pf_pdport_t pdport_config;
@@ -43,7 +74,7 @@ static int pf_pdport_load (pnet_t * net)
    if (
       pf_file_load (
          p_file_directory,
-         PF_FILENAME_PDPORT,
+         pf_pdport_get_filename (loc_port_num),
          &pdport_config,
          sizeof (pdport_config)) == 0)
    {
@@ -52,7 +83,7 @@ static int pf_pdport_load (pnet_t * net)
          "PDPORT(%d): Did read PDPort settings from nvm.\n",
          __LINE__);
 
-      p_port_data = pf_port_get_state (net, PNET_PORT_1);
+      p_port_data = pf_port_get_state (net, loc_port_num);
 
       memcpy (&p_port_data->pdport, &pdport_config, sizeof (pdport_config));
       p_port_data->pdport.lldp_peer_info_updated = false;
@@ -61,7 +92,7 @@ static int pf_pdport_load (pnet_t * net)
       if (p_port_data->pdport.check.active)
       {
          p_port_data->pdport.check.active = true;
-         pf_lldp_reset_peer_timeout (net, PNET_PORT_1, PNET_LLDP_TTL);
+         pf_lldp_reset_peer_timeout (net, loc_port_num, PNET_LLDP_TTL);
       }
 
       if (p_port_data->pdport.adjust.active == true)
@@ -70,44 +101,46 @@ static int pf_pdport_load (pnet_t * net)
             p_port_data->pdport.adjust.peer_to_peer_boundary
                .peer_to_peer_boundary.do_not_send_LLDP_frames == 1)
          {
-            pf_lldp_send_disable (net, PNET_PORT_1);
+            pf_lldp_send_disable (net, loc_port_num);
          }
          else
          {
-            pf_lldp_send_enable (net, PNET_PORT_1);
+            pf_lldp_send_enable (net, loc_port_num);
          }
       }
       else
       {
-         pf_lldp_send_enable (net, PNET_PORT_1);
+         pf_lldp_send_enable (net, loc_port_num);
       }
 
       ret = 0;
    }
    else
    {
-      pf_lldp_reset_peer_timeout (net, PNET_PORT_1, PNET_LLDP_TTL);
-      pf_lldp_send_enable (net, PNET_PORT_1);
+      pf_lldp_reset_peer_timeout (net, loc_port_num, PNET_LLDP_TTL);
+      pf_lldp_send_enable (net, loc_port_num);
    }
 
    return ret;
 }
 
 /**
- * Store PDPort data to nvm
+ * Store PDPort data for one port to nvm
  *
  * @param net              InOut: The p-net stack instance
+ * @param loc_port_num     In:    Local port number.
+ *                                Valid range: 1 .. PNET_MAX_PORT
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
-static int pf_pdport_save (pnet_t * net)
+static int pf_pdport_save (pnet_t * net, int loc_port_num)
 {
    int ret = 0;
    int save_result = 0;
    pf_pdport_t pdport_config = {0};
    pf_pdport_t temporary_buffer;
    const char * p_file_directory = NULL;
-   pf_port_t * p_port_data = pf_port_get_state (net, PNET_PORT_1);
+   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
    memcpy (&pdport_config, &p_port_data->pdport, sizeof (pdport_config));
 
@@ -115,7 +148,7 @@ static int pf_pdport_save (pnet_t * net)
 
    save_result = pf_file_save_if_modified (
       p_file_directory,
-      PF_FILENAME_PDPORT,
+      pf_pdport_get_filename (loc_port_num),
       &pdport_config,
       &temporary_buffer,
       sizeof (pf_pdport_t));
@@ -155,6 +188,7 @@ static int pf_pdport_save (pnet_t * net)
 /**
  * @internal
  * Get DAP subslot for using local port number
+ *
  * @param net              InOut: The p-net stack instance
  * @param loc_port_num     In:    Local port number.
  *                                Valid range: 1 .. PNET_MAX_PORT
@@ -169,6 +203,7 @@ static uint16_t pf_pdport_loc_port_num_to_dap_subslot (int loc_port_num)
 /**
  * @internal
  * Initialize pdport diagnostic source
+ *
  * @param diag_source      InOut: Diag source to be initialized
  * @param net              InOut: The p-net stack instance
  * @param loc_port_num     In:    Local port number.
@@ -188,13 +223,16 @@ static void pf_pdport_init_diag_source (
 
 /**
  * Delete all active diagnostics handled by pdport
+ *
  * @param net              InOut: The p-net stack instance
+ * @param loc_port_num      In:   Local port number.
+ *                                Valid range: 1 .. PNET_MAX_PORT
  */
-static void pf_pdport_remove_all_diag (pnet_t * net)
+static void pf_pdport_remove_all_diag (pnet_t * net, int loc_port_num)
 {
    pnet_diag_source_t diag_source = {0};
 
-   pf_pdport_init_diag_source (&diag_source, PNET_PORT_1);
+   pf_pdport_init_diag_source (&diag_source, loc_port_num);
 
    (void)pf_diag_std_remove (
       net,
@@ -228,26 +266,54 @@ static void pf_pdport_remove_all_diag (pnet_t * net)
  */
 int pf_pdport_init (pnet_t * net)
 {
-   if (pf_pdport_load (net) != 0)
+   int port;
+   pf_port_iterator_t port_iterator;
+
+   pf_port_init_iterator_over_ports (net, &port_iterator);
+   port = pf_port_get_next (&port_iterator);
+   while (port != 0)
    {
-      /* Create file if missing */
-      (void)pf_pdport_save (net);
+      if (pf_pdport_load (net, port) != 0)
+      {
+         /* Create file if missing */
+         (void)pf_pdport_save (net, port);
+      }
+
+      port = pf_port_get_next (&port_iterator);
    }
    return 0;
 }
 
 int pf_pdport_reset_all (pnet_t * net)
 {
+   int port;
+   pf_port_iterator_t port_iterator;
+   pf_port_t * p_port_data = NULL;
    const char * p_file_directory = NULL;
-   pf_port_t * p_port_data = pf_port_get_state (net, PNET_PORT_1);
 
    (void)pf_cmina_get_file_directory (net, &p_file_directory);
-   pf_file_clear (p_file_directory, PF_FILENAME_PDPORT);
 
-   memset (&p_port_data->pdport, 0, sizeof (p_port_data->pdport));
-   pf_pdport_remove_all_diag (net);
+   pf_port_init_iterator_over_ports (net, &port_iterator);
+   port = pf_port_get_next (&port_iterator);
+   while (port != 0)
+   {
+      p_port_data = pf_port_get_state (net, port);
+      memset (&p_port_data->pdport, 0, sizeof (p_port_data->pdport));
+      pf_pdport_remove_all_diag (net, port);
+      pf_file_clear (p_file_directory, pf_pdport_get_filename (port));
 
+      port = pf_port_get_next (&port_iterator);
+   }
    return 0;
+}
+
+void pf_pdport_remove_data_files (const char * file_directory)
+{
+   int port;
+   for (port = PNET_PORT_1; port <= PNET_MAX_PORT; port++)
+   {
+      pf_file_clear (file_directory, pf_pdport_get_filename (port));
+   }
 }
 
 void pf_pdport_ar_connected (pnet_t * net, const pf_ar_t * p_ar)
@@ -883,7 +949,7 @@ int pf_pdport_write_req (
 
    if (ret == 0)
    {
-      (void)pf_pdport_save (net);
+      (void)pf_pdport_save (net, loc_port_num);
    }
    return ret;
 }
