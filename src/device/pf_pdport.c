@@ -187,7 +187,7 @@ static int pf_pdport_save (pnet_t * net, int loc_port_num)
 
 /**
  * @internal
- * Get DAP subslot for using local port number
+ * Get DAP port subslot using local port number
  *
  * @param net              InOut: The p-net stack instance
  * @param loc_port_num     In:    Local port number.
@@ -196,8 +196,41 @@ static int pf_pdport_save (pnet_t * net, int loc_port_num)
  */
 static uint16_t pf_pdport_loc_port_num_to_dap_subslot (int loc_port_num)
 {
-   CC_ASSERT (loc_port_num == PNET_PORT_1);
-   return PNET_SUBSLOT_DAP_INTERFACE_1_PORT_1_IDENT;
+   uint16_t subslot =
+      PNET_SUBSLOT_DAP_INTERFACE_1_PORT_1_IDENT + PNET_PORT_1 - loc_port_num;
+   return subslot;
+}
+
+/**
+ * @internal
+ * Get local port from DAP port subslot
+ *
+ * @param subslot              In: Subslot number
+ * @return The port number mapping to the subslot.
+ *         0 if the subslot is not supported.
+ */
+static int pf_pdport_dap_subslot_to_local_port (uint16_t subslot)
+{
+   int port = PNET_PORT_1 + PNET_SUBSLOT_DAP_INTERFACE_1_PORT_1_IDENT - subslot;
+   if (port < PNET_PORT_1 || port > PNET_MAX_PORT)
+   {
+      port = 0;
+   }
+   return port;
+}
+
+/**
+ * @internal
+ * Check if a DAP port subslot is mapped to a local port
+ *
+ * @param subslot              In: Subslot number
+ * @return true  if the subslot is mapped to a local port.
+ *         false if the subslot is not supported.
+ */
+static bool pf_pdport_subslot_is_dap_port_id (uint16_t subslot)
+{
+   int port = pf_pdport_dap_subslot_to_local_port (subslot);
+   return (port != 0);
 }
 
 /**
@@ -310,53 +343,75 @@ int pf_pdport_reset_all (pnet_t * net)
 void pf_pdport_remove_data_files (const char * file_directory)
 {
    int port;
+
+   /* Do not use port iterator as net is not available */
    for (port = PNET_PORT_1; port <= PNET_MAX_PORT; port++)
    {
       pf_file_clear (file_directory, pf_pdport_get_filename (port));
    }
 }
 
-void pf_pdport_ar_connected (pnet_t * net, const pf_ar_t * p_ar)
+void pf_pdport_ar_connect_ind (pnet_t * net, const pf_ar_t * p_ar)
 {
-   /* Todo check which dap slots are active in ar and map to ports */
+   (void)p_ar;
+   int port;
+   pf_port_iterator_t port_iterator;
+   pf_port_t * p_port_data = NULL;
 
-   pf_port_t * p_port_data = pf_port_get_state (net, PNET_PORT_1);
-   if (p_port_data->pdport.adjust.active == true)
+   pf_port_init_iterator_over_ports (net, &port_iterator);
+   port = pf_port_get_next (&port_iterator);
+
+   while (port != 0)
    {
-      if (
-         p_port_data->pdport.adjust.peer_to_peer_boundary.peer_to_peer_boundary
-            .do_not_send_LLDP_frames == 1)
+      p_port_data = pf_port_get_state (net, port);
+      if (p_port_data->pdport.adjust.active == true)
       {
-         pf_lldp_send_disable (net, PNET_PORT_1);
+         if (
+            p_port_data->pdport.adjust.peer_to_peer_boundary
+               .peer_to_peer_boundary.do_not_send_LLDP_frames == 1)
+         {
+            pf_lldp_send_disable (net, port);
+         }
+         else
+         {
+            pf_lldp_send_enable (net, port);
+         }
       }
-      else
-      {
-         pf_lldp_send_enable (net, PNET_PORT_1);
-      }
+      port = pf_port_get_next (&port_iterator);
    }
 }
 
 void pf_pdport_lldp_restart (pnet_t * net)
 {
-   /* Todo check which dap slots are active in ar and map to ports */
+   int port;
+   pf_port_iterator_t port_iterator;
+   pf_port_t * p_port_data = NULL;
 
-   pf_port_t * p_port_data = pf_port_get_state (net, PNET_PORT_1);
-   if (p_port_data->pdport.adjust.active == true)
+   pf_port_init_iterator_over_ports (net, &port_iterator);
+   port = pf_port_get_next (&port_iterator);
+
+   while (port != 0)
    {
-      if (
-         p_port_data->pdport.adjust.peer_to_peer_boundary.peer_to_peer_boundary
-            .do_not_send_LLDP_frames == 1)
+      p_port_data = pf_port_get_state (net, port);
+      if (p_port_data->pdport.adjust.active == true)
       {
-         pf_lldp_send_disable (net, PNET_PORT_1);
+         if (
+            p_port_data->pdport.adjust.peer_to_peer_boundary
+               .peer_to_peer_boundary.do_not_send_LLDP_frames == 1)
+         {
+            pf_lldp_send_disable (net, port);
+         }
+         else
+         {
+            pf_lldp_send_enable (net, port);
+         }
       }
       else
       {
-         pf_lldp_send_enable (net, PNET_PORT_1);
+         pf_lldp_send_enable (net, port);
       }
-   }
-   else
-   {
-      pf_lldp_send_enable (net, PNET_PORT_1);
+
+      port = pf_port_get_next (&port_iterator);
    }
 }
 
@@ -370,21 +425,24 @@ int pf_pdport_read_ind (
    uint16_t * p_pos)
 {
    int ret = -1;
-   int loc_port_num = PNET_PORT_1;
-   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
+   int loc_port_num = 0;
+   pf_port_t * p_port_data = NULL;
+   uint16_t slot = p_read_req->slot_number;
+   uint16_t subslot = p_read_req->subslot_number;
 
    switch (p_read_req->index)
    {
    case PF_IDX_SUB_PDPORT_DATA_REAL:
       if (
-         (p_read_req->slot_number == PNET_SLOT_DAP_IDENT) &&
-         (p_read_req->subslot_number ==
-          PNET_SUBSLOT_DAP_INTERFACE_1_PORT_1_IDENT))
+         (slot == PNET_SLOT_DAP_IDENT) &&
+         (pf_pdport_subslot_is_dap_port_id (subslot) == true))
       {
+         loc_port_num = pf_pdport_dap_subslot_to_local_port (subslot);
          pf_put_pdport_data_real (
             net,
-            true,
             loc_port_num,
+            subslot,
+            true,
             p_read_res,
             res_size,
             p_res,
@@ -393,16 +451,17 @@ int pf_pdport_read_ind (
       }
       break;
    case PF_IDX_SUB_PDPORT_DATA_ADJ:
-      /* Only check if this is the port subslot */
       if (
-         (p_read_req->slot_number == PNET_SLOT_DAP_IDENT) &&
-         (p_read_req->subslot_number ==
-          PNET_SUBSLOT_DAP_INTERFACE_1_PORT_1_IDENT))
+         (slot == PNET_SLOT_DAP_IDENT) &&
+         (pf_pdport_subslot_is_dap_port_id (subslot) == true))
       {
+         loc_port_num = pf_pdport_dap_subslot_to_local_port (subslot);
+         p_port_data = pf_port_get_state (net, loc_port_num);
          if (p_port_data->pdport.adjust.active)
          {
             pf_put_pdport_data_adj (
                &p_port_data->pdport.adjust.peer_to_peer_boundary,
+               subslot,
                true,
                p_read_res,
                res_size,
@@ -413,32 +472,53 @@ int pf_pdport_read_ind (
       }
       break;
    case PF_IDX_SUB_PDPORT_DATA_CHECK:
-      /* Only check if this is the port subslot */
-      if (
-         (p_read_req->slot_number == PNET_SLOT_DAP_IDENT) &&
-         (p_read_req->subslot_number ==
-          PNET_SUBSLOT_DAP_INTERFACE_1_PORT_1_IDENT))
+      if (slot == PNET_SLOT_DAP_IDENT)
       {
-         /* Todo map subslot to port */
-         if (p_port_data->pdport.check.active)
+         if (pf_pdport_subslot_is_dap_port_id (subslot) == true)
          {
-            pf_put_pdport_data_check (
-               &p_port_data->pdport.check.peer,
-               true,
-               p_read_res,
-               res_size,
-               p_res,
-               p_pos);
+            loc_port_num = pf_pdport_dap_subslot_to_local_port (subslot);
+            p_port_data = pf_port_get_state (net, loc_port_num);
+            if (p_port_data->pdport.check.active)
+            {
+               pf_put_pdport_data_check (
+                  &p_port_data->pdport.check.peer,
+                  true,
+                  p_read_res,
+                  res_size,
+                  p_res,
+                  p_pos);
+            }
+            ret = 0;
          }
-         ret = 0;
+         else if (subslot == PNET_SUBSLOT_DAP_WHOLE_MODULE)
+         {
+            /* Todo - how should read using subslot 0 be handled?
+             * include all checks in response?
+             */
+            loc_port_num = PNET_PORT_1;
+            p_port_data = pf_port_get_state (net, loc_port_num);
+            if (p_port_data->pdport.check.active)
+            {
+               pf_put_pdport_data_check (
+                  &p_port_data->pdport.check.peer,
+                  true,
+                  p_read_res,
+                  res_size,
+                  p_res,
+                  p_pos);
+            }
+            ret = 0;
+         }
       }
       break;
    case PF_IDX_DEV_PDREAL_DATA:
       if (
-         (p_read_req->slot_number == PNET_SLOT_DAP_IDENT) &&
-         ((p_read_req->subslot_number == PNET_SLOT_DAP_IDENT) ||
-          (p_read_req->subslot_number == PNET_SUBMOD_DAP_IDENT)))
+         (slot == PNET_SLOT_DAP_IDENT) &&
+         ((subslot == PNET_SUBSLOT_DAP_WHOLE_MODULE) ||
+          (subslot == PNET_SUBSLOT_DAP_IDENT)))
       {
+         /*Todo - handle multiple ports and interface level */
+         loc_port_num = PNET_PORT_1;
          pf_put_pd_real_data (
             net,
             true,
@@ -467,11 +547,11 @@ int pf_pdport_read_ind (
       break;
    case PF_IDX_SUB_PDPORT_STATISTIC:
       if (
-         (p_read_req->slot_number == PNET_SLOT_DAP_IDENT) &&
-         ((p_read_req->subslot_number == PNET_SUBSLOT_DAP_INTERFACE_1_IDENT) ||
-          (p_read_req->subslot_number ==
-           PNET_SUBSLOT_DAP_INTERFACE_1_PORT_1_IDENT)))
+         (slot == PNET_SLOT_DAP_IDENT) &&
+         ((subslot == PNET_SUBSLOT_DAP_INTERFACE_1_IDENT) ||
+          (pf_pdport_subslot_is_dap_port_id (subslot) == true)))
       {
+         /* Todo - statistics for different ports and interfaces */
          pf_put_pdport_statistics (
             &net->interface_statistics,
             true,
@@ -768,9 +848,6 @@ static int pf_pdport_write_data_check (
       {
          if (check_peers.number_of_peers >= 1)
          {
-            /* ToDo - Map request to port based on slot information in
-             * port_data_check variable */
-
             /* There is max one peer in the check_peers */
             p_port_data->pdport.check.peer = check_peers.peers[0];
             p_port_data->pdport.check.active = true;
@@ -789,7 +866,7 @@ static int pf_pdport_write_data_check (
                check_peers.peers[0].length_peer_port_name,
                check_peers.peers[0].peer_port_name);
 
-            pf_pdport_run_peer_check (net, PNET_PORT_1);
+            pf_pdport_run_peer_check (net, loc_port_num);
 
             ret = 0;
          }
@@ -882,11 +959,11 @@ static int pf_pdport_write_data_adj (
             p_port_data->pdport.adjust.peer_to_peer_boundary
                .peer_to_peer_boundary.do_not_send_LLDP_frames == 1)
          {
-            pf_lldp_send_disable (net, PNET_PORT_1);
+            pf_lldp_send_disable (net, loc_port_num);
          }
          else
          {
-            pf_lldp_send_enable (net, PNET_PORT_1);
+            pf_lldp_send_enable (net, loc_port_num);
          }
 
          ret = 0;
@@ -914,37 +991,41 @@ int pf_pdport_write_req (
    pnet_t * net,
    const pf_ar_t * p_ar,
    const pf_iod_write_request_t * p_write_req,
-   int loc_port_num,
    const uint8_t * p_bytes,
    uint16_t data_length,
    pnet_result_t * p_result)
 {
    int ret = -1;
+   int loc_port_num =
+      pf_pdport_dap_subslot_to_local_port (p_write_req->subslot_number);
 
-   switch (p_write_req->index)
+   if (loc_port_num > 0)
    {
-   case PF_IDX_SUB_PDPORT_DATA_CHECK:
-      ret = pf_pdport_write_data_check (
-         net,
-         p_ar,
-         p_write_req,
-         loc_port_num,
-         p_bytes,
-         data_length,
-         p_result);
-      break;
-   case PF_IDX_SUB_PDPORT_DATA_ADJ:
-      ret = pf_pdport_write_data_adj (
-         net,
-         p_ar,
-         p_write_req,
-         loc_port_num,
-         p_bytes,
-         data_length,
-         p_result);
-      break;
-   default:
-      break;
+      switch (p_write_req->index)
+      {
+      case PF_IDX_SUB_PDPORT_DATA_CHECK:
+         ret = pf_pdport_write_data_check (
+            net,
+            p_ar,
+            p_write_req,
+            loc_port_num,
+            p_bytes,
+            data_length,
+            p_result);
+         break;
+      case PF_IDX_SUB_PDPORT_DATA_ADJ:
+         ret = pf_pdport_write_data_adj (
+            net,
+            p_ar,
+            p_write_req,
+            loc_port_num,
+            p_bytes,
+            data_length,
+            p_result);
+         break;
+      default:
+         break;
+      }
    }
 
    if (ret == 0)
