@@ -2712,9 +2712,13 @@ int pf_alarm_send_diagnosis (
    const pf_diag_item_t * p_diag_item)
 {
    int ret = -1;
+   int ret_module_id = -1;
+   int ret_submodule_id = -1;
+   int ret_send = -1;
+
    pf_alarm_type_values_t alarm_type = PF_ALARM_TYPE_DIAGNOSIS;
-   uint32_t module_ident = PNET_MOD_DAP_IDENT;
-   uint32_t submodule_ident = PNET_SUBMOD_DAP_INTERFACE_1_PORT_1_IDENT;
+   uint32_t module_ident = 0;
+   uint32_t submodule_ident = 0;
 
    if (p_diag_item != NULL)
    {
@@ -2731,22 +2735,49 @@ int pf_alarm_send_diagnosis (
          }
       }
 
-      // TODO Calculate module_ident, submodule_ident
-      // The ModuleIdentNumber of the portsubmodule which is connected to device
-      // ‘b’ The SubModuleIdentNumber of the portsubmodule which is connected to
-      // device ‘b’
+      ret_module_id =
+         pf_cmdev_get_module_ident (net, api_id, slot_nbr, &module_ident);
+      if (ret != 0)
+      {
+         LOG_ERROR (
+            PF_ALARM_LOG,
+            "Alarm(%d): Failed to get module ident for slot: %u",
+            __LINE__,
+            slot_nbr);
+      }
+
+      ret_submodule_id = pf_cmdev_get_submodule_ident (
+         net,
+         api_id,
+         slot_nbr,
+         subslot_nbr,
+         &submodule_ident);
+      if (ret != 0)
+      {
+         LOG_ERROR (
+            PF_ALARM_LOG,
+            "Alarm(%d): Failed to get submodule ident for slot: %u, "
+            "subslot: %u",
+            __LINE__,
+            slot_nbr,
+            subslot_nbr);
+      }
 
       LOG_INFO (
          PF_ALARM_LOG,
-         "Alarm(%d): Sending diagnosis alarm (type 0x%04X) Slot: %u  Subslot: "
-         "0x%04X  USI: 0x%04X\n",
+         "Alarm(%d): Sending diagnosis alarm "
+         "(type 0x%04X) Slot: %u  Subslot: 0x%04X  "
+         "Module ident: %u Submodule ident: %u "
+         "USI: 0x%04X\n",
          __LINE__,
          alarm_type,
          slot_nbr,
          subslot_nbr,
+         (unsigned)module_ident,
+         (unsigned)submodule_ident,
          p_diag_item->usi);
 
-      ret = pf_alarm_send_alarm (
+      ret_send = pf_alarm_send_alarm (
          net,
          p_ar,
          alarm_type,
@@ -2769,6 +2800,10 @@ int pf_alarm_send_diagnosis (
          __LINE__);
    }
 
+   if ((ret_module_id == 0) && (ret_submodule_id == 0) && (ret_send == 0))
+   {
+      ret = 0;
+   }
    return ret;
 }
 
