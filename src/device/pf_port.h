@@ -34,9 +34,15 @@ void pf_port_init(pnet_t * net);
  * The management port is not included.
  *
  * @param net              In:    The p-net stack instance.
+ * @param max_port         In:    Max port number supported.
+ *                                Typically PNET_MAX_PORT.
+ *                                Parameter added for testability.
  * @param p_list           Out:   List of local ports.
  */
-void pf_port_get_list_of_ports (pnet_t * net, pf_lldp_port_list_t * p_list);
+void pf_port_get_list_of_ports (
+   pnet_t * net,
+   uint16_t max_port,
+   pf_lldp_port_list_t * p_list);
 
 /**
  * Initialise iterator for iterating over local ports.
