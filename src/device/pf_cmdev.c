@@ -306,6 +306,39 @@ int pf_cmdev_get_slot_full (
    return ret;
 }
 
+int pf_cmdev_get_module_ident (
+   pnet_t * net,
+   uint16_t api_id,
+   uint16_t slot_nbr,
+   uint32_t * p_module_ident)
+{
+   pf_slot_t * p_slot = NULL;
+   if (pf_cmdev_get_slot_full (net, api_id, slot_nbr, &p_slot) == 0)
+   {
+      *p_module_ident = p_slot->module_ident_number;
+      return 0;
+   }
+   return -1;
+}
+
+int pf_cmdev_get_submodule_ident (
+   pnet_t * net,
+   uint16_t api_id,
+   uint16_t slot_nbr,
+   uint16_t subslot_nbr,
+   uint32_t * p_submodule_ident)
+{
+   pf_subslot_t * p_subslot = NULL;
+   if (
+      pf_cmdev_get_subslot_full (net, api_id, slot_nbr, subslot_nbr, &p_subslot) ==
+      0)
+   {
+      *p_submodule_ident = p_subslot->submodule_ident_number;
+      return 0;
+   }
+   return -1;
+}
+
 /******************** Diagnosis **********************************************/
 
 int pf_cmdev_get_diag_item (

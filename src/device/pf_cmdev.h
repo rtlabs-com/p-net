@@ -214,6 +214,39 @@ int pf_cmdev_get_slot_full (
    pf_slot_t ** pp_slot);
 
 /**
+ * Get identity for plugged module from the api ID and slot number.
+ * @param net              InOut: The p-net stack instance
+ * @param api_id           In:    The API identifier.
+ * @param slot_nbr         In:    The slot number.
+ * @param p_module_ident   Out:   Identity for plugged module.
+ * @return  0  if operation succeeded.
+ *          -1 if an error occurred.
+ */
+int pf_cmdev_get_module_ident (
+   pnet_t * net,
+   uint16_t api_id,
+   uint16_t slot_nbr,
+   uint32_t * p_module_ident);
+
+/**
+ * Get identity for plugged submodule from
+ * the api ID, slot and subslot number.
+ * @param net               InOut: The p-net stack instance
+ * @param api_id            In:    The API identifier.
+ * @param slot_nbr          In:    The slot number.
+ * @param subslot_nbr       In:    The subslot number.
+ * @param p_submodule_ident Out:   Identity for plugged submodule.
+ * @return  0  if operation succeeded.
+ *          -1 if an error occurred.
+ */
+int pf_cmdev_get_submodule_ident (
+   pnet_t * net,
+   uint16_t api_id,
+   uint16_t slot_nbr,
+   uint16_t subslot_nbr,
+   uint32_t * p_submodule_ident);
+
+/**
  * Get a diag item, from the array of items (by using index).
  *
  * @param net              InOut: The p-net stack instance
