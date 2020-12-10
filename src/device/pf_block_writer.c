@@ -3562,8 +3562,9 @@ void pf_put_pdport_data_check (
 
 void pf_put_pdport_data_real (
    pnet_t * net,
-   bool is_big_endian,
    int loc_port_num,
+   uint16_t subslot,
+   bool is_big_endian,
    const pf_iod_read_result_t * p_res,
    uint16_t res_len,
    uint8_t * p_bytes,
@@ -3595,12 +3596,7 @@ void pf_put_pdport_data_real (
 
    /* Slot and subslot */
    pf_put_uint16 (is_big_endian, PNET_SLOT_DAP_IDENT, res_len, p_bytes, p_pos);
-   pf_put_uint16 (
-      is_big_endian,
-      PNET_SUBSLOT_DAP_INTERFACE_1_PORT_1_IDENT,
-      res_len,
-      p_bytes,
-      p_pos);
+   pf_put_uint16 (is_big_endian, subslot, res_len, p_bytes, p_pos);
 
    /* Length OwnerPortID */
    pf_put_byte (strlen (p_port_config->port_id), res_len, p_bytes, p_pos);
@@ -3633,8 +3629,7 @@ void pf_put_pdport_data_real (
          p_pos);
 
       /* Get ChassisId of peer device */
-      pf_lldp_get_peer_chassis_id (net, 1, &chassis_id); /* TODO: Pass port
-                                                            number */
+      pf_lldp_get_peer_chassis_id (net, loc_port_num, &chassis_id);
 
       /* Length ChassisID */
       pf_put_byte (chassis_id.len, res_len, p_bytes, p_pos);
@@ -3971,6 +3966,9 @@ static void pf_put_pd_multiblock_interface_and_statistics (
 /**
  * @internal
  * Insert multiblock port and statistics
+ *
+ * TODO - Add multiport feature - current version only list port 1
+ *
  * @param net              InOut: The p-net stack instance
  * @param is_big_endian    In:    Endianness of the destination buffer.
  * @param loc_port_num     In:    Local port number.
@@ -4020,8 +4018,9 @@ static void pf_put_pd_multiblock_port_and_statistics (
    /*PDPortDataReal*/
    pf_put_pdport_data_real (
       net,
-      is_big_endian,
       loc_port_num,
+      PNET_SUBSLOT_DAP_INTERFACE_1_PORT_1_IDENT,
+      is_big_endian,
       p_res,
       res_len,
       p_bytes,
@@ -4151,6 +4150,7 @@ void pf_put_peer_to_peer_boundary (
 
 void pf_put_pdport_data_adj (
    const pf_adjust_peer_to_peer_boundary_t * p_peer_to_peer_boundary,
+   uint16_t subslot,
    bool is_big_endian,
    const pf_iod_read_result_t * p_res,
    uint16_t res_len,
@@ -4175,12 +4175,7 @@ void pf_put_pdport_data_adj (
 
    /* Slot and subslot */
    pf_put_uint16 (is_big_endian, PNET_SLOT_DAP_IDENT, res_len, p_bytes, p_pos);
-   pf_put_uint16 (
-      is_big_endian,
-      PNET_SUBSLOT_DAP_INTERFACE_1_PORT_1_IDENT,
-      res_len,
-      p_bytes,
-      p_pos);
+   pf_put_uint16 (is_big_endian, subslot, res_len, p_bytes, p_pos);
 
    /* PeerToPeer_boundary*/
    pf_put_peer_to_peer_boundary (

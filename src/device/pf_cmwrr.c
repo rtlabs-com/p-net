@@ -189,7 +189,6 @@ static int pf_cmwrr_write (
             net,
             p_ar,
             p_write_request,
-            PNET_PORT_1,
             &p_req_buf[*p_req_pos],
             data_length,
             p_result);
