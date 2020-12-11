@@ -40,6 +40,13 @@
 #include <string.h>
 #include <ctype.h>
 
+#if PNET_MAX_PORT_DESCRIPTION_LENGTH > 256
+#error "Port description can't be larger than 255 bytes plus termination"
+#endif
+#if PNET_MAX_PORT_DESCRIPTION_LENGTH < PNET_MAX_INTERFACE_NAME_LENGTH
+#error "Port description should be at least as large as interface name"
+#endif
+
 #define LLDP_TYPE_END              0
 #define LLDP_TYPE_CHASSIS_ID       1
 #define LLDP_TYPE_PORT_ID          2

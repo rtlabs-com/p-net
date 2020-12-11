@@ -173,6 +173,11 @@
 #define PNET_MAX_FILENAME_LENGTH @PNET_MAX_FILENAME_LENGTH@
 #endif
 
+/** Max port description length */
+#if !defined (PNET_MAX_PORT_DESCRIPTION_LENGTH)
+#define PNET_MAX_PORT_DESCRIPTION_LENGTH @PNET_MAX_PORT_DESCRIPTION_LENGTH@
+#endif
+
 
 /**
  * # Logging
