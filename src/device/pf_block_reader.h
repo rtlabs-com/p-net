@@ -350,7 +350,7 @@ void pf_get_port_data_check_check_peers (
  * pf_get_port_data_adjust_peer_to_peer_boundary().
  * @param p_info                   InOut: The parser information.
  * @param p_pos                    InOut: The current parsing position.
- * @param pf_port_data_adjust_t:   Out:   Destination structure
+ * @param p_port_data_check        Out:    Destination structure
  */
 void pf_get_port_data_adjust (
    pf_get_info_t * p_info,
@@ -361,7 +361,7 @@ void pf_get_port_data_adjust (
  * Extract a AdjustPeerToPeerBoundary data block from a buffer.
  * @param p_info           InOut: The parser information.
  * @param p_pos            InOut: The current parsing position.
- * @param p_im_1           Out:   Destination structure.
+ * @param boundary         Out:   Destination structure.
  */
 void pf_get_port_data_adjust_peer_to_peer_boundary (
    pf_get_info_t * p_info,
