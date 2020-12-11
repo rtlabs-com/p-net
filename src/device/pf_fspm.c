@@ -262,10 +262,12 @@ static void pf_fspm_load_im (pnet_t * net)
          PNET_LOG,
          "FSPM(%d): Did read I&M settings from nvm.\n",
          __LINE__);
+      os_mutex_lock (net->fspm_im_mutex);
       memcpy (&net->fspm_cfg.im_1_data, &file_im.im1, sizeof (pnet_im_1_t));
       memcpy (&net->fspm_cfg.im_2_data, &file_im.im2, sizeof (pnet_im_2_t));
       memcpy (&net->fspm_cfg.im_3_data, &file_im.im3, sizeof (pnet_im_3_t));
       memcpy (&net->fspm_cfg.im_4_data, &file_im.im4, sizeof (pnet_im_4_t));
+      os_mutex_unlock (net->fspm_im_mutex);
    }
    else
    {
@@ -293,10 +295,12 @@ static void pf_fspm_save_im (pnet_t * net)
    const char * p_file_directory = NULL;
    int res = 0;
 
+   os_mutex_lock (net->fspm_im_mutex);
    memcpy (&output_im.im1, &net->fspm_cfg.im_1_data, sizeof (pnet_im_1_t));
    memcpy (&output_im.im2, &net->fspm_cfg.im_2_data, sizeof (pnet_im_2_t));
    memcpy (&output_im.im3, &net->fspm_cfg.im_3_data, sizeof (pnet_im_3_t));
    memcpy (&output_im.im4, &net->fspm_cfg.im_4_data, sizeof (pnet_im_4_t));
+   os_mutex_unlock (net->fspm_im_mutex);
 
    (void)pf_cmina_get_file_directory (net, &p_file_directory);
 
@@ -336,6 +340,48 @@ static void pf_fspm_save_im (pnet_t * net)
    }
 }
 
+/**
+ * Set system location in I&M data record 1.
+ *
+ * Also see pf_fspm_save_system_location().
+ * 
+ * @param net              InOut: The p-net stack instance
+ * @param p_location       In:    New system location.
+ */
+static void pf_fspm_set_system_location (
+   pnet_t * net,
+   const pf_snmp_system_location_t * p_location)
+{
+   os_mutex_lock (net->fspm_im_mutex);
+   snprintf (
+      net->fspm_cfg.im_1_data.im_tag_location,
+      sizeof (net->fspm_cfg.im_1_data.im_tag_location),
+      "%s",
+      p_location->string);
+   os_mutex_unlock (net->fspm_im_mutex);
+}
+
+void pf_fspm_get_system_location (
+   pnet_t * net,
+   pf_snmp_system_location_t * p_location)
+{
+   os_mutex_lock (net->fspm_im_mutex);
+   snprintf (
+      p_location->string,
+      sizeof (p_location->string),
+      "%s",
+      net->fspm_cfg.im_1_data.im_tag_location);
+   os_mutex_unlock (net->fspm_im_mutex);
+}
+
+void pf_fspm_save_system_location (
+   pnet_t * net,
+   const pf_snmp_system_location_t * p_location)
+{
+   pf_fspm_set_system_location (net, p_location);
+   pf_fspm_save_im (net);
+}
+
 int pf_fspm_init (pnet_t * net, const pnet_cfg_t * p_cfg)
 {
    if (pf_fspm_validate_configuration (p_cfg) != 0)
@@ -349,6 +395,12 @@ int pf_fspm_init (pnet_t * net, const pnet_cfg_t * p_cfg)
 
    /* Reference to the default settings (used at factory reset) */
    net->p_fspm_default_cfg = p_cfg;
+
+   /* Create mutex for protecting writable I&M data */
+   if (net->fspm_im_mutex == NULL)
+   {
+      net->fspm_im_mutex = os_mutex_create();
+   }
 
    /* Load I&M data modifications from file, if any */
    pf_fspm_load_im (net);
@@ -417,6 +469,7 @@ void pf_fspm_create_log_book_entry (
 
 int pf_fspm_clear_im_data (pnet_t * net)
 {
+   os_mutex_lock (net->fspm_im_mutex);
    memset (
       net->fspm_cfg.im_1_data.im_tag_function,
       ' ',
@@ -447,6 +500,7 @@ int pf_fspm_clear_im_data (pnet_t * net)
       net->fspm_cfg.im_4_data.im_signature,
       0,
       sizeof (net->fspm_cfg.im_4_data.im_signature));
+   os_mutex_unlock (net->fspm_im_mutex);
 
    pf_fspm_save_im (net);
 
@@ -797,7 +851,9 @@ int pf_fspm_cm_write_ind (
             get_info.is_big_endian = true;
             get_info.len = write_length; /* Bytes in input buffer */
 
+            os_mutex_lock (net->fspm_im_mutex);
             pf_get_im_1 (&get_info, &pos, &net->fspm_cfg.im_1_data);
+            os_mutex_unlock (net->fspm_im_mutex);
             if ((get_info.result == PF_PARSE_OK) && (pos == write_length))
             {
                LOG_INFO (
@@ -843,12 +899,14 @@ int pf_fspm_cm_write_ind (
             /* Do not count the terminator byte */
             if (write_length == (sizeof (net->fspm_cfg.im_2_data) - 1))
             {
+               os_mutex_lock (net->fspm_im_mutex);
                memcpy (
                   &net->fspm_cfg.im_2_data,
                   p_write_data,
                   sizeof (net->fspm_cfg.im_2_data) - 1);
                net->fspm_cfg.im_2_data
                   .im_date[sizeof (net->fspm_cfg.im_2_data) - 1] = '\0';
+               os_mutex_unlock (net->fspm_im_mutex);
                LOG_INFO (
                   PNET_LOG,
                   "FSPM(%d): PLC is writing I&M2 data. Date: %s\n",
@@ -890,12 +948,14 @@ int pf_fspm_cm_write_ind (
             /* Do not count the terminator byte */
             if (write_length == (sizeof (net->fspm_cfg.im_3_data) - 1))
             {
+               os_mutex_lock (net->fspm_im_mutex);
                memcpy (
                   &net->fspm_cfg.im_3_data,
                   p_write_data,
                   sizeof (net->fspm_cfg.im_3_data) - 1);
                net->fspm_cfg.im_3_data
                   .im_descriptor[sizeof (net->fspm_cfg.im_3_data) - 1] = '\0';
+               os_mutex_unlock (net->fspm_im_mutex);
                LOG_INFO (
                   PNET_LOG,
                   "FSPM(%d): PLC is writing I&M3 data. Descriptor: %s\n",
@@ -940,10 +1000,12 @@ int pf_fspm_cm_write_ind (
                   PNET_LOG,
                   "FSPM(%d): PLC is writing I&M4 data\n",
                   __LINE__);
+               os_mutex_lock (net->fspm_im_mutex);
                memcpy (
                   &net->fspm_cfg.im_4_data,
                   p_write_data,
                   sizeof (net->fspm_cfg.im_4_data));
+               os_mutex_unlock (net->fspm_im_mutex);
                ret = 0;
             }
             else
