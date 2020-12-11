@@ -20,6 +20,11 @@
 
 #include <gtest/gtest.h>
 
+class FspmTest : public PnetIntegrationTest
+{
+};
+
+
 class FspmUnitTest : public PnetUnitTest
 {
 };
@@ -77,4 +82,45 @@ TEST_F (FspmUnitTest, FspmCheckValidateConfiguration)
    cfg.im_0_data.im_supported = 0xFFFF;
    EXPECT_EQ (pf_fspm_validate_configuration (&cfg), -1);
    cfg.im_0_data.im_supported = 0;
+}
+
+TEST_F (FspmTest, FspmGetSystemLocation)
+{
+   pf_snmp_system_location_t first;
+   pf_snmp_system_location_t second;
+
+   memset (&first, '1', sizeof (first));
+   memset (&second, '2', sizeof (second));
+
+   pf_fspm_get_system_location (net, &first);
+   EXPECT_LT (strlen (first.string), sizeof (first.string));
+
+   pf_fspm_get_system_location (net, &second);
+   EXPECT_STREQ (second.string, first.string);
+}
+
+TEST_F (FspmTest, FspmSaveSystemLocation)
+{
+   const pf_snmp_system_location_t expected = {"location of device"};
+   pf_snmp_system_location_t actual = {""};
+
+   pf_fspm_save_system_location (net, &expected);
+
+   pf_fspm_get_system_location (net, &actual);
+   EXPECT_STREQ (actual.string, expected.string);
+   EXPECT_GT (mock_os_data.file_size, 0);
+}
+
+TEST_F (FspmTest, FspmSaveSystemLocationShouldAddTermination)
+{
+   pf_snmp_system_location_t not_terminated;
+   pf_snmp_system_location_t actual = {""};
+
+   memset (not_terminated.string, 'n', sizeof (not_terminated.string));
+
+   pf_fspm_save_system_location (net, &not_terminated);
+
+   pf_fspm_get_system_location (net, &actual);
+   EXPECT_EQ (actual.string[sizeof (actual.string) - 1], '\0');
+   EXPECT_GT (mock_os_data.file_size, 0);
 }

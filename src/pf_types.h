@@ -2754,6 +2754,14 @@ struct pnet
                            during runtime */
    pf_log_book_t fspm_log_book;
    os_mutex_t * fspm_log_book_mutex;
+
+   /* Mutex for protecting access to writable I&M data.
+    *
+    * Note I&M may be both read and written by SNMP, which executes from
+    * its own thread context.
+    */
+   os_mutex_t * fspm_im_mutex;
+
    pf_interface_stats_t interface_statistics; /* Keeps track of number of sent
                                                    and discarded packets */
 
