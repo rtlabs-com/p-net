@@ -156,35 +156,6 @@ typedef struct pf_snmp_system_contact
 } pf_snmp_system_contact_t;
 
 /**
- * System location (sysLocation).
- *
- * "The physical location of this node (e.g.,
- * 'telephone closet, 3rd floor'). If the location is unknown,
- *  the value is the zero-length string."
- * - IETF RFC 3418 (SNMP MIB-II).
- *
- * The value is supplied by network manager. By default, it is
- * the zero-length string.
- *
- * This should have the same value as "IM_Tag_Location" in I&M1.
- * See PN-Topology ch. 11.5.2: "Consistency".
- *
- * Note: According to the SNMP specification, the string could be up
- * to 255 characters. The p-net stack limits it to the length of
- * IM_Tag_Location, which is 22.
- * An extra byte is added as to ensure null-termination.
- *
- * This is a writable variable. As such, it is stored in persistent memory.
- * Only writable variables (using SNMP Set) need to be stored
- * in persistent memory.
- * See IEC CDV 61158-5-10 (PN-AL-Services) ch. 7.3.3.3.6.2: "Persistency".
- */
-typedef struct pf_snmp_system_location
-{
-   char string[PNET_LOCATION_MAX_LEN + 1]; /* Terminated */
-} pf_snmp_system_location_t;
-
-/**
  * System description (sysDescr).
  *
  * "A textual description of the entity. This value
