@@ -1,4 +1,4 @@
-From e54e445a15b3519bf45b7b9de1ad19fe42b8608d Mon Sep 17 00:00:00 2001
+From 9b158e79a2e7183fbfebce9fee53347714009e35 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Fredrik=20M=C3=B6ller?= <fredrik.moller@rt-labs.com>
 Date: Tue, 15 Sep 2020 18:22:53 +0200
 Subject: [PATCH] rtkernel for Profinet
@@ -145,7 +145,7 @@ index ce2e3d29..7946cb05 100644
        MIB2_STATS_INC(mib2.udpindatagrams);
  #if SO_REUSE && SO_REUSE_RXTOALL
 diff --git a/lwip/src/include/lwip/lwipopts.h b/lwip/src/include/lwip/lwipopts.h
-index c48a69b7..0307f8da 100644
+index c48a69b7..15141e15 100644
 --- a/lwip/src/include/lwip/lwipopts.h
 +++ b/lwip/src/include/lwip/lwipopts.h
 @@ -49,7 +49,12 @@
@@ -185,7 +185,7 @@ index c48a69b7..0307f8da 100644
  /* Stack sizes */
  #define DEFAULT_THREAD_STACKSIZE    1024
  #define TCPIP_THREAD_STACKSIZE      1768
-+#define SNMP_STACK_SIZE             2300
++#define SNMP_STACK_SIZE             3000
  
  /* TCPIP thread priority */
  #define TCPIP_THREAD_PRIO           5
@@ -213,5 +213,5 @@ index c48a69b7..0307f8da 100644
  
  #endif  /* __LWIPOPTS_H__ */
 -- 
-2.25.1
+2.28.0.windows.1
 

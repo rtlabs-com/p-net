@@ -239,19 +239,15 @@ void pf_snmp_get_system_location (
    pnet_t * net,
    pf_snmp_system_location_t * location)
 {
-   snprintf (
-      location->string,
-      sizeof (location->string),
-      "%s",
-      net->fspm_cfg.im_1_data.im_tag_location);
+   pf_fspm_get_system_location (net, location);
 }
 
 int pf_snmp_set_system_location (
    pnet_t * net,
    const pf_snmp_system_location_t * location)
 {
-   /* TODO: Write to I&M1 */
-   return -1;
+   pf_fspm_save_system_location (net, location);
+   return 0;
 }
 
 void pf_snmp_get_system_description (
