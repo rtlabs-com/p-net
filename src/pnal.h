@@ -158,6 +158,19 @@ void pnal_buf_free (pnal_buf_t * p);
 uint8_t pnal_buf_header (pnal_buf_t * p, int16_t header_size_increment);
 
 /**
+ * Get network interface index
+ *
+ * The interface index (ifIndex) is the (row) index for the network interface
+ * in the table ifTable, which is part of the SNMP MIB-II data structure.
+ * See RFC 2863 "The Interfaces Group MIB".
+ *
+ * @param handle           In:    Ethernet handle
+ *
+ * @return  The interface index, or 0 if not available.
+ */
+int pnal_get_interface_index (pnal_eth_handle_t * handle);
+
+/**
  * Send raw Ethernet data
  *
  * @param handle        In: Ethernet handle

@@ -159,9 +159,18 @@ uint32_t pnal_get_system_uptime_10ms (void)
 {
    uint32_t uptime;
 
-   /* TODO: Implement this */
+   /* TODO: Get sysUptime from SNMP MIB-II */
    uptime = 0;
    return uptime;
+}
+
+int pnal_get_interface_index (pnal_eth_handle_t * handle)
+{
+   int index;
+
+   /* TODO: Get ifIndex from ifTable in SNMP MIB-II */
+   index = 0;
+   return index;
 }
 
 uint32_t pnal_buf_alloc_cnt = 0; /* Count outstanding buffers */
