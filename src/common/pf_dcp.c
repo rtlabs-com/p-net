@@ -116,7 +116,9 @@ static const pnet_ethaddr_t dcp_mc_addr_hello = {
 
 static const pnet_ethaddr_t mac_nil = PF_MAC_NIL;
 
-static const char * dcp_sync_name = "dcp";
+static const char * dcp_led_sync_name = "dcp_led";
+static const char * dcp_sam_sync_name = "dcp_sam";
+static const char * dcp_identresp_sync_name = "dcp_identresp";
 
 /*
  * A list of options that we can get/set/filter.
@@ -220,7 +222,7 @@ static void pf_dcp_clear_sam (pnet_t * net, void * arg, uint32_t current_time)
  * for 3 seconds.
  *
  * @param net              InOut: The p-net stack instance
- * @param mac              In: Remote MAC address
+ * @param mac              In:    Remote MAC address
  */
 static void pf_dcp_restart_sam_timeout (pnet_t * net, const pnet_ethaddr_t * mac)
 {
@@ -232,12 +234,12 @@ static void pf_dcp_restart_sam_timeout (pnet_t * net, const pnet_ethaddr_t * mac
       __LINE__);
 
    memcpy (&net->dcp_sam, mac, sizeof (net->dcp_sam));
-   (void)pf_scheduler_remove (net, dcp_sync_name, net->dcp_sam_timeout);
+   (void)pf_scheduler_remove (net, dcp_sam_sync_name, net->dcp_sam_timeout);
    net->dcp_sam_timeout = 0;
    (void)pf_scheduler_add (
       net,
       PF_DCP_SAM_TIMEOUT,
-      dcp_sync_name,
+      dcp_sam_sync_name,
       pf_dcp_clear_sam,
       NULL,
       &net->dcp_sam_timeout);
@@ -558,6 +560,7 @@ static int pf_dcp_get_req (
  * @param current_time     In:    The current system time, in microseconds,
  *                                when the scheduler is started to execute
  *                                stored tasks.
+ *                                Not used here.
  */
 static void pf_dcp_control_signal (
    pnet_t * net,
@@ -592,14 +595,15 @@ static void pf_dcp_control_signal (
    if ((state > 0) && (state < 200)) /* Plausibility test */
    {
       state--;
+
       /* Schedule another round in 500ms */
       pf_scheduler_add (
          net,
          500 * 1000,
-         dcp_sync_name,
+         dcp_led_sync_name,
          pf_dcp_control_signal,
          (void *)(uintptr_t)state,
-         &net->dcp_timeout);
+         &net->dcp_led_timeout);
    }
 }
 
@@ -778,10 +782,10 @@ static int pf_dcp_set_req (
          pf_scheduler_add (
             net,
             500 * 1000,
-            dcp_sync_name,
+            dcp_led_sync_name,
             pf_dcp_control_signal,
             (void *)(2 * 3 - 1),
-            &net->dcp_timeout); /* 3 flashes */
+            &net->dcp_led_timeout); /* 3 flashes */
          ret = 0;
          break;
       case PF_DCP_SUB_CONTROL_RESPONSE:
@@ -1827,10 +1831,10 @@ static int pf_dcp_identify_req (
          pf_scheduler_add (
             net,
             response_delay,
-            dcp_sync_name,
+            dcp_identresp_sync_name,
             pf_dcp_responder,
             p_rsp,
-            &net->dcp_timeout);
+            &net->dcp_identresp_timeout);
       }
       else
       {
@@ -1877,7 +1881,8 @@ void pf_dcp_init (pnet_t * net)
    net->dcp_global_block_qualifier = 0;
    net->dcp_delayed_response_waiting = false;
    net->dcp_sam_timeout = 0;
-   net->dcp_timeout = 0;
+   net->dcp_led_timeout = 0;
+   net->dcp_identresp_timeout = 0;
    net->dcp_sam = mac_nil;
 
    /* Insert handlers for our specific frame_ids */

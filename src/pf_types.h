@@ -927,7 +927,6 @@ typedef struct pf_alarm_queue
    uint16_t count;
 } pf_alarm_queue_t;
 
-
 #define PF_MAX_SESSION (2 * (PNET_MAX_AR) + 1) /* 2 per ar, and one spare. */
 
 /*
@@ -2121,8 +2120,6 @@ typedef enum pf_diag_filter_level
    PF_DIAG_FILTER_M_DEM      /* Manufacturer specific or maintenance demanded */
 } pf_diag_filter_level_t;
 
-
-
 typedef struct pf_subslot
 {
    bool in_use;
@@ -2691,8 +2688,10 @@ struct pnet
    pnet_ethaddr_t dcp_sam; /* Source address (MAC) of current DCP remote peer */
    bool dcp_delayed_response_waiting; /* A response to DCP IDENTIFY is waiting
                                          to be sent */
-   uint32_t dcp_timeout;
-   uint32_t dcp_sam_timeout; /* Handle to the SAM timeout instance */
+   uint32_t dcp_led_timeout;          /* Handle to the LED timeout instance */
+   uint32_t dcp_sam_timeout;          /* Handle to the SAM timeout instance */
+   uint32_t dcp_identresp_timeout;    /* Handle to the DCP identify timeout
+                                         instance */
    pnal_eth_handle_t * eth_handle;
    pf_eth_frame_id_map_t eth_id_map[PF_ETH_MAX_MAP];
    volatile pf_scheduler_timeouts_t scheduler_timeouts[PF_MAX_TIMEOUTS];
