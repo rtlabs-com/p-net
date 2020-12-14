@@ -15,6 +15,7 @@
 
 #ifdef UNIT_TEST
 #define pnal_get_system_uptime_10ms mock_pnal_get_system_uptime_10ms
+#define pnal_get_interface_index    mock_pnal_get_interface_index
 #endif
 
 /**
@@ -609,9 +610,9 @@ void pf_lldp_get_management_address (
    memcpy (p_man_address->value, &ipaddr, sizeof (ipaddr));
    p_man_address->len = sizeof (ipaddr);
 
-   /* TODO: Get actual ifIndex value */
    p_man_address->interface_number.subtype = 2; /* ifIndex */
-   p_man_address->interface_number.value = 1;
+   p_man_address->interface_number.value =
+      pnal_get_interface_index (net->eth_handle);
 
    p_man_address->is_valid = true;
 }

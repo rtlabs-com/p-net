@@ -45,6 +45,8 @@ typedef struct mock_os_data_obj
    uint32_t current_time_us;
    uint32_t system_uptime_10ms;
 
+   int interface_index;
+
    char file_fullpath[100]; /* Full file path at latest save operation */
    uint16_t file_size;
    uint8_t file_content[2000];
@@ -98,6 +100,7 @@ int mock_pnal_set_ip_suite (
    const pnal_ipaddr_t * p_gw,
    const char * hostname,
    bool permanent);
+int mock_pnal_get_interface_index (pnal_eth_handle_t * handle);
 
 int mock_pnal_save_file (
    const char * fullpath,

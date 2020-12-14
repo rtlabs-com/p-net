@@ -597,6 +597,7 @@ TEST_F (LldpTest, LldpGetManagementAddress)
 {
    pf_lldp_management_address_t man_address;
 
+   mock_os_data.interface_index = 3;
    memset (&man_address, 0xff, sizeof (man_address));
 
    pf_lldp_get_management_address (net, &man_address);
@@ -607,7 +608,7 @@ TEST_F (LldpTest, LldpGetManagementAddress)
    EXPECT_EQ (man_address.value[3], 171);
    EXPECT_EQ (man_address.len, 4u);
    EXPECT_EQ (man_address.interface_number.subtype, 2); /* ifIndex */
-   EXPECT_EQ (man_address.interface_number.value, 1);   /* TODO */
+   EXPECT_EQ (man_address.interface_number.value, 3);
 }
 
 TEST_F (LldpTest, LldpGetSignalDelays)
