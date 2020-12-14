@@ -146,6 +146,11 @@ void mock_pnal_udp_close (uint32_t id)
 {
 }
 
+int mock_pnal_get_interface_index (pnal_eth_handle_t * handle)
+{
+   return mock_os_data.interface_index;
+}
+
 int mock_pnal_save_file (
    const char * fullpath,
    const void * object_1,
