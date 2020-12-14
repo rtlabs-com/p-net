@@ -17,6 +17,7 @@
 #include "osal_log.h"
 
 #include <lwip/netif.h>
+#include <lwip/apps/snmp_core.h>
 #include <drivers/dev.h>
 
 #define MAX_NUMBER_OF_IF 1
@@ -24,6 +25,16 @@
 
 static struct netif * interface[MAX_NUMBER_OF_IF];
 static int nic_index = 0;
+
+int pnal_get_interface_index (pnal_eth_handle_t * handle)
+{
+   struct netif * netif = interface[handle->if_id];
+   u8_t index;
+
+   index = netif_to_num (netif);
+
+   return index;
+}
 
 pnal_eth_handle_t * pnal_eth_init (
    const char * if_name,
