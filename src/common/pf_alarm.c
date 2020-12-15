@@ -2711,100 +2711,91 @@ int pf_alarm_send_diagnosis (
    uint16_t subslot_nbr,
    const pf_diag_item_t * p_diag_item)
 {
-   int ret = -1;
-   int ret_module_id = -1;
-   int ret_submodule_id = -1;
-   int ret_send = -1;
-
    pf_alarm_type_values_t alarm_type = PF_ALARM_TYPE_DIAGNOSIS;
    uint32_t module_ident = 0;
    uint32_t submodule_ident = 0;
 
-   if (p_diag_item != NULL)
-   {
-      /* Calculate alarm type */
-      if (p_diag_item->usi >= PF_USI_CHANNEL_DIAGNOSIS)
-      {
-         switch (p_diag_item->fmt.std.ch_error_type)
-         {
-         case PF_WRT_ERROR_REMOTE_MISMATCH:
-            alarm_type = PF_ALARM_TYPE_PORT_DATA_CHANGE;
-            break;
-         default:
-            break;
-         }
-      }
-
-      ret_module_id =
-         pf_cmdev_get_module_ident (net, api_id, slot_nbr, &module_ident);
-      if (ret != 0)
-      {
-         LOG_ERROR (
-            PF_ALARM_LOG,
-            "Alarm(%d): Failed to get module ident for slot: %u",
-            __LINE__,
-            slot_nbr);
-      }
-
-      ret_submodule_id = pf_cmdev_get_submodule_ident (
-         net,
-         api_id,
-         slot_nbr,
-         subslot_nbr,
-         &submodule_ident);
-      if (ret != 0)
-      {
-         LOG_ERROR (
-            PF_ALARM_LOG,
-            "Alarm(%d): Failed to get submodule ident for slot: %u, "
-            "subslot: %u",
-            __LINE__,
-            slot_nbr,
-            subslot_nbr);
-      }
-
-      LOG_INFO (
-         PF_ALARM_LOG,
-         "Alarm(%d): Sending diagnosis alarm "
-         "(type 0x%04X) Slot: %u  Subslot: 0x%04X  "
-         "Module ident: %u Submodule ident: %u "
-         "USI: 0x%04X\n",
-         __LINE__,
-         alarm_type,
-         slot_nbr,
-         subslot_nbr,
-         (unsigned)module_ident,
-         (unsigned)submodule_ident,
-         p_diag_item->usi);
-
-      ret_send = pf_alarm_send_alarm (
-         net,
-         p_ar,
-         alarm_type,
-         false, /* Low prio */
-         api_id,
-         slot_nbr,
-         subslot_nbr,
-         p_diag_item,
-         module_ident,
-         submodule_ident,
-         p_diag_item->usi,
-         sizeof (*p_diag_item),
-         (uint8_t *)p_diag_item);
-   }
-   else
+   if (p_diag_item == NULL)
    {
       LOG_ERROR (
          PF_ALARM_LOG,
          "Alarm(%d): The diagnosis item is NULL\n",
          __LINE__);
+
+      return -1;
    }
 
-   if ((ret_module_id == 0) && (ret_submodule_id == 0) && (ret_send == 0))
+   /* Calculate alarm type */
+   if (p_diag_item->usi >= PF_USI_CHANNEL_DIAGNOSIS)
    {
-      ret = 0;
+      switch (p_diag_item->fmt.std.ch_error_type)
+      {
+      case PF_WRT_ERROR_REMOTE_MISMATCH:
+         alarm_type = PF_ALARM_TYPE_PORT_DATA_CHANGE;
+         break;
+      default:
+         break;
+      }
    }
-   return ret;
+
+   if (pf_cmdev_get_module_ident (net, api_id, slot_nbr, &module_ident) != 0)
+   {
+      LOG_ERROR (
+         PF_ALARM_LOG,
+         "Alarm(%d): Failed to get module ident for slot: %u\n",
+         __LINE__,
+         slot_nbr);
+
+      return -1;
+   }
+
+   if (
+      pf_cmdev_get_submodule_ident (
+         net,
+         api_id,
+         slot_nbr,
+         subslot_nbr,
+         &submodule_ident) != 0)
+   {
+      LOG_ERROR (
+         PF_ALARM_LOG,
+         "Alarm(%d): Failed to get submodule ident for slot: %u, "
+         "subslot: %u\n",
+         __LINE__,
+         slot_nbr,
+         subslot_nbr);
+
+      return -1;
+   }
+
+   LOG_INFO (
+      PF_ALARM_LOG,
+      "Alarm(%d): Sending diagnosis alarm "
+      "(type 0x%04X) Slot: %u  Subslot: 0x%04X  "
+      "Module ident: %u Submodule ident: %u "
+      "USI: 0x%04X\n",
+      __LINE__,
+      alarm_type,
+      slot_nbr,
+      subslot_nbr,
+      (unsigned)module_ident,
+      (unsigned)submodule_ident,
+      p_diag_item->usi);
+
+   return pf_alarm_send_alarm (
+      net,
+      p_ar,
+      alarm_type,
+      false, /* Low prio */
+      api_id,
+      slot_nbr,
+      subslot_nbr,
+      p_diag_item,
+      module_ident,
+      submodule_ident,
+      p_diag_item->usi,
+      sizeof (*p_diag_item),
+      (uint8_t *)p_diag_item);
 }
 
 int pf_alarm_send_pull (
