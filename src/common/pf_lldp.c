@@ -47,13 +47,13 @@
 #error "Port description should be at least as large as interface name"
 #endif
 
-#define LLDP_TYPE_END              0
-#define LLDP_TYPE_CHASSIS_ID       1
-#define LLDP_TYPE_PORT_ID          2
-#define LLDP_TYPE_TTL              3
-#define LLDP_TYPE_PORT_DESCRIPTION 4
-#define LLDP_TYPE_MANAGEMENT       8
-#define LLDP_TYPE_ORG_SPEC         127
+#define LLDP_TYPE_END                0
+#define LLDP_TYPE_CHASSIS_ID         1
+#define LLDP_TYPE_PORT_ID            2
+#define LLDP_TYPE_TTL                3
+#define LLDP_TYPE_PORT_DESCRIPTION   4
+#define LLDP_TYPE_MANAGEMENT_ADDRESS 8
+#define LLDP_TYPE_ORG_SPEC           127
 
 #define LLDP_IEEE_SUBTYPE_MAC_PHY 1
 
@@ -76,6 +76,13 @@ typedef struct lldp_tlv
    uint16_t len;
    const uint8_t * p_data;
 } lldp_tlv_t;
+
+/** Header for Organizationally Specific TLV */
+typedef struct pf_lldp_org_header
+{
+   uint8_t id[3];   /**< Organizationally unique identifier */
+   uint8_t subtype; /**< Organizationally defined subtype */
+} pf_lldp_org_header_t;
 
 static const char org_id_pnio[] = {0x00, 0x0e, 0xcf};
 static const char org_id_ieee_8023[] = {0x00, 0x12, 0x0f};
@@ -141,7 +148,7 @@ static inline void pf_lldp_add_tlv_header (
  * @return parsed frame. If parsing fails, frame type is set to LLDP_TYPE_END
  *                       and len field set to 0.
  */
-lldp_tlv_t pf_lldp_get_tlv (pf_get_info_t * p_info, uint16_t * p_pos)
+lldp_tlv_t pf_lldp_get_tlv_from_packet (pf_get_info_t * p_info, uint16_t * p_pos)
 {
    lldp_tlv_t tlv;
    uint16_t tlv_head = pf_get_uint16 (p_info, p_pos);
@@ -378,7 +385,7 @@ static void pf_lldp_add_management (
    uint16_t * p_pos)
 {
    /* TODO: Add more port info to the pnet_lldp_port_cfg_t configuration */
-   pf_lldp_add_tlv_header (p_buf, p_pos, LLDP_TYPE_MANAGEMENT, 12);
+   pf_lldp_add_tlv_header (p_buf, p_pos, LLDP_TYPE_MANAGEMENT_ADDRESS, 12);
 
    pf_put_byte (1 + 4, PF_FRAME_BUFFER_SIZE, p_buf, p_pos); /* Address string
                                                                length (incl
@@ -1004,6 +1011,160 @@ void pf_lldp_send_disable (pnet_t * net, int loc_port_num)
 }
 
 /**
+ * Get organizationally specific header from received packet
+ *
+ * Layout of organizationally specific header:
+ * 3     Organizationally unique identifier
+ * 1     Organizationally defined subtype
+ *
+ * @param parse_info       InOut: Parser state.
+ * @param offset           InOut: Offset in parsed buffer.
+ * @param header           Out:   Parsed organizationally specific header.
+ */
+void pf_lldp_get_org_header_from_packet (
+   pf_get_info_t * parse_info,
+   uint16_t * offset,
+   pf_lldp_org_header_t * header)
+{
+   pf_get_mem (parse_info, offset, sizeof (header->id), header->id);
+   header->subtype = pf_get_byte (parse_info, offset);
+}
+
+/**
+ * Get Chassis ID from received packet
+ *
+ * Layout of Chassis ID TLV:
+ * 2     TLV header (already processed)
+ * 1     Chassis ID subtype
+ * 1-255 Chassis ID
+ *
+ * @param parse_info       InOut: Parsing information.
+ * @param offet            InOut: Byte offset in buffer.
+ * @param tlv_len          In:    Length of TLV in bytes.
+ * @param chassis_id       Out:   Parsed Chassis ID.
+ */
+static void pf_lldp_get_chassis_id_from_packet (
+   pf_get_info_t * parse_info,
+   uint16_t * const offset,
+   const size_t tlv_len,
+   pf_lldp_chassis_id_t * chassis_id)
+{
+   size_t max_len = sizeof (chassis_id->string) - 1;
+
+   if (tlv_len == 0)
+   {
+      LOG_WARNING (
+         PF_LLDP_LOG,
+         "LLDP(%d): Ignoring Chassis Id, tlv len=%d\n",
+         __LINE__,
+         (int)tlv_len);
+      return;
+   }
+
+   chassis_id->len = tlv_len - 1;
+   if (chassis_id->len > max_len)
+   {
+      *offset += tlv_len;
+      LOG_ERROR (
+         PF_LLDP_LOG,
+         "LLDP(%d): Chassis Id too long (%d)\n",
+         __LINE__,
+         (int)chassis_id->len);
+      /* Should not happen. Reconfigure PNET_LLDP_CHASSIS_ID_MAX_LEN
+       * if it does*/
+      return;
+   }
+
+   chassis_id->subtype = pf_get_byte (parse_info, offset);
+   pf_get_mem (parse_info, offset, chassis_id->len, chassis_id->string);
+   chassis_id->string[chassis_id->len] = '\0';
+   chassis_id->is_valid = true;
+}
+
+/**
+ * Get Port ID from received packet
+ *
+ * Layout of Port ID TLV:
+ * 2     TLV header (already processed)
+ * 1     Port ID subtype
+ * 1-255 Port ID
+ *
+ * @param parse_info       InOut: Parsing information.
+ * @param offet            InOut: Byte offset in buffer.
+ * @param tlv_len          In:    Length of TLV in bytes.
+ * @param port_id          Out:   Parsed Port ID.
+ */
+static void pf_lldp_get_port_id_from_packet (
+   pf_get_info_t * parse_info,
+   uint16_t * const offset,
+   const size_t tlv_len,
+   pf_lldp_port_id_t * port_id)
+{
+   size_t max_len = sizeof (port_id->string) - 1;
+
+   if (tlv_len == 0)
+   {
+      LOG_WARNING (
+         PF_LLDP_LOG,
+         "LLDP(%d): Ignoring Port Id, tlv len=%d\n",
+         __LINE__,
+         (int)tlv_len);
+      return;
+   }
+
+   port_id->len = tlv_len - 1;
+   if (port_id->len > max_len)
+   {
+      *offset += tlv_len;
+      LOG_ERROR (
+         PF_LLDP_LOG,
+         "LLDP(%d): Port Id too long (%d)\n",
+         __LINE__,
+         (int)port_id->len);
+      /* Should not happen. Reconfigure PNET_LLDP_PORT_ID_MAX_LEN
+       * if it does*/
+      return;
+   }
+
+   port_id->subtype = pf_get_byte (parse_info, offset);
+   pf_get_mem (parse_info, offset, port_id->len, port_id->string);
+   port_id->string[port_id->len] = '\0';
+   port_id->is_valid = true;
+}
+
+/**
+ * Get TTL from received packet
+ *
+ * Layout of Time To Live TLV:
+ * 2     TLV header (already processed)
+ * 2     Time to live (TTL)
+ *
+ * @param parse_info       InOut: Parsing information.
+ * @param offet            InOut: Byte offset in buffer.
+ * @param tlv_len          In:    Length of TLV in bytes.
+ * @param ttl              Out:   Parsed TTL.
+ */
+static void pf_lldp_get_ttl_from_packet (
+   pf_get_info_t * parse_info,
+   uint16_t * const offset,
+   const size_t tlv_len,
+   uint16_t * ttl)
+{
+   if (tlv_len != 2)
+   {
+      parse_info->result = PF_PARSE_ERROR;
+      LOG_WARNING (
+         PF_LLDP_LOG,
+         "LLDP(%d): Ignoring TTL, unexpected tlv len %d(2)\n",
+         __LINE__,
+         (int)tlv_len);
+      return;
+   }
+
+   *ttl = pf_get_uint16 (parse_info, offset);
+}
+
+/**
  * Get port description from received packet
  *
  * Layout of Port description TLV:
@@ -1017,8 +1178,8 @@ void pf_lldp_send_disable (pnet_t * net, int loc_port_num)
  */
 static void pf_lldp_get_port_description_from_packet (
    pf_get_info_t * parse_info,
-   uint16_t * offset,
-   size_t tlv_len,
+   uint16_t * const offset,
+   const size_t tlv_len,
    pf_lldp_port_description_t * port_description)
 {
    size_t max_len = sizeof (port_description->string) - 1;
@@ -1028,9 +1189,9 @@ static void pf_lldp_get_port_description_from_packet (
       *offset += tlv_len;
       LOG_ERROR (
          PF_LLDP_LOG,
-         "LLDP(%d): Port Description too long (%zu)\n",
+         "LLDP(%d): Port Description too long (%d)\n",
          __LINE__,
-         tlv_len);
+         (int)tlv_len);
       return;
    }
 
@@ -1061,8 +1222,8 @@ static void pf_lldp_get_port_description_from_packet (
  */
 static void pf_lldp_get_management_address_from_packet (
    pf_get_info_t * parse_info,
-   uint16_t * offset,
-   size_t tlv_len,
+   uint16_t * const offset,
+   const size_t tlv_len,
    pf_lldp_management_address_t * management_address)
 {
    size_t oid_len;
@@ -1100,6 +1261,108 @@ static void pf_lldp_get_management_address_from_packet (
 }
 
 /**
+ * Get signal delay values from received packet
+ *
+ * Layout of LLDP_PNIO_DELAY TLV:
+ * 2     TLV header (already processed)
+ * 3     LLDP_PNIO_Header (already processed)
+ * 1     LLDP_PNIO_SubType (already processed)
+ * 4     PTCP_PortRxDelayLocal
+ * 4     PTCP_PortRxDelayRemote
+ * 4     PTCP_PortTxDelayLocal
+ * 4     PTCP_PortTxDelayRemote
+ * 4     CableDelayLocal
+ *
+ * @param parse_info       InOut: Parsing information.
+ * @param offet            InOut: Byte offset in buffer.
+ * @param tlv_len          In:    Length of TLV in bytes.
+ * @param delay            Out:   Parsed delay values.
+ */
+static void pf_lldp_get_signal_delay_from_packet (
+   pf_get_info_t * parse_info,
+   uint16_t * const offset,
+   const size_t tlv_len,
+   pf_lldp_signal_delay_t * delay)
+{
+   if (tlv_len != LLDP_PNIO_SUBTYPE_MEAS_DELAY_VALUES_TLV_LEN)
+   {
+      parse_info->result = PF_PARSE_ERROR;
+      return;
+   }
+
+   delay->rx_delay_local = pf_get_uint32 (parse_info, offset);
+   delay->rx_delay_remote = pf_get_uint32 (parse_info, offset);
+   delay->tx_delay_local = pf_get_uint32 (parse_info, offset);
+   delay->tx_delay_remote = pf_get_uint32 (parse_info, offset);
+   delay->cable_delay_local = pf_get_uint32 (parse_info, offset);
+   delay->is_valid = true;
+}
+
+/**
+ * Get port status from received packet
+ *
+ * Layout of LLDP_PNIO_PORTSTATUS TLV:
+ * 2     TLV header (already processed)
+ * 3     LLDP_PNIO_Header (already processed)
+ * 1     LLDP_PNIO_SubType (already processed)
+ * 2     RTClass2_PortStatus
+ * 2     RTClass3_PortStatus
+ *
+ * @param parse_info       InOut: Parsing information.
+ * @param offet            InOut: Byte offset in buffer.
+ * @param tlv_len          In:    Length of TLV in bytes.
+ * @param status           Out:   Parsed port status.
+ */
+static void pf_lldp_get_port_status_from_packet (
+   pf_get_info_t * parse_info,
+   uint16_t * const offset,
+   const size_t tlv_len,
+   uint8_t status[4])
+{
+   if (tlv_len != LLDP_PNIO_SUBTYPE_PORT_STATUS_TLV_LEN)
+   {
+      parse_info->result = PF_PARSE_ERROR;
+      return;
+   }
+
+   /* FIXME: Should interpret as two 16-bit integers */
+   pf_get_mem (parse_info, offset, 4, status);
+}
+
+/**
+ * Get Chassis MAC address from received packet
+ *
+ * Layout of LLDP_PNIO_CHASSIS_MAC TLV:
+ * 2     TLV header (already processed)
+ * 3     LLDP_PNIO_Header (already processed)
+ * 1     LLDP_PNIO_SubType (already processed)
+ * 6     Chassis MAC address
+ *
+ * @param parse_info       InOut: Parsing information.
+ * @param offet            InOut: Byte offset in buffer.
+ * @param tlv_len          In:    Length of TLV in bytes.
+ * @param chassis_mac      Out:   Parsed Chassis MAC address.
+ */
+static void pf_lldp_get_chassis_mac_from_packet (
+   pf_get_info_t * parse_info,
+   uint16_t * const offset,
+   const size_t tlv_len,
+   pnet_ethaddr_t * chassis_mac)
+{
+   if (tlv_len != LLDP_PNIO_SUBTYPE_CHASSIS_MAC_TLV_LEN)
+   {
+      parse_info->result = PF_PARSE_ERROR;
+      return;
+   }
+
+   pf_get_mem (
+      parse_info,
+      offset,
+      sizeof (chassis_mac->addr),
+      chassis_mac->addr);
+}
+
+/**
  * Get link status from received packet
  *
  * Layout of MAC/PHY Configuration/Status TLV:
@@ -1118,8 +1381,8 @@ static void pf_lldp_get_management_address_from_packet (
  */
 static void pf_lldp_get_link_status_from_packet (
    pf_get_info_t * parse_info,
-   uint16_t * offset,
-   size_t tlv_len,
+   uint16_t * const offset,
+   const size_t tlv_len,
    pf_lldp_link_status_t * link_status)
 {
    uint8_t aneg_support_status;
@@ -1161,6 +1424,7 @@ int pf_lldp_parse_packet (
    pf_lldp_peer_info_t * lldp_peer_info)
 {
    lldp_tlv_t tlv;
+   pf_lldp_org_header_t org;
    pf_get_info_t parse_info;
    uint16_t offset = 0;
 
@@ -1171,108 +1435,32 @@ int pf_lldp_parse_packet (
    parse_info.len = len;
    parse_info.p_buf = buf;
 
-   tlv = pf_lldp_get_tlv (&parse_info, &offset);
+   tlv = pf_lldp_get_tlv_from_packet (&parse_info, &offset);
 
    while (tlv.type != LLDP_TYPE_END)
    {
       switch (tlv.type)
       {
       case LLDP_TYPE_CHASSIS_ID:
-         /* TODO: Move this to its own function */
-         if (
-            (tlv.len > 0) && ((size_t) (tlv.len - 1) <
-                              sizeof (lldp_peer_info->chassis_id.string)))
-         {
-            lldp_peer_info->chassis_id.len = tlv.len - 1;
-            lldp_peer_info->chassis_id.subtype =
-               pf_get_byte (&parse_info, &offset);
-            pf_get_mem (
-               &parse_info,
-               &offset,
-               lldp_peer_info->chassis_id.len,
-               &lldp_peer_info->chassis_id.string);
-            lldp_peer_info->chassis_id.string[lldp_peer_info->chassis_id.len] =
-               '\0';
-            lldp_peer_info->chassis_id.is_valid = true;
-         }
-         else
-         {
-            offset += tlv.len;
-            if (tlv.len > 1)
-            {
-               LOG_ERROR (
-                  PF_LLDP_LOG,
-                  "LLDP(%d): Chassis Id too long (%d)\n",
-                  __LINE__,
-                  tlv.len - 1);
-               /* Should not happen. Reconfigure PNET_LLDP_CHASSIS_ID_MAX_LEN
-                * if it does*/
-            }
-            else
-            {
-               LOG_WARNING (
-                  PF_LLDP_LOG,
-                  "LLDP(%d): Ignoring Chassis Id, tlv len=%d\n",
-                  __LINE__,
-                  tlv.len);
-            }
-         }
+         pf_lldp_get_chassis_id_from_packet (
+            &parse_info,
+            &offset,
+            tlv.len,
+            &lldp_peer_info->chassis_id);
          break;
       case LLDP_TYPE_PORT_ID:
-         /* TODO: Move this to its own function */
-         if (
-            (tlv.len > 0) &&
-            ((size_t) (tlv.len - 1) < sizeof (lldp_peer_info->port_id.string)))
-         {
-            lldp_peer_info->port_id.len = tlv.len - 1;
-            lldp_peer_info->port_id.subtype =
-               pf_get_byte (&parse_info, &offset);
-            pf_get_mem (
-               &parse_info,
-               &offset,
-               lldp_peer_info->port_id.len,
-               &lldp_peer_info->port_id.string);
-            lldp_peer_info->port_id.string[lldp_peer_info->port_id.len] = '\0';
-            lldp_peer_info->port_id.is_valid = true;
-         }
-         else
-         {
-            offset += tlv.len;
-            if (tlv.len > 1)
-            {
-               LOG_ERROR (
-                  PF_LLDP_LOG,
-                  "LLDP(%d): Port Id too long (%d)\n",
-                  __LINE__,
-                  tlv.len - 1);
-               /* Should not happen. Reconfigure PNET_LLDP_PORT_ID_MAX_LEN if it
-                * does */
-            }
-            else
-            {
-               LOG_WARNING (
-                  PF_LLDP_LOG,
-                  "LLDP(%d): Ignoring Port Id, tlv len=%d\n",
-                  __LINE__,
-                  tlv.len);
-            }
-         }
+         pf_lldp_get_port_id_from_packet (
+            &parse_info,
+            &offset,
+            tlv.len,
+            &lldp_peer_info->port_id);
          break;
       case LLDP_TYPE_TTL:
-         /* TODO: Move this to its own function */
-         if (tlv.len == 2)
-         {
-            lldp_peer_info->ttl = pf_get_uint16 (&parse_info, &offset);
-         }
-         else
-         {
-            parse_info.result = PF_PARSE_ERROR;
-            LOG_WARNING (
-               PF_LLDP_LOG,
-               "LLDP(%d): Ignoring TTL, unexpected tlv len %d(2)\n",
-               __LINE__,
-               tlv.len);
-         }
+         pf_lldp_get_ttl_from_packet (
+            &parse_info,
+            &offset,
+            tlv.len,
+            &lldp_peer_info->ttl);
          break;
       case LLDP_TYPE_PORT_DESCRIPTION:
          pf_lldp_get_port_description_from_packet (
@@ -1281,7 +1469,7 @@ int pf_lldp_parse_packet (
             tlv.len,
             &lldp_peer_info->port_description);
          break;
-      case LLDP_TYPE_MANAGEMENT:
+      case LLDP_TYPE_MANAGEMENT_ADDRESS:
          pf_lldp_get_management_address_from_packet (
             &parse_info,
             &offset,
@@ -1290,74 +1478,40 @@ int pf_lldp_parse_packet (
          break;
       case LLDP_TYPE_ORG_SPEC:
       {
-         uint8_t org_id[3];
-         uint8_t org_subtype;
-         pf_get_mem (&parse_info, &offset, sizeof (org_id), org_id);
-         org_subtype = pf_get_byte (&parse_info, &offset);
-
-         if (memcmp (org_id_pnio, org_id, sizeof (org_id)) == 0)
+         pf_lldp_get_org_header_from_packet (&parse_info, &offset, &org);
+         if (memcmp (org_id_pnio, org.id, sizeof (org.id)) == 0)
          {
-            switch (org_subtype)
+            switch (org.subtype)
             {
             case LLDP_PNIO_SUBTYPE_MEAS_DELAY_VALUES:
-               /* TODO: Move this to its own function */
-               if (tlv.len == LLDP_PNIO_SUBTYPE_MEAS_DELAY_VALUES_TLV_LEN)
-               {
-                  lldp_peer_info->port_delay.rx_delay_local =
-                     pf_get_uint32 (&parse_info, &offset);
-                  lldp_peer_info->port_delay.rx_delay_remote =
-                     pf_get_uint32 (&parse_info, &offset);
-                  lldp_peer_info->port_delay.tx_delay_local =
-                     pf_get_uint32 (&parse_info, &offset);
-                  lldp_peer_info->port_delay.tx_delay_remote =
-                     pf_get_uint32 (&parse_info, &offset);
-                  lldp_peer_info->port_delay.cable_delay_local =
-                     pf_get_uint32 (&parse_info, &offset);
-                  lldp_peer_info->port_delay.is_valid = true;
-               }
-               else
-               {
-                  parse_info.result = PF_PARSE_ERROR;
-               }
+               pf_lldp_get_signal_delay_from_packet (
+                  &parse_info,
+                  &offset,
+                  tlv.len,
+                  &lldp_peer_info->port_delay);
                break;
             case LLDP_PNIO_SUBTYPE_PORT_STATUS:
-               /* TODO: Move this to its own function */
-               if (tlv.len == LLDP_PNIO_SUBTYPE_PORT_STATUS_TLV_LEN)
-               {
-                  pf_get_mem (
-                     &parse_info,
-                     &offset,
-                     4,
-                     lldp_peer_info->port_status);
-               }
-               else
-               {
-                  parse_info.result = PF_PARSE_ERROR;
-               }
+               pf_lldp_get_port_status_from_packet (
+                  &parse_info,
+                  &offset,
+                  tlv.len,
+                  lldp_peer_info->port_status);
                break;
             case LLDP_PNIO_SUBTYPE_CHASSIS_MAC:
-               /* TODO: Move this to its own function */
-               if (tlv.len == LLDP_PNIO_SUBTYPE_CHASSIS_MAC_TLV_LEN)
-               {
-                  pf_get_mem (
-                     &parse_info,
-                     &offset,
-                     6,
-                     &lldp_peer_info->mac_address.addr);
-               }
-               else
-               {
-                  parse_info.result = PF_PARSE_ERROR;
-               }
+               pf_lldp_get_chassis_mac_from_packet (
+                  &parse_info,
+                  &offset,
+                  tlv.len,
+                  &lldp_peer_info->mac_address);
                break;
             default:
                offset += (tlv.len - 4);
                break;
             }
          }
-         else if (memcmp (org_id_ieee_8023, org_id, sizeof (org_id)) == 0)
+         else if (memcmp (org_id_ieee_8023, org.id, sizeof (org.id)) == 0)
          {
-            switch (org_subtype)
+            switch (org.subtype)
             {
             case LLDP_IEEE_SUBTYPE_MAC_PHY:
                pf_lldp_get_link_status_from_packet (
@@ -1381,7 +1535,7 @@ int pf_lldp_parse_packet (
          offset += tlv.len;
          break;
       }
-      tlv = pf_lldp_get_tlv (&parse_info, &offset);
+      tlv = pf_lldp_get_tlv_from_packet (&parse_info, &offset);
    }
 
    if (parse_info.result != PF_PARSE_OK)
