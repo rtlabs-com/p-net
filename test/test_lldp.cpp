@@ -91,6 +91,8 @@ static pf_lldp_peer_info_t fake_peer_info (void)
    peer.port_id.subtype = PF_LLDP_SUBTYPE_LOCALLY_ASSIGNED;
    peer.port_id.is_valid = true;
 
+   peer.ttl = 12345;
+
    snprintf (
       peer.port_description.string,
       sizeof (peer.port_description.string),
@@ -116,6 +118,13 @@ static pf_lldp_peer_info_t fake_peer_info (void)
       PNET_LLDP_AUTONEG_CAP_100BaseTX_FULL_DUPLEX;
    peer.phy_config.operational_mau_type = PNET_MAU_COPPER_100BaseTX_FULL_DUPLEX;
    peer.phy_config.is_valid = true;
+
+   peer.mac_address.addr[0] = 0xab;
+   peer.mac_address.addr[0] = 0xcd;
+   peer.mac_address.addr[0] = 0xef;
+   peer.mac_address.addr[0] = 0x01;
+   peer.mac_address.addr[0] = 0x23;
+   peer.mac_address.addr[0] = 0x45;
 
    peer.port_delay.cable_delay_local = 1;
    peer.port_delay.rx_delay_local = 2;
@@ -159,6 +168,19 @@ static size_t construct_packet_port_id (
       memcpy (&packet[3], id->string, id->len);
       size = 3 + id->len;
    }
+
+   return size;
+}
+
+static size_t construct_packet_ttl (uint8_t packet[], uint16_t ttl)
+{
+   size_t size = 0;
+
+   packet[0] = TLV_BYTE_0 (sizeof (ttl), LLDP_TYPE_TTL);
+   packet[1] = TLV_BYTE_1 (sizeof (ttl));
+   packet[2] = ttl >> 8;
+   packet[3] = ttl >> 0;
+   size = 4;
 
    return size;
 }
@@ -265,6 +287,24 @@ static size_t construct_packet_signal_delay (
    return size;
 }
 
+static size_t construct_packet_chassis_mac (
+   uint8_t packet[],
+   const pnet_ethaddr_t * mac_address)
+{
+   size_t size = 0;
+
+   packet[0] = TLV_BYTE_0 (10, LLDP_TYPE_ORG_SPEC);
+   packet[1] = TLV_BYTE_1 (10);
+   packet[2] = 0x00; /* Profinet OUI */
+   packet[3] = 0x0E; /* Profinet OUI */
+   packet[4] = 0xCF; /* Profinet OUI */
+   packet[5] = 5;    /* subtype */
+   memcpy (&packet[6], mac_address->addr, 6);
+   size = 12;
+
+   return size;
+}
+
 static size_t construct_packet_end_marker (uint8_t packet[])
 {
    size_t size;
@@ -285,6 +325,7 @@ static size_t construct_packet (
 
    size += construct_packet_chassis_id (&packet[size], &data->chassis_id);
    size += construct_packet_port_id (&packet[size], &data->port_id);
+   size += construct_packet_ttl (&packet[size], data->ttl);
    size += construct_packet_port_description (
       &packet[size],
       &data->port_description);
@@ -293,6 +334,7 @@ static size_t construct_packet (
       &data->management_address);
    size += construct_packet_link_status (&packet[size], &data->phy_config);
    size += construct_packet_signal_delay (&packet[size], &data->port_delay);
+   size += construct_packet_chassis_mac (&packet[size], &data->mac_address);
    size += construct_packet_end_marker (&packet[size]);
 
    return size;
@@ -408,6 +450,8 @@ TEST_F (LldpTest, LldpParsePacket)
    EXPECT_EQ (actual.port_id.len, expected.port_id.len);
    EXPECT_STREQ (actual.port_id.string, expected.port_id.string);
 
+   EXPECT_EQ (actual.ttl, expected.ttl);
+
    EXPECT_EQ (
       actual.port_description.is_valid,
       expected.port_description.is_valid);
@@ -466,6 +510,10 @@ TEST_F (LldpTest, LldpParsePacket)
    EXPECT_EQ (
       actual.port_delay.cable_delay_local,
       expected.port_delay.cable_delay_local);
+
+   EXPECT_EQ (memcmp (actual.mac_address.addr, expected.mac_address.addr, 6), 0);
+
+   /* TODO: Add check for port status */
 
    /* Finally check that everything is as expected.
     * While this is the only check really needed, the checks above will make
