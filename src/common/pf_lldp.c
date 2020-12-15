@@ -16,6 +16,7 @@
 #ifdef UNIT_TEST
 #define pnal_get_system_uptime_10ms mock_pnal_get_system_uptime_10ms
 #define pnal_get_interface_index    mock_pnal_get_interface_index
+#define pnal_eth_get_status         mock_pnal_eth_get_status
 #endif
 
 /**
@@ -69,6 +70,10 @@
 #define LLDP_PNIO_SUBTYPE_PORT_STATUS_TLV_LEN       8
 #define LLDP_PNIO_SUBTYPE_CHASSIS_MAC_TLV_LEN       10
 #define LLDP_IEEE_SUBTYPE_MAC_PHY_TLV_LEN           9
+
+/* Autonegotiation status */
+#define LLDP_AUTONEG_SUPPORTED BIT (0)
+#define LLDP_AUTONEG_ENABLED   BIT (1)
 
 typedef struct lldp_tlv
 {
@@ -347,23 +352,40 @@ static void pf_lldp_add_chassis_mac (
  * type.
  *
  * The IEEE 802.3 MAC TLV is mandatory for ProfiNet on 803.2 interfaces.
- * @param p_port_cfg       In:    LLDP configuration for this port
+ * @param p_status         In:    Link status for this port.
  * @param p_buf            InOut: The buffer.
  * @param p_pos            InOut: The position in the buffer.
  */
 static void pf_lldp_add_ieee_mac_phy (
-   const pnet_lldp_port_cfg_t * p_port_cfg,
+   const pf_lldp_link_status_t * p_status,
    uint8_t * p_buf,
    uint16_t * p_pos)
 {
+   uint8_t autoneg_status;
+
+   autoneg_status = 0x00;
+   if (p_status->is_autonegotiation_supported)
+   {
+      autoneg_status |= LLDP_AUTONEG_SUPPORTED;
+   }
+   if (p_status->is_autonegotiation_enabled)
+   {
+      autoneg_status |= LLDP_AUTONEG_ENABLED;
+   }
+
    pf_lldp_add_ieee_header (p_buf, p_pos, 6);
 
    pf_put_byte (LLDP_IEEE_SUBTYPE_MAC_PHY, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
-   pf_put_byte (p_port_cfg->cap_aneg, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
-   pf_put_uint16 (true, p_port_cfg->cap_phy, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
+   pf_put_byte (autoneg_status, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
    pf_put_uint16 (
       true,
-      p_port_cfg->mau_type,
+      p_status->autonegotiation_advertised_capabilities,
+      PF_FRAME_BUFFER_SIZE,
+      p_buf,
+      p_pos);
+   pf_put_uint16 (
+      true,
+      p_status->operational_mau_type,
       PF_FRAME_BUFFER_SIZE,
       p_buf,
       p_pos);
@@ -705,16 +727,16 @@ void pf_lldp_get_link_status (
    int loc_port_num,
    pf_lldp_link_status_t * p_link_status)
 {
-   const pnet_lldp_port_cfg_t * p_port_cfg =
-      pf_lldp_get_port_config (net, loc_port_num);
+   pnal_eth_status_t status;
 
-   /* TODO: Get current link status from Ethernet driver */
-   p_link_status->is_autonegotiation_supported = p_port_cfg->cap_aneg &
-                                                 PNET_LLDP_AUTONEG_SUPPORTED;
-   p_link_status->is_autonegotiation_enabled = p_port_cfg->cap_aneg &
-                                               PNET_LLDP_AUTONEG_ENABLED;
-   p_link_status->autonegotiation_advertised_capabilities = p_port_cfg->cap_phy;
-   p_link_status->operational_mau_type = p_port_cfg->mau_type;
+   pnal_eth_get_status (net->eth_handle, loc_port_num, &status);
+   p_link_status->is_autonegotiation_supported =
+      status.is_autonegotiation_supported;
+   p_link_status->is_autonegotiation_enabled =
+      status.is_autonegotiation_enabled;
+   p_link_status->autonegotiation_advertised_capabilities =
+      status.autonegotiation_advertised_capabilities;
+   p_link_status->operational_mau_type = status.operational_mau_type;
    p_link_status->is_valid = true;
 }
 
@@ -746,6 +768,7 @@ static void pf_lldp_send (pnet_t * net, int loc_port_num)
    uint16_t pos = 0;
    pnal_ipaddr_t ipaddr = 0;
    pnet_ethaddr_t device_mac_address;
+   pf_lldp_link_status_t link_status;
    pf_lldp_chassis_id_t chassis_id;
    const pnet_lldp_port_cfg_t * p_port_cfg =
       pf_lldp_get_port_config (net, loc_port_num);
@@ -813,6 +836,7 @@ static void pf_lldp_send (pnet_t * net, int loc_port_num)
       {
          pf_cmina_get_device_macaddr (net, &device_mac_address);
          pf_lldp_get_chassis_id (net, &chassis_id);
+         pf_lldp_get_link_status (net, loc_port_num, &link_status);
          pf_cmina_get_ipaddr (net, &ipaddr);
 #if LOG_DEBUG_ENABLED(PF_LLDP_LOG)
          pf_cmina_ip_to_string (ipaddr, ip_string);
@@ -871,7 +895,7 @@ static void pf_lldp_send (pnet_t * net, int loc_port_num)
          /* Add optional parts */
          pf_lldp_add_port_status (p_port_cfg, p_buf, &pos);
          pf_lldp_add_chassis_mac (&device_mac_address, p_buf, &pos);
-         pf_lldp_add_ieee_mac_phy (p_port_cfg, p_buf, &pos);
+         pf_lldp_add_ieee_mac_phy (&link_status, p_buf, &pos);
          pf_lldp_add_management (&ipaddr, p_buf, &pos);
 
          /* Add end of LLDP-PDU marker */
@@ -1397,9 +1421,9 @@ static void pf_lldp_get_link_status_from_packet (
 
    aneg_support_status = pf_get_byte (parse_info, offset);
    link_status->is_autonegotiation_supported = aneg_support_status &
-                                               PNET_LLDP_AUTONEG_SUPPORTED;
+                                               LLDP_AUTONEG_SUPPORTED;
    link_status->is_autonegotiation_enabled = aneg_support_status &
-                                             PNET_LLDP_AUTONEG_ENABLED;
+                                             LLDP_AUTONEG_ENABLED;
 
    link_status->autonegotiation_advertised_capabilities =
       pf_get_uint16 (parse_info, offset);

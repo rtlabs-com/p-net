@@ -100,14 +100,14 @@ TEST_F (SnmpTest, SnmpGetLinkStatus)
    mock_lldp_data.link_status.is_autonegotiation_enabled = true;
    mock_lldp_data.link_status.autonegotiation_advertised_capabilities = 0xF00F;
    mock_lldp_data.link_status.operational_mau_type =
-      PNET_MAU_COPPER_100BaseTX_FULL_DUPLEX;
+      PNAL_ETH_MAU_COPPER_100BaseTX_FULL_DUPLEX;
 
    pf_snmp_get_link_status (net, LOCAL_PORT, &status);
    EXPECT_EQ (status.auto_neg_supported, 1); /* true */
    EXPECT_EQ (status.auto_neg_enabled, 1);   /* true */
    EXPECT_EQ (status.auto_neg_advertised_cap[0], 0xF0);
    EXPECT_EQ (status.auto_neg_advertised_cap[1], 0x0F);
-   EXPECT_EQ (status.oper_mau_type, PNET_MAU_COPPER_100BaseTX_FULL_DUPLEX);
+   EXPECT_EQ (status.oper_mau_type, PNAL_ETH_MAU_COPPER_100BaseTX_FULL_DUPLEX);
 
    memset (&status, 0xff, sizeof (status));
    mock_lldp_data.link_status.is_autonegotiation_supported = true;
@@ -115,14 +115,14 @@ TEST_F (SnmpTest, SnmpGetLinkStatus)
    mock_lldp_data.link_status.autonegotiation_advertised_capabilities =
       BIT (5 + 0) | BIT (3 + 0) | BIT (6 + 8) | BIT (0 + 8);
    mock_lldp_data.link_status.operational_mau_type =
-      PNET_MAU_COPPER_100BaseTX_HALF_DUPLEX;
+      PNAL_ETH_MAU_COPPER_100BaseTX_HALF_DUPLEX;
 
    pf_snmp_get_link_status (net, LOCAL_PORT, &status);
    EXPECT_EQ (status.auto_neg_supported, 1); /* true */
    EXPECT_EQ (status.auto_neg_enabled, 2);   /* false */
    EXPECT_EQ (status.auto_neg_advertised_cap[0], BIT (2) | BIT (4));
    EXPECT_EQ (status.auto_neg_advertised_cap[1], BIT (1) | BIT (7));
-   EXPECT_EQ (status.oper_mau_type, PNET_MAU_COPPER_100BaseTX_HALF_DUPLEX);
+   EXPECT_EQ (status.oper_mau_type, PNAL_ETH_MAU_COPPER_100BaseTX_HALF_DUPLEX);
 }
 
 TEST_F (SnmpTest, SnmpGetPeerLinkStatus)
@@ -136,7 +136,7 @@ TEST_F (SnmpTest, SnmpGetPeerLinkStatus)
    mock_lldp_data.peer_link_status.autonegotiation_advertised_capabilities =
       0xF00F;
    mock_lldp_data.peer_link_status.operational_mau_type =
-      PNET_MAU_COPPER_100BaseTX_FULL_DUPLEX;
+      PNAL_ETH_MAU_COPPER_100BaseTX_FULL_DUPLEX;
    mock_lldp_data.error = 0;
 
    error = pf_snmp_get_peer_link_status (net, LOCAL_PORT, &status);
@@ -145,7 +145,7 @@ TEST_F (SnmpTest, SnmpGetPeerLinkStatus)
    EXPECT_EQ (status.auto_neg_enabled, 1);   /* true */
    EXPECT_EQ (status.auto_neg_advertised_cap[0], 0xF0);
    EXPECT_EQ (status.auto_neg_advertised_cap[1], 0x0F);
-   EXPECT_EQ (status.oper_mau_type, PNET_MAU_COPPER_100BaseTX_FULL_DUPLEX);
+   EXPECT_EQ (status.oper_mau_type, PNAL_ETH_MAU_COPPER_100BaseTX_FULL_DUPLEX);
 
    memset (&status, 0xff, sizeof (status));
    mock_lldp_data.peer_link_status.is_autonegotiation_supported = true;
@@ -153,7 +153,7 @@ TEST_F (SnmpTest, SnmpGetPeerLinkStatus)
    mock_lldp_data.peer_link_status.autonegotiation_advertised_capabilities =
       BIT (5 + 0) | BIT (3 + 0) | BIT (6 + 8) | BIT (0 + 8);
    mock_lldp_data.peer_link_status.operational_mau_type =
-      PNET_MAU_COPPER_100BaseTX_HALF_DUPLEX;
+      PNAL_ETH_MAU_COPPER_100BaseTX_HALF_DUPLEX;
    mock_lldp_data.error = 0;
 
    error = pf_snmp_get_peer_link_status (net, LOCAL_PORT, &status);
@@ -162,7 +162,7 @@ TEST_F (SnmpTest, SnmpGetPeerLinkStatus)
    EXPECT_EQ (status.auto_neg_enabled, 2);   /* false */
    EXPECT_EQ (status.auto_neg_advertised_cap[0], BIT (2) | BIT (4));
    EXPECT_EQ (status.auto_neg_advertised_cap[1], BIT (1) | BIT (7));
-   EXPECT_EQ (status.oper_mau_type, PNET_MAU_COPPER_100BaseTX_HALF_DUPLEX);
+   EXPECT_EQ (status.oper_mau_type, PNAL_ETH_MAU_COPPER_100BaseTX_HALF_DUPLEX);
 
    mock_lldp_data.error = -1;
    error = pf_snmp_get_peer_link_status (net, LOCAL_PORT, &status);

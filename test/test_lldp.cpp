@@ -114,9 +114,10 @@ static pf_lldp_peer_info_t fake_peer_info (void)
    peer.phy_config.is_autonegotiation_supported = true;
    peer.phy_config.is_autonegotiation_enabled = true;
    peer.phy_config.autonegotiation_advertised_capabilities =
-      PNET_LLDP_AUTONEG_CAP_100BaseTX_HALF_DUPLEX |
-      PNET_LLDP_AUTONEG_CAP_100BaseTX_FULL_DUPLEX;
-   peer.phy_config.operational_mau_type = PNET_MAU_COPPER_100BaseTX_FULL_DUPLEX;
+      PNAL_ETH_AUTONEG_CAP_100BaseTX_HALF_DUPLEX |
+      PNAL_ETH_AUTONEG_CAP_100BaseTX_FULL_DUPLEX;
+   peer.phy_config.operational_mau_type =
+      PNAL_ETH_MAU_COPPER_100BaseTX_FULL_DUPLEX;
    peer.phy_config.is_valid = true;
 
    peer.mac_address.addr[0] = 0xab;
@@ -675,6 +676,13 @@ TEST_F (LldpTest, LldpGetLinkStatus)
 {
    pf_lldp_link_status_t link_status;
 
+   mock_os_data.eth_status[LOCAL_PORT].is_autonegotiation_supported = true;
+   mock_os_data.eth_status[LOCAL_PORT].is_autonegotiation_enabled = true;
+   mock_os_data.eth_status[LOCAL_PORT].autonegotiation_advertised_capabilities =
+      PNAL_ETH_AUTONEG_CAP_100BaseTX_HALF_DUPLEX |
+      PNAL_ETH_AUTONEG_CAP_100BaseTX_FULL_DUPLEX;
+   mock_os_data.eth_status[LOCAL_PORT].operational_mau_type =
+      PNAL_ETH_MAU_COPPER_100BaseTX_FULL_DUPLEX;
    memset (&link_status, 0xff, sizeof (link_status));
 
    pf_lldp_get_link_status (net, LOCAL_PORT, &link_status);
@@ -682,11 +690,32 @@ TEST_F (LldpTest, LldpGetLinkStatus)
    EXPECT_EQ (link_status.is_autonegotiation_enabled, true);
    EXPECT_EQ (
       link_status.autonegotiation_advertised_capabilities,
-      PNET_LLDP_AUTONEG_CAP_100BaseTX_HALF_DUPLEX |
-         PNET_LLDP_AUTONEG_CAP_100BaseTX_FULL_DUPLEX);
+      PNAL_ETH_AUTONEG_CAP_100BaseTX_HALF_DUPLEX |
+         PNAL_ETH_AUTONEG_CAP_100BaseTX_FULL_DUPLEX);
    EXPECT_EQ (
       link_status.operational_mau_type,
-      PNET_MAU_COPPER_100BaseTX_FULL_DUPLEX);
+      PNAL_ETH_MAU_COPPER_100BaseTX_FULL_DUPLEX);
+}
+
+TEST_F (LldpTest, LldpGetLinkStatusGivenAutonegotiationDisabled)
+{
+   pf_lldp_link_status_t link_status;
+
+   mock_os_data.eth_status[LOCAL_PORT].is_autonegotiation_supported = false;
+   mock_os_data.eth_status[LOCAL_PORT].is_autonegotiation_enabled = false;
+   mock_os_data.eth_status[LOCAL_PORT].autonegotiation_advertised_capabilities =
+      0x0000;
+   mock_os_data.eth_status[LOCAL_PORT].operational_mau_type =
+      PNAL_ETH_MAU_COPPER_100BaseTX_HALF_DUPLEX;
+   memset (&link_status, 0xff, sizeof (link_status));
+
+   pf_lldp_get_link_status (net, LOCAL_PORT, &link_status);
+   EXPECT_EQ (link_status.is_autonegotiation_supported, false);
+   EXPECT_EQ (link_status.is_autonegotiation_enabled, false);
+   EXPECT_EQ (link_status.autonegotiation_advertised_capabilities, 0x0000);
+   EXPECT_EQ (
+      link_status.operational_mau_type,
+      PNAL_ETH_MAU_COPPER_100BaseTX_HALF_DUPLEX);
 }
 
 TEST_F (LldpTest, LldpGetPeerTimestamp)

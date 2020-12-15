@@ -39,6 +39,51 @@ extern "C" {
 #define PNAL_HOSTNAME_MAX_SIZE 64 /** Incl termination. Value from Linux. */
 #endif
 
+/**
+ * Ethernet autonegotiation capabilities (not exhaustive)
+ *
+ * See IEEE 802.3 (Ethernet) ch. 30.6 "Management for link Auto-Negotiation".
+ *
+ * See IETF RFC 4836 "Definitions of Managed Objects for
+ * IEEE 802.3 Medium Attachment Units (MAUs)", object
+ * "IANAifMauAutoNegCapBits"
+ */
+#define PNAL_ETH_AUTONEG_CAP_1000BaseT_FULL_DUPLEX BIT (0)
+#define PNAL_ETH_AUTONEG_CAP_1000BaseT_HALF_DUPLEX BIT (1)
+#define PNAL_ETH_AUTONEG_CAP_1000BaseX_FULL_DUPLEX BIT (2)
+#define PNAL_ETH_AUTONEG_CAP_1000BaseX_HALF_DUPLEX BIT (3)
+#define PNAL_ETH_AUTONEG_CAP_100BaseTX_FULL_DUPLEX BIT (10)
+#define PNAL_ETH_AUTONEG_CAP_100BaseTX_HALF_DUPLEX BIT (11)
+#define PNAL_ETH_AUTONEG_CAP_10BaseT_FULL_DUPLEX   BIT (13)
+#define PNAL_ETH_AUTONEG_CAP_10BaseT_HALF_DUPLEX   BIT (14)
+#define PNAL_ETH_AUTONEG_CAP_UNKNOWN               BIT (15)
+
+/**
+ * Ethernet MAU type (not exhaustive).
+ *
+ * See IEEE 802.3 (Ethernet) ch. 30.5 "Layer management for medium
+ * attachment units (MAUs)".
+ *
+ * See IETF RFC 4836 "Definitions of Managed Objects for
+ * IEEE 802.3 Medium Attachment Units (MAUs)", objects
+ * "IANAifMauTypeListBits" and "dot3MauType".
+ *
+ * See Profinet 2.4, section 5.2.13.12.
+ */
+typedef enum pnal_eth_mau
+{
+   PNAL_ETH_MAU_RADIO = 0x00,
+   PNAL_ETH_MAU_COPPER_10BaseT = 0x05,
+   PNAL_ETH_MAU_COPPER_100BaseTX_HALF_DUPLEX = 0x0F,
+   PNAL_ETH_MAU_COPPER_100BaseTX_FULL_DUPLEX = 0x10,
+   PNAL_ETH_MAU_COPPER_1000BaseT_HALF_DUPLEX = 0x1D,
+   PNAL_ETH_MAU_COPPER_1000BaseT_FULL_DUPLEX = 0x1E,
+   PNAL_ETH_MAU_FIBER_100BaseFX_HALF_DUPLEX = 0x11,
+   PNAL_ETH_MAU_FIBER_100BaseFX_FULL_DUPLEX = 0x12,
+   PNAL_ETH_MAU_FIBER_1000BaseX_HALF_DUPLEX = 0x15,
+   PNAL_ETH_MAU_FIBER_1000BaseX_FULL_DUPLEX = 0x16,
+} pnal_eth_mau_t;
+
 /** Set an IP address given by the four byte-parts */
 #define PNAL_IP4_ADDR_TO_U32(ipaddr, a, b, c, d)                               \
    ipaddr = PNAL_MAKEU32 (a, b, c, d)
@@ -82,10 +127,37 @@ typedef struct pnal_ethaddr
 } pnal_ethaddr_t;
 
 /**
+ * Ethernet link status.
+ *
+ * See also type pf_lldp_link_status_t.
+ */
+typedef struct pnal_eth_status_t
+{
+   /* Is autonegotiation supported on this port? */
+   bool is_autonegotiation_supported;
+
+   /* Is autonegotiation supported on this port? */
+   bool is_autonegotiation_enabled;
+
+   /* Capabilites advertised to link partner during autonegotiation.
+    *
+    * See macros PNAL_ETH_AUTONEG_CAP_xxx.
+    */
+   uint16_t autonegotiation_advertised_capabilities;
+
+   /* Operational MAU type.
+    *
+    * This specifies both the physical medium as well as
+    * speed and duplex setting used for the link.
+    */
+   pnal_eth_mau_t operational_mau_type;
+} pnal_eth_status_t;
+
+/**
  * The p-net stack instance.
  *
  * This is needed for SNMP in order to access various stack variables,
- * such as the location  of the device and LLDP variables.
+ * such as the location of the device and LLDP variables.
  */
 typedef struct pnet pnet_t;
 
@@ -158,6 +230,19 @@ void pnal_clear_file (const char * fullpath);
 pnal_buf_t * pnal_buf_alloc (uint16_t length);
 void pnal_buf_free (pnal_buf_t * p);
 uint8_t pnal_buf_header (pnal_buf_t * p, int16_t header_size_increment);
+
+/**
+ * Get status of Ethernet link on specified port
+ *
+ * @param handle           In:    Ethernet handle.
+ * @param loc_port_num     In:    Local port number.
+ *                                Valid range: 1 .. PNET_MAX_PORT.
+ * @param status           Out:   Returned link status.
+ */
+void pnal_eth_get_status (
+   pnal_eth_handle_t * handle,
+   int loc_port_num,
+   pnal_eth_status_t * status);
 
 /**
  * Get network interface index

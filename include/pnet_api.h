@@ -1170,32 +1170,6 @@ typedef struct pnet_ethaddr
 #define PNET_LLDP_PORT_ID_MAX_SIZE                                             \
    (PNET_STATION_NAME_MAX_SIZE + PNET_PORT_ID_MAX_SIZE)
 
-/* LLDP Autonegotiation */
-#define PNET_LLDP_AUTONEG_SUPPORTED (1u << 0)
-#define PNET_LLDP_AUTONEG_ENABLED   (1u << 1)
-
-/* LLDP Autonegotiation capabilities (not exhaustive) */
-#define PNET_LLDP_AUTONEG_CAP_1000BaseT_FULL_DUPLEX (1ul << 0)
-#define PNET_LLDP_AUTONEG_CAP_1000BaseT_HALF_DUPLEX (1ul << 1)
-#define PNET_LLDP_AUTONEG_CAP_1000BaseX_FULL_DUPLEX (1ul << 2)
-#define PNET_LLDP_AUTONEG_CAP_1000BaseX_HALF_DUPLEX (1ul << 3)
-#define PNET_LLDP_AUTONEG_CAP_100BaseTX_FULL_DUPLEX (1ul << 10)
-#define PNET_LLDP_AUTONEG_CAP_100BaseTX_HALF_DUPLEX (1ul << 11)
-#define PNET_LLDP_AUTONEG_CAP_10BaseT_FULL_DUPLEX   (1ul << 13)
-#define PNET_LLDP_AUTONEG_CAP_10BaseT_HALF_DUPLEX   (1ul << 14)
-#define PNET_LLDP_AUTONEG_CAP_UNKNOWN               (1ul << 15)
-
-/* LLDP MAU type (not exhaustive). See Profinet 2.4, section 5.2.13.12 */
-#define PNET_MAU_RADIO                        0x0000
-#define PNET_MAU_COPPER_10BaseT               0x0005
-#define PNET_MAU_COPPER_100BaseTX_HALF_DUPLEX 0x000F
-#define PNET_MAU_COPPER_100BaseTX_FULL_DUPLEX 0x0010
-#define PNET_MAU_COPPER_1000BaseT_HALF_DUPLEX 0x001D
-#define PNET_MAU_COPPER_1000BaseT_FULL_DUPLEX 0x001E
-#define PNET_MAU_FIBER_100BaseFX_HALF_DUPLEX  0x0011
-#define PNET_MAU_FIBER_100BaseFX_FULL_DUPLEX  0x0012
-#define PNET_MAU_FIBER_1000BaseX_HALF_DUPLEX  0x0015
-#define PNET_MAU_FIBER_1000BaseX_FULL_DUPLEX  0x0016
 
 /**
  * LLDP configuration for a single port.
@@ -1206,9 +1180,6 @@ typedef struct pnet_lldp_port_cfg
    pnet_ethaddr_t port_addr;
    uint16_t rtclass_2_status;
    uint16_t rtclass_3_status;
-   uint8_t cap_aneg;  /**< Autonegotiation supported and enabled */
-   uint16_t cap_phy;  /**< Autonegotiation speeds */
-   uint16_t mau_type; /**< Cable MAU type */
 } pnet_lldp_port_cfg_t;
 
 /**
