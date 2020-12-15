@@ -216,8 +216,7 @@ int pf_alarm_send_process (
  * @param subslot_nbr      In:    The sub-slot number.
  * @param p_diag_item      In:    The diag item.
  * @return  0  if operation succeeded.
- *          -1 if an error occurred (or waiting for ACK from controller: re-try
- *                                  later).
+ *          -1 if an error occurred.
  */
 int pf_alarm_send_diagnosis (
    pnet_t * net,
