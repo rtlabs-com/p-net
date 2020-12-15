@@ -3698,7 +3698,7 @@ void pf_put_pdport_data_real (
        */
       switch (p_peer_info->phy_config.operational_mau_type)
       {
-      case PNET_MAU_RADIO:
+      case PNAL_ETH_MAU_RADIO:
          /* Radio */
          pf_put_uint32 (
             is_big_endian,
@@ -3707,11 +3707,11 @@ void pf_put_pdport_data_real (
             p_bytes,
             p_pos);
          break;
-      case PNET_MAU_COPPER_10BaseT:
-      case PNET_MAU_COPPER_100BaseTX_HALF_DUPLEX:
-      case PNET_MAU_COPPER_100BaseTX_FULL_DUPLEX:
-      case PNET_MAU_COPPER_1000BaseT_HALF_DUPLEX:
-      case PNET_MAU_COPPER_1000BaseT_FULL_DUPLEX:
+      case PNAL_ETH_MAU_COPPER_10BaseT:
+      case PNAL_ETH_MAU_COPPER_100BaseTX_HALF_DUPLEX:
+      case PNAL_ETH_MAU_COPPER_100BaseTX_FULL_DUPLEX:
+      case PNAL_ETH_MAU_COPPER_1000BaseT_HALF_DUPLEX:
+      case PNAL_ETH_MAU_COPPER_1000BaseT_FULL_DUPLEX:
          /* Copper */
          pf_put_uint32 (
             is_big_endian,
@@ -3720,10 +3720,10 @@ void pf_put_pdport_data_real (
             p_bytes,
             p_pos);
          break;
-      case PNET_MAU_FIBER_100BaseFX_HALF_DUPLEX:
-      case PNET_MAU_FIBER_100BaseFX_FULL_DUPLEX:
-      case PNET_MAU_FIBER_1000BaseX_HALF_DUPLEX:
-      case PNET_MAU_FIBER_1000BaseX_FULL_DUPLEX:
+      case PNAL_ETH_MAU_FIBER_100BaseFX_HALF_DUPLEX:
+      case PNAL_ETH_MAU_FIBER_100BaseFX_FULL_DUPLEX:
+      case PNAL_ETH_MAU_FIBER_1000BaseX_HALF_DUPLEX:
+      case PNAL_ETH_MAU_FIBER_1000BaseX_FULL_DUPLEX:
          /* Fiber */
          pf_put_uint32 (
             is_big_endian,

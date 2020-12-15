@@ -33,6 +33,12 @@ typedef struct mock_os_data_obj
    uint16_t eth_send_len;
    uint16_t eth_send_count;
 
+   /* Per port Ethernet link status.
+    * Note that port numbers start at 1. To simplify test cases, we add a
+    * dummy array element at index 0.
+    */
+   pnal_eth_status_t eth_status[PNET_MAX_PORT + 1];
+
    uint16_t udp_sendto_len;
    uint16_t udp_sendto_count;
 
@@ -78,6 +84,10 @@ pnal_eth_handle_t * mock_pnal_eth_init (
    pnal_eth_callback_t * callback,
    void * arg);
 int mock_pnal_eth_send (pnal_eth_handle_t * handle, pnal_buf_t * buf);
+void mock_pnal_eth_get_status (
+   pnal_eth_handle_t * handle,
+   int loc_port_num,
+   pnal_eth_status_t * status);
 void mock_os_cpy_mac_addr (uint8_t * mac_addr);
 int mock_pnal_udp_open (pnal_ipaddr_t addr, pnal_ipport_t port);
 int mock_pnal_udp_sendto (

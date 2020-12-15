@@ -495,13 +495,6 @@ void PnetIntegrationTestBase::cfg_init()
    strcpy (pnet_default_cfg.lldp_cfg.ports[0].port_id, "port-001");
    pnet_default_cfg.lldp_cfg.ports[0].rtclass_2_status = 0;
    pnet_default_cfg.lldp_cfg.ports[0].rtclass_3_status = 0;
-   pnet_default_cfg.lldp_cfg.ports[0].cap_aneg = PNET_LLDP_AUTONEG_SUPPORTED |
-                                                 PNET_LLDP_AUTONEG_ENABLED;
-   pnet_default_cfg.lldp_cfg.ports[0].cap_phy =
-      PNET_LLDP_AUTONEG_CAP_100BaseTX_HALF_DUPLEX |
-      PNET_LLDP_AUTONEG_CAP_100BaseTX_FULL_DUPLEX;
-   pnet_default_cfg.lldp_cfg.ports[0].mau_type =
-      PNET_MAU_COPPER_100BaseTX_FULL_DUPLEX;
 
    /* Timing */
    pnet_default_cfg.min_device_interval = 32; /* Corresponds to 1 ms */
