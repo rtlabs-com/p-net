@@ -1170,8 +1170,6 @@ typedef struct pnet_ethaddr
 #define PNET_LLDP_PORT_ID_MAX_SIZE                                             \
    (PNET_STATION_NAME_MAX_SIZE + PNET_PORT_ID_MAX_SIZE)
 
-#define PNET_LLDP_TTL 20 /* seconds. Mandatory value */
-
 /* LLDP Autonegotiation */
 #define PNET_LLDP_AUTONEG_SUPPORTED (1u << 0)
 #define PNET_LLDP_AUTONEG_ENABLED   (1u << 1)

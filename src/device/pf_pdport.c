@@ -96,7 +96,7 @@ static int pf_pdport_load (pnet_t * net, int loc_port_num)
             p_port_data->pdport.check.peer.peer_station_name,
             p_port_data->pdport.check.peer.length_peer_port_name,
             p_port_data->pdport.check.peer.peer_port_name);
-         pf_lldp_reset_peer_timeout (net, loc_port_num, PNET_LLDP_TTL);
+         pf_lldp_reset_peer_timeout (net, loc_port_num, PF_LLDP_INITIAL_PEER_TIMEOUT);
       }
       else
       {
@@ -136,7 +136,7 @@ static int pf_pdport_load (pnet_t * net, int loc_port_num)
          "peer on port %u.\n",
          __LINE__,
          loc_port_num);
-      pf_lldp_reset_peer_timeout (net, loc_port_num, PNET_LLDP_TTL);
+      pf_lldp_reset_peer_timeout (net, loc_port_num, PF_LLDP_INITIAL_PEER_TIMEOUT);
       pf_lldp_send_enable (net, loc_port_num);
    }
 

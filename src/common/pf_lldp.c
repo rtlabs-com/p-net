@@ -276,7 +276,7 @@ static void pf_lldp_add_port_id_tlv (
 static void pf_lldp_add_ttl_tlv (uint8_t * p_buf, uint16_t * p_pos)
 {
    pf_lldp_add_tlv_header (p_buf, p_pos, LLDP_TYPE_TTL, 2);
-   pf_put_uint16 (true, PNET_LLDP_TTL, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
+   pf_put_uint16 (true, PF_LLDP_TTL, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
 }
 
 /**
