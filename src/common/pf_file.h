@@ -23,7 +23,7 @@ extern "C" {
 #include <stddef.h>
 
 /* Filenames used by p-net stack. A filename may not be longer than
- * PNET_MAX_FILENAME_LENGTH (termination included).
+ * PNET_MAX_FILENAME_SIZE (termination included).
  */
 #define PF_FILENAME_IP          "pnet_data_ip.bin"
 #define PF_FILENAME_SYSCONTACT  "pnet_data_syscontact.bin"

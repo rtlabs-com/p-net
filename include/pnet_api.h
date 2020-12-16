@@ -39,20 +39,19 @@ extern "C" {
 #include <stdint.h>
 #include <stdio.h>
 
-#define PNET_PRODUCT_NAME_MAX_LEN  25
-#define PNET_ORDER_ID_MAX_LEN      20
-#define PNET_SERIAL_NUMBER_MAX_LEN 16
-#define PNET_LOCATION_MAX_LEN      22
+#define PNET_PRODUCT_NAME_MAX_LEN  25 /* Not including termination */
+#define PNET_ORDER_ID_MAX_LEN      20 /* Not including termination */
+#define PNET_SERIAL_NUMBER_MAX_LEN 16 /* Not including termination */
 
-#define PNET_MAX_FILE_FULLPATH_LEN                                             \
-   (PNET_MAX_DIRECTORYPATH_LENGTH + PNET_MAX_FILENAME_LENGTH) /** Including    \
-                                                                 separator and \
-                                                                 one           \
-                                                                 termination   \
-                                                               */
+/* Including termination. Standard says 22 (without termination) */
+#define PNET_LOCATION_MAX_SIZE     23
 
-#define PNET_MAX_INTERFACE_NAME_LENGTH                                         \
-   16 /** Including termination. Based on Linux IFNAMSIZ */
+/** Including separator and one termination */
+#define PNET_MAX_FILE_FULLPATH_SIZE                                            \
+   (PNET_MAX_DIRECTORYPATH_SIZE + PNET_MAX_FILENAME_SIZE)
+
+/** Including termination. Based on Linux IFNAMSIZ */
+#define PNET_INTERFACE_NAME_MAX_SIZE 16
 
 /** Supported block version by this implementation */
 #define PNET_BLOCK_VERSION_HIGH 1
@@ -1046,8 +1045,7 @@ typedef struct pnet_im_0
    uint8_t im_vendor_id_hi;
    uint8_t im_vendor_id_lo;
    char im_order_id[PNET_ORDER_ID_MAX_LEN + 1]; /**< Terminated string */
-   char im_serial_number[PNET_SERIAL_NUMBER_MAX_LEN + 1]; /**< Terminated string
-                                                           */
+   char im_serial_number[PNET_SERIAL_NUMBER_MAX_LEN + 1]; /**< Terminated */
    uint16_t im_hardware_revision;
    char im_sw_revision_prefix;
    uint8_t im_sw_revision_functional_enhancement;
@@ -1072,8 +1070,8 @@ typedef struct pnet_im_0
  */
 typedef struct pnet_im_1
 {
-   char im_tag_function[32 + 1];                    /**< Terminated string */
-   char im_tag_location[PNET_LOCATION_MAX_LEN + 1]; /**< Terminated string */
+   char im_tag_function[32 + 1];                 /**< Terminated string */
+   char im_tag_location[PNET_LOCATION_MAX_SIZE]; /**< Terminated string */
 } pnet_im_1_t;
 
 /**
@@ -1156,12 +1154,21 @@ typedef struct pnet_ethaddr
    uint8_t addr[6];
 } pnet_ethaddr_t;
 
-#define PNET_CHASSIS_ID_MAX_LEN      (240)
-#define PNET_STATION_NAME_MAX_LEN    (240)
-#define PNET_PORT_ID_MAX_LEN         (14)
-#define PNET_LLDP_CHASSIS_ID_MAX_LEN (PNET_CHASSIS_ID_MAX_LEN)
-#define PNET_LLDP_PORT_ID_MAX_LEN                                              \
-   (PNET_STATION_NAME_MAX_LEN + PNET_PORT_ID_MAX_LEN)
+/* Including termination. Standard says 240 (without termination) */
+#define PNET_CHASSIS_ID_MAX_SIZE   (241)
+
+/* Including termination. Standard says 240 (without termination) */
+#define PNET_STATION_NAME_MAX_SIZE (241)
+
+/* Including termination. Standard says 14 (without termination) */
+#define PNET_PORT_ID_MAX_SIZE      (15)
+
+/** Including termination */
+#define PNET_LLDP_CHASSIS_ID_MAX_SIZE (PNET_CHASSIS_ID_MAX_SIZE)
+
+/** Including termination */
+#define PNET_LLDP_PORT_ID_MAX_SIZE                                             \
+   (PNET_STATION_NAME_MAX_SIZE + PNET_PORT_ID_MAX_SIZE)
 
 #define PNET_LLDP_TTL 20 /* seconds. Mandatory value */
 
@@ -1197,7 +1204,7 @@ typedef struct pnet_ethaddr
  */
 typedef struct pnet_lldp_port_cfg
 {
-   char port_id[PNET_LLDP_PORT_ID_MAX_LEN + 1]; /**< Terminated string */
+   char port_id[PNET_LLDP_PORT_ID_MAX_SIZE]; /**< Terminated string */
    pnet_ethaddr_t port_addr;
    uint16_t rtclass_2_status;
    uint16_t rtclass_3_status;
@@ -1249,9 +1256,7 @@ typedef struct pnet_cfg
    /** Identities */
    pnet_cfg_device_id_t device_id;
    pnet_cfg_device_id_t oem_device_id;
-   char station_name[PNET_STATION_NAME_MAX_LEN + 1]; /**< Terminated string */
-   char manufacturer_specific_string[240 + 1];       /**< Terminated string
-                                                          Not yet used */
+   char station_name[PNET_STATION_NAME_MAX_SIZE]; /**< Terminated string */
 
    /**
     * Product name
@@ -1283,7 +1288,7 @@ typedef struct pnet_cfg
    pnet_ethaddr_t eth_addr; /* Interface MAC address, not port MAC address */
 
    /** Storage between runs */
-   char file_directory[PNET_MAX_DIRECTORYPATH_LENGTH]; /**< Terminated string
+   char file_directory[PNET_MAX_DIRECTORYPATH_SIZE]; /**< Terminated string
                                                           with absolute path.
                                                           Use NULL or empty
                                                           string for current
@@ -1888,7 +1893,7 @@ PNET_EXPORT int pnet_diag_std_remove (
  * @param subslot          In:    The sub-slot.
  * @param usi              In:    The USI. Range 0..0x7fff
  * @param p_manuf_data     In:    The manufacturer specific diagnosis data.
- *                                Size PF_DIAG_MANUF_DATA_LEN.
+ *                                Size PF_DIAG_MANUF_DATA_SIZE.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -1916,7 +1921,7 @@ PNET_EXPORT int pnet_diag_usi_add (
  * @param subslot          In:    The sub-slot.
  * @param usi              In:    The USI. Range 0..0x7fff
  * @param p_manuf_data     In:    New manufacturer specific diagnosis data.
- *                                Size PF_DIAG_MANUF_DATA_LEN.
+ *                                Size PF_DIAG_MANUF_DATA_SIZE.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */

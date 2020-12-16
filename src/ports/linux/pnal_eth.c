@@ -39,12 +39,12 @@ static void os_eth_task (void * thread_arg)
    ssize_t readlen;
    int handled = 0;
 
-   pnal_buf_t * p = pnal_buf_alloc (OS_BUF_MAX_SIZE);
+   pnal_buf_t * p = pnal_buf_alloc (PNAL_BUF_MAX_SIZE);
    assert (p != NULL);
 
    while (1)
    {
-      readlen = recv (eth_handle->socket, p->payload, OS_BUF_MAX_SIZE, 0);
+      readlen = recv (eth_handle->socket, p->payload, PNAL_BUF_MAX_SIZE, 0);
       if (readlen == -1)
          continue;
       p->len = readlen;
@@ -60,7 +60,7 @@ static void os_eth_task (void * thread_arg)
 
       if (handled == 1)
       {
-         p = pnal_buf_alloc (OS_BUF_MAX_SIZE);
+         p = pnal_buf_alloc (PNAL_BUF_MAX_SIZE);
          assert (p != NULL);
       }
    }

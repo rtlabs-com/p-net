@@ -58,8 +58,8 @@ void pf_cmina_show (pnet_t * net);
 /**
  * Convert IPv4 address to string
  * @param ip               In:    IP address
- * @param outputstring     Out:   Resulting string. Should have length
- *                                PNAL_INET_ADDRSTRLEN.
+ * @param outputstring     Out:   Buffer with resulting string. Should have
+ *                                size PNAL_INET_ADDRSTR_SIZE.
  */
 void pf_cmina_ip_to_string (pnal_ipaddr_t ip, char * outputstring);
 

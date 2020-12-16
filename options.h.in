@@ -163,19 +163,19 @@
 #define PNET_MAX_SESSION_BUFFER_SIZE @PNET_MAX_SESSION_BUFFER_SIZE@
 #endif
 
-/** Max directory path length */
-#if !defined (PNET_MAX_DIRECTORYPATH_LENGTH)
-#define PNET_MAX_DIRECTORYPATH_LENGTH @PNET_MAX_DIRECTORYPATH_LENGTH@
+#if !defined (PNET_MAX_DIRECTORYPATH_SIZE)
+/** Max directory path size, including termination */
+#define PNET_MAX_DIRECTORYPATH_SIZE @PNET_MAX_DIRECTORYPATH_SIZE@
 #endif
 
-/** Max filename length */
-#if !defined (PNET_MAX_FILENAME_LENGTH)
-#define PNET_MAX_FILENAME_LENGTH @PNET_MAX_FILENAME_LENGTH@
+#if !defined (PNET_MAX_FILENAME_SIZE)
+/** Max filename size, including termination  */
+#define PNET_MAX_FILENAME_SIZE @PNET_MAX_FILENAME_SIZE@
 #endif
 
-/** Max port description length */
-#if !defined (PNET_MAX_PORT_DESCRIPTION_LENGTH)
-#define PNET_MAX_PORT_DESCRIPTION_LENGTH @PNET_MAX_PORT_DESCRIPTION_LENGTH@
+#if !defined (PNET_MAX_PORT_DESCRIPTION_SIZE)
+/** Max port description size, including termination  */
+#define PNET_MAX_PORT_DESCRIPTION_SIZE @PNET_MAX_PORT_DESCRIPTION_SIZE@
 #endif
 
 

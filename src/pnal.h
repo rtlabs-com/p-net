@@ -33,9 +33,11 @@ extern "C" {
 #define PNAL_MAKEU16(a, b)                                                     \
    (((uint16_t) ((a)&0xff) << 8) | (uint16_t) ((b)&0xff))
 
-#define PNAL_INET_ADDRSTRLEN 16
-#define PNAL_ETH_ADDRSTRLEN  18
-#define PNAL_HOST_NAME_MAX   64 /* Value from Linux */
+#define PNAL_INET_ADDRSTR_SIZE 16 /** Incl termination */
+#define PNAL_ETH_ADDRSTR_SIZE  18 /** Incl termination */
+#ifndef PNAL_HOSTNAME_MAX_SIZE
+#define PNAL_HOSTNAME_MAX_SIZE 64 /** Incl termination. Value from Linux. */
+#endif
 
 /** Set an IP address given by the four byte-parts */
 #define PNAL_IP4_ADDR_TO_U32(ipaddr, a, b, c, d)                               \
@@ -269,12 +271,13 @@ int pnal_snmp_init (pnet_t * net);
  * 1.0.0.0           0x01000000 = 16777216
  * 0.0.0.1           0x00000001 = 1
  *
- * @param interface_name      In: Ethernet interface name, for example eth0
- * @param p_ipaddr            Out: IPv4 address
- * @param p_netmask           Out: Netmask
- * @param p_gw                Out: Default gateway
- * @param hostname            Out: Host name, for example my_laptop_4. Existing
- *                            buffer should have length PNAL_HOST_NAME_MAX.
+ * @param interface_name   In:    Ethernet interface name, for example eth0
+ * @param p_ipaddr         Out:   IPv4 address
+ * @param p_netmask        Out:   Netmask
+ * @param p_gw             Out:   Default gateway
+ * @param hostname         Out:   Host name, for example my_laptop_4. Existing
+ *                                buffer should have size
+ *                                PNAL_HOSTNAME_MAX_SIZE.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -332,8 +335,9 @@ int pnal_get_macaddress (const char * interface_name, pnal_ethaddr_t * p_mac);
 /**
  * Read the current host name
  *
- * @param hostname            Out: Host name, for example my_laptop_4. Existing
- * buffer should have length PNAL_HOST_NAME_MAX.
+ * @param hostname         Out:   Host name, for example my_laptop_4. Existing
+ *                                buffer should have size
+ *                                PNAL_HOSTNAME_MAX_SIZE.
  * @return 0 on success and
  *         -1 if an error occurred
  */

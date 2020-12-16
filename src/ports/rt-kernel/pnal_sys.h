@@ -24,7 +24,7 @@ extern "C" {
 #include <sys/socket.h> /* For htonl etc */
 #include <lwip/pbuf.h>
 
-#define OS_BUF_MAX_SIZE PBUF_POOL_BUFSIZE
+#define PNAL_BUF_MAX_SIZE PBUF_POOL_BUFSIZE
 
 /* Re-use lwIP pbuf for rt-kernel */
 typedef struct pbuf pnal_buf_t;

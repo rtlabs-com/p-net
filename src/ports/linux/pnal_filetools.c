@@ -78,25 +78,36 @@ static int pnal_get_directory_of_binary (char * path, size_t size)
  *
  * @param path             Out:   Resulting path. Terminated string.
  *                                Might be modified also on failure.
- * @param size             In :   Size of the outputbuffer.
- *
+ * @param size             In :   Size of the outputbuffer. Should be
+ *                                sizeof(PNAL_DEFAULT_SEARCHPATH) +
+ *                                PNET_MAX_DIRECTORYPATH_SIZE
  * @return 0 on success.
  *         -1 if an error occured.
  */
 int pnal_create_searchpath (char * path, size_t size)
 {
    int written = 0;
-   char directory_of_binary
-      [PNET_MAX_DIRECTORYPATH_LENGTH + PNET_MAX_FILENAME_LENGTH] = {0};
 
-   if (pnal_get_directory_of_binary (
-      directory_of_binary,
-      sizeof (directory_of_binary)) != 0)
+   /** Should temporarily hold full path. Resulting size is
+    * PNET_MAX_DIRECTORYPATH_SIZE */
+   char
+      directory_of_binary[PNET_MAX_DIRECTORYPATH_SIZE + PNET_MAX_FILENAME_SIZE] =
+         {0};
+
+   if (
+      pnal_get_directory_of_binary (
+         directory_of_binary,
+         sizeof (directory_of_binary)) != 0)
    {
       return -1;
    }
 
-   written = snprintf(path, size, "%s:%s", PNAL_DEFAULT_SEARCHPATH, directory_of_binary);
+   written = snprintf (
+      path,
+      size,
+      "%s:%s",
+      PNAL_DEFAULT_SEARCHPATH,
+      directory_of_binary);
    if (written < 0 || (unsigned)written >= size)
    {
       return -1;
@@ -107,9 +118,9 @@ int pnal_create_searchpath (char * path, size_t size)
 
 int pnal_execute_script (const char * argv[])
 {
+   /** Terminated string, see pnal_create_searchpath() */
    char child_searchpath
-      [PNET_MAX_DIRECTORYPATH_LENGTH + sizeof (PNAL_DEFAULT_SEARCHPATH) + 1] = {
-         0};
+      [sizeof (PNAL_DEFAULT_SEARCHPATH) + PNET_MAX_DIRECTORYPATH_SIZE] = {0};
    int childstatus = 0;
    pid_t childpid;
    char * scriptenviron[] = {NULL};

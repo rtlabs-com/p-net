@@ -378,7 +378,7 @@ TEST_F (LldpTest, LldpInitTest)
 
 TEST_F (LldpTest, LldpGenerateAliasName)
 {
-   char alias[256];
+   char alias[256]; /** Terminated string */
    int err;
 
    err = pf_lldp_generate_alias_name (NULL, "dut", alias, 96);

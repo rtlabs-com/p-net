@@ -95,9 +95,9 @@ static void pf_cmina_send_hello (pnet_t * net, void * arg, uint32_t current_time
 static void pf_cmina_save_ase (pnet_t * net, pf_cmina_dcp_ase_t * p_ase)
 {
    pf_cmina_dcp_ase_t temporary_buffer;
-   char ip_string[PNAL_INET_ADDRSTRLEN] = {0};
-   char netmask_string[PNAL_INET_ADDRSTRLEN] = {0};
-   char gateway_string[PNAL_INET_ADDRSTRLEN] = {0};
+   char ip_string[PNAL_INET_ADDRSTR_SIZE] = {0};      /** Terminated string */
+   char netmask_string[PNAL_INET_ADDRSTR_SIZE] = {0}; /** Terminated string */
+   char gateway_string[PNAL_INET_ADDRSTR_SIZE] = {0}; /** Terminated string */
    const char * p_file_directory = NULL;
    int res = 0;
 
@@ -167,9 +167,9 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
    uint16_t ix;
    bool reset_user_application = false;
    pf_cmina_dcp_ase_t file_ase;
-   char ip_string[PNAL_INET_ADDRSTRLEN] = {0};
-   char netmask_string[PNAL_INET_ADDRSTRLEN] = {0};
-   char gateway_string[PNAL_INET_ADDRSTRLEN] = {0};
+   char ip_string[PNAL_INET_ADDRSTR_SIZE] = {0};      /** Terminated string */
+   char netmask_string[PNAL_INET_ADDRSTR_SIZE] = {0}; /** Terminated string */
+   char gateway_string[PNAL_INET_ADDRSTR_SIZE] = {0}; /** Terminated string */
    uint32_t ip = 0;
    uint32_t netmask = 0;
    uint32_t gateway = 0;
@@ -196,13 +196,6 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
          sizeof (pnet_ethaddr_t));
 
       strcpy (net->cmina_nonvolatile_dcp_ase.port_name, ""); /* Terminated */
-      strncpy (
-         net->cmina_nonvolatile_dcp_ase.manufacturer_specific_string,
-         p_cfg->manufacturer_specific_string,
-         sizeof (net->cmina_nonvolatile_dcp_ase.manufacturer_specific_string));
-      net->cmina_nonvolatile_dcp_ase.manufacturer_specific_string
-         [sizeof (net->cmina_nonvolatile_dcp_ase.manufacturer_specific_string) -
-          1] = '\0';
 
       net->cmina_nonvolatile_dcp_ase.device_id = p_cfg->device_id;
       net->cmina_nonvolatile_dcp_ase.oem_device_id = p_cfg->oem_device_id;
@@ -370,9 +363,9 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
 void pf_cmina_dcp_set_commit (pnet_t * net)
 {
    int res = 0;
-   char ip_string[PNAL_INET_ADDRSTRLEN] = {0};
-   char netmask_string[PNAL_INET_ADDRSTRLEN] = {0};
-   char gateway_string[PNAL_INET_ADDRSTRLEN] = {0};
+   char ip_string[PNAL_INET_ADDRSTR_SIZE] = {0};      /** Terminated string */
+   char netmask_string[PNAL_INET_ADDRSTR_SIZE] = {0}; /** Terminated string */
+   char gateway_string[PNAL_INET_ADDRSTR_SIZE] = {0}; /** Terminated string */
    bool permanent = true;
 
    if (net->cmina_commit_ip_suite == true)
@@ -627,9 +620,9 @@ int pf_cmina_dcp_set_ind (
    bool change_dhcp = false; /* We have got a request to change DHCP settings */
    bool reset_to_factory = false; /* We have got a request to do a factory reset
                                    */
-   char ip_string[PNAL_INET_ADDRSTRLEN] = {0};
-   char netmask_string[PNAL_INET_ADDRSTRLEN] = {0};
-   char gateway_string[PNAL_INET_ADDRSTRLEN] = {0};
+   char ip_string[PNAL_INET_ADDRSTR_SIZE] = {0};      /** Terminated string */
+   char netmask_string[PNAL_INET_ADDRSTR_SIZE] = {0}; /** Terminated string */
+   char gateway_string[PNAL_INET_ADDRSTR_SIZE] = {0}; /** Terminated string */
 
    bool temp = ((block_qualifier & 1) == 0);
    uint16_t reset_mode = 0;
@@ -1273,7 +1266,7 @@ void pf_cmina_ip_to_string (pnal_ipaddr_t ip, char * outputstring)
 {
    snprintf (
       outputstring,
-      PNAL_INET_ADDRSTRLEN,
+      PNAL_INET_ADDRSTR_SIZE,
       "%u.%u.%u.%u",
       (uint8_t) ((ip >> 24) & 0xFF),
       (uint8_t) ((ip >> 16) & 0xFF),
@@ -1317,7 +1310,7 @@ static const char * pf_cmina_state_to_string (pnet_t * net)
  */
 void pf_ip_address_show (uint32_t ip)
 {
-   char ip_string[PNAL_INET_ADDRSTRLEN] = {0};
+   char ip_string[PNAL_INET_ADDRSTR_SIZE] = {0}; /** Terminated string */
 
    pf_cmina_ip_to_string (ip, ip_string);
    printf ("%s", ip_string);
@@ -1469,7 +1462,7 @@ bool pf_cmina_is_stationname_valid (const char * station_name, uint16_t len)
     * - Labels do not start with [-]
     * - Total length is 1 to 240
     */
-   if ((station_name[0] == '-') || (len > PNET_STATION_NAME_MAX_LEN))
+   if ((station_name[0] == '-') || (len >= PNET_STATION_NAME_MAX_SIZE))
    {
       return false;
    }

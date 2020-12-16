@@ -211,15 +211,15 @@ uint8_t pnal_buf_header (pnal_buf_t * p, int16_t header_size_increment)
 
 /** @internal
  * Convert IPv4 address to string
- * @param ip               In: IP address
- * @param outputstring     Out: Resulting string. Should have length
- * PNAL_INET_ADDRSTRLEN.
+ * @param ip               In:    IP address
+ * @param outputstring     Out:   Resulting string. Should have size
+ *                                PNAL_INET_ADDRSTR_SIZE.
  */
 static void os_ip_to_string (pnal_ipaddr_t ip, char * outputstring)
 {
    snprintf (
       outputstring,
-      PNAL_INET_ADDRSTRLEN,
+      PNAL_INET_ADDRSTR_SIZE,
       "%u.%u.%u.%u",
       (uint8_t) ((ip >> 24) & 0xFF),
       (uint8_t) ((ip >> 16) & 0xFF),
@@ -235,9 +235,9 @@ int pnal_set_ip_suite (
    const char * hostname,
    bool permanent)
 {
-   char ip_string[PNAL_INET_ADDRSTRLEN];
-   char netmask_string[PNAL_INET_ADDRSTRLEN];
-   char gateway_string[PNAL_INET_ADDRSTRLEN];
+   char ip_string[PNAL_INET_ADDRSTR_SIZE];      /** Terminated string */
+   char netmask_string[PNAL_INET_ADDRSTR_SIZE]; /** Terminated string */
+   char gateway_string[PNAL_INET_ADDRSTR_SIZE]; /** Terminated string */
    const char * argv[8];
 
    os_ip_to_string (*p_ipaddr, ip_string);
@@ -326,8 +326,8 @@ int pnal_get_hostname (char * hostname)
 {
    int ret = -1;
 
-   ret = gethostname (hostname, PNAL_HOST_NAME_MAX);
-   hostname[PNAL_HOST_NAME_MAX - 1] = '\0';
+   ret = gethostname (hostname, PNAL_HOSTNAME_MAX_SIZE);
+   hostname[PNAL_HOSTNAME_MAX_SIZE - 1] = '\0';
 
    return ret;
 }

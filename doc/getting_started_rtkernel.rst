@@ -268,7 +268,7 @@ Run tests on XMC4800 target
 ---------------------------
 In order to compile the test code, make sure to use BUILD_TESTING and that
 TEST_DEBUG is disabled. Set PNET_MAX_AR to 1, and reduce
-PNET_MAX_FILENAME_LENGTH to 30 bytes.
+PNET_MAX_FILENAME_SIZE to 30 bytes.
 This is done via ccmake, which should be started in the build directory::
 
     ccmake .
