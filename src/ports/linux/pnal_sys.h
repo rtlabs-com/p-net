@@ -24,7 +24,7 @@ extern "C" {
 
 #include <netinet/in.h>
 
-#define OS_BUF_MAX_SIZE 1522
+#define PNAL_BUF_MAX_SIZE 1522
 
 typedef struct os_buf
 {

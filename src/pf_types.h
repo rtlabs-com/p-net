@@ -869,10 +869,10 @@ typedef struct pf_diag_std
 } pf_diag_std_t;
 
 /* Make pf_diag_usi_t equal in size to pf_diag_std_t */
-#define PF_DIAG_MANUF_DATA_LEN sizeof (pf_diag_std_t)
+#define PF_DIAG_MANUF_DATA_SIZE sizeof (pf_diag_std_t)
 typedef struct pf_diag_usi
 {
-   uint8_t manuf_data[PF_DIAG_MANUF_DATA_LEN];
+   uint8_t manuf_data[PF_DIAG_MANUF_DATA_SIZE];
 } pf_diag_usi_t;
 
 /* This is the end of list designator. */
@@ -892,13 +892,13 @@ typedef struct pf_diag_item
    uint16_t next; /* Next in list (array index) */
 } pf_diag_item_t;
 
-#define PF_ALARM_MAX_PAYLOAD_DATA_LEN sizeof (pf_diag_item_t)
+#define PF_ALARM_MAX_PAYLOAD_DATA_SIZE sizeof (pf_diag_item_t)
 
 typedef struct pf_alarm_payload
 {
    uint16_t usi;
    uint16_t len;
-   uint8_t data[PF_ALARM_MAX_PAYLOAD_DATA_LEN];
+   uint8_t data[PF_ALARM_MAX_PAYLOAD_DATA_SIZE];
 } pf_alarm_payload_t;
 
 /* See also pnet_alarm_argument_t for a subset */
@@ -1035,21 +1035,20 @@ typedef struct pf_eth_frame_id_map
  */
 typedef struct pf_cmina_dcp_ase
 {
-   char station_name[PNET_STATION_NAME_MAX_LEN + 1]; /* Terminated */
+   char station_name[PNET_STATION_NAME_MAX_SIZE]; /* Terminated string */
 
    /*
     * DCP DeviceVendorValue is set to configured product_name
     * See PN-AL-protocol (Mar20) ch 4.3.1.4.26
     * product_name is also known as DeviceType
     */
-   char product_name[PNET_PRODUCT_NAME_MAX_LEN + 1]; /* Terminated */
+   char product_name[PNET_PRODUCT_NAME_MAX_LEN + 1]; /* Terminated string */
    uint8_t device_role;        /* Only value "1" supported */
    uint16_t device_initiative; /* 1: Should send hello. 0: No sending of hello
                                 */
 
    char alias_name
-      [PNET_STATION_NAME_MAX_LEN + 1 + PNET_PORT_ID_MAX_LEN + 1]; /* Terminated
-                                                                   */
+      [PNET_STATION_NAME_MAX_SIZE + PNET_PORT_ID_MAX_SIZE]; /** Terminated */
    struct
    {
       /* Order is important!! */
@@ -1060,9 +1059,8 @@ typedef struct pf_cmina_dcp_ase
    pnet_cfg_device_id_t device_id;
    pnet_cfg_device_id_t oem_device_id;
 
-   char port_name[14 + 1]; /* Terminated. Not used. */
+   char port_name[PNET_PORT_ID_MAX_SIZE]; /* Terminated. Not used. */
 
-   char manufacturer_specific_string[240 + 1];
    pnet_ethaddr_t mac_address;
    uint16_t standard_gw_value;
 
@@ -1071,7 +1069,7 @@ typedef struct pf_cmina_dcp_ase
 
    struct
    {
-      /* Nothing much yet */
+      /* Not yet used */
       char hostname[240 + 1];
    } dhcp_info;
 } pf_cmina_dcp_ase_t;
@@ -1250,7 +1248,7 @@ typedef struct pf_ar_param
    uint16_t cm_initiator_activity_timeout_factor; /** res: 100ms */
    uint16_t cm_initiator_udp_rt_port;             /** 0x8892 */
    uint16_t cm_initiator_station_name_len;
-   char cm_initiator_station_name[PNET_STATION_NAME_MAX_LEN + 1]; /** Terminated
+   char cm_initiator_station_name[PNET_STATION_NAME_MAX_SIZE]; /** Terminated
                                                                      string. */
 } pf_ar_param_t;
 
@@ -1420,7 +1418,9 @@ typedef struct pf_prm_server
    uint16_t cm_initiator_activity_timeout_factor;                /** res: 100ms,
                                                                     allowed 1..1000 */
    uint16_t parameter_server_station_name_len;
-   char parameter_server_station_name[240 + 1]; /** Terminated */
+   char
+      parameter_server_station_name[PNET_STATION_NAME_MAX_SIZE]; /** Terminated
+                                                                    string */
 } pf_prm_server_t;
 
 typedef struct pf_address_resolution_properties
@@ -1436,7 +1436,7 @@ typedef struct pf_multicast_cr
    pf_address_resolution_properties_t address_resolution_properties;
    uint16_t mci_timeout_factor; /* MCI_timeout range 0x0001..0xffff */
    uint16_t length_provider_station_name;
-   char provider_station_name[PNET_STATION_NAME_MAX_LEN + 1]; /** Terminated */
+   char provider_station_name[PNET_STATION_NAME_MAX_SIZE]; /** Terminated */
 } pf_multicast_cr_t;
 
 typedef struct pf_ar_rpc_request
@@ -1513,7 +1513,7 @@ typedef struct pf_ar_fsu
 typedef struct pf_ar_server
 {
    uint16_t length_cm_responder_station_name;
-   char cm_responder_station_name[240 + 1]; /** Terminated */
+   char cm_responder_station_name[PNET_STATION_NAME_MAX_SIZE]; /** Terminated */
 } pf_ar_server_t;
 
 typedef struct pf_alarm_cr_properties
@@ -2341,7 +2341,7 @@ typedef struct pf_log_book
  */
 typedef struct pf_snmp_system_location
 {
-   char string[PNET_LOCATION_MAX_LEN + 1]; /* Terminated */
+   char string[PNET_LOCATION_MAX_SIZE]; /* Terminated string */
 } pf_snmp_system_location_t;
 
 /**
@@ -2369,9 +2369,9 @@ typedef struct pf_port_data_check
 typedef struct pf_check_peer
 {
    uint8_t length_peer_port_name;
-   uint8_t peer_port_name[PNET_LLDP_PORT_ID_MAX_LEN];
+   uint8_t peer_port_name[PNET_LLDP_PORT_ID_MAX_SIZE - 1]; /** No termination */
    uint8_t length_peer_station_name;
-   uint8_t peer_station_name[PNET_STATION_NAME_MAX_LEN];
+   uint8_t peer_station_name[PNET_STATION_NAME_MAX_SIZE - 1]; /** No term */
 } pf_check_peer_t;
 
 typedef struct pf_check_peers
@@ -2457,12 +2457,12 @@ typedef struct pf_lldp_link_status
  * - IEEE 802.1AB (LLDP) ch. 9.5.5.2 "port description".
  *
  * Note: According to the SNMP specification, the string could be up
- * to 255 characters. The p-net stack limits it to
- * PNET_MAX_PORT_DESCRIPTION_LENGTH (including termination).
+ * to 255 characters (excluding termination). The p-net stack limits it to
+ * PNET_MAX_PORT_DESCRIPTION_SIZE (including termination).
  */
 typedef struct pf_lldp_port_description
 {
-   char string[PNET_MAX_PORT_DESCRIPTION_LENGTH]; /* Terminated */
+   char string[PNET_MAX_PORT_DESCRIPTION_SIZE]; /* Terminated string */
    bool is_valid;
    size_t len;
 } pf_lldp_port_description_t;
@@ -2506,8 +2506,8 @@ typedef struct pf_port_iterator
  */
 typedef struct pf_lldp_chassis_id
 {
-   char string[PNET_LLDP_CHASSIS_ID_MAX_LEN + 1]; /**< Terminated string */
-   uint8_t subtype;                               /* PF_LLDP_SUBTYPE_xxx */
+   char string[PNET_LLDP_CHASSIS_ID_MAX_SIZE]; /**< Terminated string */
+   uint8_t subtype;                            /* PF_LLDP_SUBTYPE_xxx */
    bool is_valid;
    size_t len;
 } pf_lldp_chassis_id_t;
@@ -2519,7 +2519,7 @@ typedef struct pf_lldp_chassis_id
  */
 typedef struct pf_lldp_port_id
 {
-   char string[PNET_LLDP_PORT_ID_MAX_LEN + 1]; /**< Terminated string */
+   char string[PNET_LLDP_PORT_ID_MAX_SIZE]; /**< Terminated string */
    uint8_t subtype;
    bool is_valid;
    size_t len;
@@ -2571,7 +2571,7 @@ typedef struct pf_lldp_management_address
  */
 typedef struct pf_lldp_station_name
 {
-   char string[PNET_STATION_NAME_MAX_LEN + 1]; /* Terminated */
+   char string[PNET_STATION_NAME_MAX_SIZE]; /** Terminated string */
    size_t len;
 } pf_lldp_station_name_t;
 
@@ -2705,7 +2705,7 @@ typedef struct pf_port
 
 struct pnet
 {
-   char interface_name[PNET_MAX_INTERFACE_NAME_LENGTH]; /** Terminated */
+   char interface_name[PNET_INTERFACE_NAME_MAX_SIZE]; /** Terminated string */
    uint32_t pnal_buf_alloc_cnt;
    bool global_alarm_enable;
    os_mutex_t * cpm_buf_lock;

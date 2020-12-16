@@ -44,14 +44,14 @@ static void print_bytes (const uint8_t * bytes, int32_t len)
 /**
  * Convert IPv4 address to string
  * @param ip               In:    IP address
- * @param outputstring     Out:   Resulting string. Should have length
- *                                PNAL_INET_ADDRSTRLEN.
+ * @param outputstring     Out:   Resulting string buffer. Should have size
+ *                                PNAL_INET_ADDRSTR_SIZE.
  */
 static void ip_to_string (pnal_ipaddr_t ip, char * outputstring)
 {
    snprintf (
       outputstring,
-      PNAL_INET_ADDRSTRLEN,
+      PNAL_INET_ADDRSTR_SIZE,
       "%u.%u.%u.%u",
       (uint8_t) ((ip >> 24) & 0xFF),
       (uint8_t) ((ip >> 16) & 0xFF),
@@ -62,14 +62,14 @@ static void ip_to_string (pnal_ipaddr_t ip, char * outputstring)
 /**
  * Convert MAC address to string
  * @param mac              In:    MAC address
- * @param outputstring     Out:   Resulting string. Should have length
- *                                PNAL_ETH_ADDRSTRLEN.
+ * @param outputstring     Out:   Resulting string buffer. Should have size
+ *                                PNAL_ETH_ADDRSTR_SIZE.
  */
 static void mac_to_string (pnal_ethaddr_t mac, char * outputstring)
 {
    snprintf (
       outputstring,
-      PNAL_ETH_ADDRSTRLEN,
+      PNAL_ETH_ADDRSTR_SIZE,
       "%02X:%02X:%02X:%02X:%02X:%02X",
       mac.addr[0],
       mac.addr[1],
@@ -193,11 +193,11 @@ void app_print_network_details (
    pnal_ipaddr_t netmask,
    pnal_ipaddr_t gateway)
 {
-   char ip_string[PNAL_INET_ADDRSTRLEN];
-   char netmask_string[PNAL_INET_ADDRSTRLEN];
-   char gateway_string[PNAL_INET_ADDRSTRLEN];
-   char mac_string[PNAL_ETH_ADDRSTRLEN];
-   char hostname_string[PNAL_HOST_NAME_MAX];
+   char ip_string[PNAL_INET_ADDRSTR_SIZE];       /* Terminated string */
+   char netmask_string[PNAL_INET_ADDRSTR_SIZE];  /* Terminated string */
+   char gateway_string[PNAL_INET_ADDRSTR_SIZE];  /* Terminated string */
+   char mac_string[PNAL_ETH_ADDRSTR_SIZE];       /* Terminated string */
+   char hostname_string[PNAL_HOSTNAME_MAX_SIZE]; /* Terminated string */
 
    mac_to_string (*p_macbuffer, mac_string);
    ip_to_string (ip, ip_string);
@@ -1281,7 +1281,6 @@ int app_adjust_stack_configuration (pnet_cfg_t * stack_config)
    stack_config->oem_device_id.vendor_id_lo = 0xff;
    stack_config->oem_device_id.device_id_hi = 0xee;
    stack_config->oem_device_id.device_id_lo = 0x01;
-   strcpy (stack_config->manufacturer_specific_string, "PNET demo");
    strcpy (stack_config->product_name, "rt-labs PNET demo");
 
    /* Timing */

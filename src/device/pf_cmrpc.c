@@ -798,7 +798,7 @@ static int pf_cmrpc_send_once_from_buffer (
    const char * payload_description)
 {
    int ret = -1;
-   char ip_string[PNAL_INET_ADDRSTRLEN] = {0};
+   char ip_string[PNAL_INET_ADDRSTR_SIZE] = {0}; /** Terminated string */
 
    if (size != 0)
    {
@@ -4581,7 +4581,7 @@ void pf_cmrpc_periodic (pnet_t * net)
    uint16_t dcerpc_resp_len = 0;
    uint16_t ix;
    bool is_release = false;
-   char ip_string[PNAL_INET_ADDRSTRLEN] = {0};
+   char ip_string[PNAL_INET_ADDRSTR_SIZE] = {0}; /** Terminated string */
 
    /* TODO Use a common function to avoid code duplication, remove some
     * arguments for pf_cmrpc_dce_packet() */

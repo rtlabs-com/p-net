@@ -136,7 +136,7 @@ void pf_snmp_get_system_name (pnet_t * net, pf_snmp_system_name_t * name)
 {
    int error;
 
-   CC_STATIC_ASSERT (sizeof (name->string) >= PNAL_HOST_NAME_MAX);
+   CC_STATIC_ASSERT (sizeof (name->string) >= PNAL_HOSTNAME_MAX_SIZE);
 
    error = pnal_get_hostname (name->string);
    if (error)

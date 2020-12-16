@@ -89,14 +89,14 @@ set(PNET_MAX_MAN_SPECIFIC_FAST_STARTUP_DATA_LENGTH 0
 set(PNET_MAX_SESSION_BUFFER_SIZE 4500
   CACHE STRING "Max fragmented RPC request/response length")
 
-set(PNET_MAX_DIRECTORYPATH_LENGTH 240
-  CACHE STRING "Max length of directory path, including termination")
+set(PNET_MAX_DIRECTORYPATH_SIZE 240
+  CACHE STRING "Max size of directory path, including termination")
 
-set(PNET_MAX_FILENAME_LENGTH 30
-  CACHE STRING "Max length of filenames, including termination")
+set(PNET_MAX_FILENAME_SIZE 30
+  CACHE STRING "Max size of filename, including termination")
 
-set(PNET_MAX_PORT_DESCRIPTION_LENGTH 60
-  CACHE STRING "Max length of port description, including termination")
+set(PNET_MAX_PORT_DESCRIPTION_SIZE 60
+  CACHE STRING "Max size of port description, including termination")
 
 set(LOG_STATE_VALUES "ON;OFF")
 set(LOG_LEVEL_VALUES "DEBUG;INFO;WARNING;ERROR;FATAL")

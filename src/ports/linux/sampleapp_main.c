@@ -155,7 +155,7 @@ struct cmd_args parse_commandline_arguments (int argc, char * argv[])
          strcpy (output_arguments.station_name, optarg);
          break;
       case 'b':
-         if (strlen (optarg) + 1 > PNET_MAX_FILE_FULLPATH_LEN)
+         if (strlen (optarg) + 1 > PNET_MAX_FILE_FULLPATH_SIZE)
          {
             printf ("Error: The argument to -b is too long.\n");
             exit (EXIT_FAILURE);
@@ -163,7 +163,7 @@ struct cmd_args parse_commandline_arguments (int argc, char * argv[])
          strcpy (output_arguments.path_button1, optarg);
          break;
       case 'd':
-         if (strlen (optarg) + 1 > PNET_MAX_FILE_FULLPATH_LEN)
+         if (strlen (optarg) + 1 > PNET_MAX_FILE_FULLPATH_SIZE)
          {
             printf ("Error: The argument to -d is too long.\n");
             exit (EXIT_FAILURE);
@@ -171,7 +171,7 @@ struct cmd_args parse_commandline_arguments (int argc, char * argv[])
          strcpy (output_arguments.path_button2, optarg);
          break;
       case 'p':
-         if (strlen (optarg) + 1 > PNET_MAX_FILE_FULLPATH_LEN)
+         if (strlen (optarg) + 1 > PNET_MAX_FILE_FULLPATH_SIZE)
          {
             printf ("Error: The argument to -p is too long.\n");
             exit (EXIT_FAILURE);
@@ -197,7 +197,7 @@ struct cmd_args parse_commandline_arguments (int argc, char * argv[])
             sizeof (output_arguments.path_storage_directory)) == NULL)
       {
          printf ("Error: Could not read current working directory. Is "
-                 "PNET_MAX_DIRECTORYPATH_LENGTH too small?\n");
+                 "PNET_MAX_DIRECTORYPATH_SIZE too small?\n");
          exit (EXIT_FAILURE);
       }
    }
@@ -258,7 +258,7 @@ void app_get_button (const app_data_t * p_appdata, uint16_t id, bool * p_pressed
 
 int app_set_led (uint16_t id, bool led_state)
 {
-   char id_str[7] = {0};
+   char id_str[7] = {0}; /** Terminated string */
    const char * argv[4];
 
    sprintf (id_str, "%u", id);

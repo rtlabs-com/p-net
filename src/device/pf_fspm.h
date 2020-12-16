@@ -336,9 +336,9 @@ void pf_fspm_get_default_cfg (pnet_t * net, const pnet_cfg_t ** pp_cfg);
 
 /**
  * Get system location from I&M data record 1.
- * 
+ *
  * Note that the SNMP thread may call this at any time.
- * 
+ *
  * @param net              InOut: The p-net stack instance
  * @param p_location       Out:   Current system location.
  */
@@ -348,9 +348,9 @@ void pf_fspm_get_system_location (
 
 /**
  * Set system location in I&M data record 1 and save it to persistent memory.
- * 
+ *
  * Note that the SNMP thread may call this at any time.
- * 
+ *
  * @param net              InOut: The p-net stack instance
  * @param p_location       In:    New system location.
  */

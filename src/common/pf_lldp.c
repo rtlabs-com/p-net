@@ -40,10 +40,10 @@
 #include <string.h>
 #include <ctype.h>
 
-#if PNET_MAX_PORT_DESCRIPTION_LENGTH > 256
+#if PNET_MAX_PORT_DESCRIPTION_SIZE > 256
 #error "Port description can't be larger than 255 bytes plus termination"
 #endif
-#if PNET_MAX_PORT_DESCRIPTION_LENGTH < PNET_MAX_INTERFACE_NAME_LENGTH
+#if PNET_MAX_PORT_DESCRIPTION_SIZE < PNET_INTERFACE_NAME_MAX_SIZE
 #error "Port description should be at least as large as interface name"
 #endif
 
@@ -515,7 +515,7 @@ void pf_lldp_get_chassis_id (pnet_t * net, pf_lldp_chassis_id_t * p_chassis_id)
    CC_ASSERT (station_name != NULL);
 
    p_chassis_id->len = strlen (station_name);
-   if (p_chassis_id->len == 0 || p_chassis_id->len > PNET_LLDP_CHASSIS_ID_MAX_LEN)
+   if (p_chassis_id->len == 0 || p_chassis_id->len >= PNET_LLDP_CHASSIS_ID_MAX_SIZE)
    {
       /* Use the device MAC address */
       pf_cmina_get_device_macaddr (net, &device_mac_address);
@@ -751,7 +751,7 @@ static void pf_lldp_send (pnet_t * net, int loc_port_num)
       pf_lldp_get_port_config (net, loc_port_num);
 
 #if LOG_DEBUG_ENABLED(PF_LLDP_LOG)
-   char ip_string[PNAL_INET_ADDRSTRLEN] = {0};
+   char ip_string[PNAL_INET_ADDRSTR_SIZE] = {0}; /** Terminated string */
    const char * chassis_id_description = "<MAC address>";
 #endif
 

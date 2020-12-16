@@ -153,11 +153,11 @@ static const cfg_submodule_type_t cfg_available_submodule_types[] = {
 
 struct cmd_args
 {
-   char path_button1[PNET_MAX_FILE_FULLPATH_LEN];
-   char path_button2[PNET_MAX_FILE_FULLPATH_LEN];
-   char path_storage_directory[PNET_MAX_DIRECTORYPATH_LENGTH];
-   char station_name[64];
-   char eth_interface[PNET_MAX_INTERFACE_NAME_LENGTH];
+   char path_button1[PNET_MAX_FILE_FULLPATH_SIZE]; /** Terminated string */
+   char path_button2[PNET_MAX_FILE_FULLPATH_SIZE]; /** Terminated string */
+   char path_storage_directory[PNET_MAX_DIRECTORYPATH_SIZE]; /** Terminated */
+   char station_name[PNET_STATION_NAME_MAX_SIZE];    /** Terminated string */
+   char eth_interface[PNET_INTERFACE_NAME_MAX_SIZE]; /** Terminated string */
    int verbosity;
    int show;
    bool factory_reset;

@@ -41,17 +41,17 @@
 /* Increase every time the saved contents have another format */
 #define PF_FILE_VERSION 0x00000001U
 
-/* The configurable constant PNET_MAX_FILENAME_LENGTH should be at least
+/* The configurable constant PNET_MAX_FILENAME_SIZE should be at least
  * as large as the longest filename used, including termination.
  */
-CC_STATIC_ASSERT (PNET_MAX_FILENAME_LENGTH >= sizeof (PF_FILENAME_IP));
-CC_STATIC_ASSERT (PNET_MAX_FILENAME_LENGTH >= sizeof (PF_FILENAME_SYSCONTACT));
-CC_STATIC_ASSERT (PNET_MAX_FILENAME_LENGTH >= sizeof (PF_FILENAME_IM));
-CC_STATIC_ASSERT (PNET_MAX_FILENAME_LENGTH >= sizeof (PF_FILENAME_DIAGNOSTICS));
-CC_STATIC_ASSERT (PNET_MAX_FILENAME_LENGTH >= sizeof (PF_FILENAME_PDPORT_1));
-CC_STATIC_ASSERT (PNET_MAX_FILENAME_LENGTH >= sizeof (PF_FILENAME_PDPORT_2));
-CC_STATIC_ASSERT (PNET_MAX_FILENAME_LENGTH >= sizeof (PF_FILENAME_PDPORT_3));
-CC_STATIC_ASSERT (PNET_MAX_FILENAME_LENGTH >= sizeof (PF_FILENAME_PDPORT_4));
+CC_STATIC_ASSERT (PNET_MAX_FILENAME_SIZE >= sizeof (PF_FILENAME_IP));
+CC_STATIC_ASSERT (PNET_MAX_FILENAME_SIZE >= sizeof (PF_FILENAME_SYSCONTACT));
+CC_STATIC_ASSERT (PNET_MAX_FILENAME_SIZE >= sizeof (PF_FILENAME_IM));
+CC_STATIC_ASSERT (PNET_MAX_FILENAME_SIZE >= sizeof (PF_FILENAME_DIAGNOSTICS));
+CC_STATIC_ASSERT (PNET_MAX_FILENAME_SIZE >= sizeof (PF_FILENAME_PDPORT_1));
+CC_STATIC_ASSERT (PNET_MAX_FILENAME_SIZE >= sizeof (PF_FILENAME_PDPORT_2));
+CC_STATIC_ASSERT (PNET_MAX_FILENAME_SIZE >= sizeof (PF_FILENAME_PDPORT_3));
+CC_STATIC_ASSERT (PNET_MAX_FILENAME_SIZE >= sizeof (PF_FILENAME_PDPORT_4));
 
 /**
  * @internal
@@ -149,7 +149,7 @@ int pf_file_load (
    uint32_t version = 0;
    uint32_t magic = 0;
    uint16_t pos = 0;
-   char path[PNET_MAX_FILE_FULLPATH_LEN];
+   char path[PNET_MAX_FILE_FULLPATH_SIZE];
 
    bufferinfo.p_buf = versioning_buffer;
    bufferinfo.len = sizeof (versioning_buffer);
@@ -161,7 +161,7 @@ int pf_file_load (
          directory,
          filename,
          path,
-         PNET_MAX_FILE_FULLPATH_LEN) != 0)
+         PNET_MAX_FILE_FULLPATH_SIZE) != 0)
    {
       return -1;
    }
@@ -214,8 +214,8 @@ int pf_file_save (
    const void * p_object,
    size_t size)
 {
-   char path[PNET_MAX_FILE_FULLPATH_LEN];
-   uint8_t versioning_buffer[8] = {0}; /* Two uint32_t */
+   char path[PNET_MAX_FILE_FULLPATH_SIZE]; /**< Terminated string */
+   uint8_t versioning_buffer[8] = {0};     /* Two uint32_t */
    uint16_t pos = 0;
 
    if (
@@ -223,7 +223,7 @@ int pf_file_save (
          directory,
          filename,
          path,
-         PNET_MAX_FILE_FULLPATH_LEN) != 0)
+         PNET_MAX_FILE_FULLPATH_SIZE) != 0)
    {
       return -1;
    }
@@ -288,14 +288,14 @@ int pf_file_save_if_modified (
 
 void pf_file_clear (const char * directory, const char * filename)
 {
-   char path[PNET_MAX_FILE_FULLPATH_LEN];
+   char path[PNET_MAX_FILE_FULLPATH_SIZE];
 
    if (
       pf_file_join_directory_filename (
          directory,
          filename,
          path,
-         PNET_MAX_FILE_FULLPATH_LEN) != 0)
+         PNET_MAX_FILE_FULLPATH_SIZE) != 0)
    {
       return;
    }

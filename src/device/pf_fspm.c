@@ -125,11 +125,11 @@ void pf_fspm_option_show (const pnet_t * net)
       "PNET_MAX_DIAG_ITEMS                            : %d\n",
       PNET_MAX_DIAG_ITEMS);
    printf (
-      "PNET_MAX_DIRECTORYPATH_LENGTH                  : %d\n",
-      PNET_MAX_DIRECTORYPATH_LENGTH);
+      "PNET_MAX_DIRECTORYPATH_SIZE                    : %d\n",
+      PNET_MAX_DIRECTORYPATH_SIZE);
    printf (
-      "PNET_MAX_FILENAME_LENGTH                       : %d\n",
-      PNET_MAX_FILENAME_LENGTH);
+      "PNET_MAX_FILENAME_SIZE                         : %d\n",
+      PNET_MAX_FILENAME_SIZE);
    printf (
       "PNET_MAX_SESSION_BUFFER_SIZE                   : %d\n",
       PNET_MAX_SESSION_BUFFER_SIZE);
@@ -344,7 +344,7 @@ static void pf_fspm_save_im (pnet_t * net)
  * Set system location in I&M data record 1.
  *
  * Also see pf_fspm_save_system_location().
- * 
+ *
  * @param net              InOut: The p-net stack instance
  * @param p_location       In:    New system location.
  */
