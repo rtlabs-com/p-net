@@ -1171,23 +1171,53 @@ typedef struct pnet_ethaddr
    (PNET_STATION_NAME_MAX_SIZE + PNET_PORT_ID_MAX_SIZE)
 
 /**
- * LLDP configuration for a single port.
+ * Network interface
  */
-typedef struct pnet_lldp_port_cfg
+typedef struct pnet_netif
 {
-   char port_id[PNET_LLDP_PORT_ID_MAX_SIZE]; /**< Terminated string */
-   pnet_ethaddr_t port_addr;
-   uint16_t rtclass_2_status;
-   uint16_t rtclass_3_status;
-} pnet_lldp_port_cfg_t;
+   char if_name[PNET_INTERFACE_NAME_MAX_SIZE]; /**< Terminated string */
+   pnet_ethaddr_t eth_addr;                    /**< Interface MAC address */
+} pnet_netif_t;
 
 /**
- * LLDP configuration used by the Profinet stack.
+ * Physical Port Configuration
  */
-typedef struct pnet_lldp_cfg
+typedef struct pnet_port_cfg
 {
-   pnet_lldp_port_cfg_t ports[PNET_MAX_PORT];
-} pnet_lldp_cfg_t;
+   pnet_netif_t phy_port;
+   char port_id[PNET_LLDP_PORT_ID_MAX_SIZE]; /**< Terminated string */
+   uint16_t rtclass_2_status;
+   uint16_t rtclass_3_status;
+} pnet_port_cfg_t;
+
+/**
+ * IP Configuration
+ */
+typedef struct pnet_ip_cfg
+{
+   bool dhcp_enable; /**< Not supported by stack. */
+   pnet_cfg_ip_addr_t ip_addr;
+   pnet_cfg_ip_addr_t ip_mask;
+   pnet_cfg_ip_addr_t ip_gateway;
+} pnet_ip_cfg_t;
+
+/**
+ * Interface Configuration
+ * Configuration of network interfaces used by the stack.
+ * The main_port defines the network interface used by a controller/PLC
+ * to access the device (called Management Port in Profinet).
+ * The ports array defines the physical ports connected to the
+ * main_port.
+ * In the case one network interface is used, main_port and port[0].phy_port
+ * will refer to the same network interface.
+ */
+typedef struct pnet_if_cfg
+{
+   pnet_netif_t main_port; /**< Main (DAP) network interface. */
+   pnet_ip_cfg_t ip_cfg; /**< IP Settings for main network interface */
+
+   pnet_port_cfg_t ports[PNET_MAX_PORT]; /**< Physical ports (DAP ports) */
+} pnet_if_cfg_t;
 
 /**
  * This is all the configuration needed to use the Profinet stack.
@@ -1242,8 +1272,6 @@ typedef struct pnet_cfg
                                     messages to the PLC. Should match GSDML
                                     file. Typically 32, which corresponds to 1
                                     ms. Max 0x1000 (128 ms) */
-   /** LLDP */
-   pnet_lldp_cfg_t lldp_cfg;
 
    /** Capabilities */
    bool send_hello; /**< Send DCP HELLO message on startup if true. */
@@ -1251,12 +1279,7 @@ typedef struct pnet_cfg
    /** Send diagnosis in the qualified format (otherwise extended format) */
    bool use_qualified_diagnosis;
 
-   /** IP configuration */
-   bool dhcp_enable; /**< Not supported by stack. */
-   pnet_cfg_ip_addr_t ip_addr;
-   pnet_cfg_ip_addr_t ip_mask;
-   pnet_cfg_ip_addr_t ip_gateway;
-   pnet_ethaddr_t eth_addr; /* Interface MAC address, not port MAC address */
+   pnet_if_cfg_t if_cfg;
 
    /** Storage between runs */
    char file_directory[PNET_MAX_DIRECTORYPATH_SIZE]; /**< Terminated string
@@ -1279,7 +1302,6 @@ typedef struct pnet_cfg
  *
  * This function must be called to initialize the Profinet stack.
  *
- * @param netif            In:    Name of the network interface.
  * @param tick_us          In:    Periodic interval in us. Specify the interval
  *                                between calls to pnet_handle_periodic().
  * @param p_cfg            In:    Profinet configuration. These values are used
@@ -1287,7 +1309,6 @@ typedef struct pnet_cfg
  * @return a handle to the stack instance, or NULL if an error occurred.
  */
 PNET_EXPORT pnet_t * pnet_init (
-   const char * netif,
    uint32_t tick_us,
    const pnet_cfg_t * p_cfg);
 

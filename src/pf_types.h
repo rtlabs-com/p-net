@@ -2697,11 +2697,8 @@ typedef struct pf_lldp_port
 
 /**
  * Port runtime data
- * Note that pnet_lldp_cfg_t  (MAC address etc) is located in the config
- *
- * TODO Add:
- * - Interface statistics
- * - Interface name
+ * Note that physical port configuration
+ * is part of the configuration (pnet_port_cfg_t)
  */
 typedef struct pf_port
 {
@@ -2712,7 +2709,6 @@ typedef struct pf_port
 
 struct pnet
 {
-   char interface_name[PNET_INTERFACE_NAME_MAX_SIZE]; /** Terminated string */
    uint32_t pnal_buf_alloc_cnt;
    bool global_alarm_enable;
    os_mutex_t * cpm_buf_lock;
@@ -2786,7 +2782,6 @@ struct pnet
  * Initialise a pnet_t structure into already allocated memory.
  *
  * @param net              InOut: The p-net stack instance to be initialised.
- * @param netif            In:    Name of the network interface.
  * @param tick_us          In:    Periodic interval in us. Specify the interval
  *                                between calls to pnet_handle_periodic().
  * @param p_cfg            In:    Profinet configuration. These values are used
@@ -2796,7 +2791,6 @@ struct pnet
  */
 int pnet_init_only (
    pnet_t * net,
-   const char * netif,
    uint32_t tick_us,
    const pnet_cfg_t * p_cfg);
 

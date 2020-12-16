@@ -209,6 +209,24 @@ int pf_fspm_validate_configuration (const pnet_cfg_t * p_cfg)
       return -1;
    }
 
+   if (p_cfg->tick_us == 0)
+   {
+      LOG_ERROR (
+         PNET_LOG,
+         "FSPM(%d): Configured tick interval must not be 0. By default, sample application uses 1000 micro seconds tick interval\n",
+         __LINE__);
+      return -1;
+   }
+
+   if (strlen (p_cfg->if_cfg.main_port.if_name) == 0)
+   {
+      LOG_ERROR (
+         PNET_LOG,
+         "FSPM(%d): Length of network interface name must not be 0.\n",
+         __LINE__);
+      return -1;
+   }
+
    if (p_cfg->min_device_interval == 0)
    {
       LOG_ERROR (

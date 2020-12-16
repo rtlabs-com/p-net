@@ -254,7 +254,7 @@ static void pf_lldp_add_chassis_id_tlv (
  * @param p_pos            InOut: The position in the buffer.
  */
 static void pf_lldp_add_port_id_tlv (
-   const pnet_lldp_port_cfg_t * p_port_cfg,
+   const pnet_port_cfg_t * p_port_cfg,
    uint8_t * p_buf,
    uint16_t * p_pos)
 {
@@ -294,7 +294,7 @@ static void pf_lldp_add_ttl_tlv (uint8_t * p_buf, uint16_t * p_pos)
  * @param p_pos            InOut: The position in the buffer.
  */
 static void pf_lldp_add_port_status (
-   const pnet_lldp_port_cfg_t * p_port_cfg,
+   const pnet_port_cfg_t * p_port_cfg,
    uint8_t * p_buf,
    uint16_t * p_pos)
 {
@@ -494,12 +494,10 @@ void pf_lldp_reset_peer_timeout (
    }
 }
 
-const pnet_lldp_port_cfg_t * pf_lldp_get_port_config (
-   pnet_t * net,
-   int loc_port_num)
+const pnet_port_cfg_t * pf_lldp_get_port_config (pnet_t * net, int loc_port_num)
 {
    CC_ASSERT (loc_port_num > 0 && loc_port_num <= PNET_MAX_PORT);
-   return &net->fspm_cfg.lldp_cfg.ports[loc_port_num - 1];
+   return &net->fspm_cfg.if_cfg.ports[loc_port_num - 1];
 }
 
 int pf_lldp_get_peer_timestamp (
@@ -578,7 +576,7 @@ void pf_lldp_get_port_id (
    int loc_port_num,
    pf_lldp_port_id_t * p_port_id)
 {
-   const pnet_lldp_port_cfg_t * p_port_cfg =
+   const pnet_port_cfg_t * p_port_cfg =
       pf_lldp_get_port_config (net, loc_port_num);
 
    snprintf (
@@ -610,12 +608,14 @@ void pf_lldp_get_port_description (
    int loc_port_num,
    pf_lldp_port_description_t * p_port_descr)
 {
-   /* TODO: Implement support for multiple ports */
+   const pnet_port_cfg_t * p_port_cfg =
+      pf_lldp_get_port_config (net, loc_port_num);
+
    snprintf (
       p_port_descr->string,
       sizeof (p_port_descr->string),
       "%s",
-      net->interface_name);
+      p_port_cfg->phy_port.if_name);
    p_port_descr->len = strlen (p_port_descr->string);
    p_port_descr->is_valid = true;
 }
@@ -770,7 +770,7 @@ static void pf_lldp_send (pnet_t * net, int loc_port_num)
    pnet_ethaddr_t device_mac_address;
    pf_lldp_link_status_t link_status;
    pf_lldp_chassis_id_t chassis_id;
-   const pnet_lldp_port_cfg_t * p_port_cfg =
+   const pnet_port_cfg_t * p_port_cfg =
       pf_lldp_get_port_config (net, loc_port_num);
 
 #if LOG_DEBUG_ENABLED(PF_LLDP_LOG)
@@ -875,7 +875,7 @@ static void pf_lldp_send (pnet_t * net, int loc_port_num)
          /* Add source port MAC address.  */
          memcpy (
             &p_buf[pos],
-            p_port_cfg->port_addr.addr,
+            p_port_cfg->phy_port.eth_addr.addr,
             sizeof (pnet_ethaddr_t));
          pos += sizeof (pnet_ethaddr_t);
 
