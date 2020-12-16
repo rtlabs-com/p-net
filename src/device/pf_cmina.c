@@ -192,7 +192,7 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
 
       memcpy (
          net->cmina_nonvolatile_dcp_ase.mac_address.addr,
-         p_cfg->eth_addr.addr,
+         p_cfg->if_cfg.main_port.eth_addr.addr,
          sizeof (pnet_ethaddr_t));
 
       strcpy (net->cmina_nonvolatile_dcp_ase.port_name, ""); /* Terminated */
@@ -200,7 +200,8 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
       net->cmina_nonvolatile_dcp_ase.device_id = p_cfg->device_id;
       net->cmina_nonvolatile_dcp_ase.oem_device_id = p_cfg->oem_device_id;
 
-      net->cmina_nonvolatile_dcp_ase.dhcp_enable = p_cfg->dhcp_enable;
+      net->cmina_nonvolatile_dcp_ase.dhcp_enable =
+         p_cfg->if_cfg.ip_cfg.dhcp_enable;
       if (reset_mode == 0) /* Power-on reset */
       {
          /* Read from file (nvm) */
@@ -236,22 +237,22 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
                __LINE__);
             PNAL_IP4_ADDR_TO_U32 (
                ip,
-               p_cfg->ip_addr.a,
-               p_cfg->ip_addr.b,
-               p_cfg->ip_addr.c,
-               p_cfg->ip_addr.d);
+               p_cfg->if_cfg.ip_cfg.ip_addr.a,
+               p_cfg->if_cfg.ip_cfg.ip_addr.b,
+               p_cfg->if_cfg.ip_cfg.ip_addr.c,
+               p_cfg->if_cfg.ip_cfg.ip_addr.d);
             PNAL_IP4_ADDR_TO_U32 (
                netmask,
-               p_cfg->ip_mask.a,
-               p_cfg->ip_mask.b,
-               p_cfg->ip_mask.c,
-               p_cfg->ip_mask.d);
+               p_cfg->if_cfg.ip_cfg.ip_gateway.a,
+               p_cfg->if_cfg.ip_cfg.ip_gateway.b,
+               p_cfg->if_cfg.ip_cfg.ip_gateway.c,
+               p_cfg->if_cfg.ip_cfg.ip_gateway.d);
             PNAL_IP4_ADDR_TO_U32 (
                gateway,
-               p_cfg->ip_gateway.a,
-               p_cfg->ip_gateway.b,
-               p_cfg->ip_gateway.c,
-               p_cfg->ip_gateway.d);
+               p_cfg->if_cfg.ip_cfg.ip_mask.a,
+               p_cfg->if_cfg.ip_cfg.ip_mask.b,
+               p_cfg->if_cfg.ip_cfg.ip_mask.c,
+               p_cfg->if_cfg.ip_cfg.ip_mask.d);
             memcpy (
                net->cmina_nonvolatile_dcp_ase.station_name,
                p_cfg->station_name,
@@ -409,7 +410,7 @@ void pf_cmina_dcp_set_commit (pnet_t * net)
 
       net->cmina_commit_ip_suite = false;
       res = pnal_set_ip_suite (
-         net->interface_name,
+         net->fspm_cfg.if_cfg.main_port.if_name,
          &net->cmina_current_dcp_ase.full_ip_suite.ip_suite.ip_addr,
          &net->cmina_current_dcp_ase.full_ip_suite.ip_suite.ip_mask,
          &net->cmina_current_dcp_ase.full_ip_suite.ip_suite.ip_gateway,
@@ -1322,7 +1323,7 @@ void pf_cmina_interface_statistics_show (const pnet_t * net)
       "Interface %s    In: %" PRIu32 " bytes %" PRIu32 " errors %" PRIu32
       " discards  Out: %" PRIu32 " bytes %" PRIu32 " errors %" PRIu32 " discard"
       "s\n",
-      net->interface_name,
+      net->fspm_cfg.if_cfg.main_port.if_name,
       net->interface_statistics.if_in_octets,
       net->interface_statistics.if_in_errors,
       net->interface_statistics.if_in_discards,
@@ -1361,22 +1362,22 @@ void pf_cmina_show (pnet_t * net)
 
    printf (
       "Default IP  Netmask  Gateway   : %u.%u.%u.%u  ",
-      (unsigned)p_cfg->ip_addr.a,
-      (unsigned)p_cfg->ip_addr.b,
-      (unsigned)p_cfg->ip_addr.c,
-      (unsigned)p_cfg->ip_addr.d);
+      (unsigned)p_cfg->if_cfg.ip_cfg.ip_addr.a,
+      (unsigned)p_cfg->if_cfg.ip_cfg.ip_addr.b,
+      (unsigned)p_cfg->if_cfg.ip_cfg.ip_addr.c,
+      (unsigned)p_cfg->if_cfg.ip_cfg.ip_addr.d);
    printf (
       "%u.%u.%u.%u  ",
-      (unsigned)p_cfg->ip_mask.a,
-      (unsigned)p_cfg->ip_mask.b,
-      (unsigned)p_cfg->ip_mask.c,
-      (unsigned)p_cfg->ip_mask.d);
+      (unsigned)p_cfg->if_cfg.ip_cfg.ip_mask.a,
+      (unsigned)p_cfg->if_cfg.ip_cfg.ip_mask.b,
+      (unsigned)p_cfg->if_cfg.ip_cfg.ip_mask.c,
+      (unsigned)p_cfg->if_cfg.ip_cfg.ip_mask.d);
    printf (
       "%u.%u.%u.%u\n",
-      (unsigned)p_cfg->ip_gateway.a,
-      (unsigned)p_cfg->ip_gateway.b,
-      (unsigned)p_cfg->ip_gateway.c,
-      (unsigned)p_cfg->ip_gateway.d);
+      (unsigned)p_cfg->if_cfg.ip_cfg.ip_gateway.a,
+      (unsigned)p_cfg->if_cfg.ip_cfg.ip_gateway.b,
+      (unsigned)p_cfg->if_cfg.ip_cfg.ip_gateway.c,
+      (unsigned)p_cfg->if_cfg.ip_cfg.ip_gateway.d);
 
    printf ("Perm    IP  Netmask  Gateway   : ");
    pf_ip_address_show (
@@ -1401,12 +1402,12 @@ void pf_cmina_show (pnet_t * net)
 
    printf (
       "MAC                            : %02x:%02x:%02x:%02x:%02x:%02x\n",
-      p_cfg->eth_addr.addr[0],
-      p_cfg->eth_addr.addr[1],
-      p_cfg->eth_addr.addr[2],
-      p_cfg->eth_addr.addr[3],
-      p_cfg->eth_addr.addr[4],
-      p_cfg->eth_addr.addr[5]);
+      p_cfg->if_cfg.main_port.eth_addr.addr[0],
+      p_cfg->if_cfg.main_port.eth_addr.addr[1],
+      p_cfg->if_cfg.main_port.eth_addr.addr[2],
+      p_cfg->if_cfg.main_port.eth_addr.addr[3],
+      p_cfg->if_cfg.main_port.eth_addr.addr[4],
+      p_cfg->if_cfg.main_port.eth_addr.addr[5]);
 }
 
 /************************* Validate incoming data ***************************/

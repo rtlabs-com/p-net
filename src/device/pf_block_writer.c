@@ -3575,7 +3575,7 @@ void pf_put_pdport_data_real (
    uint16_t block_len = 0;
    uint8_t numPeers = 0;
    pf_lldp_chassis_id_t chassis_id;
-   const pnet_lldp_port_cfg_t * p_port_config =
+   const pnet_port_cfg_t * p_port_config =
       pf_lldp_get_port_config (net, loc_port_num);
    pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
    const pf_lldp_peer_info_t * p_peer_info = &p_port_data->lldp.peer_info;
@@ -3853,10 +3853,10 @@ void pf_put_pdinterface_data_real (
 
    pf_put_padding (2, res_len, p_bytes, p_pos);
 
-   /* Owner MAC Address  */
+   /* DAP interface MAC address */
    pf_put_mem (
-      &net->fspm_cfg.eth_addr,
-      sizeof (net->fspm_cfg.eth_addr),
+      &net->fspm_cfg.if_cfg.main_port.eth_addr.addr,
+      sizeof (net->fspm_cfg.if_cfg.main_port.eth_addr),
       res_len,
       p_bytes,
       p_pos);

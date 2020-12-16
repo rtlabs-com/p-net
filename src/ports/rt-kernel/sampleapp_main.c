@@ -225,24 +225,35 @@ int main (void)
 
    /* Prepare stack config with IP address, gateway, station name etc */
    app_adjust_stack_configuration (&pnet_default_cfg);
-   app_copy_ip_to_struct (&pnet_default_cfg.ip_addr, ip);
-   app_copy_ip_to_struct (&pnet_default_cfg.ip_gateway, gateway);
-   app_copy_ip_to_struct (&pnet_default_cfg.ip_mask, netmask);
+   app_copy_ip_to_struct (&pnet_default_cfg.if_cfg.ip_cfg.ip_addr, ip);
+   app_copy_ip_to_struct (&pnet_default_cfg.if_cfg.ip_cfg.ip_gateway, gateway);
+   app_copy_ip_to_struct (&pnet_default_cfg.if_cfg.ip_cfg.ip_mask, netmask);
+
    strcpy (pnet_default_cfg.file_directory, APP_DEFAULT_FILE_DIRECTORY);
    strcpy (pnet_default_cfg.station_name, gp_appdata->arguments.station_name);
+
+   strncpy (
+      pnet_default_cfg.if_cfg.main_port.if_name,
+      appdata.arguments.eth_interface,
+      PNET_INTERFACE_NAME_MAX_SIZE);
    memcpy (
-      pnet_default_cfg.eth_addr.addr,
+      pnet_default_cfg.if_cfg.main_port.eth_addr.addr,
       macbuffer.addr,
       sizeof (pnet_ethaddr_t));
+
+   strncpy (
+      pnet_default_cfg.if_cfg.ports[0].phy_port.if_name,
+      appdata.arguments.eth_interface,
+      PNET_INTERFACE_NAME_MAX_SIZE);
    memcpy (
-      pnet_default_cfg.lldp_cfg.ports[0].port_addr.addr,
+      pnet_default_cfg.if_cfg.ports[0].phy_port.eth_addr.addr,
       macbuffer.addr,
       sizeof (pnet_ethaddr_t));
+
    pnet_default_cfg.cb_arg = (void *)gp_appdata;
 
    /* Initialize Profinet stack */
    g_net = pnet_init (
-      gp_appdata->arguments.eth_interface,
       TICK_INTERVAL_US,
       &pnet_default_cfg);
    if (g_net == NULL)

@@ -1356,13 +1356,14 @@ int app_adjust_stack_configuration (pnet_cfg_t * stack_config)
    stack_config->min_device_interval = 32; /* Corresponds to 1 ms */
 
    /* LLDP settings */
-   strcpy (stack_config->lldp_cfg.ports[0].port_id, "port-001");
-   stack_config->lldp_cfg.ports[0].rtclass_2_status = 0;
-   stack_config->lldp_cfg.ports[0].rtclass_3_status = 0;
+   strcpy (stack_config->if_cfg.ports[0].port_id, "port-001");
+   stack_config->if_cfg.ports[0].rtclass_2_status = 0;
+   stack_config->if_cfg.ports[0].rtclass_3_status = 0;
+
 
    /* Network configuration */
    stack_config->send_hello = true;
-   stack_config->dhcp_enable = false;
+   stack_config->if_cfg.ip_cfg.dhcp_enable = false;
 
    /* Diagnosis mechanism */
    /* Use "Extended channel diagnosis" instead of "Qualified channel diagnosis"

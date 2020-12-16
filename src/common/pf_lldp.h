@@ -62,9 +62,7 @@ int pf_lldp_get_peer_timestamp (
  * @param loc_port_num     In:    Local port number.
  *                                Valid range: 1 .. PNET_MAX_PORT
  */
-const pnet_lldp_port_cfg_t * pf_lldp_get_port_config (
-   pnet_t * net,
-   int loc_port_num);
+const pnet_port_cfg_t * pf_lldp_get_port_config (pnet_t * net, int loc_port_num);
 
 /**
  * Get Chassis ID of local device.

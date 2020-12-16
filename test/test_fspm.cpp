@@ -24,7 +24,6 @@ class FspmTest : public PnetIntegrationTest
 {
 };
 
-
 class FspmUnitTest : public PnetUnitTest
 {
 };
@@ -35,8 +34,11 @@ TEST_F (FspmUnitTest, FspmCheckValidateConfiguration)
 
    /* Known good values */
    memset (&cfg, 0, sizeof (pnet_cfg_t));
+   cfg.tick_us = 1000;
    cfg.min_device_interval = 1;
    cfg.im_0_data.im_supported = 0;
+   strcpy (cfg.if_cfg.main_port.if_name, "eth0");
+
    EXPECT_EQ (pf_fspm_validate_configuration (&cfg), 0);
 
    /* Check pointer validity */

@@ -26,22 +26,10 @@
 
 int pnet_init_only (
    pnet_t * net,
-   const char * netif,
    uint32_t tick_us,
    const pnet_cfg_t * p_cfg)
 {
    memset (net, 0, sizeof (*net));
-
-   if (strlen (netif) >= PNET_INTERFACE_NAME_MAX_SIZE)
-   {
-      LOG_ERROR (
-         PNET_LOG,
-         "Too long interface name. Given: %s  Max size incl termination: %d\n",
-         netif,
-         PNET_INTERFACE_NAME_MAX_SIZE);
-      return -1;
-   }
-   strcpy (net->interface_name, netif);
 
    net->cmdev_initialized = false; /* TODO How to handle that pf_cmdev_exit() is
                                       used before pf_cmdev_init()? */
@@ -60,7 +48,8 @@ int pnet_init_only (
 
    /* Initialize everything (and the DCP protocol) */
    /* First initialize the network interface */
-   net->eth_handle = pnal_eth_init (netif, pf_eth_recv, (void *)net);
+   net->eth_handle =
+      pnal_eth_init (p_cfg->if_cfg.main_port.if_name, pf_eth_recv, (void *)net);
    if (net->eth_handle == NULL)
    {
       return -1;
@@ -94,7 +83,6 @@ int pnet_init_only (
 }
 
 pnet_t * pnet_init (
-   const char * netif,
    uint32_t tick_us,
    const pnet_cfg_t * p_cfg)
 {
@@ -110,7 +98,7 @@ pnet_t * pnet_init (
       return NULL;
    }
 
-   if (pnet_init_only (net, netif, tick_us, p_cfg) != 0)
+   if (pnet_init_only (net, tick_us, p_cfg) != 0)
    {
       free (net);
       return NULL;
