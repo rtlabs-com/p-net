@@ -32,7 +32,7 @@
  */
 static const char * pf_pdport_get_filename (int loc_port_num)
 {
-   const char *filename = NULL;
+   const char * filename = NULL;
    switch (loc_port_num)
    {
    case PNET_PORT_1:
@@ -78,21 +78,34 @@ static int pf_pdport_load (pnet_t * net, int loc_port_num)
          &pdport_config,
          sizeof (pdport_config)) == 0)
    {
-      LOG_DEBUG (
-         PNET_LOG,
-         "PDPORT(%d): Did read PDPort settings from nvm.\n",
-         __LINE__);
-
       p_port_data = pf_port_get_state (net, loc_port_num);
 
       memcpy (&p_port_data->pdport, &pdport_config, sizeof (pdport_config));
       p_port_data->pdport.lldp_peer_info_updated = false;
       p_port_data->pdport.lldp_peer_timeout = false;
 
-      if (p_port_data->pdport.check.active)
+      if (p_port_data->pdport.check.active == true)
       {
-         p_port_data->pdport.check.active = true;
+         LOG_DEBUG (
+            PNET_LOG,
+            "PDPORT(%d): Did read PDPort settings from nvm. Monitoring peer "
+            "on port %u. Station name: \"%.*s\" Port: \"%.*s\"\n",
+            __LINE__,
+            loc_port_num,
+            p_port_data->pdport.check.peer.length_peer_station_name,
+            p_port_data->pdport.check.peer.peer_station_name,
+            p_port_data->pdport.check.peer.length_peer_port_name,
+            p_port_data->pdport.check.peer.peer_port_name);
          pf_lldp_reset_peer_timeout (net, loc_port_num, PNET_LLDP_TTL);
+      }
+      else
+      {
+         LOG_DEBUG (
+            PNET_LOG,
+            "PDPORT(%d): Did read PDPort settings from nvm. No monitoring "
+            "of peer on port %u.\n",
+            __LINE__,
+            loc_port_num);
       }
 
       if (p_port_data->pdport.adjust.active == true)
@@ -117,6 +130,12 @@ static int pf_pdport_load (pnet_t * net, int loc_port_num)
    }
    else
    {
+      LOG_DEBUG (
+         PNET_LOG,
+         "PDPORT(%d): Could not read from nvm, so no monitoring of "
+         "peer on port %u.\n",
+         __LINE__,
+         loc_port_num);
       pf_lldp_reset_peer_timeout (net, loc_port_num, PNET_LLDP_TTL);
       pf_lldp_send_enable (net, loc_port_num);
    }
@@ -322,9 +341,6 @@ int pf_pdport_reset_all (pnet_t * net)
    int port;
    pf_port_iterator_t port_iterator;
    pf_port_t * p_port_data = NULL;
-   const char * p_file_directory = NULL;
-
-   (void)pf_cmina_get_file_directory (net, &p_file_directory);
 
    pf_port_init_iterator_over_ports (net, &port_iterator);
    port = pf_port_get_next (&port_iterator);
@@ -333,7 +349,7 @@ int pf_pdport_reset_all (pnet_t * net)
       p_port_data = pf_port_get_state (net, port);
       memset (&p_port_data->pdport, 0, sizeof (p_port_data->pdport));
       pf_pdport_remove_all_diag (net, port);
-      pf_file_clear (p_file_directory, pf_pdport_get_filename (port));
+      pf_pdport_save (net, port);
 
       port = pf_port_get_next (&port_iterator);
    }
