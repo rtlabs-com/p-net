@@ -37,7 +37,7 @@ void pf_scheduler_init (pnet_t * net, uint32_t tick_interval);
  * @param delay            In:    The delay until the function shall be called,
  *                                in microseconds. Max
  *                                PF_SCHEDULER_MAX_DELAY_US.
- * @param p_name           In:    Caller/owner (for debugging).
+ * @param p_name           In:    Caller/owner (for removal and debugging).
  * @param cb               In:    The call-back.
  * @param arg              In:    Argument to the call-back.
  * @param p_timeout        Out:   The timeout instance (used to remove if
