@@ -66,6 +66,9 @@
 #define PF_DCP_ID_REQ_FRAME_ID  0xfefe
 #define PF_DCP_ID_RES_FRAME_ID  0xfeff
 
+#define PF_DCP_SIGNAL_LED_HALF_INTERVAL     500000 /* 0.5 seconds */
+#define PF_DCP_SIGNAL_LED_NUMBER_OF_FLASHES 3
+
 /* Client hold time, 3 seconds.
    See Profinet 2.4 Services, section 6.3.11.2.2 */
 #define PF_DCP_SAM_TIMEOUT 3000000 /* microseconds */
@@ -562,7 +565,7 @@ static int pf_dcp_get_req (
  *                                stored tasks.
  *                                Not used here.
  */
-static void pf_dcp_control_signal (
+static void pf_dcp_control_signal_led (
    pnet_t * net,
    void * arg,
    uint32_t current_time)
@@ -596,15 +599,57 @@ static void pf_dcp_control_signal (
    {
       state--;
 
-      /* Schedule another round in 500ms */
+      /* Schedule another round */
       pf_scheduler_add (
          net,
-         500 * 1000,
+         PF_DCP_SIGNAL_LED_HALF_INTERVAL,
          dcp_led_sync_name,
-         pf_dcp_control_signal,
+         pf_dcp_control_signal_led,
          (void *)(uintptr_t)state,
          &net->dcp_led_timeout);
    }
+   else
+   {
+      net->dcp_led_timeout = 0;
+   }
+}
+
+/**
+ * @internal
+ * Trigger blinking Profinet signal LED.
+ *
+ * If the LED already is blinking, do not restart the blinking.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @return 0 on success
+ *         -1 on error
+ */
+int pf_dcp_trigger_signal_led (pnet_t * net)
+{
+   if (net->dcp_led_timeout == 0)
+   {
+      LOG_INFO (
+         PF_DCP_LOG,
+         "DCP(%d): Received request to flash LED\n",
+         __LINE__);
+      pf_scheduler_add (
+         net,
+         PF_DCP_SIGNAL_LED_HALF_INTERVAL,
+         dcp_led_sync_name,
+         pf_dcp_control_signal_led,
+         (void *)(2 * PF_DCP_SIGNAL_LED_NUMBER_OF_FLASHES - 1),
+         &net->dcp_led_timeout);
+   }
+   else
+   {
+      LOG_INFO (
+         PF_DCP_LOG,
+         "DCP(%d): Received request to flash LED, but it is already "
+         "flashing.\n",
+         __LINE__);
+   }
+
+   return 0;
 }
 
 /**
@@ -775,18 +820,7 @@ static int pf_dcp_set_req (
          break;
       case PF_DCP_SUB_CONTROL_SIGNAL:
          /* Schedule a state-machine that flashes "the LED" for 3s, 1Hz. */
-         LOG_INFO (
-            PF_DCP_LOG,
-            "DCP(%d): Received request to flash LED\n",
-            __LINE__);
-         pf_scheduler_add (
-            net,
-            500 * 1000,
-            dcp_led_sync_name,
-            pf_dcp_control_signal,
-            (void *)(2 * 3 - 1),
-            &net->dcp_led_timeout); /* 3 flashes */
-         ret = 0;
+         ret = pf_dcp_trigger_signal_led (net);
          break;
       case PF_DCP_SUB_CONTROL_RESPONSE:
          /* Can't set this */
