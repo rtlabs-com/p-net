@@ -497,6 +497,12 @@ void PnetIntegrationTestBase::cfg_init()
       pnet_default_cfg.if_cfg.ports[0].phy_port.if_name,
       TEST_INTERFACE_NAME);
    strcpy (pnet_default_cfg.if_cfg.ports[0].port_id, "port-001");
+   pnet_default_cfg.if_cfg.ports[0].phy_port.eth_addr.addr[0] = 0x12;
+   pnet_default_cfg.if_cfg.ports[0].phy_port.eth_addr.addr[1] = 0x34;
+   pnet_default_cfg.if_cfg.ports[0].phy_port.eth_addr.addr[2] = 0x00;
+   pnet_default_cfg.if_cfg.ports[0].phy_port.eth_addr.addr[3] = 0x78;
+   pnet_default_cfg.if_cfg.ports[0].phy_port.eth_addr.addr[4] = 0x90;
+   pnet_default_cfg.if_cfg.ports[0].phy_port.eth_addr.addr[5] = 0xab;
    pnet_default_cfg.if_cfg.ports[0].rtclass_2_status = 0;
    pnet_default_cfg.if_cfg.ports[0].rtclass_3_status = 0;
 

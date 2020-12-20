@@ -28,7 +28,8 @@
 
 #define LOCAL_PORT 1
 
-#define MAX_LLDP_PAYLOAD_SIZE 1500
+#define MAX_ETH_FRAME_SIZE   1514u
+#define MAX_ETH_PAYLOAD_SIZE 1500u
 
 #define LLDP_TYPE_END                0
 #define LLDP_TYPE_CHASSIS_ID         1
@@ -40,6 +41,8 @@
 
 #define TLV_BYTE_0(len, type) (((len) >> 8) | ((type) << 1))
 #define TLV_BYTE_1(len)       (((len) >> 0) & 0xff)
+#define TLV_TYPE(tlv)         ((tlv)[0] >> 1)
+#define TLV_LEN(tlv)          ((size_t) (((tlv)[0] << 8) + (tlv)[1]) & 0x1FF)
 
 static const char * chassis_id_test_sample_1 =
    "\x53\x43\x41\x4c\x41\x4e\x43\x45\x20\x58\x2d\x32\x30\x30\x20"
@@ -318,10 +321,10 @@ static size_t construct_packet_end_marker (uint8_t packet[])
 }
 
 static size_t construct_packet (
-   uint8_t packet[MAX_LLDP_PAYLOAD_SIZE],
+   uint8_t packet[MAX_ETH_PAYLOAD_SIZE],
    const pf_lldp_peer_info_t * data)
 {
-   memset (packet, 0xff, MAX_LLDP_PAYLOAD_SIZE);
+   memset (packet, 0xff, MAX_ETH_PAYLOAD_SIZE);
    size_t size = 0;
 
    size += construct_packet_chassis_id (&packet[size], &data->chassis_id);
@@ -424,7 +427,7 @@ TEST_F (LldpTest, LldpGenerateAliasName)
 
 TEST_F (LldpTest, LldpParsePacket)
 {
-   uint8_t packet[MAX_LLDP_PAYLOAD_SIZE];
+   uint8_t packet[MAX_ETH_PAYLOAD_SIZE];
    int error;
    size_t size;
    pf_lldp_peer_info_t actual;
@@ -521,7 +524,7 @@ TEST_F (LldpTest, LldpParsePacket)
 
 TEST_F (LldpTest, LldpParsePacketWithTooBigChassisId)
 {
-   uint8_t packet[MAX_LLDP_PAYLOAD_SIZE];
+   uint8_t packet[MAX_ETH_PAYLOAD_SIZE];
    int error;
    size_t size;
    pf_lldp_peer_info_t actual;
@@ -540,7 +543,7 @@ TEST_F (LldpTest, LldpParsePacketWithTooBigChassisId)
 
 TEST_F (LldpTest, LldpParsePacketWithTooBigPortId)
 {
-   uint8_t packet[MAX_LLDP_PAYLOAD_SIZE];
+   uint8_t packet[MAX_ETH_PAYLOAD_SIZE];
    int error;
    size_t size;
    pf_lldp_peer_info_t actual;
@@ -559,7 +562,7 @@ TEST_F (LldpTest, LldpParsePacketWithTooBigPortId)
 
 TEST_F (LldpTest, LldpParsePacketWithTooBigPortDescription)
 {
-   uint8_t packet[MAX_LLDP_PAYLOAD_SIZE];
+   uint8_t packet[MAX_ETH_PAYLOAD_SIZE];
    int error;
    size_t size;
    pf_lldp_peer_info_t actual;
@@ -578,7 +581,7 @@ TEST_F (LldpTest, LldpParsePacketWithTooBigPortDescription)
 
 TEST_F (LldpTest, LldpParsePacketWithTooBigManagementAddress)
 {
-   uint8_t packet[MAX_LLDP_PAYLOAD_SIZE];
+   uint8_t packet[MAX_ETH_PAYLOAD_SIZE];
    int error;
    size_t size;
    pf_lldp_peer_info_t actual;
@@ -859,4 +862,137 @@ TEST_F (LldpTest, LldpGetPeerLinkStatus)
    error = pf_lldp_get_peer_link_status (net, LOCAL_PORT, &actual);
    EXPECT_EQ (error, 0);
    EXPECT_EQ (memcmp (&actual, &expected, sizeof (actual)), 0);
+}
+
+TEST_F (LldpTest, LldpConstructFrame)
+{
+   uint8_t frame[MAX_ETH_FRAME_SIZE];
+   const uint8_t * p;
+   const uint8_t * tlv;
+   size_t returned_size;
+   size_t size;
+
+   mock_os_data.interface_index = 3;
+
+   returned_size = pf_lldp_construct_frame (net, LOCAL_PORT, frame);
+
+   EXPECT_GT (returned_size, 14u);
+   EXPECT_LE (returned_size, MAX_ETH_FRAME_SIZE);
+
+   size = 0;
+
+   /* Check destination MAC address (from LLDP standard) */
+   p = &frame[size];
+   EXPECT_EQ (p[0], 0x01);
+   EXPECT_EQ (p[1], 0x80);
+   EXPECT_EQ (p[2], 0xC2);
+   EXPECT_EQ (p[3], 0x00);
+   EXPECT_EQ (p[4], 0x00);
+   EXPECT_EQ (p[5], 0x0E);
+   size += 6;
+
+   /* Check source MAC address (from app configuration) */
+   p = &frame[size];
+   EXPECT_EQ (p[0], 0x12);
+   EXPECT_EQ (p[1], 0x34);
+   EXPECT_EQ (p[2], 0x00);
+   EXPECT_EQ (p[3], 0x78);
+   EXPECT_EQ (p[4], 0x90);
+   EXPECT_EQ (p[5], 0xab);
+   size += 6;
+
+   /* Check EtherType (from LLDP standard) */
+   p = &frame[size];
+   EXPECT_EQ (p[0], 0x88);
+   EXPECT_EQ (p[1], 0xCC);
+   size += 2;
+
+   /* Check Chassis ID TLV */
+   tlv = &frame[size];
+   EXPECT_EQ (TLV_TYPE (tlv), LLDP_TYPE_CHASSIS_ID);
+   EXPECT_GE (TLV_LEN (tlv), 2u);
+   EXPECT_LE (TLV_LEN (tlv), 256u);
+   size += 2 + TLV_LEN (tlv);
+
+   /* Check Port ID TLV */
+   tlv = &frame[size];
+   EXPECT_EQ (TLV_TYPE (tlv), LLDP_TYPE_PORT_ID);
+   EXPECT_GE (TLV_LEN (tlv), 2u);
+   EXPECT_LE (TLV_LEN (tlv), 256u);
+   EXPECT_EQ (tlv[2], 7u); /* Subtype */
+   size += 2 + TLV_LEN (tlv);
+
+   /* Check Time To Live TLV */
+   tlv = &frame[size];
+   EXPECT_EQ (TLV_TYPE (tlv), LLDP_TYPE_TTL);
+   EXPECT_EQ (TLV_LEN (tlv), 2u);
+   EXPECT_EQ (tlv[2], 0u);  /* MSB of TTL */
+   EXPECT_EQ (tlv[3], 20u); /* LSB of TTL */
+   size += 2 + TLV_LEN (tlv);
+
+   /* Note that the order in which TLVs below are placed in the packet
+    * is not specified by LLDP or Profinet (except for the End TTL).
+    */
+
+   /* Check LLDP_PNIO_PORTSTATUS TLV */
+   tlv = &frame[size];
+   EXPECT_EQ (TLV_TYPE (tlv), LLDP_TYPE_ORG_SPEC);
+   EXPECT_EQ (TLV_LEN (tlv), 3 + 1 + 4u);
+   EXPECT_EQ (tlv[2], 0x00); /* Profinet OUI */
+   EXPECT_EQ (tlv[3], 0x0E); /* Profinet OUI */
+   EXPECT_EQ (tlv[4], 0xCF); /* Profinet OUI */
+   EXPECT_EQ (tlv[5], 0x02); /* Subtype */
+   size += 2 + TLV_LEN (tlv);
+
+   /* Check LLDP_PNIO_CHASSIS_MAC TLV */
+   tlv = &frame[size];
+   EXPECT_EQ (TLV_TYPE (tlv), LLDP_TYPE_ORG_SPEC);
+   EXPECT_EQ (TLV_LEN (tlv), 3 + 1 + 6u);
+   EXPECT_EQ (tlv[2], 0x00);  /* Profinet OUI */
+   EXPECT_EQ (tlv[3], 0x0E);  /* Profinet OUI */
+   EXPECT_EQ (tlv[4], 0xCF);  /* Profinet OUI */
+   EXPECT_EQ (tlv[5], 0x05);  /* Subtype */
+   EXPECT_EQ (tlv[6], 0x12);  /* MAC address */
+   EXPECT_EQ (tlv[7], 0x34);  /* MAC address */
+   EXPECT_EQ (tlv[8], 0x00);  /* MAC address */
+   EXPECT_EQ (tlv[9], 0x78);  /* MAC address */
+   EXPECT_EQ (tlv[10], 0x90); /* MAC address */
+   EXPECT_EQ (tlv[11], 0xab); /* MAC address */
+   size += 2 + TLV_LEN (tlv);
+
+   /* Check 802.3 MAC/PHY Configuration/Status TLV */
+   tlv = &frame[size];
+   EXPECT_EQ (TLV_TYPE (tlv), LLDP_TYPE_ORG_SPEC);
+   EXPECT_EQ (TLV_LEN (tlv), 3 + 1 + 5u);
+   EXPECT_EQ (tlv[2], 0x00); /* 802.3 OUI */
+   EXPECT_EQ (tlv[3], 0x12); /* 802.3 OUI */
+   EXPECT_EQ (tlv[4], 0x0F); /* 802.3 OUI */
+   EXPECT_EQ (tlv[5], 0x01); /* Subtype */
+   size += 2 + TLV_LEN (tlv);
+
+   /* Check Management Address TLV */
+   tlv = &frame[size];
+   EXPECT_EQ (TLV_TYPE (tlv), LLDP_TYPE_MANAGEMENT_ADDRESS);
+   EXPECT_EQ (TLV_LEN (tlv), 1 + 5 + 5 + 1u);
+   EXPECT_EQ (tlv[2], 1u + 4u); /* Size of Subtype+Address */
+   EXPECT_EQ (tlv[3], 1u);      /* Subtype IPv4 */
+   EXPECT_EQ (tlv[4], 192u);
+   EXPECT_EQ (tlv[5], 168u);
+   EXPECT_EQ (tlv[6], 1u);
+   EXPECT_EQ (tlv[7], 171u);
+   EXPECT_EQ (tlv[8], 2u);  /* Subtype ifIndex */
+   EXPECT_EQ (tlv[9], 0u);  /* ifIndex MSB */
+   EXPECT_EQ (tlv[10], 0u); /* ifIndex */
+   EXPECT_EQ (tlv[11], 0u); /* ifIndex */
+   EXPECT_EQ (tlv[12], 3u); /* ifIndex LSB */
+   EXPECT_EQ (tlv[13], 0u); /* Size of OID */
+   size += 2 + TLV_LEN (tlv);
+
+   /* Check End Of LLDPPDU TLV */
+   tlv = &frame[size];
+   EXPECT_EQ (TLV_TYPE (tlv), LLDP_TYPE_END);
+   EXPECT_EQ (TLV_LEN (tlv), 0u);
+   size += 2 + TLV_LEN (tlv);
+
+   EXPECT_EQ (size, returned_size);
 }
