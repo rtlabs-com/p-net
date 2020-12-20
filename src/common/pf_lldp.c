@@ -395,32 +395,45 @@ static void pf_lldp_add_ieee_mac_phy (
  * Insert the optional management data TLV into a buffer.
  * It is mandatory for ProfiNet.
  *
- * Contains the IP address.
+ * Contains the IP address as well as information about the
+ * management interface.
  *
- * @param p_ipaddr         In:    IP address
+ * @param p_man_address    In:    Management address
  * @param p_buf            InOut: The buffer.
  * @param p_pos            InOut: The position in the buffer.
  */
 static void pf_lldp_add_management (
-   const pnal_ipaddr_t * p_ipaddr,
+   const pf_lldp_management_address_t * p_man_address,
    uint8_t * p_buf,
    uint16_t * p_pos)
 {
-   /* TODO: Add more port info to the pnet_lldp_port_cfg_t configuration */
    pf_lldp_add_tlv_header (p_buf, p_pos, LLDP_TYPE_MANAGEMENT_ADDRESS, 12);
 
-   pf_put_byte (1 + 4, PF_FRAME_BUFFER_SIZE, p_buf, p_pos); /* Address string
-                                                               length (incl
-                                                               type) */
-   pf_put_byte (1, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);     /* Type IPV4 */
-   pf_put_uint32 (true, *p_ipaddr, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
-   pf_put_byte (1, PF_FRAME_BUFFER_SIZE, p_buf, p_pos); /* Interface Subtype:
-                                                           Unknown */
-   pf_put_uint32 (true, 0, PF_FRAME_BUFFER_SIZE, p_buf, p_pos); /* Interface
-                                                                   number:
-                                                                   Unknown */
-   pf_put_byte (0, PF_FRAME_BUFFER_SIZE, p_buf, p_pos); /* OID string length: 0
-                                                           => Not supported */
+   /* Management address length, type and value */
+   pf_put_byte (1 + p_man_address->len, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
+   pf_put_byte (p_man_address->subtype, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
+   pf_put_mem (
+      p_man_address->value,
+      p_man_address->len,
+      PF_FRAME_BUFFER_SIZE,
+      p_buf,
+      p_pos);
+
+   /* Interface number for management interface */
+   pf_put_byte (
+      p_man_address->interface_number.subtype,
+      PF_FRAME_BUFFER_SIZE,
+      p_buf,
+      p_pos);
+   pf_put_uint32 (
+      true,
+      p_man_address->interface_number.value,
+      PF_FRAME_BUFFER_SIZE,
+      p_buf,
+      p_pos);
+
+   /* Management OID. Not supported */
+   pf_put_byte (0, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
 }
 
 /********************* Initialize and send **********************************/
@@ -766,14 +779,15 @@ static void pf_lldp_send (pnet_t * net, int loc_port_num)
    pnal_buf_t * p_lldp_buffer = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE);
    uint8_t * p_buf = NULL;
    uint16_t pos = 0;
-   pnal_ipaddr_t ipaddr = 0;
    pnet_ethaddr_t device_mac_address;
    pf_lldp_link_status_t link_status;
    pf_lldp_chassis_id_t chassis_id;
+   pf_lldp_management_address_t man_address;
    const pnet_port_cfg_t * p_port_cfg =
       pf_lldp_get_port_config (net, loc_port_num);
 
 #if LOG_DEBUG_ENABLED(PF_LLDP_LOG)
+   pnal_ipaddr_t ipaddr = 0;
    char ip_string[PNAL_INET_ADDRSTR_SIZE] = {0}; /** Terminated string */
    const char * chassis_id_description = "<MAC address>";
 #endif
@@ -837,8 +851,9 @@ static void pf_lldp_send (pnet_t * net, int loc_port_num)
          pf_cmina_get_device_macaddr (net, &device_mac_address);
          pf_lldp_get_chassis_id (net, &chassis_id);
          pf_lldp_get_link_status (net, loc_port_num, &link_status);
-         pf_cmina_get_ipaddr (net, &ipaddr);
+         pf_lldp_get_management_address (net, &man_address);
 #if LOG_DEBUG_ENABLED(PF_LLDP_LOG)
+         pf_cmina_get_ipaddr (net, &ipaddr);
          pf_cmina_ip_to_string (ipaddr, ip_string);
          if (chassis_id.subtype == PF_LLDP_SUBTYPE_LOCALLY_ASSIGNED)
          {
@@ -896,7 +911,7 @@ static void pf_lldp_send (pnet_t * net, int loc_port_num)
          pf_lldp_add_port_status (p_port_cfg, p_buf, &pos);
          pf_lldp_add_chassis_mac (&device_mac_address, p_buf, &pos);
          pf_lldp_add_ieee_mac_phy (&link_status, p_buf, &pos);
-         pf_lldp_add_management (&ipaddr, p_buf, &pos);
+         pf_lldp_add_management (&man_address, p_buf, &pos);
 
          /* Add end of LLDP-PDU marker */
          pf_lldp_add_tlv_header (p_buf, &pos, LLDP_TYPE_END, 0);
