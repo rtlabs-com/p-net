@@ -174,6 +174,37 @@ lldp_tlv_t pf_lldp_get_tlv_from_packet (pf_get_info_t * p_info, uint16_t * p_pos
 }
 
 /**
+ * Insert Ethernet header into a buffer.
+ *
+ * @param p_buf            InOut: The buffer.
+ * @param p_pos            InOut: The buffer position.
+ * @param dst_addr         In:    Destination MAC address.
+ * @param src_addr         In:    Source MAC address.
+ */
+static void pf_lldp_add_ethernet_header (
+   uint8_t * p_buf,
+   uint16_t * p_pos,
+   pnet_ethaddr_t dst_addr,
+   pnet_ethaddr_t src_addr)
+{
+   pf_put_mem (
+      dst_addr.addr,
+      sizeof (dst_addr.addr),
+      PF_FRAME_BUFFER_SIZE,
+      p_buf,
+      p_pos);
+
+   pf_put_mem (
+      src_addr.addr,
+      sizeof (src_addr.addr),
+      PF_FRAME_BUFFER_SIZE,
+      p_buf,
+      p_pos);
+
+   pf_put_uint16 (true, PNAL_ETHTYPE_LLDP, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
+}
+
+/**
  * @internal
  * Insert a Profinet-specific header for a TLV field into a buffer.
  *
@@ -768,17 +799,19 @@ int pf_lldp_get_peer_link_status (
 }
 
 /**
- * Build and send a LLDP message on a specific port.
+ * Construct Ethernet frame containing LLDP PDU as payload
  *
- * @param net              InOut: The p-net stack instance
+ * @param net              In:    The p-net stack instance.
  * @param loc_port_num     In:    Local port number.
- *                                Valid range: 1 .. PNET_MAX_PORT
+ *                                Valid range: 1 .. PNET_MAX_PORT.
+ * @param buf              Out:   Ethernet frame buffer of size
+ *                                PF_FRAME_BUFFER_SIZE bytes.
+ *
+ * @return Size of constructed frame, in bytes.
  */
-static void pf_lldp_send (pnet_t * net, int loc_port_num)
+size_t pf_lldp_construct_frame (pnet_t * net, int loc_port_num, uint8_t buf[])
 {
-   pnal_buf_t * p_lldp_buffer = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE);
-   uint8_t * p_buf = NULL;
-   uint16_t pos = 0;
+   uint16_t pos;
    pnet_ethaddr_t device_mac_address;
    pf_lldp_link_status_t link_status;
    pf_lldp_chassis_id_t chassis_id;
@@ -791,137 +824,83 @@ static void pf_lldp_send (pnet_t * net, int loc_port_num)
    char ip_string[PNAL_INET_ADDRSTR_SIZE] = {0}; /** Terminated string */
    const char * chassis_id_description = "<MAC address>";
 #endif
-
-   /*
-    * LLDP-PDU ::=  LLDPChassis, LLDPPort, LLDPTTL, LLDP-PNIO-PDU, LLDPEnd
-    *
-    * LLDPChassis ::= LLDPChassisStationName ^
-    *                 LLDPChassisMacAddress           (If no station name)
-    * LLDPChassisStationName ::= LLDP_TLVHeader,      (According to IEEE
-    * 802.1AB-2016) LLDP_ChassisIDSubType(7),       (According to IEEE
-    * 802.1AB-2016) LLDP_ChassisID LLDPChassisMacAddress ::= LLDP_TLVHeader,
-    * (According to IEEE 802.1AB-2016) LLDP_ChassisIDSubType(4), (According to
-    * IEEE 802.1AB-2016)
-    *
-    * LLDP-PNIO-PDU ::= {
-    *                [LLDP_PNIO_DELAY],               (If LineDelay measurement
-    * is supported) LLDP_PNIO_PORTSTATUS, [LLDP_PNIO_ALIAS],
-    *                [LLDP_PNIO_MRPPORTSTATUS],       (If MRP is activated for
-    * this port) [LLDP_PNIO_MRPICPORTSTATUS],     (If MRP Interconnection is
-    * activated for this port) LLDP_PNIO_CHASSIS_MAC, LLDP8023MACPHY, (If IEEE
-    * 802.3 is used) LLDPManagement,                  (According to IEEE
-    * 802.1AB-2016, 8.5.9) [LLDP_PNIO_PTCPSTATUS],          (If PTCP is
-    * activated by means of the PDSyncData Record) [LLDP_PNIO_MAUTypeExtension],
-    * (If a MAUType with MAUTypeExtension is used and may exist otherwise)
-    *                [LLDPOption*],                   (Other LLDP options may be
-    * used concurrently) [LLDP8021*], [LLDP8023*]
-    *                }
-    *
-    * LLDP_PNIO_HEADER ::= LLDP_TLVHeader,            (According to IEEE
-    * 802.1AB-2016) LLDP_OUI(00-0E-CF)
-    *
-    * LLDP_PNIO_PORTSTATUS ::= LLDP_PNIO_HEADER, LLDP_PNIO_SubType(0x02),
-    * RTClass2_PortStatus, RTClass3_PortStatus
-    *
-    * LLDP_PNIO_CHASSIS_MAC ::= LLDP_PNIO_HEADER, LLDP_PNIO_SubType(0x05), (
-    *                CMResponderMacAdd ^
-    *                CMInitiatorMacAdd                (Shall be the interface
-    * MAC address of the transmitting node)
-    *                )
-    *
-    * LLDP8023MACPHY ::= LLDP_TLVHeader,              (According to IEEE
-    * 802.1AB-2016) LLDP_OUI(00-12-0F),              (According to IEEE
-    * 802.1AB-2016, Annex F) LLDP_8023_SubType(1),            (According to IEEE
-    * 802.1AB-2016, Annex F) LLDP_8023_AUTONEG,               (According to IEEE
-    * 802.1AB-2016, Annex F) LLDP_8023_PMDCAP,                (According to IEEE
-    * 802.1AB-2016, Annex F) LLDP_8023_OPMAU                  (According to IEEE
-    * 802.1AB-2016, Annex F)
-    *
-    * LLDPManagement ::= LLDP_TLVHeader,              (According to IEEE
-    * 802.1AB-2016) LLDP_ManagementData              (Use PNIO MIB Enterprise
-    * number = 24686 (dec))
-    *
-    * LLDP_ManagementData ::=
-    */
-   if (p_lldp_buffer != NULL)
-   {
-      p_buf = p_lldp_buffer->payload;
-      if (p_buf != NULL)
-      {
-         pf_cmina_get_device_macaddr (net, &device_mac_address);
-         pf_lldp_get_chassis_id (net, &chassis_id);
-         pf_lldp_get_link_status (net, loc_port_num, &link_status);
-         pf_lldp_get_management_address (net, &man_address);
+   pf_cmina_get_device_macaddr (net, &device_mac_address);
+   pf_lldp_get_chassis_id (net, &chassis_id);
+   pf_lldp_get_link_status (net, loc_port_num, &link_status);
+   pf_lldp_get_management_address (net, &man_address);
 #if LOG_DEBUG_ENABLED(PF_LLDP_LOG)
-         pf_cmina_get_ipaddr (net, &ipaddr);
-         pf_cmina_ip_to_string (ipaddr, ip_string);
-         if (chassis_id.subtype == PF_LLDP_SUBTYPE_LOCALLY_ASSIGNED)
-         {
-            chassis_id_description = chassis_id.string;
-         }
-         LOG_DEBUG (
-            PF_LLDP_LOG,
-            "LLDP(%d): Sending LLDP frame. MAC "
-            "%02X:%02X:%02X:%02X:%02X:%02X "
-            "IP: %s Chassis ID: \"%s\" Port number: %u Port ID: \"%s\"\n",
-            __LINE__,
-            device_mac_address.addr[0],
-            device_mac_address.addr[1],
-            device_mac_address.addr[2],
-            device_mac_address.addr[3],
-            device_mac_address.addr[4],
-            device_mac_address.addr[5],
-            ip_string,
-            chassis_id_description,
-            loc_port_num,
-            p_port_cfg->port_id);
+   pf_cmina_get_ipaddr (net, &ipaddr);
+   pf_cmina_ip_to_string (ipaddr, ip_string);
+   if (chassis_id.subtype == PF_LLDP_SUBTYPE_LOCALLY_ASSIGNED)
+   {
+      chassis_id_description = chassis_id.string;
+   }
+   LOG_DEBUG (
+      PF_LLDP_LOG,
+      "LLDP(%d): Sending LLDP frame. MAC "
+      "%02X:%02X:%02X:%02X:%02X:%02X "
+      "IP: %s Chassis ID: \"%s\" Port number: %u Port ID: \"%s\"\n",
+      __LINE__,
+      device_mac_address.addr[0],
+      device_mac_address.addr[1],
+      device_mac_address.addr[2],
+      device_mac_address.addr[3],
+      device_mac_address.addr[4],
+      device_mac_address.addr[5],
+      ip_string,
+      chassis_id_description,
+      loc_port_num,
+      p_port_cfg->port_id);
 #endif
 
-         pos = 0;
+   pos = 0;
 
-         /* Add destination MAC address */
-         pf_put_mem (
-            &lldp_dst_addr,
-            sizeof (lldp_dst_addr),
-            PF_FRAME_BUFFER_SIZE,
-            p_buf,
-            &pos);
+   pf_lldp_add_ethernet_header (
+      buf,
+      &pos,
+      lldp_dst_addr,
+      p_port_cfg->phy_port.eth_addr);
 
-         /* Add source port MAC address.  */
-         memcpy (
-            &p_buf[pos],
-            p_port_cfg->phy_port.eth_addr.addr,
-            sizeof (pnet_ethaddr_t));
-         pos += sizeof (pnet_ethaddr_t);
+   /* Add mandatory parts */
+   pf_lldp_add_chassis_id_tlv (&chassis_id, buf, &pos);
+   pf_lldp_add_port_id_tlv (p_port_cfg, buf, &pos);
+   pf_lldp_add_ttl_tlv (buf, &pos);
 
-         /* Add Ethertype for LLDP */
-         pf_put_uint16 (
-            true,
-            PNAL_ETHTYPE_LLDP,
-            PF_FRAME_BUFFER_SIZE,
-            p_buf,
-            &pos);
+   /* Add optional parts */
+   pf_lldp_add_port_status (p_port_cfg, buf, &pos);
+   pf_lldp_add_chassis_mac (&device_mac_address, buf, &pos);
+   pf_lldp_add_ieee_mac_phy (&link_status, buf, &pos);
+   pf_lldp_add_management (&man_address, buf, &pos);
 
-         /* Add mandatory parts */
-         pf_lldp_add_chassis_id_tlv (&chassis_id, p_buf, &pos);
-         pf_lldp_add_port_id_tlv (p_port_cfg, p_buf, &pos);
-         pf_lldp_add_ttl_tlv (p_buf, &pos);
+   /* Add end of LLDP-PDU marker */
+   pf_lldp_add_tlv_header (buf, &pos, LLDP_TYPE_END, 0);
 
-         /* Add optional parts */
-         pf_lldp_add_port_status (p_port_cfg, p_buf, &pos);
-         pf_lldp_add_chassis_mac (&device_mac_address, p_buf, &pos);
-         pf_lldp_add_ieee_mac_phy (&link_status, p_buf, &pos);
-         pf_lldp_add_management (&man_address, p_buf, &pos);
+   return pos;
+}
 
-         /* Add end of LLDP-PDU marker */
-         pf_lldp_add_tlv_header (p_buf, &pos, LLDP_TYPE_END, 0);
+/**
+ * Build and send a LLDP message on a specific port.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param loc_port_num     In:    Local port number.
+ *                                Valid range: 1 .. PNET_MAX_PORT
+ */
+static void pf_lldp_send (pnet_t * net, int loc_port_num)
+{
+   /* FIXME: Buffer size should include Ethernet header (14 bytes) */
+   pnal_buf_t * p_buffer = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE);
 
-         p_lldp_buffer->len = pos;
+   if (p_buffer != NULL)
+   {
+      if (p_buffer->payload != NULL)
+      {
+         p_buffer->len =
+            pf_lldp_construct_frame (net, loc_port_num, p_buffer->payload);
 
-         (void)pf_eth_send (net, net->eth_handle, p_lldp_buffer);
+         (void)pf_eth_send (net, net->eth_handle, p_buffer);
       }
 
-      pnal_buf_free (p_lldp_buffer);
+      pnal_buf_free (p_buffer);
    }
 }
 

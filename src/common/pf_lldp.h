@@ -368,6 +368,8 @@ int pf_lldp_generate_alias_name (
    char * alias,
    uint16_t len);
 
+size_t pf_lldp_construct_frame (pnet_t * net, int loc_port_num, uint8_t buf[]);
+
 int pf_lldp_parse_packet (
    const uint8_t buf[],
    uint16_t len,
