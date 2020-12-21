@@ -3532,6 +3532,7 @@ void pf_put_pdport_data_check (
 
    /* Length peer_id */
    pf_put_byte (check_peer->length_peer_port_name, res_len, p_bytes, p_pos);
+
    /* peer_id */
    pf_put_mem (
       &check_peer->peer_port_name,

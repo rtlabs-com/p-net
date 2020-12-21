@@ -918,7 +918,10 @@ static void get_check_peer (
    uint16_t * p_pos,
    pf_check_peer_t * p_check_peer)
 {
+   /* TODO: Validate length_peer_port_name and length_peer_station_name */
+
    p_check_peer->length_peer_port_name = pf_get_byte (p_info, p_pos);
+
    pf_get_mem (
       p_info,
       p_pos,
@@ -927,6 +930,7 @@ static void get_check_peer (
    p_check_peer->peer_port_name[p_check_peer->length_peer_port_name] = '\0';
 
    p_check_peer->length_peer_station_name = pf_get_byte (p_info, p_pos);
+
    pf_get_mem (
       p_info,
       p_pos,
