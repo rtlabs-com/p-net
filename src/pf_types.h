@@ -2369,9 +2369,9 @@ typedef struct pf_port_data_check
 typedef struct pf_check_peer
 {
    uint8_t length_peer_port_name;
-   uint8_t peer_port_name[PNET_LLDP_PORT_ID_MAX_SIZE - 1]; /** No termination */
+   uint8_t peer_port_name[PNET_LLDP_PORT_ID_MAX_SIZE]; /** Terminated */
    uint8_t length_peer_station_name;
-   uint8_t peer_station_name[PNET_STATION_NAME_MAX_SIZE - 1]; /** No term */
+   uint8_t peer_station_name[PNET_STATION_NAME_MAX_SIZE]; /** Terminated */
 } pf_check_peer_t;
 
 typedef struct pf_check_peers
