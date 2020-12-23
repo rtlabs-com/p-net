@@ -1,6 +1,5 @@
 Multiple ports
 ==============
-
 This section describes how to configure the p-net stack, sample application
 and system for multiple network interfaces or ports.
 
@@ -9,20 +8,20 @@ Terminology
 -----------
 
 Interface
-    Abstract group of ports. In Profinet context, interface typically doesn't mean a 
-    specific network interface. This is a common cause of confusion. 
+    Abstract group of ports. In Profinet context, interface typically doesn't mean a
+    specific network interface. This is a common cause of confusion.
 Port
-    Network interface. The physical connectors are referred to as "physical ports". 
+    Network interface. The physical connectors are referred to as "physical ports".
     A "management port" is the network interface to which a controller / PLC connects.
 
-In the example described in this section, br0 is the management port 
-and eth0 and eth1 are the physical ports. The interface consists of br0, eth0 and eth1.
+In the example described in this section, ``br0`` is the management port
+and ``eth0`` and ``eth1`` are the physical ports. The interface consists of
+``br0``, ``eth0`` and ``eth1``.
 
 
 Configuration of bridge using Linux
 -----------------------------------
-
-Tested with Raspberry PI 3B+ and USB ethernet dongle USB3GIG.
+Tested with Raspberry PI 3B+ and USB Ethernet dongle USB3GIG.
 
             +-------------+
             |    br0      |
@@ -32,8 +31,8 @@ Tested with Raspberry PI 3B+ and USB ethernet dongle USB3GIG.
 
 
 p-net supports multiple Ethernet ports. To use multiple ports, these
-shall be grouped into a bridge. In such a configuration the management port / main network interface 
-is the bridge and the ethernet interfaces are named physical ports.
+shall be grouped into a bridge. In such a configuration the management port / main network interface
+is the bridge and the Ethernet interfaces are named physical ports.
 
 To create a bridge and add network interfaces to it, create the following files and content::
 
@@ -98,7 +97,7 @@ Configuration of p-net stack and sample application (TBD)
 To run p-net and the sample application with multiple ports a couple
 of things need to be done:
 
-* Reconfigure setting ``PNET_MAX_PORT`` to the actual number of physical ports available in the system. 
-  For this example ``PNET_MAX_PORT`` shall be set to 2. 
+* Reconfigure setting ``PNET_MAX_PORT`` to the actual number of physical ports available in the system.
+  For this example ``PNET_MAX_PORT`` shall be set to 2.
 
 * TBD - update this document when multiport support is implemented

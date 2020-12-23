@@ -247,6 +247,9 @@ the IO-device to find its MAC address, and to detect IP address collisions.
 
 Scan for devices, assign IP address, reset devices and change station name
 --------------------------------------------------------------------------
+
+Scan
+^^^^
 In the left side menu, right-click the PN_Controller and select "Scan for
 devices". The running IO-devices will show up, and it is possible to see which
 modules are plugged into which slot.
@@ -261,6 +264,8 @@ responds with the APIs it supports. A similar request for
 IO-device responds which modules (and submodules) are plugged into which slots
 (and subslots).
 
+Factory reset
+^^^^^^^^^^^^^
 To factory reset a device, select it in the list of scanned devices and click
 the "reset" button.
 
@@ -270,6 +275,8 @@ IO-device will do the factory reset and also send a LLDP message with the
 new values. Then the IO-controller sends a "Ident request, all", to which
 the IO-device responds.
 
+Set name and IP
+^^^^^^^^^^^^^^^
 To modify the station name or IP address, change the corresponding fields
 in the list of scanned devices, and the click "Set name and IP".
 
@@ -279,6 +286,8 @@ response, the IO-device will change IP address and station name. It will
 also send a LLDP message with the new values. Then the
 IO-controller sends a "Ident request, all", to which the IO-device responds.
 
+Flash LED
+^^^^^^^^^
 There is functionality to flash a LED on an IO-device. Select your device in
 the list of scanned devices, and click the "Blink LED" button. The button
 remains activated until you click it again.
@@ -286,9 +295,27 @@ remains activated until you click it again.
 LED-blinking is done by sending the "Set request" DCP message with suboption
 "Signal" once every 5 seconds as long as the corresponding button is activated.
 
+Identification & Maintenance (I&M) data
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 In order the read Identification & Maintenance (I&M) data, the device needs to
 be present as an IO-device connected to the IO-controller in the left side menu.
 Select the device in the list of scanned devices, and click the "I&M" button.
 
 Reading I&M data is done by the IO-controller by sending four "Read implicit"
 request DCP messages, one for each of I&M0 to I&M3.
+
+
+Enabling checking of peer stationname and port ID
+-------------------------------------------------
+It is possible to have the IO-device verify that it is connected to the
+correct neighbour (peer) by checking its station name and port ID (as sent
+in LLDP frames by the neighbour).
+
+Double-click the “rt_labs_DEMO_device” node in the left menu. On the "options"
+tab in the resulting window, use the fields "Peer station" and "port". It
+seems only possible to select station names from other devices or controllers
+already available in the project.
+
+During startup the PLC will send the given values to the IO-Device via a
+write command. If the correct neighbour is not present, an alarm will be sent
+by the IO-device to the PLC.

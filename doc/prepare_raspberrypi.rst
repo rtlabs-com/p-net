@@ -17,10 +17,10 @@ you will run into problem when a PLC is used for configuration.
 
 Installation using Linux
 ------------------------
-Download the Raspberry Pi OS (previously Raspbian) image from
-https://www.raspberrypi.org/software/operating-systems/
-Use the full version with "recommended software". Follow the instructions on
-the page to burn a SD-card.
+Burn a SD-card with Raspberry Pi OS, by using the Raspberry Pi imager.
+A card size of 16 - 32 GByte is recommended.
+Follow the instructions on the page https://www.raspberrypi.org/software/
+Select the standard "Raspberry Pi OS" operating system.
 
 Unplug, and reinsert your SD-card to mount it. To enable SSH logging in on the
 Raspberry Pi, create an empty file on the named ``ssh`` in the boot partition::
@@ -128,7 +128,7 @@ name to something informative, for example::
 
     touch /home/pi/IAmAProfinetDevice
 
-Reboot and the Raspberry Pi is now ready to run the p-net sample application.
+Reboot and the Raspberry Pi is now ready to run the p-net sample application::
 
     sudo reboot
 
@@ -291,3 +291,30 @@ And to turn it off::
 Note that you need root privileges to control the LEDs.
 
 Similarly for the red (power) LED, which is called ``led1``.
+
+
+Advanced users only: Control Linux real-time properties
+-------------------------------------------------------
+See the page on Linux timing in this documentation for an introduction to
+the subject.
+
+Add this to the first (and only) line in ``/boot/cmdline.txt``::
+
+   isolcpus=2
+
+Run the sample application on a specific CPU core, by modifying the
+autostart file ``/lib/systemd/system/pnet-sampleapp.service`` (if installed)::
+
+   ExecStart=taskset -c 2 /home/pi/profinet/build/pn_dev -v -b /sys/class/gpio/gpio22/value -d /sys/class/gpio/gpio27/value
+
+Display which CPU core a process is running on::
+
+   pi@pndevice-pi:~$ taskset -c -p $(pidof pn_dev)
+   pid 443's current affinity list: 2
+
+Display real time properties of a process (should typically be ``SCHED_FIFO``
+for best result)::
+
+   pi@pndevice-pi:~$ chrt -p $(pidof pn_dev)
+   pid 438's current scheduling policy: SCHED_OTHER
+   pid 438's current scheduling priority: 0

@@ -793,7 +793,7 @@ static void pf_pdport_peer_lldp_timeout_alarm (pnet_t * net, int loc_port_num)
 
    LOG_DEBUG (
       PNET_LOG,
-      "PDPORT(%d): Sending no peer detected alarm port %u",
+      "PDPORT(%d): Sending missing peer alarm for port %u",
       __LINE__,
       loc_port_num);
 

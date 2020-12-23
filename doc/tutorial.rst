@@ -186,7 +186,7 @@ Run the sample app in the build directory::
 
     cd build
 
-Usage of the demo IO-device application:
+Usage of the IO-device sample application:
 
 .. code-block:: none
 
@@ -298,7 +298,7 @@ you enable verbose output::
 
    sudo ./pn_dev -v -b /sys/class/gpio/gpio22/value -d /sys/class/gpio/gpio27/value
 
-    ** Starting Profinet demo application **
+    ** Starting Profinet sample application **
     Number of slots:      5 (incl slot for DAP module)
     P-net log level:      4 (DEBUG=0, FATAL=4)
     App verbosity level:  1

@@ -123,6 +123,7 @@ Study the resulting core::
 
     gdb pf_test core
 
+
 SNMP (Conformance class B)
 --------------------------
 Conformance class B requires SNMP support. Linux uses net-snmp as agent,
@@ -164,7 +165,7 @@ To restart the service after modification::
    sudo systemctl daemon-reload
    sudo systemctl restart snmpd.service
 
-The file snmpd.conf controls access to the snmp agent. It should be
+The file ``snmpd.conf`` controls access to the snmp agent. It should be
 set to listen on all interfaces and allow read-write access to the
 Profinet MIB:s. On Ubuntu Linux you should change
 ``/etc/snmp/snmpd.conf`` to read::
@@ -172,9 +173,16 @@ Profinet MIB:s. On Ubuntu Linux you should change
    master  agentx
    agentaddress  0.0.0.0,[::1]
    view   systemonly  included   .1.3.6.1.2.1.1
+   view   systemonly  included   .1.3.6.1.2.1.2.2
    view   systemonly  included   .1.0.8802.1.1.2
    rocommunity  public  default -V systemonly
    rwcommunity  private default -V systemonly
+
+If your linux distribution does give a long description for ``ifDesc`` you can
+override it by adding a line to the ``snmpd.conf`` file. Adapt the interface
+index (last digit in OID) and the interface name::
+
+   override 1.3.6.1.2.1.2.2.1.2.3 octet_str "enp0s31f6"
 
 To verify the SNMP capabilities, first use ``ping`` to make sure you have a
 connection to the device, and then use ``snmpwalk``::
@@ -184,6 +192,9 @@ connection to the device, and then use ``snmpwalk``::
    snmpget -v1 -c public 192.168.0.50 1.3.6.1.2.1.1.4.0
    snmpset -v1 -c private 192.168.0.50 1.3.6.1.2.1.1.4.0 s "My new sys contact"
 
+If you enable debug logging in the p-net stack, the two last commands will
+cause entries in the p-net log.
+
 See :ref:`network-topology-detection` for more details on SNMP.
 
 
@@ -191,3 +202,30 @@ snmpd in a Yocto build
 ----------------------
 In an embedded Linux Yocto build, you would include the ``snmpd`` daemon by
 using the ``net-snmp`` recipe.
+
+
+Persistent logs
+---------------
+To make the journalctl logs persistent between restarts::
+
+   sudo mkdir -p /var/log/journal
+   sudo systemd-tmpfiles --create --prefix /var/log/journal
+
+Remove all contents of the journalctl logs::
+
+   sudo journalctl --rotate
+   sudo journalctl --vacuum-time=1s
+
+
+Boot time optimization
+----------------------
+The boot time should be less than approximately 15 seconds, for the "missing
+peer" alarm to be sent within 30 s after the power on.
+
+To improve the startup time of your Linux device, it is useful to study what
+is delaying the start. If you use the "systemd" init system, you can use these
+commands to analyze the startup::
+
+   systemd-analyze
+   systemd-analyze blame
+   systemd-analyze critical-chain pnet-sampleapp.service

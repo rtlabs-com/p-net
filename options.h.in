@@ -77,43 +77,43 @@
  * values are used as is by the stack. No validation is performed.
  */
 
-/** Number of connections. Must be > 0. "Automated RT Tester" uses 2 */
 #if !defined (PNET_MAX_AR)
+/** Number of connections. Must be > 0. "Automated RT Tester" uses 2 */
 #define PNET_MAX_AR               @PNET_MAX_AR@
 #endif
 
-/** Number of Application Processes. Must be > 0. */
 #if !defined (PNET_MAX_API)
+/** Number of Application Processes. Must be > 0. */
 #define PNET_MAX_API              @PNET_MAX_API@
 #endif
 
-/** Per AR. 1 input and 1 output. */
 #if !defined (PNET_MAX_CR)
+/** Per AR. 1 input and 1 output. */
 #define PNET_MAX_CR               @PNET_MAX_CR@
 #endif
 
-/** Per API. Should be > 1 to allow at least one I/O module. */
 #if !defined (PNET_MAX_SLOTS)
+/** Per API. Should be > 1 to allow at least one I/O module. */
 #define PNET_MAX_SLOTS          @PNET_MAX_SLOTS@
 #endif
 
-/** Per slot (3 needed for DAP). */
 #if !defined (PNET_MAX_SUBSLOTS)
+/** Per slot (3 needed for DAP). */
 #define PNET_MAX_SUBSLOTS       @PNET_MAX_SUBSLOTS@
 #endif
 
-/** Per sub-slot. Used for diagnosis. */
 #if !defined (PNET_MAX_CHANNELS)
+/** Per sub-slot. Used for diagnosis. */
 #define PNET_MAX_CHANNELS         @PNET_MAX_CHANNELS@
 #endif
 
-/** Allowed values are 0 (zero) or 2. */
 #if !defined (PNET_MAX_DFP_IOCR)
+/** Allowed values are 0 (zero) or 2. */
 #define PNET_MAX_DFP_IOCR         @PNET_MAX_DFP_IOCR@
 #endif
 
-/** 2 for media redundancy. Currently only 1 is supported. */
 #if !defined (PNET_MAX_PORT)
+/** 2 for media redundancy. Currently only 1 is supported. */
 #define PNET_MAX_PORT             @PNET_MAX_PORT@
 #endif
 
@@ -121,20 +121,20 @@
 #define PNET_MAX_LOG_BOOK_ENTRIES @PNET_MAX_LOG_BOOK_ENTRIES@
 #endif
 
-/** Per AR and queue. One queue for hi and one for lo alarms. */
 #if !defined (PNET_MAX_ALARMS)
+/** Per AR and queue. One queue for hi and one for lo alarms. */
 #define PNET_MAX_ALARMS           @PNET_MAX_ALARMS@
 #endif
 
-/** Total, per device. Max is 65534 items. */
 #if !defined (PNET_MAX_DIAG_ITEMS)
+/** Total, per device. Max is 65534 items. */
 #define PNET_MAX_DIAG_ITEMS       @PNET_MAX_DIAG_ITEMS@
 #endif
 
 #if PNET_OPTION_MC_CR
 
-/**< Per AR. */
 #if !defined (PNET_MAX_MC_CR)
+/**< Per AR. */
 #define PNET_MAX_MC_CR            @PNET_MAX_MC_CR@
 #endif
 
@@ -142,8 +142,8 @@
 
 #if PNET_OPTION_AR_VENDOR_BLOCKS
 
-/**< Must be > 0 */
 #if !defined (PNET_MAX_AR_VENDOR_BLOCKS)
+/**< Must be > 0 */
 #define PNET_MAX_AR_VENDOR_BLOCKS @PNET_MAX_AR_VENDOR_BLOCKS@
 #endif
 
@@ -153,13 +153,13 @@
 
 #endif  /* PNET_OPTION_AR_VENDOR_BLOCKS */
 
-/** or 512 (bytes) */
 #if !defined (PNET_MAX_MAN_SPECIFIC_FAST_STARTUP_DATA_LENGTH)
+/** or 512 (bytes) */
 #define PNET_MAX_MAN_SPECIFIC_FAST_STARTUP_DATA_LENGTH @PNET_MAX_MAN_SPECIFIC_FAST_STARTUP_DATA_LENGTH@
 #endif
 
-/** Max fragmented RPC request/response length */
 #if !defined (PNET_MAX_SESSION_BUFFER_SIZE)
+/** Max fragmented RPC request/response length */
 #define PNET_MAX_SESSION_BUFFER_SIZE @PNET_MAX_SESSION_BUFFER_SIZE@
 #endif
 

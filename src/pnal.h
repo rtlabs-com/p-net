@@ -140,6 +140,8 @@ typedef uint16_t pnal_ipport_t;
 
 /**
  * The Ethernet MAC address.
+ *
+ * TODO: Remove this and use pnet_ethaddr_t instead
  */
 typedef struct pnal_ethaddr
 {
