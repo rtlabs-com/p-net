@@ -225,6 +225,9 @@ void pf_snmp_get_system_contact (
    pnet_t * net,
    pf_snmp_system_contact_t * contact)
 {
+   /* Note: This function must do logging for all calls, in order for users
+            to easily verify SNMP functionality */
+
    const char * directory = net->fspm_cfg.file_directory;
    int error;
 
@@ -238,7 +241,7 @@ void pf_snmp_get_system_contact (
       contact->string[0] = '\0';
       LOG_INFO (
          PF_SNMP_LOG,
-         "SNMP(%d): Could not yet read sysContact from nvm.\n",
+         "SNMP(%d): Could not yet read sysContact from nvm. Using empty string.\n",
          __LINE__);
    }
    else
@@ -255,6 +258,9 @@ int pf_snmp_set_system_contact (
    pnet_t * net,
    const pf_snmp_system_contact_t * contact)
 {
+   /* Note: This function must do logging for all calls, in order for users
+            to easily verify SNMP functionality */
+
    const char * directory = net->fspm_cfg.file_directory;
    pf_snmp_system_contact_t temporary_buffer;
    int res;

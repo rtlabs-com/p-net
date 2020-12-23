@@ -50,7 +50,7 @@ static void main_timer_tick (os_timer_t * timer, void * arg)
 
 void show_usage()
 {
-   printf ("\nDemo application for p-net Profinet device stack.\n");
+   printf ("\nSample application for p-net Profinet device stack.\n");
    printf ("\n");
    printf ("Wait for connection from IO-controller.\n");
    printf ("Then read buttons (input) and send to controller.\n");
@@ -323,7 +323,7 @@ int main (int argc, char * argv[])
    /* Parse and display command line arguments */
    appdata.arguments = parse_commandline_arguments (argc, argv);
 
-   printf ("\n** Starting Profinet demo application **\n");
+   printf ("\n** Starting Profinet sample application " PNET_VERSION " **\n");
    if (appdata.arguments.verbosity > 0)
    {
       printf (

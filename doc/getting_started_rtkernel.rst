@@ -299,6 +299,9 @@ connection to the device, and then use ``snmpwalk``::
    snmpget -v1 -c public 192.168.0.50 1.3.6.1.2.1.1.4.0
    snmpset -v1 -c private 192.168.0.50 1.3.6.1.2.1.1.4.0 s "My new sys contact"
 
+If you enable debug logging in the p-net stack, the two last commands will
+cause entries in the p-net log.
+
 For more details on SNMP and its usage, see :ref:`network-topology-detection`.
 
 

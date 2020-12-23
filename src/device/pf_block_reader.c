@@ -569,6 +569,12 @@ void pf_get_ar_prm_server_request (
 #endif
 
 #if PNET_OPTION_IR
+/**
+ * Extract an DFP IOCR block from a buffer.
+ * @param p_info           InOut: The parser state.
+ * @param p_pos            InOut: Position in the buffer.
+ * @param p_dfp_iocr       Out:   Contains the destination structure.
+ */
 static void pf_get_dfp_iocr (
    pf_get_info_t * p_info,
    uint16_t * p_pos,
@@ -913,6 +919,13 @@ void pf_get_port_data_check (
    pf_get_block_header (p_info, p_pos, &p_port_data_check->block_header);
 }
 
+/**
+ * Extract CheckPeer data block from buffer.
+ *
+ * @param p_info           InOut: The parser information.
+ * @param p_pos            InOut: The current parsing position.
+ * @param p_check_peer:    Out:   Destination structure
+ */
 static void get_check_peer (
    pf_get_info_t * p_info,
    uint16_t * p_pos,

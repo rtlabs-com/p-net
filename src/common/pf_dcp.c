@@ -214,7 +214,7 @@ static void pf_dcp_responder (pnet_t * net, void * arg, uint32_t current_time)
  */
 static void pf_dcp_clear_sam (pnet_t * net, void * arg, uint32_t current_time)
 {
-   LOG_DEBUG (PF_DCP_LOG, "DCP(%d): SAM timeout, clear stored mac\n", __LINE__);
+   LOG_DEBUG (PF_DCP_LOG, "DCP(%d): SAM timeout. Clear stored remote MAC address.\n", __LINE__);
    net->dcp_sam = mac_nil;
 }
 
@@ -233,7 +233,7 @@ static void pf_dcp_restart_sam_timeout (pnet_t * net, const pnet_ethaddr_t * mac
     * for 3 seconds */
    LOG_DEBUG (
       PF_DCP_LOG,
-      "DCP(%d): Update SAM mac and reset timeout\n",
+      "DCP(%d): Update SAM remote MAC address, and restart timeout.\n",
       __LINE__);
 
    memcpy (&net->dcp_sam, mac, sizeof (net->dcp_sam));
@@ -896,7 +896,7 @@ static int pf_dcp_set_req (
  *
  * @param net              InOut: The p-net stack instance
  * @param frame_id         In:    The frame id.
- * @param p_buf            InOut: The ethernet frame. Will be freed.
+ * @param p_buf            InOut: The Ethernet frame. Will be freed.
  * @param frame_id_pos     In:    Position of the frame id in the buffer.
  * @param p_arg            In:    Not used.
  * @return  0     If the frame was NOT handled by this function.
@@ -1105,7 +1105,7 @@ static int pf_dcp_get_set (
  * ToDo: Device-device communication (MC) is not yet implemented.
  * @param net              InOut: The p-net stack instance
  * @param frame_id         In:    The frame id.
- * @param p_buf            InOut: The ethernet frame. Will be freed.
+ * @param p_buf            InOut: The Ethernet frame. Will be freed.
  * @param frame_id_pos     In:    Position of the frame id in the buffer.
  * @param p_arg            In:    Not used.
  * @return  0     If the frame was NOT handled by this function.
@@ -1398,7 +1398,7 @@ uint32_t pf_dcp_calculate_response_delay (
  *
  * @param net              InOut: The p-net stack instance
  * @param frame_id         In:    The frame id.
- * @param p_buf            In:    The ethernet frame.
+ * @param p_buf            In:    The Ethernet frame.
  * @param frame_id_pos     In:    Position of the frame id in the buffer.
  * @param p_arg            In:    Not used.
  * @return  0     If the frame was NOT handled by this function.

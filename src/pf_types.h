@@ -2437,6 +2437,7 @@ typedef struct pf_port_data_adjust_peer_to_peer_boundary
  * Link status
  *
  * See IEEE 802.1AB-2005 (LLDPv1) Annex G.2 "MAC/PHY Configuration/Status TLV".
+ * See also pnal_eth_status_t
  */
 typedef struct pf_lldp_link_status
 {
