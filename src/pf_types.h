@@ -2433,17 +2433,6 @@ typedef struct pf_port_data_adjust_peer_to_peer_boundary
                                   Ch.5.2.13.14 */
 } pf_adjust_peer_to_peer_boundary_t;
 
-/* See Profinet 2.4 section 5.2.28 and appendix W */
-typedef struct pf_interface_stats
-{
-   uint32_t if_in_octets;
-   uint32_t if_out_octets;
-   uint32_t if_in_discards;
-   uint32_t if_out_discards;
-   uint32_t if_in_errors;
-   uint32_t if_out_errors;
-} pf_interface_stats_t;
-
 /**
  * Link status
  *
@@ -2765,9 +2754,6 @@ struct pnet
     */
    os_mutex_t * fspm_im_mutex;
 
-   pf_interface_stats_t interface_statistics; /* Keeps track of number of sent
-                                                   and discarded packets */
-
    /* LLDP mutex
     *
     * This mutex protects information about the peer device.
@@ -2787,9 +2773,7 @@ struct pnet
  * @return  0  on success.
  *          -1 if an error occurred.
  */
-int pnet_init_only (
-   pnet_t * net,
-   const pnet_cfg_t * p_cfg);
+int pnet_init_only (pnet_t * net, const pnet_cfg_t * p_cfg);
 
 #ifdef __cplusplus
 }

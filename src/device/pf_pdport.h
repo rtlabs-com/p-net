@@ -158,6 +158,16 @@ void pf_pdport_peer_lldp_timeout (pnet_t * net, int loc_port_num);
  */
 void pf_pdport_periodic (pnet_t * net);
 
+/**
+ * Get DAP port subslot using local port number
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param loc_port_num     In:    Local port number.
+ *                                Valid range: 1 .. PNET_MAX_PORT
+ * @return DAP subslot number for port identity
+ */
+uint16_t pf_pdport_loc_port_num_to_dap_subslot (int loc_port_num);
+
 #ifdef __cplusplus
 }
 #endif

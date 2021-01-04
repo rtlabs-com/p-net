@@ -25,7 +25,7 @@ extern "C" {
  *
  * @param net              In:    The p-net stack instance.
  */
-void pf_port_init(pnet_t * net);
+void pf_port_init (pnet_t * net);
 
 /**
  * Get list of local ports.
@@ -54,7 +54,9 @@ void pf_port_get_list_of_ports (
  * @param net              In:    The p-net stack instance.
  * @param p_iterator       Out:   Port iterator.
  */
-void pf_port_init_iterator_over_ports (pnet_t * net, pf_port_iterator_t * p_iterator);
+void pf_port_init_iterator_over_ports (
+   pnet_t * net,
+   pf_port_iterator_t * p_iterator);
 
 /**
  * Get next local port.
@@ -73,14 +75,14 @@ int pf_port_get_next (pf_port_iterator_t * p_iterator);
  * If the local port number is out of range this operation will assert.
  * NULL will never be returned.
  *
+ * See also \a pf_lldp_get_port_config() for configuration of the port.
+ *
  * @param net              In:    The p-net stack instance
  * @param loc_port_num     In:    Local port number.
  *                                Valid range: 1 .. PNET_MAX_PORT
  * @return Address to port runtime data
  */
-pf_port_t * pf_port_get_state (
-   pnet_t * net,
-   int loc_port_num);
+pf_port_t * pf_port_get_state (pnet_t * net, int loc_port_num);
 
 #ifdef __cplusplus
 }

@@ -1317,19 +1317,66 @@ void pf_ip_address_show (uint32_t ip)
    printf ("%s", ip_string);
 }
 
-void pf_cmina_interface_statistics_show (const pnet_t * net)
+void pf_cmina_port_statistics_show (pnet_t * net)
 {
-   printf (
-      "Interface %s    In: %" PRIu32 " bytes %" PRIu32 " errors %" PRIu32
-      " discards  Out: %" PRIu32 " bytes %" PRIu32 " errors %" PRIu32 " discard"
-      "s\n",
-      net->fspm_cfg.if_cfg.main_port.if_name,
-      net->interface_statistics.if_in_octets,
-      net->interface_statistics.if_in_errors,
-      net->interface_statistics.if_in_discards,
-      net->interface_statistics.if_out_octets,
-      net->interface_statistics.if_out_errors,
-      net->interface_statistics.if_out_discards);
+   int port;
+   pf_port_iterator_t port_iterator;
+   pnal_port_stats_t stats;
+   const pnet_port_cfg_t * p_port_config;
+
+   if (
+      pnal_get_port_statistics (
+         net->fspm_cfg.if_cfg.main_port.if_name,
+         &stats) == 0)
+   {
+      printf (
+         "Main interface %s    In: %" PRIu32 " bytes %" PRIu32
+         " errors %" PRIu32 " discards  Out: %" PRIu32 " bytes %" PRIu32
+         " errors %" PRIu32 " discards"
+         "s\n",
+         net->fspm_cfg.if_cfg.main_port.if_name,
+         stats.if_in_octets,
+         stats.if_in_errors,
+         stats.if_in_discards,
+         stats.if_out_octets,
+         stats.if_out_errors,
+         stats.if_out_discards);
+   }
+   else
+   {
+      printf (
+         "Did not find main interface %s\n",
+         net->fspm_cfg.if_cfg.main_port.if_name);
+   }
+
+   pf_port_init_iterator_over_ports (net, &port_iterator);
+   port = pf_port_get_next (&port_iterator);
+   while (port != 0)
+   {
+      p_port_config = pf_lldp_get_port_config (net, port);
+
+      if (pnal_get_port_statistics (p_port_config->phy_port.if_name, &stats) == 0)
+      {
+         printf (
+            "Port        %s    In: %" PRIu32 " bytes %" PRIu32
+            " errors %" PRIu32 " discards  Out: %" PRIu32 " bytes %" PRIu32
+            " errors %" PRIu32 " discards"
+            "s\n",
+            p_port_config->phy_port.if_name,
+            stats.if_in_octets,
+            stats.if_in_errors,
+            stats.if_in_discards,
+            stats.if_out_octets,
+            stats.if_out_errors,
+            stats.if_out_discards);
+      }
+      else
+      {
+         printf ("Did not find port %s\n", p_port_config->phy_port.if_name);
+      }
+
+      port = pf_port_get_next (&port_iterator);
+   }
 }
 
 void pf_cmina_show (pnet_t * net)
@@ -1408,6 +1455,8 @@ void pf_cmina_show (pnet_t * net)
       p_cfg->if_cfg.main_port.eth_addr.addr[3],
       p_cfg->if_cfg.main_port.eth_addr.addr[4],
       p_cfg->if_cfg.main_port.eth_addr.addr[5]);
+
+   pf_cmina_port_statistics_show (net);
 }
 
 /************************* Validate incoming data ***************************/

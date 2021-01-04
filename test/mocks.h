@@ -84,9 +84,8 @@ pnal_eth_handle_t * mock_pnal_eth_init (
    pnal_eth_callback_t * callback,
    void * arg);
 int mock_pnal_eth_send (pnal_eth_handle_t * handle, pnal_buf_t * buf);
-void mock_pnal_eth_get_status (
-   pnal_eth_handle_t * handle,
-   int loc_port_num,
+int mock_pnal_eth_get_status (
+   const char * interface_name,
    pnal_eth_status_t * status);
 void mock_os_cpy_mac_addr (uint8_t * mac_addr);
 int mock_pnal_udp_open (pnal_ipaddr_t addr, pnal_ipport_t port);
@@ -110,7 +109,7 @@ int mock_pnal_set_ip_suite (
    const pnal_ipaddr_t * p_gw,
    const char * hostname,
    bool permanent);
-int mock_pnal_get_interface_index (pnal_eth_handle_t * handle);
+int mock_pnal_get_interface_index (const char * interface_name);
 
 int mock_pnal_save_file (
    const char * fullpath,
