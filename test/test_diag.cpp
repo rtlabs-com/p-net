@@ -573,7 +573,7 @@ TEST_F (DiagTest, DiagRunTest)
       TEST_SLOT_IDENT,
       TEST_SUBSLOT_IDENT,
       TEST_DIAG_USI_CUSTOM,
-      (uint8_t *)"Bjarne");
+      (uint8_t *)"ABCD");
    EXPECT_EQ (ret, 0);
 
    TEST_TRACE ("Update data for a manufacturer specific USI, via add()\n");
@@ -583,7 +583,7 @@ TEST_F (DiagTest, DiagRunTest)
       TEST_SLOT_IDENT,
       TEST_SUBSLOT_IDENT,
       TEST_DIAG_USI_CUSTOM,
-      (uint8_t *)"Bjarn1");
+      (uint8_t *)"ABC1");
    EXPECT_EQ (ret, 0);
 
    TEST_TRACE ("Update data for a manufacturer specific USI, via update()\n");
@@ -640,7 +640,7 @@ TEST_F (DiagTest, DiagRunTest)
       TEST_SLOT_IDENT,
       TEST_SUBSLOT_NONEXIST_IDENT,
       TEST_DIAG_USI_CUSTOM,
-      (uint8_t *)"Bjarne");
+      (uint8_t *)"ABCD");
    EXPECT_EQ (ret, -1);
 
    TEST_TRACE ("Add, update and remove diagnosis for invalid USI\n");
@@ -650,7 +650,7 @@ TEST_F (DiagTest, DiagRunTest)
       TEST_SLOT_IDENT,
       TEST_SUBSLOT_IDENT,
       TEST_DIAG_USI_INVALID,
-      (uint8_t *)"Bjarne");
+      (uint8_t *)"ABCD");
    EXPECT_EQ (ret, -1);
 
    ret = pnet_diag_usi_update (
@@ -668,6 +668,371 @@ TEST_F (DiagTest, DiagRunTest)
       TEST_SLOT_IDENT,
       TEST_SUBSLOT_IDENT,
       TEST_DIAG_USI_INVALID);
+   EXPECT_EQ (ret, -1);
+
+   TEST_TRACE ("\nUse low-level functionality. Create a standard diag entry, "
+               "with QUALIFIED and FAULT. Then update it and finally "
+               "remove it.\n");
+   ret = pnet_diag_add (
+      net,
+      &diag_source,
+      TEST_CHANNEL_NUMBER_OF_BITS,
+      PNET_DIAG_CH_PROP_MAINT_FAULT,
+      TEST_CHANNEL_ERRORTYPE,
+      TEST_DIAG_EXT_ERRTYPE,
+      TEST_DIAG_EXT_ADDVALUE,
+      TEST_DIAG_QUALIFIER_NOTSET,
+      0x8003, /* PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS */
+      NULL);
+   EXPECT_EQ (ret, 0);
+
+   ret = pnet_diag_update (
+      net,
+      &diag_source,
+      TEST_CHANNEL_ERRORTYPE,
+      TEST_DIAG_EXT_ERRTYPE,
+      TEST_DIAG_EXT_ADDVALUE_B,
+      0x8003, /* PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS */
+      NULL);
+   EXPECT_EQ (ret, 0);
+
+   ret = pnet_diag_remove (
+      net,
+      &diag_source,
+      TEST_CHANNEL_ERRORTYPE,
+      TEST_DIAG_EXT_ERRTYPE,
+      0x8003 /* PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS */
+   );
+   EXPECT_EQ (ret, 0);
+
+   TEST_TRACE ("\nUse low-level functionality. Create a standard diag entry, "
+               "with QUALIFIED. Then update it and finally "
+               "remove it.\n");
+   ret = pnet_diag_add (
+      net,
+      &diag_source,
+      TEST_CHANNEL_NUMBER_OF_BITS,
+      PNET_DIAG_CH_PROP_MAINT_QUALIFIED,
+      TEST_CHANNEL_ERRORTYPE,
+      TEST_DIAG_EXT_ERRTYPE,
+      TEST_DIAG_EXT_ADDVALUE,
+      TEST_DIAG_QUALIFIER,
+      0x8003, /* PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS */
+      NULL);
+   EXPECT_EQ (ret, 0);
+
+   ret = pnet_diag_update (
+      net,
+      &diag_source,
+      TEST_CHANNEL_ERRORTYPE,
+      TEST_DIAG_EXT_ERRTYPE,
+      TEST_DIAG_EXT_ADDVALUE_B,
+      0x8003, /* PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS */
+      NULL);
+   EXPECT_EQ (ret, 0);
+
+   ret = pnet_diag_remove (
+      net,
+      &diag_source,
+      TEST_CHANNEL_ERRORTYPE,
+      TEST_DIAG_EXT_ERRTYPE,
+      0x8003 /* PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS */
+   );
+   EXPECT_EQ (ret, 0);
+
+   TEST_TRACE ("\nUse low-level functionality. Create a standard diag entry, "
+               "with EXTENDED. Then update it and finally "
+               "remove it.\n");
+   ret = pnet_diag_add (
+      net,
+      &diag_source,
+      TEST_CHANNEL_NUMBER_OF_BITS,
+      PNET_DIAG_CH_PROP_MAINT_FAULT,
+      TEST_CHANNEL_ERRORTYPE,
+      TEST_DIAG_EXT_ERRTYPE,
+      TEST_DIAG_EXT_ADDVALUE,
+      TEST_DIAG_QUALIFIER_NOTSET,
+      0x8002, /* PF_USI_EXTENDED_CHANNEL_DIAGNOSIS */
+      NULL);
+   EXPECT_EQ (ret, 0);
+
+   ret = pnet_diag_update (
+      net,
+      &diag_source,
+      TEST_CHANNEL_ERRORTYPE,
+      TEST_DIAG_EXT_ERRTYPE,
+      TEST_DIAG_EXT_ADDVALUE_B,
+      0x8002, /* PF_USI_EXTENDED_CHANNEL_DIAGNOSIS */
+      NULL);
+   EXPECT_EQ (ret, 0);
+
+   ret = pnet_diag_remove (
+      net,
+      &diag_source,
+      TEST_CHANNEL_ERRORTYPE,
+      TEST_DIAG_EXT_ERRTYPE,
+      0x8002 /* PF_USI_EXTENDED_CHANNEL_DIAGNOSIS */
+   );
+   EXPECT_EQ (ret, 0);
+
+   TEST_TRACE ("\nUse low-level functionality. Create a USI diag entry. Then "
+               "update it and finally "
+               "remove it.\n");
+   ret = pnet_diag_add (
+      net,
+      &diag_source,
+      PNET_DIAG_CH_PROP_TYPE_UNSPECIFIED,
+      PNET_DIAG_CH_PROP_MAINT_FAULT,
+      0, /* Channel error type */
+      0, /* Ext channel error type */
+      0, /* Add value */
+      0, /* Qualifier */
+      TEST_DIAG_USI_CUSTOM,
+      (uint8_t *)"ABCD");
+   EXPECT_EQ (ret, 0);
+
+   ret = pnet_diag_update (
+      net,
+      &diag_source,
+      0, /* Channel error type */
+      0, /* Ext channel error type */
+      0, /* Add value */
+      TEST_DIAG_USI_CUSTOM,
+      (uint8_t *)"ABC2");
+   EXPECT_EQ (ret, 0);
+
+   ret = pnet_diag_remove (
+      net,
+      &diag_source,
+      0, /* Channel error type */
+      0, /* Ext channel error type */
+      TEST_DIAG_USI_CUSTOM);
+   EXPECT_EQ (ret, 0);
+
+   TEST_TRACE ("\nError checking for low-level functionality. Invalid USI.\n");
+   ret = pnet_diag_add (
+      net,
+      &diag_source,
+      TEST_CHANNEL_NUMBER_OF_BITS,
+      PNET_DIAG_CH_PROP_MAINT_FAULT,
+      TEST_CHANNEL_ERRORTYPE,
+      TEST_DIAG_EXT_ERRTYPE,
+      TEST_DIAG_EXT_ADDVALUE,
+      TEST_DIAG_QUALIFIER_NOTSET,
+      0x8001, /* Invalid */
+      NULL);
+   EXPECT_EQ (ret, -1);
+
+   ret = pnet_diag_add (
+      net,
+      &diag_source,
+      TEST_CHANNEL_NUMBER_OF_BITS,
+      PNET_DIAG_CH_PROP_MAINT_FAULT,
+      TEST_CHANNEL_ERRORTYPE,
+      TEST_DIAG_EXT_ERRTYPE,
+      TEST_DIAG_EXT_ADDVALUE,
+      TEST_DIAG_QUALIFIER_NOTSET,
+      0x8004, /* Invalid */
+      NULL);
+   EXPECT_EQ (ret, -1);
+
+   ret = pnet_diag_update (
+      net,
+      &diag_source,
+      TEST_CHANNEL_ERRORTYPE,
+      TEST_DIAG_EXT_ERRTYPE,
+      TEST_DIAG_EXT_ADDVALUE_B,
+      0x8001, /* Invalid */
+      NULL);
+   EXPECT_EQ (ret, -1);
+
+   ret = pnet_diag_remove (
+      net,
+      &diag_source,
+      TEST_CHANNEL_ERRORTYPE,
+      TEST_DIAG_EXT_ERRTYPE,
+      0x8001 /* Invalid */
+   );
+   EXPECT_EQ (ret, -1);
+
+   ret = pnet_diag_update (
+      net,
+      &diag_source,
+      TEST_CHANNEL_ERRORTYPE,
+      TEST_DIAG_EXT_ERRTYPE,
+      TEST_DIAG_EXT_ADDVALUE_B,
+      0x8004, /* Invalid */
+      NULL);
+   EXPECT_EQ (ret, -1);
+
+   ret = pnet_diag_remove (
+      net,
+      &diag_source,
+      TEST_CHANNEL_ERRORTYPE,
+      TEST_DIAG_EXT_ERRTYPE,
+      0x8004 /* Invalid */
+   );
+   EXPECT_EQ (ret, -1);
+
+   TEST_TRACE ("\nError checking for low-level functionality. Channel error "
+               "type given for custom USI.\n");
+   ret = pnet_diag_add (
+      net,
+      &diag_source,
+      PNET_DIAG_CH_PROP_TYPE_UNSPECIFIED,
+      PNET_DIAG_CH_PROP_MAINT_FAULT,
+      TEST_CHANNEL_ERRORTYPE,
+      0, /* Ext channel error type */
+      0, /* Add value */
+      TEST_DIAG_QUALIFIER_NOTSET,
+      TEST_DIAG_USI_CUSTOM,
+      (uint8_t *)"ABCD");
+   EXPECT_EQ (ret, -1);
+
+   ret = pnet_diag_update (
+      net,
+      &diag_source,
+      TEST_CHANNEL_ERRORTYPE,
+      0, /* Extended hannel error type */
+      0, /* Add value */
+      TEST_DIAG_USI_CUSTOM,
+      (uint8_t *)"ABCD");
+   EXPECT_EQ (ret, -1);
+
+   ret = pnet_diag_remove (
+      net,
+      &diag_source,
+      TEST_CHANNEL_ERRORTYPE,
+      0, /* Ext channel error type */
+      TEST_DIAG_USI_CUSTOM);
+   EXPECT_EQ (ret, -1);
+
+   TEST_TRACE ("\nError checking for low-level functionality. Ext channel "
+               "error type given for custom USI.\n");
+   ret = pnet_diag_add (
+      net,
+      &diag_source,
+      PNET_DIAG_CH_PROP_TYPE_UNSPECIFIED,
+      PNET_DIAG_CH_PROP_MAINT_FAULT,
+      0, /* Channel error type */
+      TEST_DIAG_EXT_ERRTYPE,
+      0, /* Add value */
+      TEST_DIAG_QUALIFIER_NOTSET,
+      TEST_DIAG_USI_CUSTOM,
+      (uint8_t *)"ABCD");
+   EXPECT_EQ (ret, -1);
+
+   ret = pnet_diag_update (
+      net,
+      &diag_source,
+      0, /* Channel error type */
+      TEST_DIAG_EXT_ERRTYPE,
+      0, /* Add value */
+      TEST_DIAG_USI_CUSTOM,
+      (uint8_t *)"ABC2");
+   EXPECT_EQ (ret, -1);
+
+   ret = pnet_diag_remove (
+      net,
+      &diag_source,
+      0, /* Channel error type */
+      TEST_DIAG_EXT_ERRTYPE,
+      TEST_DIAG_USI_CUSTOM);
+   EXPECT_EQ (ret, -1);
+
+   TEST_TRACE ("\nError checking for low-level functionality. Channel "
+               "additional value given for custom USI.\n");
+   ret = pnet_diag_add (
+      net,
+      &diag_source,
+      PNET_DIAG_CH_PROP_TYPE_UNSPECIFIED,
+      PNET_DIAG_CH_PROP_MAINT_FAULT,
+      0, /* Channel error type */
+      0, /* Ext channel error type */
+      TEST_DIAG_EXT_ADDVALUE,
+      TEST_DIAG_QUALIFIER_NOTSET,
+      TEST_DIAG_USI_CUSTOM,
+      (uint8_t *)"ABCD");
+   EXPECT_EQ (ret, -1);
+
+   ret = pnet_diag_update (
+      net,
+      &diag_source,
+      0, /* Channel error type */
+      0, /* Ext channel error type */
+      TEST_DIAG_EXT_ADDVALUE,
+      TEST_DIAG_USI_CUSTOM,
+      (uint8_t *)"ABC2");
+   EXPECT_EQ (ret, -1);
+
+   TEST_TRACE ("\nError checking for low-level functionality. Qualifier given "
+               "for custom USI.\n");
+   ret = pnet_diag_add (
+      net,
+      &diag_source,
+      PNET_DIAG_CH_PROP_TYPE_UNSPECIFIED,
+      PNET_DIAG_CH_PROP_MAINT_FAULT,
+      0, /* Channel error type */
+      0, /* Ext channel error type */
+      0, /* Add value */
+      TEST_DIAG_QUALIFIER,
+      TEST_DIAG_USI_CUSTOM,
+      (uint8_t *)"ABCD");
+   EXPECT_EQ (ret, -1);
+
+   TEST_TRACE ("\nError checking for low-level functionality. Manufacturer "
+               "data given for standard USI.\n");
+   ret = pnet_diag_add (
+      net,
+      &diag_source,
+      TEST_CHANNEL_NUMBER_OF_BITS,
+      PNET_DIAG_CH_PROP_MAINT_FAULT,
+      TEST_CHANNEL_ERRORTYPE,
+      TEST_DIAG_EXT_ERRTYPE,
+      TEST_DIAG_EXT_ADDVALUE,
+      TEST_DIAG_QUALIFIER_NOTSET,
+      0x8003, /* PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS */
+      (uint8_t *)"ABCD");
+   EXPECT_EQ (ret, -1);
+
+   ret = pnet_diag_update (
+      net,
+      &diag_source,
+      TEST_CHANNEL_ERRORTYPE,
+      TEST_DIAG_EXT_ERRTYPE,
+      TEST_DIAG_EXT_ADDVALUE_B,
+      0x8003, /* PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS */
+      (uint8_t *)"ABCD");
+   EXPECT_EQ (ret, -1);
+
+   TEST_TRACE ("\nError checking for low-level functionality. Qualifier given "
+               "for non-qualifyer USI.\n");
+   ret = pnet_diag_add (
+      net,
+      &diag_source,
+      TEST_CHANNEL_NUMBER_OF_BITS,
+      PNET_DIAG_CH_PROP_MAINT_FAULT,
+      TEST_CHANNEL_ERRORTYPE,
+      TEST_DIAG_EXT_ERRTYPE,
+      TEST_DIAG_EXT_ADDVALUE,
+      TEST_DIAG_QUALIFIER,
+      0x8002, /* PF_USI_EXTENDED_CHANNEL_DIAGNOSIS */
+      NULL);
+   EXPECT_EQ (ret, -1);
+
+   TEST_TRACE ("\nError checking for low-level functionality. Qualifier given "
+               "for wrong severity.\n");
+   ret = pnet_diag_add (
+      net,
+      &diag_source,
+      TEST_CHANNEL_NUMBER_OF_BITS,
+      PNET_DIAG_CH_PROP_MAINT_FAULT,
+      TEST_CHANNEL_ERRORTYPE,
+      TEST_DIAG_EXT_ERRTYPE,
+      TEST_DIAG_EXT_ADDVALUE,
+      TEST_DIAG_QUALIFIER,
+      0x8003, /* PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS */
+      NULL);
    EXPECT_EQ (ret, -1);
 
    TEST_TRACE ("\nGenerating mock release request\n");

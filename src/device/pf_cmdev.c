@@ -1297,11 +1297,12 @@ void pf_cmdev_diag_show (const pnet_t * net)
          {
             printf (
                "  Channel: 0x%04X  Ch.error: 0x%04X  Ext.error 0x%04X  "
-               "Add.value 0x%08" PRIX32 "\n",
+               "Add.value 0x%08" PRIX32 " Qualifier 0x%08" PRIX32 "\n",
                p_diag->fmt.std.ch_nbr,
                p_diag->fmt.std.ch_error_type,
                p_diag->fmt.std.ext_ch_error_type,
-               p_diag->fmt.std.ext_ch_add_value);
+               p_diag->fmt.std.ext_ch_add_value,
+               p_diag->fmt.std.qual_ch_qualifier);
          }
          else
          {
