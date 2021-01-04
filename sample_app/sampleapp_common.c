@@ -1284,6 +1284,7 @@ void app_plug_dap (pnet_t * net, void * arg)
 int app_adjust_stack_configuration (pnet_cfg_t * stack_config)
 {
    memset (stack_config, 0, sizeof (pnet_cfg_t));
+   stack_config->tick_us = APP_TICK_INTERVAL_US;
 
    /* For clarity, some members are set to 0 even though the entire struct is
     * cleared.
@@ -1359,7 +1360,6 @@ int app_adjust_stack_configuration (pnet_cfg_t * stack_config)
    strcpy (stack_config->if_cfg.ports[0].port_id, "port-001");
    stack_config->if_cfg.ports[0].rtclass_2_status = 0;
    stack_config->if_cfg.ports[0].rtclass_3_status = 0;
-
 
    /* Network configuration */
    stack_config->send_hello = true;

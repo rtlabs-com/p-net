@@ -353,7 +353,7 @@ class LldpTest : public PnetIntegrationTestBase
 
       callcounter_reset();
 
-      pnet_init_only (net, TICK_INTERVAL_US, &pnet_default_cfg);
+      pnet_init_only (net, &pnet_default_cfg);
 
       /* Do not clear mock or callcounters here - we need to verify send at init
        * from LLDP */

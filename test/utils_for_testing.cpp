@@ -463,6 +463,7 @@ void PnetIntegrationTestBase::available_modules_and_submodules_init()
 
 void PnetIntegrationTestBase::cfg_init()
 {
+   pnet_default_cfg.tick_us = TICK_INTERVAL_US;
    pnet_default_cfg.state_cb = my_state_ind;
    pnet_default_cfg.connect_cb = my_connect_ind;
    pnet_default_cfg.release_cb = my_release_ind;

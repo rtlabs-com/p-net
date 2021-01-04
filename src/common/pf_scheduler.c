@@ -222,7 +222,8 @@ void pf_scheduler_init (pnet_t * net, uint32_t tick_interval)
    }
    memset ((void *)net->scheduler_timeouts, 0, sizeof (net->scheduler_timeouts));
 
-   net->scheduler_tick_interval = tick_interval; /* Cannot be zero */
+   net->scheduler_tick_interval = tick_interval;
+   CC_ASSERT (net->scheduler_tick_interval > 0);
 
    /* Link all entries into a list and put them into the free queue. */
    for (ix = PF_MAX_TIMEOUTS; ix > 0; ix--)

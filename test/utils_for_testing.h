@@ -279,7 +279,7 @@ class PnetIntegrationTest : public PnetIntegrationTestBase
 
       callcounter_reset();
 
-      pnet_init_only (net, TICK_INTERVAL_US, &pnet_default_cfg);
+      pnet_init_only (net, &pnet_default_cfg);
 
       mock_clear(); /* lldp sends a frame at init */
    };

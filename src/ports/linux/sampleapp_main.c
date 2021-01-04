@@ -436,7 +436,7 @@ int main (int argc, char * argv[])
    }
 
    /* Initialize profinet stack */
-   net = pnet_init (TICK_INTERVAL_US, &pnet_default_cfg);
+   net = pnet_init (&pnet_default_cfg);
    if (net == NULL)
    {
       printf ("Failed to initialize p-net. Do you have enough Ethernet "
@@ -472,7 +472,7 @@ int main (int argc, char * argv[])
    appdata_and_stack.net = net;
    appdata.main_events = os_event_create();
    appdata.main_timer = os_timer_create (
-      TICK_INTERVAL_US,
+      APP_TICK_INTERVAL_US,
       main_timer_tick,
       (void *)&appdata,
       false);

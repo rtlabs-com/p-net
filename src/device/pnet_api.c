@@ -26,7 +26,6 @@
 
 int pnet_init_only (
    pnet_t * net,
-   uint32_t tick_us,
    const pnet_cfg_t * p_cfg)
 {
    memset (net, 0, sizeof (*net));
@@ -56,7 +55,7 @@ int pnet_init_only (
    }
 
    pf_eth_init (net);
-   pf_scheduler_init (net, tick_us);
+   pf_scheduler_init (net, p_cfg->tick_us);
    pf_cmina_init (net); /* Read from permanent pool */
 
    pf_dcp_exit (net); /* Prepare for re-init. */
@@ -83,7 +82,6 @@ int pnet_init_only (
 }
 
 pnet_t * pnet_init (
-   uint32_t tick_us,
    const pnet_cfg_t * p_cfg)
 {
    pnet_t * net = NULL;
@@ -98,7 +96,7 @@ pnet_t * pnet_init (
       return NULL;
    }
 
-   if (pnet_init_only (net, tick_us, p_cfg) != 0)
+   if (pnet_init_only (net, p_cfg) != 0)
    {
       free (net);
       return NULL;
