@@ -1226,6 +1226,11 @@ typedef struct pnet_if_cfg
  */
 typedef struct pnet_cfg
 {
+   /** Tick interval in us.
+    *  Specifies the time between calls to pnet_handle_periodic().
+    */
+   uint32_t tick_us;
+
    /** Application call-backs */
    pnet_state_ind state_cb;
    pnet_connect_ind connect_cb;
@@ -1301,23 +1306,18 @@ typedef struct pnet_cfg
  * Initialize the Profinet stack.
  *
  * This function must be called to initialize the Profinet stack.
- *
- * @param tick_us          In:    Periodic interval in us. Specify the interval
- *                                between calls to pnet_handle_periodic().
  * @param p_cfg            In:    Profinet configuration. These values are used
  *                                at first startup and at factory reset.
  * @return a handle to the stack instance, or NULL if an error occurred.
  */
-PNET_EXPORT pnet_t * pnet_init (
-   uint32_t tick_us,
-   const pnet_cfg_t * p_cfg);
+PNET_EXPORT pnet_t * pnet_init (const pnet_cfg_t * p_cfg);
 
 /**
  * Execute all periodic functions within the ProfiNet stack.
  *
- * This function should be called periodically by the application.
- * The period is specified by the application in the \a tick_us argument
- * to \a pnet_init().
+ * This function shall be called periodically by the application.
+ * The period is specified by the tick_us parameter, part of pnet_cfg_t
+ * configuration.
  * The period should match the expected I/O data rate to and from the device.
  * @param net              InOut: The p-net stack instance
  */

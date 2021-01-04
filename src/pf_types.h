@@ -2782,8 +2782,6 @@ struct pnet
  * Initialise a pnet_t structure into already allocated memory.
  *
  * @param net              InOut: The p-net stack instance to be initialised.
- * @param tick_us          In:    Periodic interval in us. Specify the interval
- *                                between calls to pnet_handle_periodic().
  * @param p_cfg            In:    Profinet configuration. These values are used
  *                                at first startup and at factory reset.
  * @return  0  on success.
@@ -2791,7 +2789,6 @@ struct pnet
  */
 int pnet_init_only (
    pnet_t * net,
-   uint32_t tick_us,
    const pnet_cfg_t * p_cfg);
 
 #ifdef __cplusplus

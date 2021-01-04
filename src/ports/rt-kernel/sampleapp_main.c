@@ -182,7 +182,7 @@ int main (void)
    appdata.arguments = cmdline_arguments;
    appdata.main_events = os_event_create();
    appdata.main_timer =
-      os_timer_create (TICK_INTERVAL_US, main_timer_tick, NULL, false);
+      os_timer_create (APP_TICK_INTERVAL_US, main_timer_tick, NULL, false);
    gp_appdata = &appdata;
 
    printf ("\n** Profinet sample application **\n");
@@ -254,7 +254,6 @@ int main (void)
 
    /* Initialize Profinet stack */
    g_net = pnet_init (
-      TICK_INTERVAL_US,
       &pnet_default_cfg);
    if (g_net == NULL)
    {
