@@ -498,6 +498,67 @@ int pnet_alarm_send_ack (
    return ret;
 }
 
+/************************** Low-level diagnosis functions*********************/
+
+int pnet_diag_add (
+   pnet_t * net,
+   const pnet_diag_source_t * p_diag_source,
+   pnet_diag_ch_prop_type_values_t ch_bits,
+   pnet_diag_ch_prop_maint_values_t severity,
+   uint16_t ch_error_type,
+   uint16_t ext_ch_error_type,
+   uint32_t ext_ch_add_value,
+   uint32_t qual_ch_qualifier,
+   uint16_t usi,
+   const uint8_t * p_manuf_data)
+{
+   return pf_diag_add (
+      net,
+      p_diag_source,
+      ch_bits,
+      severity,
+      ch_error_type,
+      ext_ch_error_type,
+      ext_ch_add_value,
+      qual_ch_qualifier,
+      usi,
+      p_manuf_data);
+}
+
+int pnet_diag_update (
+   pnet_t * net,
+   const pnet_diag_source_t * p_diag_source,
+   uint16_t ch_error_type,
+   uint16_t ext_ch_error_type,
+   uint32_t ext_ch_add_value,
+   uint16_t usi,
+   const uint8_t * p_manuf_data)
+{
+   return pf_diag_update (
+      net,
+      p_diag_source,
+      ch_error_type,
+      ext_ch_error_type,
+      ext_ch_add_value,
+      usi,
+      p_manuf_data);
+}
+
+int pnet_diag_remove (
+   pnet_t * net,
+   const pnet_diag_source_t * p_diag_source,
+   uint16_t ch_error_type,
+   uint16_t ext_ch_error_type,
+   uint16_t usi)
+{
+   return pf_diag_remove (
+      net,
+      p_diag_source,
+      ch_error_type,
+      ext_ch_error_type,
+      usi);
+}
+
 /************************** Diagnosis in standard format *********************/
 
 int pnet_diag_std_add (

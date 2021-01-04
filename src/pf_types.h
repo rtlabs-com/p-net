@@ -90,7 +90,8 @@ static inline uint32_t atomic_fetch_sub (atomic_int * p, uint32_t v)
 /** Qualifier 6..3 */
 #define PF_DIAG_QUALIFIER_MASK_ADVICE 0x00000078
 
-/* Mask and position of bit fields and values within ch_properties */
+/* ch_properties channel size in bits
+   See also pnet_diag_ch_prop_type_values_t */
 #define PF_DIAG_CH_PROP_TYPE_MASK 0x00ff
 #define PF_DIAG_CH_PROP_TYPE_POS  0
 #define PF_DIAG_CH_PROP_TYPE_GET(x)                                            \
@@ -102,6 +103,8 @@ static inline uint32_t atomic_fetch_sub (atomic_int * p, uint32_t v)
       (x) |= (v) << PF_DIAG_CH_PROP_TYPE_POS;                                  \
    } while (0)
 
+/* ch_properties channel group or individual channel
+   See also pnet_diag_ch_group_values_t */
 #define PF_DIAG_CH_PROP_ACC_MASK 0x0100
 #define PF_DIAG_CH_PROP_ACC_POS  8
 #define PF_DIAG_CH_PROP_ACC_GET(x)                                             \
@@ -113,6 +116,8 @@ static inline uint32_t atomic_fetch_sub (atomic_int * p, uint32_t v)
       (x) |= (v) << PF_DIAG_CH_PROP_ACC_POS;                                   \
    } while (0)
 
+/* ch_properties diagnosis severity
+   See also pnet_diag_ch_prop_maint_values_t */
 #define PF_DIAG_CH_PROP_MAINT_MASK 0x0600
 #define PF_DIAG_CH_PROP_MAINT_POS  9
 #define PF_DIAG_CH_PROP_MAINT_GET(x)                                           \
@@ -124,6 +129,7 @@ static inline uint32_t atomic_fetch_sub (atomic_int * p, uint32_t v)
       (x) |= (v) << PF_DIAG_CH_PROP_MAINT_POS;                                 \
    } while (0)
 
+/* ch_properties appears or disappers */
 #define PF_DIAG_CH_PROP_SPEC_MASK 0x1800
 #define PF_DIAG_CH_PROP_SPEC_POS  11
 #define PF_DIAG_CH_PROP_SPEC_GET(x)                                            \
@@ -143,6 +149,8 @@ typedef enum pf_diag_ch_prop_spec_values
    PF_DIAG_CH_PROP_SPEC_DIS_OTHERS_REMAIN = 3,
 } pf_diag_ch_prop_spec_values_t;
 
+/* ch_properties direction
+   See also pnet_diag_ch_prop_dir_values_t */
 #define PF_DIAG_CH_PROP_DIR_MASK 0xe000
 #define PF_DIAG_CH_PROP_DIR_POS  13
 #define PF_DIAG_CH_PROP_DIR_GET(x)                                             \
@@ -951,8 +959,9 @@ typedef struct pf_alarm_queue
 #define PF_CMINA_FS_HELLO_INTERVAL                                             \
    (3 * 1000)                            /* milliseconds. Default is 30 ms */
 #define PF_LLDP_SEND_INTERVAL (5 * 1000) /* milliseconds */
-#define PF_LLDP_INITIAL_PEER_TIMEOUT ((2 * PF_LLDP_SEND_INTERVAL) / 1000) /* seconds */
-#define PF_LLDP_TTL 20 /* seconds */
+#define PF_LLDP_INITIAL_PEER_TIMEOUT                                           \
+   ((2 * PF_LLDP_SEND_INTERVAL) / 1000) /* seconds */
+#define PF_LLDP_TTL 20                  /* seconds */
 
 typedef enum pf_cmina_state_values
 {
@@ -1420,9 +1429,8 @@ typedef struct pf_prm_server
    uint16_t cm_initiator_activity_timeout_factor;                /** res: 100ms,
                                                                     allowed 1..1000 */
    uint16_t parameter_server_station_name_len;
-   char
-      parameter_server_station_name[PNET_STATION_NAME_MAX_SIZE]; /** Terminated
-                                                                    string */
+   char parameter_server_station_name[PNET_STATION_NAME_MAX_SIZE]; /** Terminated
+                                                                      string */
 } pf_prm_server_t;
 
 typedef struct pf_address_resolution_properties

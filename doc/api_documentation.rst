@@ -11,6 +11,7 @@ the instructions given on the page "Additional Linux Details".
 
 Study the sample_app to get more information on how to use the API.
 
+
 General
 -------
 All functions return either ``0`` (zero) for a successful call or ``-1`` for an
@@ -63,6 +64,17 @@ Alarms and diagnostics
 .. doxygenfunction:: pnet_diag_usi_add
 .. doxygenfunction:: pnet_diag_usi_update
 .. doxygenfunction:: pnet_diag_usi_remove
+
+
+Low-level diagnostic functions
+------------------------------
+These are used internally in the functions above for handling diagnosis in
+standard or in USI format. However they can be useful in situations where
+detailed control is required.
+
+.. doxygenfunction:: pnet_diag_add
+.. doxygenfunction:: pnet_diag_update
+.. doxygenfunction:: pnet_diag_remove
 
 
 Callbacks
@@ -124,3 +136,4 @@ sending LLDP frames.
 .. doxygenstruct:: pnet_cfg_t
 .. doxygenstruct:: pnet_alarm_spec_t
 .. doxygenstruct:: pnet_alarm_argument_t
+.. doxygenstruct:: pnet_diag_source_t

@@ -1364,6 +1364,11 @@ int app_adjust_stack_configuration (pnet_cfg_t * stack_config)
    stack_config->send_hello = true;
    stack_config->dhcp_enable = false;
 
+   /* Diagnosis mechanism */
+   /* Use "Extended channel diagnosis" instead of "Qualified channel diagnosis"
+      format on the wire, as this is better supported by Wireshark. */
+   stack_config->use_qualified_diagnosis = false;
+
    return 0;
 }
 

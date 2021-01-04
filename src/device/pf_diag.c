@@ -47,11 +47,6 @@
 #include "pf_block_reader.h"
 #include "pf_block_writer.h"
 
-/** Which diagnosis mechanism to use when messaging the PLC.
- *  Normally PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS would be used as it has
- *  more features, but it does not yet seem fully supported by Wireshark. */
-#define PF_DIAG_PREFERRED_DIAGNOSIS_USI PF_USI_EXTENDED_CHANNEL_DIAGNOSIS
-
 int pf_diag_init (void)
 {
    return 0;
@@ -353,9 +348,67 @@ int pf_diag_add (
    /* TODO: Validate qual_ch_qualifier */
    qual_ch_qualifier &= PF_DIAG_QUALIFIED_SEVERITY_MASK;
 
-   if (usi > PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS)
+   if (usi > PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS || usi == PF_USI_ALARM_MULTIPLE)
    {
       LOG_ERROR (PF_ALARM_LOG, "DIAG(%d): The given USI is invalid\n", __LINE__);
+   }
+   else if (usi < PF_USI_CHANNEL_DIAGNOSIS && ch_error_type != 0)
+   {
+      LOG_ERROR (
+         PF_ALARM_LOG,
+         "DIAG(%d): The ch_error_type should not be used for USI %u\n",
+         __LINE__,
+         usi);
+   }
+   else if (usi <= PF_USI_CHANNEL_DIAGNOSIS && ext_ch_error_type != 0)
+   {
+      LOG_ERROR (
+         PF_ALARM_LOG,
+         "DIAG(%d): The ext_ch_error_type should not be used for USI %u\n",
+         __LINE__,
+         usi);
+   }
+   else if (usi <= PF_USI_CHANNEL_DIAGNOSIS && ext_ch_add_value != 0)
+   {
+      LOG_ERROR (
+         PF_ALARM_LOG,
+         "DIAG(%d): The ext_ch_add_value should not be used for USI %u\n",
+         __LINE__,
+         usi);
+   }
+   else if (usi != PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS && qual_ch_qualifier != 0)
+   {
+      LOG_ERROR (
+         PF_ALARM_LOG,
+         "DIAG(%d): The qual_ch_qualifier should only be used when "
+         "usi=PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS\n",
+         __LINE__);
+   }
+   else if (
+      usi != PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS &&
+      severity == PNET_DIAG_CH_PROP_MAINT_QUALIFIED)
+   {
+      LOG_ERROR (
+         PF_ALARM_LOG,
+         "DIAG(%d): The severity PNET_DIAG_CH_PROP_MAINT_QUALIFIED should only "
+         "be used when usi=PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS\n",
+         __LINE__);
+   }
+   else if (qual_ch_qualifier != 0 && severity != PNET_DIAG_CH_PROP_MAINT_QUALIFIED)
+   {
+      LOG_ERROR (
+         PF_ALARM_LOG,
+         "DIAG(%d): The qual_ch_qualifier should only be used when "
+         "severity=PNET_DIAG_CH_PROP_MAINT_QUALIFIED\n",
+         __LINE__);
+   }
+   else if (usi >= PF_USI_CHANNEL_DIAGNOSIS && p_manuf_data != NULL)
+   {
+      LOG_ERROR (
+         PF_ALARM_LOG,
+         "DIAG(%d): Manufacturer specific data should only be given for USI up "
+         "to 0x7fff\n",
+         __LINE__);
    }
    else if (p_diag_source->ch > PNET_CHANNEL_WHOLE_SUBMODULE)
    {
@@ -426,10 +479,12 @@ int pf_diag_add (
             {
                LOG_DEBUG (
                   PF_ALARM_LOG,
-                  "DIAG(%d): Adding standard format diagnosis, ix %u. Slot "
+                  "DIAG(%d): Adding standard format diagnosis, ix %u. USI "
+                  "0x%04X Slot "
                   "%u Subslot 0x%04X Channel 0x%04X\n",
                   __LINE__,
                   item_ix,
+                  usi,
                   p_diag_source->slot,
                   p_diag_source->subslot,
                   p_diag_source->ch);
@@ -447,7 +502,7 @@ int pf_diag_add (
                   ch_properties,
                   PF_DIAG_CH_PROP_SPEC_APPEARS);
 
-               p_item->usi = PF_DIAG_PREFERRED_DIAGNOSIS_USI;
+               p_item->usi = usi;
                p_item->fmt.std.ch_nbr = p_diag_source->ch;
                p_item->fmt.std.ch_properties = ch_properties;
                p_item->fmt.std.ch_error_type = ch_error_type;
@@ -535,9 +590,41 @@ int pf_diag_update (
    uint16_t item_ix = PF_DIAG_IX_NULL;
    pf_ar_t * p_ar = NULL;
 
-   if (usi > PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS)
+   if (usi > PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS || usi == PF_USI_ALARM_MULTIPLE)
    {
-      LOG_ERROR (PF_ALARM_LOG, "DIAG(%d): Bad USI\n", __LINE__);
+      LOG_ERROR (PF_ALARM_LOG, "DIAG(%d): The given USI is invalid\n", __LINE__);
+   }
+   else if (usi < PF_USI_CHANNEL_DIAGNOSIS && ch_error_type != 0)
+   {
+      LOG_ERROR (
+         PF_ALARM_LOG,
+         "DIAG(%d): The ch_error_type should not be used for USI %u\n",
+         __LINE__,
+         usi);
+   }
+   else if (usi <= PF_USI_CHANNEL_DIAGNOSIS && ext_ch_error_type != 0)
+   {
+      LOG_ERROR (
+         PF_ALARM_LOG,
+         "DIAG(%d): The ext_ch_error_type should not be used for USI %u\n",
+         __LINE__,
+         usi);
+   }
+   else if (usi <= PF_USI_CHANNEL_DIAGNOSIS && ext_ch_add_value != 0)
+   {
+      LOG_ERROR (
+         PF_ALARM_LOG,
+         "DIAG(%d): The ext_ch_add_value should not be used for USI %u\n",
+         __LINE__,
+         usi);
+   }
+   else if (usi >= PF_USI_CHANNEL_DIAGNOSIS && p_manuf_data != NULL)
+   {
+      LOG_ERROR (
+         PF_ALARM_LOG,
+         "DIAG(%d): Manufacturer specific data should only be given for USI up "
+         "to 0x7fff\n",
+         __LINE__);
    }
    else if (p_diag_source->ch > PNET_CHANNEL_WHOLE_SUBMODULE)
    {
@@ -628,7 +715,10 @@ int pf_diag_update (
          else
          {
             /* Diag not found */
-            LOG_ERROR (PF_ALARM_LOG, "DIAG(%d): Diag not found\n", __LINE__);
+            LOG_ERROR (
+               PF_ALARM_LOG,
+               "DIAG(%d): Diag not found. No update possible.\n",
+               __LINE__);
          }
       }
       else
@@ -656,9 +746,25 @@ int pf_diag_remove (
    pf_diag_item_t * p_item = NULL;
    pf_ar_t * p_ar = NULL;
 
-   if (usi > PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS)
+   if (usi > PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS || usi == PF_USI_ALARM_MULTIPLE)
    {
-      LOG_ERROR (PF_ALARM_LOG, "DIAG(%d): Bad USI\n", __LINE__);
+      LOG_ERROR (PF_ALARM_LOG, "DIAG(%d): The given USI is invalid\n", __LINE__);
+   }
+   else if (usi < PF_USI_CHANNEL_DIAGNOSIS && ch_error_type != 0)
+   {
+      LOG_ERROR (
+         PF_ALARM_LOG,
+         "DIAG(%d): The ch_error_type should not be used for USI %u\n",
+         __LINE__,
+         usi);
+   }
+   else if (usi <= PF_USI_CHANNEL_DIAGNOSIS && ext_ch_error_type != 0)
+   {
+      LOG_ERROR (
+         PF_ALARM_LOG,
+         "DIAG(%d): The ext_ch_error_type should not be used for USI %u\n",
+         __LINE__,
+         usi);
    }
    else if (p_diag_source->ch > PNET_CHANNEL_WHOLE_SUBMODULE)
    {
@@ -705,13 +811,6 @@ int pf_diag_remove (
                         p_item->fmt.std.ch_properties,
                         PF_DIAG_CH_PROP_SPEC_DISAPPEARS);
                   }
-                  ret = pf_alarm_send_diagnosis (
-                     net,
-                     p_ar,
-                     p_diag_source->api,
-                     p_diag_source->slot,
-                     p_diag_source->subslot,
-                     p_item);
                }
                else
                {
@@ -727,15 +826,14 @@ int pf_diag_remove (
                   PF_DIAG_CH_PROP_SPEC_SET (
                      p_item->fmt.std.ch_properties,
                      PF_DIAG_CH_PROP_SPEC_ALL_DISAPPEARS);
-
-                  ret = pf_alarm_send_diagnosis (
-                     net,
-                     p_ar,
-                     p_diag_source->api,
-                     p_diag_source->slot,
-                     p_diag_source->subslot,
-                     p_item);
                }
+               ret = pf_alarm_send_diagnosis (
+                  net,
+                  p_ar,
+                  p_diag_source->api,
+                  p_diag_source->slot,
+                  p_diag_source->subslot,
+                  p_item);
             }
             else
             {
@@ -769,6 +867,24 @@ int pf_diag_remove (
 
 /************************** Diagnosis in standard format *********************/
 
+/**
+ * @internal
+ * Get the prefered diagnosis USI, for use with standard format.
+ *
+ * @param net              InOut: The p-net stack instance.
+ * @return the USI
+ */
+static uint16_t pf_diag_get_preferred_usi (pnet_t * net)
+{
+   pnet_cfg_t * p_cfg = NULL;
+   pf_fspm_get_cfg (net, &p_cfg);
+   if (p_cfg->use_qualified_diagnosis == true)
+   {
+      return PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS;
+   }
+   return PF_USI_EXTENDED_CHANNEL_DIAGNOSIS;
+}
+
 int pf_diag_std_add (
    pnet_t * net,
    const pnet_diag_source_t * p_diag_source,
@@ -788,7 +904,7 @@ int pf_diag_std_add (
       ext_ch_error_type,
       ext_ch_add_value,
       qual_ch_qualifier,
-      PF_DIAG_PREFERRED_DIAGNOSIS_USI,
+      pf_diag_get_preferred_usi (net),
       NULL);
 }
 
@@ -805,7 +921,7 @@ int pf_diag_std_update (
       ch_error_type,
       ext_ch_error_type,
       ext_ch_add_value,
-      PF_DIAG_PREFERRED_DIAGNOSIS_USI,
+      pf_diag_get_preferred_usi (net),
       NULL);
 }
 
@@ -820,7 +936,7 @@ int pf_diag_std_remove (
       p_diag_source,
       ch_error_type,
       ext_ch_error_type,
-      PF_DIAG_PREFERRED_DIAGNOSIS_USI);
+      pf_diag_get_preferred_usi (net));
 }
 
 /************************** Diagnosis in USI format **************************/

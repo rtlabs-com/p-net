@@ -44,7 +44,7 @@ extern "C" {
 #define PNET_SERIAL_NUMBER_MAX_LEN 16 /* Not including termination */
 
 /* Including termination. Standard says 22 (without termination) */
-#define PNET_LOCATION_MAX_SIZE     23
+#define PNET_LOCATION_MAX_SIZE 23
 
 /** Including separator and one termination */
 #define PNET_MAX_FILE_FULLPATH_SIZE                                            \
@@ -1155,13 +1155,13 @@ typedef struct pnet_ethaddr
 } pnet_ethaddr_t;
 
 /* Including termination. Standard says 240 (without termination) */
-#define PNET_CHASSIS_ID_MAX_SIZE   (241)
+#define PNET_CHASSIS_ID_MAX_SIZE (241)
 
 /* Including termination. Standard says 240 (without termination) */
 #define PNET_STATION_NAME_MAX_SIZE (241)
 
 /* Including termination. Standard says 14 (without termination) */
-#define PNET_PORT_ID_MAX_SIZE      (15)
+#define PNET_PORT_ID_MAX_SIZE (15)
 
 /** Including termination */
 #define PNET_LLDP_CHASSIS_ID_MAX_SIZE (PNET_CHASSIS_ID_MAX_SIZE)
@@ -1169,7 +1169,6 @@ typedef struct pnet_ethaddr
 /** Including termination */
 #define PNET_LLDP_PORT_ID_MAX_SIZE                                             \
    (PNET_STATION_NAME_MAX_SIZE + PNET_PORT_ID_MAX_SIZE)
-
 
 /**
  * LLDP configuration for a single port.
@@ -1248,6 +1247,9 @@ typedef struct pnet_cfg
 
    /** Capabilities */
    bool send_hello; /**< Send DCP HELLO message on startup if true. */
+
+   /** Send diagnosis in the qualified format (otherwise extended format) */
+   bool use_qualified_diagnosis;
 
    /** IP configuration */
    bool dhcp_enable; /**< Not supported by stack. */
@@ -1751,7 +1753,7 @@ typedef struct pnet_diag_source
    uint32_t api;
    uint16_t slot;
    uint16_t subslot;
-   uint16_t ch; /* 0 - 0x7FFF manufacturer specific, 0x8000 whole submodule */
+   uint16_t ch; /** 0 - 0x7FFF manufacturer specific, 0x8000 whole submodule */
    pnet_diag_ch_group_values_t ch_grouping;
    pnet_diag_ch_prop_dir_values_t ch_direction;
 } pnet_diag_source_t;
@@ -1764,7 +1766,9 @@ typedef struct pnet_diag_source
  *
  * This sends a diagnosis alarm.
  *
- * Uses the "Qualified channel diagnosis" format on the wire.
+ * Uses the "Qualified channel diagnosis" format on the wire if the
+ * configuration parameter use_qualified_diagnosis is true, otherwise
+ * "Extended channel diagnosis".
  *
  * @param net                 InOut: The p-net stack instance.
  * @param p_diag_source       In:    Slot, subslot, channel, direction etc.
@@ -1780,7 +1784,8 @@ typedef struct pnet_diag_source
  *                                   to the error.
  * @param qual_ch_qualifier   In:    More detailed severity information. Used
  *                                   when severity =
- *                                   PNET_DIAG_CH_PROP_MAINT_QUALIFIED.
+ *                                   PNET_DIAG_CH_PROP_MAINT_QUALIFIED and the
+ *                                   use_qualified_diagnosis is enabled.
  *                                   Max one bit should be set.
  *                                   Use 0 otherwise.
  * @return  0  if the operation succeeded.
@@ -1851,8 +1856,8 @@ PNET_EXPORT int pnet_diag_std_remove (
  * Use \a pnet_diag_usi_update() instead if you would like to have an error
  * if the diagnosis is missing when trying to update it.
  *
- * A diagnosis in USI format is always assigned to the channel "whole
- * submodule" (not individual channels). The severity is always "Fault".
+ * A diagnosis in USI format is always assigned to the channel
+ * "whole submodule" (not individual channels). The severity is always "Fault".
  *
  * It is recommended to use the standard diagnosis format in most cases.
  * Use the manufacturer specific format ("USI format") only if it's not
@@ -1926,6 +1931,116 @@ PNET_EXPORT int pnet_diag_usi_remove (
    uint32_t api,
    uint16_t slot,
    uint16_t subslot,
+   uint16_t usi);
+
+/**
+ * Add a diagnosis entry, in standard or USI format.
+ *
+ * This is a low-level function. Typically you should use one of these instead
+ * (which uses this function internally):
+ *  - pnet_diag_std_add()
+ *  - pnet_diag_usi_add()
+ *
+ * This sends a diagnosis alarm.
+ *
+ * @param net                 InOut: The p-net stack instance.
+ * @param p_diag_source       In:    Slot, subslot, channel, direction etc.
+ * @param ch_bits             In:    Number of bits in the channel.
+ * @param severity            In:    Diagnosis severity.
+ * @param ch_error_type       In:    The channel error type.
+ * @param ext_ch_error_type   In:    The extended channel error type.
+ * @param ext_ch_add_value    In:    The extended channel error additional
+ *                                   value.
+ * @param qual_ch_qualifier   In:    The qualified channel qualifier.
+ * @param usi                 In:    The USI.
+ * @param p_manuf_data        In:    The manufacturer specific diagnosis data.
+ *                                   (Only needed if USI <= 0x7fff).
+ * @return  0  if the operation succeeded.
+ *          -1 if an error occurred.
+ */
+PNET_EXPORT int pnet_diag_add (
+   pnet_t * net,
+   const pnet_diag_source_t * p_diag_source,
+   pnet_diag_ch_prop_type_values_t ch_bits,
+   pnet_diag_ch_prop_maint_values_t severity,
+   uint16_t ch_error_type,
+   uint16_t ext_ch_error_type,
+   uint32_t ext_ch_add_value,
+   uint32_t qual_ch_qualifier,
+   uint16_t usi,
+   const uint8_t * p_manuf_data);
+
+/**
+ * Update a diagnosis entry, in standard or USI format.
+ *
+ * This is a low-level function. Typically you should use one of these instead
+ * (which uses this function internally):
+ *  - pnet_diag_std_update()
+ *  - pnet_diag_usi_update()
+ *
+ * If the USI of the item is in the manufacturer-specified range then
+ * the USI is used to identify the item.
+ * Otherwise the other parameters are used (all must match):
+ *  - p_diag_source (all fields)
+ *  - Channel error type.
+ *  - Extended error type.
+ *
+ * When the item is found either the manufacturer data is updated (for
+ * USI in manufacturer-specific range) or the extended channel additional
+ * value is updated.
+ *
+ * This sends a diagnosis alarm.
+ *
+ * @param net               InOut: The p-net stack instance.
+ * @param p_diag_source     In:    Slot, subslot, channel, direction etc.
+ * @param ch_error_type     In:    The channel error type.
+ * @param ext_ch_error_type In:    The extended channel error type, or 0.
+ * @param ext_ch_add_value  In:    New extended channel error additional value.
+ * @param usi               In:    The USI.
+ * @param p_manuf_data      In:    New manufacturer specific diagnosis data.
+ *                                (Only needed if USI <= 0x7fff).
+ * @return  0  if the operation succeeded.
+ *          -1 if an error occurred.
+ */
+PNET_EXPORT int pnet_diag_update (
+   pnet_t * net,
+   const pnet_diag_source_t * p_diag_source,
+   uint16_t ch_error_type,
+   uint16_t ext_ch_error_type,
+   uint32_t ext_ch_add_value,
+   uint16_t usi,
+   const uint8_t * p_manuf_data);
+
+/**
+ * Remove a diagnosis entry, in standard or USI format.
+ *
+ * This is a low-level function. Typically you should use one of these instead
+ * (which uses this function internally):
+ *  - pnet_diag_std_remove()
+ *  - pnet_diag_usi_remove()
+ *
+ * If the USI of the item is in the manufacturer-specified range then
+ * the USI is used to identify the item.
+ * Otherwise the other parameters are used (all must match):
+ *  - p_diag_source (all fields)
+ *  - Channel error type.
+ *  - Extended error type.
+ *
+ * This sends a diagnosis alarm.
+ *
+ * @param net               InOut: The p-net stack instance.
+ * @param p_diag_source     In:    Slot, subslot, channel, direction etc.
+ * @param ch_error_type     In:    The channel error type.
+ * @param ext_ch_error_type In:    The extended channel error type, or 0.
+ * @param usi               In:    The USI.
+ * @return  0  if the operation succeeded.
+ *          -1 if an error occurred.
+ */
+PNET_EXPORT int pnet_diag_remove (
+   pnet_t * net,
+   const pnet_diag_source_t * p_diag_source,
+   uint16_t ch_error_type,
+   uint16_t ext_ch_error_type,
    uint16_t usi);
 
 /******************** Show Profinet stack info ********************************/

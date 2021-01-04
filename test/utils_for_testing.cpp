@@ -547,6 +547,9 @@ void PnetIntegrationTestBase::cfg_init()
 
    /* Storage */
    strcpy (pnet_default_cfg.file_directory, "/disk1");
+
+   /* Diagnosis */
+   pnet_default_cfg.use_qualified_diagnosis = true;
 }
 
 void PnetIntegrationTestBase::run_stack (int us)
