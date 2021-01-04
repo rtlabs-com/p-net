@@ -49,11 +49,9 @@ int pf_eth_send (pnet_t * net, pnal_eth_handle_t * handle, pnal_buf_t * buf)
    if (sent_len <= 0)
    {
       LOG_ERROR (PF_ETH_LOG, "ETH(%d): Error from pnal_eth_send\n", __LINE__);
-      net->interface_statistics.if_out_errors++;
    }
    else
    {
-      net->interface_statistics.if_out_octets += sent_len;
    }
    return sent_len;
 }
@@ -85,8 +83,6 @@ int pf_eth_recv (void * arg, pnal_buf_t * p_buf)
    switch (eth_type)
    {
    case PNAL_ETHTYPE_PROFINET:
-      net->interface_statistics.if_in_octets += p_buf->len;
-
       p_data = (uint16_t *)(&((uint8_t *)p_buf->payload)[frame_pos]);
       frame_id = ntohs (p_data[0]);
 
@@ -110,8 +106,6 @@ int pf_eth_recv (void * arg, pnal_buf_t * p_buf)
       }
       break;
    case PNAL_ETHTYPE_LLDP:
-      net->interface_statistics.if_in_octets += p_buf->len;
-
       ret = pf_lldp_recv (net, p_buf, frame_pos);
       break;
    case PNAL_ETHTYPE_IP:
@@ -121,7 +115,6 @@ int pf_eth_recv (void * arg, pnal_buf_t * p_buf)
       break;
    default:
       /* Unknown packet. */
-      net->interface_statistics.if_in_discards++;
 
       ret = 0;
       break;

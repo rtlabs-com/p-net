@@ -736,10 +736,12 @@ void pf_put_pdport_data_adj (
 
 /**
  * Insert pd port real data block into a buffer.
+ *
+ * Includes peer chassis ID, peer MAC address and peer MAU type.
+ *
  * @param net              InOut: The p-net stack instance
  * @param loc_port_num     In:    Local port number.
  *                                Valid range: 1 .. PNET_MAX_PORT
- * @param subslot          In:    DAP subslot identifying the port.
  * @param is_big_endian    In:    Endianness of the destination buffer.
  * @param p_res            In:    Read result
  * @param res_len          In:    Size of destination buffer.
@@ -749,7 +751,6 @@ void pf_put_pdport_data_adj (
 void pf_put_pdport_data_real (
    pnet_t * net,
    int loc_port_num,
-   uint16_t subslot,
    bool is_big_endian,
    const pf_iod_read_result_t * p_res,
    uint16_t res_len,
@@ -758,7 +759,7 @@ void pf_put_pdport_data_real (
 
 /**
  * Insert pd port statistics block into a buffer.
- * @param p_if_stats       In:    Interface statistics
+ * @param p_port_stats     In:    Port statistics
  * @param is_big_endian    In:    Endianness of the destination buffer.
  * @param p_res            In:    Read result
  * @param res_len          In:    Size of destination buffer.
@@ -767,7 +768,7 @@ void pf_put_pdport_data_real (
  */
 
 void pf_put_pdport_statistics (
-   const pf_interface_stats_t * p_if_stats,
+   const pnal_port_stats_t * p_port_stats,
    bool is_big_endian,
    const pf_iod_read_result_t * p_res,
    uint16_t res_len,
@@ -776,6 +777,9 @@ void pf_put_pdport_statistics (
 
 /**
  * Insert dp interface real data block into a buffer.
+ *
+ * This includes chassis ID, MAC address, IP address, subnet and gateway.
+ *
  * @param net              InOut: The p-net stack instance
  * @param is_big_endian    In:    Endianness of the destination buffer.
  * @param p_res            In:    Read result

@@ -31,8 +31,6 @@ int pf_eth_init (pnet_t * net);
 /**
  * Send raw Ethernet data.
  *
- * Update interface statistics.
- *
  * @param net              InOut: The p-net stack instance
  * @param handle           In:    Ethernet handle
  * @param buf              In:    Buffer with data to be sent

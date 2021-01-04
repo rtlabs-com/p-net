@@ -13,6 +13,11 @@
  * full license information.
  ********************************************************************/
 
+/**
+ * @file
+ * @brief Linux Ethernet related functions that use \a pnal_eth_handle_t
+ */
+
 #include "pnal.h"
 
 #include <net/ethernet.h>
@@ -139,18 +144,4 @@ int pnal_eth_send (pnal_eth_handle_t * handle, pnal_buf_t * buf)
    int ret = send (handle->socket, buf->payload, buf->len, 0);
 
    return ret;
-}
-
-void pnal_eth_get_status (
-   pnal_eth_handle_t * handle,
-   int loc_port_num,
-   pnal_eth_status_t * status)
-{
-   /* TODO: Read current status */
-   status->is_autonegotiation_supported = true;
-   status->is_autonegotiation_enabled = true;
-   status->autonegotiation_advertised_capabilities =
-      PNAL_ETH_AUTONEG_CAP_10BaseT_HALF_DUPLEX |
-      PNAL_ETH_AUTONEG_CAP_10BaseT_FULL_DUPLEX;
-   status->operational_mau_type = PNAL_ETH_MAU_COPPER_100BaseTX_FULL_DUPLEX;
 }

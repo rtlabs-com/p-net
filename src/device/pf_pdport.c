@@ -96,7 +96,10 @@ static int pf_pdport_load (pnet_t * net, int loc_port_num)
             p_port_data->pdport.check.peer.peer_station_name,
             p_port_data->pdport.check.peer.length_peer_port_name,
             p_port_data->pdport.check.peer.peer_port_name);
-         pf_lldp_reset_peer_timeout (net, loc_port_num, PF_LLDP_INITIAL_PEER_TIMEOUT);
+         pf_lldp_reset_peer_timeout (
+            net,
+            loc_port_num,
+            PF_LLDP_INITIAL_PEER_TIMEOUT);
       }
       else
       {
@@ -136,7 +139,10 @@ static int pf_pdport_load (pnet_t * net, int loc_port_num)
          "peer on port %u.\n",
          __LINE__,
          loc_port_num);
-      pf_lldp_reset_peer_timeout (net, loc_port_num, PF_LLDP_INITIAL_PEER_TIMEOUT);
+      pf_lldp_reset_peer_timeout (
+         net,
+         loc_port_num,
+         PF_LLDP_INITIAL_PEER_TIMEOUT);
       pf_lldp_send_enable (net, loc_port_num);
    }
 
@@ -204,16 +210,7 @@ static int pf_pdport_save (pnet_t * net, int loc_port_num)
    return ret;
 }
 
-/**
- * @internal
- * Get DAP port subslot using local port number
- *
- * @param net              InOut: The p-net stack instance
- * @param loc_port_num     In:    Local port number.
- *                                Valid range: 1 .. PNET_MAX_PORT
- * @return DAP subslot number for port identity
- */
-static uint16_t pf_pdport_loc_port_num_to_dap_subslot (int loc_port_num)
+uint16_t pf_pdport_loc_port_num_to_dap_subslot (int loc_port_num)
 {
    uint16_t subslot =
       PNET_SUBSLOT_DAP_INTERFACE_1_PORT_1_IDENT + PNET_PORT_1 - loc_port_num;
@@ -223,6 +220,8 @@ static uint16_t pf_pdport_loc_port_num_to_dap_subslot (int loc_port_num)
 /**
  * @internal
  * Get local port from DAP port subslot
+ *
+ * Considers PNET_MAX_PORT
  *
  * @param subslot              In: Subslot number
  * @return The port number mapping to the subslot.
@@ -441,8 +440,10 @@ int pf_pdport_read_ind (
    uint16_t * p_pos)
 {
    int ret = -1;
-   int loc_port_num = 0;
-   pf_port_t * p_port_data = NULL;
+   int loc_port_num;
+   pnal_port_stats_t port_stats;
+   pf_port_t * p_port_data;
+   const pnet_port_cfg_t * p_port_cfg;
    uint16_t slot = p_read_req->slot_number;
    uint16_t subslot = p_read_req->subslot_number;
 
@@ -457,7 +458,6 @@ int pf_pdport_read_ind (
          pf_put_pdport_data_real (
             net,
             loc_port_num,
-            subslot,
             true,
             p_read_res,
             res_size,
@@ -567,15 +567,36 @@ int pf_pdport_read_ind (
          ((subslot == PNET_SUBSLOT_DAP_INTERFACE_1_IDENT) ||
           (pf_pdport_subslot_is_dap_port_id (subslot) == true)))
       {
-         /* Todo - statistics for different ports and interfaces */
-         pf_put_pdport_statistics (
-            &net->interface_statistics,
-            true,
-            p_read_res,
-            res_size,
-            p_res,
-            p_pos);
-         ret = 0;
+         loc_port_num = pf_pdport_dap_subslot_to_local_port (subslot);
+
+         if (loc_port_num != 0)
+         {
+            p_port_cfg = pf_lldp_get_port_config (net, loc_port_num);
+            if (
+               pnal_get_port_statistics (
+                  p_port_cfg->phy_port.if_name,
+                  &port_stats) == 0)
+            {
+               pf_put_pdport_statistics (
+                  &port_stats,
+                  true,
+                  p_read_res,
+                  res_size,
+                  p_res,
+                  p_pos);
+               ret = 0;
+            }
+         }
+         else
+         {
+            /* TODO What should be provided for
+                    PNET_SUBSLOT_DAP_INTERFACE_1_IDENT? */
+            LOG_DEBUG (
+               PNET_LOG,
+               "PDPORT(%d): PF_IDX_SUB_PDPORT_STATISTIC for "
+               "PNET_SUBSLOT_DAP_INTERFACE_1_IDENT is not yet implemented\n",
+               __LINE__);
+         }
       }
       break;
    default:

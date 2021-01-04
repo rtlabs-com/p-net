@@ -353,7 +353,7 @@ Device details:
 | lldpConfigManAddrPortsTxEnable | On/off for ports. Writable                                      |
 +--------------------------------+-----------------------------------------------------------------+
 
-Interface statistics, for each port?:
+Interface statistics, for each port:
 
 +----------------+-----------------------------------------------------------------+
 | Field name     | Description                                                     |

@@ -43,11 +43,11 @@ int pf_cmina_init (pnet_t * net);
 int pf_cmina_remove_all_data_files (const char * file_directory);
 
 /**
- * Show interface statistics
+ * Show port statistics
  *
  * @param net              InOut: The p-net stack instance
  */
-void pf_cmina_interface_statistics_show (const pnet_t * net);
+void pf_cmina_port_statistics_show (pnet_t * net);
 
 /**
  * Show the CMINA status.

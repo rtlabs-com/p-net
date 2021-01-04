@@ -52,11 +52,14 @@ int pf_lldp_get_peer_timestamp (
    int loc_port_num,
    uint32_t * p_timestamp_10ms);
 
+/* TODO: Move this function to src/device/pf_port.h */
 /**
- * Get LLDP port configuration for a port.
+ * Get port configuration.
  *
  * If the local port number is out of range this operation will assert.
  * NULL will never be returned.
+ *
+ * See also \a pf_port_get_state() for port runtime data.
  *
  * @param net              InOut: The p-net stack instance
  * @param loc_port_num     In:    Local port number.

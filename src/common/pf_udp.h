@@ -32,8 +32,6 @@ int pf_udp_open (pnet_t * net, pnal_ipport_t port);
 /**
  * Send UDP data
  *
- * Update interface statistics.
- *
  * @param net              InOut: The p-net stack instance
  * @param id               In:    Socket ID
  * @param dst_addr         In:    Destination IP address
@@ -52,8 +50,6 @@ int pf_udp_sendto (
 
 /**
  * Receive UDP data.
- *
- * Update interface statistics.
  *
  * This is a nonblocking function, and it
  * returns 0 immediately if no data is available.

@@ -13,6 +13,11 @@
  * full license information.
  ********************************************************************/
 
+/**
+ * @file
+ * @brief rt-kernel Ethernet related functions that use \a pnal_eth_handle_t
+ */
+
 #include "pnal.h"
 #include "osal_log.h"
 
@@ -25,16 +30,6 @@
 
 static struct netif * interface[MAX_NUMBER_OF_IF];
 static int nic_index = 0;
-
-int pnal_get_interface_index (pnal_eth_handle_t * handle)
-{
-   struct netif * netif = interface[handle->if_id];
-   u8_t index;
-
-   index = netif_to_num (netif);
-
-   return index;
-}
 
 pnal_eth_handle_t * pnal_eth_init (
    const char * if_name,
@@ -103,18 +98,4 @@ int pnal_eth_send (pnal_eth_handle_t * handle, pnal_buf_t * buf)
       }
    }
    return ret;
-}
-
-void pnal_eth_get_status (
-   pnal_eth_handle_t * handle,
-   int loc_port_num,
-   pnal_eth_status_t * status)
-{
-   /* TODO: Read current status */
-   status->is_autonegotiation_supported = true;
-   status->is_autonegotiation_enabled = true;
-   status->autonegotiation_advertised_capabilities =
-      PNAL_ETH_AUTONEG_CAP_10BaseT_HALF_DUPLEX |
-      PNAL_ETH_AUTONEG_CAP_10BaseT_FULL_DUPLEX;
-   status->operational_mau_type = PNAL_ETH_MAU_COPPER_100BaseTX_FULL_DUPLEX;
 }

@@ -58,12 +58,14 @@ pnal_eth_handle_t * mock_pnal_eth_init (
    return handle;
 }
 
-void mock_pnal_eth_get_status (
-   pnal_eth_handle_t * handle,
-   int loc_port_num,
+int mock_pnal_eth_get_status (
+   const char * interface_name,
    pnal_eth_status_t * status)
 {
-   *status = mock_os_data.eth_status[loc_port_num];
+   /* TODO get loc_port_num from interface_name */
+   *status = mock_os_data.eth_status[1];
+
+   return 0;
 }
 
 int mock_pnal_get_ip_suite (
@@ -154,7 +156,7 @@ void mock_pnal_udp_close (uint32_t id)
 {
 }
 
-int mock_pnal_get_interface_index (pnal_eth_handle_t * handle)
+int mock_pnal_get_interface_index (const char * interface_name)
 {
    return mock_os_data.interface_index;
 }

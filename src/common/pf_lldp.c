@@ -692,7 +692,7 @@ void pf_lldp_get_management_address (
 
    p_man_address->interface_number.subtype = 2; /* ifIndex */
    p_man_address->interface_number.value =
-      pnal_get_interface_index (net->eth_handle);
+      pnal_get_interface_index (net->fspm_cfg.if_cfg.main_port.if_name);
 
    p_man_address->is_valid = true;
 }
@@ -772,8 +772,20 @@ void pf_lldp_get_link_status (
    pf_lldp_link_status_t * p_link_status)
 {
    pnal_eth_status_t status;
+   const pnet_port_cfg_t * p_port_cfg =
+      pf_lldp_get_port_config (net, loc_port_num);
 
-   pnal_eth_get_status (net->eth_handle, loc_port_num, &status);
+   /* TODO: Better error handling */
+   if (pnal_eth_get_status (p_port_cfg->phy_port.if_name, &status) != 0)
+   {
+      LOG_ERROR (
+         PF_LLDP_LOG,
+         "LLDP(%d): Failed to read Ethernet port status for port %d\n",
+         __LINE__,
+         loc_port_num);
+      memset (&status, 0, sizeof (status));
+   }
+
    p_link_status->is_autonegotiation_supported =
       status.is_autonegotiation_supported;
    p_link_status->is_autonegotiation_enabled =

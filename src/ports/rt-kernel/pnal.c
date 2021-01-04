@@ -101,6 +101,43 @@ int pnal_get_ip_suite (
    return ret;
 }
 
+int pnal_get_port_statistics (
+   const char * interface_name,
+   pnal_port_stats_t * port_stats)
+{
+   /* TODO Read statistics */
+   memset (port_stats, 0, sizeof (*port_stats));
+   return 0;
+}
+
+int pnal_get_interface_index (const char * interface_name)
+{
+   u8_t index;
+   struct netif * netif = netif_find (interface_name);
+
+   if (netif == NULL)
+   {
+      return 0;
+   }
+
+   index = netif_to_num (netif);
+
+   return index;
+}
+
+int pnal_eth_get_status (const char * interface_name, pnal_eth_status_t * status)
+{
+   /* TODO: Read current status */
+   status->is_autonegotiation_supported = true;
+   status->is_autonegotiation_enabled = true;
+   status->autonegotiation_advertised_capabilities =
+      PNAL_ETH_AUTONEG_CAP_100BaseTX_HALF_DUPLEX |
+      PNAL_ETH_AUTONEG_CAP_100BaseTX_FULL_DUPLEX;
+   status->operational_mau_type = PNAL_ETH_MAU_COPPER_100BaseTX_FULL_DUPLEX;
+
+   return 0;
+}
+
 int os_snprintf (char * str, size_t size, const char * fmt, ...)
 {
    int ret;

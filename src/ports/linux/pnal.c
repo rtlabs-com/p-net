@@ -23,6 +23,10 @@
 #include "pnal_filetools.h"
 
 #include <arpa/inet.h>
+#include <ifaddrs.h>
+#include <linux/ethtool.h>
+#include <linux/if_link.h>
+#include <linux/sockios.h>
 #include <net/if.h>
 #include <pthread.h>
 #include <sys/ioctl.h>
@@ -38,6 +42,8 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+
+/********************************* Files *************************************/
 
 int pnal_save_file (
    const char * fullpath,
@@ -155,6 +161,8 @@ int pnal_load_file (
    return ret;
 }
 
+/*****************************************************************************/
+
 uint32_t pnal_get_system_uptime_10ms (void)
 {
    uint32_t uptime;
@@ -162,15 +170,6 @@ uint32_t pnal_get_system_uptime_10ms (void)
    /* TODO: Get sysUptime from SNMP MIB-II */
    uptime = 0;
    return uptime;
-}
-
-int pnal_get_interface_index (pnal_eth_handle_t * handle)
-{
-   int index;
-
-   /* TODO: Get ifIndex from ifTable in SNMP MIB-II */
-   index = 0;
-   return index;
 }
 
 uint32_t pnal_buf_alloc_cnt = 0; /* Count outstanding buffers */
@@ -208,6 +207,8 @@ uint8_t pnal_buf_header (pnal_buf_t * p, int16_t header_size_increment)
 {
    return 255;
 }
+
+/************************** Networking ***************************************/
 
 /** @internal
  * Convert IPv4 address to string
@@ -254,6 +255,180 @@ int pnal_set_ip_suite (
    argv[7] = NULL;
 
    return pnal_execute_script (argv);
+}
+
+/**
+ * Calculate MAU type.
+ *
+ * @param speed            In:    Speed in Mbit/s
+ * @param duplex           In:    DUPLEX_FULL, DUPLEX_HALF or DUPLEX_UNKNOWN
+ * @return  The MAU type
+ */
+static pnal_eth_mau_t calculate_mau_type (uint32_t speed, uint8_t duplex)
+{
+   /* TODO Differentiate between copper, fiber and radio.
+           Better handling of edge cases. */
+
+   if (duplex == DUPLEX_FULL)
+   {
+      switch (speed)
+      {
+      case SPEED_10:
+         return PNAL_ETH_MAU_COPPER_10BaseT;
+      case SPEED_100:
+         return PNAL_ETH_MAU_COPPER_100BaseTX_FULL_DUPLEX;
+      case SPEED_1000:
+         return PNAL_ETH_MAU_COPPER_1000BaseT_FULL_DUPLEX;
+      default:
+         break;
+      }
+   }
+   else if (duplex == DUPLEX_HALF)
+   {
+      switch (speed)
+      {
+      case SPEED_10:
+         return PNAL_ETH_MAU_COPPER_10BaseT;
+      case SPEED_100:
+         return PNAL_ETH_MAU_COPPER_100BaseTX_HALF_DUPLEX;
+      case SPEED_1000:
+         return PNAL_ETH_MAU_COPPER_1000BaseT_HALF_DUPLEX;
+      default:
+         break;
+      }
+   }
+
+   return PNAL_ETH_MAU_RADIO;
+}
+
+/**
+ * Calculate advertised capabilites
+ *
+ * @param advertised       In:    Linux advertised capabilites as a bitfield
+ * @return Profinet advertised capabilites as a bitfield
+ */
+static uint16_t calculate_capabilities (uint32_t advertised)
+{
+   uint16_t out = 0;
+
+   if (advertised & ADVERTISED_10baseT_Half)
+   {
+      out |= PNAL_ETH_AUTONEG_CAP_10BaseT_HALF_DUPLEX;
+   }
+   if (advertised & ADVERTISED_10baseT_Full)
+   {
+      out |= PNAL_ETH_AUTONEG_CAP_10BaseT_FULL_DUPLEX;
+   }
+   if (advertised & ADVERTISED_100baseT_Half)
+   {
+      out |= PNAL_ETH_AUTONEG_CAP_100BaseTX_HALF_DUPLEX;
+   }
+   if (advertised & ADVERTISED_100baseT_Full)
+   {
+      out |= PNAL_ETH_AUTONEG_CAP_100BaseTX_FULL_DUPLEX;
+   }
+   if (advertised & ADVERTISED_1000baseT_Half)
+   {
+      out |= PNAL_ETH_AUTONEG_CAP_1000BaseT_HALF_DUPLEX;
+   }
+   if (advertised & ADVERTISED_1000baseT_Full)
+   {
+      out |= PNAL_ETH_AUTONEG_CAP_1000BaseT_FULL_DUPLEX;
+   }
+
+   if (out == 0)
+   {
+      out |= PNAL_ETH_AUTONEG_CAP_UNKNOWN;
+   }
+
+   return out;
+}
+
+int pnal_eth_get_status (const char * interface_name, pnal_eth_status_t * status)
+{
+   /* TODO: Possibly use the new ETHTOOL_GLINKSETTINGS instead of ETHTOOL_GSET
+      See:
+   https://stackoverflow.com/questions/41822920/how-to-get-ethtool-settings */
+
+   int ret = -1;
+   int control_socket;
+   struct ifreq ifr;
+   struct ethtool_cmd eth_status_linux;
+   uint32_t speed = 0; /* Mbit/s */
+
+   control_socket = socket (PF_INET, SOCK_DGRAM, IPPROTO_IP);
+   if (control_socket < 0)
+   {
+      return ret;
+   }
+
+   snprintf (ifr.ifr_name, sizeof (ifr.ifr_name), "%s", interface_name);
+   ifr.ifr_data = (char *)&eth_status_linux;
+   eth_status_linux.cmd = ETHTOOL_GSET;
+
+   if (ioctl (control_socket, SIOCETHTOOL, &ifr) >= 0)
+   {
+      speed = ethtool_cmd_speed (&eth_status_linux);
+
+      status->is_autonegotiation_enabled =
+         (eth_status_linux.autoneg == AUTONEG_ENABLE);
+      status->is_autonegotiation_supported = eth_status_linux.advertising &
+                                             ADVERTISED_Autoneg;
+      status->operational_mau_type =
+         calculate_mau_type (speed, eth_status_linux.duplex);
+      status->autonegotiation_advertised_capabilities =
+         calculate_capabilities (eth_status_linux.advertising);
+
+      ret = 0;
+   }
+   close (control_socket);
+
+   return ret;
+}
+
+int pnal_get_interface_index (const char * interface_name)
+{
+   return if_nametoindex (interface_name);
+}
+
+int pnal_get_port_statistics (
+   const char * interface_name,
+   pnal_port_stats_t * port_stats)
+{
+   struct ifaddrs *p_ifaddr, *p_temp;
+   struct rtnl_link_stats * p_statistics_linux;
+   int ret = -1;
+
+   if (getifaddrs (&p_ifaddr) != 0)
+   {
+      return ret;
+   }
+
+   /* Walk the linked list and look for correct interface name */
+   for (p_temp = p_ifaddr; p_temp != NULL; p_temp = p_temp->ifa_next)
+   {
+      if (
+         (p_temp->ifa_addr != NULL) &&
+         (p_temp->ifa_addr->sa_family == AF_PACKET) &&
+         (strcmp (p_temp->ifa_name, interface_name) == 0) &&
+         (p_temp->ifa_data != NULL))
+      {
+         p_statistics_linux = (struct rtnl_link_stats *)p_temp->ifa_data;
+
+         port_stats->if_in_octets = p_statistics_linux->rx_bytes;
+         port_stats->if_in_errors = p_statistics_linux->rx_errors;
+         port_stats->if_in_discards = p_statistics_linux->rx_dropped;
+         port_stats->if_out_octets = p_statistics_linux->tx_bytes;
+         port_stats->if_out_errors = p_statistics_linux->tx_errors;
+         port_stats->if_out_discards = p_statistics_linux->tx_dropped;
+
+         ret = 0;
+         break;
+      }
+   }
+   freeifaddrs (p_ifaddr);
+
+   return ret;
 }
 
 int pnal_get_macaddress (const char * interface_name, pnal_ethaddr_t * mac_addr)
