@@ -197,27 +197,34 @@ int pf_cmrdr_rm_read_ind (
       case PF_IDX_SUB_IM_1:
          if ((data_len == sizeof (pnet_im_1_t)) && (*p_pos + data_len < res_size))
          {
+            os_mutex_lock (net->fspm_im_mutex);
             pf_put_im_1 (true, (pnet_im_1_t *)p_data, res_size, p_res, p_pos);
+            os_mutex_unlock (net->fspm_im_mutex);
             ret = 0;
          }
          break;
       case PF_IDX_SUB_IM_2:
          if ((data_len == sizeof (pnet_im_2_t)) && (*p_pos + data_len < res_size))
          {
+            os_mutex_lock (net->fspm_im_mutex);
             pf_put_im_2 (true, (pnet_im_2_t *)p_data, res_size, p_res, p_pos);
+            os_mutex_unlock (net->fspm_im_mutex);
             ret = 0;
          }
          break;
       case PF_IDX_SUB_IM_3:
          if ((data_len == sizeof (pnet_im_3_t)) && (*p_pos + data_len < res_size))
          {
+            os_mutex_lock (net->fspm_im_mutex);
             pf_put_im_3 (true, (pnet_im_3_t *)p_data, res_size, p_res, p_pos);
+            os_mutex_unlock (net->fspm_im_mutex);
             ret = 0;
          }
          break;
       case PF_IDX_SUB_IM_4:
          if ((data_len == sizeof (pnet_im_4_t)) && (*p_pos + data_len < res_size))
          {
+            os_mutex_lock (net->fspm_im_mutex);
             pf_put_record_data_read (
                true,
                PF_BT_IM_4,
@@ -226,6 +233,7 @@ int pf_cmrdr_rm_read_ind (
                res_size,
                p_res,
                p_pos);
+            os_mutex_unlock (net->fspm_im_mutex);
             ret = 0;
          }
          break;

@@ -220,7 +220,7 @@ int my_state_ind (
          net,
          TEST_API_IDENT,
          PNET_SLOT_DAP_IDENT,
-         PNET_SUBSLOT_DAP_INTERFACE_1_PORT_0_IDENT,
+         PNET_SUBSLOT_DAP_INTERFACE_1_PORT_1_IDENT,
          NULL,
          0,
          PNET_IOXS_GOOD);
@@ -439,7 +439,7 @@ void PnetIntegrationTestBase::available_modules_and_submodules_init()
    appdata.available_submodule_types[2].module_ident_number =
       PNET_MOD_DAP_IDENT;
    appdata.available_submodule_types[2].submodule_ident_number =
-      PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT;
+      PNET_SUBMOD_DAP_INTERFACE_1_PORT_1_IDENT;
    appdata.available_submodule_types[2].direction = PNET_DIR_NO_IO;
    appdata.available_submodule_types[2].input_length = 0;
    appdata.available_submodule_types[2].output_length = 0;
@@ -490,19 +490,11 @@ void PnetIntegrationTestBase::cfg_init()
    pnet_default_cfg.oem_device_id.device_id_lo = 0xef;
 
    strcpy (pnet_default_cfg.station_name, "");
-   strcpy (pnet_default_cfg.manufacturer_specific_string, "PNET demo");
    strcpy (pnet_default_cfg.product_name, "PNET unit tests");
 
    strcpy (pnet_default_cfg.lldp_cfg.ports[0].port_id, "port-001");
    pnet_default_cfg.lldp_cfg.ports[0].rtclass_2_status = 0;
    pnet_default_cfg.lldp_cfg.ports[0].rtclass_3_status = 0;
-   pnet_default_cfg.lldp_cfg.ports[0].cap_aneg = PNET_LLDP_AUTONEG_SUPPORTED |
-                                                 PNET_LLDP_AUTONEG_ENABLED;
-   pnet_default_cfg.lldp_cfg.ports[0].cap_phy =
-      PNET_LLDP_AUTONEG_CAP_100BaseTX_HALF_DUPLEX |
-      PNET_LLDP_AUTONEG_CAP_100BaseTX_FULL_DUPLEX;
-   pnet_default_cfg.lldp_cfg.ports[0].mau_type =
-      PNET_MAU_COPPER_100BaseTX_FULL_DUPLEX;
 
    /* Timing */
    pnet_default_cfg.min_device_interval = 32; /* Corresponds to 1 ms */

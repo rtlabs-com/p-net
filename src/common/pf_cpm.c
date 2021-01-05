@@ -519,7 +519,7 @@ static int pf_cpm_c_data_ind (
          if (changes != 0)
          {
             /* Notify the application about changes in the data_status */
-            (void)pf_fspm_data_status_changed (
+            pf_fspm_data_status_changed (
                net,
                p_iocr->p_ar,
                p_iocr,

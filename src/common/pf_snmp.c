@@ -69,10 +69,10 @@ static void pf_snmp_encode_link_status (
    const pf_lldp_link_status_t * plain)
 {
    /* See RFC 2579 "Textual Conventions for SMIv2": "TruthValue" */
-   encoded->auto_neg_supported = plain->auto_neg_supported ? 1 : 2;
-   encoded->auto_neg_enabled = plain->auto_neg_enabled ? 1 : 2;
+   encoded->auto_neg_supported = plain->is_autonegotiation_supported ? 1 : 2;
+   encoded->auto_neg_enabled = plain->is_autonegotiation_enabled ? 1 : 2;
 
-   encoded->oper_mau_type = plain->oper_mau_type;
+   encoded->oper_mau_type = plain->operational_mau_type;
 
    /* See RFC 1906 "Transport Mappings for Version 2 of the
     *  Simple Network Management Protocol (SNMPv2)", ch. 8:
@@ -87,10 +87,10 @@ static void pf_snmp_encode_link_status (
     *  if any, of the final octet are set to zero on generation and
     *  ignored on receipt."
     */
-   encoded->auto_neg_advertised_cap[0] =
-      pf_snmp_bit_reversed_byte ((plain->auto_neg_advertised_cap >> 0) & 0xff);
-   encoded->auto_neg_advertised_cap[1] =
-      pf_snmp_bit_reversed_byte ((plain->auto_neg_advertised_cap >> 8) & 0xff);
+   encoded->auto_neg_advertised_cap[0] = pf_snmp_bit_reversed_byte (
+      (plain->autonegotiation_advertised_capabilities >> 0) & 0xff);
+   encoded->auto_neg_advertised_cap[1] = pf_snmp_bit_reversed_byte (
+      (plain->autonegotiation_advertised_capabilities >> 8) & 0xff);
 }
 
 /**
@@ -117,11 +117,26 @@ static void pf_snmp_encode_management_address (
    memcpy (&encoded->value[1], plain->value, plain->len);
 }
 
+/**
+ * Encode signal delays for use in SNMP response.
+ *
+ * @param encoded          Out:   Encoded signal delays.
+ * @param plain            In:    Unencoded signal delays.
+ */
+static void pf_snmp_encode_signal_delays (
+   pf_snmp_signal_delay_t * encoded,
+   const pf_lldp_signal_delay_t * plain)
+{
+   encoded->port_tx_delay_ns = plain->tx_delay_local;
+   encoded->port_rx_delay_ns = plain->rx_delay_local;
+   encoded->line_propagation_delay_ns = plain->cable_delay_local;
+}
+
 void pf_snmp_get_system_name (pnet_t * net, pf_snmp_system_name_t * name)
 {
    int error;
 
-   CC_STATIC_ASSERT (sizeof (name->string) >= PNAL_HOST_NAME_MAX);
+   CC_STATIC_ASSERT (sizeof (name->string) >= PNAL_HOSTNAME_MAX_SIZE);
 
    error = pnal_get_hostname (name->string);
    if (error)
@@ -146,7 +161,7 @@ void pf_snmp_get_system_contact (
 
    error = pf_file_load (
       directory,
-      PNET_FILENAME_SYSCONTACT,
+      PF_FILENAME_SYSCONTACT,
       contact,
       sizeof (*contact));
    if (error)
@@ -177,7 +192,7 @@ int pf_snmp_set_system_contact (
 
    res = pf_file_save_if_modified (
       directory,
-      PNET_FILENAME_SYSCONTACT,
+      PF_FILENAME_SYSCONTACT,
       contact,
       &temporary_buffer,
       sizeof (*contact));
@@ -224,19 +239,15 @@ void pf_snmp_get_system_location (
    pnet_t * net,
    pf_snmp_system_location_t * location)
 {
-   snprintf (
-      location->string,
-      sizeof (location->string),
-      "%s",
-      net->fspm_cfg.im_1_data.im_tag_location);
+   pf_fspm_get_system_location (net, location);
 }
 
 int pf_snmp_set_system_location (
    pnet_t * net,
    const pf_snmp_system_location_t * location)
 {
-   /* TODO: Write to I&M1 */
-   return -1;
+   pf_fspm_save_system_location (net, location);
+   return 0;
 }
 
 void pf_snmp_get_system_description (
@@ -272,7 +283,7 @@ void pf_snmp_get_system_description (
 
 void pf_snmp_get_port_list (pnet_t * net, pf_lldp_port_list_t * p_list)
 {
-   pf_port_get_list_of_ports (net, p_list);
+   pf_port_get_list_of_ports (net, PNET_MAX_PORT, p_list);
 }
 
 void pf_snmp_init_port_iterator (pnet_t * net, pf_port_iterator_t * p_iterator)
@@ -358,7 +369,7 @@ int pf_snmp_get_peer_management_address (
 
    error =
       pf_lldp_get_peer_management_address (net, loc_port_num, &man_address);
-   if (error == false)
+   if (error == 0)
    {
       pf_snmp_encode_management_address (p_man_address, &man_address);
    }
@@ -368,20 +379,30 @@ int pf_snmp_get_peer_management_address (
 
 void pf_snmp_get_management_port_index (
    pnet_t * net,
-   pf_lldp_management_port_index_t * p_man_port_index)
+   pf_lldp_interface_number_t * p_man_port_index)
 {
-   pf_lldp_get_management_port_index (net, p_man_port_index);
+   pf_lldp_management_address_t man_address;
+
+   pf_lldp_get_management_address (net, &man_address);
+   *p_man_port_index = man_address.interface_number;
 }
 
 int pf_snmp_get_peer_management_port_index (
    pnet_t * net,
    int loc_port_num,
-   pf_lldp_management_port_index_t * p_man_port_index)
+   pf_lldp_interface_number_t * p_man_port_index)
 {
-   return pf_lldp_get_peer_management_port_index (
-      net,
-      loc_port_num,
-      p_man_port_index);
+   int error;
+   pf_lldp_management_address_t man_address;
+
+   error =
+      pf_lldp_get_peer_management_address (net, loc_port_num, &man_address);
+   if (error == 0)
+   {
+      *p_man_port_index = man_address.interface_number;
+   }
+
+   return error;
 }
 
 void pf_snmp_get_station_name (
@@ -416,17 +437,29 @@ int pf_snmp_get_peer_station_name (
 void pf_snmp_get_signal_delays (
    pnet_t * net,
    int loc_port_num,
-   pf_lldp_signal_delay_t * p_delays)
+   pf_snmp_signal_delay_t * p_delays)
 {
-   pf_lldp_get_signal_delays (net, loc_port_num, p_delays);
+   pf_lldp_signal_delay_t delays;
+
+   pf_lldp_get_signal_delays (net, loc_port_num, &delays);
+   pf_snmp_encode_signal_delays (p_delays, &delays);
 }
 
 int pf_snmp_get_peer_signal_delays (
    pnet_t * net,
    int loc_port_num,
-   pf_lldp_signal_delay_t * p_delays)
+   pf_snmp_signal_delay_t * p_delays)
 {
-   return pf_lldp_get_peer_signal_delays (net, loc_port_num, p_delays);
+   pf_lldp_signal_delay_t delays;
+   int error;
+
+   error = pf_lldp_get_peer_signal_delays (net, loc_port_num, &delays);
+   if (error == 0)
+   {
+      pf_snmp_encode_signal_delays (p_delays, &delays);
+   }
+
+   return error;
 }
 
 void pf_snmp_get_link_status (
@@ -449,7 +482,7 @@ int pf_snmp_get_peer_link_status (
    int error;
 
    error = pf_lldp_get_peer_link_status (net, loc_port_num, &link_status);
-   if (error == false)
+   if (error == 0)
    {
       pf_snmp_encode_link_status (p_link_status, &link_status);
    }

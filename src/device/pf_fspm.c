@@ -33,6 +33,14 @@
 #include "pf_includes.h"
 #include "pf_block_reader.h"
 
+typedef struct pf_im_nvm
+{
+   pnet_im_1_t im1;
+   pnet_im_2_t im2;
+   pnet_im_3_t im3;
+   pnet_im_4_t im4;
+} pf_im_nvm_t;
+
 void pf_fspm_im_show (const pnet_t * net)
 {
    printf ("Identification & Maintenance\n");
@@ -93,10 +101,10 @@ void pf_fspm_option_show (const pnet_t * net)
       PNET_MAX_API);
    printf ("PNET_MAX_CR                                    : %d\n", PNET_MAX_CR);
    printf (
-      "PNET_MAX_SLOTS                               : %d\n",
+      "PNET_MAX_SLOTS                                 : %d\n",
       PNET_MAX_SLOTS);
    printf (
-      "PNET_MAX_SUBSLOTS                            : %d\n",
+      "PNET_MAX_SUBSLOTS                              : %d\n",
       PNET_MAX_SUBSLOTS);
    printf (
       "PNET_MAX_CHANNELS                              : %d\n",
@@ -117,11 +125,11 @@ void pf_fspm_option_show (const pnet_t * net)
       "PNET_MAX_DIAG_ITEMS                            : %d\n",
       PNET_MAX_DIAG_ITEMS);
    printf (
-      "PNET_MAX_DIRECTORYPATH_LENGTH                  : %d\n",
-      PNET_MAX_DIRECTORYPATH_LENGTH);
+      "PNET_MAX_DIRECTORYPATH_SIZE                    : %d\n",
+      PNET_MAX_DIRECTORYPATH_SIZE);
    printf (
-      "PNET_MAX_FILENAME_LENGTH                       : %d\n",
-      PNET_MAX_FILENAME_LENGTH);
+      "PNET_MAX_FILENAME_SIZE                         : %d\n",
+      PNET_MAX_FILENAME_SIZE);
    printf (
       "PNET_MAX_SESSION_BUFFER_SIZE                   : %d\n",
       PNET_MAX_SESSION_BUFFER_SIZE);
@@ -168,6 +176,9 @@ void pf_fspm_option_show (const pnet_t * net)
    printf (
       "PNET_OPTION_SRL                                : %d\n",
       PNET_OPTION_SRL);
+   printf (
+      "PNET_OPTION_SNMP                               : %d\n",
+      PNET_OPTION_SNMP);
    printf ("LOG_LEVEL (DEBUG=0, FATAL=4)                   : %d\n", LOG_LEVEL);
    printf (
       "sizeof(pnet_t) : %" PRIu32 " bytes (for currently selected option "
@@ -238,7 +249,7 @@ int pf_fspm_validate_configuration (const pnet_cfg_t * p_cfg)
  */
 static void pf_fspm_load_im (pnet_t * net)
 {
-   pnet_im_nvm_t file_im;
+   pf_im_nvm_t file_im;
    const char * p_file_directory = NULL;
 
    (void)pf_cmina_get_file_directory (net, &p_file_directory);
@@ -246,18 +257,20 @@ static void pf_fspm_load_im (pnet_t * net)
    if (
       pf_file_load (
          p_file_directory,
-         PNET_FILENAME_IM,
+         PF_FILENAME_IM,
          &file_im,
-         sizeof (pnet_im_nvm_t)) == 0)
+         sizeof (pf_im_nvm_t)) == 0)
    {
       LOG_DEBUG (
          PNET_LOG,
          "FSPM(%d): Did read I&M settings from nvm.\n",
          __LINE__);
+      os_mutex_lock (net->fspm_im_mutex);
       memcpy (&net->fspm_cfg.im_1_data, &file_im.im1, sizeof (pnet_im_1_t));
       memcpy (&net->fspm_cfg.im_2_data, &file_im.im2, sizeof (pnet_im_2_t));
       memcpy (&net->fspm_cfg.im_3_data, &file_im.im3, sizeof (pnet_im_3_t));
       memcpy (&net->fspm_cfg.im_4_data, &file_im.im4, sizeof (pnet_im_4_t));
+      os_mutex_unlock (net->fspm_im_mutex);
    }
    else
    {
@@ -280,24 +293,26 @@ static void pf_fspm_load_im (pnet_t * net)
  */
 static void pf_fspm_save_im (pnet_t * net)
 {
-   pnet_im_nvm_t output_im = {0};
-   pnet_im_nvm_t temporary_buffer;
+   pf_im_nvm_t output_im = {0};
+   pf_im_nvm_t temporary_buffer;
    const char * p_file_directory = NULL;
    int res = 0;
 
+   os_mutex_lock (net->fspm_im_mutex);
    memcpy (&output_im.im1, &net->fspm_cfg.im_1_data, sizeof (pnet_im_1_t));
    memcpy (&output_im.im2, &net->fspm_cfg.im_2_data, sizeof (pnet_im_2_t));
    memcpy (&output_im.im3, &net->fspm_cfg.im_3_data, sizeof (pnet_im_3_t));
    memcpy (&output_im.im4, &net->fspm_cfg.im_4_data, sizeof (pnet_im_4_t));
+   os_mutex_unlock (net->fspm_im_mutex);
 
    (void)pf_cmina_get_file_directory (net, &p_file_directory);
 
    res = pf_file_save_if_modified (
       p_file_directory,
-      PNET_FILENAME_IM,
+      PF_FILENAME_IM,
       &output_im,
       &temporary_buffer,
-      sizeof (pnet_im_nvm_t));
+      sizeof (pf_im_nvm_t));
    switch (res)
    {
    case 2:
@@ -328,6 +343,48 @@ static void pf_fspm_save_im (pnet_t * net)
    }
 }
 
+/**
+ * Set system location in I&M data record 1.
+ *
+ * Also see pf_fspm_save_system_location().
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param p_location       In:    New system location.
+ */
+static void pf_fspm_set_system_location (
+   pnet_t * net,
+   const pf_snmp_system_location_t * p_location)
+{
+   os_mutex_lock (net->fspm_im_mutex);
+   snprintf (
+      net->fspm_cfg.im_1_data.im_tag_location,
+      sizeof (net->fspm_cfg.im_1_data.im_tag_location),
+      "%s",
+      p_location->string);
+   os_mutex_unlock (net->fspm_im_mutex);
+}
+
+void pf_fspm_get_system_location (
+   pnet_t * net,
+   pf_snmp_system_location_t * p_location)
+{
+   os_mutex_lock (net->fspm_im_mutex);
+   snprintf (
+      p_location->string,
+      sizeof (p_location->string),
+      "%s",
+      net->fspm_cfg.im_1_data.im_tag_location);
+   os_mutex_unlock (net->fspm_im_mutex);
+}
+
+void pf_fspm_save_system_location (
+   pnet_t * net,
+   const pf_snmp_system_location_t * p_location)
+{
+   pf_fspm_set_system_location (net, p_location);
+   pf_fspm_save_im (net);
+}
+
 int pf_fspm_init (pnet_t * net, const pnet_cfg_t * p_cfg)
 {
    if (pf_fspm_validate_configuration (p_cfg) != 0)
@@ -342,6 +399,12 @@ int pf_fspm_init (pnet_t * net, const pnet_cfg_t * p_cfg)
    /* Reference to the default settings (used at factory reset) */
    net->p_fspm_default_cfg = p_cfg;
 
+   /* Create mutex for protecting writable I&M data */
+   if (net->fspm_im_mutex == NULL)
+   {
+      net->fspm_im_mutex = os_mutex_create();
+   }
+
    /* Load I&M data modifications from file, if any */
    pf_fspm_load_im (net);
    pf_fspm_save_im (net);
@@ -351,8 +414,6 @@ int pf_fspm_init (pnet_t * net, const pnet_cfg_t * p_cfg)
    {
       net->fspm_log_book_mutex = os_mutex_create();
    }
-
-   pf_pdport_init (net);
 
    /* Turn LED off */
    if (pf_fspm_signal_led_ind (net, false) != 0)
@@ -411,6 +472,7 @@ void pf_fspm_create_log_book_entry (
 
 int pf_fspm_clear_im_data (pnet_t * net)
 {
+   os_mutex_lock (net->fspm_im_mutex);
    memset (
       net->fspm_cfg.im_1_data.im_tag_function,
       ' ',
@@ -441,6 +503,7 @@ int pf_fspm_clear_im_data (pnet_t * net)
       net->fspm_cfg.im_4_data.im_signature,
       0,
       sizeof (net->fspm_cfg.im_4_data.im_signature));
+   os_mutex_unlock (net->fspm_im_mutex);
 
    pf_fspm_save_im (net);
 
@@ -515,18 +578,16 @@ int pf_fspm_exp_submodule_ind (
    return ret;
 }
 
-int pf_fspm_data_status_changed (
+void pf_fspm_data_status_changed (
    pnet_t * net,
    const pf_ar_t * p_ar,
    const pf_iocr_t * p_iocr,
    uint8_t changes,
    uint8_t data_status)
 {
-   int ret = -1;
-
    if (net->fspm_cfg.new_data_status_cb != NULL)
    {
-      ret = net->fspm_cfg.new_data_status_cb (
+      (void)net->fspm_cfg.new_data_status_cb (
          net,
          net->fspm_cfg.cb_arg,
          p_ar->arep,
@@ -534,24 +595,18 @@ int pf_fspm_data_status_changed (
          changes,
          data_status);
    }
-
-   return ret;
 }
 
-int pf_fspm_ccontrol_cnf (
+void pf_fspm_ccontrol_cnf (
    pnet_t * net,
    const pf_ar_t * p_ar,
    pnet_result_t * p_result)
 {
-   int ret = 0;
-
    if (net->fspm_cfg.ccontrol_cb != NULL)
    {
-      ret = net->fspm_cfg
-               .ccontrol_cb (net, net->fspm_cfg.cb_arg, p_ar->arep, p_result);
+      (void)net->fspm_cfg
+         .ccontrol_cb (net, net->fspm_cfg.cb_arg, p_ar->arep, p_result);
    }
-
-   return ret;
 }
 
 int pf_fspm_cm_read_ind (
@@ -738,7 +793,7 @@ int pf_fspm_cm_write_ind (
    const pf_ar_t * p_ar,
    const pf_iod_write_request_t * p_write_request,
    uint16_t write_length,
-   uint8_t * p_write_data,
+   const uint8_t * p_write_data,
    pnet_result_t * p_write_status)
 {
    int ret = -1;
@@ -799,7 +854,9 @@ int pf_fspm_cm_write_ind (
             get_info.is_big_endian = true;
             get_info.len = write_length; /* Bytes in input buffer */
 
+            os_mutex_lock (net->fspm_im_mutex);
             pf_get_im_1 (&get_info, &pos, &net->fspm_cfg.im_1_data);
+            os_mutex_unlock (net->fspm_im_mutex);
             if ((get_info.result == PF_PARSE_OK) && (pos == write_length))
             {
                LOG_INFO (
@@ -845,12 +902,14 @@ int pf_fspm_cm_write_ind (
             /* Do not count the terminator byte */
             if (write_length == (sizeof (net->fspm_cfg.im_2_data) - 1))
             {
+               os_mutex_lock (net->fspm_im_mutex);
                memcpy (
                   &net->fspm_cfg.im_2_data,
                   p_write_data,
                   sizeof (net->fspm_cfg.im_2_data) - 1);
                net->fspm_cfg.im_2_data
                   .im_date[sizeof (net->fspm_cfg.im_2_data) - 1] = '\0';
+               os_mutex_unlock (net->fspm_im_mutex);
                LOG_INFO (
                   PNET_LOG,
                   "FSPM(%d): PLC is writing I&M2 data. Date: %s\n",
@@ -892,12 +951,14 @@ int pf_fspm_cm_write_ind (
             /* Do not count the terminator byte */
             if (write_length == (sizeof (net->fspm_cfg.im_3_data) - 1))
             {
+               os_mutex_lock (net->fspm_im_mutex);
                memcpy (
                   &net->fspm_cfg.im_3_data,
                   p_write_data,
                   sizeof (net->fspm_cfg.im_3_data) - 1);
                net->fspm_cfg.im_3_data
                   .im_descriptor[sizeof (net->fspm_cfg.im_3_data) - 1] = '\0';
+               os_mutex_unlock (net->fspm_im_mutex);
                LOG_INFO (
                   PNET_LOG,
                   "FSPM(%d): PLC is writing I&M3 data. Descriptor: %s\n",
@@ -942,10 +1003,12 @@ int pf_fspm_cm_write_ind (
                   PNET_LOG,
                   "FSPM(%d): PLC is writing I&M4 data\n",
                   __LINE__);
+               os_mutex_lock (net->fspm_im_mutex);
                memcpy (
                   &net->fspm_cfg.im_4_data,
                   p_write_data,
                   sizeof (net->fspm_cfg.im_4_data));
+               os_mutex_unlock (net->fspm_im_mutex);
                ret = 0;
             }
             else
@@ -1071,13 +1134,11 @@ int pf_fspm_cm_dcontrol_ind (
    return ret;
 }
 
-int pf_fspm_state_ind (
+void pf_fspm_state_ind (
    pnet_t * net,
    const pf_ar_t * p_ar,
    pnet_event_values_t event)
 {
-   int ret = 0;
-
    CC_ASSERT (p_ar != NULL);
 
    LOG_DEBUG (
@@ -1088,11 +1149,9 @@ int pf_fspm_state_ind (
 
    if (net->fspm_cfg.state_cb != NULL)
    {
-      ret =
+      (void)
          net->fspm_cfg.state_cb (net, net->fspm_cfg.cb_arg, p_ar->arep, event);
    }
-
-   return ret;
 }
 
 int pf_fspm_alpmr_alarm_ind (
@@ -1120,55 +1179,40 @@ int pf_fspm_alpmr_alarm_ind (
    return ret;
 }
 
-int pf_fspm_alpmi_alarm_cnf (
+void pf_fspm_alpmi_alarm_cnf (
    pnet_t * net,
    const pf_ar_t * p_ar,
    const pnet_pnio_status_t * p_pnio_status)
 {
-   int ret = 0;
-
    if (net->fspm_cfg.alarm_cnf_cb != NULL)
    {
-      ret = net->fspm_cfg.alarm_cnf_cb (
-         net,
-         net->fspm_cfg.cb_arg,
-         p_ar->arep,
-         p_pnio_status);
+      (void)net->fspm_cfg
+         .alarm_cnf_cb (net, net->fspm_cfg.cb_arg, p_ar->arep, p_pnio_status);
    }
-
-   return ret;
 }
 
-int pf_fspm_alpmr_alarm_ack_cnf (pnet_t * net, const pf_ar_t * p_ar, int res)
+void pf_fspm_alpmr_alarm_ack_cnf (pnet_t * net, const pf_ar_t * p_ar, int res)
 {
-   int ret = 0;
-
    if (net->fspm_cfg.alarm_ack_cnf_cb != NULL)
    {
-      ret = net->fspm_cfg
-               .alarm_ack_cnf_cb (net, net->fspm_cfg.cb_arg, p_ar->arep, res);
+      (void)net->fspm_cfg
+         .alarm_ack_cnf_cb (net, net->fspm_cfg.cb_arg, p_ar->arep, res);
    }
-
-   return ret;
 }
 
-int pf_fspm_reset_ind (
+void pf_fspm_reset_ind (
    pnet_t * net,
    bool should_reset_application,
    uint16_t reset_mode)
 {
-   int ret = 0;
-
    if (net->fspm_cfg.reset_cb != NULL)
    {
-      ret = net->fspm_cfg.reset_cb (
+      (void)net->fspm_cfg.reset_cb (
          net,
          net->fspm_cfg.cb_arg,
          should_reset_application,
          reset_mode);
    }
-
-   return ret;
 }
 
 int pf_fspm_signal_led_ind (pnet_t * net, bool led_state)

@@ -306,6 +306,39 @@ int pf_cmdev_get_slot_full (
    return ret;
 }
 
+int pf_cmdev_get_module_ident (
+   pnet_t * net,
+   uint16_t api_id,
+   uint16_t slot_nbr,
+   uint32_t * p_module_ident)
+{
+   pf_slot_t * p_slot = NULL;
+   if (pf_cmdev_get_slot_full (net, api_id, slot_nbr, &p_slot) == 0)
+   {
+      *p_module_ident = p_slot->module_ident_number;
+      return 0;
+   }
+   return -1;
+}
+
+int pf_cmdev_get_submodule_ident (
+   pnet_t * net,
+   uint16_t api_id,
+   uint16_t slot_nbr,
+   uint16_t subslot_nbr,
+   uint32_t * p_submodule_ident)
+{
+   pf_subslot_t * p_subslot = NULL;
+   if (
+      pf_cmdev_get_subslot_full (net, api_id, slot_nbr, subslot_nbr, &p_subslot) ==
+      0)
+   {
+      *p_submodule_ident = p_subslot->submodule_ident_number;
+      return 0;
+   }
+   return -1;
+}
+
 /******************** Diagnosis **********************************************/
 
 int pf_cmdev_get_diag_item (
@@ -3514,7 +3547,9 @@ static int pf_cmdev_exp_submodule_configure (
                10);
             ret = -1;
          }
-         else if ((p_exp_sub->subslot_number >= 0x8000) && (p_exp_api->api != 0))
+         else if (
+            (p_exp_sub->subslot_number >= PNET_SUBSLOT_DAP_INTERFACE_1_IDENT) &&
+            (p_exp_api->api != 0))
          {
             pf_set_error (
                p_stat,
@@ -4243,7 +4278,6 @@ static int pf_cmdev_check_apdu (
    return ret;
 }
 
-
 int pf_cmdev_generate_submodule_diff (pnet_t * net, pf_ar_t * p_ar)
 {
    int ret = 0;
@@ -4642,6 +4676,23 @@ static int pf_cmdev_cm_connect_rsp_pos (
    return ret;
 }
 
+/**
+ * @internal
+ * Reset observers / configurable checks
+ * - Disable configurable checks / observers
+ * - Observers should remove active diagnostics
+ *   from diagnostics ASE
+ *
+ * Todo: Only observers for submodules used within a
+ * certain AR should be reset.
+ *
+ * @param net              InOut: The p-net stack instance
+ */
+static void pf_cmdev_reset_observers (pnet_t * net)
+{
+   pf_pdport_reset_all (net);
+}
+
 /* ================================================
  *       Remote primitives
  */
@@ -4659,46 +4710,51 @@ int pf_cmdev_rm_connect_ind (
    pf_cmina_get_device_macaddr (net, &mac_address);
 
    /* RM_Connect.ind */
-   if (
-      (pf_cmdev_check_apdu (net, p_ar, p_connect_result) == 0) &&
-      (pf_cmdev_generate_submodule_diff (net, p_ar) == 0))
+   if (pf_cmdev_check_apdu (net, p_ar, p_connect_result) == 0)
    {
-      /* Start building the response to the connect request. */
-      memcpy (
-         p_ar->ar_result.cm_responder_mac_add.addr,
-         mac_address.addr,
-         sizeof (pnet_ethaddr_t));
-      p_ar->ar_result.responder_udp_rt_port = PF_UDP_UNICAST_PORT;
+      pf_cmdev_reset_observers (net);
+      pf_pdport_ar_connect_ind (net, p_ar);
 
-      pf_cmdev_fix_frame_id (p_ar);
-
-      for (ix = 0; ix < p_ar->nbr_iocrs; ix++)
+      if (pf_cmdev_generate_submodule_diff (net, p_ar) == 0)
       {
-         p_ar->iocrs[ix].result.iocr_type = p_ar->iocrs[ix].param.iocr_type;
-         p_ar->iocrs[ix].result.iocr_reference =
-            p_ar->iocrs[ix].param.iocr_reference;
-         p_ar->iocrs[ix].result.frame_id = p_ar->iocrs[ix].param.frame_id;
+         /* Start building the response to the connect request. */
+         memcpy (
+            p_ar->ar_result.cm_responder_mac_add.addr,
+            mac_address.addr,
+            sizeof (pnet_ethaddr_t));
+         p_ar->ar_result.responder_udp_rt_port = PF_UDP_UNICAST_PORT;
+
+         pf_cmdev_fix_frame_id (p_ar);
+
+         for (ix = 0; ix < p_ar->nbr_iocrs; ix++)
+         {
+            p_ar->iocrs[ix].result.iocr_type = p_ar->iocrs[ix].param.iocr_type;
+            p_ar->iocrs[ix].result.iocr_reference =
+               p_ar->iocrs[ix].param.iocr_reference;
+            p_ar->iocrs[ix].result.frame_id = p_ar->iocrs[ix].param.frame_id;
+         }
+         p_ar->alarm_cr_result.alarm_cr_type =
+            p_ar->alarm_cr_request.alarm_cr_type;
+         p_ar->alarm_cr_result.remote_alarm_reference =
+            p_ar->alarm_cr_request.local_alarm_reference;
+         p_ar->alarm_cr_result.max_alarm_data_length = 200; /* ToDo: Add a
+                                                               define for this
+                                                               value */
+
+         (void)pf_cmina_get_station_name (net, &p_station_name);
+         strncpy (
+            p_ar->ar_server.cm_responder_station_name,
+            p_station_name,
+            sizeof (p_ar->ar_server.cm_responder_station_name));
+         p_ar->ar_server.cm_responder_station_name
+            [sizeof (p_ar->ar_server.cm_responder_station_name) - 1] = '\0';
+         p_ar->ar_server.length_cm_responder_station_name =
+            (uint16_t)strlen (p_station_name);
+
+         p_ar->ready_4_data = false;
+
+         ret = pf_fspm_cm_connect_ind (net, p_ar, p_connect_result);
       }
-      p_ar->alarm_cr_result.alarm_cr_type =
-         p_ar->alarm_cr_request.alarm_cr_type;
-      p_ar->alarm_cr_result.remote_alarm_reference =
-         p_ar->alarm_cr_request.local_alarm_reference;
-      p_ar->alarm_cr_result.max_alarm_data_length = 200; /* ToDo: Add a define
-                                                            for this value */
-
-      (void)pf_cmina_get_station_name (net, &p_station_name);
-      strncpy (
-         p_ar->ar_server.cm_responder_station_name,
-         p_station_name,
-         sizeof (p_ar->ar_server.cm_responder_station_name));
-      p_ar->ar_server.cm_responder_station_name
-         [sizeof (p_ar->ar_server.cm_responder_station_name) - 1] = '\0';
-      p_ar->ar_server.length_cm_responder_station_name =
-         (uint16_t)strlen (p_station_name);
-
-      p_ar->ready_4_data = false;
-
-      ret = pf_fspm_cm_connect_ind (net, p_ar, p_connect_result);
    }
 
    if (ret == 0)
@@ -4850,6 +4906,12 @@ int pf_cmdev_rm_ccontrol_cnf (
           */
          if (p_control_io->control_command == BIT (PF_CONTROL_COMMAND_BIT_DONE))
          {
+            /*
+             * Alarm transmitter enabled on APPLRDY CNF.
+             * PN-AL-protocol (Mar20) Figure A.7
+             */
+            pf_alarm_enable (p_ar);
+
             if (p_ar->ready_4_data == true)
             {
                (void)pf_cmdev_state_ind (net, p_ar, PNET_EVENT_DATA);
@@ -4860,7 +4922,7 @@ int pf_cmdev_rm_ccontrol_cnf (
                ret = pf_cmdev_set_state (net, p_ar, PF_CMDEV_STATE_WDATA);
             }
             /* Send result to application */
-            (void)pf_fspm_ccontrol_cnf (net, p_ar, p_ccontrol_result);
+            pf_fspm_ccontrol_cnf (net, p_ar, p_ccontrol_result);
          }
          else
          {
@@ -4876,7 +4938,7 @@ int pf_cmdev_rm_ccontrol_cnf (
             (p_ccontrol_result->add_data_1 << 16) +
                (p_ccontrol_result->add_data_2));
          /* Send result to application */
-         (void)pf_fspm_ccontrol_cnf (net, p_ar, p_ccontrol_result);
+         pf_fspm_ccontrol_cnf (net, p_ar, p_ccontrol_result);
          (void)pf_cmdev_set_state (net, p_ar, PF_CMDEV_STATE_ABORT);
       }
    }

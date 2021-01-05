@@ -216,8 +216,7 @@ int pf_alarm_send_process (
  * @param subslot_nbr      In:    The sub-slot number.
  * @param p_diag_item      In:    The diag item.
  * @return  0  if operation succeeded.
- *          -1 if an error occurred (or waiting for ACK from controller: re-try
- *                                  later).
+ *          -1 if an error occurred.
  */
 int pf_alarm_send_diagnosis (
    pnet_t * net,
@@ -231,6 +230,8 @@ int pf_alarm_send_diagnosis (
  * Send Alarm ACK (from the application)
  *
  * Always uses high prio, has no payload.
+ *
+ * This is the "Alarm notification" service.
  *
  * ALPMR: ALPMR_Alarm_Ack.req
  * ALPMR: ALPMR_Alarm_Ack.cnf   (Implements part of that signal via the return
@@ -266,6 +267,14 @@ void pf_alarm_add_diag_item_to_summary (
    const pf_diag_item_t * p_diag_item,
    pnet_alarm_spec_t * p_alarm_spec,
    uint32_t * p_maint_status);
+
+int pf_alarm_add_send_queue (
+   pf_alarm_queue_t * q,
+   const pf_alarm_data_t * p_alarm_data);
+
+int pf_alarm_fetch_send_queue (
+   pf_alarm_queue_t * q,
+   pf_alarm_data_t * p_alarm_data);
 
 #ifdef __cplusplus
 }

@@ -68,6 +68,10 @@
 #define ALARM_VLAN_PRIO_LOW  5
 #define ALARM_VLAN_PRIO_HIGH 6
 
+#if PNET_MAX_ALARMS < 1
+#error "PNET_MAX_ALARMS needs to be at least 1"
+#endif
+
 /* The scheduler identifier */
 static const char * apmx_sync_name = "apmx";
 
@@ -498,7 +502,7 @@ static int pf_alarm_alpmi_apmr_a_data_ind (
    case PF_ALPMI_STATE_W_ACK:
       /* This function is only called for DATA = ACK */
       p_apmx->p_alpmx->alpmi_state = PF_ALPMI_STATE_W_ALARM;
-      (void)pf_fspm_alpmi_alarm_cnf (net, p_apmx->p_ar, p_pnio_status);
+      pf_fspm_alpmi_alarm_cnf (net, p_apmx->p_ar, p_pnio_status);
       ret = 0;
       break;
    }
@@ -563,7 +567,7 @@ static void pf_alarm_alpmr_apms_a_data_cnf (
       else
       {
          /* Handle pos cnf */
-         (void)pf_fspm_alpmr_alarm_ack_cnf (
+         pf_fspm_alpmr_alarm_ack_cnf (
             net,
             p_apmx->p_ar,
             res); /* ALPMR:
@@ -579,6 +583,10 @@ static void pf_alarm_alpmr_apms_a_data_cnf (
  * @internal
  * The APMR has received an Alarm Notification DATA message over wire, and tells
  * ALPMR about the result.
+ *
+ * We have already sent the transport acknowledge ("TACK") frame.
+ *
+ * Will trigger the user callback \a pnet_alarm_ind().
  *
  * ALPMR: APMR_A_Data.ind
  *
@@ -619,16 +627,20 @@ static int pf_alarm_alpmr_apmr_a_data_ind (
       alarm_arg.alarm_specifier = p_alarm_data->alarm_specifier;
       alarm_arg.sequence_number = p_alarm_data->sequence_number;
 
-      ret = pf_fspm_alpmr_alarm_ind (
+      p_apmx->p_alpmx->alpmr_state = PF_ALPMR_STATE_W_USER_ACK;
+
+      /*
+       * Indicate alarm to app. App must respond to callback
+       * using pnet_alarm_send_ack()
+       */
+      (void)pf_fspm_alpmr_alarm_ind (
          net,
          p_apmx->p_ar,
          &alarm_arg,
          data_len,
          data_usi,
          p_data);
-
-      /* App must now send an ACK or a NACK */
-      p_apmx->p_alpmx->alpmr_state = PF_ALPMR_STATE_W_USER_ACK;
+      ret = 0;
       break;
    case PF_ALPMR_STATE_W_USER_ACK:
       /* ToDo: "Combine data for the RTA error request */
@@ -857,7 +869,7 @@ static void pf_alarm_apms_timeout (
    {
       LOG_DEBUG (
          PF_ALARM_LOG,
-         "Alarm(%d): No alarm retransmission as we are in in state %s. Free "
+         "Alarm(%d): Skip scheduled alarm retransmission as we are in in state %s. Free "
          "saved RTA buffer %p\n",
          __LINE__,
          pf_alarm_apms_state_to_string (p_apmx->apms_state),
@@ -1144,7 +1156,7 @@ static int pf_alarm_apms_a_data_req (
       {
          LOG_ERROR (
             PF_ALARM_LOG,
-            "Alarm(%d): No output buffer for alarm",
+            "Alarm(%d): Failed to allocate output buffer for alarm",
             __LINE__);
       }
       else
@@ -1154,7 +1166,7 @@ static int pf_alarm_apms_a_data_req (
          {
             LOG_ERROR (
                PF_ALARM_LOG,
-               "Alarm(%d): No payload output buffer for alarm.\n",
+               "Alarm(%d): Failed to allocate payload output buffer for alarm.\n",
                __LINE__);
          }
          else
@@ -1305,7 +1317,7 @@ static int pf_alarm_apms_a_data_req (
             {
                LOG_DEBUG (
                   PF_AL_BUF_LOG,
-                  "Alarm(%d): Save RTA output buffer for later use.\n",
+                  "Alarm(%d): Save RTA alarm output buffer for later use.\n",
                   __LINE__);
                p_apmx->p_rta = p_rta;
             }
@@ -1313,7 +1325,7 @@ static int pf_alarm_apms_a_data_req (
             {
                LOG_ERROR (
                   PF_ALARM_LOG,
-                  "Alarm(%d): RTA buffer with TACK lost!!\n",
+                  "Alarm(%d): RTA alarm output buffer with TACK lost!!\n",
                   __LINE__);
                pnal_buf_free (p_rta);
             }
@@ -1323,7 +1335,7 @@ static int pf_alarm_apms_a_data_req (
             /* ACK, NAK and ERR buffers are not saved for retransmission. */
             LOG_DEBUG (
                PF_AL_BUF_LOG,
-               "Alarm(%d): Free unsaved RTA buffer\n",
+               "Alarm(%d): Free unsaved RTA alarm output buffer\n",
                __LINE__);
             pnal_buf_free (p_rta);
          }
@@ -1350,11 +1362,6 @@ static int pf_alarm_apms_a_data_req (
  * @param p_alarm_data     In:    Alarm details (Type, slot, subslot etc).
  * @param maint_status     In:    The Maintenance status used for specific USI
  *                                values (inserted only if not zero).
- * @param payload_usi      In:    The payload USI. Use 0 for no payload.
- * @param payload_len      In:    Payload length. Must be > 0 for manufacturer
- *                                specific payload ("USI format").
- * @param p_payload        In:    Mandatory if payload_usi > 0. May be NULL.
- *                                Custom data or pf_diag_item_t.
  * @param p_pnio_status    In:    Optional. Detailed error information (or NULL)
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
@@ -1364,9 +1371,6 @@ static int pf_alarm_apms_apms_a_data_req (
    pf_apmx_t * p_apmx,
    const pf_alarm_data_t * p_alarm_data,
    uint32_t maint_status,
-   uint16_t payload_usi,
-   uint16_t payload_len,
-   const uint8_t * p_payload,
    const pnet_pnio_status_t * p_pnio_status)
 {
    int ret = -1;
@@ -1400,9 +1404,9 @@ static int pf_alarm_apms_apms_a_data_req (
          &fixed,
          p_alarm_data,
          maint_status,
-         payload_usi,
-         payload_len,
-         p_payload,
+         p_alarm_data->payload.usi,
+         p_alarm_data->payload.len,
+         p_alarm_data->payload.data,
          p_pnio_status);
 
       p_apmx->apms_state = PF_APMS_STATE_WTACK;
@@ -1656,7 +1660,7 @@ static int pf_alarm_apmr_a_data_ind (
    pf_alarm_data_t alarm_data;
    pnet_pnio_status_t pnio_status;
    uint16_t data_usi;
-   uint8_t * p_data;
+   const uint8_t * p_data;
 
    switch (p_apmx->apmr_state)
    {
@@ -1813,6 +1817,93 @@ static int pf_alarm_apmr_a_data_ind (
    }
 
    return ret;
+}
+
+/**
+ * @internal
+ * Return the alarm specifier and maintenance status for a specific sub-slot,
+ * by looking at all diagnosis items found for that subslot.
+ *
+ * Also includes the "current diag item" in the analysis.
+ *
+ * Describes diagnosis alarms.
+ *
+ * This corresponds to the "BuildSummarizedAlarmSpecifier" and
+ * "BuildSummarizedMaintenanceStatus" functions mentioned in the standard.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param p_ar             In:    The AR instance.
+ * @param api_id           In:    The API identifier.
+ * @param slot_nbr         In:    The slot number.
+ * @param subslot_nbr      In:    The sub-slot number.
+ * @param p_diag_item      In:    The current diag item (may be NULL).
+ * @param p_alarm_spec     Out:   The computed alarm specifier.
+ * @param p_maint_status   Out:   The computed maintenance status.
+ * @return  0  if operation succeeded.
+ *          -1 if an error occurred.
+ */
+static int pf_alarm_get_diag_summary (
+   pnet_t * net,
+   const pf_ar_t * p_ar,
+   uint32_t api_id,
+   uint16_t slot_nbr,
+   uint16_t subslot_nbr,
+   const pf_diag_item_t * p_diag_item,
+   pnet_alarm_spec_t * p_alarm_spec,
+   uint32_t * p_maint_status)
+{
+   pf_device_t * p_dev = NULL;
+   pf_subslot_t * p_subslot = NULL;
+   uint16_t item_ix;
+   pf_diag_item_t * p_item = NULL;
+
+   if (pf_cmdev_get_device (net, &p_dev) == 0)
+   {
+      memset (p_alarm_spec, 0, sizeof (*p_alarm_spec));
+      *p_maint_status = 0;
+
+      /* Consider only alarms on this sub-slot. */
+      if (
+         pf_cmdev_get_subslot_full (
+            net,
+            api_id,
+            slot_nbr,
+            subslot_nbr,
+            &p_subslot) == 0)
+      {
+         /* Collect all diags into maintenanceStatus*/
+
+         /* First handle the "current" (unreported) item. */
+         if (p_diag_item != NULL)
+         {
+            pf_alarm_add_diag_item_to_summary (
+               p_ar,
+               p_subslot,
+               p_diag_item,
+               p_alarm_spec,
+               p_maint_status);
+         }
+
+         /* Now handle all the already reported diag items. */
+         item_ix = p_subslot->diag_list;
+         pf_cmdev_get_diag_item (net, item_ix, &p_item);
+         while (p_item != NULL)
+         {
+            /* Collect all diags into maintenanceStatus*/
+            pf_alarm_add_diag_item_to_summary (
+               p_ar,
+               p_subslot,
+               p_item,
+               p_alarm_spec,
+               p_maint_status);
+
+            item_ix = p_item->next;
+            pf_cmdev_get_diag_item (net, item_ix, &p_item);
+         }
+      }
+   }
+
+   return 0;
 }
 
 /**
@@ -2032,6 +2123,177 @@ static int pf_alarm_apmr_periodic (pnet_t * net, pf_ar_t * p_ar)
    return ret;
 }
 
+/**
+ * Send alarm
+ * - Update diag summary
+ * - Update sequence numbers
+ * - Hand over to alarm to APMS instance
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param p_ar             InOut: The AR instance.
+ * @param p_apmx           InOut: The APMX instance.
+ * @param alarm_data       In: Alarm
+ */
+static int pf_alarm_send_internal (
+   pnet_t * net,
+   pf_ar_t * p_ar,
+   pf_apmx_t * p_apmx,
+   pf_alarm_data_t * alarm_data)
+{
+   int ret = -1;
+   uint32_t maint_status = 0;
+
+   CC_ASSERT (net->global_alarm_enable == true);
+   CC_ASSERT (p_ar->alarm_enable == true);
+   CC_ASSERT (p_apmx->p_alpmx->alpmi_state == PF_ALPMI_STATE_W_ALARM);
+
+   (void)pf_alarm_get_diag_summary (
+      net,
+      p_ar,
+      alarm_data->api_id,
+      alarm_data->slot_nbr,
+      alarm_data->subslot_nbr,
+      NULL,
+      &alarm_data->alarm_specifier,
+      &maint_status);
+
+   /* Calculate sequence numbers */
+   alarm_data->sequence_number = p_apmx->p_alpmx->sequence_number;
+   p_apmx->p_alpmx->prev_sequence_number = p_apmx->p_alpmx->sequence_number;
+   p_apmx->p_alpmx->sequence_number++;
+   p_apmx->p_alpmx->sequence_number %= 0x0800;
+
+   /* Create and send an DATA RTA-PDU */
+   ret = pf_alarm_apms_apms_a_data_req (
+      net,
+      p_apmx,
+      alarm_data,
+      maint_status,
+      NULL);
+
+   if (ret == 0)
+   {
+      p_apmx->p_alpmx->alpmi_state = PF_ALPMI_STATE_W_ACK;
+   }
+   else
+   {
+      LOG_ERROR (PF_ALARM_LOG, "Alarm(%d): Failed to send alarm\n", __LINE__);
+   }
+
+   return ret;
+}
+
+/**
+ * Reset queues for outgoing alarms
+ * @param net              InOut: The p-net stack instance
+ * @param p_ar             InOut: The AR instance.
+ * @return 0 is always returned
+ */
+static int pf_alarm_reset_send_queues (pnet_t * net, pf_ar_t * p_ar)
+{
+   memset (p_ar->alarm_send_q, 0, sizeof (p_ar->alarm_send_q));
+   return 0;
+}
+
+/**
+ * Add an alarm to the send queue
+ * @param q               InOut: Alarm send queue
+ * @param p_alarm_data    In: Alarm
+ * @return 0  is returned if an alarm is put into the queue
+ *         -1 is returned if queue is full
+ */
+int pf_alarm_add_send_queue (
+   pf_alarm_queue_t * q,
+   const pf_alarm_data_t * p_alarm_data)
+{
+   int ret = -1;
+
+   if (q->count < PNET_MAX_ALARMS)
+   {
+      memcpy (&q->items[q->write_index], p_alarm_data, sizeof (*p_alarm_data));
+      q->write_index++;
+      q->write_index %= PNET_MAX_ALARMS;
+      q->count++;
+      ret = 0;
+   }
+   else
+   {
+      LOG_ERROR (
+         PF_ALARM_LOG,
+         "Alarm(%d): Send queue is full, alarm dropped.\n",
+         __LINE__);
+   }
+
+   return ret;
+}
+
+/**
+ * Fetch an alarm from the send queue
+ * @param q               InOut: Alarm send queue
+ * @param p_alarm_data    Out: Alarm
+ * @return 0  is returned if an alarm is fetched from the queue
+ *         -1 is returned if queue is empty
+ */
+int pf_alarm_fetch_send_queue (
+   pf_alarm_queue_t * q,
+   pf_alarm_data_t * p_alarm_data)
+{
+   int ret = -1;
+   if (q->count > 0)
+   {
+      memcpy (p_alarm_data, &q->items[q->read_index], sizeof (*p_alarm_data));
+      q->read_index++;
+      q->read_index %= PNET_MAX_ALARMS;
+      q->count--;
+      ret = 0;
+   }
+   return ret;
+}
+
+/**
+ * @internal
+ * Handle outgoing alarm messages for one AR instance.
+ *
+ * When called this function checks the ALMPI state for high and
+ * low priority alarms. If state is PF_ALPMI_STATE_W_ALARM and a alarm
+ * is found in the send queue this alarm is sent.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param p_ar             InOut: The AR instance.
+ * @return  0  if operation succeeded.
+ *          -1 if an error occurred.
+ */
+static void pf_alarm_almpi_periodic (pnet_t * net, pf_ar_t * p_ar)
+{
+   int res = 0;
+   int16_t prio;
+   pf_apmx_t * p_apmx;
+   pf_alarm_queue_t * q;
+   pf_alarm_data_t alarm_data;
+
+   if (p_ar->alarm_enable == true)
+   {
+      for (prio = 1; prio >= 0; prio--)
+      {
+         p_apmx = &p_ar->apmx[prio];
+         q = &p_ar->alarm_send_q[prio];
+         if (p_apmx->p_alpmx->alpmi_state == PF_ALPMI_STATE_W_ALARM)
+         {
+            res = pf_alarm_fetch_send_queue (q, &alarm_data);
+            if (res == 0)
+            {
+               pf_alarm_send_internal (net, p_ar, p_apmx, &alarm_data);
+               /*
+                * If a high prio alarm is found don't check low low prio
+                * alarms until next call of this operation.
+                */
+               break;
+            }
+         }
+      }
+   }
+}
+
 /* ===== Common alarm functions ===== */
 void pf_alarm_enable (pf_ar_t * p_ar)
 {
@@ -2052,7 +2314,6 @@ bool pf_alarm_pending (const pf_ar_t * p_ar)
 int pf_alarm_activate (pnet_t * net, pf_ar_t * p_ar)
 {
    int ret = 0; /* Assume all goes well */
-
    if (pf_alarm_alpmx_activate (p_ar) != 0)
    {
       ret = -1;
@@ -2062,6 +2323,8 @@ int pf_alarm_activate (pnet_t * net, pf_ar_t * p_ar)
    {
       ret = -1;
    }
+
+   pf_alarm_reset_send_queues (net, p_ar);
 
    return ret;
 }
@@ -2142,20 +2405,20 @@ void pf_alarm_add_diag_item_to_summary (
 
       severity_qualifier =
          (p_diag_item->fmt.std.qual_ch_qualifier &
-          PNET_DIAG_QUALIFIED_SEVERITY_MASK);
+          PF_DIAG_QUALIFIED_SEVERITY_MASK);
 
       /* Severity "Maintenance required" */
       if (
-         PNET_DIAG_CH_PROP_MAINT_GET (p_diag_item->fmt.std.ch_properties) ==
+         PF_DIAG_CH_PROP_MAINT_GET (p_diag_item->fmt.std.ch_properties) ==
          PNET_DIAG_CH_PROP_MAINT_REQUIRED)
       {
          is_maintenance_required = true;
       }
       else if (
-         PNET_DIAG_CH_PROP_MAINT_GET (p_diag_item->fmt.std.ch_properties) ==
+         PF_DIAG_CH_PROP_MAINT_GET (p_diag_item->fmt.std.ch_properties) ==
          PNET_DIAG_CH_PROP_MAINT_QUALIFIED)
       {
-         if ((severity_qualifier & PNET_DIAG_QUALIFIER_MASK_REQUIRED) > 0)
+         if ((severity_qualifier & PF_DIAG_QUALIFIER_MASK_REQUIRED) > 0)
          {
             is_maintenance_required = true;
          }
@@ -2163,16 +2426,16 @@ void pf_alarm_add_diag_item_to_summary (
 
       /* Severity "Maintenance demanded"  */
       if (
-         PNET_DIAG_CH_PROP_MAINT_GET (p_diag_item->fmt.std.ch_properties) ==
+         PF_DIAG_CH_PROP_MAINT_GET (p_diag_item->fmt.std.ch_properties) ==
          PNET_DIAG_CH_PROP_MAINT_DEMANDED)
       {
          is_maintenance_demanded = true;
       }
       else if (
-         PNET_DIAG_CH_PROP_MAINT_GET (p_diag_item->fmt.std.ch_properties) ==
+         PF_DIAG_CH_PROP_MAINT_GET (p_diag_item->fmt.std.ch_properties) ==
          PNET_DIAG_CH_PROP_MAINT_QUALIFIED)
       {
-         if ((severity_qualifier & PNET_DIAG_QUALIFIER_MASK_DEMANDED) > 0)
+         if ((severity_qualifier & PF_DIAG_QUALIFIER_MASK_DEMANDED) > 0)
          {
             is_maintenance_demanded = true;
          }
@@ -2180,16 +2443,16 @@ void pf_alarm_add_diag_item_to_summary (
 
       /* Severity "Fault" */
       if (
-         PNET_DIAG_CH_PROP_MAINT_GET (p_diag_item->fmt.std.ch_properties) ==
+         PF_DIAG_CH_PROP_MAINT_GET (p_diag_item->fmt.std.ch_properties) ==
          PNET_DIAG_CH_PROP_MAINT_FAULT)
       {
          is_fault = true;
       }
       else if (
-         PNET_DIAG_CH_PROP_MAINT_GET (p_diag_item->fmt.std.ch_properties) ==
+         PF_DIAG_CH_PROP_MAINT_GET (p_diag_item->fmt.std.ch_properties) ==
          PNET_DIAG_CH_PROP_MAINT_QUALIFIED)
       {
-         if ((severity_qualifier & PNET_DIAG_QUALIFIER_MASK_FAULT) > 0)
+         if ((severity_qualifier & PF_DIAG_QUALIFIER_MASK_FAULT) > 0)
          {
             is_fault = true;
          }
@@ -2197,8 +2460,8 @@ void pf_alarm_add_diag_item_to_summary (
 
       /* Is the diagnosis appearing */
       if (
-         PNET_DIAG_CH_PROP_SPEC_GET (p_diag_item->fmt.std.ch_properties) ==
-         PNET_DIAG_CH_PROP_SPEC_APPEARS)
+         PF_DIAG_CH_PROP_SPEC_GET (p_diag_item->fmt.std.ch_properties) ==
+         PF_DIAG_CH_PROP_SPEC_APPEARS)
       {
          is_appears = true;
       }
@@ -2209,11 +2472,11 @@ void pf_alarm_add_diag_item_to_summary (
       /* MaintenanceRequired and MaintenanceDemanded bits */
       if (is_maintenance_required == true)
       {
-         *p_maint_status |= PNET_DIAG_BIT_MAINTENANCE_REQUIRED;
+         *p_maint_status |= PF_DIAG_BIT_MAINTENANCE_REQUIRED;
       }
       if (is_maintenance_demanded == true)
       {
-         *p_maint_status |= PNET_DIAG_BIT_MAINTENANCE_DEMANDED;
+         *p_maint_status |= PF_DIAG_BIT_MAINTENANCE_DEMANDED;
       }
 
       /* Alarm specifiers for diagnosis in standard format */
@@ -2232,93 +2495,6 @@ void pf_alarm_add_diag_item_to_summary (
    }
 }
 
-/**
- * @internal
- * Return the alarm specifier and maintenance status for a specific sub-slot,
- * by looking at all diagnosis items found for that subslot.
- *
- * Also includes the "current diag item" in the analysis.
- *
- * Describes diagnosis alarms.
- *
- * This corresponds to the "BuildSummarizedAlarmSpecifier" and
- * "BuildSummarizedMaintenanceStatus" functions mentioned in the standard.
- *
- * @param net              InOut: The p-net stack instance
- * @param p_ar             In:    The AR instance.
- * @param api_id           In:    The API identifier.
- * @param slot_nbr         In:    The slot number.
- * @param subslot_nbr      In:    The sub-slot number.
- * @param p_diag_item      In:    The current diag item (may be NULL).
- * @param p_alarm_spec     Out:   The computed alarm specifier.
- * @param p_maint_status   Out:   The computed maintenance status.
- * @return  0  if operation succeeded.
- *          -1 if an error occurred.
- */
-static int pf_alarm_get_diag_summary (
-   pnet_t * net,
-   const pf_ar_t * p_ar,
-   uint32_t api_id,
-   uint16_t slot_nbr,
-   uint16_t subslot_nbr,
-   const pf_diag_item_t * p_diag_item,
-   pnet_alarm_spec_t * p_alarm_spec,
-   uint32_t * p_maint_status)
-{
-   pf_device_t * p_dev = NULL;
-   pf_subslot_t * p_subslot = NULL;
-   uint16_t item_ix;
-   pf_diag_item_t * p_item = NULL;
-
-   if (pf_cmdev_get_device (net, &p_dev) == 0)
-   {
-      memset (p_alarm_spec, 0, sizeof (*p_alarm_spec));
-      *p_maint_status = 0;
-
-      /* Consider only alarms on this sub-slot. */
-      if (
-         pf_cmdev_get_subslot_full (
-            net,
-            api_id,
-            slot_nbr,
-            subslot_nbr,
-            &p_subslot) == 0)
-      {
-         /* Collect all diags into maintenanceStatus*/
-
-         /* First handle the "current" (unreported) item. */
-         if (p_diag_item != NULL)
-         {
-            pf_alarm_add_diag_item_to_summary (
-               p_ar,
-               p_subslot,
-               p_diag_item,
-               p_alarm_spec,
-               p_maint_status);
-         }
-
-         /* Now handle all the already reported diag items. */
-         item_ix = p_subslot->diag_list;
-         pf_cmdev_get_diag_item (net, item_ix, &p_item);
-         while (p_item != NULL)
-         {
-            /* Collect all diags into maintenanceStatus*/
-            pf_alarm_add_diag_item_to_summary (
-               p_ar,
-               p_subslot,
-               p_item,
-               p_alarm_spec,
-               p_maint_status);
-
-            item_ix = p_item->next;
-            pf_cmdev_get_diag_item (net, item_ix, &p_item);
-         }
-      }
-   }
-
-   return 0;
-}
-
 int pf_alarm_periodic (pnet_t * net)
 {
    uint16_t ix;
@@ -2332,6 +2508,7 @@ int pf_alarm_periodic (pnet_t * net)
          if ((p_ar != NULL) && (p_ar->in_use == true))
          {
             (void)pf_alarm_apmr_periodic (net, p_ar);
+            (void)pf_alarm_almpi_periodic (net, p_ar);
          }
       }
    }
@@ -2373,9 +2550,6 @@ int pf_alarm_alpmr_alarm_ack (
          p_apmx,
          &alarm_data,
          0,
-         0,
-         0,
-         NULL, /* No payload */
          p_pnio_status);
 
       p_alpmx->alpmr_state = PF_ALPMR_STATE_W_TACK;
@@ -2425,13 +2599,16 @@ int pf_alarm_alpmr_alarm_ack (
  * @param payload_usi      In:    The payload USI. Use 0 for no payload.
  * @param payload_len      In:    Payload length. Must be > 0 for manufacturer
  *                                specific payload ("USI format", which is
- *                                the payload_usi range 0x0001..0x7fff).
+ *                                the payload_usi range 0x0001..0x7fff),
+ *                                or when sending a diagnosis alarm.
  * @param p_payload        In:    Mandatory if payload_len > 0, or if sending
  *                                a diagnosis alarm. Otherwise NULL.
  *                                Custom data or pf_diag_item_t.
  * @return  0  if operation succeeded.
- *          -1 if an error occurred (or waiting for ACK from controller: re-try
- *             later).
+ *          -1 if an error occurred. Errors include:
+ *             Payload oversize (process alarms only)
+ *             Alarms not enabled for AR
+ *             Queue for outgoing alarms is full
  */
 static int pf_alarm_send_alarm (
    pnet_t * net,
@@ -2450,68 +2627,27 @@ static int pf_alarm_send_alarm (
 {
    int ret = -1;
    pf_alarm_data_t alarm_data;
-   uint32_t maint_status = 0;
-   pf_apmx_t * p_apmx = &p_ar->apmx[high_prio ? 1 : 0];
-   pf_alpmx_t * p_alpmx = &p_ar->alpmx[high_prio ? 1 : 0];
 
-   if ((net->global_alarm_enable == true) &&
-       (p_ar->alarm_enable == true))
+   if (
+      net->global_alarm_enable == true && p_ar->alarm_enable == true &&
+      payload_len <= sizeof (alarm_data.payload.data))
    {
-      if (p_alpmx->alpmi_state == PF_ALPMI_STATE_W_ALARM)
-      {
-         /* Prepare data */
-         memset (&alarm_data, 0, sizeof (alarm_data));
-         alarm_data.alarm_type = alarm_type;
-         alarm_data.api_id = api_id;
-         alarm_data.slot_nbr = slot_nbr;
-         alarm_data.subslot_nbr = subslot_nbr;
-         alarm_data.module_ident = module_ident;
-         alarm_data.submodule_ident = submodule_ident;
+      /* Prepare data */
+      memset (&alarm_data, 0, sizeof (alarm_data));
+      alarm_data.alarm_type = alarm_type;
+      alarm_data.api_id = api_id;
+      alarm_data.slot_nbr = slot_nbr;
+      alarm_data.subslot_nbr = subslot_nbr;
+      alarm_data.module_ident = module_ident;
+      alarm_data.submodule_ident = submodule_ident;
 
-         /* Check if there is any (other) diagnosis for this subslot */
-         (void)pf_alarm_get_diag_summary (
-            net,
-            p_ar,
-            api_id,
-            slot_nbr,
-            subslot_nbr,
-            p_diag_item,
-            &alarm_data.alarm_specifier,
-            &maint_status);
+      alarm_data.payload.usi = payload_usi;
+      alarm_data.payload.len = payload_len;
+      memcpy (alarm_data.payload.data, p_payload, payload_len);
 
-         /* Calculate sequence numbers */
-         alarm_data.sequence_number = p_alpmx->sequence_number;
-         p_alpmx->prev_sequence_number = p_alpmx->sequence_number;
-         p_alpmx->sequence_number++;
-         p_alpmx->sequence_number %= 0x0800;
-
-         /* Create and send an DATA RTA-PDU */
-         ret = pf_alarm_apms_apms_a_data_req (
-            net,
-            p_apmx,
-            &alarm_data,
-            maint_status,
-            payload_usi,
-            payload_len,
-            p_payload,
-            NULL);
-
-         p_alpmx->alpmi_state = PF_ALPMI_STATE_W_ACK;
-      }
-      else
-      {
-         /* The standard says that ALPMI_Alarm_Notification.cnf(-) should be
-          * sent back to application */
-         LOG_INFO (
-            PF_ALARM_LOG,
-            "Alarm(%d): Skipped sending the alarm, as the ALPMI state is %s.\n",
-            __LINE__,
-            pf_alarm_alpmi_state_to_string (p_alpmx->alpmi_state));
-      }
-   }
-   else
-   {
-      ret = 0; /* ToDo: Is this right? */
+      return pf_alarm_add_send_queue (
+         &p_ar->alarm_send_q[high_prio ? 1 : 0],
+         &alarm_data);
    }
 
    return ret;
@@ -2576,66 +2712,91 @@ int pf_alarm_send_diagnosis (
    uint16_t subslot_nbr,
    const pf_diag_item_t * p_diag_item)
 {
-   int ret = -1;
    pf_alarm_type_values_t alarm_type = PF_ALARM_TYPE_DIAGNOSIS;
-   uint32_t module_ident = PNET_MOD_DAP_IDENT;
-   uint32_t submodule_ident = PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT;
+   uint32_t module_ident = 0;
+   uint32_t submodule_ident = 0;
 
-   if (p_diag_item != NULL)
-   {
-
-      /* Calculate alarm type */
-      if (p_diag_item->usi >= PF_USI_CHANNEL_DIAGNOSIS)
-      {
-         switch (p_diag_item->fmt.std.ch_error_type)
-         {
-         case PF_WRT_ERROR_REMOTE_MISMATCH:
-            alarm_type = PF_ALARM_TYPE_PORT_DATA_CHANGE;
-            break;
-         default:
-            break;
-         }
-      }
-
-      // TODO Calculate module_ident, submodule_ident
-      // The ModuleIdentNumber of the portsubmodule which is connected to device
-      // ‘b’ The SubModuleIdentNumber of the portsubmodule which is connected to
-      // device ‘b’
-
-      LOG_INFO (
-         PF_ALARM_LOG,
-         "Alarm(%d): Sending diagnosis alarm (type 0x%04X) Slot: %u  Subslot: "
-         "0x%04X  USI: 0x%04X\n",
-         __LINE__,
-         alarm_type,
-         slot_nbr,
-         subslot_nbr,
-         p_diag_item->usi);
-
-      ret = pf_alarm_send_alarm (
-         net,
-         p_ar,
-         alarm_type,
-         false, /* Low prio */
-         api_id,
-         slot_nbr,
-         subslot_nbr,
-         p_diag_item,
-         module_ident,
-         submodule_ident,
-         p_diag_item->usi,
-         0, /* Not using manufacturer specific payload */
-         (uint8_t *)p_diag_item);
-   }
-   else
+   if (p_diag_item == NULL)
    {
       LOG_ERROR (
          PF_ALARM_LOG,
          "Alarm(%d): The diagnosis item is NULL\n",
          __LINE__);
+
+      return -1;
    }
 
-   return ret;
+   /* Calculate alarm type */
+   if (p_diag_item->usi >= PF_USI_CHANNEL_DIAGNOSIS)
+   {
+      switch (p_diag_item->fmt.std.ch_error_type)
+      {
+      case PF_WRT_ERROR_REMOTE_MISMATCH:
+         alarm_type = PF_ALARM_TYPE_PORT_DATA_CHANGE;
+         break;
+      default:
+         break;
+      }
+   }
+
+   if (pf_cmdev_get_module_ident (net, api_id, slot_nbr, &module_ident) != 0)
+   {
+      LOG_ERROR (
+         PF_ALARM_LOG,
+         "Alarm(%d): Failed to get module ident for slot: %u\n",
+         __LINE__,
+         slot_nbr);
+
+      return -1;
+   }
+
+   if (
+      pf_cmdev_get_submodule_ident (
+         net,
+         api_id,
+         slot_nbr,
+         subslot_nbr,
+         &submodule_ident) != 0)
+   {
+      LOG_ERROR (
+         PF_ALARM_LOG,
+         "Alarm(%d): Failed to get submodule ident for slot: %u, "
+         "subslot: %u\n",
+         __LINE__,
+         slot_nbr,
+         subslot_nbr);
+
+      return -1;
+   }
+
+   LOG_INFO (
+      PF_ALARM_LOG,
+      "Alarm(%d): Sending diagnosis alarm "
+      "(type 0x%04X) Slot: %u  Subslot: 0x%04X  "
+      "Module ident: %u Submodule ident: %u "
+      "USI: 0x%04X\n",
+      __LINE__,
+      alarm_type,
+      slot_nbr,
+      subslot_nbr,
+      (unsigned)module_ident,
+      (unsigned)submodule_ident,
+      p_diag_item->usi);
+
+   return pf_alarm_send_alarm (
+      net,
+      p_ar,
+      alarm_type,
+      false, /* Low prio */
+      api_id,
+      slot_nbr,
+      subslot_nbr,
+      p_diag_item,
+      module_ident,
+      submodule_ident,
+      p_diag_item->usi,
+      sizeof (*p_diag_item),
+      (uint8_t *)p_diag_item);
 }
 
 int pf_alarm_send_pull (

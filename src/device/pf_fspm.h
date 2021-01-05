@@ -88,7 +88,7 @@ int pf_fspm_cm_write_ind (
    const pf_ar_t * p_ar,
    const pf_iod_write_request_t * p_write_request,
    uint16_t write_length,
-   uint8_t * p_write_data,
+   const uint8_t * p_write_data,
    pnet_result_t * p_result);
 
 /**
@@ -114,14 +114,14 @@ int pf_fspm_cm_read_ind (
 
 /**
  * Response from controller to appl_rdy request.
+ *
  * Triggers the \a pnet_ccontrol_cnf() user callback.
+ *
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param p_result         Out:  The result information.
- * @return  0  if operation succeeded.
- *          -1 if an error occurred.
  */
-int pf_fspm_ccontrol_cnf (
+void pf_fspm_ccontrol_cnf (
    pnet_t * net,
    const pf_ar_t * p_ar,
    pnet_result_t * p_result);
@@ -176,17 +176,17 @@ int pf_fspm_cm_dcontrol_ind (
  * @param p_ar             In:    The AR instance.
  * @param event            In:    The new CMDEV state. Use PNET_EVENT_xxx, not
  *                                PF_CMDEV_STATE_xxx
- * @return  0  if operation succeeded.
- *          -1 if an error occurred.
  */
-int pf_fspm_state_ind (
+void pf_fspm_state_ind (
    pnet_t * net,
    const pf_ar_t * p_ar,
    pnet_event_values_t event);
 
 /**
  * The remote side sends an alarm.
+ *
  * Calls user call-back \a pnet_alarm_ind().
+ * We have already sent the transport acknowledge ("TACK") frame.
  *
  * ALPMR: ALPMR_Alarm_Notification.ind
  *
@@ -209,7 +209,7 @@ int pf_fspm_alpmr_alarm_ind (
    const uint8_t * p_data);
 
 /**
- * The remote side acknowledges the alarm sent by this side by sending an
+ * The remote side acknowledges the alarm sent by this side, by sending an
  * AlarmAck. Calls user call-back \a pnet_alarm_cnf().
  *
  * ALPMI: ALPMI_Alarm_Notification.cnf(+/-)
@@ -217,10 +217,8 @@ int pf_fspm_alpmr_alarm_ind (
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:    The AR instance.
  * @param p_pnio_status    In:    Detailed ACK information.
- * @return  0  if operation succeeded.
- *          -1 if an error occurred.
  */
-int pf_fspm_alpmi_alarm_cnf (
+void pf_fspm_alpmi_alarm_cnf (
    pnet_t * net,
    const pf_ar_t * p_ar,
    const pnet_pnio_status_t * p_pnio_status);
@@ -237,10 +235,8 @@ int pf_fspm_alpmi_alarm_cnf (
  *                                   This is cnf(+)
  *                                -1 if ACK was not received.
  *                                   This is cnf(-)
- * @return  0  if operation succeeded.
- *          -1 if an error occurred.
  */
-int pf_fspm_alpmr_alarm_ack_cnf (pnet_t * net, const pf_ar_t * p_ar, int res);
+void pf_fspm_alpmr_alarm_ack_cnf (pnet_t * net, const pf_ar_t * p_ar, int res);
 
 /**
  * Call user call-back \a pnet_exp_module_ind() to indicate to application
@@ -283,15 +279,14 @@ int pf_fspm_exp_submodule_ind (
 /**
  * Notify application that the received data status has changed,
  * via the \a pnet_new_data_status_ind() user callback.
+ *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:  The AR instance.
- * @param p_iocr           In:  The IOCR instance.
- * @param changes          In:  The changed bits in the data status.
- * @param data_status      In:  Data status (after the changes)
- * @return  0  if operation succeeded.
- *          -1 if an error occurred.
+ * @param p_ar             In:    The AR instance.
+ * @param p_iocr           In:    The IOCR instance.
+ * @param changes          In:    The changed bits in the data status.
+ * @param data_status      In:    Data status (after the changes)
  */
-int pf_fspm_data_status_changed (
+void pf_fspm_data_status_changed (
    pnet_t * net,
    const pf_ar_t * p_ar,
    const pf_iocr_t * p_iocr,
@@ -305,12 +300,10 @@ int pf_fspm_data_status_changed (
  *
  * @param net                       InOut: The p-net stack instance
  * @param should_reset_application  In:    True if the user should reset the
- * application data.
+ *                                         application data.
  * @param reset_mode                In:    Detailed reset information.
- * @return  0  if operation succeeded.
- *          -1 if an error occurred.
  */
-int pf_fspm_reset_ind (
+void pf_fspm_reset_ind (
    pnet_t * net,
    bool should_reset_application,
    uint16_t reset_mode);
@@ -340,6 +333,30 @@ void pf_fspm_get_cfg (pnet_t * net, pnet_cfg_t ** pp_cfg);
  * @param pp_cfg           Out: The default configuration (or NULL).
  */
 void pf_fspm_get_default_cfg (pnet_t * net, const pnet_cfg_t ** pp_cfg);
+
+/**
+ * Get system location from I&M data record 1.
+ *
+ * Note that the SNMP thread may call this at any time.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param p_location       Out:   Current system location.
+ */
+void pf_fspm_get_system_location (
+   pnet_t * net,
+   pf_snmp_system_location_t * p_location);
+
+/**
+ * Set system location in I&M data record 1 and save it to persistent memory.
+ *
+ * Note that the SNMP thread may call this at any time.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param p_location       In:    New system location.
+ */
+void pf_fspm_save_system_location (
+   pnet_t * net,
+   const pf_snmp_system_location_t * p_location);
 
 /**
  * Clear the I&M data records 1-4.

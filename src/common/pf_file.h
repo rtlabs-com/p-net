@@ -22,6 +22,18 @@ extern "C" {
 
 #include <stddef.h>
 
+/* Filenames used by p-net stack. A filename may not be longer than
+ * PNET_MAX_FILENAME_SIZE (termination included).
+ */
+#define PF_FILENAME_IP          "pnet_data_ip.bin"
+#define PF_FILENAME_SYSCONTACT  "pnet_data_syscontact.bin"
+#define PF_FILENAME_IM          "pnet_data_im.bin"
+#define PF_FILENAME_DIAGNOSTICS "pnet_data_diagnostics.bin"
+#define PF_FILENAME_PDPORT_1    "pnet_data_pdport_1.bin"
+#define PF_FILENAME_PDPORT_2    "pnet_data_pdport_2.bin"
+#define PF_FILENAME_PDPORT_3    "pnet_data_pdport_3.bin"
+#define PF_FILENAME_PDPORT_4    "pnet_data_pdport_4.bin"
+
 /**
  * Load a binary file, and verify the file version.
  *

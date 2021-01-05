@@ -16,9 +16,9 @@
 #ifndef SAMPLEAPP_COMMON_H
 #define SAMPLEAPP_COMMON_H
 
+#include "options.h" /* Remove when #224 is solved */
 #include "osal.h"
 #include "pnal.h"
-#include "options.h"
 #include <pnet_api.h>
 
 #ifdef __cplusplus
@@ -36,19 +36,24 @@ extern "C" {
 
 /********************** Settings **********************************************/
 
-#define APP_PROFINET_SIGNAL_LED_ID 0
 #define APP_DATA_LED_ID            1
-#define EVENT_READY_FOR_DATA       BIT (0)
-#define EVENT_TIMER                BIT (1)
-#define EVENT_ALARM                BIT (2)
-#define EVENT_ABORT                BIT (15)
+#define APP_PROFINET_SIGNAL_LED_ID 2
+#define APP_EVENT_READY_FOR_DATA   BIT (0)
+#define APP_EVENT_TIMER            BIT (1)
+#define APP_EVENT_ALARM            BIT (2)
+#define APP_EVENT_ABORT            BIT (15)
 
-#define TICK_INTERVAL_US                1000 /* 1 ms */
-#define APP_ALARM_USI                   0x0010
-#define APP_DIAG_CHANNEL_NUMBER         1
-#define APP_DIAG_CHANNEL_DIRECTION      PNET_DIAG_CH_PROP_DIR_INPUT
-#define APP_DIAG_CHANNEL_NUMBER_OF_BITS PNET_DIAG_CH_PROP_TYPE_8_BIT
-#define APP_DIAG_QUAL_SEVERITY          0x00000100UL /* Max one bit set */
+#define TICK_INTERVAL_US                    1000 /* 1 ms */
+#define APP_ALARM_USI                       0x0010
+#define APP_DIAG_CHANNEL_NUMBER             4
+#define APP_DIAG_CHANNEL_DIRECTION          PNET_DIAG_CH_PROP_DIR_INPUT
+#define APP_DIAG_CHANNEL_NUMBER_OF_BITS     PNET_DIAG_CH_PROP_TYPE_1_BIT
+#define APP_DIAG_CHANNEL_SEVERITY           PNET_DIAG_CH_PROP_MAINT_FAULT
+#define APP_DIAG_CHANNEL_ERRORTYPE          CHANNEL_ERRORTYPE_SHORT_CIRCUIT
+#define APP_DIAG_CHANNEL_ADDVALUE_A         0
+#define APP_DIAG_CHANNEL_ADDVALUE_B         1234
+#define APP_DIAG_CHANNEL_EXTENDED_ERRORTYPE 0
+#define APP_DIAG_CHANNEL_QUAL_SEVERITY      0 /* Not used (Max one bit set) */
 
 #define APP_TICKS_READ_BUTTONS 10
 #define APP_TICKS_UPDATE_DATA  100
@@ -62,10 +67,11 @@ extern "C" {
 
 #define APP_DIAG_CUSTOM_USI 0x1234
 
+/* See "Specification for GSDML" 8.26 LogBookEntryItem for allowed values */
 #define APP_LOGBOOK_ERROR_CODE   0x20 /* Manufacturer specific */
 #define APP_LOGBOOK_ERROR_DECODE 0x82 /* Manufacturer specific */
 #define APP_LOGBOOK_ERROR_CODE_1 PNET_ERROR_CODE_1_FSPM
-#define APP_LOGBOOK_ERROR_CODE_2 0xFF       /* Manufacturer specific */
+#define APP_LOGBOOK_ERROR_CODE_2 0x00      /* Manufacturer specific */
 #define APP_LOGBOOK_ENTRY_DETAIL 0xFEE1DEAD /* Manufacturer specific */
 
 /*
@@ -122,7 +128,7 @@ static const cfg_submodule_type_t cfg_available_submodule_types[] = {
    {"DAP Port 1",
     APP_API,
     PNET_MOD_DAP_IDENT,
-    PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT,
+    PNET_SUBMOD_DAP_INTERFACE_1_PORT_1_IDENT,
     PNET_DIR_NO_IO,
     0,
     0},
@@ -153,11 +159,11 @@ static const cfg_submodule_type_t cfg_available_submodule_types[] = {
 
 struct cmd_args
 {
-   char path_button1[PNET_MAX_FILE_FULLPATH_LEN];
-   char path_button2[PNET_MAX_FILE_FULLPATH_LEN];
-   char path_storage_directory[PNET_MAX_DIRECTORYPATH_LENGTH];
-   char station_name[64];
-   char eth_interface[PNET_MAX_INTERFACE_NAME_LENGTH];
+   char path_button1[PNET_MAX_FILE_FULLPATH_SIZE]; /** Terminated string */
+   char path_button2[PNET_MAX_FILE_FULLPATH_SIZE]; /** Terminated string */
+   char path_storage_directory[PNET_MAX_DIRECTORYPATH_SIZE]; /** Terminated */
+   char station_name[PNET_STATION_NAME_MAX_SIZE];    /** Terminated string */
+   char eth_interface[PNET_INTERFACE_NAME_MAX_SIZE]; /** Terminated string */
    int verbosity;
    int show;
    bool factory_reset;
@@ -213,6 +219,9 @@ typedef enum app_demo_state
 {
    APP_DEMO_STATE_ALARM_SEND,
    APP_DEMO_STATE_LOGBOOK_ENTRY,
+   APP_DEMO_STATE_ABORT_AR,
+   APP_DEMO_STATE_CYCLIC_REDUNDANT,
+   APP_DEMO_STATE_CYCLIC_NORMAL,
    APP_DEMO_STATE_DIAG_STD_ADD,
    APP_DEMO_STATE_DIAG_STD_UPDATE,
    APP_DEMO_STATE_DIAG_STD_REMOVE,
@@ -285,10 +294,11 @@ void app_loop_forever (pnet_t * net, app_data_t * p_appdata);
  *
  * @param id               In:    LED number, starting from 0.
  * @param led_state        In:    LED state. Use true for on and false for off.
+ * @param verbosity        In:    Print new led_state, if verbosity > 0
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
-int app_set_led (uint16_t id, bool led_state);
+int app_set_led (uint16_t id, bool led_state, int verbosity);
 
 /**
  * Read a button.

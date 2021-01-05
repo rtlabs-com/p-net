@@ -31,7 +31,7 @@ class FileUnitTest : public PnetUnitTest
 
 TEST_F (FileUnitTest, FileJoinDirectoryFilename)
 {
-   char outputstring[TEST_FILE_OUTPUTSTRING_SIZE] = {0};
+   char outputstring[TEST_FILE_OUTPUTSTRING_SIZE] = {0}; /** Terminated */
    int res = 0;
 
    /* Happy case */

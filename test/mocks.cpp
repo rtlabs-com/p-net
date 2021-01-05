@@ -41,6 +41,11 @@ uint32_t mock_os_get_current_time_us (void)
    return mock_os_data.current_time_us;
 }
 
+uint32_t mock_pnal_get_system_uptime_10ms (void)
+{
+   return mock_os_data.system_uptime_10ms;
+}
+
 pnal_eth_handle_t * mock_pnal_eth_init (
    const char * if_name,
    pnal_eth_callback_t * callback,
@@ -51,6 +56,14 @@ pnal_eth_handle_t * mock_pnal_eth_init (
    handle = (pnal_eth_handle_t *)calloc (1, sizeof (pnal_eth_handle_t));
 
    return handle;
+}
+
+void mock_pnal_eth_get_status (
+   pnal_eth_handle_t * handle,
+   int loc_port_num,
+   pnal_eth_status_t * status)
+{
+   *status = mock_os_data.eth_status[loc_port_num];
 }
 
 int mock_pnal_get_ip_suite (
@@ -139,6 +152,11 @@ int mock_pnal_udp_recvfrom (
 
 void mock_pnal_udp_close (uint32_t id)
 {
+}
+
+int mock_pnal_get_interface_index (pnal_eth_handle_t * handle)
+{
+   return mock_os_data.interface_index;
 }
 
 int mock_pnal_save_file (

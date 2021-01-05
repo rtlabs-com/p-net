@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<ISO15745Profile xmlns="http://www.profibus.com/GSDML/2003/11/DeviceProfile" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.profibus.com/GSDML/2003/11/DeviceProfile ..\xsd\GSDML-DeviceProfile-V2.35.xsd">
+<ISO15745Profile xmlns="http://www.profibus.com/GSDML/2003/11/DeviceProfile" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.profibus.com/GSDML/2003/11/DeviceProfile ..\xsd\GSDML-DeviceProfile-V2.4.xsd">
    <!-- ProfileHeader definition as defined in ISO 15745-1. Please do not change the content. -->
    <ProfileHeader>
       <ProfileIdentification>PROFINET Device Profile</ProfileIdentification>
@@ -23,14 +23,14 @@
       </DeviceFunction>
       <ApplicationProcess>
          <DeviceAccessPointList>
-            <DeviceAccessPointItem ID="IDD_1" PNIO_Version="V2.35" PhysicalSlots="0..4" ModuleIdentNumber="0x00000001" MinDeviceInterval="32" DNS_CompatibleName="rt-labs-dev" FixedInSlots="0" ObjectUUID_LocalIndex="1" DeviceAccessSupported="true" NumberOfDeviceAccessAR="1" MultipleWriteSupported="true" CheckDeviceID_Allowed="true" NameOfStationNotTransferable="false" LLDP_NoD_Supported="true" ResetToFactoryModes="1..2">
+            <DeviceAccessPointItem ID="IDD_1" PNIO_Version="V2.4" PhysicalSlots="0..4" ModuleIdentNumber="0x00000001" MinDeviceInterval="32" DNS_CompatibleName="rt-labs-dev" FixedInSlots="0" ObjectUUID_LocalIndex="1" DeviceAccessSupported="true" NumberOfDeviceAccessAR="1" MultipleWriteSupported="true" CheckDeviceID_Allowed="true" NameOfStationNotTransferable="false" LLDP_NoD_Supported="true" ResetToFactoryModes="1..2">
                <ModuleInfo>
                   <Name TextId="IDT_MODULE_NAME_DAP1"/>
                   <InfoText TextId="IDT_INFO_DAP1"/>
                   <VendorName Value="rt-labs"/>
                   <OrderNumber Value="12345"/>
                   <HardwareRelease Value="A1.0"/>
-                  <SoftwareRelease Value="Z1.0"/>
+                  <SoftwareRelease Value="V0.1.0"/>
                </ModuleInfo>
                <CertificationInfo ConformanceClass="A" ApplicationClass="" NetloadClass="I"/>
                <IOConfigData MaxInputLength="244" MaxOutputLength="244"/>
@@ -71,7 +71,7 @@
                   <SoftwareRelease Value="1.0"/>
                </ModuleInfo>
                <VirtualSubmoduleList>
-                  <VirtualSubmoduleItem ID="11" SubmoduleIdentNumber="0x0001" API="0" MayIssueProcessAlarm="false">
+                  <VirtualSubmoduleItem ID="11" SubmoduleIdentNumber="0x0001" MayIssueProcessAlarm="true">
                      <IOData>
                         <Input Consistency="All items consistency">
                            <DataItem DataType="Unsigned8" TextId="TOK_Input_DataItem_8" UseAsBits="true">
@@ -101,7 +101,7 @@
                   <SoftwareRelease Value="1.0"/>
                </ModuleInfo>
                <VirtualSubmoduleList>
-                  <VirtualSubmoduleItem ID="12" SubmoduleIdentNumber="0x0001" API="0" MayIssueProcessAlarm="false">
+                  <VirtualSubmoduleItem ID="12" SubmoduleIdentNumber="0x0001" MayIssueProcessAlarm="true">
                      <IOData>
                         <Output Consistency="All items consistency">
                            <DataItem DataType="Unsigned8" TextId="TOK_Output_DataItem_8" UseAsBits="true">
@@ -131,7 +131,7 @@
                   <SoftwareRelease Value="1.0"/>
                </ModuleInfo>
                <VirtualSubmoduleList>
-                  <VirtualSubmoduleItem ID="13" SubmoduleIdentNumber="0x0001" API="0" MayIssueProcessAlarm="false">
+                  <VirtualSubmoduleItem ID="13" SubmoduleIdentNumber="0x0001" MayIssueProcessAlarm="true">
                      <IOData>
                         <Input>
                            <DataItem DataType="Unsigned8" UseAsBits="true" TextId="TOK_Input_DataItem_8">
@@ -176,11 +176,23 @@
                </VirtualSubmoduleList>
             </ModuleItem>
          </ModuleList>
+         <LogBookEntryList>
+            <LogBookEntryItem Status="2130510">
+               <!--Custom log book entry for sample application-->
+               <!--Error code 0x20  Error decode 0x82  Error code 1 0x4E-->
+               <ErrorCode2Value>
+                  <Name TextId="IDT_CUSTOM_LOGBOOK_1"/>
+               </ErrorCode2Value>
+            </LogBookEntryItem>
+         </LogBookEntryList>
          <ExternalTextList>
             <PrimaryLanguage>
-               <Text TextId="IDT_INFO_Device" Value="PNO GSDML V2.35 Examples"/>
+               <Text TextId="IDT_INFO_Device" Value="PNIO GSDML V2.4 Examples"/>
                <Text TextId="IDT_MODULE_NAME_DAP1" Value="rt-labs DEMO device, for PNIO controller with PDev"/>
                <Text TextId="IDT_INFO_DAP1" Value="Example for a ProfinetIO device"/>
+               <Text TextId="IDT_CUSTOM_DIAG_1" Value="Custom diagnosis in USI format"/>
+               <Text TextId="IDT_CUSTOM_DIAG_1_VALUE" Value="Custom diagnosis value"/>
+               <Text TextId="IDT_CUSTOM_LOGBOOK_1" Value="Custom Logbook entry"/>
                <Text TextId="IDT_NAME_IS" Value="I"/>
                <Text TextId="IDT_NAME_PS1" Value="P1"/>
                <!--module name-->
@@ -214,10 +226,10 @@
                <Text TextId="TOK_Output_DataItem_Bit7" Value="Output Bit 7"/>
 
                <!--ParameterRecordDataItem name-->
-               <Text TextId="RT-Labs_demo_parameter_1" Value="Parameter 1" />
-               <Text TextId="RT-Labs_demo_parameter_2" Value="Parameter 2" />
-               <Text TextId="DEMO_1" Value="DEMO_1" />
-               <Text TextId="DEMO_2" Value="DEMO_2" />
+               <Text TextId="RT-Labs_demo_parameter_1" Value="Parameter 1"/>
+               <Text TextId="RT-Labs_demo_parameter_2" Value="Parameter 2"/>
+               <Text TextId="DEMO_1" Value="DEMO_1"/>
+               <Text TextId="DEMO_2" Value="DEMO_2"/>
             </PrimaryLanguage>
          </ExternalTextList>
       </ApplicationProcess>

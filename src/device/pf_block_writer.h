@@ -98,6 +98,36 @@ void pf_put_uint32 (
    uint16_t * p_pos);
 
 /**
+ * Insert fixed length zero padding into a buffer.
+ * @param n_bytes          In:   The number of bytes byte to insert.
+ * @param res_len          In:   Size of destination buffer.
+ * @param p_bytes          Out:  Destination buffer.
+ * @param p_pos            InOut:Position in destination buffer.
+ */
+void pf_put_padding (
+   uint16_t n_bytes,
+   uint16_t res_len,
+   uint8_t * p_bytes,
+   uint16_t * p_pos);
+
+/**
+ * Pad a buffer with zeroes until block length is aligned
+ *
+ * @param start_position   In:   Start of block to align.
+ * @param align            In:   Alignment. 2 for 16 bit alignment,
+ *                               4 for 32bit alignment
+ * @param res_len          In:   Size of destination buffer.
+ * @param p_bytes          Out:  Destination buffer.
+ * @param p_pos            InOut:Position in destination buffer.
+ */
+void pf_put_padding_align (
+   uint16_t start_postion,
+   uint16_t align,
+   uint16_t res_len,
+   uint8_t * p_bytes,
+   uint16_t * p_pos);
+
+/**
  * Insert an AR result block into a buffer.
  * @param is_big_endian    In:   Endianness of the destination buffer.
  * @param p_ar             In:   Contains the AR result to insert.
@@ -688,6 +718,7 @@ void pf_put_pdport_data_check (
  * Insert pd port data adjust block into a buffer.
  * @param p_peer_to_peer_boundary   In:    Peer to peer boundary ToDo - Add
  *                                         support for other adjust properties
+ * @param subslot                   In:    DAP subslot identifying the port.
  * @param is_big_endian             In:    Endianness of the destination buffer.
  * @param p_res                     In:    Read result
  * @param res_len                   In:    Size of destination buffer.
@@ -696,6 +727,7 @@ void pf_put_pdport_data_check (
  */
 void pf_put_pdport_data_adj (
    const pf_adjust_peer_to_peer_boundary_t * p_peer_to_peer_boundary,
+   uint16_t subslot,
    bool is_big_endian,
    const pf_iod_read_result_t * p_res,
    uint16_t res_len,
@@ -705,9 +737,10 @@ void pf_put_pdport_data_adj (
 /**
  * Insert pd port real data block into a buffer.
  * @param net              InOut: The p-net stack instance
- * @param is_big_endian    In:    Endianness of the destination buffer.
  * @param loc_port_num     In:    Local port number.
  *                                Valid range: 1 .. PNET_MAX_PORT
+ * @param subslot          In:    DAP subslot identifying the port.
+ * @param is_big_endian    In:    Endianness of the destination buffer.
  * @param p_res            In:    Read result
  * @param res_len          In:    Size of destination buffer.
  * @param p_bytes          Out:   Destination buffer.
@@ -715,8 +748,9 @@ void pf_put_pdport_data_adj (
  */
 void pf_put_pdport_data_real (
    pnet_t * net,
-   bool is_big_endian,
    int loc_port_num,
+   uint16_t subslot,
+   bool is_big_endian,
    const pf_iod_read_result_t * p_res,
    uint16_t res_len,
    uint8_t * p_bytes,
@@ -733,7 +767,7 @@ void pf_put_pdport_data_real (
  */
 
 void pf_put_pdport_statistics (
-   const pnet_interface_stats_t * p_if_stats,
+   const pf_interface_stats_t * p_if_stats,
    bool is_big_endian,
    const pf_iod_read_result_t * p_res,
    uint16_t res_len,

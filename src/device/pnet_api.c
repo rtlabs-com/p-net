@@ -14,7 +14,7 @@
  ********************************************************************/
 
 #ifdef UNIT_TEST
-#define pnal_eth_init mock_pnal_eth_init
+#define pnal_eth_init  mock_pnal_eth_init
 #define pnal_snmp_init mock_pnal_snmp_init
 #endif
 
@@ -32,13 +32,13 @@ int pnet_init_only (
 {
    memset (net, 0, sizeof (*net));
 
-   if (strlen (netif) > PNET_MAX_INTERFACE_NAME_LENGTH)
+   if (strlen (netif) >= PNET_INTERFACE_NAME_MAX_SIZE)
    {
       LOG_ERROR (
          PNET_LOG,
-         "Too long interface name. Given: %s  Max len: %d\n",
+         "Too long interface name. Given: %s  Max size incl termination: %d\n",
          netif,
-         PNET_MAX_INTERFACE_NAME_LENGTH);
+         PNET_INTERFACE_NAME_MAX_SIZE);
       return -1;
    }
    strcpy (net->interface_name, netif);
@@ -70,9 +70,11 @@ int pnet_init_only (
    pf_scheduler_init (net, tick_us);
    pf_cmina_init (net); /* Read from permanent pool */
 
-   pf_dcp_exit (net);  /* Prepare for re-init. */
-   pf_dcp_init (net);  /* Start DCP */
-   pf_lldp_init (net); /* Send the LLDP frame */
+   pf_dcp_exit (net); /* Prepare for re-init. */
+   pf_dcp_init (net); /* Start DCP */
+   pf_port_init (net);
+   pf_lldp_init (net);
+   pf_pdport_init (net);
 
    /* Configure SNMP server if enabled */
 #if PNET_OPTION_SNMP == 1
@@ -124,6 +126,8 @@ void pnet_handle_periodic (pnet_t * net)
 
    /* Handle expired timeout events */
    pf_scheduler_tick (net);
+
+   pf_pdport_periodic (net);
 }
 
 void pnet_show (pnet_t * net, unsigned level)
@@ -300,7 +304,7 @@ int pnet_pull_submodule (
    return pf_cmdev_pull_submodule (net, api, slot, subslot);
 }
 
-int pnet_set_state (pnet_t * net, bool primary)
+int pnet_set_primary_state (pnet_t * net, bool primary)
 {
    int ret = 0; /* Assume all goes well */
    uint16_t ar_ix;

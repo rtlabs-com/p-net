@@ -118,8 +118,8 @@ extern "C" {
  * See PN-Topology Annex A.
  *
  * Note: According to the SNMP specification, the string could be up
- * to 255 characters. The p-net stack limits it to PNAL_HOST_NAME_MAX.
- * An extra byte is added as to ensure null-termination.
+ * to 255 characters (excluding termination). The p-net stack limits it to
+ * PNAL_HOSTNAME_MAX_SIZE, including null-termination.
  *
  * This is a writable variable. As such it is be in persistent memory.
  * Only writable variables (using SNMP Set) need to be stored
@@ -128,7 +128,7 @@ extern "C" {
  */
 typedef struct pf_snmp_system_name
 {
-   char string[PNAL_HOST_NAME_MAX + 1]; /* Terminated */
+   char string[PNAL_HOSTNAME_MAX_SIZE]; /* Terminated string */
 } pf_snmp_system_name_t;
 
 /**
@@ -156,35 +156,6 @@ typedef struct pf_snmp_system_contact
 } pf_snmp_system_contact_t;
 
 /**
- * System location (sysLocation).
- *
- * "The physical location of this node (e.g.,
- * 'telephone closet, 3rd floor'). If the location is unknown,
- *  the value is the zero-length string."
- * - IETF RFC 3418 (SNMP MIB-II).
- *
- * The value is supplied by network manager. By default, it is
- * the zero-length string.
- *
- * This should have the same value as "IM_Tag_Location" in I&M1.
- * See PN-Topology ch. 11.5.2: "Consistency".
- *
- * Note: According to the SNMP specification, the string could be up
- * to 255 characters. The p-net stack limits it to the length of
- * IM_Tag_Location, which is 22.
- * An extra byte is added as to ensure null-termination.
- *
- * This is a writable variable. As such, it is stored in persistent memory.
- * Only writable variables (using SNMP Set) need to be stored
- * in persistent memory.
- * See IEC CDV 61158-5-10 (PN-AL-Services) ch. 7.3.3.3.6.2: "Persistency".
- */
-typedef struct pf_snmp_system_location
-{
-   char string[PNET_LOCATION_MAX_LEN + 1]; /* Terminated */
-} pf_snmp_system_location_t;
-
-/**
  * System description (sysDescr).
  *
  * "A textual description of the entity. This value
@@ -207,20 +178,20 @@ typedef struct pf_snmp_system_location
  */
 typedef struct pf_snmp_system_description
 {
-   char string[PNET_LLDP_CHASSIS_ID_MAX_LEN + 1]; /* Terminated */
+   char string[PNET_LLDP_CHASSIS_ID_MAX_SIZE]; /** Terminated string */
 } pf_snmp_system_description_t;
 
 /**
  * Encoded management address.
  *
- * Contains the same information as pf_lldp_management_address_t, but the
+ * Contains similar information as pf_lldp_management_address_t, but the
  * fields have been encoded so they may be immediately placed in SNMP response.
  */
 typedef struct pf_snmp_management_address
 {
-   uint8_t value[31]; /**< First byte is size of actual address */
-   uint8_t subtype;   /**< 1 for IPv4 */
-   size_t len;        /**< 5 for IPv4 */
+   uint8_t value[1 + 31]; /**< First byte is size of actual address */
+   uint8_t subtype;       /**< 1 for IPv4 */
+   size_t len;            /**< 5 for IPv4 */
 } pf_snmp_management_address_t;
 
 /**
@@ -236,6 +207,25 @@ typedef struct pf_snmp_link_status
    uint8_t auto_neg_advertised_cap[2]; /**< OCTET STRING encoding of BITS */
    int32_t oper_mau_type;
 } pf_snmp_link_status_t;
+
+/**
+ * Measured signal delays in nanoseconds
+ *
+ * If a signal delay was not measured, its value is zero.
+ *
+ * See IEC CDV 61158-6-10 (PN-AL-Protocol) Annex U: "LLDP EXT MIB", fields
+ * lldpXPnoLocLPDValue / lldpXPnoRemLPDValue,
+ * lldpXPnoLocPortTxDValue / lldpXPnoRemPortTxDValue,
+ * lldpXPnoLocPortRxDValue / lldpXPnoRemPortRxDValue.
+ *
+ * See also pf_lldp_signal_delay_t.
+ */
+typedef struct pf_snmp_signal_delay
+{
+   uint32_t port_tx_delay_ns;
+   uint32_t port_rx_delay_ns;
+   uint32_t line_propagation_delay_ns;
+} pf_snmp_signal_delay_t;
 
 /**
  * Get system description.
@@ -609,7 +599,7 @@ int pf_snmp_get_peer_management_address (
  */
 void pf_snmp_get_management_port_index (
    pnet_t * net,
-   pf_lldp_management_port_index_t * p_man_port_index);
+   pf_lldp_interface_number_t * p_man_port_index);
 
 /**
  * Get ManAddrIfId for remote interface connected to local port.
@@ -637,7 +627,7 @@ void pf_snmp_get_management_port_index (
 int pf_snmp_get_peer_management_port_index (
    pnet_t * net,
    int loc_port_num,
-   pf_lldp_management_port_index_t * p_man_port_index);
+   pf_lldp_interface_number_t * p_man_port_index);
 
 /**
  * Get local station name.
@@ -713,7 +703,7 @@ int pf_snmp_get_peer_station_name (
 void pf_snmp_get_signal_delays (
    pnet_t * net,
    int loc_port_num,
-   pf_lldp_signal_delay_t * p_delays);
+   pf_snmp_signal_delay_t * p_delays);
 
 /**
  * Get measured signal delays on remote port.
@@ -737,7 +727,7 @@ void pf_snmp_get_signal_delays (
 int pf_snmp_get_peer_signal_delays (
    pnet_t * net,
    int loc_port_num,
-   pf_lldp_signal_delay_t * p_delays);
+   pf_snmp_signal_delay_t * p_delays);
 
 /**
  * Get encoded link status of local port.

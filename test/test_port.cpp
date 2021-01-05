@@ -20,8 +20,6 @@
 
 #include <gtest/gtest.h>
 
-
-
 class PortTest : public PnetIntegrationTest
 {
 };
@@ -32,10 +30,33 @@ TEST_F (PortTest, PortGetPortList)
 
    memset (&port_list, 0xff, sizeof (port_list));
 
-   /* TODO: Add support for multiple ports */
-   pf_port_get_list_of_ports (net, &port_list);
+   pf_port_get_list_of_ports (net, 1, &port_list);
    EXPECT_EQ (port_list.ports[0], 0x80);
    EXPECT_EQ (port_list.ports[1], 0x00);
+
+   pf_port_get_list_of_ports (net, 2, &port_list);
+   EXPECT_EQ (port_list.ports[0], 0xC0);
+   EXPECT_EQ (port_list.ports[1], 0x00);
+
+   pf_port_get_list_of_ports (net, 4, &port_list);
+   EXPECT_EQ (port_list.ports[0], 0xF0);
+   EXPECT_EQ (port_list.ports[1], 0x00);
+
+   pf_port_get_list_of_ports (net, 8, &port_list);
+   EXPECT_EQ (port_list.ports[0], 0xFF);
+   EXPECT_EQ (port_list.ports[1], 0x00);
+
+   pf_port_get_list_of_ports (net, 9, &port_list);
+   EXPECT_EQ (port_list.ports[0], 0xFF);
+   EXPECT_EQ (port_list.ports[1], 0x80);
+
+   pf_port_get_list_of_ports (net, 12, &port_list);
+   EXPECT_EQ (port_list.ports[0], 0xFF);
+   EXPECT_EQ (port_list.ports[1], 0xF0);
+
+   pf_port_get_list_of_ports (net, 16, &port_list);
+   EXPECT_EQ (port_list.ports[0], 0xFF);
+   EXPECT_EQ (port_list.ports[1], 0xFF);
 }
 
 TEST_F (PortTest, PortCheckIterator)
@@ -50,7 +71,7 @@ TEST_F (PortTest, PortCheckIterator)
    EXPECT_EQ (port, 1);
 
    /* More ports might be available dependent on compile time setting */
-   for(ix = 2; ix <= PNET_MAX_PORT; ix++)
+   for (ix = 2; ix <= PNET_MAX_PORT; ix++)
    {
       port = pf_port_get_next (&port_iterator);
       EXPECT_EQ (port, ix);

@@ -24,17 +24,48 @@
  */
 
 /**
- * Load PDPort data from nvm
+ * Get configuration file name for one port
+ *
+ * @param loc_port_num      In:   Local port number.
+ *                                Valid range: 1 .. PNET_MAX_PORT
+ * @return  The configuration file name
+ */
+static const char * pf_pdport_get_filename (int loc_port_num)
+{
+   const char * filename = NULL;
+   switch (loc_port_num)
+   {
+   case PNET_PORT_1:
+      filename = PF_FILENAME_PDPORT_1;
+      break;
+   case PNET_PORT_2:
+      filename = PF_FILENAME_PDPORT_2;
+      break;
+   case PNET_PORT_3:
+      filename = PF_FILENAME_PDPORT_3;
+      break;
+   case PNET_PORT_4:
+      filename = PF_FILENAME_PDPORT_4;
+      break;
+   default:
+      CC_ASSERT (false);
+   }
+   return filename;
+}
+
+/**
+ * Load PDPort data for one port from nvm
  *
  * @param net              InOut: The p-net stack instance
- *
+ * @param loc_port_num     In:    Local port number.
+ *                                Valid range: 1 .. PNET_MAX_PORT
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
-static int pf_pdport_load (pnet_t * net)
+static int pf_pdport_load (pnet_t * net, int loc_port_num)
 {
    int ret = -1;
-   pnet_pdport_nvm_t file_port;
+   pf_pdport_t pdport_config;
    const char * p_file_directory = NULL;
    pf_port_t * p_port_data = NULL;
 
@@ -43,58 +74,104 @@ static int pf_pdport_load (pnet_t * net)
    if (
       pf_file_load (
          p_file_directory,
-         PNET_FILENAME_PDPORT,
-         &file_port,
-         sizeof (pnet_pdport_nvm_t)) == 0)
+         pf_pdport_get_filename (loc_port_num),
+         &pdport_config,
+         sizeof (pdport_config)) == 0)
+   {
+      p_port_data = pf_port_get_state (net, loc_port_num);
+
+      memcpy (&p_port_data->pdport, &pdport_config, sizeof (pdport_config));
+      p_port_data->pdport.lldp_peer_info_updated = false;
+      p_port_data->pdport.lldp_peer_timeout = false;
+
+      if (p_port_data->pdport.check.active == true)
+      {
+         LOG_DEBUG (
+            PNET_LOG,
+            "PDPORT(%d): Did read PDPort settings from nvm. Monitoring peer "
+            "on port %u. Station name: \"%.*s\" Port: \"%.*s\"\n",
+            __LINE__,
+            loc_port_num,
+            p_port_data->pdport.check.peer.length_peer_station_name,
+            p_port_data->pdport.check.peer.peer_station_name,
+            p_port_data->pdport.check.peer.length_peer_port_name,
+            p_port_data->pdport.check.peer.peer_port_name);
+         pf_lldp_reset_peer_timeout (net, loc_port_num, PF_LLDP_INITIAL_PEER_TIMEOUT);
+      }
+      else
+      {
+         LOG_DEBUG (
+            PNET_LOG,
+            "PDPORT(%d): Did read PDPort settings from nvm. No monitoring "
+            "of peer on port %u.\n",
+            __LINE__,
+            loc_port_num);
+      }
+
+      if (p_port_data->pdport.adjust.active == true)
+      {
+         if (
+            p_port_data->pdport.adjust.peer_to_peer_boundary
+               .peer_to_peer_boundary.do_not_send_LLDP_frames == 1)
+         {
+            pf_lldp_send_disable (net, loc_port_num);
+         }
+         else
+         {
+            pf_lldp_send_enable (net, loc_port_num);
+         }
+      }
+      else
+      {
+         pf_lldp_send_enable (net, loc_port_num);
+      }
+
+      ret = 0;
+   }
+   else
    {
       LOG_DEBUG (
          PNET_LOG,
-         "PDPORT(%d): Did read PDPort settings from nvm.\n",
-         __LINE__);
-
-      p_port_data = pf_port_get_state (net, PNET_PORT_1);
-
-      p_port_data->pdport.check.peer = file_port.peer;
-      if (
-         p_port_data->pdport.check.peer.length_peer_port_name > 0 ||
-         p_port_data->pdport.check.peer.length_peer_station_name > 0)
-      {
-         p_port_data->pdport.check.active = true;
-      }
-      ret = 0;
+         "PDPORT(%d): Could not read from nvm, so no monitoring of "
+         "peer on port %u.\n",
+         __LINE__,
+         loc_port_num);
+      pf_lldp_reset_peer_timeout (net, loc_port_num, PF_LLDP_INITIAL_PEER_TIMEOUT);
+      pf_lldp_send_enable (net, loc_port_num);
    }
+
    return ret;
 }
 
 /**
- * Store PDPort data to nvm
+ * Store PDPort data for one port to nvm
  *
  * @param net              InOut: The p-net stack instance
+ * @param loc_port_num     In:    Local port number.
+ *                                Valid range: 1 .. PNET_MAX_PORT
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
-static int pf_pdport_save (pnet_t * net)
+static int pf_pdport_save (pnet_t * net, int loc_port_num)
 {
    int ret = 0;
    int save_result = 0;
-   pnet_pdport_nvm_t output_port_nvm = {0};
-   pnet_pdport_nvm_t temporary_buffer;
+   pf_pdport_t pdport_config = {0};
+   pf_pdport_t temporary_buffer;
    const char * p_file_directory = NULL;
-   pf_port_t * p_port_data = pf_port_get_state (net, PNET_PORT_1);
+   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
-   memcpy (
-      &output_port_nvm.peer,
-      &p_port_data->pdport.check.peer,
-      sizeof (output_port_nvm.peer));
+   memcpy (&pdport_config, &p_port_data->pdport, sizeof (pdport_config));
 
    (void)pf_cmina_get_file_directory (net, &p_file_directory);
 
    save_result = pf_file_save_if_modified (
       p_file_directory,
-      PNET_FILENAME_PDPORT,
-      &output_port_nvm,
+      pf_pdport_get_filename (loc_port_num),
+      &pdport_config,
       &temporary_buffer,
-      sizeof (pnet_pdport_nvm_t));
+      sizeof (pf_pdport_t));
+
    switch (save_result)
    {
    case 2:
@@ -128,8 +205,112 @@ static int pf_pdport_save (pnet_t * net)
 }
 
 /**
+ * @internal
+ * Get DAP port subslot using local port number
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param loc_port_num     In:    Local port number.
+ *                                Valid range: 1 .. PNET_MAX_PORT
+ * @return DAP subslot number for port identity
+ */
+static uint16_t pf_pdport_loc_port_num_to_dap_subslot (int loc_port_num)
+{
+   uint16_t subslot =
+      PNET_SUBSLOT_DAP_INTERFACE_1_PORT_1_IDENT + PNET_PORT_1 - loc_port_num;
+   return subslot;
+}
+
+/**
+ * @internal
+ * Get local port from DAP port subslot
+ *
+ * @param subslot              In: Subslot number
+ * @return The port number mapping to the subslot.
+ *         0 if the subslot is not supported.
+ */
+static int pf_pdport_dap_subslot_to_local_port (uint16_t subslot)
+{
+   int port = PNET_PORT_1 + PNET_SUBSLOT_DAP_INTERFACE_1_PORT_1_IDENT - subslot;
+   if (port < PNET_PORT_1 || port > PNET_MAX_PORT)
+   {
+      port = 0;
+   }
+   return port;
+}
+
+/**
+ * @internal
+ * Check if a DAP port subslot is mapped to a local port
+ *
+ * @param subslot              In: Subslot number
+ * @return true  if the subslot is mapped to a local port.
+ *         false if the subslot is not supported.
+ */
+static bool pf_pdport_subslot_is_dap_port_id (uint16_t subslot)
+{
+   int port = pf_pdport_dap_subslot_to_local_port (subslot);
+   return (port != 0);
+}
+
+/**
+ * @internal
+ * Initialize pdport diagnostic source
+ *
+ * @param diag_source      InOut: Diag source to be initialized
+ * @param net              InOut: The p-net stack instance
+ * @param loc_port_num     In:    Local port number.
+ *                                Valid range: 1 .. PNET_MAX_PORT
+ */
+static void pf_pdport_init_diag_source (
+   pnet_diag_source_t * diag_source,
+   int loc_port_num)
+{
+   diag_source->api = PNET_API_NO_APPLICATION_PROFILE;
+   diag_source->slot = PNET_SLOT_DAP_IDENT;
+   diag_source->subslot = pf_pdport_loc_port_num_to_dap_subslot (loc_port_num);
+   diag_source->ch = PNET_CHANNEL_WHOLE_SUBMODULE;
+   diag_source->ch_grouping = PNET_DIAG_CH_INDIVIDUAL_CHANNEL;
+   diag_source->ch_direction = PNET_DIAG_CH_PROP_DIR_MANUF_SPEC;
+}
+
+/**
+ * Delete all active diagnostics handled by pdport
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param loc_port_num      In:   Local port number.
+ *                                Valid range: 1 .. PNET_MAX_PORT
+ */
+static void pf_pdport_remove_all_diag (pnet_t * net, int loc_port_num)
+{
+   pnet_diag_source_t diag_source = {0};
+
+   pf_pdport_init_diag_source (&diag_source, loc_port_num);
+
+   (void)pf_diag_std_remove (
+      net,
+      &diag_source,
+      PF_WRT_ERROR_REMOTE_MISMATCH,
+      PF_WRT_ERROR_PEER_STATIONNAME_MISMATCH);
+
+   (void)pf_diag_std_remove (
+      net,
+      &diag_source,
+      PF_WRT_ERROR_REMOTE_MISMATCH,
+      PF_WRT_ERROR_PEER_PORTNAME_MISMATCH);
+
+   (void)pf_diag_std_remove (
+      net,
+      &diag_source,
+      PF_WRT_ERROR_REMOTE_MISMATCH,
+      PF_WRT_ERROR_NO_PEER_DETECTED);
+}
+
+/**
  * Init PDPort data.
  * Load port configuration from nvm.
+
+ * If a check is loaded it will be run when pdport receives
+ * data from lldp.
  *
  * @param net              InOut: The p-net stack instance
  * @return  0  if the operation succeeded.
@@ -137,32 +318,117 @@ static int pf_pdport_save (pnet_t * net)
  */
 int pf_pdport_init (pnet_t * net)
 {
-   if (pf_pdport_load (net) != 0)
+   int port;
+   pf_port_iterator_t port_iterator;
+
+   pf_port_init_iterator_over_ports (net, &port_iterator);
+   port = pf_port_get_next (&port_iterator);
+   while (port != 0)
    {
-      /* Create file if missing */
-      (void)pf_pdport_save (net);
+      if (pf_pdport_load (net, port) != 0)
+      {
+         /* Create file if missing */
+         (void)pf_pdport_save (net, port);
+      }
+
+      port = pf_port_get_next (&port_iterator);
    }
    return 0;
 }
 
-/**
- * Reset port configuration data for all ports.
- * Clear configuration in nvm.
- *
- * @param net              InOut: The p-net stack instance
- * @return  0  if the operation succeeded.
- *          -1 if an error occurred
- */
 int pf_pdport_reset_all (pnet_t * net)
 {
-   const char * p_file_directory = NULL;
-   pf_port_t * p_port_data = pf_port_get_state (net, PNET_PORT_1);
+   int port;
+   pf_port_iterator_t port_iterator;
+   pf_port_t * p_port_data = NULL;
 
-   (void)pf_cmina_get_file_directory (net, &p_file_directory);
-   pf_file_clear (p_file_directory, PNET_FILENAME_PDPORT);
+   pf_port_init_iterator_over_ports (net, &port_iterator);
+   port = pf_port_get_next (&port_iterator);
+   while (port != 0)
+   {
+      p_port_data = pf_port_get_state (net, port);
+      memset (&p_port_data->pdport, 0, sizeof (p_port_data->pdport));
+      pf_pdport_remove_all_diag (net, port);
+      pf_pdport_save (net, port);
 
-   memset (&p_port_data->pdport, 0, sizeof (p_port_data->pdport));
+      port = pf_port_get_next (&port_iterator);
+   }
    return 0;
+}
+
+void pf_pdport_remove_data_files (const char * file_directory)
+{
+   int port;
+
+   /* Do not use port iterator as net is not available */
+   for (port = PNET_PORT_1; port <= PNET_MAX_PORT; port++)
+   {
+      pf_file_clear (file_directory, pf_pdport_get_filename (port));
+   }
+}
+
+void pf_pdport_ar_connect_ind (pnet_t * net, const pf_ar_t * p_ar)
+{
+   (void)p_ar;
+   int port;
+   pf_port_iterator_t port_iterator;
+   pf_port_t * p_port_data = NULL;
+
+   pf_port_init_iterator_over_ports (net, &port_iterator);
+   port = pf_port_get_next (&port_iterator);
+
+   while (port != 0)
+   {
+      p_port_data = pf_port_get_state (net, port);
+      if (p_port_data->pdport.adjust.active == true)
+      {
+         if (
+            p_port_data->pdport.adjust.peer_to_peer_boundary
+               .peer_to_peer_boundary.do_not_send_LLDP_frames == 1)
+         {
+            pf_lldp_send_disable (net, port);
+         }
+         else
+         {
+            pf_lldp_send_enable (net, port);
+         }
+      }
+      port = pf_port_get_next (&port_iterator);
+   }
+}
+
+void pf_pdport_lldp_restart (pnet_t * net)
+{
+   int port;
+   pf_port_iterator_t port_iterator;
+   pf_port_t * p_port_data = NULL;
+
+   pf_port_init_iterator_over_ports (net, &port_iterator);
+   port = pf_port_get_next (&port_iterator);
+
+   while (port != 0)
+   {
+      p_port_data = pf_port_get_state (net, port);
+      if (p_port_data->pdport.adjust.active == true)
+      {
+         if (
+            p_port_data->pdport.adjust.peer_to_peer_boundary
+               .peer_to_peer_boundary.do_not_send_LLDP_frames == 1)
+         {
+            pf_lldp_send_disable (net, port);
+         }
+         else
+         {
+            pf_lldp_send_enable (net, port);
+         }
+      }
+      else
+      {
+         pf_lldp_send_enable (net, port);
+      }
+
+      port = pf_port_get_next (&port_iterator);
+   }
 }
 
 int pf_pdport_read_ind (
@@ -175,21 +441,24 @@ int pf_pdport_read_ind (
    uint16_t * p_pos)
 {
    int ret = -1;
-   int loc_port_num = PNET_PORT_1;
-   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
+   int loc_port_num = 0;
+   pf_port_t * p_port_data = NULL;
+   uint16_t slot = p_read_req->slot_number;
+   uint16_t subslot = p_read_req->subslot_number;
 
    switch (p_read_req->index)
    {
    case PF_IDX_SUB_PDPORT_DATA_REAL:
       if (
-         (p_read_req->slot_number == PNET_SLOT_DAP_IDENT) &&
-         (p_read_req->subslot_number ==
-          PNET_SUBSLOT_DAP_INTERFACE_1_PORT_0_IDENT))
+         (slot == PNET_SLOT_DAP_IDENT) &&
+         (pf_pdport_subslot_is_dap_port_id (subslot) == true))
       {
+         loc_port_num = pf_pdport_dap_subslot_to_local_port (subslot);
          pf_put_pdport_data_real (
             net,
-            true,
             loc_port_num,
+            subslot,
+            true,
             p_read_res,
             res_size,
             p_res,
@@ -198,16 +467,17 @@ int pf_pdport_read_ind (
       }
       break;
    case PF_IDX_SUB_PDPORT_DATA_ADJ:
-      /* Only check if this is the port subslot */
       if (
-         (p_read_req->slot_number == PNET_SLOT_DAP_IDENT) &&
-         (p_read_req->subslot_number ==
-          PNET_SUBSLOT_DAP_INTERFACE_1_PORT_0_IDENT))
+         (slot == PNET_SLOT_DAP_IDENT) &&
+         (pf_pdport_subslot_is_dap_port_id (subslot) == true))
       {
+         loc_port_num = pf_pdport_dap_subslot_to_local_port (subslot);
+         p_port_data = pf_port_get_state (net, loc_port_num);
          if (p_port_data->pdport.adjust.active)
          {
             pf_put_pdport_data_adj (
                &p_port_data->pdport.adjust.peer_to_peer_boundary,
+               subslot,
                true,
                p_read_res,
                res_size,
@@ -218,32 +488,53 @@ int pf_pdport_read_ind (
       }
       break;
    case PF_IDX_SUB_PDPORT_DATA_CHECK:
-      /* Only check if this is the port subslot */
-      if (
-         (p_read_req->slot_number == PNET_SLOT_DAP_IDENT) &&
-         (p_read_req->subslot_number ==
-          PNET_SUBSLOT_DAP_INTERFACE_1_PORT_0_IDENT))
+      if (slot == PNET_SLOT_DAP_IDENT)
       {
-         /* Todo map subslot to port */
-         if (p_port_data->pdport.check.active)
+         if (pf_pdport_subslot_is_dap_port_id (subslot) == true)
          {
-            pf_put_pdport_data_check (
-               &p_port_data->pdport.check.peer,
-               true,
-               p_read_res,
-               res_size,
-               p_res,
-               p_pos);
+            loc_port_num = pf_pdport_dap_subslot_to_local_port (subslot);
+            p_port_data = pf_port_get_state (net, loc_port_num);
+            if (p_port_data->pdport.check.active)
+            {
+               pf_put_pdport_data_check (
+                  &p_port_data->pdport.check.peer,
+                  true,
+                  p_read_res,
+                  res_size,
+                  p_res,
+                  p_pos);
+            }
+            ret = 0;
          }
-         ret = 0;
+         else if (subslot == PNET_SUBSLOT_DAP_WHOLE_MODULE)
+         {
+            /* Todo - how should read using subslot 0 be handled?
+             * include all checks in response?
+             */
+            loc_port_num = PNET_PORT_1;
+            p_port_data = pf_port_get_state (net, loc_port_num);
+            if (p_port_data->pdport.check.active)
+            {
+               pf_put_pdport_data_check (
+                  &p_port_data->pdport.check.peer,
+                  true,
+                  p_read_res,
+                  res_size,
+                  p_res,
+                  p_pos);
+            }
+            ret = 0;
+         }
       }
       break;
    case PF_IDX_DEV_PDREAL_DATA:
       if (
-         (p_read_req->slot_number == PNET_SLOT_DAP_IDENT) &&
-         ((p_read_req->subslot_number == PNET_SLOT_DAP_IDENT) ||
-          (p_read_req->subslot_number == PNET_SUBMOD_DAP_IDENT)))
+         (slot == PNET_SLOT_DAP_IDENT) &&
+         ((subslot == PNET_SUBSLOT_DAP_WHOLE_MODULE) ||
+          (subslot == PNET_SUBSLOT_DAP_IDENT)))
       {
+         /*Todo - handle multiple ports and interface level */
+         loc_port_num = PNET_PORT_1;
          pf_put_pd_real_data (
             net,
             true,
@@ -272,11 +563,11 @@ int pf_pdport_read_ind (
       break;
    case PF_IDX_SUB_PDPORT_STATISTIC:
       if (
-         (p_read_req->slot_number == PNET_SLOT_DAP_IDENT) &&
-         ((p_read_req->subslot_number == PNET_SUBSLOT_DAP_INTERFACE_1_IDENT) ||
-          (p_read_req->subslot_number ==
-           PNET_SUBSLOT_DAP_INTERFACE_1_PORT_0_IDENT)))
+         (slot == PNET_SLOT_DAP_IDENT) &&
+         ((subslot == PNET_SUBSLOT_DAP_INTERFACE_1_IDENT) ||
+          (pf_pdport_subslot_is_dap_port_id (subslot) == true)))
       {
+         /* Todo - statistics for different ports and interfaces */
          pf_put_pdport_statistics (
             &net->interface_statistics,
             true,
@@ -295,63 +586,50 @@ int pf_pdport_read_ind (
 }
 
 /**
- * Run peer check
+ * @internal
+ * Run peer station name check
  *
  * Compare llpd peer information with configured pdport peer.
  * Trigger an alarm if wrong peer is connected.
+ * Remove diagnosis if expected peer data is received.
  *
  * @param net              InOut: The p-net stack instance
  * @param loc_port_num     In:    Local port number.
- *                                Valid range: 1 .. N, where N is the total
- *                                number of local ports used by p-net stack.
- * @param p_lldp_peer_info In:    Currently received peer info
+ *                                Valid range: 1 .. PNET_MAX_PORT
  */
-static void pf_pdport_run_peer_check (
-   pnet_t * net,
-   int loc_port_num,
-   const pnet_lldp_peer_info_t * p_lldp_peer_info)
+static void pf_pdport_check_peer_station_name (pnet_t * net, int loc_port_num)
 {
    bool peer_stationname_is_correct = false;
-
-   bool peer_portname_is_correct = false;
    pnet_diag_source_t diag_source = {0};
    pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
    pf_check_peer_t * p_wanted_peer = &p_port_data->pdport.check.peer;
+   pf_lldp_station_name_t lldp_station_name = {0};
 
-   if (p_port_data->pdport.check.active == true)
+   if (pf_lldp_get_peer_station_name (net, loc_port_num, &lldp_station_name) == 0)
    {
+      pf_pdport_init_diag_source (&diag_source, loc_port_num);
+
       if (
          strncmp (
-            p_lldp_peer_info->chassis_id.string,
+            lldp_station_name.string,
             (char *)p_wanted_peer->peer_station_name,
-            p_lldp_peer_info->chassis_id.len) == 0)
+            lldp_station_name.len) == 0)
       {
          peer_stationname_is_correct = true;
       }
-
-      // TODO Update also peer_portname_is_correct
-
-      diag_source.api = PNET_API_NO_APPLICATION_PROFILE;
-      diag_source.slot = PNET_SLOT_DAP_IDENT;
-      diag_source.subslot = PNET_SUBSLOT_DAP_INTERFACE_1_PORT_0_IDENT; /* TODO should depend on port number */
-      diag_source.ch = PNET_CHANNEL_WHOLE_SUBMODULE;
-      diag_source.ch_grouping = PNET_DIAG_CH_INDIVIDUAL_CHANNEL;
-      diag_source.ch_direction = PNET_DIAG_CH_PROP_DIR_MANUF_SPEC;
 
       if (peer_stationname_is_correct == false)
       {
          LOG_DEBUG (
             PNET_LOG,
-            "PDPORT(%d): Sending peer station name mismatch alarm: %s (Port: "
-            "%s) "
-            "Wanted peer station name: %.*s (Port: %.*s)\n",
+            "PDPORT(%d): Sending peer station name mismatch alarm: \"%.*s\". "
+            "Wanted peer station name: \"%.*s\"\n",
             __LINE__,
-            p_lldp_peer_info->chassis_id.string,
-            p_lldp_peer_info->port_id,
+            (int)lldp_station_name.len,
+            lldp_station_name.string,
             p_wanted_peer->length_peer_station_name,
-            p_wanted_peer->peer_station_name,
-            p_wanted_peer->length_peer_port_name,
-            p_wanted_peer->peer_port_name);
+            p_wanted_peer->peer_station_name);
+
          (void)pf_diag_std_add (
             net,
             &diag_source,
@@ -366,27 +644,173 @@ static void pf_pdport_run_peer_check (
       {
          LOG_DEBUG (
             PNET_LOG,
-            "PDPORT(%d): Peer station name is correct: %s (Port: "
-            "%s). Remove diagnosis.\n",
+            "PDPORT(%d): Peer station name is correct: \"%.*s\". "
+            "Remove diagnosis.\n",
             __LINE__,
-            p_lldp_peer_info->chassis_id.string,
-            p_lldp_peer_info->port_id);
+            (int)lldp_station_name.len,
+            lldp_station_name.string);
          (void)pf_diag_std_remove (
             net,
             &diag_source,
             PF_WRT_ERROR_REMOTE_MISMATCH,
             PF_WRT_ERROR_PEER_STATIONNAME_MISMATCH);
       }
+   }
+}
 
-      (void)peer_portname_is_correct; /* TODO use in the decision making */
+/**
+ * @internal
+ * Run peer port name check
+ *
+ * Compare llpd peer information with configured pdport peer.
+ * Trigger an diagnosis if unexpected peer data is connected.
+ * Remove diagnosis if expected peer data is received.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param loc_port_num     In:    Local port number.
+ *                                Valid range: 1 .. PNET_MAX_PORT
+ */
+static void pf_pdport_check_peer_port_name (pnet_t * net, int loc_port_num)
+{
+   bool peer_portname_is_correct = false;
+   pnet_diag_source_t diag_source = {0};
+   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
+   pf_check_peer_t * p_wanted_peer = &p_port_data->pdport.check.peer;
+   pf_lldp_port_id_t lldp_port_id = {0};
+
+   if (pf_lldp_get_peer_port_id (net, loc_port_num, &lldp_port_id) == 0)
+   {
+      pf_pdport_init_diag_source (&diag_source, loc_port_num);
+
+      if (
+         strncmp (
+            lldp_port_id.string,
+            (char *)p_wanted_peer->peer_port_name,
+            lldp_port_id.len) == 0)
+      {
+         peer_portname_is_correct = true;
+      }
+
+      if (peer_portname_is_correct == false)
+      {
+         LOG_DEBUG (
+            PNET_LOG,
+            "PDPORT(%d): Sending peer port name mismatch alarm: \"%.*s\". "
+            "Wanted peer port name: \"%.*s\"\n",
+            __LINE__,
+            (int)lldp_port_id.len,
+            lldp_port_id.string,
+            p_wanted_peer->length_peer_port_name,
+            p_wanted_peer->peer_port_name);
+
+         (void)pf_diag_std_add (
+            net,
+            &diag_source,
+            PNET_DIAG_CH_PROP_TYPE_UNSPECIFIED,
+            PNET_DIAG_CH_PROP_MAINT_FAULT,
+            PF_WRT_ERROR_REMOTE_MISMATCH,
+            PF_WRT_ERROR_PEER_PORTNAME_MISMATCH,
+            0,
+            0);
+      }
+      else
+      {
+         LOG_DEBUG (
+            PNET_LOG,
+            "PDPORT(%d): Peer port name is correct: \"%.*s\". "
+            "Remove diagnosis.\n",
+            __LINE__,
+            (int)lldp_port_id.len,
+            lldp_port_id.string);
+         (void)pf_diag_std_remove (
+            net,
+            &diag_source,
+            PF_WRT_ERROR_REMOTE_MISMATCH,
+            PF_WRT_ERROR_PEER_PORTNAME_MISMATCH);
+      }
+   }
+}
+
+/**
+ * @internal
+ * Run peer check
+ *
+ * Compare llpd peer information with configured pdport peer.
+ * Trigger an diagnosis if unexpected peer data is connected.
+ * Remove diagnosis if expected peer data is received.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param loc_port_num     In:    Local port number.
+ *                                Valid range: 1 .. PNET_MAX_PORT
+ */
+static void pf_pdport_run_peer_check (pnet_t * net, int loc_port_num)
+{
+   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
+
+   if (p_port_data->pdport.check.active == true)
+   {
+      pf_pdport_check_peer_port_name (net, loc_port_num);
+      pf_pdport_check_peer_station_name (net, loc_port_num);
    }
    else
    {
       LOG_DEBUG (
          PNET_LOG,
-         "PDPORT(%d): We do not check peer name and portID, so no port change "
+         "PDPORT(%d): We do not check peer name or portID, so no port change "
          "alarm is sent.\n",
          __LINE__);
+   }
+}
+
+static void pf_pdport_peer_lldp_timeout_alarm (pnet_t * net, int loc_port_num)
+{
+   pnet_diag_source_t diag_source = {0};
+
+   pf_pdport_init_diag_source (&diag_source, loc_port_num);
+
+   LOG_DEBUG (
+      PNET_LOG,
+      "PDPORT(%d): Sending no peer detected alarm port %u",
+      __LINE__,
+      loc_port_num);
+
+   (void)pf_diag_std_add (
+      net,
+      &diag_source,
+      PNET_DIAG_CH_PROP_TYPE_UNSPECIFIED,
+      PNET_DIAG_CH_PROP_MAINT_FAULT,
+      PF_WRT_ERROR_REMOTE_MISMATCH,
+      PF_WRT_ERROR_NO_PEER_DETECTED,
+      0,
+      0);
+}
+
+void pf_pdport_periodic (pnet_t * net)
+{
+   int port;
+   pf_port_iterator_t port_iterator;
+   pf_port_t * p_port_data = NULL;
+
+   pf_port_init_iterator_over_ports (net, &port_iterator);
+   port = pf_port_get_next (&port_iterator);
+
+   while (port != 0)
+   {
+      p_port_data = pf_port_get_state (net, port);
+
+      if (p_port_data->pdport.lldp_peer_info_updated)
+      {
+         p_port_data->pdport.lldp_peer_info_updated = false;
+         pf_pdport_run_peer_check (net, port);
+      }
+
+      if (p_port_data->pdport.lldp_peer_timeout)
+      {
+         p_port_data->pdport.lldp_peer_timeout = false;
+         pf_pdport_peer_lldp_timeout_alarm (net, port);
+      }
+
+      port = pf_port_get_next (&port_iterator);
    }
 }
 
@@ -410,7 +834,7 @@ static int pf_pdport_write_data_check (
    const pf_ar_t * p_ar,
    const pf_iod_write_request_t * p_write_req,
    int loc_port_num,
-   uint8_t * p_bytes, /* Not const as it is used in a pf_get_info_t */
+   const uint8_t * p_bytes,
    uint16_t p_datalength,
    pnet_result_t * p_result)
 {
@@ -440,9 +864,6 @@ static int pf_pdport_write_data_check (
       {
          if (check_peers.number_of_peers >= 1)
          {
-            /* ToDo - Map request to port based on slot information in
-             * port_data_check variable */
-
             /* There is max one peer in the check_peers */
             p_port_data->pdport.check.peer = check_peers.peers[0];
             p_port_data->pdport.check.active = true;
@@ -461,10 +882,7 @@ static int pf_pdport_write_data_check (
                check_peers.peers[0].length_peer_port_name,
                check_peers.peers[0].peer_port_name);
 
-            pf_pdport_run_peer_check (
-               net,
-               PNET_PORT_1,
-               &net->port[0].lldp.peer_info);
+            pf_pdport_run_peer_check (net, loc_port_num);
 
             ret = 0;
          }
@@ -519,7 +937,7 @@ static int pf_pdport_write_data_adj (
    const pf_ar_t * p_ar,
    const pf_iod_write_request_t * p_write_req,
    int loc_port_num,
-   uint8_t * p_bytes, /* Not const as it is used in a pf_get_info_t */
+   const uint8_t * p_bytes,
    uint16_t p_datalength,
    pnet_result_t * p_result)
 {
@@ -553,6 +971,17 @@ static int pf_pdport_write_data_adj (
             __LINE__,
             boundary.peer_to_peer_boundary.do_not_send_LLDP_frames);
 
+         if (
+            p_port_data->pdport.adjust.peer_to_peer_boundary
+               .peer_to_peer_boundary.do_not_send_LLDP_frames == 1)
+         {
+            pf_lldp_send_disable (net, loc_port_num);
+         }
+         else
+         {
+            pf_lldp_send_enable (net, loc_port_num);
+         }
+
          ret = 0;
       }
       else
@@ -578,42 +1007,46 @@ int pf_pdport_write_req (
    pnet_t * net,
    const pf_ar_t * p_ar,
    const pf_iod_write_request_t * p_write_req,
-   int loc_port_num,
-   uint8_t * p_bytes,
+   const uint8_t * p_bytes,
    uint16_t data_length,
    pnet_result_t * p_result)
 {
    int ret = -1;
+   int loc_port_num =
+      pf_pdport_dap_subslot_to_local_port (p_write_req->subslot_number);
 
-   switch (p_write_req->index)
+   if (loc_port_num > 0)
    {
-   case PF_IDX_SUB_PDPORT_DATA_CHECK:
-      ret = pf_pdport_write_data_check (
-         net,
-         p_ar,
-         p_write_req,
-         loc_port_num,
-         p_bytes,
-         data_length,
-         p_result);
-      break;
-   case PF_IDX_SUB_PDPORT_DATA_ADJ:
-      ret = pf_pdport_write_data_adj (
-         net,
-         p_ar,
-         p_write_req,
-         loc_port_num,
-         p_bytes,
-         data_length,
-         p_result);
-      break;
-   default:
-      break;
+      switch (p_write_req->index)
+      {
+      case PF_IDX_SUB_PDPORT_DATA_CHECK:
+         ret = pf_pdport_write_data_check (
+            net,
+            p_ar,
+            p_write_req,
+            loc_port_num,
+            p_bytes,
+            data_length,
+            p_result);
+         break;
+      case PF_IDX_SUB_PDPORT_DATA_ADJ:
+         ret = pf_pdport_write_data_adj (
+            net,
+            p_ar,
+            p_write_req,
+            loc_port_num,
+            p_bytes,
+            data_length,
+            p_result);
+         break;
+      default:
+         break;
+      }
    }
 
    if (ret == 0)
    {
-      (void)pf_pdport_save (net);
+      (void)pf_pdport_save (net, loc_port_num);
    }
    return ret;
 }
@@ -621,7 +1054,14 @@ int pf_pdport_write_req (
 void pf_pdport_peer_indication (
    pnet_t * net,
    int loc_port_num,
-   const pnet_lldp_peer_info_t * p_lldp_peer_info)
+   const pf_lldp_peer_info_t * p_lldp_peer_info)
 {
-   pf_pdport_run_peer_check (net, loc_port_num, p_lldp_peer_info);
+   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
+   p_port_data->pdport.lldp_peer_info_updated = true;
+}
+
+void pf_pdport_peer_lldp_timeout (pnet_t * net, int loc_port_num)
+{
+   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
+   p_port_data->pdport.lldp_peer_timeout = true;
 }
