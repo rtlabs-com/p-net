@@ -1447,8 +1447,13 @@ static void app_handle_send_alarm_ack (
 /**
  * Send and receive cyclic data
  *
- * The payload is built from the binary value of a button input,
- * and the value in a counter.
+ * The payload to the PLC (inputdata in Profinet naming) is built from
+ * the binary value of a button input, and the value in a counter.
+ *
+ * All input modules will be provided with the same data.
+ *
+ * The output LED (data LED) will be affected only by outputdata to the
+ * module with lowest slot number.
  *
  * @param net              InOut: p-net stack instance
  * @param p_appdata        In:    Application data
@@ -1476,6 +1481,7 @@ static void app_handle_cyclic_data (
    const app_subslot_t * p_subslot = NULL;
    bool outputdata_is_updated = false; /* Not used in this application */
    bool led_state = false;             /* LED for cyclic data */
+   bool has_set_led_state = false;
 
    /* Prepare input data (for sending to IO-controller) */
    /* Lowest 7 bits: Counter    Most significant bit: Button */
@@ -1496,7 +1502,7 @@ static void app_handle_cyclic_data (
          iops = PNET_IOXS_BAD;
          p_subslot = &p_appdata->main_api.slots[slot].subslots[subslot];
 
-         /* Set data for custom input modules, if any */
+         /* Set inputdata for all custom input modules, if any */
          if (p_subslot->plugged && app_subslot_is_input (p_subslot))
          {
             if (p_subslot->p_in_data != NULL)
@@ -1539,7 +1545,7 @@ static void app_handle_cyclic_data (
             }
          }
 
-         /* Set data for custom output modules, if any */
+         /* Set outputdata for custom output modules, if any */
          if (p_subslot->plugged && app_subslot_is_output (p_subslot))
          {
             outputdata_length = sizeof (outputdata);
@@ -1553,27 +1559,31 @@ static void app_handle_cyclic_data (
                &outputdata_length,
                &outputdata_iops);
 
-            /* Set LED state */
-            if (outputdata_length != APP_DATASIZE_OUTPUT)
+            /* Set data LED state from outputdata only in lowest slotnumber */
+            if (has_set_led_state == false)
             {
-               printf ("Wrong outputdata length: %u\n", outputdata_length);
-               app_set_outputs_default_value (p_appdata->arguments.verbosity);
-            }
-            else if (outputdata_iops == PNET_IOXS_GOOD)
-            {
-               /* Extract LED state from most significant bit */
-               led_state = (outputdata[0] & 0x80) > 0;
-               app_handle_data_led_state (
-                  led_state,
-                  p_appdata->arguments.verbosity);
-            }
-            else
-            {
-               if (p_appdata->arguments.verbosity > 1)
+               if (outputdata_length != APP_DATASIZE_OUTPUT)
                {
-                  printf ("Wrong IOPS: %u\n", outputdata_iops);
+                  printf ("Wrong outputdata length: %u\n", outputdata_length);
+                  app_set_outputs_default_value (p_appdata->arguments.verbosity);
                }
-               app_set_outputs_default_value (p_appdata->arguments.verbosity);
+               else if (outputdata_iops == PNET_IOXS_GOOD)
+               {
+                  /* Extract LED state from most significant bit */
+                  led_state = (outputdata[0] & 0x80) > 0;
+                  app_handle_data_led_state (
+                     led_state,
+                     p_appdata->arguments.verbosity);
+                  has_set_led_state = true;
+               }
+               else
+               {
+                  if (p_appdata->arguments.verbosity > 1)
+                  {
+                     printf ("Wrong IOPS: %u\n", outputdata_iops);
+                  }
+                  app_set_outputs_default_value (p_appdata->arguments.verbosity);
+               }
             }
          }
       }

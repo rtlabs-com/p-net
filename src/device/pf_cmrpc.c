@@ -1098,7 +1098,7 @@ static int pf_cmrpc_rm_connect_interpret_ind (
             LOG_DEBUG (
                PF_RPC_LOG,
                "CMRPC(%d): Requested send cycle time %u (in 1/32 of millisec) "
-               "Reduction ratio:%u  Watchdog factor:%u  Data hold factor:%u\n",
+               "Reduction ratio:%u  Watchdog factor:%" PRIu32 " Data hold factor:%u\n",
                __LINE__,
                p_ar->iocrs[p_ar->nbr_iocrs].param.send_clock_factor,
                p_ar->iocrs[p_ar->nbr_iocrs].param.reduction_ratio,
