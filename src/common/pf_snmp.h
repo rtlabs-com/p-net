@@ -246,6 +246,9 @@ void pf_snmp_get_system_description (
  * The value will be loaded from file.
  * If no file is available, the hostname is returned.
  *
+ * Note: User may choose to get the fully qualified domain name (FQDN) instead
+ * of calling this function, assuming the operating system supports it.
+ *
  * See IETF RFC 3418 (SNMP MIB-II) ch. 2 "Definitions". Relevant fields:
  * - SysName.
  *
@@ -258,6 +261,10 @@ void pf_snmp_get_system_name (pnet_t * net, pf_snmp_system_name_t * p_name);
  * Set system name.
  *
  * The value will be stored to file.
+ * The hostname will not be updated.
+ *
+ * Note: User may choose to set the fully qualified domain name (FQDN) instead
+ * of calling this function, assuming the operating system supports it.
  *
  * See IETF RFC 3418 (SNMP MIB-II) ch. 2 "Definitions". Relevant fields:
  * - SysName.
