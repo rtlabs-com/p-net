@@ -134,22 +134,91 @@ static void pf_snmp_encode_signal_delays (
 
 void pf_snmp_get_system_name (pnet_t * net, pf_snmp_system_name_t * name)
 {
+   const char * directory = net->fspm_cfg.file_directory;
    int error;
 
    CC_STATIC_ASSERT (sizeof (name->string) >= PNAL_HOSTNAME_MAX_SIZE);
 
-   error = pnal_get_hostname (name->string);
+   error = pf_file_load (directory, PF_FILENAME_SYSNAME, name, sizeof (*name));
    if (error)
    {
-      name->string[0] = '\0';
+      error = pnal_get_hostname (name->string);
+      if (error)
+      {
+         name->string[0] = '\0';
+      }
+      LOG_INFO (
+         PF_SNMP_LOG,
+         "SNMP(%d): Could not yet read sysName from nvm. Using hostname "
+         "\"%s\"\n",
+         __LINE__,
+         name->string);
+   }
+   else
+   {
+      LOG_INFO (
+         PF_SNMP_LOG,
+         "SNMP(%d): Did read sysName from nvm. sysName: %s\n",
+         __LINE__,
+         name->string);
    }
    name->string[sizeof (name->string) - 1] = '\0';
 }
 
 int pf_snmp_set_system_name (pnet_t * net, const pf_snmp_system_name_t * name)
 {
-   /* TODO: Set new hostname permanently. Perhaps call pnal_set_ip_suite()? */
-   return -1;
+   const char * directory = net->fspm_cfg.file_directory;
+   pf_snmp_system_name_t temporary_buffer;
+   int res;
+
+   /* Ideally, we should set the Fully Qualified Domain Name here. However, not
+    * all systems are expected to support doing that, so we don't.
+    * Instead, we just save the sysName to file as to ensure it is persistent
+    * across restarts.
+    */
+   res = pf_file_save_if_modified (
+      directory,
+      PF_FILENAME_SYSNAME,
+      name,
+      &temporary_buffer,
+      sizeof (*name));
+   switch (res)
+   {
+   case 2:
+      LOG_INFO (
+         PF_SNMP_LOG,
+         "SNMP(%d): First nvm saving of sysName. "
+         "sysName: %s\n",
+         __LINE__,
+         name->string);
+      break;
+   case 1:
+      LOG_INFO (
+         PF_SNMP_LOG,
+         "SNMP(%d): Updating nvm stored sysName. "
+         "sysName: %s\n",
+         __LINE__,
+         name->string);
+      break;
+   case 0:
+      LOG_INFO (
+         PF_SNMP_LOG,
+         "SNMP(%d): No storing of nvm sysName (no changes). "
+         "sysName: %s\n",
+         __LINE__,
+         name->string);
+      break;
+   default:
+      /* Fall-through */
+   case -1:
+      LOG_ERROR (
+         PF_SNMP_LOG,
+         "SNMP(%d): Failed to store nvm sysName.\n",
+         __LINE__);
+      break;
+   }
+
+   return res == -1 ? -1 : 0;
 }
 
 void pf_snmp_get_system_contact (
