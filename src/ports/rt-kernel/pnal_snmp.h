@@ -37,6 +37,19 @@ extern "C" {
 #endif
 
 #include "pf_snmp.h"
+#include <lwip/apps/snmp.h>
+
+/**
+ * Response buffer
+ *
+ * Note that this is a union, not a struct.
+ */
+typedef union pnal_snmp_response
+{
+   uint32_t u32;
+   int32_t s32;
+   uint8_t buffer[SNMP_MAX_VALUE_SIZE];
+} pnal_snmp_response_t;
 
 /**
  * SNMP server state
@@ -53,6 +66,8 @@ typedef struct pnal_snmp
    pf_snmp_system_contact_t syscontact;
    pf_snmp_system_location_t syslocation;
    pf_snmp_system_description_t sysdescr;
+
+   pnal_snmp_response_t response;
 } pnal_snmp_t;
 
 /** Global variable containing SNMP server state */
