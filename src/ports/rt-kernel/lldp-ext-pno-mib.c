@@ -236,7 +236,7 @@ static snmp_err_t lldpxpnoloctable_get_next_instance (
  * @param cell_instance    In:    Cell instance (containing meta-data).
  * @param value            Out:   Value to be returned in response.
  * @return  Size of returned value, in bytes.
- *          0 if error occurred.
+ *          -1 if error occurred (server will report GenError).
  */
 static s16_t lldpxpnoloctable_get_value (
    struct snmp_node_instance * cell_instance,
@@ -297,24 +297,18 @@ static s16_t lldpxpnoloctable_get_value (
             "LLDP-EXT-PNO-MIB(%d): Value is too large: %" PRId16 "\n",
             __LINE__,
             value_len);
-         value_len = 0;
+         return -1;
       }
-      else
-      {
-         memcpy (v, station_name.string, value_len);
-      }
+      memcpy (v, station_name.string, value_len);
    }
    break;
    default:
-   {
       LOG_ERROR (
          PF_SNMP_LOG,
          "LLDP-EXT-PNO-MIB(%d): Unknown table column: %" PRIu32 ".\n",
          __LINE__,
          column);
-      value_len = 0;
-   }
-   break;
+      return -1;
    }
 
    return value_len;
@@ -323,12 +317,18 @@ static s16_t lldpxpnoloctable_get_value (
 /* --- lldpXPnoRemoteData 1.0.8802.1.1.2.1.5.3791.1.3
  * ----------------------------------------------------- */
 
+static s16_t lldpxpnoremtable_get_value_from_remote_device (
+   pnal_snmp_response_t * value,
+   int port,
+   u32_t column);
+
 /**
  * Get cell in table lldpXPnoRemTable.
  *
  * Called when an SNMP Get request is received for this table.
- * If cell is found, the SNMP stack may call the corresponding get_value()
- * function below to retrieve the actual value contained in the cell.
+ * If cell with valid value is found, the value will be saved for later
+ * retrieval by the SNMP stack in call to the corresponding get_value()
+ * function.
  *
  * @param column           In:    Column index for the cell.
  * @param row_oid          In:    Row index (array) for the cell.
@@ -343,24 +343,36 @@ static snmp_err_t lldpxpnoremtable_get_instance (
    u8_t row_oid_len,
    struct snmp_node_instance * cell_instance)
 {
-   int port = rowindex_match_with_remote_device (row_oid, row_oid_len);
+   int port;
+   s16_t response_len;
+
+   port = rowindex_match_with_remote_device (row_oid, row_oid_len);
    if (port == 0)
    {
       return SNMP_ERR_NOSUCHINSTANCE;
    }
-   else
+
+   response_len = lldpxpnoremtable_get_value_from_remote_device (
+      &pnal_snmp.response,
+      port,
+      *column);
+   if (response_len < 0)
    {
-      cell_instance->reference.s32 = port;
-      return SNMP_ERR_NOERROR;
+      return SNMP_ERR_NOSUCHINSTANCE;
    }
+
+   cell_instance->reference.ptr = &pnal_snmp.response;
+   cell_instance->reference_len = response_len;
+   return SNMP_ERR_NOERROR;
 }
 
 /**
  * Get next cell in table lldpXPnoRemTable.
  *
  * Called when an SNMP GetNext request is received for this table.
- * If cell is found, the SNMP stack may call the corresponding get_value()
- * function below to retrieve the actual value contained in the cell.
+ * If cell with valid value is found, the value will be saved for later
+ * retrieval by the SNMP stack in call to the corresponding get_value()
+ * function.
  *
  * @param column           In:    Column index for the cell.
  * @param row_oid          InOut: Row index for the cell.
@@ -373,16 +385,124 @@ static snmp_err_t lldpxpnoremtable_get_next_instance (
    struct snmp_obj_id * row_oid,
    struct snmp_node_instance * cell_instance)
 {
-   int port = rowindex_update_with_next_remote_device (row_oid);
+   int port;
+   s16_t response_len;
+
+   port = rowindex_update_with_next_remote_device (row_oid);
    if (port == 0)
    {
       return SNMP_ERR_NOSUCHINSTANCE;
    }
-   else
+
+   response_len = lldpxpnoremtable_get_value_from_remote_device (
+      &pnal_snmp.response,
+      port,
+      *column);
+   if (response_len < 0)
    {
-      cell_instance->reference.s32 = port;
-      return SNMP_ERR_NOERROR;
+      return SNMP_ERR_NOSUCHINSTANCE;
    }
+
+   cell_instance->reference.ptr = &pnal_snmp.response;
+   cell_instance->reference_len = response_len;
+   return SNMP_ERR_NOERROR;
+}
+
+/**
+ * Get value at cell in table lldpXPnoRemTable.
+ *
+ * @param value            Out:   Value to be returned in response.
+ * @param port             In:    Local port number for port directly
+ *                                connected to the remote device.
+ *                                Valid range: 1 .. PNET_MAX_PORT.
+ * @param column           In:    Column index for the cell.
+ * @return  Size of returned value, in bytes.
+ *          -1 if no valid value could be returned.
+ */
+static s16_t lldpxpnoremtable_get_value_from_remote_device (
+   pnal_snmp_response_t * value,
+   int port,
+   u32_t column)
+{
+   s16_t value_len;
+   int error;
+
+   switch (column)
+   {
+   case 1:
+   {
+      /* lldpXPnoRemLPDValue */
+      pf_snmp_signal_delay_t delays;
+
+      error = pf_snmp_get_peer_signal_delays (pnal_snmp.net, port, &delays);
+      if (error)
+      {
+         return error;
+      }
+
+      value_len = sizeof (u32_t);
+      value->u32 = delays.line_propagation_delay_ns;
+   }
+   break;
+   case 2:
+   {
+      /* lldpXPnoRemPortTxDValue */
+      pf_snmp_signal_delay_t delays;
+
+      error = pf_snmp_get_peer_signal_delays (pnal_snmp.net, port, &delays);
+      if (error)
+      {
+         return error;
+      }
+
+      value_len = sizeof (u32_t);
+      value->u32 = delays.port_tx_delay_ns;
+   }
+   break;
+   case 3:
+   {
+      /* lldpXPnoRemPortRxDValue */
+      pf_snmp_signal_delay_t delays;
+
+      error = pf_snmp_get_peer_signal_delays (pnal_snmp.net, port, &delays);
+      if (error)
+      {
+         return error;
+      }
+
+      value_len = sizeof (u32_t);
+      value->u32 = delays.port_rx_delay_ns;
+   }
+   break;
+   case 6:
+   {
+      /* lldpXPnoRemPortNoS */
+      pf_lldp_station_name_t station_name;
+
+      error =
+         pf_snmp_get_peer_station_name (pnal_snmp.net, port, &station_name);
+      if (error)
+      {
+         return error;
+      }
+
+      value_len = station_name.len;
+      if ((size_t)value_len <= SNMP_MAX_VALUE_SIZE)
+      {
+         memcpy (value->buffer, station_name.string, value_len);
+      }
+   }
+   break;
+   default:
+      LOG_ERROR (
+         PF_SNMP_LOG,
+         "LLDP-EXT-PNO-MIB(%d): Unknown table column: %" PRIu32 ".\n",
+         __LINE__,
+         column);
+      return -1;
+   }
+
+   return value_len;
 }
 
 /**
@@ -390,122 +510,32 @@ static snmp_err_t lldpxpnoremtable_get_next_instance (
  *
  * Called when an SNMP Get or GetNext request is received for this table.
  * The cell was previously identified in a call to get_instance() or
- * get_next_instance().
+ * get_next_instance(). Its value was also read and saved in
+ * cell_instance->reference.
  *
  * @param cell_instance    In:    Cell instance (containing meta-data).
  * @param value            Out:   Value to be returned in response.
  * @return  Size of returned value, in bytes.
- *          0 if error occurred.
+ *          -1 if value was too large (server will report GenError).
  */
 static s16_t lldpxpnoremtable_get_value (
    struct snmp_node_instance * cell_instance,
    void * value)
 {
-   s16_t value_len;
-   int port = cell_instance->reference.s32;
-   u32_t column =
-      SNMP_TABLE_GET_COLUMN_FROM_OID (cell_instance->instance_oid.id);
+   s16_t value_len = cell_instance->reference_len;
+   pnal_snmp_response_t * saved_value = cell_instance->reference.ptr;
 
-   switch (column)
-   {
-   case 1:
-   {
-      /* lldpXPnoRemLPDValue */
-      u32_t * v = (u32_t *)value;
-      pf_snmp_signal_delay_t delays;
-      int error;
-
-      error = pf_snmp_get_peer_signal_delays (pnal_snmp.net, port, &delays);
-      if (error)
-      {
-         value_len = 0;
-      }
-      else
-      {
-         value_len = sizeof (u32_t);
-         *v = delays.line_propagation_delay_ns;
-      }
-   }
-   break;
-   case 2:
-   {
-      /* lldpXPnoRemPortTxDValue */
-      u32_t * v = (u32_t *)value;
-      pf_snmp_signal_delay_t delays;
-      int error;
-
-      error = pf_snmp_get_peer_signal_delays (pnal_snmp.net, port, &delays);
-      if (error)
-      {
-         value_len = 0;
-      }
-      else
-      {
-         value_len = sizeof (u32_t);
-         *v = delays.port_tx_delay_ns;
-      }
-   }
-   break;
-   case 3:
-   {
-      /* lldpXPnoRemPortRxDValue */
-      u32_t * v = (u32_t *)value;
-      pf_snmp_signal_delay_t delays;
-      int error;
-
-      error = pf_snmp_get_peer_signal_delays (pnal_snmp.net, port, &delays);
-      if (error)
-      {
-         value_len = 0;
-      }
-      else
-      {
-         value_len = sizeof (u32_t);
-         *v = delays.port_rx_delay_ns;
-      }
-   }
-   break;
-   case 6:
-   {
-      /* lldpXPnoRemPortNoS */
-      u8_t * v = (u8_t *)value;
-      pf_lldp_station_name_t station_name;
-      int error;
-
-      error =
-         pf_snmp_get_peer_station_name (pnal_snmp.net, port, &station_name);
-      value_len = station_name.len;
-      if (error)
-      {
-         value_len = 0;
-      }
-      else if ((size_t)value_len > SNMP_MAX_VALUE_SIZE)
-      {
-         LOG_ERROR (
-            PF_SNMP_LOG,
-            "LLDP-EXT-PNO-MIB(%d): Value is too large: %" PRId16 "\n",
-            __LINE__,
-            value_len);
-         value_len = 0;
-      }
-      else
-      {
-         memcpy (v, station_name.string, value_len);
-      }
-   }
-   break;
-   default:
+   if ((size_t)value_len > SNMP_MAX_VALUE_SIZE)
    {
       LOG_ERROR (
          PF_SNMP_LOG,
-         "LLDP-EXT-PNO-MIB(%d): Unknown table column: %" PRIu32 ".\n",
+         "LLDP-EXT-PNO-MIB(%d): Value is too large: %" PRId16 "\n",
          __LINE__,
-         column);
-      value_len = 0;
-   }
-   break;
+         value_len);
+      return -1;
    }
 
+   memcpy (value, saved_value, value_len);
    return value_len;
 }
 
