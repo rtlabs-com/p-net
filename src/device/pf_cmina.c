@@ -243,16 +243,16 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
                p_cfg->if_cfg.ip_cfg.ip_addr.d);
             PNAL_IP4_ADDR_TO_U32 (
                netmask,
-               p_cfg->if_cfg.ip_cfg.ip_gateway.a,
-               p_cfg->if_cfg.ip_cfg.ip_gateway.b,
-               p_cfg->if_cfg.ip_cfg.ip_gateway.c,
-               p_cfg->if_cfg.ip_cfg.ip_gateway.d);
-            PNAL_IP4_ADDR_TO_U32 (
-               gateway,
                p_cfg->if_cfg.ip_cfg.ip_mask.a,
                p_cfg->if_cfg.ip_cfg.ip_mask.b,
                p_cfg->if_cfg.ip_cfg.ip_mask.c,
                p_cfg->if_cfg.ip_cfg.ip_mask.d);
+            PNAL_IP4_ADDR_TO_U32 (
+               gateway,
+               p_cfg->if_cfg.ip_cfg.ip_gateway.a,
+               p_cfg->if_cfg.ip_cfg.ip_gateway.b,
+               p_cfg->if_cfg.ip_cfg.ip_gateway.c,
+               p_cfg->if_cfg.ip_cfg.ip_gateway.d);
             memcpy (
                net->cmina_nonvolatile_dcp_ase.station_name,
                p_cfg->station_name,
