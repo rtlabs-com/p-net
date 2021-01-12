@@ -160,8 +160,6 @@ int lldpXPnoRemTable_handler (
    int port;
    int error;
 
-   LOG_DEBUG (PF_SNMP_LOG, "lldpXpNoRemTable(%d): handler entry\n", __LINE__);
-
    switch (reqinfo->mode)
    {
       /*
@@ -172,6 +170,12 @@ int lldpXPnoRemTable_handler (
       {
          my_data_context = netsnmp_extract_iterator_context (request);
          table_info = netsnmp_extract_table_info (request);
+
+         LOG_DEBUG (
+            PF_SNMP_LOG,
+            "lldpXPnoRemTable(%d): GET. Column number: %u\n",
+            __LINE__,
+            table_info->colnum);
 
          switch (table_info->colnum)
          {
@@ -257,6 +261,13 @@ int lldpXPnoRemTable_handler (
             break;
          }
       }
+      break;
+   default:
+      LOG_DEBUG (
+         PF_SNMP_LOG,
+         "lldpXPnoRemTable(%d): Unknown mode: %u\n",
+         __LINE__,
+         reqinfo->mode);
       break;
    }
    return SNMP_ERR_NOERROR;

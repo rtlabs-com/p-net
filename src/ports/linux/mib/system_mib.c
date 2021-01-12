@@ -135,6 +135,7 @@ int handle_sysDescr (
    {
 
    case MODE_GET:
+      LOG_DEBUG (PF_SNMP_LOG, "system_mib(%d): GET sysDescr.\n", __LINE__);
       snmp_set_var_typed_value (
          requests->requestvb,
          ASN_OCTET_STR,
@@ -172,6 +173,7 @@ int handle_sysObjectID (
    {
 
    case MODE_GET:
+      LOG_DEBUG (PF_SNMP_LOG, "system_mib(%d): GET sysObjectID.\n", __LINE__);
       snmp_set_var_typed_value (
          requests->requestvb,
          ASN_OBJECT_ID,
@@ -208,6 +210,7 @@ int handle_sysUpTime (
    {
 
    case MODE_GET:
+      LOG_DEBUG (PF_SNMP_LOG, "system_mib(%d): GET sysUpTime.\n", __LINE__);
       snmp_set_var_typed_integer (
          requests->requestvb,
          ASN_TIMETICKS,
@@ -243,6 +246,12 @@ int handle_sysContact (
 
    /* a instance handler also only hands us one request at a time, so
       we don't need to loop over a list of requests; we'll only get one. */
+
+   LOG_DEBUG (
+      PF_SNMP_LOG,
+      "system_mib(%d): Handle sysContact. Mode: %d\n",
+      __LINE__,
+      reqinfo->mode);
 
    switch (reqinfo->mode)
    {
@@ -352,6 +361,12 @@ int handle_sysName (
    /* a instance handler also only hands us one request at a time, so
       we don't need to loop over a list of requests; we'll only get one. */
 
+   LOG_DEBUG (
+      PF_SNMP_LOG,
+      "system_mib(%d): Handle sysName. Mode: %d\n",
+      __LINE__,
+      reqinfo->mode);
+
    switch (reqinfo->mode)
    {
 
@@ -460,6 +475,12 @@ int handle_sysLocation (
    /* a instance handler also only hands us one request at a time, so
       we don't need to loop over a list of requests; we'll only get one. */
 
+   LOG_DEBUG (
+      PF_SNMP_LOG,
+      "system_mib(%d): Handle sysLocation. Mode: %d\n",
+      __LINE__,
+      reqinfo->mode);
+
    switch (reqinfo->mode)
    {
 
@@ -567,7 +588,7 @@ int handle_sysServices (
    {
 
    case MODE_GET:
-
+      LOG_DEBUG (PF_SNMP_LOG, "system_mib(%d): GET sysServices\n", __LINE__);
       /* Supported services. Should be 78 for Profinet. See IETF RFC 3418. */
       snmp_set_var_typed_integer (requests->requestvb, ASN_INTEGER, 78);
       break;

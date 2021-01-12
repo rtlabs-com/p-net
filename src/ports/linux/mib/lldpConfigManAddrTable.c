@@ -123,11 +123,6 @@ int lldpConfigManAddrTable_handler (
    void * my_data_context;
    pf_lldp_port_list_t port_list;
 
-   LOG_DEBUG (
-      PF_SNMP_LOG,
-      "lldpConfigManAddrTable(%d): handler entry\n",
-      __LINE__);
-
    switch (reqinfo->mode)
    {
       /*
@@ -138,6 +133,12 @@ int lldpConfigManAddrTable_handler (
       {
          my_data_context = netsnmp_extract_iterator_context (request);
          table_info = netsnmp_extract_table_info (request);
+
+         LOG_DEBUG (
+            PF_SNMP_LOG,
+            "lldpConfigManAddrTable(%d): GET. Column number: %u\n",
+            __LINE__,
+            table_info->colnum);
 
          switch (table_info->colnum)
          {
@@ -160,6 +161,13 @@ int lldpConfigManAddrTable_handler (
             break;
          }
       }
+      break;
+   default:
+      LOG_DEBUG (
+         PF_SNMP_LOG,
+         "lldpConfigManAddrTable(%d): Unknown mode: %u\n",
+         __LINE__,
+         reqinfo->mode);
       break;
    }
    return SNMP_ERR_NOERROR;

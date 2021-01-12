@@ -133,7 +133,6 @@ int lldpLocPortTable_handler (
    netsnmp_agent_request_info * reqinfo,
    netsnmp_request_info * requests)
 {
-
    netsnmp_request_info * request;
    netsnmp_table_request_info * table_info;
    pnet_t * pnet = reginfo->my_reg_void;
@@ -141,8 +140,6 @@ int lldpLocPortTable_handler (
    pf_lldp_port_description_t port_desc;
    void * my_data_context;
    int port;
-
-   LOG_DEBUG (PF_SNMP_LOG, "lldpLocPortTable(%d): handler entry\n", __LINE__);
 
    switch (reqinfo->mode)
    {
@@ -154,6 +151,12 @@ int lldpLocPortTable_handler (
       {
          my_data_context = netsnmp_extract_iterator_context (request);
          table_info = netsnmp_extract_table_info (request);
+
+         LOG_DEBUG (
+            PF_SNMP_LOG,
+            "lldpLocPortTable(%d): GET. Column number: %u\n",
+            __LINE__,
+            table_info->colnum);
 
          switch (table_info->colnum)
          {
@@ -206,6 +209,13 @@ int lldpLocPortTable_handler (
             break;
          }
       }
+      break;
+   default:
+      LOG_DEBUG (
+         PF_SNMP_LOG,
+         "lldpLocPortTable(%d): Unknown mode: %u\n",
+         __LINE__,
+         reqinfo->mode);
       break;
    }
    return SNMP_ERR_NOERROR;

@@ -165,7 +165,6 @@ int lldpRemManAddrTable_handler (
    netsnmp_agent_request_info * reqinfo,
    netsnmp_request_info * requests)
 {
-
    netsnmp_request_info * request;
    netsnmp_table_request_info * table_info;
    pnet_t * pnet = reginfo->my_reg_void;
@@ -173,8 +172,6 @@ int lldpRemManAddrTable_handler (
    pf_lldp_interface_number_t port_index;
    int port;
    int error;
-
-   LOG_DEBUG (PF_SNMP_LOG, "lldpRemManAddrTable(%d): handler entry\n", __LINE__);
 
    switch (reqinfo->mode)
    {
@@ -186,6 +183,12 @@ int lldpRemManAddrTable_handler (
       {
          my_data_context = netsnmp_extract_iterator_context (request);
          table_info = netsnmp_extract_table_info (request);
+
+         LOG_DEBUG (
+            PF_SNMP_LOG,
+            "lldpRemManAddrTable(%d): GET. Column number: %u\n",
+            __LINE__,
+            table_info->colnum);
 
          switch (table_info->colnum)
          {
@@ -236,6 +239,13 @@ int lldpRemManAddrTable_handler (
             break;
          }
       }
+      break;
+   default:
+      LOG_DEBUG (
+         PF_SNMP_LOG,
+         "lldpRemManAddrTable(%d): Unknown mode: %u\n",
+         __LINE__,
+         reqinfo->mode);
       break;
    }
    return SNMP_ERR_NOERROR;
