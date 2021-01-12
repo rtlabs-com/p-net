@@ -24,10 +24,11 @@
 #include <net-snmp/net-snmp-includes.h>
 #include <net-snmp/agent/net-snmp-agent-includes.h>
 
-#include "mib/lldpLocalSystemData.h"
-#include "mib/lldpLocPortTable.h"
 #include "mib/lldpConfigManAddrTable.h"
+#include "mib/lldpLocalSystemData.h"
 #include "mib/lldpLocManAddrTable.h"
+#include "mib/lldpLocPortTable.h"
+#include "mib/lldpRemManAddrTable.h"
 #include "mib/lldpRemTable.h"
 #include "mib/lldpXdot3LocPortTable.h"
 #include "mib/lldpXdot3RemPortTable.h"
@@ -53,6 +54,7 @@ static void pnal_snmp_thread (void * arg)
    init_lldpLocPortTable (pnet);
    init_lldpConfigManAddrTable (pnet);
    init_lldpLocManAddrTable (pnet);
+   init_lldpRemManAddrTable (pnet);
    init_lldpRemTable (pnet);
    init_lldpXdot3LocPortTable (pnet);
    init_lldpXdot3RemPortTable (pnet);
