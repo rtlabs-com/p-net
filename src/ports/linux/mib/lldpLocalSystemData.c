@@ -79,6 +79,10 @@ int handle_lldpLocChassisIdSubtype (
    {
 
    case MODE_GET:
+      LOG_DEBUG (
+         PF_SNMP_LOG,
+         "lldpLocalSystemData(%d): GET chassis ID subtype.\n",
+         __LINE__);
       snmp_set_var_typed_integer (
          requests->requestvb,
          ASN_INTEGER,
@@ -119,6 +123,11 @@ int handle_lldpLocChassisId (
    {
 
    case MODE_GET:
+      LOG_DEBUG (
+         PF_SNMP_LOG,
+         "lldpLocalSystemData(%d): GET chassis ID.\n",
+         __LINE__);
+
       snmp_set_var_typed_value (
          requests->requestvb,
          ASN_OCTET_STR,
