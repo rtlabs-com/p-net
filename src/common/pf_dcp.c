@@ -181,6 +181,8 @@ static void pf_dcp_responder (pnet_t * net, void * arg, uint32_t current_time)
 {
    pnal_buf_t * p_buf = (pnal_buf_t *)arg;
 
+   net->dcp_identresp_timeout = 0;
+
    if (p_buf != NULL)
    {
       if (net->dcp_delayed_response_waiting == true)
@@ -216,6 +218,7 @@ static void pf_dcp_clear_sam (pnet_t * net, void * arg, uint32_t current_time)
 {
    LOG_DEBUG (PF_DCP_LOG, "DCP(%d): SAM timeout, clear stored mac\n", __LINE__);
    net->dcp_sam = mac_nil;
+   net->dcp_sam_timeout = 0;
 }
 
 /**
@@ -237,8 +240,11 @@ static void pf_dcp_restart_sam_timeout (pnet_t * net, const pnet_ethaddr_t * mac
       __LINE__);
 
    memcpy (&net->dcp_sam, mac, sizeof (net->dcp_sam));
-   (void)pf_scheduler_remove (net, dcp_sam_sync_name, net->dcp_sam_timeout);
-   net->dcp_sam_timeout = 0;
+   if (net->dcp_sam_timeout != 0)
+   {
+      (void)pf_scheduler_remove (net, dcp_sam_sync_name, net->dcp_sam_timeout);
+      net->dcp_sam_timeout = 0;
+   }
    (void)pf_scheduler_add (
       net,
       PF_DCP_SAM_TIMEOUT,
