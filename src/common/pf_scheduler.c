@@ -420,7 +420,7 @@ void pf_scheduler_show (pnet_t * net)
    }
 
    printf (
-      "%-4s  %-8s  %-6s  %-6s  %-6s  %s\n",
+      "%-4s  %-14s  %-6s  %-6s  %-6s  %s\n",
       "idx",
       "owner",
       "in_use",
@@ -430,7 +430,7 @@ void pf_scheduler_show (pnet_t * net)
    for (ix = 0; ix < PF_MAX_TIMEOUTS; ix++)
    {
       printf (
-         "[%02u]  %-8s  %-6s  %-6u  %-6u  %u\n",
+         "[%02u]  %-14s  %-6s  %-6u  %-6u  %u\n",
          (unsigned)ix,
          net->scheduler_timeouts[ix].p_name,
          net->scheduler_timeouts[ix].in_use ? "true" : "false",
