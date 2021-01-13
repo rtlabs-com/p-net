@@ -355,12 +355,12 @@ static void pf_lldp_add_port_status (
  * Insert the optional Profinet chassis MAC TLV into a buffer.
  *
  * The chassis MAC TLV is mandatory for ProfiNet.
- * @param p_mac_address    In:    Device MAC address.
+ * @param mac_address      In:    Device MAC address.
  * @param p_buf            InOut: The buffer.
  * @param p_pos            InOut: The position in the buffer.
  */
 static void pf_lldp_add_chassis_mac (
-   const pnet_ethaddr_t * p_mac_address,
+   const pnet_ethaddr_t * mac_address,
    uint8_t * p_buf,
    uint16_t * p_pos)
 {
@@ -371,7 +371,7 @@ static void pf_lldp_add_chassis_mac (
       PF_FRAME_BUFFER_SIZE,
       p_buf,
       p_pos);
-   memcpy (&p_buf[*p_pos], p_mac_address->addr, sizeof (pnet_ethaddr_t));
+   memcpy (&p_buf[*p_pos], mac_address->addr, sizeof (pnet_ethaddr_t));
    (*p_pos) += sizeof (pnet_ethaddr_t);
 }
 
@@ -557,31 +557,29 @@ int pf_lldp_get_peer_timestamp (
 
 void pf_lldp_get_chassis_id (pnet_t * net, pf_lldp_chassis_id_t * p_chassis_id)
 {
-   pnet_ethaddr_t device_mac_address;
-   const char * station_name = NULL;
+   const pnet_ethaddr_t * device_mac_address =
+      pf_cmina_get_device_macaddr (net);
+   char station_name[PNET_STATION_NAME_MAX_SIZE]; /** Terminated */
 
    /* Try to use NameOfStation as Chassis ID.
     *
-    * FIXME: Use of pf_cmina_get_station_name() is not thread-safe, as the
-    * returned pointer points to non-constant memory shared by multiple threads.
+    * FIXME: Use of pf_cmina_get_station_name() is not thread-safe.
     * Fix this, e.g. using a mutex.
     *
     * TODO: Add option to use SystemIdentification as Chassis ID.
     * See IEC61158-6-10 table 361.
     */
-   pf_cmina_get_station_name (net, &station_name);
-   CC_ASSERT (station_name != NULL);
+   pf_cmina_get_station_name (net, station_name);
 
    p_chassis_id->len = strlen (station_name);
    if (p_chassis_id->len == 0 || p_chassis_id->len >= PNET_LLDP_CHASSIS_ID_MAX_SIZE)
    {
       /* Use the device MAC address */
-      pf_cmina_get_device_macaddr (net, &device_mac_address);
       p_chassis_id->subtype = PF_LLDP_SUBTYPE_MAC;
       p_chassis_id->len = sizeof (pnet_ethaddr_t);
       memcpy (
          p_chassis_id->string,
-         device_mac_address.addr,
+         device_mac_address->addr,
          sizeof (pnet_ethaddr_t));
    }
    else
@@ -674,9 +672,8 @@ void pf_lldp_get_management_address (
    pnet_t * net,
    pf_lldp_management_address_t * p_man_address)
 {
-   pnal_ipaddr_t ipaddr;
+   pnal_ipaddr_t ipaddr = pf_cmina_get_ipaddr (net);
 
-   pf_cmina_get_ipaddr (net, &ipaddr);
    p_man_address->subtype = 1; /* IPv4 */
    ipaddr = CC_TO_BE32 (ipaddr);
    memcpy (p_man_address->value, &ipaddr, sizeof (ipaddr));
@@ -815,23 +812,22 @@ int pf_lldp_get_peer_link_status (
 size_t pf_lldp_construct_frame (pnet_t * net, int loc_port_num, uint8_t buf[])
 {
    uint16_t pos;
-   pnet_ethaddr_t device_mac_address;
+   const pnet_ethaddr_t * device_mac_address =
+      pf_cmina_get_device_macaddr (net);
    pf_lldp_link_status_t link_status;
    pf_lldp_chassis_id_t chassis_id;
    pf_lldp_management_address_t man_address;
    const pnet_port_cfg_t * p_port_cfg = pf_port_get_config (net, loc_port_num);
 
 #if LOG_DEBUG_ENABLED(PF_LLDP_LOG)
-   pnal_ipaddr_t ipaddr = 0;
+   pnal_ipaddr_t ipaddr = pf_cmina_get_ipaddr (net);
    char ip_string[PNAL_INET_ADDRSTR_SIZE] = {0}; /** Terminated string */
    const char * chassis_id_description = "<MAC address>";
 #endif
-   pf_cmina_get_device_macaddr (net, &device_mac_address);
    pf_lldp_get_chassis_id (net, &chassis_id);
    pf_lldp_get_link_status (net, loc_port_num, &link_status);
    pf_lldp_get_management_address (net, &man_address);
 #if LOG_DEBUG_ENABLED(PF_LLDP_LOG)
-   pf_cmina_get_ipaddr (net, &ipaddr);
    pf_cmina_ip_to_string (ipaddr, ip_string);
    if (chassis_id.subtype == PF_LLDP_SUBTYPE_LOCALLY_ASSIGNED)
    {
@@ -843,12 +839,12 @@ size_t pf_lldp_construct_frame (pnet_t * net, int loc_port_num, uint8_t buf[])
       "%02X:%02X:%02X:%02X:%02X:%02X "
       "IP: %s Chassis ID: \"%s\" Port number: %u Port ID: \"%s\"\n",
       __LINE__,
-      device_mac_address.addr[0],
-      device_mac_address.addr[1],
-      device_mac_address.addr[2],
-      device_mac_address.addr[3],
-      device_mac_address.addr[4],
-      device_mac_address.addr[5],
+      device_mac_address->addr[0],
+      device_mac_address->addr[1],
+      device_mac_address->addr[2],
+      device_mac_address->addr[3],
+      device_mac_address->addr[4],
+      device_mac_address->addr[5],
       ip_string,
       chassis_id_description,
       loc_port_num,
@@ -870,7 +866,7 @@ size_t pf_lldp_construct_frame (pnet_t * net, int loc_port_num, uint8_t buf[])
 
    /* Add optional parts */
    pf_lldp_add_port_status (p_port_cfg, buf, &pos);
-   pf_lldp_add_chassis_mac (&device_mac_address, buf, &pos);
+   pf_lldp_add_chassis_mac (device_mac_address, buf, &pos);
    pf_lldp_add_ieee_mac_phy (&link_status, buf, &pos);
    pf_lldp_add_management (&man_address, buf, &pos);
 
@@ -1571,7 +1567,7 @@ int pf_lldp_parse_packet (
 
 /**
  * @internal
- * Generate an alias name from port_id and chassis_id
+ * Generate an alias name from the peer port_id and peer chassis_id
  *
  * See PN-Topology 6.4.2 and PN-Protocol 4.3.1.4.18
  *
@@ -1673,7 +1669,7 @@ void pf_lldp_update_peer (
    const pf_lldp_peer_info_t * lldp_peer_info)
 {
    int error = 0;
-   char alias[sizeof (net->cmina_current_dcp_ase.alias_name)];
+   char new_alias[PF_ALIAS_NAME_MAX_SIZE]; /** Terminated */
    pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
    pf_lldp_reset_peer_timeout (net, loc_port_num, lldp_peer_info->ttl);
@@ -1691,20 +1687,20 @@ void pf_lldp_update_peer (
    error = pf_lldp_generate_alias_name (
       lldp_peer_info->port_id.string,
       lldp_peer_info->chassis_id.string,
-      alias,
-      sizeof (alias));
-   if (!error && (strcmp (alias, net->cmina_current_dcp_ase.alias_name) != 0))
+      new_alias,
+      sizeof (new_alias));
+   if (!error && (strcmp (new_alias, net->cmina_current_dcp_ase.alias_name) != 0))
    {
       LOG_INFO (
          PF_LLDP_LOG,
          "LLDP(%d): Updating alias name: %s -> %s\n",
          __LINE__,
          net->cmina_current_dcp_ase.alias_name,
-         alias);
+         new_alias);
 
       strncpy (
          net->cmina_current_dcp_ase.alias_name,
-         alias,
+         new_alias,
          sizeof (net->cmina_current_dcp_ase.alias_name));
 
       pf_pdport_peer_indication (net, loc_port_num, lldp_peer_info);

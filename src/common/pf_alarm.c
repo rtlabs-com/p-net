@@ -869,8 +869,8 @@ static void pf_alarm_apms_timeout (
    {
       LOG_DEBUG (
          PF_ALARM_LOG,
-         "Alarm(%d): Skip scheduled alarm retransmission as we are in in state %s. Free "
-         "saved RTA buffer %p\n",
+         "Alarm(%d): Skip scheduled alarm retransmission as we are in in state "
+         "%s. Free saved RTA buffer %p\n",
          __LINE__,
          pf_alarm_apms_state_to_string (p_apmx->apms_state),
          p_apmx->p_rta);
@@ -1136,10 +1136,8 @@ static int pf_alarm_apms_a_data_req (
    pnal_buf_t * p_rta;
    uint8_t * p_buf = NULL;
    uint16_t pos = 0;
-   pnet_ethaddr_t mac_address;
+   const pnet_ethaddr_t * mac_address = pf_cmina_get_device_macaddr (net);
    uint16_t u16 = 0;
-
-   pf_cmina_get_device_macaddr (net, &mac_address);
 
    if (p_apmx->p_ar->alarm_cr_request.alarm_cr_properties.transport_udp == true)
    {
@@ -1166,7 +1164,8 @@ static int pf_alarm_apms_a_data_req (
          {
             LOG_ERROR (
                PF_ALARM_LOG,
-               "Alarm(%d): Failed to allocate payload output buffer for alarm.\n",
+               "Alarm(%d): Failed to allocate payload output buffer for "
+               "alarm.\n",
                __LINE__);
          }
          else
@@ -1180,7 +1179,7 @@ static int pf_alarm_apms_a_data_req (
                &pos);
 
             /* Insert source MAC address (our interface MAC address) */
-            memcpy (&p_buf[pos], mac_address.addr, sizeof (pnet_ethaddr_t));
+            memcpy (&p_buf[pos], mac_address->addr, sizeof (pnet_ethaddr_t));
             pos += sizeof (pnet_ethaddr_t);
 
             /* Insert VLAN Tag protocol identifier (TPID) */

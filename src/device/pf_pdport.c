@@ -66,10 +66,8 @@ static int pf_pdport_load (pnet_t * net, int loc_port_num)
 {
    int ret = -1;
    pf_pdport_t pdport_config;
-   const char * p_file_directory = NULL;
+   const char * p_file_directory = pf_cmina_get_file_directory (net);
    pf_port_t * p_port_data = NULL;
-
-   (void)pf_cmina_get_file_directory (net, &p_file_directory);
 
    if (
       pf_file_load (
@@ -164,12 +162,10 @@ static int pf_pdport_save (pnet_t * net, int loc_port_num)
    int save_result = 0;
    pf_pdport_t pdport_config = {0};
    pf_pdport_t temporary_buffer;
-   const char * p_file_directory = NULL;
+   const char * p_file_directory = pf_cmina_get_file_directory (net);
    pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
    memcpy (&pdport_config, &p_port_data->pdport, sizeof (pdport_config));
-
-   (void)pf_cmina_get_file_directory (net, &p_file_directory);
 
    save_result = pf_file_save_if_modified (
       p_file_directory,
@@ -577,7 +573,7 @@ int pf_pdport_read_ind (
             loc_port_num = 1;
          }
 
-         p_port_cfg = pf_lldp_get_port_config (net, loc_port_num);
+         p_port_cfg = pf_port_get_config (net, loc_port_num);
          if (
             pnal_get_port_statistics (
                p_port_cfg->phy_port.if_name,

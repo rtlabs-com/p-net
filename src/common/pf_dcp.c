@@ -929,9 +929,7 @@ static int pf_dcp_get_set (
    uint16_t dst_start;
    pf_ethhdr_t * p_dst_ethhdr;
    pf_dcp_header_t * p_dst_dcphdr;
-   pnet_ethaddr_t mac_address;
-
-   pf_cmina_get_device_macaddr (net, &mac_address);
+   const pnet_ethaddr_t * mac_address = pf_cmina_get_device_macaddr (net);
 
    if (p_buf != NULL)
    {
@@ -977,7 +975,7 @@ static int pf_dcp_get_set (
             sizeof (pnet_ethaddr_t));
          memcpy (
             p_dst_ethhdr->src.addr,
-            mac_address.addr,
+            mac_address->addr,
             sizeof (pnet_ethaddr_t));
          p_dst_ethhdr->type = htons (PNAL_ETHTYPE_PROFINET);
 
@@ -1195,9 +1193,7 @@ int pf_dcp_hello_req (pnet_t * net)
    uint8_t block_error;
    uint16_t temp16;
    pf_ip_suite_t ip_suite;
-   pnet_ethaddr_t mac_address;
-
-   pf_cmina_get_device_macaddr (net, &mac_address);
+   const pnet_ethaddr_t * mac_address = pf_cmina_get_device_macaddr (net);
 
    if (p_buf != NULL)
    {
@@ -1210,7 +1206,7 @@ int pf_dcp_hello_req (pnet_t * net)
             p_ethhdr->dest.addr,
             dcp_mc_addr_hello.addr,
             sizeof (p_ethhdr->dest.addr));
-         memcpy (p_ethhdr->src.addr, mac_address.addr, sizeof (pnet_ethaddr_t));
+         memcpy (p_ethhdr->src.addr, mac_address->addr, sizeof (pnet_ethaddr_t));
 
          p_ethhdr->type = htons (PNAL_ETHTYPE_PROFINET);
          dst_pos += sizeof (pf_ethhdr_t);
@@ -1442,7 +1438,7 @@ static int pf_dcp_identify_req (
    uint16_t value_length;
    uint8_t * p_value;
    uint8_t block_error;
-   pnet_ethaddr_t mac_address;
+   const pnet_ethaddr_t * mac_address = pf_cmina_get_device_macaddr (net);
 
    /* For diagnostic logging */
    bool identify_all = false;
@@ -1457,8 +1453,6 @@ static int pf_dcp_identify_req (
    (void)stationname_len;
    (void)alias_position;
    (void)alias_len;
-
-   pf_cmina_get_device_macaddr (net, &mac_address);
 
    /*
     * IdentifyReqBlock = DeviceRoleBlock ^ DeviceVendorBlock ^ DeviceIDBlock ^
@@ -1497,7 +1491,10 @@ static int pf_dcp_identify_req (
          p_dst_ethhdr->dest.addr,
          p_src_ethhdr->src.addr,
          sizeof (pnet_ethaddr_t));
-      memcpy (p_dst_ethhdr->src.addr, mac_address.addr, sizeof (pnet_ethaddr_t));
+      memcpy (
+         p_dst_ethhdr->src.addr,
+         mac_address->addr,
+         sizeof (pnet_ethaddr_t));
       p_dst_ethhdr->type = htons (PNAL_ETHTYPE_PROFINET);
 
       /* Start with the request header and modify what is needed. */
@@ -1854,7 +1851,7 @@ static int pf_dcp_identify_req (
 
          net->dcp_delayed_response_waiting = true;
          response_delay = pf_dcp_calculate_response_delay (
-            &mac_address,
+            mac_address,
             ntohs (p_src_dcphdr->response_delay_factor));
          LOG_INFO (
             PF_DCP_LOG,

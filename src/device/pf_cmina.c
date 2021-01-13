@@ -25,6 +25,9 @@
  *
  * States are SETUP, SET_NAME, SET_IP and W_CONNECT.
  *
+ * Implements setters and getters for net->cmina_current_dcp_ase, so other
+ * parts of the stack don't need to know these internal details.
+ *
  */
 
 #ifdef UNIT_TEST
@@ -98,10 +101,8 @@ static void pf_cmina_save_ase (pnet_t * net, pf_cmina_dcp_ase_t * p_ase)
    char ip_string[PNAL_INET_ADDRSTR_SIZE] = {0};      /** Terminated string */
    char netmask_string[PNAL_INET_ADDRSTR_SIZE] = {0}; /** Terminated string */
    char gateway_string[PNAL_INET_ADDRSTR_SIZE] = {0}; /** Terminated string */
-   const char * p_file_directory = NULL;
+   const char * p_file_directory = pf_cmina_get_file_directory (net);
    int res = 0;
-
-   (void)pf_cmina_get_file_directory (net, &p_file_directory);
 
    pf_cmina_ip_to_string (p_ase->full_ip_suite.ip_suite.ip_addr, ip_string);
    pf_cmina_ip_to_string (p_ase->full_ip_suite.ip_suite.ip_mask, netmask_string);
@@ -173,7 +174,7 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
    uint32_t ip = 0;
    uint32_t netmask = 0;
    uint32_t gateway = 0;
-   const char * p_file_directory = NULL;
+   const char * p_file_directory = pf_cmina_get_file_directory (net);
 
    LOG_DEBUG (
       PF_DCP_LOG,
@@ -184,8 +185,6 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
    pf_fspm_get_default_cfg (net, &p_cfg);
    if (p_cfg != NULL)
    {
-      (void)pf_cmina_get_file_directory (net, &p_file_directory);
-
       net->cmina_nonvolatile_dcp_ase.device_initiative = p_cfg->send_hello ? 1
                                                                            : 0;
       net->cmina_nonvolatile_dcp_ase.device_role = 1; /* Means: PNIO Device */
@@ -1225,28 +1224,38 @@ int pf_cmina_dcp_get_req (
    return ret;
 }
 
-int pf_cmina_get_file_directory (pnet_t * net, const char ** pp_file_directory)
+const char * pf_cmina_get_file_directory (const pnet_t * net)
 {
-   *pp_file_directory = net->fspm_cfg.file_directory;
-   return 0;
+   return net->fspm_cfg.file_directory;
 }
 
-int pf_cmina_get_station_name (pnet_t * net, const char ** pp_station_name)
+void pf_cmina_get_station_name (const pnet_t * net, char * station_name)
 {
-   *pp_station_name = net->cmina_current_dcp_ase.station_name;
-   return 0;
+   snprintf (
+      station_name,
+      PNET_STATION_NAME_MAX_SIZE,
+      "%s",
+      net->cmina_current_dcp_ase.station_name);
 }
 
-int pf_cmina_get_ipaddr (pnet_t * net, pnal_ipaddr_t * p_ipaddr)
+pnal_ipaddr_t pf_cmina_get_ipaddr (const pnet_t * net)
 {
-   *p_ipaddr = net->cmina_current_dcp_ase.full_ip_suite.ip_suite.ip_addr;
-   return 0;
+   return net->cmina_current_dcp_ase.full_ip_suite.ip_suite.ip_addr;
 }
 
-int pf_cmina_get_device_macaddr (pnet_t * net, pnet_ethaddr_t * p_macaddr)
+pnal_ipaddr_t pf_cmina_get_netmask (const pnet_t * net)
 {
-   *p_macaddr = net->cmina_current_dcp_ase.mac_address;
-   return 0;
+   return net->cmina_current_dcp_ase.full_ip_suite.ip_suite.ip_mask;
+}
+
+pnal_ipaddr_t pf_cmina_get_gateway (const pnet_t * net)
+{
+   return net->cmina_current_dcp_ase.full_ip_suite.ip_suite.ip_gateway;
+}
+
+const pnet_ethaddr_t * pf_cmina_get_device_macaddr (const pnet_t * net)
+{
+   return &net->fspm_cfg.if_cfg.main_port.eth_addr;
 }
 
 /************************* Utilites ******************************************/
