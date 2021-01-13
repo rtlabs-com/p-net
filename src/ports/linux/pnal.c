@@ -31,6 +31,7 @@
 #include <pthread.h>
 #include <sys/ioctl.h>
 #include <sys/syscall.h>
+#include <sys/sysinfo.h>
 
 #include <assert.h>
 #include <errno.h>
@@ -165,11 +166,14 @@ int pnal_load_file (
 
 uint32_t pnal_get_system_uptime_10ms (void)
 {
-   uint32_t uptime;
+   struct sysinfo systeminfo; /* Field .uptime contains uptime in seconds */
 
-   /* TODO: Get sysUptime from SNMP MIB-II */
-   uptime = 0;
-   return uptime;
+   if (sysinfo (&systeminfo) != 0)
+   {
+      return 0;
+   }
+
+   return systeminfo.uptime * 100;
 }
 
 uint32_t pnal_buf_alloc_cnt = 0; /* Count outstanding buffers */
