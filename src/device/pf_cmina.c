@@ -1355,7 +1355,7 @@ void pf_cmina_port_statistics_show (pnet_t * net)
    port = pf_port_get_next (&port_iterator);
    while (port != 0)
    {
-      p_port_config = pf_lldp_get_port_config (net, port);
+      p_port_config = pf_port_get_config (net, port);
 
       if (pnal_get_port_statistics (p_port_config->phy_port.if_name, &stats) == 0)
       {

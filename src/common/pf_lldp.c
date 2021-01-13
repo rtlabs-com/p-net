@@ -538,12 +538,6 @@ void pf_lldp_reset_peer_timeout (
    }
 }
 
-const pnet_port_cfg_t * pf_lldp_get_port_config (pnet_t * net, int loc_port_num)
-{
-   CC_ASSERT (loc_port_num > 0 && loc_port_num <= PNET_MAX_PORT);
-   return &net->fspm_cfg.if_cfg.ports[loc_port_num - 1];
-}
-
 int pf_lldp_get_peer_timestamp (
    pnet_t * net,
    int loc_port_num,
@@ -620,8 +614,7 @@ void pf_lldp_get_port_id (
    int loc_port_num,
    pf_lldp_port_id_t * p_port_id)
 {
-   const pnet_port_cfg_t * p_port_cfg =
-      pf_lldp_get_port_config (net, loc_port_num);
+   const pnet_port_cfg_t * p_port_cfg = pf_port_get_config (net, loc_port_num);
 
    snprintf (
       p_port_id->string,
@@ -652,8 +645,7 @@ void pf_lldp_get_port_description (
    int loc_port_num,
    pf_lldp_port_description_t * p_port_descr)
 {
-   const pnet_port_cfg_t * p_port_cfg =
-      pf_lldp_get_port_config (net, loc_port_num);
+   const pnet_port_cfg_t * p_port_cfg = pf_port_get_config (net, loc_port_num);
 
    snprintf (
       p_port_descr->string,
@@ -772,8 +764,7 @@ void pf_lldp_get_link_status (
    pf_lldp_link_status_t * p_link_status)
 {
    pnal_eth_status_t status;
-   const pnet_port_cfg_t * p_port_cfg =
-      pf_lldp_get_port_config (net, loc_port_num);
+   const pnet_port_cfg_t * p_port_cfg = pf_port_get_config (net, loc_port_num);
 
    /* TODO: Better error handling */
    if (pnal_eth_get_status (p_port_cfg->phy_port.if_name, &status) != 0)
@@ -828,8 +819,7 @@ size_t pf_lldp_construct_frame (pnet_t * net, int loc_port_num, uint8_t buf[])
    pf_lldp_link_status_t link_status;
    pf_lldp_chassis_id_t chassis_id;
    pf_lldp_management_address_t man_address;
-   const pnet_port_cfg_t * p_port_cfg =
-      pf_lldp_get_port_config (net, loc_port_num);
+   const pnet_port_cfg_t * p_port_cfg = pf_port_get_config (net, loc_port_num);
 
 #if LOG_DEBUG_ENABLED(PF_LLDP_LOG)
    pnal_ipaddr_t ipaddr = 0;
