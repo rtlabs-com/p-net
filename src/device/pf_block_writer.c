@@ -3577,7 +3577,7 @@ void pf_put_pdport_data_real (
    const uint16_t subslot =
       pf_pdport_loc_port_num_to_dap_subslot (loc_port_num);
    const pnet_port_cfg_t * p_port_config =
-      pf_lldp_get_port_config (net, loc_port_num);
+      pf_port_get_config (net, loc_port_num);
    const pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
    const pf_lldp_peer_info_t * p_peer_info = &p_port_data->lldp.peer_info;
 
@@ -4010,8 +4010,7 @@ static void pf_put_pd_multiblock_port_and_statistics (
    pnal_port_stats_t port_stats;
    const uint16_t subslot =
       pf_pdport_loc_port_num_to_dap_subslot (loc_port_num);
-   const pnet_port_cfg_t * p_port_cfg =
-      pf_lldp_get_port_config (net, loc_port_num);
+   const pnet_port_cfg_t * p_port_cfg = pf_port_get_config (net, loc_port_num);
 
    if (pnal_get_port_statistics (p_port_cfg->phy_port.if_name, &port_stats) != 0)
    {

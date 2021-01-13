@@ -91,3 +91,9 @@ pf_port_t * pf_port_get_state (pnet_t * net, int loc_port_num)
    CC_ASSERT (loc_port_num > 0 && loc_port_num <= PNET_MAX_PORT);
    return &net->port[loc_port_num - 1];
 }
+
+const pnet_port_cfg_t * pf_port_get_config (pnet_t * net, int loc_port_num)
+{
+   CC_ASSERT (loc_port_num > 0 && loc_port_num <= PNET_MAX_PORT);
+   return &net->fspm_cfg.if_cfg.ports[loc_port_num - 1];
+}
