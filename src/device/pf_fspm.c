@@ -213,7 +213,8 @@ int pf_fspm_validate_configuration (const pnet_cfg_t * p_cfg)
    {
       LOG_ERROR (
          PNET_LOG,
-         "FSPM(%d): Configured tick interval must not be 0. By default, sample application uses 1000 micro seconds tick interval\n",
+         "FSPM(%d): Configured tick interval must not be 0. By default, sample "
+         "application uses 1000 micro seconds tick interval\n",
          __LINE__);
       return -1;
    }
@@ -268,9 +269,7 @@ int pf_fspm_validate_configuration (const pnet_cfg_t * p_cfg)
 static void pf_fspm_load_im (pnet_t * net)
 {
    pf_im_nvm_t file_im;
-   const char * p_file_directory = NULL;
-
-   (void)pf_cmina_get_file_directory (net, &p_file_directory);
+   const char * p_file_directory = pf_cmina_get_file_directory (net);
 
    if (
       pf_file_load (
@@ -313,7 +312,7 @@ static void pf_fspm_save_im (pnet_t * net)
 {
    pf_im_nvm_t output_im = {0};
    pf_im_nvm_t temporary_buffer;
-   const char * p_file_directory = NULL;
+   const char * p_file_directory = pf_cmina_get_file_directory (net);
    int res = 0;
 
    os_mutex_lock (net->fspm_im_mutex);
@@ -322,8 +321,6 @@ static void pf_fspm_save_im (pnet_t * net)
    memcpy (&output_im.im3, &net->fspm_cfg.im_3_data, sizeof (pnet_im_3_t));
    memcpy (&output_im.im4, &net->fspm_cfg.im_4_data, sizeof (pnet_im_4_t));
    os_mutex_unlock (net->fspm_im_mutex);
-
-   (void)pf_cmina_get_file_directory (net, &p_file_directory);
 
    res = pf_file_save_if_modified (
       p_file_directory,

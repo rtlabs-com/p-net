@@ -75,6 +75,10 @@ static inline uint32_t atomic_fetch_sub (atomic_int * p, uint32_t v)
  */
 #define PF_CHECK_PEERS_PER_PORT 1
 
+/** Including termination */
+#define PF_ALIAS_NAME_MAX_SIZE                                                 \
+   (PNET_STATION_NAME_MAX_SIZE + PNET_PORT_ID_MAX_SIZE)
+
 /************************* Diagnosis ******************************************/
 
 #define PF_DIAG_QUALIFIED_SEVERITY_MASK  ~0x00000007
@@ -1058,8 +1062,7 @@ typedef struct pf_cmina_dcp_ase
    uint16_t device_initiative; /* 1: Should send hello. 0: No sending of hello
                                 */
 
-   char alias_name
-      [PNET_STATION_NAME_MAX_SIZE + PNET_PORT_ID_MAX_SIZE]; /** Terminated */
+   char alias_name[PF_ALIAS_NAME_MAX_SIZE]; /** Terminated */
    struct
    {
       /* Order is important!! */

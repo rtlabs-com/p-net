@@ -448,7 +448,7 @@ pnal_ipaddr_t pnal_get_gateway (const char * interface_name);
  * @param mac_addr         Out:   MAC address
  *
  * @return 0 on success and
- *         -1 if an error occurred
+ *         -1 if no such interface is available
  */
 int pnal_get_macaddress (const char * interface_name, pnal_ethaddr_t * p_mac);
 

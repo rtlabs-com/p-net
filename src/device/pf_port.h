@@ -70,7 +70,7 @@ void pf_port_init_iterator_over_ports (
 int pf_port_get_next (pf_port_iterator_t * p_iterator);
 
 /**
- * Get a reference to port runtime data.
+ * Get port runtime data.
  *
  * If the local port number is out of range this operation will assert.
  * NULL will never be returned.
@@ -80,7 +80,7 @@ int pf_port_get_next (pf_port_iterator_t * p_iterator);
  * @param net              In:    The p-net stack instance
  * @param loc_port_num     In:    Local port number.
  *                                Valid range: 1 .. PNET_MAX_PORT
- * @return Address to port runtime data
+ * @return port runtime data
  */
 pf_port_t * pf_port_get_state (pnet_t * net, int loc_port_num);
 
@@ -95,7 +95,7 @@ pf_port_t * pf_port_get_state (pnet_t * net, int loc_port_num);
  * @param net              In:    The p-net stack instance
  * @param loc_port_num     In:    Local port number.
  *                                Valid range: 1 .. PNET_MAX_PORT
- * @return Address to port configuration
+ * @return port configuration
  */
 const pnet_port_cfg_t * pf_port_get_config (pnet_t * net, int loc_port_num);
 

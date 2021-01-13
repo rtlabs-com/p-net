@@ -40,6 +40,8 @@ void pf_generate_uuid (
    pnet_ethaddr_t mac_address,
    pf_uuid_t * p_uuid)
 {
+   /* TODO Maybe we should take pointer to mac address instead, to avoid
+           copying? */
    p_uuid->data1 = timestamp;
    p_uuid->data2 = session_number >> 16;
    p_uuid->data3 = (session_number >> 8) & 0x00ff;

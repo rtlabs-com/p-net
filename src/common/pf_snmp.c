@@ -478,14 +478,12 @@ void pf_snmp_get_station_name (
    pnet_t * net,
    pf_lldp_station_name_t * p_station_name)
 {
-   const char * station_name = NULL;
+   char station_name[PNET_STATION_NAME_MAX_SIZE]; /** Terminated */
 
-   /* FIXME: Use of pf_cmina_get_station_name() is not thread-safe, as the
-    * returned pointer points to non-constant memory shared by multiple threads.
+   /* FIXME: Use of pf_cmina_get_station_name() is not thread-safe.
     * Fix this, e.g. using a mutex.
     */
-   pf_cmina_get_station_name (net, &station_name);
-   CC_ASSERT (station_name != NULL);
+   pf_cmina_get_station_name (net, station_name);
 
    snprintf (
       p_station_name->string,
