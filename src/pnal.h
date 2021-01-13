@@ -182,12 +182,21 @@ typedef struct pnal_eth_status_t
 typedef struct pnet pnet_t;
 
 /**
- * Get system uptime.
+ * Get system uptime from the SNMP implementation.
  *
  * This is the sysUpTime, as used by SNMP:
  * "The time (in hundredths of a second) since the network
  *  management portion of the system was last re-initialized."
  * - IETF RFC 3418 (SNMP MIB-2).
+ *
+ * Typically used to store the SNMP-timestamp for incoming LLDP-packets.
+ * This timestamp is later reported back to the SNMP implementation, and
+ * remote SNMP managers might use it for filtering.
+ *
+ * The returned value should be the one used by the SNMP implementation.
+ * Ask the SNMP implementation for the value, or make sure that this
+ * function and the SNMP implementation use the same mechanism to get the
+ * value.
  *
  * Starts at 0, with wrap-around after ~497 days.
  *

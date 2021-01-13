@@ -17,8 +17,10 @@
 #define os_get_current_time_us mock_os_get_current_time_us
 #endif
 
-#include <string.h>
 #include "pf_includes.h"
+
+#include <inttypes.h>
+#include <string.h>
 
 static bool pf_scheduler_is_linked (pnet_t * net, uint32_t first, uint32_t ix)
 {
@@ -464,8 +466,10 @@ void pf_scheduler_show (pnet_t * net)
 
       os_mutex_unlock (net->scheduler_timeout_mutex);
    }
-
    printf ("\n");
+   printf (
+      "Uptime (in quanta of 10 ms): %" PRIu32 " \n",
+      pnal_get_system_uptime_10ms());
 }
 
 /**

@@ -31,6 +31,8 @@
 #include "system_mib.h"
 #include "pnal_options.h"
 
+#include <sys/sysinfo.h>
+
 /** Initializes the system_mib module */
 void init_system_mib (pnet_t * pnet)
 {
@@ -200,6 +202,9 @@ int handle_sysUpTime (
    netsnmp_agent_request_info * reqinfo,
    netsnmp_request_info * requests)
 {
+   struct sysinfo systeminfo; /* Field .uptime contains uptime in seconds */
+   uint32_t uptime_10ms;
+
    /* We are never called for a GETNEXT if it's registered as a
       "instance", as it's "magically" handled for us.  */
 
@@ -208,13 +213,21 @@ int handle_sysUpTime (
 
    switch (reqinfo->mode)
    {
-
    case MODE_GET:
       LOG_DEBUG (PF_SNMP_LOG, "system_mib(%d): GET sysUpTime.\n", __LINE__);
+      if (sysinfo (&systeminfo) == 0)
+      {
+         uptime_10ms = systeminfo.uptime * 100;
+      }
+      else
+      {
+         uptime_10ms = 0;
+      }
+
       snmp_set_var_typed_integer (
          requests->requestvb,
          ASN_TIMETICKS,
-         netsnmp_get_agent_uptime());
+         uptime_10ms);
       break;
 
    default:
