@@ -23,11 +23,15 @@ uint8_t pnet_log_level;
 os_mutex_t * mock_mutex;
 mock_os_data_t mock_os_data;
 mock_lldp_data_t mock_lldp_data;
+mock_file_data_t mock_file_data;
+mock_fspm_data_t mock_fspm_data;
 
 void mock_clear (void)
 {
    memset (&mock_os_data, 0, sizeof (mock_os_data));
    memset (&mock_lldp_data, 0, sizeof (mock_lldp_data));
+   memset (&mock_file_data, 0, sizeof (mock_file_data));
+   memset (&mock_fspm_data, 0, sizeof (mock_fspm_data));
 }
 
 void mock_init (void)
@@ -301,4 +305,146 @@ int mock_pf_lldp_get_peer_link_status (
 int mock_pnal_snmp_init (pnet_t * pnet)
 {
    return 0;
+}
+
+int mock_pf_file_save_if_modified (
+   const char * directory,
+   const char * filename,
+   const void * p_object,
+   void * p_tempobject,
+   size_t size)
+{
+   int result;
+
+   /* Exit if any argument is invalid */
+   if (size > sizeof (mock_file_data.object))
+   {
+      return -1;
+   }
+   if (filename == NULL || p_object == NULL || p_tempobject == NULL)
+   {
+      return -1;
+   }
+   if (strlen (filename) >= sizeof (mock_file_data.filename))
+   {
+      return -1;
+   }
+
+   /* Inject error? */
+   if (mock_file_data.is_save_failing)
+   {
+      return -1;
+   }
+
+   /* Calculate return value */
+   if (strcmp (filename, mock_file_data.filename) != 0)
+   {
+      result = 2; /* First saving of file */
+   }
+   else if (
+      size == mock_file_data.size &&
+      memcmp (p_object, mock_file_data.object, size) == 0)
+   {
+      result = 0; /* No update required */
+   }
+   else
+   {
+      result = 1; /* Updating file */
+   }
+
+   /* Store to fake file */
+   strcpy (mock_file_data.filename, filename);
+   mock_file_data.size = size;
+   memcpy (mock_file_data.object, p_object, size);
+   return result;
+}
+
+int mock_pf_file_save (
+   const char * directory,
+   const char * filename,
+   const void * p_object,
+   size_t size)
+{
+   /* Exit if any argument is invalid */
+   if (size > sizeof (mock_file_data.object))
+   {
+      return -1;
+   }
+   if (filename == NULL || p_object == NULL)
+   {
+      return -1;
+   }
+   if (strlen (filename) >= sizeof (mock_file_data.filename))
+   {
+      return -1;
+   }
+
+   /* Inject error? */
+   if (mock_file_data.is_save_failing)
+   {
+      return -1;
+   }
+
+   /* Store to fake file */
+   strcpy (mock_file_data.filename, filename);
+   mock_file_data.size = size;
+   memcpy (mock_file_data.object, p_object, size);
+   return 0;
+}
+
+void mock_pf_file_clear (const char * directory, const char * filename)
+{
+   if (strcmp (filename, mock_file_data.filename) == 0)
+   {
+      strcpy (mock_file_data.filename, "");
+      mock_file_data.size = 0;
+   }
+}
+
+int mock_pf_file_load (
+   const char * directory,
+   const char * filename,
+   void * p_object,
+   size_t size)
+{
+   /* Exit if any argument is invalid */
+   if (size != mock_file_data.size)
+   {
+      return -1;
+   }
+   if (filename == NULL || p_object == NULL)
+   {
+      return -1;
+   }
+   if (strcmp (filename, mock_file_data.filename) != 0)
+   {
+      return -1;
+   }
+
+   /* Inject error? */
+   if (mock_file_data.is_load_failing)
+   {
+      return -1;
+   }
+
+   memcpy (p_object, mock_file_data.object, size);
+   return 0;
+}
+
+void mock_pf_fspm_get_im_location (pnet_t * net, char * location)
+{
+   snprintf (
+      location,
+      PNET_LOCATION_MAX_SIZE,
+      "%-22s",
+      mock_fspm_data.im_location);
+}
+
+void mock_pf_fspm_save_im_location (pnet_t * net, const char * location)
+{
+   snprintf (
+      mock_fspm_data.im_location,
+      sizeof (mock_fspm_data.im_location),
+      "%-22s",
+      location);
 }

@@ -28,6 +28,7 @@ extern "C" {
 #define PF_FILENAME_IP          "pnet_data_ip.bin"
 #define PF_FILENAME_SYSCONTACT  "pnet_data_syscontact.bin"
 #define PF_FILENAME_SYSNAME     "pnet_data_sysname.bin"
+#define PF_FILENAME_SYSLOCATION "pnet_data_syslocation.bin"
 #define PF_FILENAME_IM          "pnet_data_im.bin"
 #define PF_FILENAME_DIAGNOSTICS "pnet_data_diagnostics.bin"
 #define PF_FILENAME_PDPORT_1    "pnet_data_pdport_1.bin"

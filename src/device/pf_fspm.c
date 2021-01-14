@@ -24,7 +24,10 @@
  */
 
 #ifdef UNIT_TEST
-#define os_get_current_time_us mock_os_get_current_time_us
+#define os_get_current_time_us   mock_os_get_current_time_us
+#define pf_file_clear            mock_pf_file_clear
+#define pf_file_load             mock_pf_file_load
+#define pf_file_save_if_modified mock_pf_file_save_if_modified
 #endif
 
 #include <string.h>
@@ -359,44 +362,41 @@ static void pf_fspm_save_im (pnet_t * net)
 }
 
 /**
- * Set system location in I&M data record 1.
+ * Set device location in I&M data record 1.
  *
- * Also see pf_fspm_save_system_location().
+ * If location string does not fit in the I&M1 field "IM_Tag_Location",
+ * (which is 22 bytes) it will be truncated with termination added.
+ *
+ * Also see pf_fspm_save_im_location().
  *
  * @param net              InOut: The p-net stack instance
- * @param p_location       In:    New system location.
+ * @param location         In:    New device location.
  */
-static void pf_fspm_set_system_location (
-   pnet_t * net,
-   const pf_snmp_system_location_t * p_location)
+static void pf_fspm_set_im_location (pnet_t * net, const char * location)
 {
    os_mutex_lock (net->fspm_im_mutex);
    snprintf (
       net->fspm_cfg.im_1_data.im_tag_location,
       sizeof (net->fspm_cfg.im_1_data.im_tag_location),
-      "%s",
-      p_location->string);
+      "%-22s",
+      location);
    os_mutex_unlock (net->fspm_im_mutex);
 }
 
-void pf_fspm_get_system_location (
-   pnet_t * net,
-   pf_snmp_system_location_t * p_location)
+void pf_fspm_get_im_location (pnet_t * net, char * location)
 {
    os_mutex_lock (net->fspm_im_mutex);
    snprintf (
-      p_location->string,
-      sizeof (p_location->string),
-      "%s",
+      location,
+      PNET_LOCATION_MAX_SIZE,
+      "%-22s",
       net->fspm_cfg.im_1_data.im_tag_location);
    os_mutex_unlock (net->fspm_im_mutex);
 }
 
-void pf_fspm_save_system_location (
-   pnet_t * net,
-   const pf_snmp_system_location_t * p_location)
+void pf_fspm_save_im_location (pnet_t * net, const char * location)
 {
-   pf_fspm_set_system_location (net, p_location);
+   pf_fspm_set_im_location (net, location);
    pf_fspm_save_im (net);
 }
 
@@ -814,6 +814,7 @@ int pf_fspm_cm_write_ind (
    int ret = -1;
    pf_get_info_t get_info;
    uint16_t pos = 0;
+   const char * p_file_directory = pf_cmina_get_file_directory (net);
 
    if (p_write_request->index <= PF_IDX_USER_MAX)
    {
@@ -882,6 +883,13 @@ int pf_fspm_cm_write_ind (
                   net->fspm_cfg.im_1_data.im_tag_function,
                   net->fspm_cfg.im_1_data.im_tag_location);
                ret = 0;
+
+               /* Location data is stored in two different files: the file with
+                * I&M data and a file used by SNMP containing a larger version
+                * of the device's location. The larger version has precedence
+                * over the I&M version, so we need to delete the larger one.
+                */
+               pf_file_clear (p_file_directory, PF_FILENAME_SYSLOCATION);
             }
             else
             {
