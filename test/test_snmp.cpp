@@ -168,3 +168,93 @@ TEST_F (SnmpTest, SnmpGetPeerLinkStatus)
    error = pf_snmp_get_peer_link_status (net, LOCAL_PORT, &status);
    EXPECT_EQ (error, -1);
 }
+
+TEST_F (SnmpTest, SnmpGetLocationGivenLargeString)
+{
+   const pf_snmp_system_location_t stored = {"1234567890123456789012 large"};
+   const char * expected = stored.string;
+   pf_snmp_system_location_t actual;
+
+   memset (&actual, 0xff, sizeof (actual));
+   mock_pf_file_save (NULL, PF_FILENAME_SYSLOCATION, &stored, sizeof (stored));
+
+   pf_snmp_get_system_location (net, &actual);
+
+   EXPECT_STREQ (actual.string, expected);
+}
+
+TEST_F (SnmpTest, SnmpGetLocationGivenSmallString)
+{
+   const pf_snmp_system_location_t stored = {"small"};
+   const char * expected = stored.string;
+   pf_snmp_system_location_t actual;
+
+   memset (&actual, 0xcd, sizeof (actual));
+   mock_pf_file_save (NULL, PF_FILENAME_SYSLOCATION, &stored, sizeof (stored));
+
+   pf_snmp_get_system_location (net, &actual);
+
+   EXPECT_STREQ (actual.string, expected);
+}
+
+/* Note that the 22 bytes device location in I&M1 will be used if loading of
+ * sysLocation file fails (e.g. if does not exit).
+ */
+TEST_F (SnmpTest, SnmpGetLocationGivenError)
+{
+   const char expected[] = "IM_Tag_Location in I&M";
+   pf_snmp_system_location_t actual;
+
+   mock_file_data.is_load_failing = true;
+   memset (&actual, 0xff, sizeof (actual));
+   mock_pf_fspm_save_im_location (net, expected);
+
+   pf_snmp_get_system_location (net, &actual);
+
+   EXPECT_STREQ (actual.string, expected);
+   EXPECT_EQ (strlen (actual.string), 22u);
+}
+
+/* Note that the first 22 bytes is also written to device location in I&M1 */
+TEST_F (SnmpTest, SnmpSetLocationGivenLargeString)
+{
+   const pf_snmp_system_location_t written = {"1234567890123456789012345"};
+   int error;
+
+   error = pf_snmp_set_system_location (net, &written);
+
+   EXPECT_EQ (error, 0);
+   EXPECT_STREQ (mock_file_data.filename, PF_FILENAME_SYSLOCATION);
+   EXPECT_EQ (mock_file_data.size, sizeof (written));
+   EXPECT_EQ (memcmp (mock_file_data.object, &written, sizeof (written)), 0);
+   EXPECT_STREQ (mock_fspm_data.im_location, "1234567890123456789012");
+}
+
+/* Note that the first 22 bytes is also written to device location in I&M1 */
+TEST_F (SnmpTest, SnmpSetLocationGivenSmallString)
+{
+   const pf_snmp_system_location_t written = {"small"};
+   int error;
+
+   error = pf_snmp_set_system_location (net, &written);
+
+   EXPECT_EQ (error, 0);
+   EXPECT_STREQ (mock_file_data.filename, PF_FILENAME_SYSLOCATION);
+   EXPECT_EQ (mock_file_data.size, sizeof (written));
+   EXPECT_EQ (memcmp (mock_file_data.object, &written, sizeof (written)), 0);
+   EXPECT_STREQ (mock_fspm_data.im_location, "small                 ");
+}
+
+/* Note that the first 22 bytes is also written to device location in I&M1 */
+TEST_F (SnmpTest, SnmpSetLocationGivenError)
+{
+   const pf_snmp_system_location_t written = {"1234567890123456789012345"};
+   int error;
+
+   mock_file_data.is_save_failing = true;
+
+   error = pf_snmp_set_system_location (net, &written);
+
+   EXPECT_EQ (error, -1);
+   EXPECT_STREQ (mock_fspm_data.im_location, "1234567890123456789012");
+}

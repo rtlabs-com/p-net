@@ -86,43 +86,66 @@ TEST_F (FspmUnitTest, FspmCheckValidateConfiguration)
    cfg.im_0_data.im_supported = 0;
 }
 
-TEST_F (FspmTest, FspmGetSystemLocation)
+TEST_F (FspmTest, FspmGetImLocation)
 {
-   pf_snmp_system_location_t first;
-   pf_snmp_system_location_t second;
+   const char expected[PNET_LOCATION_MAX_SIZE] = "                      ";
+   char actual[PNET_LOCATION_MAX_SIZE];
 
-   memset (&first, '1', sizeof (first));
-   memset (&second, '2', sizeof (second));
+   memset (actual, 0xff, sizeof (actual));
 
-   pf_fspm_get_system_location (net, &first);
-   EXPECT_LT (strlen (first.string), sizeof (first.string));
-
-   pf_fspm_get_system_location (net, &second);
-   EXPECT_STREQ (second.string, first.string);
+   /* Note that as loading from file failed in pf_fspm_init(), location was set
+    * to its default value, which is all spaces.
+    */
+   pf_fspm_get_im_location (net, actual);
+   EXPECT_STREQ (actual, expected);
+   EXPECT_EQ (strlen (actual), 22u);
 }
 
-TEST_F (FspmTest, FspmSaveSystemLocation)
+TEST_F (FspmTest, FspmSaveImLocation)
 {
-   const pf_snmp_system_location_t expected = {"location of device"};
-   pf_snmp_system_location_t actual = {""};
+   const char written[PNET_LOCATION_MAX_SIZE] = "location of device";
+   const char expected[PNET_LOCATION_MAX_SIZE] = "location of device    ";
+   char actual[PNET_LOCATION_MAX_SIZE];
 
-   pf_fspm_save_system_location (net, &expected);
+   memset (actual, 0xff, sizeof (actual));
 
-   pf_fspm_get_system_location (net, &actual);
-   EXPECT_STREQ (actual.string, expected.string);
-   EXPECT_GT (mock_os_data.file_size, 0);
+   /* Note that extra spaces are added at the end */
+   pf_fspm_save_im_location (net, written);
+
+   pf_fspm_get_im_location (net, actual);
+   EXPECT_STREQ (actual, expected);
+   EXPECT_EQ (strlen (actual), 22u);
+   EXPECT_STREQ (mock_file_data.filename, PF_FILENAME_IM);
 }
 
-TEST_F (FspmTest, FspmSaveSystemLocationShouldAddTermination)
+TEST_F (FspmTest, FspmSaveImLocationShouldAddTermination)
 {
-   pf_snmp_system_location_t not_terminated;
-   pf_snmp_system_location_t actual = {""};
+   char not_terminated[PNET_LOCATION_MAX_SIZE];
+   char actual[PNET_LOCATION_MAX_SIZE];
 
-   memset (not_terminated.string, 'n', sizeof (not_terminated.string));
+   memset (actual, 0xff, sizeof (actual));
+   memset (not_terminated, 'n', sizeof (not_terminated));
 
-   pf_fspm_save_system_location (net, &not_terminated);
+   pf_fspm_save_im_location (net, not_terminated);
 
-   pf_fspm_get_system_location (net, &actual);
-   EXPECT_EQ (actual.string[sizeof (actual.string) - 1], '\0');
-   EXPECT_GT (mock_os_data.file_size, 0);
+   pf_fspm_get_im_location (net, actual);
+   EXPECT_EQ (actual[sizeof (actual) - 1], '\0');
+   EXPECT_EQ (strlen (actual), 22u);
+   EXPECT_STREQ (mock_file_data.filename, PF_FILENAME_IM);
+}
+
+TEST_F (FspmTest, FspmSaveImLocationShouldTruncateLargeStrings)
+{
+   const char large[] = "123456789012345678901234567890";
+   const char expected[] = "1234567890123456789012";
+   char actual[PNET_LOCATION_MAX_SIZE];
+
+   memset (actual, 0xff, sizeof (actual));
+
+   pf_fspm_save_im_location (net, large);
+
+   pf_fspm_get_im_location (net, actual);
+   EXPECT_STREQ (actual, expected);
+   EXPECT_EQ (strlen (actual), 22u);
+   EXPECT_STREQ (mock_file_data.filename, PF_FILENAME_IM);
 }
