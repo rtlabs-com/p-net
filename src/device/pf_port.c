@@ -120,3 +120,23 @@ bool pf_port_subslot_is_dap_port_id (uint16_t subslot)
    int port = pf_port_dap_subslot_to_local_port (subslot);
    return (port != 0);
 }
+
+bool pf_port_is_valid (pnet_t * net, int loc_port_num)
+{
+   return (loc_port_num > 0 && loc_port_num <= PNET_MAX_PORT);
+}
+
+int pf_port_get_port_number (pnet_t * net, pnal_eth_handle_t * eth_handle)
+{
+   int loc_port_num;
+
+   for (loc_port_num = 1; loc_port_num <= PNET_MAX_PORT; loc_port_num++)
+   {
+      if (net->port[loc_port_num - 1].eth_handle == eth_handle)
+      {
+         return loc_port_num;
+      }
+   }
+
+   return 0;
+}

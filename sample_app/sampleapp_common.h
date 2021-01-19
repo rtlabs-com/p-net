@@ -71,7 +71,7 @@ extern "C" {
 #define APP_LOGBOOK_ERROR_CODE   0x20 /* Manufacturer specific */
 #define APP_LOGBOOK_ERROR_DECODE 0x82 /* Manufacturer specific */
 #define APP_LOGBOOK_ERROR_CODE_1 PNET_ERROR_CODE_1_FSPM
-#define APP_LOGBOOK_ERROR_CODE_2 0x00      /* Manufacturer specific */
+#define APP_LOGBOOK_ERROR_CODE_2 0x00       /* Manufacturer specific */
 #define APP_LOGBOOK_ENTRY_DETAIL 0xFEE1DEAD /* Manufacturer specific */
 
 /*
@@ -132,6 +132,33 @@ static const cfg_submodule_type_t cfg_available_submodule_types[] = {
     PNET_DIR_NO_IO,
     0,
     0},
+#if PNET_MAX_PORT >= 2
+   {"DAP Port 2",
+    APP_API,
+    PNET_MOD_DAP_IDENT,
+    PNET_SUBMOD_DAP_INTERFACE_1_PORT_2_IDENT,
+    PNET_DIR_NO_IO,
+    0,
+    0},
+#endif
+#if PNET_MAX_PORT >= 3
+   {"DAP Port 3",
+    APP_API,
+    PNET_MOD_DAP_IDENT,
+    PNET_SUBMOD_DAP_INTERFACE_1_PORT_3_IDENT,
+    PNET_DIR_NO_IO,
+    0,
+    0},
+#endif
+#if PNET_MAX_PORT >= 4
+   {"DAP Port 4",
+    APP_API,
+    PNET_MOD_DAP_IDENT,
+    PNET_SUBMOD_DAP_INTERFACE_1_PORT_4_IDENT,
+    PNET_DIR_NO_IO,
+    0,
+    0},
+#endif
    {"Input 8 bits",
     APP_API,
     APP_MOD_8_0_IDENT,
@@ -162,13 +189,25 @@ struct cmd_args
    char path_button1[PNET_MAX_FILE_FULLPATH_SIZE]; /** Terminated string */
    char path_button2[PNET_MAX_FILE_FULLPATH_SIZE]; /** Terminated string */
    char path_storage_directory[PNET_MAX_DIRECTORYPATH_SIZE]; /** Terminated */
-   char station_name[PNET_STATION_NAME_MAX_SIZE];    /** Terminated string */
-   char eth_interface[PNET_INTERFACE_NAME_MAX_SIZE]; /** Terminated string */
+   char station_name[PNET_STATION_NAME_MAX_SIZE]; /** Terminated string */
+   char eth_interfaces
+      [PNET_INTERFACE_NAME_MAX_SIZE * (PNET_MAX_PORT + 1) +
+       PNET_MAX_PORT]; /** Terminated string */
    int verbosity;
    int show;
    bool factory_reset;
    bool remove_files;
 };
+
+typedef struct app_netif_name
+{
+   char name[PNET_INTERFACE_NAME_MAX_SIZE];
+} app_netif_name_t;
+
+typedef struct app_netif_namelist
+{
+   app_netif_name_t netif[PNET_MAX_PORT + 1];
+} app_netif_namelist_t;
 
 typedef struct app_subslot
 {
@@ -233,9 +272,16 @@ typedef enum app_demo_state
 /********************* Helper function declarations ***************************/
 
 /**
- * Print out current IP address, MAC address etc.
+ * Convert MAC address to string
+ * @param mac              In:    MAC address
+ * @param outputstring     Out:   Resulting string buffer. Should have size
+ *                                PNAL_ETH_ADDRSTR_SIZE.
+ */
+void app_mac_to_string (pnal_ethaddr_t mac, char * outputstring);
+
+/**
+ * Print out current IP address, netmask and default gateway.
  *
- * @param p_macbuffer      In:    MAC address
  * @param ip               In:    IP address
  * @param netmask          In:    Netmask
  * @param gateway          In:    Gateway
@@ -243,7 +289,6 @@ typedef enum app_demo_state
  *          -1 if an error occurred.
  */
 void app_print_network_details (
-   pnal_ethaddr_t * p_macbuffer,
    pnal_ipaddr_t ip,
    pnal_ipaddr_t netmask,
    pnal_ipaddr_t gateway);
@@ -255,7 +300,45 @@ void app_print_network_details (
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
-int app_adjust_stack_configuration (pnet_cfg_t * stack_config);
+int app_pnet_cfg_init_default (pnet_cfg_t * stack_config);
+
+/**
+ * Initialize interface configuration from argument string.
+ *
+ * @param netif_list_str   In:    Comma separated list of network interfaces.
+ *                                Terminated string.
+ * @param p_cfg            InOut: p-net configuration
+ * @param verbosity        In:    Verbosity
+ * @return  0  on success
+ *         -1  on error
+ */
+int app_pnet_cfg_init_netifs (
+   const char * netif_list_str,
+   pnet_cfg_t * p_cfg,
+   int verbosity);
+
+/**
+ * Parse a comma separated list of network interfaces and check
+ * that the number of interfaces match the PNET_MAX_PORT configuration.
+ * Examples:
+ * PNET_MAX_PORT     arg_str                 status
+ * 1                 "eth0"                  ok
+ * 1                 "eth0,eth1"             err
+ * 2                 "br0,eth0,eth1"         ok
+ * 2                 "br0,eth0,"             err
+ *
+ * @param arg_str    In:   Network interface list as comma separated,
+ *                         terminated string. For example "eth0" or
+ *                         "br0,eth0,eth1".
+ * @param p_if_list  Out:  List of network interfaces
+ * @param max_port   In:   PNET_MAX_PORT, passed as argument to allow test
+ * @return  0  if network interface list matches configuration
+ *         -1  on error
+ */
+int app_get_netif_namelist (
+   const char * arg_str,
+   app_netif_namelist_t * p_if_list,
+   int max_port);
 
 /**
  * Plug DAP (sub-)modules. This operation shall be called after p-net

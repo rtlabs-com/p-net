@@ -242,7 +242,7 @@ typedef struct dwmac1000
    uint32_t cr;
 } dwmac1000_t;
 
-static pnal_eth_callback_t * input_rx_hook = NULL;
+static pnal_eth_sys_recv_callback_t * input_rx_hook = NULL;
 static void * input_rx_arg = NULL;
 
 #ifdef DEBUG_DATA
@@ -640,7 +640,7 @@ static void dwmac1000_input (dwmac1000_t * dwmac1000, struct netif * netif)
    /* Pass pbuf to rx hook if set */
    if (input_rx_hook != NULL)
    {
-      handled = input_rx_hook (input_rx_arg, p);
+      handled = input_rx_hook (netif, input_rx_arg, p);
       if (handled != 0)
       {
          return;
@@ -746,7 +746,7 @@ int eth_ioctl (drv_t * drv, void * arg, int req, void * param)
 
    if (req == IOCTL_NET_SET_RX_HOOK)
    {
-      input_rx_hook = (pnal_eth_callback_t *)param;
+      input_rx_hook = (pnal_eth_sys_recv_callback_t *)param;
       input_rx_arg = arg;
       return 0;
    }

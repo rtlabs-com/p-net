@@ -60,13 +60,7 @@ static void ip_to_string (pnal_ipaddr_t ip, char * outputstring)
       (uint8_t) (ip & 0xFF));
 }
 
-/**
- * Convert MAC address to string
- * @param mac              In:    MAC address
- * @param outputstring     Out:   Resulting string buffer. Should have size
- *                                PNAL_ETH_ADDRSTR_SIZE.
- */
-static void mac_to_string (pnal_ethaddr_t mac, char * outputstring)
+void app_mac_to_string (pnal_ethaddr_t mac, char * outputstring)
 {
    snprintf (
       outputstring,
@@ -189,7 +183,6 @@ static const char * ioxs_to_string (pnet_ioxs_values_t ioxs)
 }
 
 void app_print_network_details (
-   pnal_ethaddr_t * p_macbuffer,
    pnal_ipaddr_t ip,
    pnal_ipaddr_t netmask,
    pnal_ipaddr_t gateway)
@@ -197,16 +190,13 @@ void app_print_network_details (
    char ip_string[PNAL_INET_ADDRSTR_SIZE];       /* Terminated string */
    char netmask_string[PNAL_INET_ADDRSTR_SIZE];  /* Terminated string */
    char gateway_string[PNAL_INET_ADDRSTR_SIZE];  /* Terminated string */
-   char mac_string[PNAL_ETH_ADDRSTR_SIZE];       /* Terminated string */
    char hostname_string[PNAL_HOSTNAME_MAX_SIZE]; /* Terminated string */
 
-   mac_to_string (*p_macbuffer, mac_string);
    ip_to_string (ip, ip_string);
    ip_to_string (netmask, netmask_string);
    ip_to_string (gateway, gateway_string);
    pnal_get_hostname (hostname_string);
 
-   printf ("MAC address:          %s\n", mac_string);
    printf ("Current hostname:     %s\n", hostname_string);
    printf ("Current IP address:   %s\n", ip_string);
    printf ("Current Netmask:      %s\n", netmask_string);
@@ -1265,6 +1255,7 @@ void app_plug_dap (pnet_t * net, void * arg)
       PNET_MOD_DAP_IDENT,
       PNET_SUBMOD_DAP_IDENT,
       &cfg_dap_data);
+
    app_exp_submodule_ind (
       net,
       arg,
@@ -1274,6 +1265,7 @@ void app_plug_dap (pnet_t * net, void * arg)
       PNET_MOD_DAP_IDENT,
       PNET_SUBMOD_DAP_INTERFACE_1_IDENT,
       &cfg_dap_data);
+
    app_exp_submodule_ind (
       net,
       arg,
@@ -1283,12 +1275,49 @@ void app_plug_dap (pnet_t * net, void * arg)
       PNET_MOD_DAP_IDENT,
       PNET_SUBMOD_DAP_INTERFACE_1_PORT_1_IDENT,
       &cfg_dap_data);
+
+#if PNET_MAX_PORT >= 2
+   app_exp_submodule_ind (
+      net,
+      arg,
+      APP_API,
+      PNET_SLOT_DAP_IDENT,
+      PNET_SUBSLOT_DAP_INTERFACE_1_PORT_2_IDENT,
+      PNET_MOD_DAP_IDENT,
+      PNET_SUBMOD_DAP_INTERFACE_1_PORT_2_IDENT,
+      &cfg_dap_data);
+#endif
+
+#if PNET_MAX_PORT >= 3
+   app_exp_submodule_ind (
+      net,
+      arg,
+      APP_API,
+      PNET_SLOT_DAP_IDENT,
+      PNET_SUBSLOT_DAP_INTERFACE_1_PORT_3_IDENT,
+      PNET_MOD_DAP_IDENT,
+      PNET_SUBMOD_DAP_INTERFACE_1_PORT_3_IDENT,
+      &cfg_dap_data);
+#endif
+
+#if PNET_MAX_PORT >= 4
+   app_exp_submodule_ind (
+      net,
+      arg,
+      APP_API,
+      PNET_SLOT_DAP_IDENT,
+      PNET_SUBSLOT_DAP_INTERFACE_1_PORT_4_IDENT,
+      PNET_MOD_DAP_IDENT,
+      PNET_SUBMOD_DAP_INTERFACE_1_PORT_4_IDENT,
+      &cfg_dap_data);
+#endif
 }
 
 /************ Configuration of product ID, software version etc **************/
 
-int app_adjust_stack_configuration (pnet_cfg_t * stack_config)
+int app_pnet_cfg_init_default (pnet_cfg_t * stack_config)
 {
+   uint16_t i;
    memset (stack_config, 0, sizeof (pnet_cfg_t));
    stack_config->tick_us = APP_TICK_INTERVAL_US;
 
@@ -1363,9 +1392,16 @@ int app_adjust_stack_configuration (pnet_cfg_t * stack_config)
    stack_config->min_device_interval = 32; /* Corresponds to 1 ms */
 
    /* LLDP settings */
-   strcpy (stack_config->if_cfg.ports[0].port_id, "port-001");
-   stack_config->if_cfg.ports[0].rtclass_2_status = 0;
-   stack_config->if_cfg.ports[0].rtclass_3_status = 0;
+   for (i = 0; i < PNET_MAX_PORT; i++)
+   {
+      snprintf (
+         stack_config->if_cfg.ports[i].port_id,
+         PNET_LLDP_PORT_ID_MAX_SIZE,
+         "port-%03d",
+         i + 1);
+      stack_config->if_cfg.ports[i].rtclass_2_status = 0;
+      stack_config->if_cfg.ports[i].rtclass_3_status = 0;
+   }
 
    /* Network configuration */
    stack_config->send_hello = true;
@@ -1377,6 +1413,190 @@ int app_adjust_stack_configuration (pnet_cfg_t * stack_config)
    stack_config->use_qualified_diagnosis = false;
 
    return 0;
+}
+
+/**
+ * Initialize a network interface configuration from a network
+ * interface name.
+ * This includes reading the Ethernet MAC address.
+ * If the network interface can not be found or the operation
+ * fails to read the mac address from the network interface,
+ * error is returned.
+ * @param netif_name       In:   Network interface name
+ * @param p_netif          Out:  Network interface configuration
+ * @param verbosity        In:   Verbosity
+ * @return 0  on success
+ *         -1 on error
+ */
+int app_port_cfg_init (
+   const char * netif_name,
+   pnet_netif_t * p_netif,
+   int verbosity)
+{
+   pnal_ethaddr_t mac;
+   char mac_string[PNAL_ETH_ADDRSTR_SIZE]; /* Terminated string */
+
+   int ret = pnal_get_macaddress (netif_name, &mac);
+   if (ret != 0)
+   {
+      printf (
+         "Error: The given network interface does not exist: \"%s\"\n",
+         netif_name);
+      return -1;
+   }
+   else
+   {
+      if (verbosity > 0)
+      {
+         app_mac_to_string (mac, mac_string);
+         printf ("%-10s %s\n", netif_name, mac_string);
+      }
+   }
+
+   strncpy (p_netif->if_name, netif_name, PNET_INTERFACE_NAME_MAX_SIZE);
+   memcpy (p_netif->eth_addr.addr, mac.addr, sizeof (pnal_ethaddr_t));
+
+   return 0;
+}
+
+int app_get_netif_namelist (
+   const char * arg_str,
+   app_netif_namelist_t * p_if_list,
+   int max_port)
+{
+   int ret = 0;
+   uint16_t i = 0;
+   uint16_t j = 0;
+   uint16_t if_index = 0;
+   uint16_t if_list_size = max_port + 1; /* NELEMENTS (p_if_list->netif) dynamic
+                                            for test. */
+   char c;
+
+   memset (p_if_list, 0, sizeof (*p_if_list));
+   c = arg_str[i++];
+   while (c != '\0' && if_index < if_list_size)
+   {
+      if (c != ',')
+      {
+         p_if_list->netif[if_index].name[j++] = c;
+      }
+      else
+      {
+         p_if_list->netif[if_index].name[j++] = '\0';
+         j = 0;
+         if_index++;
+      }
+      c = arg_str[i++];
+   }
+
+   if (max_port == 1)
+   {
+      if (if_index >= max_port)
+      {
+         printf ("Error: Only 1 network interface expected.\n");
+         ret = -1;
+      }
+
+      if (strlen (p_if_list->netif[0].name) == 0)
+      {
+         printf ("Error: Zero length network interface name.\n");
+         ret = -1;
+      }
+      p_if_list->netif[1] = p_if_list->netif[0];
+   }
+
+   if (max_port > 1)
+   {
+      if (if_index != max_port)
+      {
+         printf ("Error: %u network interfaces expected.\n", max_port + 1);
+         ret = -1;
+      }
+
+      for (i = 0; i <= max_port; i++)
+      {
+         if (strlen (p_if_list->netif[i].name) == 0)
+         {
+            printf ("Error: Zero length network interface name (%d).\n", i);
+            ret = -1;
+         }
+      }
+   }
+
+   return ret;
+}
+
+int app_pnet_cfg_init_netifs (
+   const char * netif_list_str,
+   pnet_cfg_t * p_cfg,
+   int verbosity)
+{
+   int ret = 0;
+   int i = 0;
+   pnal_ipaddr_t ip;
+   pnal_ipaddr_t netmask;
+   pnal_ipaddr_t gateway;
+   app_netif_namelist_t if_list;
+
+   ret = app_get_netif_namelist (netif_list_str, &if_list, PNET_MAX_PORT);
+   if (ret != 0)
+   {
+      return ret;
+   }
+
+   if (verbosity > 0)
+   {
+      printf ("Management port:      ");
+   }
+   if (
+      app_port_cfg_init (
+         if_list.netif[0].name,
+         &p_cfg->if_cfg.main_port,
+         verbosity) != 0)
+   {
+      return -1;
+   }
+
+   for (i = 1; i <= PNET_MAX_PORT; i++)
+   {
+      if (verbosity > 0)
+      {
+         printf ("Physical port [%u]:    ", i);
+      }
+
+      if (
+         app_port_cfg_init (
+            if_list.netif[i].name,
+            &p_cfg->if_cfg.ports[i - 1].phy_port,
+            verbosity) != 0)
+      {
+         return -1;
+      }
+   }
+
+   /* Read IP, netmask, gateway from operating system */
+   ip = pnal_get_ip_address (if_list.netif[0].name);
+   netmask = pnal_get_netmask (if_list.netif[0].name);
+   gateway = pnal_get_gateway (if_list.netif[0].name);
+
+   if (gateway == IP_INVALID)
+   {
+      printf (
+         "Error: Invalid gateway IP address for Ethernet interface: %s\n",
+         if_list.netif[0].name);
+      return -1;
+   }
+
+   if (verbosity > 0)
+   {
+      app_print_network_details (ip, netmask, gateway);
+   }
+
+   app_copy_ip_to_struct (&p_cfg->if_cfg.ip_cfg.ip_addr, ip);
+   app_copy_ip_to_struct (&p_cfg->if_cfg.ip_cfg.ip_gateway, gateway);
+   app_copy_ip_to_struct (&p_cfg->if_cfg.ip_cfg.ip_mask, netmask);
+
+   return ret;
 }
 
 /*************************** Helper functions ********************************/

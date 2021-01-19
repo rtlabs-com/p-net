@@ -28,6 +28,14 @@
 #include <stdlib.h>
 #include <string.h>
 
+typedef struct pnal_eth_handle_t
+{
+   pnal_eth_callback_t * callback;
+   void * arg;
+   int socket;
+   os_thread_t * thread;
+} pnal_eth_handle_t;
+
 /**
  * @internal
  * Run a thread that listens to incoming raw Ethernet sockets.
@@ -56,7 +64,7 @@ static void os_eth_task (void * thread_arg)
 
       if (eth_handle->callback != NULL)
       {
-         handled = eth_handle->callback (eth_handle->arg, p);
+         handled = eth_handle->callback (eth_handle, eth_handle->arg, p);
       }
       else
       {
@@ -73,6 +81,7 @@ static void os_eth_task (void * thread_arg)
 
 pnal_eth_handle_t * pnal_eth_init (
    const char * if_name,
+   pnal_ethertype_t receive_type,
    pnal_eth_callback_t * callback,
    void * arg)
 {
@@ -82,6 +91,8 @@ pnal_eth_handle_t * pnal_eth_init (
    struct sockaddr_ll sll;
    int ifindex;
    struct timeval timeout;
+   const uint16_t linux_receive_type =
+      (receive_type == PNAL_ETHTYPE_ALL) ? ETH_P_ALL : receive_type;
 
    handle = malloc (sizeof (pnal_eth_handle_t));
    if (handle == NULL)
@@ -91,7 +102,7 @@ pnal_eth_handle_t * pnal_eth_init (
 
    handle->arg = arg;
    handle->callback = callback;
-   handle->socket = socket (PF_PACKET, SOCK_RAW, htons (ETH_P_ALL));
+   handle->socket = socket (PF_PACKET, SOCK_RAW, htons (linux_receive_type));
 
    /* Adjust send timeout */
    timeout.tv_sec = 0;
@@ -123,7 +134,7 @@ pnal_eth_handle_t * pnal_eth_init (
    /* Bind socket to all protocols */
    sll.sll_family = AF_PACKET;
    sll.sll_ifindex = ifindex;
-   sll.sll_protocol = htons (ETH_P_ALL);
+   sll.sll_protocol = htons (linux_receive_type);
    bind (handle->socket, (struct sockaddr *)&sll, sizeof (sll));
 
    if (handle->socket > -1)
@@ -142,6 +153,5 @@ pnal_eth_handle_t * pnal_eth_init (
 int pnal_eth_send (pnal_eth_handle_t * handle, pnal_buf_t * buf)
 {
    int ret = send (handle->socket, buf->payload, buf->len, 0);
-
    return ret;
 }

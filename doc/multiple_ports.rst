@@ -2,6 +2,7 @@ Multiple ports
 ==============
 This section describes how to configure the p-net stack, sample application
 and system for multiple network interfaces or ports.
+So far, multiple port has only been tested using the linux port.
 
 
 Terminology
@@ -92,12 +93,40 @@ Run ``ifconfig`` to check that the bridge is up and its network interfaces are a
         TX packets 0  bytes 0 (0.0 B)
         TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
 
-Configuration of p-net stack and sample application (TBD)
+Configuration of p-net stack and sample application 
 ---------------------------------------------------------
 To run p-net and the sample application with multiple ports a couple
 of things need to be done:
 
-* Reconfigure setting ``PNET_MAX_PORT`` to the actual number of physical ports available in the system.
-  For this example ``PNET_MAX_PORT`` shall be set to 2.
+Reconfigure setting ``PNET_MAX_PORT`` to the actual number of physical ports available in the system.
+For this example ``PNET_MAX_PORT`` shall be set to 2. 
 
-* TBD - update this document when multi-port support is implemented
+Example of initial log when starting the demo application with a multi port configuration:: 
+
+    pi@pndevice-pi:~/profinet/build $ sudo ./pn_dev -v
+    ** Starting Profinet demo application **
+    Number of slots:      5 (incl slot for DAP module)
+    P-net log level:      0 (DEBUG=0, FATAL=4)
+    App verbosity level:  1
+    Nbr of ports:         2
+    Network interfaces:   br0,eth0,eth1
+    Button1 file:         
+    Button2 file:         
+    Station name:         rt-labs-dev
+    Management port:      br0 C2:38:F3:A6:0A:66
+    Physical port [1]:    eth0 B8:27:EB:67:14:8A
+    Physical port [2]:    eth1 58:EF:68:B5:11:0F
+    Current hostname:     pndevice-pi
+    Current IP address:   192.168.0.50
+    Current Netmask:      255.255.255.0
+    Current Gateway:      192.168.0.1
+    Storage directory:    /home/pi/profinet/build
+
+Update gsdml file
+-----------------
+The sample app gsdml file contains a commented out block that defines 
+a second physical port. In the sample application gsdml file, search for "IDS_P2" 
+and enable commented out lines as described in the gsdml file. 
+
+Note that you will have to the reload gsdml file in all tools you are using and 
+also the Automated RT tester any time the file is changed.

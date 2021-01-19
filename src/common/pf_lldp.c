@@ -849,10 +849,11 @@ size_t pf_lldp_construct_frame (pnet_t * net, int loc_port_num, uint8_t buf[])
    }
    LOG_DEBUG (
       PF_LLDP_LOG,
-      "LLDP(%d): Sending LLDP frame. MAC "
+      "LLDP(%d): Send port %u MAC: "
       "%02X:%02X:%02X:%02X:%02X:%02X "
-      "IP: %s Chassis ID: \"%s\" Port number: %u Port ID: \"%s\"\n",
+      "IP: %s Chassis ID: \"%s\" Port ID: \"%s\"\n",
       __LINE__,
+      loc_port_num,
       device_mac_address->addr[0],
       device_mac_address->addr[1],
       device_mac_address->addr[2],
@@ -861,7 +862,6 @@ size_t pf_lldp_construct_frame (pnet_t * net, int loc_port_num, uint8_t buf[])
       device_mac_address->addr[5],
       ip_string,
       chassis_id_description,
-      loc_port_num,
       p_port_cfg->port_id);
 #endif
 
@@ -901,6 +901,7 @@ static void pf_lldp_send (pnet_t * net, int loc_port_num)
 {
    /* FIXME: Buffer size should include Ethernet header (14 bytes) */
    pnal_buf_t * p_buffer = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE);
+   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
    if (p_buffer != NULL)
    {
@@ -909,7 +910,7 @@ static void pf_lldp_send (pnet_t * net, int loc_port_num)
          p_buffer->len =
             pf_lldp_construct_frame (net, loc_port_num, p_buffer->payload);
 
-         (void)pf_eth_send (net, net->eth_handle, p_buffer);
+         (void)pf_eth_send (net, p_port_data->eth_handle, p_buffer);
       }
 
       pnal_buf_free (p_buffer);
@@ -1728,11 +1729,16 @@ void pf_lldp_update_peer (
    pf_lldp_store_peer_info (net, loc_port_num, lldp_peer_info);
 }
 
-int pf_lldp_recv (pnet_t * net, pnal_buf_t * p_frame_buf, uint16_t offset)
+int pf_lldp_recv (
+   pnet_t * net,
+   pnal_eth_handle_t * eth_handle,
+   pnal_buf_t * p_frame_buf,
+   uint16_t offset)
 {
    uint8_t * buf = p_frame_buf->payload + offset;
    uint16_t buf_len = p_frame_buf->len - offset;
    pf_lldp_peer_info_t peer_data;
+   int loc_port_num = pf_port_get_port_number (net, eth_handle);
    int err = 0;
 
    err = pf_lldp_parse_packet (buf, buf_len, &peer_data);
@@ -1741,9 +1747,10 @@ int pf_lldp_recv (pnet_t * net, pnal_buf_t * p_frame_buf, uint16_t offset)
    {
       LOG_DEBUG (
          PF_LLDP_LOG,
-         "LLDP(%d): Received LLDP packet from %02X:%02X:%02X:%02X:%02X:%02X "
+         "LLDP(%d): Receive port %u MAC: %02X:%02X:%02X:%02X:%02X:%02X "
          "Len: %d Chassis ID: %s Port ID: %s\n",
          __LINE__,
+         loc_port_num,
          peer_data.mac_address.addr[0],
          peer_data.mac_address.addr[1],
          peer_data.mac_address.addr[2],
@@ -1754,13 +1761,21 @@ int pf_lldp_recv (pnet_t * net, pnal_buf_t * p_frame_buf, uint16_t offset)
          peer_data.chassis_id.string,
          peer_data.port_id.string);
 
-      pf_lldp_update_peer (net, PNET_PORT_1, &peer_data);
+      if (pf_port_is_valid (net, loc_port_num))
+      {
+         pf_lldp_update_peer (net, loc_port_num, &peer_data);
+      }
+      else
+      {
+         LOG_ERROR (
+            PF_LLDP_LOG,
+            "LLDP(%d): Unexpected local port %u, frame discarded\n",
+            __LINE__,
+            loc_port_num);
+      }
    }
 
-   if (p_frame_buf != NULL)
-   {
-      pnal_buf_free (p_frame_buf);
-   }
+   pnal_buf_free (p_frame_buf);
 
    return 1; /* Means: handled */
 }

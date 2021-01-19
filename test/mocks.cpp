@@ -18,6 +18,13 @@
 #include <gtest/gtest.h>
 #include <string.h>
 
+typedef struct pnal_eth_handle_t
+{
+   const char * if_name;
+   pnal_eth_callback_t * callback;
+   void * arg;
+} pnal_eth_handle_t;
+
 uint8_t pnet_log_level;
 
 os_mutex_t * mock_mutex;
@@ -25,6 +32,7 @@ mock_os_data_t mock_os_data;
 mock_lldp_data_t mock_lldp_data;
 mock_file_data_t mock_file_data;
 mock_fspm_data_t mock_fspm_data;
+pnal_eth_handle_t mock_eth_handle;
 
 void mock_clear (void)
 {
@@ -57,7 +65,13 @@ pnal_eth_handle_t * mock_pnal_eth_init (
 {
    pnal_eth_handle_t * handle;
 
-   handle = (pnal_eth_handle_t *)calloc (1, sizeof (pnal_eth_handle_t));
+   handle = &mock_eth_handle;
+
+   handle->if_name = if_name;
+   handle->arg = arg;
+   handle->callback = callback;
+
+   mock_os_data.eth_if_handle = handle;
 
    return handle;
 }
