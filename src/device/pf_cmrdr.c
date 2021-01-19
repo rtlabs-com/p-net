@@ -25,7 +25,7 @@
  * @brief Implements the Context Management Read Record Responder protocol
  * machine device (CMRDR)
  *
- * Contains a single function \a pf_cmrdr_rm_read_ind(),
+ * Contains mainly one function \a pf_cmrdr_rm_read_ind(),
  * that handles a RPC parameter read request (and read implicit request).
  *
  * Triggers the \a pnet_read_ind() user callback for some values.
@@ -58,9 +58,33 @@ int pf_cmrdr_rm_read_ind (
    uint16_t data_len = 0;
    bool new_flag = false;
 
-#if LOG_INFO_ENABLED(PNET_LOG)
-   char * index_range_text = NULL;
-#endif
+   if (
+      (p_read_request->slot_number == PNET_SLOT_DAP_IDENT) &&
+      (pf_port_subslot_is_dap_port_id (p_read_request->subslot_number) == true))
+   {
+      LOG_INFO (
+         PNET_LOG,
+         "CMRDR(%d): PLC is reading slot %u subslot 0x%04X index 0x%04X "
+         "(local port %d) \"%s\"\n",
+         __LINE__,
+         p_read_request->slot_number,
+         p_read_request->subslot_number,
+         p_read_request->index,
+         pf_port_dap_subslot_to_local_port (p_read_request->subslot_number),
+         pf_index_to_logstring (p_read_request->index));
+   }
+   else
+   {
+      LOG_INFO (
+         PNET_LOG,
+         "CMRDR(%d): PLC is reading slot %u subslot 0x%04X index 0x%04X "
+         "\"%s\"\n",
+         __LINE__,
+         p_read_request->slot_number,
+         p_read_request->subslot_number,
+         p_read_request->index,
+         pf_index_to_logstring (p_read_request->index));
+   }
 
    read_result.sequence_number = p_read_request->sequence_number;
    read_result.ar_uuid = p_read_request->ar_uuid;
@@ -127,59 +151,9 @@ int pf_cmrdr_rm_read_ind (
    }
    else
    {
-
-#if LOG_INFO_ENABLED(PNET_LOG)
-      /* Logging */
-      if (
-         (p_read_request->index >= PF_IDX_SUB_DIAGNOSIS_CH) &&
-         (p_read_request->index <= PF_IDX_SUB_DIAG_MAINT_DEM_ALL))
-      {
-         index_range_text = "subslot";
-      }
-      else if (
-         (p_read_request->index >= PF_IDX_SLOT_DIAGNOSIS_CH) &&
-         (p_read_request->index <= PF_IDX_SLOT_DIAG_MAINT_DEM_ALL))
-      {
-         index_range_text = "slot";
-      }
-      else if (
-         (p_read_request->index >= PF_IDX_API_DIAGNOSIS_CH) &&
-         (p_read_request->index <= PF_IDX_API_DIAG_MAINT_DEM_ALL))
-      {
-         index_range_text = "api";
-      }
-      else if (
-         (p_read_request->index >= PF_IDX_AR_DIAGNOSIS_CH) &&
-         (p_read_request->index <= PF_IDX_AR_DIAG_MAINT_DEM_ALL))
-      {
-         index_range_text = "ar";
-      }
-      else if (p_read_request->index == PF_IDX_DEV_DIAGNOSIS_DMQS)
-      {
-         index_range_text = "device";
-      }
-
-      if (index_range_text != NULL)
-      {
-         LOG_INFO (
-            PNET_LOG,
-            "CMRDR(%d): PLC is reading %s diagnosis. Slot %u subslot 0x%04X "
-            "index 0x%04X\n",
-            __LINE__,
-            index_range_text,
-            p_read_request->slot_number,
-            p_read_request->subslot_number,
-            p_read_request->index);
-      }
-#endif
-
       switch (p_read_request->index)
       {
       case PF_IDX_DEV_IM_0_FILTER_DATA:
-         LOG_INFO (
-            PNET_LOG,
-            "CMRDR(%d): PLC is reading I&M0 filter-data\n",
-            __LINE__);
          /* Block-writer knows where to fetch and how to build the answer. */
          pf_put_im_0_filter_data (net, true, res_size, p_res, p_pos);
          ret = 0;
@@ -355,10 +329,6 @@ int pf_cmrdr_rm_read_ind (
          ret = 0;
          break;
       case PF_IDX_API_REAL_ID_DATA:
-         LOG_INFO (
-            PNET_LOG,
-            "CMRDR(%d): PLC is reading real ID data\n",
-            __LINE__);
          pf_put_ident_data (
             net,
             true,
@@ -377,7 +347,6 @@ int pf_cmrdr_rm_read_ind (
          break;
 
       case PF_IDX_DEV_API_DATA:
-         LOG_INFO (PNET_LOG, "CMRDR(%d): PLC is reading API data\n", __LINE__);
          pf_put_ident_data (
             net,
             true,
@@ -396,12 +365,6 @@ int pf_cmrdr_rm_read_ind (
          break;
 
       case PF_IDX_SUB_INPUT_DATA:
-         LOG_INFO (
-            PNET_LOG,
-            "CMRDR(%d): PLC is reading inputdata. Slot %u subslot 0x%04X\n",
-            __LINE__,
-            p_read_request->slot_number,
-            p_read_request->subslot_number);
          /* Sub-module data to the controller */
          data_len = sizeof (subslot_data);
          iops_len = sizeof (iops);
@@ -457,12 +420,6 @@ int pf_cmrdr_rm_read_ind (
          }
          break;
       case PF_IDX_SUB_OUTPUT_DATA:
-         LOG_INFO (
-            PNET_LOG,
-            "CMRDR(%d): PLC is reading outputdata. Slot %u subslot 0x%04X\n",
-            __LINE__,
-            p_read_request->slot_number,
-            p_read_request->subslot_number);
          /* Sub-module data from the controller. */
          data_len = sizeof (subslot_data);
          iops_len = sizeof (iops);
@@ -854,6 +811,7 @@ int pf_cmrdr_rm_read_ind (
          break;
 
       case PF_IDX_DEV_CONN_MON_TRIGGER:
+         /* Restart timeout period. See pf_cmsm_rm_read_ind() */
          ret = 0;
          break;
 
@@ -933,7 +891,7 @@ int pf_cmrdr_rm_read_ind (
       default:
          LOG_INFO (
             PNET_LOG,
-            "cmrdr(%d): No support for reading index 0x%x\n",
+            "CMRSR(%d): Index 0x%04X is not supported.\n",
             __LINE__,
             p_read_request->index);
          ret = -1;
@@ -943,6 +901,14 @@ int pf_cmrdr_rm_read_ind (
 
    if (ret != 0)
    {
+      LOG_INFO (
+         PNET_LOG,
+         "CMRSR(%d): Could not read index 0x%04X for slot %u subslot 0x%04X.\n",
+         __LINE__,
+         p_read_request->index,
+         p_read_request->slot_number,
+         p_read_request->subslot_number);
+
       p_read_status->pnio_status.error_code = PNET_ERROR_CODE_READ;
       p_read_status->pnio_status.error_decode = PNET_ERROR_DECODE_PNIORW;
       p_read_status->pnio_status.error_code_1 =
@@ -963,4 +929,270 @@ int pf_cmrdr_rm_read_ind (
    ret = pf_cmsm_cm_read_ind (net, p_ar, p_read_request);
 
    return ret;
+}
+
+const char * pf_index_to_logstring (uint16_t index)
+{
+   if (index <= PF_IDX_USER_MAX)
+   {
+      return "user defined";
+   }
+
+   switch (index)
+   {
+   case PF_IDX_SUB_EXP_ID_DATA:
+      return "ExpectedIdentificationData for one subslot";
+   case PF_IDX_SUB_REAL_ID_DATA:
+      return "RealIdentificationData for one subslot";
+   case PF_IDX_SUB_DIAGNOSIS_CH:
+      return "Diagnosis in channel coding for one subslot";
+   case PF_IDX_SUB_DIAGNOSIS_ALL:
+      return "Diagnosis in all codings for one subslot";
+   case PF_IDX_SUB_DIAGNOSIS_DMQS:
+      return "Diagnosis, Maintenance, Qualified and Status for one subslot";
+   case PF_IDX_SUB_DIAG_MAINT_REQ_CH:
+      return "Maintenance required in channel coding for one subslot";
+   case PF_IDX_SUB_DIAG_MAINT_DEM_CH:
+      return "Maintenance demanded in channel coding for one subslot";
+   case PF_IDX_SUB_DIAG_MAINT_REQ_ALL:
+      return "Maintenance required in all codings for one subslot";
+   case PF_IDX_SUB_DIAG_MAINT_DEM_ALL:
+      return "Maintenance demanded in all codings for one subslot";
+   case PF_IDX_SUB_SUBSTITUTE:
+      return "SubstituteValue for one subslot";
+   case PF_IDX_SUB_PDIR:
+      return "PDIRSubframeData for one subslot";
+   case PF_IDX_SUB_PDPORTDATAREALEXT:
+      return "PDPortDataRealExtended for one subslot";
+   case PF_IDX_SUB_INPUT_DATA:
+      return "inputdata for one subslot";
+   case PF_IDX_SUB_OUTPUT_DATA:
+      return "outputdata for one subslot";
+   case PF_IDX_SUB_PDPORT_DATA_REAL:
+      return "PDPortDataReal for one subslot";
+   case PF_IDX_SUB_PDPORT_DATA_CHECK:
+      return "PDPortDataCheck for one subslot";
+   case PF_IDX_SUB_PDIR_DATA:
+      return "PDIRData for one subslot";
+   case PF_IDX_SUB_PDSYNC_ID0:
+      return "PDSyncData for one subslot SyncID=0";
+   case PF_IDX_SUB_PDPORT_DATA_ADJ:
+      return "PDPortDataAdjust for one subslot";
+   case PF_IDX_SUB_ISOCHRONUOUS_DATA:
+      return "IsochronousModeData for one subslot";
+   case PF_IDX_SUB_PDTIME:
+      return "PDTimeData for one subslot";
+   case PF_IDX_SUB_PDINTF_MRP_REAL:
+      return "PDInterfaceMrpDataReal for one subslot";
+   case PF_IDX_SUB_PDINTF_MRP_CHECK:
+      return "PDInterfaceMrpDataCheck for one subslot";
+   case PF_IDX_SUB_PDINTF_MRP_ADJUST:
+      return "PDInterfaceMrpDataAdjust for one subslot";
+   case PF_IDX_SUB_PDPORT_MRP_ADJUST:
+      return "PDPortMrpDataAdjust for one subslot";
+   case PF_IDX_SUB_PDPORT_MRP_REAL:
+      return "PDPortMrpDataReal for one subslot";
+   case PF_IDX_SUB_PDPORT_MRPIC_REAL:
+      return "PDPortMrpIcDataAdjust for one subslot";
+   case PF_IDX_SUB_PDPORT_MRPIC_CHECK:
+      return "PDPortMrpIcDataCheck for one subslot";
+   case PF_IDX_SUB_PDPORT_MRPIC_ADJUST:
+      return "PDPortMrpIcDataReal for one subslot";
+   case PF_IDX_SUB_PDPORT_FO_REAL:
+      return "PDPortFODataReal for one subslot";
+   case PF_IDX_SUB_PDPORT_FO_CHECK:
+      return "PDPortFODataCheck for one subslot";
+   case PF_IDX_SUB_PDPORT_FO_ADJUST:
+      return "PDPortFODataAdjust for one subslot";
+   case PF_IDX_SUB_PDPORT_SPF_CHECK:
+      return "PDPortSFPDataCheck for one subslot";
+   case PF_IDX_SUB_PDNC_CHECK:
+      return "PDNCDataCheck for one subslot";
+   case PF_IDX_SUB_PDINTF_ADJUST:
+      return "PDInterfaceAdjust for one subslot";
+   case PF_IDX_SUB_PDPORT_STATISTIC:
+      return "PDPortStatistic for one subslot";
+   case PF_IDX_SUB_PDINTF_REAL:
+      return "PDInterfaceDataReal for one subslot";
+   case PF_IDX_SUB_PDINTF_FSU_ADJUST:
+      return "PDInterfaceFSUDataAdjust";
+   case PF_IDX_SUB_PE_ENTITY_STATUS:
+      return "PE_EntityStatusData for one subslot";
+   case PF_IDX_SUB_COMBINED_OBJ_CONTAINER:
+      return "CombinedObjectContainer";
+   case PF_IDX_SUB_RS_ADJUST_OBSERVER:
+      return "RS_AdjustObserver";
+   case PF_IDX_TSN_NETWORK_CONTROL_DATA_REAL:
+      return "TSNNetworkControlDataReal";
+   case PF_IDX_TSN_STREAM_PATH_DATA:
+      return "TSNStreamPathData";
+   case PF_IDX_TSN_SYNC_TREE_DATA:
+      return "TSNSyncTreeData";
+   case PF_IDX_TSN_UPLOAD_NETWORK_ATTRIBUTES:
+      return "TSNUploadNetworkAttributes";
+   case PF_IDX_TSN_EXPECTED_NETWORK_ATTRIBUTES:
+      return "TSNExpectedNetworkAttributes";
+   case PF_IDX_TSN_NETWORK_CONTROL_DATA_ADJUST:
+      return "TSNNetworkControlDataAdjust";
+   case PF_IDX_SUB_PDINTF_SECURITY_ADJUST:
+      return "PDInterfaceSecurityAdjust for one subslot";
+   case PF_IDX_SUB_IM_0:
+      return "I&M0";
+   case PF_IDX_SUB_IM_1:
+      return "I&M1";
+   case PF_IDX_SUB_IM_2:
+      return "I&M2";
+   case PF_IDX_SUB_IM_3:
+      return "I&M3";
+   case PF_IDX_SUB_IM_4:
+      return "I&M4";
+   case PF_IDX_SUB_IM_5:
+      return "I&M5";
+   case PF_IDX_SUB_IM_6:
+      return "I&M6";
+   case PF_IDX_SUB_IM_7:
+      return "I&M7";
+   case PF_IDX_SUB_IM_8:
+      return "I&M8";
+   case PF_IDX_SUB_IM_9:
+      return "I&M9";
+   case PF_IDX_SUB_IM_10:
+      return "I&M10";
+   case PF_IDX_SUB_IM_11:
+      return "I&M11";
+   case PF_IDX_SUB_IM_12:
+      return "I&M12";
+   case PF_IDX_SUB_IM_13:
+      return "I&M13";
+   case PF_IDX_SUB_IM_14:
+      return "I&M14";
+   case PF_IDX_SUB_IM_15:
+      return "I&M15";
+   case PF_IDX_SLOT_EXP_ID_DATA:
+      return "ExpectedIdentificationData for one slot";
+   case PF_IDX_SLOT_REAL_ID_DATA:
+      return "RealIdentificationData for one slot";
+   case PF_IDX_SLOT_DIAGNOSIS_CH:
+      return "Diagnosis in channel coding for one slot";
+   case PF_IDX_SLOT_DIAGNOSIS_ALL:
+      return "Diagnosis in all codings for one slot";
+   case PF_IDX_SLOT_DIAGNOSIS_DMQS:
+      return "Diagnosis, Maintenance, Qualified and Status for one slot";
+   case PF_IDX_SLOT_DIAG_MAINT_REQ_CH:
+      return "Maintenance required in channel coding for one slot";
+   case PF_IDX_SLOT_DIAG_MAINT_DEM_CH:
+      return "Maintenance demanded in channel coding for one slot";
+   case PF_IDX_SLOT_DIAG_MAINT_REQ_ALL:
+      return "Maintenance required in all codings for one slot";
+   case PF_IDX_SLOT_DIAG_MAINT_DEM_ALL:
+      return "Maintenance demanded in all codings for one slot";
+   case PF_IDX_AR_EXP_ID_DATA:
+      return "ExpectedIdentificationData for one AR";
+   case PF_IDX_AR_REAL_ID_DATA:
+      return "RealIdentificationData for one AR";
+   case PF_IDX_AR_MOD_DIFF:
+      return "ModuleDiffBlock for one AR";
+   case PF_IDX_AR_DIAGNOSIS_CH:
+      return "Diagnosis in channel coding for one AR";
+   case PF_IDX_AR_DIAGNOSIS_ALL:
+      return "Diagnosis in all codings for one AR";
+   case PF_IDX_AR_DIAGNOSIS_DMQS:
+      return "Diagnosis, Maintenance, Qualified and Status for one AR";
+   case PF_IDX_AR_DIAG_MAINT_REQ_CH:
+      return "Maintenance required in channel coding for one AR";
+   case PF_IDX_AR_DIAG_MAINT_DEM_CH:
+      return "Maintenance demanded in channel coding for one AR";
+   case PF_IDX_AR_DIAG_MAINT_REQ_ALL:
+      return "Maintenance required in all codings for one AR";
+   case PF_IDX_AR_DIAG_MAINT_DEM_ALL:
+      return "Maintenance demanded in all codings for one AR";
+   case PF_IDX_AR_PE_ENTITY_FILTER_DATA:
+      return "PE_EntityFilterData for one AR";
+   case PF_IDX_AR_PE_ENTITY_STATUS_DATA:
+      return "PE_EntityStatusData for one AR";
+   case PF_IDX_AR_WRITE_MULTIPLE:
+      return "WriteMultiple";
+   case PF_IDX_APPLICATION_READY:
+      return "ApplicationReadyBlock, closes parameterization";
+   case PF_IDX_AR_FSU_DATA_ADJUST:
+      return "ARFSUDataAdjust data for one AR";
+   case PF_IDX_AR_RS_GET_EVENT:
+      return "RS_GetEvent";
+   case PF_IDX_AR_RS_ACK_EVENT:
+      return "RS_AckEvent";
+   case PF_IDX_API_REAL_ID_DATA:
+      return "RealIdentificationData for one API";
+   case PF_IDX_API_DIAGNOSIS_CH:
+      return "Diagnosis in channel coding for one API";
+   case PF_IDX_API_DIAGNOSIS_ALL:
+      return "Diagnosis in all codings for one API";
+   case PF_IDX_API_DIAGNOSIS_DMQS:
+      return "Diagnosis, Maintenance, Qualified and Status for one API";
+   case PF_IDX_API_DIAG_MAINT_REQ_CH:
+      return "Maintenance required in channel coding for one API";
+   case PF_IDX_API_DIAG_MAINT_DEM_CH:
+      return "Maintenance demanded in channel coding for one API";
+   case PF_IDX_API_DIAG_MAINT_REQ_ALL:
+      return "Maintenance required in all codings for one API";
+   case PF_IDX_API_DIAG_MAINT_DEM_ALL:
+      return "Maintenance demanded in all codings for one API";
+   case PF_IDX_API_AR_DATA:
+      return "ARData for one API";
+   case PF_IDX_DEV_DIAGNOSIS_DMQS:
+      return "Diagnosis, Maintenance, Qualified and Status for one device";
+   case PF_IDX_DEV_AR_DATA:
+      return "ARData";
+   case PF_IDX_DEV_API_DATA:
+      return "APIData";
+   case PF_IDX_DEV_LOGBOOK_DATA:
+      return "LogBookData";
+   case PF_IDX_DEV_PDEV_DATA:
+      return "PdevData";
+   case PF_IDX_DEV_IM_0_FILTER_DATA:
+      return "I&M0FilterData";
+   case PF_IDX_DEV_PDREAL_DATA:
+      return "PDRealData";
+   case PF_IDX_DEV_PDEXP_DATA:
+      return "PDExpectedData";
+   case PF_IDX_DEV_AUTO_CONFIGURATION:
+      return "AutoConfiguration";
+   case PF_IDX_DEV_GSD_UPLOAD:
+      return "GSD upload";
+   case PF_IDX_DEV_PE_ENTITY_FILTER_DATA:
+      return "PE_EntityFilterData";
+   case PF_IDX_DEV_PE_ENTITY_STATUS_DATA:
+      return "PE_EntityStatusData";
+   case PF_IDX_DEV_ASSET_MANAGEMENT_1:
+      return "AssetManagementData1";
+   case PF_IDX_DEV_ASSET_MANAGEMENT_2:
+      return "AssetManagementData2";
+   case PF_IDX_DEV_ASSET_MANAGEMENT_3:
+      return "AssetManagementData3";
+   case PF_IDX_DEV_ASSET_MANAGEMENT_4:
+      return "AssetManagementData4";
+   case PF_IDX_DEV_ASSET_MANAGEMENT_5:
+      return "AssetManagementData5";
+   case PF_IDX_DEV_ASSET_MANAGEMENT_6:
+      return "AssetManagementData6";
+   case PF_IDX_DEV_ASSET_MANAGEMENT_7:
+      return "AssetManagementData7";
+   case PF_IDX_DEV_ASSET_MANAGEMENT_8:
+      return "AssetManagementData8";
+   case PF_IDX_DEV_ASSET_MANAGEMENT_9:
+      return "AssetManagementData9";
+   case PF_IDX_DEV_ASSET_MANAGEMENT_10:
+      return "AssetManagementData10";
+   case PF_IDX_TSN_STREAM_ADD:
+      return "TSN stream add";
+   case PF_IDX_PDRSI_INSTANCDES:
+      return "PDRsiInstances";
+   case PF_IDX_TSN_STREAM_REMOVE:
+      return "TSN stream remove";
+   case PF_IDX_TSN_STREAM_RENEW:
+      return "TSN stream renew";
+   case PF_IDX_DEV_CONN_MON_TRIGGER:
+      return "nothing, but is restarting the timeout period";
+   default:
+      return "unknown";
+   }
 }

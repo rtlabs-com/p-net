@@ -43,6 +43,14 @@ int pf_cmrdr_rm_read_ind (
    uint8_t * p_res,
    uint16_t * p_pos);
 
+/**
+ * Describe an index on a subslot.
+ *
+ * @param index            In:    The index
+ * @return a descriptive string.
+ */
+const char * pf_index_to_logstring (uint16_t index);
+
 #ifdef __cplusplus
 }
 #endif

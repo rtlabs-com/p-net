@@ -401,8 +401,9 @@ int pf_pdport_read_ind (
    const pnet_port_cfg_t * p_port_cfg;
    uint16_t slot = p_read_req->slot_number;
    uint16_t subslot = p_read_req->subslot_number;
+   uint16_t index = p_read_req->index;
 
-   switch (p_read_req->index)
+   switch (index)
    {
    case PF_IDX_SUB_PDPORT_DATA_REAL:
       if (
@@ -421,6 +422,7 @@ int pf_pdport_read_ind (
          ret = 0;
       }
       break;
+
    case PF_IDX_SUB_PDPORT_DATA_ADJ:
       if (
          (slot == PNET_SLOT_DAP_IDENT) &&
@@ -442,6 +444,7 @@ int pf_pdport_read_ind (
          ret = 0;
       }
       break;
+
    case PF_IDX_SUB_PDPORT_DATA_CHECK:
       if (slot == PNET_SLOT_DAP_IDENT)
       {
@@ -467,6 +470,7 @@ int pf_pdport_read_ind (
              * include all checks in response?
              */
             loc_port_num = PNET_PORT_1;
+
             p_port_data = pf_port_get_state (net, loc_port_num);
             if (p_port_data->pdport.check.active)
             {
@@ -482,7 +486,9 @@ int pf_pdport_read_ind (
          }
       }
       break;
+
    case PF_IDX_DEV_PDREAL_DATA:
+      /* Combined interface and port info and statistics */
       if (
          (slot == PNET_SLOT_DAP_IDENT) &&
          ((subslot == PNET_SUBSLOT_DAP_WHOLE_MODULE) ||
@@ -501,7 +507,13 @@ int pf_pdport_read_ind (
          ret = 0;
       }
       break;
+
    case PF_IDX_DEV_PDEXP_DATA:
+      LOG_INFO (
+         PNET_LOG,
+         "PDPORT(%d): PD exp data is not yet implemented.\n",
+         __LINE__);
+
       /* ToDo: Implement when LLDP is done */
       /*
        * MultipleBlockHeader, { [PDPortDataCheck] a, [PDPortDataAdjust] a,
@@ -549,18 +561,8 @@ int pf_pdport_read_ind (
             ret = 0;
          }
       }
-      else
-      {
-         LOG_INFO (
-            PNET_LOG,
-            "PDPORT(%d): PLC could not read port statistics (index 0x%04X) for "
-            "slot %u, subslot 0x%04X\n",
-            __LINE__,
-            p_read_req->index,
-            slot,
-            subslot);
-      }
       break;
+
    default:
       ret = -1;
       break;
@@ -853,12 +855,9 @@ static int pf_pdport_write_data_check (
 
             LOG_INFO (
                PNET_LOG,
-               "PDPORT(%d): PLC is writing PDPort data check. Slot: %u "
-               "Subslot: "
-               "0x%04x Peers: %u First peer station name: %.*s Port: %.*s\n",
+               "PDPORT(%d): New PDPort data check. Peers: %u First peer "
+               "station name: %.*s Port: %.*s\n",
                __LINE__,
-               port_data_check.slot_number,
-               port_data_check.subslot_number,
                check_peers.number_of_peers,
                check_peers.peers[0].length_peer_station_name,
                check_peers.peers[0].peer_station_name,
@@ -949,8 +948,7 @@ static int pf_pdport_write_data_adj (
 
          LOG_INFO (
             PNET_LOG,
-            "PDPORT(%d): PLC is writing PDPort data adjust. Do not send LLDP: "
-            "%u\n",
+            "PDPORT(%d): New PDPort data adjust. Do not send LLDP: %u\n",
             __LINE__,
             boundary.peer_to_peer_boundary.do_not_send_LLDP_frames);
 
