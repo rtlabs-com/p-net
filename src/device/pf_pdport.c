@@ -206,47 +206,6 @@ static int pf_pdport_save (pnet_t * net, int loc_port_num)
    return ret;
 }
 
-uint16_t pf_pdport_loc_port_num_to_dap_subslot (int loc_port_num)
-{
-   uint16_t subslot =
-      PNET_SUBSLOT_DAP_INTERFACE_1_PORT_1_IDENT + PNET_PORT_1 - loc_port_num;
-   return subslot;
-}
-
-/**
- * @internal
- * Get local port from DAP port subslot
- *
- * Considers PNET_MAX_PORT
- *
- * @param subslot              In: Subslot number
- * @return The port number mapping to the subslot.
- *         0 if the subslot is not supported.
- */
-static int pf_pdport_dap_subslot_to_local_port (uint16_t subslot)
-{
-   int port = PNET_PORT_1 + PNET_SUBSLOT_DAP_INTERFACE_1_PORT_1_IDENT - subslot;
-   if (port < PNET_PORT_1 || port > PNET_MAX_PORT)
-   {
-      port = 0;
-   }
-   return port;
-}
-
-/**
- * @internal
- * Check if a DAP port subslot is mapped to a local port
- *
- * @param subslot              In: Subslot number
- * @return true  if the subslot is mapped to a local port.
- *         false if the subslot is not supported.
- */
-static bool pf_pdport_subslot_is_dap_port_id (uint16_t subslot)
-{
-   int port = pf_pdport_dap_subslot_to_local_port (subslot);
-   return (port != 0);
-}
-
 /**
  * @internal
  * Initialize pdport diagnostic source
@@ -262,7 +221,7 @@ static void pf_pdport_init_diag_source (
 {
    diag_source->api = PNET_API_NO_APPLICATION_PROFILE;
    diag_source->slot = PNET_SLOT_DAP_IDENT;
-   diag_source->subslot = pf_pdport_loc_port_num_to_dap_subslot (loc_port_num);
+   diag_source->subslot = pf_port_loc_port_num_to_dap_subslot (loc_port_num);
    diag_source->ch = PNET_CHANNEL_WHOLE_SUBMODULE;
    diag_source->ch_grouping = PNET_DIAG_CH_INDIVIDUAL_CHANNEL;
    diag_source->ch_direction = PNET_DIAG_CH_PROP_DIR_MANUF_SPEC;
@@ -448,9 +407,9 @@ int pf_pdport_read_ind (
    case PF_IDX_SUB_PDPORT_DATA_REAL:
       if (
          (slot == PNET_SLOT_DAP_IDENT) &&
-         (pf_pdport_subslot_is_dap_port_id (subslot) == true))
+         (pf_port_subslot_is_dap_port_id (subslot) == true))
       {
-         loc_port_num = pf_pdport_dap_subslot_to_local_port (subslot);
+         loc_port_num = pf_port_dap_subslot_to_local_port (subslot);
          pf_put_pdport_data_real (
             net,
             loc_port_num,
@@ -465,9 +424,9 @@ int pf_pdport_read_ind (
    case PF_IDX_SUB_PDPORT_DATA_ADJ:
       if (
          (slot == PNET_SLOT_DAP_IDENT) &&
-         (pf_pdport_subslot_is_dap_port_id (subslot) == true))
+         (pf_port_subslot_is_dap_port_id (subslot) == true))
       {
-         loc_port_num = pf_pdport_dap_subslot_to_local_port (subslot);
+         loc_port_num = pf_port_dap_subslot_to_local_port (subslot);
          p_port_data = pf_port_get_state (net, loc_port_num);
          if (p_port_data->pdport.adjust.active)
          {
@@ -486,9 +445,9 @@ int pf_pdport_read_ind (
    case PF_IDX_SUB_PDPORT_DATA_CHECK:
       if (slot == PNET_SLOT_DAP_IDENT)
       {
-         if (pf_pdport_subslot_is_dap_port_id (subslot) == true)
+         if (pf_port_subslot_is_dap_port_id (subslot) == true)
          {
-            loc_port_num = pf_pdport_dap_subslot_to_local_port (subslot);
+            loc_port_num = pf_port_dap_subslot_to_local_port (subslot);
             p_port_data = pf_port_get_state (net, loc_port_num);
             if (p_port_data->pdport.check.active)
             {
@@ -557,13 +516,14 @@ int pf_pdport_read_ind (
        */
       ret = 0;
       break;
+
    case PF_IDX_SUB_PDPORT_STATISTIC:
       if (
          (slot == PNET_SLOT_DAP_IDENT) &&
          ((subslot == PNET_SUBSLOT_DAP_INTERFACE_1_IDENT) ||
-          (pf_pdport_subslot_is_dap_port_id (subslot) == true)))
+          (pf_port_subslot_is_dap_port_id (subslot) == true)))
       {
-         loc_port_num = pf_pdport_dap_subslot_to_local_port (subslot);
+         loc_port_num = pf_port_dap_subslot_to_local_port (subslot);
 
          /* TODO Summarize port statistics for
                  PNET_SUBSLOT_DAP_INTERFACE_1_IDENT
@@ -1036,7 +996,7 @@ int pf_pdport_write_req (
 {
    int ret = -1;
    int loc_port_num =
-      pf_pdport_dap_subslot_to_local_port (p_write_req->subslot_number);
+      pf_port_dap_subslot_to_local_port (p_write_req->subslot_number);
 
    if (loc_port_num > 0)
    {

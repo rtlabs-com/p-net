@@ -70,6 +70,36 @@ void pf_port_init_iterator_over_ports (
 int pf_port_get_next (pf_port_iterator_t * p_iterator);
 
 /**
+ * Get DAP port subslot using local port number
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param loc_port_num     In:    Local port number.
+ *                                Valid range: 1 .. PNET_MAX_PORT
+ * @return DAP subslot number for port identity
+ */
+uint16_t pf_port_loc_port_num_to_dap_subslot (int loc_port_num);
+
+/**
+ * Check if a DAP port subslot is mapped to a local port
+ *
+ * @param subslot              In: Subslot number
+ * @return true  if the subslot is mapped to a local port.
+ *         false if the subslot is not supported.
+ */
+bool pf_port_subslot_is_dap_port_id (uint16_t subslot);
+
+/**
+ * Get local port from DAP port subslot
+ *
+ * Considers PNET_MAX_PORT
+ *
+ * @param subslot              In: Subslot number
+ * @return The port number mapping to the subslot.
+ *         0 if the subslot is not supported.
+ */
+int pf_port_dap_subslot_to_local_port (uint16_t subslot);
+
+/**
  * Get port runtime data.
  *
  * If the local port number is out of range this operation will assert.

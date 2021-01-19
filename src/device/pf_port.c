@@ -97,3 +97,26 @@ const pnet_port_cfg_t * pf_port_get_config (pnet_t * net, int loc_port_num)
    CC_ASSERT (loc_port_num > 0 && loc_port_num <= PNET_MAX_PORT);
    return &net->fspm_cfg.if_cfg.ports[loc_port_num - 1];
 }
+
+uint16_t pf_port_loc_port_num_to_dap_subslot (int loc_port_num)
+{
+   uint16_t subslot =
+      PNET_SUBSLOT_DAP_INTERFACE_1_PORT_1_IDENT + PNET_PORT_1 - loc_port_num;
+   return subslot;
+}
+
+int pf_port_dap_subslot_to_local_port (uint16_t subslot)
+{
+   int port = PNET_PORT_1 + PNET_SUBSLOT_DAP_INTERFACE_1_PORT_1_IDENT - subslot;
+   if (port < PNET_PORT_1 || port > PNET_MAX_PORT)
+   {
+      port = 0;
+   }
+   return port;
+}
+
+bool pf_port_subslot_is_dap_port_id (uint16_t subslot)
+{
+   int port = pf_port_dap_subslot_to_local_port (subslot);
+   return (port != 0);
+}
