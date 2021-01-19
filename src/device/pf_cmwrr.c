@@ -155,6 +155,35 @@ static int pf_cmwrr_write (
 {
    int ret = -1;
 
+   if (
+      (p_write_request->slot_number == PNET_SLOT_DAP_IDENT) &&
+      (pf_port_subslot_is_dap_port_id (p_write_request->subslot_number) ==
+       true))
+   {
+      LOG_INFO (
+         PNET_LOG,
+         "CMWRR(%d): PLC is writing slot %u subslot 0x%04X index 0x%04X "
+         "(local port %u) \"%s\"\n",
+         __LINE__,
+         p_write_request->slot_number,
+         p_write_request->subslot_number,
+         p_write_request->index,
+         pf_port_dap_subslot_to_local_port (p_write_request->subslot_number),
+         pf_index_to_logstring (p_write_request->index));
+   }
+   else
+   {
+      LOG_INFO (
+         PNET_LOG,
+         "CMWRR(%d): PLC is writing slot %u subslot 0x%04X index 0x%04X "
+         "\"%s\"\n",
+         __LINE__,
+         p_write_request->slot_number,
+         p_write_request->subslot_number,
+         p_write_request->index,
+         pf_index_to_logstring (p_write_request->index));
+   }
+
    if (p_write_request->index <= PF_IDX_USER_MAX)
    {
       /* User defined indexes */
@@ -200,6 +229,17 @@ static int pf_cmwrr_write (
 
    (*p_req_pos) += data_length;
 
+   if (ret != 0)
+   {
+      LOG_INFO (
+         PNET_LOG,
+         "CMRSR(%d): Could not write index 0x%04X for slot %u subslot "
+         "0x%04X.\n",
+         __LINE__,
+         p_write_request->index,
+         p_write_request->slot_number,
+         p_write_request->subslot_number);
+   }
    return ret;
 }
 
