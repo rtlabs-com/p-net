@@ -14,12 +14,14 @@
  ********************************************************************/
 
 #include "pnal.h"
+
 #include "osal.h"
 #include "osal_log.h"
 #include "options.h"
 
 #include <drivers/net.h>
 #include <gpio.h>
+#include <lwip/apps/snmp.h>
 #include <lwip/netif.h>
 #include <lwip/snmp.h>
 #include <lwip/sys.h>
