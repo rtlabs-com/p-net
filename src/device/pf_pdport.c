@@ -569,34 +569,40 @@ int pf_pdport_read_ind (
       {
          loc_port_num = pf_pdport_dap_subslot_to_local_port (subslot);
 
-         if (loc_port_num != 0)
+         /* TODO Summarize port statistics for
+                 PNET_SUBSLOT_DAP_INTERFACE_1_IDENT
+                 when we support multiple ports */
+         if (loc_port_num == 0)
          {
-            p_port_cfg = pf_lldp_get_port_config (net, loc_port_num);
-            if (
-               pnal_get_port_statistics (
-                  p_port_cfg->phy_port.if_name,
-                  &port_stats) == 0)
-            {
-               pf_put_pdport_statistics (
-                  &port_stats,
-                  true,
-                  p_read_res,
-                  res_size,
-                  p_res,
-                  p_pos);
-               ret = 0;
-            }
+            loc_port_num = 1;
          }
-         else
+
+         p_port_cfg = pf_lldp_get_port_config (net, loc_port_num);
+         if (
+            pnal_get_port_statistics (
+               p_port_cfg->phy_port.if_name,
+               &port_stats) == 0)
          {
-            /* TODO What should be provided for
-                    PNET_SUBSLOT_DAP_INTERFACE_1_IDENT? */
-            LOG_DEBUG (
-               PNET_LOG,
-               "PDPORT(%d): PF_IDX_SUB_PDPORT_STATISTIC for "
-               "PNET_SUBSLOT_DAP_INTERFACE_1_IDENT is not yet implemented\n",
-               __LINE__);
+            pf_put_pdport_statistics (
+               &port_stats,
+               true,
+               p_read_res,
+               res_size,
+               p_res,
+               p_pos);
+            ret = 0;
          }
+      }
+      else
+      {
+         LOG_INFO (
+            PNET_LOG,
+            "PDPORT(%d): PLC could not read port statistics (index 0x%04X) for "
+            "slot %u, subslot 0x%04X\n",
+            __LINE__,
+            p_read_req->index,
+            slot,
+            subslot);
       }
       break;
    default:
