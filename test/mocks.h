@@ -52,6 +52,7 @@ typedef struct mock_os_data_obj
    uint32_t system_uptime_10ms;
 
    int interface_index;
+   pnal_eth_handle_t * eth_if_handle;
 
    char file_fullpath[100]; /* Full file path at latest save operation */
    uint16_t file_size;
@@ -82,7 +83,6 @@ typedef struct mock_file_data
 typedef struct mock_fspm_data
 {
    char im_location[PNET_LOCATION_MAX_SIZE];
-
 } mock_fspm_data_t;
 
 extern mock_os_data_t mock_os_data;

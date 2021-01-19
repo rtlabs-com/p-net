@@ -129,6 +129,28 @@ pf_port_t * pf_port_get_state (pnet_t * net, int loc_port_num);
  */
 const pnet_port_cfg_t * pf_port_get_config (pnet_t * net, int loc_port_num);
 
+/**
+ * Check if port number corresponds to a valid physical port.
+ *
+ * @param net              In:    The p-net stack instance
+ * @param loc_port_num     In:    Local port number.
+ *                                Valid range: 1 .. PNET_MAX_PORT
+ * @return  true  if port number is valid,
+ *          false if not
+ */
+bool pf_port_is_valid (pnet_t * net, int loc_port_num);
+
+/**
+ * Get port number for network interface. If network interface
+ * is not a physical port, zero is returned.
+ *
+ * @param net              In:    The p-net stack instance.
+ * @param eth_handle       In:    Network interface handle.
+ * @return local port number
+ *         0 if no local port matches the network interface handle
+ */
+int pf_port_get_port_number (pnet_t * net, pnal_eth_handle_t * eth_handle);
+
 #ifdef __cplusplus
 }
 #endif

@@ -341,12 +341,20 @@ void pf_lldp_send_disable (pnet_t * net, int loc_port_num);
  * Parse LLDP tlv format and store selected information.
  * Trigger alarms if needed.
  * @param net              InOut: The p-net stack instance.
- * @param p_frame_buf      InOut: The Ethernet frame.
+ * @param eth_handle       In:    Network interface the LLDP message was
+ *                                received on. This should be a physical port
+ *                                and not the management port (unless system
+ *                                only supports a single physical port).
+ * @param p_frame_buf      InOut: Received LLDP message.
  * @param offset           In:    The offset to start of LLDP data.
  * @return  0     If the frame was NOT handled by this function.
  *          1     If the frame was handled and the buffer freed.
  */
-int pf_lldp_recv (pnet_t * net, pnal_buf_t * p_frame_buf, uint16_t offset);
+int pf_lldp_recv (
+   pnet_t * net,
+   pnal_eth_handle_t * eth_handle,
+   pnal_buf_t * p_frame_buf,
+   uint16_t offset);
 
 /************ Internal functions, made available for unit testing ************/
 

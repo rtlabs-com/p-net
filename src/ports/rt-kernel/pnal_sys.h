@@ -34,25 +34,12 @@ typedef struct pbuf pnal_buf_t;
  */
 #define IOCTL_NET_SET_RX_HOOK 0x601
 
+typedef int (pnal_eth_sys_recv_callback_t) (
+   struct netif * netif,
+   void * arg,
+   pnal_buf_t * p_buf);
+
 int eth_ioctl (drv_t * drv, void * arg, int req, void * param);
-
-/**
- * The prototype of raw Ethernet reception call-back functions.
- * *
- * @param arg              In:   User-defined (may be NULL).
- * @param p_buf            In:   The incoming Ethernet frame
- *
- * @return  0  If the frame was NOT handled by this function.
- *          1  If the frame was handled and the buffer freed.
- */
-typedef int (pnal_eth_callback_t) (void * arg, pnal_buf_t * p_buf);
-
-typedef struct os_eth_handle
-{
-   pnal_eth_callback_t * callback;
-   void * arg;
-   int if_id;
-} pnal_eth_handle_t;
 
 #ifdef __cplusplus
 }

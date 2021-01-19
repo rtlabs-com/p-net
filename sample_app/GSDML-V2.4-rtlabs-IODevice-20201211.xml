@@ -59,6 +59,15 @@
                         <MAUTypeItem Value="16"/>
                      </MAUTypeList>
                   </PortSubmoduleItem>
+<!-- Enable to support additional port. (PNET_MAX_PORT == 2)        -->
+<!-- Add additional PortSubmoduleItems to support additional ports  -->
+<!--
+                  <PortSubmoduleItem ID="IDS_P2" SubmoduleIdentNumber="0x00008002" SubslotNumber="32770" TextId="IDT_NAME_PS2" MaxPortRxDelay="350" MaxPortTxDelay="160">
+                     <MAUTypeList>
+                        <MAUTypeItem Value="16"/>
+                     </MAUTypeList>
+                  </PortSubmoduleItem>
+-->
                </SystemDefinedSubmoduleList>
             </DeviceAccessPointItem>
          </DeviceAccessPointList>
@@ -195,6 +204,7 @@
                <Text TextId="IDT_CUSTOM_LOGBOOK_1" Value="Custom Logbook entry"/>
                <Text TextId="IDT_NAME_IS" Value="I"/>
                <Text TextId="IDT_NAME_PS1" Value="P1"/>
+               <Text TextId="IDT_NAME_PS2" Value="P2"/>
                <!--module name-->
                <Text TextId="TOK_TextId_Module_I8" Value="8 bits I"/>
                <Text TextId="TOK_TextId_Module_O8" Value="8 bits O"/>

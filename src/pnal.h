@@ -108,7 +108,7 @@ typedef struct pnal_port_stats
 #define PNAL_IP4_ADDR_TO_U32(ipaddr, a, b, c, d)                               \
    ipaddr = PNAL_MAKEU32 (a, b, c, d)
 
-enum pnal_eth_type
+typedef enum pnal_ethertype
 {
    PNAL_ETHTYPE_IP = 0x0800U,
    PNAL_ETHTYPE_ARP = 0x0806U,
@@ -116,7 +116,8 @@ enum pnal_eth_type
    PNAL_ETHTYPE_PROFINET = 0x8892U,
    PNAL_ETHTYPE_ETHERCAT = 0x88A4U,
    PNAL_ETHTYPE_LLDP = 0x88CCU,
-};
+   PNAL_ETHTYPE_ALL = 0xFFFFU,
+} pnal_ethertype_t;
 
 /* 255.255.255.255 */
 #ifndef PNAL_IPADDR_NONE
@@ -263,6 +264,26 @@ void pnal_buf_free (pnal_buf_t * p);
 uint8_t pnal_buf_header (pnal_buf_t * p, int16_t header_size_increment);
 
 /**
+ * Network interface handle, forward declaration.
+ */
+typedef struct pnal_eth_handle_t pnal_eth_handle_t;
+
+/**
+ * The prototype of raw Ethernet reception call-back functions.
+ *
+ * @param eth_handle       InOut: Network interface handle
+ * @param arg              InOut: User-defined (may be NULL).
+ * @param p_buf            InOut: The incoming Ethernet frame
+ *
+ * @return  0  If the frame was NOT handled by this function.
+ *          1  If the frame was handled and the buffer freed.
+ */
+typedef int (pnal_eth_callback_t) (
+   pnal_eth_handle_t * eth_handle,
+   void * arg,
+   pnal_buf_t * p_buf);
+
+/**
  * Get status of Ethernet link on specified port
  *
  * @param interface_name   In:    Ethernet interface name, for example eth0
@@ -316,6 +337,8 @@ int pnal_eth_send (pnal_eth_handle_t * handle, pnal_buf_t * buf);
  * Initialize receiving of raw Ethernet frames (in separate thread)
  *
  * @param if_name          In:    Ethernet interface name
+ * @param receive_type     In:    Ethernet frame types that shall be received
+ *                                by the network interface / port.
  * @param callback         In:    Callback for received raw Ethernet frames
  * @param arg              InOut: User argument passed to the callback
  *
@@ -323,6 +346,7 @@ int pnal_eth_send (pnal_eth_handle_t * handle, pnal_buf_t * buf);
  */
 pnal_eth_handle_t * pnal_eth_init (
    const char * if_name,
+   pnal_ethertype_t receive_type,
    pnal_eth_callback_t * callback,
    void * arg);
 
