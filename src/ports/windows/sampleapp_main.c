@@ -5,6 +5,7 @@
  ********************************************************************/
 
 #include "sampleapp_common.h"
+#include "pcap_helper.h"
 
 #include "osal_log.h"
 #include "osal.h"
@@ -13,7 +14,7 @@
 
 #include <string.h>
 
-#define APP_DEFAULT_ETHERNET_INTERFACE "eth0"
+#define APP_DEFAULT_ETHERNET_INTERFACE ""   /* will result in selection */
 #define APP_DEFAULT_FILE_DIRECTORY     "c:\\Temp"
 
 /********************************** Globals ***********************************/
@@ -94,9 +95,17 @@ int main (void)
       printf ("Default station name: %s\n", appdata.arguments.station_name);
    }
 
+   /* Select network adapter */
+   pcap_helper_init();
+   if (appdata.arguments.eth_interface[0] == 0)
+    if (pcap_helper_list_and_select_adapter (appdata.arguments.eth_interface) < 0)
+      return -1;
+   if (pcap_helper_populate_adapter_info (appdata.arguments.eth_interface) < 0)
+      return -1;
+
    /* Read IP, netmask, gateway and MAC address from operating system */
    ret = pnal_get_macaddress (appdata.arguments.eth_interface, &macbuffer);
-   if (ret != 0)
+   if (ret < 0)
    {
       printf ("Error: The given Ethernet interface does not exist: %s\n", appdata.arguments.eth_interface);
       return -1;
