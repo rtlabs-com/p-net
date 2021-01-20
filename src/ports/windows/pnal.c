@@ -4,6 +4,7 @@
  * full license information.
  ********************************************************************/
 
+#include <ws2tcpip.h>
 #include "pnal.h"
 
 #include "osal.h"
@@ -12,6 +13,8 @@
 
 #include <stdio.h>
 #include <string.h>
+
+#include "pcap_helper.h"
 
 /********************************* Files *************************************/
 
@@ -101,11 +104,7 @@ int pnal_load_file (const char * fullpath,void * object_1,size_t size_1,void * o
 
 uint32_t pnal_get_system_uptime_10ms (void)
 {
-   uint32_t uptime;
-
-   /* TODO: Get sysUptime from SNMP MIB-II */
-   uptime = 0;
-   return uptime;
+   return (uint32_t) (GetTickCount64() / 10);
 }
 
 pnal_buf_t * pnal_buf_alloc (uint16_t length)
@@ -140,51 +139,112 @@ uint8_t pnal_buf_header (pnal_buf_t * p, int16_t header_size_increment)
 
 int pnal_set_ip_suite (const char * interface_name,const pnal_ipaddr_t * p_ipaddr,const pnal_ipaddr_t * p_netmask,const pnal_ipaddr_t * p_gw,const char * hostname,bool permanent)
 {
+   pnal_ipaddr_t tmp;
+
+   char ip_string[PNAL_INET_ADDRSTR_SIZE];      /** Terminated string */
+   char netmask_string[PNAL_INET_ADDRSTR_SIZE]; /** Terminated string */
+   char gateway_string[PNAL_INET_ADDRSTR_SIZE]; /** Terminated string */
+
+   tmp = htonl (*p_ipaddr);
+   inet_ntop (AF_INET, &tmp, ip_string, PNAL_INET_ADDRSTR_SIZE);
+   tmp = htonl (*p_netmask);
+   inet_ntop (AF_INET, &tmp, netmask_string, PNAL_INET_ADDRSTR_SIZE);
+   tmp = htonl (*p_gw);
+   inet_ntop (AF_INET, &tmp, gateway_string, PNAL_INET_ADDRSTR_SIZE);
+
+   printf("\r\nSet network parameters to:\r\n");
+   printf ("Ip: %s\r\n", ip_string);
+   printf ("Netmask: %s\r\n", netmask_string);
+   printf ("Gateway: %s\r\n", gateway_string);
+   printf ("Hostname: %s\r\n", hostname);
+   printf ("Permanent: %s\r\n", permanent ? "True" : "False");
+   printf ("\r\n");
+
+   LOG_WARNING (
+      PF_PNAL_LOG,
+      "PNAL(%d): pnal_set_ip_suite not really supported on Windows\n",
+      __LINE__);
+
    return 0;
 }
 
 int pnal_eth_get_status (const char * interface_name, pnal_eth_status_t * status)
 {
+   /* Is autonegotiation supported on this port? */
+   //bool is_autonegotiation_supported;
+
+   /* Is autonegotiation supported on this port? */
+   //bool is_autonegotiation_enabled;
+
+   /* Capabilites advertised to link partner during autonegotiation.
+    *
+    * See macros PNAL_ETH_AUTONEG_CAP_xxx.
+    */
+   //uint16_t autonegotiation_advertised_capabilities;
+
+   /* Operational MAU type.
+    *
+    * This specifies both the physical medium as well as
+    * speed and duplex setting used for the link.
+    */
+   //pnal_eth_mau_t operational_mau_type;
+
+   /*
+    * Not sure, that we able to get this stuff from Windows
+    */
+
+   LOG_WARNING (
+      PF_PNAL_LOG,
+      "PNAL(%d): pnal_eth_get_status not yet supported on Windows\n",
+      __LINE__);
+
    return 0;
 }
 
 int pnal_get_interface_index (const char * interface_name)
 {
-   return 0;
+   int ret = -1;
+   if (sscanf (interface_name, "eth%d", &ret) != 1)
+      return -EFAULT;
+   return ret;
 }
 
 int pnal_get_port_statistics (const char * interface_name, pnal_port_stats_t * port_stats)
 {
    memset (port_stats, 0, sizeof (pnal_port_stats_t));
 
+   LOG_WARNING (
+      PF_PNAL_LOG,
+      "PNAL(%d): pnal_get_port_statistics not yet supported on Windows\n",
+      __LINE__);
+
    return 0;
 }
 
 int pnal_get_macaddress (const char * interface_name, pnal_ethaddr_t * mac_addr)
 {
-   int ret = 0;
-   
-   return ret;
+   memcpy(mac_addr, pcap_helper_get_mac(), 6);
+   return 0;
 }
 
 pnal_ipaddr_t pnal_get_ip_address (const char * interface_name)
 {
-   return 0;
+   return pcap_helper_get_ip();
 }
 
 pnal_ipaddr_t pnal_get_netmask (const char * interface_name)
 {
-   return 0;
+   return pcap_helper_get_netmask();
 }
 
 pnal_ipaddr_t pnal_get_gateway (const char * interface_name)
 {
-   return 0;
+   return pcap_helper_get_gateway();
 }
 
 int pnal_get_hostname (char * hostname)
 {
-   return 0;
+   return gethostname (hostname, PNAL_HOSTNAME_MAX_SIZE);
 }
 
 int pnal_get_ip_suite (const char * interface_name, pnal_ipaddr_t * p_ipaddr, pnal_ipaddr_t * p_netmask, pnal_ipaddr_t * p_gw, char * hostname)

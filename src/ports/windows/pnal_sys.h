@@ -36,7 +36,7 @@ typedef struct os_eth_handle
 {
    pnal_eth_callback_t * callback;
    void * arg;
-   int socket;
+   void * pcap_handle;
    os_thread_t * thread;
 } pnal_eth_handle_t;
 
