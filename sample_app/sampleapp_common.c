@@ -1454,7 +1454,7 @@ static void app_handle_send_alarm_ack (
  * All input modules will be provided with the same data.
  *
  * The output LED (data LED) will be affected only by outputdata to the
- * module with lowest slot number.
+ * output module with lowest slot number.
  *
  * @param net              InOut: p-net stack instance
  * @param p_appdata        In:    Application data

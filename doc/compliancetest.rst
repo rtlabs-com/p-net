@@ -78,7 +78,7 @@ Adjust the settings of the Ethernet card of your personal computer to use
 100 Mbit/s full duplex (otherwise the test case "Different access ways
 port-to-port" will fail).
 
-Set the IP address to 192.168.0.25 and netmask to 255.255.255.0.
+Set the IP address to ``192.168.0.25`` and netmask to ``255.255.255.0``.
 
 Use a separate network for running tests with Advanced RT tester
 (avoid running it on a network with unrelated devices).
@@ -136,19 +136,23 @@ Some of the test cases requires additional hardware; a Profinet-enabled switch
 ("Device B") and an IO-controller ("Device A"). Also a remote controlled
 power outlet can be used to simplify the tests.
 
-+-------------------------+-----------------------------+-------------------+
-| Item                    | IP address                  | Description       |
-+=========================+=============================+===================+
-| Device under test (DUT) | 192.168.0.50                |                   |
-+-------------------------+-----------------------------+-------------------+
-| ART tester on PC        | 192.168.0.25, 192.168.1.143 |                   |
-+-------------------------+-----------------------------+-------------------+
-| PLC ("Device A")        | 192.168.0.100               |                   |
-+-------------------------+-----------------------------+-------------------+
-| Switch (“Device B”)     | 192.168.0.99                |                   |
-+-------------------------+-----------------------------+-------------------+
-| Power outlet            | 192.168.1.244               | Separate network  |
-+-------------------------+-----------------------------+-------------------+
++-------------------------+-----------------------------+------------------------+
+| Item                    | IP address                  | Description            |
++=========================+=============================+========================+
+| Device under test (DUT) | 192.168.0.50                |                        |
++-------------------------+-----------------------------+------------------------+
+| ART tester on PC        | 192.168.0.25, 192.168.1.143 |                        |
++-------------------------+-----------------------------+------------------------+
+| PLC ("Device A")        | 192.168.0.100               |                        |
++-------------------------+-----------------------------+------------------------+
+| Switch (“Device B”)     | 192.168.0.99                |                        |
++-------------------------+-----------------------------+------------------------+
+| Neighbour (“Device D”)  | 192.168.0.98                | To port 2 of DUT       |
++-------------------------+-----------------------------+------------------------+
+| Neighbour (“Device E”)  | 192.168.0.97                | To highest port of DUT |
++-------------------------+-----------------------------+------------------------+
+| Power outlet            | 192.168.1.244               | Separate network       |
++-------------------------+-----------------------------+------------------------+
 
 
 Profinet-enabled switch
@@ -158,7 +162,7 @@ switch.
 
 The test specification of version V 2.41 recommends the use of a
 Siemens Scalance X204IRT (article number 6GK5204-0BA00-2BA3).
-It should have IP address 192.168.0.99, netmask 255.255.255.0 and station name "b".
+It should have IP address ``192.168.0.99``, netmask ``255.255.255.0`` and station name "b".
 Use for example Codesys to scan for the device, and to adjust the IP settings.
 Alternatively, use SinecPni to change the IP address (see the Simatic
 page in this documentation).
@@ -183,21 +187,31 @@ Connection of the switch ports is described in the table below:
 The Automated RT tester will detect "Device B" by itself. No configuration is
 required in the Automated RT tester menu.
 
+The setting "Use IEC V2.2 LLDP mode" available via the STEP7 Profinet setup
+tool controls the format of the sent portID in LLDP frames.
+With the "Use IEC V2.2 LLDP mode" enabled the portID is sent as ``port-001``,
+while it is sent as ``port-001.b`` if disabled. The latter format is used in
+Profinet 2.3 and newer. The ART tester requires the LLDP format to be in the
+2.2 format, otherwise it will complain about portID length.
+One way to restore the behavior to the 2.2 format is to do a factory reset
+of the switch via the web interface or by pressing the SET button for more than
+20 seconds (if the button not is disabled in the web interface).
+
 
 Remote controlled power outlet
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 The Automated RT Tester can control an "Anel Net-PwrCtrl" power outlet via Ethernet.
 It must be connected via a separate Ethernet
-interface on the personal computer. Use a static IP address 192.168.1.243 with
-subnet mask to 255.255.255.0 on that interface.
+interface on the personal computer. Use a static IP address ``192.168.1.243`` with
+subnet mask to ``255.255.255.0`` on that interface.
 
-The Power outlet has a default IP address of 192.168.0.244, and it has a
+The Power outlet has a default IP address of ``192.168.0.244``, and it has a
 built-in web server. Enter its IP address in your web browser to log in
 (username and password printed on the hardware).
-(You might need to temporary set your Ethernet interface to IP 192.168.0.1
-and subnet mask to 255.255.255.0)
+(You might need to temporary set your Ethernet interface to IP ``192.168.0.1``
+and subnet mask to ``255.255.255.0``)
 Modify the IP settings (on the "Einstellung" page) to use a static IP address
-of 192.168.1.244.
+of ``192.168.1.244``.
 On the "Steuerung" page you can control the individual power outputs.
 
 Connect power for your device under test to connector number 3 on the power outlet.
@@ -206,6 +220,21 @@ Test the functionality from Automated RT Tester by clicking on the symbol to the
 left of the "PowerOutlet" text in the tool bar. The symbol to the right of the
 "PowerOutlet" text shows a green check mark when the outputs are on, and a
 black cross when the outputs are off (or when the power outlet not is connected).
+
++--------------+------------------------------------------------------------+
+| Power outlet | Connected to                                               |
++==============+============================================================+
+| 1            | PLC "A"                                                    |
++--------------+------------------------------------------------------------+
+| 2            | Profinet enabled switch "B"                                |
++--------------+------------------------------------------------------------+
+| 3            | Device under test (DUT) running p-net                      |
++--------------+------------------------------------------------------------+
+| 4            | Neighbour device "D", connected to DUT port 2              |
++--------------+------------------------------------------------------------+
+| 5            | Neighbour device "E", connected to DUT highest port number |
++--------------+------------------------------------------------------------+
+
 
 Hardware naming
 ^^^^^^^^^^^^^^^
@@ -216,22 +245,105 @@ a list of Siemens naming conventions is provided here:
 * AI: Analog input module
 * AQ: Analog output module
 * BA: Basic
+* BA: Busadapter (with RJ45 or fiber optic connectors)
 * BU: BaseUnit (for mounting input and output modules)
 * CM: Communication module
 * DI: Digital input module
 * DP: Profibus DP
 * DQ: Digital output module
 * F-: Fail safe
+* FC: Fast Connect (A bus adapter for network cables)
 * HF: High feature
 * HS: High speed
 * IM: Interface Module
+* L+: +24 V DC
+* M: Ground connection
 * P: Port
 * PN: Profinet
 * R: Ring port for media redundancy
 * SM: Special module
+* SP: Scalable Peripherals
 * ST: Standard
 * TM: Technology module
 * X: Interface
+
+
+Siemens IO-device for verification of multi-port devices
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
++--------------------------------------+-------------------------------------------+
+| Part                                 | Comments                                  |
++======================================+===========================================+
+| Interface module ET200 IM155-6PN/2HF |                                           |
++--------------------------------------+-------------------------------------------+
+| Digital output module DQ 132         | In slot 1 (closest to interface module)   |
++--------------------------------------+-------------------------------------------+
+| Digital input module DI 131          | In slot 2                                 |
++--------------------------------------+-------------------------------------------+
+| Base uint A0 (24 VDC, light colored) | One for each input/output module          |
++--------------------------------------+-------------------------------------------+
+| Bus adapter                          | With two RJ45 connectors                  |
++--------------------------------------+-------------------------------------------+
+| Server module                        | Delivered with the interface module. Put  |
+|                                      | it in slot 3.                             |
++--------------------------------------+-------------------------------------------+
+
+See the Profinet test specification for part numbers.
+
+Light-colored bus adapters are used for supply voltage distribution.
+The cyan-colored (auxiliary) terminals on bus-adapters are all connected together.
+If you only use light-colored bus adapters, then the cyan-colored terminals on
+one bus adapter are isolated from the corresponding terminals on other bus adapters.
+
+Connect +24 V to the red terminals of the interface module and the base units.
+Connect 0 V to the blue terminals of the interface module and the base units.
+
+Connect a button via wires to the digital input (DI) module. Connect it between
+DI.7 (pin 18) and and +24 V. The LED ".7" on the input module will be green
+when the button is pressed.
+
+The LED ".7" on the digital output module (DQ) will be green when the output
+is high (+24 V).
+
+.. image:: illustrations/SimaticIoDevice.jpg
+
+See the page on setting up a Simatic PLC in this documentation for
+instructions on usage.
+
+
+Set up Cisco SF352-08P switch
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+For multiport Profinet devices, also SNMP-communication to non-Profinet
+devices is verified. This Cisco switch can be used for that purpose.
+
+Connect an Ethernet cable to port G1.
+Set your laptop IP address to ``192.168.1.143`` and netmask to be ``255.255.255.0``.
+Log in to ``192.168.1.254``. Default username is ``cisco`` and password is ``cisco``.
+Change password when prompted.
+
+Set the IP address via the left side menu "IP configuration" -> "IPv4 Management and Interfaces" -> "IPv4 Interface".
+Click "Add" and enter the static IP address ``192.168.0.98``. Use netmask ``255.255.255.0``.
+The switch will change IP address to a new subnet, so you might need to change your
+laptop network setting before connecting to the new IP address.
+
+Adjust LLDP settings via menu Administration -> "Discovery - LLDP" -> Properties.
+In the page top bar, set "Display mode" to Advanced. Set "Chassis ID Advertisement"
+to "MAC Address".
+
+Via Administration -> "Discovery - LLDP" -> "Port settings" select port FE1 and
+click Edit. Enable SNMP notification. Select the optional TLVs that start with "802.3".
+
+Via the menu Security -> "TCO/UDP Services", enable "SNMP Service".
+
+In the page top bar, set "Display mode" to Advanced.
+Add a SNMP community via the menu SNMP -> Communities and click Add. The
+community string should be "public". Set "SNMP Management Station" to "All".
+Click "Apply" and "Close".
+
+In the top of the page click the "Save" icon.
+
+For the actual measurements, use the port 1 on the Cisco switch.
+
 
 Tips and ideas
 --------------
@@ -359,7 +471,7 @@ Set the GSDML file attributes ``ConformanceClass="B"`` and
 Relevant test cases for multi-port devices
 ------------------------------------------
 
-* PDEV_RECORDS
+* PDEV_RECORDS Requires additional hardware ("Device B")
 
 
 Relevant test cases for legacy startup mode

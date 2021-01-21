@@ -57,8 +57,10 @@ tab "Device" and "Send Echo Service" to verify the communication.
 In the Codesys menu "Tools", select "Device Repository". Click "Install" and
 select the GSDML file from your hard drive.
 
-* On the “Device (CODESY Control for Raspberry Pi SL)” in the left hand panel, right-click and select Add Device. Use “Ethernet”.
-* On the "Ethernet", right-click and select Add Device. Use "Profinet IO master".
+* On the “Device (CODESY Control for Raspberry Pi SL)” in the left hand panel,
+  right-click and select Add Device. Use “Ethernet adapter”, “Ethernet”.
+* On the "Ethernet", right-click and select Add Device.
+  Use "Profinet IO master", "PN-Controller".
 * On the "PN_Controller", right-click and select Add Device. Use "rt-labs DEMO device".
 * On the "rt_labs_DEMO_device", right-click and select Add Device. Use "8 bits I 8 bits 0".
 
@@ -303,6 +305,8 @@ Select the device in the list of scanned devices, and click the "I&M" button.
 
 Reading I&M data is done by the IO-controller by sending four "Read implicit"
 request DCP messages, one for each of I&M0 to I&M3.
+
+When writing I&M data from Codesys, it will send a connect, write and release.
 
 
 Enabling checking of peer stationname and port ID

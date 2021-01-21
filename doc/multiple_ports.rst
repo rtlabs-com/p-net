@@ -53,7 +53,7 @@ To create a bridge and add network interfaces to it, create the following files 
     [Network]
     Bridge=br0
 
-Enable and start network deamon::
+Enable and start network daemon::
 
     sudo systemctl enable systemd-networkd
     sudo systemctl start systemd-networkd
@@ -100,4 +100,4 @@ of things need to be done:
 * Reconfigure setting ``PNET_MAX_PORT`` to the actual number of physical ports available in the system.
   For this example ``PNET_MAX_PORT`` shall be set to 2.
 
-* TBD - update this document when multiport support is implemented
+* TBD - update this document when multi-port support is implemented

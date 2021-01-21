@@ -10,7 +10,7 @@ It uses a 24 V DC supply voltage.
 Using Siemens SinecPni (Primary Network Initialization)
 -------------------------------------------------------
 This is a tool for configuration of Profinet network equipment. Use it
-to adjust the IP address of PLC.
+to adjust the IP address of your PLC.
 
 Download the program from the Siemens homepage, and unzip the file.
 Start the program by double clicking the SinecPni executable.
@@ -118,8 +118,9 @@ Ethernet cable between the PLC and the IO-device.
 
 In the network view, right-click the PLC icon and select Compile > "Hardware
 (rebuild all)". Repeat for Compile > "Software (rebuild all)". Then right-click
-and select "Download to device" > "Hardware configuration". Repeat for "Download
-to device" > "Software (all)". Click Load in the pop-up window, and then Finish.
+and select "Download to device" > "Hardware configuration".
+Click Load in the pop-up window, and then Finish.
+Repeat for "Download to device" > "Software (all)".
 
 In the main menu, use Online > "Go online". In the right part of the screen,
 use "Online tools" to see the PLC LED states and to go to RUN and STOP modes.
@@ -136,16 +137,6 @@ Change IO-device station name
 In the network view, click the icon of the IO-device. Select and change the
 name (on top row) in the icon. Do a download (hardware and software) to the
 PLC. You can verify the result by looking at the PN-DCP frames in Wireshark.
-
-
-Factory reset of Simatic ET200SP
---------------------------------
-Use the mode switch on the front panel to do a factory reset. See the user
-manual for details. This will reset also the IP address.
-
-Connect the PLC to your laptop, and run Wireshark to figure out the IP address.
-It is given inside the LLDP frame. Also the detailed model name, firmware
-version etc are given in the LLDP frame.
 
 
 Change IP address
@@ -287,6 +278,16 @@ Note that the PLC might complain if there is a non-Profinet switch between the
 IO-device and the IO-controller. This is probably due to wrong port names in LLDP messages.
 
 
+Factory reset of Simatic ET200SP
+--------------------------------
+Use the mode switch on the front panel to do a factory reset. See the user
+manual for details. This will reset also the IP address.
+
+Connect the PLC to your laptop, and run Wireshark to figure out the IP address.
+It is given inside the LLDP frame. Also the detailed model name, firmware
+version etc are given in the LLDP frame.
+
+
 Upgrade firmware on a Siemens PLC
 ---------------------------------
 Select the proper firmware to use for your PLC from the Siemens downloads
@@ -296,3 +297,20 @@ Download the file, which is in ``.zip`` format. Unzip the file.
 In TIA Portal, right-click the PLC and select "Online and Diagnostics". In
 the "Functions" sections, use "Firmware update". Browse to the downloaded file
 (in ``.upd`` format) and start the update.
+
+
+Using a Simatic ET200SP IO-device for conformance test
+------------------------------------------------------
+See the page on conformance testing in this documentation for hardware details.
+
+This type of hardware is used when testing multiple-port IO-devices, to verify
+that it is possible to communicate with other IO-devices via the ports of the
+device-under-test.
+
+You can also use this hardware for communication reference instead of the
+p-net sample app. For that use case, configure the Simatic IO-device similarly
+as described for the p-net sample application above. Select the proper device
+from the hardware catalog in the STEP7 software.
+
+In STEP7, add the digital output module (DQ) in slot 1 and the digital input
+module (DI) in slot 2. The server module should be inserted into slot 3.

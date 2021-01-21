@@ -632,6 +632,9 @@ Include headers in sorted groups in this order:
 * Headers from the operating system
 * Standard C headers
 
+New files should have the rt-labs standard header comment, with description of
+the license and "Copyright YYYY rt-labs AB, Sweden."
+
 Avoid "Yoda conditions"::
 
     if (3 == a) { /* ... */ }
@@ -652,7 +655,8 @@ Typically functions should return 0 on success and -1 on error.
 Name functions and variables using "snake_case", for example
 ``pf_lldp_get_chassis_id ()`` and ``min_device_interval``.
 
-Pointer names start with ``p_``, for example ``p_data_status``.
+Avoid to start pointer names with ``p_``. It can be useful in some special situations
+but we will gradually remove those names from the p-net stack.
 
 Instead of::
 
