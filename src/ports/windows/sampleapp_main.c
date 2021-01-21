@@ -15,7 +15,6 @@
 #include <string.h>
 
 #define APP_DEFAULT_ETHERNET_INTERFACE ""   /* will result in selection */
-#define APP_DEFAULT_FILE_DIRECTORY     "c:\\Temp"
 
 /********************************** Globals ***********************************/
 
@@ -313,9 +312,10 @@ int main (int argc, char * argv[])
    app_copy_ip_to_struct (&pnet_default_cfg.if_cfg.ip_cfg.ip_addr, ip);
    app_copy_ip_to_struct (&pnet_default_cfg.if_cfg.ip_cfg.ip_gateway, gateway);
    app_copy_ip_to_struct (&pnet_default_cfg.if_cfg.ip_cfg.ip_mask, netmask);
-
-   strcpy (pnet_default_cfg.file_directory, APP_DEFAULT_FILE_DIRECTORY);
    strcpy (pnet_default_cfg.station_name, gp_appdata->arguments.station_name);
+   strcpy (
+      pnet_default_cfg.file_directory,
+      appdata.arguments.path_storage_directory);
 
    strncpy (
       pnet_default_cfg.if_cfg.main_port.if_name,
