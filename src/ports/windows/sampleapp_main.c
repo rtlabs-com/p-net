@@ -104,8 +104,6 @@ void show_usage()
            "writing\n");
    printf ("to plain text files (useful for demo if no LEDs are available).\n");
    printf ("\n");
-   printf ("Assumes the default gateway is found on .1 on same subnet as the "
-           "IP address.\n");
    printf ("\n");
    printf ("Optional arguments:\n");
    printf ("   --help       Show this help text and exit\n");
@@ -117,8 +115,7 @@ void show_usage()
    printf ("   -g           Show stack details and exit. Repeat for more "
            "details.\n");
    printf (
-      "   -i INTERF    Name of Ethernet interface to use. Defaults to %s\n",
-      APP_DEFAULT_ETHERNET_INTERFACE);
+      "   -i INTERF    Name of Ethernet interface to use. Eg. eth1. Defaults to Console User Selection\n");
    printf (
       "   -s NAME      Set station name. Defaults to %s  Only used\n",
       APP_DEFAULT_STATION_NAME);
