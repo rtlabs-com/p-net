@@ -293,6 +293,13 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
 
          /* Reset I&M data */
          ret = pf_fspm_clear_im_data (net);
+
+         /* According to section 8.4 "Behavior to ResetToFactory" in
+            "Test case specification: Behavior" the MIB data should be reset
+            in all supported reset modes. This seems to contradict
+            PN-AL-Services ch. 6.3.11.3.2 */
+         pf_file_clear (p_file_directory, PF_FILENAME_SYSCONTACT);
+         pf_file_clear (p_file_directory, PF_FILENAME_SYSNAME);
       }
 
       if (reset_mode == 2 || reset_mode >= 3)
