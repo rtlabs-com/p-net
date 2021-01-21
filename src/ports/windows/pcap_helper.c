@@ -158,7 +158,7 @@ int pcap_helper_populate_adapter_info (const char * eth_interface)
       pAdapter = pAdapterInfo;
       while (pAdapter)
       {
-         if (strstr (pcap_name, pAdapter->AdapterName) >= 0)
+         if (strstr (pcap_name, pAdapter->AdapterName) != NULL)
          {
             // copy mac
             memcpy (Mac1, pAdapter->Address, 6);
