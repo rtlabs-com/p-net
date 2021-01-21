@@ -236,7 +236,7 @@ static snmp_err_t lldpxdot3locporttable_get_next_instance (
  * @param cell_instance    In:    Cell instance (containing meta-data).
  * @param value            Out:   Value to be returned in response.
  * @return  Size of returned value, in bytes.
- *          0 if error occurred.
+ *          -1 if error occurred (server will report GenError).
  */
 static s16_t lldpxdot3locporttable_get_value (
    struct snmp_node_instance * cell_instance,
@@ -294,15 +294,12 @@ static s16_t lldpxdot3locporttable_get_value (
    }
    break;
    default:
-   {
       LOG_ERROR (
          PF_SNMP_LOG,
          "LLDP-EXT-DOT3-MIB(%d): Unknown table column: %" PRIu32 ".\n",
          __LINE__,
          column);
-      value_len = 0;
-   }
-   break;
+      return -1;
    }
 
    return value_len;
@@ -311,12 +308,18 @@ static s16_t lldpxdot3locporttable_get_value (
 /* --- lldpXdot3RemoteData 1.0.8802.1.1.2.1.5.4623.1.3
  * ----------------------------------------------------- */
 
+static s16_t lldpxdot3remporttable_get_value_from_remote_device (
+   pnal_snmp_response_t * value,
+   int port,
+   u32_t column);
+
 /**
  * Get cell in table lldpXdot3RemPortTable.
  *
  * Called when an SNMP Get request is received for this table.
- * If cell is found, the SNMP stack may call the corresponding get_value()
- * function below to retrieve the actual value contained in the cell.
+ * If cell with valid value is found, the value will be saved for later
+ * retrieval by the SNMP stack in call to the corresponding get_value()
+ * function.
  *
  * @param column           In:    Column index for the cell.
  * @param row_oid          In:    Row index (array) for the cell.
@@ -331,24 +334,36 @@ static snmp_err_t lldpxdot3remporttable_get_instance (
    u8_t row_oid_len,
    struct snmp_node_instance * cell_instance)
 {
-   int port = rowindex_match_with_remote_device (row_oid, row_oid_len);
+   int port;
+   s16_t response_len;
+
+   port = rowindex_match_with_remote_device (row_oid, row_oid_len);
    if (port == 0)
    {
       return SNMP_ERR_NOSUCHINSTANCE;
    }
-   else
+
+   response_len = lldpxdot3remporttable_get_value_from_remote_device (
+      &pnal_snmp.response,
+      port,
+      *column);
+   if (response_len < 0)
    {
-      cell_instance->reference.s32 = port;
-      return SNMP_ERR_NOERROR;
+      return SNMP_ERR_NOSUCHINSTANCE;
    }
+
+   cell_instance->reference.ptr = &pnal_snmp.response;
+   cell_instance->reference_len = response_len;
+   return SNMP_ERR_NOERROR;
 }
 
 /**
  * Get next cell in table lldpXdot3RemPortTable.
  *
  * Called when an SNMP GetNext request is received for this table.
- * If cell is found, the SNMP stack may call the corresponding get_value()
- * function below to retrieve the actual value contained in the cell.
+ * If cell with valid value is found, the value will be saved for later
+ * retrieval by the SNMP stack in call to the corresponding get_value()
+ * function.
  *
  * @param column           In:    Column index for the cell.
  * @param row_oid          InOut: Row index for the cell.
@@ -361,16 +376,120 @@ static snmp_err_t lldpxdot3remporttable_get_next_instance (
    struct snmp_obj_id * row_oid,
    struct snmp_node_instance * cell_instance)
 {
-   int port = rowindex_update_with_next_remote_device (row_oid);
+   int port;
+   s16_t response_len;
+
+   port = rowindex_update_with_next_remote_device (row_oid);
    if (port == 0)
    {
       return SNMP_ERR_NOSUCHINSTANCE;
    }
-   else
+
+   response_len = lldpxdot3remporttable_get_value_from_remote_device (
+      &pnal_snmp.response,
+      port,
+      *column);
+   if (response_len < 0)
    {
-      cell_instance->reference.s32 = port;
-      return SNMP_ERR_NOERROR;
+      return SNMP_ERR_NOSUCHINSTANCE;
    }
+
+   cell_instance->reference.ptr = &pnal_snmp.response;
+   cell_instance->reference_len = response_len;
+   return SNMP_ERR_NOERROR;
+}
+
+/**
+ * Get value at cell in table lldpXdot3RemPortTable.
+ *
+ * @param value            Out:   Value to be returned in response.
+ * @param port             In:    Local port number for port directly
+ *                                connected to the remote device.
+ *                                Valid range: 1 .. PNET_MAX_PORT.
+ * @param column           In:    Column index for the cell.
+ * @return  Size of returned value, in bytes.
+ *          -1 if no valid value could be returned.
+ */
+static s16_t lldpxdot3remporttable_get_value_from_remote_device (
+   pnal_snmp_response_t * value,
+   int port,
+   u32_t column)
+{
+   s16_t value_len;
+   int error;
+
+   switch (column)
+   {
+   case 1:
+   {
+      /* lldpXdot3RemPortAutoNegSupported */
+      pf_snmp_link_status_t link_status;
+
+      error = pf_snmp_get_peer_link_status (pnal_snmp.net, port, &link_status);
+      if (error)
+      {
+         return error;
+      }
+
+      value_len = sizeof (s32_t);
+      value->s32 = link_status.auto_neg_supported;
+   }
+   break;
+   case 2:
+   {
+      /* lldpXdot3RemPortAutoNegEnabled */
+      pf_snmp_link_status_t link_status;
+
+      error = pf_snmp_get_peer_link_status (pnal_snmp.net, port, &link_status);
+      if (error)
+      {
+         return error;
+      }
+
+      value_len = sizeof (s32_t);
+      value->s32 = link_status.auto_neg_enabled;
+   }
+   break;
+   case 3:
+   {
+      /* lldpXdot3RemPortAutoNegAdvertisedCap */
+      pf_snmp_link_status_t link_status;
+
+      error = pf_snmp_get_peer_link_status (pnal_snmp.net, port, &link_status);
+      if (error)
+      {
+         return error;
+      }
+
+      value_len = 2;
+      memcpy (value->buffer, link_status.auto_neg_advertised_cap, 2);
+   }
+   break;
+   case 4:
+   {
+      /* lldpXdot3RemPortOperMauType */
+      pf_snmp_link_status_t link_status;
+
+      error = pf_snmp_get_peer_link_status (pnal_snmp.net, port, &link_status);
+      if (error)
+      {
+         return error;
+      }
+
+      value_len = sizeof (s32_t);
+      value->s32 = link_status.oper_mau_type;
+   }
+   break;
+   default:
+      LOG_ERROR (
+         PF_SNMP_LOG,
+         "LLDP-EXT-DOT3-MIB(%d): Unknown table column: %" PRIu32 ".\n",
+         __LINE__,
+         column);
+      return -1;
+   }
+
+   return value_len;
 }
 
 /**
@@ -378,112 +497,32 @@ static snmp_err_t lldpxdot3remporttable_get_next_instance (
  *
  * Called when an SNMP Get or GetNext request is received for this table.
  * The cell was previously identified in a call to get_instance() or
- * get_next_instance().
+ * get_next_instance(). Its value was also read and saved in
+ * cell_instance->reference.
  *
  * @param cell_instance    In:    Cell instance (containing meta-data).
  * @param value            Out:   Value to be returned in response.
  * @return  Size of returned value, in bytes.
- *          0 if error occurred.
+ *          -1 if value was too large (server will report GenError).
  */
 static s16_t lldpxdot3remporttable_get_value (
    struct snmp_node_instance * cell_instance,
    void * value)
 {
-   s16_t value_len;
-   int port = cell_instance->reference.s32;
-   u32_t column =
-      SNMP_TABLE_GET_COLUMN_FROM_OID (cell_instance->instance_oid.id);
+   s16_t value_len = cell_instance->reference_len;
+   pnal_snmp_response_t * saved_value = cell_instance->reference.ptr;
 
-   switch (column)
-   {
-   case 1:
-   {
-      /* lldpXdot3RemPortAutoNegSupported */
-      s32_t * v = (s32_t *)value;
-      pf_snmp_link_status_t link_status;
-      int error;
-
-      error = pf_snmp_get_peer_link_status (pnal_snmp.net, port, &link_status);
-      if (error)
-      {
-         value_len = 0;
-      }
-      else
-      {
-         value_len = sizeof (s32_t);
-         *v = link_status.auto_neg_supported;
-      }
-   }
-   break;
-   case 2:
-   {
-      /* lldpXdot3RemPortAutoNegEnabled */
-      s32_t * v = (s32_t *)value;
-      pf_snmp_link_status_t link_status;
-      int error;
-
-      error = pf_snmp_get_peer_link_status (pnal_snmp.net, port, &link_status);
-      if (error)
-      {
-         value_len = 0;
-      }
-      else
-      {
-         value_len = sizeof (s32_t);
-         *v = link_status.auto_neg_enabled;
-      }
-   }
-   break;
-   case 3:
-   {
-      /* lldpXdot3RemPortAutoNegAdvertisedCap */
-      u8_t * v = (u8_t *)value;
-      pf_snmp_link_status_t link_status;
-      int error;
-
-      error = pf_snmp_get_peer_link_status (pnal_snmp.net, port, &link_status);
-      if (error)
-      {
-         value_len = 0;
-      }
-      else
-      {
-         value_len = 2;
-         memcpy (v, link_status.auto_neg_advertised_cap, 2);
-      }
-   }
-   break;
-   case 4:
-   {
-      /* lldpXdot3RemPortOperMauType */
-      s32_t * v = (s32_t *)value;
-      pf_snmp_link_status_t link_status;
-      int error;
-
-      error = pf_snmp_get_peer_link_status (pnal_snmp.net, port, &link_status);
-      if (error)
-      {
-         value_len = 0;
-      }
-      else
-      {
-         value_len = sizeof (s32_t);
-         *v = link_status.oper_mau_type;
-      }
-   }
-   break;
-   default:
+   if ((size_t)value_len > SNMP_MAX_VALUE_SIZE)
    {
       LOG_ERROR (
          PF_SNMP_LOG,
-         "LLDP-EXT-DOT3-MIB(%d): Unknown table column: %" PRIu32 ".\n",
+         "LLDP-EXT-DOT3-MIB(%d): Value is too large: %" PRId16 "\n",
          __LINE__,
-         column);
-      value_len = 0;
-   }
-   break;
+         value_len);
+      return -1;
    }
 
+   memcpy (value, saved_value, value_len);
    return value_len;
 }
 

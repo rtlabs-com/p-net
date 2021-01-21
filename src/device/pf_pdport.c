@@ -66,10 +66,8 @@ static int pf_pdport_load (pnet_t * net, int loc_port_num)
 {
    int ret = -1;
    pf_pdport_t pdport_config;
-   const char * p_file_directory = NULL;
+   const char * p_file_directory = pf_cmina_get_file_directory (net);
    pf_port_t * p_port_data = NULL;
-
-   (void)pf_cmina_get_file_directory (net, &p_file_directory);
 
    if (
       pf_file_load (
@@ -164,12 +162,10 @@ static int pf_pdport_save (pnet_t * net, int loc_port_num)
    int save_result = 0;
    pf_pdport_t pdport_config = {0};
    pf_pdport_t temporary_buffer;
-   const char * p_file_directory = NULL;
+   const char * p_file_directory = pf_cmina_get_file_directory (net);
    pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
    memcpy (&pdport_config, &p_port_data->pdport, sizeof (pdport_config));
-
-   (void)pf_cmina_get_file_directory (net, &p_file_directory);
 
    save_result = pf_file_save_if_modified (
       p_file_directory,
@@ -569,34 +565,40 @@ int pf_pdport_read_ind (
       {
          loc_port_num = pf_pdport_dap_subslot_to_local_port (subslot);
 
-         if (loc_port_num != 0)
+         /* TODO Summarize port statistics for
+                 PNET_SUBSLOT_DAP_INTERFACE_1_IDENT
+                 when we support multiple ports */
+         if (loc_port_num == 0)
          {
-            p_port_cfg = pf_lldp_get_port_config (net, loc_port_num);
-            if (
-               pnal_get_port_statistics (
-                  p_port_cfg->phy_port.if_name,
-                  &port_stats) == 0)
-            {
-               pf_put_pdport_statistics (
-                  &port_stats,
-                  true,
-                  p_read_res,
-                  res_size,
-                  p_res,
-                  p_pos);
-               ret = 0;
-            }
+            loc_port_num = 1;
          }
-         else
+
+         p_port_cfg = pf_port_get_config (net, loc_port_num);
+         if (
+            pnal_get_port_statistics (
+               p_port_cfg->phy_port.if_name,
+               &port_stats) == 0)
          {
-            /* TODO What should be provided for
-                    PNET_SUBSLOT_DAP_INTERFACE_1_IDENT? */
-            LOG_DEBUG (
-               PNET_LOG,
-               "PDPORT(%d): PF_IDX_SUB_PDPORT_STATISTIC for "
-               "PNET_SUBSLOT_DAP_INTERFACE_1_IDENT is not yet implemented\n",
-               __LINE__);
+            pf_put_pdport_statistics (
+               &port_stats,
+               true,
+               p_read_res,
+               res_size,
+               p_res,
+               p_pos);
+            ret = 0;
          }
+      }
+      else
+      {
+         LOG_INFO (
+            PNET_LOG,
+            "PDPORT(%d): PLC could not read port statistics (index 0x%04X) for "
+            "slot %u, subslot 0x%04X\n",
+            __LINE__,
+            p_read_req->index,
+            slot,
+            subslot);
       }
       break;
    default:
@@ -791,7 +793,7 @@ static void pf_pdport_peer_lldp_timeout_alarm (pnet_t * net, int loc_port_num)
 
    LOG_DEBUG (
       PNET_LOG,
-      "PDPORT(%d): Sending no peer detected alarm port %u",
+      "PDPORT(%d): Sending missing peer alarm for port %u",
       __LINE__,
       loc_port_num);
 

@@ -654,6 +654,18 @@ Name functions and variables using "snake_case", for example
 
 Pointer names start with ``p_``, for example ``p_data_status``.
 
+Instead of::
+
+   if (have_dhcp == true){...}
+   if (!have_dhcp){...}
+
+use::
+
+   if (have_dhcp){...}
+   if (have_dhcp == false){...}
+
+(Note that this not yet is fully implemented in the stack.)
+
 Run clang-format on staged files before committing::
 
     $ git add .
@@ -677,5 +689,5 @@ Github workflow:
 * Commit your fix to the branch. Add the line "Closes #123" (for example)
   in the commit message, to indicate which Github issue it closes.
 * Push the branch to your Github account.
-* Create a pull request to rtlabs-com/p-net on Github.
+* Create a pull request to https://github.com/rtlabs-com/p-net
 * After review the fix will be merged.

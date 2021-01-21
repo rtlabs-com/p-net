@@ -185,7 +185,7 @@ int main (void)
       os_timer_create (APP_TICK_INTERVAL_US, main_timer_tick, NULL, false);
    gp_appdata = &appdata;
 
-   printf ("\n** Profinet sample application **\n");
+   printf ("\n** Starting Profinet sample application " PNET_VERSION " **\n");
    if (appdata.arguments.verbosity > 0)
    {
       printf (

@@ -74,6 +74,10 @@ More details are given in the "Product Documentation" document for the tool.
 You might also need to turn off LLDP protocol for the selected network
 interface. Both Windows and Simatic TIA can have LLDP implemented.
 
+Adjust the settings of the Ethernet card of your personal computer to use
+100 Mbit/s full duplex (otherwise the test case "Different access ways
+port-to-port" will fail).
+
 Set the IP address to 192.168.0.25 and netmask to 255.255.255.0.
 
 Use a separate network for running tests with Advanced RT tester
@@ -345,9 +349,11 @@ Relevant test cases for conformance class B
 Set the GSDML file attributes ``ConformanceClass="B"`` and
 ``SupportedProtocols="SNMP;LLDP"``.
 
+* Behavior scenario 10
 * Topology discovery check, standard setup
 * Topology discovery check, non-Profinet-neighbour setup
 * Port-to-port
+* Behavior of reset to factory (manual)
 
 
 Relevant test cases for multi-port devices
@@ -383,6 +389,8 @@ describes the startup time in milliseconds.
 
 * FSU
 * Different Access Ways
+* Manual FSU test case
+* Hardware (no auto-negotiation)
 
 
 Relevant test cases for DHCP
@@ -405,45 +413,106 @@ Load PLC program
 Verify that the sample application PLC program is working properly with your
 IO-device. Button1 should be able to control the state of data LED (LED1).
 
+Interoperability
+^^^^^^^^^^^^^^^^
+Run with PLC for 10 minutes without errors.
+If the device under test has more than one port, there should be 5 IO-devices
+connected to the non-PLC port.
+
+The timing should be the fastest allowed according to the GSDML
+file, and use 3 "accepted update cycles without IO data".
+Record startup and data exchange using Wireshark.
+
+In the Wireshark file, make sure IOPS and IOCS in the cyclic data from the
+IO-device have the value GOOD after it has sent the "application ready"
+message.
+Also verify that there have been no alarms (sort the frames by protocol).
+
+* "Record data"?
+* ExpectedIdentification is equal to the RealIdentification?
+* How to create additional net load? (using DCP Identify all)
+* Implicit read?
 
 Data Hold Timer
 ^^^^^^^^^^^^^^^
-Unplug network cable from the PLC while recording the cyclic data (use Wireshark).
-Count the number of cyclic data frames before the alarm from the IO-device is sent.
-It is allowed that 3-6 data frames are sent before sending the alarm frame.
+Run with PLC. The timing should be the fastest allowed according to the GSDML
+file, and use 3 "accepted update cycles without IO data".
+Record startup and data exchange using Wireshark.
 
-Perform the cable unplugging measurements with reduction ratios 1, 2, 4, 8 and 16.
-The data hold time should be 3x the frame interval.
-With a cycle time of 1 ms this corresponds to a frame send interval of
-1 ms to 16 ms, and a data hold time of 3 ms to 48 ms.
+Unplug network cable from the PLC.
 
-In Siemens TIA portal, set the update time to for example 2 ms (values
-1, 2, 4, 8, and 16 ms should be used).
-The "Accepted update cycles without IO data" should be set to 3.
+In the Wireshark file:
 
-At startup the first valid data frame should be sent within the data hold time.
-Check IOPS.
+* Count the number of cyclic data frames sent by the IO-device before the
+  alarm frame appears. It is allowed that 3-6 data frames are sent before
+  the alarm frame.
+* At startup the first valid data frame should be sent within the data
+  hold time.
+* The IOCS in the cyclic data from the IO-device should have the value GOOD
+  after the "application ready" message has been sent.
+* Verify the data cycle time.
 
-Verify the data cycle time.
+Repeat the cable unplugging measurements with reduction ratios (1), 2, 4, 8
+and 16. With a cycle time of for example 1 ms this corresponds to a frame
+send interval of 1 ms to 16 ms, and a data hold time of 3 ms to 48 ms.
 
 Check that a LLDP frame is sent within 5 seconds, and then every 5 seconds.
 The TTL value in the LLDP frame should be 20 seconds.
 The MAUtype, "autonegotiation supported" and "autonegotiation enabled" must
 be correct.
 
-
-Interoperability
-^^^^^^^^^^^^^^^^
-Run with PLC for 10 minutes without errors. Record startup and data exchange using Wireshark.
-
-* ExpectedIdentification is equal to the RealIdentification?
-* Additional net load?
-* Implicit read?
-
 Interoperability with controller
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Run with PLC, and verify that the outputs are according to the manual of your
-IO-device.
+Run with PLC. The timing should be the fastest allowed according to the GSDML
+file, and use 3 "accepted update cycles without IO data".
+Record startup and data exchange using Wireshark.
 
-* Switch the PLC to stop. Study the outputs of the IO-device.
-* Disconnect cable from PLC. Study the outputs of the IO-device.
+Verify that the outputs are according to the manual of your IO-device when
+you do these actions (repeat several times):
+
+* PLC powered off
+* PLC powered on. The program should be running.
+* Switch the PLC to stop.
+* Switch the PLC to run.
+* Disconnect cable from PLC.
+* Reconnect the PLC cable.
+
+In the Wireshark file, make sure IOPS and IOCS in the cyclic data from the
+IO-device have the value GOOD after it has sent the "application ready"
+message.
+
+* Record data?
+
+Security Level 1 tester
+-----------------------
+Install the tester software on an Ubuntu machine, or in a virtual Ubuntu
+machine running on Windows.
+See the PDF in the "Security Level 1"/"tester" folder in the downloaded
+test bundle.
+
+Use a non-Profinet switch (no LLDP packet filtering) to connect the device
+under test (DUT), the PLC and the personal computer running the Security
+Level 1 tester software. For single port devices, use port 1 on the PLC and
+port 1 on the DUT.
+
+A PLC program is used to both establish cyclic data communication, and to
+repeatedly do acyclic data read out from the IO-device.
+
+In Siemens TIA Portal, open the file "normal_d_V2.40.0_V15.1.zap15_1" as
+an existing project. Give the path to a local directory that will be used
+for the project.
+
+Delete the existing "dut" device and "d" device. Insert your IO-device and
+adjust the settings (as described on the page about Siemens PLCs in
+this documentation).
+
+In the "Main [OB1]" program, change the line with ``Ihw_ID`` to::
+
+   Ihw_ID := "rt-labs-dev~Head",
+
+Right-click on the PLC icon, and select Compile > "Hardware (rebuild all)" and
+then "Software (rebuild all)". Use "Download to device" > "Hardware
+configuration" and then "Software (all)".
+
+Verify that there is cyclic communication, and that there is repeated
+acyclic data read out.

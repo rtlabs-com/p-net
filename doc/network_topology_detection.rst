@@ -38,12 +38,16 @@ SNMP versions:
 
 Monitor incoming LLDP frames on Linux
 -------------------------------------
+This is useful for experimenting with LLDP, but should not be running on the
+same device as p-net. This is because p-net implements LLDP transmission and
+reception itself.
+
 Install the ``lldpd`` daemon::
 
    $ sudo apt install lldpd
 
-It will start to collect information automatically, but also start sending
-LLDP packets every 30 seconds.
+It will start to collect information automatically, but will also start sending
+LLDP packets on each interface every 30 seconds.
 
 Show neighbour information::
 
@@ -70,7 +74,8 @@ Show neighbour information::
 
 To stop the daemon (to avoid sending additional LLDP packets)::
 
-   sudo service lldpd stop
+   sudo systemctl stop lldpd.service
+   sudo systemctl disable lldpd.service
 
 
 SNMPwalk tool for querying SNMP agents
@@ -325,6 +330,48 @@ This is done by giving the OID value or corresponding name, for example
 ``1.0.8802.1.1.2`` or ``LLDP-MIB::lldpMIB``.
 
 
+Showing SNMP info in tabular format
+-----------------------------------
+Some of the OIDs are part of tables, for example the OID ``1.3.6.1.2.1.2.2.1.2``
+which is the ``ifDescr`` (descriptive text for Ethernet interface).
+It is part of the table ``IF-MIB::ifTable`` which uses the ``ifIndex``
+(interface index) as the table index, and the ``ifIndex`` is appended to the
+end of the OID. Thus:
+
+* 1.3.6.1.2.1.2.2.1.2.1 ``ifDescr`` for first interface (actually a port in Profinet naming)
+* 1.3.6.1.2.1.2.2.1.2.2 ``ifDescr`` for second interface
+* 1.3.6.1.2.1.2.2.1.2.3 ``ifDescr`` for third interface
+
+This SNMP table can also be displayed in a tabular format on the command
+line (the symbolic name must be given)::
+
+   snmptable -v1 -c public 192.168.0.50 IF-MIB::ifTable
+
+Add ``-Cw 120`` to the command line to limit the ``snmptable`` output line length.
+
+Relevant tables:
+
++-----------------------------------------+--------------------------------+
+| Table name                              | Top OID                        |
++=========================================+================================+
+| IF-MIB::ifTable                         | 1.3.6.1.2.1.2.2                |
++-----------------------------------------+--------------------------------+
+| LLDP-MIB::lldpConfigManAddrTable        | 1.0.8802.1.1.2.1.1.7           |
++-----------------------------------------+--------------------------------+
+| LLDP-MIB::lldpLocPortTable              | 1.0.8802.1.1.2.1.3.7           |
++-----------------------------------------+--------------------------------+
+| LLDP-MIB::lldpLocManAddrTable           | 1.0.8802.1.1.2.1.3.8           |
++-----------------------------------------+--------------------------------+
+| LLDP-MIB::lldpRemTable                  | 1.0.8802.1.1.2.1.4.1           |
++-----------------------------------------+--------------------------------+
+| LLDP-MIB::lldpRemManAddrTable           | 1.0.8802.1.1.2.1.4.2           |
++-----------------------------------------+--------------------------------+
+| LLDP-EXT-PNO-MIB::lldpXPnoLocTable      | 1.0.8802.1.1.2.1.5.3791.1.2.1  |
++-----------------------------------------+--------------------------------+
+| LLDP-EXT-PNO-MIB::lldpXPnoRemTable      | 1.0.8802.1.1.2.1.5.3791.1.3.1  |
++-----------------------------------------+--------------------------------+
+
+
 Supported SNMP variables for Profinet
 -------------------------------------
 
@@ -430,8 +477,8 @@ Readable fields related to ports and interfaces:
 +----------------------+--------------------------------------+-----------------+------------+-------------+
 
 Note that some objects are listed "Not accessible" in the standard. These
-are read indirectly via other objects, so the information must thus be
-available.
+are read indirectly via other objects (used as table index, and appended
+to the OID of other objects), so the information must thus be available.
 
 See the standard for the corresponding numerical OID values.
 
@@ -451,6 +498,9 @@ On the home screen, select "Network analysis" and use the "Online" tab.
 Click the "Refresh" icon to scan the network topology.
 A graphical view with all Profinet equipment will be shown, including
 the connections between all ports.
+
+The program will show the list of current diagnosis for IO-devices.
+It will also show details about interfaces and ports.
 
 By right-clicking on a device in the graphical view, you can set the
 station name and IP address (temporarily or permanently).

@@ -65,7 +65,10 @@ to add a new column. Change "Title" to "Delta displayed" and "Type" to
 
 Plot transmission time periodicity using Wireshark
 --------------------------------------------------
-To plot the periodicity of sent frames, use the menu "Statistics" -> "I/O Graph".
+To plot the periodicity of sent frames, you first need to filter the displayed
+frames in the main Wireshark window, as described above.
+
+Then use the menu "Statistics" -> "I/O Graph".
 
 * Display filter: ``eth.src == 54:ee:75:ff:95:a6 and pn_io``
 * Y Axis: AVG(Y Field)

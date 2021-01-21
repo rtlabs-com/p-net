@@ -61,6 +61,7 @@ Limitations or not yet implemented:
 * No iPar (parameter server) support
 * No support for time synchronization
 * No UDP frames at alarm (just the default alarm mechanism is implemented)
+* No ProfiDrive or ProfiSafe profiles.
 
 This software is dual-licensed, with GPL version 3 and a commercial license.
 See LICENSE.md for more details.
