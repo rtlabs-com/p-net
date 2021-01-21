@@ -272,6 +272,8 @@ int main (int argc, char * argv[])
       printf ("P-net log level:      %u (DEBUG=0, FATAL=4)\n", LOG_LEVEL);
       printf ("App verbosity level:  %u\n", appdata.arguments.verbosity);
       printf ("Ethernet interface:   %s\n", appdata.arguments.eth_interface);
+      printf ("Button1 file:         %s\n", appdata.arguments.path_button1);
+      printf ("Button2 file:         %s\n", appdata.arguments.path_button2);
       printf ("Default station name: %s\n", appdata.arguments.station_name);
    }
 
