@@ -297,9 +297,9 @@ int main (int argc, char * argv[])
    if (gateway == IP_INVALID)
    {
       printf (
-         "Error: Invalid gateway IP address for Ethernet interface: %s\n",
+         "Warning: Invalid gateway IP address for Ethernet interface: %s\n",
          appdata.arguments.eth_interface);
-      return -1;
+      //return -1; ... gateways can be empty for various reasons
    }
 
    if (appdata.arguments.verbosity > 0)
