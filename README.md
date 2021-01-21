@@ -52,12 +52,14 @@ Features:
 
 Limitations or not yet implemented:
 
+* This is a device stack, which means that the IO-controller/master/PLC side is not supported.
 * Only a single Ethernet port (no media redundancy)
 * No startup mode legacy
 * No support for RT_CLASS_UDP
 * No support for DHCP
 * No fast start-up
 * No MC multicast device-to-device
+* No support of shared device (connection to multiple controllers)
 * No iPar (parameter server) support
 * No support for time synchronization
 * No UDP frames at alarm (just the default alarm mechanism is implemented)

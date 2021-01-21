@@ -291,18 +291,8 @@ SNMP
 ----
 To enable SNMP support, set the ``PNET_OPTION_SNMP`` value to ``ON``.
 
-To verify the SNMP capabilities, first use ``ping`` to make sure you have a
-connection to the device, and then use ``snmpwalk``::
-
-   ping 192.168.0.50
-   snmpwalk -v1 -c public 192.168.0.50 1
-   snmpget -v1 -c public 192.168.0.50 1.3.6.1.2.1.1.4.0
-   snmpset -v1 -c private 192.168.0.50 1.3.6.1.2.1.1.4.0 s "My new sys contact"
-
-If you enable debug logging in the p-net stack, the two last commands will
-cause entries in the p-net log.
-
-For more details on SNMP and its usage, see :ref:`network-topology-detection`.
+See :ref:`network-topology-detection` for more details on SNMP and how to
+verify the SNMP communication to the p-net stack.
 
 
 IP-stack lwip

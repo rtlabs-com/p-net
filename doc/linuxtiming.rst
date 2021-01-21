@@ -66,3 +66,13 @@ Increase application cycle time
 For testing, you can increase the cycle time from the PLC in order to reduce
 the time-out problems. Also the allowed number of missed frames can be
 increased in the PLC settings.
+
+
+Network interface hardware
+--------------------------
+If your Ethernet network interface is connected via USB, there can be an
+additional latency. This can affect the frame-to-frame interval for
+transmitted Profinet frames.
+
+For example the Ethernet interface in a Raspberry Pi 3 is connected via
+an USB bus internally.
