@@ -10,6 +10,7 @@ add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 target_include_directories(profinet
   PRIVATE
   src/ports/windows
+  src/ports/windows/pcap/Include
   )
 
 target_sources(profinet
@@ -17,16 +18,21 @@ target_sources(profinet
   src/ports/windows/pnal.c
   src/ports/windows/pnal_eth.c
   src/ports/windows/pnal_udp.c
+  src/ports/windows/pcap_helper.c
   )
 
 target_compile_options(profinet
   PRIVATE
   )
+
+#npcap: https://nmap.org/npcap/
+find_library(NPCAP_LIBRARY wpcap HINT src/ports/windows/pcap/Lib/x64)
   
 target_link_libraries(profinet
   PUBLIC
-  wsock32 
   ws2_32
+  IPHLPAPI
+  ${NPCAP_LIBRARY}
   )
 
 target_include_directories(pn_dev
