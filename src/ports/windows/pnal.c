@@ -239,23 +239,23 @@ int pnal_get_port_statistics (const char * interface_name, pnal_port_stats_t * p
 
 int pnal_get_macaddress (const char * interface_name, pnal_ethaddr_t * mac_addr)
 {
-   memcpy(mac_addr, pcap_helper_get_mac(), 6);
+   memcpy (mac_addr, pcap_helper_get_mac (interface_name), 6);
    return 0;
 }
 
 pnal_ipaddr_t pnal_get_ip_address (const char * interface_name)
 {
-   return pcap_helper_get_ip();
+   return pcap_helper_get_ip (interface_name);
 }
 
 pnal_ipaddr_t pnal_get_netmask (const char * interface_name)
 {
-   return pcap_helper_get_netmask();
+   return pcap_helper_get_netmask (interface_name);
 }
 
 pnal_ipaddr_t pnal_get_gateway (const char * interface_name)
 {
-   return pcap_helper_get_gateway();
+   return pcap_helper_get_gateway (interface_name);
 }
 
 int pnal_get_hostname (char * hostname)

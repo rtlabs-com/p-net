@@ -20,12 +20,14 @@
 #include <iphlpapi.h> //GetAdaptersInfo
 #include "options.h"
 #include "osal_log.h"
+#include <pnet_api.h>
 
-// ***** interface 1 *****
-static unsigned int NetMask1 = 0;
-static unsigned int Address1 = 0;
-static unsigned int Gateway1 = 0;
-static unsigned char Mac1[6] = {0};
+// ***** Cache for eth adapter info *****
+static char CurrentEthName[PNET_INTERFACE_NAME_MAX_SIZE] = "";
+static unsigned int NetMask = 0;
+static unsigned int Address = 0;
+static unsigned int Gateway = 0;
+static unsigned char Mac[6] = {0};
 
 // ***** filter data ****
 static struct bpf_program fpdat;
@@ -39,21 +41,25 @@ static struct bpf_program fpdat;
 // * ---------------------------------------------------------
 // * get / set
 // * ---------------------------------------------------------
-unsigned int pcap_helper_get_ip()
+unsigned int pcap_helper_get_ip (const char * eth_interface)
 {
-   return Address1;
+   populate_adapter_info(eth_interface);
+   return Address;
 }
-unsigned int pcap_helper_get_netmask()
+unsigned int pcap_helper_get_netmask (const char * eth_interface)
 {
-   return NetMask1;
+   populate_adapter_info (eth_interface);
+   return NetMask;
 }
-unsigned int pcap_helper_get_gateway()
+unsigned int pcap_helper_get_gateway (const char * eth_interface)
 {
-   return Gateway1;
+   populate_adapter_info (eth_interface);
+   return Gateway;
 }
-unsigned char * pcap_helper_get_mac()
+unsigned char * pcap_helper_get_mac (const char * eth_interface)
 {
-   return Mac1;
+   populate_adapter_info (eth_interface);
+   return Mac;
 }
 
 // * ---------------------------------------------------------
@@ -123,7 +129,7 @@ int pcap_helper_init (void)
 // * ---------------------------------------------------------
 // * Will search out the selected network interface via win32 and copy mac etc.
 // * ---------------------------------------------------------
-int pcap_helper_populate_adapter_info (const char * eth_interface)
+static int populate_adapter_info (const char * eth_interface)
 {
    PIP_ADAPTER_INFO pAdapterInfo;
    PIP_ADAPTER_INFO pAdapter = NULL;
@@ -131,6 +137,11 @@ int pcap_helper_populate_adapter_info (const char * eth_interface)
    int ret = 0;
    struct sockaddr_in sa;
    char pcap_name[256];
+
+   /* First check cache */
+   if (strcmp (CurrentEthName, eth_interface) == 0)
+      return 0;
+   CurrentEthName[0] = 0; /* clear cache */
 
    /* translate from eth name to pcap name */
    if (get_pcap_name (eth_interface, pcap_name) < 0)
@@ -170,24 +181,26 @@ int pcap_helper_populate_adapter_info (const char * eth_interface)
          if (strstr (pcap_name, pAdapter->AdapterName) != NULL)
          {
             // copy mac
-            memcpy (Mac1, pAdapter->Address, 6);
+            memcpy (Mac, pAdapter->Address, 6);
 
             // ip et.al
             inet_pton (
                AF_INET,
                pAdapter->IpAddressList.IpAddress.String,
                &(sa.sin_addr));
-            Address1 = ntohl (sa.sin_addr.S_un.S_addr);
+            Address = ntohl (sa.sin_addr.S_un.S_addr);
             inet_pton (
                AF_INET,
                pAdapter->IpAddressList.IpMask.String,
                &(sa.sin_addr));
-            NetMask1 = ntohl (sa.sin_addr.S_un.S_addr);
+            NetMask = ntohl (sa.sin_addr.S_un.S_addr);
             inet_pton (
                AF_INET,
                pAdapter->GatewayList.IpAddress.String,
                &(sa.sin_addr));
-            Gateway1 = ntohl (sa.sin_addr.S_un.S_addr);
+            Gateway = ntohl (sa.sin_addr.S_un.S_addr);
+
+            strcpy (CurrentEthName, eth_interface);
 
             ret = 1;
             break;
@@ -258,7 +271,8 @@ int pcap_helper_list_and_select_adapter (char * eth_interface)
    if (NumOfIF >= 2)
    {
       printf ("Enter first interface number (1-%d):", NumOfIF);
-      scanf ("%d", &inum1);
+      if (scanf ("%d", &inum1) < 1)
+         inum1 = 0;
    }
    else
    {
@@ -291,6 +305,10 @@ int pcap_helper_open (const char * eth_interface, PCAP_HANDLE* handle)
 
    *handle = NULL;
 
+   /* get netmask */
+   if (populate_adapter_info (eth_interface) < 0)
+      return -EFAULT;
+
    /* translate from eth name to pcap name */
    if (get_pcap_name (eth_interface, pcap_name) < 0)
       return -EFAULT;
@@ -321,7 +339,7 @@ int pcap_helper_open (const char * eth_interface, PCAP_HANDLE* handle)
    }
 
    // ***** compile and activate filter ****
-   if (pcap_compile (PcapId, &fpdat, FILTER_STRING, 1, NetMask1) < 0)
+   if (pcap_compile (PcapId, &fpdat, FILTER_STRING, 1, NetMask) < 0)
    {
       LOG_ERROR (
          PF_PNAL_LOG,

@@ -288,8 +288,11 @@ int main (int argc, char * argv[])
    if (appdata.arguments.eth_interface[0] == 0)
       if (pcap_helper_list_and_select_adapter (appdata.arguments.eth_interface) < 0)
          return -1;
-   if (pcap_helper_populate_adapter_info (appdata.arguments.eth_interface) < 0)
-      return -1;
+#if PNET_MAX_PORT >= 2
+   if (appdata.arguments.eth_interface2[0] == 0) /* Currently this doesn't exists */
+      if (pcap_helper_list_and_select_adapter (appdata.arguments.eth_interface2) < 0)
+         return -1;
+#endif
 
    /* Read IP, netmask, gateway and MAC address from operating system */
    ret = pnal_get_macaddress (appdata.arguments.eth_interface, &macbuffer);
