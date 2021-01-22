@@ -70,6 +70,7 @@ int pnal_udp_sendto (
    return len;
 }
 
+/* this function must be non-blocking */
 int pnal_udp_recvfrom (
    uint32_t id,
    pnal_ipaddr_t * src_addr,
@@ -77,18 +78,21 @@ int pnal_udp_recvfrom (
    uint8_t * data,
    int size)
 {
-   struct sockaddr_in remote;
+   struct sockaddr_in remote = {0};
    int addr_len = sizeof (remote);
    int len;
+   int ret;
+   struct timeval timeout = {0};
 
-   memset (&remote, 0, sizeof (remote));
-   len = recvfrom (
-      id,
-      data,
-      size,
-      0,
-      (struct sockaddr *)&remote,
-      &addr_len);
+   /* poll */
+   fd_set read_fds;
+   FD_ZERO (&read_fds);
+   FD_SET (id, &read_fds);
+   if ((ret = select (id, &read_fds, NULL, NULL, &timeout)) <= 0)
+      return ret;
+
+   /* read data */
+   len = recvfrom (id, data, size, 0, (struct sockaddr *)&remote, &addr_len);
    if (len > 0)
    {
       *src_addr = ntohl (remote.sin_addr.s_addr);
@@ -100,5 +104,5 @@ int pnal_udp_recvfrom (
 
 void pnal_udp_close (uint32_t id)
 {
-   closesocket(id);
+   closesocket (id);
 }
