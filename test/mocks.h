@@ -69,8 +69,26 @@ typedef struct mock_lldp_data
 
 } mock_lldp_data_t;
 
+typedef struct mock_file_data
+{
+   char filename[PNET_MAX_FILENAME_SIZE];
+   uint8_t object[300];
+   size_t size;
+   bool is_save_failing; /* Used for injecting error */
+   bool is_load_failing; /* Used for injecting error */
+
+} mock_file_data_t;
+
+typedef struct mock_fspm_data
+{
+   char im_location[PNET_LOCATION_MAX_SIZE];
+
+} mock_fspm_data_t;
+
 extern mock_os_data_t mock_os_data;
 extern mock_lldp_data_t mock_lldp_data;
+extern mock_file_data_t mock_file_data;
+extern mock_fspm_data_t mock_fspm_data;
 
 uint32_t mock_os_get_current_time_us (void);
 uint32_t mock_pnal_get_system_uptime_10ms (void);
@@ -160,6 +178,31 @@ int mock_pf_lldp_get_peer_link_status (
    pf_lldp_link_status_t * p_link_status);
 
 int mock_pnal_snmp_init (pnet_t * pnet);
+
+int mock_pf_file_save_if_modified (
+   const char * directory,
+   const char * filename,
+   const void * p_object,
+   void * p_tempobject,
+   size_t size);
+
+int mock_pf_file_save (
+   const char * directory,
+   const char * filename,
+   const void * p_object,
+   size_t size);
+
+void mock_pf_file_clear (const char * directory, const char * filename);
+
+int mock_pf_file_load (
+   const char * directory,
+   const char * filename,
+   void * p_object,
+   size_t size);
+
+void mock_pf_fspm_get_im_location (pnet_t * net, char * location);
+
+void mock_pf_fspm_save_im_location (pnet_t * net, const char * location);
 
 #ifdef __cplusplus
 }
