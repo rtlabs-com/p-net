@@ -13,6 +13,7 @@
 #include "version.h"
 
 #include <string.h>
+#include <direct.h> // _getcwd
 
 #define APP_DEFAULT_ETHERNET_INTERFACE ""   /* will result in selection */
 
@@ -221,7 +222,7 @@ struct cmd_args parse_commandline_arguments (int argc, char * argv[])
    if (strlen (output_arguments.path_storage_directory) == 0)
    {
       if (
-         getcwd (
+         _getcwd (
             output_arguments.path_storage_directory,
             sizeof (output_arguments.path_storage_directory)) == NULL)
       {
