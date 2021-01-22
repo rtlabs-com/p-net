@@ -538,6 +538,20 @@ void pf_lldp_reset_peer_timeout (
    }
 }
 
+/**
+ * @internal
+ * Check if management address is of type IPv4
+ *
+ * @param address          In:    Management address.
+ * @return true if address is a valid IPv4 address,
+ *         false if not.
+ */
+static bool pf_lldp_management_address_is_ipv4 (
+   const pf_lldp_management_address_t * address)
+{
+   return address->is_valid && address->subtype == 1 && address->len == 4;
+}
+
 int pf_lldp_get_peer_timestamp (
    pnet_t * net,
    int loc_port_num,
@@ -1442,6 +1456,7 @@ int pf_lldp_parse_packet (
    lldp_tlv_t tlv;
    pf_lldp_org_header_t org;
    pf_get_info_t parse_info;
+   pf_lldp_management_address_t management_address;
    uint16_t offset = 0;
 
    memset (lldp_peer_info, 0, sizeof (*lldp_peer_info));
@@ -1490,7 +1505,11 @@ int pf_lldp_parse_packet (
             &parse_info,
             &offset,
             tlv.len,
-            &lldp_peer_info->management_address);
+            &management_address);
+         if (pf_lldp_management_address_is_ipv4 (&management_address))
+         {
+            lldp_peer_info->management_address = management_address;
+         }
          break;
       case LLDP_TYPE_ORG_SPEC:
       {
