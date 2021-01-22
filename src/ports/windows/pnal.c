@@ -18,6 +18,13 @@
 
 /********************************* Files *************************************/
 
+bool pnal_does_file_exist (const char * filepath) 
+{ 
+    DWORD dwAttrib = GetFileAttributes (filepath);
+
+   return dwAttrib != INVALID_FILE_ATTRIBUTES;
+}
+
 int pnal_save_file (const char * fullpath,const void * object_1,size_t size_1,const void * object_2,size_t size_2)
 {
    int ret = 0; /* Assume everything goes well */
