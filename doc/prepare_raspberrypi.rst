@@ -250,7 +250,7 @@ repository. It assumes that the code is checked out into
 ``/home/pi/profinet/p-net/`` on your Raspberry Pi.
 Install the file::
 
-    sudo cp /home/pi/profinet/p-net/sample_app/pnet-sampleapp.service /lib/systemd/system/
+    sudo cp /home/pi/profinet/p-net/src/ports/linux/pnet-sampleapp.service /lib/systemd/system/
 
 Adapt the contents to your paths and hardware.
 
