@@ -104,8 +104,8 @@ target_sources(pn_dev
 
 file(COPY
   src/ports/linux/set_network_parameters
-  sample_app/set_profinet_leds_linux
-  sample_app/set_profinet_leds_linux.raspberrypi
+  src/ports/linux/set_profinet_leds
+  src/ports/linux/set_profinet_leds.raspberrypi
   DESTINATION
   ${PROFINET_BINARY_DIR}/
   )

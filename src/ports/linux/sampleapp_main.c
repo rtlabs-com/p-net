@@ -65,7 +65,7 @@ void show_usage()
    printf ("Also the mandatory Profinet signal LED is controlled by this "
            "application.\n");
    printf ("\n");
-   printf ("The LEDs are controlled by the script set_profinet_leds_linux\n");
+   printf ("The LEDs are controlled by the script set_profinet_leds\n");
    printf ("located in the same directory as the application binary.\n");
    printf ("A version for Raspberry Pi is available, and also a version "
            "writing\n");
@@ -264,7 +264,7 @@ int app_set_led (uint16_t id, bool led_state, int verbosity)
    sprintf (id_str, "%u", id);
    id_str[sizeof (id_str) - 1] = '\0';
 
-   argv[0] = "set_profinet_leds_linux";
+   argv[0] = "set_profinet_leds";
    argv[1] = (char *)&id_str;
    argv[2] = (led_state == 1) ? "1" : "0";
    argv[3] = NULL;

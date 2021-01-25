@@ -153,8 +153,8 @@ Instead of controlling real LEDs, the default behavior is to write LED output
 to regular files. If you have connected real LEDs to your Raspberry Pi,
 enable the LED control script::
 
-    mv build/set_profinet_leds_linux build/set_profinet_leds_linux.disabled
-    mv build/set_profinet_leds_linux.raspberrypi build/set_profinet_leds_linux
+    mv build/set_profinet_leds build/set_profinet_leds.disabled
+    mv build/set_profinet_leds.raspberrypi build/set_profinet_leds
 
 
 Notes to advanced users
@@ -203,7 +203,7 @@ Usage of the IO-device sample application:
 
     Also the mandatory Profinet signal LED is controlled by this application.
 
-    The LEDs are controlled by the script set_profinet_leds_linux
+    The LEDs are controlled by the script set_profinet_leds
     located in the same directory as the application binary.
     A version for Raspberry Pi is available, and also a version writing
     to plain text files (useful for demo if no LEDs are available).
