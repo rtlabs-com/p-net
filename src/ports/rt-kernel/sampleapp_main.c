@@ -31,7 +31,7 @@
 #define GPIO_LED2                      GPIO_P5_8
 #define GPIO_BUTTON1                   GPIO_P15_13
 #define GPIO_BUTTON2                   GPIO_P15_12
-#define APP_DEFAULT_ETHERNET_INTERFACE "en1"
+#define APP_DEFAULT_ETHERNET_INTERFACE "en"
 #define APP_DEFAULT_FILE_DIRECTORY     "/disk1"
 
 /********************************** Globals ***********************************/
