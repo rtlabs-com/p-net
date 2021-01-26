@@ -107,8 +107,13 @@ int pnal_get_port_statistics (
    const char * interface_name,
    pnal_port_stats_t * port_stats)
 {
-   /* TODO Read statistics */
-   memset (port_stats, 0, sizeof (*port_stats));
+   port_stats->if_in_octets = netif_default->mib2_counters.ifinoctets;
+   port_stats->if_in_errors = netif_default->mib2_counters.ifinerrors;
+   port_stats->if_in_discards = netif_default->mib2_counters.ifindiscards;
+   port_stats->if_out_octets = netif_default->mib2_counters.ifoutoctets;
+   port_stats->if_out_errors = netif_default->mib2_counters.ifouterrors;
+   port_stats->if_out_discards = netif_default->mib2_counters.ifoutdiscards;
+
    return 0;
 }
 
