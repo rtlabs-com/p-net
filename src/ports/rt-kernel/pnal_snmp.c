@@ -24,7 +24,6 @@
 #include "lldp-mib.h"
 #include "lldp-ext-pno-mib.h"
 #include "lldp-ext-dot3-mib.h"
-
 #include <lwip/apps/snmp.h>
 #include <lwip/apps/snmp_mib2.h>
 #include <lwip/apps/snmp_threadsync.h>
@@ -104,6 +103,11 @@ int pnal_snmp_init (pnet_t * net)
    pnal_snmp_configure_mib2();
    snmp_set_mibs (mibs, LWIP_ARRAYSIZE (mibs));
    snmp_set_write_callback (pnal_snmp_write_callback, net);
+
+   /* TODO: Initialize statistics counters
+            See https://www.nongnu.org/lwip/2_0_x/group__netif__mib2.html
+            Remember to make sure the counters are incremented properly
+            in the Ethernet driver */
 
    /* Start the SNMP server task */
    snmp_init();
