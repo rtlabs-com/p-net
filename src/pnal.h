@@ -174,6 +174,11 @@ typedef struct pnal_eth_status_t
     * speed and duplex setting used for the link.
     */
    pnal_eth_mau_t operational_mau_type;
+
+   /* Corresponds to linux "RUNNING" flag.
+    * Up and cable connected
+    */
+   bool running;
 } pnal_eth_status_t;
 
 /**

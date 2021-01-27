@@ -141,7 +141,7 @@ int pnal_eth_get_status (const char * interface_name, pnal_eth_status_t * status
       PNAL_ETH_AUTONEG_CAP_100BaseTX_HALF_DUPLEX |
       PNAL_ETH_AUTONEG_CAP_100BaseTX_FULL_DUPLEX;
    status->operational_mau_type = PNAL_ETH_MAU_COPPER_100BaseTX_FULL_DUPLEX;
-
+   status->running = true;
    return 0;
 }
 
