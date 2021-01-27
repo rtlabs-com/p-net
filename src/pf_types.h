@@ -223,6 +223,32 @@ typedef enum pf_epmapper_opnum_values
    PF_RPC_EPM_OPNUM_MGMT_DELETE,
 } pf_epmapper_opnum_values_t;
 
+/* PN-AL-protocol (Mar20) Table 725 */
+typedef enum pf_link_state_link
+{
+   PF_PD_LINK_STATE_LINK_RESERVED = 0,
+   PF_PD_LINK_STATE_LINK_UP = 1,
+   PF_PD_LINK_STATE_LINK_DOWN = 2,
+   PF_PD_LINK_STATE_LINK_TESTING = 3,
+   PF_PD_LINK_STATE_LINK_UNKNOWN = 4,
+   PF_PD_LINK_STATE_LINK_DORMANT = 5,
+   PF_PD_LINK_STATE_LINK_NOTPRESENT = 6,
+   PF_PD_LINK_STATE_LINK_LOWERLAYERDOWN = 7
+} pf_link_state_link_t;
+
+/* PN-AL-protocol (Mar20) Table 726 */
+typedef enum pf_link_state_port
+{
+   PF_PD_LINK_STATE_PORT_UNKNOWN = 0,
+   PF_PD_LINK_STATE_PORT_DISABLED = 1,
+   PF_PD_LINK_STATE_PORT_BLOCKING = 2,
+   PF_PD_LINK_STATE_PORT_LISTENING = 3,
+   PF_PD_LINK_STATE_PORT_LEARNING = 4,
+   PF_PD_LINK_STATE_PORT_FORWARDING = 5,
+   PF_PD_LINK_STATE_PORT_BROKEN = 6
+} pf_link_state_port_t;
+
+/* PN-AL-protocol (Mar20) Table 727 */
 typedef enum pf_mediatype_values
 {
    PF_PD_MEDIATYPE_UNKNOWN = 0,

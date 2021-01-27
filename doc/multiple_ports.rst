@@ -96,10 +96,16 @@ Run ``ifconfig`` to check that the bridge is up and its network interfaces are a
 Configuration of p-net stack and sample application 
 ---------------------------------------------------------
 To run p-net and the sample application with multiple ports a couple
-of things need to be done:
+of things need to be done. Note that the settings described in the 
+following sections are changed by running ``ccmake .`` in the build folder.
+``options.h`` will be regenerated. Another way to set the options is to 
+set them on the cmake command line (-DPNET_MAX_PORT=2 -DPNET_MAX_SUBSLOTS=4).
 
 Reconfigure setting ``PNET_MAX_PORT`` to the actual number of physical ports available in the system.
 For this example ``PNET_MAX_PORT`` shall be set to 2. 
+
+Reconfigure setting ``PNET_MAX_SUBSLOTS``. Each additional port will require an additional subslot.
+For this example the ``PNET_MAX_SUBSLOTS`` should be be set to 4.
 
 Example of initial log when starting the demo application with a multi port configuration:: 
 

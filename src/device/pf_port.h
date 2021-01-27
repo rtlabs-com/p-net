@@ -151,6 +151,14 @@ bool pf_port_is_valid (pnet_t * net, int loc_port_num);
  */
 int pf_port_get_port_number (pnet_t * net, pnal_eth_handle_t * eth_handle);
 
+/**
+ * Decode media type from Ethernet MAU type.
+ * Media types listed in PN-AL-protocol (Mar20) Table 727.
+ * @param mau_type         In:   Ethernet MAU type
+ * @return media type
+ */
+pf_mediatype_values_t pf_port_get_media_type (pnal_eth_mau_t mau_type);
+
 #ifdef __cplusplus
 }
 #endif
