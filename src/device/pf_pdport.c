@@ -396,12 +396,14 @@ int pf_pdport_read_ind (
 {
    int ret = -1;
    int loc_port_num;
+   pf_port_iterator_t port_iterator;
    pnal_port_stats_t port_stats;
    pf_port_t * p_port_data;
    const pnet_port_cfg_t * p_port_cfg;
    uint16_t slot = p_read_req->slot_number;
    uint16_t subslot = p_read_req->subslot_number;
    uint16_t index = p_read_req->index;
+   const char * netif_name;
 
    switch (index)
    {
@@ -466,21 +468,21 @@ int pf_pdport_read_ind (
          }
          else if (subslot == PNET_SUBSLOT_DAP_WHOLE_MODULE)
          {
-            /* Todo - how should read using subslot 0 be handled?
-             * include all checks in response?
-             */
-            loc_port_num = PNET_PORT_1;
-
-            p_port_data = pf_port_get_state (net, loc_port_num);
-            if (p_port_data->pdport.check.active)
+            pf_port_init_iterator_over_ports (net, &port_iterator);
+            loc_port_num = pf_port_get_next (&port_iterator);
+            while (loc_port_num != 0)
             {
-               pf_put_pdport_data_check (
-                  &p_port_data->pdport.check.peer,
-                  true,
-                  p_read_res,
-                  res_size,
-                  p_res,
-                  p_pos);
+               p_port_data = pf_port_get_state (net, loc_port_num);
+               if (p_port_data->pdport.check.active)
+               {
+                  pf_put_pdport_data_check (
+                     &p_port_data->pdport.check.peer,
+                     true,
+                     p_read_res,
+                     res_size,
+                     p_res,
+                     p_pos);
+               }
             }
             ret = 0;
          }
@@ -494,16 +496,7 @@ int pf_pdport_read_ind (
          ((subslot == PNET_SUBSLOT_DAP_WHOLE_MODULE) ||
           (subslot == PNET_SUBSLOT_DAP_IDENT)))
       {
-         /*Todo - handle multiple ports and interface level */
-         loc_port_num = PNET_PORT_1;
-         pf_put_pd_real_data (
-            net,
-            true,
-            loc_port_num,
-            p_read_res,
-            res_size,
-            p_res,
-            p_pos);
+         pf_put_pd_real_data (net, true, p_read_res, res_size, p_res, p_pos);
          ret = 0;
       }
       break;
@@ -537,19 +530,17 @@ int pf_pdport_read_ind (
       {
          loc_port_num = pf_port_dap_subslot_to_local_port (subslot);
 
-         /* TODO Summarize port statistics for
-                 PNET_SUBSLOT_DAP_INTERFACE_1_IDENT
-                 when we support multiple ports */
          if (loc_port_num == 0)
          {
-            loc_port_num = 1;
+            netif_name = net->fspm_cfg.if_cfg.main_port.if_name;
+         }
+         else
+         {
+            p_port_cfg = pf_port_get_config (net, loc_port_num);
+            netif_name = p_port_cfg->phy_port.if_name;
          }
 
-         p_port_cfg = pf_port_get_config (net, loc_port_num);
-         if (
-            pnal_get_port_statistics (
-               p_port_cfg->phy_port.if_name,
-               &port_stats) == 0)
+         if (pnal_get_port_statistics (netif_name, &port_stats) == 0)
          {
             pf_put_pdport_statistics (
                &port_stats,

@@ -140,3 +140,25 @@ int pf_port_get_port_number (pnet_t * net, pnal_eth_handle_t * eth_handle)
 
    return 0;
 }
+
+pf_mediatype_values_t pf_port_get_media_type (pnal_eth_mau_t mau_type)
+{
+   switch (mau_type)
+   {
+   case PNAL_ETH_MAU_RADIO:
+      return PF_PD_MEDIATYPE_RADIO;
+   case PNAL_ETH_MAU_COPPER_10BaseT:
+   case PNAL_ETH_MAU_COPPER_100BaseTX_HALF_DUPLEX:
+   case PNAL_ETH_MAU_COPPER_100BaseTX_FULL_DUPLEX:
+   case PNAL_ETH_MAU_COPPER_1000BaseT_HALF_DUPLEX:
+   case PNAL_ETH_MAU_COPPER_1000BaseT_FULL_DUPLEX:
+      return PF_PD_MEDIATYPE_COPPER;
+   case PNAL_ETH_MAU_FIBER_100BaseFX_HALF_DUPLEX:
+   case PNAL_ETH_MAU_FIBER_100BaseFX_FULL_DUPLEX:
+   case PNAL_ETH_MAU_FIBER_1000BaseX_HALF_DUPLEX:
+   case PNAL_ETH_MAU_FIBER_1000BaseX_FULL_DUPLEX:
+      return PF_PD_MEDIATYPE_FIBER;
+   default:
+      return PF_PD_MEDIATYPE_UNKNOWN;
+   }
+}
