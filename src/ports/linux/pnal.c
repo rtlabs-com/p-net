@@ -385,6 +385,12 @@ int pnal_eth_get_status (const char * interface_name, pnal_eth_status_t * status
 
       ret = 0;
    }
+
+   if (ioctl (control_socket, SIOCGIFFLAGS, &ifr) >= 0)
+   {
+      status->running = (ifr.ifr_flags & IFF_RUNNING) ? true : false;
+   }
+
    close (control_socket);
 
    return ret;
