@@ -63,12 +63,19 @@ target_sources(profinet
   $<$<BOOL:${PNET_OPTION_SNMP}>:src/ports/linux/mib/lldpXPnoRemTable.c>
   )
 
+target_link_options(pn_dev
+   PRIVATE
+   -Wl,--gc-sections
+)
+
 target_compile_options(profinet
   PRIVATE
   -Wall
   -Wextra
   -Werror
   -Wno-unused-parameter
+  -ffunction-sections
+  -fdata-sections
   INTERFACE
   $<$<CONFIG:Coverage>:--coverage>
   )
