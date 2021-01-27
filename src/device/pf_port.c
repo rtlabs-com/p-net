@@ -101,13 +101,13 @@ const pnet_port_cfg_t * pf_port_get_config (pnet_t * net, int loc_port_num)
 uint16_t pf_port_loc_port_num_to_dap_subslot (int loc_port_num)
 {
    uint16_t subslot =
-      PNET_SUBSLOT_DAP_INTERFACE_1_PORT_1_IDENT + PNET_PORT_1 - loc_port_num;
+      PNET_SUBSLOT_DAP_INTERFACE_1_PORT_1_IDENT + loc_port_num - PNET_PORT_1;
    return subslot;
 }
 
 int pf_port_dap_subslot_to_local_port (uint16_t subslot)
 {
-   int port = PNET_PORT_1 + PNET_SUBSLOT_DAP_INTERFACE_1_PORT_1_IDENT - subslot;
+   int port = PNET_PORT_1 + subslot - PNET_SUBSLOT_DAP_INTERFACE_1_PORT_1_IDENT;
    if (port < PNET_PORT_1 || port > PNET_MAX_PORT)
    {
       port = 0;
