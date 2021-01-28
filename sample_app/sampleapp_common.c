@@ -1395,8 +1395,8 @@ int app_pnet_cfg_init_default (pnet_cfg_t * stack_config)
    for (i = 0; i < PNET_MAX_PORT; i++)
    {
       snprintf (
-         stack_config->if_cfg.ports[i].port_id,
-         PNET_LLDP_PORT_ID_MAX_SIZE,
+         stack_config->if_cfg.ports[i].port_name,
+         sizeof (stack_config->if_cfg.ports[i].port_name),
          "port-%03d",
          i + 1);
       stack_config->if_cfg.ports[i].rtclass_2_status = 0;

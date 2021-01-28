@@ -214,6 +214,7 @@ static int pf_cmwrr_write (
       {
       case PF_IDX_SUB_PDPORT_DATA_CHECK:
       case PF_IDX_SUB_PDPORT_DATA_ADJ:
+      case PF_IDX_SUB_PDINTF_ADJUST:
          ret = pf_pdport_write_req (
             net,
             p_ar,

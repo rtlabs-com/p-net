@@ -739,6 +739,26 @@ void pf_put_pdport_data_adj (
    uint16_t * p_pos);
 
 /**
+ * Insert pd interface adjust block into a buffer.
+ * @param mode             In:    Multiple interface mode.
+ *                                (name of device mode)
+ * @param subslot          In:    DAP subslot identifying the interface
+ * @param is_big_endian    In:    Endianness of the destination buffer.
+ * @param p_res            In:    Read result
+ * @param res_len          In:    Size of destination buffer.
+ * @param p_bytes          Out:   Destination buffer.
+ * @param p_pos            InOut: Position in destination buffer.
+ */
+void pf_put_pd_interface_adj (
+   pf_lldp_name_of_device_mode_t name_of_device_mode,
+   uint16_t subslot,
+   bool is_big_endian,
+   const pf_iod_read_result_t * p_res,
+   uint16_t res_len,
+   uint8_t * p_bytes,
+   uint16_t * p_pos);
+
+/**
  * Insert pd port real data block into a buffer.
  *
  * Includes peer chassis ID, peer MAC address and peer MAU type.

@@ -757,18 +757,16 @@ TEST_F (LldpTest, LldpGetChassisId)
 
    memset (&chassis_id, 0xff, sizeof (chassis_id));
 
-   /* Currently, the MAC address is used as Chassis ID */
    pf_lldp_get_chassis_id (net, &chassis_id);
-   EXPECT_EQ (chassis_id.subtype, PF_LLDP_SUBTYPE_MAC);
-   EXPECT_EQ (chassis_id.string[0], 0x12);
-   EXPECT_EQ (chassis_id.string[1], 0x34);
-   EXPECT_EQ (chassis_id.string[2], 0x00);
-   EXPECT_EQ (chassis_id.string[3], 0x78);
-   EXPECT_EQ (chassis_id.string[4], (char)0x90);
-   EXPECT_EQ (chassis_id.string[5], (char)0xab);
-   EXPECT_EQ (chassis_id.len, 6u);
-
-   /* TODO: Add test case for locally assigned Chassis ID */
+   EXPECT_EQ (chassis_id.subtype, PF_LLDP_SUBTYPE_LOCALLY_ASSIGNED);
+   EXPECT_STREQ (
+      chassis_id.string,
+      "PNET unit tests           <orderid>            <serial nbr>         1 P "
+      " 0  0  0");
+   EXPECT_EQ (
+      chassis_id.len,
+      strlen ("PNET unit tests           <orderid>            <serial nbr>     "
+              "    1 P  0  0  0"));
 }
 
 TEST_F (LldpTest, LldpGetPortId)
@@ -779,8 +777,8 @@ TEST_F (LldpTest, LldpGetPortId)
 
    pf_lldp_get_port_id (net, LOCAL_PORT, &port_id);
    EXPECT_EQ (port_id.subtype, PF_LLDP_SUBTYPE_LOCALLY_ASSIGNED);
-   EXPECT_STREQ (port_id.string, "port-001");
-   EXPECT_EQ (port_id.len, strlen ("port-001"));
+   EXPECT_STREQ (port_id.string, "port-001.12-34-00-78-90-AB");
+   EXPECT_EQ (port_id.len, strlen ("port-001.12-34-00-78-90-AB"));
 }
 
 TEST_F (LldpTest, LldpGetPortDescription)
