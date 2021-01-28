@@ -23,7 +23,7 @@
 #include <lwip/stats.h>
 #include <lwip/tcpip.h>
 #include <lwip/opt.h>
-
+#include <lwip/snmp.h>
 #include <netif/etharp.h>
 
 #include <string.h>
@@ -49,6 +49,8 @@ COMPILETIME_ASSERT ((BUFFER_SIZE % 4) == 0);
 #define DPRINT(...)
 #define DEBUG_ASSERT(expression)
 #endif /* DEBUG */
+
+#define IS_UNICAST(p)           ((((uint8_t *)(p)->payload)[0] & 1) == 0)
 
 typedef struct eth_mac
 {
@@ -432,6 +434,7 @@ static err_t dwmac1000_hw_transmit_frame (struct netif * netif, struct pbuf * p)
    if (p->tot_len > BUFFER_SIZE)
    {
       DPRINT ("transmit_frame: frame is too big\n");
+      MIB2_STATS_NETIF_INC (netif, ifouterrors);
       LINK_STATS_INC (link.drop);
       LINK_STATS_INC (link.lenerr);
       return ERR_OK;
@@ -452,6 +455,7 @@ static err_t dwmac1000_hw_transmit_frame (struct netif * netif, struct pbuf * p)
    {
       /* No free descriptors, packet dropped */
       LINK_STATS_INC (link.drop);
+      MIB2_STATS_NETIF_INC (netif, ifoutdiscards);
       goto exit;
    }
 
@@ -478,6 +482,16 @@ static err_t dwmac1000_hw_transmit_frame (struct netif * netif, struct pbuf * p)
    /* Move to next descriptor */
    pTx = pTx->next;
    dwmac1000->pTx = pTx;
+
+   MIB2_STATS_NETIF_ADD (netif, ifoutoctets, p->tot_len);
+   if (IS_UNICAST (p))
+   {
+      MIB2_STATS_NETIF_INC (netif, ifoutucastpkts);
+   }
+   else
+   {
+      MIB2_STATS_NETIF_INC (netif, ifoutnucastpkts);
+   }
 
    LINK_STATS_INC (link.xmit);
 
@@ -517,8 +531,9 @@ static void dwmac1000_isr (void * arg)
  * Should allocate a pbuf and transfer the bytes of the incoming
  * packet from the interface into the pbuf.
  */
-static struct pbuf * dwmac1000_hw_get_received_frame (dwmac1000_t * dwmac1000)
+static struct pbuf *dwmac1000_hw_get_received_frame (struct netif * netif)
 {
+   dwmac1000_t *dwmac1000 = netif->state;
    struct pbuf * p = NULL;
    struct pbuf * q = NULL;
    uint16_t length;
@@ -560,6 +575,17 @@ static struct pbuf * dwmac1000_hw_get_received_frame (dwmac1000_t * dwmac1000)
       DEBUG_ASSERT (q->len == q->tot_len);
       pRx->buff = q->payload;
       pRx->pbuf = q;
+
+      MIB2_STATS_NETIF_ADD (netif, ifinoctets, p->tot_len);
+      if (IS_UNICAST (p))
+      {
+         MIB2_STATS_NETIF_INC (netif, ifinucastpkts);
+      }
+      else
+      {
+         MIB2_STATS_NETIF_INC (netif, ifinnucastpkts);
+      }
+
       LINK_STATS_INC (link.recv);
    }
    else
@@ -567,6 +593,7 @@ static struct pbuf * dwmac1000_hw_get_received_frame (dwmac1000_t * dwmac1000)
       p = NULL;
       LINK_STATS_INC (link.memerr);
       LINK_STATS_INC (link.drop);
+      MIB2_STATS_NETIF_INC (netif, ifindiscards);
    }
 
 done:
@@ -600,7 +627,7 @@ static void dwmac1000_input (dwmac1000_t * dwmac1000, struct netif * netif)
    struct pbuf * p;
 
    /* Move received packet into a new pbuf */
-   p = dwmac1000_hw_get_received_frame (dwmac1000);
+   p = dwmac1000_hw_get_received_frame (netif);
    if (p == NULL)
    {
       /* No packet could be read, silently ignore this */
@@ -766,6 +793,8 @@ drv_t * dwmac1000_init (
    netif->flags |= NETIF_FLAG_BROADCAST | NETIF_FLAG_ETHARP | NETIF_FLAG_IGMP;
    netif->hwaddr_len = ETHARP_HWADDR_LEN;
    memcpy (netif->hwaddr, cfg->mac_address, sizeof (netif->hwaddr));
+
+   MIB2_INIT_NETIF (netif, snmp_ifType_ethernet_csmacd, 0);
 
    /* Initialise driver state */
    dwmac1000->phy = phy;
