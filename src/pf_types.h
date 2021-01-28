@@ -77,7 +77,7 @@ static inline uint32_t atomic_fetch_sub (atomic_int * p, uint32_t v)
 
 /** Including termination */
 #define PF_ALIAS_NAME_MAX_SIZE                                                 \
-   (PNET_STATION_NAME_MAX_SIZE + PNET_PORT_ID_MAX_SIZE)
+   (PNET_STATION_NAME_MAX_SIZE + PNET_PORT_NAME_MAX_SIZE)
 
 /************************* Diagnosis ******************************************/
 
@@ -1089,7 +1089,7 @@ typedef struct pf_cmina_dcp_ase
    pnet_cfg_device_id_t device_id;
    pnet_cfg_device_id_t oem_device_id;
 
-   char port_name[PNET_PORT_ID_MAX_SIZE]; /* Terminated. Not used. */
+   char port_name[PNET_PORT_NAME_MAX_SIZE]; /* Terminated. Not used. */
 
    pnet_ethaddr_t mac_address;
    uint16_t standard_gw_value;
@@ -2394,9 +2394,30 @@ typedef struct pf_port_data_adjust
    pf_block_header_t block_header;
 } pf_port_data_adjust_t;
 
+/*
+ * 0x00 The field LLDPChassis contains the NameOfStation and
+ *      the field PortID of LLDP contains the name of the port.
+ * 0x01 The field LLDPChassis contains the NameOfDevice
+ *      and is defined by local means. The field PortID of LLDP
+ *      contains the name of the port and the NameOfStation.
+ *
+ * Example:
+ *                   Legacy LLDP mode       Standard LLDP mode
+ * Version           v2.4 0x00              v2.4 0x01
+ * NameOfStation     dut                    dut
+ * NameOfPort        port-001               port-001
+ * LLDP_PortID       port-001               port-001.dut
+ * LLDP_ChassisID    dut (or mac)           system description
+ */
+typedef enum
+{
+   PF_LLDP_NAME_OF_DEVICE_MODE_LEGACY = 0,
+   PF_LLDP_NAME_OF_DEVICE_MODE_STANDARD = 1
+} pf_lldp_name_of_device_mode_t;
+
 /**
  * Substitution name: PeerToPeerBoundary
- * Table 722
+ * PN-AL-protocol (Mar20) Table 722
  */
 typedef struct pf_peer_to_peer_boundary
 {
@@ -2564,6 +2585,17 @@ typedef struct pf_lldp_station_name
    char string[PNET_STATION_NAME_MAX_SIZE]; /** Terminated string */
    size_t len;
 } pf_lldp_station_name_t;
+
+/**
+ * Port Name
+ * In standard name-of-device mode this is first part of Port ID
+ * In legacy mode Port ID and Port Name are the same.
+ */
+typedef struct pf_lldp_port_name
+{
+   char string[PNET_PORT_NAME_MAX_SIZE]; /** Terminated string */
+   size_t len;
+} pf_lldp_port_name_t;
 
 /**
  * Measured signal delays in nanoseconds
@@ -2752,7 +2784,15 @@ struct pnet
     */
    os_mutex_t * lldp_mutex;
 
-   pf_port_t port[PNET_MAX_PORT];
+   /* Interface data
+    *
+    * Interface and ports runtime data.
+    */
+   struct
+   {
+      pf_lldp_name_of_device_mode_t name_of_device_mode;
+      pf_port_t port[PNET_MAX_PORT];
+   } interface;
 };
 
 /**

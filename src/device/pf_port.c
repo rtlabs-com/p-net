@@ -89,7 +89,7 @@ int pf_port_get_next (pf_port_iterator_t * p_iterator)
 pf_port_t * pf_port_get_state (pnet_t * net, int loc_port_num)
 {
    CC_ASSERT (loc_port_num > 0 && loc_port_num <= PNET_MAX_PORT);
-   return &net->port[loc_port_num - 1];
+   return &net->interface.port[loc_port_num - 1];
 }
 
 const pnet_port_cfg_t * pf_port_get_config (pnet_t * net, int loc_port_num)
@@ -132,7 +132,7 @@ int pf_port_get_port_number (pnet_t * net, pnal_eth_handle_t * eth_handle)
 
    for (loc_port_num = 1; loc_port_num <= PNET_MAX_PORT; loc_port_num++)
    {
-      if (net->port[loc_port_num - 1].eth_handle == eth_handle)
+      if (net->interface.port[loc_port_num - 1].eth_handle == eth_handle)
       {
          return loc_port_num;
       }

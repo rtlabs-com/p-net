@@ -368,6 +368,18 @@ void pf_get_port_data_adjust_peer_to_peer_boundary (
    uint16_t * p_pos,
    pf_adjust_peer_to_peer_boundary_t * boundary);
 
+/**
+ * Extract a pd interface adjust block from a buffer.
+ *
+ * @param p_info           InOut: The parser information.
+ * @param p_pos            InOut: The current parsing position.
+ * @param mode             Out:   Multiple interface mode.
+ */
+void pf_get_interface_adjust (
+   pf_get_info_t * p_info,
+   uint16_t * p_pos,
+   pf_lldp_name_of_device_mode_t * name_of_device_mode);
+
 /************ Internal functions, made available for unit testing ************/
 
 uint32_t pf_get_bits (uint32_t bits, uint8_t pos, uint8_t len);

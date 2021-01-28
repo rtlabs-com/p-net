@@ -1161,14 +1161,14 @@ typedef struct pnet_ethaddr
 #define PNET_STATION_NAME_MAX_SIZE (241)
 
 /* Including termination. Standard says 14 (without termination) */
-#define PNET_PORT_ID_MAX_SIZE (15)
+#define PNET_PORT_NAME_MAX_SIZE (15)
 
 /** Including termination */
 #define PNET_LLDP_CHASSIS_ID_MAX_SIZE (PNET_CHASSIS_ID_MAX_SIZE)
 
 /** Including termination */
 #define PNET_LLDP_PORT_ID_MAX_SIZE                                             \
-   (PNET_STATION_NAME_MAX_SIZE + PNET_PORT_ID_MAX_SIZE)
+   (PNET_STATION_NAME_MAX_SIZE + PNET_PORT_NAME_MAX_SIZE)
 
 /**
  * Network interface
@@ -1185,7 +1185,7 @@ typedef struct pnet_netif
 typedef struct pnet_port_cfg
 {
    pnet_netif_t phy_port;
-   char port_id[PNET_LLDP_PORT_ID_MAX_SIZE]; /**< Terminated string */
+   char port_name[PNET_PORT_NAME_MAX_SIZE]; /**< Terminated string */
    uint16_t rtclass_2_status;
    uint16_t rtclass_3_status;
 } pnet_port_cfg_t;
@@ -1214,7 +1214,7 @@ typedef struct pnet_ip_cfg
 typedef struct pnet_if_cfg
 {
    pnet_netif_t main_port; /**< Main (DAP) network interface. */
-   pnet_ip_cfg_t ip_cfg; /**< IP Settings for main network interface */
+   pnet_ip_cfg_t ip_cfg;   /**< IP Settings for main network interface */
 
    pnet_port_cfg_t ports[PNET_MAX_PORT]; /**< Physical ports (DAP ports) */
 } pnet_if_cfg_t;

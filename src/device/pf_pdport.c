@@ -563,6 +563,24 @@ int pf_pdport_read_ind (
       }
       break;
 
+   case PF_IDX_SUB_PDINTF_ADJUST:
+      if (
+         (slot == PNET_SLOT_DAP_IDENT) &&
+         (subslot == PNET_SUBSLOT_DAP_INTERFACE_1_IDENT))
+      {
+         pf_put_pd_interface_adj (
+            net->interface.name_of_device_mode,
+            PNET_SUBSLOT_DAP_INTERFACE_1_IDENT,
+            true,
+            p_read_res,
+            res_size,
+            p_res,
+            p_pos);
+
+         ret = 0;
+      }
+      break;
+
    default:
       ret = -1;
       break;
@@ -984,6 +1002,40 @@ static int pf_pdport_write_data_adj (
    return ret;
 }
 
+static int pf_pdport_write_interface_adj (
+   pnet_t * net,
+   const pf_ar_t * p_ar,
+   const pf_iod_write_request_t * p_write_req,
+   const uint8_t * p_bytes,
+   uint16_t p_datalength,
+   pnet_result_t * p_result)
+{
+   uint16_t pos = 0;
+   pf_get_info_t get_info;
+
+   get_info.result = PF_PARSE_OK;
+   get_info.p_buf = p_bytes;
+   get_info.is_big_endian = true;
+   get_info.len = p_datalength;
+
+   pf_get_interface_adjust (
+      &get_info,
+      &pos,
+      &net->interface.name_of_device_mode);
+
+   LOG_INFO (
+      PNET_LOG,
+      "PDPORT(%d): PD interface adjust. PLC is setting LLDP mode: %s\n",
+      __LINE__,
+      net->interface.name_of_device_mode == PF_LLDP_NAME_OF_DEVICE_MODE_STANDARD
+         ? "Standard"
+         : "Legacy");
+
+   pf_pdport_lldp_restart (net);
+
+   return 0;
+}
+
 int pf_pdport_write_req (
    pnet_t * net,
    const pf_ar_t * p_ar,
@@ -1023,12 +1075,30 @@ int pf_pdport_write_req (
       default:
          break;
       }
+
+      if (ret == 0)
+      {
+         (void)pf_pdport_save (net, loc_port_num);
+      }
+   }
+   else
+   {
+      switch (p_write_req->index)
+      {
+      case PF_IDX_SUB_PDINTF_ADJUST:
+         ret = pf_pdport_write_interface_adj (
+            net,
+            p_ar,
+            p_write_req,
+            p_bytes,
+            data_length,
+            p_result);
+         break;
+      default:
+         break;
+      }
    }
 
-   if (ret == 0)
-   {
-      (void)pf_pdport_save (net, loc_port_num);
-   }
    return ret;
 }
 

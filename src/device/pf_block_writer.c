@@ -3573,7 +3573,8 @@ void pf_put_pdport_data_real (
    uint16_t block_pos = *p_pos;
    uint16_t block_len = 0;
    uint8_t numPeers = 0;
-   pf_lldp_chassis_id_t chassis_id;
+   pf_lldp_station_name_t station_name;
+   pf_lldp_port_name_t port_name;
    const uint16_t subslot = pf_port_loc_port_num_to_dap_subslot (loc_port_num);
    const pnet_port_cfg_t * p_port_config =
       pf_port_get_config (net, loc_port_num);
@@ -3599,13 +3600,13 @@ void pf_put_pdport_data_real (
    pf_put_uint16 (is_big_endian, PNET_SLOT_DAP_IDENT, res_len, p_bytes, p_pos);
    pf_put_uint16 (is_big_endian, subslot, res_len, p_bytes, p_pos);
 
-   /* Length OwnerPortID */
-   pf_put_byte (strlen (p_port_config->port_id), res_len, p_bytes, p_pos);
+   /* Length OwnPortName */
+   pf_put_byte (strlen (p_port_config->port_name), res_len, p_bytes, p_pos);
 
-   /* OwnerPortID */
+   /* OwnPortName */
    pf_put_mem (
-      p_port_config->port_id,
-      strlen (p_port_config->port_id),
+      p_port_config->port_name,
+      strlen (p_port_config->port_name),
       res_len,
       p_bytes,
       p_pos);
@@ -3618,25 +3619,20 @@ void pf_put_pdport_data_real (
    {
       pf_put_padding (2, res_len, p_bytes, p_pos);
 
-      /* Length peer_id */
-      pf_put_byte (p_peer_info->port_id.len, res_len, p_bytes, p_pos);
+      /* Peer port name */
+      pf_lldp_get_peer_port_name (net, loc_port_num, &port_name);
+      pf_put_byte (port_name.len, res_len, p_bytes, p_pos);
+      pf_put_mem (port_name.string, port_name.len, res_len, p_bytes, p_pos);
 
-      /* peer_id */
+      /* Peer station name */
+      pf_lldp_get_peer_station_name (net, loc_port_num, &station_name);
+      pf_put_byte (station_name.len, res_len, p_bytes, p_pos);
       pf_put_mem (
-         p_peer_info->port_id.string,
-         p_peer_info->port_id.len,
+         station_name.string,
+         station_name.len,
          res_len,
          p_bytes,
          p_pos);
-
-      /* Get ChassisId of peer device */
-      pf_lldp_get_peer_chassis_id (net, loc_port_num, &chassis_id);
-
-      /* Length ChassisID */
-      pf_put_byte (chassis_id.len, res_len, p_bytes, p_pos);
-
-      /* ChassisID */
-      pf_put_mem (chassis_id.string, chassis_id.len, res_len, p_bytes, p_pos);
 
       pf_put_padding_align (block_pos, 4, res_len, p_bytes, p_pos);
 
@@ -3829,7 +3825,7 @@ void pf_put_pdinterface_data_real (
 {
    uint16_t block_pos = *p_pos;
    uint16_t block_len = 0;
-   pf_lldp_chassis_id_t chassis_id;
+   char station_name[PNET_STATION_NAME_MAX_SIZE]; /** Terminated */
    const pnet_ethaddr_t * mac_address = pf_cmina_get_device_macaddr (net);
    pnal_ipaddr_t ip_address = pf_cmina_get_ipaddr (net);
    pnal_ipaddr_t netmask = pf_cmina_get_netmask (net);
@@ -3846,16 +3842,13 @@ void pf_put_pdinterface_data_real (
       p_bytes,
       p_pos);
 
-   /* Get owner ChassisId */
-   pf_lldp_get_chassis_id (net, &chassis_id);
+   /* Station name */
+   /* If station name length is 0, maybe mac string shall be used instead */
+   pf_cmina_get_station_name (net, station_name);
+   pf_put_byte ((uint8_t)strlen(station_name), res_len, p_bytes, p_pos);
+   pf_put_mem (station_name, strlen(station_name), res_len, p_bytes, p_pos);
 
-   /* Owner ChassisID Length */
-   pf_put_byte ((uint8_t)chassis_id.len, res_len, p_bytes, p_pos);
-
-   /* Owner ChassisID*/
-   pf_put_mem (chassis_id.string, chassis_id.len, res_len, p_bytes, p_pos);
-
-   pf_put_padding (2, res_len, p_bytes, p_pos);
+   pf_put_padding_align (block_pos, 4, res_len, p_bytes, p_pos);
 
    /* DAP interface MAC address */
    pf_put_mem (
@@ -4189,6 +4182,48 @@ void pf_put_pdport_data_adj (
       res_len,
       p_bytes,
       p_pos);
+
+   /* Finally insert the block length into the block header */
+   block_len = *p_pos - (block_pos + 4);
+   block_pos += offsetof (pf_block_header_t, block_length); /* Point to correct
+                                                               place */
+   pf_put_uint16 (is_big_endian, block_len, res_len, p_bytes, &block_pos);
+}
+
+void pf_put_pd_interface_adj (
+   pf_lldp_name_of_device_mode_t name_of_device_mode,
+   uint16_t subslot,
+   bool is_big_endian,
+   const pf_iod_read_result_t * p_res,
+   uint16_t res_len,
+   uint8_t * p_bytes,
+   uint16_t * p_pos)
+{
+   uint16_t block_pos = *p_pos;
+   uint16_t block_len = 0;
+   uint32_t temp_u32;
+
+   /* Block header first */
+   pf_put_block_header (
+      is_big_endian,
+      PF_BT_INTERFACE_ADJUST,
+      0, /* Dont know block_len yet */
+      PNET_BLOCK_VERSION_HIGH,
+      PNET_BLOCK_VERSION_LOW,
+      res_len,
+      p_bytes,
+      p_pos);
+
+   pf_put_padding (2, res_len, p_bytes, p_pos);
+
+   /* Slot and subslot */
+   pf_put_uint16 (is_big_endian, PNET_SLOT_DAP_IDENT, res_len, p_bytes, p_pos);
+   pf_put_uint16 (is_big_endian, subslot, res_len, p_bytes, p_pos);
+
+   /* MultipleInterfaceMode */
+   temp_u32 = 0;
+   pf_put_bits (name_of_device_mode, 1, 0, &temp_u32);
+   pf_put_uint16 (is_big_endian, temp_u32, res_len, p_bytes, p_pos);
 
    /* Finally insert the block length into the block header */
    block_len = *p_pos - (block_pos + 4);
