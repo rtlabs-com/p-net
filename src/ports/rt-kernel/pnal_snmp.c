@@ -20,6 +20,7 @@
 #include "pnal.h"
 #include "pf_types.h"
 #include "pnal_snmp.h"
+#include "mib2_system.h"
 
 #include "lldp-mib.h"
 #include "lldp-ext-pno-mib.h"
@@ -31,29 +32,11 @@
 /* Global variable for SNMP server state */
 pnal_snmp_t pnal_snmp;
 
-/**
- * Called right after writing a variable
+/* Configure standard SNMP variables (MIB-II)
  *
- * This is a callback function for SNMP in lwip. It conforms to
- * the type snmp_write_callback_fct.
- *
- * @param oid              In:    Object ID array, e.g. 1.3.6.1.2.1.1.5.0 for
- *                                sysName.
- * @param oid_len          In:    Number of elements in array.
- * @param callback_arg     InOut: Argument configured in call to
- *                                snmp_set_write_callback().
+ * NOTE: This uses a patched version of lwip where callback functions are
+ * called when the MIB-II system variables are read or written.
  */
-static void pnal_snmp_write_callback (
-   const u32_t * oid,
-   u8_t oid_len,
-   void * callback_arg)
-{
-   (void)pf_snmp_set_system_name (pnal_snmp.net, &pnal_snmp.sysname);
-   (void)pf_snmp_set_system_contact (pnal_snmp.net, &pnal_snmp.syscontact);
-   (void)pf_snmp_set_system_location (pnal_snmp.net, &pnal_snmp.syslocation);
-}
-
-/* Configure standard SNMP variables (MIB-II) */
 static void pnal_snmp_configure_mib2 (void)
 {
    static const struct snmp_obj_id enterprise_oid = {
@@ -62,24 +45,11 @@ static void pnal_snmp_configure_mib2 (void)
    };
 
    snmp_threadsync_init (&snmp_mib2_lwip_locks, snmp_mib2_lwip_synchronizer);
-
-   /* Set buffers to hold the writable variables */
-   snmp_mib2_set_sysname (
-      (u8_t *)pnal_snmp.sysname.string,
-      NULL,
-      sizeof (pnal_snmp.sysname.string) - 1);
-   snmp_mib2_set_syscontact (
-      (u8_t *)pnal_snmp.syscontact.string,
-      NULL,
-      sizeof (pnal_snmp.syscontact.string) - 1);
-   snmp_mib2_set_syslocation (
-      (u8_t *)pnal_snmp.syslocation.string,
-      NULL,
-      sizeof (pnal_snmp.syslocation.string) - 1);
-
-   snmp_mib2_set_sysdescr ((const u8_t *)pnal_snmp.sysdescr.string, NULL);
-
    snmp_set_device_enterprise_oid (&enterprise_oid);
+   snmp_mib2_system_set_callbacks (
+      mib2_system_get_value,
+      mib2_system_test_set_value,
+      mib2_system_set_value);
 }
 
 int pnal_snmp_init (pnet_t * net)
@@ -94,20 +64,8 @@ int pnal_snmp_init (pnet_t * net)
    /* Store reference to Profinet device instance */
    pnal_snmp.net = net;
 
-   /* Get values to use for system variables in MIB-II */
-   pf_snmp_get_system_name (net, &pnal_snmp.sysname);
-   pf_snmp_get_system_contact (net, &pnal_snmp.syscontact);
-   pf_snmp_get_system_location (net, &pnal_snmp.syslocation);
-   pf_snmp_get_system_description (net, &pnal_snmp.sysdescr);
-
    pnal_snmp_configure_mib2();
    snmp_set_mibs (mibs, LWIP_ARRAYSIZE (mibs));
-   snmp_set_write_callback (pnal_snmp_write_callback, net);
-
-   /* TODO: Initialize statistics counters
-            See https://www.nongnu.org/lwip/2_0_x/group__netif__mib2.html
-            Remember to make sure the counters are incremented properly
-            in the Ethernet driver */
 
    /* Start the SNMP server task */
    snmp_init();

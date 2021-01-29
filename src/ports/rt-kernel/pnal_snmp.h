@@ -17,7 +17,7 @@
  * @file
  * @brief SNMP server for rt-kernel
  *
- * Uses the SNMP server implementation supplied by lwip.
+ * Uses (a patched version of) the SNMP server implementation supplied by lwip.
  * Access to Profinet stack is done through the platform-independent internal
  * API, pf_snmp.h. Supported MIBs:
  * - MIB-II,
@@ -61,11 +61,6 @@ typedef struct pnal_snmp
     * Used for accessing variables in the stack, such as LLDP variables.
     */
    pnet_t * net;
-
-   pf_snmp_system_name_t sysname;
-   pf_snmp_system_contact_t syscontact;
-   pf_snmp_system_location_t syslocation;
-   pf_snmp_system_description_t sysdescr;
 
    pnal_snmp_response_t response;
 } pnal_snmp_t;
