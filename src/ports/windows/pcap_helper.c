@@ -36,7 +36,7 @@ static struct bpf_program fpdat;
    "ether dst 08:00:06:60:4a:3f || ether multicast || ether broadcast || "     \
    "ether proto 0x8892 || ether proto 0x88cc"
 
-static int populate_adapter_info (const char * eth_interface)
+static int populate_adapter_info (const char * eth_interface);
 
 // * ---------------------------------------------------------
 // * get / set
