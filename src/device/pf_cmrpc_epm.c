@@ -280,6 +280,10 @@ static int pf_cmrdr_inquiry_read_all_reg_ind (
             sizeof (null_rpc_handle)) == 0)
       {
          /* Send the EPM interface information */
+         LOG_INFO (
+            PF_RPC_LOG,
+            "EPM(%d): PLC is requesting EPM interface information.\n",
+            __LINE__);
          ret = pf_cmrdr_add_epmv4_entry (
             net,
             p_rpc_req,
@@ -298,6 +302,10 @@ static int pf_cmrdr_inquiry_read_all_reg_ind (
             sizeof (null_rpc_handle)) != 0)
       {
          /* Send the PNIO interface information */
+         LOG_INFO (
+            PF_RPC_LOG,
+            "EPM(%d): PLC is requesting PNIO interface information via EPM.\n",
+            __LINE__);
          ret = pf_cmrdr_add_pnio_entry (
             net,
             p_rpc_req,
@@ -334,6 +342,11 @@ int pf_cmrpc_lookup_request (
    uint8_t * p_res,
    uint16_t * p_pos)
 {
+   LOG_INFO (
+      PF_RPC_LOG,
+      "EPM(%d): Received endpoint mapper (EPM) request.\n",
+      __LINE__);
+
    pf_rpc_lookup_rsp_t lookup_rsp;
 
    memset (&lookup_rsp, 0, sizeof (lookup_rsp));
