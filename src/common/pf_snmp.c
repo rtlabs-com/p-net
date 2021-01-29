@@ -284,7 +284,7 @@ void pf_snmp_get_system_contact (
       contact->string[0] = '\0';
    }
    contact->string[sizeof (contact->string) - 1] = '\0';
-   pf_snmp_log_loaded_variable (error, "syContact", contact->string);
+   pf_snmp_log_loaded_variable (error, "sysContact", contact->string);
 }
 
 int pf_snmp_set_system_contact (

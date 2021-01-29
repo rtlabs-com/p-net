@@ -24,6 +24,7 @@ target_sources(profinet
   src/ports/rt-kernel/pnal_eth.c
   src/ports/rt-kernel/pnal_udp.c
   src/ports/rt-kernel/pnal_snmp.c
+  src/ports/rt-kernel/mib2_system.c
   src/ports/rt-kernel/lldp-mib.c
   src/ports/rt-kernel/lldp-ext-pno-mib.c
   src/ports/rt-kernel/lldp-ext-dot3-mib.c
