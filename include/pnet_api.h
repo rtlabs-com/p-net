@@ -1172,6 +1172,13 @@ typedef struct pnet_ethaddr
 
 /**
  * Physical Port Configuration
+ *
+ * The port_name field has the format port-xyz or port-abcde-xyz regardless of
+ * the format used for LLDP ChassisID and PortID.
+ * See section 7.3.3.3.4 "Attributes" in Profinet 2.4 Services.
+ * TODO: Move this field to runtime data instead, and rename the field to
+ * name_of_port
+ * Automatically populate it with port-00x where x is local_port_number
  */
 typedef struct pnet_port_cfg
 {

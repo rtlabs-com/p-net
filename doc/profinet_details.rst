@@ -129,7 +129,7 @@ This is used for example for assigning station name and IP address to devices.
 Setting the station name and IP address etc:
 
 * Permanent: The values should be used after power cycling
-* Temporary: After power cycling the station name should be "" and the IP address 0.0.0.0
+* Temporary: After power cycling the station name should be ``""`` and the IP address ``0.0.0.0``
 
 
 DCE/RPC protocol via UDP
@@ -307,17 +307,16 @@ Examples of pre-defined indexes:
 +-----------------------------+--------------------------------------------------------+
 | ExpectedIdentificationData  |                                                        |
 +-----------------------------+--------------------------------------------------------+
-| ExpectedIdentificationData  |                                                        |
-+-----------------------------+--------------------------------------------------------+
 | LogBookData                 |                                                        |
 +-----------------------------+--------------------------------------------------------+
 | ModuleDiffBlock             |                                                        |
 +-----------------------------+--------------------------------------------------------+
 | PDExpectedData              |                                                        |
 +-----------------------------+--------------------------------------------------------+
-| PDInterfaceAdjust           |                                                        |
+| PDInterfaceAdjust           | Use standard LLDP mode or legacy LLDP mode.            |
 +-----------------------------+--------------------------------------------------------+
-| PDInterfaceDataReal         |                                                        |
+| PDInterfaceDataReal         | Actual station name (not ChassisID), interface MAC     |
+|                             | address, IP address etc.                               |
 +-----------------------------+--------------------------------------------------------+
 | PDInterfaceFSUDataAdjust    |                                                        |
 +-----------------------------+--------------------------------------------------------+
@@ -329,17 +328,18 @@ Examples of pre-defined indexes:
 +-----------------------------+--------------------------------------------------------+
 | PDNCDataCheck               |                                                        |
 +-----------------------------+--------------------------------------------------------+
-| PDPortDataAdjust            | Turn on and off LLDP transmission                      |
+| PDPortDataAdjust            | Turn on and off LLDP transmission.                     |
 +-----------------------------+--------------------------------------------------------+
-| PDPortDataCheck             | Wanted peer chassisID, port ID etc                     |
+| PDPortDataCheck             | Wanted peer chassisID, port ID etc.                    |
 +-----------------------------+--------------------------------------------------------+
-| PDPortDataReal              | Actual peer chassisID, MAU type etc                    |
+| PDPortDataReal              | Actual PortID, peer PortID, peer ChassisID, peer MAC   |
+|                             | address, MAU type, link state etc.                     |
 +-----------------------------+--------------------------------------------------------+
 | PDPortDataRealExtended      |                                                        |
 +-----------------------------+--------------------------------------------------------+
-| PDPortStatistic             |                                                        |
+| PDPortStatistic             | Sent and recieved bytes. Errors and discards.          |
 +-----------------------------+--------------------------------------------------------+
-| PDRealData                  |                                                        |
+| PDRealData                  | Actual values and statistics for interface and port.   |
 +-----------------------------+--------------------------------------------------------+
 | PDSyncData                  |                                                        |
 +-----------------------------+--------------------------------------------------------+
@@ -351,9 +351,8 @@ Examples of pre-defined indexes:
 +-----------------------------+--------------------------------------------------------+
 | PE_EntityStatusData         |                                                        |
 +-----------------------------+--------------------------------------------------------+
-| RealIdentificationData      |                                                        |
-+-----------------------------+--------------------------------------------------------+
-| RealIdentificationData      |                                                        |
+| RealIdentificationData      | Which modules (and submodules) are plugged into which  |
+|                             | slots (and subslots).                                  |
 +-----------------------------+--------------------------------------------------------+
 | SubstituteValue             |                                                        |
 +-----------------------------+--------------------------------------------------------+
@@ -415,30 +414,35 @@ It is followed by the block payload data.
 Different TLV block types may have subtypes defined (within the payload).
 
 The frame is broadcast to MAC address ``01:80:c2:00:00:0e`` and
-has an Ethertype of 0x88cc.
+has an Ethertype of ``0x88cc``.
 
 TLV types:
 
 * 0: (End of LLDP frame indicator)
 * 1: Chassis ID. Subtypes 4: MAC address. 7: Locally assigned name
-* 2: Port ID. Subtype 7: Local
+* 2: Port ID. Subtype 7: Locally assigned name
 * 3: Time to live in seconds
+* 4: Port description
+* 5: System name
+* 7: Capabilites (Router, Bridge, Telephone etc)
 * 8: Management address (optional for LLDP, mandatory in Profinet). Includes IP
   address and interface number. Address subtype 1: IPv4 2: IPv6
 * 127: Organisation specific (optional for LLDP. See below.). Has an
   organisation unique code, and a subtype.
 
-Organisation unique code 00:0e:cf belongs to Profibus Nutzerorganisation, and
-supports these subtypes:
+Organisation unique code ``00:0e:cf`` belongs to Profibus Nutzerorganisation,
+and supports these subtypes:
 
+* 1: Measured delay values
 * 2: Port status. Contains RTClass2 and RTClass3 port status.
 * 5: Chassis MAC address
 
-Organisation unique code 00:12:0f belongs to the IEEE 802.3 organisation, and
-supports these subtypes:
+Organisation unique code ``00:12:0f`` belongs to the IEEE 802.3 organisation,
+and supports these subtypes:
 
 * 1: MAC/PHY configuration status. Shows autonegotiation support, and which
   speeds are supported. Also MAU type.
+* 4: Maximum frame size
 
 Autonegotiation:
 
@@ -454,6 +458,58 @@ Speed:
 * Bit 13: 10BASE-T Full duplex
 * Bit 14: 10BASE-T Half duplex
 * Bit 15: Unknown speed
+
+MAU types:
+
+* 0x00 Radio
+* 0x10 Copper 100BaseTX Full duplex
+* 0x1E Copper 1000BaseT Full duplex
+
+
+Standard and legacy LLDP name format
+------------------------------------
+The contents of the LLDP fields PortID and ChassisID were changed in
+Profinet v 2.3. An example will show the differences:
+
++-------------------------------+------------+
+| NameOfStation (for interface) | "dut"      |
++-------------------------------+------------+
+| NameOfPort                    | "port-001" |
++-------------------------------+------------+
+| NameOfStation of neighbour    | "b"        |
++-------------------------------+------------+
+| NameOfPort of neighbour       | "port-003" |
++-------------------------------+------------+
+
+We have an alias name for each of our ports, and it is constructed from
+the information about the connected neighbour. In this example, our
+alias name for our port would be "port-003.b".
+
+Legacy LLDP mode (up to and including Profinet v 2.2):
+
++-----------------+------------+
+| LLDP_PortID     | "port-001" |
++-----------------+------------+
+| LLDP_ChassisID  | "dut"      |
++-----------------+------------+
+
+Standard LLDP mode (Profinet v 2.3 and later):
+
++-----------------+----------------------------------------+
+| LLDP_PortID     | "port-001.dut"                         |
++-----------------+----------------------------------------+
+| LLDP_ChassisID  | devicetype+orderID+serialNumber etc    |
++-----------------+----------------------------------------+
+
+If NameOfStation not yet is set, we instead use our device MAC address
+(as a string) when constructing the LLDP strings.
+
+The legacy LLDP mode is used by devices conformant to Profinet v2.2 and earlier.
+Later Profinet versions uses the standard LLDP mode, but an IO-device can
+be ordered by the PLC at startup to use the legacy LLDP mode.
+By setting the ``MultipleInterfaceMode`` to ``1`` (instead of ``0``) the PLC
+will ask the IO-device to use the standard LLDP mode. This is done by writing
+to the PDInterfaceAdjust index.
 
 
 Relevant standards
@@ -481,8 +537,9 @@ Relevant standards
 * IETF :rfc:`1213`   Management Information Base v 2 (MIB-II)
 * IETF :rfc:`2131`   DHCP
 * IETF :rfc:`2132`   DHCP Options
+* IETF :rfc:`2741`   AgentX protocol for SNMP subagents
 * IETF :rfc:`2863`   The Interfaces Group MIB
-* IETF :rfc:`3414`   ?
+* IETF :rfc:`3414`   SNMPv3
 * IETF :rfc:`3418`   Management Information Base (MIB) for SNMP
 * IETF :rfc:`3635`   Definitions of Managed Objects for the Ethernet-like Interface Types
 * IETF :rfc:`5890`   Internationalized Domain Names for Applications (IDNA)

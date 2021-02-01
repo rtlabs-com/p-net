@@ -3,6 +3,11 @@
 Network topology detection
 ==========================
 
+A Profinet device of class B has the same features as a device class A, plus
+the support for network topology detection. That allows tools to ask the
+devices how they are connected, so it is possible to automatically draw a
+network map. See for example the illustration in the section on the PRONETA
+tool below.
 
 LLDP
 ----
@@ -465,7 +470,8 @@ Readable fields related to ports and interfaces:
 +----------------------+--------------------------------------+-----------------+------------+-------------+
 | PortRxDValue         | Reception delay in ns. uint32        |                 | x          | x           |
 +----------------------+--------------------------------------+-----------------+------------+-------------+
-| NoS                  | Station name (interface name) String | x               |            | x           |
+| NoS                  | Station name (or MAC address as      | x               |            | x           |
+|                      | string) String                       |                 |            |             |
 +----------------------+--------------------------------------+-----------------+------------+-------------+
 | AutoNegSupported     | Autonegotiation supported. Bool.     |                 | x          | o           |
 +----------------------+--------------------------------------+-----------------+------------+-------------+
@@ -506,6 +512,22 @@ agent is Profinet-enabled::
    snmpget -v1 -c public 192.168.0.50 1.3.6.1.2.1.1.2.0
 
 
+Verification of multiport SNMP functionality for p-net
+------------------------------------------------------
+Ask the device about its neighbours on the different ports by running::
+
+   snmpwalk -v1 -c public 192.168.0.50  1.0.8802.1.1.2.1.4.1
+
+This will use the LldpRemTable to show peer ChassisID and peer PortId for the
+different local ports.
+Connect some other LLDP-enabled device (Profinet or not) to one of the ports,
+and verify that it will show up in the results.
+
+A while after disconnecting the device (controlled by the TTL value)
+the entry will be removed from the list.
+Verify this behavior for all ports on your device.
+
+
 Siemens PRONETA - Profinet Network Analysis tool
 ------------------------------------------------
 The Proneta tool can scan the network to discover the topology of connected
@@ -520,7 +542,9 @@ on your computer.
 On the home screen, select "Network analysis" and use the "Online" tab.
 Click the "Refresh" icon to scan the network topology.
 A graphical view with all Profinet equipment will be shown, including
-the connections between all ports.
+the connections between all ports. An example screenshot is shown below.
+
+.. image:: illustrations/proneta_example.png
 
 The program will show the list of current diagnosis for IO-devices.
 It will also show details about interfaces and ports.

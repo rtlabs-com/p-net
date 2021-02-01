@@ -503,7 +503,7 @@ static void pf_lldp_receive_timeout (
    pf_port_t * p_port_data = (pf_port_t *)arg;
 
    p_port_data->lldp.rx_timeout = 0;
-   LOG_WARNING (PF_LLDP_LOG, "LLDP(%d): Receive timeout expired\n", __LINE__);
+   LOG_WARNING (PF_LLDP_LOG, "LLDP(%d): Receive timeout expired for port %u\n", __LINE__, p_port_data->port_num);
 
    pf_pdport_peer_lldp_timeout (net, p_port_data->port_num);
    pf_lldp_invalidate_peer_info (net, p_port_data->port_num);
@@ -1028,12 +1028,12 @@ size_t pf_lldp_construct_frame (pnet_t * net, int loc_port_num, uint8_t buf[])
       "IP: %s Chassis ID: \"%s\" Port ID: \"%s\"\n",
       __LINE__,
       loc_port_num,
-      device_mac_address->addr[0],
-      device_mac_address->addr[1],
-      device_mac_address->addr[2],
-      device_mac_address->addr[3],
-      device_mac_address->addr[4],
-      device_mac_address->addr[5],
+      p_port_data->netif.mac_address.addr[0],
+      p_port_data->netif.mac_address.addr[1],
+      p_port_data->netif.mac_address.addr[2],
+      p_port_data->netif.mac_address.addr[3],
+      p_port_data->netif.mac_address.addr[4],
+      p_port_data->netif.mac_address.addr[5],
       ip_string,
       chassis_id_description,
       port_id.string);
@@ -1763,7 +1763,7 @@ int pf_lldp_parse_packet (
 
 /**
  * @internal
- * Generate an alias name from the peer port_id and peer chassis_id
+ * Generate an alias name (for me) from the peer port_id and peer chassis_id
  *
  * See PN-Topology 6.4.2 and PN-Protocol 4.3.1.4.18
  *

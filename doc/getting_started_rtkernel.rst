@@ -30,9 +30,11 @@ Run (adapt paths)::
 
     cp -r /opt/rt-tools/rt-kernel-xmc4 /home/jonas/projects/profinetstack/rtkernelcopy/
 
-Patch the source (in the root folder of the rt-kernel directory)::
+Patch the source by using the patch file available in the p-net repository.
+Verify that you have the version of rt-kernel that the patch file is intended for.
+Run this in the root folder of the rt-kernel directory::
 
-   git am PATH_TO_PNET/src/ports/rt-kernel/0001-rtkernel-for-Profinet.patch
+   patch -p1 < PATH_TO_PNET/src/ports/rt-kernel/0001-rtkernel-for-Profinet.patch
 
 You may want to change IP settings in ``rt-kernel-xmc4/bsp/xmc48relax/include/config.h``.
 

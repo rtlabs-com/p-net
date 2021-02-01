@@ -132,7 +132,6 @@ sending LLDP frames.
 .. doxygenstruct:: pnet_im_3_t
 .. doxygenstruct:: pnet_im_4_t
 .. doxygenstruct:: pnet_cfg_device_id_t
-.. doxygenstruct:: pnet_lldp_cfg_t
 .. doxygenstruct:: pnet_cfg_t
 .. doxygenstruct:: pnet_alarm_spec_t
 .. doxygenstruct:: pnet_alarm_argument_t

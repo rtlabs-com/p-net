@@ -42,6 +42,10 @@ To create a bridge and add network interfaces to it, create the following files 
     Name=br0
     Kind=bridge
 
+    # /etc/systemd/network/bridge-br0.network
+    [Match]
+    Name=br0
+
     # /etc/systemd/network/br0-member-eth0.network
     [Match]
     Name=eth0
@@ -59,55 +63,103 @@ Enable and start network daemon::
     sudo systemctl enable systemd-networkd
     sudo systemctl start systemd-networkd
 
-Run ``ifconfig`` to check that the bridge is up and its network interfaces are all up::
+Run ``ifconfig -a`` to check that the bridge is up and its network interfaces are all up::
 
-    pi@pndevice-pi:~$ ifconfig
-    br0: flags=4419<UP,BROADCAST,RUNNING,PROMISC,MULTICAST>  mtu 1500
-        ether c2:38:f3:a6:0a:66  txqueuelen 1000  (Ethernet)
-        RX packets 6871  bytes 614728 (600.3 KiB)
-        RX errors 0  dropped 12  overruns 0  frame 0
-        TX packets 929  bytes 288939 (282.1 KiB)
-        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+   pi@pndevice-pi:~$ ifconfig -a
+   br0: flags=4419<UP,BROADCAST,RUNNING,PROMISC,MULTICAST>  mtu 1500
+         inet 192.168.0.50  netmask 255.255.255.0  broadcast 0.0.0.0
+         ether 3e:9b:37:c6:3e:ee  txqueuelen 1000  (Ethernet)
+         RX packets 209875  bytes 11260238 (10.7 MiB)
+         RX errors 0  dropped 0  overruns 0  frame 0
+         TX packets 201263  bytes 12927207 (12.3 MiB)
+         TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
 
-    eth0: flags=4099<UP,BROADCAST,MULTICAST>  mtu 1500
-        ether b8:27:eb:67:14:8a  txqueuelen 1000  (Ethernet)
-        RX packets 0  bytes 0 (0.0 B)
-        RX errors 0  dropped 0  overruns 0  frame 0
-        TX packets 0  bytes 0 (0.0 B)
-        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+   eth0: flags=4419<UP,BROADCAST,RUNNING,PROMISC,MULTICAST>  mtu 1500
+         inet6 fe80::ba27:ebff:fef3:9ab2  prefixlen 64  scopeid 0x20<link>
+         ether b8:27:eb:f3:9a:b2  txqueuelen 1000  (Ethernet)
+         RX packets 209581  bytes 12999322 (12.3 MiB)
+         RX errors 0  dropped 2285  overruns 0  frame 0
+         TX packets 205044  bytes 14541592 (13.8 MiB)
+         TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
 
-    eth1: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
-        inet6 fe80::c641:1eff:fe82:f67f  prefixlen 64  scopeid 0x20<link>
-        ether c4:41:1e:82:f6:7f  txqueuelen 1000  (Ethernet)
-        RX packets 6901  bytes 617674 (603.1 KiB)
-        RX errors 0  dropped 0  overruns 0  frame 0
-        TX packets 972  bytes 293401 (286.5 KiB)
-        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+   eth1: flags=4419<UP,BROADCAST,RUNNING,PROMISC,MULTICAST>  mtu 1500
+         inet6 fe80::a2ce:c8ff:fe1e:1745  prefixlen 64  scopeid 0x20<link>
+         ether a0:ce:c8:1e:17:45  txqueuelen 1000  (Ethernet)
+         RX packets 6019  bytes 1764099 (1.6 MiB)
+         RX errors 0  dropped 2320  overruns 0  frame 0
+         TX packets 6662  bytes 721472 (704.5 KiB)
+         TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
 
-    lo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536
-        inet 127.0.0.1  netmask 255.0.0.0
-        inet6 ::1  prefixlen 128  scopeid 0x10<host>
-        loop  txqueuelen 1000  (Local Loopback)
-        RX packets 0  bytes 0 (0.0 B)
-        RX errors 0  dropped 0  overruns 0  frame 0
-        TX packets 0  bytes 0 (0.0 B)
-        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+   lo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536
+         inet 127.0.0.1  netmask 255.0.0.0
+         inet6 ::1  prefixlen 128  scopeid 0x10<host>
+         loop  txqueuelen 1000  (Local Loopback)
+         RX packets 38  bytes 3952 (3.8 KiB)
+         RX errors 0  dropped 0  overruns 0  frame 0
+         TX packets 38  bytes 3952 (3.8 KiB)
+         TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
 
-Configuration of p-net stack and sample application 
+   wlan0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+         inet 192.168.42.92  netmask 255.255.255.0  broadcast 192.168.42.255
+         inet6 fe80::d4bf:5c2c:48c0:bf1e  prefixlen 64  scopeid 0x20<link>
+         ether b8:27:eb:a6:cf:e7  txqueuelen 1000  (Ethernet)
+         RX packets 1883  bytes 135753 (132.5 KiB)
+         RX errors 0  dropped 0  overruns 0  frame 0
+         TX packets 126  bytes 20075 (19.6 KiB)
+         TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+No IP address has to be assigned to the bridge or any of the Ethernet interfaces
+in order for the bridge to forward packets from one Ethernet interface to
+the other. However the bridge needs to be in UP state.
+
+To show bridge status::
+
+   pi@pndevice-pi:~$ bridge -d link
+   2: eth0: <BROADCAST,MULTICAST,PROMISC,UP,LOWER_UP> mtu 1500 master br0 state forwarding priority 32 cost 4
+      hairpin off guard off root_block off fastleave off learning on flood on mcast_flood on neigh_suppress off vlan_tunnel off isolated off
+   3: br0: <BROADCAST,MULTICAST,PROMISC,UP,LOWER_UP> mtu 1500 master br0
+   5: eth1: <BROADCAST,MULTICAST,PROMISC,UP,LOWER_UP> mtu 1500 master br0 state forwarding priority 32 cost 19
+      hairpin off guard off root_block off fastleave off learning on flood on mcast_flood on neigh_suppress off vlan_tunnel off isolated off
+
+You can also use the ``brctl`` Linux command from the ``bridge-utils`` package::
+
+   pi@pndevice-pi:~$ brctl show
+   bridge name    bridge id            STP enabled    interfaces
+   br0            8000.3e9b37c63eee    no             eth0
+                                                      eth1
+
+Another useful Linux command is ``networkctl``::
+
+   pi@pndevice-pi:~$ networkctl
+   IDX LINK             TYPE               OPERATIONAL SETUP
+     1 lo               loopback           carrier     unmanaged
+     2 eth0             ether              degraded    configured
+     3 br0              bridge             degraded    unmanaged
+     4 eth1             ether              degraded    configured
+     5 wlan0            wlan               routable    unmanaged
+
+   5 links listed.
+
+To disable the creation of the bridge at reboot::
+
+   sudo systemctl disable systemd-networkd
+
+
+Configuration of p-net stack and sample application
 ---------------------------------------------------------
 To run p-net and the sample application with multiple ports a couple
-of things need to be done. Note that the settings described in the 
+of things need to be done. Note that the settings described in the
 following sections are changed by running ``ccmake .`` in the build folder.
-``options.h`` will be regenerated. Another way to set the options is to 
+``options.h`` will be regenerated. Another way to set the options is to
 set them on the cmake command line (-DPNET_NUMBER_OF_PHYSICAL_PORTS=2 -DPNET_MAX_SUBSLOTS=4).
 
 Reconfigure setting ``PNET_NUMBER_OF_PHYSICAL_PORTS`` to the actual number of physical ports available in the system.
-For this example ``PNET_NUMBER_OF_PHYSICAL_PORTS`` shall be set to 2. 
+For this example ``PNET_NUMBER_OF_PHYSICAL_PORTS`` shall be set to 2.
 
 Reconfigure setting ``PNET_MAX_SUBSLOTS``. Each additional port will require an additional subslot.
 For this example the ``PNET_MAX_SUBSLOTS`` should be be set to 4.
 
-Example of initial log when starting the demo application with a multi port configuration:: 
+Example of initial log when starting the demo application with a multi port configuration::
 
     pi@pndevice-pi:~/profinet/build $ sudo ./pn_dev -v
     ** Starting Profinet demo application **
@@ -116,8 +168,8 @@ Example of initial log when starting the demo application with a multi port conf
     App verbosity level:  1
     Nbr of ports:         2
     Network interfaces:   br0,eth0,eth1
-    Button1 file:         
-    Button2 file:         
+    Button1 file:
+    Button2 file:
     Station name:         rt-labs-dev
     Management port:      br0 C2:38:F3:A6:0A:66
     Physical port [1]:    eth0 B8:27:EB:67:14:8A
@@ -128,11 +180,38 @@ Example of initial log when starting the demo application with a multi port conf
     Current Gateway:      192.168.0.1
     Storage directory:    /home/pi/profinet/build
 
-Update gsdml file
+Update GSDML file
 -----------------
-The sample app gsdml file contains a commented out block that defines 
-a second physical port. In the sample application gsdml file, search for "IDS_P2" 
-and enable commented out lines as described in the gsdml file. 
+The sample app GSDML file contains a commented out block that defines
+a second physical port. In the sample application GSDML file, search for "IDS_P2"
+and enable commented out lines as described in the GSDML file.
 
-Note that you will have to the reload gsdml file in all tools you are using and 
+Note that you will have to the reload GSDML file in all tools you are using and
 also the Automated RT tester any time the file is changed.
+
+
+Running ART tester with multiple ports
+--------------------------------------
+Use the MAC-address of ``br0`` when running ART tester.
+
+
+Routing traffic with multiple ports
+-----------------------------------
+To see the MAC addresses and IP addresses of the neighbours, use the ``arp``
+Linux command::
+
+   pi@pndevice-pi:~$ arp
+   Address                  HWtype  HWaddress           Flags Mask            Iface
+   192.168.0.99             ether   20:87:56:ff:aa:83   C                     br0
+   192.168.42.1             ether   b4:fb:e4:51:09:72   C                     wlan0
+   192.168.0.98             ether   ac:4a:56:f4:02:89   C                     br0
+   192.168.0.30             ether   54:ee:75:ff:95:a6   C                     br0
+
+To see the IP routing table, use the ``route`` Linux command::
+
+   pi@pndevice-pi:~$ route
+   Kernel IP routing table
+   Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+   default         192.168.42.1    0.0.0.0         UG    305    0        0 wlan0
+   192.168.0.0     0.0.0.0         255.255.255.0   U     0      0        0 br0
+   192.168.42.0    0.0.0.0         255.255.255.0   U     305    0        0 wlan0

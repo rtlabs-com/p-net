@@ -18,6 +18,7 @@ Profinet device stack implementation. Key features:
 * Profinet v2.4
   * Conformance Class A and B
   * Real Time Class 1
+  * Multiple Ethernet ports
 * Easy to use
   * Extensive documentation and instructions on how to get started.
   * Build and run sample application on Raspberry Pi in 30 minutes.
@@ -39,8 +40,10 @@ The main requirement on the platform
 is that it can send and receive raw Ethernet Layer 2 frames.
 
 Features:
-
+ * Multiple Ethernet ports (for Linux only, so far)
  * TCP/IP
+ * LLDP
+ * SNMP
  * RT (real-time)
  * Address resolution
  * Parameterization
@@ -54,7 +57,7 @@ Features:
 Limitations or not yet implemented:
 
 * This is a device stack, which means that the IO-controller/master/PLC side is not supported.
-* Only a single Ethernet port (no media redundancy)
+* No media redundancy (No MRP support)
 * No startup mode legacy
 * No support for RT_CLASS_UDP
 * No support for DHCP

@@ -23,6 +23,33 @@ For details on how to add yourself to the ``wireshark`` user group, see
 https://linuxhint.com/install_wireshark_ubuntu/
 
 
+Filtering frames in Wirehark based on protocol
+----------------------------------------------
+To show only frames with specific protocols, enter this into the "display
+filter" text box::
+
+   pn_dcp or pn_io or pn_io_device or pn_io_controller or epm or lldp or snmp or syslog
+
+To hide frames with specific protocols::
+
+   not (pn_ptcp or arp or mdns or llmnr or ssdp or dhcp or dhcpv6 or icmpv6 or igmp or nbns or browser or ipv6)
+
+
+Filter frames in Wireshark based on frame contents
+--------------------------------------------------
+To show Profinet read and write commands for a specific index::
+
+   pn_io.index == 0x8071
+
+To show Profinet read and write commands for a specific subslot::
+
+   pn_io.subslot_nr == 0x8001
+
+To look for a specific OID in SNMP messages::
+
+   snmp.name == 1.3.6.1.2.1.1.3.0
+
+
 Parsing Profinet cyclic data with Wireshark
 -------------------------------------------
 It is possible to load a GSDML file into recent versions of Wireshark, for

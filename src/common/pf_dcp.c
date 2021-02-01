@@ -1442,7 +1442,7 @@ static int pf_dcp_identify_req (
    bool first = true;          /* First of the blocks */
    bool match = false;         /* Is it for us? */
    bool filter = false;        /* Is it IdentifyFilter or IdentifyAll? */
-   bool alias_request = false; /*Is this a request via an alias name?*/
+   bool alias_request = false; /* Is this a request via an alias name? */
    uint8_t * p_src;
    uint16_t src_pos = 0;
    pf_ethhdr_t * p_src_ethhdr;

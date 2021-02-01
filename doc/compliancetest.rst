@@ -17,29 +17,8 @@ for example uniqueness of MAC addresses. This is not tested by the test lab.
 A detailed description of the certification process can be downloaded from
 https://www.profibus.com/download/how-to-get-a-certificate-for-a-profinet-device/
 
-
-General requirements
---------------------
-It should be possible to do a factory reset without an engineering tool. For
-example a hardware switch can be used. Routing of Ethernet frames must not be
-affected by a factory reset.
-
-A Profinet signal LED must be visible on the IO-Device. A callback is available
-from p-net to control the signal LED, so you can implement your board specific
-hardware.
-
-Connectors and cables should fulfill the requirements in "PROFINET Cabling and
-Interconnection Technology". For recommended diagnosis indicators (for example
-LEDs) see "Diagnosis for PROFINET".
-Consider the housing (often IP65) and grounding of the device.
-In general the MAC address of the device should be visible when installed.
-
-Hardware requirements for the Ethernet ports:
-
-* At least 100 Mbit/s full duplex
-* Standard and crossover cables should be handled
-* Auto polarity
-* Auto negotiation (should be possible to turn off for fast startup)
+See also the general requirements on the page "Creating applications and
+porting to new hardware" in this documentation.
 
 Needed for certification:
 
@@ -71,8 +50,11 @@ settings of your PC. In the properties for the driver, go to the "Advanced"
 tab. For the "Packet priority & VLAN" select "Packet priority & VLAN Disable".
 More details are given in the "Product Documentation" document for the tool.
 
-You might also need to turn off LLDP protocol for the selected network
-interface. Both Windows and Simatic TIA can have LLDP implemented.
+You also need to turn off LLDP protocol for the selected network interface
+on the laptop running the "Automated RT tester" tool,
+otherwise the test case “Different access ways port-to-port” will fail.
+Both Windows and Simatic TIA ("PROFINET IO Protocol (DCP/LLDP)") can have
+LLDP implemented.
 
 Adjust the settings of the Ethernet card of your personal computer to use
 100 Mbit/s full duplex (otherwise the test case "Different access ways
@@ -158,7 +140,7 @@ power outlet can be used to simplify the tests.
 Profinet-enabled switch
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Some of the test cases for the Automated RT Tester requires an Profinet-enabled
-switch.
+switch. It is called "Device B" in the test setup documentation.
 
 The test specification of version V 2.41 recommends the use of a
 Siemens Scalance X204IRT (article number 6GK5204-0BA00-2BA3).
@@ -248,6 +230,7 @@ a list of Siemens naming conventions is provided here:
 * BA: Busadapter (with RJ45 or fiber optic connectors)
 * BU: BaseUnit (for mounting input and output modules)
 * CM: Communication module
+* CU: Ethernet connector (copper wires)
 * DI: Digital input module
 * DP: Profibus DP
 * DQ: Digital output module
@@ -258,6 +241,8 @@ a list of Siemens naming conventions is provided here:
 * IM: Interface Module
 * L+: +24 V DC
 * M: Ground connection
+* MLFB: Article number (order number) Maschinen Lesbare Fabrikate Bezeichnung
+* MP: ?
 * P: Port
 * PN: Profinet
 * R: Ring port for media redundancy
@@ -270,6 +255,7 @@ a list of Siemens naming conventions is provided here:
 
 Siemens IO-device for verification of multi-port devices
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+It is called "Device D" in the test setup documentation.
 
 +--------------------------------------+-------------------------------------------+
 | Part                                 | Comments                                  |
@@ -305,16 +291,27 @@ when the button is pressed.
 The LED ".7" on the digital output module (DQ) will be green when the output
 is high (+24 V).
 
+Use the Ethernet connector P1R.
+
 .. image:: illustrations/SimaticIoDevice.jpg
 
 See the page on setting up a Simatic PLC in this documentation for
 instructions on usage.
+
+Make sure that the LLDP frames are in the legacy LLDP format, where the PortId
+is "port-001" instead of "port-001.d". This is done via the setting
+"Use IEC V2.2 LLDP mode", available in the STEP7 Profinet setup tool for PLCs.
 
 
 Set up Cisco SF352-08P switch
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 For multiport Profinet devices, also SNMP-communication to non-Profinet
 devices is verified. This Cisco switch can be used for that purpose.
+Replaces "Device D" in the test setup.
+
+The system LED flashes during startup, and lights steady when the switch is
+properly set up and running.
+Note that the boot time can be around 100 seconds.
 
 Connect an Ethernet cable to port G1.
 Set your laptop IP address to ``192.168.1.143`` and netmask to be ``255.255.255.0``.
@@ -333,16 +330,20 @@ to "MAC Address".
 Via Administration -> "Discovery - LLDP" -> "Port settings" select port FE1 and
 click Edit. Enable SNMP notification. Select the optional TLVs that start with "802.3".
 
-Via the menu Security -> "TCO/UDP Services", enable "SNMP Service".
+Via the menu Security -> "TCP/UDP Services", enable "SNMP Service".
 
 In the page top bar, set "Display mode" to Advanced.
-Add a SNMP community via the menu SNMP -> Communities and click Add. The
-community string should be "public". Set "SNMP Management Station" to "All".
-Click "Apply" and "Close".
+Add a SNMP community via the left side menu SNMP -> Communities and
+click Add. The community string should be "public". Set "SNMP Management
+Station" to "All". Click "Apply" and "Close".
 
 In the top of the page click the "Save" icon.
 
 For the actual measurements, use the port 1 on the Cisco switch.
+
+Verify the SNMP communication to the Cisco switch::
+
+   snmpwalk -v1 -c public 192.168.0.98
 
 
 Tips and ideas
@@ -418,7 +419,7 @@ Relevant test cases for conformance class A
 +-------------------------------------------------+-----------------------------------------------------------------+
 | Behavior Scenario 1 to 9                        | Power cycle                                                     |
 +-------------------------------------------------+-----------------------------------------------------------------+
-| Behavior Scenario 10                            |                                                                 |
+| Behavior Scenario 10                            | Power cycle 7 times.                                            |
 +-------------------------------------------------+-----------------------------------------------------------------+
 | Behavior Scenario 11                            |                                                                 |
 +-------------------------------------------------+-----------------------------------------------------------------+
@@ -426,7 +427,7 @@ Relevant test cases for conformance class A
 +-------------------------------------------------+-----------------------------------------------------------------+
 | PDEV_CHECK_ONEPORT                              | Requires additional hardware ("Device B"). Power cycle 3 times. |
 +-------------------------------------------------+-----------------------------------------------------------------+
-| Diagnosis                                       | Requires additional hardware ("Device B"). Power cycle.         |
+| Diagnosis                                       | Requires additional hardware ("Device B"). Power cycle twice.   |
 +-------------------------------------------------+-----------------------------------------------------------------+
 | Alarm                                           | Requires additional hardware ("Device B")                       |
 +-------------------------------------------------+-----------------------------------------------------------------+
@@ -462,16 +463,23 @@ Set the GSDML file attributes ``ConformanceClass="B"`` and
 ``SupportedProtocols="SNMP;LLDP"``.
 
 * Behavior scenario 10
-* Topology discovery check, standard setup
+* Topology discovery check, standard setup. Requires additional hardware (“Device B”).
 * Topology discovery check, non-Profinet-neighbour setup
 * Port-to-port
 * Behavior of reset to factory (manual)
 
 
-Relevant test cases for multi-port devices
-------------------------------------------
+Additional test cases for multi-port devices
+--------------------------------------------
+Requires additional hardware ("Device B", “Device D” and Cisco switch).
 
-* PDEV_RECORDS Requires additional hardware ("Device B")
+* PDEV_RECORDS
+* Topology discovery check, standard setup.
+* Topology discovery check, non-Profinet setup. Uses Cisco switch. Power cycle twice.
+
+For "port-to-port" testing on devices with multiple ports, connect the port
+directly to the ART tester laptop. Leave other ports on the device not
+connected.
 
 
 Relevant test cases for legacy startup mode
@@ -489,8 +497,8 @@ behavior.
 * IP_UDP_RPC_I&M_EPM
 * Behavior
 * FSU (if also supporting fast startup)
-* Interoperability (use another PLC)
-* Interoperability with controller (use another PLC)
+* Interoperability (use a legacy PLC)
+* Interoperability with controller (use a legacy PLC)
 
 
 Relevant test cases for fast startup (FSU)
@@ -628,3 +636,11 @@ configuration" and then "Software (all)".
 
 Verify that there is cyclic communication, and that there is repeated
 acyclic data read out.
+
+
+Troubleshooting
+---------------
+If the test case "“Different access ways port-to-port" fails,
+verify that your laptop Ethernet interface speed is set to 100 Mbit/s and
+that any Windows or Siemens (TIA portal) LLDP implementation on the
+Ethernet interface is disabled.
