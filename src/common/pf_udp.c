@@ -15,7 +15,7 @@
 
 /**
  * @file
- * @brief Update interface statistics for UDP communications
+ * @brief UDP communications
  */
 
 #ifdef UNIT_TEST
@@ -47,16 +47,11 @@ int pf_udp_sendto (
 
    if (sent_len != size)
    {
-      net->interface_statistics.if_out_errors++;
       LOG_ERROR (
          PNET_LOG,
          "UDP(%d): Failed to send %u UDP bytes payload on the socket.\n",
          __LINE__,
          size);
-   }
-   else
-   {
-      net->interface_statistics.if_out_octets += sent_len;
    }
 
    return sent_len;
@@ -70,13 +65,7 @@ int pf_udp_recvfrom (
    uint8_t * data,
    int size)
 {
-   int input_len = 0;
-
-   input_len = pnal_udp_recvfrom (id, src_addr, src_port, data, size);
-
-   net->interface_statistics.if_in_octets += input_len;
-
-   return input_len;
+   return pnal_udp_recvfrom (id, src_addr, src_port, data, size);
 }
 
 void pf_udp_close (pnet_t * net, uint32_t id)

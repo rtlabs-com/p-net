@@ -463,6 +463,7 @@ void PnetIntegrationTestBase::available_modules_and_submodules_init()
 
 void PnetIntegrationTestBase::cfg_init()
 {
+   pnet_default_cfg.tick_us = TICK_INTERVAL_US;
    pnet_default_cfg.state_cb = my_state_ind;
    pnet_default_cfg.connect_cb = my_connect_ind;
    pnet_default_cfg.release_cb = my_release_ind;
@@ -492,34 +493,44 @@ void PnetIntegrationTestBase::cfg_init()
    strcpy (pnet_default_cfg.station_name, "");
    strcpy (pnet_default_cfg.product_name, "PNET unit tests");
 
-   strcpy (pnet_default_cfg.lldp_cfg.ports[0].port_id, "port-001");
-   pnet_default_cfg.lldp_cfg.ports[0].rtclass_2_status = 0;
-   pnet_default_cfg.lldp_cfg.ports[0].rtclass_3_status = 0;
+   strcpy (
+      pnet_default_cfg.if_cfg.ports[0].phy_port.if_name,
+      TEST_INTERFACE_NAME);
+   strcpy (pnet_default_cfg.if_cfg.ports[0].port_id, "port-001");
+   pnet_default_cfg.if_cfg.ports[0].phy_port.eth_addr.addr[0] = 0x12;
+   pnet_default_cfg.if_cfg.ports[0].phy_port.eth_addr.addr[1] = 0x34;
+   pnet_default_cfg.if_cfg.ports[0].phy_port.eth_addr.addr[2] = 0x00;
+   pnet_default_cfg.if_cfg.ports[0].phy_port.eth_addr.addr[3] = 0x78;
+   pnet_default_cfg.if_cfg.ports[0].phy_port.eth_addr.addr[4] = 0x90;
+   pnet_default_cfg.if_cfg.ports[0].phy_port.eth_addr.addr[5] = 0xab;
+   pnet_default_cfg.if_cfg.ports[0].rtclass_2_status = 0;
+   pnet_default_cfg.if_cfg.ports[0].rtclass_3_status = 0;
 
    /* Timing */
    pnet_default_cfg.min_device_interval = 32; /* Corresponds to 1 ms */
 
    /* Network configuration */
    pnet_default_cfg.send_hello = 1; /* Send HELLO */
-   pnet_default_cfg.dhcp_enable = 0;
-   pnet_default_cfg.eth_addr.addr[0] = 0x12;
-   pnet_default_cfg.eth_addr.addr[1] = 0x34;
-   pnet_default_cfg.eth_addr.addr[2] = 0x00;
-   pnet_default_cfg.eth_addr.addr[3] = 0x78;
-   pnet_default_cfg.eth_addr.addr[4] = 0x90;
-   pnet_default_cfg.eth_addr.addr[5] = 0xab;
-   pnet_default_cfg.ip_addr.a = 192;
-   pnet_default_cfg.ip_addr.b = 168;
-   pnet_default_cfg.ip_addr.c = 1;
-   pnet_default_cfg.ip_addr.d = 171;
-   pnet_default_cfg.ip_mask.a = 255;
-   pnet_default_cfg.ip_mask.b = 255;
-   pnet_default_cfg.ip_mask.c = 255;
-   pnet_default_cfg.ip_mask.d = 255;
-   pnet_default_cfg.ip_gateway.a = 192;
-   pnet_default_cfg.ip_gateway.b = 168;
-   pnet_default_cfg.ip_gateway.c = 1;
-   pnet_default_cfg.ip_gateway.d = 1;
+   pnet_default_cfg.if_cfg.ip_cfg.dhcp_enable = 0;
+   strcpy (pnet_default_cfg.if_cfg.main_port.if_name, TEST_INTERFACE_NAME);
+   pnet_default_cfg.if_cfg.main_port.eth_addr.addr[0] = 0x12;
+   pnet_default_cfg.if_cfg.main_port.eth_addr.addr[1] = 0x34;
+   pnet_default_cfg.if_cfg.main_port.eth_addr.addr[2] = 0x00;
+   pnet_default_cfg.if_cfg.main_port.eth_addr.addr[3] = 0x78;
+   pnet_default_cfg.if_cfg.main_port.eth_addr.addr[4] = 0x90;
+   pnet_default_cfg.if_cfg.main_port.eth_addr.addr[5] = 0xab;
+   pnet_default_cfg.if_cfg.ip_cfg.ip_addr.a = 192;
+   pnet_default_cfg.if_cfg.ip_cfg.ip_addr.b = 168;
+   pnet_default_cfg.if_cfg.ip_cfg.ip_addr.c = 1;
+   pnet_default_cfg.if_cfg.ip_cfg.ip_addr.d = 171;
+   pnet_default_cfg.if_cfg.ip_cfg.ip_mask.a = 255;
+   pnet_default_cfg.if_cfg.ip_cfg.ip_mask.b = 255;
+   pnet_default_cfg.if_cfg.ip_cfg.ip_mask.c = 255;
+   pnet_default_cfg.if_cfg.ip_cfg.ip_mask.d = 255;
+   pnet_default_cfg.if_cfg.ip_cfg.ip_gateway.a = 192;
+   pnet_default_cfg.if_cfg.ip_cfg.ip_gateway.b = 168;
+   pnet_default_cfg.if_cfg.ip_cfg.ip_gateway.c = 1;
+   pnet_default_cfg.if_cfg.ip_cfg.ip_gateway.d = 1;
 
    pnet_default_cfg.im_0_data.im_vendor_id_hi = 0x00;
    pnet_default_cfg.im_0_data.im_vendor_id_lo = 0x01;
@@ -547,6 +558,9 @@ void PnetIntegrationTestBase::cfg_init()
 
    /* Storage */
    strcpy (pnet_default_cfg.file_directory, "/disk1");
+
+   /* Diagnosis */
+   pnet_default_cfg.use_qualified_diagnosis = true;
 }
 
 void PnetIntegrationTestBase::run_stack (int us)

@@ -69,8 +69,26 @@ typedef struct mock_lldp_data
 
 } mock_lldp_data_t;
 
+typedef struct mock_file_data
+{
+   char filename[PNET_MAX_FILENAME_SIZE];
+   uint8_t object[300];
+   size_t size;
+   bool is_save_failing; /* Used for injecting error */
+   bool is_load_failing; /* Used for injecting error */
+
+} mock_file_data_t;
+
+typedef struct mock_fspm_data
+{
+   char im_location[PNET_LOCATION_MAX_SIZE];
+
+} mock_fspm_data_t;
+
 extern mock_os_data_t mock_os_data;
 extern mock_lldp_data_t mock_lldp_data;
+extern mock_file_data_t mock_file_data;
+extern mock_fspm_data_t mock_fspm_data;
 
 uint32_t mock_os_get_current_time_us (void);
 uint32_t mock_pnal_get_system_uptime_10ms (void);
@@ -84,9 +102,8 @@ pnal_eth_handle_t * mock_pnal_eth_init (
    pnal_eth_callback_t * callback,
    void * arg);
 int mock_pnal_eth_send (pnal_eth_handle_t * handle, pnal_buf_t * buf);
-void mock_pnal_eth_get_status (
-   pnal_eth_handle_t * handle,
-   int loc_port_num,
+int mock_pnal_eth_get_status (
+   const char * interface_name,
    pnal_eth_status_t * status);
 void mock_os_cpy_mac_addr (uint8_t * mac_addr);
 int mock_pnal_udp_open (pnal_ipaddr_t addr, pnal_ipport_t port);
@@ -110,7 +127,7 @@ int mock_pnal_set_ip_suite (
    const pnal_ipaddr_t * p_gw,
    const char * hostname,
    bool permanent);
-int mock_pnal_get_interface_index (pnal_eth_handle_t * handle);
+int mock_pnal_get_interface_index (const char * interface_name);
 
 int mock_pnal_save_file (
    const char * fullpath,
@@ -161,6 +178,31 @@ int mock_pf_lldp_get_peer_link_status (
    pf_lldp_link_status_t * p_link_status);
 
 int mock_pnal_snmp_init (pnet_t * pnet);
+
+int mock_pf_file_save_if_modified (
+   const char * directory,
+   const char * filename,
+   const void * p_object,
+   void * p_tempobject,
+   size_t size);
+
+int mock_pf_file_save (
+   const char * directory,
+   const char * filename,
+   const void * p_object,
+   size_t size);
+
+void mock_pf_file_clear (const char * directory, const char * filename);
+
+int mock_pf_file_load (
+   const char * directory,
+   const char * filename,
+   void * p_object,
+   size_t size);
+
+void mock_pf_fspm_get_im_location (pnet_t * net, char * location);
+
+void mock_pf_fspm_save_im_location (pnet_t * net, const char * location);
 
 #ifdef __cplusplus
 }

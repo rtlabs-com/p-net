@@ -457,9 +457,7 @@ static int pf_session_allocate (pnet_t * net, pf_session_info_t ** pp_sess)
    int ret = -1;
    uint16_t ix = 0;
    pf_session_info_t * p_sess = NULL;
-   pnet_ethaddr_t mac_address;
-
-   pf_cmina_get_device_macaddr (net, &mac_address);
+   const pnet_ethaddr_t * mac_address = pf_cmina_get_device_macaddr (net);
 
    os_mutex_lock (net->p_cmrpc_rpc_mutex);
    while ((ix < NELEMENTS (net->cmrpc_session_info)) &&
@@ -483,7 +481,7 @@ static int pf_session_allocate (pnet_t * net, pf_session_info_t ** pp_sess)
       pf_generate_uuid (
          os_get_current_time_us(),
          net->cmrpc_session_number,
-         mac_address,
+         *mac_address,
          &p_sess->activity_uuid);
       net->cmrpc_session_number++;
 
@@ -1098,7 +1096,8 @@ static int pf_cmrpc_rm_connect_interpret_ind (
             LOG_DEBUG (
                PF_RPC_LOG,
                "CMRPC(%d): Requested send cycle time %u (in 1/32 of millisec) "
-               "Reduction ratio:%u  Watchdog factor:%u  Data hold factor:%u\n",
+               "Reduction ratio:%u  Watchdog factor:%" PRIu32
+               " Data hold factor:%u\n",
                __LINE__,
                p_ar->iocrs[p_ar->nbr_iocrs].param.send_clock_factor,
                p_ar->iocrs[p_ar->nbr_iocrs].param.reduction_ratio,

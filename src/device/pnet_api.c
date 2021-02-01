@@ -26,22 +26,9 @@
 
 int pnet_init_only (
    pnet_t * net,
-   const char * netif,
-   uint32_t tick_us,
    const pnet_cfg_t * p_cfg)
 {
    memset (net, 0, sizeof (*net));
-
-   if (strlen (netif) >= PNET_INTERFACE_NAME_MAX_SIZE)
-   {
-      LOG_ERROR (
-         PNET_LOG,
-         "Too long interface name. Given: %s  Max size incl termination: %d\n",
-         netif,
-         PNET_INTERFACE_NAME_MAX_SIZE);
-      return -1;
-   }
-   strcpy (net->interface_name, netif);
 
    net->cmdev_initialized = false; /* TODO How to handle that pf_cmdev_exit() is
                                       used before pf_cmdev_init()? */
@@ -60,14 +47,15 @@ int pnet_init_only (
 
    /* Initialize everything (and the DCP protocol) */
    /* First initialize the network interface */
-   net->eth_handle = pnal_eth_init (netif, pf_eth_recv, (void *)net);
+   net->eth_handle =
+      pnal_eth_init (p_cfg->if_cfg.main_port.if_name, pf_eth_recv, (void *)net);
    if (net->eth_handle == NULL)
    {
       return -1;
    }
 
    pf_eth_init (net);
-   pf_scheduler_init (net, tick_us);
+   pf_scheduler_init (net, p_cfg->tick_us);
    pf_cmina_init (net); /* Read from permanent pool */
 
    pf_dcp_exit (net); /* Prepare for re-init. */
@@ -94,8 +82,6 @@ int pnet_init_only (
 }
 
 pnet_t * pnet_init (
-   const char * netif,
-   uint32_t tick_us,
    const pnet_cfg_t * p_cfg)
 {
    pnet_t * net = NULL;
@@ -110,7 +96,7 @@ pnet_t * pnet_init (
       return NULL;
    }
 
-   if (pnet_init_only (net, netif, tick_us, p_cfg) != 0)
+   if (pnet_init_only (net, p_cfg) != 0)
    {
       free (net);
       return NULL;
@@ -496,6 +482,67 @@ int pnet_alarm_send_ack (
    }
 
    return ret;
+}
+
+/************************** Low-level diagnosis functions*********************/
+
+int pnet_diag_add (
+   pnet_t * net,
+   const pnet_diag_source_t * p_diag_source,
+   pnet_diag_ch_prop_type_values_t ch_bits,
+   pnet_diag_ch_prop_maint_values_t severity,
+   uint16_t ch_error_type,
+   uint16_t ext_ch_error_type,
+   uint32_t ext_ch_add_value,
+   uint32_t qual_ch_qualifier,
+   uint16_t usi,
+   const uint8_t * p_manuf_data)
+{
+   return pf_diag_add (
+      net,
+      p_diag_source,
+      ch_bits,
+      severity,
+      ch_error_type,
+      ext_ch_error_type,
+      ext_ch_add_value,
+      qual_ch_qualifier,
+      usi,
+      p_manuf_data);
+}
+
+int pnet_diag_update (
+   pnet_t * net,
+   const pnet_diag_source_t * p_diag_source,
+   uint16_t ch_error_type,
+   uint16_t ext_ch_error_type,
+   uint32_t ext_ch_add_value,
+   uint16_t usi,
+   const uint8_t * p_manuf_data)
+{
+   return pf_diag_update (
+      net,
+      p_diag_source,
+      ch_error_type,
+      ext_ch_error_type,
+      ext_ch_add_value,
+      usi,
+      p_manuf_data);
+}
+
+int pnet_diag_remove (
+   pnet_t * net,
+   const pnet_diag_source_t * p_diag_source,
+   uint16_t ch_error_type,
+   uint16_t ext_ch_error_type,
+   uint16_t usi)
+{
+   return pf_diag_remove (
+      net,
+      p_diag_source,
+      ch_error_type,
+      ext_ch_error_type,
+      usi);
 }
 
 /************************** Diagnosis in standard format *********************/

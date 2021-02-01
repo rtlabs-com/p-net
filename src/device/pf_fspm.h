@@ -335,28 +335,33 @@ void pf_fspm_get_cfg (pnet_t * net, pnet_cfg_t ** pp_cfg);
 void pf_fspm_get_default_cfg (pnet_t * net, const pnet_cfg_t ** pp_cfg);
 
 /**
- * Get system location from I&M data record 1.
+ * Get device location from I&M data record 1.
+ *
+ * Device location is always 22 bytes long, possibly padded with
+ * space characters (' ') to the right. It is always null terminated.
  *
  * Note that the SNMP thread may call this at any time.
  *
  * @param net              InOut: The p-net stack instance
- * @param p_location       Out:   Current system location.
+ * @param location         Out:   Current device location.
+ *                                Buffer must at least be of size
+ *                                PNET_LOCATION_MAX_SIZE.
  */
-void pf_fspm_get_system_location (
-   pnet_t * net,
-   pf_snmp_system_location_t * p_location);
+void pf_fspm_get_im_location (pnet_t * net, char * location);
 
 /**
- * Set system location in I&M data record 1 and save it to persistent memory.
+ * Set device location in I&M data record 1 and save it to persistent memory.
+ *
+ * Only the first 22 bytes will be saved.
+ * If \a location is less than 22 bytes, it will be padded with spaces
+ * until it is 22 bytes long. Null termination will also be added.
  *
  * Note that the SNMP thread may call this at any time.
  *
  * @param net              InOut: The p-net stack instance
- * @param p_location       In:    New system location.
+ * @param location         In:    New device location.
  */
-void pf_fspm_save_system_location (
-   pnet_t * net,
-   const pf_snmp_system_location_t * p_location);
+void pf_fspm_save_im_location (pnet_t * net, const char * location);
 
 /**
  * Clear the I&M data records 1-4.

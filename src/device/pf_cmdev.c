@@ -1297,11 +1297,12 @@ void pf_cmdev_diag_show (const pnet_t * net)
          {
             printf (
                "  Channel: 0x%04X  Ch.error: 0x%04X  Ext.error 0x%04X  "
-               "Add.value 0x%08" PRIX32 "\n",
+               "Add.value 0x%08" PRIX32 " Qualifier 0x%08" PRIX32 "\n",
                p_diag->fmt.std.ch_nbr,
                p_diag->fmt.std.ch_error_type,
                p_diag->fmt.std.ext_ch_error_type,
-               p_diag->fmt.std.ext_ch_add_value);
+               p_diag->fmt.std.ext_ch_add_value,
+               p_diag->fmt.std.qual_ch_qualifier);
          }
          else
          {
@@ -4704,10 +4705,8 @@ int pf_cmdev_rm_connect_ind (
 {
    int ret = -1;
    uint16_t ix;
-   const char * p_station_name = NULL;
-   pnet_ethaddr_t mac_address;
-
-   pf_cmina_get_device_macaddr (net, &mac_address);
+   char station_name[PNET_STATION_NAME_MAX_SIZE]; /** Terminated */
+   const pnet_ethaddr_t * mac_address = pf_cmina_get_device_macaddr (net);
 
    /* RM_Connect.ind */
    if (pf_cmdev_check_apdu (net, p_ar, p_connect_result) == 0)
@@ -4720,7 +4719,7 @@ int pf_cmdev_rm_connect_ind (
          /* Start building the response to the connect request. */
          memcpy (
             p_ar->ar_result.cm_responder_mac_add.addr,
-            mac_address.addr,
+            mac_address->addr,
             sizeof (pnet_ethaddr_t));
          p_ar->ar_result.responder_udp_rt_port = PF_UDP_UNICAST_PORT;
 
@@ -4741,15 +4740,15 @@ int pf_cmdev_rm_connect_ind (
                                                                define for this
                                                                value */
 
-         (void)pf_cmina_get_station_name (net, &p_station_name);
+         pf_cmina_get_station_name (net, station_name);
          strncpy (
             p_ar->ar_server.cm_responder_station_name,
-            p_station_name,
+            station_name,
             sizeof (p_ar->ar_server.cm_responder_station_name));
          p_ar->ar_server.cm_responder_station_name
             [sizeof (p_ar->ar_server.cm_responder_station_name) - 1] = '\0';
          p_ar->ar_server.length_cm_responder_station_name =
-            (uint16_t)strlen (p_station_name);
+            (uint16_t)strlen (station_name);
 
          p_ar->ready_4_data = false;
 

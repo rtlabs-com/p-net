@@ -75,6 +75,10 @@ static inline uint32_t atomic_fetch_sub (atomic_int * p, uint32_t v)
  */
 #define PF_CHECK_PEERS_PER_PORT 1
 
+/** Including termination */
+#define PF_ALIAS_NAME_MAX_SIZE                                                 \
+   (PNET_STATION_NAME_MAX_SIZE + PNET_PORT_ID_MAX_SIZE)
+
 /************************* Diagnosis ******************************************/
 
 #define PF_DIAG_QUALIFIED_SEVERITY_MASK  ~0x00000007
@@ -90,7 +94,8 @@ static inline uint32_t atomic_fetch_sub (atomic_int * p, uint32_t v)
 /** Qualifier 6..3 */
 #define PF_DIAG_QUALIFIER_MASK_ADVICE 0x00000078
 
-/* Mask and position of bit fields and values within ch_properties */
+/* ch_properties channel size in bits
+   See also pnet_diag_ch_prop_type_values_t */
 #define PF_DIAG_CH_PROP_TYPE_MASK 0x00ff
 #define PF_DIAG_CH_PROP_TYPE_POS  0
 #define PF_DIAG_CH_PROP_TYPE_GET(x)                                            \
@@ -102,6 +107,8 @@ static inline uint32_t atomic_fetch_sub (atomic_int * p, uint32_t v)
       (x) |= (v) << PF_DIAG_CH_PROP_TYPE_POS;                                  \
    } while (0)
 
+/* ch_properties channel group or individual channel
+   See also pnet_diag_ch_group_values_t */
 #define PF_DIAG_CH_PROP_ACC_MASK 0x0100
 #define PF_DIAG_CH_PROP_ACC_POS  8
 #define PF_DIAG_CH_PROP_ACC_GET(x)                                             \
@@ -113,6 +120,8 @@ static inline uint32_t atomic_fetch_sub (atomic_int * p, uint32_t v)
       (x) |= (v) << PF_DIAG_CH_PROP_ACC_POS;                                   \
    } while (0)
 
+/* ch_properties diagnosis severity
+   See also pnet_diag_ch_prop_maint_values_t */
 #define PF_DIAG_CH_PROP_MAINT_MASK 0x0600
 #define PF_DIAG_CH_PROP_MAINT_POS  9
 #define PF_DIAG_CH_PROP_MAINT_GET(x)                                           \
@@ -124,6 +133,7 @@ static inline uint32_t atomic_fetch_sub (atomic_int * p, uint32_t v)
       (x) |= (v) << PF_DIAG_CH_PROP_MAINT_POS;                                 \
    } while (0)
 
+/* ch_properties appears or disappers */
 #define PF_DIAG_CH_PROP_SPEC_MASK 0x1800
 #define PF_DIAG_CH_PROP_SPEC_POS  11
 #define PF_DIAG_CH_PROP_SPEC_GET(x)                                            \
@@ -143,6 +153,8 @@ typedef enum pf_diag_ch_prop_spec_values
    PF_DIAG_CH_PROP_SPEC_DIS_OTHERS_REMAIN = 3,
 } pf_diag_ch_prop_spec_values_t;
 
+/* ch_properties direction
+   See also pnet_diag_ch_prop_dir_values_t */
 #define PF_DIAG_CH_PROP_DIR_MASK 0xe000
 #define PF_DIAG_CH_PROP_DIR_POS  13
 #define PF_DIAG_CH_PROP_DIR_GET(x)                                             \
@@ -536,6 +548,7 @@ typedef enum pf_index_values
    PF_IDX_SUB_DIAGNOSIS_CH = 0x800a,
    PF_IDX_SUB_DIAGNOSIS_ALL = 0x800b,
    PF_IDX_SUB_DIAGNOSIS_DMQS = 0x800c,
+
    PF_IDX_SUB_DIAG_MAINT_REQ_CH = 0x8010,
    PF_IDX_SUB_DIAG_MAINT_DEM_CH = 0x8011,
    PF_IDX_SUB_DIAG_MAINT_REQ_ALL = 0x8012,
@@ -544,7 +557,6 @@ typedef enum pf_index_values
    PF_IDX_SUB_SUBSTITUTE = 0x801e,
 
    PF_IDX_SUB_PDIR = 0x8020,
-
    PF_IDX_SUB_PDPORTDATAREALEXT = 0x8027,
    PF_IDX_SUB_INPUT_DATA = 0x8028,
    PF_IDX_SUB_OUTPUT_DATA = 0x8029,
@@ -552,8 +564,8 @@ typedef enum pf_index_values
    PF_IDX_SUB_PDPORT_DATA_CHECK = 0x802b,
    PF_IDX_SUB_PDIR_DATA = 0x802c,
    PF_IDX_SUB_PDSYNC_ID0 = 0x802d,
-
    PF_IDX_SUB_PDPORT_DATA_ADJ = 0x802f,
+
    PF_IDX_SUB_ISOCHRONUOUS_DATA = 0x8030,
    PF_IDX_SUB_PDTIME = 0x8031,
 
@@ -569,6 +581,7 @@ typedef enum pf_index_values
    PF_IDX_SUB_PDPORT_FO_REAL = 0x8060,
    PF_IDX_SUB_PDPORT_FO_CHECK = 0x8061,
    PF_IDX_SUB_PDPORT_FO_ADJUST = 0x8062,
+   PF_IDX_SUB_PDPORT_SPF_CHECK = 0x8063,
 
    PF_IDX_SUB_PDNC_CHECK = 0x8070,
    PF_IDX_SUB_PDINTF_ADJUST = 0x8071,
@@ -582,6 +595,15 @@ typedef enum pf_index_values
    PF_IDX_SUB_COMBINED_OBJ_CONTAINER = 0x80b0,
 
    PF_IDX_SUB_RS_ADJUST_OBSERVER = 0x80cf,
+
+   PF_IDX_TSN_NETWORK_CONTROL_DATA_REAL = 0x80f0,
+   PF_IDX_TSN_STREAM_PATH_DATA = 0x80f1,
+   PF_IDX_TSN_SYNC_TREE_DATA = 0x80f2,
+   PF_IDX_TSN_UPLOAD_NETWORK_ATTRIBUTES = 0x80f3,
+   PF_IDX_TSN_EXPECTED_NETWORK_ATTRIBUTES = 0x80f4,
+   PF_IDX_TSN_NETWORK_CONTROL_DATA_ADJUST = 0x80f5,
+
+   PF_IDX_SUB_PDINTF_SECURITY_ADJUST = 0x8200,
 
    PF_IDX_SUB_IM_0 = 0xaff0,
    PF_IDX_SUB_IM_1 = 0xaff1,
@@ -629,6 +651,7 @@ typedef enum pf_index_values
    PF_IDX_AR_PE_ENTITY_STATUS_DATA = 0xe031,
 
    PF_IDX_AR_WRITE_MULTIPLE = 0xe040,
+   PF_IDX_APPLICATION_READY = 0xe041, /* Closes parameterization phase */
 
    PF_IDX_AR_FSU_DATA_ADJUST = 0xe050,
 
@@ -675,6 +698,11 @@ typedef enum pf_index_values
    PF_IDX_DEV_ASSET_MANAGEMENT_8 = 0xf887,
    PF_IDX_DEV_ASSET_MANAGEMENT_9 = 0xf888,
    PF_IDX_DEV_ASSET_MANAGEMENT_10 = 0xf889,
+
+   PF_IDX_TSN_STREAM_ADD = 0xf8f0,
+   PF_IDX_PDRSI_INSTANCDES = 0xf8f1,
+   PF_IDX_TSN_STREAM_REMOVE = 0xf8f2,
+   PF_IDX_TSN_STREAM_RENEW = 0xf8f3,
 
    PF_IDX_DEV_CONN_MON_TRIGGER = 0xfbff,
 } pf_index_values_t;
@@ -951,8 +979,9 @@ typedef struct pf_alarm_queue
 #define PF_CMINA_FS_HELLO_INTERVAL                                             \
    (3 * 1000)                            /* milliseconds. Default is 30 ms */
 #define PF_LLDP_SEND_INTERVAL (5 * 1000) /* milliseconds */
-#define PF_LLDP_INITIAL_PEER_TIMEOUT ((2 * PF_LLDP_SEND_INTERVAL) / 1000) /* seconds */
-#define PF_LLDP_TTL 20 /* seconds */
+#define PF_LLDP_INITIAL_PEER_TIMEOUT                                           \
+   ((2 * PF_LLDP_SEND_INTERVAL) / 1000) /* seconds */
+#define PF_LLDP_TTL 20                  /* seconds */
 
 typedef enum pf_cmina_state_values
 {
@@ -1049,8 +1078,7 @@ typedef struct pf_cmina_dcp_ase
    uint16_t device_initiative; /* 1: Should send hello. 0: No sending of hello
                                 */
 
-   char alias_name
-      [PNET_STATION_NAME_MAX_SIZE + PNET_PORT_ID_MAX_SIZE]; /** Terminated */
+   char alias_name[PF_ALIAS_NAME_MAX_SIZE]; /** Terminated */
    struct
    {
       /* Order is important!! */
@@ -1420,9 +1448,8 @@ typedef struct pf_prm_server
    uint16_t cm_initiator_activity_timeout_factor;                /** res: 100ms,
                                                                     allowed 1..1000 */
    uint16_t parameter_server_station_name_len;
-   char
-      parameter_server_station_name[PNET_STATION_NAME_MAX_SIZE]; /** Terminated
-                                                                    string */
+   char parameter_server_station_name[PNET_STATION_NAME_MAX_SIZE]; /** Terminated
+                                                                      string */
 } pf_prm_server_t;
 
 typedef struct pf_address_resolution_properties
@@ -2318,35 +2345,6 @@ typedef struct pf_log_book
 } pf_log_book_t;
 
 /**
- * System location (sysLocation).
- *
- * "The physical location of this node (e.g.,
- * 'telephone closet, 3rd floor'). If the location is unknown,
- *  the value is the zero-length string."
- * - IETF RFC 3418 (SNMP MIB-II).
- *
- * The value is supplied by network manager. By default, it is
- * the zero-length string.
- *
- * This should have the same value as "IM_Tag_Location" in I&M1.
- * See PN-Topology ch. 11.5.2: "Consistency".
- *
- * Note: According to the SNMP specification, the string could be up
- * to 255 characters. The p-net stack limits it to the length of
- * IM_Tag_Location, which is 22.
- * An extra byte is added as to ensure null-termination.
- *
- * This is a writable variable. As such, it is stored in persistent memory.
- * Only writable variables (using SNMP Set) need to be stored
- * in persistent memory.
- * See IEC CDV 61158-5-10 (PN-AL-Services) ch. 7.3.3.3.6.2: "Persistency".
- */
-typedef struct pf_snmp_system_location
-{
-   char string[PNET_LOCATION_MAX_SIZE]; /* Terminated string */
-} pf_snmp_system_location_t;
-
-/**
  *
  * Substitution name: PDPortDataCheck
  * BlockHeader, Padding, Padding, SlotNumber, SubslotNumber, { [CheckPeers],
@@ -2425,21 +2423,11 @@ typedef struct pf_port_data_adjust_peer_to_peer_boundary
                                   Ch.5.2.13.14 */
 } pf_adjust_peer_to_peer_boundary_t;
 
-/* See Profinet 2.4 section 5.2.28 and appendix W */
-typedef struct pf_interface_stats
-{
-   uint32_t if_in_octets;
-   uint32_t if_out_octets;
-   uint32_t if_in_discards;
-   uint32_t if_out_discards;
-   uint32_t if_in_errors;
-   uint32_t if_out_errors;
-} pf_interface_stats_t;
-
 /**
  * Link status
  *
  * See IEEE 802.1AB-2005 (LLDPv1) Annex G.2 "MAC/PHY Configuration/Status TLV".
+ * See also pnal_eth_status_t
  */
 typedef struct pf_lldp_link_status
 {
@@ -2689,11 +2677,8 @@ typedef struct pf_lldp_port
 
 /**
  * Port runtime data
- * Note that pnet_lldp_cfg_t  (MAC address etc) is located in the config
- *
- * TODO Add:
- * - Interface statistics
- * - Interface name
+ * Note that physical port configuration
+ * is part of the configuration (pnet_port_cfg_t)
  */
 typedef struct pf_port
 {
@@ -2704,7 +2689,6 @@ typedef struct pf_port
 
 struct pnet
 {
-   char interface_name[PNET_INTERFACE_NAME_MAX_SIZE]; /** Terminated string */
    uint32_t pnal_buf_alloc_cnt;
    bool global_alarm_enable;
    os_mutex_t * cpm_buf_lock;
@@ -2761,9 +2745,6 @@ struct pnet
     */
    os_mutex_t * fspm_im_mutex;
 
-   pf_interface_stats_t interface_statistics; /* Keeps track of number of sent
-                                                   and discarded packets */
-
    /* LLDP mutex
     *
     * This mutex protects information about the peer device.
@@ -2778,19 +2759,12 @@ struct pnet
  * Initialise a pnet_t structure into already allocated memory.
  *
  * @param net              InOut: The p-net stack instance to be initialised.
- * @param netif            In:    Name of the network interface.
- * @param tick_us          In:    Periodic interval in us. Specify the interval
- *                                between calls to pnet_handle_periodic().
  * @param p_cfg            In:    Profinet configuration. These values are used
  *                                at first startup and at factory reset.
  * @return  0  on success.
  *          -1 if an error occurred.
  */
-int pnet_init_only (
-   pnet_t * net,
-   const char * netif,
-   uint32_t tick_us,
-   const pnet_cfg_t * p_cfg);
+int pnet_init_only (pnet_t * net, const pnet_cfg_t * p_cfg);
 
 #ifdef __cplusplus
 }

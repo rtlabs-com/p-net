@@ -181,6 +181,8 @@ static void pf_dcp_responder (pnet_t * net, void * arg, uint32_t current_time)
 {
    pnal_buf_t * p_buf = (pnal_buf_t *)arg;
 
+   net->dcp_identresp_timeout = 0;
+
    if (p_buf != NULL)
    {
       if (net->dcp_delayed_response_waiting == true)
@@ -214,8 +216,9 @@ static void pf_dcp_responder (pnet_t * net, void * arg, uint32_t current_time)
  */
 static void pf_dcp_clear_sam (pnet_t * net, void * arg, uint32_t current_time)
 {
-   LOG_DEBUG (PF_DCP_LOG, "DCP(%d): SAM timeout, clear stored mac\n", __LINE__);
+   LOG_DEBUG (PF_DCP_LOG, "DCP(%d): SAM timeout. Clear stored remote MAC address.\n", __LINE__);
    net->dcp_sam = mac_nil;
+   net->dcp_sam_timeout = 0;
 }
 
 /**
@@ -233,12 +236,15 @@ static void pf_dcp_restart_sam_timeout (pnet_t * net, const pnet_ethaddr_t * mac
     * for 3 seconds */
    LOG_DEBUG (
       PF_DCP_LOG,
-      "DCP(%d): Update SAM mac and reset timeout\n",
+      "DCP(%d): Update SAM remote MAC address, and restart timeout.\n",
       __LINE__);
 
    memcpy (&net->dcp_sam, mac, sizeof (net->dcp_sam));
-   (void)pf_scheduler_remove (net, dcp_sam_sync_name, net->dcp_sam_timeout);
-   net->dcp_sam_timeout = 0;
+   if (net->dcp_sam_timeout != 0)
+   {
+      (void)pf_scheduler_remove (net, dcp_sam_sync_name, net->dcp_sam_timeout);
+      net->dcp_sam_timeout = 0;
+   }
    (void)pf_scheduler_add (
       net,
       PF_DCP_SAM_TIMEOUT,
@@ -896,7 +902,7 @@ static int pf_dcp_set_req (
  *
  * @param net              InOut: The p-net stack instance
  * @param frame_id         In:    The frame id.
- * @param p_buf            InOut: The ethernet frame. Will be freed.
+ * @param p_buf            InOut: The Ethernet frame. Will be freed.
  * @param frame_id_pos     In:    Position of the frame id in the buffer.
  * @param p_arg            In:    Not used.
  * @return  0     If the frame was NOT handled by this function.
@@ -923,9 +929,7 @@ static int pf_dcp_get_set (
    uint16_t dst_start;
    pf_ethhdr_t * p_dst_ethhdr;
    pf_dcp_header_t * p_dst_dcphdr;
-   pnet_ethaddr_t mac_address;
-
-   pf_cmina_get_device_macaddr (net, &mac_address);
+   const pnet_ethaddr_t * mac_address = pf_cmina_get_device_macaddr (net);
 
    if (p_buf != NULL)
    {
@@ -971,7 +975,7 @@ static int pf_dcp_get_set (
             sizeof (pnet_ethaddr_t));
          memcpy (
             p_dst_ethhdr->src.addr,
-            mac_address.addr,
+            mac_address->addr,
             sizeof (pnet_ethaddr_t));
          p_dst_ethhdr->type = htons (PNAL_ETHTYPE_PROFINET);
 
@@ -1105,7 +1109,7 @@ static int pf_dcp_get_set (
  * ToDo: Device-device communication (MC) is not yet implemented.
  * @param net              InOut: The p-net stack instance
  * @param frame_id         In:    The frame id.
- * @param p_buf            InOut: The ethernet frame. Will be freed.
+ * @param p_buf            InOut: The Ethernet frame. Will be freed.
  * @param frame_id_pos     In:    Position of the frame id in the buffer.
  * @param p_arg            In:    Not used.
  * @return  0     If the frame was NOT handled by this function.
@@ -1189,9 +1193,7 @@ int pf_dcp_hello_req (pnet_t * net)
    uint8_t block_error;
    uint16_t temp16;
    pf_ip_suite_t ip_suite;
-   pnet_ethaddr_t mac_address;
-
-   pf_cmina_get_device_macaddr (net, &mac_address);
+   const pnet_ethaddr_t * mac_address = pf_cmina_get_device_macaddr (net);
 
    if (p_buf != NULL)
    {
@@ -1204,7 +1206,7 @@ int pf_dcp_hello_req (pnet_t * net)
             p_ethhdr->dest.addr,
             dcp_mc_addr_hello.addr,
             sizeof (p_ethhdr->dest.addr));
-         memcpy (p_ethhdr->src.addr, mac_address.addr, sizeof (pnet_ethaddr_t));
+         memcpy (p_ethhdr->src.addr, mac_address->addr, sizeof (pnet_ethaddr_t));
 
          p_ethhdr->type = htons (PNAL_ETHTYPE_PROFINET);
          dst_pos += sizeof (pf_ethhdr_t);
@@ -1398,7 +1400,7 @@ uint32_t pf_dcp_calculate_response_delay (
  *
  * @param net              InOut: The p-net stack instance
  * @param frame_id         In:    The frame id.
- * @param p_buf            In:    The ethernet frame.
+ * @param p_buf            In:    The Ethernet frame.
  * @param frame_id_pos     In:    Position of the frame id in the buffer.
  * @param p_arg            In:    Not used.
  * @return  0     If the frame was NOT handled by this function.
@@ -1436,7 +1438,7 @@ static int pf_dcp_identify_req (
    uint16_t value_length;
    uint8_t * p_value;
    uint8_t block_error;
-   pnet_ethaddr_t mac_address;
+   const pnet_ethaddr_t * mac_address = pf_cmina_get_device_macaddr (net);
 
    /* For diagnostic logging */
    bool identify_all = false;
@@ -1451,8 +1453,6 @@ static int pf_dcp_identify_req (
    (void)stationname_len;
    (void)alias_position;
    (void)alias_len;
-
-   pf_cmina_get_device_macaddr (net, &mac_address);
 
    /*
     * IdentifyReqBlock = DeviceRoleBlock ^ DeviceVendorBlock ^ DeviceIDBlock ^
@@ -1491,7 +1491,10 @@ static int pf_dcp_identify_req (
          p_dst_ethhdr->dest.addr,
          p_src_ethhdr->src.addr,
          sizeof (pnet_ethaddr_t));
-      memcpy (p_dst_ethhdr->src.addr, mac_address.addr, sizeof (pnet_ethaddr_t));
+      memcpy (
+         p_dst_ethhdr->src.addr,
+         mac_address->addr,
+         sizeof (pnet_ethaddr_t));
       p_dst_ethhdr->type = htons (PNAL_ETHTYPE_PROFINET);
 
       /* Start with the request header and modify what is needed. */
@@ -1848,7 +1851,7 @@ static int pf_dcp_identify_req (
 
          net->dcp_delayed_response_waiting = true;
          response_delay = pf_dcp_calculate_response_delay (
-            &mac_address,
+            mac_address,
             ntohs (p_src_dcphdr->response_delay_factor));
          LOG_INFO (
             PF_DCP_LOG,

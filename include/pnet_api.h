@@ -44,7 +44,7 @@ extern "C" {
 #define PNET_SERIAL_NUMBER_MAX_LEN 16 /* Not including termination */
 
 /* Including termination. Standard says 22 (without termination) */
-#define PNET_LOCATION_MAX_SIZE     23
+#define PNET_LOCATION_MAX_SIZE 23
 
 /** Including separator and one termination */
 #define PNET_MAX_FILE_FULLPATH_SIZE                                            \
@@ -1155,13 +1155,13 @@ typedef struct pnet_ethaddr
 } pnet_ethaddr_t;
 
 /* Including termination. Standard says 240 (without termination) */
-#define PNET_CHASSIS_ID_MAX_SIZE   (241)
+#define PNET_CHASSIS_ID_MAX_SIZE (241)
 
 /* Including termination. Standard says 240 (without termination) */
 #define PNET_STATION_NAME_MAX_SIZE (241)
 
 /* Including termination. Standard says 14 (without termination) */
-#define PNET_PORT_ID_MAX_SIZE      (15)
+#define PNET_PORT_ID_MAX_SIZE (15)
 
 /** Including termination */
 #define PNET_LLDP_CHASSIS_ID_MAX_SIZE (PNET_CHASSIS_ID_MAX_SIZE)
@@ -1170,25 +1170,54 @@ typedef struct pnet_ethaddr
 #define PNET_LLDP_PORT_ID_MAX_SIZE                                             \
    (PNET_STATION_NAME_MAX_SIZE + PNET_PORT_ID_MAX_SIZE)
 
+/**
+ * Network interface
+ */
+typedef struct pnet_netif
+{
+   char if_name[PNET_INTERFACE_NAME_MAX_SIZE]; /**< Terminated string */
+   pnet_ethaddr_t eth_addr;                    /**< Interface MAC address */
+} pnet_netif_t;
 
 /**
- * LLDP configuration for a single port.
+ * Physical Port Configuration
  */
-typedef struct pnet_lldp_port_cfg
+typedef struct pnet_port_cfg
 {
+   pnet_netif_t phy_port;
    char port_id[PNET_LLDP_PORT_ID_MAX_SIZE]; /**< Terminated string */
-   pnet_ethaddr_t port_addr;
    uint16_t rtclass_2_status;
    uint16_t rtclass_3_status;
-} pnet_lldp_port_cfg_t;
+} pnet_port_cfg_t;
 
 /**
- * LLDP configuration used by the Profinet stack.
+ * IP Configuration
  */
-typedef struct pnet_lldp_cfg
+typedef struct pnet_ip_cfg
 {
-   pnet_lldp_port_cfg_t ports[PNET_MAX_PORT];
-} pnet_lldp_cfg_t;
+   bool dhcp_enable; /**< Not supported by stack. */
+   pnet_cfg_ip_addr_t ip_addr;
+   pnet_cfg_ip_addr_t ip_mask;
+   pnet_cfg_ip_addr_t ip_gateway;
+} pnet_ip_cfg_t;
+
+/**
+ * Interface Configuration
+ * Configuration of network interfaces used by the stack.
+ * The main_port defines the network interface used by a controller/PLC
+ * to access the device (called Management Port in Profinet).
+ * The ports array defines the physical ports connected to the
+ * main_port.
+ * In the case one network interface is used, main_port and port[0].phy_port
+ * will refer to the same network interface.
+ */
+typedef struct pnet_if_cfg
+{
+   pnet_netif_t main_port; /**< Main (DAP) network interface. */
+   pnet_ip_cfg_t ip_cfg; /**< IP Settings for main network interface */
+
+   pnet_port_cfg_t ports[PNET_MAX_PORT]; /**< Physical ports (DAP ports) */
+} pnet_if_cfg_t;
 
 /**
  * This is all the configuration needed to use the Profinet stack.
@@ -1197,6 +1226,11 @@ typedef struct pnet_lldp_cfg
  */
 typedef struct pnet_cfg
 {
+   /** Tick interval in us.
+    *  Specifies the time between calls to pnet_handle_periodic().
+    */
+   uint32_t tick_us;
+
    /** Application call-backs */
    pnet_state_ind state_cb;
    pnet_connect_ind connect_cb;
@@ -1243,18 +1277,14 @@ typedef struct pnet_cfg
                                     messages to the PLC. Should match GSDML
                                     file. Typically 32, which corresponds to 1
                                     ms. Max 0x1000 (128 ms) */
-   /** LLDP */
-   pnet_lldp_cfg_t lldp_cfg;
 
    /** Capabilities */
    bool send_hello; /**< Send DCP HELLO message on startup if true. */
 
-   /** IP configuration */
-   bool dhcp_enable; /**< Not supported by stack. */
-   pnet_cfg_ip_addr_t ip_addr;
-   pnet_cfg_ip_addr_t ip_mask;
-   pnet_cfg_ip_addr_t ip_gateway;
-   pnet_ethaddr_t eth_addr; /* Interface MAC address, not port MAC address */
+   /** Send diagnosis in the qualified format (otherwise extended format) */
+   bool use_qualified_diagnosis;
+
+   pnet_if_cfg_t if_cfg;
 
    /** Storage between runs */
    char file_directory[PNET_MAX_DIRECTORYPATH_SIZE]; /**< Terminated string
@@ -1276,25 +1306,18 @@ typedef struct pnet_cfg
  * Initialize the Profinet stack.
  *
  * This function must be called to initialize the Profinet stack.
- *
- * @param netif            In:    Name of the network interface.
- * @param tick_us          In:    Periodic interval in us. Specify the interval
- *                                between calls to pnet_handle_periodic().
  * @param p_cfg            In:    Profinet configuration. These values are used
  *                                at first startup and at factory reset.
  * @return a handle to the stack instance, or NULL if an error occurred.
  */
-PNET_EXPORT pnet_t * pnet_init (
-   const char * netif,
-   uint32_t tick_us,
-   const pnet_cfg_t * p_cfg);
+PNET_EXPORT pnet_t * pnet_init (const pnet_cfg_t * p_cfg);
 
 /**
  * Execute all periodic functions within the ProfiNet stack.
  *
- * This function should be called periodically by the application.
- * The period is specified by the application in the \a tick_us argument
- * to \a pnet_init().
+ * This function shall be called periodically by the application.
+ * The period is specified by the tick_us parameter, part of pnet_cfg_t
+ * configuration.
  * The period should match the expected I/O data rate to and from the device.
  * @param net              InOut: The p-net stack instance
  */
@@ -1751,7 +1774,7 @@ typedef struct pnet_diag_source
    uint32_t api;
    uint16_t slot;
    uint16_t subslot;
-   uint16_t ch; /* 0 - 0x7FFF manufacturer specific, 0x8000 whole submodule */
+   uint16_t ch; /** 0 - 0x7FFF manufacturer specific, 0x8000 whole submodule */
    pnet_diag_ch_group_values_t ch_grouping;
    pnet_diag_ch_prop_dir_values_t ch_direction;
 } pnet_diag_source_t;
@@ -1764,7 +1787,9 @@ typedef struct pnet_diag_source
  *
  * This sends a diagnosis alarm.
  *
- * Uses the "Qualified channel diagnosis" format on the wire.
+ * Uses the "Qualified channel diagnosis" format on the wire if the
+ * configuration parameter use_qualified_diagnosis is true, otherwise
+ * "Extended channel diagnosis".
  *
  * @param net                 InOut: The p-net stack instance.
  * @param p_diag_source       In:    Slot, subslot, channel, direction etc.
@@ -1780,7 +1805,8 @@ typedef struct pnet_diag_source
  *                                   to the error.
  * @param qual_ch_qualifier   In:    More detailed severity information. Used
  *                                   when severity =
- *                                   PNET_DIAG_CH_PROP_MAINT_QUALIFIED.
+ *                                   PNET_DIAG_CH_PROP_MAINT_QUALIFIED and the
+ *                                   use_qualified_diagnosis is enabled.
  *                                   Max one bit should be set.
  *                                   Use 0 otherwise.
  * @return  0  if the operation succeeded.
@@ -1851,8 +1877,8 @@ PNET_EXPORT int pnet_diag_std_remove (
  * Use \a pnet_diag_usi_update() instead if you would like to have an error
  * if the diagnosis is missing when trying to update it.
  *
- * A diagnosis in USI format is always assigned to the channel "whole
- * submodule" (not individual channels). The severity is always "Fault".
+ * A diagnosis in USI format is always assigned to the channel
+ * "whole submodule" (not individual channels). The severity is always "Fault".
  *
  * It is recommended to use the standard diagnosis format in most cases.
  * Use the manufacturer specific format ("USI format") only if it's not
@@ -1926,6 +1952,116 @@ PNET_EXPORT int pnet_diag_usi_remove (
    uint32_t api,
    uint16_t slot,
    uint16_t subslot,
+   uint16_t usi);
+
+/**
+ * Add a diagnosis entry, in standard or USI format.
+ *
+ * This is a low-level function. Typically you should use one of these instead
+ * (which uses this function internally):
+ *  - pnet_diag_std_add()
+ *  - pnet_diag_usi_add()
+ *
+ * This sends a diagnosis alarm.
+ *
+ * @param net                 InOut: The p-net stack instance.
+ * @param p_diag_source       In:    Slot, subslot, channel, direction etc.
+ * @param ch_bits             In:    Number of bits in the channel.
+ * @param severity            In:    Diagnosis severity.
+ * @param ch_error_type       In:    The channel error type.
+ * @param ext_ch_error_type   In:    The extended channel error type.
+ * @param ext_ch_add_value    In:    The extended channel error additional
+ *                                   value.
+ * @param qual_ch_qualifier   In:    The qualified channel qualifier.
+ * @param usi                 In:    The USI.
+ * @param p_manuf_data        In:    The manufacturer specific diagnosis data.
+ *                                   (Only needed if USI <= 0x7fff).
+ * @return  0  if the operation succeeded.
+ *          -1 if an error occurred.
+ */
+PNET_EXPORT int pnet_diag_add (
+   pnet_t * net,
+   const pnet_diag_source_t * p_diag_source,
+   pnet_diag_ch_prop_type_values_t ch_bits,
+   pnet_diag_ch_prop_maint_values_t severity,
+   uint16_t ch_error_type,
+   uint16_t ext_ch_error_type,
+   uint32_t ext_ch_add_value,
+   uint32_t qual_ch_qualifier,
+   uint16_t usi,
+   const uint8_t * p_manuf_data);
+
+/**
+ * Update a diagnosis entry, in standard or USI format.
+ *
+ * This is a low-level function. Typically you should use one of these instead
+ * (which uses this function internally):
+ *  - pnet_diag_std_update()
+ *  - pnet_diag_usi_update()
+ *
+ * If the USI of the item is in the manufacturer-specified range then
+ * the USI is used to identify the item.
+ * Otherwise the other parameters are used (all must match):
+ *  - p_diag_source (all fields)
+ *  - Channel error type.
+ *  - Extended error type.
+ *
+ * When the item is found either the manufacturer data is updated (for
+ * USI in manufacturer-specific range) or the extended channel additional
+ * value is updated.
+ *
+ * This sends a diagnosis alarm.
+ *
+ * @param net               InOut: The p-net stack instance.
+ * @param p_diag_source     In:    Slot, subslot, channel, direction etc.
+ * @param ch_error_type     In:    The channel error type.
+ * @param ext_ch_error_type In:    The extended channel error type, or 0.
+ * @param ext_ch_add_value  In:    New extended channel error additional value.
+ * @param usi               In:    The USI.
+ * @param p_manuf_data      In:    New manufacturer specific diagnosis data.
+ *                                (Only needed if USI <= 0x7fff).
+ * @return  0  if the operation succeeded.
+ *          -1 if an error occurred.
+ */
+PNET_EXPORT int pnet_diag_update (
+   pnet_t * net,
+   const pnet_diag_source_t * p_diag_source,
+   uint16_t ch_error_type,
+   uint16_t ext_ch_error_type,
+   uint32_t ext_ch_add_value,
+   uint16_t usi,
+   const uint8_t * p_manuf_data);
+
+/**
+ * Remove a diagnosis entry, in standard or USI format.
+ *
+ * This is a low-level function. Typically you should use one of these instead
+ * (which uses this function internally):
+ *  - pnet_diag_std_remove()
+ *  - pnet_diag_usi_remove()
+ *
+ * If the USI of the item is in the manufacturer-specified range then
+ * the USI is used to identify the item.
+ * Otherwise the other parameters are used (all must match):
+ *  - p_diag_source (all fields)
+ *  - Channel error type.
+ *  - Extended error type.
+ *
+ * This sends a diagnosis alarm.
+ *
+ * @param net               InOut: The p-net stack instance.
+ * @param p_diag_source     In:    Slot, subslot, channel, direction etc.
+ * @param ch_error_type     In:    The channel error type.
+ * @param ext_ch_error_type In:    The extended channel error type, or 0.
+ * @param usi               In:    The USI.
+ * @return  0  if the operation succeeded.
+ *          -1 if an error occurred.
+ */
+PNET_EXPORT int pnet_diag_remove (
+   pnet_t * net,
+   const pnet_diag_source_t * p_diag_source,
+   uint16_t ch_error_type,
+   uint16_t ext_ch_error_type,
    uint16_t usi);
 
 /******************** Show Profinet stack info ********************************/

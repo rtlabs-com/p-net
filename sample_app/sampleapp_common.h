@@ -43,7 +43,7 @@ extern "C" {
 #define APP_EVENT_ALARM            BIT (2)
 #define APP_EVENT_ABORT            BIT (15)
 
-#define TICK_INTERVAL_US                    1000 /* 1 ms */
+#define APP_TICK_INTERVAL_US                1000 /* 1 ms */
 #define APP_ALARM_USI                       0x0010
 #define APP_DIAG_CHANNEL_NUMBER             4
 #define APP_DIAG_CHANNEL_DIRECTION          PNET_DIAG_CH_PROP_DIR_INPUT

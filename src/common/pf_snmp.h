@@ -182,6 +182,30 @@ typedef struct pf_snmp_system_description
 } pf_snmp_system_description_t;
 
 /**
+ * System location (sysLocation).
+ *
+ * "The physical location of this node (e.g.,
+ * 'telephone closet, 3rd floor'). If the location is unknown,
+ *  the value is the zero-length string."
+ * - IETF RFC 3418 (SNMP MIB-II).
+ *
+ * The value is supplied by network manager. By default, it is a string with
+ * 22 space (' ') characters.
+ *
+ * The first 22 bytes should have the same value as "IM_Tag_Location" in I&M1.
+ * See PN-Topology ch. 11.5.2: "Consistency".
+ *
+ * This is a writable variable. As such, it is stored in persistent memory.
+ * Only writable variables (using SNMP Set) need to be stored
+ * in persistent memory.
+ * See IEC CDV 61158-5-10 (PN-AL-Services) ch. 7.3.3.3.6.2: "Persistency".
+ */
+typedef struct pf_snmp_system_location
+{
+   char string[255 + 1]; /* Terminated string */
+} pf_snmp_system_location_t;
+
+/**
  * Encoded management address.
  *
  * Contains similar information as pf_lldp_management_address_t, but the
@@ -246,6 +270,9 @@ void pf_snmp_get_system_description (
  * The value will be loaded from file.
  * If no file is available, the hostname is returned.
  *
+ * Note: User may choose to get the fully qualified domain name (FQDN) instead
+ * of calling this function, assuming the operating system supports it.
+ *
  * See IETF RFC 3418 (SNMP MIB-II) ch. 2 "Definitions". Relevant fields:
  * - SysName.
  *
@@ -258,6 +285,10 @@ void pf_snmp_get_system_name (pnet_t * net, pf_snmp_system_name_t * p_name);
  * Set system name.
  *
  * The value will be stored to file.
+ * The hostname will not be updated.
+ *
+ * Note: User may choose to set the fully qualified domain name (FQDN) instead
+ * of calling this function, assuming the operating system supports it.
  *
  * See IETF RFC 3418 (SNMP MIB-II) ch. 2 "Definitions". Relevant fields:
  * - SysName.
@@ -305,8 +336,8 @@ int pf_snmp_set_system_contact (
 /**
  * Get system location.
  *
- * The value will be loaded from file.
- * If no file is available, an empty string is returned.
+ * The value will be loaded from file. If file is not available,
+ * the device location from I&M1 will be used.
  *
  * See IETF RFC 3418 (SNMP MIB-II) ch. 2 "Definitions". Relevant fields:
  * - SysLocation.
@@ -322,6 +353,8 @@ void pf_snmp_get_system_location (
  * Set system location.
  *
  * The value will be stored to file.
+ * The device location in I&M1 will also be replaced with the first
+ * 22 characters of system location.
  *
  * See IETF RFC 3418 (SNMP MIB-II) ch. 2 "Definitions". Relevant fields:
  * - SysLocation.

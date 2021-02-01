@@ -25,6 +25,10 @@
    mock_pf_lldp_get_peer_management_address
 #define pf_lldp_get_link_status      mock_pf_lldp_get_link_status
 #define pf_lldp_get_peer_link_status mock_pf_lldp_get_peer_link_status
+#define pf_file_load                 mock_pf_file_load
+#define pf_file_save_if_modified     mock_pf_file_save_if_modified
+#define pf_fspm_get_im_location      mock_pf_fspm_get_im_location
+#define pf_fspm_save_im_location     mock_pf_fspm_save_im_location
 #endif
 
 #include "pf_includes.h"
@@ -32,6 +36,94 @@
 
 #define STRINGIFY(s)   STRINGIFIED (s)
 #define STRINGIFIED(s) #s
+
+/**
+ * Log result of variable load operation
+ *
+ * @param error            In:    Error code returned from pf_file_load().
+ * @param variable_name    In:    Name of variable loaded from file.
+ * @param variable_value   In:    Value of variable loaded from file, in
+ *                                case no error was detected.
+ */
+static void pf_snmp_log_loaded_variable (
+   int error,
+   const char * variable_name,
+   const char * variable_value)
+{
+   if (error)
+   {
+      LOG_INFO (
+         PF_SNMP_LOG,
+         "SNMP(%d): Could not yet read %s from nvm. Using '%s'\n",
+         __LINE__,
+         variable_name,
+         variable_value);
+   }
+   else
+   {
+      LOG_INFO (
+         PF_SNMP_LOG,
+         "SNMP(%d): Did read %s from nvm. %s: %s\n",
+         __LINE__,
+         variable_name,
+         variable_name,
+         variable_value);
+   }
+}
+
+/**
+ * Log result of variable save operation
+ *
+ * @param result           In:    Error code returned from
+ *                                pf_file_save_if_modified().
+ * @param variable_name    In:    Name of variable stored to file.
+ * @param variable_value   In:    Value of variable save to file.
+ */
+static void pf_snmp_log_saved_variable (
+   int result,
+   const char * variable_name,
+   const char * variable_value)
+{
+   switch (result)
+   {
+   case 2:
+      LOG_INFO (
+         PF_SNMP_LOG,
+         "SNMP(%d): First nvm saving of %s. %s: %s\n",
+         __LINE__,
+         variable_name,
+         variable_name,
+         variable_value);
+      break;
+   case 1:
+      LOG_INFO (
+         PF_SNMP_LOG,
+         "SNMP(%d): Updating nvm stored %s. %s: %s\n",
+         __LINE__,
+         variable_name,
+         variable_name,
+         variable_value);
+      break;
+   case 0:
+      LOG_INFO (
+         PF_SNMP_LOG,
+         "SNMP(%d): No storing of nvm %s (no changes). %s: %s\n",
+         __LINE__,
+         variable_name,
+         variable_name,
+         variable_value);
+      break;
+   case -1:
+      /* Fall-through */
+   default:
+      LOG_ERROR (
+         PF_SNMP_LOG,
+         "SNMP(%d): Failed to store nvm %s.\n",
+         __LINE__,
+         variable_name);
+      break;
+   }
+}
 
 /**
  * Reverse bits in byte.
@@ -134,29 +226,52 @@ static void pf_snmp_encode_signal_delays (
 
 void pf_snmp_get_system_name (pnet_t * net, pf_snmp_system_name_t * name)
 {
+   const char * directory = pf_cmina_get_file_directory (net);
    int error;
+   int result;
 
    CC_STATIC_ASSERT (sizeof (name->string) >= PNAL_HOSTNAME_MAX_SIZE);
 
-   error = pnal_get_hostname (name->string);
+   error = pf_file_load (directory, PF_FILENAME_SYSNAME, name, sizeof (*name));
    if (error)
    {
-      name->string[0] = '\0';
+      result = pnal_get_hostname (name->string);
+      if (result != 0)
+      {
+         name->string[0] = '\0';
+      }
    }
    name->string[sizeof (name->string) - 1] = '\0';
+   pf_snmp_log_loaded_variable (error, "sysName", name->string);
 }
 
 int pf_snmp_set_system_name (pnet_t * net, const pf_snmp_system_name_t * name)
 {
-   /* TODO: Set new hostname permanently. Perhaps call pnal_set_ip_suite()? */
-   return -1;
+   const char * directory = pf_cmina_get_file_directory (net);
+   pf_snmp_system_name_t temporary_buffer;
+   int res;
+
+   /* Ideally, we should set the Fully Qualified Domain Name here. However, not
+    * all systems are expected to support doing that, so we don't.
+    * Instead, we just save the sysName to file as to ensure it is persistent
+    * across restarts.
+    */
+   res = pf_file_save_if_modified (
+      directory,
+      PF_FILENAME_SYSNAME,
+      name,
+      &temporary_buffer,
+      sizeof (*name));
+   pf_snmp_log_saved_variable (res, "sysName", name->string);
+
+   return res == -1 ? -1 : 0;
 }
 
 void pf_snmp_get_system_contact (
    pnet_t * net,
    pf_snmp_system_contact_t * contact)
 {
-   const char * directory = net->fspm_cfg.file_directory;
+   const char * directory = pf_cmina_get_file_directory (net);
    int error;
 
    error = pf_file_load (
@@ -167,26 +282,16 @@ void pf_snmp_get_system_contact (
    if (error)
    {
       contact->string[0] = '\0';
-      LOG_INFO (
-         PF_SNMP_LOG,
-         "SNMP(%d): Could not yet read sysContact from nvm.\n",
-         __LINE__);
-   }
-   else
-   {
-      LOG_INFO (
-         PF_SNMP_LOG,
-         "SNMP(%d): Did read sysContact from nvm.\n",
-         __LINE__);
    }
    contact->string[sizeof (contact->string) - 1] = '\0';
+   pf_snmp_log_loaded_variable (error, "syContact", contact->string);
 }
 
 int pf_snmp_set_system_contact (
    pnet_t * net,
    const pf_snmp_system_contact_t * contact)
 {
-   const char * directory = net->fspm_cfg.file_directory;
+   const char * directory = pf_cmina_get_file_directory (net);
    pf_snmp_system_contact_t temporary_buffer;
    int res;
 
@@ -196,41 +301,7 @@ int pf_snmp_set_system_contact (
       contact,
       &temporary_buffer,
       sizeof (*contact));
-   switch (res)
-   {
-   case 2:
-      LOG_INFO (
-         PF_SNMP_LOG,
-         "SNMP(%d): First nvm saving of sysContact. "
-         "sysContact: %s\n",
-         __LINE__,
-         contact->string);
-      break;
-   case 1:
-      LOG_INFO (
-         PF_SNMP_LOG,
-         "SNMP(%d): Updating nvm stored sysContact. "
-         "sysContact: %s\n",
-         __LINE__,
-         contact->string);
-      break;
-   case 0:
-      LOG_INFO (
-         PF_SNMP_LOG,
-         "SNMP(%d): No storing of nvm sysContact (no changes). "
-         "sysContact: %s\n",
-         __LINE__,
-         contact->string);
-      break;
-   default:
-      /* Fall-through */
-   case -1:
-      LOG_ERROR (
-         PF_SNMP_LOG,
-         "SNMP(%d): Failed to store nvm sysContact.\n",
-         __LINE__);
-      break;
-   }
+   pf_snmp_log_saved_variable (res, "sysContact", contact->string);
 
    return res == -1 ? -1 : 0;
 }
@@ -239,15 +310,44 @@ void pf_snmp_get_system_location (
    pnet_t * net,
    pf_snmp_system_location_t * location)
 {
-   pf_fspm_get_system_location (net, location);
+   const char * directory = pf_cmina_get_file_directory (net);
+   int error;
+
+   error = pf_file_load (
+      directory,
+      PF_FILENAME_SYSLOCATION,
+      location,
+      sizeof (*location));
+   if (error)
+   {
+      /* Use "IM_Tag_Location" from I&M1 */
+      pf_fspm_get_im_location (net, location->string);
+   }
+   location->string[sizeof (location->string) - 1] = '\0';
+
+   pf_snmp_log_loaded_variable (error, "sysLocation", location->string);
 }
 
 int pf_snmp_set_system_location (
    pnet_t * net,
    const pf_snmp_system_location_t * location)
 {
-   pf_fspm_save_system_location (net, location);
-   return 0;
+   const char * directory = pf_cmina_get_file_directory (net);
+   pf_snmp_system_location_t temporary_buffer;
+   int res;
+
+   res = pf_file_save_if_modified (
+      directory,
+      PF_FILENAME_SYSLOCATION,
+      location,
+      &temporary_buffer,
+      sizeof (*location));
+   pf_snmp_log_saved_variable (res, "sysLocation", location->string);
+
+   /* Update 22 byte "IM_Tag_Location" in I&M1 */
+   pf_fspm_save_im_location (net, location->string);
+
+   return res == -1 ? -1 : 0;
 }
 
 void pf_snmp_get_system_description (
@@ -409,14 +509,12 @@ void pf_snmp_get_station_name (
    pnet_t * net,
    pf_lldp_station_name_t * p_station_name)
 {
-   const char * station_name = NULL;
+   char station_name[PNET_STATION_NAME_MAX_SIZE]; /** Terminated */
 
-   /* FIXME: Use of pf_cmina_get_station_name() is not thread-safe, as the
-    * returned pointer points to non-constant memory shared by multiple threads.
+   /* FIXME: Use of pf_cmina_get_station_name() is not thread-safe.
     * Fix this, e.g. using a mutex.
     */
-   pf_cmina_get_station_name (net, &station_name);
-   CC_ASSERT (station_name != NULL);
+   pf_cmina_get_station_name (net, station_name);
 
    snprintf (
       p_station_name->string,

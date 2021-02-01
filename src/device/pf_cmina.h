@@ -43,11 +43,11 @@ int pf_cmina_init (pnet_t * net);
 int pf_cmina_remove_all_data_files (const char * file_directory);
 
 /**
- * Show interface statistics
+ * Show port statistics
  *
  * @param net              InOut: The p-net stack instance
  */
-void pf_cmina_interface_statistics_show (const pnet_t * net);
+void pf_cmina_port_statistics_show (pnet_t * net);
 
 /**
  * Show the CMINA status.
@@ -65,40 +65,51 @@ void pf_cmina_ip_to_string (pnal_ipaddr_t ip, char * outputstring);
 
 /**
  * Retrieve the path to the directory for saving files.
- * @param net                 InOut: The p-net stack instance
- * @param pp_file_directory   Out:   The absolute path to the file directory.
- *                                   Terminated string or NULL.
- * @return  0  if the operation succeeded.
- *          -1 if an error occurred.
+ * @param net              In:    The p-net stack instance
+ * @return the absolute path to the file directory.
+ *         Terminated string or NULL.
  */
-int pf_cmina_get_file_directory (pnet_t * net, const char ** pp_file_directory);
+const char * pf_cmina_get_file_directory (const pnet_t * net);
 
 /**
  * Retrieve the current station name of the device.
- * @param net              InOut: The p-net stack instance
- * @param pp_station_name  Out:   The station name. Terminated string.
- * @return  0  if the operation succeeded.
- *          -1 if an error occurred.
+ *
+ * TODO: Not yet thread safe. Fix this, e.g. using a mutex.
+ *
+ * @param net              In:    The p-net stack instance
+ * @param station_name     Out:   Resulting string buffer with a terminated
+ *                                string. Should have size
+ *                                PNET_STATION_NAME_MAX_SIZE.
  */
-int pf_cmina_get_station_name (pnet_t * net, const char ** pp_station_name);
+void pf_cmina_get_station_name (const pnet_t * net, char * station_name);
 
 /**
  * Retrieve the current IP address of the device.
- * @param net              InOut: The p-net stack instance
- * @param p_ipaddr         Out:   The ip_address.
- * @return  0  if the operation succeeded.
- *          -1 if an error occurred.
+ * @param net              In:    The p-net stack instance
+ * @return the ip_address.
  */
-int pf_cmina_get_ipaddr (pnet_t * net, pnal_ipaddr_t * p_ipaddr);
+pnal_ipaddr_t pf_cmina_get_ipaddr (const pnet_t * net);
+
+/**
+ * Retrieve the current netmask for the device.
+ * @param net              In:    The p-net stack instance
+ * @return the netmask
+ */
+pnal_ipaddr_t pf_cmina_get_netmask (const pnet_t * net);
+
+/**
+ * Retrieve the gateway address.
+ * @param net              In:    The p-net stack instance
+ * @return the gateway address.
+ */
+pnal_ipaddr_t pf_cmina_get_gateway (const pnet_t * net);
 
 /**
  * Retrieve the device MAC address.
- * @param net              InOut: The p-net stack instance
- * @param p_macaddr        Out:   The MAC address.
- * @return  0  if the operation succeeded.
- *          -1 if an error occurred.
+ * @param net              In:    The p-net stack instance
+ * @return the MAC address
  */
-int pf_cmina_get_device_macaddr (pnet_t * net, pnet_ethaddr_t * p_macaddr);
+const pnet_ethaddr_t * pf_cmina_get_device_macaddr (const pnet_t * net);
 
 /**
  * Save one block of data for incoming DCP set command.

@@ -390,13 +390,16 @@ void pf_put_im_3 (
  * Insert filtered real or expected ident data into a buffer.
  *
  * filter_level specifies what is being filtered:
- *    If p_ar is != NULL then only select items that belong to this AR.
- *    PF_DEV_FILTER_LEVEL_SUBSLOT means "Only include sub-slot" specified by
- * api_id, slot_nbr and subslot_nbr. PF_DEV_FILTER_LEVEL_SLOT means "Include all
- * sub-slots of slot" specified by api_id and slot_nbr. PF_DEV_FILTER_LEVEL_API
- * means "Include all slots and sub-slots of API id" specified by api_id.
- *    PF_DEV_FILTER_LEVEL_DEVICE essentially means "No filtering" on API id,
- * slot_nbr or subslot_nbr.
+ *   If p_ar is != NULL then only select items that belong to this AR.
+ *
+ *   PF_DEV_FILTER_LEVEL_SUBSLOT means "Only include sub-slot"
+ *      specified by api_id, slot_nbr and subslot_nbr.
+ *   PF_DEV_FILTER_LEVEL_SLOT means "Include all sub-slots of slot"
+ *      specified by api_id and slot_nbr.
+ *   PF_DEV_FILTER_LEVEL_API means "Include all slots and sub-slots of API id"
+ *      specified by api_id.
+ *   PF_DEV_FILTER_LEVEL_DEVICE essentially means "No filtering" on API id,
+ *      slot_nbr or subslot_nbr.
  *
  * stop_level specifies how much data is being included:
  *    PF_DEV_FILTER_LEVEL_SUBSLOT means "Include all levels".
@@ -404,20 +407,21 @@ void pf_put_im_3 (
  *    PF_DEV_FILTER_LEVEL_API means "Do not include slots or sub-slots".
  *    PF_DEV_FILTER_LEVEL_DEVICE means "Only include API count".
  *
- * @param net              InOut: The p-net stack instance
- * @param is_big_endian    In:   Endianness of the destination buffer.
- * @param block_version_low In:  The minor version number of the block to
- * insert.
- * @param block_type       In:   Specifies REAL or EXP ident number to insert.
- * @param filter_level     In:   The filter level.
- * @param stop_level       In:   The amount of detail to include (ending level).
- * @param p_ar             In:   If != NULL then filter by AR.
- * @param api_id           In:   API id to filter by.
- * @param slot_nbr         In:   Slot number to filter by.
- * @param subslot_nbr      In:   Sub-slot number to filter by.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
- * @param p_pos            InOut:Position in destination buffer.
+ * @param net               InOut: The p-net stack instance
+ * @param is_big_endian     In:    Endianness of the destination buffer.
+ * @param block_version_low In:    The minor version number of the block to
+ *                                   insert.
+ * @param block_type        In:    Specifies REAL or EXP ident number to insert.
+ * @param filter_level      In:    The filter level.
+ * @param stop_level        In:    The amount of detail to include
+ *                                 (ending level).
+ * @param p_ar              In:    If != NULL then filter by AR.
+ * @param api_id            In:    API id to filter by.
+ * @param slot_nbr          In:    Slot number to filter by.
+ * @param subslot_nbr       In:    Sub-slot number to filter by.
+ * @param res_len           In:    Size of destination buffer.
+ * @param p_bytes           Out:   Destination buffer.
+ * @param p_pos             InOut: Position in destination buffer.
  */
 void pf_put_ident_data (
    pnet_t * net,
@@ -736,10 +740,12 @@ void pf_put_pdport_data_adj (
 
 /**
  * Insert pd port real data block into a buffer.
+ *
+ * Includes peer chassis ID, peer MAC address and peer MAU type.
+ *
  * @param net              InOut: The p-net stack instance
  * @param loc_port_num     In:    Local port number.
  *                                Valid range: 1 .. PNET_MAX_PORT
- * @param subslot          In:    DAP subslot identifying the port.
  * @param is_big_endian    In:    Endianness of the destination buffer.
  * @param p_res            In:    Read result
  * @param res_len          In:    Size of destination buffer.
@@ -749,7 +755,6 @@ void pf_put_pdport_data_adj (
 void pf_put_pdport_data_real (
    pnet_t * net,
    int loc_port_num,
-   uint16_t subslot,
    bool is_big_endian,
    const pf_iod_read_result_t * p_res,
    uint16_t res_len,
@@ -758,7 +763,7 @@ void pf_put_pdport_data_real (
 
 /**
  * Insert pd port statistics block into a buffer.
- * @param p_if_stats       In:    Interface statistics
+ * @param p_port_stats     In:    Port statistics
  * @param is_big_endian    In:    Endianness of the destination buffer.
  * @param p_res            In:    Read result
  * @param res_len          In:    Size of destination buffer.
@@ -767,7 +772,7 @@ void pf_put_pdport_data_real (
  */
 
 void pf_put_pdport_statistics (
-   const pf_interface_stats_t * p_if_stats,
+   const pnal_port_stats_t * p_port_stats,
    bool is_big_endian,
    const pf_iod_read_result_t * p_res,
    uint16_t res_len,
@@ -776,6 +781,9 @@ void pf_put_pdport_statistics (
 
 /**
  * Insert dp interface real data block into a buffer.
+ *
+ * This includes chassis ID, MAC address, IP address, subnet and gateway.
+ *
  * @param net              InOut: The p-net stack instance
  * @param is_big_endian    In:    Endianness of the destination buffer.
  * @param p_res            In:    Read result

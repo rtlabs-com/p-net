@@ -25,7 +25,7 @@ extern "C" {
  *
  * @param net              In:    The p-net stack instance.
  */
-void pf_port_init(pnet_t * net);
+void pf_port_init (pnet_t * net);
 
 /**
  * Get list of local ports.
@@ -54,7 +54,9 @@ void pf_port_get_list_of_ports (
  * @param net              In:    The p-net stack instance.
  * @param p_iterator       Out:   Port iterator.
  */
-void pf_port_init_iterator_over_ports (pnet_t * net, pf_port_iterator_t * p_iterator);
+void pf_port_init_iterator_over_ports (
+   pnet_t * net,
+   pf_port_iterator_t * p_iterator);
 
 /**
  * Get next local port.
@@ -68,19 +70,64 @@ void pf_port_init_iterator_over_ports (pnet_t * net, pf_port_iterator_t * p_iter
 int pf_port_get_next (pf_port_iterator_t * p_iterator);
 
 /**
- * Get a reference to port runtime data.
+ * Get DAP port subslot using local port number
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param loc_port_num     In:    Local port number.
+ *                                Valid range: 1 .. PNET_MAX_PORT
+ * @return DAP subslot number for port identity
+ */
+uint16_t pf_port_loc_port_num_to_dap_subslot (int loc_port_num);
+
+/**
+ * Check if a DAP port subslot is mapped to a local port
+ *
+ * @param subslot              In: Subslot number
+ * @return true  if the subslot is mapped to a local port.
+ *         false if the subslot is not supported.
+ */
+bool pf_port_subslot_is_dap_port_id (uint16_t subslot);
+
+/**
+ * Get local port from DAP port subslot
+ *
+ * Considers PNET_MAX_PORT
+ *
+ * @param subslot              In: Subslot number
+ * @return The port number mapping to the subslot.
+ *         0 if the subslot is not supported.
+ */
+int pf_port_dap_subslot_to_local_port (uint16_t subslot);
+
+/**
+ * Get port runtime data.
  *
  * If the local port number is out of range this operation will assert.
  * NULL will never be returned.
  *
+ * See also \a pf_port_get_config() for configuration of the port.
+ *
  * @param net              In:    The p-net stack instance
  * @param loc_port_num     In:    Local port number.
  *                                Valid range: 1 .. PNET_MAX_PORT
- * @return Address to port runtime data
+ * @return port runtime data
  */
-pf_port_t * pf_port_get_state (
-   pnet_t * net,
-   int loc_port_num);
+pf_port_t * pf_port_get_state (pnet_t * net, int loc_port_num);
+
+/**
+ * Get port configuration.
+ *
+ * If the local port number is out of range this operation will assert.
+ * NULL will never be returned.
+ *
+ * See also \a pf_port_get_state() for port runtime data.
+ *
+ * @param net              In:    The p-net stack instance
+ * @param loc_port_num     In:    Local port number.
+ *                                Valid range: 1 .. PNET_MAX_PORT
+ * @return port configuration
+ */
+const pnet_port_cfg_t * pf_port_get_config (pnet_t * net, int loc_port_num);
 
 #ifdef __cplusplus
 }

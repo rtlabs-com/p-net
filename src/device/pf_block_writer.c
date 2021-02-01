@@ -3564,7 +3564,6 @@ void pf_put_pdport_data_check (
 void pf_put_pdport_data_real (
    pnet_t * net,
    int loc_port_num,
-   uint16_t subslot,
    bool is_big_endian,
    const pf_iod_read_result_t * p_res,
    uint16_t res_len,
@@ -3575,9 +3574,10 @@ void pf_put_pdport_data_real (
    uint16_t block_len = 0;
    uint8_t numPeers = 0;
    pf_lldp_chassis_id_t chassis_id;
-   const pnet_lldp_port_cfg_t * p_port_config =
-      pf_lldp_get_port_config (net, loc_port_num);
-   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
+   const uint16_t subslot = pf_port_loc_port_num_to_dap_subslot (loc_port_num);
+   const pnet_port_cfg_t * p_port_config =
+      pf_port_get_config (net, loc_port_num);
+   const pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
    const pf_lldp_peer_info_t * p_peer_info = &p_port_data->lldp.peer_info;
 
    numPeers = p_peer_info->ttl ? 1 : 0;
@@ -3648,7 +3648,7 @@ void pf_put_pdport_data_real (
          p_bytes,
          p_pos);
 
-      /* PeerMAC Addr */
+      /* Peer MAC Addr */
       pf_put_mem (
          p_peer_info->mac_address.addr,
          sizeof (p_peer_info->mac_address.addr),
@@ -3752,7 +3752,7 @@ void pf_put_pdport_data_real (
 }
 
 void pf_put_pdport_statistics (
-   const pf_interface_stats_t * p_if_stats,
+   const pnal_port_stats_t * p_port_stats,
    bool is_big_endian,
    const pf_iod_read_result_t * p_res,
    uint16_t res_len,
@@ -3777,37 +3777,37 @@ void pf_put_pdport_statistics (
 
    pf_put_uint32 (
       is_big_endian,
-      p_if_stats->if_in_octets,
+      p_port_stats->if_in_octets,
       res_len,
       p_bytes,
       p_pos);
    pf_put_uint32 (
       is_big_endian,
-      p_if_stats->if_out_octets,
+      p_port_stats->if_out_octets,
       res_len,
       p_bytes,
       p_pos);
    pf_put_uint32 (
       is_big_endian,
-      p_if_stats->if_in_discards,
+      p_port_stats->if_in_discards,
       res_len,
       p_bytes,
       p_pos);
    pf_put_uint32 (
       is_big_endian,
-      p_if_stats->if_out_discards,
+      p_port_stats->if_out_discards,
       res_len,
       p_bytes,
       p_pos);
    pf_put_uint32 (
       is_big_endian,
-      p_if_stats->if_in_errors,
+      p_port_stats->if_in_errors,
       res_len,
       p_bytes,
       p_pos);
    pf_put_uint32 (
       is_big_endian,
-      p_if_stats->if_out_errors,
+      p_port_stats->if_out_errors,
       res_len,
       p_bytes,
       p_pos);
@@ -3830,6 +3830,10 @@ void pf_put_pdinterface_data_real (
    uint16_t block_pos = *p_pos;
    uint16_t block_len = 0;
    pf_lldp_chassis_id_t chassis_id;
+   const pnet_ethaddr_t * mac_address = pf_cmina_get_device_macaddr (net);
+   pnal_ipaddr_t ip_address = pf_cmina_get_ipaddr (net);
+   pnal_ipaddr_t netmask = pf_cmina_get_netmask (net);
+   pnal_ipaddr_t gateway = pf_cmina_get_gateway (net);
 
    /* Block header first */
    pf_put_block_header (
@@ -3853,10 +3857,10 @@ void pf_put_pdinterface_data_real (
 
    pf_put_padding (2, res_len, p_bytes, p_pos);
 
-   /* Owner MAC Address  */
+   /* DAP interface MAC address */
    pf_put_mem (
-      &net->fspm_cfg.eth_addr,
-      sizeof (net->fspm_cfg.eth_addr),
+      &mac_address->addr,
+      sizeof (pnet_ethaddr_t),
       res_len,
       p_bytes,
       p_pos);
@@ -3864,28 +3868,13 @@ void pf_put_pdinterface_data_real (
    pf_put_padding (2, res_len, p_bytes, p_pos);
 
    /* IP Address */
-   pf_put_uint32 (
-      is_big_endian,
-      net->cmina_current_dcp_ase.full_ip_suite.ip_suite.ip_addr,
-      res_len,
-      p_bytes,
-      p_pos);
+   pf_put_uint32 (is_big_endian, ip_address, res_len, p_bytes, p_pos);
 
    /* Subnet Mask */
-   pf_put_uint32 (
-      is_big_endian,
-      net->cmina_current_dcp_ase.full_ip_suite.ip_suite.ip_mask,
-      res_len,
-      p_bytes,
-      p_pos);
+   pf_put_uint32 (is_big_endian, netmask, res_len, p_bytes, p_pos);
 
    /* Router  */
-   pf_put_uint32 (
-      is_big_endian,
-      net->cmina_current_dcp_ase.full_ip_suite.ip_suite.ip_gateway,
-      res_len,
-      p_bytes,
-      p_pos);
+   pf_put_uint32 (is_big_endian, gateway, res_len, p_bytes, p_pos);
 
    /* Finally insert the block length into the block header */
    block_len = *p_pos - (block_pos + 4);
@@ -3914,6 +3903,17 @@ static void pf_put_pd_multiblock_interface_and_statistics (
 {
    uint16_t block_pos = *p_pos;
    uint16_t block_len = 0;
+
+   pnal_port_stats_t port_stats;
+
+   /* TODO get correct interface/port name */
+   if (
+      pnal_get_port_statistics (
+         net->fspm_cfg.if_cfg.main_port.if_name,
+         &port_stats) != 0)
+   {
+      memset (&port_stats, 0, sizeof (port_stats));
+   }
 
    /* Block header first */
    pf_put_block_header (
@@ -3948,9 +3948,10 @@ static void pf_put_pd_multiblock_interface_and_statistics (
       res_len,
       p_bytes,
       p_pos);
+
    /*PDPortStatistics*/
    pf_put_pdport_statistics (
-      &net->interface_statistics,
+      &port_stats,
       is_big_endian,
       p_res,
       res_len,
@@ -3990,6 +3991,14 @@ static void pf_put_pd_multiblock_port_and_statistics (
 {
    uint16_t block_pos = *p_pos;
    uint16_t block_len = 0;
+   pnal_port_stats_t port_stats;
+   const uint16_t subslot = pf_port_loc_port_num_to_dap_subslot (loc_port_num);
+   const pnet_port_cfg_t * p_port_cfg = pf_port_get_config (net, loc_port_num);
+
+   if (pnal_get_port_statistics (p_port_cfg->phy_port.if_name, &port_stats) != 0)
+   {
+      memset (&port_stats, 0, sizeof (port_stats));
+   }
 
    /* Block header first */
    pf_put_block_header (
@@ -4009,18 +4018,12 @@ static void pf_put_pd_multiblock_port_and_statistics (
 
    /* Slot and subslot */
    pf_put_uint16 (is_big_endian, PNET_SLOT_DAP_IDENT, res_len, p_bytes, p_pos);
-   pf_put_uint16 (
-      is_big_endian,
-      PNET_SUBSLOT_DAP_INTERFACE_1_PORT_1_IDENT,
-      res_len,
-      p_bytes,
-      p_pos);
+   pf_put_uint16 (is_big_endian, subslot, res_len, p_bytes, p_pos);
 
    /*PDPortDataReal*/
    pf_put_pdport_data_real (
       net,
       loc_port_num,
-      PNET_SUBSLOT_DAP_INTERFACE_1_PORT_1_IDENT,
       is_big_endian,
       p_res,
       res_len,
@@ -4029,7 +4032,7 @@ static void pf_put_pd_multiblock_port_and_statistics (
 
    /*PDPortStatistics*/
    pf_put_pdport_statistics (
-      &net->interface_statistics,
+      &port_stats,
       is_big_endian,
       p_res,
       res_len,
@@ -4052,7 +4055,7 @@ void pf_put_pd_real_data (
    uint8_t * p_bytes,
    uint16_t * p_pos)
 {
-   /* Add Interface Data with the interface statistics */
+   /* Add Interface Data with the interface (port) statistics */
    pf_put_pd_multiblock_interface_and_statistics (
       net,
       is_big_endian,
