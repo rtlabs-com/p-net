@@ -271,7 +271,7 @@ Later on kill the ``pn_dev`` process by using ``sudo pkill pn_dev``.
 LEDs
 ^^^^
 If you use plain files as output instead of LEDs, use this to study the file
-for the "Data LED":
+for the "Data LED"::
 
     watch -n 0.1 cat /home/pi/profinet/build/pnet_led_1.txt
 

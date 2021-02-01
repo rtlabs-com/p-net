@@ -206,8 +206,9 @@ int pf_lldp_get_peer_management_address (
 /**
  * Get remote station name for remote interface connected to local port.
  *
- * The station name is usually a string, but may also be the MAC address of
- * the remote interface in case no string has been assigned.
+ * The station name is usually a string, but may also be the MAC address
+ * (as a string "AB-CD-EF-01-23-45") of the remote interface in case no string
+ * has been assigned.
  *
  * Note that the remote device may have multiple interfaces. Only the remote
  * interface connected to the local port is relevant here.

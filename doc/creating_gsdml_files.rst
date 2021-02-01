@@ -299,7 +299,8 @@ has these attributes:
 * ``MaxPortTxDelay="160"`` Time delay in ns needed for sending frames. Unsigned16.
 
 Use an ``<MAUTypeItem>`` element to describe the Medium Attachment Unit type,
-which can be radio (0), copper at 100 Mbit/s (16) or fiber optics.
+which can be radio (0), copper at 100 Mbit/s (16), copper at 1000 Mbit/s (30)
+or fiber optics etc.
 
 
 Additional ports

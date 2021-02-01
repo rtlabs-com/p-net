@@ -645,6 +645,8 @@ int pf_cmina_dcp_set_ind (
       net->cmina_hello_timeout = UINT32_MAX;
    }
 
+   /* Parse incoming DCP SET, without caring about actual CMINA state.
+      Update cmina_current_dcp_ase and cmina_nonvolatile_dcp_ase*/
    switch (opt)
    {
    case PF_DCP_OPT_IP:
@@ -657,7 +659,7 @@ int pf_cmina_dcp_set_ind (
          {
             if (pf_cmina_is_ipsuite_valid ((pf_ip_suite_t *)p_value))
             {
-               /* Case 13 in Profinet 2.4 Table 1096 */
+               /* Case 13 in Profinet 2.4 Table 1096 "CMINA state table" */
                /* Set IP address etc */
                change_ip =
                   (memcmp (
@@ -704,7 +706,7 @@ int pf_cmina_dcp_set_ind (
             }
             else
             {
-               /* Case 10, 22 in Profinet 2.4 Table 1096 */
+               /* Case 10, 22 in Profinet 2.4 Table 1096 "CMINA state table" */
                LOG_INFO (
                   PF_DCP_LOG,
                   "CMINA(%d): Got incoming request to change IP suite to an "
@@ -715,7 +717,7 @@ int pf_cmina_dcp_set_ind (
          }
          else
          {
-            /* Case 12, 23 in Profinet 2.4 Table 1096 */
+            /* Case 12, 23 in Profinet 2.4 Table 1096 "CMINA state table" */
             *p_block_error = PF_DCP_BLOCK_ERROR_SUBOPTION_NOT_SET;
          }
          break;
@@ -727,7 +729,7 @@ int pf_cmina_dcp_set_ind (
          {
             if (pf_cmina_is_full_ipsuite_valid ((pf_full_ip_suite_t *)p_value))
             {
-               /* Case 13 in Profinet 2.4 Table 1096 */
+               /* Case 13 in Profinet 2.4 Table 1096 "CMINA state table" */
                /* Set IP address and DNS etc */
                change_ip =
                   (memcmp (
@@ -774,7 +776,7 @@ int pf_cmina_dcp_set_ind (
             }
             else
             {
-               /* Case 10,22 in Profinet 2.4 Table 1096 */
+               /* Case 10,22 in Profinet 2.4 Table 1096 "CMINA state table" */
                LOG_INFO (
                   PF_DCP_LOG,
                   "CMINA(%d): Got incoming request to change full IP suite to "
@@ -789,7 +791,7 @@ int pf_cmina_dcp_set_ind (
          }
          break;
       default:
-         /* Case 12, 23 in Profinet 2.4 Table 1096 */
+         /* Case 12, 23 in Profinet 2.4 Table 1096 "CMINA state table" */
          *p_block_error = PF_DCP_BLOCK_ERROR_SUBOPTION_NOT_SUPPORTED;
          break;
       }
@@ -802,7 +804,7 @@ int pf_cmina_dcp_set_ind (
          {
             if (pf_cmina_is_stationname_valid ((char *)p_value, value_length))
             {
-               /* Case 13, 27 in Profinet 2.4 Table 1096 */
+               /* Case 13, 27 in Profinet 2.4 Table "CMINA state table" */
                /* Set station name */
                change_name =
                   ((strncmp (
@@ -843,7 +845,7 @@ int pf_cmina_dcp_set_ind (
             }
             else
             {
-               /* Case 10, 22 in Profinet 2.4 Table 1096 */
+               /* Case 10, 22 in Profinet 2.4 Table 1096 "CMINA state table"*/
                LOG_INFO (
                   PF_DCP_LOG,
                   "CMINA(%d): Got incoming request to change station name to "
@@ -858,7 +860,7 @@ int pf_cmina_dcp_set_ind (
          }
          break;
       default:
-         /* Case 12, 23 in Profinet 2.4 Table 1096 */
+         /* Case 12, 23 in Profinet 2.4 Table 1096 "CMINA state table" */
          *p_block_error = PF_DCP_BLOCK_ERROR_SUBOPTION_NOT_SUPPORTED;
          break;
       }
@@ -871,7 +873,7 @@ int pf_cmina_dcp_set_ind (
    case PF_DCP_OPT_CONTROL:
       if (sub == PF_DCP_SUB_CONTROL_FACTORY_RESET)
       {
-         /* Case 15, 30 in Profinet 2.4 Table 1096 */
+         /* Case 15, 30 in Profinet 2.4 Table 1096 "CMINA state table" */
          reset_to_factory = true;
          reset_mode = 99; /* Reset all */
 
@@ -888,18 +890,19 @@ int pf_cmina_dcp_set_ind (
           */
          reset_mode = block_qualifier >> 1;
 
-         /* Case 15, 30 in Profinet 2.4 Table 1096 */
+         /* Case 15, 30 in Profinet 2.4 Table 1096 "CMINA state table" */
          reset_to_factory = true;
 
          ret = 0;
       }
       break;
    default:
-      /* Case 12, 23 in Profinet 2.4 Table 1096 */
+      /* Case 12, 23 in Profinet 2.4 Table 1096 "CMINA state table" */
       *p_block_error = PF_DCP_BLOCK_ERROR_OPTION_NOT_SUPPORTED;
       break;
    }
 
+   /* Use parsed DCP SET request, depending on acual CMINA state */
    if (ret == 0)
    {
       /* Save to file */
@@ -927,7 +930,7 @@ int pf_cmina_dcp_set_ind (
          {
             if ((have_name == true) && (have_ip == true))
             {
-               /* Case 5, 13 in Profinet 2.4 Table 1096 */
+               /* Case 5, 13 in Profinet 2.4 Table 1096"CMINA state table" */
                /* Change name or change IP */
                /* Stop DHCP timer */
                net->cmina_commit_ip_suite = true;
@@ -941,13 +944,13 @@ int pf_cmina_dcp_set_ind (
                /* Stop IP */
                if (have_name == false)
                {
-                  /* Case 15 in Profinet 2.4 Table 1096 */
+                  /* Case 15 in Profinet 2.4 Table 1096 "CMINA state table" */
                   /* Reset name */
                   net->cmina_state = PF_CMINA_STATE_SET_NAME;
                }
                else if (have_ip == false)
                {
-                  /* Case 15 in Profinet 2.4 Table 1096 */
+                  /* Case 15 in Profinet 2.4 Table 1096 "CMINA state table" */
                   /* Reset IP */
                   net->cmina_state = PF_CMINA_STATE_SET_IP;
                }
@@ -957,7 +960,7 @@ int pf_cmina_dcp_set_ind (
          {
             if (have_dhcp == true)
             {
-               /* Case 14 in Profinet 2.4 Table 1096 */
+               /* Case 14 in Profinet 2.4 Table 1096 "CMINA state table" */
                /* Change DHCP */
                memset (
                   &net->cmina_current_dcp_ase.full_ip_suite.ip_suite,
@@ -973,7 +976,7 @@ int pf_cmina_dcp_set_ind (
             }
             else
             {
-               /* Case 14 in Profinet 2.4 Table 1096 */
+               /* Case 14 in Profinet 2.4 Table 1096 "CMINA state table" */
                /* Reset DHCP */
                /* Stop DHCP */
             }
@@ -984,14 +987,14 @@ int pf_cmina_dcp_set_ind (
             (change_name == false) && (change_ip == false) &&
             (reset_to_factory == false))
          {
-            /* Case 24 in Profinet 2.4 Table 1096 */
+            /* Case 24 in Profinet 2.4 Table 1096 "CMINA state table" */
             /* No change of name or IP. All OK */
          }
          else if ((have_name == false) || (reset_to_factory == true))
          {
             int aborted_ars = 0;
 
-            /* Case 27, 30 in Profinet 2.4 Table 1096 */
+            /* Case 27, 30 in Profinet 2.4 Table 1096 "CMINA state table" */
             /* Reset name or reset to factory */
             /* Abort active ARs */
             if (reset_to_factory == true)
@@ -1018,7 +1021,7 @@ int pf_cmina_dcp_set_ind (
             (have_ip == false))
          {
             int aborted_ars = 0;
-            /* Case 27, 28 in Profinet 2.4 Table 1096 */
+            /* Case 27, 28 in Profinet 2.4 Table 1096 "CMINA state table" */
             /* Change name or reset IP */
             /* Abort active ARs */
             aborted_ars = pf_cmina_abort_active_ars (
@@ -1041,7 +1044,7 @@ int pf_cmina_dcp_set_ind (
 
             if (pf_cmina_nbr_of_active_ars (net) == 0)
             {
-               /* Case 25 in Profinet 2.4 Table 1096 */
+               /* Case 25 in Profinet 2.4 Table 1096 "CMINA state table" */
                /* Change IP, no active connection */
                net->cmina_commit_ip_suite = true;
 
@@ -1049,7 +1052,7 @@ int pf_cmina_dcp_set_ind (
             }
             else
             {
-               /* Case 26 in Profinet 2.4 Table 1096 */
+               /* Case 26 in Profinet 2.4 Table 1096 "CMINA state table" */
                /* Change IP, active connection */
                net->cmina_error_decode = PNET_ERROR_DECODE_PNIORW;
                net->cmina_error_code_1 =
@@ -1069,7 +1072,7 @@ int pf_cmina_dcp_set_ind (
    }
 
    /*
-    * Case 5 in Profinet 2.4 Table 1096 Do_Check
+    * Case 5 in Profinet 2.4 Table 1096 "CMINA state table" Do_Check
     */
    if (
       ((net->cmina_state == PF_CMINA_STATE_SET_IP) ||
@@ -1082,7 +1085,7 @@ int pf_cmina_dcp_set_ind (
    if (reset_to_factory == true)
    {
       /* Handle reset to factory here */
-      /* Case 15 in Profinet 2.4 Table 1096 */
+      /* Case 15 in Profinet 2.4 Table 1096 "CMINA state table" */
       ret = pf_cmina_set_default_cfg (net, reset_mode);
    }
 
@@ -1408,21 +1411,21 @@ void pf_cmina_show (pnet_t * net)
    printf (
       "state                          : %s\n",
       pf_cmina_state_to_string (net));
-   printf ("Default station_name        : <%s>\n", p_cfg->station_name);
+   printf ("Default station_name      : <%s>\n", p_cfg->station_name);
    printf (
-      "Perm station_name           : <%s>\n",
+      "Perm station_name              : <%s>\n",
       net->cmina_nonvolatile_dcp_ase.station_name);
    printf (
-      "Temp station_name           : <%s>\n",
+      "Temp station_name              : <%s>\n",
       net->cmina_current_dcp_ase.station_name);
    printf ("\n");
 
-   printf ("Default product_name          : <%s>\n", p_cfg->product_name);
+   printf ("Default product_name      : <%s>\n", p_cfg->product_name);
    printf (
-      "Perm product_name             : <%s>\n",
+      "Perm product_name              : <%s>\n",
       net->cmina_nonvolatile_dcp_ase.product_name);
    printf (
-      "Temp product_name             : <%s>\n",
+      "Temp product_name              : <%s>\n",
       net->cmina_current_dcp_ase.product_name);
    printf ("\n");
 
@@ -1445,7 +1448,7 @@ void pf_cmina_show (pnet_t * net)
       (unsigned)p_cfg->if_cfg.ip_cfg.ip_gateway.c,
       (unsigned)p_cfg->if_cfg.ip_cfg.ip_gateway.d);
 
-   printf ("Perm    IP  Netmask  Gateway   : ");
+   printf ("Perm IP  Netmask  Gateway      : ");
    pf_ip_address_show (
       net->cmina_nonvolatile_dcp_ase.full_ip_suite.ip_suite.ip_addr);
    printf ("  ");

@@ -138,7 +138,8 @@ be installed. On Ubuntu you can install the required packages using::
 
 The p-net SNMP subagent will handle the system objects so the default
 SNMP system module should be disabled by adding the snmpd argument
-``-I -system_mib``. On Ubuntu Linux you should change
+``-I -system_mib``, otherwise the subagent will complain about
+"registering pdu failed" at startup. On Ubuntu Linux you should change
 ``/lib/systemd/system/snmpd.service`` to read::
 
   [Unit]
@@ -186,6 +187,18 @@ index (last digit in OID) and the interface name::
 
 See :ref:`network-topology-detection` for more details on SNMP and how to
 verify the SNMP communication to the p-net stack.
+
+
+You probably would like your application to wait for the ``snmpd`` application to
+be up and running. If you use systemd as init system, modify this line in
+the ``[Unit]`` part of your ``.service`` file::
+
+   After=network.target snmpd.service
+
+You might also need to add this to the ``[Service]`` part of your
+``.service`` file::
+
+   ExecStartPre=/usr/bin/sleep 0.3
 
 
 snmpd in a Yocto build

@@ -675,8 +675,9 @@ int pf_snmp_get_peer_management_port_index (
  *
  * The local station name (NameOfStation) is the name of the local interface.
  *
- * The station name is usually a string, but may also be the MAC address of
- * the local interface in case no string has been assigned.
+ * The station name is usually a string, but may also be the MAC address
+ * (as a string "AB-CD-EF-01-23-45") of the remote interface in case no string
+ * has been assigned.
  *
  * Note that the local device may have multiple interfaces (such as a
  * loopback interface). Only the local interface used by the p-net stack
@@ -700,8 +701,9 @@ void pf_snmp_get_station_name (
  * and is contained in an LLDP packet sent from a port
  * on the remote device to the local port with no intermediate switches.
  *
- * The station name is usually a string, but may also be the MAC address of
- * the remote interface in case no string has been assigned.
+ * The station name is usually a string, but may also be the MAC address
+ * (as a string "AB-CD-EF-01-23-45") of the remote interface in case no string
+ * has been assigned.
  *
  * Note that the remote device may have multiple interfaces. Only the remote
  * interface connected to the local port is relevant here.

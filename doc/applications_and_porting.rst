@@ -22,11 +22,37 @@ This includes for example:
 * Implement the callback to control the "Signal" LED.
 
 
-Required features of the hardware
----------------------------------
+Required features of the hardware or operating system
+-----------------------------------------------------
 
 * It should be possible to send and receive raw (layer 2) Ethernet frames
 * It should be possible to store data between runs, in a file system or some nonvolatile memory
+* For conformance class B, there needs to be an SNMP implementation that
+  the p-net stack can use.
+
+
+General requirements
+--------------------
+It should be possible to do a factory reset without an engineering tool. For
+example a hardware switch can be used. Routing of Ethernet frames must not be
+affected by a factory reset.
+
+A Profinet signal LED must be visible on the IO-Device. A callback is available
+from p-net to control the signal LED, so you can implement your board specific
+hardware.
+
+Connectors and cables should fulfill the requirements in "PROFINET Cabling and
+Interconnection Technology". For recommended diagnosis indicators (for example
+LEDs) see "Diagnosis for PROFINET".
+Consider the housing (often IP65) and grounding of the device.
+In general the MAC address of the device should be visible when installed.
+
+Hardware requirements for the Ethernet ports:
+
+* At least 100 Mbit/s full duplex
+* Standard and crossover cables should be handled
+* Auto polarity
+* Auto negotiation (should be possible to turn off for fast startup)
 
 
 Minimum cycle time for your application and hardware

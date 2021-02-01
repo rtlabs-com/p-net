@@ -85,6 +85,7 @@ IPv4
 iso
 Isochronous
 J-link
+jitter
 journalctl
 kB
 libprofinet

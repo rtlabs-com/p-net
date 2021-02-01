@@ -2561,7 +2561,7 @@ typedef struct pf_lldp_chassis_id
 typedef struct pf_lldp_port_id
 {
    char string[PNET_LLDP_PORT_ID_MAX_SIZE]; /**< Terminated string */
-   uint8_t subtype;
+   uint8_t subtype;                         /* PF_LLDP_SUBTYPE_xxx */
    bool is_valid;
    size_t len;
 } pf_lldp_port_id_t;
