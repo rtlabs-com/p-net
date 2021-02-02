@@ -1386,7 +1386,7 @@ int app_pnet_cfg_init_default (pnet_cfg_t * stack_config)
    stack_config->oem_device_id.vendor_id_lo = 0xff;
    stack_config->oem_device_id.device_id_hi = 0xee;
    stack_config->oem_device_id.device_id_lo = 0x01;
-   strcpy (stack_config->product_name, "rt-labs p-net sampleapp");
+   strcpy (stack_config->product_name, "RT-Labs P-Net Sample App");
 
    /* Timing */
    stack_config->min_device_interval = 32; /* Corresponds to 1 ms */
