@@ -17,7 +17,7 @@
  * @file
  * @brief Implements the Context Management Input Output protocol machine (CMIO)
  *
- * This monitors several CPM during startup, to know when there is incoming
+ * This monitors several CPMs during startup, to know when there is incoming
  * cyclic data.
  *
  * States are IDLE, STARTUP, WDATA and DATA.
@@ -34,8 +34,6 @@
 #include "pf_includes.h"
 
 #define PF_CMIO_TIMER_PERIOD (100 * 1000) /* us */
-
-static const char * cmio_sched_name = "cmio";
 
 /*************** Diagnostic strings *****************************************/
 
@@ -73,8 +71,12 @@ void pf_cmio_show (const pf_ar_t * p_ar)
    printf (
       "CMIO state            = %s\n",
       pf_cmio_state_to_string (p_ar->cmio_state));
-   printf ("     timer            = %u\n", (unsigned)p_ar->cmio_timer);
-   printf ("     timer run        = %u\n", (unsigned)p_ar->cmio_timer_run);
+   printf (
+      "     timer            = %u\n",
+      (unsigned)pf_scheduler_get_value (&p_ar->cmio_timeout));
+   printf (
+      "     timer should reschedule = %u\n",
+      p_ar->cmio_timer_should_reschedule);
 }
 
 /****************************************************************************/
@@ -106,16 +108,16 @@ static void pf_cmio_set_state (pf_ar_t * p_ar, pf_cmio_state_values_t state)
  * This is a callback for the scheduler. Arguments should fulfill
  * pf_scheduler_timeout_ftn_t
  *
- * When in state PF_CMIO_STATE_WDATA this function polls (every 100ms) all CPM
+ * When in state PF_CMIO_STATE_WDATA this function polls (every 100 ms) all CPM
  * to see if data has arrived from the controller.
  * If CPM data has arrived in state PF_CMIO_STATE_WDATA then notify CMDEV, else
- * schedule another call in 100ms.
+ * schedule another call in 100 ms.
  *
  * @param net              InOut: The p-net stack instance
- * @param arg              In:    The AR instance.
+ * @param arg              In:    The AR instance. pf_ar_t
  * @param current_time     In:    The current system time, in microseconds,
  *                                when the scheduler is started to execute
- * stored tasks.
+ *                                stored tasks. Not used here.
  */
 static void pf_cmio_timer_expired (
    pnet_t * net,
@@ -126,7 +128,9 @@ static void pf_cmio_timer_expired (
    uint16_t crep;
    bool data_possible = true;
 
-   if ((p_ar->cmio_state == PF_CMIO_STATE_WDATA) && (p_ar->cmio_timer_run == true))
+   if (
+      (p_ar->cmio_state == PF_CMIO_STATE_WDATA) &&
+      (p_ar->cmio_timer_should_reschedule == true))
    {
       for (crep = 0; crep < p_ar->nbr_iocrs; crep++)
       {
@@ -140,19 +144,20 @@ static void pf_cmio_timer_expired (
             }
          }
       }
+
       pf_cmdev_cmio_info_ind (net, p_ar, data_possible);
-      pf_scheduler_add (
+
+      (void)pf_scheduler_add (
          net,
          PF_CMIO_TIMER_PERIOD,
-         cmio_sched_name,
          pf_cmio_timer_expired,
          p_ar,
-         &p_ar->cmio_timer);
+         &p_ar->cmio_timeout);
    }
    else
    {
-      p_ar->cmio_timer_run = false;
-      p_ar->cmio_timer = UINT32_MAX;
+      p_ar->cmio_timer_should_reschedule = false;
+      pf_scheduler_reset_handle (&p_ar->cmio_timeout);
    }
 }
 
@@ -162,6 +167,9 @@ int pf_cmio_cmdev_state_ind (
    pnet_event_values_t event)
 {
    uint16_t crep;
+
+   /* TODO: Double-check the state transitions.
+            Also split the handling of creps into a separate function. */
 
    LOG_DEBUG (
       PNET_LOG,
@@ -177,10 +185,9 @@ int pf_cmio_cmdev_state_ind (
       if (event == PNET_EVENT_ABORT)
       {
          /* Ignore */
-         p_ar->cmio_timer_run = false;
-         p_ar->cmio_timer = UINT32_MAX;
+         p_ar->cmio_timer_should_reschedule = false;
 
-         pf_cmio_set_state (p_ar, PF_CMIO_STATE_STARTUP);
+         pf_cmio_set_state (p_ar, PF_CMIO_STATE_STARTUP); /* TODO validate */
       }
       else if (event == PNET_EVENT_STARTUP)
       {
@@ -197,8 +204,7 @@ int pf_cmio_cmdev_state_ind (
                p_ar->iocrs[crep].cpm.cmio_start = false;
             }
          }
-         p_ar->cmio_timer_run = false;
-         p_ar->cmio_timer = UINT32_MAX;
+         p_ar->cmio_timer_should_reschedule = false;
 
          pf_cmio_set_state (p_ar, PF_CMIO_STATE_STARTUP);
       }
@@ -206,12 +212,12 @@ int pf_cmio_cmdev_state_ind (
    case PF_CMIO_STATE_STARTUP:
       if (event == PNET_EVENT_ABORT)
       {
-         p_ar->cmio_timer_run = false;
-         p_ar->cmio_timer = UINT32_MAX;
+         /* Ignore */
+         p_ar->cmio_timer_should_reschedule = false;
 
          pf_cmio_set_state (p_ar, PF_CMIO_STATE_IDLE);
       }
-      else if (event == PNET_EVENT_STARTUP)
+      else if (event == PNET_EVENT_STARTUP) /* TODO Validate */
       {
          for (crep = 0; crep < p_ar->nbr_iocrs; crep++)
          {
@@ -226,14 +232,14 @@ int pf_cmio_cmdev_state_ind (
       }
       else if (event == PNET_EVENT_PRMEND)
       {
-         p_ar->cmio_timer_run = true;
-         pf_scheduler_add (
+         /* StartTimer() */
+         p_ar->cmio_timer_should_reschedule = true;
+         (void)pf_scheduler_add (
             net,
             PF_CMIO_TIMER_PERIOD,
-            cmio_sched_name,
             pf_cmio_timer_expired,
             p_ar,
-            &p_ar->cmio_timer);
+            &p_ar->cmio_timeout);
 
          pf_cmio_set_state (p_ar, PF_CMIO_STATE_WDATA);
       }
@@ -241,15 +247,15 @@ int pf_cmio_cmdev_state_ind (
    case PF_CMIO_STATE_WDATA:
       if (event == PNET_EVENT_ABORT)
       {
-         p_ar->cmio_timer_run = false;
-         p_ar->cmio_timer = UINT32_MAX;
+         p_ar->cmio_timer_should_reschedule = false;
 
          pf_cmio_set_state (p_ar, PF_CMIO_STATE_IDLE);
       }
       else if (event == PNET_EVENT_DATA)
       {
-         p_ar->cmio_timer_run = false;
-         p_ar->cmio_timer = UINT32_MAX;
+         /* StopTimer() */
+         p_ar->cmio_timer_should_reschedule = false;
+         pf_scheduler_remove_if_running (net, &p_ar->cmio_timeout);
 
          pf_cmio_set_state (p_ar, PF_CMIO_STATE_DATA);
       }
@@ -257,8 +263,7 @@ int pf_cmio_cmdev_state_ind (
    case PF_CMIO_STATE_DATA:
       if (event == PNET_EVENT_ABORT)
       {
-         p_ar->cmio_timer_run = false;
-         p_ar->cmio_timer = UINT32_MAX;
+         p_ar->cmio_timer_should_reschedule = false;
 
          pf_cmio_set_state (p_ar, PF_CMIO_STATE_IDLE);
       }

@@ -70,7 +70,9 @@ void pf_port_main_interface_init (pnet_t * net)
    pf_port_init_iterator_over_ports (
       net,
       &net->pf_interface.link_monitor_iterator);
-   net->pf_interface.link_monitor_timeout = UINT32_MAX;
+   pf_scheduler_init_handle (
+      &net->pf_interface.link_monitor_timeout,
+      "link_monitor");
    pf_pdport_start_linkmonitor (net);
 }
 

@@ -39,8 +39,6 @@
 
 #include "pf_includes.h"
 
-static const char * cmsm_sync_name = "cmsm";
-
 int pf_cmsm_activate (pf_ar_t * p_ar)
 {
    if (p_ar == NULL)
@@ -48,7 +46,7 @@ int pf_cmsm_activate (pf_ar_t * p_ar)
       return -1;
    }
 
-   p_ar->cmsm_timer = UINT32_MAX;
+   pf_scheduler_init_handle (&p_ar->cmsm_timeout, "cmsm");
    return 0;
 }
 
@@ -86,7 +84,9 @@ void pf_cmsm_show (const pf_ar_t * p_ar)
    printf (
       "CMSM state            = %s\n",
       pf_cmsm_state_to_string (p_ar->cmsm_state));
-   printf ("     timer            = %u\n", (unsigned)p_ar->cmsm_timer);
+   printf (
+      "     timer            = %u\n",
+      (unsigned)pf_scheduler_get_value (&p_ar->cmsm_timeout));
 }
 
 /**
@@ -124,14 +124,14 @@ static void pf_cmsm_set_state (pf_ar_t * p_ar, pf_cmsm_state_values_t state)
  *                                converted to pf_ar_t
  * @param current_time     In:    The current system time, in microseconds,
  *                                when the scheduler is started to execute
- *                                stored tasks.
+ *                                stored tasks. Not used here.
  */
 static void pf_cmsm_timeout (pnet_t * net, void * arg, uint32_t current_time)
 {
    CC_ASSERT (arg != NULL);
    pf_ar_t * p_ar = (pf_ar_t *)arg;
 
-   p_ar->cmsm_timer = UINT32_MAX;
+   pf_scheduler_reset_handle (&p_ar->cmsm_timeout);
    switch (p_ar->cmsm_state)
    {
    case PF_CMSM_STATE_IDLE:
@@ -187,19 +187,13 @@ int pf_cmsm_cmdev_state_ind (
             "x 100 ms\n",
             __LINE__,
             (unsigned)p_ar->ar_param.cm_initiator_activity_timeout_factor);
-         if (p_ar->cmsm_timer != UINT32_MAX)
-         {
-            pf_scheduler_remove (net, cmsm_sync_name, p_ar->cmsm_timer);
-            p_ar->cmsm_timer = UINT32_MAX; /* unused */
-         }
-         pf_scheduler_add (
+         (void)pf_scheduler_restart (
             net,
             p_ar->ar_param.cm_initiator_activity_timeout_factor * 100 *
                1000, /* time in us */
-            cmsm_sync_name,
             pf_cmsm_timeout,
             (void *)p_ar,
-            &p_ar->cmsm_timer);
+            &p_ar->cmsm_timeout);
          ret = 0;
          break;
       default:
@@ -213,16 +207,15 @@ int pf_cmsm_cmdev_state_ind (
       {
       case PNET_EVENT_DATA:
       case PNET_EVENT_ABORT:
-         if (p_ar->cmsm_timer != UINT32_MAX)
+         if (pf_scheduler_is_running (&p_ar->cmsm_timeout))
          {
             LOG_DEBUG (
                PNET_LOG,
                "CMSM(%d): Stopping communication start-up timer. AREP %u\n",
                __LINE__,
                p_ar->arep);
-            pf_scheduler_remove (net, cmsm_sync_name, p_ar->cmsm_timer);
-            p_ar->cmsm_timer = UINT32_MAX; /* unused */
          }
+         pf_scheduler_remove_if_running (net, &p_ar->cmsm_timeout);
          pf_cmsm_set_state (p_ar, PF_CMSM_STATE_IDLE);
          ret = 0;
          break;
@@ -259,29 +252,15 @@ int pf_cmsm_rm_read_ind (
       if (p_read_request->index == PF_IDX_DEV_CONN_MON_TRIGGER)
       {
          /* Restart timeout period */
-         if (p_ar->cmsm_timer != UINT32_MAX)
-         {
-            pf_scheduler_remove (net, cmsm_sync_name, p_ar->cmsm_timer);
-            p_ar->cmsm_timer = UINT32_MAX; /* unused */
-         }
-         if (
-            pf_scheduler_add (
-               net,
-               p_ar->ar_param.cm_initiator_activity_timeout_factor * 100 *
-                  1000, /* time in us */
-               cmsm_sync_name,
-               pf_cmsm_timeout,
-               (void *)p_ar,
-               &p_ar->cmsm_timer) != 0)
-         {
-            p_ar->cmsm_timer = UINT32_MAX; /* unused */
-         }
-         ret = 0;
+         (void)pf_scheduler_restart (
+            net,
+            p_ar->ar_param.cm_initiator_activity_timeout_factor * 100 *
+               1000, /* time in us */
+            pf_cmsm_timeout,
+            (void *)p_ar,
+            &p_ar->cmsm_timeout);
       }
-      else
-      {
-         ret = 0;
-      }
+      ret = 0;
       break;
    }
 
@@ -307,23 +286,13 @@ int pf_cmsm_cm_read_ind (
       ret = 0;
       break;
    case PF_CMSM_STATE_RUN:
-      if (p_ar->cmsm_timer != UINT32_MAX)
-      {
-         pf_scheduler_remove (net, cmsm_sync_name, p_ar->cmsm_timer);
-         p_ar->cmsm_timer = UINT32_MAX; /* unused */
-      }
-      if (
-         pf_scheduler_add (
-            net,
-            p_ar->ar_param.cm_initiator_activity_timeout_factor * 100 *
-               1000, /* time in us */
-            cmsm_sync_name,
-            pf_cmsm_timeout,
-            (void *)p_ar,
-            &p_ar->cmsm_timer) != 0)
-      {
-         p_ar->cmsm_timer = UINT32_MAX; /* unused */
-      }
+      /* Restart timeout period */
+      (void)pf_scheduler_restart (
+         net,
+         p_ar->ar_param.cm_initiator_activity_timeout_factor * 100 * 1000,
+         pf_cmsm_timeout,
+         (void *)p_ar,
+         &p_ar->cmsm_timeout);
       ret = 0;
       break;
    }
@@ -350,23 +319,13 @@ int pf_cmsm_cm_write_ind (
       ret = 0;
       break;
    case PF_CMSM_STATE_RUN:
-      if (p_ar->cmsm_timer != UINT32_MAX)
-      {
-         pf_scheduler_remove (net, cmsm_sync_name, p_ar->cmsm_timer);
-         p_ar->cmsm_timer = UINT32_MAX; /* unused */
-      }
-      if (
-         pf_scheduler_add (
-            net,
-            p_ar->ar_param.cm_initiator_activity_timeout_factor * 100 *
-               1000, /* time in us */
-            cmsm_sync_name,
-            pf_cmsm_timeout,
-            (void *)p_ar,
-            &p_ar->cmsm_timer) != 0)
-      {
-         p_ar->cmsm_timer = UINT32_MAX; /* unused */
-      }
+      /* Restart timeout period */
+      (void)pf_scheduler_restart (
+         net,
+         p_ar->ar_param.cm_initiator_activity_timeout_factor * 100 * 1000,
+         pf_cmsm_timeout,
+         (void *)p_ar,
+         &p_ar->cmsm_timeout);
       ret = 0;
       break;
    }

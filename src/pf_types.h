@@ -1030,7 +1030,8 @@ typedef struct pf_alarm_receive_queue
  * The DCP uses the scheduler for responding to multi-cast messages.
  * pf_cmsm uses it to supervise the startup sequence.
  */
-#define PF_MAX_TIMEOUTS (2 * (PNET_MAX_AR) * (PNET_MAX_CR) + 10)
+#define PF_MAX_TIMEOUTS                                                        \
+   (2 * (PNET_MAX_AR) * (PNET_MAX_CR) + 2 * (PNET_MAX_PHYSICAL_PORTS) + 9)
 
 #define PF_CMINA_FS_HELLO_RETRY 3
 #define PF_CMINA_FS_HELLO_INTERVAL                                             \
@@ -1077,8 +1078,8 @@ typedef void (*pf_scheduler_timeout_ftn_t) (
 
 typedef struct pf_scheduler_timeouts
 {
-   const char * p_name; /* For debugging only */
-   bool in_use;         /* For debugging only */
+   const char * name; /* For debugging only */
+   bool in_use;       /* For debugging only */
 
    uint32_t when; /* absolute time of timeout */
    uint32_t next; /* Next in list */
@@ -1087,6 +1088,12 @@ typedef struct pf_scheduler_timeouts
    pf_scheduler_timeout_ftn_t cb; /* Call-back to call on timeout */
    void * arg;                    /* call-back argument */
 } pf_scheduler_timeouts_t;
+
+typedef struct pf_scheduler_handle
+{
+   const char * name;    /* private */
+   uint32_t timer_index; /* private */
+} pf_scheduler_handle_t;
 
 /**
  * This is the prototype for the Profinet frame handler.
@@ -1700,9 +1707,9 @@ typedef struct pf_ppm
                                   32 */
    uint16_t reduction_ratio;   /* Allowed: 1..512 */
    uint32_t control_interval;  /* Period in microseconds between frames */
-   bool ci_running;   /* True if the timer is running. Used for stopping
-                         transmission before next scheduled sending.  */
-   uint32_t ci_timer; /* Scheduler timeout instance. UINT32_MAX when stopped */
+   bool ci_running; /* True if the timer is running. Used for stopping
+                       transmission before next scheduled sending.  */
+   pf_scheduler_handle_t ci_timeout;
 } pf_ppm_t;
 
 typedef struct pf_cpm
@@ -1739,7 +1746,8 @@ typedef struct pf_cpm
 
    uint32_t control_interval;
    bool ci_running;
-   uint32_t ci_timer;
+
+   pf_scheduler_handle_t ci_timeout;
 
    /* CMIO data */
    bool cmio_start; /* cmInstance.start/stop */
@@ -1876,8 +1884,10 @@ typedef struct pf_apmx
    uint16_t frame_id;
 
    uint32_t timeout_us;
-   uint32_t timeout_id; /* Scheduler handle for Alarm retransmission */
-   uint32_t retry;
+
+   pf_scheduler_handle_t resend_timeout; /* Scheduler handle for Alarm
+                                            retransmission */
+   uint32_t resend_counter;
 } pf_apmx_t;
 
 typedef enum pf_alpmr_state_values
@@ -1986,8 +1996,8 @@ typedef struct pf_session_info
    pnet_result_t dcontrol_result;
 
    /* This timer is used to handle ccontrol and fragment re-transmissions */
-   uint32_t resend_timeout; /* Handle for removing scheduled event */
-   uint32_t resend_timeout_ctr;
+   pf_scheduler_handle_t resend_timeout;
+   uint32_t resend_counter;
 } pf_session_info_t;
 
 typedef struct pf_ar
@@ -2063,11 +2073,11 @@ typedef struct pf_ar
    pf_cmsu_state_values_t cmsu_state;
 
    pf_cmsm_state_values_t cmsm_state;
-   uint32_t cmsm_timer;
+   pf_scheduler_handle_t cmsm_timeout;
 
    pf_cmio_state_values_t cmio_state;
-   uint32_t cmio_timer;
-   bool cmio_timer_run;
+   pf_scheduler_handle_t cmio_timeout;
+   bool cmio_timer_should_reschedule;
 
    pf_cmpbe_state_values_t cmpbe_state;
    uint16_t cmpbe_stored_command;
@@ -2745,10 +2755,10 @@ typedef struct pf_lldp_port
    uint32_t timestamp_for_last_peer_change;
 
    /* Scheduler handle for LLDP receive timeout */
-   uint32_t rx_timeout;
+   pf_scheduler_handle_t rx_timeout;
 
    /* Scheduler handle for periodic LLDP sending */
-   uint32_t tx_timeout;
+   pf_scheduler_handle_t tx_timeout;
 
    /* Is information about peer device received?
     *
@@ -2791,10 +2801,9 @@ struct pnet
    pnet_ethaddr_t dcp_sam; /* Source address (MAC) of current DCP remote peer */
    bool dcp_delayed_response_waiting; /* A response to DCP IDENTIFY is waiting
                                          to be sent */
-   uint32_t dcp_led_timeout;          /* Handle to the LED timeout instance */
-   uint32_t dcp_sam_timeout;          /* Handle to the SAM timeout instance */
-   uint32_t dcp_identresp_timeout;    /* Handle to the DCP identify timeout
-                                         instance */
+   pf_scheduler_handle_t dcp_led_timeout;
+   pf_scheduler_handle_t dcp_sam_timeout;
+   pf_scheduler_handle_t dcp_identresp_timeout;
    pf_eth_frame_id_map_t eth_id_map[PF_ETH_MAX_MAP];
    volatile pf_scheduler_timeouts_t scheduler_timeouts[PF_MAX_TIMEOUTS];
    volatile uint32_t scheduler_timeout_first;
@@ -2811,7 +2820,8 @@ struct pnet
    uint8_t cmina_error_decode;
    uint8_t cmina_error_code_1;
    uint16_t cmina_hello_count;
-   uint32_t cmina_hello_timeout;
+   pf_scheduler_handle_t cmina_hello_timeout;
+
    bool cmina_commit_ip_suite;
    os_mutex_t * p_cmrpc_rpc_mutex;
    uint32_t cmrpc_session_number;
@@ -2854,7 +2864,9 @@ struct pnet
       } name_of_device_mode;
       pf_port_t port[PNET_MAX_PHYSICAL_PORTS];
       pf_port_iterator_t link_monitor_iterator;
-      uint32_t link_monitor_timeout; /* Scheduler timeout instance. */
+
+      /* Scheduler handle for Ethernet link monitoring */
+      pf_scheduler_handle_t link_monitor_timeout;
    } pf_interface;
 };
 

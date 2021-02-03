@@ -28,8 +28,6 @@
  * @brief Management Physical Device Port (PD Port) data
  */
 
-static const char * shed_tag_linkmonitor = "linkmonitor";
-
 /**
  * Get configuration file name for one port
  *
@@ -1027,7 +1025,6 @@ static void pf_lldp_trigger_linkmonitor (
       pf_scheduler_add (
          net,
          PF_LINK_MONITOR_INTERVAL,
-         shed_tag_linkmonitor,
          pf_lldp_trigger_linkmonitor,
          NULL,
          &net->pf_interface.link_monitor_timeout) != 0)
@@ -1045,7 +1042,6 @@ void pf_pdport_start_linkmonitor (pnet_t * net)
       pf_scheduler_add (
          net,
          PF_LINK_MONITOR_INTERVAL,
-         shed_tag_linkmonitor,
          pf_lldp_trigger_linkmonitor,
          NULL,
          &net->pf_interface.link_monitor_timeout) != 0)

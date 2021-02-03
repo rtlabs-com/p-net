@@ -463,7 +463,7 @@ void PnetIntegrationTestBase::available_modules_and_submodules_init()
 
 void PnetIntegrationTestBase::cfg_init()
 {
-   pnet_default_cfg.tick_us = TICK_INTERVAL_US;
+   pnet_default_cfg.tick_us = TEST_TICK_INTERVAL_US;
    pnet_default_cfg.state_cb = my_state_ind;
    pnet_default_cfg.connect_cb = my_connect_ind;
    pnet_default_cfg.release_cb = my_release_ind;
@@ -552,7 +552,7 @@ void PnetIntegrationTestBase::run_stack (int us)
 {
    uint16_t slot = 0;
 
-   for (int tmr = 0; tmr < us / TICK_INTERVAL_US; tmr++)
+   for (int tmr = 0; tmr < us / TEST_TICK_INTERVAL_US; tmr++)
    {
       /* Set new output data every 10 ticks */
       appdata.tick_ctr++;
@@ -580,7 +580,7 @@ void PnetIntegrationTestBase::run_stack (int us)
 
       /* Run stack functionality every tick */
       pnet_handle_periodic (net);
-      mock_os_data.current_time_us += TICK_INTERVAL_US;
+      mock_os_data.current_time_us += TEST_TICK_INTERVAL_US;
    }
 }
 
