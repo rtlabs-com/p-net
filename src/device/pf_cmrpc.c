@@ -57,7 +57,6 @@
 #error "There must be at least 2 CR per AR. Increase PNET_MAX_CR."
 #endif
 
-static const char * rpc_sync_name = "rpc";
 static const pf_uuid_t implicit_ar = {0, 0, 0, {0, 0, 0, 0, 0, 0, 0, 0}};
 
 static const pf_uuid_t uuid_epmap_interface = {
@@ -71,6 +70,8 @@ static const pf_uuid_t uuid_io_device_interface = {
    0x6C97,
    0x11D1,
    {0x82, 0x71, 0x00, 0xA0, 0x24, 0x42, 0xDF, 0x7D}};
+
+#define PF_CMRPC_NUMBER_OF_RESENDS 3
 
 /**************** Diagnostic strings *****************************************/
 
@@ -505,6 +506,7 @@ static int pf_session_allocate (pnet_t * net, pf_session_info_t ** pp_sess)
       p_sess->sequence_nmb_send = 0;
       p_sess->dcontrol_sequence_nmb = UINT32_MAX;
       p_sess->ix = ix;
+      pf_scheduler_init_handle (&p_sess->resend_timeout, "rpc");
 
       /* Set activity UUID. Will be overwritten for incoming requests. */
       pf_generate_uuid (
@@ -549,16 +551,15 @@ static void pf_session_release (pnet_t * net, pf_session_info_t * p_sess)
                pf_udp_close (net, p_sess->socket);
             }
          }
-         if (p_sess->resend_timeout != 0)
-         {
-            pf_scheduler_remove (net, rpc_sync_name, p_sess->resend_timeout);
-            p_sess->resend_timeout = 0;
-         }
+
+         pf_scheduler_remove_if_running (net, &p_sess->resend_timeout);
+
          LOG_DEBUG (
             PF_RPC_LOG,
             "CMRPC(%d): Released session %u\n",
             __LINE__,
             (unsigned)p_sess->ix);
+
          memset (p_sess, 0, sizeof (*p_sess));
          p_sess->in_use = false;
       }
@@ -671,6 +672,8 @@ static int pf_ar_allocate (pnet_t * net, pf_ar_t ** pp_ar)
       net->cmrpc_ar[ix].in_use = true;
       pf_cmsu_init (net, &net->cmrpc_ar[ix]);
       pf_cmwrr_init (net, &net->cmrpc_ar[ix]);
+      pf_scheduler_init_handle (&net->cmrpc_ar[ix].cmio_timeout, "cmio");
+      net->cmrpc_ar[ix].cmio_timer_should_reschedule = false;
 
       *pp_ar = &net->cmrpc_ar[ix];
 
@@ -1008,12 +1011,12 @@ static void pf_cmrpc_send_with_timeout (
    }
    else
    {
-      p_sess->resend_timeout = 0;
+      pf_scheduler_reset_handle (&p_sess->resend_timeout);
 
-      if (p_sess->resend_timeout_ctr > 0)
+      if (p_sess->resend_counter > 0)
       {
          /* Send */
-         p_sess->resend_timeout_ctr--;
+         p_sess->resend_counter--;
          delay = p_sess->from_me ? (PF_CCONTROL_TIMEOUT * 1000)
                                  : (PF_FRAG_TIMEOUT * 1000);
          payload_description = p_sess->from_me ? "CControl request (possibly "
@@ -1025,7 +1028,6 @@ static void pf_cmrpc_send_with_timeout (
                pf_scheduler_add (
                   p_net,
                   delay,
-                  rpc_sync_name,
                   pf_cmrpc_send_with_timeout,
                   arg,
                   &p_sess->resend_timeout) != 0)
@@ -3805,7 +3807,7 @@ int pf_cmrpc_rm_ccontrol_req (pnet_t * net, pf_ar_t * p_ar)
          &start_pos);
 
       p_sess->socket = pf_udp_open (net, PF_RPC_CCONTROL_EPHEMERAL_PORT);
-      p_sess->resend_timeout_ctr = 3;
+      p_sess->resend_counter = PF_CMRPC_NUMBER_OF_RESENDS;
       pf_cmrpc_send_with_timeout (net, p_sess, os_get_current_time_us());
 
       ret = 0;
@@ -4260,11 +4262,7 @@ static int pf_cmrpc_dce_packet (
       }
 
       /* Any incoming message stops resending */
-      if (p_sess->resend_timeout != 0)
-      {
-         pf_scheduler_remove (net, rpc_sync_name, p_sess->resend_timeout);
-         p_sess->resend_timeout = 0;
-      }
+      pf_scheduler_remove_if_running (net, &p_sess->resend_timeout);
 
       /* Decide what to do with incoming message */
       /* Enter here _even_if_ an error is already detected because we may need
@@ -4482,7 +4480,7 @@ static int pf_cmrpc_dce_packet (
             {
                /* Fragmented respones from us (with ack) are supposed to be
                 * re-transmitted according to the spec. */
-               p_sess->resend_timeout_ctr = 3;
+               p_sess->resend_counter = PF_CMRPC_NUMBER_OF_RESENDS;
                pf_cmrpc_send_with_timeout (
                   net,
                   p_sess,
@@ -4628,7 +4626,7 @@ static int pf_cmrpc_dce_packet (
                p_sess->out_buf_send_len += start_pos;
 
                /* Fragments from us are supposed to be re-transmitted */
-               p_sess->resend_timeout_ctr = 3;
+               p_sess->resend_counter = PF_CMRPC_NUMBER_OF_RESENDS;
                pf_cmrpc_send_with_timeout (
                   net,
                   p_sess,

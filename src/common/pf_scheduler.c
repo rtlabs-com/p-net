@@ -13,6 +13,14 @@
  * full license information.
  ********************************************************************/
 
+/**
+ * @file
+ * @brief Scheduler implementation
+ *
+ * Use the scheduler to execute callbacks after a known delay time.
+ *
+ */
+
 #ifdef UNIT_TEST
 #define os_get_current_time_us mock_os_get_current_time_us
 #endif
@@ -31,7 +39,7 @@ static bool pf_scheduler_is_linked (pnet_t * net, uint32_t first, uint32_t ix)
    {
       while (first < PF_MAX_TIMEOUTS)
       {
-         CC_ASSERT(cnt < PF_MAX_TIMEOUTS);
+         CC_ASSERT (cnt < PF_MAX_TIMEOUTS);
          if (first == ix)
          {
             ret = true;
@@ -67,7 +75,7 @@ static void pf_scheduler_unlink (
          PNET_LOG,
          "Sched(%d): %s is not in Q\n",
          __LINE__,
-         net->scheduler_timeouts[ix].p_name);
+         net->scheduler_timeouts[ix].name);
    }
    else
    {
@@ -110,7 +118,7 @@ static void pf_scheduler_link_after (
          PNET_LOG,
          "Sched(%d): %s is already in Q\n",
          __LINE__,
-         net->scheduler_timeouts[ix].p_name);
+         net->scheduler_timeouts[ix].name);
    }
    else if (pos >= PF_MAX_TIMEOUTS)
    {
@@ -169,7 +177,7 @@ static void pf_scheduler_link_before (
          PNET_LOG,
          "Sched(%d): %s is already in Q\n",
          __LINE__,
-         net->scheduler_timeouts[ix].p_name);
+         net->scheduler_timeouts[ix].name);
    }
    else if (pos >= PF_MAX_TIMEOUTS)
    {
@@ -212,6 +220,53 @@ static void pf_scheduler_link_before (
    }
 }
 
+void pf_scheduler_reset_handle (pf_scheduler_handle_t * handle)
+{
+   handle->timer_index = UINT32_MAX;
+}
+
+void pf_scheduler_init_handle (pf_scheduler_handle_t * handle, const char * name)
+{
+   handle->name = name;
+   pf_scheduler_reset_handle (handle);
+}
+
+const char * pf_scheduler_get_name (const pf_scheduler_handle_t * handle)
+{
+   return handle->name;
+}
+
+uint32_t pf_scheduler_get_value (const pf_scheduler_handle_t * handle)
+{
+   return handle->timer_index;
+}
+
+bool pf_scheduler_is_running (const pf_scheduler_handle_t * handle)
+{
+   return (handle->timer_index == UINT32_MAX) ? false : true;
+}
+
+void pf_scheduler_remove_if_running (
+   pnet_t * net,
+   pf_scheduler_handle_t * handle)
+{
+   if (pf_scheduler_is_running (handle))
+   {
+      pf_scheduler_remove (net, handle);
+   }
+}
+
+int pf_scheduler_restart (
+   pnet_t * net,
+   uint32_t delay,
+   pf_scheduler_timeout_ftn_t cb,
+   void * arg,
+   pf_scheduler_handle_t * handle)
+{
+   pf_scheduler_remove_if_running (net, handle);
+   return pf_scheduler_add (net, delay, cb, arg, handle);
+}
+
 void pf_scheduler_init (pnet_t * net, uint32_t tick_interval)
 {
    uint32_t ix;
@@ -231,7 +286,7 @@ void pf_scheduler_init (pnet_t * net, uint32_t tick_interval)
    /* Link all entries into a list and put them into the free queue. */
    for (ix = PF_MAX_TIMEOUTS; ix > 0; ix--)
    {
-      net->scheduler_timeouts[ix - 1].p_name = "<free>";
+      net->scheduler_timeouts[ix - 1].name = "<free>";
       net->scheduler_timeouts[ix - 1].in_use = false;
       pf_scheduler_link_before (
          net,
@@ -244,10 +299,9 @@ void pf_scheduler_init (pnet_t * net, uint32_t tick_interval)
 int pf_scheduler_add (
    pnet_t * net,
    uint32_t delay,
-   const char * p_name,
    pf_scheduler_timeout_ftn_t cb,
    void * arg,
-   uint32_t * p_timeout)
+   pf_scheduler_handle_t * handle)
 {
    uint32_t ix_this;
    uint32_t ix_prev;
@@ -269,11 +323,12 @@ int pf_scheduler_add (
          PNET_LOG,
          "SCHEDULER(%d): Out of timeout resources!!\n",
          __LINE__);
+      handle->timer_index = UINT32_MAX;
       return -1;
    }
 
    net->scheduler_timeouts[ix_free].in_use = true;
-   net->scheduler_timeouts[ix_free].p_name = p_name;
+   net->scheduler_timeouts[ix_free].name = handle->name;
    net->scheduler_timeouts[ix_free].cb = cb;
    net->scheduler_timeouts[ix_free].arg = arg;
    net->scheduler_timeouts[ix_free].when = now + delay;
@@ -323,36 +378,48 @@ int pf_scheduler_add (
    }
    os_mutex_unlock (net->scheduler_timeout_mutex);
 
-   *p_timeout = ix_free + 1; /* Make sure 0 is invalid. */
+   handle->timer_index = ix_free + 1; /* Make sure 0 is invalid. */
 
    return 0;
 }
 
-void pf_scheduler_remove (pnet_t * net, const char * p_name, uint32_t timeout)
+void pf_scheduler_remove (pnet_t * net, pf_scheduler_handle_t * handle)
 {
    uint16_t ix;
 
-   if (timeout == 0)
+   if (handle->timer_index == 0 || handle->timer_index > PF_MAX_TIMEOUTS)
    {
-      LOG_DEBUG (
+      LOG_ERROR (
          PNET_LOG,
-         "SCHEDULER(%d): timeout == 0 for event %s. No removal.\n",
+         "SCHEDULER(%d): Invalid value %" PRIu32 " for timeout \"%s\". No "
+         "removal.\n",
          __LINE__,
-         p_name);
+         handle->timer_index,
+         handle->name);
    }
    else
    {
-      ix = timeout - 1; /* Refer to _add() on how p_timeout is created */
+      /* See pf_scheduler_add() for handle->timer_index details */
+      ix = handle->timer_index - 1;
       os_mutex_lock (net->scheduler_timeout_mutex);
 
-      if (net->scheduler_timeouts[ix].p_name != p_name)
+      if (net->scheduler_timeouts[ix].name != handle->name)
       {
          LOG_ERROR (
             PNET_LOG,
             "SCHEDULER(%d): Expected %s but got %s. No removal.\n",
             __LINE__,
-            net->scheduler_timeouts[ix].p_name,
-            p_name);
+            net->scheduler_timeouts[ix].name,
+            handle->name);
+      }
+      else if (net->scheduler_timeouts[ix].in_use == false)
+      {
+         LOG_ERROR (
+            PNET_LOG,
+            "SCHEDULER(%d): Tried to remove timeout \"%s\", but it says "
+            "not-in-use.\n",
+            __LINE__,
+            handle->name);
       }
       else
       {
@@ -365,6 +432,8 @@ void pf_scheduler_remove (pnet_t * net, const char * p_name, uint32_t timeout)
             &net->scheduler_timeout_free,
             ix,
             net->scheduler_timeout_free);
+
+         handle->timer_index = UINT32_MAX;
       }
 
       os_mutex_unlock (net->scheduler_timeout_mutex);
@@ -436,7 +505,7 @@ void pf_scheduler_show (pnet_t * net)
       printf (
          "[%02u]  %-14s  %-6s  %-6u  %-6u  %u\n",
          (unsigned)ix,
-         net->scheduler_timeouts[ix].p_name,
+         net->scheduler_timeouts[ix].name,
          net->scheduler_timeouts[ix].in_use ? "true" : "false",
          (unsigned)net->scheduler_timeouts[ix].next,
          (unsigned)net->scheduler_timeouts[ix].prev,
@@ -499,7 +568,7 @@ void pf_scheduler_show (pnet_t * net)
  *     |
  *     |                                                         Wanted delay
  *   0 +-----------+-----------+-----------+-----------+--->   (in stack cycle
- * times)
+ *                                                              times)
  *
  *     0           1           2           3           4
  *

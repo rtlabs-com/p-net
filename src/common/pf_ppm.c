@@ -44,8 +44,6 @@
 #include <string.h>
 #include <inttypes.h>
 
-static const char * ppm_sync_name = "ppm";
-
 void pf_ppm_init (pnet_t * net)
 {
    net->ppm_instance_cnt = ATOMIC_VAR_INIT (0);
@@ -253,7 +251,7 @@ static void pf_ppm_send (pnet_t * net, void * arg, uint32_t current_time)
 
    /* ToDo: Handle RT_CLASS_UDP */
 
-   p_arg->ppm.ci_timer = UINT32_MAX;
+   pf_scheduler_reset_handle (&p_arg->ppm.ci_timeout);
    if (p_arg->ppm.ci_running == true)
    {
       /* Insert data, status etc. The in_length is the size of input to the
@@ -274,10 +272,9 @@ static void pf_ppm_send (pnet_t * net, void * arg, uint32_t current_time)
             pf_scheduler_add (
                net,
                delay,
-               ppm_sync_name,
                pf_ppm_send,
                arg,
-               &p_arg->ppm.ci_timer) == 0)
+               &p_arg->ppm.ci_timeout) == 0)
          {
             p_arg->ppm.trx_cnt++;
             if (p_arg->ppm.first_transmit == false)
@@ -290,7 +287,6 @@ static void pf_ppm_send (pnet_t * net, void * arg, uint32_t current_time)
          }
          else
          {
-            p_arg->ppm.ci_timer = UINT32_MAX;
             pf_ppm_state_ind (net, p_arg->p_ar, &p_arg->ppm, true); /* Error */
          }
       }
@@ -401,16 +397,15 @@ int pf_ppm_activate_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
       pf_ppm_set_state (p_ppm, PF_PPM_STATE_RUN);
 
       p_ppm->ci_running = true;
+      pf_scheduler_init_handle (&p_ppm->ci_timeout, "ppm");
       ret = pf_scheduler_add (
          net,
          p_ppm->control_interval,
-         ppm_sync_name,
          pf_ppm_send,
          p_iocr,
-         &p_ppm->ci_timer);
+         &p_ppm->ci_timeout);
       if (ret != 0)
       {
-         p_ppm->ci_timer = UINT32_MAX;
          pf_ppm_state_ind (net, p_ar, p_ppm, true); /* Error */
       }
    }
@@ -431,12 +426,7 @@ int pf_ppm_close_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
       crep);
    p_ppm = &p_ar->iocrs[crep].ppm;
    p_ppm->ci_running = false;
-   if (p_ppm->ci_timer != UINT32_MAX)
-   {
-      pf_scheduler_remove (net, ppm_sync_name, p_ppm->ci_timer);
-      p_ppm->ci_timer = UINT32_MAX;
-   }
-
+   pf_scheduler_remove_if_running (net, &p_ppm->ci_timeout);
    pnal_buf_free (p_ppm->p_send_buffer);
    pf_ppm_set_state (p_ppm, PF_PPM_STATE_W_START);
 
@@ -1119,7 +1109,9 @@ void pf_ppm_show (const pf_ppm_t * p_ppm)
    printf (
       "   ci_running                   = %u\n",
       (unsigned)p_ppm->ci_running);
-   printf ("   ci_timer                     = %u\n", (unsigned)p_ppm->ci_timer);
+   printf (
+      "   ci_timer                     = %u\n",
+      (unsigned)pf_scheduler_get_value (&p_ppm->ci_timeout));
    printf (
       "   transfer_status              = %u\n",
       (unsigned)p_ppm->transfer_status);

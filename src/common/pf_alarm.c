@@ -93,9 +93,6 @@
 
 CC_STATIC_ASSERT (PNET_MAX_ALARM_PAYLOAD_DATA_SIZE >= sizeof (pf_diag_item_t));
 
-/* The scheduler identifier */
-static const char * apmx_sync_name = "apmx";
-
 /*************** Diagnostic strings *****************************************/
 
 /**
@@ -795,7 +792,8 @@ static void pf_alarm_apms_timeout (
    pf_apmx_t * p_apmx = (pf_apmx_t *)arg;
    pnal_buf_t * p_rta;
 
-   p_apmx->timeout_id = UINT32_MAX;
+   pf_scheduler_reset_handle (&p_apmx->resend_timeout);
+
    if (p_apmx->apms_state == PF_APMS_STATE_WTACK)
    {
       if (p_apmx->p_rta == NULL)
@@ -805,9 +803,9 @@ static void pf_alarm_apms_timeout (
             "Alarm(%d): No alarm frame available for resending.\n",
             __LINE__);
       }
-      else if (p_apmx->retry > 0)
+      else if (p_apmx->resend_counter > 0)
       {
-         p_apmx->retry--;
+         p_apmx->resend_counter--;
 
          /* Retransmit */
          if (p_apmx->p_ar->alarm_cr_request.alarm_cr_properties.transport_udp == true)
@@ -832,19 +830,14 @@ static void pf_alarm_apms_timeout (
             pf_scheduler_add (
                net,
                p_apmx->timeout_us,
-               apmx_sync_name,
                pf_alarm_apms_timeout,
                p_apmx,
-               &p_apmx->timeout_id) != 0)
+               &p_apmx->resend_timeout) != 0)
          {
             LOG_ERROR (
                PF_ALARM_LOG,
-               "Alarm(%d): Error from pf_scheduler_add\n",
+               "Alarm(%d): Failed to schedule resending of alarm frame\n",
                __LINE__);
-         }
-         else
-         {
-            p_apmx->timeout_id = UINT32_MAX;
          }
       }
       else
@@ -990,13 +983,14 @@ static int pf_alarm_apmx_activate (pnet_t * net, pf_ar_t * p_ar)
 
          p_ar->apmx[ix].timeout_us =
             100 * 1000 * p_ar->alarm_cr_request.rta_timeout_factor;
-         p_ar->apmx[ix].retry = 0; /* Updated in pf_alarm_apms_apms_a_data_req()
-                                    */
+         p_ar->apmx[ix].resend_counter = 0; /* Updated in
+                                             * pf_alarm_apms_apms_a_data_req()
+                                             */
 
          p_ar->apmx[ix].p_ar = p_ar;
          p_ar->apmx[ix].p_alpmx = &p_ar->alpmx[ix];
 
-         p_ar->apmx[ix].timeout_id = UINT32_MAX;
+         pf_scheduler_init_handle (&p_ar->apmx[ix].resend_timeout, "apmx");
 
          p_ar->apmx[ix].apms_state = PF_APMS_STATE_OPEN;
          p_ar->apmx[ix].apmr_state = PF_APMR_STATE_OPEN;
@@ -1448,7 +1442,7 @@ static int pf_alarm_apms_apms_a_data_req (
       fixed.send_seq_num = p_apmx->send_seq_count;
       fixed.ack_seq_nbr = p_apmx->exp_seq_count_o;
 
-      p_apmx->retry = p_apmx->p_ar->alarm_cr_request.rta_retries;
+      p_apmx->resend_counter = p_apmx->p_ar->alarm_cr_request.rta_retries;
 
       ret = pf_alarm_apms_a_data_req (
          net,
@@ -1470,15 +1464,13 @@ static int pf_alarm_apms_apms_a_data_req (
          pf_scheduler_add (
             net,
             p_apmx->timeout_us,
-            apmx_sync_name,
             pf_alarm_apms_timeout,
             p_apmx,
-            &p_apmx->timeout_id) != 0)
+            &p_apmx->resend_timeout) != 0)
       {
-         p_apmx->timeout_id = UINT32_MAX;
          LOG_ERROR (
             PF_ALARM_LOG,
-            "Alarm(%d): Error from pf_scheduler_add\n",
+            "Alarm(%d): Failed to schedule sending of alarm frame\\n",
             __LINE__);
          ret = -1;
       }
@@ -1559,11 +1551,7 @@ static int pf_alarm_apmx_close (pnet_t * net, pf_ar_t * p_ar, uint8_t err_code)
       {
          /* Free resources */
          /* StopTimer */
-         if (p_ar->apmx[ix].timeout_id != UINT32_MAX)
-         {
-            pf_scheduler_remove (net, apmx_sync_name, p_ar->apmx[ix].timeout_id);
-            p_ar->apmx[ix].timeout_id = UINT32_MAX;
-         }
+         pf_scheduler_remove_if_running (net, &p_ar->apmx[ix].resend_timeout);
 
          p_ar->apmx[ix].p_ar = NULL;
          p_ar->apmx[ix].apms_state = PF_APMS_STATE_CLOSED;

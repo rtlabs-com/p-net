@@ -41,8 +41,6 @@
 
 #include "pf_includes.h"
 
-static const char * hello_sync_name = "hello";
-
 /**
  * @internal
  * Trigger sending a DCP HELLO message.
@@ -67,21 +65,16 @@ static void pf_cmina_send_hello (pnet_t * net, void * arg, uint32_t current_time
 
       /* Reschedule */
       net->cmina_hello_count--;
-      if (
-         pf_scheduler_add (
-            net,
-            PF_CMINA_FS_HELLO_INTERVAL * 1000,
-            hello_sync_name,
-            pf_cmina_send_hello,
-            NULL,
-            &net->cmina_hello_timeout) != 0)
-      {
-         net->cmina_hello_timeout = UINT32_MAX;
-      }
+      (void)pf_scheduler_add (
+         net,
+         PF_CMINA_FS_HELLO_INTERVAL * 1000,
+         pf_cmina_send_hello,
+         NULL,
+         &net->cmina_hello_timeout);
    }
    else
    {
-      net->cmina_hello_timeout = UINT32_MAX;
+      pf_scheduler_reset_handle (&net->cmina_hello_timeout);
       net->cmina_hello_count = 0;
    }
 }
@@ -442,7 +435,7 @@ int pf_cmina_init (pnet_t * net)
    int ret = 0;
 
    net->cmina_hello_count = 0;
-   net->cmina_hello_timeout = UINT32_MAX;
+   pf_scheduler_init_handle (&net->cmina_hello_timeout, "hello");
    net->cmina_error_decode = 0;
    net->cmina_error_code_1 = 0;
    net->cmina_commit_ip_suite = false;
@@ -539,17 +532,12 @@ int pf_cmina_init (pnet_t * net)
                net->cmina_hello_count);
 
             /* Send first HELLO now! */
-            ret = pf_scheduler_add (
+            (void)pf_scheduler_add (
                net,
                0,
-               hello_sync_name,
                pf_cmina_send_hello,
                NULL,
                &net->cmina_hello_timeout);
-            if (ret != 0)
-            {
-               net->cmina_hello_timeout = UINT32_MAX;
-            }
          }
          else
          {
@@ -646,11 +634,7 @@ int pf_cmina_dcp_set_ind (
    uint16_t reset_mode = 0;
 
    /* Stop sending Hello packets */
-   if (net->cmina_hello_timeout != UINT32_MAX)
-   {
-      pf_scheduler_remove (net, hello_sync_name, net->cmina_hello_timeout);
-      net->cmina_hello_timeout = UINT32_MAX;
-   }
+   pf_scheduler_remove_if_running (net, &net->cmina_hello_timeout);
 
    /* Parse incoming DCP SET, without caring about actual CMINA state.
       Update cmina_current_dcp_ase and cmina_nonvolatile_dcp_ase*/

@@ -10,7 +10,7 @@ data every millisecond. Note that the sample application does not read
 the GSDML file, the file just describes the hard coded value used
 in the sample application.
 
-The sample application timer uses ``TICK_INTERVAL_US`` which is
+The sample application timer uses ``APP_TICK_INTERVAL_US`` which is
 1000 microseconds = 1 millisecond. To be able to tell this information to
 others, the value ``32`` is given in the ``min_device_interval`` field of the
 device configuration.
