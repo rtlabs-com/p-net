@@ -131,6 +131,7 @@ typedef enum pnal_ethertype
 #ifndef PNAL_IPADDR_ANY
 #define PNAL_IPADDR_ANY ((uint32_t)0x00000000UL)
 #endif
+#define PNAL_IPADDR_INVALID PNAL_IPADDR_ANY
 /* 255.255.255.255 */
 #ifndef PNAL_IPADDR_BROADCAST
 #define PNAL_IPADDR_BROADCAST ((uint32_t)0xffffffffUL)
