@@ -470,7 +470,13 @@ pnal_ipaddr_t pnal_get_ip_address (const char * interface_name)
    fd = socket (AF_INET, SOCK_DGRAM, 0);
    ifr.ifr_addr.sa_family = AF_INET;
    strncpy (ifr.ifr_name, interface_name, IFNAMSIZ - 1);
-   ioctl (fd, SIOCGIFADDR, &ifr);
+
+   if (ioctl (fd, SIOCGIFADDR, &ifr) != 0)
+   {
+      close (fd);
+      return PNAL_IPADDR_INVALID;
+   }
+
    ip = ntohl (((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr.s_addr);
    close (fd);
 
@@ -487,7 +493,13 @@ pnal_ipaddr_t pnal_get_netmask (const char * interface_name)
 
    ifr.ifr_addr.sa_family = AF_INET;
    strncpy (ifr.ifr_name, interface_name, IFNAMSIZ - 1);
-   ioctl (fd, SIOCGIFNETMASK, &ifr);
+
+   if (ioctl (fd, SIOCGIFNETMASK, &ifr) != 0)
+   {
+      close (fd);
+      return PNAL_IPADDR_INVALID;
+   }
+
    netmask = ntohl (((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr.s_addr);
    close (fd);
 
@@ -502,6 +514,11 @@ pnal_ipaddr_t pnal_get_gateway (const char * interface_name)
    pnal_ipaddr_t gateway;
 
    ip = pnal_get_ip_address (interface_name);
+   if (ip == PNAL_IPADDR_INVALID)
+   {
+      return PNAL_IPADDR_INVALID;
+   }
+
    gateway = (ip & 0xFFFFFF00) | 0x00000001;
 
    return gateway;

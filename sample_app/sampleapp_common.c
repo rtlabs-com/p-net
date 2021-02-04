@@ -1579,14 +1579,6 @@ int app_pnet_cfg_init_netifs (
    netmask = pnal_get_netmask (if_list.netif[0].name);
    gateway = pnal_get_gateway (if_list.netif[0].name);
 
-   if (gateway == IP_INVALID)
-   {
-      printf (
-         "Error: Invalid gateway IP address for Ethernet interface: %s\n",
-         if_list.netif[0].name);
-      return -1;
-   }
-
    if (verbosity > 0)
    {
       app_print_network_details (ip, netmask, gateway);

@@ -25,7 +25,6 @@
 extern "C" {
 #endif
 
-#define IP_INVALID                                            0
 #define CHANNEL_ERRORTYPE_SHORT_CIRCUIT                       0x0001
 #define CHANNEL_ERRORTYPE_LINE_BREAK                          0x0006
 #define CHANNEL_ERRORTYPE_DATA_TRANSMISSION_IMPOSSIBLE        0x8000
