@@ -20,6 +20,7 @@
 #include "options.h"
 
 #include <drivers/net.h>
+#include <drivers/eth/phy/phy.h>
 #include <gpio.h>
 #include <lwip/apps/snmp.h>
 #include <lwip/netif.h>
@@ -30,6 +31,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+/* Bit patterns for Ethernet PHY Auto-Negotiation Advertisement Register */
+#define MII_ANAR_100_FD BIT (8) /* Can do 100BASE-TX full duplex */
+#define MII_ANAR_100    BIT (7) /* Can do 100BASE-TX */
+#define MII_ANAR_10_FD  BIT (6) /* Can do 10BASE-T full duplex */
+#define MII_ANAR_10     BIT (5) /* Can do 10BASE-T */
 
 int pnal_set_ip_suite (
    const char * interface_name,
@@ -132,16 +139,95 @@ int pnal_get_interface_index (const char * interface_name)
    return index;
 }
 
+/**
+ * Calculate MAU type
+ *
+ * @param link_state       In:    Link state.
+ * @return The MAU type
+ */
+static pnal_eth_mau_t calculate_mau_type (uint8_t link_state)
+{
+   switch (link_state)
+   {
+   case PHY_LINK_OK | PHY_LINK_10MBIT:
+      return PNAL_ETH_MAU_COPPER_10BaseT;
+   case PHY_LINK_OK | PHY_LINK_100MBIT:
+      return PNAL_ETH_MAU_COPPER_100BaseTX_HALF_DUPLEX;
+   case PHY_LINK_OK | PHY_LINK_1000MBIT:
+      return PNAL_ETH_MAU_COPPER_1000BaseT_HALF_DUPLEX;
+   case PHY_LINK_OK | PHY_LINK_10MBIT | PHY_LINK_FULL_DUPLEX:
+      return PNAL_ETH_MAU_COPPER_10BaseT;
+   case PHY_LINK_OK | PHY_LINK_100MBIT | PHY_LINK_FULL_DUPLEX:
+      return PNAL_ETH_MAU_COPPER_100BaseTX_FULL_DUPLEX;
+   case PHY_LINK_OK | PHY_LINK_1000MBIT | PHY_LINK_FULL_DUPLEX:
+      return PNAL_ETH_MAU_COPPER_1000BaseT_FULL_DUPLEX;
+   default:
+      return PNAL_ETH_MAU_RADIO;
+   }
+}
+
+/**
+ * Calculate advertised capabilites
+ *
+ * @param anar       In:    Contents of the ANAR register read from PHY.
+ * @return Profinet advertised capabilites as a bitfield.
+ */
+static uint16_t calculate_capabilities (uint16_t anar)
+{
+   uint16_t out = 0;
+
+   if (anar & MII_ANAR_10)
+   {
+      out |= PNAL_ETH_AUTONEG_CAP_10BaseT_HALF_DUPLEX;
+   }
+   if (anar & MII_ANAR_10_FD)
+   {
+      out |= PNAL_ETH_AUTONEG_CAP_10BaseT_FULL_DUPLEX;
+   }
+   if (anar & MII_ANAR_100)
+   {
+      out |= PNAL_ETH_AUTONEG_CAP_100BaseTX_HALF_DUPLEX;
+   }
+   if (anar & MII_ANAR_100_FD)
+   {
+      out |= PNAL_ETH_AUTONEG_CAP_100BaseTX_FULL_DUPLEX;
+   }
+
+   if (out == 0)
+   {
+      out |= PNAL_ETH_AUTONEG_CAP_UNKNOWN;
+   }
+
+   return out;
+}
+
 int pnal_eth_get_status (const char * interface_name, pnal_eth_status_t * status)
 {
-   /* TODO: Read current status */
-   status->is_autonegotiation_supported = true;
-   status->is_autonegotiation_enabled = true;
+   struct netif * netif = netif_find (interface_name);
+   eth_status_t link;
+   drv_t * drv;
+   int error;
+
+   if (netif == NULL)
+   {
+      return -1;
+   }
+
+   drv = netif->state;
+   error = eth_ioctl (drv, netif, IOCTL_NET_GET_STATUS, &link);
+   if (error)
+   {
+      return -1;
+   }
+
+   status->is_autonegotiation_supported = link.is_autonegotiation_supported;
+   status->is_autonegotiation_enabled = link.is_autonegotiation_enabled;
    status->autonegotiation_advertised_capabilities =
-      PNAL_ETH_AUTONEG_CAP_100BaseTX_HALF_DUPLEX |
-      PNAL_ETH_AUTONEG_CAP_100BaseTX_FULL_DUPLEX;
-   status->operational_mau_type = PNAL_ETH_MAU_COPPER_100BaseTX_FULL_DUPLEX;
-   status->running = true;
+      calculate_capabilities (link.anar);
+
+   status->operational_mau_type = calculate_mau_type (link.state);
+   status->running = link.is_operational;
+
    return 0;
 }
 
