@@ -50,7 +50,9 @@ COMPILETIME_ASSERT ((BUFFER_SIZE % 4) == 0);
 #define DEBUG_ASSERT(expression)
 #endif /* DEBUG */
 
-#define IS_UNICAST(p)           ((((uint8_t *)(p)->payload)[0] & 1) == 0)
+#define IS_UNICAST(p) ((((uint8_t *)(p)->payload)[0] & 1) == 0)
+
+#define MII_ANAR 0x04 /* Auto-Negotiation Advertisement Register */
 
 typedef struct eth_mac
 {
@@ -240,6 +242,16 @@ typedef struct dwmac1000
 
    /* MIIAR CR divider */
    uint32_t cr;
+
+   /* Link state retrieved in last call to probe function
+    * See defines PHY_LINK_OK, PHY_LINK_100MBIT, etc.
+    */
+   uint8_t last_link_state;
+
+   /* Contents of Auto-Negotiation Advertisement Register read from
+    * PHY at startup.
+    */
+   uint16_t anar;
 } dwmac1000_t;
 
 static pnal_eth_sys_recv_callback_t * input_rx_hook = NULL;
@@ -347,6 +359,10 @@ static void dwmac1000_hw_init (struct netif * netif, const dwmac1000_cfg_t * cfg
    /* Start link autonegotiation */
    DEBUG_ASSERT (dwmac1000->phy->ops->start != NULL);
    dwmac1000->phy->ops->start (dwmac1000->phy);
+
+   /* Read Auto-Negotiation Advertisement Register (ANAR) from PHY */
+   dwmac1000->anar =
+      dwmac1000_read_phy (dwmac1000, dwmac1000->phy->address, MII_ANAR);
 
    /* Enable receiver, transmitter */
    mac->cr = CR_RE | CR_TE;
@@ -531,9 +547,9 @@ static void dwmac1000_isr (void * arg)
  * Should allocate a pbuf and transfer the bytes of the incoming
  * packet from the interface into the pbuf.
  */
-static struct pbuf *dwmac1000_hw_get_received_frame (struct netif * netif)
+static struct pbuf * dwmac1000_hw_get_received_frame (struct netif * netif)
 {
-   dwmac1000_t *dwmac1000 = netif->state;
+   dwmac1000_t * dwmac1000 = netif->state;
    struct pbuf * p = NULL;
    struct pbuf * q = NULL;
    uint16_t length;
@@ -737,21 +753,49 @@ static dev_state_t dwmac1000_probe (drv_t * drv)
 
    link_state = dwmac1000->phy->ops->get_link_state (dwmac1000->phy);
 
+   /* Save link state for IOCTL_NET_GET_STATUS */
+   dwmac1000->last_link_state = link_state;
+
    return (link_state & PHY_LINK_OK) ? StateAttached : StateDetached;
+}
+
+static void dwmac1000_get_status (
+   dwmac1000_t * dwmac1000,
+   struct netif * netif,
+   eth_status_t * link)
+{
+   if (dwmac1000->phy->loopback_mode)
+   {
+      link->is_autonegotiation_supported = false;
+      link->is_autonegotiation_enabled = false;
+      link->anar = 0x0000;
+   }
+   else
+   {
+      link->is_autonegotiation_supported = true;
+      link->is_autonegotiation_enabled = true;
+      link->anar = dwmac1000->anar;
+   }
+
+   link->state = dwmac1000->last_link_state;
+   link->is_operational = netif_is_up (netif) && netif_is_link_up (netif);
 }
 
 int eth_ioctl (drv_t * drv, void * arg, int req, void * param)
 {
+   dwmac1000_t * dwmac1000 = (dwmac1000_t *)drv;
    int status = EARG;
 
-   if (req == IOCTL_NET_SET_RX_HOOK)
+   switch (req)
    {
+   case IOCTL_NET_SET_RX_HOOK:
       input_rx_hook = (pnal_eth_sys_recv_callback_t *)param;
       input_rx_arg = arg;
       return 0;
-   }
-   else
-   {
+   case IOCTL_NET_GET_STATUS:
+      dwmac1000_get_status (dwmac1000, arg, param);
+      return 0;
+   default:
       UASSERT (0, EARG);
    }
 
@@ -803,6 +847,7 @@ drv_t * dwmac1000_init (
    dwmac1000->mac = (eth_mac_t *)cfg->base;
    dwmac1000->mmc = (eth_mmc_t *)(cfg->base + 0x100);
    dwmac1000->dma = (eth_dma_t *)(cfg->base + 0x1000);
+   dwmac1000->last_link_state = 0x00;
 
    /* Create receive task */
    dwmac1000->tRcv = task_spawn (
