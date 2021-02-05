@@ -35,6 +35,7 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <limits.h>
 #include <signal.h>
 #include <stdarg.h>
@@ -54,11 +55,14 @@ int pnal_save_file (
    size_t size_2)
 {
    int ret = 0; /* Assume everything goes well */
-   FILE * outputfile;
+   int outputfile;
 
    /* Open file */
-   outputfile = fopen (fullpath, "wb");
-   if (outputfile == NULL)
+   outputfile = open (
+      fullpath,
+      O_WRONLY | O_CREAT | O_TRUNC | O_SYNC,
+      S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+   if (outputfile == -1)
    {
       LOG_ERROR (
          PF_PNAL_LOG,
@@ -72,7 +76,7 @@ int pnal_save_file (
    LOG_DEBUG (PF_PNAL_LOG, "PNAL(%d): Saving to file %s\n", __LINE__, fullpath);
    if (size_1 > 0)
    {
-      if (fwrite (object_1, size_1, 1, outputfile) != 1)
+      if (write (outputfile, object_1, size_1) == -1)
       {
          ret = -1;
          LOG_ERROR (
@@ -84,7 +88,7 @@ int pnal_save_file (
    }
    if (size_2 > 0 && ret == 0)
    {
-      if (fwrite (object_2, size_2, 1, outputfile) != 1)
+      if (write (outputfile, object_2, size_2) == -1)
       {
          ret = -1;
          LOG_ERROR (
@@ -96,7 +100,10 @@ int pnal_save_file (
    }
 
    /* Close file */
-   fclose (outputfile);
+   if (close (outputfile) != 0)
+   {
+      ret = -1;
+   }
 
    return ret;
 }
