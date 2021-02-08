@@ -20,11 +20,11 @@
 #include "pnal.h"
 #include "pf_types.h"
 #include "pnal_snmp.h"
-#include "mib2_system.h"
 
-#include "lldp-mib.h"
-#include "lldp-ext-pno-mib.h"
-#include "lldp-ext-dot3-mib.h"
+#include "mib/mib2_system.h"
+#include "mib/lldp-mib.h"
+#include "mib/lldp-ext-pno-mib.h"
+#include "mib/lldp-ext-dot3-mib.h"
 #include <lwip/apps/snmp.h>
 #include <lwip/apps/snmp_mib2.h>
 #include <lwip/apps/snmp_threadsync.h>
