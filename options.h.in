@@ -112,9 +112,9 @@
 #define PNET_MAX_DFP_IOCR         @PNET_MAX_DFP_IOCR@
 #endif
 
-#if !defined (PNET_MAX_PORT)
+#if !defined (PNET_NUMBER_OF_PHYSICAL_PORTS)
 /** 2 for media redundancy. Currently only 1 is supported. */
-#define PNET_MAX_PORT             @PNET_MAX_PORT@
+#define PNET_NUMBER_OF_PHYSICAL_PORTS        @PNET_NUMBER_OF_PHYSICAL_PORTS@
 #endif
 
 #if !defined (PNET_MAX_LOG_BOOK_ENTRIES)

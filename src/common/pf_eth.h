@@ -22,10 +22,10 @@ extern "C" {
 
 /**
  * Initialize ETH component and network interfaces according to configuration
- * If device is configured with one network interface (PNET_MAX_PORT==1),
- * the management port and physical port 1 refers to same network interface.
- * In a multi port configuration, the management port and physical ports are
- * different network interfaces.
+ * If device is configured with one network interface
+ * (PNET_NUMBER_OF_PHYSICAL_PORTS==1), the management port and physical port 1
+ * refers to same network interface. In a multi port configuration, the
+ * management port and physical ports are different network interfaces.
  * @param net              InOut: The p-net stack instance
  * @param p_cfg            In:    Configuration
  * @return   0 on success

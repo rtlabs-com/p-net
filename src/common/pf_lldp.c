@@ -33,7 +33,6 @@
  * This file should not have any knowledge of Profinet slots, subslots etc.
  *
  * ToDo: Differentiate between device and port MAC addresses.
- * ToDo: Handle PNET_MAX_PORT ports.
  */
 
 #include "pf_includes.h"
@@ -987,7 +986,8 @@ void pf_lldp_mac_address_to_string (
  *
  * @param net              In:    The p-net stack instance.
  * @param loc_port_num     In:    Local port number.
- *                                Valid range: 1 .. PNET_MAX_PORT.
+ *                                Valid range:
+ *                                1 .. PNET_NUMBER_OF_PHYSICAL_PORTS.
  * @param buf              Out:   Ethernet frame buffer of size
  *                                PF_FRAME_BUFFER_SIZE bytes.
  *
@@ -1068,7 +1068,8 @@ size_t pf_lldp_construct_frame (pnet_t * net, int loc_port_num, uint8_t buf[])
  *
  * @param net              InOut: The p-net stack instance
  * @param loc_port_num     In:    Local port number.
- *                                Valid range: 1 .. PNET_MAX_PORT
+ *                                Valid range:
+ *                                1 .. PNET_NUMBER_OF_PHYSICAL_PORTS.
  */
 static void pf_lldp_send (pnet_t * net, int loc_port_num)
 {
@@ -1134,7 +1135,8 @@ static void pf_lldp_trigger_sending (
  *
  * @param net              InOut: The p-net stack instance
  * @param loc_port_num     In:    Local port number.
- *                                Valid range: 1 .. PNET_MAX_PORT
+ *                                Valid range:
+ *                                1 .. PNET_NUMBER_OF_PHYSICAL_PORTS.
  * @param send             In:    Send LLDP message
  */
 static void pf_lldp_tx_restart (pnet_t * net, int loc_port_num, bool send)
@@ -1825,7 +1827,8 @@ int pf_lldp_generate_alias_name (
  *
  * @param net              InOut: p-net stack instance
  * @param loc_port_num     In:    Local port number.
- *                                Valid range: 1 .. PNET_MAX_PORT
+ *                                Valid range:
+ *                                1 .. PNET_NUMBER_OF_PHYSICAL_PORTS.
  * @param new_info         In:    Peer data to be stored
  */
 void pf_lldp_store_peer_info (
@@ -1853,7 +1856,8 @@ void pf_lldp_store_peer_info (
  *
  * @param net              InOut: p-net stack instance
  * @param loc_port_num     In:    Local port number.
- *                                Valid range: 1 .. PNET_MAX_PORT
+ *                                Valid range:
+ *                                1 .. PNET_NUMBER_OF_PHYSICAL_PORTS.
  * @param lldp_peer_info   In:    Peer data to be applied
  */
 void pf_lldp_update_peer (

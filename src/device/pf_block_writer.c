@@ -3923,7 +3923,8 @@ static void pf_put_pd_multiblock_interface_and_statistics (
  * @param net              InOut: The p-net stack instance
  * @param is_big_endian    In:    Endianness of the destination buffer.
  * @param loc_port_num     In:    Local port number.
- *                                Valid range: 1 .. PNET_MAX_PORT
+ *                                Valid range:
+ *                                1 .. PNET_NUMBER_OF_PHYSICAL_PORTS.
  * @param p_res            In:    The entity to insert
  * @param res_len          In:    Size of destination buffer.
  * @param p_bytes          Out:   Destination buffer.

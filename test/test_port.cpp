@@ -71,7 +71,7 @@ TEST_F (PortTest, PortCheckIterator)
    EXPECT_EQ (port, 1);
 
    /* More ports might be available dependent on compile time setting */
-   for (ix = 2; ix <= PNET_MAX_PORT; ix++)
+   for (ix = 2; ix <= PNET_NUMBER_OF_PHYSICAL_PORTS; ix++)
    {
       port = pf_port_get_next (&port_iterator);
       EXPECT_EQ (port, ix);
@@ -129,7 +129,7 @@ TEST_F (PortTest, dap_subslot_to_local_port)
    EXPECT_EQ (local_port_num, 0);
 
    /* Invalid / not port sub slot  (high)*/
-   local_port_num =
-      pf_port_dap_subslot_to_local_port (0x8000 + PNET_MAX_PORT + 1);
+   local_port_num = pf_port_dap_subslot_to_local_port (
+      0x8000 + PNET_NUMBER_OF_PHYSICAL_PORTS + 1);
    EXPECT_EQ (local_port_num, 0);
 }

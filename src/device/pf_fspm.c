@@ -116,8 +116,8 @@ void pf_fspm_option_show (const pnet_t * net)
       "PNET_MAX_DFP_IOCR                              : %d\n",
       PNET_MAX_DFP_IOCR);
    printf (
-      "PNET_MAX_PORT                                  : %d\n",
-      PNET_MAX_PORT);
+      "PNET_NUMBER_OF_PHYSICAL_PORTS                             : %d\n",
+      PNET_NUMBER_OF_PHYSICAL_PORTS);
    printf (
       "PNET_MAX_LOG_BOOK_ENTRIES                      : %d\n",
       PNET_MAX_LOG_BOOK_ENTRIES);

@@ -1276,7 +1276,7 @@ void app_plug_dap (pnet_t * net, void * arg)
       PNET_SUBMOD_DAP_INTERFACE_1_PORT_1_IDENT,
       &cfg_dap_data);
 
-#if PNET_MAX_PORT >= 2
+#if PNET_MAX_PHY_PORTS >= 2
    app_exp_submodule_ind (
       net,
       arg,
@@ -1288,7 +1288,7 @@ void app_plug_dap (pnet_t * net, void * arg)
       &cfg_dap_data);
 #endif
 
-#if PNET_MAX_PORT >= 3
+#if PNET_MAX_PHY_PORTS >= 3
    app_exp_submodule_ind (
       net,
       arg,
@@ -1300,7 +1300,7 @@ void app_plug_dap (pnet_t * net, void * arg)
       &cfg_dap_data);
 #endif
 
-#if PNET_MAX_PORT >= 4
+#if PNET_MAX_PHY_PORTS >= 4
    app_exp_submodule_ind (
       net,
       arg,
@@ -1481,7 +1481,10 @@ int app_pnet_cfg_init_netifs (
    pnal_ipaddr_t netmask;
    pnal_ipaddr_t gateway;
 
-   ret = app_get_netif_namelist (netif_list_str, if_list, PNET_MAX_PORT);
+   ret = app_get_netif_namelist (
+      netif_list_str,
+      if_list,
+      PNET_NUMBER_OF_PHYSICAL_PORTS);
    if (ret != 0)
    {
       return ret;
@@ -1493,7 +1496,7 @@ int app_pnet_cfg_init_netifs (
       printf ("Management port:      %s\n", p_cfg->if_cfg.main_netif_name);
    }
 
-   for (i = 1; i <= PNET_MAX_PORT; i++)
+   for (i = 1; i <= PNET_NUMBER_OF_PHYSICAL_PORTS; i++)
    {
       p_cfg->if_cfg.physical_ports[i - 1].netif_name = if_list->netif[i].name;
       if (verbosity > 0)
