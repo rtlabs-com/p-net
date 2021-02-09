@@ -319,12 +319,14 @@ static void pf_lldp_add_ttl_tlv (uint8_t * p_buf, uint16_t * p_pos)
  * Insert the optional Profinet port status TLV into a buffer.
  *
  * The port status TLV is mandatory for ProfiNet.
- * @param p_port_cfg       In:    LLDP configuration for this port
- * @param p_buf            InOut: The buffer.
- * @param p_pos            InOut: The position in the buffer.
+ * @param rtclass_2_status  In:    Use 0. Not supported.
+ * @param rtclass_3_status  In:    Use 0. Not supported.
+ * @param p_buf             InOut: The buffer.
+ * @param p_pos             InOut: The position in the buffer.
  */
 static void pf_lldp_add_port_status (
-   const pnet_port_cfg_t * p_port_cfg,
+   uint16_t rtclass_2_status,
+   uint16_t rtclass_3_status,
    uint8_t * p_buf,
    uint16_t * p_pos)
 {
@@ -335,18 +337,8 @@ static void pf_lldp_add_port_status (
       PF_FRAME_BUFFER_SIZE,
       p_buf,
       p_pos);
-   pf_put_uint16 (
-      true,
-      p_port_cfg->rtclass_2_status,
-      PF_FRAME_BUFFER_SIZE,
-      p_buf,
-      p_pos);
-   pf_put_uint16 (
-      true,
-      p_port_cfg->rtclass_3_status,
-      PF_FRAME_BUFFER_SIZE,
-      p_buf,
-      p_pos);
+   pf_put_uint16 (true, rtclass_2_status, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
+   pf_put_uint16 (true, rtclass_3_status, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
 }
 
 /**
@@ -659,7 +651,7 @@ void pf_lldp_get_port_id (
    int loc_port_num,
    pf_lldp_port_id_t * p_port_id)
 {
-   const pnet_port_cfg_t * p_port_cfg = pf_port_get_config (net, loc_port_num);
+   const pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
    char station_name[PNET_STATION_NAME_MAX_SIZE]; /** Terminated */
    const pnet_ethaddr_t * device_mac_address =
       pf_cmina_get_device_macaddr (net);
@@ -672,7 +664,7 @@ void pf_lldp_get_port_id (
          p_port_id->string,
          sizeof (p_port_id->string),
          "%s",
-         p_port_cfg->port_name);
+         p_port_data->port_name);
    }
    else /* PF_LLDP_NAME_OF_DEVICE_MODE_STANDARD */
    {
@@ -691,7 +683,7 @@ void pf_lldp_get_port_id (
          p_port_id->string,
          sizeof (p_port_id->string),
          "%s.%s",
-         p_port_cfg->port_name,
+         p_port_data->port_name,
          station_name);
    }
 
@@ -719,13 +711,13 @@ void pf_lldp_get_port_description (
    int loc_port_num,
    pf_lldp_port_description_t * p_port_descr)
 {
-   const pnet_port_cfg_t * p_port_cfg = pf_port_get_config (net, loc_port_num);
+   const pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
    snprintf (
       p_port_descr->string,
       sizeof (p_port_descr->string),
       "%s",
-      p_port_cfg->phy_port.if_name);
+      p_port_data->netif.name);
    p_port_descr->len = strlen (p_port_descr->string);
    p_port_descr->is_valid = true;
 }
@@ -757,7 +749,7 @@ void pf_lldp_get_management_address (
 
    p_man_address->interface_number.subtype = 2; /* ifIndex */
    p_man_address->interface_number.value =
-      pnal_get_interface_index (net->fspm_cfg.if_cfg.main_port.if_name);
+      pnal_get_interface_index (net->pf_interface.main_port.name);
 
    p_man_address->is_valid = true;
 }
@@ -911,10 +903,10 @@ void pf_lldp_get_link_status (
    pf_lldp_link_status_t * p_link_status)
 {
    pnal_eth_status_t status;
-   const pnet_port_cfg_t * p_port_cfg = pf_port_get_config (net, loc_port_num);
+   const pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
    /* TODO: Better error handling */
-   if (pnal_eth_get_status (p_port_cfg->phy_port.if_name, &status) != 0)
+   if (pnal_eth_get_status (p_port_data->netif.name, &status) != 0)
    {
       LOG_ERROR (
          PF_LLDP_LOG,
@@ -1010,7 +1002,7 @@ size_t pf_lldp_construct_frame (pnet_t * net, int loc_port_num, uint8_t buf[])
    pf_lldp_chassis_id_t chassis_id;
    pf_lldp_port_id_t port_id;
    pf_lldp_management_address_t man_address;
-   const pnet_port_cfg_t * p_port_cfg = pf_port_get_config (net, loc_port_num);
+   const pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
 #if LOG_DEBUG_ENABLED(PF_LLDP_LOG)
    pnal_ipaddr_t ipaddr = pf_cmina_get_ipaddr (net);
@@ -1052,7 +1044,7 @@ size_t pf_lldp_construct_frame (pnet_t * net, int loc_port_num, uint8_t buf[])
       buf,
       &pos,
       lldp_dst_addr,
-      p_port_cfg->phy_port.eth_addr);
+      p_port_data->netif.mac_address);
 
    /* Add mandatory parts */
    pf_lldp_add_chassis_id_tlv (&chassis_id, buf, &pos);
@@ -1060,7 +1052,7 @@ size_t pf_lldp_construct_frame (pnet_t * net, int loc_port_num, uint8_t buf[])
    pf_lldp_add_ttl_tlv (buf, &pos);
 
    /* Add optional parts */
-   pf_lldp_add_port_status (p_port_cfg, buf, &pos);
+   pf_lldp_add_port_status (0, 0, buf, &pos);
    pf_lldp_add_chassis_mac (device_mac_address, buf, &pos);
    pf_lldp_add_ieee_mac_phy (&link_status, buf, &pos);
    pf_lldp_add_management (&man_address, buf, &pos);
@@ -1091,7 +1083,7 @@ static void pf_lldp_send (pnet_t * net, int loc_port_num)
          p_buffer->len =
             pf_lldp_construct_frame (net, loc_port_num, p_buffer->payload);
 
-         (void)pf_eth_send (net, p_port_data->eth_handle, p_buffer);
+         (void)pf_eth_send (net, p_port_data->netif.handle, p_buffer);
       }
 
       pnal_buf_free (p_buffer);

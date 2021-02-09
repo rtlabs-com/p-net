@@ -187,7 +187,7 @@ static void pf_dcp_responder (pnet_t * net, void * arg, uint32_t current_time)
    {
       if (net->dcp_delayed_response_waiting == true)
       {
-         if (pf_eth_send (net, net->eth_handle, p_buf) > 0)
+         if (pf_eth_send (net, net->pf_interface.main_port.handle, p_buf) > 0)
          {
             LOG_DEBUG (
                PNET_LOG,
@@ -1091,7 +1091,7 @@ static int pf_dcp_get_set (
          p_dst_dcphdr->data_length = htons (dst_pos - dst_start);
          p_rsp->len = dst_pos;
 
-         if (pf_eth_send (net, net->eth_handle, p_rsp) > 0)
+         if (pf_eth_send (net, net->pf_interface.main_port.handle, p_rsp) > 0)
          {
             LOG_DEBUG (
                PF_DCP_LOG,
@@ -1366,7 +1366,7 @@ int pf_dcp_hello_req (pnet_t * net)
          p_dcphdr->data_length = htons (dst_pos - dst_start_pos);
          p_buf->len = dst_pos;
 
-         (void)pf_eth_send (net, net->eth_handle, p_buf);
+         (void)pf_eth_send (net, net->pf_interface.main_port.handle, p_buf);
       }
       pnal_buf_free (p_buf);
    }

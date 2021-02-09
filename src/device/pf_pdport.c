@@ -399,7 +399,6 @@ int pf_pdport_read_ind (
    pf_port_iterator_t port_iterator;
    pnal_port_stats_t port_stats;
    pf_port_t * p_port_data;
-   const pnet_port_cfg_t * p_port_cfg;
    uint16_t slot = p_read_req->slot_number;
    uint16_t subslot = p_read_req->subslot_number;
    uint16_t index = p_read_req->index;
@@ -532,12 +531,12 @@ int pf_pdport_read_ind (
 
          if (loc_port_num == 0)
          {
-            netif_name = net->fspm_cfg.if_cfg.main_port.if_name;
+            netif_name = net->interface.main_port.name;
          }
          else
          {
-            p_port_cfg = pf_port_get_config (net, loc_port_num);
-            netif_name = p_port_cfg->phy_port.if_name;
+            p_port_data = pf_port_get_state (net, loc_port_num);
+            netif_name = p_port_data->netif.name;
          }
 
          if (pnal_get_port_statistics (netif_name, &port_stats) == 0)

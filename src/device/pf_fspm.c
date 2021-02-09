@@ -222,7 +222,7 @@ int pf_fspm_validate_configuration (const pnet_cfg_t * p_cfg)
       return -1;
    }
 
-   if (strlen (p_cfg->if_cfg.main_port.if_name) == 0)
+   if (strlen (p_cfg->if_cfg.main_netif_name) == 0)
    {
       LOG_ERROR (
          PNET_LOG,

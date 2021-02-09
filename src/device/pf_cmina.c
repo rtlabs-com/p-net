@@ -191,7 +191,7 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
 
       memcpy (
          net->cmina_nonvolatile_dcp_ase.mac_address.addr,
-         p_cfg->if_cfg.main_port.eth_addr.addr,
+         net->pf_interface.main_port.mac_address.addr,
          sizeof (pnet_ethaddr_t));
 
       strcpy (net->cmina_nonvolatile_dcp_ase.port_name, ""); /* Terminated */
@@ -420,7 +420,7 @@ void pf_cmina_dcp_set_commit (pnet_t * net)
 
       net->cmina_commit_ip_suite = false;
       res = pnal_set_ip_suite (
-         net->fspm_cfg.if_cfg.main_port.if_name,
+         net->pf_interface.main_port.name,
          &net->cmina_current_dcp_ase.full_ip_suite.ip_suite.ip_addr,
          &net->cmina_current_dcp_ase.full_ip_suite.ip_suite.ip_mask,
          &net->cmina_current_dcp_ase.full_ip_suite.ip_suite.ip_gateway,
@@ -1265,7 +1265,7 @@ pnal_ipaddr_t pf_cmina_get_gateway (const pnet_t * net)
 
 const pnet_ethaddr_t * pf_cmina_get_device_macaddr (const pnet_t * net)
 {
-   return &net->fspm_cfg.if_cfg.main_port.eth_addr;
+   return &net->pf_interface.main_port.mac_address;
 }
 
 /************************* Utilites ******************************************/
@@ -1344,19 +1344,16 @@ void pf_cmina_port_statistics_show (pnet_t * net)
    int port;
    pf_port_iterator_t port_iterator;
    pnal_port_stats_t stats;
-   const pnet_port_cfg_t * p_port_config;
+   pf_port_t * p_port_data;
 
-   if (
-      pnal_get_port_statistics (
-         net->fspm_cfg.if_cfg.main_port.if_name,
-         &stats) == 0)
+   if (pnal_get_port_statistics (net->pf_interface.main_port.name, &stats) == 0)
    {
       printf (
          "Main interface %s    In: %" PRIu32 " bytes %" PRIu32
          " errors %" PRIu32 " discards  Out: %" PRIu32 " bytes %" PRIu32
          " errors %" PRIu32 " discards"
          "s\n",
-         net->fspm_cfg.if_cfg.main_port.if_name,
+         net->pf_interface.main_port.name,
          stats.if_in_octets,
          stats.if_in_errors,
          stats.if_in_discards,
@@ -1368,23 +1365,23 @@ void pf_cmina_port_statistics_show (pnet_t * net)
    {
       printf (
          "Did not find main interface %s\n",
-         net->fspm_cfg.if_cfg.main_port.if_name);
+         net->pf_interface.main_port.name);
    }
 
    pf_port_init_iterator_over_ports (net, &port_iterator);
    port = pf_port_get_next (&port_iterator);
    while (port != 0)
    {
-      p_port_config = pf_port_get_config (net, port);
+      p_port_data = pf_port_get_state (net, port);
 
-      if (pnal_get_port_statistics (p_port_config->phy_port.if_name, &stats) == 0)
+      if (pnal_get_port_statistics (p_port_data->netif.name, &stats) == 0)
       {
          printf (
             "Port        %s    In: %" PRIu32 " bytes %" PRIu32
             " errors %" PRIu32 " discards  Out: %" PRIu32 " bytes %" PRIu32
             " errors %" PRIu32 " discards"
             "s\n",
-            p_port_config->phy_port.if_name,
+            p_port_data->netif.name,
             stats.if_in_octets,
             stats.if_in_errors,
             stats.if_in_discards,
@@ -1394,7 +1391,7 @@ void pf_cmina_port_statistics_show (pnet_t * net)
       }
       else
       {
-         printf ("Did not find port %s\n", p_port_config->phy_port.if_name);
+         printf ("Did not find port %s\n", p_port_data->netif.name);
       }
 
       port = pf_port_get_next (&port_iterator);
@@ -1471,12 +1468,12 @@ void pf_cmina_show (pnet_t * net)
 
    printf (
       "MAC                            : %02x:%02x:%02x:%02x:%02x:%02x\n",
-      p_cfg->if_cfg.main_port.eth_addr.addr[0],
-      p_cfg->if_cfg.main_port.eth_addr.addr[1],
-      p_cfg->if_cfg.main_port.eth_addr.addr[2],
-      p_cfg->if_cfg.main_port.eth_addr.addr[3],
-      p_cfg->if_cfg.main_port.eth_addr.addr[4],
-      p_cfg->if_cfg.main_port.eth_addr.addr[5]);
+      net->pf_interface.main_port.mac_address.addr[0],
+      net->pf_interface.main_port.mac_address.addr[1],
+      net->pf_interface.main_port.mac_address.addr[2],
+      net->pf_interface.main_port.mac_address.addr[3],
+      net->pf_interface.main_port.mac_address.addr[4],
+      net->pf_interface.main_port.mac_address.addr[5]);
 
    pf_cmina_port_statistics_show (net);
 }

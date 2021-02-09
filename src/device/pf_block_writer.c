@@ -3578,14 +3578,12 @@ void pf_put_pdport_data_real (
    pf_lldp_port_name_t port_name;
    pnal_eth_status_t eth_status;
    const uint16_t subslot = pf_port_loc_port_num_to_dap_subslot (loc_port_num);
-   const pnet_port_cfg_t * p_port_config =
-      pf_port_get_config (net, loc_port_num);
    const pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
    const pf_lldp_peer_info_t * p_peer_info = &p_port_data->lldp.peer_info;
 
    num_peers = p_port_data->lldp.is_peer_info_received ? 1 : 0;
 
-   if (pnal_eth_get_status (p_port_config->phy_port.if_name, &eth_status) != 0)
+   if (pnal_eth_get_status (p_port_data->netif.name, &eth_status) != 0)
    {
       memset (&eth_status, 0, sizeof (eth_status));
    }
@@ -3608,12 +3606,12 @@ void pf_put_pdport_data_real (
    pf_put_uint16 (is_big_endian, subslot, res_len, p_bytes, p_pos);
 
    /* Length OwnPortName */
-   pf_put_byte (strlen (p_port_config->port_name), res_len, p_bytes, p_pos);
+   pf_put_byte (strlen (p_port_data->port_name), res_len, p_bytes, p_pos);
 
    /* OwnPortName */
    pf_put_mem (
-      p_port_config->port_name,
-      strlen (p_port_config->port_name),
+      p_port_data->port_name,
+      strlen (p_port_data->port_name),
       res_len,
       p_bytes,
       p_pos);
@@ -3863,10 +3861,7 @@ static void pf_put_pd_multiblock_interface_and_statistics (
    uint16_t block_len = 0;
    pnal_port_stats_t port_stats;
 
-   if (
-      pnal_get_port_statistics (
-         net->fspm_cfg.if_cfg.main_port.if_name,
-         &port_stats) != 0)
+   if (pnal_get_port_statistics (net->pf_interface.main_port.name, &port_stats) != 0)
    {
       memset (&port_stats, 0, sizeof (port_stats));
    }
@@ -3947,9 +3942,9 @@ static void pf_put_pd_multiblock_port_and_statistics (
    uint16_t block_len = 0;
    pnal_port_stats_t port_stats;
    const uint16_t subslot = pf_port_loc_port_num_to_dap_subslot (loc_port_num);
-   const pnet_port_cfg_t * p_port_cfg = pf_port_get_config (net, loc_port_num);
+   const pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
-   if (pnal_get_port_statistics (p_port_cfg->phy_port.if_name, &port_stats) != 0)
+   if (pnal_get_port_statistics (p_port_data->netif.name, &port_stats) != 0)
    {
       memset (&port_stats, 0, sizeof (port_stats));
    }
