@@ -132,7 +132,8 @@ int pf_pdport_write_req (
  *
  * @param net              InOut: The p-net stack instance
  * @param loc_port_num     In:    Local port number.
- *                                Valid range: 1 .. PNET_MAX_PORT
+ *                                Valid range:
+ *                                1 .. PNET_NUMBER_OF_PHYSICAL_PORTS.
  * @param p_lldp_peer_info In:    Peer info
  */
 void pf_pdport_peer_indication (
@@ -146,7 +147,8 @@ void pf_pdport_peer_indication (
  *
  * @param net              InOut: The p-net stack instance
  * @param loc_port_num     In:    Local port number.
- *                                Valid range: 1 .. PNET_MAX_PORT
+ *                                Valid range:
+ *                                1 .. PNET_NUMBER_OF_PHYSICAL_PORTS.
  */
 void pf_pdport_peer_lldp_timeout (pnet_t * net, int loc_port_num);
 

@@ -104,7 +104,7 @@ TEST_F (DcpTest, DcpHelloTest)
    ret = pf_eth_recv (mock_os_data.eth_if_handle, net, p_buf);
 
    EXPECT_EQ (ret, 1);
-   EXPECT_EQ (mock_os_data.eth_send_count, PNET_MAX_PORT + 1);
+   EXPECT_EQ (mock_os_data.eth_send_count, PNET_NUMBER_OF_PHYSICAL_PORTS + 1);
 
    EXPECT_EQ (appdata.call_counters.led_off_calls, 1);
    EXPECT_EQ (appdata.call_counters.led_on_calls, 0);
@@ -154,7 +154,9 @@ TEST_F (DcpTest, DcpRunTest)
    /* Wait for LED to flash three times at 1 Hz */
    run_stack (4 * 1000 * 1000);
 
-   EXPECT_EQ (mock_os_data.eth_send_count, 9 + (PNET_MAX_PORT - 1) * 4);
+   EXPECT_EQ (
+      mock_os_data.eth_send_count,
+      9 + (PNET_NUMBER_OF_PHYSICAL_PORTS - 1) * 4);
    EXPECT_EQ (mock_os_data.set_ip_suite_count, 2);
 
    EXPECT_EQ (appdata.call_counters.led_on_calls, 3);

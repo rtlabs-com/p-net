@@ -131,7 +131,7 @@ static const cfg_submodule_type_t cfg_available_submodule_types[] = {
     PNET_DIR_NO_IO,
     0,
     0},
-#if PNET_MAX_PORT >= 2
+#if PNET_NUMBER_OF_PHYSICAL_PORTS >= 2
    {"DAP Port 2",
     APP_API,
     PNET_MOD_DAP_IDENT,
@@ -140,7 +140,7 @@ static const cfg_submodule_type_t cfg_available_submodule_types[] = {
     0,
     0},
 #endif
-#if PNET_MAX_PORT >= 3
+#if PNET_NUMBER_OF_PHYSICAL_PORTS >= 3
    {"DAP Port 3",
     APP_API,
     PNET_MOD_DAP_IDENT,
@@ -149,7 +149,7 @@ static const cfg_submodule_type_t cfg_available_submodule_types[] = {
     0,
     0},
 #endif
-#if PNET_MAX_PORT >= 4
+#if PNET_NUMBER_OF_PHYSICAL_PORTS >= 4
    {"DAP Port 4",
     APP_API,
     PNET_MOD_DAP_IDENT,
@@ -190,8 +190,8 @@ struct cmd_args
    char path_storage_directory[PNET_MAX_DIRECTORYPATH_SIZE]; /** Terminated */
    char station_name[PNET_STATION_NAME_MAX_SIZE]; /** Terminated string */
    char eth_interfaces
-      [PNET_INTERFACE_NAME_MAX_SIZE * (PNET_MAX_PORT + 1) +
-       PNET_MAX_PORT]; /** Terminated string */
+      [PNET_INTERFACE_NAME_MAX_SIZE * (PNET_NUMBER_OF_PHYSICAL_PORTS + 1) +
+       PNET_NUMBER_OF_PHYSICAL_PORTS]; /** Terminated string */
    int verbosity;
    int show;
    bool factory_reset;
@@ -205,7 +205,7 @@ typedef struct app_netif_name
 
 typedef struct app_netif_namelist
 {
-   app_netif_name_t netif[PNET_MAX_PORT + 1];
+   app_netif_name_t netif[PNET_NUMBER_OF_PHYSICAL_PORTS + 1];
 } app_netif_namelist_t;
 
 typedef struct app_subslot
@@ -321,19 +321,17 @@ int app_pnet_cfg_init_netifs (
 
 /**
  * Parse a comma separated list of network interfaces and check
- * that the number of interfaces match the PNET_MAX_PORT configuration.
- * Examples:
- * PNET_MAX_PORT     arg_str                 status
- * 1                 "eth0"                  ok
- * 1                 "eth0,eth1"             err
- * 2                 "br0,eth0,eth1"         ok
- * 2                 "br0,eth0,"             err
+ * that the number of interfaces match the PNET_NUMBER_OF_PHYSICAL_PORTS
+ * configuration. Examples: PNET_NUMBER_OF_PHYSICAL_PORTS     arg_str status 1
+ * "eth0"                  ok 1                 "eth0,eth1"             err 2
+ * "br0,eth0,eth1"         ok 2                 "br0,eth0,"             err
  *
  * @param arg_str    In:   Network interface list as comma separated,
  *                         terminated string. For example "eth0" or
  *                         "br0,eth0,eth1".
  * @param p_if_list  Out:  List of network interfaces
- * @param max_port   In:   PNET_MAX_PORT, passed as argument to allow test
+ * @param max_port   In:   PNET_NUMBER_OF_PHYSICAL_PORTS, passed as argument to
+ *                         allow test
  * @return  0  if network interface list matches configuration
  *         -1  on error
  */

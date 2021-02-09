@@ -99,10 +99,10 @@ To run p-net and the sample application with multiple ports a couple
 of things need to be done. Note that the settings described in the 
 following sections are changed by running ``ccmake .`` in the build folder.
 ``options.h`` will be regenerated. Another way to set the options is to 
-set them on the cmake command line (-DPNET_MAX_PORT=2 -DPNET_MAX_SUBSLOTS=4).
+set them on the cmake command line (-DPNET_NUMBER_OF_PHYSICAL_PORTS=2 -DPNET_MAX_SUBSLOTS=4).
 
-Reconfigure setting ``PNET_MAX_PORT`` to the actual number of physical ports available in the system.
-For this example ``PNET_MAX_PORT`` shall be set to 2. 
+Reconfigure setting ``PNET_NUMBER_OF_PHYSICAL_PORTS`` to the actual number of physical ports available in the system.
+For this example ``PNET_NUMBER_OF_PHYSICAL_PORTS`` shall be set to 2. 
 
 Reconfigure setting ``PNET_MAX_SUBSLOTS``. Each additional port will require an additional subslot.
 For this example the ``PNET_MAX_SUBSLOTS`` should be be set to 4.
