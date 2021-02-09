@@ -635,6 +635,8 @@ void pf_lldp_get_port_id (
 {
    const pnet_port_cfg_t * p_port_cfg = pf_port_get_config (net, loc_port_num);
    char station_name[PNET_STATION_NAME_MAX_SIZE]; /** Terminated */
+   const pnet_ethaddr_t * device_mac_address =
+      pf_cmina_get_device_macaddr (net);
 
    if (net->interface.name_of_device_mode == PF_LLDP_NAME_OF_DEVICE_MODE_LEGACY)
    {
@@ -649,8 +651,10 @@ void pf_lldp_get_port_id (
       pf_cmina_get_station_name (net, station_name);
       if (strlen (station_name) == 0)
       {
+         /* Profinet 2.4 Protocol, table 335 "LLDP substitutions":
+            Use chassis MAC address if no NameOfStation is assigned */
          pf_lldp_mac_address_to_string (
-            p_port_cfg->phy_port.eth_addr.addr,
+            device_mac_address->addr,
             station_name,
             sizeof (station_name));
       }
