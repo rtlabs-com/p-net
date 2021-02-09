@@ -34,11 +34,11 @@
 #include <string.h>
 #include <unistd.h>
 
-#if PNET_MAX_PORT == 1
+#if PNET_NUMBER_OF_PHYSICAL_PORTS == 1
 #define APP_DEFAULT_ETHERNET_INTERFACE "eth0"
-#elif PNET_MAX_PORT == 2
+#elif PNET_NUMBER_OF_PHYSICAL_PORTS == 2
 #define APP_DEFAULT_ETHERNET_INTERFACE "br0,eth0,eth1"
-#elif PNET_MAX_PORT == 3
+#elif PNET_NUMBER_OF_PHYSICAL_PORTS == 3
 #define APP_DEFAULT_ETHERNET_INTERFACE "br0,eth0,eth1,eth2"
 #else
 #define APP_DEFAULT_ETHERNET_INTERFACE ""
@@ -383,7 +383,7 @@ int main (int argc, char * argv[])
          PNET_MAX_SLOTS);
       printf ("P-net log level:      %u (DEBUG=0, FATAL=4)\n", LOG_LEVEL);
       printf ("App verbosity level:  %u\n", appdata.arguments.verbosity);
-      printf ("Number of ports:      %u\n", PNET_MAX_PORT);
+      printf ("Number of ports:      %u\n", PNET_NUMBER_OF_PHYSICAL_PORTS);
       printf ("Network interfaces:   %s\n", appdata.arguments.eth_interfaces);
       printf ("Button1 file:         %s\n", appdata.arguments.path_button1);
       printf ("Button2 file:         %s\n", appdata.arguments.path_button2);

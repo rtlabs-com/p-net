@@ -1204,7 +1204,7 @@ typedef struct pnet_if_cfg
    const char * main_netif_name; /**< Main (DAP) network interface. */
    pnet_ip_cfg_t ip_cfg;   /**< IP Settings for main network interface */
 
-   pnet_port_cfg_t physical_ports[PNET_MAX_PORT];
+   pnet_port_cfg_t physical_ports[PNET_NUMBER_OF_PHYSICAL_PORTS];
 } pnet_if_cfg_t;
 
 /**

@@ -33,17 +33,6 @@
 #include <string.h>
 #include "pf_includes.h"
 
-/**
- * Init network interface.
- * Set name, read mac address, register receive callback.
- *
- * @param net              InOut: The p-net stack instance
- * @param netif_name       In:    Network interface name
- * @param eth_receive_type In:    Ethernet frame types that shall be received
- *                                by the network interface / port.
- * @param netif            Out:   Initialized network interface.
- * @return
- */
 static int pf_eth_init_netif (
    pnet_t * net,
    const char * netif_name,
@@ -83,13 +72,13 @@ int pf_eth_init (pnet_t * net, const pnet_cfg_t * p_cfg)
    pf_port_iterator_t port_iterator;
    pf_port_t * p_port_data;
    pnal_ethertype_t main_port_receive_type;
-#if PNET_MAX_PORT > 1
+#if PNET_NUMBER_OF_PHYSICAL_PORTS > 1
    const pnet_port_cfg_t * p_port_cfg;
 #endif
 
    memset (net->eth_id_map, 0, sizeof (net->eth_id_map));
 
-#if (PNET_MAX_PORT == 1)
+#if (PNET_NUMBER_OF_PHYSICAL_PORTS == 1)
    main_port_receive_type = PNAL_ETHTYPE_ALL;
 #else
    main_port_receive_type = PNAL_ETHTYPE_PROFINET;
@@ -113,7 +102,7 @@ int pf_eth_init (pnet_t * net, const pnet_cfg_t * p_cfg)
    {
       p_port_data = pf_port_get_state (net, port);
 
-#if PNET_MAX_PORT > 1
+#if PNET_NUMBER_OF_PHYSICAL_PORTS > 1
       p_port_cfg = pf_port_get_config (net, port);
 
       if (
@@ -133,6 +122,7 @@ int pf_eth_init (pnet_t * net, const pnet_cfg_t * p_cfg)
 
       port = pf_port_get_next (&port_iterator);
    }
+
    return 0;
 }
 

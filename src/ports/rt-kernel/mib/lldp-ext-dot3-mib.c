@@ -405,7 +405,8 @@ static snmp_err_t lldpxdot3remporttable_get_next_instance (
  * @param value            Out:   Value to be returned in response.
  * @param port             In:    Local port number for port directly
  *                                connected to the remote device.
- *                                Valid range: 1 .. PNET_MAX_PORT.
+ *                                Valid range:
+ *                                1 .. PNET_NUMBER_OF_PHYSICAL_PORTS.
  * @param column           In:    Column index for the cell.
  * @return  Size of returned value, in bytes.
  *          -1 if no valid value could be returned.

@@ -186,7 +186,7 @@ int main (void)
          PNET_MAX_SLOTS);
       printf ("P-net log level:      %u (DEBUG=0, FATAL=4)\n", LOG_LEVEL);
       printf ("App verbosity level:  %u\n", appdata.arguments.verbosity);
-      printf ("Number of ports:      %u\n", PNET_MAX_PORT);
+      printf ("Number of ports:      %u\n", PNET_NUMBER_OF_PHYSICAL_PORTS);
       printf ("Network interfaces:   %s\n", appdata.arguments.eth_interfaces);
       printf ("Default station name: %s\n", appdata.arguments.station_name);
    }
