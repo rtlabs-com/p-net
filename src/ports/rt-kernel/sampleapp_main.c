@@ -198,6 +198,7 @@ int main (void)
 
    ret = app_pnet_cfg_init_netifs (
       appdata.arguments.eth_interfaces,
+      &appdata.if_list,
       &pnet_default_cfg,
       appdata.arguments.verbosity);
    if (ret != 0)

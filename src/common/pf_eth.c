@@ -27,18 +27,65 @@
 #ifdef UNIT_TEST
 #define pnal_eth_init mock_pnal_eth_init
 #define pnal_eth_send mock_pnal_eth_send
+#define pnal_get_macaddress mock_pnal_get_macaddress
 #endif
 
 #include <string.h>
 #include "pf_includes.h"
+
+/**
+ * Init network interface.
+ * Set name, read mac address, register receive callback.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param netif_name       In:    Network interface name
+ * @param eth_receive_type In:    Ethernet frame types that shall be received
+ *                                by the network interface / port.
+ * @param netif            Out:   Initialized network interface.
+ * @return
+ */
+static int pf_eth_init_netif (
+   pnet_t * net,
+   const char * netif_name,
+   pnal_ethertype_t eth_receive_type,
+   pf_netif_t * netif)
+{
+   pnal_ethaddr_t pnal_mac_addr;
+
+   snprintf (netif->name, sizeof (netif->name), "%s", netif_name);
+
+   netif->handle =
+      pnal_eth_init (netif->name, eth_receive_type, pf_eth_recv, (void *)net);
+
+   if (netif->handle == NULL)
+   {
+      LOG_ERROR (PNET_LOG, "Failed to init \"%s\"\n", netif_name);
+      return -1;
+   }
+
+   if (pnal_get_macaddress (netif_name, &pnal_mac_addr) != 0)
+   {
+      LOG_ERROR (PNET_LOG, "Failed read mac address on \"%s\"\n", netif_name);
+      return -1;
+   }
+
+   memcpy (
+      netif->mac_address.addr,
+      pnal_mac_addr.addr,
+      sizeof (netif->mac_address.addr));
+
+   return 0;
+}
 
 int pf_eth_init (pnet_t * net, const pnet_cfg_t * p_cfg)
 {
    int port;
    pf_port_iterator_t port_iterator;
    pf_port_t * p_port_data;
-   const pnet_port_cfg_t * p_port_cfg;
    pnal_ethertype_t main_port_receive_type;
+#if PNET_MAX_PORT > 1
+   const pnet_port_cfg_t * p_port_cfg;
+#endif
 
    memset (net->eth_id_map, 0, sizeof (net->eth_id_map));
 
@@ -49,17 +96,13 @@ int pf_eth_init (pnet_t * net, const pnet_cfg_t * p_cfg)
 #endif
 
    /* Init management port */
-   net->eth_handle = pnal_eth_init (
-      p_cfg->if_cfg.main_port.if_name,
-      main_port_receive_type,
-      pf_eth_recv,
-      (void *)net);
-   if (net->eth_handle == NULL)
+   if (
+      pf_eth_init_netif (
+         net,
+         p_cfg->if_cfg.main_netif_name,
+         main_port_receive_type,
+         &net->pf_interface.main_port) != 0)
    {
-      LOG_ERROR (
-         PNET_LOG,
-         "Failed to init \"%s\"\n",
-         p_cfg->if_cfg.main_port.if_name);
       return -1;
    }
 
@@ -69,27 +112,24 @@ int pf_eth_init (pnet_t * net, const pnet_cfg_t * p_cfg)
    while (port != 0)
    {
       p_port_data = pf_port_get_state (net, port);
-      p_port_cfg = pf_port_get_config (net, port);
 
 #if PNET_MAX_PORT > 1
-      p_port_data->eth_handle = pnal_eth_init (
-         p_port_cfg->phy_port.if_name,
-         PNAL_ETHTYPE_LLDP,
-         pf_eth_recv,
-         (void *)net);
-#else
-      /* In single port configuration managed port is also physical port 1 */
-      p_port_data->eth_handle = net->eth_handle;
-#endif
+      p_port_cfg = pf_port_get_config (net, port);
 
-      if (p_port_data->eth_handle == NULL)
+      if (
+         pf_eth_init_netif (
+            net,
+            p_port_cfg->netif_name,
+            PNAL_ETHTYPE_LLDP,
+            &p_port_data->netif) != 0)
       {
-         LOG_ERROR (
-            PNET_LOG,
-            "Failed to init \"%s\"\n",
-            p_port_cfg->phy_port.if_name);
          return -1;
       }
+#else
+      /* In single port configuration the managed port is also physical port 1
+       */
+      p_port_data->netif = net->pf_interface.main_port;
+#endif
 
       port = pf_port_get_next (&port_iterator);
    }

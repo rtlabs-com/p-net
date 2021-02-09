@@ -2728,14 +2728,21 @@ typedef struct pf_lldp_port
    bool is_peer_info_received;
 } pf_lldp_port_t;
 
+/** Network interface */
+typedef struct pf_netif
+{
+   char name[PNET_INTERFACE_NAME_MAX_SIZE]; /**< Terminated string */
+   pnet_ethaddr_t mac_address;
+   pnal_eth_handle_t * handle;
+} pf_netif_t;
+
 /**
  * Port runtime data
- * Note that physical port configuration
- * is part of the configuration (pnet_port_cfg_t)
  */
 typedef struct pf_port
 {
-   pnal_eth_handle_t * eth_handle;
+   pf_netif_t netif;
+   char port_name[PNET_PORT_NAME_MAX_SIZE]; /* Terminated string */
    uint8_t port_num;
    pf_pdport_t pdport;
    pf_lldp_port_t lldp;
@@ -2757,7 +2764,6 @@ struct pnet
    uint32_t dcp_sam_timeout;          /* Handle to the SAM timeout instance */
    uint32_t dcp_identresp_timeout;    /* Handle to the DCP identify timeout
                                          instance */
-   pnal_eth_handle_t * eth_handle;    /* Management port */
    pf_eth_frame_id_map_t eth_id_map[PF_ETH_MAX_MAP];
    volatile pf_scheduler_timeouts_t scheduler_timeouts[PF_MAX_TIMEOUTS];
    volatile uint32_t scheduler_timeout_first;
@@ -2811,6 +2817,7 @@ struct pnet
     */
    struct
    {
+      pf_netif_t main_port; /* Management port */
       struct
       {
          bool active;

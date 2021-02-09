@@ -60,7 +60,7 @@ static void ip_to_string (pnal_ipaddr_t ip, char * outputstring)
       (uint8_t) (ip & 0xFF));
 }
 
-void app_mac_to_string (pnal_ethaddr_t mac, char * outputstring)
+void app_mac_to_string (pnet_ethaddr_t mac, char * outputstring)
 {
    snprintf (
       outputstring,
@@ -1317,7 +1317,6 @@ void app_plug_dap (pnet_t * net, void * arg)
 
 int app_pnet_cfg_init_default (pnet_cfg_t * stack_config)
 {
-   uint16_t i;
    memset (stack_config, 0, sizeof (pnet_cfg_t));
    stack_config->tick_us = APP_TICK_INTERVAL_US;
 
@@ -1391,18 +1390,6 @@ int app_pnet_cfg_init_default (pnet_cfg_t * stack_config)
    /* Timing */
    stack_config->min_device_interval = 32; /* Corresponds to 1 ms */
 
-   /* LLDP settings */
-   for (i = 0; i < PNET_MAX_PORT; i++)
-   {
-      snprintf (
-         stack_config->if_cfg.ports[i].port_name,
-         sizeof (stack_config->if_cfg.ports[i].port_name),
-         "port-%03d",
-         i + 1);
-      stack_config->if_cfg.ports[i].rtclass_2_status = 0;
-      stack_config->if_cfg.ports[i].rtclass_3_status = 0;
-   }
-
    /* Network configuration */
    stack_config->send_hello = true;
    stack_config->if_cfg.ip_cfg.dhcp_enable = false;
@@ -1411,50 +1398,6 @@ int app_pnet_cfg_init_default (pnet_cfg_t * stack_config)
    /* Use "Extended channel diagnosis" instead of "Qualified channel diagnosis"
       format on the wire, as this is better supported by Wireshark. */
    stack_config->use_qualified_diagnosis = false;
-
-   return 0;
-}
-
-/**
- * Initialize a network interface configuration from a network
- * interface name.
- * This includes reading the Ethernet MAC address.
- * If the network interface can not be found or the operation
- * fails to read the mac address from the network interface,
- * error is returned.
- * @param netif_name       In:   Network interface name
- * @param p_netif          Out:  Network interface configuration
- * @param verbosity        In:   Verbosity
- * @return 0  on success
- *         -1 on error
- */
-int app_port_cfg_init (
-   const char * netif_name,
-   pnet_netif_t * p_netif,
-   int verbosity)
-{
-   pnal_ethaddr_t mac;
-   char mac_string[PNAL_ETH_ADDRSTR_SIZE]; /* Terminated string */
-
-   int ret = pnal_get_macaddress (netif_name, &mac);
-   if (ret != 0)
-   {
-      printf (
-         "Error: The given network interface does not exist: \"%s\"\n",
-         netif_name);
-      return -1;
-   }
-   else
-   {
-      if (verbosity > 0)
-      {
-         app_mac_to_string (mac, mac_string);
-         printf ("%-10s %s\n", netif_name, mac_string);
-      }
-   }
-
-   strncpy (p_netif->if_name, netif_name, PNET_INTERFACE_NAME_MAX_SIZE);
-   memcpy (p_netif->eth_addr.addr, mac.addr, sizeof (pnal_ethaddr_t));
 
    return 0;
 }
@@ -1528,6 +1471,7 @@ int app_get_netif_namelist (
 
 int app_pnet_cfg_init_netifs (
    const char * netif_list_str,
+   app_netif_namelist_t * if_list,
    pnet_cfg_t * p_cfg,
    int verbosity)
 {
@@ -1536,48 +1480,35 @@ int app_pnet_cfg_init_netifs (
    pnal_ipaddr_t ip;
    pnal_ipaddr_t netmask;
    pnal_ipaddr_t gateway;
-   app_netif_namelist_t if_list;
 
-   ret = app_get_netif_namelist (netif_list_str, &if_list, PNET_MAX_PORT);
+   ret = app_get_netif_namelist (netif_list_str, if_list, PNET_MAX_PORT);
    if (ret != 0)
    {
       return ret;
    }
+   p_cfg->if_cfg.main_netif_name = if_list->netif[0].name;
 
    if (verbosity > 0)
    {
-      printf ("Management port:      ");
-   }
-   if (
-      app_port_cfg_init (
-         if_list.netif[0].name,
-         &p_cfg->if_cfg.main_port,
-         verbosity) != 0)
-   {
-      return -1;
+      printf ("Management port:      %s\n", p_cfg->if_cfg.main_netif_name);
    }
 
    for (i = 1; i <= PNET_MAX_PORT; i++)
    {
+      p_cfg->if_cfg.physical_ports[i - 1].netif_name = if_list->netif[i].name;
       if (verbosity > 0)
       {
-         printf ("Physical port [%u]:    ", i);
-      }
-
-      if (
-         app_port_cfg_init (
-            if_list.netif[i].name,
-            &p_cfg->if_cfg.ports[i - 1].phy_port,
-            verbosity) != 0)
-      {
-         return -1;
+         printf (
+            "Physical port [%u]:    %s\n",
+            i,
+            p_cfg->if_cfg.physical_ports[i - 1].netif_name);
       }
    }
 
    /* Read IP, netmask, gateway from operating system */
-   ip = pnal_get_ip_address (if_list.netif[0].name);
-   netmask = pnal_get_netmask (if_list.netif[0].name);
-   gateway = pnal_get_gateway (if_list.netif[0].name);
+   ip = pnal_get_ip_address (p_cfg->if_cfg.main_netif_name);
+   netmask = pnal_get_netmask (p_cfg->if_cfg.main_netif_name);
+   gateway = pnal_get_gateway (p_cfg->if_cfg.main_netif_name);
 
    if (verbosity > 0)
    {

@@ -39,6 +39,11 @@ void pf_port_init (pnet_t * net)
    {
       p_port_data = pf_port_get_state (net, port);
       p_port_data->port_num = port;
+      snprintf (
+         p_port_data->port_name,
+         sizeof (p_port_data->port_name),
+         "port-%03u",
+         (uint8_t)port); /* Cast to avoid format-truncation */
       port = pf_port_get_next (&port_iterator);
    }
 }
@@ -95,7 +100,7 @@ pf_port_t * pf_port_get_state (pnet_t * net, int loc_port_num)
 const pnet_port_cfg_t * pf_port_get_config (pnet_t * net, int loc_port_num)
 {
    CC_ASSERT (loc_port_num > 0 && loc_port_num <= PNET_MAX_PORT);
-   return &net->fspm_cfg.if_cfg.ports[loc_port_num - 1];
+   return &net->fspm_cfg.if_cfg.physical_ports[loc_port_num - 1];
 }
 
 uint16_t pf_port_loc_port_num_to_dap_subslot (int loc_port_num)
@@ -132,7 +137,7 @@ int pf_port_get_port_number (pnet_t * net, pnal_eth_handle_t * eth_handle)
 
    for (loc_port_num = 1; loc_port_num <= PNET_MAX_PORT; loc_port_num++)
    {
-      if (net->pf_interface.port[loc_port_num - 1].eth_handle == eth_handle)
+      if (net->pf_interface.port[loc_port_num - 1].netif.handle == eth_handle)
       {
          return loc_port_num;
       }

@@ -471,7 +471,7 @@ static int pf_session_allocate (pnet_t * net, pf_session_info_t ** pp_sess)
       p_sess = &net->cmrpc_session_info[ix];
       memset (p_sess, 0, sizeof (*p_sess));
       p_sess->in_use = true;
-      p_sess->eth_handle = net->eth_handle;
+      p_sess->eth_handle = net->pf_interface.main_port.handle;
       p_sess->p_ar = NULL;
       p_sess->sequence_nmb_send = 0;
       p_sess->dcontrol_sequence_nmb = UINT32_MAX;

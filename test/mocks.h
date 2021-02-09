@@ -102,6 +102,9 @@ pnal_eth_handle_t * mock_pnal_eth_init (
    pnal_eth_callback_t * callback,
    void * arg);
 int mock_pnal_eth_send (pnal_eth_handle_t * handle, pnal_buf_t * buf);
+int mock_pnal_get_macaddress (
+   const char * interface_name,
+   pnal_ethaddr_t * p_mac);
 int mock_pnal_eth_get_status (
    const char * interface_name,
    pnal_eth_status_t * status);

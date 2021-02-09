@@ -242,6 +242,7 @@ typedef struct app_data_obj
    bool alarm_allowed;
    pnet_alarm_argument_t alarm_arg;
    struct cmd_args arguments;
+   app_netif_namelist_t if_list;
    uint32_t app_param_1;
    uint32_t app_param_2;
    uint8_t inputdata[APP_DATASIZE_INPUT];
@@ -276,7 +277,7 @@ typedef enum app_demo_state
  * @param outputstring     Out:   Resulting string buffer. Should have size
  *                                PNAL_ETH_ADDRSTR_SIZE.
  */
-void app_mac_to_string (pnal_ethaddr_t mac, char * outputstring);
+void app_mac_to_string (pnet_ethaddr_t mac, char * outputstring);
 
 /**
  * Print out current IP address, netmask and default gateway.
@@ -306,6 +307,7 @@ int app_pnet_cfg_init_default (pnet_cfg_t * stack_config);
  *
  * @param netif_list_str   In:    Comma separated list of network interfaces.
  *                                Terminated string.
+ * @param if_list          Out:   Network interface string storage.
  * @param p_cfg            InOut: p-net configuration
  * @param verbosity        In:    Verbosity
  * @return  0  on success
@@ -313,6 +315,7 @@ int app_pnet_cfg_init_default (pnet_cfg_t * stack_config);
  */
 int app_pnet_cfg_init_netifs (
    const char * netif_list_str,
+   app_netif_namelist_t * if_list,
    pnet_cfg_t * p_cfg,
    int verbosity);
 

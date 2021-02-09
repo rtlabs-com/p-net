@@ -161,7 +161,7 @@ static int pf_cmrdr_add_epmv4_entry (
 {
    pf_generate_epm_handle (
       os_get_current_time_us(),
-      net->fspm_cfg.if_cfg.main_port.eth_addr,
+      net->pf_interface.main_port.mac_address,
       &p_lookup_rsp->rpc_handle);
 
    p_lookup_rsp->num_entry++;
@@ -202,7 +202,7 @@ static int pf_cmrdr_add_pnio_entry (
 {
    pf_generate_epm_handle (
       os_get_current_time_us(),
-      net->fspm_cfg.if_cfg.main_port.eth_addr,
+      net->pf_interface.main_port.mac_address,
       &p_lookup_rsp->rpc_handle);
 
    /*Set the number of entries */

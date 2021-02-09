@@ -117,6 +117,19 @@ int mock_pnal_eth_send (pnal_eth_handle_t * handle, pnal_buf_t * p_buf)
    return p_buf->len;
 }
 
+int mock_pnal_get_macaddress (
+   const char * interface_name,
+   pnal_ethaddr_t * p_mac)
+{
+   p_mac->addr[0] = 0x12;
+   p_mac->addr[1] = 0x34;
+   p_mac->addr[2] = 0x00;
+   p_mac->addr[3] = 0x78;
+   p_mac->addr[4] = 0x90;
+   p_mac->addr[5] = 0xab;
+   return 0;
+}
+
 int mock_pnal_udp_open (pnal_ipaddr_t addr, pnal_ipport_t port)
 {
    int ret = 2;
