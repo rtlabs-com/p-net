@@ -86,6 +86,7 @@ static int get_pcap_name (const char * eth_interface, char * pcap_name)
    /* scan name */
    if (sscanf (eth_interface, "eth%u", &inum1) != 1)
       return -EFAULT;
+   inum1++;
 
    /* Jump to the selected adapter */
    for (d1 = alldevs, i = 0; i < inum1 - 1; d1 = d1->next, i++)
@@ -289,6 +290,7 @@ int pcap_helper_list_and_select_adapter (char * eth_interface)
    }
 
    /* set result */
+   inum1--;
    sprintf (eth_interface, "eth%u", inum1);
 
    /* Free the device list */

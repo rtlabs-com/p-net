@@ -16,6 +16,14 @@
 #include "pnal.h"
 #include "pcap_helper.h"
 
+typedef struct pnal_eth_handle_t
+{
+   pnal_eth_callback_t * callback;
+   void * arg;
+   void * pcap_handle;
+   os_thread_t * thread;
+} pnal_eth_handle_t;
+
 /**
  * @internal
  * Run a thread that listens to incoming raw Ethernet sockets.
@@ -43,7 +51,7 @@ static void os_eth_task (void * thread_arg)
 
       if (eth_handle->callback != NULL)
       {
-         handled = eth_handle->callback (eth_handle->arg, p);
+         handled = eth_handle->callback (eth_handle, eth_handle->arg, p);
       }
       else
       {
@@ -58,7 +66,11 @@ static void os_eth_task (void * thread_arg)
    }
 }
 
-pnal_eth_handle_t * pnal_eth_init (const char * if_name, pnal_eth_callback_t * callback, void * arg)
+pnal_eth_handle_t * pnal_eth_init (
+   const char * if_name,
+   pnal_ethertype_t receive_type,
+   pnal_eth_callback_t * callback,
+   void * arg)
 {
    pnal_eth_handle_t * handle;
    PCAP_HANDLE pcap;

@@ -16,79 +16,34 @@
 #include "sampleapp_common.h"
 #include "pcap_helper.h"
 
-#include "osal_log.h"
+#include "options.h" /* Rename/remove when #224 is solved */
 #include "osal.h"
+#include "osal_log.h" /* For LOG_LEVEL */
+#include "pnal.h"
 #include <pnet_api.h>
-#include "version.h"
+#include "version.h" /* Rename/remove when #224 is solved */
 
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-#include <direct.h> // _getcwd
+#include <direct.h> /* getcwd */
 
 #define APP_DEFAULT_ETHERNET_INTERFACE ""   /* will result in selection */
 
-/********************************** Globals ***********************************/
+#define APP_THREAD_PRIORITY   15
+#define APP_THREAD_STACKSIZE  4096 /* bytes */
+#define APP_MAIN_SLEEPTIME_US 5000 * 1000
 
-static app_data_t * gp_appdata = NULL;
-static pnet_t * g_net = NULL;
-static pnet_cfg_t pnet_default_cfg;
+extern bool pnal_does_file_exist (const char * filepath);
 
 /************************* Utilities ******************************************/
 
-int app_set_led (uint16_t id, bool led_state, int verbosity)
-{
-   if (id == APP_DATA_LED_ID)
-   {
-      
-   }
-   else if (id == APP_PROFINET_SIGNAL_LED_ID)
-   {
-      
-   }
-
-   return 0;
-}
-
-void app_get_button (const app_data_t * p_appdata, uint16_t id, bool * p_pressed)
-{
-   *p_pressed = false;
-
-   if (id == 0)
-   {
-      
-   }
-   else if (id == 1)
-   {
-      
-   }
-
-}
-
 static void main_timer_tick (os_timer_t * timer, void * arg)
 {
-   os_event_set (gp_appdata->main_events, APP_EVENT_TIMER);
+   app_data_t * p_appdata = (app_data_t *)arg;
+
+   os_event_set (p_appdata->main_events, APP_EVENT_TIMER);
 }
-
-/* =============== small mini implementation of getopt =============== */
-/* This is just enough to make the parse_commandline_arguments work.   */
-/* It does *not* compare to the real getopt                            */
-
-static char * optarg = NULL;
-static int optind = -1;
-
-static int getopt (int argc, char * argv[], const char * optstring)
-{
-   while (++optind < argc)
-   {
-      if (argv[optind][0] == '-')
-      {
-        optarg = argv[optind + 1];
-        return argv[optind][1];
-      }
-   }
-   return -1;
-}
-
-/* =================================================================== */
 
 void show_usage()
 {
@@ -107,12 +62,14 @@ void show_usage()
    printf ("Also the mandatory Profinet signal LED is controlled by this "
            "application.\n");
    printf ("\n");
-   printf ("The LEDs are controlled by the script set_profinet_leds_linux\n");
+   printf ("The LEDs are controlled by the script set_profinet_leds\n");
    printf ("located in the same directory as the application binary.\n");
    printf ("A version for Raspberry Pi is available, and also a version "
            "writing\n");
    printf ("to plain text files (useful for demo if no LEDs are available).\n");
    printf ("\n");
+   printf ("Assumes the default gateway is found on .1 on same subnet as the "
+           "IP address.\n");
    printf ("\n");
    printf ("Optional arguments:\n");
    printf ("   --help       Show this help text and exit\n");
@@ -124,7 +81,8 @@ void show_usage()
    printf ("   -g           Show stack details and exit. Repeat for more "
            "details.\n");
    printf (
-      "   -i INTERF    Name of Ethernet interface to use. Eg. eth1. Defaults to Console User Selection\n");
+      "   -i INTERF    Name of Ethernet interface to use. Defaults to %s\n",
+      APP_DEFAULT_ETHERNET_INTERFACE);
    printf (
       "   -s NAME      Set station name. Defaults to %s  Only used\n",
       APP_DEFAULT_STATION_NAME);
@@ -138,6 +96,28 @@ void show_usage()
    printf ("\n");
    printf ("p-net revision: " PNET_VERSION "\n");
 }
+
+/* =============== small mini implementation of getopt =============== */
+/* This is just enough to make the parse_commandline_arguments work.   */
+/* It does *not* compare to the real getopt                            */
+
+static char * optarg = NULL;
+static int optind = -1;
+
+static int getopt (int argc, char * argv[], const char * optstring)
+{
+   while (++optind < argc)
+   {
+      if (argv[optind][0] == '-')
+      {
+         optarg = argv[optind + 1];
+         return argv[optind][1];
+      }
+   }
+   return -1;
+}
+
+/* =================================================================== */
 
 /**
  * Parse command line arguments
@@ -164,7 +144,7 @@ struct cmd_args parse_commandline_arguments (int argc, char * argv[])
    strcpy (output_arguments.path_button2, "");
    strcpy (output_arguments.path_storage_directory, "");
    strcpy (output_arguments.station_name, APP_DEFAULT_STATION_NAME);
-   strcpy (output_arguments.eth_interface, APP_DEFAULT_ETHERNET_INTERFACE);
+   strcpy (output_arguments.eth_interfaces, APP_DEFAULT_ETHERNET_INTERFACE);
    output_arguments.verbosity = 0;
    output_arguments.show = 0;
    output_arguments.factory_reset = false;
@@ -188,7 +168,12 @@ struct cmd_args parse_commandline_arguments (int argc, char * argv[])
          output_arguments.remove_files = true;
          break;
       case 'i':
-         strcpy (output_arguments.eth_interface, optarg);
+         if ((strlen (optarg) + 1) > sizeof (output_arguments.eth_interfaces))
+         {
+            printf ("Error: The argument to -i is too long.\n");
+            exit (EXIT_FAILURE);
+         }
+         strcpy (output_arguments.eth_interfaces, optarg);
          break;
       case 's':
          strcpy (output_arguments.station_name, optarg);
@@ -244,32 +229,144 @@ struct cmd_args parse_commandline_arguments (int argc, char * argv[])
    return output_arguments;
 }
 
+/**
+ * Read a bool from a file
+ *
+ * @param filepath      In: Path to file
+ * @return true if file exists and the first character is '1'
+ */
+bool read_bool_from_file (const char * filepath)
+{
+   FILE * fp;
+   char ch;
+   int eof_indicator;
+
+   fp = fopen (filepath, "r");
+   if (fp == NULL)
+   {
+      return false;
+   }
+
+   ch = fgetc (fp);
+   eof_indicator = feof (fp);
+   fclose (fp);
+
+   if (eof_indicator)
+   {
+      return false;
+   }
+   return ch == '1';
+}
+
+void app_get_button (const app_data_t * p_appdata, uint16_t id, bool * p_pressed)
+{
+   if (id == 0)
+   {
+      if (p_appdata->arguments.path_button1[0] != '\0')
+      {
+         *p_pressed = read_bool_from_file (p_appdata->arguments.path_button1);
+      }
+   }
+   else if (id == 1)
+   {
+      if (p_appdata->arguments.path_button2[0] != '\0')
+      {
+         *p_pressed = read_bool_from_file (p_appdata->arguments.path_button2);
+      }
+   }
+   else
+   {
+      *p_pressed = false;
+   }
+}
+
+int app_set_led (uint16_t id, bool led_state, int verbosity)
+{
+   //TODO: No LEDs in Windows
+   return 0;
+}
+
+/**
+ * Run main loop in separate thread
+ *
+ * @param arg              In:    Thread argument   app_data_and_stack_t
+ */
+void pn_main_thread (void * arg)
+{
+   pnet_t * net;
+   app_data_t * p_appdata;
+   app_data_and_stack_t * appdata_and_stack;
+
+   appdata_and_stack = (app_data_and_stack_t *)arg;
+   p_appdata = appdata_and_stack->appdata;
+   net = appdata_and_stack->net;
+
+   app_loop_forever (net, p_appdata);
+
+   os_timer_destroy (p_appdata->main_timer);
+   os_event_destroy (p_appdata->main_events);
+   printf ("Quitting the sample application\n\n");
+}
+
+int app_pnet_cfg_init_storage (pnet_cfg_t * p_cfg, struct cmd_args * p_args)
+{
+   strcpy (p_cfg->file_directory, p_args->path_storage_directory);
+
+   if (p_args->verbosity > 0)
+   {
+      printf ("Storage directory:    %s\n\n", p_cfg->file_directory);
+   }
+
+   /* Validate paths */
+   if (!pnal_does_file_exist (p_cfg->file_directory))
+   {
+      printf (
+         "Error: The given storage directory does not exist: %s\n",
+         p_cfg->file_directory);
+      return -1;
+   }
+
+   if (p_args->path_button1[0] != '\0')
+   {
+      if (!pnal_does_file_exist (p_args->path_button1))
+      {
+         printf (
+            "Error: The given input file for Button1 does not exist: %s\n",
+            p_args->path_button1);
+         return -1;
+      }
+   }
+
+   if (p_args->path_button2[0] != '\0')
+   {
+      if (!pnal_does_file_exist (p_args->path_button2))
+      {
+         printf (
+            "Error: The given input file for Button2 does not exist: %s\n",
+            p_args->path_button2);
+         return -1;
+      }
+   }
+   return 0;
+}
+
 /****************************** Main ******************************************/
 
 int main (int argc, char * argv[])
 {
-   int ret = -1;
+   pnet_t * net;
+   pnet_cfg_t pnet_default_cfg;
+   app_data_and_stack_t appdata_and_stack;
    app_data_t appdata;
-   pnal_ethaddr_t macbuffer;
-   pnal_ipaddr_t ip;
-   pnal_ipaddr_t netmask;
-   pnal_ipaddr_t gateway;
+   int ret = 0;
 
-   g_net = NULL;
-
-   /* Prepare appdata */
    memset (&appdata, 0, sizeof (appdata));
    appdata.alarm_allowed = true;
-   appdata.arguments = parse_commandline_arguments (argc, argv); /* Parse and
-                                                                    display
-                                                                    command line
-                                                                    arguments */
-   appdata.main_events = os_event_create();
-   appdata.main_timer =
-      os_timer_create (APP_TICK_INTERVAL_US, main_timer_tick, NULL, false);
-   gp_appdata = &appdata;
 
-   printf ("\n** Profinet sample application **\n");
+   /* Parse and display command line arguments */
+   appdata.arguments = parse_commandline_arguments (argc, argv);
+
+   printf ("\n** Starting Profinet sample application " PNET_VERSION " **\n");
    if (appdata.arguments.verbosity > 0)
    {
       printf (
@@ -277,94 +374,97 @@ int main (int argc, char * argv[])
          PNET_MAX_SLOTS);
       printf ("P-net log level:      %u (DEBUG=0, FATAL=4)\n", LOG_LEVEL);
       printf ("App verbosity level:  %u\n", appdata.arguments.verbosity);
-      printf ("Ethernet interface:   %s\n", appdata.arguments.eth_interface);
+      printf ("Number of ports:      %u\n", PNET_MAX_PORT);
+      printf ("Network interfaces:   %s\n", appdata.arguments.eth_interfaces);
       printf ("Button1 file:         %s\n", appdata.arguments.path_button1);
       printf ("Button2 file:         %s\n", appdata.arguments.path_button2);
-      printf ("Default station name: %s\n", appdata.arguments.station_name);
+      printf ("Station name:         %s\n", appdata.arguments.station_name);
    }
 
    /* Select network adapter */
    pcap_helper_init();
-   if (appdata.arguments.eth_interface[0] == 0)
-      if (pcap_helper_list_and_select_adapter (appdata.arguments.eth_interface) < 0)
+   if (appdata.arguments.eth_interfaces[0] == 0)
+      if (pcap_helper_list_and_select_adapter (appdata.arguments.eth_interfaces) < 0)
          return -1;
-#if PNET_MAX_PORT >= 2
-   if (appdata.arguments.eth_interface2[0] == 0) /* Currently this doesn't exists */
-      if (pcap_helper_list_and_select_adapter (appdata.arguments.eth_interface2) < 0)
-         return -1;
-#endif
 
-   /* Read IP, netmask, gateway and MAC address from operating system */
-   ret = pnal_get_macaddress (appdata.arguments.eth_interface, &macbuffer);
-   if (ret < 0)
+   app_pnet_cfg_init_default (&pnet_default_cfg);
+   pnet_default_cfg.cb_arg = (void *)&appdata;
+   strcpy (pnet_default_cfg.station_name, appdata.arguments.station_name);
+
+   ret = app_pnet_cfg_init_netifs (
+      appdata.arguments.eth_interfaces,
+      &pnet_default_cfg,
+      appdata.arguments.verbosity);
+   if (ret != 0)
    {
-      printf (
-         "Error: The given Ethernet interface does not exist: %s\n",
-         appdata.arguments.eth_interface);
-      return -1;
+      exit (EXIT_FAILURE);
    }
 
-   ip = pnal_get_ip_address (appdata.arguments.eth_interface);
-   netmask = pnal_get_netmask (appdata.arguments.eth_interface);
-   gateway = pnal_get_gateway (appdata.arguments.eth_interface);
-   if (gateway == IP_INVALID)
+   ret = app_pnet_cfg_init_storage (&pnet_default_cfg, &appdata.arguments);
+   if (ret != 0)
    {
-      printf (
-         "Warning: Invalid gateway IP address for Ethernet interface: %s\n",
-         appdata.arguments.eth_interface);
-      //return -1; ... gateways can be empty for various reasons
+      exit (EXIT_FAILURE);
    }
 
-   if (appdata.arguments.verbosity > 0)
+   /* Remove files and exit */
+   if (appdata.arguments.remove_files == true)
    {
-      app_print_network_details (&macbuffer, ip, netmask, gateway);
+      printf ("\nRemoving stored files\n");
+      (void)pnet_remove_data_files (pnet_default_cfg.file_directory);
+      exit (EXIT_SUCCESS);
    }
 
-   /* Prepare stack config with IP address, gateway, station name etc */
-   app_adjust_stack_configuration (&pnet_default_cfg);
-   app_copy_ip_to_struct (&pnet_default_cfg.if_cfg.ip_cfg.ip_addr, ip);
-   app_copy_ip_to_struct (&pnet_default_cfg.if_cfg.ip_cfg.ip_gateway, gateway);
-   app_copy_ip_to_struct (&pnet_default_cfg.if_cfg.ip_cfg.ip_mask, netmask);
-   strcpy (pnet_default_cfg.station_name, gp_appdata->arguments.station_name);
-   strcpy (
-      pnet_default_cfg.file_directory,
-      appdata.arguments.path_storage_directory);
-
-   strncpy (
-      pnet_default_cfg.if_cfg.main_port.if_name,
-      appdata.arguments.eth_interface,
-      PNET_INTERFACE_NAME_MAX_SIZE);
-   memcpy (
-      pnet_default_cfg.if_cfg.main_port.eth_addr.addr,
-      macbuffer.addr,
-      sizeof (pnet_ethaddr_t));
-
-   strncpy (
-      pnet_default_cfg.if_cfg.ports[0].phy_port.if_name,
-      appdata.arguments.eth_interface,
-      PNET_INTERFACE_NAME_MAX_SIZE);
-   memcpy (
-      pnet_default_cfg.if_cfg.ports[0].phy_port.eth_addr.addr,
-      macbuffer.addr,
-      sizeof (pnet_ethaddr_t));
-
-   pnet_default_cfg.cb_arg = (void *)gp_appdata;
-
-   /* Initialize Profinet stack */
-   g_net = pnet_init (&pnet_default_cfg);
-   if (g_net == NULL)
+   /* Initialize profinet stack */
+   net = pnet_init (&pnet_default_cfg);
+   if (net == NULL)
    {
-      printf ("Failed to initialize p-net application.\n");
-      return -1;
+      printf ("Failed to initialize p-net. Do you have enough Ethernet "
+              "interface permission?\n");
+      exit (EXIT_FAILURE);
    }
 
-   os_timer_start (gp_appdata->main_timer);
+   /* Do factory reset and exit */
+   if (appdata.arguments.factory_reset == true)
+   {
+      printf ("\nPerforming factory reset\n");
+      (void)pnet_factory_reset (net);
+      exit (EXIT_SUCCESS);
+   }
 
-   app_loop_forever (g_net, &appdata);
+   /* Show stack info and exit */
+   if (appdata.arguments.show > 0)
+   {
+      int level = 0xFFFF;
 
-   os_timer_destroy (appdata.main_timer);
-   os_event_destroy (appdata.main_events);
-   printf ("Quitting the sample application\n\n");
+      printf ("\nShowing stack information.\n\n");
+      if (appdata.arguments.show == 1)
+      {
+         level = 0x2010; /* See documentation for pnet_show() */
+      }
+
+      pnet_show (net, level);
+      exit (EXIT_SUCCESS);
+   }
+
+   /* Start thread and timer */
+   appdata_and_stack.appdata = &appdata;
+   appdata_and_stack.net = net;
+   appdata.main_events = os_event_create();
+   appdata.main_timer = os_timer_create (
+      APP_TICK_INTERVAL_US,
+      main_timer_tick,
+      (void *)&appdata,
+      false);
+   os_thread_create (
+      "pn_main_thread",
+      APP_THREAD_PRIORITY,
+      APP_THREAD_STACKSIZE,
+      pn_main_thread,
+      (void *)&appdata_and_stack);
+   os_timer_start (appdata.main_timer);
+
+   for (;;)
+      os_usleep (APP_MAIN_SLEEPTIME_US);
 
    return 0;
 }
