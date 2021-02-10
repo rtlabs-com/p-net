@@ -2816,7 +2816,11 @@ struct pnet
     */
    struct
    {
-      pf_lldp_name_of_device_mode_t name_of_device_mode;
+      struct
+      {
+         bool active;
+         pf_lldp_name_of_device_mode_t mode;
+      } name_of_device_mode;
       pf_port_t port[PNET_MAX_PORT];
    } interface;
 };
