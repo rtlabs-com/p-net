@@ -2675,13 +2675,8 @@ typedef struct pf_lldp_peer_info
    pf_lldp_signal_delay_t port_delay;
    uint8_t port_status[4];
    pnet_ethaddr_t mac_address;
-   uint16_t media_type;
    uint32_t line_delay;
-   uint32_t domain_boundary;
-   uint32_t multicast_boundary;
-   uint8_t link_state_port;
    pf_lldp_link_status_t phy_config;
-   pf_lldp_peer_to_peer_boundary_t peer_boundary;
 } pf_lldp_peer_info_t;
 
 typedef struct pf_pdport
