@@ -4182,14 +4182,13 @@ void pf_put_pd_interface_adj (
 
    pf_put_padding (2, res_len, p_bytes, p_pos);
 
-   /* Slot and subslot */
-   pf_put_uint16 (is_big_endian, PNET_SLOT_DAP_IDENT, res_len, p_bytes, p_pos);
-   pf_put_uint16 (is_big_endian, subslot, res_len, p_bytes, p_pos);
-
    /* MultipleInterfaceMode */
    temp_u32 = 0;
    pf_put_bits (name_of_device_mode, 1, 0, &temp_u32);
-   pf_put_uint16 (is_big_endian, temp_u32, res_len, p_bytes, p_pos);
+   pf_put_uint32 (is_big_endian, temp_u32, res_len, p_bytes, p_pos);
+
+   /* Pad with zeroes until block length is a multiple of 4 bytes */
+   pf_put_padding_align (block_pos, 4, res_len, p_bytes, p_pos);
 
    /* Finally insert the block length into the block header */
    block_len = *p_pos - (block_pos + 4);
