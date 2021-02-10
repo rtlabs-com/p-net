@@ -496,7 +496,7 @@ void PnetIntegrationTestBase::cfg_init()
    strcpy (
       pnet_default_cfg.if_cfg.ports[0].phy_port.if_name,
       TEST_INTERFACE_NAME);
-   strcpy (pnet_default_cfg.if_cfg.ports[0].port_id, "port-001");
+   strcpy (pnet_default_cfg.if_cfg.ports[0].port_name, "port-001");
    pnet_default_cfg.if_cfg.ports[0].phy_port.eth_addr.addr[0] = 0x12;
    pnet_default_cfg.if_cfg.ports[0].phy_port.eth_addr.addr[1] = 0x34;
    pnet_default_cfg.if_cfg.ports[0].phy_port.eth_addr.addr[2] = 0x00;
@@ -621,7 +621,7 @@ void PnetIntegrationTestBase::send_data (uint8_t * data_packet, uint16_t len)
       *(p_ctr + 1) = appdata.data_cycle_ctr & 0xff;
 
       p_buf->len = len;
-      ret = pf_eth_recv (net, p_buf);
+      ret = pf_eth_recv (mock_os_data.eth_if_handle, net, p_buf);
       EXPECT_EQ (ret, 1);
       if (ret == 0)
       {

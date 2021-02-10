@@ -23,7 +23,7 @@
 #include <lwip/stats.h>
 #include <lwip/tcpip.h>
 #include <lwip/opt.h>
-
+#include <lwip/snmp.h>
 #include <netif/etharp.h>
 
 #include <string.h>
@@ -49,6 +49,10 @@ COMPILETIME_ASSERT ((BUFFER_SIZE % 4) == 0);
 #define DPRINT(...)
 #define DEBUG_ASSERT(expression)
 #endif /* DEBUG */
+
+#define IS_UNICAST(p) ((((uint8_t *)(p)->payload)[0] & 1) == 0)
+
+#define MII_ANAR 0x04 /* Auto-Negotiation Advertisement Register */
 
 typedef struct eth_mac
 {
@@ -238,9 +242,19 @@ typedef struct dwmac1000
 
    /* MIIAR CR divider */
    uint32_t cr;
+
+   /* Link state retrieved in last call to probe function
+    * See defines PHY_LINK_OK, PHY_LINK_100MBIT, etc.
+    */
+   uint8_t last_link_state;
+
+   /* Contents of Auto-Negotiation Advertisement Register read from
+    * PHY at startup.
+    */
+   uint16_t anar;
 } dwmac1000_t;
 
-static pnal_eth_callback_t * input_rx_hook = NULL;
+static pnal_eth_sys_recv_callback_t * input_rx_hook = NULL;
 static void * input_rx_arg = NULL;
 
 #ifdef DEBUG_DATA
@@ -346,6 +360,10 @@ static void dwmac1000_hw_init (struct netif * netif, const dwmac1000_cfg_t * cfg
    DEBUG_ASSERT (dwmac1000->phy->ops->start != NULL);
    dwmac1000->phy->ops->start (dwmac1000->phy);
 
+   /* Read Auto-Negotiation Advertisement Register (ANAR) from PHY */
+   dwmac1000->anar =
+      dwmac1000_read_phy (dwmac1000, dwmac1000->phy->address, MII_ANAR);
+
    /* Enable receiver, transmitter */
    mac->cr = CR_RE | CR_TE;
 
@@ -432,6 +450,7 @@ static err_t dwmac1000_hw_transmit_frame (struct netif * netif, struct pbuf * p)
    if (p->tot_len > BUFFER_SIZE)
    {
       DPRINT ("transmit_frame: frame is too big\n");
+      MIB2_STATS_NETIF_INC (netif, ifouterrors);
       LINK_STATS_INC (link.drop);
       LINK_STATS_INC (link.lenerr);
       return ERR_OK;
@@ -452,6 +471,7 @@ static err_t dwmac1000_hw_transmit_frame (struct netif * netif, struct pbuf * p)
    {
       /* No free descriptors, packet dropped */
       LINK_STATS_INC (link.drop);
+      MIB2_STATS_NETIF_INC (netif, ifoutdiscards);
       goto exit;
    }
 
@@ -478,6 +498,16 @@ static err_t dwmac1000_hw_transmit_frame (struct netif * netif, struct pbuf * p)
    /* Move to next descriptor */
    pTx = pTx->next;
    dwmac1000->pTx = pTx;
+
+   MIB2_STATS_NETIF_ADD (netif, ifoutoctets, p->tot_len);
+   if (IS_UNICAST (p))
+   {
+      MIB2_STATS_NETIF_INC (netif, ifoutucastpkts);
+   }
+   else
+   {
+      MIB2_STATS_NETIF_INC (netif, ifoutnucastpkts);
+   }
 
    LINK_STATS_INC (link.xmit);
 
@@ -517,8 +547,9 @@ static void dwmac1000_isr (void * arg)
  * Should allocate a pbuf and transfer the bytes of the incoming
  * packet from the interface into the pbuf.
  */
-static struct pbuf * dwmac1000_hw_get_received_frame (dwmac1000_t * dwmac1000)
+static struct pbuf * dwmac1000_hw_get_received_frame (struct netif * netif)
 {
+   dwmac1000_t * dwmac1000 = netif->state;
    struct pbuf * p = NULL;
    struct pbuf * q = NULL;
    uint16_t length;
@@ -560,6 +591,17 @@ static struct pbuf * dwmac1000_hw_get_received_frame (dwmac1000_t * dwmac1000)
       DEBUG_ASSERT (q->len == q->tot_len);
       pRx->buff = q->payload;
       pRx->pbuf = q;
+
+      MIB2_STATS_NETIF_ADD (netif, ifinoctets, p->tot_len);
+      if (IS_UNICAST (p))
+      {
+         MIB2_STATS_NETIF_INC (netif, ifinucastpkts);
+      }
+      else
+      {
+         MIB2_STATS_NETIF_INC (netif, ifinnucastpkts);
+      }
+
       LINK_STATS_INC (link.recv);
    }
    else
@@ -567,6 +609,7 @@ static struct pbuf * dwmac1000_hw_get_received_frame (dwmac1000_t * dwmac1000)
       p = NULL;
       LINK_STATS_INC (link.memerr);
       LINK_STATS_INC (link.drop);
+      MIB2_STATS_NETIF_INC (netif, ifindiscards);
    }
 
 done:
@@ -600,7 +643,7 @@ static void dwmac1000_input (dwmac1000_t * dwmac1000, struct netif * netif)
    struct pbuf * p;
 
    /* Move received packet into a new pbuf */
-   p = dwmac1000_hw_get_received_frame (dwmac1000);
+   p = dwmac1000_hw_get_received_frame (netif);
    if (p == NULL)
    {
       /* No packet could be read, silently ignore this */
@@ -613,7 +656,7 @@ static void dwmac1000_input (dwmac1000_t * dwmac1000, struct netif * netif)
    /* Pass pbuf to rx hook if set */
    if (input_rx_hook != NULL)
    {
-      handled = input_rx_hook (input_rx_arg, p);
+      handled = input_rx_hook (netif, input_rx_arg, p);
       if (handled != 0)
       {
          return;
@@ -710,21 +753,49 @@ static dev_state_t dwmac1000_probe (drv_t * drv)
 
    link_state = dwmac1000->phy->ops->get_link_state (dwmac1000->phy);
 
+   /* Save link state for IOCTL_NET_GET_STATUS */
+   dwmac1000->last_link_state = link_state;
+
    return (link_state & PHY_LINK_OK) ? StateAttached : StateDetached;
+}
+
+static void dwmac1000_get_status (
+   dwmac1000_t * dwmac1000,
+   struct netif * netif,
+   eth_status_t * link)
+{
+   if (dwmac1000->phy->loopback_mode)
+   {
+      link->is_autonegotiation_supported = false;
+      link->is_autonegotiation_enabled = false;
+      link->anar = 0x0000;
+   }
+   else
+   {
+      link->is_autonegotiation_supported = true;
+      link->is_autonegotiation_enabled = true;
+      link->anar = dwmac1000->anar;
+   }
+
+   link->state = dwmac1000->last_link_state;
+   link->is_operational = netif_is_up (netif) && netif_is_link_up (netif);
 }
 
 int eth_ioctl (drv_t * drv, void * arg, int req, void * param)
 {
+   dwmac1000_t * dwmac1000 = (dwmac1000_t *)drv;
    int status = EARG;
 
-   if (req == IOCTL_NET_SET_RX_HOOK)
+   switch (req)
    {
-      input_rx_hook = (pnal_eth_callback_t *)param;
+   case IOCTL_NET_SET_RX_HOOK:
+      input_rx_hook = (pnal_eth_sys_recv_callback_t *)param;
       input_rx_arg = arg;
       return 0;
-   }
-   else
-   {
+   case IOCTL_NET_GET_STATUS:
+      dwmac1000_get_status (dwmac1000, arg, param);
+      return 0;
+   default:
       UASSERT (0, EARG);
    }
 
@@ -767,6 +838,8 @@ drv_t * dwmac1000_init (
    netif->hwaddr_len = ETHARP_HWADDR_LEN;
    memcpy (netif->hwaddr, cfg->mac_address, sizeof (netif->hwaddr));
 
+   MIB2_INIT_NETIF (netif, snmp_ifType_ethernet_csmacd, 0);
+
    /* Initialise driver state */
    dwmac1000->phy = phy;
    dwmac1000->irq = cfg->irq;
@@ -774,6 +847,7 @@ drv_t * dwmac1000_init (
    dwmac1000->mac = (eth_mac_t *)cfg->base;
    dwmac1000->mmc = (eth_mmc_t *)(cfg->base + 0x100);
    dwmac1000->dma = (eth_dma_t *)(cfg->base + 0x1000);
+   dwmac1000->last_link_state = 0x00;
 
    /* Create receive task */
    dwmac1000->tRcv = task_spawn (

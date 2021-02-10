@@ -302,6 +302,14 @@ Use an ``<MAUTypeItem>`` element to describe the Medium Attachment Unit type,
 which can be radio (0), copper at 100 Mbit/s (16) or fiber optics.
 
 
+Additional ports
+----------------
+Additional physical ports are created by adding ``<PortSubmoduleItem>`` nodes
+to the ``<SystemDefinedSubmoduleList>`` node.
+The ID, submodule identity number and subslot number shall be unique for
+all ports.
+
+
 Details on the module list
 --------------------------
 Profinet field devices can have different hardware modules, therefore there is

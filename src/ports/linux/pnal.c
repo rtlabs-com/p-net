@@ -35,6 +35,7 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <limits.h>
 #include <signal.h>
 #include <stdarg.h>
@@ -54,11 +55,14 @@ int pnal_save_file (
    size_t size_2)
 {
    int ret = 0; /* Assume everything goes well */
-   FILE * outputfile;
+   int outputfile;
 
    /* Open file */
-   outputfile = fopen (fullpath, "wb");
-   if (outputfile == NULL)
+   outputfile = open (
+      fullpath,
+      O_WRONLY | O_CREAT | O_TRUNC | O_SYNC,
+      S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+   if (outputfile == -1)
    {
       LOG_ERROR (
          PF_PNAL_LOG,
@@ -72,7 +76,7 @@ int pnal_save_file (
    LOG_DEBUG (PF_PNAL_LOG, "PNAL(%d): Saving to file %s\n", __LINE__, fullpath);
    if (size_1 > 0)
    {
-      if (fwrite (object_1, size_1, 1, outputfile) != 1)
+      if (write (outputfile, object_1, size_1) == -1)
       {
          ret = -1;
          LOG_ERROR (
@@ -84,7 +88,7 @@ int pnal_save_file (
    }
    if (size_2 > 0 && ret == 0)
    {
-      if (fwrite (object_2, size_2, 1, outputfile) != 1)
+      if (write (outputfile, object_2, size_2) == -1)
       {
          ret = -1;
          LOG_ERROR (
@@ -96,7 +100,10 @@ int pnal_save_file (
    }
 
    /* Close file */
-   fclose (outputfile);
+   if (close (outputfile) != 0)
+   {
+      ret = -1;
+   }
 
    return ret;
 }
@@ -385,6 +392,12 @@ int pnal_eth_get_status (const char * interface_name, pnal_eth_status_t * status
 
       ret = 0;
    }
+
+   if (ioctl (control_socket, SIOCGIFFLAGS, &ifr) >= 0)
+   {
+      status->running = (ifr.ifr_flags & IFF_RUNNING) ? true : false;
+   }
+
    close (control_socket);
 
    return ret;
@@ -464,7 +477,13 @@ pnal_ipaddr_t pnal_get_ip_address (const char * interface_name)
    fd = socket (AF_INET, SOCK_DGRAM, 0);
    ifr.ifr_addr.sa_family = AF_INET;
    strncpy (ifr.ifr_name, interface_name, IFNAMSIZ - 1);
-   ioctl (fd, SIOCGIFADDR, &ifr);
+
+   if (ioctl (fd, SIOCGIFADDR, &ifr) != 0)
+   {
+      close (fd);
+      return PNAL_IPADDR_INVALID;
+   }
+
    ip = ntohl (((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr.s_addr);
    close (fd);
 
@@ -481,7 +500,13 @@ pnal_ipaddr_t pnal_get_netmask (const char * interface_name)
 
    ifr.ifr_addr.sa_family = AF_INET;
    strncpy (ifr.ifr_name, interface_name, IFNAMSIZ - 1);
-   ioctl (fd, SIOCGIFNETMASK, &ifr);
+
+   if (ioctl (fd, SIOCGIFNETMASK, &ifr) != 0)
+   {
+      close (fd);
+      return PNAL_IPADDR_INVALID;
+   }
+
    netmask = ntohl (((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr.s_addr);
    close (fd);
 
@@ -496,6 +521,11 @@ pnal_ipaddr_t pnal_get_gateway (const char * interface_name)
    pnal_ipaddr_t gateway;
 
    ip = pnal_get_ip_address (interface_name);
+   if (ip == PNAL_IPADDR_INVALID)
+   {
+      return PNAL_IPADDR_INVALID;
+   }
+
    gateway = (ip & 0xFFFFFF00) | 0x00000001;
 
    return gateway;

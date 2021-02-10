@@ -28,42 +28,57 @@
 #define MAX_NUMBER_OF_IF 1
 #define NET_DRIVER_NAME  "/net"
 
-static struct netif * interface[MAX_NUMBER_OF_IF];
+typedef struct pnal_eth_handle_t
+{
+   struct netif * netif;
+   pnal_eth_callback_t * eth_rx_callback;
+   void * arg;
+} pnal_eth_handle_t;
+
+static pnal_eth_handle_t interface[MAX_NUMBER_OF_IF];
 static int nic_index = 0;
+
+static int pnal_eth_sys_recv (
+   struct netif * netif,
+   void * arg,
+   pnal_buf_t * p_buf)
+{
+   int ret = -1;
+   pnal_eth_handle_t * handle;
+   if (arg != NULL && p_buf != NULL)
+   {
+      handle = (pnal_eth_handle_t *)arg;
+      ret = handle->eth_rx_callback (handle, handle->arg, p_buf);
+   }
+   return ret;
+}
 
 pnal_eth_handle_t * pnal_eth_init (
    const char * if_name,
+   pnal_ethertype_t receive_type,
    pnal_eth_callback_t * callback,
    void * arg)
 {
-   pnal_eth_handle_t * handle;
+   pnal_eth_handle_t * handle = NULL;
    struct netif * found_if;
    drv_t * drv;
 
-   handle = malloc (sizeof (pnal_eth_handle_t));
-   UASSERT (handle != NULL, EMEM);
-
-   handle->arg = arg;
-   handle->callback = callback;
-   handle->if_id = -1;
+   (void)receive_type; /* Ignore, for now all frames will be received. */
 
    if (nic_index < MAX_NUMBER_OF_IF)
    {
       drv = dev_find_driver (NET_DRIVER_NAME);
-      if (drv != NULL)
+      found_if = netif_find (if_name);
+      if (drv != NULL && found_if != NULL)
       {
-         eth_ioctl (drv, arg, IOCTL_NET_SET_RX_HOOK, callback);
+         handle = &interface[nic_index];
+         nic_index++;
 
-         found_if = netif_find (if_name);
-         if (found_if == NULL)
-         {
-            interface[nic_index] = netif_default;
-         }
-         else
-         {
-            interface[nic_index] = found_if;
-         }
-         handle->if_id = nic_index++;
+         handle->arg = arg;
+         handle->eth_rx_callback = callback;
+         handle->netif = found_if;
+
+         eth_ioctl (drv, handle, IOCTL_NET_SET_RX_HOOK, pnal_eth_sys_recv);
       }
       else
       {
@@ -71,15 +86,7 @@ pnal_eth_handle_t * pnal_eth_init (
       }
    }
 
-   if (handle->if_id > -1)
-   {
-      return handle;
-   }
-   else
-   {
-      free (handle);
-      return NULL;
-   }
+   return handle;
 }
 
 int pnal_eth_send (pnal_eth_handle_t * handle, pnal_buf_t * buf)
@@ -91,9 +98,9 @@ int pnal_eth_send (pnal_eth_handle_t * handle, pnal_buf_t * buf)
       /* TODO: remove tot_len from os_buff */
       buf->tot_len = buf->len;
 
-      if (interface[handle->if_id]->linkoutput != NULL)
+      if (handle->netif->linkoutput != NULL)
       {
-         interface[handle->if_id]->linkoutput (interface[handle->if_id], buf);
+         handle->netif->linkoutput (handle->netif, buf);
          ret = buf->len;
       }
    }

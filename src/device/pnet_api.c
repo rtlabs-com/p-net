@@ -14,7 +14,6 @@
  ********************************************************************/
 
 #ifdef UNIT_TEST
-#define pnal_eth_init  mock_pnal_eth_init
 #define pnal_snmp_init mock_pnal_snmp_init
 #endif
 
@@ -24,14 +23,12 @@
 #include "pf_includes.h"
 #include "pf_block_reader.h"
 
-int pnet_init_only (
-   pnet_t * net,
-   const pnet_cfg_t * p_cfg)
+int pnet_init_only (pnet_t * net, const pnet_cfg_t * p_cfg)
 {
    memset (net, 0, sizeof (*net));
 
-   net->cmdev_initialized = false; /* TODO How to handle that pf_cmdev_exit() is
-                                      used before pf_cmdev_init()? */
+   net->cmdev_initialized = false; /* TODO How to handle that pf_cmdev_exit()
+                                      is used before pf_cmdev_init()? */
 
    pf_cmsu_init (net);
    pf_cmwrr_init (net);
@@ -45,22 +42,19 @@ int pnet_init_only (
       return -1;
    }
 
-   /* Initialize everything (and the DCP protocol) */
-   /* First initialize the network interface */
-   net->eth_handle =
-      pnal_eth_init (p_cfg->if_cfg.main_port.if_name, pf_eth_recv, (void *)net);
-   if (net->eth_handle == NULL)
+   if (pf_eth_init (net, p_cfg) != 0)
    {
+      LOG_ERROR (PNET_LOG, "Failed to initialise network interfaces\n");
       return -1;
    }
 
-   pf_eth_init (net);
    pf_scheduler_init (net, p_cfg->tick_us);
    pf_cmina_init (net); /* Read from permanent pool */
 
    pf_dcp_exit (net); /* Prepare for re-init. */
    pf_dcp_init (net); /* Start DCP */
    pf_port_init (net);
+   net->interface.name_of_device_mode = PF_LLDP_NAME_OF_DEVICE_MODE_STANDARD;
    pf_lldp_init (net);
    pf_pdport_init (net);
 
@@ -81,8 +75,7 @@ int pnet_init_only (
    return 0;
 }
 
-pnet_t * pnet_init (
-   const pnet_cfg_t * p_cfg)
+pnet_t * pnet_init (const pnet_cfg_t * p_cfg)
 {
    pnet_t * net = NULL;
 
@@ -484,7 +477,7 @@ int pnet_alarm_send_ack (
    return ret;
 }
 
-/************************** Low-level diagnosis functions*********************/
+/************************** Low-level diagnosis functions ******************/
 
 int pnet_diag_add (
    pnet_t * net,
@@ -545,7 +538,7 @@ int pnet_diag_remove (
       usi);
 }
 
-/************************** Diagnosis in standard format *********************/
+/************************** Diagnosis in standard format *******************/
 
 int pnet_diag_std_add (
    pnet_t * net,
@@ -596,7 +589,7 @@ int pnet_diag_std_remove (
       ext_ch_error_type);
 }
 
-/************************** Diagnosis in USI format **************************/
+/************************** Diagnosis in USI format ************************/
 
 int pnet_diag_usi_add (
    pnet_t * net,

@@ -77,7 +77,7 @@ static inline uint32_t atomic_fetch_sub (atomic_int * p, uint32_t v)
 
 /** Including termination */
 #define PF_ALIAS_NAME_MAX_SIZE                                                 \
-   (PNET_STATION_NAME_MAX_SIZE + PNET_PORT_ID_MAX_SIZE)
+   (PNET_STATION_NAME_MAX_SIZE + PNET_PORT_NAME_MAX_SIZE)
 
 /************************* Diagnosis ******************************************/
 
@@ -223,6 +223,32 @@ typedef enum pf_epmapper_opnum_values
    PF_RPC_EPM_OPNUM_MGMT_DELETE,
 } pf_epmapper_opnum_values_t;
 
+/* PN-AL-protocol (Mar20) Table 725 */
+typedef enum pf_link_state_link
+{
+   PF_PD_LINK_STATE_LINK_RESERVED = 0,
+   PF_PD_LINK_STATE_LINK_UP = 1,
+   PF_PD_LINK_STATE_LINK_DOWN = 2,
+   PF_PD_LINK_STATE_LINK_TESTING = 3,
+   PF_PD_LINK_STATE_LINK_UNKNOWN = 4,
+   PF_PD_LINK_STATE_LINK_DORMANT = 5,
+   PF_PD_LINK_STATE_LINK_NOTPRESENT = 6,
+   PF_PD_LINK_STATE_LINK_LOWERLAYERDOWN = 7
+} pf_link_state_link_t;
+
+/* PN-AL-protocol (Mar20) Table 726 */
+typedef enum pf_link_state_port
+{
+   PF_PD_LINK_STATE_PORT_UNKNOWN = 0,
+   PF_PD_LINK_STATE_PORT_DISABLED = 1,
+   PF_PD_LINK_STATE_PORT_BLOCKING = 2,
+   PF_PD_LINK_STATE_PORT_LISTENING = 3,
+   PF_PD_LINK_STATE_PORT_LEARNING = 4,
+   PF_PD_LINK_STATE_PORT_FORWARDING = 5,
+   PF_PD_LINK_STATE_PORT_BROKEN = 6
+} pf_link_state_port_t;
+
+/* PN-AL-protocol (Mar20) Table 727 */
 typedef enum pf_mediatype_values
 {
    PF_PD_MEDIATYPE_UNKNOWN = 0,
@@ -548,6 +574,7 @@ typedef enum pf_index_values
    PF_IDX_SUB_DIAGNOSIS_CH = 0x800a,
    PF_IDX_SUB_DIAGNOSIS_ALL = 0x800b,
    PF_IDX_SUB_DIAGNOSIS_DMQS = 0x800c,
+
    PF_IDX_SUB_DIAG_MAINT_REQ_CH = 0x8010,
    PF_IDX_SUB_DIAG_MAINT_DEM_CH = 0x8011,
    PF_IDX_SUB_DIAG_MAINT_REQ_ALL = 0x8012,
@@ -556,7 +583,6 @@ typedef enum pf_index_values
    PF_IDX_SUB_SUBSTITUTE = 0x801e,
 
    PF_IDX_SUB_PDIR = 0x8020,
-
    PF_IDX_SUB_PDPORTDATAREALEXT = 0x8027,
    PF_IDX_SUB_INPUT_DATA = 0x8028,
    PF_IDX_SUB_OUTPUT_DATA = 0x8029,
@@ -564,8 +590,8 @@ typedef enum pf_index_values
    PF_IDX_SUB_PDPORT_DATA_CHECK = 0x802b,
    PF_IDX_SUB_PDIR_DATA = 0x802c,
    PF_IDX_SUB_PDSYNC_ID0 = 0x802d,
-
    PF_IDX_SUB_PDPORT_DATA_ADJ = 0x802f,
+
    PF_IDX_SUB_ISOCHRONUOUS_DATA = 0x8030,
    PF_IDX_SUB_PDTIME = 0x8031,
 
@@ -581,6 +607,7 @@ typedef enum pf_index_values
    PF_IDX_SUB_PDPORT_FO_REAL = 0x8060,
    PF_IDX_SUB_PDPORT_FO_CHECK = 0x8061,
    PF_IDX_SUB_PDPORT_FO_ADJUST = 0x8062,
+   PF_IDX_SUB_PDPORT_SPF_CHECK = 0x8063,
 
    PF_IDX_SUB_PDNC_CHECK = 0x8070,
    PF_IDX_SUB_PDINTF_ADJUST = 0x8071,
@@ -594,6 +621,15 @@ typedef enum pf_index_values
    PF_IDX_SUB_COMBINED_OBJ_CONTAINER = 0x80b0,
 
    PF_IDX_SUB_RS_ADJUST_OBSERVER = 0x80cf,
+
+   PF_IDX_TSN_NETWORK_CONTROL_DATA_REAL = 0x80f0,
+   PF_IDX_TSN_STREAM_PATH_DATA = 0x80f1,
+   PF_IDX_TSN_SYNC_TREE_DATA = 0x80f2,
+   PF_IDX_TSN_UPLOAD_NETWORK_ATTRIBUTES = 0x80f3,
+   PF_IDX_TSN_EXPECTED_NETWORK_ATTRIBUTES = 0x80f4,
+   PF_IDX_TSN_NETWORK_CONTROL_DATA_ADJUST = 0x80f5,
+
+   PF_IDX_SUB_PDINTF_SECURITY_ADJUST = 0x8200,
 
    PF_IDX_SUB_IM_0 = 0xaff0,
    PF_IDX_SUB_IM_1 = 0xaff1,
@@ -641,6 +677,7 @@ typedef enum pf_index_values
    PF_IDX_AR_PE_ENTITY_STATUS_DATA = 0xe031,
 
    PF_IDX_AR_WRITE_MULTIPLE = 0xe040,
+   PF_IDX_APPLICATION_READY = 0xe041, /* Closes parameterization phase */
 
    PF_IDX_AR_FSU_DATA_ADJUST = 0xe050,
 
@@ -687,6 +724,11 @@ typedef enum pf_index_values
    PF_IDX_DEV_ASSET_MANAGEMENT_8 = 0xf887,
    PF_IDX_DEV_ASSET_MANAGEMENT_9 = 0xf888,
    PF_IDX_DEV_ASSET_MANAGEMENT_10 = 0xf889,
+
+   PF_IDX_TSN_STREAM_ADD = 0xf8f0,
+   PF_IDX_PDRSI_INSTANCDES = 0xf8f1,
+   PF_IDX_TSN_STREAM_REMOVE = 0xf8f2,
+   PF_IDX_TSN_STREAM_RENEW = 0xf8f3,
 
    PF_IDX_DEV_CONN_MON_TRIGGER = 0xfbff,
 } pf_index_values_t;
@@ -1073,7 +1115,7 @@ typedef struct pf_cmina_dcp_ase
    pnet_cfg_device_id_t device_id;
    pnet_cfg_device_id_t oem_device_id;
 
-   char port_name[PNET_PORT_ID_MAX_SIZE]; /* Terminated. Not used. */
+   char port_name[PNET_PORT_NAME_MAX_SIZE]; /* Terminated. Not used. */
 
    pnet_ethaddr_t mac_address;
    uint16_t standard_gw_value;
@@ -2378,9 +2420,30 @@ typedef struct pf_port_data_adjust
    pf_block_header_t block_header;
 } pf_port_data_adjust_t;
 
+/*
+ * 0x00 The field LLDPChassis contains the NameOfStation and
+ *      the field PortID of LLDP contains the name of the port.
+ * 0x01 The field LLDPChassis contains the NameOfDevice
+ *      and is defined by local means. The field PortID of LLDP
+ *      contains the name of the port and the NameOfStation.
+ *
+ * Example:
+ *                   Legacy LLDP mode       Standard LLDP mode
+ * Version           v2.4 0x00              v2.4 0x01
+ * NameOfStation     dut                    dut
+ * NameOfPort        port-001               port-001
+ * LLDP_PortID       port-001               port-001.dut
+ * LLDP_ChassisID    dut (or mac)           system description
+ */
+typedef enum
+{
+   PF_LLDP_NAME_OF_DEVICE_MODE_LEGACY = 0,
+   PF_LLDP_NAME_OF_DEVICE_MODE_STANDARD = 1
+} pf_lldp_name_of_device_mode_t;
+
 /**
  * Substitution name: PeerToPeerBoundary
- * Table 722
+ * PN-AL-protocol (Mar20) Table 722
  */
 typedef struct pf_peer_to_peer_boundary
 {
@@ -2550,6 +2613,17 @@ typedef struct pf_lldp_station_name
 } pf_lldp_station_name_t;
 
 /**
+ * Port Name
+ * In standard name-of-device mode this is first part of Port ID
+ * In legacy mode Port ID and Port Name are the same.
+ */
+typedef struct pf_lldp_port_name
+{
+   char string[PNET_PORT_NAME_MAX_SIZE]; /** Terminated string */
+   size_t len;
+} pf_lldp_port_name_t;
+
+/**
  * Measured signal delays in nanoseconds
  *
  * Valid range is 0x1 - 0xFFF.
@@ -2666,6 +2740,7 @@ typedef struct pf_lldp_port
  */
 typedef struct pf_port
 {
+   pnal_eth_handle_t * eth_handle;
    uint8_t port_num;
    pf_pdport_t pdport;
    pf_lldp_port_t lldp;
@@ -2687,7 +2762,7 @@ struct pnet
    uint32_t dcp_sam_timeout;          /* Handle to the SAM timeout instance */
    uint32_t dcp_identresp_timeout;    /* Handle to the DCP identify timeout
                                          instance */
-   pnal_eth_handle_t * eth_handle;
+   pnal_eth_handle_t * eth_handle;    /* Management port */
    pf_eth_frame_id_map_t eth_id_map[PF_ETH_MAX_MAP];
    volatile pf_scheduler_timeouts_t scheduler_timeouts[PF_MAX_TIMEOUTS];
    volatile uint32_t scheduler_timeout_first;
@@ -2735,7 +2810,15 @@ struct pnet
     */
    os_mutex_t * lldp_mutex;
 
-   pf_port_t port[PNET_MAX_PORT];
+   /* Interface data
+    *
+    * Interface and ports runtime data.
+    */
+   struct
+   {
+      pf_lldp_name_of_device_mode_t name_of_device_mode;
+      pf_port_t port[PNET_MAX_PORT];
+   } interface;
 };
 
 /**

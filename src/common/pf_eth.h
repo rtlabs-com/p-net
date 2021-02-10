@@ -21,12 +21,17 @@ extern "C" {
 #endif
 
 /**
- * Initialize the ETH component.
+ * Initialize ETH component and network interfaces according to configuration
+ * If device is configured with one network interface (PNET_MAX_PORT==1),
+ * the management port and physical port 1 refers to same network interface.
+ * In a multi port configuration, the management port and physical ports are
+ * different network interfaces.
  * @param net              InOut: The p-net stack instance
- * @return  0  if the ETH component could be initialized.
- *          -1 if an error occurred.
+ * @param p_cfg            In:    Configuration
+ * @return   0 on success
+ *          -1 on error
  */
-int pf_eth_init (pnet_t * net);
+int pf_eth_init (pnet_t * net, const pnet_cfg_t * p_cfg);
 
 /**
  * Send raw Ethernet data.
@@ -71,15 +76,16 @@ void pf_eth_frame_id_map_remove (pnet_t * net, uint16_t frame_id);
  * handler, depending on the frame_id within the packet. The frame_id is located
  * right after the packet type. Take care of handling the VLAN tag!!
  *
- * Note that this itself is a callback, and its arguments should fulfill the
- * prototype os_raw_frame_handler_t
+ * Note also that this function is a callback and will be passed as an argument
+ * to pnal_eth_init().
  *
+ * @param eth_handle       InOut: Network interface the frame was received on.
  * @param arg              InOut: User argument, will be converted to pnet_t
- * @param p_buf            In:    The Ethernet frame. Might be freed.
+ * @param p_buf            InOut: The Ethernet frame. Might be freed.
  * @return  0  If the frame was NOT handled by this function.
  *          1  If the frame was handled and the buffer freed.
  */
-int pf_eth_recv (void * arg, pnal_buf_t * p_buf);
+int pf_eth_recv (pnal_eth_handle_t * eth_handle, void * arg, pnal_buf_t * p_buf);
 
 #ifdef __cplusplus
 }

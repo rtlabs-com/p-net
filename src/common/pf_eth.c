@@ -32,13 +32,68 @@
 #include <string.h>
 #include "pf_includes.h"
 
-int pf_eth_init (pnet_t * net)
+int pf_eth_init (pnet_t * net, const pnet_cfg_t * p_cfg)
 {
-   int ret = 0;
+   int port;
+   pf_port_iterator_t port_iterator;
+   pf_port_t * p_port_data;
+   const pnet_port_cfg_t * p_port_cfg;
+   pnal_ethertype_t main_port_receive_type;
 
    memset (net->eth_id_map, 0, sizeof (net->eth_id_map));
 
-   return ret;
+#if (PNET_MAX_PORT == 1)
+   main_port_receive_type = PNAL_ETHTYPE_ALL;
+#else
+   main_port_receive_type = PNAL_ETHTYPE_PROFINET;
+#endif
+
+   /* Init management port */
+   net->eth_handle = pnal_eth_init (
+      p_cfg->if_cfg.main_port.if_name,
+      main_port_receive_type,
+      pf_eth_recv,
+      (void *)net);
+   if (net->eth_handle == NULL)
+   {
+      LOG_ERROR (
+         PNET_LOG,
+         "Failed to init \"%s\"\n",
+         p_cfg->if_cfg.main_port.if_name);
+      return -1;
+   }
+
+   /* Init physical ports */
+   pf_port_init_iterator_over_ports (net, &port_iterator);
+   port = pf_port_get_next (&port_iterator);
+   while (port != 0)
+   {
+      p_port_data = pf_port_get_state (net, port);
+      p_port_cfg = pf_port_get_config (net, port);
+
+#if PNET_MAX_PORT > 1
+      p_port_data->eth_handle = pnal_eth_init (
+         p_port_cfg->phy_port.if_name,
+         PNAL_ETHTYPE_LLDP,
+         pf_eth_recv,
+         (void *)net);
+#else
+      /* In single port configuration managed port is also physical port 1 */
+      p_port_data->eth_handle = net->eth_handle;
+#endif
+
+      if (p_port_data->eth_handle == NULL)
+      {
+         LOG_ERROR (
+            PNET_LOG,
+            "Failed to init \"%s\"\n",
+            p_port_cfg->phy_port.if_name);
+         return -1;
+      }
+
+      port = pf_port_get_next (&port_iterator);
+   }
+   return 0;
 }
 
 int pf_eth_send (pnet_t * net, pnal_eth_handle_t * handle, pnal_buf_t * buf)
@@ -56,7 +111,7 @@ int pf_eth_send (pnet_t * net, pnal_eth_handle_t * handle, pnal_buf_t * buf)
    return sent_len;
 }
 
-int pf_eth_recv (void * arg, pnal_buf_t * p_buf)
+int pf_eth_recv (pnal_eth_handle_t * eth_handle, void * arg, pnal_buf_t * p_buf)
 {
    int ret = 0; /* Means: "Not handled" */
    uint16_t eth_type_pos = 2 * sizeof (pnet_ethaddr_t);
@@ -106,7 +161,7 @@ int pf_eth_recv (void * arg, pnal_buf_t * p_buf)
       }
       break;
    case PNAL_ETHTYPE_LLDP:
-      ret = pf_lldp_recv (net, p_buf, frame_pos);
+      ret = pf_lldp_recv (net, eth_handle, p_buf, frame_pos);
       break;
    case PNAL_ETHTYPE_IP:
       /* IP-packets (UDP) are also received via the UDP sockets. Do not count

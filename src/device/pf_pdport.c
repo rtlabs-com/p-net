@@ -206,47 +206,6 @@ static int pf_pdport_save (pnet_t * net, int loc_port_num)
    return ret;
 }
 
-uint16_t pf_pdport_loc_port_num_to_dap_subslot (int loc_port_num)
-{
-   uint16_t subslot =
-      PNET_SUBSLOT_DAP_INTERFACE_1_PORT_1_IDENT + PNET_PORT_1 - loc_port_num;
-   return subslot;
-}
-
-/**
- * @internal
- * Get local port from DAP port subslot
- *
- * Considers PNET_MAX_PORT
- *
- * @param subslot              In: Subslot number
- * @return The port number mapping to the subslot.
- *         0 if the subslot is not supported.
- */
-static int pf_pdport_dap_subslot_to_local_port (uint16_t subslot)
-{
-   int port = PNET_PORT_1 + PNET_SUBSLOT_DAP_INTERFACE_1_PORT_1_IDENT - subslot;
-   if (port < PNET_PORT_1 || port > PNET_MAX_PORT)
-   {
-      port = 0;
-   }
-   return port;
-}
-
-/**
- * @internal
- * Check if a DAP port subslot is mapped to a local port
- *
- * @param subslot              In: Subslot number
- * @return true  if the subslot is mapped to a local port.
- *         false if the subslot is not supported.
- */
-static bool pf_pdport_subslot_is_dap_port_id (uint16_t subslot)
-{
-   int port = pf_pdport_dap_subslot_to_local_port (subslot);
-   return (port != 0);
-}
-
 /**
  * @internal
  * Initialize pdport diagnostic source
@@ -262,7 +221,7 @@ static void pf_pdport_init_diag_source (
 {
    diag_source->api = PNET_API_NO_APPLICATION_PROFILE;
    diag_source->slot = PNET_SLOT_DAP_IDENT;
-   diag_source->subslot = pf_pdport_loc_port_num_to_dap_subslot (loc_port_num);
+   diag_source->subslot = pf_port_loc_port_num_to_dap_subslot (loc_port_num);
    diag_source->ch = PNET_CHANNEL_WHOLE_SUBMODULE;
    diag_source->ch_grouping = PNET_DIAG_CH_INDIVIDUAL_CHANNEL;
    diag_source->ch_direction = PNET_DIAG_CH_PROP_DIR_MANUF_SPEC;
@@ -437,20 +396,23 @@ int pf_pdport_read_ind (
 {
    int ret = -1;
    int loc_port_num;
+   pf_port_iterator_t port_iterator;
    pnal_port_stats_t port_stats;
    pf_port_t * p_port_data;
    const pnet_port_cfg_t * p_port_cfg;
    uint16_t slot = p_read_req->slot_number;
    uint16_t subslot = p_read_req->subslot_number;
+   uint16_t index = p_read_req->index;
+   const char * netif_name;
 
-   switch (p_read_req->index)
+   switch (index)
    {
    case PF_IDX_SUB_PDPORT_DATA_REAL:
       if (
          (slot == PNET_SLOT_DAP_IDENT) &&
-         (pf_pdport_subslot_is_dap_port_id (subslot) == true))
+         (pf_port_subslot_is_dap_port_id (subslot) == true))
       {
-         loc_port_num = pf_pdport_dap_subslot_to_local_port (subslot);
+         loc_port_num = pf_port_dap_subslot_to_local_port (subslot);
          pf_put_pdport_data_real (
             net,
             loc_port_num,
@@ -462,12 +424,13 @@ int pf_pdport_read_ind (
          ret = 0;
       }
       break;
+
    case PF_IDX_SUB_PDPORT_DATA_ADJ:
       if (
          (slot == PNET_SLOT_DAP_IDENT) &&
-         (pf_pdport_subslot_is_dap_port_id (subslot) == true))
+         (pf_port_subslot_is_dap_port_id (subslot) == true))
       {
-         loc_port_num = pf_pdport_dap_subslot_to_local_port (subslot);
+         loc_port_num = pf_port_dap_subslot_to_local_port (subslot);
          p_port_data = pf_port_get_state (net, loc_port_num);
          if (p_port_data->pdport.adjust.active)
          {
@@ -483,12 +446,13 @@ int pf_pdport_read_ind (
          ret = 0;
       }
       break;
+
    case PF_IDX_SUB_PDPORT_DATA_CHECK:
       if (slot == PNET_SLOT_DAP_IDENT)
       {
-         if (pf_pdport_subslot_is_dap_port_id (subslot) == true)
+         if (pf_port_subslot_is_dap_port_id (subslot) == true)
          {
-            loc_port_num = pf_pdport_dap_subslot_to_local_port (subslot);
+            loc_port_num = pf_port_dap_subslot_to_local_port (subslot);
             p_port_data = pf_port_get_state (net, loc_port_num);
             if (p_port_data->pdport.check.active)
             {
@@ -504,45 +468,45 @@ int pf_pdport_read_ind (
          }
          else if (subslot == PNET_SUBSLOT_DAP_WHOLE_MODULE)
          {
-            /* Todo - how should read using subslot 0 be handled?
-             * include all checks in response?
-             */
-            loc_port_num = PNET_PORT_1;
-            p_port_data = pf_port_get_state (net, loc_port_num);
-            if (p_port_data->pdport.check.active)
+            pf_port_init_iterator_over_ports (net, &port_iterator);
+            loc_port_num = pf_port_get_next (&port_iterator);
+            while (loc_port_num != 0)
             {
-               pf_put_pdport_data_check (
-                  &p_port_data->pdport.check.peer,
-                  true,
-                  p_read_res,
-                  res_size,
-                  p_res,
-                  p_pos);
+               p_port_data = pf_port_get_state (net, loc_port_num);
+               if (p_port_data->pdport.check.active)
+               {
+                  pf_put_pdport_data_check (
+                     &p_port_data->pdport.check.peer,
+                     true,
+                     p_read_res,
+                     res_size,
+                     p_res,
+                     p_pos);
+               }
             }
             ret = 0;
          }
       }
       break;
+
    case PF_IDX_DEV_PDREAL_DATA:
+      /* Combined interface and port info and statistics */
       if (
          (slot == PNET_SLOT_DAP_IDENT) &&
          ((subslot == PNET_SUBSLOT_DAP_WHOLE_MODULE) ||
           (subslot == PNET_SUBSLOT_DAP_IDENT)))
       {
-         /*Todo - handle multiple ports and interface level */
-         loc_port_num = PNET_PORT_1;
-         pf_put_pd_real_data (
-            net,
-            true,
-            loc_port_num,
-            p_read_res,
-            res_size,
-            p_res,
-            p_pos);
+         pf_put_pd_real_data (net, true, p_read_res, res_size, p_res, p_pos);
          ret = 0;
       }
       break;
+
    case PF_IDX_DEV_PDEXP_DATA:
+      LOG_INFO (
+         PNET_LOG,
+         "PDPORT(%d): PD exp data is not yet implemented.\n",
+         __LINE__);
+
       /* ToDo: Implement when LLDP is done */
       /*
        * MultipleBlockHeader, { [PDPortDataCheck] a, [PDPortDataAdjust] a,
@@ -557,27 +521,26 @@ int pf_pdport_read_ind (
        */
       ret = 0;
       break;
+
    case PF_IDX_SUB_PDPORT_STATISTIC:
       if (
          (slot == PNET_SLOT_DAP_IDENT) &&
          ((subslot == PNET_SUBSLOT_DAP_INTERFACE_1_IDENT) ||
-          (pf_pdport_subslot_is_dap_port_id (subslot) == true)))
+          (pf_port_subslot_is_dap_port_id (subslot) == true)))
       {
-         loc_port_num = pf_pdport_dap_subslot_to_local_port (subslot);
+         loc_port_num = pf_port_dap_subslot_to_local_port (subslot);
 
-         /* TODO Summarize port statistics for
-                 PNET_SUBSLOT_DAP_INTERFACE_1_IDENT
-                 when we support multiple ports */
          if (loc_port_num == 0)
          {
-            loc_port_num = 1;
+            netif_name = net->fspm_cfg.if_cfg.main_port.if_name;
+         }
+         else
+         {
+            p_port_cfg = pf_port_get_config (net, loc_port_num);
+            netif_name = p_port_cfg->phy_port.if_name;
          }
 
-         p_port_cfg = pf_port_get_config (net, loc_port_num);
-         if (
-            pnal_get_port_statistics (
-               p_port_cfg->phy_port.if_name,
-               &port_stats) == 0)
+         if (pnal_get_port_statistics (netif_name, &port_stats) == 0)
          {
             pf_put_pdport_statistics (
                &port_stats,
@@ -589,18 +552,26 @@ int pf_pdport_read_ind (
             ret = 0;
          }
       }
-      else
+      break;
+
+   case PF_IDX_SUB_PDINTF_ADJUST:
+      if (
+         (slot == PNET_SLOT_DAP_IDENT) &&
+         (subslot == PNET_SUBSLOT_DAP_INTERFACE_1_IDENT))
       {
-         LOG_INFO (
-            PNET_LOG,
-            "PDPORT(%d): PLC could not read port statistics (index 0x%04X) for "
-            "slot %u, subslot 0x%04X\n",
-            __LINE__,
-            p_read_req->index,
-            slot,
-            subslot);
+         pf_put_pd_interface_adj (
+            net->interface.name_of_device_mode,
+            PNET_SUBSLOT_DAP_INTERFACE_1_IDENT,
+            true,
+            p_read_res,
+            res_size,
+            p_res,
+            p_pos);
+
+         ret = 0;
       }
       break;
+
    default:
       ret = -1;
       break;
@@ -893,12 +864,9 @@ static int pf_pdport_write_data_check (
 
             LOG_INFO (
                PNET_LOG,
-               "PDPORT(%d): PLC is writing PDPort data check. Slot: %u "
-               "Subslot: "
-               "0x%04x Peers: %u First peer station name: %.*s Port: %.*s\n",
+               "PDPORT(%d): New PDPort data check. Peers: %u First peer "
+               "station name: %.*s Port: %.*s\n",
                __LINE__,
-               port_data_check.slot_number,
-               port_data_check.subslot_number,
                check_peers.number_of_peers,
                check_peers.peers[0].length_peer_station_name,
                check_peers.peers[0].peer_station_name,
@@ -989,8 +957,7 @@ static int pf_pdport_write_data_adj (
 
          LOG_INFO (
             PNET_LOG,
-            "PDPORT(%d): PLC is writing PDPort data adjust. Do not send LLDP: "
-            "%u\n",
+            "PDPORT(%d): New PDPort data adjust. Do not send LLDP: %u\n",
             __LINE__,
             boundary.peer_to_peer_boundary.do_not_send_LLDP_frames);
 
@@ -1026,6 +993,40 @@ static int pf_pdport_write_data_adj (
    return ret;
 }
 
+static int pf_pdport_write_interface_adj (
+   pnet_t * net,
+   const pf_ar_t * p_ar,
+   const pf_iod_write_request_t * p_write_req,
+   const uint8_t * p_bytes,
+   uint16_t p_datalength,
+   pnet_result_t * p_result)
+{
+   uint16_t pos = 0;
+   pf_get_info_t get_info;
+
+   get_info.result = PF_PARSE_OK;
+   get_info.p_buf = p_bytes;
+   get_info.is_big_endian = true;
+   get_info.len = p_datalength;
+
+   pf_get_interface_adjust (
+      &get_info,
+      &pos,
+      &net->interface.name_of_device_mode);
+
+   LOG_INFO (
+      PNET_LOG,
+      "PDPORT(%d): PD interface adjust. PLC is setting LLDP mode: %s\n",
+      __LINE__,
+      net->interface.name_of_device_mode == PF_LLDP_NAME_OF_DEVICE_MODE_STANDARD
+         ? "Standard"
+         : "Legacy");
+
+   pf_pdport_lldp_restart (net);
+
+   return 0;
+}
+
 int pf_pdport_write_req (
    pnet_t * net,
    const pf_ar_t * p_ar,
@@ -1036,7 +1037,7 @@ int pf_pdport_write_req (
 {
    int ret = -1;
    int loc_port_num =
-      pf_pdport_dap_subslot_to_local_port (p_write_req->subslot_number);
+      pf_port_dap_subslot_to_local_port (p_write_req->subslot_number);
 
    if (loc_port_num > 0)
    {
@@ -1065,12 +1066,30 @@ int pf_pdport_write_req (
       default:
          break;
       }
+
+      if (ret == 0)
+      {
+         (void)pf_pdport_save (net, loc_port_num);
+      }
+   }
+   else
+   {
+      switch (p_write_req->index)
+      {
+      case PF_IDX_SUB_PDINTF_ADJUST:
+         ret = pf_pdport_write_interface_adj (
+            net,
+            p_ar,
+            p_write_req,
+            p_bytes,
+            data_length,
+            p_result);
+         break;
+      default:
+         break;
+      }
    }
 
-   if (ret == 0)
-   {
-      (void)pf_pdport_save (net, loc_port_num);
-   }
    return ret;
 }
 

@@ -60,13 +60,7 @@ static void ip_to_string (pnal_ipaddr_t ip, char * outputstring)
       (uint8_t) (ip & 0xFF));
 }
 
-/**
- * Convert MAC address to string
- * @param mac              In:    MAC address
- * @param outputstring     Out:   Resulting string buffer. Should have size
- *                                PNAL_ETH_ADDRSTR_SIZE.
- */
-static void mac_to_string (pnal_ethaddr_t mac, char * outputstring)
+void app_mac_to_string (pnal_ethaddr_t mac, char * outputstring)
 {
    snprintf (
       outputstring,
@@ -189,7 +183,6 @@ static const char * ioxs_to_string (pnet_ioxs_values_t ioxs)
 }
 
 void app_print_network_details (
-   pnal_ethaddr_t * p_macbuffer,
    pnal_ipaddr_t ip,
    pnal_ipaddr_t netmask,
    pnal_ipaddr_t gateway)
@@ -197,16 +190,13 @@ void app_print_network_details (
    char ip_string[PNAL_INET_ADDRSTR_SIZE];       /* Terminated string */
    char netmask_string[PNAL_INET_ADDRSTR_SIZE];  /* Terminated string */
    char gateway_string[PNAL_INET_ADDRSTR_SIZE];  /* Terminated string */
-   char mac_string[PNAL_ETH_ADDRSTR_SIZE];       /* Terminated string */
    char hostname_string[PNAL_HOSTNAME_MAX_SIZE]; /* Terminated string */
 
-   mac_to_string (*p_macbuffer, mac_string);
    ip_to_string (ip, ip_string);
    ip_to_string (netmask, netmask_string);
    ip_to_string (gateway, gateway_string);
    pnal_get_hostname (hostname_string);
 
-   printf ("MAC address:          %s\n", mac_string);
    printf ("Current hostname:     %s\n", hostname_string);
    printf ("Current IP address:   %s\n", ip_string);
    printf ("Current Netmask:      %s\n", netmask_string);
@@ -219,23 +209,29 @@ void app_print_network_details (
  * Get subslot application information.
  * @param p_appdata        InOut: Application state.
  * @param slot_nbr         In:    Slot number.
- * @param subslot_nbr      In:    Subslot number.
+ * @param subslot_nbr      In:    Subslot number. Range 0 - 0x9FFF.
  * @return Reference to application subslot,
- *         NULL is subslot is not found/plugged.
+ *         NULL if subslot is not found/plugged.
  */
 static app_subslot_t * app_subslot_get (
    app_data_t * p_appdata,
    uint16_t slot_nbr,
    uint16_t subslot_nbr)
 {
-   uint16_t subslot;
-   for (subslot = 0; subslot < PNET_MAX_SUBSLOTS; subslot++)
+   uint16_t subslot_ix;
+
+   if (slot_nbr >= PNET_MAX_SLOTS || p_appdata == NULL)
+   {
+      return NULL;
+   }
+
+   for (subslot_ix = 0; subslot_ix < PNET_MAX_SUBSLOTS; subslot_ix++)
    {
       if (
-         p_appdata->main_api.slots[slot_nbr].subslots[subslot].subslot_nbr ==
+         p_appdata->main_api.slots[slot_nbr].subslots[subslot_ix].subslot_nbr ==
          subslot_nbr)
       {
-         return &p_appdata->main_api.slots[slot_nbr].subslots[subslot];
+         return &p_appdata->main_api.slots[slot_nbr].subslots[subslot_ix];
       }
    }
    return NULL;
@@ -245,7 +241,7 @@ static app_subslot_t * app_subslot_get (
  * Alloc/reserve application subslot.
  * @param p_appdata        InOut: Application state.
  * @param slot_nbr         In:    Slot number.
- * @param subslot_nbr      In:    Subslot number.
+ * @param subslot_nbr      In:    Subslot number. Range 0 - 0x9FFF.
  * @param submodule_ident  In:    Submodule identity.
  * @param p_data_cfg       In:    Data configuration,
  *                                direction, in and out sizes.
@@ -261,19 +257,19 @@ static app_subslot_t * app_subslot_alloc (
    const pnet_data_cfg_t * p_data_cfg,
    const char * submodule_name)
 {
-   uint16_t subslot;
+   uint16_t subslot_ix;
 
    if (slot_nbr >= PNET_MAX_SLOTS || p_appdata == NULL || p_data_cfg == NULL)
    {
       return NULL;
    }
 
-   for (subslot = 0; subslot < PNET_MAX_SUBSLOTS; subslot++)
+   for (subslot_ix = 0; subslot_ix < PNET_MAX_SUBSLOTS; subslot_ix++)
    {
-      if (p_appdata->main_api.slots[slot_nbr].subslots[subslot].used == false)
+      if (p_appdata->main_api.slots[slot_nbr].subslots[subslot_ix].used == false)
       {
          app_subslot_t * p_subslot =
-            &p_appdata->main_api.slots[slot_nbr].subslots[subslot];
+            &p_appdata->main_api.slots[slot_nbr].subslots[subslot_ix];
 
          p_subslot->used = true;
          p_subslot->plugged = true;
@@ -294,7 +290,7 @@ static app_subslot_t * app_subslot_alloc (
  *
  * @param p_appdata        InOut: Application state.
  * @param slot_nbr         In:    Slot number.
- * @param subslot_nbr      In:    Subslot number.
+ * @param subslot_nbr      In:    Subslot number. Range 0 - 0x9FFF
  * @return 0 on success, -1 on error.
  */
 static int app_subslot_free (
@@ -732,7 +728,7 @@ static int app_state_ind (
    uint16_t err_cls = 0;
    uint16_t err_code = 0;
    uint16_t slot = 0;
-   uint16_t subslot = 0;
+   uint16_t subslot_ix = 0;
    const char * error_class_description = "";
    const char * error_code_description = "";
 
@@ -815,16 +811,16 @@ static int app_state_ind (
        */
       for (slot = 0; slot < PNET_MAX_SLOTS; slot++)
       {
-         for (subslot = 0; subslot < PNET_MAX_SUBSLOTS; subslot++)
+         for (subslot_ix = 0; subslot_ix < PNET_MAX_SUBSLOTS; subslot_ix++)
          {
             if (
                p_appdata->main_api.slots[slot].plugged &&
-               p_appdata->main_api.slots[slot].subslots[subslot].plugged)
+               p_appdata->main_api.slots[slot].subslots[subslot_ix].plugged)
             {
                app_set_initial_data_and_ioxs (
                   net,
                   p_appdata,
-                  &p_appdata->main_api.slots[slot].subslots[subslot]);
+                  &p_appdata->main_api.slots[slot].subslots[subslot_ix]);
             }
          }
       }
@@ -1259,6 +1255,7 @@ void app_plug_dap (pnet_t * net, void * arg)
       PNET_MOD_DAP_IDENT,
       PNET_SUBMOD_DAP_IDENT,
       &cfg_dap_data);
+
    app_exp_submodule_ind (
       net,
       arg,
@@ -1268,6 +1265,7 @@ void app_plug_dap (pnet_t * net, void * arg)
       PNET_MOD_DAP_IDENT,
       PNET_SUBMOD_DAP_INTERFACE_1_IDENT,
       &cfg_dap_data);
+
    app_exp_submodule_ind (
       net,
       arg,
@@ -1277,12 +1275,49 @@ void app_plug_dap (pnet_t * net, void * arg)
       PNET_MOD_DAP_IDENT,
       PNET_SUBMOD_DAP_INTERFACE_1_PORT_1_IDENT,
       &cfg_dap_data);
+
+#if PNET_MAX_PORT >= 2
+   app_exp_submodule_ind (
+      net,
+      arg,
+      APP_API,
+      PNET_SLOT_DAP_IDENT,
+      PNET_SUBSLOT_DAP_INTERFACE_1_PORT_2_IDENT,
+      PNET_MOD_DAP_IDENT,
+      PNET_SUBMOD_DAP_INTERFACE_1_PORT_2_IDENT,
+      &cfg_dap_data);
+#endif
+
+#if PNET_MAX_PORT >= 3
+   app_exp_submodule_ind (
+      net,
+      arg,
+      APP_API,
+      PNET_SLOT_DAP_IDENT,
+      PNET_SUBSLOT_DAP_INTERFACE_1_PORT_3_IDENT,
+      PNET_MOD_DAP_IDENT,
+      PNET_SUBMOD_DAP_INTERFACE_1_PORT_3_IDENT,
+      &cfg_dap_data);
+#endif
+
+#if PNET_MAX_PORT >= 4
+   app_exp_submodule_ind (
+      net,
+      arg,
+      APP_API,
+      PNET_SLOT_DAP_IDENT,
+      PNET_SUBSLOT_DAP_INTERFACE_1_PORT_4_IDENT,
+      PNET_MOD_DAP_IDENT,
+      PNET_SUBMOD_DAP_INTERFACE_1_PORT_4_IDENT,
+      &cfg_dap_data);
+#endif
 }
 
 /************ Configuration of product ID, software version etc **************/
 
-int app_adjust_stack_configuration (pnet_cfg_t * stack_config)
+int app_pnet_cfg_init_default (pnet_cfg_t * stack_config)
 {
+   uint16_t i;
    memset (stack_config, 0, sizeof (pnet_cfg_t));
    stack_config->tick_us = APP_TICK_INTERVAL_US;
 
@@ -1351,15 +1386,22 @@ int app_adjust_stack_configuration (pnet_cfg_t * stack_config)
    stack_config->oem_device_id.vendor_id_lo = 0xff;
    stack_config->oem_device_id.device_id_hi = 0xee;
    stack_config->oem_device_id.device_id_lo = 0x01;
-   strcpy (stack_config->product_name, "rt-labs p-net sampleapp");
+   strcpy (stack_config->product_name, "RT-Labs P-Net Sample App");
 
    /* Timing */
    stack_config->min_device_interval = 32; /* Corresponds to 1 ms */
 
    /* LLDP settings */
-   strcpy (stack_config->if_cfg.ports[0].port_id, "port-001");
-   stack_config->if_cfg.ports[0].rtclass_2_status = 0;
-   stack_config->if_cfg.ports[0].rtclass_3_status = 0;
+   for (i = 0; i < PNET_MAX_PORT; i++)
+   {
+      snprintf (
+         stack_config->if_cfg.ports[i].port_name,
+         sizeof (stack_config->if_cfg.ports[i].port_name),
+         "port-%03d",
+         i + 1);
+      stack_config->if_cfg.ports[i].rtclass_2_status = 0;
+      stack_config->if_cfg.ports[i].rtclass_3_status = 0;
+   }
 
    /* Network configuration */
    stack_config->send_hello = true;
@@ -1371,6 +1413,182 @@ int app_adjust_stack_configuration (pnet_cfg_t * stack_config)
    stack_config->use_qualified_diagnosis = false;
 
    return 0;
+}
+
+/**
+ * Initialize a network interface configuration from a network
+ * interface name.
+ * This includes reading the Ethernet MAC address.
+ * If the network interface can not be found or the operation
+ * fails to read the mac address from the network interface,
+ * error is returned.
+ * @param netif_name       In:   Network interface name
+ * @param p_netif          Out:  Network interface configuration
+ * @param verbosity        In:   Verbosity
+ * @return 0  on success
+ *         -1 on error
+ */
+int app_port_cfg_init (
+   const char * netif_name,
+   pnet_netif_t * p_netif,
+   int verbosity)
+{
+   pnal_ethaddr_t mac;
+   char mac_string[PNAL_ETH_ADDRSTR_SIZE]; /* Terminated string */
+
+   int ret = pnal_get_macaddress (netif_name, &mac);
+   if (ret != 0)
+   {
+      printf (
+         "Error: The given network interface does not exist: \"%s\"\n",
+         netif_name);
+      return -1;
+   }
+   else
+   {
+      if (verbosity > 0)
+      {
+         app_mac_to_string (mac, mac_string);
+         printf ("%-10s %s\n", netif_name, mac_string);
+      }
+   }
+
+   strncpy (p_netif->if_name, netif_name, PNET_INTERFACE_NAME_MAX_SIZE);
+   memcpy (p_netif->eth_addr.addr, mac.addr, sizeof (pnal_ethaddr_t));
+
+   return 0;
+}
+
+int app_get_netif_namelist (
+   const char * arg_str,
+   app_netif_namelist_t * p_if_list,
+   int max_port)
+{
+   int ret = 0;
+   uint16_t i = 0;
+   uint16_t j = 0;
+   uint16_t if_index = 0;
+   uint16_t if_list_size = max_port + 1; /* NELEMENTS (p_if_list->netif) dynamic
+                                            for test. */
+   char c;
+
+   memset (p_if_list, 0, sizeof (*p_if_list));
+   c = arg_str[i++];
+   while (c != '\0' && if_index < if_list_size)
+   {
+      if (c != ',')
+      {
+         p_if_list->netif[if_index].name[j++] = c;
+      }
+      else
+      {
+         p_if_list->netif[if_index].name[j++] = '\0';
+         j = 0;
+         if_index++;
+      }
+      c = arg_str[i++];
+   }
+
+   if (max_port == 1)
+   {
+      if (if_index >= max_port)
+      {
+         printf ("Error: Only 1 network interface expected.\n");
+         ret = -1;
+      }
+
+      if (strlen (p_if_list->netif[0].name) == 0)
+      {
+         printf ("Error: Zero length network interface name.\n");
+         ret = -1;
+      }
+      p_if_list->netif[1] = p_if_list->netif[0];
+   }
+
+   if (max_port > 1)
+   {
+      if (if_index != max_port)
+      {
+         printf ("Error: %u network interfaces expected.\n", max_port + 1);
+         ret = -1;
+      }
+
+      for (i = 0; i <= max_port; i++)
+      {
+         if (strlen (p_if_list->netif[i].name) == 0)
+         {
+            printf ("Error: Zero length network interface name (%d).\n", i);
+            ret = -1;
+         }
+      }
+   }
+
+   return ret;
+}
+
+int app_pnet_cfg_init_netifs (
+   const char * netif_list_str,
+   pnet_cfg_t * p_cfg,
+   int verbosity)
+{
+   int ret = 0;
+   int i = 0;
+   pnal_ipaddr_t ip;
+   pnal_ipaddr_t netmask;
+   pnal_ipaddr_t gateway;
+   app_netif_namelist_t if_list;
+
+   ret = app_get_netif_namelist (netif_list_str, &if_list, PNET_MAX_PORT);
+   if (ret != 0)
+   {
+      return ret;
+   }
+
+   if (verbosity > 0)
+   {
+      printf ("Management port:      ");
+   }
+   if (
+      app_port_cfg_init (
+         if_list.netif[0].name,
+         &p_cfg->if_cfg.main_port,
+         verbosity) != 0)
+   {
+      return -1;
+   }
+
+   for (i = 1; i <= PNET_MAX_PORT; i++)
+   {
+      if (verbosity > 0)
+      {
+         printf ("Physical port [%u]:    ", i);
+      }
+
+      if (
+         app_port_cfg_init (
+            if_list.netif[i].name,
+            &p_cfg->if_cfg.ports[i - 1].phy_port,
+            verbosity) != 0)
+      {
+         return -1;
+      }
+   }
+
+   /* Read IP, netmask, gateway from operating system */
+   ip = pnal_get_ip_address (if_list.netif[0].name);
+   netmask = pnal_get_netmask (if_list.netif[0].name);
+   gateway = pnal_get_gateway (if_list.netif[0].name);
+
+   if (verbosity > 0)
+   {
+      app_print_network_details (ip, netmask, gateway);
+   }
+
+   app_copy_ip_to_struct (&p_cfg->if_cfg.ip_cfg.ip_addr, ip);
+   app_copy_ip_to_struct (&p_cfg->if_cfg.ip_cfg.ip_gateway, gateway);
+   app_copy_ip_to_struct (&p_cfg->if_cfg.ip_cfg.ip_mask, netmask);
+
+   return ret;
 }
 
 /*************************** Helper functions ********************************/
@@ -1454,7 +1672,7 @@ static void app_handle_send_alarm_ack (
  * All input modules will be provided with the same data.
  *
  * The output LED (data LED) will be affected only by outputdata to the
- * module with lowest slot number.
+ * output module with lowest slot number.
  *
  * @param net              InOut: p-net stack instance
  * @param p_appdata        In:    Application data
@@ -1566,7 +1784,8 @@ static void app_handle_cyclic_data (
                if (outputdata_length != APP_DATASIZE_OUTPUT)
                {
                   printf ("Wrong outputdata length: %u\n", outputdata_length);
-                  app_set_outputs_default_value (p_appdata->arguments.verbosity);
+                  app_set_outputs_default_value (
+                     p_appdata->arguments.verbosity);
                }
                else if (outputdata_iops == PNET_IOXS_GOOD)
                {
@@ -1583,7 +1802,8 @@ static void app_handle_cyclic_data (
                   {
                      printf ("Wrong IOPS: %u\n", outputdata_iops);
                   }
-                  app_set_outputs_default_value (p_appdata->arguments.verbosity);
+                  app_set_outputs_default_value (
+                     p_appdata->arguments.verbosity);
                }
             }
          }
@@ -1627,7 +1847,7 @@ static void app_handle_send_alarm (
    static app_demo_state_t state = APP_DEMO_STATE_ALARM_SEND;
    uint16_t slot = 0;
    bool found_inputslot = false;
-   uint16_t subslot_array_index = 0;
+   uint16_t subslot_ix = 0;
    const app_subslot_t * p_subslot = NULL;
    pnet_pnio_status_t pnio_status = {0};
    pnet_diag_source_t diag_source = {
@@ -1641,12 +1861,10 @@ static void app_handle_send_alarm (
    /* Look for first input slot */
    while (!found_inputslot && (slot < PNET_MAX_SLOTS))
    {
-      for (subslot_array_index = 0;
-           !found_inputslot && (subslot_array_index < PNET_MAX_SUBSLOTS);
-           subslot_array_index++)
+      for (subslot_ix = 0; !found_inputslot && (subslot_ix < PNET_MAX_SUBSLOTS);
+           subslot_ix++)
       {
-         p_subslot =
-            &p_appdata->main_api.slots[slot].subslots[subslot_array_index];
+         p_subslot = &p_appdata->main_api.slots[slot].subslots[subslot_ix];
          if (app_subslot_is_input (p_subslot))
          {
             found_inputslot = true;

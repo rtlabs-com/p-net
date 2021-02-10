@@ -34,25 +34,65 @@ typedef struct pbuf pnal_buf_t;
  */
 #define IOCTL_NET_SET_RX_HOOK 0x601
 
-int eth_ioctl (drv_t * drv, void * arg, int req, void * param);
+/**
+ * Get status of network interface
+ *
+ * \code
+ * eth_status_t status;
+ * int error = eth_ioctl (drv, netif, IOCTL_NET_GET_STATUS, &status);
+ * \endcode
+ */
+#define IOCTL_NET_GET_STATUS 0x602
 
 /**
- * The prototype of raw Ethernet reception call-back functions.
- * *
- * @param arg              In:   User-defined (may be NULL).
- * @param p_buf            In:   The incoming Ethernet frame
- *
- * @return  0  If the frame was NOT handled by this function.
- *          1  If the frame was handled and the buffer freed.
+ * Status of Ethernet link
  */
-typedef int (pnal_eth_callback_t) (void * arg, pnal_buf_t * p_buf);
-
-typedef struct os_eth_handle
+typedef struct eth_status
 {
-   pnal_eth_callback_t * callback;
-   void * arg;
-   int if_id;
-} pnal_eth_handle_t;
+   /** Contents of PHY register ANAR
+    *
+    * The ANAR (Auto-Negotiation Advertisement Register) contains a bit
+    * for each link type the physical layer supports, as advertised to
+    * link partner when establishing a link:
+    * - Bit 8: 100BASE-TX full duplex,
+    * - Bit 7: 100BASE-TX,
+    * - Bit 6: 10BASE-T full duplex,
+    * - Bit 5: 10BASE-T.
+    */
+   uint16_t anar;
+
+   /** Is auto-negotiation process supported by physical layer? */
+   bool is_autonegotiation_supported;
+
+   /** Is auto-negotiation process enabled for physical layer? */
+   bool is_autonegotiation_enabled;
+
+   /**
+    * Is link operational?
+    *
+    * True if link is up and network interface is administratively up.
+    * False if any of those are down.
+    */
+   bool is_operational;
+
+   /**
+    * Link state
+    *
+    * Bit pattern of the following:
+    * - PHY_LINK_OK is set if link is up,
+    * - PHY_LINK_10MBIT, PHY_LINK_100MBIT or PHY_LINK_1000MBIT is the speed,
+    * - PHY_LINK_FULL_DUPLEX is set if link is full-duplex and cleared if
+    *   it is half-duplex.
+    */
+   uint8_t state;
+} eth_status_t;
+
+typedef int (pnal_eth_sys_recv_callback_t) (
+   struct netif * netif,
+   void * arg,
+   pnal_buf_t * p_buf);
+
+int eth_ioctl (drv_t * drv, void * arg, int req, void * param);
 
 #ifdef __cplusplus
 }

@@ -34,10 +34,19 @@
 #include <string.h>
 #include <unistd.h>
 
+#if PNET_MAX_PORT == 1
 #define APP_DEFAULT_ETHERNET_INTERFACE "eth0"
-#define APP_THREAD_PRIORITY            15
-#define APP_THREAD_STACKSIZE           4096 /* bytes */
-#define APP_MAIN_SLEEPTIME_US          5000 * 1000
+#elif PNET_MAX_PORT == 2
+#define APP_DEFAULT_ETHERNET_INTERFACE "br0,eth0,eth1"
+#elif PNET_MAX_PORT == 3
+#define APP_DEFAULT_ETHERNET_INTERFACE "br0,eth0,eth1,eth2"
+#else
+#define APP_DEFAULT_ETHERNET_INTERFACE ""
+#endif
+
+#define APP_THREAD_PRIORITY   15
+#define APP_THREAD_STACKSIZE  4096 /* bytes */
+#define APP_MAIN_SLEEPTIME_US 5000 * 1000
 
 /************************* Utilities ******************************************/
 
@@ -65,7 +74,7 @@ void show_usage()
    printf ("Also the mandatory Profinet signal LED is controlled by this "
            "application.\n");
    printf ("\n");
-   printf ("The LEDs are controlled by the script set_profinet_leds_linux\n");
+   printf ("The LEDs are controlled by the script set_profinet_leds\n");
    printf ("located in the same directory as the application binary.\n");
    printf ("A version for Raspberry Pi is available, and also a version "
            "writing\n");
@@ -125,7 +134,7 @@ struct cmd_args parse_commandline_arguments (int argc, char * argv[])
    strcpy (output_arguments.path_button2, "");
    strcpy (output_arguments.path_storage_directory, "");
    strcpy (output_arguments.station_name, APP_DEFAULT_STATION_NAME);
-   strcpy (output_arguments.eth_interface, APP_DEFAULT_ETHERNET_INTERFACE);
+   strcpy (output_arguments.eth_interfaces, APP_DEFAULT_ETHERNET_INTERFACE);
    output_arguments.verbosity = 0;
    output_arguments.show = 0;
    output_arguments.factory_reset = false;
@@ -149,7 +158,12 @@ struct cmd_args parse_commandline_arguments (int argc, char * argv[])
          output_arguments.remove_files = true;
          break;
       case 'i':
-         strcpy (output_arguments.eth_interface, optarg);
+         if ((strlen (optarg) + 1) > sizeof (output_arguments.eth_interfaces))
+         {
+            printf ("Error: The argument to -i is too long.\n");
+            exit (EXIT_FAILURE);
+         }
+         strcpy (output_arguments.eth_interfaces, optarg);
          break;
       case 's':
          strcpy (output_arguments.station_name, optarg);
@@ -264,7 +278,7 @@ int app_set_led (uint16_t id, bool led_state, int verbosity)
    sprintf (id_str, "%u", id);
    id_str[sizeof (id_str) - 1] = '\0';
 
-   argv[0] = "set_profinet_leds_linux";
+   argv[0] = "set_profinet_leds";
    argv[1] = (char *)&id_str;
    argv[2] = (led_state == 1) ? "1" : "0";
    argv[3] = NULL;
@@ -299,6 +313,48 @@ void pn_main_thread (void * arg)
    printf ("Quitting the sample application\n\n");
 }
 
+int app_pnet_cfg_init_storage (pnet_cfg_t * p_cfg, struct cmd_args * p_args)
+{
+   strcpy (p_cfg->file_directory, p_args->path_storage_directory);
+
+   if (p_args->verbosity > 0)
+   {
+      printf ("Storage directory:    %s\n\n", p_cfg->file_directory);
+   }
+
+   /* Validate paths */
+   if (!pnal_does_file_exist (p_cfg->file_directory))
+   {
+      printf (
+         "Error: The given storage directory does not exist: %s\n",
+         p_cfg->file_directory);
+      return -1;
+   }
+
+   if (p_args->path_button1[0] != '\0')
+   {
+      if (!pnal_does_file_exist (p_args->path_button1))
+      {
+         printf (
+            "Error: The given input file for Button1 does not exist: %s\n",
+            p_args->path_button1);
+         return -1;
+      }
+   }
+
+   if (p_args->path_button2[0] != '\0')
+   {
+      if (!pnal_does_file_exist (p_args->path_button2))
+      {
+         printf (
+            "Error: The given input file for Button2 does not exist: %s\n",
+            p_args->path_button2);
+         return -1;
+      }
+   }
+   return 0;
+}
+
 /****************************** Main ******************************************/
 
 int main (int argc, char * argv[])
@@ -307,10 +363,6 @@ int main (int argc, char * argv[])
    pnet_cfg_t pnet_default_cfg;
    app_data_and_stack_t appdata_and_stack;
    app_data_t appdata;
-   pnal_ethaddr_t macbuffer;
-   pnal_ipaddr_t ip;
-   pnal_ipaddr_t netmask;
-   pnal_ipaddr_t gateway;
    int ret = 0;
 
    memset (&appdata, 0, sizeof (appdata));
@@ -331,100 +383,30 @@ int main (int argc, char * argv[])
          PNET_MAX_SLOTS);
       printf ("P-net log level:      %u (DEBUG=0, FATAL=4)\n", LOG_LEVEL);
       printf ("App verbosity level:  %u\n", appdata.arguments.verbosity);
-      printf ("Ethernet interface:   %s\n", appdata.arguments.eth_interface);
+      printf ("Number of ports:      %u\n", PNET_MAX_PORT);
+      printf ("Network interfaces:   %s\n", appdata.arguments.eth_interfaces);
       printf ("Button1 file:         %s\n", appdata.arguments.path_button1);
       printf ("Button2 file:         %s\n", appdata.arguments.path_button2);
-      printf ("Default station name: %s\n", appdata.arguments.station_name);
+      printf ("Station name:         %s\n", appdata.arguments.station_name);
    }
 
-   /* Read IP, netmask, gateway and MAC address from operating system */
-   ret = pnal_get_macaddress (appdata.arguments.eth_interface, &macbuffer);
+   app_pnet_cfg_init_default (&pnet_default_cfg);
+   pnet_default_cfg.cb_arg = (void *)&appdata;
+   strcpy (pnet_default_cfg.station_name, appdata.arguments.station_name);
+
+   ret = app_pnet_cfg_init_netifs (
+      appdata.arguments.eth_interfaces,
+      &pnet_default_cfg,
+      appdata.arguments.verbosity);
    if (ret != 0)
    {
-      printf (
-         "Error: The given Ethernet interface does not exist: %s\n",
-         appdata.arguments.eth_interface);
       exit (EXIT_FAILURE);
    }
 
-   ip = pnal_get_ip_address (appdata.arguments.eth_interface);
-   netmask = pnal_get_netmask (appdata.arguments.eth_interface);
-   gateway = pnal_get_gateway (appdata.arguments.eth_interface);
-   if (gateway == IP_INVALID)
+   ret = app_pnet_cfg_init_storage (&pnet_default_cfg, &appdata.arguments);
+   if (ret != 0)
    {
-      printf (
-         "Error: Invalid gateway IP address for Ethernet interface: %s\n",
-         appdata.arguments.eth_interface);
       exit (EXIT_FAILURE);
-   }
-
-   if (appdata.arguments.verbosity > 0)
-   {
-      app_print_network_details (&macbuffer, ip, netmask, gateway);
-   }
-
-   /* Prepare stack config with IP address, gateway, station name etc */
-   app_adjust_stack_configuration (&pnet_default_cfg);
-   app_copy_ip_to_struct (&pnet_default_cfg.if_cfg.ip_cfg.ip_addr, ip);
-   app_copy_ip_to_struct (&pnet_default_cfg.if_cfg.ip_cfg.ip_gateway, gateway);
-   app_copy_ip_to_struct (&pnet_default_cfg.if_cfg.ip_cfg.ip_mask, netmask);
-   strcpy (pnet_default_cfg.station_name, appdata.arguments.station_name);
-   strcpy (
-      pnet_default_cfg.file_directory,
-      appdata.arguments.path_storage_directory);
-
-   strncpy (
-      pnet_default_cfg.if_cfg.main_port.if_name,
-      appdata.arguments.eth_interface,
-      PNET_INTERFACE_NAME_MAX_SIZE);
-   memcpy (
-      pnet_default_cfg.if_cfg.main_port.eth_addr.addr,
-      macbuffer.addr,
-      sizeof (pnal_ethaddr_t));
-
-   strncpy (
-      pnet_default_cfg.if_cfg.ports[0].phy_port.if_name,
-      appdata.arguments.eth_interface,
-      PNET_INTERFACE_NAME_MAX_SIZE);
-   memcpy (
-      pnet_default_cfg.if_cfg.ports[0].phy_port.eth_addr.addr,
-      macbuffer.addr,
-      sizeof (pnal_ethaddr_t));
-
-   pnet_default_cfg.cb_arg = (void *)&appdata;
-
-   if (appdata.arguments.verbosity > 0)
-   {
-      printf ("Storage directory:    %s\n\n", pnet_default_cfg.file_directory);
-   }
-
-   /* Validate paths */
-   if (!pnal_does_file_exist (pnet_default_cfg.file_directory))
-   {
-      printf (
-         "Error: The given storage directory does not exist: %s\n",
-         pnet_default_cfg.file_directory);
-      exit (EXIT_FAILURE);
-   }
-   if (appdata.arguments.path_button1[0] != '\0')
-   {
-      if (!pnal_does_file_exist (appdata.arguments.path_button1))
-      {
-         printf (
-            "Error: The given input file for Button1 does not exist: %s\n",
-            appdata.arguments.path_button1);
-         exit (EXIT_FAILURE);
-      }
-   }
-   if (appdata.arguments.path_button2[0] != '\0')
-   {
-      if (!pnal_does_file_exist (appdata.arguments.path_button2))
-      {
-         printf (
-            "Error: The given input file for Button2 does not exist: %s\n",
-            appdata.arguments.path_button2);
-         exit (EXIT_FAILURE);
-      }
    }
 
    /* Remove files and exit */

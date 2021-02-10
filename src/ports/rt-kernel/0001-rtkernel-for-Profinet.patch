@@ -1,4 +1,4 @@
-From 9b158e79a2e7183fbfebce9fee53347714009e35 Mon Sep 17 00:00:00 2001
+From 337d268fa4701e10cec14bedb9732d049ff3e387 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Fredrik=20M=C3=B6ller?= <fredrik.moller@rt-labs.com>
 Date: Tue, 15 Sep 2020 18:22:53 +0200
 Subject: [PATCH] rtkernel for Profinet
@@ -6,25 +6,35 @@ Subject: [PATCH] rtkernel for Profinet
 Changes made to rt-kernel tree from rt-collab
 Toolbox 2020.1 as to support the p-net Profinet
 stack:
-- lwip: Build SNMP server. Discard invalid UDP
-  packets. VLAN tag support.
-- bsp/xmc48relax: Static IP addressing. Increase
-  stack sizes for main() and Ethernet driver
-  tasks. Put .bss in different memory section.
+- lwip:
+  - Build SNMP server.
+  - Add SNMP callbacks for MIB-II system variables.
+  - Fix SNMP ifDescr in ifTable.
+  - Discard invalid UDP packets.
+  - VLAN tag support.
+- bsp/xmc48relax:
+  - Static IP addressing.
+  - Increase stack size for main task.
+  - Increase stack size for Ethernet driver task.
+  - Put .bss and heap in 256kB memory section.
 ---
- bsp/xmc48relax/include/config.h  | 10 +++++-----
- bsp/xmc48relax/src/lwip.c        |  2 +-
- bsp/xmc48relax/xmc48relax.ld     |  2 +-
- lwip/src/apps/Makefile           | 12 ++++++++++++
- lwip/src/apps/snmp/Makefile      | 16 ++++++++++++++++
- lwip/src/core/udp.c              | 12 ++++++++++++
- lwip/src/include/lwip/lwipopts.h | 23 ++++++++++++++++++++++-
- 7 files changed, 69 insertions(+), 8 deletions(-)
+ bsp/xmc48relax/include/config.h           |  10 +-
+ bsp/xmc48relax/src/lwip.c                 |   2 +-
+ bsp/xmc48relax/xmc48relax.ld              |  26 +-
+ kern/arch/xmc4/hal.h                      |   2 +-
+ lwip/src/apps/Makefile                    |  12 +
+ lwip/src/apps/snmp/Makefile               |  16 ++
+ lwip/src/apps/snmp/snmp_mib2_interfaces.c |   6 +-
+ lwip/src/apps/snmp/snmp_mib2_system.c     | 309 ++--------------------
+ lwip/src/core/udp.c                       |  12 +
+ lwip/src/include/lwip/apps/snmp_mib2.h    |  24 +-
+ lwip/src/include/lwip/lwipopts.h          |  23 +-
+ 11 files changed, 133 insertions(+), 309 deletions(-)
  create mode 100644 lwip/src/apps/Makefile
  create mode 100644 lwip/src/apps/snmp/Makefile
 
 diff --git a/bsp/xmc48relax/include/config.h b/bsp/xmc48relax/include/config.h
-index 850ce674..de1e7de7 100644
+index 850ce674..07d80b1e 100644
 --- a/bsp/xmc48relax/include/config.h
 +++ b/bsp/xmc48relax/include/config.h
 @@ -53,14 +53,14 @@
@@ -37,11 +47,11 @@ index 850ce674..de1e7de7 100644
     #define CFG_LWIP_HOSTNAME       "xmc48relax"
  #else
 -   #define CFG_LWIP_IPADDR()       IP4_ADDR (&ipaddr, 192, 168, 10, 171)
-+   #define CFG_LWIP_IPADDR()       IP4_ADDR (&ipaddr, 192, 168, 137, 4)
++   #define CFG_LWIP_IPADDR()       IP4_ADDR (&ipaddr, 192, 168, 0, 50)
     #define CFG_LWIP_NETMASK()      IP4_ADDR (&netmask, 255, 255, 255, 0)
 -   #define CFG_LWIP_GATEWAY()      IP4_ADDR (&gw, 192, 168, 10, 1)
 -   #define CFG_LWIP_NAMESERVER()   IP4_ADDR (&nameserver, 192, 168, 10, 4)
-+   #define CFG_LWIP_GATEWAY()      IP4_ADDR (&gw, 192, 168, 137, 1)
++   #define CFG_LWIP_GATEWAY()      IP4_ADDR (&gw, 192, 168, 0, 1)
 +   #define CFG_LWIP_NAMESERVER()   IP4_ADDR (&nameserver, 0, 0, 0, 0)
  #endif
  
@@ -56,7 +66,7 @@ index 850ce674..de1e7de7 100644
  /* Configure the priority of the main task. */
  #define CFG_MAIN_PRIORITY       10
 diff --git a/bsp/xmc48relax/src/lwip.c b/bsp/xmc48relax/src/lwip.c
-index f8b7d94a..49780cc4 100644
+index f8b7d94a..accb0f7d 100644
 --- a/bsp/xmc48relax/src/lwip.c
 +++ b/bsp/xmc48relax/src/lwip.c
 @@ -95,7 +95,7 @@ err_t bsp_eth_init (struct netif * netif)
@@ -64,23 +74,92 @@ index f8b7d94a..49780cc4 100644
        .tx_buffers    = 5,
        .rx_task_prio  = TCPIP_THREAD_PRIO - 1,
 -      .rx_task_stack = 1100,
-+      .rx_task_stack = 4000,
++      .rx_task_stack = 6000,
        .mac_address   = CFG_LWIP_MAC_ADDRESS,
     };
  #ifdef CFG_RTC_INIT
 diff --git a/bsp/xmc48relax/xmc48relax.ld b/bsp/xmc48relax/xmc48relax.ld
-index e59a5939..a338c463 100644
+index e59a5939..bf075030 100644
 --- a/bsp/xmc48relax/xmc48relax.ld
 +++ b/bsp/xmc48relax/xmc48relax.ld
-@@ -97,7 +97,7 @@ SECTIONS
-         event_start = .;
-         KEEP (*(.event));
-         event_end = .;
+@@ -18,6 +18,7 @@ EXTERN(vectors)
+  * sram: The Code RAM is intended for user code or Operating System data storage. The
+  * memory is accessed via the Bus Matrix and provides zero-wait-state access for the CPU
+  * for code execution or data access.
++ * NOTE: May not be used by USB and ETH modules.
+  *
+  * sdsram: The System RAM is intended for general user data storage. The System RAM is
+  * accessed via the Bus Matrix and provides zero-wait-state access for data.
+@@ -30,8 +31,7 @@ MEMORY
+ {
+    flash : org = 0x08000000, len = 2M
+    sram  : org = 0x1FFE8000, len = 96K
+-   sdsram : org = 0x20000000, len = 128K
+-   cdsram : org = 0x20020000, len = 128K
++   ram   : org = 0x20000000, len = 256K /* sdsram + cdsram */
+ }
+ 
+ SECTIONS
+@@ -85,19 +85,23 @@ SECTIONS
+ 
+    /* Put the IRQ-stack at the start of RAM as to
+     * provoke CPU exception upon overflow. */
+-   .bss :
++   .os_stuff :
+    {
+         KEEP (*(.irqstack));
+         irq_stack_top = .;
++        event_start = .;
++        KEEP (*(.event));
++        event_end = .;
++   } > sram
++
++   .bss :
++   {
+         bss_start = .;
+         *(.bss*)
+         *(COMMON)
+         . = ALIGN(4);
+         bss_end = .;
+-        event_start = .;
+-        KEEP (*(.event));
+-        event_end = .;
 -   } > sram
-+   } > cdsram
++   } > ram
  
     .data : AT (data_start_rom)
     {
+@@ -106,13 +110,13 @@ SECTIONS
+         *(.data*)
+         . = ALIGN(4);
+         data_end_ram = .;
+-   } > sram
++   } > ram
+ 
+    .heap :
+    {
+-    	heap_start = .;
+-   } > sdsram
++      heap_start = .;
++   } > ram
+    
+-   heap_end = ORIGIN(sdsram) + LENGTH(sdsram);
++   heap_end = ORIGIN(ram) + LENGTH(ram);
+    heap_size = heap_end - heap_start;
+ }
+diff --git a/kern/arch/xmc4/hal.h b/kern/arch/xmc4/hal.h
+index 8508b3cf..8cda1255 100644
+--- a/kern/arch/xmc4/hal.h
++++ b/kern/arch/xmc4/hal.h
+@@ -18,7 +18,7 @@
+ 
+ /* Set the maximum allocation size in bytes per malloc.
+  * Maximum size is 2^HAL_MAXIMUM_ALLOCATION_SIZE_POWER bytes */
+-#define HAL_MAXIMUM_ALLOCATION_SIZE_POWER 17 /* 128 kB */
++#define HAL_MAXIMUM_ALLOCATION_SIZE_POWER 18 /* 256 kB */
+ 
+ /* This macro enables interrupts globally. */
+ #define HAL_INTERRUPT_UNLOCK()                  \
 diff --git a/lwip/src/apps/Makefile b/lwip/src/apps/Makefile
 new file mode 100644
 index 00000000..e92bb4ee
@@ -121,6 +200,373 @@ index 00000000..e1383bfe
 +override EXTRA_CFLAGS += -Wno-enum-compare
 +
 +include $(PRJ_ROOT)/make/subdir.mk
+diff --git a/lwip/src/apps/snmp/snmp_mib2_interfaces.c b/lwip/src/apps/snmp/snmp_mib2_interfaces.c
+index 979b5073..e38d79a1 100644
+--- a/lwip/src/apps/snmp/snmp_mib2_interfaces.c
++++ b/lwip/src/apps/snmp/snmp_mib2_interfaces.c
+@@ -165,6 +165,7 @@ interfaces_Table_get_value(struct snmp_node_instance* instance, void* value)
+   struct netif *netif = (struct netif*)instance->reference.ptr;
+   u32_t* value_u32 = (u32_t*)value;
+   s32_t* value_s32 = (s32_t*)value;
++  char* value_string = (char*)value;
+   u16_t value_len;
+ 
+   switch (SNMP_TABLE_GET_COLUMN_FROM_OID(instance->instance_oid.id))
+@@ -174,8 +175,9 @@ interfaces_Table_get_value(struct snmp_node_instance* instance, void* value)
+     value_len = sizeof(*value_s32);
+     break;
+   case 2: /* ifDescr */
+-    value_len = sizeof(netif->name);
+-    MEMCPY(value, netif->name, value_len);
++    value_len = sizeof(netif->name) + 1;
++    MEMCPY(value_string, netif->name, sizeof(netif->name));
++    value_string[sizeof(netif->name)] = '0' + netif->num;
+     break;
+   case 3: /* ifType */
+     *value_s32 = netif->link_type;
+diff --git a/lwip/src/apps/snmp/snmp_mib2_system.c b/lwip/src/apps/snmp/snmp_mib2_system.c
+index 90e57805..0242ce5c 100644
+--- a/lwip/src/apps/snmp/snmp_mib2_system.c
++++ b/lwip/src/apps/snmp/snmp_mib2_system.c
+@@ -56,310 +56,57 @@
+ 
+ /* --- system .1.3.6.1.2.1.1 ----------------------------------------------------- */
+ 
+-/** mib-2.system.sysDescr */
+-static const u8_t   sysdescr_default[] = SNMP_LWIP_MIB2_SYSDESC;
+-static const u8_t*  sysdescr           = sysdescr_default;
+-static const u16_t* sysdescr_len       = NULL; /* use strlen for determining len */
+-
+-/** mib-2.system.sysContact */
+-static const u8_t   syscontact_default[]     = SNMP_LWIP_MIB2_SYSCONTACT;
+-static const u8_t*  syscontact               = syscontact_default;
+-static const u16_t* syscontact_len           = NULL; /* use strlen for determining len */
+-static u8_t*        syscontact_wr            = NULL; /* if writable, points to the same buffer as syscontact (required for correct constness) */
+-static u16_t*       syscontact_wr_len        = NULL; /* if writable, points to the same buffer as syscontact_len (required for correct constness) */
+-static u16_t        syscontact_bufsize       = 0;    /* 0=not writable */
+-
+-/** mib-2.system.sysName */
+-static const u8_t   sysname_default[]        = SNMP_LWIP_MIB2_SYSNAME;
+-static const u8_t*  sysname                  = sysname_default;
+-static const u16_t* sysname_len              = NULL; /* use strlen for determining len */
+-static u8_t*        sysname_wr               = NULL; /* if writable, points to the same buffer as sysname (required for correct constness) */
+-static u16_t*       sysname_wr_len           = NULL; /* if writable, points to the same buffer as sysname_len (required for correct constness) */
+-static u16_t        sysname_bufsize          = 0;    /* 0=not writable */
+-
+-/** mib-2.system.sysLocation */
+-static const u8_t   syslocation_default[]    = SNMP_LWIP_MIB2_SYSLOCATION;
+-static const u8_t*  syslocation              = syslocation_default;
+-static const u16_t* syslocation_len           = NULL; /* use strlen for determining len */
+-static u8_t*        syslocation_wr            = NULL; /* if writable, points to the same buffer as syslocation (required for correct constness) */
+-static u16_t*       syslocation_wr_len        = NULL; /* if writable, points to the same buffer as syslocation_len (required for correct constness) */
+-static u16_t        syslocation_bufsize       = 0;    /* 0=not writable */
+-
+-/**
+- * @ingroup snmp_mib2
+- * Initializes sysDescr pointers.
+- *
+- * @param str if non-NULL then copy str pointer
+- * @param len points to string length, excluding zero terminator
+- */
+-void
+-snmp_mib2_set_sysdescr(const u8_t *str, const u16_t *len)
+-{
+-  if (str != NULL) {
+-    sysdescr     = str;
+-    sysdescr_len = len;
+-  }
+-}
+-
+-/**
+- * @ingroup snmp_mib2
+- * Initializes sysContact pointers
+- *
+- * @param ocstr if non-NULL then copy str pointer
+- * @param ocstrlen points to string length, excluding zero terminator.
+- *        if set to NULL it is assumed that ocstr is NULL-terminated.
+- * @param bufsize size of the buffer in bytes.
+- *        (this is required because the buffer can be overwritten by snmp-set)
+- *        if ocstrlen is NULL buffer needs space for terminating 0 byte.
+- *        otherwise complete buffer is used for string.
+- *        if bufsize is set to 0, the value is regarded as read-only.
+- */
+-void
+-snmp_mib2_set_syscontact(u8_t *ocstr, u16_t *ocstrlen, u16_t bufsize)
+-{
+-  if (ocstr != NULL) {
+-    syscontact         = ocstr;
+-    syscontact_wr      = ocstr;
+-    syscontact_len     = ocstrlen;
+-    syscontact_wr_len  = ocstrlen;
+-    syscontact_bufsize = bufsize;
+-  }
+-}
+-
+-/**
+- * @ingroup snmp_mib2
+- * see \ref snmp_mib2_set_syscontact but set pointer to readonly memory
+- */
+-void
+-snmp_mib2_set_syscontact_readonly(const u8_t *ocstr, const u16_t *ocstrlen)
+-{
+-  if (ocstr != NULL) {
+-    syscontact         = ocstr;
+-    syscontact_len     = ocstrlen;
+-    syscontact_wr      = NULL;
+-    syscontact_wr_len  = NULL;
+-    syscontact_bufsize = 0;
+-  }
+-}
+-
+-
+-/**
+- * @ingroup snmp_mib2
+- * Initializes sysName pointers
+- *
+- * @param ocstr if non-NULL then copy str pointer
+- * @param ocstrlen points to string length, excluding zero terminator.
+- *        if set to NULL it is assumed that ocstr is NULL-terminated.
+- * @param bufsize size of the buffer in bytes.
+- *        (this is required because the buffer can be overwritten by snmp-set)
+- *        if ocstrlen is NULL buffer needs space for terminating 0 byte.
+- *        otherwise complete buffer is used for string.
+- *        if bufsize is set to 0, the value is regarded as read-only.
+- */
+-void
+-snmp_mib2_set_sysname(u8_t *ocstr, u16_t *ocstrlen, u16_t bufsize)
+-{
+-  if (ocstr != NULL) {
+-    sysname         = ocstr;
+-    sysname_wr      = ocstr;
+-    sysname_len     = ocstrlen;
+-    sysname_wr_len  = ocstrlen;
+-    sysname_bufsize = bufsize;
+-  }
+-}
+-
+-/**
+- * @ingroup snmp_mib2
+- * see \ref snmp_mib2_set_sysname but set pointer to readonly memory
+- */
+-void
+-snmp_mib2_set_sysname_readonly(const u8_t *ocstr, const u16_t *ocstrlen)
+-{
+-  if (ocstr != NULL) {
+-    sysname         = ocstr;
+-    sysname_len     = ocstrlen;
+-    sysname_wr      = NULL;
+-    sysname_wr_len  = NULL;
+-    sysname_bufsize = 0;
+-  }
+-}
+-
+-/**
+- * @ingroup snmp_mib2
+- * Initializes sysLocation pointers
+- *
+- * @param ocstr if non-NULL then copy str pointer
+- * @param ocstrlen points to string length, excluding zero terminator.
+- *        if set to NULL it is assumed that ocstr is NULL-terminated.
+- * @param bufsize size of the buffer in bytes.
+- *        (this is required because the buffer can be overwritten by snmp-set)
+- *        if ocstrlen is NULL buffer needs space for terminating 0 byte.
+- *        otherwise complete buffer is used for string.
+- *        if bufsize is set to 0, the value is regarded as read-only.
+- */
+-void
+-snmp_mib2_set_syslocation(u8_t *ocstr, u16_t *ocstrlen, u16_t bufsize)
+-{
+-  if (ocstr != NULL) {
+-    syslocation         = ocstr;
+-    syslocation_wr      = ocstr;
+-    syslocation_len     = ocstrlen;
+-    syslocation_wr_len  = ocstrlen;
+-    syslocation_bufsize = bufsize;
+-  }
+-}
+-
+-/**
+- * @ingroup snmp_mib2
+- * see \ref snmp_mib2_set_syslocation but set pointer to readonly memory
+- */
+-void
+-snmp_mib2_set_syslocation_readonly(const u8_t *ocstr, const u16_t *ocstrlen)
++static snmp_mib2_get_callback_fct snmp_mib2_system_get;
++static snmp_mib2_test_set_callback_fct snmp_mib2_system_test_set;
++static snmp_mib2_set_callback_fct snmp_mib2_system_set;
++
++void snmp_mib2_system_set_callbacks(
++  snmp_mib2_get_callback_fct get, 
++  snmp_mib2_test_set_callback_fct test_set,
++  snmp_mib2_set_callback_fct set)
+ {
+-  if (ocstr != NULL) {
+-    syslocation         = ocstr;
+-    syslocation_len     = ocstrlen;
+-    syslocation_wr      = NULL;
+-    syslocation_wr_len  = NULL;
+-    syslocation_bufsize = 0;
+-  }
++  snmp_mib2_system_get = get;
++  snmp_mib2_system_test_set = test_set;
++  snmp_mib2_system_set = set;
+ }
+ 
+-
+ static s16_t
+ system_get_value(const struct snmp_scalar_array_node_def *node, void *value)
+ {
+-  const u8_t*  var = NULL;
+-  const s16_t* var_len;
+-  u16_t result;
+-
+-  switch (node->oid) {
+-  case 1: /* sysDescr */
+-    var     = sysdescr;
+-    var_len = (const s16_t*)sysdescr_len;
+-    break;
+-  case 2: /* sysObjectID */
+-    {
+-      const struct snmp_obj_id* dev_enterprise_oid = snmp_get_device_enterprise_oid();
+-      MEMCPY(value, dev_enterprise_oid->id, dev_enterprise_oid->len * sizeof(u32_t));
+-      return dev_enterprise_oid->len * sizeof(u32_t);
+-    }
+-  case 3: /* sysUpTime */
+-    MIB2_COPY_SYSUPTIME_TO((u32_t*)value);
+-    return sizeof(u32_t);
+-  case 4: /* sysContact */
+-    var     = syscontact;
+-    var_len = (const s16_t*)syscontact_len;
+-    break;
+-  case 5: /* sysName */
+-    var     = sysname;
+-    var_len = (const s16_t*)sysname_len;
+-    break;
+-  case 6: /* sysLocation */
+-    var     = syslocation;
+-    var_len = (const s16_t*)syslocation_len;
+-    break;
+-  case 7: /* sysServices */
+-    *(s32_t*)value = SNMP_SYSSERVICES;
+-    return sizeof(s32_t);
+-  default:
+-    LWIP_DEBUGF(SNMP_MIB_DEBUG,("system_get_value(): unknown id: %"S32_F"\n", node->oid));
+-    return 0;
++  if (snmp_mib2_system_get == NULL)
++  {
++    return SNMP_ERR_GENERROR;
+   }
+-
+-  /* handle string values (OID 1,4,5 and 6) */
+-  LWIP_ASSERT("", (value != NULL));
+-  if (var_len == NULL) {
+-    result = (s16_t)strlen((const char*)var);
+-  } else {
+-    result = *var_len;
++  else
++  {
++    return snmp_mib2_system_get(node->oid, value, SNMP_MAX_VALUE_SIZE);
+   }
+-  MEMCPY(value, var, result);
+-  return result;
+ }
+ 
+ static snmp_err_t
+ system_set_test(const struct snmp_scalar_array_node_def *node, u16_t len, void *value)
+ {
+-  snmp_err_t ret = SNMP_ERR_WRONGVALUE;
+-  const u16_t* var_bufsize  = NULL;
+-  const u16_t* var_wr_len;
+-
+-  LWIP_UNUSED_ARG(value);
+-
+-  switch (node->oid) {
+-  case 4: /* sysContact */
+-    var_bufsize  = &syscontact_bufsize;
+-    var_wr_len   = syscontact_wr_len;
+-    break;
+-  case 5: /* sysName */
+-    var_bufsize  = &sysname_bufsize;
+-    var_wr_len   = sysname_wr_len;
+-    break;
+-  case 6: /* sysLocation */
+-    var_bufsize  = &syslocation_bufsize;
+-    var_wr_len   = syslocation_wr_len;
+-    break;
+-  default:
+-    LWIP_DEBUGF(SNMP_MIB_DEBUG,("system_set_test(): unknown id: %"S32_F"\n", node->oid));
+-    return ret;
++  if (snmp_mib2_system_test_set == NULL)
++  {
++    return SNMP_ERR_GENERROR;
+   }
+-
+-  /* check if value is writable at all */
+-  if (*var_bufsize > 0) {
+-    if (var_wr_len == NULL) {
+-      /* we have to take the terminating 0 into account */
+-      if (len < *var_bufsize) {
+-        ret = SNMP_ERR_NOERROR;
+-      }
+-    } else {
+-      if (len <= *var_bufsize) {
+-        ret = SNMP_ERR_NOERROR;
+-      }
+-    }
+-  } else {
+-    ret = SNMP_ERR_NOTWRITABLE;
++  else
++  {
++    return snmp_mib2_system_test_set(node->oid, value, len);
+   }
+-
+-  return ret;
+ }
+ 
+ static snmp_err_t
+ system_set_value(const struct snmp_scalar_array_node_def *node, u16_t len, void *value)
+ {
+-  u8_t*  var_wr = NULL;
+-  u16_t* var_wr_len;
+-
+-  switch (node->oid) {
+-  case 4: /* sysContact */
+-    var_wr     = syscontact_wr;
+-    var_wr_len = syscontact_wr_len;
+-    break;
+-  case 5: /* sysName */
+-    var_wr     = sysname_wr;
+-    var_wr_len = sysname_wr_len;
+-    break;
+-  case 6: /* sysLocation */
+-    var_wr     = syslocation_wr;
+-    var_wr_len = syslocation_wr_len;
+-    break;
+-  default:
+-    LWIP_DEBUGF(SNMP_MIB_DEBUG,("system_set_value(): unknown id: %"S32_F"\n", node->oid));
++  if (snmp_mib2_system_set == NULL)
++  {
+     return SNMP_ERR_GENERROR;
+   }
+-
+-  /* no need to check size of target buffer, this was already done in set_test method */
+-  LWIP_ASSERT("", var_wr != NULL);
+-  MEMCPY(var_wr, value, len);
+-  
+-  if (var_wr_len == NULL) {
+-    /* add terminating 0 */
+-    var_wr[len] = 0;
+-  } else {
+-    *var_wr_len = len;
++  else
++  {
++    return snmp_mib2_system_set(node->oid, value, len);
+   }
+-
+-  return SNMP_ERR_NOERROR;
+ }
+ 
+ static const struct snmp_scalar_array_node_def system_nodes[] = {
 diff --git a/lwip/src/core/udp.c b/lwip/src/core/udp.c
 index ce2e3d29..7946cb05 100644
 --- a/lwip/src/core/udp.c
@@ -144,8 +590,43 @@ index ce2e3d29..7946cb05 100644
      if (pcb != NULL) {
        MIB2_STATS_INC(mib2.udpindatagrams);
  #if SO_REUSE && SO_REUSE_RXTOALL
+diff --git a/lwip/src/include/lwip/apps/snmp_mib2.h b/lwip/src/include/lwip/apps/snmp_mib2.h
+index 2f4a6893..1df6bb0d 100644
+--- a/lwip/src/include/lwip/apps/snmp_mib2.h
++++ b/lwip/src/include/lwip/apps/snmp_mib2.h
+@@ -60,13 +60,23 @@ extern struct snmp_threadsync_instance snmp_mib2_lwip_locks;
+ #define SNMP_SYSSERVICES ((1 << 6) | (1 << 3) | ((IP_FORWARD) << 2))
+ #endif
+ 
+-void snmp_mib2_set_sysdescr(const u8_t* str, const u16_t* len); /* read-only be defintion */
+-void snmp_mib2_set_syscontact(u8_t *ocstr, u16_t *ocstrlen, u16_t bufsize);
+-void snmp_mib2_set_syscontact_readonly(const u8_t *ocstr, const u16_t *ocstrlen);
+-void snmp_mib2_set_sysname(u8_t *ocstr, u16_t *ocstrlen, u16_t bufsize);
+-void snmp_mib2_set_sysname_readonly(const u8_t *ocstr, const u16_t *ocstrlen);
+-void snmp_mib2_set_syslocation(u8_t *ocstr, u16_t *ocstrlen, u16_t bufsize);
+-void snmp_mib2_set_syslocation_readonly(const u8_t *ocstr, const u16_t *ocstrlen);
++typedef s16_t(*snmp_mib2_get_callback_fct)(
++   u32_t column,
++   void *value,
++   size_t size);
++typedef snmp_err_t(*snmp_mib2_test_set_callback_fct)(
++   u32_t column,
++   const void *value,
++   size_t size);
++typedef snmp_err_t(*snmp_mib2_set_callback_fct)(
++   u32_t column,
++   const void *value,
++   size_t size);
++
++void snmp_mib2_system_set_callbacks(
++  snmp_mib2_get_callback_fct get, 
++  snmp_mib2_test_set_callback_fct test_set,
++  snmp_mib2_set_callback_fct set);
+ 
+ #endif /* SNMP_LWIP_MIB2 */
+ #endif /* LWIP_SNMP */
 diff --git a/lwip/src/include/lwip/lwipopts.h b/lwip/src/include/lwip/lwipopts.h
-index c48a69b7..15141e15 100644
+index c48a69b7..941e6f9c 100644
 --- a/lwip/src/include/lwip/lwipopts.h
 +++ b/lwip/src/include/lwip/lwipopts.h
 @@ -49,7 +49,12 @@
@@ -185,7 +666,7 @@ index c48a69b7..15141e15 100644
  /* Stack sizes */
  #define DEFAULT_THREAD_STACKSIZE    1024
  #define TCPIP_THREAD_STACKSIZE      1768
-+#define SNMP_STACK_SIZE             3000
++#define SNMP_STACK_SIZE             4000
  
  /* TCPIP thread priority */
  #define TCPIP_THREAD_PRIO           5

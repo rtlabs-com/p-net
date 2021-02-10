@@ -63,12 +63,19 @@ target_sources(profinet
   $<$<BOOL:${PNET_OPTION_SNMP}>:src/ports/linux/mib/lldpXPnoRemTable.c>
   )
 
+target_link_options(pn_dev
+   PRIVATE
+   -Wl,--gc-sections
+)
+
 target_compile_options(profinet
   PRIVATE
   -Wall
   -Wextra
   -Werror
   -Wno-unused-parameter
+  -ffunction-sections
+  -fdata-sections
   INTERFACE
   $<$<CONFIG:Coverage>:--coverage>
   )
@@ -97,8 +104,8 @@ target_sources(pn_dev
 
 file(COPY
   src/ports/linux/set_network_parameters
-  sample_app/set_profinet_leds_linux
-  sample_app/set_profinet_leds_linux.raspberrypi
+  src/ports/linux/set_profinet_leds
+  src/ports/linux/set_profinet_leds.raspberrypi
   DESTINATION
   ${PROFINET_BINARY_DIR}/
   )

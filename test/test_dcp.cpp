@@ -101,10 +101,10 @@ TEST_F (DcpTest, DcpHelloTest)
 
    p_buf = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE);
    memcpy (p_buf->payload, get_name_req, sizeof (get_name_req));
-   ret = pf_eth_recv (net, p_buf);
+   ret = pf_eth_recv (mock_os_data.eth_if_handle, net, p_buf);
 
    EXPECT_EQ (ret, 1);
-   EXPECT_EQ (mock_os_data.eth_send_count, 2);
+   EXPECT_EQ (mock_os_data.eth_send_count, PNET_MAX_PORT + 1);
 
    EXPECT_EQ (appdata.call_counters.led_off_calls, 1);
    EXPECT_EQ (appdata.call_counters.led_on_calls, 0);
@@ -125,36 +125,36 @@ TEST_F (DcpTest, DcpRunTest)
    TEST_TRACE ("\nGenerating mock set name request\n");
    p_buf = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE);
    memcpy (p_buf->payload, set_name_req, sizeof (set_name_req));
-   ret = pf_eth_recv (net, p_buf);
+   ret = pf_eth_recv (mock_os_data.eth_if_handle, net, p_buf);
    EXPECT_EQ (ret, 1);
 
    TEST_TRACE ("\nGenerating mock set IP request\n");
    p_buf = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE);
    memcpy (p_buf->payload, set_ip_req, sizeof (set_ip_req));
-   ret = pf_eth_recv (net, p_buf);
+   ret = pf_eth_recv (mock_os_data.eth_if_handle, net, p_buf);
    EXPECT_EQ (ret, 1);
 
    TEST_TRACE ("\nGenerating mock set ident request\n");
    p_buf = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE);
    memcpy (p_buf->payload, ident_req, sizeof (ident_req));
-   ret = pf_eth_recv (net, p_buf);
+   ret = pf_eth_recv (mock_os_data.eth_if_handle, net, p_buf);
    EXPECT_EQ (ret, 1);
 
    TEST_TRACE ("\nGenerating mock factory reset request\n");
    p_buf = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE);
    memcpy (p_buf->payload, factory_reset_req, sizeof (factory_reset_req));
-   ret = pf_eth_recv (net, p_buf);
+   ret = pf_eth_recv (mock_os_data.eth_if_handle, net, p_buf);
    EXPECT_EQ (ret, 1);
 
    TEST_TRACE ("\nGenerating mock flash LED request\n");
    p_buf = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE);
    memcpy (p_buf->payload, signal_req, sizeof (signal_req));
-   ret = pf_eth_recv (net, p_buf);
+   ret = pf_eth_recv (mock_os_data.eth_if_handle, net, p_buf);
    EXPECT_EQ (ret, 1);
    /* Wait for LED to flash three times at 1 Hz */
    run_stack (4 * 1000 * 1000);
 
-   EXPECT_EQ (mock_os_data.eth_send_count, 9);
+   EXPECT_EQ (mock_os_data.eth_send_count, 9 + (PNET_MAX_PORT - 1) * 4);
    EXPECT_EQ (mock_os_data.set_ip_suite_count, 2);
 
    EXPECT_EQ (appdata.call_counters.led_on_calls, 3);

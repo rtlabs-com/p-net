@@ -1087,6 +1087,15 @@ static int pf_cmrpc_rm_connect_interpret_ind (
                if (ret == 0)
                {
                   p_ar->nbr_ar_param++;
+
+                  LOG_DEBUG (
+                     PF_RPC_LOG,
+                     "CMRPC(%d): Requested start up mode: \"%s\" Initiator station name: \"%s\" port: 0x%04x Timeout: %u x 100 ms\n",
+                     __LINE__,
+                     p_ar->ar_param.ar_properties.startup_mode ? "Advanced" : "Legacy",
+                     p_ar->ar_param.cm_initiator_station_name,
+                     p_ar->ar_param.cm_initiator_udp_rt_port,
+                     p_ar->ar_param.cm_initiator_activity_timeout_factor);
                }
             }
             break;

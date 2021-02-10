@@ -633,6 +633,9 @@ int pf_fspm_cm_read_ind (
    pnet_result_t * p_read_status)
 {
    int ret = -1;
+   uint16_t slot = p_read_request->slot_number;
+   uint16_t subslot = p_read_request->subslot_number;
+   uint16_t index = p_read_request->index;
 
    if (p_read_request->index <= PF_IDX_USER_MAX)
    {
@@ -644,9 +647,9 @@ int pf_fspm_cm_read_ind (
             net->fspm_cfg.cb_arg,
             p_ar->arep,
             p_read_request->api,
-            p_read_request->slot_number,
-            p_read_request->subslot_number,
-            p_read_request->index,
+            slot,
+            subslot,
+            index,
             p_read_request->sequence_number,
             pp_read_data,
             p_read_length,
@@ -661,21 +664,15 @@ int pf_fspm_cm_read_ind (
          p_read_status->pnio_status.error_code_2 = 0;
       }
    }
-   else if (
-      (PF_IDX_SUB_IM_0 <= p_read_request->index) &&
-      (p_read_request->index <= PF_IDX_SUB_IM_15))
+   else if ((PF_IDX_SUB_IM_0 <= index) && (index <= PF_IDX_SUB_IM_15))
    {
       /* Read I&M data - This is handled internally. */
-      switch (p_read_request->index)
+      switch (index)
       {
       case PF_IDX_SUB_IM_0:
 
          if (*p_read_length >= sizeof (net->fspm_cfg.im_0_data))
          {
-            LOG_INFO (
-               PNET_LOG,
-               "FSPM(%d): PLC is reading I&M0 data.\n",
-               __LINE__);
             *pp_read_data = (uint8_t *)&net->fspm_cfg.im_0_data;
             *p_read_length = sizeof (net->fspm_cfg.im_0_data);
             ret = 0;
@@ -698,8 +695,7 @@ int pf_fspm_cm_read_ind (
          {
             LOG_INFO (
                PNET_LOG,
-               "FSPM(%d): PLC is reading I&M1 data. Function: %s Location: "
-               "%s\n",
+               "FSPM(%d): I&M1 function: \"%s\" Location: \"%s\"\n",
                __LINE__,
                net->fspm_cfg.im_1_data.im_tag_function,
                net->fspm_cfg.im_1_data.im_tag_location);
@@ -721,7 +717,7 @@ int pf_fspm_cm_read_ind (
          {
             LOG_INFO (
                PNET_LOG,
-               "FSPM(%d): PLC is reading I&M2 data. Date: %s\n",
+               "FSPM(%d): I&M2 Date: %s\n",
                __LINE__,
                net->fspm_cfg.im_2_data.im_date);
             *pp_read_data = (uint8_t *)&net->fspm_cfg.im_2_data;
@@ -742,7 +738,7 @@ int pf_fspm_cm_read_ind (
          {
             LOG_INFO (
                PNET_LOG,
-               "FSPM(%d): PLC is reading I&M3 data. Descriptor: %s\n",
+               "FSPM(%d): I&M3 Descriptor: \"%s\"\n",
                __LINE__,
                net->fspm_cfg.im_3_data.im_descriptor);
             *pp_read_data = (uint8_t *)&net->fspm_cfg.im_3_data;
@@ -761,10 +757,6 @@ int pf_fspm_cm_read_ind (
       case PF_IDX_SUB_IM_4:
          if ((net->fspm_cfg.im_0_data.im_supported & PNET_SUPPORTED_IM4) > 0)
          {
-            LOG_INFO (
-               PNET_LOG,
-               "FSPM(%d): PLC is reading I&M4 data\n",
-               __LINE__);
             *pp_read_data = (uint8_t *)&net->fspm_cfg.im_4_data;
             *p_read_length = sizeof (net->fspm_cfg.im_4_data);
             ret = 0;
@@ -782,15 +774,13 @@ int pf_fspm_cm_read_ind (
          /* Nothing if data not available here */
          LOG_DEBUG (
             PNET_LOG,
-            "FSPM(%d): Request to read non-implemented I&M data. Index %u\n",
-            __LINE__,
-            p_read_request->index);
+            "FSPM(%d): PLC is requesting to read non-implemented I&M data.\n",
+            __LINE__);
          break;
       }
    }
-   else if (p_read_request->index == PF_IDX_DEV_LOGBOOK_DATA)
+   else if (index == PF_IDX_DEV_LOGBOOK_DATA)
    {
-      LOG_INFO (PNET_LOG, "FSPM(%d): PLC is reading logbook data\n", __LINE__);
       *pp_read_data = (uint8_t *)&net->fspm_log_book;
       *p_read_length = sizeof (net->fspm_log_book);
       ret = 0;
@@ -853,7 +843,7 @@ int pf_fspm_cm_write_ind (
       case PF_IDX_SUB_IM_0: /* read-only */
          LOG_ERROR (
             PNET_LOG,
-            "FSPM(%d): Request to write I&M0 data, but it is read-only.\n",
+            "FSPM(%d): PLC requests to write I&M0 data, but it is read-only.\n",
             __LINE__);
          p_write_status->pnio_status.error_code = PNET_ERROR_CODE_WRITE;
          p_write_status->pnio_status.error_decode = PNET_ERROR_DECODE_PNIORW;
@@ -877,8 +867,7 @@ int pf_fspm_cm_write_ind (
             {
                LOG_INFO (
                   PNET_LOG,
-                  "FSPM(%d): PLC is writing I&M1 data. Function: %s Location: "
-                  "%s\n",
+                  "FSPM(%d): I&M1 data. Function: \"%s\" Location: \"%s\"\n",
                   __LINE__,
                   net->fspm_cfg.im_1_data.im_tag_function,
                   net->fspm_cfg.im_1_data.im_tag_location);
@@ -935,7 +924,7 @@ int pf_fspm_cm_write_ind (
                os_mutex_unlock (net->fspm_im_mutex);
                LOG_INFO (
                   PNET_LOG,
-                  "FSPM(%d): PLC is writing I&M2 data. Date: %s\n",
+                  "FSPM(%d): I&M2 Date: %s\n",
                   __LINE__,
                   net->fspm_cfg.im_2_data.im_date);
                ret = 0;
@@ -984,7 +973,7 @@ int pf_fspm_cm_write_ind (
                os_mutex_unlock (net->fspm_im_mutex);
                LOG_INFO (
                   PNET_LOG,
-                  "FSPM(%d): PLC is writing I&M3 data. Descriptor: %s\n",
+                  "FSPM(%d): I&M3 Descriptor: %s\n",
                   __LINE__,
                   net->fspm_cfg.im_3_data.im_descriptor);
                ret = 0;
@@ -1022,10 +1011,6 @@ int pf_fspm_cm_write_ind (
          {
             if (write_length == sizeof (net->fspm_cfg.im_4_data))
             {
-               LOG_INFO (
-                  PNET_LOG,
-                  "FSPM(%d): PLC is writing I&M4 data\n",
-                  __LINE__);
                os_mutex_lock (net->fspm_im_mutex);
                memcpy (
                   &net->fspm_cfg.im_4_data,
@@ -1065,7 +1050,8 @@ int pf_fspm_cm_write_ind (
       default:
          LOG_ERROR (
             PNET_LOG,
-            "FSPM(%d): Trying to write non-implemented I&M data. Index %u\n",
+            "FSPM(%d): PLC is trying to write non-implemented I&M data. Index "
+            "%u\n",
             __LINE__,
             p_write_request->index);
          p_write_status->pnio_status.error_code = PNET_ERROR_CODE_WRITE;

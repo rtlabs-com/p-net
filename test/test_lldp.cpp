@@ -70,73 +70,160 @@ static const char * port_id_test_sample_1 =
    "\x6c\x6d\x6e\x6f\x70\x71\x72\x73\x74\x75\x76\x77\x78\x79\x7a\x31"
    "\x32\x33\x34\x35\x36\x37\x38\x39\x30";
 
+static pf_lldp_chassis_id_t fake_chassis_id (void)
+{
+   pf_lldp_chassis_id_t chassis_id;
+
+   memset (&chassis_id, 0, sizeof (chassis_id));
+   snprintf (
+      chassis_id.string,
+      sizeof (chassis_id.string),
+      "%s",
+      "Chassis ID received from remote device");
+   chassis_id.len = strlen (chassis_id.string);
+   chassis_id.subtype = PF_LLDP_SUBTYPE_LOCALLY_ASSIGNED;
+   chassis_id.is_valid = true;
+   return chassis_id;
+}
+
+static pf_lldp_port_id_t fake_port_id (void)
+{
+   pf_lldp_port_id_t port_id;
+
+   memset (&port_id, 0, sizeof (port_id));
+   snprintf (
+      port_id.string,
+      sizeof (port_id.string),
+      "%s",
+      "Port ID received from remote device");
+   port_id.len = strlen (port_id.string);
+   port_id.subtype = PF_LLDP_SUBTYPE_LOCALLY_ASSIGNED;
+   port_id.is_valid = true;
+   return port_id;
+}
+
+static uint16_t fake_ttl (void)
+{
+   return 12345;
+}
+
+static pf_lldp_port_description_t fake_port_description (void)
+{
+   pf_lldp_port_description_t port_description;
+
+   memset (&port_description, 0, sizeof (port_description));
+   snprintf (
+      port_description.string,
+      sizeof (port_description.string),
+      "%s",
+      "Port Description");
+   port_description.len = strlen (port_description.string);
+   port_description.is_valid = true;
+   return port_description;
+}
+
+static pf_lldp_management_address_t fake_ipv4_management_address (void)
+{
+   pf_lldp_management_address_t management_address;
+
+   memset (&management_address, 0, sizeof (management_address));
+   management_address.subtype = 1; /* IPv4 */
+   management_address.value[0] = 192;
+   management_address.value[1] = 168;
+   management_address.value[2] = 10;
+   management_address.value[3] = 102;
+   management_address.len = 4;
+   management_address.interface_number.subtype = 2; /* ifIndex */
+   management_address.interface_number.value = 1;
+   management_address.is_valid = true;
+   return management_address;
+}
+
+static pf_lldp_management_address_t fake_ipv6_management_address (void)
+{
+   pf_lldp_management_address_t management_address;
+
+   memset (&management_address, 0, sizeof (management_address));
+   management_address.subtype = 2; /* IPv6 */
+   management_address.value[0] = 0x20;
+   management_address.value[1] = 0x01;
+   management_address.value[2] = 0x0d;
+   management_address.value[3] = 0xd8;
+   management_address.value[4] = 0x85;
+   management_address.value[5] = 0xa3;
+   management_address.value[6] = 0x00;
+   management_address.value[7] = 0x00;
+   management_address.value[8] = 0x00;
+   management_address.value[9] = 0x00;
+   management_address.value[10] = 0x8a;
+   management_address.value[11] = 0x2e;
+   management_address.value[12] = 0x03;
+   management_address.value[13] = 0x70;
+   management_address.value[14] = 0x73;
+   management_address.value[15] = 0x34;
+   management_address.len = 16;
+   management_address.interface_number.subtype = 2; /* ifIndex */
+   management_address.interface_number.value = 1;
+   management_address.is_valid = true;
+   return management_address;
+}
+
+static pf_lldp_link_status_t fake_phy_config (void)
+{
+   pf_lldp_link_status_t phy_config;
+
+   memset (&phy_config, 0, sizeof (phy_config));
+   phy_config.is_autonegotiation_supported = true;
+   phy_config.is_autonegotiation_enabled = true;
+   phy_config.autonegotiation_advertised_capabilities =
+      PNAL_ETH_AUTONEG_CAP_100BaseTX_HALF_DUPLEX |
+      PNAL_ETH_AUTONEG_CAP_100BaseTX_FULL_DUPLEX;
+   phy_config.operational_mau_type = PNAL_ETH_MAU_COPPER_100BaseTX_FULL_DUPLEX;
+   phy_config.is_valid = true;
+   return phy_config;
+}
+
+static pnet_ethaddr_t fake_mac_address (void)
+{
+   pnet_ethaddr_t mac_address;
+
+   memset (&mac_address, 0, sizeof (mac_address));
+   mac_address.addr[0] = 0xab;
+   mac_address.addr[0] = 0xcd;
+   mac_address.addr[0] = 0xef;
+   mac_address.addr[0] = 0x01;
+   mac_address.addr[0] = 0x23;
+   mac_address.addr[0] = 0x45;
+   return mac_address;
+}
+
+static pf_lldp_signal_delay_t fake_port_delay (void)
+{
+   pf_lldp_signal_delay_t port_delay;
+
+   memset (&port_delay, 0, sizeof (port_delay));
+   port_delay.cable_delay_local = 1;
+   port_delay.rx_delay_local = 2;
+   port_delay.tx_delay_local = 3;
+   port_delay.rx_delay_remote = 4;
+   port_delay.tx_delay_remote = 5;
+   port_delay.is_valid = true;
+   return port_delay;
+}
+
 static pf_lldp_peer_info_t fake_peer_info (void)
 {
    pf_lldp_peer_info_t peer;
 
    memset (&peer, 0, sizeof (peer));
-
-   snprintf (
-      peer.chassis_id.string,
-      sizeof (peer.chassis_id.string),
-      "%s",
-      "Chassis ID received from remote device");
-   peer.chassis_id.len = strlen (peer.chassis_id.string);
-   peer.chassis_id.subtype = PF_LLDP_SUBTYPE_LOCALLY_ASSIGNED;
-   peer.chassis_id.is_valid = true;
-
-   snprintf (
-      peer.port_id.string,
-      sizeof (peer.port_id.string),
-      "%s",
-      "Port ID received from remote device");
-   peer.port_id.len = strlen (peer.port_id.string);
-   peer.port_id.subtype = PF_LLDP_SUBTYPE_LOCALLY_ASSIGNED;
-   peer.port_id.is_valid = true;
-
-   peer.ttl = 12345;
-
-   snprintf (
-      peer.port_description.string,
-      sizeof (peer.port_description.string),
-      "%s",
-      "Port Description");
-   peer.port_description.len = strlen (peer.port_description.string);
-   peer.port_description.is_valid = true;
-
-   peer.management_address.subtype = 1; /* IPv4 */
-   peer.management_address.value[0] = 192;
-   peer.management_address.value[1] = 168;
-   peer.management_address.value[2] = 10;
-   peer.management_address.value[3] = 102;
-   peer.management_address.len = 4;
-   peer.management_address.interface_number.subtype = 2; /* ifIndex */
-   peer.management_address.interface_number.value = 1;
-   peer.management_address.is_valid = true;
-
-   peer.phy_config.is_autonegotiation_supported = true;
-   peer.phy_config.is_autonegotiation_enabled = true;
-   peer.phy_config.autonegotiation_advertised_capabilities =
-      PNAL_ETH_AUTONEG_CAP_100BaseTX_HALF_DUPLEX |
-      PNAL_ETH_AUTONEG_CAP_100BaseTX_FULL_DUPLEX;
-   peer.phy_config.operational_mau_type =
-      PNAL_ETH_MAU_COPPER_100BaseTX_FULL_DUPLEX;
-   peer.phy_config.is_valid = true;
-
-   peer.mac_address.addr[0] = 0xab;
-   peer.mac_address.addr[0] = 0xcd;
-   peer.mac_address.addr[0] = 0xef;
-   peer.mac_address.addr[0] = 0x01;
-   peer.mac_address.addr[0] = 0x23;
-   peer.mac_address.addr[0] = 0x45;
-
-   peer.port_delay.cable_delay_local = 1;
-   peer.port_delay.rx_delay_local = 2;
-   peer.port_delay.tx_delay_local = 3;
-   peer.port_delay.rx_delay_remote = 4;
-   peer.port_delay.tx_delay_remote = 5;
-   peer.port_delay.is_valid = true;
-
+   peer.chassis_id = fake_chassis_id();
+   peer.port_id = fake_port_id();
+   peer.ttl = fake_ttl();
+   peer.port_description = fake_port_description();
+   peer.management_address = fake_ipv4_management_address();
+   peer.phy_config = fake_phy_config();
+   peer.mac_address = fake_mac_address();
+   peer.port_delay = fake_port_delay();
    return peer;
 }
 
@@ -373,7 +460,7 @@ TEST_F (LldpTest, LldpInitTest)
    EXPECT_EQ (appdata.call_counters.ccontrol_calls, 0);
    EXPECT_EQ (appdata.call_counters.read_calls, 0);
    EXPECT_EQ (appdata.call_counters.write_calls, 0);
-   EXPECT_EQ (mock_os_data.eth_send_count, 1);
+   EXPECT_EQ (mock_os_data.eth_send_count, PNET_MAX_PORT);
 }
 
 TEST_F (LldpTest, LldpGenerateAliasName)
@@ -598,24 +685,88 @@ TEST_F (LldpTest, LldpParsePacketWithTooBigManagementAddress)
    EXPECT_EQ (actual.management_address.is_valid, false);
 }
 
+TEST_F (LldpTest, LldpParsePacketWithMultipleManagementAddresses)
+{
+   uint8_t packet[MAX_ETH_PAYLOAD_SIZE];
+   int error;
+   size_t size;
+   pf_lldp_peer_info_t actual;
+   const pf_lldp_chassis_id_t chassis_id = fake_chassis_id();
+   const pf_lldp_port_id_t port_id = fake_port_id();
+   const uint16_t ttl = fake_ttl();
+   const pf_lldp_management_address_t ipv4 = fake_ipv4_management_address();
+   const pf_lldp_management_address_t ipv6 = fake_ipv6_management_address();
+
+   /* Construct LLDP packet with IPv4 and IPv6 addresses (in that order) */
+   memset (packet, 0xff, MAX_ETH_PAYLOAD_SIZE);
+   size = 0;
+   size += construct_packet_chassis_id (&packet[size], &chassis_id);
+   size += construct_packet_port_id (&packet[size], &port_id);
+   size += construct_packet_ttl (&packet[size], ttl);
+   size += construct_packet_management_address (&packet[size], &ipv4);
+   size += construct_packet_management_address (&packet[size], &ipv6);
+   size += construct_packet_end_marker (&packet[size]);
+
+   memset (&actual, 0xff, sizeof (actual));
+
+   error = pf_lldp_parse_packet (packet, size, &actual);
+
+   /* Note that only the IPv4 address should be saved, as IPv6 addresses are
+    * of no use for the p-net stack.
+    */
+   EXPECT_EQ (error, 0);
+   EXPECT_EQ (actual.management_address.is_valid, true);
+   EXPECT_EQ (actual.management_address.subtype, ipv4.subtype);
+   EXPECT_EQ (actual.management_address.len, 4u);
+}
+
+TEST_F (LldpTest, LldpParsePacketWithInvalidManagementAddresses)
+{
+   uint8_t packet[MAX_ETH_PAYLOAD_SIZE];
+   int error;
+   size_t size;
+   pf_lldp_peer_info_t actual;
+   const pf_lldp_chassis_id_t chassis_id = fake_chassis_id();
+   const pf_lldp_port_id_t port_id = fake_port_id();
+   const uint16_t ttl = fake_ttl();
+   pf_lldp_management_address_t address;
+
+   address = fake_ipv4_management_address();
+   address.len = 5;
+
+   /* Construct LLDP packet */
+   memset (packet, 0xff, MAX_ETH_PAYLOAD_SIZE);
+   size = 0;
+   size += construct_packet_chassis_id (&packet[size], &chassis_id);
+   size += construct_packet_port_id (&packet[size], &port_id);
+   size += construct_packet_ttl (&packet[size], ttl);
+   size += construct_packet_management_address (&packet[size], &address);
+   size += construct_packet_end_marker (&packet[size]);
+
+   memset (&actual, 0xff, sizeof (actual));
+
+   error = pf_lldp_parse_packet (packet, size, &actual);
+
+   EXPECT_EQ (error, 0);
+   EXPECT_EQ (actual.management_address.is_valid, false);
+}
+
 TEST_F (LldpTest, LldpGetChassisId)
 {
    pf_lldp_chassis_id_t chassis_id;
 
    memset (&chassis_id, 0xff, sizeof (chassis_id));
 
-   /* Currently, the MAC address is used as Chassis ID */
    pf_lldp_get_chassis_id (net, &chassis_id);
-   EXPECT_EQ (chassis_id.subtype, PF_LLDP_SUBTYPE_MAC);
-   EXPECT_EQ (chassis_id.string[0], 0x12);
-   EXPECT_EQ (chassis_id.string[1], 0x34);
-   EXPECT_EQ (chassis_id.string[2], 0x00);
-   EXPECT_EQ (chassis_id.string[3], 0x78);
-   EXPECT_EQ (chassis_id.string[4], (char)0x90);
-   EXPECT_EQ (chassis_id.string[5], (char)0xab);
-   EXPECT_EQ (chassis_id.len, 6u);
-
-   /* TODO: Add test case for locally assigned Chassis ID */
+   EXPECT_EQ (chassis_id.subtype, PF_LLDP_SUBTYPE_LOCALLY_ASSIGNED);
+   EXPECT_STREQ (
+      chassis_id.string,
+      "PNET unit tests           <orderid>            <serial nbr>         1 P "
+      " 0  0  0");
+   EXPECT_EQ (
+      chassis_id.len,
+      strlen ("PNET unit tests           <orderid>            <serial nbr>     "
+              "    1 P  0  0  0"));
 }
 
 TEST_F (LldpTest, LldpGetPortId)
@@ -626,8 +777,8 @@ TEST_F (LldpTest, LldpGetPortId)
 
    pf_lldp_get_port_id (net, LOCAL_PORT, &port_id);
    EXPECT_EQ (port_id.subtype, PF_LLDP_SUBTYPE_LOCALLY_ASSIGNED);
-   EXPECT_STREQ (port_id.string, "port-001");
-   EXPECT_EQ (port_id.len, strlen ("port-001"));
+   EXPECT_STREQ (port_id.string, "port-001.12-34-00-78-90-AB");
+   EXPECT_EQ (port_id.len, strlen ("port-001.12-34-00-78-90-AB"));
 }
 
 TEST_F (LldpTest, LldpGetPortDescription)
