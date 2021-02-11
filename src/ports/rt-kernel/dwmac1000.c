@@ -254,9 +254,6 @@ typedef struct dwmac1000
    uint16_t anar;
 } dwmac1000_t;
 
-static pnal_eth_sys_recv_callback_t * input_rx_hook = NULL;
-static void * input_rx_arg = NULL;
-
 #ifdef DEBUG_DATA
 #include <ctype.h>
 static void dwmac1000_pbuf_dump (struct pbuf * p)
@@ -636,10 +633,8 @@ done:
  * called.
  *
  */
-static void dwmac1000_input (dwmac1000_t * dwmac1000, struct netif * netif)
+static void dwmac1000_input (struct netif * netif)
 {
-   int handled = 0;
-   struct eth_hdr * ethhdr;
    struct pbuf * p;
 
    /* Move received packet into a new pbuf */
@@ -650,35 +645,11 @@ static void dwmac1000_input (dwmac1000_t * dwmac1000, struct netif * netif)
       return;
    }
 
-   /* points to packet payload, which starts with an Ethernet header */
-   ethhdr = p->payload;
-
-   /* Pass pbuf to rx hook if set */
-   if (input_rx_hook != NULL)
+   /* pass all packets to netif input, which decides what packets it supports */
+   if (netif->input (p, netif) != (err_t)ERR_OK)
    {
-      handled = input_rx_hook (netif, input_rx_arg, p);
-      if (handled != 0)
-      {
-         return;
-      }
-      /* Else pass it to lwIP */
-   }
-
-   switch (htons (ethhdr->type))
-   {
-   case ETHTYPE_VLAN:
-   case ETHTYPE_IP:
-      /* Fall-through */
-   case ETHTYPE_ARP:
-      if (netif->input (p, netif) != (err_t)ERR_OK)
-      {
-         LWIP_DEBUGF (NETIF_DEBUG, ("ethernetif_input: IP input error\n"));
-         pbuf_free (p);
-      }
-      break;
-   default:
+      LWIP_DEBUGF (NETIF_DEBUG, ("dwmac1000: IP input error\n"));
       pbuf_free (p);
-      break;
    }
 }
 
@@ -704,7 +675,7 @@ static void dwmac1000_receiver (void * arg)
       while ((dwmac1000->pRx->des0 & xDES0_OWN) == 0)
       {
          /* Get one packet */
-         dwmac1000_input (dwmac1000, netif);
+         dwmac1000_input (netif);
 
          /* Move to next descriptor */
          dwmac1000->pRx = dwmac1000->pRx->next;
@@ -788,10 +759,6 @@ int eth_ioctl (drv_t * drv, void * arg, int req, void * param)
 
    switch (req)
    {
-   case IOCTL_NET_SET_RX_HOOK:
-      input_rx_hook = (pnal_eth_sys_recv_callback_t *)param;
-      input_rx_arg = arg;
-      return 0;
    case IOCTL_NET_GET_STATUS:
       dwmac1000_get_status (dwmac1000, arg, param);
       return 0;

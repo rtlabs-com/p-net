@@ -1,4 +1,4 @@
-From 337d268fa4701e10cec14bedb9732d049ff3e387 Mon Sep 17 00:00:00 2001
+From 3dd5f871c118cdbc98c6068165a7eeef4ac5d245 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Fredrik=20M=C3=B6ller?= <fredrik.moller@rt-labs.com>
 Date: Tue, 15 Sep 2020 18:22:53 +0200
 Subject: [PATCH] rtkernel for Profinet
@@ -12,6 +12,12 @@ stack:
   - Fix SNMP ifDescr in ifTable.
   - Discard invalid UDP packets.
   - VLAN tag support.
+  - Lock mutex while handling received frame
+    instead of passing message to lwip thread
+    (LWIP_TCPIP_CORE_LOCKING_INPUT).
+  - Add hook function to be called when frame of
+    unknown EtherType is received, such as LLDP
+    and Profinet (LWIP_HOOK_UNKNOWN_ETH_PROTOCOL).
 - bsp/xmc48relax:
   - Static IP addressing.
   - Increase stack size for main task.
@@ -26,12 +32,16 @@ stack:
  lwip/src/apps/snmp/Makefile               |  16 ++
  lwip/src/apps/snmp/snmp_mib2_interfaces.c |   6 +-
  lwip/src/apps/snmp/snmp_mib2_system.c     | 309 ++--------------------
+ lwip/src/core/lwip_hooks.c                |  23 ++
  lwip/src/core/udp.c                       |  12 +
  lwip/src/include/lwip/apps/snmp_mib2.h    |  24 +-
- lwip/src/include/lwip/lwipopts.h          |  23 +-
- 11 files changed, 133 insertions(+), 309 deletions(-)
+ lwip/src/include/lwip/lwip_hooks.h        |  41 +++
+ lwip/src/include/lwip/lwipopts.h          |  39 ++-
+ 13 files changed, 213 insertions(+), 309 deletions(-)
  create mode 100644 lwip/src/apps/Makefile
  create mode 100644 lwip/src/apps/snmp/Makefile
+ create mode 100644 lwip/src/core/lwip_hooks.c
+ create mode 100644 lwip/src/include/lwip/lwip_hooks.h
 
 diff --git a/bsp/xmc48relax/include/config.h b/bsp/xmc48relax/include/config.h
 index 850ce674..07d80b1e 100644
@@ -567,6 +577,35 @@ index 90e57805..0242ce5c 100644
  }
  
  static const struct snmp_scalar_array_node_def system_nodes[] = {
+diff --git a/lwip/src/core/lwip_hooks.c b/lwip/src/core/lwip_hooks.c
+new file mode 100644
+index 00000000..ad6229f8
+--- /dev/null
++++ b/lwip/src/core/lwip_hooks.c
+@@ -0,0 +1,23 @@
++#include "lwip/lwip_hooks.h"
++
++#ifdef LWIP_HOOK_UNKNOWN_ETH_PROTOCOL
++static netif_input_fn lwip_hook_for_unknown_eth_protocol;
++
++err_enum_t lwip_hook_unknown_eth_protocol(struct pbuf *pbuf, struct netif *netif)
++{
++  if(lwip_hook_for_unknown_eth_protocol == NULL)
++  {
++    /* Not handled. User needs to free pbuf */
++    return ERR_IF;
++  }
++  else
++  {
++    return lwip_hook_for_unknown_eth_protocol(pbuf, netif);
++  }
++}
++
++void lwip_set_hook_for_unknown_eth_protocol(struct netif *netif, netif_input_fn hook)
++{
++  lwip_hook_for_unknown_eth_protocol = hook;
++}
++#endif /* LWIP_HOOK_UNKNOWN_ETH_PROTOCOL */
 diff --git a/lwip/src/core/udp.c b/lwip/src/core/udp.c
 index ce2e3d29..7946cb05 100644
 --- a/lwip/src/core/udp.c
@@ -625,11 +664,62 @@ index 2f4a6893..1df6bb0d 100644
  
  #endif /* SNMP_LWIP_MIB2 */
  #endif /* LWIP_SNMP */
+diff --git a/lwip/src/include/lwip/lwip_hooks.h b/lwip/src/include/lwip/lwip_hooks.h
+new file mode 100644
+index 00000000..c48f1c57
+--- /dev/null
++++ b/lwip/src/include/lwip/lwip_hooks.h
+@@ -0,0 +1,41 @@
++/**
++ * Hook functions
++ *
++ * Declares hook functions called by lwip.
++ * Also declared API for configuring hook functions.
++ *
++ * The name of this file is specified as LWIP_HOOK_FILENAME in lwipopts.h.
++ */
++
++#ifndef LWIP_HOOKS_H
++#define LWIP_HOOKS_H
++
++#include "lwip/netif.h"
++
++/**
++ * LWIP_HOOK_UNKNOWN_ETH_PROTOCOL
++ *
++ * Called from ethernet_input() when an unknown eth type is encountered.
++ *
++ * By default, this will do nothing and return ERR_IF.
++ * If a hook function has been set in lwip_set_hook_for_unknown_eth_protocol(),
++ * then that function will be called.
++ *
++ * \param pbuf  Payload points to ethernet header!
++ * \param netif Network interface.
++ * \return ERR_OK if packet is accepted and freed, 
++ *         ERR_IF otherwise.
++ */
++err_enum_t lwip_hook_unknown_eth_protocol(struct pbuf *pbuf, struct netif *netif);
++
++/**
++ * Configure function to be called by lwip_hook_unknown_eth_protocol()
++ *
++ *\param netif Network interface.
++ *\param hook  Hook function to be called when frame with unknown eth type
++ *             is encountered. Should return ERR_OK for accepted and freed
++ *             frames, ERR_IF otherwise.
++ */
++void lwip_set_hook_for_unknown_eth_protocol(struct netif *netif, netif_input_fn hook);
++
++#endif /* LWIP_HOOKS_H */
 diff --git a/lwip/src/include/lwip/lwipopts.h b/lwip/src/include/lwip/lwipopts.h
-index c48a69b7..941e6f9c 100644
+index c48a69b7..c3fdf058 100644
 --- a/lwip/src/include/lwip/lwipopts.h
 +++ b/lwip/src/include/lwip/lwipopts.h
-@@ -49,7 +49,12 @@
+@@ -46,10 +46,31 @@
+ #define LWIP_NETIF_LINK_CALLBACK    1
+ #define LWIP_NETIF_STATUS_CALLBACK  1
+ #define LWIP_NETIF_LOOPBACK         1
++#define LWIP_TCPIP_CORE_LOCKING_INPUT 1
  #define LWIP_SOCKET                 1
  #define LWIP_IGMP                   1
  #define LWIP_TCP_KEEPALIVE          1
@@ -639,10 +729,25 @@ index c48a69b7..941e6f9c 100644
 +#define MIB2_STATS                  1
  #define SO_REUSE                    1
 +#define ETHARP_SUPPORT_VLAN         1
++
++/**
++ * LWIP_HOOK_FILENAME: Custom filename to #include in files that provide hooks.
++ * Declare your hook function prototypes in there, you may also #include all headers
++ * providing data types that are need in this file.
++ */
++#define LWIP_HOOK_FILENAME "lwip/lwip_hooks.h"
++
++/**
++ * LWIP_HOOK_UNKNOWN_ETH_PROTOCOL(pbuf, netif):
++ * Called from ethernet_input() when an unknown eth type is encountered.
++ * Return ERR_OK if packet is accepted, any error code otherwise.
++ * Payload points to ethernet header!
++ */
++#define LWIP_HOOK_UNKNOWN_ETH_PROTOCOL lwip_hook_unknown_eth_protocol
  
  /**
   * LWIP_DHCP_AUTOIP_COOP_TRIES: Set to the number of DHCP DISCOVER probes
-@@ -60,20 +65,33 @@
+@@ -60,20 +81,33 @@
   */
  #define LWIP_DHCP_AUTOIP_COOP_TRIES 2
  
@@ -677,7 +782,7 @@ index c48a69b7..941e6f9c 100644
  /* Mailbox sizes */
  #define TCPIP_MBOX_SIZE             128
  #define DEFAULT_RAW_RECVMBOX_SIZE   5
-@@ -106,6 +124,7 @@
+@@ -106,6 +140,7 @@
   *    LWIP_DBG_OFF
   *    LWIP_DBG_ON
   */
@@ -685,7 +790,7 @@ index c48a69b7..941e6f9c 100644
  #define IP_DEBUG                    LWIP_DBG_OFF
  #define IGMP_DEBUG                  LWIP_DBG_OFF
  #define TCPIP_DEBUG                 LWIP_DBG_OFF
-@@ -120,5 +139,7 @@
+@@ -120,5 +155,7 @@
  #define TCP_FR_DEBUG                LWIP_DBG_OFF
  #define TCP_QLEN_DEBUG              LWIP_DBG_OFF
  #define TCP_RST_DEBUG               LWIP_DBG_OFF

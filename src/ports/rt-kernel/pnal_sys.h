@@ -29,11 +29,6 @@ extern "C" {
 /* Re-use lwIP pbuf for rt-kernel */
 typedef struct pbuf pnal_buf_t;
 
-/* TODO: Integrate in standard drivers?
- * Local handling to enable the NIC drivers to support a RX hook
- */
-#define IOCTL_NET_SET_RX_HOOK 0x601
-
 /**
  * Get status of network interface
  *
