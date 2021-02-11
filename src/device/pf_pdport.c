@@ -559,10 +559,10 @@ int pf_pdport_read_ind (
          (slot == PNET_SLOT_DAP_IDENT) &&
          (subslot == PNET_SUBSLOT_DAP_INTERFACE_1_IDENT))
       {
-         if (net->interface.name_of_device_mode.active == true)
+         if (net->pf_interface.name_of_device_mode.active == true)
          {
             pf_put_pd_interface_adj (
-               net->interface.name_of_device_mode.mode,
+               net->pf_interface.name_of_device_mode.mode,
                PNET_SUBSLOT_DAP_INTERFACE_1_IDENT,
                true,
                p_read_res,
@@ -1014,14 +1014,14 @@ static int pf_pdport_write_interface_adj (
    pf_get_interface_adjust (
       &get_info,
       &pos,
-      &net->interface.name_of_device_mode.mode);
-   net->interface.name_of_device_mode.active = true;
+      &net->pf_interface.name_of_device_mode.mode);
+   net->pf_interface.name_of_device_mode.active = true;
 
    LOG_INFO (
       PNET_LOG,
       "PDPORT(%d): PD interface adjust. PLC is setting LLDP mode: %s\n",
       __LINE__,
-      net->interface.name_of_device_mode.mode ==
+      net->pf_interface.name_of_device_mode.mode ==
             PF_LLDP_NAME_OF_DEVICE_MODE_STANDARD
          ? "Standard"
          : "Legacy");

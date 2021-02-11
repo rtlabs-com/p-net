@@ -598,7 +598,9 @@ void pf_lldp_get_chassis_id (pnet_t * net, pf_lldp_chassis_id_t * p_chassis_id)
       pf_cmina_get_device_macaddr (net);
    char station_name[PNET_STATION_NAME_MAX_SIZE]; /** Terminated */
 
-   if (net->interface.name_of_device_mode.mode == PF_LLDP_NAME_OF_DEVICE_MODE_LEGACY)
+   if (
+      net->pf_interface.name_of_device_mode.mode ==
+      PF_LLDP_NAME_OF_DEVICE_MODE_LEGACY)
    {
       /*
        * FIXME: Use of pf_cmina_get_station_name() is not thread-safe.
@@ -662,7 +664,9 @@ void pf_lldp_get_port_id (
    const pnet_ethaddr_t * device_mac_address =
       pf_cmina_get_device_macaddr (net);
 
-   if (net->interface.name_of_device_mode.mode == PF_LLDP_NAME_OF_DEVICE_MODE_LEGACY)
+   if (
+      net->pf_interface.name_of_device_mode.mode ==
+      PF_LLDP_NAME_OF_DEVICE_MODE_LEGACY)
    {
       snprintf (
          p_port_id->string,
