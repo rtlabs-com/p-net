@@ -273,6 +273,30 @@ static bool pf_dcp_check_sam (pnet_t * net, const pnet_ethaddr_t * mac)
 
 /**
  * @internal
+ * Check that address is not a multi-cast address
+ * and also that it matches the local MAC address.
+ *
+ * This check was added to handle situation where network
+ * interface is in promiscous mode and the need to filter out
+ * DCP requests intended for other devices.
+ *
+ * @param local_mac        In: Local MAC address. Should be the
+ *                             MAC address of main (DAP) interface.
+ * @param destination_mac  In: Destination MAC address
+ * @return true if destination address is ok and shall packet shall
+ *         be accepted. false if not.
+ */
+bool pf_dcp_check_destination_address (
+   const pnet_ethaddr_t * local_mac,
+   const pnet_ethaddr_t * destination_mac)
+{
+   return (
+      ((destination_mac->addr[0] & 1) == 0) && /* Not multi-cast */
+      (memcmp (destination_mac, local_mac, sizeof (*destination_mac)) == 0));
+}
+
+/**
+ * @internal
  * Add a block to a buffer, possibly including a block_info.
  *
  * @param p_dst            Out:   The destination buffer.
@@ -950,7 +974,7 @@ static int pf_dcp_get_set (
       if (
          (p_rsp != NULL) &&
          (pf_dcp_check_sam (net, &p_src_ethhdr->src) == true) &&
-         ((p_src_ethhdr->dest.addr[0] & 1) == 0)) /* Not multi-cast */
+         pf_dcp_check_destination_address (mac_address, &p_src_ethhdr->dest))
       {
          /* Prepare the response */
          p_dst = (uint8_t *)p_rsp->payload;
@@ -958,7 +982,7 @@ static int pf_dcp_get_set (
          p_dst_ethhdr = (pf_ethhdr_t *)&p_dst[dst_pos];
          dst_pos += sizeof (pf_ethhdr_t);
 
-         /* Insert frame ID into reponse */
+         /* Insert frame ID into response */
          p_dst[dst_pos++] = ((PF_DCP_GET_SET_FRAME_ID & 0xff00) >> 8);
          p_dst[dst_pos++] = PF_DCP_GET_SET_FRAME_ID & 0xff;
 

@@ -134,6 +134,10 @@ uint32_t pf_dcp_calculate_response_delay (
    const pnet_ethaddr_t * mac_address,
    uint16_t response_delay_factor);
 
+bool pf_dcp_check_destination_address (
+   const pnet_ethaddr_t * local_mac,
+   const pnet_ethaddr_t * destination_mac);
+
 #ifdef __cplusplus
 }
 #endif
