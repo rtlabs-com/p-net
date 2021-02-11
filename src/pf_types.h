@@ -2817,7 +2817,7 @@ struct pnet
          pf_lldp_name_of_device_mode_t mode;
       } name_of_device_mode;
       pf_port_t port[PNET_MAX_PORT];
-   } interface;
+   } pf_interface;
 };
 
 /**
