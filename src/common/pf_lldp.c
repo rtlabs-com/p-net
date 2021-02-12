@@ -466,6 +466,29 @@ static void pf_lldp_add_management (
    pf_put_byte (0, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
 }
 
+/**
+ * Mark lldp peer data as invalid.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param loc_port_num     In:    Local port number.
+ *                                Valid range: 1 .. PNET_MAX_PORT
+ */
+void pf_lldp_invalidate_peer_info (pnet_t * net, int loc_port_num)
+{
+   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
+
+   os_mutex_lock (net->lldp_mutex);
+   p_port_data->lldp.is_peer_info_received = false;
+   p_port_data->lldp.peer_info.chassis_id.is_valid = false;
+   p_port_data->lldp.peer_info.port_id.is_valid = false;
+   p_port_data->lldp.peer_info.port_description.is_valid = false;
+   p_port_data->lldp.peer_info.management_address.is_valid = false;
+   p_port_data->lldp.peer_info.port_delay.is_valid = false;
+   p_port_data->lldp.peer_info.phy_config.is_valid = false;
+   p_port_data->lldp.peer_info.ttl = 0;
+   os_mutex_unlock (net->lldp_mutex);
+}
+
 /********************* Initialize and send **********************************/
 
 /**
@@ -491,6 +514,7 @@ static void pf_lldp_receive_timeout (
    LOG_WARNING (PF_LLDP_LOG, "LLDP(%d): Receive timeout expired\n", __LINE__);
 
    pf_pdport_peer_lldp_timeout (net, p_port_data->port_num);
+   pf_lldp_invalidate_peer_info (net, p_port_data->port_num);
 }
 
 void pf_lldp_reset_peer_timeout (

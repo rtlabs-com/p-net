@@ -3583,7 +3583,7 @@ void pf_put_pdport_data_real (
    const pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
    const pf_lldp_peer_info_t * p_peer_info = &p_port_data->lldp.peer_info;
 
-   num_peers = p_peer_info->ttl ? 1 : 0;
+   num_peers = p_port_data->lldp.is_peer_info_received ? 1 : 0;
 
    if (pnal_eth_get_status (p_port_config->phy_port.if_name, &eth_status) != 0)
    {
