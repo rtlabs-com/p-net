@@ -122,22 +122,21 @@ netsnmp_variable_list * lldpRemManAddrTable_get_next_data_point (
    int error;
 
    iterator = (pf_port_iterator_t *)*my_loop_context;
-   port = pf_snmp_get_next_port (iterator);
-   if (port == 0)
-   {
-      return NULL;
-   }
 
-   error = pf_snmp_get_peer_timestamp (pnet, port, &timestamp);
-   if (error)
+   do
    {
-      return NULL;
-   }
-   error = pf_snmp_get_peer_management_address (pnet, port, &address);
-   if (error)
-   {
-      return NULL;
-   }
+      port = pf_snmp_get_next_port (iterator);
+      if (port == 0)
+      {
+         return NULL;
+      }
+
+      error = pf_snmp_get_peer_timestamp (pnet, port, &timestamp);
+      if (error == 0)
+      {
+         error = pf_snmp_get_peer_management_address (pnet, port, &address);
+      }
+   } while (error);
 
    snmp_set_var_typed_integer (idx, ASN_TIMETICKS, timestamp);
    idx = idx->next_variable;
