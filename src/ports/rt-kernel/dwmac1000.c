@@ -252,6 +252,9 @@ typedef struct dwmac1000
     * PHY at startup.
     */
    uint16_t anar;
+
+   /* lwip network interface handle */
+   struct netif * netif;
 } dwmac1000_t;
 
 #ifdef DEBUG_DATA
@@ -288,6 +291,24 @@ static void dwmac1000_pbuf_dump (struct pbuf * p)
    }
 }
 #endif /* DEBUG_DATA */
+
+#if MIB2_STATS
+static uint32_t dwmac1000_snmp_link_speed (uint8_t link_state)
+{
+   if (link_state & PHY_LINK_10MBIT)
+   {
+      return 10 * 1000 * 1000;
+   }
+   else if (link_state & PHY_LINK_100MBIT)
+   {
+      return 100 * 1000 * 1000;
+   }
+   else
+   {
+      return 0;
+   }
+}
+#endif /* MIB2_STATS */
 
 static uint16_t dwmac1000_read_phy (void * arg, uint8_t address, uint8_t reg)
 {
@@ -727,6 +748,11 @@ static dev_state_t dwmac1000_probe (drv_t * drv)
    /* Save link state for IOCTL_NET_GET_STATUS */
    dwmac1000->last_link_state = link_state;
 
+   /* Set ifSpeed in SNMP MIB-II ifTable */
+#if MIB2_STATS
+   dwmac1000->netif->link_speed = dwmac1000_snmp_link_speed (link_state);
+#endif /* MIB2_STATS */
+
    return (link_state & PHY_LINK_OK) ? StateAttached : StateDetached;
 }
 
@@ -815,6 +841,7 @@ drv_t * dwmac1000_init (
    dwmac1000->mmc = (eth_mmc_t *)(cfg->base + 0x100);
    dwmac1000->dma = (eth_dma_t *)(cfg->base + 0x1000);
    dwmac1000->last_link_state = 0x00;
+   dwmac1000->netif = netif;
 
    /* Create receive task */
    dwmac1000->tRcv = task_spawn (
