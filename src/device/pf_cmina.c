@@ -1150,10 +1150,6 @@ int pf_cmina_dcp_get_req (
          *p_block_error = PF_DCP_BLOCK_ERROR_SUBOPTION_NOT_SUPPORTED;
          ret = -1;
          break;
-      case PF_DCP_SUB_DEV_PROP_ALIAS:
-         *p_value_length = sizeof (net->cmina_current_dcp_ase.alias_name);
-         *pp_value = (uint8_t *)&net->cmina_current_dcp_ase.alias_name;
-         break;
       case PF_DCP_SUB_DEV_PROP_INSTANCE:
          *p_value_length = sizeof (net->cmina_current_dcp_ase.instance_id);
          *pp_value = (uint8_t *)&net->cmina_current_dcp_ase.instance_id;
@@ -1167,6 +1163,7 @@ int pf_cmina_dcp_get_req (
             sizeof (net->cmina_current_dcp_ase.standard_gw_value);
          *pp_value = (uint8_t *)&net->cmina_current_dcp_ase.standard_gw_value;
          break;
+      case PF_DCP_SUB_DEV_PROP_ALIAS:
       default:
          *p_block_error = PF_DCP_BLOCK_ERROR_SUBOPTION_NOT_SUPPORTED;
          ret = -1;
