@@ -65,6 +65,11 @@ int pf_diag_exit (void);
  *                                   value.
  * @param qual_ch_qualifier   In:    The qualified channel qualifier.
  * @param usi                 In:    The USI.
+ * @param manuf_data_len      In:    Length in bytes of the
+ *                                   manufacturer specific diagnosis data.
+ *                                   Max PNET_MAX_DIAG_MANUF_DATA_SIZE.
+ *                                   (Only needed if USI <= 0x7fff,
+ *                                    and may still be 0).
  * @param p_manuf_data        In:    The manufacturer specific diagnosis data.
  *                                   (Only needed if USI <= 0x7fff).
  * @return  0  if the operation succeeded.
@@ -80,6 +85,7 @@ int pf_diag_add (
    uint32_t ext_ch_add_value,
    uint32_t qual_ch_qualifier,
    uint16_t usi,
+   uint16_t manuf_data_len,
    const uint8_t * p_manuf_data);
 
 /**
@@ -108,8 +114,13 @@ int pf_diag_add (
  * @param ext_ch_error_type In:    The extended channel error type, or 0.
  * @param ext_ch_add_value  In:    New extended channel error additional value.
  * @param usi               In:    The USI.
+ * @param manuf_data_len    In:    Length in bytes of the
+ *                                 manufacturer specific diagnosis data.
+ *                                 Max PNET_MAX_DIAG_MANUF_DATA_SIZE.
+ *                                (Only needed if USI <= 0x7fff,
+ *                                 and may still be 0).
  * @param p_manuf_data      In:    New manufacturer specific diagnosis data.
- *                                (Only needed if USI <= 0x7fff).
+ *                                 (Only needed if USI <= 0x7fff).
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -120,6 +131,7 @@ int pf_diag_update (
    uint16_t ext_ch_error_type,
    uint32_t ext_ch_add_value,
    uint16_t usi,
+   uint16_t manuf_data_len,
    const uint8_t * p_manuf_data);
 
 /**
@@ -237,6 +249,9 @@ int pf_diag_std_remove (
  * @param slot_nbr         In:    The slot.
  * @param subslot_nbr      In:    The sub-slot.
  * @param usi              In:    The USI. Range 0..0x7fff
+ * @param manuf_data_len   In:    Length in bytes of the
+ *                                manufacturer specific diagnosis data.
+ *                                Max PNET_MAX_DIAG_MANUF_DATA_SIZE.
  * @param p_manuf_data     In:    The manufacturer specific diagnosis data.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
@@ -247,6 +262,7 @@ int pf_diag_usi_add (
    uint16_t slot_nbr,
    uint16_t subslot_nbr,
    uint16_t usi,
+   uint16_t manuf_data_len,
    const uint8_t * p_manuf_data);
 
 /**
@@ -261,6 +277,9 @@ int pf_diag_usi_add (
  * @param slot_nbr         In:    The slot.
  * @param subslot_nbr      In:    The sub-slot.
  * @param usi              In:    The USI. Range 0..0x7fff
+ * @param manuf_data_len   In:    Length in bytes of the
+ *                                manufacturer specific diagnosis data.
+ *                                Max PNET_MAX_DIAG_MANUF_DATA_SIZE.
  * @param p_manuf_data     In:    New manufacturer specific diagnosis data.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
@@ -271,6 +290,7 @@ int pf_diag_usi_update (
    uint16_t slot_nbr,
    uint16_t subslot_nbr,
    uint16_t usi,
+   uint16_t manuf_data_len,
    const uint8_t * p_manuf_data);
 
 /**

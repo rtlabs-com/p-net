@@ -524,14 +524,19 @@ void pf_put_alarm_fixed (
  * @param is_big_endian    In:    Endianness of the destination buffer.
  * @param bh_type          In:    The block type.
  * @param p_alarm_data     In:    Alarm type, slot, subslot etc. Mandatory.
+ *                                The payload part of it (if any) is not used.
  * @param maint_status     In:    The Maintenance status used for specific USI
  *                                values (inserted only if not zero).
  * @param payload_usi      In:    The payload USI (may be 0). Only used for
  *                                block type = alarm notify.
- * @param payload_len      In:    Payload length. Must be > 0 if payload_usi >
- *                                0.
- * @param p_payload        In:    Mandatory if payload_len > 0. May be NULL.
- *                                Custom data or pf_diag_item_t.
+ *                                Use 0 for no payload.
+ * @param payload_len      In:    Number of bytes of manufaturer data.
+ *                                Only used for manufacturer data
+ *                                (payload USI <= 0x7FFF).
+ *                                May be 0 for manufacturer data.
+ * @param p_payload        In:    pf_diag_item_t, manufacturer data or NULL.
+ *                                Mandatory if payload_len > 0 or for USI
+ *                                values that expect a pf_diag_item_t
  * @param p_status         In:    PNIO status. Only used for block type = alarm
  *                                ack.
  * @param res_len          In:    Size of destination buffer.

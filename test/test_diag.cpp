@@ -573,6 +573,7 @@ TEST_F (DiagTest, DiagRunTest)
       TEST_SLOT_IDENT,
       TEST_SUBSLOT_IDENT,
       TEST_DIAG_USI_CUSTOM,
+      5, /* Should fit in PNET_MAX_DIAG_MANUF_DATA_SIZE */
       (uint8_t *)"ABCD");
    EXPECT_EQ (ret, 0);
 
@@ -583,6 +584,7 @@ TEST_F (DiagTest, DiagRunTest)
       TEST_SLOT_IDENT,
       TEST_SUBSLOT_IDENT,
       TEST_DIAG_USI_CUSTOM,
+      5,
       (uint8_t *)"ABC1");
    EXPECT_EQ (ret, 0);
 
@@ -593,7 +595,8 @@ TEST_F (DiagTest, DiagRunTest)
       TEST_SLOT_IDENT,
       TEST_SUBSLOT_IDENT,
       TEST_DIAG_USI_CUSTOM,
-      (uint8_t *)"Bjarn2");
+      5,
+      (uint8_t *)"ABC2");
    EXPECT_EQ (ret, 0);
 
    TEST_TRACE ("Update for wrong USI and wrong subslot\n");
@@ -603,7 +606,8 @@ TEST_F (DiagTest, DiagRunTest)
       TEST_SLOT_IDENT,
       TEST_SUBSLOT_IDENT,
       TEST_DIAG_USI_NONEXIST,
-      (uint8_t *)"Bjarn2");
+      5,
+      (uint8_t *)"ABC2");
    EXPECT_EQ (ret, -1);
 
    ret = pnet_diag_usi_update (
@@ -612,7 +616,8 @@ TEST_F (DiagTest, DiagRunTest)
       TEST_SLOT_IDENT,
       TEST_SUBSLOT_NONEXIST_IDENT,
       TEST_DIAG_USI_CUSTOM,
-      (uint8_t *)"Bjarn2");
+      5,
+      (uint8_t *)"ABC2");
    EXPECT_EQ (ret, -1);
 
    TEST_TRACE ("Remove wrong USI\n");
@@ -640,6 +645,7 @@ TEST_F (DiagTest, DiagRunTest)
       TEST_SLOT_IDENT,
       TEST_SUBSLOT_NONEXIST_IDENT,
       TEST_DIAG_USI_CUSTOM,
+      5,
       (uint8_t *)"ABCD");
    EXPECT_EQ (ret, -1);
 
@@ -650,6 +656,7 @@ TEST_F (DiagTest, DiagRunTest)
       TEST_SLOT_IDENT,
       TEST_SUBSLOT_IDENT,
       TEST_DIAG_USI_INVALID,
+      5,
       (uint8_t *)"ABCD");
    EXPECT_EQ (ret, -1);
 
@@ -659,7 +666,8 @@ TEST_F (DiagTest, DiagRunTest)
       TEST_SLOT_IDENT,
       TEST_SUBSLOT_IDENT,
       TEST_DIAG_USI_INVALID,
-      (uint8_t *)"Bjarn3");
+      5,
+      (uint8_t *)"ABCD");
    EXPECT_EQ (ret, -1);
 
    ret = pnet_diag_usi_remove (
@@ -683,6 +691,7 @@ TEST_F (DiagTest, DiagRunTest)
       TEST_DIAG_EXT_ADDVALUE,
       TEST_DIAG_QUALIFIER_NOTSET,
       0x8003, /* PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS */
+      0,
       NULL);
    EXPECT_EQ (ret, 0);
 
@@ -693,6 +702,7 @@ TEST_F (DiagTest, DiagRunTest)
       TEST_DIAG_EXT_ERRTYPE,
       TEST_DIAG_EXT_ADDVALUE_B,
       0x8003, /* PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS */
+      0,
       NULL);
    EXPECT_EQ (ret, 0);
 
@@ -718,6 +728,7 @@ TEST_F (DiagTest, DiagRunTest)
       TEST_DIAG_EXT_ADDVALUE,
       TEST_DIAG_QUALIFIER,
       0x8003, /* PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS */
+      0,
       NULL);
    EXPECT_EQ (ret, 0);
 
@@ -728,6 +739,7 @@ TEST_F (DiagTest, DiagRunTest)
       TEST_DIAG_EXT_ERRTYPE,
       TEST_DIAG_EXT_ADDVALUE_B,
       0x8003, /* PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS */
+      0,
       NULL);
    EXPECT_EQ (ret, 0);
 
@@ -753,6 +765,7 @@ TEST_F (DiagTest, DiagRunTest)
       TEST_DIAG_EXT_ADDVALUE,
       TEST_DIAG_QUALIFIER_NOTSET,
       0x8002, /* PF_USI_EXTENDED_CHANNEL_DIAGNOSIS */
+      0,
       NULL);
    EXPECT_EQ (ret, 0);
 
@@ -763,6 +776,7 @@ TEST_F (DiagTest, DiagRunTest)
       TEST_DIAG_EXT_ERRTYPE,
       TEST_DIAG_EXT_ADDVALUE_B,
       0x8002, /* PF_USI_EXTENDED_CHANNEL_DIAGNOSIS */
+      0,
       NULL);
    EXPECT_EQ (ret, 0);
 
@@ -788,6 +802,7 @@ TEST_F (DiagTest, DiagRunTest)
       0, /* Add value */
       0, /* Qualifier */
       TEST_DIAG_USI_CUSTOM,
+      5,
       (uint8_t *)"ABCD");
    EXPECT_EQ (ret, 0);
 
@@ -798,6 +813,7 @@ TEST_F (DiagTest, DiagRunTest)
       0, /* Ext channel error type */
       0, /* Add value */
       TEST_DIAG_USI_CUSTOM,
+      5,
       (uint8_t *)"ABC2");
    EXPECT_EQ (ret, 0);
 
@@ -820,6 +836,7 @@ TEST_F (DiagTest, DiagRunTest)
       TEST_DIAG_EXT_ADDVALUE,
       TEST_DIAG_QUALIFIER_NOTSET,
       0x8001, /* Invalid */
+      0,
       NULL);
    EXPECT_EQ (ret, -1);
 
@@ -833,6 +850,7 @@ TEST_F (DiagTest, DiagRunTest)
       TEST_DIAG_EXT_ADDVALUE,
       TEST_DIAG_QUALIFIER_NOTSET,
       0x8004, /* Invalid */
+      0,
       NULL);
    EXPECT_EQ (ret, -1);
 
@@ -843,6 +861,7 @@ TEST_F (DiagTest, DiagRunTest)
       TEST_DIAG_EXT_ERRTYPE,
       TEST_DIAG_EXT_ADDVALUE_B,
       0x8001, /* Invalid */
+      0,
       NULL);
    EXPECT_EQ (ret, -1);
 
@@ -862,6 +881,7 @@ TEST_F (DiagTest, DiagRunTest)
       TEST_DIAG_EXT_ERRTYPE,
       TEST_DIAG_EXT_ADDVALUE_B,
       0x8004, /* Invalid */
+      0,
       NULL);
    EXPECT_EQ (ret, -1);
 
@@ -886,6 +906,7 @@ TEST_F (DiagTest, DiagRunTest)
       0, /* Add value */
       TEST_DIAG_QUALIFIER_NOTSET,
       TEST_DIAG_USI_CUSTOM,
+      5,
       (uint8_t *)"ABCD");
    EXPECT_EQ (ret, -1);
 
@@ -896,6 +917,7 @@ TEST_F (DiagTest, DiagRunTest)
       0, /* Extended hannel error type */
       0, /* Add value */
       TEST_DIAG_USI_CUSTOM,
+      5,
       (uint8_t *)"ABCD");
    EXPECT_EQ (ret, -1);
 
@@ -919,6 +941,7 @@ TEST_F (DiagTest, DiagRunTest)
       0, /* Add value */
       TEST_DIAG_QUALIFIER_NOTSET,
       TEST_DIAG_USI_CUSTOM,
+      5,
       (uint8_t *)"ABCD");
    EXPECT_EQ (ret, -1);
 
@@ -929,6 +952,7 @@ TEST_F (DiagTest, DiagRunTest)
       TEST_DIAG_EXT_ERRTYPE,
       0, /* Add value */
       TEST_DIAG_USI_CUSTOM,
+      5,
       (uint8_t *)"ABC2");
    EXPECT_EQ (ret, -1);
 
@@ -952,6 +976,7 @@ TEST_F (DiagTest, DiagRunTest)
       TEST_DIAG_EXT_ADDVALUE,
       TEST_DIAG_QUALIFIER_NOTSET,
       TEST_DIAG_USI_CUSTOM,
+      5,
       (uint8_t *)"ABCD");
    EXPECT_EQ (ret, -1);
 
@@ -962,6 +987,7 @@ TEST_F (DiagTest, DiagRunTest)
       0, /* Ext channel error type */
       TEST_DIAG_EXT_ADDVALUE,
       TEST_DIAG_USI_CUSTOM,
+      5,
       (uint8_t *)"ABC2");
    EXPECT_EQ (ret, -1);
 
@@ -977,6 +1003,7 @@ TEST_F (DiagTest, DiagRunTest)
       0, /* Add value */
       TEST_DIAG_QUALIFIER,
       TEST_DIAG_USI_CUSTOM,
+      5,
       (uint8_t *)"ABCD");
    EXPECT_EQ (ret, -1);
 
@@ -992,6 +1019,7 @@ TEST_F (DiagTest, DiagRunTest)
       TEST_DIAG_EXT_ADDVALUE,
       TEST_DIAG_QUALIFIER_NOTSET,
       0x8003, /* PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS */
+      5,
       (uint8_t *)"ABCD");
    EXPECT_EQ (ret, -1);
 
@@ -1002,6 +1030,7 @@ TEST_F (DiagTest, DiagRunTest)
       TEST_DIAG_EXT_ERRTYPE,
       TEST_DIAG_EXT_ADDVALUE_B,
       0x8003, /* PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS */
+      5,
       (uint8_t *)"ABCD");
    EXPECT_EQ (ret, -1);
 
@@ -1017,6 +1046,7 @@ TEST_F (DiagTest, DiagRunTest)
       TEST_DIAG_EXT_ADDVALUE,
       TEST_DIAG_QUALIFIER,
       0x8002, /* PF_USI_EXTENDED_CHANNEL_DIAGNOSIS */
+      0,
       NULL);
    EXPECT_EQ (ret, -1);
 
@@ -1032,6 +1062,7 @@ TEST_F (DiagTest, DiagRunTest)
       TEST_DIAG_EXT_ADDVALUE,
       TEST_DIAG_QUALIFIER,
       0x8003, /* PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS */
+      0,
       NULL);
    EXPECT_EQ (ret, -1);
 

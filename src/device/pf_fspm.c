@@ -125,8 +125,14 @@ void pf_fspm_option_show (const pnet_t * net)
       "PNET_MAX_ALARMS                                : %d\n",
       PNET_MAX_ALARMS);
    printf (
+      "PNET_MAX_ALARM_PAYLOAD_DATA_SIZE               : %d\n",
+      PNET_MAX_ALARM_PAYLOAD_DATA_SIZE);
+   printf (
       "PNET_MAX_DIAG_ITEMS                            : %d\n",
       PNET_MAX_DIAG_ITEMS);
+   printf (
+      "PNET_MAX_DIAG_MANUF_DATA_SIZE                  : %d\n",
+      PNET_MAX_DIAG_MANUF_DATA_SIZE);
    printf (
       "PNET_MAX_DIRECTORYPATH_SIZE                    : %d\n",
       PNET_MAX_DIRECTORYPATH_SIZE);
