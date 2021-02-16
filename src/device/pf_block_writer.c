@@ -2656,7 +2656,7 @@ static void pf_put_diag_item (
    default:
       pf_put_mem (
          p_item->fmt.usi.manuf_data,
-         sizeof (p_item->fmt.usi.manuf_data),
+         p_item->fmt.usi.len,
          res_len,
          p_bytes,
          p_pos);
@@ -3318,7 +3318,10 @@ void pf_put_alarm_block (
          /* Manufacturer data */
          /* Starts with the USI and then followed by raw data bytes */
          pf_put_uint16 (is_big_endian, payload_usi, res_len, p_bytes, p_pos);
-         pf_put_mem (p_payload, payload_len, res_len, p_bytes, p_pos);
+         if (payload_len > 0)
+         {
+            pf_put_mem (p_payload, payload_len, res_len, p_bytes, p_pos);
+         }
          break;
       }
    }
@@ -3808,8 +3811,8 @@ void pf_put_pdinterface_data_real (
    /* Station name */
    /* If station name length is 0, maybe mac string shall be used instead */
    pf_cmina_get_station_name (net, station_name);
-   pf_put_byte ((uint8_t)strlen(station_name), res_len, p_bytes, p_pos);
-   pf_put_mem (station_name, strlen(station_name), res_len, p_bytes, p_pos);
+   pf_put_byte ((uint8_t)strlen (station_name), res_len, p_bytes, p_pos);
+   pf_put_mem (station_name, strlen (station_name), res_len, p_bytes, p_pos);
 
    pf_put_padding_align (block_pos, 4, res_len, p_bytes, p_pos);
 

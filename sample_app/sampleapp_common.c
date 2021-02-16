@@ -1933,6 +1933,7 @@ static void app_handle_send_alarm (
          slot,
          p_subslot->subslot_nbr,
          APP_DIAG_CUSTOM_USI,
+         11,
          (uint8_t *)"diagdata_1");
       break;
 
@@ -1941,13 +1942,14 @@ static void app_handle_send_alarm (
          "Updating USI diagnosis. Slot %u subslot %u\n",
          slot,
          p_subslot->subslot_nbr);
-      pnet_diag_usi_add (
+      pnet_diag_usi_update (
          net,
          APP_API,
          slot,
          p_subslot->subslot_nbr,
          APP_DIAG_CUSTOM_USI,
-         (uint8_t *)"diagdata_2");
+         13,
+         (uint8_t *)"diagdata_123");
       break;
 
    case APP_DEMO_STATE_DIAG_USI_REMOVE:

@@ -126,9 +126,19 @@
 #define PNET_MAX_ALARMS           @PNET_MAX_ALARMS@
 #endif
 
+#if !defined (PNET_MAX_ALARM_PAYLOAD_DATA_SIZE)
+/** Max size of alarm payload */
+#define PNET_MAX_ALARM_PAYLOAD_DATA_SIZE    @PNET_MAX_ALARM_PAYLOAD_DATA_SIZE@
+#endif
+
 #if !defined (PNET_MAX_DIAG_ITEMS)
 /** Total, per device. Max is 65534 items. */
 #define PNET_MAX_DIAG_ITEMS       @PNET_MAX_DIAG_ITEMS@
+#endif
+
+#if !defined (PNET_MAX_DIAG_MANUF_DATA_SIZE)
+/** Max size of manufacturer specific diagnosis data */
+#define PNET_MAX_DIAG_MANUF_DATA_SIZE    @PNET_MAX_DIAG_MANUF_DATA_SIZE@
 #endif
 
 #if PNET_OPTION_MC_CR

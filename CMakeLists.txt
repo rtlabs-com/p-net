@@ -88,30 +88,26 @@ set(PNET_MAX_LOG_BOOK_ENTRIES   16
   CACHE STRING "")
 set(PNET_MAX_ALARMS             3
   CACHE STRING "Per AR and queue. One queue for high and one for low priority alarms.")
+set(PNET_MAX_ALARM_PAYLOAD_DATA_SIZE 28
+  CACHE STRING "Min 24 or PNET_MAX_DIAG_MANUF_DATA_SIZE + 12. Max is 1408")
 set(PNET_MAX_DIAG_ITEMS         200
   CACHE STRING "Total, per device. Max is 65534 items")
-
+set(PNET_MAX_DIAG_MANUF_DATA_SIZE 16
+  CACHE STRING "Min 5 for tests. Max is 1396")
 set(PNET_MAX_MC_CR              1
   CACHE STRING "Per AR")
-
 set(PNET_MAX_AR_VENDOR_BLOCKS   1
   CACHE STRING "Must be > 0")
-
 set(PNET_MAX_AR_VENDOR_BLOCK_DATA_LENGTH 512
   CACHE STRING "")
-
 set(PNET_MAX_MAN_SPECIFIC_FAST_STARTUP_DATA_LENGTH 0
   CACHE STRING "or 512 (bytes")
-
 set(PNET_MAX_SESSION_BUFFER_SIZE 4500
   CACHE STRING "Max fragmented RPC request/response length")
-
 set(PNET_MAX_DIRECTORYPATH_SIZE 240
   CACHE STRING "Max size of directory path, including termination")
-
 set(PNET_MAX_FILENAME_SIZE 30
   CACHE STRING "Max size of filename, including termination")
-
 set(PNET_MAX_PORT_DESCRIPTION_SIZE 60
   CACHE STRING "Max size of port description, including termination")
 

@@ -491,6 +491,7 @@ int pnet_diag_add (
    uint32_t ext_ch_add_value,
    uint32_t qual_ch_qualifier,
    uint16_t usi,
+   uint16_t manuf_data_len,
    const uint8_t * p_manuf_data)
 {
    return pf_diag_add (
@@ -503,6 +504,7 @@ int pnet_diag_add (
       ext_ch_add_value,
       qual_ch_qualifier,
       usi,
+      manuf_data_len,
       p_manuf_data);
 }
 
@@ -513,6 +515,7 @@ int pnet_diag_update (
    uint16_t ext_ch_error_type,
    uint32_t ext_ch_add_value,
    uint16_t usi,
+   uint16_t manuf_data_len,
    const uint8_t * p_manuf_data)
 {
    return pf_diag_update (
@@ -522,6 +525,7 @@ int pnet_diag_update (
       ext_ch_error_type,
       ext_ch_add_value,
       usi,
+      manuf_data_len,
       p_manuf_data);
 }
 
@@ -599,9 +603,17 @@ int pnet_diag_usi_add (
    uint16_t slot,
    uint16_t subslot,
    uint16_t usi,
+   uint16_t manuf_data_len,
    const uint8_t * p_manuf_data)
 {
-   return pf_diag_usi_add (net, api, slot, subslot, usi, p_manuf_data);
+   return pf_diag_usi_add (
+      net,
+      api,
+      slot,
+      subslot,
+      usi,
+      manuf_data_len,
+      p_manuf_data);
 }
 
 int pnet_diag_usi_update (
@@ -610,9 +622,17 @@ int pnet_diag_usi_update (
    uint16_t slot,
    uint16_t subslot,
    uint16_t usi,
+   uint16_t manuf_data_len,
    const uint8_t * p_manuf_data)
 {
-   return pf_diag_usi_update (net, api, slot, subslot, usi, p_manuf_data);
+   return pf_diag_usi_update (
+      net,
+      api,
+      slot,
+      subslot,
+      usi,
+      manuf_data_len,
+      p_manuf_data);
 }
 
 int pnet_diag_usi_remove (

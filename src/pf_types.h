@@ -925,11 +925,12 @@ typedef struct pf_diag_std
    uint16_t ext_ch_error_type;
 } pf_diag_std_t;
 
-/* Make pf_diag_usi_t equal in size to pf_diag_std_t */
-#define PF_DIAG_MANUF_DATA_SIZE sizeof (pf_diag_std_t)
 typedef struct pf_diag_usi
 {
-   uint8_t manuf_data[PF_DIAG_MANUF_DATA_SIZE];
+   /* Number of bytes of manufacturer data */
+   uint16_t len;
+
+   uint8_t manuf_data[PNET_MAX_DIAG_MANUF_DATA_SIZE];
 } pf_diag_usi_t;
 
 /* This is the end of list designator. */
@@ -949,13 +950,16 @@ typedef struct pf_diag_item
    uint16_t next; /* Next in list (array index) */
 } pf_diag_item_t;
 
-#define PF_ALARM_MAX_PAYLOAD_DATA_SIZE sizeof (pf_diag_item_t)
 
 typedef struct pf_alarm_payload
 {
    uint16_t usi;
+
+   /* Number of bytes of manufacturer data */
    uint16_t len;
-   uint8_t data[PF_ALARM_MAX_PAYLOAD_DATA_SIZE];
+
+   /* pf_diag_item_t or manufacturer data */
+   uint8_t data[PNET_MAX_ALARM_PAYLOAD_DATA_SIZE];
 } pf_alarm_payload_t;
 
 /* See also pnet_alarm_argument_t for a subset */
@@ -967,8 +971,10 @@ typedef struct pf_alarm_data
    uint16_t subslot_nbr;
    uint32_t module_ident;
    uint16_t submodule_ident;
+
    pnet_alarm_spec_t alarm_specifier; /* Booleans for diagnosis alarms. */
    uint16_t sequence_number;
+
    /*
     * pf_alarm_data_t may be followed by alarm_payload:
     *    RTA-SDU = alarm_noftification_pdu | alarm_ack_pdu

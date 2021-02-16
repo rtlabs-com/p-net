@@ -181,6 +181,7 @@ int pf_alarm_send_plug_wrong (
  * @param payload_usi      In:    The USI for the alarm. Use 0 if no payload.
  *                                Max 0x7fff
  * @param payload_len      In:    Length of diagnostics data (may be 0).
+ *                                Max PNET_MAX_ALARM_PAYLOAD_DATA_SIZE
  * @param p_payload        In:    User supplied payload (may be NULL if
  *                                payload_usi == 0).
  * @return  0  if operation succeeded.
@@ -225,6 +226,26 @@ int pf_alarm_send_diagnosis (
    uint16_t slot_nbr,
    uint16_t subslot_nbr,
    const pf_diag_item_t * p_diag_item);
+
+/**
+ * Send "diagnosis disappears" alarm for diagnosis in USI format.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param p_ar             InOut: The AR instance.
+ * @param api_id           In:    The API identifier.
+ * @param slot_nbr         In:    The slot number.
+ * @param subslot_nbr      In:    The sub-slot number.
+ * @param usi              In:    USI value. Should be <= 0x7FFF
+ * @return  0  if operation succeeded.
+ *          -1 if an error occurred.
+ */
+int pf_alarm_send_usi_diagnosis_disappears (
+   pnet_t * net,
+   pf_ar_t * p_ar,
+   uint32_t api_id,
+   uint16_t slot_nbr,
+   uint16_t subslot_nbr,
+   uint16_t usi);
 
 /**
  * Send Alarm ACK (from the application)
