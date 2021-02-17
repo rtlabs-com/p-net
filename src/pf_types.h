@@ -1180,7 +1180,8 @@ typedef enum pf_rt_class_values
    PF_RT_CLASS_1 = 1, /** Legacy: FrameID range 7 */
    PF_RT_CLASS_2,     /** FrameID range 6 */
    PF_RT_CLASS_3,     /** FrameID range 3 */
-   PF_RT_CLASS_UDP    /** FrameID range 7 */
+   PF_RT_CLASS_UDP,   /** FrameID range 7 */
+   PF_RT_CLASS_STREAM /** FrameID range 3 */
 } pf_rt_class_values_t;
 
 typedef enum pf_protocol_values
