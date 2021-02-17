@@ -3071,13 +3071,27 @@ static int pf_cmdev_check_iocr_param (
          ret = -1;
       }
       else if (
-         ((p_iocr->iocr_properties.rt_class < PF_RT_CLASS_1) &&
-          (p_iocr->iocr_properties.rt_class > PF_RT_CLASS_UDP) &&
-          (p_ar->ar_param.ar_properties.startup_mode == false)) || /* LEGACY */
-         ((p_iocr->iocr_properties.rt_class < PF_RT_CLASS_2) &&
-          (p_iocr->iocr_properties.rt_class > PF_RT_CLASS_UDP) &&
-          (p_ar->ar_param.ar_properties.startup_mode == true))) /* ADVANCED */
+         (p_ar->ar_param.ar_properties.startup_mode == false) &&
+         ((p_iocr->iocr_properties.rt_class < PF_RT_CLASS_1) ||
+          (p_iocr->iocr_properties.rt_class > PF_RT_CLASS_STREAM)))
       {
+         /* Legacy startup mode:     1 <= rtclass <= 5
+            Profinet 2.4 Protocol table 984 "IOCRBlockReq" */
+         pf_set_error (
+            p_stat,
+            PNET_ERROR_CODE_CONNECT,
+            PNET_ERROR_DECODE_PNIO,
+            PNET_ERROR_CODE_1_CONN_FAULTY_IOCR_BLOCK_REQ,
+            7);
+         ret = -1;
+      }
+      else if (
+         (p_ar->ar_param.ar_properties.startup_mode == true) &&
+         ((p_iocr->iocr_properties.rt_class < PF_RT_CLASS_2) ||
+          (p_iocr->iocr_properties.rt_class > PF_RT_CLASS_STREAM)))
+      {
+         /* Advanced startup mode:     2 <= rtclass <= 5
+            Profinet 2.4 Protocol table 984 "IOCRBlockReq" */
          pf_set_error (
             p_stat,
             PNET_ERROR_CODE_CONNECT,
