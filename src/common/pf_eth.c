@@ -152,6 +152,18 @@ int pf_eth_recv (pnal_eth_handle_t * eth_handle, void * arg, pnal_buf_t * p_buf)
    uint16_t ix = 0;
    pnet_t * net = (pnet_t *)arg;
 
+#ifndef UNIT_TEST
+   /* Reject unicast packets with destination not matching
+    * mac address of management interface.
+    */
+   if (
+      (((uint8_t *)p_buf->payload)[0] != 1) &&
+      (memcmp (p_buf->payload, net->pf_interface.main_port.mac.addr, 6) != 0))
+   {
+      return 0;
+   }
+#endif
+
    /* Skip ALL VLAN tags */
    p_data = (uint16_t *)(&((uint8_t *)p_buf->payload)[eth_type_pos]);
    eth_type = ntohs (p_data[0]);
