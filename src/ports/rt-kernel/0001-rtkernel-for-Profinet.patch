@@ -1,4 +1,4 @@
-From 3dd5f871c118cdbc98c6068165a7eeef4ac5d245 Mon Sep 17 00:00:00 2001
+From c746b47af2f84fbd28c47d7e864d940e7ef6ee0a Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Fredrik=20M=C3=B6ller?= <fredrik.moller@rt-labs.com>
 Date: Tue, 15 Sep 2020 18:22:53 +0200
 Subject: [PATCH] rtkernel for Profinet
@@ -22,10 +22,12 @@ stack:
   - Static IP addressing.
   - Increase stack size for main task.
   - Increase stack size for Ethernet driver task.
+  - Let Ethernet driver task have higher priority
+    than lwip task.
   - Put .bss and heap in 256kB memory section.
 ---
  bsp/xmc48relax/include/config.h           |  10 +-
- bsp/xmc48relax/src/lwip.c                 |   2 +-
+ bsp/xmc48relax/src/lwip.c                 |   4 +-
  bsp/xmc48relax/xmc48relax.ld              |  26 +-
  kern/arch/xmc4/hal.h                      |   2 +-
  lwip/src/apps/Makefile                    |  12 +
@@ -37,7 +39,7 @@ stack:
  lwip/src/include/lwip/apps/snmp_mib2.h    |  24 +-
  lwip/src/include/lwip/lwip_hooks.h        |  41 +++
  lwip/src/include/lwip/lwipopts.h          |  39 ++-
- 13 files changed, 213 insertions(+), 309 deletions(-)
+ 13 files changed, 214 insertions(+), 310 deletions(-)
  create mode 100644 lwip/src/apps/Makefile
  create mode 100644 lwip/src/apps/snmp/Makefile
  create mode 100644 lwip/src/core/lwip_hooks.c
@@ -76,14 +78,16 @@ index 850ce674..07d80b1e 100644
  /* Configure the priority of the main task. */
  #define CFG_MAIN_PRIORITY       10
 diff --git a/bsp/xmc48relax/src/lwip.c b/bsp/xmc48relax/src/lwip.c
-index f8b7d94a..accb0f7d 100644
+index f8b7d94a..5d1a39ce 100644
 --- a/bsp/xmc48relax/src/lwip.c
 +++ b/bsp/xmc48relax/src/lwip.c
-@@ -95,7 +95,7 @@ err_t bsp_eth_init (struct netif * netif)
+@@ -94,8 +94,8 @@ err_t bsp_eth_init (struct netif * netif)
+       .hclk          = CFG_ETHCLK_FREQUENCY,
        .rx_buffers    = 3,
        .tx_buffers    = 5,
-       .rx_task_prio  = TCPIP_THREAD_PRIO - 1,
+-      .rx_task_prio  = TCPIP_THREAD_PRIO - 1,
 -      .rx_task_stack = 1100,
++      .rx_task_prio  = TCPIP_THREAD_PRIO + 1,
 +      .rx_task_stack = 6000,
        .mac_address   = CFG_LWIP_MAC_ADDRESS,
     };
