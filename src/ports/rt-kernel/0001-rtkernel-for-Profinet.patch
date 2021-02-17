@@ -1,4 +1,4 @@
-From c746b47af2f84fbd28c47d7e864d940e7ef6ee0a Mon Sep 17 00:00:00 2001
+From c0e25ff85245cd7ab756e2e0aebbf46f9d27f9e9 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Fredrik=20M=C3=B6ller?= <fredrik.moller@rt-labs.com>
 Date: Tue, 15 Sep 2020 18:22:53 +0200
 Subject: [PATCH] rtkernel for Profinet
@@ -18,6 +18,14 @@ stack:
   - Add hook function to be called when frame of
     unknown EtherType is received, such as LLDP
     and Profinet (LWIP_HOOK_UNKNOWN_ETH_PROTOCOL).
+- drivers/eth/dwmac1000:
+  - Use zero copy for Rx.
+  - Add ioctl for getting link status.
+  - Lock mutex for Tx, as p-net stack may send
+    frames outside of lwip context.
+  - Report accurate ifSpeed to SNMP.
+- drivers/eth/phy:
+  - Add function for retrieving link capabilities.
 - bsp/xmc48relax:
   - Static IP addressing.
   - Increase stack size for main task.
@@ -29,6 +37,11 @@ stack:
  bsp/xmc48relax/include/config.h           |  10 +-
  bsp/xmc48relax/src/lwip.c                 |   4 +-
  bsp/xmc48relax/xmc48relax.ld              |  26 +-
+ drivers/eth/dwmac1000.c                   | 162 +++++++++---
+ drivers/eth/phy/mii.c                     |  13 +-
+ include/drivers/eth/phy/mii.h             |   1 +
+ include/drivers/eth/phy/phy.h             |   9 +
+ include/drivers/ioctl.h                   |  51 ++++
  kern/arch/xmc4/hal.h                      |   2 +-
  lwip/src/apps/Makefile                    |  12 +
  lwip/src/apps/snmp/Makefile               |  16 ++
@@ -39,7 +52,7 @@ stack:
  lwip/src/include/lwip/apps/snmp_mib2.h    |  24 +-
  lwip/src/include/lwip/lwip_hooks.h        |  41 +++
  lwip/src/include/lwip/lwipopts.h          |  39 ++-
- 13 files changed, 214 insertions(+), 310 deletions(-)
+ 18 files changed, 417 insertions(+), 343 deletions(-)
  create mode 100644 lwip/src/apps/Makefile
  create mode 100644 lwip/src/apps/snmp/Makefile
  create mode 100644 lwip/src/core/lwip_hooks.c
@@ -78,7 +91,7 @@ index 850ce674..07d80b1e 100644
  /* Configure the priority of the main task. */
  #define CFG_MAIN_PRIORITY       10
 diff --git a/bsp/xmc48relax/src/lwip.c b/bsp/xmc48relax/src/lwip.c
-index f8b7d94a..5d1a39ce 100644
+index f8b7d94a..858a794b 100644
 --- a/bsp/xmc48relax/src/lwip.c
 +++ b/bsp/xmc48relax/src/lwip.c
 @@ -94,8 +94,8 @@ err_t bsp_eth_init (struct netif * netif)
@@ -88,7 +101,7 @@ index f8b7d94a..5d1a39ce 100644
 -      .rx_task_prio  = TCPIP_THREAD_PRIO - 1,
 -      .rx_task_stack = 1100,
 +      .rx_task_prio  = TCPIP_THREAD_PRIO + 1,
-+      .rx_task_stack = 6000,
++      .rx_task_stack = 6250,
        .mac_address   = CFG_LWIP_MAC_ADDRESS,
     };
  #ifdef CFG_RTC_INIT
@@ -161,6 +174,436 @@ index e59a5939..bf075030 100644
 +   heap_end = ORIGIN(ram) + LENGTH(ram);
     heap_size = heap_end - heap_start;
  }
+diff --git a/drivers/eth/dwmac1000.c b/drivers/eth/dwmac1000.c
+index ece017a5..45698621 100644
+--- a/drivers/eth/dwmac1000.c
++++ b/drivers/eth/dwmac1000.c
+@@ -26,7 +26,13 @@
+ 
+ #include <string.h>
+ 
+-#define BUFFER_SIZE 1520
++/* Align DMA buffer with lwIP POOL buf size
++ * One RX DMA buffer will fit in one POOL buf.
++ */
++#define BUFFER_SIZE PBUF_POOL_BUFSIZE
++COMPILETIME_ASSERT (BUFFER_SIZE >= 1520);
++COMPILETIME_ASSERT ((BUFFER_SIZE % 4) == 0);
++
+ #define RX_MAX_BUFFERS 10
+ #define TX_MAX_BUFFERS 10
+ 
+@@ -194,6 +200,7 @@ typedef struct dma_descriptor
+    uint32_t des1;
+    uint8_t * buff;
+    volatile struct dma_descriptor * next;
++   struct pbuf * pbuf;
+ } dma_descriptor_t;
+ 
+ #define xDES0_OWN BIT(31)        /* Owned by DMA engine */
+@@ -215,6 +222,7 @@ typedef struct dwmac1000
+    drv_t drv;
+ 
+    irq_t irq;
++   mtx_t * mtx_tx;
+    task_t * tRcv;
+    phy_t * phy;
+    volatile eth_mac_t * mac;
+@@ -229,6 +237,19 @@ typedef struct dwmac1000
+ 
+    /* MIIAR CR divider */
+    uint32_t cr;
++
++   /* Link state retrieved in last call to probe function
++    * See defines PHY_LINK_OK, PHY_LINK_100MBIT, etc.
++    */
++   uint8_t last_link_state;
++
++   /* Link auto-negotiation capabilities read from PHY at startup
++    * See defines PHY_CAPABILITY_100_FD, PHY_CAPABILITY_100, etc.
++    */
++   uint16_t link_capabilities;
++
++   /* lwip network interface handle */
++   struct netif * netif;
+ } dwmac1000_t;
+ 
+ #ifdef DEBUG_DATA
+@@ -263,6 +284,24 @@ static void dwmac1000_pbuf_dump (struct pbuf *p)
+ }
+ #endif  /* DEBUG_DATA */
+ 
++#if MIB2_STATS
++static uint32_t dwmac1000_snmp_link_speed (uint8_t link_state)
++{
++   if (link_state & PHY_LINK_10MBIT)
++   {
++      return 10 * 1000 * 1000;
++   }
++   else if (link_state & PHY_LINK_100MBIT)
++   {
++      return 100 * 1000 * 1000;
++   }
++   else
++   {
++      return 0;
++   }
++}
++#endif /* MIB2_STATS */
++
+ static uint16_t dwmac1000_read_phy (void * arg, uint8_t address, uint8_t reg)
+ {
+    dwmac1000_t *dwmac1000 = arg;
+@@ -326,6 +365,13 @@ static void dwmac1000_hw_init (struct netif *netif, const dwmac1000_cfg_t * cfg)
+    DEBUG_ASSERT (dwmac1000->phy->ops->start != NULL);
+    dwmac1000->phy->ops->start (dwmac1000->phy);
+ 
++   /* Read auto-negotiation capabilities from PHY */
++   if (dwmac1000->phy->ops->get_link_capabilities)
++   {
++      dwmac1000->link_capabilities =
++         dwmac1000->phy->ops->get_link_capabilities (dwmac1000->phy);
++   }
++
+    /* Enable receiver, transmitter */
+    mac->cr = CR_RE | CR_TE;
+ 
+@@ -352,13 +398,18 @@ static void dwmac1000_hw_init (struct netif *netif, const dwmac1000_cfg_t * cfg)
+    /* Setup Rx descriptors using chained mode */
+    for (ix = 0; ix < cfg->rx_buffers; ix++)
+    {
+-      uint8_t * p = malloc (BUFFER_SIZE);
++      /* Allocate a pbuf from the pool.
++       * Note that pbuf will be unchained (pbuf->next==NULL) as allocated size
++       * fits in a single pool buffer.
++       */
++      struct pbuf * p = pbuf_alloc (PBUF_RAW, BUFFER_SIZE, PBUF_POOL);
+       UASSERT (p != NULL, EMEM);
+ 
+       dwmac1000->rx[ix].des0 = xDES0_OWN;
+       dwmac1000->rx[ix].des1 = RDES1_RCH | BUFFER_SIZE;
+-      dwmac1000->rx[ix].buff = p;
++      dwmac1000->rx[ix].buff = p->payload;
+       dwmac1000->rx[ix].next = &dwmac1000->rx[ix + 1];
++      dwmac1000->rx[ix].pbuf = p;
+    }
+    dwmac1000->rx[ix - 1].next = &dwmac1000->rx[0]; /* Point to first */
+    dwmac1000->pRx = &dwmac1000->rx[0];             /* Driver index */
+@@ -373,6 +424,7 @@ static void dwmac1000_hw_init (struct netif *netif, const dwmac1000_cfg_t * cfg)
+       dwmac1000->tx[ix].des0 = TDES0_TCH;
+       dwmac1000->tx[ix].buff = p;
+       dwmac1000->tx[ix].next = &dwmac1000->tx[ix + 1];
++      dwmac1000->tx[ix].pbuf = NULL;
+    }
+    dwmac1000->tx[ix - 1].next = &dwmac1000->tx[0]; /* Point to first */
+    dwmac1000->pTx = &dwmac1000->tx[0];             /* Driver index */
+@@ -420,6 +472,9 @@ static err_t dwmac1000_hw_transmit_frame (struct netif *netif, struct pbuf *p)
+       return ERR_OK;
+    }
+ 
++   /* Lock TX handling */
++   mtx_lock (dwmac1000->mtx_tx);
++
+ #if ETH_PAD_SIZE
+    pbuf_header (p, -ETH_PAD_SIZE);  /* drop the padding word */
+ #endif
+@@ -478,6 +533,7 @@ static err_t dwmac1000_hw_transmit_frame (struct netif *netif, struct pbuf *p)
+    pbuf_header (p, ETH_PAD_SIZE);   /* reclaim the padding word */
+ #endif
+ 
++   mtx_unlock (dwmac1000->mtx_tx);
+    return ERR_OK;
+ }
+ 
+@@ -513,7 +569,7 @@ static struct pbuf *dwmac1000_hw_get_received_frame (struct netif * netif)
+    struct pbuf *p = NULL;
+    uint16_t length;
+    volatile dma_descriptor_t * pRx;
+-   uint8_t * buffer;
++   struct pbuf * q;
+    uint32_t des0;
+ 
+    pRx = dwmac1000->pRx;
+@@ -527,39 +583,33 @@ static struct pbuf *dwmac1000_hw_get_received_frame (struct netif * netif)
+    if ((des0 & (RDES0_FS | RDES0_LS)) != (RDES0_FS | RDES0_LS))
+       goto done;
+ 
+-   buffer = pRx->buff;
++   /* Fetch received pbuf */
++   p = pRx->pbuf;
++   p->payload = pRx->buff;
+    length = (des0 >> 16) & 0x3FFF;
+-   length -= 4;                 /* Drop CRC */
++   length -= 4; /* Drop CRC */
++   p->len = p->tot_len = length;
++
++   DPRINT ("in (%d):\n", p->len);
++#ifdef DEBUG_DATA
++   dwmac1000_pbuf_dump (q);
++#endif /* DEBUG_DATA */
+ 
+ #if ETH_PAD_SIZE
+ #error "ETH_PAD_SIZE not supported"
+ #endif
+ 
+-   /* We allocate a pbuf chain of pbufs from the pool. */
+-   p = pbuf_alloc (PBUF_RAW, length, PBUF_POOL);
++   /* Allocate a pbuf from the pool to replace the one currently use by DMA.
++    * Note that pbuf will be unchained (pbuf->next==NULL) as allocated size
++    * fits in a single pool buffer.
++    */
++   q = pbuf_alloc (PBUF_RAW, BUFFER_SIZE, PBUF_POOL);
+ 
+-   if (p != NULL)
++   if (q != NULL)
+    {
+-      struct pbuf *q;
+-
+-      /* We iterate over the pbuf chain until we have read the entire
+-       * packet into the pbuf.
+-       */
+-      for (q = p; q != NULL; q = q->next)
+-      {
+-         /* Read enough bytes to fill this pbuf in the chain. The
+-          * available data in the pbuf is given by the q->len
+-          * variable.
+-          */
+-
+-         memcpy (q->payload, buffer, q->len);
+-         buffer += q->len;
+-
+-         DPRINT ("in (%d):\n", q->len);
+-#ifdef DEBUG_DATA
+-         dwmac1000_pbuf_dump (q);
+-#endif  /* DEBUG_DATA */
+-      }
++      ASSERT (q->len == q->tot_len);
++      pRx->buff = q->payload;
++      pRx->pbuf = q;
+ 
+       MIB2_STATS_NETIF_ADD (netif, ifinoctets, p->tot_len);
+       if (IS_UNICAST (p))
+@@ -575,6 +625,7 @@ static struct pbuf *dwmac1000_hw_get_received_frame (struct netif * netif)
+    }
+    else
+    {
++      p = NULL;
+       LINK_STATS_INC (link.memerr);
+       LINK_STATS_INC (link.drop);
+       MIB2_STATS_NETIF_INC (netif, ifindiscards);
+@@ -694,16 +745,63 @@ static dev_state_t dwmac1000_probe (drv_t * drv)
+ 
+    link_state = dwmac1000->phy->ops->get_link_state (dwmac1000->phy);
+ 
++   /* Save link state for IOCTL_ETH_GET_STATUS */
++   dwmac1000->last_link_state = link_state;
++
++   /* Set ifSpeed in SNMP MIB-II ifTable */
++#if MIB2_STATS
++   dwmac1000->netif->link_speed = dwmac1000_snmp_link_speed (link_state);
++#endif /* MIB2_STATS */
++
+    return (link_state & PHY_LINK_OK) ? StateAttached : StateDetached;
+ }
+ 
++static void dwmac1000_get_status (
++   dwmac1000_t * dwmac1000,
++   struct netif * netif,
++   ioctl_eth_status_t * link)
++{
++   if (dwmac1000->phy->loopback_mode)
++   {
++      link->is_autonegotiation_supported = false;
++      link->is_autonegotiation_enabled = false;
++      link->capabilities = 0x0000;
++   }
++   else
++   {
++      link->is_autonegotiation_supported = true;
++      link->is_autonegotiation_enabled = true;
++      link->capabilities = dwmac1000->link_capabilities;
++   }
++
++   link->state = dwmac1000->last_link_state;
++   link->is_operational = netif_is_up (netif) && netif_is_link_up (netif);
++}
++
++static int dwmac1000_ioctl (drv_t * drv, void * arg, int req, void * param)
++{
++   dwmac1000_t * dwmac1000 = (dwmac1000_t *)drv;
++   int status = EARG;
++
++   switch (req)
++   {
++   case IOCTL_ETH_GET_STATUS:
++      dwmac1000_get_status (dwmac1000, arg, param);
++      return 0;
++   default:
++      UASSERT (0, EARG);
++   }
++
++   return status;
++}
++
+ static const drv_ops_t dwmac1000_ops =
+ {
+    .open    = NULL,
+    .read    = NULL,
+    .write   = NULL,
+    .close   = NULL,
+-   .ioctl   = NULL,
++   .ioctl   = dwmac1000_ioctl,
+    .hotplug = dwmac1000_hotplug,
+ };
+ 
+@@ -714,6 +812,7 @@ drv_t * dwmac1000_init (const char * name, const dwmac1000_cfg_t * cfg,
+ 
+    UASSERT (cfg->hclk >= 20 * 1000 * 1000, EARG);
+    UASSERT (cfg->rx_buffers <= RX_MAX_BUFFERS, EARG);
++   UASSERT (cfg->rx_buffers < PBUF_POOL_SIZE, EARG);
+    UASSERT (cfg->tx_buffers <= TX_MAX_BUFFERS, EARG);
+ 
+    dwmac1000 = malloc (sizeof (dwmac1000_t));
+@@ -735,9 +834,12 @@ drv_t * dwmac1000_init (const char * name, const dwmac1000_cfg_t * cfg,
+    /* Initialise driver state */
+    dwmac1000->phy = phy;
+    dwmac1000->irq = cfg->irq;
++   dwmac1000->mtx_tx = mtx_create();
+    dwmac1000->mac = (eth_mac_t *)cfg->base;
+    dwmac1000->mmc = (eth_mmc_t *)(cfg->base + 0x100);
+    dwmac1000->dma = (eth_dma_t *)(cfg->base + 0x1000);
++   dwmac1000->last_link_state = 0x00;
++   dwmac1000->netif = netif;
+ 
+    /* Create receive task */
+    dwmac1000->tRcv = task_spawn ("EthRcv",
+diff --git a/drivers/eth/phy/mii.c b/drivers/eth/phy/mii.c
+index a670d1bf..6581da00 100644
+--- a/drivers/eth/phy/mii.c
++++ b/drivers/eth/phy/mii.c
+@@ -305,11 +305,18 @@ uint8_t mii_get_link_state (phy_t * phy)
+ 	return link_state;
+ }
+ 
++uint16_t  mii_get_link_capabilities (struct phy * phy)
++{
++   uint16_t anar = phy->read (phy->arg, phy->address, MII_ANAR);
++   return anar;
++}
++
+ static phy_ops_t mii_ops =
+ {
+-   .reset          = mii_reset,
+-   .start          = mii_start,
+-   .get_link_state = mii_get_link_state
++   .reset                 = mii_reset,
++   .start                 = mii_start,
++   .get_link_state        = mii_get_link_state,
++   .get_link_capabilities = mii_get_link_capabilities,
+ };
+ 
+ phy_t * mii_init (const phy_cfg_t * cfg)
+diff --git a/include/drivers/eth/phy/mii.h b/include/drivers/eth/phy/mii.h
+index 57364bdc..dd69ceae 100644
+--- a/include/drivers/eth/phy/mii.h
++++ b/include/drivers/eth/phy/mii.h
+@@ -19,6 +19,7 @@ phy_t * mii_init (const phy_cfg_t * cfg);
+ void mii_reset (phy_t * phy);
+ void mii_start (phy_t * phy);
+ uint8_t mii_get_link_state (phy_t * phy);
++uint16_t mii_get_link_capabilities (phy_t * phy);
+ 
+ /** \internal Exposed for testing purposes only
+  *
+diff --git a/include/drivers/eth/phy/phy.h b/include/drivers/eth/phy/phy.h
+index 22aea4cc..a34a0a61 100644
+--- a/include/drivers/eth/phy/phy.h
++++ b/include/drivers/eth/phy/phy.h
+@@ -19,6 +19,14 @@
+ #define PHY_LINK_1000MBIT    BIT (3)
+ #define PHY_LINK_FULL_DUPLEX BIT (4)
+ 
++/* Capabilities advertised to link partner during auto-negotiation.
++ * Bit patterns are the same as the Auto-Negotiation Advertisement Register.
++ */
++#define PHY_CAPABILITY_100_FD  BIT (8) /* Can do 100BASE-TX full duplex */
++#define PHY_CAPABILITY_100     BIT (7) /* Can do 100BASE-TX */
++#define PHY_CAPABILITY_10_FD   BIT (6) /* Can do 10BASE-T full duplex */
++#define PHY_CAPABILITY_10      BIT (5) /* Can do 10BASE-T */
++
+ struct phy;
+ 
+ typedef struct phy_ops
+@@ -26,6 +34,7 @@ typedef struct phy_ops
+    void (*reset) (struct phy * phy);
+    void (*start) (struct phy * phy);
+    uint8_t  (*get_link_state) (struct phy * phy);
++   uint16_t (*get_link_capabilities) (struct phy * phy);
+ } phy_ops_t;
+ 
+ typedef struct phy
+diff --git a/include/drivers/ioctl.h b/include/drivers/ioctl.h
+index ee450744..85f88815 100644
+--- a/include/drivers/ioctl.h
++++ b/include/drivers/ioctl.h
+@@ -142,6 +142,57 @@ typedef struct ioctl_i2c_access
+ 
+ #define IOCTL_CAN_LOOPBACK 0x701 /**< Set CAN module in loopback state */
+ 
++/**
++ * Status of Ethernet link
++ */
++typedef struct ioctl_eth_status
++{
++   /** Capabilities advertised to link partner during auto-negotiation
++    *
++    * This forms a bit pattern. Valid bit values (see driver/eth/phy/phy.h):
++    * - PHY_CAPABILITY_100_FD,
++    * - PHY_CAPABILITY_100,
++    * - PHY_CAPABILITY_10_FD,
++    * - PHY_CAPABILITY_10.
++    */
++   uint16_t capabilities;
++
++   /** Is auto-negotiation process supported by physical layer? */
++   bool is_autonegotiation_supported;
++
++   /** Is auto-negotiation process enabled for physical layer? */
++   bool is_autonegotiation_enabled;
++
++   /**
++    * Is link operational?
++    *
++    * True if link is up and network interface is administratively up.
++    * False if any of those are down.
++    */
++   bool is_operational;
++
++   /**
++    * Link state
++    *
++    * Bit pattern of the following:
++    * - PHY_LINK_OK is set if link is up,
++    * - PHY_LINK_10MBIT, PHY_LINK_100MBIT or PHY_LINK_1000MBIT is the speed,
++    * - PHY_LINK_FULL_DUPLEX is set if link is full-duplex and cleared if
++    *   it is half-duplex.
++    */
++   uint8_t state;
++} ioctl_eth_status_t;
++
++/**
++ * Get status of network interface
++ *
++ * \code
++ * ioctl_eth_status_t status;
++ * int error = ioctl (fd, IOCTL_ETH_GET_STATUS, &status);
++ * \endcode
++ */
++#define IOCTL_ETH_GET_STATUS 0x801
++
+ /* ioctl is not defined by newlib */
+ int ioctl (int fd, int request, ...);
+ 
 diff --git a/kern/arch/xmc4/hal.h b/kern/arch/xmc4/hal.h
 index 8508b3cf..8cda1255 100644
 --- a/kern/arch/xmc4/hal.h

@@ -103,11 +103,7 @@ static err_t pnal_eth_sys_recv (struct pbuf * p_buf, struct netif * netif)
    pnal_eth_handle_t * handle;
 
    handle = pnal_eth_find_handle (netif);
-   if (handle == NULL)
-   {
-      /* Invalid network interface. This should never happen. */
-      return ERR_IF;
-   }
+   ASSERT (handle != NULL);
 
    processed = handle->eth_rx_callback (handle, handle->arg, p_buf);
    if (processed)

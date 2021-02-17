@@ -29,7 +29,6 @@ target_sources(profinet
   src/ports/rt-kernel/mib/lldp-ext-pno-mib.c
   src/ports/rt-kernel/mib/lldp-ext-dot3-mib.c
   src/ports/rt-kernel/mib/rowindex.c
-  src/ports/rt-kernel/dwmac1000.c
   )
 
 target_compile_options(profinet
