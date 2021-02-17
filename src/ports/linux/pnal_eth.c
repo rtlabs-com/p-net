@@ -28,13 +28,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-typedef struct pnal_eth_handle_t
+struct pnal_eth_handle
 {
    pnal_eth_callback_t * callback;
    void * arg;
    int socket;
    os_thread_t * thread;
-} pnal_eth_handle_t;
+};
 
 /**
  * @internal
