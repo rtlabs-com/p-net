@@ -32,12 +32,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* Bit patterns for Ethernet PHY Auto-Negotiation Advertisement Register */
-#define MII_ANAR_100_FD BIT (8) /* Can do 100BASE-TX full duplex */
-#define MII_ANAR_100    BIT (7) /* Can do 100BASE-TX */
-#define MII_ANAR_10_FD  BIT (6) /* Can do 10BASE-T full duplex */
-#define MII_ANAR_10     BIT (5) /* Can do 10BASE-T */
-
 int pnal_set_ip_suite (
    const char * interface_name,
    const pnal_ipaddr_t * p_ipaddr,
@@ -169,26 +163,27 @@ static pnal_eth_mau_t calculate_mau_type (uint8_t link_state)
 /**
  * Calculate advertised capabilites
  *
- * @param anar       In:    Contents of the ANAR register read from PHY.
+ * @param capabilities     In:    rt-kernel advertised capabilities as a
+ *                                bitfield.
  * @return Profinet advertised capabilites as a bitfield.
  */
-static uint16_t calculate_capabilities (uint16_t anar)
+static uint16_t calculate_capabilities (uint16_t capabilities)
 {
    uint16_t out = 0;
 
-   if (anar & MII_ANAR_10)
+   if (capabilities & PHY_CAPABILITY_10)
    {
       out |= PNAL_ETH_AUTONEG_CAP_10BaseT_HALF_DUPLEX;
    }
-   if (anar & MII_ANAR_10_FD)
+   if (capabilities & PHY_CAPABILITY_10_FD)
    {
       out |= PNAL_ETH_AUTONEG_CAP_10BaseT_FULL_DUPLEX;
    }
-   if (anar & MII_ANAR_100)
+   if (capabilities & PHY_CAPABILITY_100)
    {
       out |= PNAL_ETH_AUTONEG_CAP_100BaseTX_HALF_DUPLEX;
    }
-   if (anar & MII_ANAR_100_FD)
+   if (capabilities & PHY_CAPABILITY_100_FD)
    {
       out |= PNAL_ETH_AUTONEG_CAP_100BaseTX_FULL_DUPLEX;
    }
@@ -203,18 +198,17 @@ static uint16_t calculate_capabilities (uint16_t anar)
 
 int pnal_eth_get_status (const char * interface_name, pnal_eth_status_t * status)
 {
-   struct netif * netif = netif_find (interface_name);
-   eth_status_t link;
+   struct netif * netif;
    drv_t * drv;
+   ioctl_eth_status_t link;
    int error;
 
-   if (netif == NULL)
-   {
-      return -1;
-   }
+   netif = netif_find (interface_name);
+   ASSERT (netif != NULL);
 
    drv = netif->state;
-   error = eth_ioctl (drv, netif, IOCTL_NET_GET_STATUS, &link);
+   ASSERT (drv != NULL);
+   error = drv->ops->ioctl (drv, NULL, IOCTL_ETH_GET_STATUS, &link);
    if (error)
    {
       return -1;
@@ -223,7 +217,7 @@ int pnal_eth_get_status (const char * interface_name, pnal_eth_status_t * status
    status->is_autonegotiation_supported = link.is_autonegotiation_supported;
    status->is_autonegotiation_enabled = link.is_autonegotiation_enabled;
    status->autonegotiation_advertised_capabilities =
-      calculate_capabilities (link.anar);
+      calculate_capabilities (link.capabilities);
 
    status->operational_mau_type = calculate_mau_type (link.state);
    status->running = link.is_operational;
