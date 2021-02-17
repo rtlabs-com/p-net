@@ -6,10 +6,11 @@ Web resources
 
 * Source repository: [https://github.com/rtlabs-com/p-net](https://github.com/rtlabs-com/p-net)
 * Documentation: [https://rt-labs.com/docs/p-net](https://rt-labs.com/docs/p-net)
-* Continuous integration: [https://travis-ci.com/rtlabs-com/p-net](https://travis-ci.com/rtlabs-com/p-net)
+* Continuous integration: [https://github.com/rtlabs-com/p-net/actions](https://github.com/rtlabs-com/p-net/actions)
 * RT-Labs: [https://rt-labs.com](https://rt-labs.com)
 
-[![Build Status](https://api.travis-ci.com/rtlabs-com/p-net.svg?branch=master)](https://travis-ci.com/rtlabs-com/p-net)
+
+[![Build Status](https://github.com/rtlabs-com/p-net/workflows/build/badge.svg?branch=master)](https://github.com/rtlabs-com/p-net/actions?workflow=build)
 
 p-net
 -----
