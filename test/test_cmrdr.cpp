@@ -118,17 +118,12 @@ static uint8_t data_packet_good_iops_good_iocs[] =
  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf6, 0x35, 0x00
 };
 
-typedef struct test_reads
-{
-   uint16_t idx;
-} test_reads_t;
-
-static test_reads_t test_mod_diff[] =
+static uint16_t test_mod_diff[] =
 {
    0xe002
 };
 
-static test_reads_t test_reads[] =
+static uint16_t test_reads[] =
 {
     0x8000, 0x8001,
     0x800a, 0x800b, 0x800c,
@@ -183,12 +178,11 @@ static uint16_t seq_nbr = 0;
 class CmrdrTest : public PnetIntegrationTest
 {
  protected:
-   void test_read (test_reads_t * p_the_test)
+   void test_read (uint16_t idx)
    {
       pf_ar_t * p_ar;
       uint8_t buffer[PF_FRAME_BUFFER_SIZE];
       uint16_t pos = 0;
-      uint16_t idx = p_the_test->idx;
 
       /* Send data to prevent timeout */
       send_data (
@@ -362,7 +356,7 @@ TEST_F (CmrdrTest, CmrdrRunTest)
    TEST_TRACE ("\nNow read all the records\n");
    for (ix = 0; ix < NELEMENTS (test_reads); ix++)
    {
-      test_read (&test_reads[ix]);
+      test_read (test_reads[ix]);
    }
    EXPECT_EQ (appdata.read_fails, 62); // Currently expected number of fails.
 
@@ -486,7 +480,7 @@ TEST_F (CmrdrTest, CmrdrModDiffTest)
    /* Now read all the mod diff record */
    for (ix = 0; ix < NELEMENTS (test_mod_diff); ix++)
    {
-      test_read (&test_mod_diff[ix]);
+      test_read (test_mod_diff[ix]);
    }
    EXPECT_EQ (appdata.read_fails, 0);
 
