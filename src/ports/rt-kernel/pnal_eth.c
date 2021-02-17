@@ -28,12 +28,12 @@
 
 #define MAX_NUMBER_OF_IF 1
 
-typedef struct pnal_eth_handle_t
+struct pnal_eth_handle
 {
    struct netif * netif;
    pnal_eth_callback_t * eth_rx_callback;
    void * arg;
-} pnal_eth_handle_t;
+};
 
 static pnal_eth_handle_t interface[MAX_NUMBER_OF_IF];
 static int nic_index = 0;

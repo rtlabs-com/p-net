@@ -18,12 +18,12 @@
 #include <gtest/gtest.h>
 #include <string.h>
 
-typedef struct pnal_eth_handle_t
+struct pnal_eth_handle
 {
    const char * if_name;
    pnal_eth_callback_t * callback;
    void * arg;
-} pnal_eth_handle_t;
+};
 
 uint8_t pnet_log_level;
 

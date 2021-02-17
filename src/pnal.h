@@ -272,7 +272,7 @@ uint8_t pnal_buf_header (pnal_buf_t * p, int16_t header_size_increment);
 /**
  * Network interface handle, forward declaration.
  */
-typedef struct pnal_eth_handle_t pnal_eth_handle_t;
+typedef struct pnal_eth_handle pnal_eth_handle_t;
 
 /**
  * The prototype of raw Ethernet reception call-back functions.
