@@ -128,7 +128,7 @@ pnal_eth_handle_t * pnal_eth_init (
    strcpy (ifr.ifr_name, if_name);
    ifr.ifr_flags = 0;
    ioctl (handle->socket, SIOCGIFFLAGS, &ifr);
-   ifr.ifr_flags = ifr.ifr_flags | IFF_PROMISC | IFF_BROADCAST;
+   ifr.ifr_flags = ifr.ifr_flags | IFF_MULTICAST | IFF_BROADCAST;
    ioctl (handle->socket, SIOCSIFFLAGS, &ifr);
 
    /* Bind socket to all protocols */
