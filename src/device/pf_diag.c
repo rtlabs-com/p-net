@@ -128,7 +128,7 @@ static void pf_diag_update_submodule_state (
       pf_cmdev_get_diag_item (net, ix, &p_item);
       while (p_item != NULL)
       {
-         if ((p_item->in_use == true))
+         if (p_item->in_use == true)
          {
             pf_alarm_add_diag_item_to_summary (
                p_ar,

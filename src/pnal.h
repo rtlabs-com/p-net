@@ -33,6 +33,8 @@ extern "C" {
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "options.h"
+#include "pnet_api.h"
 #include "pnal_sys.h"
 
 #define PNAL_MAKEU32(a, b, c, d)                                               \
@@ -181,14 +183,6 @@ typedef struct pnal_eth_status_t
     */
    bool running;
 } pnal_eth_status_t;
-
-/**
- * The p-net stack instance.
- *
- * This is needed for SNMP in order to access various stack variables,
- * such as the location of the device and LLDP variables.
- */
-typedef struct pnet pnet_t;
 
 /**
  * Get system uptime from the SNMP implementation.
