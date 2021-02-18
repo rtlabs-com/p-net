@@ -29,6 +29,9 @@ extern "C" {
 #include <stdatomic.h>
 #else
 #define atomic_int         uint32_t
+#ifdef ATOMIC_VAR_INIT
+#undef ATOMIC_VAR_INIT
+#endif
 #define ATOMIC_VAR_INIT(x) x
 
 #ifdef atomic_fetch_add

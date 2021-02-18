@@ -13,9 +13,12 @@
  * full license information.
  ********************************************************************/
 
+// TODO: Must be included first due to redefinition of atomics in
+// pf_types.h
+#include <gtest/gtest.h>
+
 #include "mocks.h"
 
-#include <gtest/gtest.h>
 #include <string.h>
 
 struct pnal_eth_handle

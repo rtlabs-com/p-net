@@ -82,8 +82,6 @@ target_compile_options(profinet
 
 target_link_libraries(profinet
   PUBLIC
-  pthread
-  rt
   $<$<BOOL:${PNET_OPTION_SNMP}>:NetSNMP::NetSNMPAgent>
   $<$<BOOL:${PNET_OPTION_SNMP}>:NetSNMP::NetSNMP>
   INTERFACE

@@ -117,3 +117,6 @@ target_link_libraries(pf_test
   PRIVATE
   profinet
   )
+
+# No need for gmock
+set(BUILD_GMOCK OFF CACHE BOOL "")
