@@ -15,6 +15,12 @@
 
 option(TEST_DEBUG "Add trace output to tests" OFF)
 
+set_target_properties (pf_test
+  PROPERTIES
+  C_STANDARD 99
+  CXX_STANDARD 11
+  )
+
 target_sources(pf_test PRIVATE
   # Unit tests
   test_alarm.cpp
