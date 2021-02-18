@@ -1,10 +1,25 @@
+/*********************************************************************
+ *        _       _         _
+ *  _ __ | |_  _ | |  __ _ | |__   ___
+ * | '__|| __|(_)| | / _` || '_ \ / __|
+ * | |   | |_  _ | || (_| || |_) |\__ \
+ * |_|    \__|(_)|_| \__,_||_.__/ |___/
+ *
+ * www.rt-labs.com
+ * Copyright 2018 rt-labs AB, Sweden.
+ *
+ * This software is dual-licensed under GPLv3 and a commercial
+ * license. See the file LICENSE.md distributed with this software for
+ * full license information.
+ ********************************************************************/
+
 #ifndef VERSION_H
 #define VERSION_H
 
-#cmakedefine PNET_VERSION_GIT "@PNET_VERSION_GIT@"
+#cmakedefine PROFINET_GIT_REVISION "@PROFINET_GIT_REVISION@"
 
-#if !defined(PNET_VERSION_BUILD) && defined(PNET_VERSION_GIT)
-#define PNET_VERSION_BUILD PNET_VERSION_GIT
+#if !defined(PNET_VERSION_BUILD) && defined(PROFINET_GIT_REVISION)
+#define PNET_VERSION_BUILD PROFINET_GIT_REVISION
 #endif
 
 /* clang-format-off */
