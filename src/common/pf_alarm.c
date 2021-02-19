@@ -2607,6 +2607,9 @@ int pf_alarm_alpmr_alarm_ack (
  * Also look in the diagnostics database to attach information whether
  * there are any relevant diagnosis items.
  *
+ * Note that the PLC can set the max alarm payload length at startup. This
+ * limit can be 200 to 1432 bytes.
+ *
  * ALPMI: ALPMI_Alarm_Notification.req
  *
  * @param net              InOut: The p-net stack instance
@@ -2628,7 +2631,8 @@ int pf_alarm_alpmr_alarm_ack (
  *                                or sizeof(pf_diag_item_t) for diagnosis in
  *                                standard format.
  *                                May be 0 also for manufacturer data.
- *                                Max PNET_MAX_ALARM_PAYLOAD_DATA_SIZE
+ *                                Max PNET_MAX_ALARM_PAYLOAD_DATA_SIZE or
+ *                                value from PLC.
  * @param p_payload        In:    pf_diag_item_t, manufacturer data or NULL.
  *                                Mandatory if payload_len > 0 or for USI
  *                                values for diagnosis in standard format
@@ -2668,6 +2672,16 @@ static int pf_alarm_send_alarm (
             __LINE__,
             payload_len,
             sizeof (alarm_data.payload.data));
+      }
+      else if (payload_len > p_ar->alarm_cr_request.max_alarm_data_length)
+      {
+         LOG_ERROR (
+            PF_ALARM_LOG,
+            "Alarm(%d): You provided too long alarm payload (%u bytes) but PLC "
+            "said max %u bytes.\n",
+            __LINE__,
+            payload_len,
+            p_ar->alarm_cr_request.max_alarm_data_length);
       }
       else
       {
