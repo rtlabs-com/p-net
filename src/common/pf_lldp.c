@@ -503,7 +503,11 @@ static void pf_lldp_receive_timeout (
    pf_port_t * p_port_data = (pf_port_t *)arg;
 
    p_port_data->lldp.rx_timeout = 0;
-   LOG_WARNING (PF_LLDP_LOG, "LLDP(%d): Receive timeout expired for port %u\n", __LINE__, p_port_data->port_num);
+   LOG_INFO (
+      PF_LLDP_LOG,
+      "LLDP(%d): Port %d, receive timeout expired\n",
+      __LINE__,
+      p_port_data->port_num);
 
    pf_pdport_peer_lldp_timeout (net, p_port_data->port_num);
    pf_lldp_invalidate_peer_info (net, p_port_data->port_num);
@@ -1817,6 +1821,37 @@ int pf_lldp_generate_alias_name (
    return 0;
 }
 
+bool pf_lldp_is_alias_matching (pnet_t * net, const char * alias)
+{
+   char port_alias[PF_ALIAS_NAME_MAX_SIZE]; /** Terminated */
+   int port;
+   pf_port_iterator_t port_iterator;
+   pf_port_t * p_port_data = NULL;
+
+   pf_port_init_iterator_over_ports (net, &port_iterator);
+   port = pf_port_get_next (&port_iterator);
+   while (port != 0)
+   {
+      p_port_data = pf_port_get_state (net, port);
+      if (
+         p_port_data->lldp.is_peer_info_received &&
+         (pf_lldp_generate_alias_name (
+             p_port_data->lldp.peer_info.port_id.string,
+             p_port_data->lldp.peer_info.chassis_id.string,
+             port_alias,
+             sizeof (port_alias)) == 0))
+      {
+         if (strcmp (alias, port_alias) == 0)
+         {
+            return true;
+         }
+      }
+
+      port = pf_port_get_next (&port_iterator);
+   }
+   return false;
+}
+
 /**
  * @internal
  * Store peer information
@@ -1866,8 +1901,6 @@ void pf_lldp_update_peer (
    int loc_port_num,
    const pf_lldp_peer_info_t * lldp_peer_info)
 {
-   int error = 0;
-   char new_alias[PF_ALIAS_NAME_MAX_SIZE]; /** Terminated */
    pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
    pf_lldp_reset_peer_timeout (net, loc_port_num, lldp_peer_info->ttl);
@@ -1882,27 +1915,44 @@ void pf_lldp_update_peer (
       return;
    }
 
-   error = pf_lldp_generate_alias_name (
-      lldp_peer_info->port_id.string,
-      lldp_peer_info->chassis_id.string,
-      new_alias,
-      sizeof (new_alias));
-   if (!error && (strcmp (new_alias, net->cmina_current_dcp_ase.alias_name) != 0))
+   LOG_INFO (
+      PF_LLDP_LOG,
+      "LLDP(%d): Port %d, peer info changed\n",
+      __LINE__,
+      loc_port_num);
+
+   if (p_port_data->lldp.is_peer_info_received)
    {
       LOG_INFO (
          PF_LLDP_LOG,
-         "LLDP(%d): Updating alias name: %s -> %s\n",
+         "LLDP(%d): Old peer info - MAC: %02X:%02X:%02X:%02X:%02X:%02X "
+         "Chassis ID: %s Port ID: %s\n",
          __LINE__,
-         net->cmina_current_dcp_ase.alias_name,
-         new_alias);
-
-      strncpy (
-         net->cmina_current_dcp_ase.alias_name,
-         new_alias,
-         sizeof (net->cmina_current_dcp_ase.alias_name));
-
-      pf_pdport_peer_indication (net, loc_port_num, lldp_peer_info);
+         p_port_data->lldp.peer_info.mac_address.addr[0],
+         p_port_data->lldp.peer_info.mac_address.addr[1],
+         p_port_data->lldp.peer_info.mac_address.addr[2],
+         p_port_data->lldp.peer_info.mac_address.addr[3],
+         p_port_data->lldp.peer_info.mac_address.addr[4],
+         p_port_data->lldp.peer_info.mac_address.addr[5],
+         p_port_data->lldp.peer_info.chassis_id.string,
+         p_port_data->lldp.peer_info.port_id.string);
    }
+
+   LOG_INFO (
+      PF_LLDP_LOG,
+      "LLDP(%d): New peer info - MAC: %02X:%02X:%02X:%02X:%02X:%02X "
+      "Chassis ID: %s Port ID: %s\n",
+      __LINE__,
+      lldp_peer_info->mac_address.addr[0],
+      lldp_peer_info->mac_address.addr[1],
+      lldp_peer_info->mac_address.addr[2],
+      lldp_peer_info->mac_address.addr[3],
+      lldp_peer_info->mac_address.addr[4],
+      lldp_peer_info->mac_address.addr[5],
+      lldp_peer_info->chassis_id.string,
+      lldp_peer_info->port_id.string);
+
+   pf_pdport_peer_indication (net, loc_port_num, lldp_peer_info);
 
    pf_lldp_store_peer_info (net, loc_port_num, lldp_peer_info);
 }

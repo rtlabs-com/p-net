@@ -1112,8 +1112,6 @@ typedef struct pf_cmina_dcp_ase
    uint8_t device_role;        /* Only value "1" supported */
    uint16_t device_initiative; /* 1: Should send hello. 0: No sending of hello
                                 */
-
-   char alias_name[PF_ALIAS_NAME_MAX_SIZE]; /** Terminated */
    struct
    {
       /* Order is important!! */

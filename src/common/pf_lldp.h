@@ -431,6 +431,17 @@ int pf_lldp_recv (
    pnal_buf_t * p_frame_buf,
    uint16_t offset);
 
+/**
+ * Check if an alias name matches any of the LLDP peers.
+ *
+ * @param net              InOut: The p-net stack instance.
+ * @param alias            In:    Alias to be compared with LLDP peers.
+ *                                Null terminated string.
+ * return                  true if the alias matches any of the peers,
+ *                         false if not.
+ */
+bool pf_lldp_is_alias_matching (pnet_t * net, const char * alias);
+
 /************ Internal functions, made available for unit testing ************/
 
 int pf_lldp_generate_alias_name (
