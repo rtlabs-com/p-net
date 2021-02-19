@@ -2664,6 +2664,9 @@ int pf_alarm_send_process (
    uint16_t payload_len,
    const uint8_t * p_payload)
 {
+   uint32_t module_ident = 0;
+   uint32_t submodule_ident = 0;
+
    LOG_INFO (
       PF_ALARM_LOG,
       "Alarm(%d): Sending process alarm. Slot %u, subslot %u, %u bytes, USI "
@@ -2687,6 +2690,36 @@ int pf_alarm_send_process (
       return -1;
    }
 
+   /* Find module and submodule identities */
+   if (pf_cmdev_get_module_ident (net, api_id, slot_nbr, &module_ident) != 0)
+   {
+      LOG_ERROR (
+         PF_ALARM_LOG,
+         "Alarm(%d): Failed to get module ident for slot: %u\n",
+         __LINE__,
+         slot_nbr);
+
+      return -1;
+   }
+   if (
+      pf_cmdev_get_submodule_ident (
+         net,
+         api_id,
+         slot_nbr,
+         subslot_nbr,
+         &submodule_ident) != 0)
+   {
+      LOG_ERROR (
+         PF_ALARM_LOG,
+         "Alarm(%d): Failed to get submodule ident for slot: %u, "
+         "subslot: %u\n",
+         __LINE__,
+         slot_nbr,
+         subslot_nbr);
+
+      return -1;
+   }
+
    return pf_alarm_send_alarm (
       net,
       p_ar,
@@ -2696,8 +2729,8 @@ int pf_alarm_send_process (
       slot_nbr,
       subslot_nbr,
       NULL, /* No p_diag_item */
-      0,    /* module_ident */
-      0,    /* submodule_ident */
+      module_ident,
+      submodule_ident,
       payload_usi,
       payload_len,
       p_payload);
@@ -2738,6 +2771,7 @@ int pf_alarm_send_diagnosis (
       }
    }
 
+   /* Find module and submodule identities */
    if (pf_cmdev_get_module_ident (net, api_id, slot_nbr, &module_ident) != 0)
    {
       LOG_ERROR (
@@ -2748,7 +2782,6 @@ int pf_alarm_send_diagnosis (
 
       return -1;
    }
-
    if (
       pf_cmdev_get_submodule_ident (
          net,
