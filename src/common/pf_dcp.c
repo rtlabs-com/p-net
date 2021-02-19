@@ -1855,7 +1855,7 @@ static int pf_dcp_identify_req (
             {
                match = false;
             }
-            
+
             src_pos += src_block_len;
 
             /* Skip padding to align on uint16_t */
