@@ -1660,13 +1660,17 @@ PNET_EXPORT void pnet_create_log_book_entry (
  * This function may be used by the application to issue a process alarm.
  * Such alarms are sent to the controller using high-priority alarm messages.
  *
- * Optional payload may be attached to the alarm. If \a payload_usi is != 0 then
+ * Optional payload may be attached to the alarm. If \a payload_usi is != 0
+ * and \a payload_len > 0 then
  * the \a payload_usi and the payload at \a p_payload is attached to the alarm.
  *
  * After calling this function the application must wait for
  * the \a pnet_alarm_cnf() callback before sending another alarm.
  * This function fails if the application does not wait for the
  * \a pnet_alarm_cnf() between sending two alarms.
+ *
+ * Note that the PLC can set the max alarm payload length at startup. This
+ * limit can be 200 to 1432 bytes.
  *
  * This functionality is used for alarms triggered by the IO-device.
  *
@@ -1676,8 +1680,9 @@ PNET_EXPORT void pnet_create_log_book_entry (
  * @param slot             In:    The slot.
  * @param subslot          In:    The sub-slot.
  * @param payload_usi      In:    The USI for the payload. Max 0x7fff
- * @param payload_len      In:    Length in bytes of the payload.
- *                                Max PNET_MAX_ALARM_PAYLOAD_DATA_SIZE.
+ * @param payload_len      In:    Length in bytes of the payload. May be 0.
+ *                                Max PNET_MAX_ALARM_PAYLOAD_DATA_SIZE or
+ *                                value from PLC.
  * @param p_payload        In:    The alarm payload (USI specific format).
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred (or waiting for ACK from controller: re-try
@@ -1882,6 +1887,9 @@ PNET_EXPORT int pnet_diag_std_remove (
  * Use the manufacturer specific format ("USI format") only if it's not
  * possible to use the standard format.
  *
+ * Note that the PLC can set the max alarm payload length at startup, and
+ * that affects how large diagnosis entries can be sent via alarms.
+ *
  * This sends a diagnosis alarm.
  *
  * @param net              InOut: The p-net stack instance.
@@ -1891,8 +1899,9 @@ PNET_EXPORT int pnet_diag_std_remove (
  * @param usi              In:    The USI. Range 0..0x7fff
  * @param manuf_data_len   In:    Length in bytes of the
  *                                manufacturer specific diagnosis data.
- *                                Max PNET_MAX_DIAG_MANUF_DATA_SIZE.
  *                                A value 0 is allowed.
+ *                                Max PNET_MAX_DIAG_MANUF_DATA_SIZE or value
+ *                                from PLC.
  * @param p_manuf_data     In:    The manufacturer specific diagnosis data.
  *                                Mandatory if manuf_data_len > 0, otherwise
  *                                NULL.
@@ -1916,6 +1925,9 @@ PNET_EXPORT int pnet_diag_usi_add (
  * Use \a pnet_diag_usi_add() instead if you would like to create the
  * missing diagnosis when trying to update it.
  *
+ * Note that the PLC can set the max alarm payload length at startup, and
+ * that affects how large diagnosis entries can be sent via alarms.
+ *
  * This sends a diagnosis alarm.
  *
  * @param net              InOut: The p-net stack instance.
@@ -1925,8 +1937,9 @@ PNET_EXPORT int pnet_diag_usi_add (
  * @param usi              In:    The USI. Range 0..0x7fff
  * @param manuf_data_len   In:    Length in bytes of the
  *                                manufacturer specific diagnosis data.
- *                                Max PNET_MAX_DIAG_MANUF_DATA_SIZE.
  *                                A value 0 is allowed.
+ *                                Max PNET_MAX_DIAG_MANUF_DATA_SIZE or
+ *                                value from PLC.
  * @param p_manuf_data     In:    New manufacturer specific diagnosis data.
  *                                Mandatory if manuf_data_len > 0, otherwise
  *                                NULL.
@@ -1972,6 +1985,9 @@ PNET_EXPORT int pnet_diag_usi_remove (
  *  - pnet_diag_std_add()
  *  - pnet_diag_usi_add()
  *
+ * Note that the PLC can set the max alarm payload length at startup, and
+ * that affects how large diagnosis entries can be sent via alarms.
+ *
  * This sends a diagnosis alarm.
  *
  * @param net                 InOut: The p-net stack instance.
@@ -1986,7 +2002,8 @@ PNET_EXPORT int pnet_diag_usi_remove (
  * @param usi                 In:    The USI.
  * @param manuf_data_len      In:    Length in bytes of the
  *                                   manufacturer specific diagnosis data.
- *                                   Max PNET_MAX_DIAG_MANUF_DATA_SIZE.
+ *                                   Max PNET_MAX_DIAG_MANUF_DATA_SIZE or
+ *                                   value from PLC.
  *                                   (Only needed if USI <= 0x7fff,
  *                                    and may still be 0).
  * @param p_manuf_data        In:    The manufacturer specific diagnosis data.
@@ -2026,6 +2043,9 @@ PNET_EXPORT int pnet_diag_add (
  * USI in manufacturer-specific range) or the extended channel additional
  * value is updated.
  *
+ * Note that the PLC can set the max alarm payload length at startup, and
+ * that affects how large diagnosis entries can be sent via alarms.
+ *
  * This sends a diagnosis alarm.
  *
  * @param net               InOut: The p-net stack instance.
@@ -2036,7 +2056,8 @@ PNET_EXPORT int pnet_diag_add (
  * @param usi               In:    The USI.
  * @param manuf_data_len    In:    Length in bytes of the
  *                                 manufacturer specific diagnosis data.
- *                                 Max PNET_MAX_DIAG_MANUF_DATA_SIZE.
+ *                                 Max PNET_MAX_DIAG_MANUF_DATA_SIZE or
+ *                                 value from PLC.
  *                                 (Only needed if USI <= 0x7fff,
  *                                  and may still be 0).
  * @param p_manuf_data      In:    New manufacturer specific diagnosis data.

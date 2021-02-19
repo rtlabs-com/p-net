@@ -1592,6 +1592,11 @@ typedef struct pf_alarm_cr_tag_header
                                    USER_PRIORITY_HIGH (6) */
 } pf_alarm_cr_tag_header_t;
 
+/** The largest alarmdata we can accept
+ *  Allowed 200..1432
+*/
+#define PF_MAX_ALARM_DATA_LEN 200
+
 typedef struct pf_alarm_cr_request
 {
    bool valid;

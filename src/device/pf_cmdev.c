@@ -4750,9 +4750,7 @@ int pf_cmdev_rm_connect_ind (
             p_ar->alarm_cr_request.alarm_cr_type;
          p_ar->alarm_cr_result.remote_alarm_reference =
             p_ar->alarm_cr_request.local_alarm_reference;
-         p_ar->alarm_cr_result.max_alarm_data_length = 200; /* ToDo: Add a
-                                                               define for this
-                                                               value */
+         p_ar->alarm_cr_result.max_alarm_data_length = PF_MAX_ALARM_DATA_LEN;
 
          pf_cmina_get_station_name (net, station_name);
          strncpy (
