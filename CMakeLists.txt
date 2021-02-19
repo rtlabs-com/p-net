@@ -156,14 +156,18 @@ set_property(CACHE PNET_LOG PROPERTY STRINGS ${LOG_STATE_VALUES})
 
 # Generate version numbers
 configure_file (
-  version.h.in
-  ${PROFINET_BINARY_DIR}/src/version.h
+  pnet_version.h.in
+  ${PROFINET_BINARY_DIR}/include/pnet_version.h
   )
 
 # Generate config options
 configure_file (
   options.h.in
   ${PROFINET_BINARY_DIR}/src/options.h
+  )
+configure_file (
+  pnet_options.h.in
+  ${PROFINET_BINARY_DIR}/include/pnet_options.h
   )
 
 # Add platform-dependent targets early, so they can be configured by
@@ -218,6 +222,8 @@ install(
 install (FILES
   include/pnet_api.h
   ${PROFINET_BINARY_DIR}/include/pnet_export.h
+  ${PROFINET_BINARY_DIR}/include/pnet_options.h
+  ${PROFINET_BINARY_DIR}/include/pnet_version.h
   DESTINATION include
   )
 

@@ -32,7 +32,9 @@
 extern "C" {
 #endif
 
-#include <pnet_export.h>
+#include "pnet_export.h"
+#include "pnet_options.h"
+#include "pnet_version.h"
 
 #include <stdbool.h>
 #include <stddef.h>

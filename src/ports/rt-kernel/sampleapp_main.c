@@ -18,7 +18,6 @@
 #include "osal_log.h"
 #include "osal.h"
 #include <pnet_api.h>
-#include "version.h"
 
 #include <gpio.h>
 #include <kern/kern.h>

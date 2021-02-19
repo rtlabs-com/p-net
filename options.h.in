@@ -1,3 +1,18 @@
+/*********************************************************************
+ *        _       _         _
+ *  _ __ | |_  _ | |  __ _ | |__   ___
+ * | '__|| __|(_)| | / _` || '_ \ / __|
+ * | |   | |_  _ | || (_| || |_) |\__ \
+ * |_|    \__|(_)|_| \__,_||_.__/ |___/
+ *
+ * www.rt-labs.com
+ * Copyright 2018 rt-labs AB, Sweden.
+ *
+ * This software is dual-licensed under GPLv3 and a commercial
+ * license. See the file LICENSE.md distributed with this software for
+ * full license information.
+ ********************************************************************/
+
 #ifndef OPTIONS_H
 #define OPTIONS_H
 
@@ -112,11 +127,6 @@
 #define PNET_MAX_DFP_IOCR         @PNET_MAX_DFP_IOCR@
 #endif
 
-#if !defined (PNET_NUMBER_OF_PHYSICAL_PORTS)
-/** 2 for media redundancy. Currently only 1 is supported. */
-#define PNET_NUMBER_OF_PHYSICAL_PORTS        @PNET_NUMBER_OF_PHYSICAL_PORTS@
-#endif
-
 #if !defined (PNET_MAX_LOG_BOOK_ENTRIES)
 #define PNET_MAX_LOG_BOOK_ENTRIES @PNET_MAX_LOG_BOOK_ENTRIES@
 #endif
@@ -161,11 +171,6 @@
 #if !defined (PNET_MAX_SESSION_BUFFER_SIZE)
 /** Max fragmented RPC request/response length */
 #define PNET_MAX_SESSION_BUFFER_SIZE @PNET_MAX_SESSION_BUFFER_SIZE@
-#endif
-
-#if !defined (PNET_MAX_DIRECTORYPATH_SIZE)
-/** Max directory path size, including termination */
-#define PNET_MAX_DIRECTORYPATH_SIZE @PNET_MAX_DIRECTORYPATH_SIZE@
 #endif
 
 #if !defined (PNET_MAX_FILENAME_SIZE)
