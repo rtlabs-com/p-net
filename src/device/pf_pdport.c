@@ -587,6 +587,41 @@ int pf_pdport_read_ind (
 
 /**
  * @internal
+ * Remove no-peer-detected diagnosis if peer is available.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param loc_port_num     In:    Local port number.
+ *                                Valid range:
+ *                                1 .. PNET_NUMBER_OF_PHYSICAL_PORTS.
+ */
+static void pf_pdport_check_no_peer_detected_diagnosis (
+   pnet_t * net,
+   int loc_port_num)
+{
+   pnet_diag_source_t diag_source;
+   uint32_t peer_timestamp;
+
+   if (pf_lldp_get_peer_timestamp (net, loc_port_num, &peer_timestamp) == 0)
+   {
+      /* Peer available, remove no-peer-detected diagnosis */
+      pf_pdport_init_diag_source (&diag_source, loc_port_num);
+
+      LOG_DEBUG (
+         PNET_LOG,
+         "PDPORT(%d): Peer is available on port %u. Remove no-peer-detected "
+         "diagnosis.\n",
+         __LINE__,
+         loc_port_num);
+      (void)pf_diag_std_remove (
+         net,
+         &diag_source,
+         PF_WRT_ERROR_REMOTE_MISMATCH,
+         PF_WRT_ERROR_NO_PEER_DETECTED);
+   }
+}
+
+/**
+ * @internal
  * Run peer station name check
  *
  * Compare llpd peer information with configured pdport peer.
@@ -752,6 +787,7 @@ static void pf_pdport_run_peer_check (pnet_t * net, int loc_port_num)
 
    if (p_port_data->pdport.check.active == true)
    {
+      pf_pdport_check_no_peer_detected_diagnosis (net, loc_port_num);
       pf_pdport_check_peer_port_name (net, loc_port_num);
       pf_pdport_check_peer_station_name (net, loc_port_num);
    }
@@ -773,7 +809,7 @@ static void pf_pdport_peer_lldp_timeout_alarm (pnet_t * net, int loc_port_num)
 
    LOG_DEBUG (
       PNET_LOG,
-      "PDPORT(%d): Sending missing peer alarm for port %u",
+      "PDPORT(%d): Sending no-peer-detected alarm for port %u",
       __LINE__,
       loc_port_num);
 
