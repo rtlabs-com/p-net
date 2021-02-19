@@ -17,13 +17,11 @@
 
 #include "sampleapp_common.h"
 
-#include "options.h" /* Rename/remove when #224 is solved */
 #include "osal.h"
 #include "osal_log.h" /* For LOG_LEVEL */
 #include "pnal.h"
 #include "pnal_filetools.h"
 #include <pnet_api.h>
-#include "version.h" /* Rename/remove when #224 is solved */
 
 #include <net/if.h>
 #include <sys/ioctl.h>

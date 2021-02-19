@@ -18,7 +18,6 @@
 #include "osal.h"
 #include "pnal.h"
 #include <pnet_api.h>
-#include "version.h"
 
 #include <stdio.h>
 #include <stdlib.h>

@@ -13,8 +13,8 @@
  * full license information.
  ********************************************************************/
 
-#ifndef VERSION_H
-#define VERSION_H
+#ifndef PNET_VERSION_H
+#define PNET_VERSION_H
 
 #cmakedefine PROFINET_GIT_REVISION "@PROFINET_GIT_REVISION@"
 
@@ -30,7 +30,7 @@
 
 #if defined(PNET_VERSION_BUILD)
 #define PNET_VERSION \
-   "@PROFINET_VERSION_MAJOR@.@PROFINET_VERSION_MINOR@.@PROFINET_VERSION_PATCH@+"PNET_VERSION_BUILD
+   "@PROFINET_VERSION_MAJOR@.@PROFINET_VERSION_MINOR@.@PROFINET_VERSION_PATCH@+" PNET_VERSION_BUILD
 #else
 #define PNET_VERSION \
    "@PROFINET_VERSION_MAJOR@.@PROFINET_VERSION_MINOR@.@PROFINET_VERSION_PATCH@"
@@ -38,4 +38,4 @@
 
 /* clang-format-on */
 
-#endif /* VERSION_H */
+#endif /* PNET_VERSION_H */

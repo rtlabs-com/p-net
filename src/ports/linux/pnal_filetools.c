@@ -18,6 +18,7 @@
 
 #include "pnal_filetools.h"
 
+#include "pnet_options.h"
 #include "options.h"
 #include "osal_log.h"
 
