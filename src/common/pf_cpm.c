@@ -153,6 +153,13 @@ static void pf_cpm_control_interval_expired (
                                                                         */
 
             pf_cpm_set_state (&p_iocr->cpm, PF_CPM_STATE_W_START);
+
+            /* Generate an alarm. */
+            pf_cmsu_cpm_error_ind (
+               net,
+               p_iocr->p_ar,
+               p_iocr->p_ar->err_cls,
+               p_iocr->p_ar->err_code);
          }
          else
          {
