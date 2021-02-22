@@ -804,7 +804,6 @@ static int app_state_ind (
    {
       /* Save the arep for later use */
       p_appdata->main_api.arep = arep;
-      os_event_set (p_appdata->main_events, APP_EVENT_READY_FOR_DATA);
 
       /* Set initial data and IOPS for input modules, and IOCS for
        * output modules
@@ -824,8 +823,10 @@ static int app_state_ind (
             }
          }
       }
-
       (void)pnet_set_provider_state (net, true);
+
+      /* Send application ready  */
+      os_event_set (p_appdata->main_events, APP_EVENT_READY_FOR_DATA);
    }
 
    return 0;
