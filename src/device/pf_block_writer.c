@@ -2801,19 +2801,22 @@ static void pf_put_diag_slot (
    pf_dev_filter_level_t filter_level,
    pf_diag_filter_level_t diag_filter,
    const pf_ar_t * p_ar,
+   uint32_t api_id,
    const pf_slot_t * p_slot,
    uint16_t subslot_nbr,
    uint16_t res_len,
    uint8_t * p_bytes,
-   uint16_t * p_pos)
+   uint16_t * p_pos,
+   uint16_t * p_block_pos,
+   uint16_t * p_data_pos)
 {
    uint16_t ix;
    const pf_subslot_t * p_subslot;
+   uint16_t block_len;
 
    /* Include at least API ID information */
    for (ix = 0; ix < NELEMENTS (p_slot->subslots); ix++)
    {
-
       p_subslot = &p_slot->subslots[ix];
       if (p_subslot->in_use == true)
       {
@@ -2852,6 +2855,32 @@ static void pf_put_diag_slot (
             }
          }
       }
+
+      if (*p_pos > *p_data_pos)
+      {
+         /* Diag list added.
+          * Finalize current block header and insert new.
+          */
+         block_len = *p_pos - (*p_block_pos + 4);
+         *p_block_pos += offsetof (pf_block_header_t, block_length);
+         pf_put_uint16 (is_big_endian, block_len, res_len, p_bytes, p_block_pos);
+         /* Store start of new block header */
+         *p_block_pos = *p_pos;
+
+         pf_put_uint32 (is_big_endian, api_id, res_len, p_bytes, p_pos);
+         *p_data_pos = *p_pos;
+
+         /* Insert block header for next diag list block */
+         pf_put_block_header (
+            is_big_endian,
+            PF_BT_DIAGNOSIS_DATA,
+            0, /* Dont know block_len yet */
+            PNET_BLOCK_VERSION_HIGH,
+            PNET_BLOCK_VERSION_LOW_1,
+            res_len,
+            p_bytes,
+            p_pos);
+      }
    }
 }
 
@@ -2884,7 +2913,9 @@ static void pf_put_diag_api (
    uint16_t subslot_nbr,
    uint16_t res_len,
    uint8_t * p_bytes,
-   uint16_t * p_pos)
+   uint16_t * p_pos,
+   uint16_t * p_block_pos,
+   uint16_t * p_data_pos)
 {
    uint16_t ix;
    const pf_slot_t * p_slot;
@@ -2908,11 +2939,14 @@ static void pf_put_diag_api (
                      filter_level,
                      diag_filter,
                      p_ar,
+                     p_api->api_id,
                      p_slot,
                      subslot_nbr,
                      res_len,
                      p_bytes,
-                     p_pos);
+                     p_pos,
+                     p_block_pos,
+                     p_data_pos);
                }
             }
             else
@@ -2924,11 +2958,14 @@ static void pf_put_diag_api (
                   filter_level,
                   diag_filter,
                   p_ar,
+                  p_api->api_id,
                   p_slot,
                   subslot_nbr,
                   res_len,
                   p_bytes,
-                  p_pos);
+                  p_pos,
+                  p_block_pos,
+                  p_data_pos);
             }
          }
       }
@@ -2966,7 +3003,9 @@ static void pf_put_diag_device (
    uint16_t subslot_nbr,
    uint16_t res_len,
    uint8_t * p_bytes,
-   uint16_t * p_pos)
+   uint16_t * p_pos,
+   uint16_t * p_block_pos,
+   uint16_t * p_data_pos)
 {
    uint16_t ix;
    const pf_api_t * p_api;
@@ -2995,7 +3034,9 @@ static void pf_put_diag_device (
                      subslot_nbr,
                      res_len,
                      p_bytes,
-                     p_pos);
+                     p_pos,
+                     p_block_pos,
+                     p_data_pos);
                }
             }
             else
@@ -3012,7 +3053,9 @@ static void pf_put_diag_device (
                   subslot_nbr,
                   res_len,
                   p_bytes,
-                  p_pos);
+                  p_pos,
+                  p_block_pos,
+                  p_data_pos);
             }
          }
       }
@@ -3066,7 +3109,9 @@ void pf_put_diag_data (
          subslot_nbr,
          res_len,
          p_bytes,
-         p_pos);
+         p_pos,
+         &block_pos,
+         &data_pos);
    }
 
    /* Finally insert the block length into the block header */
