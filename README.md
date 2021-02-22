@@ -10,7 +10,8 @@ Web resources
 * RT-Labs: [https://rt-labs.com](https://rt-labs.com)
 
 
-[![Build Status](https://github.com/rtlabs-com/p-net/workflows/build/badge.svg?branch=master)](https://github.com/rtlabs-com/p-net/actions?workflow=build)
+[![Build Status](https://github.com/rtlabs-com/p-net/workflows/Build/badge.svg?branch=master)](https://github.com/rtlabs-com/p-net/actions?workflow=Build)
+[![CodeQL](https://github.com/rtlabs-com/p-net/workflows/CodeQL/badge.svg?branch=master)](https://github.com/rtlabs-com/p-net/actions?workflow=CodeQL)
 
 p-net
 -----
