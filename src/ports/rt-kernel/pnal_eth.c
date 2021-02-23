@@ -121,6 +121,7 @@ static err_t pnal_eth_sys_recv (struct pbuf * p_buf, struct netif * netif)
 pnal_eth_handle_t * pnal_eth_init (
    const char * if_name,
    pnal_ethertype_t receive_type,
+   const pnal_cfg_t * pnal_cfg,
    pnal_eth_callback_t * callback,
    void * arg)
 {

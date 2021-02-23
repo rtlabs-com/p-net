@@ -35,6 +35,7 @@ extern "C" {
 #include "pnet_export.h"
 #include "pnet_options.h"
 #include "pnet_version.h"
+#include "pnal_config.h"
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -1253,6 +1254,9 @@ typedef struct pnet_cfg
                                     messages to the PLC. Should match GSDML
                                     file. Typically 32, which corresponds to 1
                                     ms. Max 0x1000 (128 ms) */
+
+   /** Operating system dependent settings */
+   pnal_cfg_t pnal_cfg;
 
    /** Capabilities */
    bool send_hello; /**< Send DCP HELLO message on startup if true. */

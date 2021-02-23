@@ -51,11 +51,12 @@ target_sources(pn_dev
   src/ports/rt-kernel/sampleapp_main.c
   )
 
+install (FILES
+  src/ports/rt-kernel/pnal_config.h
+  DESTINATION include
+  )
+
 if (BUILD_TESTING)
-  target_sources(pf_test
-    PRIVATE
-    ${PROFINET_SOURCE_DIR}/src/ports/rt-kernel/pnal.c
-    )
   target_include_directories(pf_test
     PRIVATE
     src/ports/rt-kernel

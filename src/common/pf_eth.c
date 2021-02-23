@@ -33,18 +33,35 @@
 #include <string.h>
 #include "pf_includes.h"
 
+/**
+ * @internal
+ * Initialize network interface
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param netif_name       In:    Interface name
+ * @param eth_receive_type In:    Protocol to receive
+ * @param pnal_cfg         In:    Operating system dependent configuration
+ * @param netif            InOut: Network interface instance
+ * @return   0 on success
+ *          -1 on error
+ */
 static int pf_eth_init_netif (
    pnet_t * net,
    const char * netif_name,
    pnal_ethertype_t eth_receive_type,
+   const pnal_cfg_t * pnal_cfg,
    pf_netif_t * netif)
 {
    pnal_ethaddr_t pnal_mac_addr;
 
    snprintf (netif->name, sizeof (netif->name), "%s", netif_name);
 
-   netif->handle =
-      pnal_eth_init (netif->name, eth_receive_type, pf_eth_recv, (void *)net);
+   netif->handle = pnal_eth_init (
+      netif->name,
+      eth_receive_type,
+      pnal_cfg,
+      pf_eth_recv,
+      (void *)net);
 
    if (netif->handle == NULL)
    {
@@ -92,6 +109,7 @@ int pf_eth_init (pnet_t * net, const pnet_cfg_t * p_cfg)
          net,
          p_cfg->if_cfg.main_netif_name,
          main_port_receive_type,
+         &p_cfg->pnal_cfg,
          &net->pf_interface.main_port) != 0)
    {
       return -1;
@@ -112,6 +130,7 @@ int pf_eth_init (pnet_t * net, const pnet_cfg_t * p_cfg)
             net,
             p_port_cfg->netif_name,
             PNAL_ETHTYPE_LLDP,
+            &p_cfg->pnal_cfg,
             &p_port_data->netif) != 0)
       {
          return -1;

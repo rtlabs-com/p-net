@@ -14,7 +14,6 @@
  ********************************************************************/
 
 #include "pnal.h"
-#include "pnal_options.h"
 #include "osal.h"
 #include "options.h"
 #include "osal_log.h"
@@ -70,12 +69,12 @@ static void pnal_snmp_thread (void * arg)
    }
 }
 
-int pnal_snmp_init (struct pnet * pnet)
+int pnal_snmp_init (struct pnet * pnet, const pnal_cfg_t * pnal_cfg)
 {
    os_thread_create (
       "pn_snmp",
-      PNET_SNMP_PRIO,
-      PNET_SNMP_STACK_SIZE,
+      pnal_cfg->snmp_thread.prio,
+      pnal_cfg->snmp_thread.stack_size,
       pnal_snmp_thread,
       pnet);
    return 0;

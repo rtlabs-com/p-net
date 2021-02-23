@@ -6,26 +6,34 @@
  * |_|    \__|(_)|_| \__,_||_.__/ |___/
  *
  * www.rt-labs.com
- * Copyright 2020 rt-labs AB, Sweden.
+ * Copyright 2021 rt-labs AB, Sweden.
  *
  * This software is dual-licensed under GPLv3 and a commercial
  * license. See the file LICENSE.md distributed with this software for
  * full license information.
  ********************************************************************/
 
-#ifndef PNAL_OPTIONS_H
-#define PNAL_OPTIONS_H
+/**
+ * @file
+ * @brief PNAL-specific configuration
+ *
+ * This file contains definitions of configuration settings for the
+ * PNAL layer.
+ */
 
-#include <net-snmp/net-snmp-config.h>
+#ifndef PNAL_CONFIG_H
+#define PNAL_CONFIG_H
 
-/** Priority of SNMP thread (if SCHED_FIFO is used) */
-#if !defined (PNET_SNMP_PRIO)
-#define PNET_SNMP_PRIO          @PNET_SNMP_PRIO@
+#ifdef __cplusplus
+extern "C" {
 #endif
 
-/** Stack size of SNMP thread */
-#if !defined (PNET_SNMP_STACK_SIZE)
-#define PNET_SNMP_STACK_SIZE    (@PNET_SNMP_STACK_SIZE@)
+typedef struct pnal_cfg
+{
+} pnal_cfg_t;
+
+#ifdef __cplusplus
+}
 #endif
 
-#endif  /* PNAL_OPTIONS_H */
+#endif /* PNAL_CONFIG_H */

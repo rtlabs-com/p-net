@@ -52,7 +52,7 @@ static void pnal_snmp_configure_mib2 (void)
       mib2_system_set_value);
 }
 
-int pnal_snmp_init (pnet_t * net)
+int pnal_snmp_init (pnet_t * net, const pnal_cfg_t * pnal_cfg)
 {
    static const struct snmp_mib * mibs[] = {
       &mib2,

@@ -82,6 +82,7 @@ static void os_eth_task (void * thread_arg)
 pnal_eth_handle_t * pnal_eth_init (
    const char * if_name,
    pnal_ethertype_t receive_type,
+   const pnal_cfg_t * pnal_cfg,
    pnal_eth_callback_t * callback,
    void * arg)
 {
@@ -143,8 +144,12 @@ pnal_eth_handle_t * pnal_eth_init (
 
    if (handle->socket > -1)
    {
-      handle->thread =
-         os_thread_create ("os_eth_task", 10, 4096, os_eth_task, handle);
+      handle->thread = os_thread_create (
+         "os_eth_task",
+         pnal_cfg->eth_recv_thread.prio,
+         pnal_cfg->eth_recv_thread.stack_size,
+         os_eth_task,
+         handle);
       return handle;
    }
    else
