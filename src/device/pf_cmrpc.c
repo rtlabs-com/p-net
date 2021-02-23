@@ -72,37 +72,62 @@ static const pf_uuid_t uuid_io_device_interface = {
 
 void pf_memory_contents_show (const uint8_t * data, int size)
 {
-   int i, j, pos;
+   int i, j, pos, n, remain;
    uint8_t c;
    char s[80];
+
+   /* Note: a line is 67 characters or shorter */
 
    for (i = 0; i < size; i += 16)
    {
       pos = 0;
+      remain = sizeof(s);
 
       /* Print hex values */
       for (j = 0; j < 16 && (i + j) < size; j++)
       {
-         pos += snprintf (s + pos, sizeof (s) - pos, "%02x ", *(data + i + j));
+         n = snprintf (&s[pos], remain, "%02x ", data[i + j]);
+         if (n >= remain)
+            return;
+
+         pos += n;
+         remain -= n;
       }
 
       /* Fill up short line */
       for (; j < 16; j++)
       {
-         pos += snprintf (s + pos, sizeof (s) - pos, "   ");
+         n = snprintf (&s[pos], remain, "   ");
+         if (n >= remain)
+            return;
+
+         pos += n;
+         remain -= n;
       }
 
-      pos += snprintf (s + pos, sizeof (s) - pos, "|");
+      n = snprintf (&s[pos], remain, "|");
+      if (n >= remain)
+         return;
+
+      pos += n;
+      remain -= n;
 
       /* Print ASCII values */
       for (j = 0; j < 16 && (i + j) < size; j++)
       {
-         c = *(data + i + j);
+         c = data[i + j];
          c = (isprint (c)) ? c : '.';
-         pos += snprintf (s + pos, sizeof (s) - pos, "%c", c);
+         n = snprintf (&s[pos], remain, "%c", c);
+         if (n >= remain)
+            return;
+
+         pos += n;
+         remain -= n;
       }
 
-      pos += snprintf (s + pos, sizeof (s) - pos, "|\n");
+      n = snprintf (&s[pos], remain, "|\n");
+      if (n >= remain)
+         return;
 
       printf ("%s", s);
    }
