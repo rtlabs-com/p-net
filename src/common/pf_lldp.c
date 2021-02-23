@@ -837,7 +837,7 @@ int pf_lldp_get_peer_port_name (
    pf_lldp_port_name_t * p_port_name)
 {
    pf_lldp_port_id_t port_id;
-   uint16_t i;
+   size_t i;
    const pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
    memset (p_port_name, 0, sizeof (*p_port_name));
 
