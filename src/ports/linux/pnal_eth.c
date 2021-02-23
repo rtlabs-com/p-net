@@ -124,14 +124,18 @@ pnal_eth_handle_t * pnal_eth_init (
    ioctl (handle->socket, SIOCGIFINDEX, &ifr);
    ifindex = ifr.ifr_ifindex;
 
-   /* Set flags of NIC interface, here promiscuous and broadcast */
+   /* Set flags of NIC interface */
    strcpy (ifr.ifr_name, if_name);
    ifr.ifr_flags = 0;
    ioctl (handle->socket, SIOCGIFFLAGS, &ifr);
    ifr.ifr_flags = ifr.ifr_flags | IFF_MULTICAST | IFF_BROADCAST;
+   if (receive_type == PNAL_ETHTYPE_ALL)
+   {
+      ifr.ifr_flags |= IFF_ALLMULTI; /* Receive all multicasts */
+   }
    ioctl (handle->socket, SIOCSIFFLAGS, &ifr);
 
-   /* Bind socket to all protocols */
+   /* Bind socket to relevant protocol */
    sll.sll_family = AF_PACKET;
    sll.sll_ifindex = ifindex;
    sll.sll_protocol = htons (linux_receive_type);
