@@ -42,9 +42,17 @@
 #define APP_DEFAULT_ETHERNET_INTERFACE ""
 #endif
 
-#define APP_THREAD_PRIORITY   15
-#define APP_THREAD_STACKSIZE  4096 /* bytes */
-#define APP_MAIN_SLEEPTIME_US 5000 * 1000
+#define APP_MAIN_SLEEPTIME_US      5000 * 1000
+#define APP_MAIN_THREAD_PRIORITY   15
+#define APP_MAIN_THREAD_STACKSIZE  4096 /* bytes */
+#define APP_SNMP_THREAD_PRIORITY   1
+#define APP_SNMP_THREAD_STACKSIZE  256 * 1024 /* bytes */
+#define APP_ETH_THREAD_PRIORITY    10
+#define APP_ETH_THREAD_STACKSIZE   4096 /* bytes */
+/* Note that this sample application uses os_timer_create() for the timer
+   that controls the ticks. It is implemented in OSAL, and the Linux
+   implementation uses a thread internally. To modify the timer thread priority,
+   modify OSAL or use some other timer */
 
 /************************* Utilities ******************************************/
 
@@ -391,6 +399,11 @@ int main (int argc, char * argv[])
    app_pnet_cfg_init_default (&pnet_default_cfg);
    pnet_default_cfg.cb_arg = (void *)&appdata;
    strcpy (pnet_default_cfg.station_name, appdata.arguments.station_name);
+   pnet_default_cfg.pnal_cfg.snmp_thread.prio = APP_SNMP_THREAD_PRIORITY;
+   pnet_default_cfg.pnal_cfg.snmp_thread.stack_size = APP_SNMP_THREAD_STACKSIZE;
+   pnet_default_cfg.pnal_cfg.eth_recv_thread.prio = APP_ETH_THREAD_PRIORITY;
+   pnet_default_cfg.pnal_cfg.eth_recv_thread.stack_size =
+      APP_ETH_THREAD_STACKSIZE;
 
    ret = app_pnet_cfg_init_netifs (
       appdata.arguments.eth_interfaces,
@@ -459,8 +472,8 @@ int main (int argc, char * argv[])
       false);
    os_thread_create (
       "pn_main_thread",
-      APP_THREAD_PRIORITY,
-      APP_THREAD_STACKSIZE,
+      APP_MAIN_THREAD_PRIORITY,
+      APP_MAIN_THREAD_STACKSIZE,
       pn_main_thread,
       (void *)&appdata_and_stack);
    os_timer_start (appdata.main_timer);

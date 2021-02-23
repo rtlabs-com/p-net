@@ -1331,6 +1331,7 @@ int app_pnet_cfg_init_default (pnet_cfg_t * stack_config)
     *    ip_mask
     *    station_name
     *    file_directory
+    *    pnal_cfg
     */
 
    /* Call-backs */

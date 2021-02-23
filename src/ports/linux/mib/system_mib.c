@@ -29,7 +29,6 @@
 #undef LOG_FATAL
 
 #include "system_mib.h"
-#include "pnal_options.h"
 
 #include <sys/sysinfo.h>
 

@@ -194,6 +194,7 @@ int main (void)
    pnet_default_cfg.cb_arg = (void *)&appdata;
    strcpy (pnet_default_cfg.station_name, appdata.arguments.station_name);
    strcpy (pnet_default_cfg.file_directory, APP_DEFAULT_FILE_DIRECTORY);
+   /* Note: pnal_cfg not is used for rt-kernel  */
 
    ret = app_pnet_cfg_init_netifs (
       appdata.arguments.eth_interfaces,

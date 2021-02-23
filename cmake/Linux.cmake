@@ -26,21 +26,9 @@ if (PNET_OPTION_SNMP)
   find_package(NetSNMPAgent REQUIRED)
 endif()
 
-set(PNET_SNMP_PRIO 1
-  CACHE STRING "SNMP thread priority")
-set(PNET_SNMP_STACK_SIZE 256*1024
-  CACHE STRING "SNMP thread stack size")
-
-# Generate PNAL options
-configure_file (
-  src/ports/linux/pnal_options.h.in
-  ${PROFINET_BINARY_DIR}/src/ports/linux/pnal_options.h
-  )
-
 target_include_directories(profinet
   PRIVATE
   src/ports/linux
-  ${PROFINET_BINARY_DIR}/src/ports/linux
   )
 
 target_sources(profinet
@@ -100,6 +88,11 @@ target_sources(pn_dev
   src/ports/linux/sampleapp_main.c
   )
 
+install (FILES
+  src/ports/linux/pnal_config.h
+  DESTINATION include
+  )
+
 file(COPY
   src/ports/linux/set_network_parameters
   src/ports/linux/set_profinet_leds
@@ -110,10 +103,6 @@ file(COPY
 
 if (BUILD_TESTING)
   set(GOOGLE_TEST_INDIVIDUAL TRUE)
-  target_sources(pf_test
-    PRIVATE
-    ${PROFINET_SOURCE_DIR}/src/ports/linux/pnal.c
-    )
   target_include_directories(pf_test
     PRIVATE
     src/ports/linux
