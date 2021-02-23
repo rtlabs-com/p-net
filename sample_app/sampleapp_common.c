@@ -1404,7 +1404,7 @@ int app_pnet_cfg_init_default (pnet_cfg_t * stack_config)
 int app_get_netif_namelist (
    const char * arg_str,
    app_netif_namelist_t * p_if_list,
-   int max_port)
+   uint16_t max_port)
 {
    int ret = 0;
    uint16_t i = 0;

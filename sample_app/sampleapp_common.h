@@ -337,7 +337,7 @@ int app_pnet_cfg_init_netifs (
 int app_get_netif_namelist (
    const char * arg_str,
    app_netif_namelist_t * p_if_list,
-   int max_port);
+   uint16_t max_port);
 
 /**
  * Plug DAP (sub-)modules. This operation shall be called after p-net
