@@ -42,30 +42,38 @@ bool pnal_does_file_exist (const char * filepath)
  * @internal
  * Get the path to the directory where the main binary is located.
  *
- * @param path             Out:   Path to directory. Terminated string.
- * @param size             In :   Size of the stringbuffer. Should be large
+ * @param tempstring       Temp:  Temporary buffer.
+ * @param dirpath          Out:   Path to directory. Terminated string.
+ * @param size             In:    Size of the stringbuffers. Should be large
  *                                enough for the full path to the binary.
  *
  * @return 0 on success.
  *         -1 if an error occured.
  */
-static int pnal_get_directory_of_binary (char * path, size_t size)
+static int pnal_get_directory_of_binary (
+   char * tempstring,
+   char * dirpath,
+   size_t size)
 {
    ssize_t num_bytes = 0;
+   memset (tempstring, 0, size); /* Path to executable */
+   memset (dirpath, 0, size);
+   char * resulting_directory = NULL;
 
-   num_bytes = readlink ("/proc/self/exe", path, size);
+   num_bytes = readlink ("/proc/self/exe", tempstring, size);
    if (num_bytes == -1)
    {
       return -1;
    }
 
    /* Verify that we have the full path (size is big enough) */
-   if (!pnal_does_file_exist (path))
+   if (!pnal_does_file_exist (tempstring))
    {
       return -1;
    }
 
-   path = dirname (path);
+   resulting_directory = dirname (tempstring);
+   snprintf (dirpath, size, "%s", resulting_directory);
 
    return 0;
 }
@@ -79,7 +87,7 @@ static int pnal_get_directory_of_binary (char * path, size_t size)
  *
  * @param path             Out:   Resulting path. Terminated string.
  *                                Might be modified also on failure.
- * @param size             In :   Size of the outputbuffer. Should be
+ * @param size             In:    Size of the outputbuffer. Should be
  *                                sizeof(PNAL_DEFAULT_SEARCHPATH) +
  *                                PNET_MAX_DIRECTORYPATH_SIZE
  * @return 0 on success.
@@ -94,9 +102,11 @@ int pnal_create_searchpath (char * path, size_t size)
    char
       directory_of_binary[PNET_MAX_DIRECTORYPATH_SIZE + PNET_MAX_FILENAME_SIZE] =
          {0};
+   char tempstring[PNET_MAX_DIRECTORYPATH_SIZE + PNET_MAX_FILENAME_SIZE] = {0};
 
    if (
       pnal_get_directory_of_binary (
+         tempstring,
          directory_of_binary,
          sizeof (directory_of_binary)) != 0)
    {
