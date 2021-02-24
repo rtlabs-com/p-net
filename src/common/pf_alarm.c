@@ -2667,52 +2667,9 @@ static int pf_alarm_send_alarm (
    uint16_t payload_len,
    const uint8_t * p_payload)
 {
-   int ret = -1;
    pf_alarm_data_t alarm_data;
 
-   if (net->global_alarm_enable == true && p_ar->alarm_enable == true)
-   {
-      if (payload_len > sizeof (alarm_data.payload.data))
-      {
-         LOG_ERROR (
-            PF_ALARM_LOG,
-            "Alarm(%d): You provided too long alarm payload (%u bytes) but max "
-            "is %zu. Increase PNET_MAX_ALARM_PAYLOAD_DATA_SIZE.\n",
-            __LINE__,
-            payload_len,
-            sizeof (alarm_data.payload.data));
-      }
-      else if (payload_len > p_ar->alarm_cr_request.max_alarm_data_length)
-      {
-         LOG_ERROR (
-            PF_ALARM_LOG,
-            "Alarm(%d): You provided too long alarm payload (%u bytes) but PLC "
-            "said max %u bytes.\n",
-            __LINE__,
-            payload_len,
-            p_ar->alarm_cr_request.max_alarm_data_length);
-      }
-      else
-      {
-         /* Prepare data */
-         memset (&alarm_data, 0, sizeof (alarm_data));
-         alarm_data.alarm_type = alarm_type;
-         alarm_data.api_id = api_id;
-         alarm_data.slot_nbr = slot_nbr;
-         alarm_data.subslot_nbr = subslot_nbr;
-         alarm_data.module_ident = module_ident;
-         alarm_data.submodule_ident = submodule_ident;
-
-         alarm_data.payload.usi = payload_usi;
-         alarm_data.payload.len = payload_len;
-         memcpy (alarm_data.payload.data, p_payload, payload_len);
-
-         return pf_alarm_add_send_queue (
-            &p_ar->alarm_send_q[high_prio ? 1 : 0],
-            &alarm_data);
-      }
-   }
-   else
+   if (net->global_alarm_enable == false || p_ar->alarm_enable == false)
    {
       LOG_DEBUG (
          PF_ALARM_LOG,
@@ -2721,9 +2678,67 @@ static int pf_alarm_send_alarm (
          __LINE__,
          net->global_alarm_enable,
          p_ar->alarm_enable);
+
+      return -1;
    }
 
-   return ret;
+   if (payload_len > sizeof (alarm_data.payload.data))
+   {
+      LOG_ERROR (
+         PF_ALARM_LOG,
+         "Alarm(%d): You provided too long alarm payload (%u bytes) but max "
+         "is %zu. Increase PNET_MAX_ALARM_PAYLOAD_DATA_SIZE.\n",
+         __LINE__,
+         payload_len,
+         sizeof (alarm_data.payload.data));
+
+      return -1;
+   }
+
+   if (payload_len > p_ar->alarm_cr_request.max_alarm_data_length)
+   {
+      LOG_ERROR (
+         PF_ALARM_LOG,
+         "Alarm(%d): You provided too long alarm payload (%u bytes) but PLC "
+         "said max %u bytes.\n",
+         __LINE__,
+         payload_len,
+         p_ar->alarm_cr_request.max_alarm_data_length);
+
+      return -1;
+   }
+
+   if (payload_len > 0 && p_payload == NULL)
+   {
+      LOG_ERROR (
+         PF_ALARM_LOG,
+         "Alarm(%d): payload_len is %u but no payload is given.\n",
+         __LINE__,
+         payload_len);
+
+      return -1;
+   }
+
+   /* Prepare data */
+   memset (&alarm_data, 0, sizeof (alarm_data));
+   alarm_data.alarm_type = alarm_type;
+   alarm_data.api_id = api_id;
+   alarm_data.slot_nbr = slot_nbr;
+   alarm_data.subslot_nbr = subslot_nbr;
+   alarm_data.module_ident = module_ident;
+   alarm_data.submodule_ident = submodule_ident;
+
+   alarm_data.payload.usi = payload_usi;
+   alarm_data.payload.len = payload_len;
+
+   if (payload_len > 0)
+   {
+      memcpy (alarm_data.payload.data, p_payload, payload_len);
+   }
+
+   return pf_alarm_add_send_queue (
+      &p_ar->alarm_send_q[high_prio ? 1 : 0],
+      &alarm_data);
 }
 
 /************************ Send specific alarm types **************************/
