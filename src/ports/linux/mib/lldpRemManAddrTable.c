@@ -151,7 +151,6 @@ netsnmp_variable_list * lldpRemManAddrTable_get_next_data_point (
    idx = idx->next_variable;
 
    snmp_set_var_value (idx, &address.value[1], address.value[0]);
-   idx = idx->next_variable;
 
    *my_data_context = (void *)(uintptr_t)port;
    return put_index_data;

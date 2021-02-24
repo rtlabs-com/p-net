@@ -92,7 +92,6 @@ netsnmp_variable_list * lldpConfigManAddrTable_get_first_data_point (
    idx = idx->next_variable;
 
    snmp_set_var_value (idx, &address.value[1], address.value[0]);
-   idx = idx->next_variable;
 
    /* Set my_data_context to a value that is not NULL */
    *my_data_context = (void *)(uintptr_t) true;

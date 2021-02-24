@@ -319,7 +319,7 @@ static void pf_fspm_load_im (pnet_t * net)
  */
 static void pf_fspm_save_im (pnet_t * net)
 {
-   pf_im_nvm_t output_im = {0};
+   pf_im_nvm_t output_im;
    pf_im_nvm_t temporary_buffer;
    const char * p_file_directory = pf_cmina_get_file_directory (net);
    int res = 0;

@@ -701,20 +701,17 @@ static int pf_alarm_apmr_frame_handler (
    uint16_t frame_id_pos,
    void * p_arg)
 {
-   char * priotext = NULL;
    pf_apmx_t * p_apmx = (pf_apmx_t *)p_arg;
    pf_apmr_msg_t * p_apmr_msg;
    uint16_t nbr;
    int ret = 0; /* Failed to handle frame. The calling function needs to free
                    the buffer. */
 
-   priotext = p_apmx->high_priority ? "high" : "low";
-
    LOG_INFO (
       PF_ALARM_LOG,
       "Alarm(%d): Received %s prio alarm frame.\n",
       __LINE__,
-      priotext);
+      p_apmx->high_priority ? "high" : "low");
    if (p_buf != NULL)
    {
       nbr = p_apmx->apmr_msg_nbr++; /* ToDo: Make atomic */
@@ -738,7 +735,7 @@ static int pf_alarm_apmr_frame_handler (
                PF_ALARM_LOG,
                "Alarm(%d): Failed to put incoming %s prio alarm in mbox\n",
                __LINE__,
-               priotext);
+               p_apmx->high_priority ? "high" : "low");
          }
       }
       else
@@ -748,7 +745,7 @@ static int pf_alarm_apmr_frame_handler (
             "Alarm(%d): Could not put incoming %s prio alarm frame in"
             " mbox, as it is deallocated.\n",
             __LINE__,
-            priotext);
+            p_apmx->high_priority ? "high" : "low");
       }
    }
    else
@@ -1435,20 +1432,21 @@ static int pf_alarm_apms_apms_a_data_req (
       /* APMS: A_Data_cnf     (tells that incoming message is acyclic data)
          In state PF_APMS_STATE_WTACK with A_Data_cnf we should start
          retransmission timer */
-      ret = pf_scheduler_add (
-         net,
-         p_apmx->timeout_us,
-         apmx_sync_name,
-         pf_alarm_apms_timeout,
-         p_apmx,
-         &p_apmx->timeout_id);
-      if (ret != 0)
+      if (
+         pf_scheduler_add (
+            net,
+            p_apmx->timeout_us,
+            apmx_sync_name,
+            pf_alarm_apms_timeout,
+            p_apmx,
+            &p_apmx->timeout_id) != 0)
       {
          p_apmx->timeout_id = UINT32_MAX;
          LOG_ERROR (
             PF_ALARM_LOG,
             "Alarm(%d): Error from pf_scheduler_add\n",
             __LINE__);
+         ret = -1;
       }
    }
 

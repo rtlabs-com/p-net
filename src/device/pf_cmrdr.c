@@ -916,7 +916,10 @@ int pf_cmrdr_rm_read_ind (
       &data_length_pos); /* Insert actual data length */
 
    /* Restart timer */
-   ret = pf_cmsm_cm_read_ind (net, p_ar, p_read_request);
+   if (pf_cmsm_cm_read_ind (net, p_ar, p_read_request) != 0)
+   {
+      ret = -1;
+   }
 
    return ret;
 }
