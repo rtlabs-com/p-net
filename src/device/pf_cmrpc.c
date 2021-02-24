@@ -81,7 +81,7 @@ void pf_memory_contents_show (const uint8_t * data, int size)
    for (i = 0; i < size; i += 16)
    {
       pos = 0;
-      remain = sizeof(s);
+      remain = sizeof (s);
 
       /* Print hex values */
       for (j = 0; j < 16 && (i + j) < size; j++)
@@ -1115,9 +1115,11 @@ static int pf_cmrpc_rm_connect_interpret_ind (
 
                   LOG_DEBUG (
                      PF_RPC_LOG,
-                     "CMRPC(%d): Requested start up mode: \"%s\" Initiator station name: \"%s\" port: 0x%04x Timeout: %u x 100 ms\n",
+                     "CMRPC(%d): Requested start up mode: \"%s\" Initiator "
+                     "station name: \"%s\" port: 0x%04x Timeout: %u x 100 ms\n",
                      __LINE__,
-                     p_ar->ar_param.ar_properties.startup_mode ? "Advanced" : "Legacy",
+                     p_ar->ar_param.ar_properties.startup_mode ? "Advanced"
+                                                               : "Legacy",
                      p_ar->ar_param.cm_initiator_station_name,
                      p_ar->ar_param.cm_initiator_udp_rt_port,
                      p_ar->ar_param.cm_initiator_activity_timeout_factor);
@@ -4517,6 +4519,7 @@ static int pf_cmrpc_dce_packet (
                "CMRPC(%d): FAULT (code %" PRIx32 ") received\n",
                __LINE__,
                fault_code);
+            (void)fault_code;
 
             (void)pf_cmdev_cm_abort (net, p_sess->p_ar);
 
@@ -4537,6 +4540,7 @@ static int pf_cmrpc_dce_packet (
                "CMRPC(%d): REJECT (code %" PRIx32 ") received\n",
                __LINE__,
                reject_code);
+            (void)reject_code;
 
             (void)pf_cmdev_cm_abort (net, p_sess->p_ar);
 

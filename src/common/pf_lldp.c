@@ -825,7 +825,6 @@ int pf_lldp_get_peer_station_name (
             p_station_name->string,
             sizeof (p_station_name->string));
       }
-      found = true;
    }
 
    /* Do not use peer mac address here since its status is unknown. */

@@ -139,7 +139,6 @@ netsnmp_variable_list * lldpXdot3RemPortTable_get_next_data_point (
    idx = idx->next_variable;
 
    snmp_set_var_typed_integer (idx, ASN_INTEGER, port);
-   idx = idx->next_variable;
 
    *my_data_context = (void *)(uintptr_t)port;
    return put_index_data;

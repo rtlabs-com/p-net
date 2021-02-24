@@ -320,7 +320,10 @@ int pf_cmwrr_rm_write_ind (
    p_write_result->add_data_2 = p_result->add_data_2;
 
    /* Update the CMSM timer, which monitors start-up timeout */
-   ret = pf_cmsm_cm_write_ind (net, p_ar, p_write_request);
+   if (pf_cmsm_cm_write_ind (net, p_ar, p_write_request) != 0)
+   {
+      ret = -1;
+   }
 
    return ret;
 }

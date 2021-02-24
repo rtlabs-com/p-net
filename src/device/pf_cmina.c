@@ -292,7 +292,7 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
             __LINE__);
 
          /* Reset I&M data */
-         ret = pf_fspm_clear_im_data (net);
+         (void)pf_fspm_clear_im_data (net);
 
          /* According to section 8.4 "Behavior to ResetToFactory" in
           * "Test case specification: Behavior" the MIB data should be reset

@@ -604,7 +604,7 @@ static void pf_pdport_check_peer_station_name (pnet_t * net, int loc_port_num)
    pnet_diag_source_t diag_source = {0};
    pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
    pf_check_peer_t * p_wanted_peer = &p_port_data->pdport.check.peer;
-   pf_lldp_station_name_t lldp_station_name = {0};
+   pf_lldp_station_name_t lldp_station_name;
 
    if (pf_lldp_get_peer_station_name (net, loc_port_num, &lldp_station_name) == 0)
    {
@@ -678,7 +678,7 @@ static void pf_pdport_check_peer_port_name (pnet_t * net, int loc_port_num)
    pnet_diag_source_t diag_source = {0};
    pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
    pf_check_peer_t * p_wanted_peer = &p_port_data->pdport.check.peer;
-   pf_lldp_port_id_t lldp_port_id = {0};
+   pf_lldp_port_id_t lldp_port_id;
 
    if (pf_lldp_get_peer_port_id (net, loc_port_num, &lldp_port_id) == 0)
    {
@@ -947,7 +947,7 @@ static int pf_pdport_write_data_adj (
    uint16_t pos = 0;
    pf_get_info_t get_info;
    pf_port_data_adjust_t port_data_adjust = {0};
-   pf_adjust_peer_to_peer_boundary_t boundary = {0};
+   pf_adjust_peer_to_peer_boundary_t boundary;
    pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
    get_info.result = PF_PARSE_OK;
