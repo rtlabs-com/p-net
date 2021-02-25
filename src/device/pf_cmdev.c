@@ -398,6 +398,40 @@ void pf_cmdev_free_diag (pnet_t * net, uint16_t item_ix)
    }
 }
 
+int pf_cmdev_get_next_diagnosis_usi (
+   pnet_t * net,
+   uint16_t list_head,
+   uint16_t low_usi_limit,
+   uint16_t * p_next_usi)
+{
+   int ret = -1;
+   pf_diag_item_t * p_item = NULL;
+   uint16_t resulting_value = UINT16_MAX;
+
+   /* Walk the list to find next larger USI value */
+   pf_cmdev_get_diag_item (net, list_head, &p_item);
+   while (p_item != NULL)
+   {
+      if (p_item->usi > low_usi_limit)
+      {
+         if (p_item->usi < resulting_value)
+         {
+            resulting_value = p_item->usi;
+         }
+      }
+
+      pf_cmdev_get_diag_item (net, p_item->next, &p_item);
+   }
+
+   if (resulting_value != UINT16_MAX)
+   {
+      *p_next_usi = resulting_value;
+      ret = 0;
+   }
+
+   return ret;
+}
+
 /*****************************************************************************/
 
 /**

@@ -277,6 +277,24 @@ int pf_cmdev_new_diag (pnet_t * net, uint16_t * p_item_ix);
 void pf_cmdev_free_diag (pnet_t * net, uint16_t item_ix);
 
 /**
+ * Find next diagnosis USI value (sorted) for a subslot
+ *
+ * Finds the smallest USI value that is greater than \a low_usi_limit
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param list_head        In:    Index of first item of diagnoses for
+ *                                this subslot
+ * @param low_usi_limit    In:    Previous USI value
+ * @param p_next_usi       Out:   Next USI value
+ * @return 0 if an USI value was found, -1 otherwise.
+ */
+int pf_cmdev_get_next_diagnosis_usi (
+   pnet_t * net,
+   uint16_t list_head,
+   uint16_t low_usi_limit,
+   uint16_t * p_next_usi);
+
+/**
  * Generate module diffs, when needed, for the specified AR.
  * @param net              InOut: The p-net stack instance
  * @param p_ar             InOut: The AR instance.
