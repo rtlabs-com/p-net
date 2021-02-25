@@ -675,10 +675,11 @@ void pf_put_input_data (
  *
  * Implemented using:
  *    pf_put_diag_device()
- *       pf_put_diag_api()            for all APIs
- *          pf_put_diag_slot()        for all slots
- *             pf_put_diag_list()     for all subslots
- *                pf_put_diag_item()  Does actual insertion
+ *       pf_put_diag_api()              for all APIs
+ *          pf_put_diag_slot()          for all slots
+ *             pf_put_diag_subslot()    for all subslots
+ *               pf_put_diag_list()     Header insertion for a USI value
+ *                  pf_put_diag_item()  Insertion of diag item
  *
  * @param net              InOut: The p-net stack instance
  * @param is_big_endian    In:    Endianness of the destination buffer.

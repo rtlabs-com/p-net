@@ -2535,6 +2535,8 @@ void pf_put_log_book_data (
  *  - Extended channel diagnosis (standard format)
  *  - Qualified channel diagnosis (standard format)
  *
+ * Used both for creating an alarm frame and a diagnostics read answer frame.
+ *
  * @param is_big_endian    In:   true if buffer is big-endian.
  * @param p_item           In:   The diag item to insert.
  * @param insert_usi       In:   Insert USI field if true.
@@ -2668,13 +2670,18 @@ static void pf_put_diag_item (
  * @internal
  * Insert a diagnosis item list (for a subslot) into a buffer.
  *
+ * Note that all diagnoses inserted into this block in the buffer must be for
+ * the same API, slot, subslot and USI.
+ *
  * Insertion is done via pf_put_diag_item()
  *
  * @param net              InOut: The p-net stack instance
  * @param is_big_endian    In:    true if buffer is big-endian.
  * @param diag_filter      In:    Type of diag items to insert.
+ * @param usi_filter       In:    USI value to filter by. Mandatory.
+ * @param api_id           In:    The API number to write to buffer.
  * @param slot_nbr         In:    The slot number to write to buffer.
- * @param subslot_nbr      In:    The sub-slot number to write to buffer.
+ * @param subslot_nbr      In:    The subslot number to write to buffer.
  * @param list_head        In:    Index of first item in the list to insert.
  * @param res_len          In:    Size of destination buffer.
  * @param p_bytes          Out:   Destination buffer.
@@ -2684,9 +2691,11 @@ static void pf_put_diag_list (
    pnet_t * net,
    bool is_big_endian,
    pf_diag_filter_level_t diag_filter,
+   uint16_t usi_filter,
+   uint16_t api_id,
    uint16_t slot_nbr,
    uint16_t subslot_nbr,
-   uint16_t list_head, /* First in list */
+   uint16_t list_head,
    uint16_t res_len,
    uint8_t * p_bytes,
    uint16_t * p_pos)
@@ -2694,32 +2703,50 @@ static void pf_put_diag_list (
    uint16_t ch_properties = 0;
    pf_diag_item_t * p_item = NULL;
    bool insert;
+   uint16_t block_pos = *p_pos;
+   uint16_t block_len = 0;
+   uint16_t data_pos;
 
    /* Walk the list to insert all items */
    pf_cmdev_get_diag_item (net, list_head, &p_item);
    if (p_item != NULL)
    {
+      /* Insert block header */
+      pf_put_block_header (
+         is_big_endian,
+         PF_BT_DIAGNOSIS_DATA,
+         0, /* Dont know block_len yet */
+         PNET_BLOCK_VERSION_HIGH,
+         PNET_BLOCK_VERSION_LOW_1,
+         res_len,
+         p_bytes,
+         p_pos);
+
+      /* Insert API, slot and subslot */
+      pf_put_uint32 (is_big_endian, api_id, res_len, p_bytes, p_pos);
       pf_put_uint16 (is_big_endian, slot_nbr, res_len, p_bytes, p_pos);
       pf_put_uint16 (is_big_endian, subslot_nbr, res_len, p_bytes, p_pos);
+
+      /* Insert summary-channel, and its properties
+       * The list only contains APPEARS, so it can be hardcoded here.
+       * ToDo: More info into ch_properties here!
+       */
       pf_put_uint16 (
          is_big_endian,
          PNET_CHANNEL_WHOLE_SUBMODULE,
          res_len,
          p_bytes,
          p_pos);
-
-      /*
-       * The list only contains APPEARS, so it can be hardcoded here.
-       * ToDo: More info into ch_properties here!
-       */
       PF_DIAG_CH_PROP_SPEC_SET (ch_properties, PF_DIAG_CH_PROP_SPEC_APPEARS);
       pf_put_uint16 (is_big_endian, ch_properties, res_len, p_bytes, p_pos);
 
-      /* Todo: order diagitems by usi */
-      pf_put_uint16 (is_big_endian, p_item->usi, res_len, p_bytes, p_pos);
+      /* Insert USI */
+      pf_put_uint16 (is_big_endian, usi_filter, res_len, p_bytes, p_pos);
 
+      data_pos = *p_pos;
       while (p_item != NULL)
       {
+
          /* Filter based on diagnosis type */
          insert = false;
          switch (diag_filter)
@@ -2762,12 +2789,19 @@ static void pf_put_diag_list (
             break;
          }
 
+         /* Filter based on USI value */
+         if (p_item->usi != usi_filter)
+         {
+            insert = false;
+         }
+
          if (insert == true)
          {
+            /* Insert diagnosis item */
             pf_put_diag_item (
                is_big_endian,
                p_item,
-               false /*Do not insert usi item */,
+               false, /* Do not insert USI value */
                res_len,
                p_bytes,
                p_pos);
@@ -2775,6 +2809,68 @@ static void pf_put_diag_list (
 
          pf_cmdev_get_diag_item (net, p_item->next, &p_item);
       }
+
+      /* Finally insert the block length into the block header */
+      if (*p_pos > data_pos)
+      {
+         block_len = *p_pos - (block_pos + 4);
+         block_pos += offsetof (pf_block_header_t, block_length);
+         pf_put_uint16 (is_big_endian, block_len, res_len, p_bytes, &block_pos);
+      }
+      else
+      {
+         /* Do not insert an empty block. */
+         *p_pos = block_pos;
+      }
+   }
+}
+
+/**
+ * @internal
+ * Insert diagnosis items of a subslot into a buffer.
+ *
+ * This is done by calling pf_put_diag_list() for USI values of found diagnoses.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param is_big_endian    In:    true if buffer is big-endian.
+ * @param diag_filter      In:    Type of diag items to insert.
+ * @param api_id           In:    The API number to write to buffer.
+ * @param slot_nbr         In:    The slot number to write to buffer.
+ * @param p_subslot        In:    The subslot instance.
+ * @param res_len          In:    Size of destination buffer.
+ * @param p_bytes          Out:   Destination buffer.
+ * @param p_pos            InOut: Position in destination buffer.
+ */
+static void pf_put_diag_subslot (
+   pnet_t * net,
+   bool is_big_endian,
+   pf_diag_filter_level_t diag_filter,
+   uint16_t api_id,
+   uint16_t slot_nbr,
+   const pf_subslot_t * p_subslot,
+   uint16_t res_len,
+   uint8_t * p_bytes,
+   uint16_t * p_pos)
+{
+   uint16_t usi = 0;
+   int err = pf_cmdev_get_next_diagnosis_usi (net, p_subslot->diag_list, 0, &usi);
+
+   while (err == 0)
+   {
+      pf_put_diag_list (
+         net,
+         is_big_endian,
+         diag_filter,
+         usi,
+         api_id,
+         slot_nbr,
+         p_subslot->subslot_nbr,
+         p_subslot->diag_list,
+         res_len,
+         p_bytes,
+         p_pos);
+
+      err = pf_cmdev_get_next_diagnosis_usi (net, p_subslot->diag_list, usi, &usi);
    }
 }
 
@@ -2782,13 +2878,14 @@ static void pf_put_diag_list (
  * @internal
  * Insert diagnosis items of a slot into a buffer.
  *
- * This is done by calling pf_put_diag_list() for all matching subslots.
+ * This is done by calling pf_put_diag_subslot() for relevant subslots.
  *
  * @param net              InOut: The p-net stack instance
  * @param is_big_endian    In:    true if buffer is big-endian.
  * @param filter_level     In:    The filter ending level.
  * @param diag_filter      In:    The types of diag to insert.
  * @param p_ar             In:    If != NULL then filter by AR.
+ * @param api_id           In:    API to insert
  * @param p_slot           In:    The slot instance.
  * @param subslot_nbr      In:    The sub-slot number to filter by.
  * @param res_len          In:    Size of destination buffer.
@@ -2801,6 +2898,7 @@ static void pf_put_diag_slot (
    pf_dev_filter_level_t filter_level,
    pf_diag_filter_level_t diag_filter,
    const pf_ar_t * p_ar,
+   uint32_t api_id,
    const pf_slot_t * p_slot,
    uint16_t subslot_nbr,
    uint16_t res_len,
@@ -2810,10 +2908,8 @@ static void pf_put_diag_slot (
    uint16_t ix;
    const pf_subslot_t * p_subslot;
 
-   /* Include at least API ID information */
    for (ix = 0; ix < NELEMENTS (p_slot->subslots); ix++)
    {
-
       p_subslot = &p_slot->subslots[ix];
       if (p_subslot->in_use == true)
       {
@@ -2824,13 +2920,13 @@ static void pf_put_diag_slot (
                if (p_subslot->subslot_nbr == subslot_nbr)
                {
                   /* Call only for the matching subslot_nbr */
-                  pf_put_diag_list (
+                  pf_put_diag_subslot (
                      net,
                      is_big_endian,
                      diag_filter,
+                     api_id,
                      p_slot->slot_nbr,
-                     p_subslot->subslot_nbr,
-                     p_subslot->diag_list,
+                     p_subslot,
                      res_len,
                      p_bytes,
                      p_pos);
@@ -2839,13 +2935,13 @@ static void pf_put_diag_slot (
             else
             {
                /* No filter: Call for all sub-slots that are in use */
-               pf_put_diag_list (
+               pf_put_diag_subslot (
                   net,
                   is_big_endian,
                   diag_filter,
+                  api_id,
                   p_slot->slot_nbr,
-                  p_subslot->subslot_nbr,
-                  p_subslot->diag_list,
+                  p_subslot,
                   res_len,
                   p_bytes,
                   p_pos);
@@ -2859,7 +2955,7 @@ static void pf_put_diag_slot (
  * @internal
  * Insert diagnosis items of an API into a buffer.
  *
- * This is done by calling pf_put_diag_slot() for all matching slots.
+ * This is done by calling pf_put_diag_slot() for relevant slots.
  *
  * @param net              InOut: The p-net stack instance
  * @param is_big_endian    In:    true if buffer is big-endian.
@@ -2889,7 +2985,6 @@ static void pf_put_diag_api (
    uint16_t ix;
    const pf_slot_t * p_slot;
 
-   /* Include at least API ID information */
    for (ix = 0; ix < NELEMENTS (p_api->slots); ix++)
    {
       p_slot = &p_api->slots[ix];
@@ -2908,6 +3003,7 @@ static void pf_put_diag_api (
                      filter_level,
                      diag_filter,
                      p_ar,
+                     p_api->api_id,
                      p_slot,
                      subslot_nbr,
                      res_len,
@@ -2924,6 +3020,7 @@ static void pf_put_diag_api (
                   filter_level,
                   diag_filter,
                   p_ar,
+                  p_api->api_id,
                   p_slot,
                   subslot_nbr,
                   res_len,
@@ -2939,7 +3036,7 @@ static void pf_put_diag_api (
  * @internal
  * Insert diagnosis items of a device into a buffer.
  *
- * This is done by calling pf_put_diag_api() for all APIs.
+ * This is done by calling pf_put_diag_api() for all relevant APIs.
  *
  * @param net              InOut: The p-net stack instance
  * @param is_big_endian    In:    true if buffer is big-endian.
@@ -2971,7 +3068,6 @@ static void pf_put_diag_device (
    uint16_t ix;
    const pf_api_t * p_api;
 
-   /* Include at least API ID information */
    for (ix = 0; ix < NELEMENTS (p_device->apis); ix++)
    {
       p_api = &p_device->apis[ix];
@@ -3033,25 +3129,8 @@ void pf_put_diag_data (
    uint8_t * p_bytes,
    uint16_t * p_pos)
 {
-   uint16_t block_pos = *p_pos;
-   uint16_t block_len = 0;
-   uint16_t data_pos;
    pf_device_t * p_device = NULL;
 
-   /* Insert block header for the output block */
-   pf_put_block_header (
-      is_big_endian,
-      PF_BT_DIAGNOSIS_DATA,
-      0, /* Dont know block_len yet */
-      PNET_BLOCK_VERSION_HIGH,
-      PNET_BLOCK_VERSION_LOW_1,
-      res_len,
-      p_bytes,
-      p_pos);
-
-   pf_put_uint32 (is_big_endian, api_id, res_len, p_bytes, p_pos);
-
-   data_pos = *p_pos;
    if (pf_cmdev_get_device (net, &p_device) == 0)
    {
       pf_put_diag_device (
@@ -3067,21 +3146,6 @@ void pf_put_diag_data (
          res_len,
          p_bytes,
          p_pos);
-   }
-
-   /* Finally insert the block length into the block header */
-   if (*p_pos > data_pos)
-   {
-      block_len = *p_pos - (block_pos + 4);
-      block_pos += offsetof (pf_block_header_t, block_length); /* Point to
-                                                                  correct place
-                                                                */
-      pf_put_uint16 (is_big_endian, block_len, res_len, p_bytes, &block_pos);
-   }
-   else
-   {
-      /* Do not insert an empty block. */
-      *p_pos = block_pos;
    }
 }
 
