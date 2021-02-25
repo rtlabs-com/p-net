@@ -117,11 +117,6 @@
 #define PNET_MAX_SUBSLOTS       @PNET_MAX_SUBSLOTS@
 #endif
 
-#if !defined (PNET_MAX_CHANNELS)
-/** Per sub-slot. Used for diagnosis. */
-#define PNET_MAX_CHANNELS         @PNET_MAX_CHANNELS@
-#endif
-
 #if !defined (PNET_MAX_DFP_IOCR)
 /** Allowed values are 0 (zero) or 2. */
 #define PNET_MAX_DFP_IOCR         @PNET_MAX_DFP_IOCR@

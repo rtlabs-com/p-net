@@ -110,9 +110,6 @@ void pf_fspm_option_show (const pnet_t * net)
       "PNET_MAX_SUBSLOTS                              : %d\n",
       PNET_MAX_SUBSLOTS);
    printf (
-      "PNET_MAX_CHANNELS                              : %d\n",
-      PNET_MAX_CHANNELS);
-   printf (
       "PNET_MAX_DFP_IOCR                              : %d\n",
       PNET_MAX_DFP_IOCR);
    printf (
