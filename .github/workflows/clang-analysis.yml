@@ -16,19 +16,31 @@ jobs:
 
     steps:
     - name: Install dependencies
-      run: sudo apt-get install clang-tools
+      run: sudo apt-get install clang-tools libsnmp-dev
 
     - name: Checkout repository
       uses: actions/checkout@v2
       with:
         submodules: true
 
+    # Run clang analyzer.
+    #
+    # Detect if issues were found and upload SARIF report only in that
+    # case, because reports without entries are not accepted. See
+    # https://github.com/github/codeql-action/issues/390. The analyzer
+    # is run twice in order to get a SARIF report as well as an exit
+    # status when issues are detected, as the scan-build --status-bugs
+    # parameter doesn't work when the output format is SARIF.
+
     - name: Run analyzer
+      id: analyze
+      continue-on-error: true
       run: |
           cmake -E make_directory ${{github.workspace}}/build.clang
           scan-build cmake \
              -B ${{github.workspace}}/build.clang \
              -S ${{github.workspace}} \
+             -DPNET_OPTION_SNMP=ON \
              -DBUILD_TESTING=OFF \
              -DCMAKE_BUILD_TYPE=Release
           scan-build \
@@ -37,13 +49,21 @@ jobs:
              make \
                -C ${{github.workspace}}/build.clang \
                -j4
+          cmake --build ${{github.workspace}}/build.clang --target clean
+          scan-build \
+             --status-bugs \
+             make \
+               -C ${{github.workspace}}/build.clang \
+               -j4
 
-    - name: Merge results
+    - name: Merge results if any
+      if: steps.analyze.outcome == 'failure'
       uses: microsoft/sarif-actions@v0.1
       with:
         command: 'merge sarif/*/*.sarif'
 
-    - name: Upload results
+    - name: Upload results if any
+      if: steps.analyze.outcome == 'failure'
       uses: github/codeql-action/upload-sarif@v1
       with:
         sarif_file: ${{github.workspace}}/merged.sarif
