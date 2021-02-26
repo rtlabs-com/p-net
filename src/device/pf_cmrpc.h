@@ -67,6 +67,11 @@ pf_ar_t * pf_ar_find_by_index (pnet_t * net, uint16_t ix);
 
 /**
  * Insert detailed error information into the result structure (of a session).
+ *
+ * If you need to set error information after some function has returned an
+ * error (and possibly already has updated the error information), use
+ * \a pf_set_error_if_not_already_set() instead.
+ *
  * @param p_stat           Out:  The result structure.
  * @param code             In:   The error_code.
  * @param decode           In:   The error_decode.
@@ -74,6 +79,27 @@ pf_ar_t * pf_ar_find_by_index (pnet_t * net, uint16_t ix);
  * @param code_2           In:   The error_code_2.
  */
 void pf_set_error (
+   pnet_result_t * p_stat,
+   uint8_t code,
+   uint8_t decode,
+   uint8_t code_1,
+   uint8_t code_2);
+
+/**
+ * Insert detailed error information into the result structure (of a session).
+ * Does not overwrite existing error information.
+ *
+ * This function is typically called after some other function has returned an
+ * error and possibly have set an error code.
+ * For other usecases, use pf_set_error() instead.
+ *
+ * @param p_stat           Out:  The result structure.
+ * @param code             In:   The error_code.
+ * @param decode           In:   The error_decode.
+ * @param code_1           In:   The error_code_1.
+ * @param code_2           In:   The error_code_2.
+ */
+void pf_set_error_if_not_already_set (
    pnet_result_t * p_stat,
    uint8_t code,
    uint8_t decode,
