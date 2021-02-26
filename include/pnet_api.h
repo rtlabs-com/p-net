@@ -107,7 +107,8 @@ extern "C" {
  * Reserved 0x01-0x1F
  * Manufacturer specific 0x20-0x3F (LogBookData) Reserved 0x40-0x80
  */
-#define PNET_ERROR_CODE_PNIO 0x81 /** All other errors */
+#define PNET_ERROR_CODE_NOERROR 0x00
+#define PNET_ERROR_CODE_PNIO    0x81 /** All other errors */
 /** Reserved 0x82-0xDE */
 #define PNET_ERROR_CODE_RTA_ERROR 0xCF /** In ERR-RTA-PDU and ERR-UDP-PDU */
 /** Reserved 0xD0-0xD9 */
@@ -126,17 +127,11 @@ extern "C" {
  *
  * Reserved 0x01-0x7F
  */
+#define PNET_ERROR_DECODE_NOERROR               0x00
 #define PNET_ERROR_DECODE_PNIORW                0x80 /** Only Read/Write */
 #define PNET_ERROR_DECODE_PNIO                  0x81
 #define PNET_ERROR_DECODE_MANUFACTURER_SPECIFIC 0x82
 /** Reserved 0x83-0xFF */
-
-/**
- * # List of error_code_1 values, bits 4..7, for PNET_ERROR_DECODE_PNIORW
- */
-#define PNET_ERROR_CODE_1_PNIORW_APP 0xa0
-#define PNET_ERROR_CODE_1_PNIORW_ACC 0xb0
-#define PNET_ERROR_CODE_1_PNIORW_RES 0xc0
 
 /**
  * # List of error_code_1 values, for PNET_ERROR_DECODE_PNIORW
@@ -145,43 +140,27 @@ extern "C" {
  * ACC = access
  * RES = resource
  */
-#define PNET_ERROR_CODE_1_APP_READ_ERROR  (0x00 + PNET_ERROR_CODE_1_PNIORW_APP)
-#define PNET_ERROR_CODE_1_APP_WRITE_ERROR (0x01 + PNET_ERROR_CODE_1_PNIORW_APP)
-#define PNET_ERROR_CODE_1_APP_MODULE_FAILURE                                   \
-   (0x02 + PNET_ERROR_CODE_1_PNIORW_APP)
-#define PNET_ERROR_CODE_1_APP_BUSY (0x07 + PNET_ERROR_CODE_1_PNIORW_APP)
-#define PNET_ERROR_CODE_1_APP_VERSION_CONFLICT                                 \
-   (0x08 + PNET_ERROR_CODE_1_PNIORW_APP)
-#define PNET_ERROR_CODE_1_APP_NOT_SUPPORTED                                    \
-   (0x09 + PNET_ERROR_CODE_1_PNIORW_APP)
-#define PNET_ERROR_CODE_1_ACC_INVALID_INDEX                                    \
-   (0x00 + PNET_ERROR_CODE_1_PNIORW_ACC)
-#define PNET_ERROR_CODE_1_ACC_WRITE_LENGTH_ERROR                               \
-   (0x01 + PNET_ERROR_CODE_1_PNIORW_ACC)
-#define PNET_ERROR_CODE_1_ACC_INVALID_SLOT_SUBSLOT                             \
-   (0x02 + PNET_ERROR_CODE_1_PNIORW_ACC)
-#define PNET_ERROR_CODE_1_ACC_TYPE_CONFLICT                                    \
-   (0x03 + PNET_ERROR_CODE_1_PNIORW_ACC)
-#define PNET_ERROR_CODE_1_ACC_INVALID_AREA_API                                 \
-   (0x04 + PNET_ERROR_CODE_1_PNIORW_ACC)
-#define PNET_ERROR_CODE_1_ACC_STATE_CONFLICT                                   \
-   (0x05 + PNET_ERROR_CODE_1_PNIORW_ACC)
-#define PNET_ERROR_CODE_1_ACC_ACCESS_DENIED                                    \
-   (0x06 + PNET_ERROR_CODE_1_PNIORW_ACC)
-#define PNET_ERROR_CODE_1_ACC_INVALID_RANGE                                    \
-   (0x07 + PNET_ERROR_CODE_1_PNIORW_ACC)
-#define PNET_ERROR_CODE_1_ACC_INVALID_PARAMETER                                \
-   (0x08 + PNET_ERROR_CODE_1_PNIORW_ACC)
-#define PNET_ERROR_CODE_1_ACC_INVALID_TYPE (0x09 + PNET_ERROR_CODE_1_PNIORW_ACC)
-#define PNET_ERROR_CODE_1_ACC_BACKUP       (0x0a + PNET_ERROR_CODE_1_PNIORW_ACC)
-#define PNET_ERROR_CODE_1_RES_READ_CONFLICT                                    \
-   (0x00 + PNET_ERROR_CODE_1_PNIORW_RES)
-#define PNET_ERROR_CODE_1_RES_WRITE_CONFLICT                                   \
-   (0x01 + PNET_ERROR_CODE_1_PNIORW_RES)
-#define PNET_ERROR_CODE_1_RES_RESOURCE_BUSY                                    \
-   (0x02 + PNET_ERROR_CODE_1_PNIORW_RES)
-#define PNET_ERROR_CODE_1_RES_RESOURCE_UNAVAILABLE                             \
-   (0x03 + PNET_ERROR_CODE_1_PNIORW_RES)
+#define PNET_ERROR_CODE_1_APP_READ_ERROR           0xA0
+#define PNET_ERROR_CODE_1_APP_WRITE_ERROR          0xA1
+#define PNET_ERROR_CODE_1_APP_MODULE_FAILURE       0xA2
+#define PNET_ERROR_CODE_1_APP_BUSY                 0xA7
+#define PNET_ERROR_CODE_1_APP_VERSION_CONFLICT     0xA8
+#define PNET_ERROR_CODE_1_APP_NOT_SUPPORTED        0xA9
+#define PNET_ERROR_CODE_1_ACC_INVALID_INDEX        0xB0
+#define PNET_ERROR_CODE_1_ACC_WRITE_LENGTH_ERROR   0xB1
+#define PNET_ERROR_CODE_1_ACC_INVALID_SLOT_SUBSLOT 0xB2
+#define PNET_ERROR_CODE_1_ACC_TYPE_CONFLICT        0xB3
+#define PNET_ERROR_CODE_1_ACC_INVALID_AREA_API     0xB4
+#define PNET_ERROR_CODE_1_ACC_STATE_CONFLICT       0xB5
+#define PNET_ERROR_CODE_1_ACC_ACCESS_DENIED        0xB6
+#define PNET_ERROR_CODE_1_ACC_INVALID_RANGE        0xB7
+#define PNET_ERROR_CODE_1_ACC_INVALID_PARAMETER    0xB8
+#define PNET_ERROR_CODE_1_ACC_INVALID_TYPE         0xB9
+#define PNET_ERROR_CODE_1_ACC_BACKUP               0xBA
+#define PNET_ERROR_CODE_1_RES_READ_CONFLICT        0xC0
+#define PNET_ERROR_CODE_1_RES_WRITE_CONFLICT       0xC1
+#define PNET_ERROR_CODE_1_RES_RESOURCE_BUSY        0xC2
+#define PNET_ERROR_CODE_1_RES_RESOURCE_UNAVAILABLE 0xC3
 
 /**
  * # List of error_code_1 values, for PNET_ERROR_DECODE_PNIO
@@ -703,7 +682,7 @@ typedef int (*pnet_state_ind) (
  * @param pp_read_data     Out:   A pointer to the binary value.
  * @param p_read_length    InOut: The maximum (in) and actual (out) length in
  *                                bytes of the binary value.
- * @param p_result         Out:   Detailed error information.
+ * @param p_result         Out:   Detailed error information if returning != 0
  * @return  0  on success.
  *          -1 if an error occurred.
  */
@@ -716,9 +695,9 @@ typedef int (*pnet_read_ind) (
    uint16_t subslot,
    uint16_t idx,
    uint16_t sequence_number,
-   uint8_t ** pp_read_data,   /**< Out: A pointer to the data */
-   uint16_t * p_read_length,  /**< Out: Size of data */
-   pnet_result_t * p_result); /**< Error status if returning != 0 */
+   uint8_t ** pp_read_data,
+   uint16_t * p_read_length,
+   pnet_result_t * p_result);
 
 /**
  * Indication to the application that an IODWrite request was received from the
@@ -749,7 +728,7 @@ typedef int (*pnet_read_ind) (
  * @param sequence_number  In:    The sequence number.
  * @param write_length     In:    The length in bytes of the binary value.
  * @param p_write_data     In:    A pointer to the binary value.
- * @param p_result         Out:   Detailed error information.
+ * @param p_result         Out:   Detailed error information if returning != 0
  * @return  0  on success.
  *          -1 if an error occurred.
  */
@@ -1211,7 +1190,7 @@ typedef struct pnet_ip_cfg
 typedef struct pnet_if_cfg
 {
    const char * main_netif_name; /**< Main (DAP) network interface. */
-   pnet_ip_cfg_t ip_cfg;   /**< IP Settings for main network interface */
+   pnet_ip_cfg_t ip_cfg;         /**< IP Settings for main network interface */
 
    pnet_port_cfg_t physical_ports[PNET_NUMBER_OF_PHYSICAL_PORTS];
 } pnet_if_cfg_t;

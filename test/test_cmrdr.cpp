@@ -212,7 +212,7 @@ class CmrdrTest : public PnetIntegrationTest
          buffer,
          &pos);
 
-      if (read_status.pnio_status.error_code != 0)
+      if (read_status.pnio_status.error_code != PNET_ERROR_CODE_NOERROR)
       {
          TEST_TRACE ("Read failed for idx %#x\n", (unsigned)idx);
          appdata.read_fails++;

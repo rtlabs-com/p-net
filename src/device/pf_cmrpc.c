@@ -787,16 +787,77 @@ void pf_set_error (
 {
    LOG_INFO (
       PNET_LOG,
-      "CMRPC(%d) ERROR: %u, %u, %u, %u\n",
+      "CMRPC(%d) Setting error: 0x%02X 0x%02X 0x%02X 0x%02X\n",
       __LINE__,
       (unsigned)code,
       (unsigned)decode,
       (unsigned)code_1,
       (unsigned)code_2);
+
+   if (
+      p_stat->pnio_status.error_code != PNET_ERROR_CODE_NOERROR ||
+      p_stat->pnio_status.error_decode != PNET_ERROR_DECODE_NOERROR)
+   {
+      LOG_DEBUG (
+         PNET_LOG,
+         "CMRPC(%d) Did overwrite previous error: 0x%02X 0x%02X 0x%02X "
+         "0x%02X\n",
+         __LINE__,
+         (unsigned)p_stat->pnio_status.error_code,
+         (unsigned)p_stat->pnio_status.error_decode,
+         (unsigned)p_stat->pnio_status.error_code_1,
+         (unsigned)p_stat->pnio_status.error_code_2);
+   }
+
    p_stat->pnio_status.error_code = code;
    p_stat->pnio_status.error_decode = decode;
    p_stat->pnio_status.error_code_1 = code_1;
    p_stat->pnio_status.error_code_2 = code_2;
+}
+
+void pf_set_error_if_not_already_set (
+   pnet_result_t * p_stat,
+   uint8_t code,
+   uint8_t decode,
+   uint8_t code_1,
+   uint8_t code_2)
+{
+   if (
+      p_stat->pnio_status.error_code == PNET_ERROR_CODE_NOERROR &&
+      p_stat->pnio_status.error_decode == PNET_ERROR_DECODE_NOERROR)
+   {
+      LOG_INFO (
+         PNET_LOG,
+         "CMRPC(%d) Setting error: 0x%02X 0x%02X 0x%02X 0x%02X (not "
+         "overwriting)\n",
+         __LINE__,
+         (unsigned)code,
+         (unsigned)decode,
+         (unsigned)code_1,
+         (unsigned)code_2);
+
+      p_stat->pnio_status.error_code = code;
+      p_stat->pnio_status.error_decode = decode;
+      p_stat->pnio_status.error_code_1 = code_1;
+      p_stat->pnio_status.error_code_2 = code_2;
+   }
+   else
+   {
+      LOG_DEBUG (
+         PNET_LOG,
+         "CMRPC(%d) No overwrite of error, as these values already are set: "
+         "0x%02X 0x%02X 0x%02X 0x%02X Ignored error: 0x%02X 0x%02X 0x%02X "
+         "0x%02X\n",
+         __LINE__,
+         (unsigned)p_stat->pnio_status.error_code,
+         (unsigned)p_stat->pnio_status.error_decode,
+         (unsigned)p_stat->pnio_status.error_code_1,
+         (unsigned)p_stat->pnio_status.error_code_2,
+         (unsigned)code,
+         (unsigned)decode,
+         (unsigned)code_1,
+         (unsigned)code_2);
+   }
 }
 
 /******************** Send UDP ***********************************************/
@@ -1276,7 +1337,6 @@ static int pf_cmrpc_rm_connect_interpret_ind (
                      "CMRPC(%d): Requested max alarm data length: %u bytes\n",
                      __LINE__,
                      p_ar->alarm_cr_request.max_alarm_data_length);
-
                }
             }
             break;
@@ -1720,7 +1780,7 @@ static int pf_cmrpc_rm_connect_ind (
    pf_ar_t * p_ar = NULL;
    pf_ar_t * p_ar_2 = NULL; /* When looking for duplicate */
 
-   if (p_sess->rpc_result.pnio_status.error_code != 0)
+   if (p_sess->rpc_result.pnio_status.error_code != PNET_ERROR_CODE_NOERROR)
    {
       LOG_ERROR (PF_RPC_LOG, "CMRPC(%d): RPC request has error\n", __LINE__);
       pf_set_error (
@@ -1799,7 +1859,9 @@ static int pf_cmrpc_rm_connect_ind (
       p_sess->rpc_result.pnio_status.error_code_2);
    pf_cmrpc_rm_connect_rsp (p_sess, ret, p_ar, res_size, p_res, p_res_pos);
 
-   if ((ret != 0) || (p_sess->rpc_result.pnio_status.error_code != 0))
+   if (
+      (ret != 0) ||
+      (p_sess->rpc_result.pnio_status.error_code != PNET_ERROR_CODE_NOERROR))
    {
       /* Connect failed: Cleanup and signal to terminate the session. */
       LOG_INFO (PF_RPC_LOG, "CMRPC(%d): Connect failed - Free AR!\n", __LINE__);
@@ -2001,7 +2063,7 @@ static void pf_cmrpc_rm_release_rsp (
 
    start_pos = *p_res_pos; /* Start of blocks - save for last */
 
-   if (p_sess->rpc_result.pnio_status.error_code == 0)
+   if (p_sess->rpc_result.pnio_status.error_code == PNET_ERROR_CODE_NOERROR)
    {
       p_release_io->control_command = BIT (PF_CONTROL_COMMAND_BIT_DONE);
       pf_put_control (
@@ -2088,7 +2150,7 @@ static int pf_cmrpc_rm_release_ind (
       p_res,
       p_res_pos,
       &status_pos);
-   if (p_sess->rpc_result.pnio_status.error_code != 0)
+   if (p_sess->rpc_result.pnio_status.error_code != PNET_ERROR_CODE_NOERROR)
    {
       LOG_ERROR (PF_RPC_LOG, "CMRPC(%d): RPC request has error\n", __LINE__);
       pf_set_error (
@@ -2326,7 +2388,7 @@ static void pf_cmrpc_rm_dcontrol_rsp (
 
    start_pos = *p_res_pos; /* Start of blocks - save for last */
 
-   if (p_sess->rpc_result.pnio_status.error_code == 0)
+   if (p_sess->rpc_result.pnio_status.error_code == PNET_ERROR_CODE_NOERROR)
    {
       p_control_io->control_command = BIT (PF_CONTROL_COMMAND_BIT_DONE);
       pf_put_control (
@@ -2608,7 +2670,7 @@ static int pf_cmrpc_rm_read_ind (
 
    memset (&read_request, 0, sizeof (read_request));
 
-   if (p_sess->rpc_result.pnio_status.error_code != 0)
+   if (p_sess->rpc_result.pnio_status.error_code != PNET_ERROR_CODE_NOERROR)
    {
       LOG_ERROR (PF_RPC_LOG, "CMRPC(%d): RPC request has error\n", __LINE__);
       pf_set_error (
@@ -2801,7 +2863,7 @@ static int pf_cmrpc_lookup_ind (
 
    memset (&lookup_request, 0, sizeof (lookup_request));
 
-   if (p_sess->rpc_result.pnio_status.error_code != 0)
+   if (p_sess->rpc_result.pnio_status.error_code != PNET_ERROR_CODE_NOERROR)
    {
       LOG_ERROR (PF_RPC_LOG, "CMRPC(%d): RPC request has error\n", __LINE__);
       pf_set_error (
@@ -2834,7 +2896,7 @@ static int pf_cmrpc_lookup_ind (
  * @param p_get_info       InOut: Parser data for the input buffer.
  * @param p_write_request  Out:   The IODWrite request block.
  * @param p_pos            InOut: Position in the input buffer.
- * @param p_stat           Out:   Detailed error information.
+ * @param p_stat           Out:   Detailed error information if returning != 0
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -2894,7 +2956,7 @@ static int pf_cmrpc_rm_write_interpret_ind (
  * @param p_sess           InOut: The session instance.
  * @param p_write_request  In:    The IODWrite request block.
  * @param p_write_result   Out:   The IODWrite result block.
- * @param p_stat           Out:   Detailed error information.
+ * @param p_stat           Out:   Detailed error information if returning != 0
  * @param p_req_pos        InOut: Position in the request buffer.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
@@ -2939,7 +3001,8 @@ static int pf_cmrpc_perform_one_write (
    {
       if (p_write_request->index <= PF_IDX_USER_MAX)
       {
-         /* This is a write of a GSDML param. No block header in this case. */
+         /* This is a write of a user defined index. No block header in this
+          * case. */
          if (
             pf_cmwrr_rm_write_ind (
                net,
@@ -2955,13 +3018,12 @@ static int pf_cmrpc_perform_one_write (
          }
          else
          {
-            pf_set_error (
+            pf_set_error_if_not_already_set (
                p_stat,
                PNET_ERROR_CODE_WRITE,
                PNET_ERROR_DECODE_PNIORW,
                PNET_ERROR_CODE_1_ACC_INVALID_AREA_API,
                2);
-            ret = -1;
          }
       }
       else
@@ -2971,13 +3033,10 @@ static int pf_cmrpc_perform_one_write (
           * that we will let CMWRR read data (sans block header) directly from
           * the request buffer.
           *
-          * Skip the block header - it is not needed in the stack.
+          * Skip the block header - it is not needed in the stack but
+          * advances position in the buffer.
           */
-         pf_get_block_header (
-            &p_sess->get_info,
-            p_req_pos,
-            &block_header); /* Not needed by code, but advances position in
-                               buffer */
+         pf_get_block_header (&p_sess->get_info, p_req_pos, &block_header);
          if (
             pf_cmwrr_rm_write_ind (
                net,
@@ -2993,13 +3052,12 @@ static int pf_cmrpc_perform_one_write (
          }
          else
          {
-            pf_set_error (
+            pf_set_error_if_not_already_set (
                p_stat,
                PNET_ERROR_CODE_WRITE,
                PNET_ERROR_DECODE_PNIORW,
                PNET_ERROR_CODE_1_ACC_INVALID_AREA_API,
                2);
-            ret = -1;
          }
       }
    }
@@ -3011,7 +3069,6 @@ static int pf_cmrpc_perform_one_write (
          PNET_ERROR_DECODE_PNIORW,
          PNET_ERROR_CODE_1_ACC_INVALID_AREA_API,
          4);
-      ret = -1;
    }
 
    return ret;
@@ -3153,7 +3210,8 @@ static int pf_cmrpc_rm_write_ind (
                     p_sess->get_info.len) && /* 58 ==
                                                 sizeof((PACKED)write_request)+2
                                               */
-                   (write_result_multi.pnio_status.error_code == 0) &&
+                   (write_result_multi.pnio_status.error_code ==
+                    PNET_ERROR_CODE_NOERROR) &&
                    (pf_cmrpc_rm_write_interpret_ind (
                        &p_sess->get_info,
                        &write_request_multi,

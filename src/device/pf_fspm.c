@@ -840,7 +840,7 @@ int pf_fspm_cm_write_ind (
       (PF_IDX_SUB_IM_0 <= p_write_request->index) &&
       (p_write_request->index <= PF_IDX_SUB_IM_15))
    {
-      /* Write I&M data - This is handled internally. */
+      /* Write I&M data - This is handled internally in the stack */
       switch (p_write_request->index)
       {
       case PF_IDX_SUB_IM_0: /* read-only */
@@ -853,7 +853,6 @@ int pf_fspm_cm_write_ind (
          p_write_status->pnio_status.error_code_1 =
             PNET_ERROR_CODE_1_ACC_ACCESS_DENIED;
          p_write_status->pnio_status.error_code_2 = 0;
-         ret = 0;
          break;
       case PF_IDX_SUB_IM_1:
          if ((net->fspm_cfg.im_0_data.im_supported & PNET_SUPPORTED_IM1) > 0)
@@ -1065,7 +1064,10 @@ int pf_fspm_cm_write_ind (
          break;
       }
 
-      pf_fspm_save_im (net);
+      if (ret == 0)
+      {
+         pf_fspm_save_im (net);
+      }
    }
    else
    {

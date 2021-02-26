@@ -4627,7 +4627,7 @@ static int pf_cmdev_cm_connect_rsp_neg (
  * Handle a positive answer to a connect request.
  * @param net              InOut: The p-net stack instance
  * @param p_ar             InOut: The AR instance.
- * @param p_stat           Out:   Detailed error information.
+ * @param p_stat           Out:   Detailed error info if returning != 0
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -4905,8 +4905,10 @@ int pf_cmdev_rm_ccontrol_cnf (
    if (p_ar->cmdev_state == PF_CMDEV_STATE_W_ARDYCNF)
    {
       if (
-         (p_ccontrol_result->pnio_status.error_code == 0) &&
-         (p_ccontrol_result->pnio_status.error_decode == 0) &&
+         (p_ccontrol_result->pnio_status.error_code ==
+          PNET_ERROR_CODE_NOERROR) &&
+         (p_ccontrol_result->pnio_status.error_decode ==
+          PNET_ERROR_DECODE_NOERROR) &&
          (p_ccontrol_result->pnio_status.error_code_1 == 0) &&
          (p_ccontrol_result->pnio_status.error_code_2 == 0))
       {
