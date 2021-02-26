@@ -69,7 +69,7 @@ the directory with your GSD file. Mark the line with the file, and click
 In the project view, in the left menu select the PLC and the subitem "Device
 configuration". Click the "Network view" tab. At the right edge open the
 "Hardware catalog". Select "Other field devices" > Profinet IO > I/O > rt-labs >
-rt-labs dev > "rt-labs DEMO device". Double-click it, and it will appear in the
+rt-labs dev > "P-Net Sample App". Double-click it, and it will appear in the
 main window.
 
 Use the "Network view" tab, and right-click "Not assigned" on the rt-labs-dev
@@ -272,14 +272,23 @@ There is also a "Diagnosis status" page that shows a summary of the current
 status.
 
 
+Scan for devices from TIA portal
+--------------------------------
+In the "Portal view", click "Online & Diagnostics" and then "Accessible devices".
+In the pop-up window, select "PN/IE" and the name of the Ethernet interface
+of your laptop. Click "Start search".
+You can flash a LED on your device by marking the relevant line in the
+result table, and mark the "Flash LED" check-box.
+
+
 Troubleshooting
 ---------------
 Note that the PLC might complain if there is a non-Profinet switch between the
 IO-device and the IO-controller. This is probably due to wrong port names in LLDP messages.
 
 
-Factory reset of Simatic ET200SP
---------------------------------
+Factory reset of Simatic ET200SP CPU
+------------------------------------
 Use the mode switch on the front panel to do a factory reset. See the user
 manual for details. This will reset also the IP address.
 

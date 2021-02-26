@@ -11,7 +11,8 @@ Commissioning
 Engineering tool
     A desktop program for configuring PLC. For example Siemens TIA portal.
 Parameterization
-    Write parameter values to all submodules
+    Write parameter values to all submodules. Parameterization is done via
+    the Write and Control commands.
 Record data
    Data that can be accessed with acyclic Profinet Read and Write. Addressed by
    slot, subslot and index.

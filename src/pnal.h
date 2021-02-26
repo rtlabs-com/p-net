@@ -165,7 +165,7 @@ typedef struct pnal_eth_status_t
    /* Is autonegotiation supported on this port? */
    bool is_autonegotiation_enabled;
 
-   /* Capabilites advertised to link partner during autonegotiation.
+   /* Capabilities advertised to link partner during autonegotiation.
     *
     * See macros PNAL_ETH_AUTONEG_CAP_xxx.
     */

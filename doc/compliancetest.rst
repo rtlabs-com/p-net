@@ -40,7 +40,9 @@ load. This is tested by a separate tool (not the "Automated RT tester").
 Installation of Automated RT tester on a Windows PC
 ---------------------------------------------------
 Unzip the downloaded file, and double-click the
-"AutomatedRtTester_2.4.1.3_Setup.exe" file.
+"AutomatedRtTester_VERSION_Setup.exe" file.
+
+Verify that you use the latest available version.
 
 
 Adjust the Ethernet network card on a Windows PC
@@ -111,6 +113,10 @@ When communication is verified, enable all relevant test cases.
 
 The ART tester tool stores Wireshark files (.pcap files) in the
 project directory. See the ``EthernetDump`` subdirectory.
+
+To export test reports as PDF, click the small printer icon in the top
+toolbar.
+
 
 Additional hardware
 -------------------

@@ -7,7 +7,7 @@ Web resources
 * Source repository: [https://github.com/rtlabs-com/p-net](https://github.com/rtlabs-com/p-net)
 * Documentation: [https://rt-labs.com/docs/p-net](https://rt-labs.com/docs/p-net)
 * Continuous integration: [https://github.com/rtlabs-com/p-net/actions](https://github.com/rtlabs-com/p-net/actions)
-* RT-Labs: [https://rt-labs.com](https://rt-labs.com)
+* RT-Labs (stack integration, certification services and training): [https://rt-labs.com](https://rt-labs.com)
 
 
 [![Build Status](https://github.com/rtlabs-com/p-net/workflows/Build/badge.svg?branch=master)](https://github.com/rtlabs-com/p-net/actions?workflow=Build)
@@ -59,12 +59,11 @@ Limitations or not yet implemented:
 
 * This is a device stack, which means that the IO-controller/master/PLC side is not supported.
 * No media redundancy (No MRP support)
-* No startup mode legacy
+* Legacy startup mode is not fully implemented
 * No support for RT_CLASS_UDP
 * No support for DHCP
 * No fast start-up
 * No MC multicast device-to-device
-* No support of shared device (connection to multiple controllers)
 * No iPar (parameter server) support
 * No support for time synchronization
 * No UDP frames at alarm (just the default alarm mechanism is implemented)
@@ -99,17 +98,40 @@ having 8 digital inputs and 8 digital outputs (one bit each). The values are
 sent and received each millisecond (PLC watchdog setting 3 ms).
 
 
+Getting started
+---------------
+See the tutorial in the documentation: [https://rt-labs.com/docs/p-net/tutorial.html](https://rt-labs.com/docs/p-net/tutorial.html)
+
+Note that you need to include submodules when cloning:
+
+```
+git clone --recurse-submodules https://github.com/rtlabs-com/p-net.git
+```
+
 Dependencies
 ------------
+Some of the platform-dependent parts are located in the OSAL repository and the
+cmake-tools repository.
+
+* [https://github.com/rtlabs-com/osal](https://github.com/rtlabs-com/osal)
+* [https://github.com/rtlabs-com/cmake-tools](https://github.com/rtlabs-com/cmake-tools)
+
+Those are downloaded automatically during install.
+
 The p-net stack contains no third party components. Its external dependencies are:
 
 * C-library
 * An operating system (if used)
+* For conformance class B you need an SNMP implementation. On Linux is
+   net-snmp (BSD License) used [http://www.net-snmp.org](http://www.net-snmp.org)
 
-Tools used for building and documentation (not shipped in the resulting binaries):
+Tools used for building, testing and documentation (not shipped in the resulting binaries):
 
-* cmake (BSD 3-clause License)
-* Sphinx (BSD license)
+* cmake (BSD 3-clause License)  [https://cmake.org](https://cmake.org)
+* gtest (BSD-3-Clause License) [https://github.com/google/googletest](https://github.com/google/googletest)
+* Sphinx (BSD license) [https://www.sphinx-doc.org](https://www.sphinx-doc.org)
+* Doxygen (GPL v2) [https://www.doxygen.nl](https://www.doxygen.nl/index.html)
+* clang-format (Apache License 2.0) [https://clang.llvm.org](https://clang.llvm.org/docs/ClangFormat.html)
 
 
 Contributions

@@ -49,7 +49,7 @@ int pf_cmpbe_cm_ccontrol_req (pnet_t * net, pf_ar_t * p_ar);
  * Handle a CControl confirmation for a specific AR.
  * @param p_ar             InOut: The AR instance.
  * @param p_control_io     In:    The CControl block.
- * @param p_result         Out:   The result information.
+ * @param p_result         Out:   The result information. Not used.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */

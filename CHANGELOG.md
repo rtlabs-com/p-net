@@ -5,9 +5,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## 2021-03-03
+### Changed
+- Set thread priority and stack size via configuration
+
+## 2021-02-19
+### Changed
+- Split options.h into two files.
+- Simplify configuration
+
+## 2020-02-03
+### Added
+ - Improved support for multiple ports
+
 ## 2021-01-29
 ### Changed
- -Move remaining Linux sample app files to src/ports/linux
+ - Move remaining Linux sample app files to src/ports/linux
 
 ## 2020-01-11
 ### Added

@@ -193,7 +193,7 @@ configuration file in your home directory. For example::
 
 Read and write a single OID
 ---------------------------
-Read only the "SNMPv2-MIB::sysLocation.0" OID::
+Read only the ``SNMPv2-MIB::sysLocation.0`` OID::
 
    $ snmpget -v1 -c public 192.168.0.99 1.3.6.1.2.1.1.6.0
    iso.3.6.1.2.1.1.6.0 = STRING: "sysLocation Not Set"
@@ -295,7 +295,7 @@ Other Profinet-relevant MIB files on Linux:
 
 Walking a subtree using snmpwalk
 --------------------------------
-By default the ``snmpwalk`` searches the SNMPv2-SMI::mib-2 subtree. You can
+By default the ``snmpwalk`` searches the ``SNMPv2-SMI::mib-2`` subtree. You can
 search a smaller or larger subtree by giving the OID (or the corresponding
 name) to ``snmpwalk`` as the argument after the host argument.
 
@@ -402,7 +402,7 @@ Device details:
 +--------------------------------+-----------------------------------------------------------------+
 | sysServices                    | 78 (dec) for Profinet devices                                   |
 +--------------------------------+-----------------------------------------------------------------+
-| lldpConfigManAddrPortsTxEnable | On/off for ports. Writable                                      |
+| lldpConfigManAddrPortsTxEnable | On/off for ports. Writable?                                     |
 +--------------------------------+-----------------------------------------------------------------+
 
 Interface statistics, for each port:
@@ -422,7 +422,7 @@ Interface statistics, for each port:
 +----------------+-----------------------------------------------------------------+
 | ifPhysAddress  | MAC address                                                     |
 +----------------+-----------------------------------------------------------------+
-| ifAdminStatus  | Up, down etc. Writable                                          |
+| ifAdminStatus  | Up, down etc. Writable?                                         |
 +----------------+-----------------------------------------------------------------+
 | ifOperStatus   | Up, down etc.                                                   |
 +----------------+-----------------------------------------------------------------+
@@ -458,7 +458,7 @@ Readable fields related to ports and interfaces:
 +----------------------+--------------------------------------+-----------------+------------+-------------+
 | Index                |                                      |                 |            | x           |
 +----------------------+--------------------------------------+-----------------+------------+-------------+
-| ManAddrSubtype       | Typically ?=IP                       | x               |            | x           |
+| ManAddrSubtype       | Typically 1=IP                       | x               |            | x           |
 +----------------------+--------------------------------------+-----------------+------------+-------------+
 | ManAddr              | Management (IP) address              | x               |            | x           |
 +----------------------+--------------------------------------+-----------------+------------+-------------+
@@ -486,7 +486,11 @@ Note that some objects are listed "Not accessible" in the standard. These
 are read indirectly via other objects (used as table index, and appended
 to the OID of other objects), so the information must thus be available.
 
-See the standard for the corresponding numerical OID values.
+See the Profinet standard for the corresponding numerical OID values.
+
+Enable SNMP when running p-net on Linux
+---------------------------------------
+See the page "Additional Linux details" in this documentation.
 
 
 Verification of SNMP communication to p-net
@@ -537,6 +541,9 @@ Download "Proneta Basic" (free version) from the Siemens web page.
 Unzip the downloaded file onto a Windows personal computer.
 Double-click the ``PRONETA.exe`` file to start the program.
 
+Turn off the ART tester tool before starting Proneta, otherwise Proneta can
+not scan the network.
+
 On the settings page, select which Ethernet network adapter to use
 on your computer.
 On the home screen, select "Network analysis" and use the "Online" tab.
@@ -546,13 +553,21 @@ the connections between all ports. An example screenshot is shown below.
 
 .. image:: illustrations/proneta_example.png
 
-The program will show the list of current diagnosis for IO-devices.
-It will also show details about interfaces and ports.
+The program will show details about interfaces and ports, and which of the slots
+that are populated by modules.
+It will also show the list of current diagnosis for IO-devices.
+Proneta will read out the diagnostics buffer every 5 seconds, as long as the
+device is selected in the graphical view.
 
 By right-clicking on a device in the graphical view, you can set the
 station name and IP address (temporarily or permanently).
 It is also possible to edit the I&M information, to flash the signal LED and
 to do a factory reset.
+
+For PRONETA to be able to map the connection to the closest device, you need to
+enable LLDP transmission on the Ethernet interface of your laptop. Note that
+this interferes with the ART tester software. See the section on installing
+ART tester in this documentation.
 
 
 Full SNMP readout example

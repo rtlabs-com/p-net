@@ -55,6 +55,21 @@ Hardware requirements for the Ethernet ports:
 * Auto negotiation (should be possible to turn off for fast startup)
 
 
+Interacting with other parts of your application software
+---------------------------------------------------------
+When the PLC sends a "factory reset" command, not only the p-net stack but
+also the rest of your application should be reset to factory settings.
+
+If there is a method to do a factory reset of your application, it should also
+reset the p-net stack.
+
+It is possible to set the IP-address, netmask and gateway address via Profinet
+from a PLC. Consider how this affects other aspects of your application.
+
+Serial number, software version, model name etc should be available for the
+p-net stack to use.
+
+
 Minimum cycle time for your application and hardware
 ----------------------------------------------------
 At PLC configuration, there are two adjustable parameters regarding the

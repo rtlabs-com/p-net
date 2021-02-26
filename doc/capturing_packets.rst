@@ -23,8 +23,8 @@ For details on how to add yourself to the ``wireshark`` user group, see
 https://linuxhint.com/install_wireshark_ubuntu/
 
 
-Filtering frames in Wirehark based on protocol
-----------------------------------------------
+Filtering frames in Wireshark based on protocol
+-----------------------------------------------
 To show only frames with specific protocols, enter this into the "display
 filter" text box::
 
@@ -33,6 +33,32 @@ filter" text box::
 To hide frames with specific protocols::
 
    not (pn_ptcp or arp or mdns or llmnr or ssdp or dhcp or dhcpv6 or icmpv6 or igmp or nbns or browser or ipv6)
+
++--------------------------+----------------------------------------------------+
+| Filter expression        | Wireshark protocol names                           |
++==========================+====================================================+
+| arp                      | ARP                                                |
++--------------------------+----------------------------------------------------+
+| epm                      | EPM                                                |
++--------------------------+----------------------------------------------------+
+| lldp                     | LLDP                                               |
++--------------------------+----------------------------------------------------+
+| pn_dcp                   | PN-DCP                                             |
++--------------------------+----------------------------------------------------+
+| pn_io                    | PNIO and PNIO_PS and PNIO-AL                       |
++--------------------------+----------------------------------------------------+
+| pn_io_controller         | PNIO-CM (application ready)                        |
++--------------------------+----------------------------------------------------+
+| pn_io_device             | PNIO-CM (connect, read, read implicit, write,      |
+|                          | param end, release)                                |
++--------------------------+----------------------------------------------------+
+| pn_ptcp                  | PN-PTCP                                            |
++--------------------------+----------------------------------------------------+
+| snmp                     | SNMP                                               |
++--------------------------+----------------------------------------------------+
+| syslog                   | Syslog                                             |
++--------------------------+----------------------------------------------------+
+
 
 
 Filter frames in Wireshark based on frame contents
@@ -130,6 +156,10 @@ Run it with::
 Use the ``-i`` argument to specify Ethernet interface.
 
 Transfer the resulting file to your laptop, where you can open it in Wireshark.
+
+Note that Wireshark and tcpdump modifies the network interface settings on Linux.
+The promiscuous bit will be enabled, as seen when looking at
+``/sys/class/net/eth0/flags``. It will not be visible via ``ifconfig`` though.
 
 
 Hardware for capturing packets on network

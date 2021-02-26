@@ -220,6 +220,7 @@ Examples of block identifiers:
 * 0x0002 AlarmNotificationLow
 * 0x0008 IODWriteReqHeader
 * 0x0009 IODReadReqHeader
+* 0x0010 DiagnosisData
 * 0x0019 LogBookData
 * 0x0020 I&M0
 * 0x0021 I&M1
@@ -307,6 +308,8 @@ Examples of pre-defined indexes:
 +-----------------------------+--------------------------------------------------------+
 | ExpectedIdentificationData  |                                                        |
 +-----------------------------+--------------------------------------------------------+
+| I&M0FilterData              |                                                        |
++-----------------------------+--------------------------------------------------------+
 | LogBookData                 |                                                        |
 +-----------------------------+--------------------------------------------------------+
 | ModuleDiffBlock             |                                                        |
@@ -337,7 +340,7 @@ Examples of pre-defined indexes:
 +-----------------------------+--------------------------------------------------------+
 | PDPortDataRealExtended      |                                                        |
 +-----------------------------+--------------------------------------------------------+
-| PDPortStatistic             | Sent and recieved bytes. Errors and discards.          |
+| PDPortStatistic             | Sent and received bytes. Errors and discards.          |
 +-----------------------------+--------------------------------------------------------+
 | PDRealData                  | Actual values and statistics for interface and port.   |
 +-----------------------------+--------------------------------------------------------+
@@ -424,7 +427,7 @@ TLV types:
 * 3: Time to live in seconds
 * 4: Port description
 * 5: System name
-* 7: Capabilites (Router, Bridge, Telephone etc)
+* 7: Capabilities (Router, Bridge, Telephone etc)
 * 8: Management address (optional for LLDP, mandatory in Profinet). Includes IP
   address and interface number. Address subtype 1: IPv4 2: IPv6
 * 127: Organisation specific (optional for LLDP. See below.). Has an

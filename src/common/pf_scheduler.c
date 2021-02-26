@@ -414,7 +414,9 @@ void pf_scheduler_show (pnet_t * net)
    uint32_t ix;
    uint32_t cnt;
 
-   printf ("Scheduler (time now=%u):\n", (unsigned)os_get_current_time_us());
+   printf (
+      "Scheduler (time now=%u microseconds):\n",
+      (unsigned)os_get_current_time_us());
 
    if (net->scheduler_timeout_mutex != NULL)
    {

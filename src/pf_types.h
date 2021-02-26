@@ -1297,9 +1297,8 @@ typedef struct pf_ar_properties
    uint16_t companion_ar;           /** pf_companion_ar_values_t */
    bool acknowledge_companion_ar;   /** whether companion_ar is needed */
    bool combined_object_container;  /** See IEC61158-6-10 */
-   bool startup_mode; /** false: legacy (do not use), true: advanced */
-   bool pull_module_alarm_allowed; /** false: mandatory support, true: optional
-                                    */
+   bool startup_mode;               /** false: legacy, true: advanced */
+   bool pull_module_alarm_allowed;  /** false: mandatory, true: optional */
 } pf_ar_properties_t;
 
 typedef struct pf_ar_param
@@ -1443,7 +1442,7 @@ typedef struct pf_submodule_state
    bool maintenance_demanded; /** Bit 5 */
    bool fault;                /** Bit 6 */
    uint8_t ar_info;           /** Bits 7..10: pf_submod_ar_info_t */
-   uint8_t ident_info;        /** Bits 11..14: pf_ident_info_values_t */
+   uint8_t ident_info;        /** Bits 11..14: pf_submod_plug_state_t */
    bool format_indicator;     /** Bit 15: Always 1 (true) */
 } pf_submodule_state_t;
 
@@ -1738,9 +1737,11 @@ typedef struct pf_iodata_object
    /* Individual sub-slot data */
    uint16_t data_offset;
    uint16_t data_length;
+
    /* The provider status */
    uint16_t iops_offset;
    uint16_t iops_length;
+
    /* The consumer status */
    uint16_t iocs_offset;
    uint16_t iocs_length;
@@ -1850,13 +1851,14 @@ typedef struct pf_apmx
    uint16_t exp_seq_count;
    uint16_t exp_seq_count_o;
 
-   /* The receive queue */
+   /* The receive queue (mailbox, contains pointers to messages) */
    os_mbox_t * p_alarm_q;
-   /* The messages sent via the mailbox */
+
+   /* The actual incoming messages handled in the receive queue (mailbox) */
    pf_apmr_msg_t apmr_msg[PNET_MAX_ALARMS];
    uint16_t apmr_msg_nbr;
 
-   /* Latest sent alarm */
+   /* Latest sent alarm, for possible retransmission */
    pnal_buf_t * p_rta;
 
    bool high_priority; /* True for high priority APMX. For printouts. */
@@ -2019,8 +2021,8 @@ typedef struct pf_ar
    pf_ar_rpc_request_t ar_rpc_request; /* From connect.req */
    pf_ar_rpc_result_t ar_rpc_result;   /* From connect.ind */
 
-   uint16_t nbr_iocrs; /* From connect.req */
-   pf_iocr_t iocrs[PNET_MAX_CR];
+   uint16_t nbr_iocrs;           /* From connect.req */
+   pf_iocr_t iocrs[PNET_MAX_CR]; /* Each has a CPM and a PPM */
 
    uint16_t nbr_exp_apis;
    pf_exp_api_t exp_apis[PNET_MAX_API]; /* From connect.req */
@@ -2045,8 +2047,8 @@ typedef struct pf_ar
    bool ready_4_data;
 
    /* Global error codes */
-   uint8_t err_cls;
-   uint8_t err_code;
+   uint8_t err_cls;  /* Error code 1 */
+   uint8_t err_code; /* Error code 2 */
 
    pf_cmwrr_state_values_t cmwrr_state;
 

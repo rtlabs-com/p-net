@@ -382,11 +382,13 @@ int pf_ppm_activate_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
 
       LOG_DEBUG (
          PF_PPM_LOG,
-         "PPM(%d): Starting cyclic data transmission for CREP %" PRIu32
-         ", period %" PRIu32 " microseconds\n",
+         "PPM(%d): Starting cyclic input data transmission with PPM. AREP %u "
+         "CREP %" PRIu32 ", period %" PRIu32 " microseconds. FrameID 0x%04x\n",
          __LINE__,
+         p_ar->arep,
          crep,
-         p_ppm->control_interval);
+         p_ppm->control_interval,
+         p_iocr->param.frame_id);
 
       /* Needed for counter calculations */
       p_ppm->send_clock_factor = p_iocr->param.send_clock_factor;
@@ -417,7 +419,12 @@ int pf_ppm_close_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
    pf_ppm_t * p_ppm;
    uint32_t cnt;
 
-   LOG_DEBUG (PF_PPM_LOG, "PPM(%d): Closing\n", __LINE__);
+   LOG_DEBUG (
+      PF_PPM_LOG,
+      "PPM(%d): Closing PPM for AREP %u CREP %u\n",
+      __LINE__,
+      p_ar->arep,
+      crep);
    p_ppm = &p_ar->iocrs[crep].ppm;
    p_ppm->ci_running = false;
    if (p_ppm->ci_timer != UINT32_MAX)
@@ -544,9 +551,10 @@ int pf_ppm_set_data_and_iops (
          p_ar->err_code = PNET_ERROR_CODE_2_PPM_INVALID_STATE;
          LOG_DEBUG (
             PF_PPM_LOG,
-            "PPM(%d): Set data in wrong state: %u\n",
+            "PPM(%d): Set data in wrong state: %u for AREP %u\n",
             __LINE__,
-            p_iocr->ppm.state);
+            p_iocr->ppm.state,
+            p_ar->arep);
          break;
       case PF_PPM_STATE_RUN:
          if (
@@ -592,9 +600,10 @@ int pf_ppm_set_data_and_iops (
       default:
          LOG_ERROR (
             PF_PPM_LOG,
-            "PPM(%d): Set data in wrong state: %u\n",
+            "PPM(%d): Set data in wrong state: %u for AREP %u\n",
             __LINE__,
-            p_iocr->ppm.state);
+            p_iocr->ppm.state,
+            p_ar->arep);
          break;
       }
    }
@@ -640,9 +649,10 @@ int pf_ppm_set_iocs (
          p_ar->err_code = PNET_ERROR_CODE_2_PPM_INVALID_STATE;
          LOG_DEBUG (
             PF_PPM_LOG,
-            "PPM(%d): Set iocs in wrong state: %u\n",
+            "PPM(%d): Set iocs in wrong state: %u for AREP %u\n",
             __LINE__,
-            p_iocr->ppm.state);
+            p_iocr->ppm.state,
+            p_ar->arep);
          break;
       case PF_PPM_STATE_RUN:
          if (iocs_len == p_iodata->iocs_length)
@@ -679,9 +689,10 @@ int pf_ppm_set_iocs (
       default:
          LOG_ERROR (
             PF_PPM_LOG,
-            "PPM(%d): Set data in wrong state: %u\n",
+            "PPM(%d): Set data in wrong state: %u for AREP %u\n",
             __LINE__,
-            (unsigned)p_iocr->ppm.state);
+            (unsigned)p_iocr->ppm.state,
+            p_ar->arep);
          break;
       }
    }
@@ -729,9 +740,10 @@ int pf_ppm_get_data_and_iops (
          p_ar->err_code = PNET_ERROR_CODE_2_PPM_INVALID_STATE;
          LOG_DEBUG (
             PF_PPM_LOG,
-            "PPM(%d): Get data in wrong state: %u\n",
+            "PPM(%d): Get data in wrong state: %u for AREP %u\n",
             __LINE__,
-            p_iocr->ppm.state);
+            p_iocr->ppm.state,
+            p_ar->arep);
          break;
       case PF_PPM_STATE_RUN:
          if (
@@ -773,9 +785,10 @@ int pf_ppm_get_data_and_iops (
       default:
          LOG_ERROR (
             PF_PPM_LOG,
-            "PPM(%d): Get data in wrong state: %u\n",
+            "PPM(%d): Get data in wrong state: %u for AREP %u\n",
             __LINE__,
-            (unsigned)p_iocr->ppm.state);
+            (unsigned)p_iocr->ppm.state,
+            p_ar->arep);
          break;
       }
    }
@@ -821,9 +834,10 @@ int pf_ppm_get_iocs (
          p_ar->err_code = PNET_ERROR_CODE_2_PPM_INVALID_STATE;
          LOG_DEBUG (
             PF_PPM_LOG,
-            "PPM(%d): Get iocs in wrong state: %u\n",
+            "PPM(%d): Get iocs in wrong state: %u for AREP %u\n",
             __LINE__,
-            p_iocr->ppm.state);
+            p_iocr->ppm.state,
+            p_ar->arep);
          break;
       case PF_PPM_STATE_RUN:
          if (*p_iocs_len >= p_iodata->iocs_length)
@@ -855,9 +869,10 @@ int pf_ppm_get_iocs (
       default:
          LOG_ERROR (
             PF_PPM_LOG,
-            "PPM(%d): Get iocs in wrong state: %u\n",
+            "PPM(%d): Get iocs in wrong state: %u for AREP %u\n",
             __LINE__,
-            (unsigned)p_iocr->ppm.state);
+            (unsigned)p_iocr->ppm.state,
+            p_ar->arep);
          break;
       }
    }

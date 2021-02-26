@@ -19,6 +19,7 @@ documentation.
    additional_linux_details.rst
    getting_started_rtkernel.rst
    using_codesys.rst
+   codesys_details.rst
    use_with_siematic.rst
    capturing_packets.rst
    sampleapp_details.rst

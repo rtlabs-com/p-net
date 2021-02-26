@@ -40,14 +40,14 @@
 /**
  * @internal
  * Insert a block header into a buffer.
- * @param is_big_endian    In:   true if buffer is big-endian.
- * @param bh_type          In:   Block type.
- * @param bh_length        In:   Block length.
- * @param bh_ver_high      In:   Block version high.
- * @param bh_ver_low       In:   Block version low.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
- * @param p_pos            InOut:Position in destination buffer.
+ * @param is_big_endian    In:    true if buffer is big-endian.
+ * @param bh_type          In:    Block type.
+ * @param bh_length        In:    Block length.
+ * @param bh_ver_high      In:    Block version high.
+ * @param bh_ver_low       In:    Block version low.
+ * @param res_len          In:    Size of destination buffer.
+ * @param p_bytes          Out:   Destination buffer.
+ * @param p_pos            InOut: Position in destination buffer.
  */
 static void pf_put_block_header (
    bool is_big_endian,
@@ -80,11 +80,11 @@ static void pf_put_block_header (
  * If the string is shorter than the destination size then the destination
  * is padded with spaces.
  * The destination buffer does not contain any terminating NUL byte.
- * @param p_src            In:   The string.
- * @param src_size         In:   The destination string size.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
- * @param p_pos            InOut:Position in destination buffer.
+ * @param p_src            In:    The string.
+ * @param src_size         In:    The destination string size.
+ * @param res_len          In:    Size of destination buffer.
+ * @param p_bytes          Out:   Destination buffer.
+ * @param p_pos            InOut: Position in destination buffer.
  */
 static void pf_put_str (
    const void * p_src,
@@ -119,11 +119,11 @@ static void pf_put_str (
 /**
  * @internal
  * Insert a UUID into a buffer.
- * @param is_big_endian    In:   true if buffer is big-endian.
- * @param p_uuid           In:   The UUID to insert.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
- * @param p_pos            InOut:Position in destination buffer.
+ * @param is_big_endian    In:    true if buffer is big-endian.
+ * @param p_uuid           In:    The UUID to insert.
+ * @param res_len          In:    Size of destination buffer.
+ * @param p_bytes          Out:   Destination buffer.
+ * @param p_pos            InOut: Position in destination buffer.
  */
 static void pf_put_uuid (
    bool is_big_endian,
@@ -140,11 +140,11 @@ static void pf_put_uuid (
 
 /**
  * Put rpc UUID into a buffer
- * @param is_big_endian    In:   Endianness of the destination buffer.
- * @param p_uuid           In:   The UUID to insert.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
- * @param p_pos            InOut:Position in destination buffer.
+ * @param is_big_endian    In:    Endianness of the destination buffer.
+ * @param p_uuid           In:    The UUID to insert.
+ * @param res_len          In:    Size of destination buffer.
+ * @param p_bytes          Out:   Destination buffer.
+ * @param p_pos            InOut: Position in destination buffer.
  */
 static void pf_put_rpc_uuid (
    bool is_big_endian,
@@ -468,10 +468,10 @@ void pf_put_alarm_cr_result (
 /**
  * @internal
  * Insert bits into a uint32_t.
- * @param val              In:   The value of the bit field.
- * @param len              In:   The number of bits to insert.
- * @param pos              In:   The position in p_bits to insert the bits at.
- * @param p_bits           InOut:The resulting uint32_t.
+ * @param val              In:    The value of the bit field.
+ * @param len              In:    The number of bits to insert.
+ * @param pos              In:    The position in p_bits to insert the bits at.
+ * @param p_bits           InOut: The resulting uint32_t.
  */
 static void pf_put_bits (
    uint32_t val,
@@ -487,11 +487,11 @@ static void pf_put_bits (
 /**
  * @internal
  * Insert a sub-module diff into a buffer.
- * @param is_big_endian    In:   Endianness of the destination buffer.
- * @param p_diff           In:   The sub-module diff information.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
- * @param p_pos            InOut:Position in destination buffer.
+ * @param is_big_endian    In:    Endianness of the destination buffer.
+ * @param p_diff           In:    The sub-module diff information.
+ * @param res_len          In:    Size of destination buffer.
+ * @param p_bytes          Out:   Destination buffer.
+ * @param p_pos            InOut: Position in destination buffer.
  */
 static void pf_put_submodule_diff (
    bool is_big_endian,
@@ -539,11 +539,11 @@ static void pf_put_submodule_diff (
 /**
  * @internal
  * Insert a module diff into a buffer.
- * @param is_big_endian    In:   Endianness of the destination buffer.
- * @param p_diff           In:   The module diff information.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
- * @param p_pos            InOut:Position in destination buffer.
+ * @param is_big_endian    In:    Endianness of the destination buffer.
+ * @param p_diff           In:    The module diff information.
+ * @param res_len          In:    Size of destination buffer.
+ * @param p_bytes          Out:   Destination buffer.
+ * @param p_pos            InOut: Position in destination buffer.
  */
 static void pf_put_module_diff (
    bool is_big_endian,
@@ -596,12 +596,12 @@ static void pf_put_module_diff (
 /**
  * @internal
  * Insert AR diff blocks into a buffer.
- * @param is_big_endian    In:   Endianness of the destination buffer.
- * @param p_ar             In:   Contains the AR diff to insert.
- * @param api_ix           In:   The specific AR diff to add.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
- * @param p_pos            InOut:Position in destination buffer.
+ * @param is_big_endian    In:    Endianness of the destination buffer.
+ * @param p_ar             In:    Contains the AR diff to insert.
+ * @param api_ix           In:    The specific AR diff to add.
+ * @param res_len          In:    Size of destination buffer.
+ * @param p_bytes          Out:   Destination buffer.
+ * @param p_pos            InOut: Position in destination buffer.
  */
 static void pf_put_api_diff (
    bool is_big_endian,
@@ -819,12 +819,12 @@ void pf_put_ar_vendor_result (
 /**
  * @internal
  * Insert an IOCR struct into a buffer.
- * @param is_big_endian    In:   Endianness of the destination buffer.
- * @param p_ar             In:   The AR instance.
- * @param ix               In:   The IOCR indice.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
- * @param p_pos            InOut:Position in destination buffer.
+ * @param is_big_endian    In:    Endianness of the destination buffer.
+ * @param p_ar             In:    The AR instance.
+ * @param ix               In:    The IOCR indice.
+ * @param res_len          In:    Size of destination buffer.
+ * @param p_bytes          Out:   Destination buffer.
+ * @param p_pos            InOut: Position in destination buffer.
  */
 static void pf_put_iocr (
    bool is_big_endian,
@@ -952,13 +952,13 @@ static void pf_put_rs_info (
 
 /**
  * Insert one AR to a buffer.
- * @param is_big_endian    In:   Endianness of the destination buffer.
- * @param p_ar             In:   The AR to insert.
- * @param api_filter       In:   true => Insert only specific API.
- * @param api_id           In:   The api id.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
- * @param p_pos            InOut:Position in destination buffer.
+ * @param is_big_endian    In:    Endianness of the destination buffer.
+ * @param p_ar             In:    The AR to insert.
+ * @param api_filter       In:    true => Insert only specific API.
+ * @param api_id           In:    The api id.
+ * @param res_len          In:    Size of destination buffer.
+ * @param p_bytes          Out:   Destination buffer.
+ * @param p_pos            InOut: Position in destination buffer.
  */
 static void pf_put_one_ar (
    bool is_big_endian,
@@ -1619,12 +1619,12 @@ void pf_put_read_result (
  *
  * Inserts subslot number and submodule ID.
  *
- * @param is_big_endian    In:   Endianness of the destination buffer.
- * @param block_type       In:   Specifies REAL or EXP ident number to insert.
- * @param p_subslot        In:   The sub-slot instance.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
- * @param p_pos            InOut:Position in destination buffer.
+ * @param is_big_endian    In:    Endianness of the destination buffer.
+ * @param block_type       In:    Specifies REAL or EXP ident number to insert.
+ * @param p_subslot        In:    The sub-slot instance.
+ * @param res_len          In:    Size of destination buffer.
+ * @param p_bytes          Out:   Destination buffer.
+ * @param p_pos            InOut: Position in destination buffer.
  */
 static void pf_put_ident_subslot (
    bool is_big_endian,
@@ -1667,16 +1667,17 @@ static void pf_put_ident_subslot (
  * Inserts slot number, module ID, number of subslots and then uses
  * \a pf_put_ident_subslot() to insert more info.
  *
- * @param is_big_endian    In:   Endianness of the destination buffer.
- * @param block_type       In:   Specifies REAL or EXP ident number to insert.
- * @param filter_level     In:   The filter starting level.
- * @param stop_level       In:   The amount of detail to include (ending level).
- * @param p_ar             In:   If != NULL then filter by AR.
- * @param p_slot           In:   The slot instance.
- * @param subslot_nbr      In:   Sub-slot number to filter by.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
- * @param p_pos            InOut:Position in destination buffer.
+ * @param is_big_endian    In:    Endianness of the destination buffer.
+ * @param block_type       In:    Specifies REAL or EXP ident number to insert.
+ * @param filter_level     In:    The filter starting level.
+ * @param stop_level       In:    The amount of detail to include (ending
+ *                                level).
+ * @param p_ar             In:    If != NULL then filter by AR.
+ * @param p_slot           In:    The slot instance.
+ * @param subslot_nbr      In:    Sub-slot number to filter by.
+ * @param res_len          In:    Size of destination buffer.
+ * @param p_bytes          Out:   Destination buffer.
+ * @param p_pos            InOut: Position in destination buffer.
  */
 static void pf_put_ident_slot (
    bool is_big_endian,
@@ -1789,17 +1790,18 @@ static void pf_put_ident_slot (
  * Inserts API ID, number of slots and then uses \a pf_put_ident_slot() to
  * insert more info.
  *
- * @param is_big_endian    In:   Endianness of the destination buffer.
- * @param block_type       In:   Specifies REAL or EXP ident number to insert.
- * @param filter_level     In:   The filter starting level.
- * @param stop_level       In:   The amount of detail to include (ending level).
- * @param p_ar             In:   If != NULL then filter by AR.
- * @param p_api            In:   The api instance.
- * @param slot_nbr         In:   Slot number to filter by.
- * @param subslot_nbr      In:   Sub-slot number to filter by.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
- * @param p_pos            InOut:Position in destination buffer.
+ * @param is_big_endian    In:    Endianness of the destination buffer.
+ * @param block_type       In:    Specifies REAL or EXP ident number to insert.
+ * @param filter_level     In:    The filter starting level.
+ * @param stop_level       In:    The amount of detail to include (ending
+ *                                level).
+ * @param p_ar             In:    If != NULL then filter by AR.
+ * @param p_api            In:    The api instance.
+ * @param slot_nbr         In:    Slot number to filter by.
+ * @param subslot_nbr      In:    Sub-slot number to filter by.
+ * @param res_len          In:    Size of destination buffer.
+ * @param p_bytes          Out:   Destination buffer.
+ * @param p_pos            InOut: Position in destination buffer.
  */
 static void pf_put_ident_api (
    bool is_big_endian,
@@ -1905,18 +1907,19 @@ static void pf_put_ident_api (
  * Inserts number of APIs, and then uses \a pf_put_ident_api() to insert
  * more info.
  *
- * @param is_big_endian    In:   Endianness of the destination buffer.
- * @param block_type       In:   Specifies REAL or EXP ident number to insert.
- * @param filter_level     In:   The filter starting level.
- * @param stop_level       In:   The amount of detail to include (ending level).
- * @param p_ar             In:   If != NULL then filter by AR.
- * @param p_device         In:   The device instance.
- * @param api_id           In:   API id to filter by.
- * @param slot_nbr         In:   Slot number to filter by.
- * @param subslot_nbr      In:   Sub-slot number to filter by.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
- * @param p_pos            InOut:Position in destination buffer.
+ * @param is_big_endian    In:    Endianness of the destination buffer.
+ * @param block_type       In:    Specifies REAL or EXP ident number to insert.
+ * @param filter_level     In:    The filter starting level.
+ * @param stop_level       In:    The amount of detail to include (ending
+ *                                level).
+ * @param p_ar             In:    If != NULL then filter by AR.
+ * @param p_device         In:    The device instance.
+ * @param api_id           In:    API id to filter by.
+ * @param slot_nbr         In:    Slot number to filter by.
+ * @param subslot_nbr      In:    Sub-slot number to filter by.
+ * @param res_len          In:    Size of destination buffer.
+ * @param p_bytes          Out:   Destination buffer.
+ * @param p_pos            InOut: Position in destination buffer.
  */
 static void pf_put_ident_device (
    bool is_big_endian,
@@ -2537,12 +2540,12 @@ void pf_put_log_book_data (
  *
  * Used both for creating an alarm frame and a diagnostics read answer frame.
  *
- * @param is_big_endian    In:   true if buffer is big-endian.
- * @param p_item           In:   The diag item to insert.
- * @param insert_usi       In:   Insert USI field if true.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
- * @param p_pos            InOut:Position in destination buffer.
+ * @param is_big_endian    In:    true if buffer is big-endian.
+ * @param p_item           In:    The diag item to insert.
+ * @param insert_usi       In:    Insert USI field if true.
+ * @param res_len          In:    Size of destination buffer.
+ * @param p_bytes          Out:   Destination buffer.
+ * @param p_pos            InOut: Position in destination buffer.
  */
 static void pf_put_diag_item (
    bool is_big_endian,
@@ -4267,11 +4270,11 @@ void pf_put_pd_interface_adj (
 
 /**
  * Put rpc epm floor count into a buffer
- * @param is_big_endian    In:   Endianness of the destination buffer.
- * @param count            In:   Floor count.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
- * @param p_pos            InOut:Position in destination buffer.
+ * @param is_big_endian    In:    Endianness of the destination buffer.
+ * @param count            In:    Floor count.
+ * @param res_len          In:    Size of destination buffer.
+ * @param p_bytes          Out:   Destination buffer.
+ * @param p_pos            InOut: Position in destination buffer.
  */
 static void pf_put_rpc_floor_count (
    bool is_big_endian,
@@ -4285,11 +4288,11 @@ static void pf_put_rpc_floor_count (
 
 /**
  * Put rpc epm floor 1 configuration into a buffer
- * @param is_big_endian    In:   Endianness of the destination buffer.
- * @param p_floor          In:   Floor configuration.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
- * @param p_pos            InOut:Position in destination buffer.
+ * @param is_big_endian    In:    Endianness of the destination buffer.
+ * @param p_floor          In:    Floor configuration.
+ * @param res_len          In:    Size of destination buffer.
+ * @param p_bytes          Out:   Destination buffer.
+ * @param p_pos            InOut: Position in destination buffer.
  */
 static void pf_put_rpc_floor_1_uuid (
    bool is_big_endian,
@@ -4332,11 +4335,11 @@ static void pf_put_rpc_floor_1_uuid (
 
 /**
  * Put rpc epm floor 2 configuration into a buffer
- * @param is_big_endian    In:   Endianness of the destination buffer.
- * @param p_floor          In:   Floor configuration.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
- * @param p_pos            InOut:Position in destination buffer.
+ * @param is_big_endian    In:    Endianness of the destination buffer.
+ * @param p_floor          In:    Floor configuration.
+ * @param res_len          In:    Size of destination buffer.
+ * @param p_bytes          Out:   Destination buffer.
+ * @param p_pos            InOut: Position in destination buffer.
  */
 static void pf_put_rpc_floor_2_uuid (
    bool is_big_endian,
@@ -4350,11 +4353,11 @@ static void pf_put_rpc_floor_2_uuid (
 
 /**
  * Put rpc epm floor 3 configuration into a buffer
- * @param is_big_endian    In:   Endianness of the destination buffer.
- * @param p_floor          In:   Floor configuration.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
- * @param p_pos            InOut:Position in destination buffer.
+ * @param is_big_endian    In:    Endianness of the destination buffer.
+ * @param p_floor          In:    Floor configuration.
+ * @param res_len          In:    Size of destination buffer.
+ * @param p_bytes          Out:   Destination buffer.
+ * @param p_pos            InOut: Position in destination buffer.
  */
 static void pf_put_rpc_floor_3_rpc (
    bool is_big_endian,
@@ -4389,11 +4392,11 @@ static void pf_put_rpc_floor_3_rpc (
 
 /**
  * Put rpc epm floor 4 configuration into a buffer
- * @param is_big_endian    In:   Endianness of the destination buffer.
- * @param p_floor          In:   Floor configuration.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
- * @param p_pos            InOut:Position in destination buffer.
+ * @param is_big_endian    In:    Endianness of the destination buffer.
+ * @param p_floor          In:    Floor configuration.
+ * @param res_len          In:    Size of destination buffer.
+ * @param p_bytes          Out:   Destination buffer.
+ * @param p_pos            InOut: Position in destination buffer.
  */
 static void pf_put_rpc_floor_4_udp (
    bool is_big_endian,
@@ -4423,11 +4426,11 @@ static void pf_put_rpc_floor_4_udp (
 
 /**
  * Put rpc epm floor 5 configuration into a buffer
- * @param is_big_endian    In:   Endianness of the destination buffer.
- * @param p_floor          In:   Floor configuration.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
- * @param p_pos            InOut:Position in destination buffer.
+ * @param is_big_endian    In:    Endianness of the destination buffer.
+ * @param p_floor          In:    Floor configuration.
+ * @param res_len          In:    Size of destination buffer.
+ * @param p_bytes          Out:   Destination buffer.
+ * @param p_pos            InOut: Position in destination buffer.
  */
 static void pf_put_rpc_floor_5_ip (
    bool is_big_endian,
@@ -4471,11 +4474,11 @@ static void pf_put_rpc_floor_5_ip (
  * SWRevision        VisibleString[9]     4.10.3.3.5
  * EndTerm           '\0'
  *
- * @param p_cfg            In:   Configuration data used to generate
- *                               annotation.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
- * @param p_pos            InOut:Position in destination buffer.
+ * @param p_cfg            In:    Configuration data used to generate
+ *                                annotation.
+ * @param res_len          In:    Size of destination buffer.
+ * @param p_bytes          Out:   Destination buffer.
+ * @param p_pos            InOut: Position in destination buffer.
  */
 static void pf_put_rpc_epm_annotation (
    const pnet_cfg_t * p_cfg,
@@ -4512,11 +4515,11 @@ static void pf_put_rpc_epm_annotation (
 
 /**
  * Put rpc epm protocol tower into a buffer
- * @param is_big_endian    In:   Endianness of the destination buffer.
- * @param p_tower          In:   Protocol tower configuration.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
- * @param p_pos            InOut:Position in destination buffer.
+ * @param is_big_endian    In:    Endianness of the destination buffer.
+ * @param p_tower          In:    Protocol tower configuration.
+ * @param res_len          In:    Size of destination buffer.
+ * @param p_bytes          Out:   Destination buffer.
+ * @param p_pos            InOut: Position in destination buffer.
  */
 static void pf_put_tower_entry (
    bool is_big_endian,
@@ -4606,11 +4609,11 @@ static void pf_put_tower_entry (
 
 /**
  * Put rpc handle into a buffer
- * @param is_big_endian    In:   Endianness of the destination buffer.
- * @param p_handle         In:   Rpc handle
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
- * @param p_pos            InOut:Position in destination buffer.
+ * @param is_big_endian    In:    Endianness of the destination buffer.
+ * @param p_handle         In:    Rpc handle
+ * @param res_len          In:    Size of destination buffer.
+ * @param p_bytes          Out:   Destination buffer.
+ * @param p_pos            InOut: Position in destination buffer.
  */
 static void pf_put_rpc_handle (
    bool is_big_endian,
@@ -4637,12 +4640,12 @@ static void pf_put_rpc_handle (
 /**
  * Put rpc epm entry into a buffer. If no no protocol tower is
  * configured / actual_count == 0, a empty entry is written.
- * @param is_big_endian    In:   Endianness of the destination buffer.
- * @param p_entry          In:   Rpc epm entry including protocol
- *                               tower configuration.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
- * @param p_pos            InOut:Position in destination buffer.
+ * @param is_big_endian    In:    Endianness of the destination buffer.
+ * @param p_entry          In:    Rpc epm entry including protocol
+ *                                tower configuration.
+ * @param res_len          In:    Size of destination buffer.
+ * @param p_bytes          Out:   Destination buffer.
+ * @param p_pos            InOut: Position in destination buffer.
  */
 static void pf_put_rpc_epm_entry (
    bool is_big_endian,

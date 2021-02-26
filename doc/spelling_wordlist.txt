@@ -10,6 +10,7 @@ Bonjour
 Bool
 boolean
 booleans
+breakpoint
 bsp
 bss
 Buildroot
@@ -24,6 +25,7 @@ cnf
 Codesys
 collab
 Commonmark
+conformant
 COntroller
 Datagram
 DControl

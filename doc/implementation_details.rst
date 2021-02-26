@@ -163,10 +163,11 @@ Sections in 61158-5-10 (services) describing diagnosis:
 | 7.1.4.5.3.6   | Channel and channel numbers                                 |
 +---------------+-------------------------------------------------------------+
 | 7.3.1.5.6.3   | Behavior of the Module Diff Block regarding diagnosis       |
+|               | (failed parameterization)                                   |
 +---------------+-------------------------------------------------------------+
 | 7.3.1.6.1.2   | Alarm types attached to diagnosis ASE                       |
 +---------------+-------------------------------------------------------------+
-| 7.3.1.6.5.1   | Alarm Notification                                          |
+| 7.3.1.6.5.1   | "Alarm Notification" Lists of diagnosis data                |
 +---------------+-------------------------------------------------------------+
 | 7.3.2.5       | Observer class (PD Port Data Check etc)                     |
 +---------------+-------------------------------------------------------------+
@@ -191,6 +192,9 @@ Sections in 61158-6-10 (protocol) describing diagnosis:
 
 See also the "Diagnosis for Profinet" Guideline published by the Profinet
 organisation.
+
+For general discussions on diagnosis usage, see the section "A.6 PROFINET
+Diagnosis" in the "Specification for GSDML" document.
 
 An array of PNET_MAX_DIAG_ITEMS diagnosis items is available for use. Each
 subslot uses a linked list of diagnosis items, and stores the index to the
@@ -428,6 +432,33 @@ ETH
 Registers and invokes frame handlers for incoming raw Ethernet frames.
 
 
+Module diff block
+-----------------
+Informs about differences between expected and plugged modules,
+and also about diagnosis in modules etc. The information for each submodule
+is indicated by bit fields in a 16-bit number.
+
+Relevant sections in 61158-5-10 (services):
+
++--------------------------+--------------------------------------------------+
+| Section                  | Description                                      |
++==========================+==================================================+
+| 7.3.1.5.5.5 - 7.3.1.5.6  | "Read Module Diff Block for one AR"              |
++--------------------------+--------------------------------------------------+
+
+Relevant sections in 61158-6-10 (protocol):
+
++---------------+-------------------------------------------------------------+
+| Section       | Description                                                 |
++===============+=============================================================+
+| 5.1.2         | "APDU abstract syntax"                                      |
++---------------+-------------------------------------------------------------+
+| 5.2.5.65      | "Coding of the field SubmoduleState"                        |
++---------------+-------------------------------------------------------------+
+| 5.2.42.3.6    | "ModuleDiffBlock"                                           |
++---------------+-------------------------------------------------------------+
+
+
 LLDP - Link Layer Discovery Protocol
 ------------------------------------
 Sections in 61784-2 (profiles) describing LLDP:
@@ -467,7 +498,6 @@ Sections in 61158-6-10 (protocol) describing LLDP:
 +---------------+-------------------------------------------------------------+
 | Annex U       | LLDP EXT MIB                                                |
 +---------------+-------------------------------------------------------------+
-
 
 
 Simple Network Management Protocol (SNMP)
@@ -528,14 +558,80 @@ organisation, and the list of supported OIDs in the test case specification
 "Topology discovery check".
 
 
+Legacy startup mode
+-------------------
+The startup mode is parsed at connect. It uses legacy start up mode when
+this value is set to false::
+
+   p_ar->ar_param.ar_properties.startup_mode
+
+Section 17 "Startup Mode" in the guideline "PROFINET IRT Engineering" discusses
+the differences between legacy and advanced startup modes.
+
+Sections in 61784-2 (profiles) describing Legacy Startup mode:
+
++---------------+-------------------------------------------------------------+
+| Section       | Description                                                 |
++===============+=============================================================+
+| 7.1.9.2       | "Index" ARFSUDataAdjust (0xE050)                            |
++---------------+-------------------------------------------------------------+
+
+Sections in 61158-5-10 (services) describing Legacy Startup mode:
+
++---------------+-------------------------------------------------------------+
+| Section       | Description                                                 |
++===============+=============================================================+
+| 7.3.1.3.4     | "Attributes" Allowed values for Startup Mode and for CM     |
+|               | Initiator Activity Timeout Factor. The fields "IR Info      |
+|               | Block", "SR Info Block", "Redundancy Info" and "List of     |
+|               | AR Vendor Blocks" only in advanced startup mode.            |
++---------------+-------------------------------------------------------------+
+| 7.3.1.3.5.1.2 | "Connect" Usage of "IR Info Block" , "SR Info Block" and    |
+|               | "AR Server Block"                                           |
++---------------+-------------------------------------------------------------+
+| 7.3.1.3.5.11  | "Read Expected Fast Startup Data" Only in legacy mode, and  |
+|               | only for fast startup.                                      |
++---------------+-------------------------------------------------------------+
+| 7.3.1.3.5.12  | "Write Expected Fast Startup Data" Only in legacy mode, and |
+|               | only for fast startup.                                      |
++---------------+-------------------------------------------------------------+
+| 7.3.1.3.6.3   | "IO controller during startup" Record data ARFSUDataAdjust  |
+|               | (0xE050) supported only for legacy mode                     |
++---------------+-------------------------------------------------------------+
+| 7.3.1.4.4     | "Attributes" RT Class and startup mode combinations         |
++---------------+-------------------------------------------------------------+
+
+Sections in 61158-6-10 (protocol) describing Legacy Startup mode:
+(search for "startupmode")
+
++---------------+-------------------------------------------------------------+
+| Section       | Description                                                 |
++===============+=============================================================+
+| 5.1.2         | "APDU abstract syntax" IODConnectReq with StartupMode:=1    |
++---------------+-------------------------------------------------------------+
+| 5.2.4.4.4     | "Record index" Index 0xE050 ARFSUDataAdjust                 |
++---------------+-------------------------------------------------------------+
+| 5.2.42.2.4    | "ARBlockReq" Checking of CMInitiatorActivityTimeoutFactor   |
++---------------+-------------------------------------------------------------+
+| 5.6.3.1.1     | "General" Use profinet v 2.2 for Legacy startup mode.       |
++---------------+-------------------------------------------------------------+
+| 5.6.3.3.4     | "CMSU state table" Legacy startup mode implemented in CMSU, |
+|               | PPM and CPM.                                                |
++---------------+-------------------------------------------------------------+
+| Figure A.2    | Startup in advanced mode                                    |
++---------------+-------------------------------------------------------------+
+| Figure B.2    | Startup in legacy mode                                      |
++---------------+-------------------------------------------------------------+
+
+
 Conformance class D
 -------------------
 
 7.1.3.2.1 Communication (Class D should support one additional Device Access AR)
 
 
-Start up procedure
-------------------
+Messages and function calls at startup
+--------------------------------------
 
 +------------------+--------------------+-----------------------+--------------------------------------------+-------------------------------------+
 | | Incoming       | | Outgoing         | | CMDEV               |  Application                               | Other                               |
@@ -679,6 +775,21 @@ This will format the commit using clang-format. Examine and stage
 modified files before finalizing the commit.
 
 
+Static code analyzer
+--------------------
+To install the clang static analyzer tool::
+
+   sudo apt-get install clang-tools
+
+Run it using::
+
+   rm -rf build
+   scan-build cmake -B build
+   scan-build -o clangreports make -C build -j4
+
+The resulting HTML reports will end up in the ``clangreports`` subdirectory.
+
+
 Workflow
 --------
 We have chosen to host the code on Github to ease the collaboration between
@@ -688,9 +799,9 @@ Github workflow:
 * Open a Github issue on https://github.com/rtlabs-com/p-net/ for each
   separate bug found.
 * Fork the repository to your own account on Github, and make a local
-  clone on your work station.
+  clone on your laptop.
 * Create a branch with a descriptive name.
-* Commit your fix to the branch. Add the line "Closes #123" (for example)
+* Commit your fix to the branch. Add the line ``Closes #123`` (for example)
   in the commit message, to indicate which Github issue it closes.
 * Push the branch to your Github account.
 * Create a pull request to https://github.com/rtlabs-com/p-net
