@@ -95,17 +95,16 @@ int pf_cmrdr_rm_read_ind (
 
    /* Get the data from FSPM or the application, if possible. */
    data_len = res_size - *p_pos;
-   ret = pf_fspm_cm_read_ind (
-      net,
-      p_ar,
-      p_read_request,
-      &p_data,
-      &data_len,
-      p_read_status);
-   if (ret != 0)
+   if (
+      pf_fspm_cm_read_ind (
+         net,
+         p_ar,
+         p_read_request,
+         &p_data,
+         &data_len,
+         p_read_status) != 0)
    {
-      data_len = 0;
-      ret = 0; /* Handled: No data available. */
+      data_len = 0; /* Handled: No data available. */
    }
 
    /*
@@ -137,7 +136,6 @@ int pf_cmrdr_rm_read_ind (
     * Even if the application or FSPM provided an answer.
     * If there is another answer then use that!!
     */
-   ret = -1;
    start_pos = *p_pos;
    if (p_read_request->index <= PF_IDX_USER_MAX)
    {
@@ -881,7 +879,7 @@ int pf_cmrdr_rm_read_ind (
       default:
          LOG_INFO (
             PNET_LOG,
-            "CMRSR(%d): Index 0x%04X is not supported.\n",
+            "CMRDR(%d): Index 0x%04X is not supported.\n",
             __LINE__,
             p_read_request->index);
          ret = -1;
@@ -893,7 +891,7 @@ int pf_cmrdr_rm_read_ind (
    {
       LOG_INFO (
          PNET_LOG,
-         "CMRSR(%d): Could not read index 0x%04X for slot %u subslot 0x%04X.\n",
+         "CMRDR(%d): Could not read index 0x%04X for slot %u subslot 0x%04X.\n",
          __LINE__,
          p_read_request->index,
          p_read_request->slot_number,
