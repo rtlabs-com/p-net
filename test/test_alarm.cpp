@@ -294,60 +294,195 @@ TEST_F (AlarmUnitTest, AlarmCheckAddDiagItemToSummary)
       PNET_DIAG_CH_PROP_MAINT_FAULT);
 }
 
-
-TEST_F (AlarmUnitTest, AlarmCheckQueueHandling)
+TEST_F (AlarmUnitTest, AlarmCheckSendQueueHandling)
 {
-   pf_alarm_queue_t queue;
-   pf_alarm_data_t alarm_input;
-   pf_alarm_data_t alarm_output;
+   pf_alarm_send_queue_t queue;
+   pf_alarm_data_t post_message;
+   pf_alarm_data_t fetch_message;
    int ix = 0;
    int err = 0;
    const uint16_t SEQUENCE_START_NUMBER = 100;
 
-   /* Prepare default data */
+   memset (&post_message, 0, sizeof (post_message));
+   memset (&fetch_message, 0, sizeof (fetch_message));
    memset (&queue, 0, sizeof (queue));
-   memset (&alarm_input, 0, sizeof (alarm_input));
-   memset (&alarm_output, 0, sizeof (alarm_output));
-   EXPECT_EQ (queue.count, 0);
+
+   /* Set up queue */
+   EXPECT_FALSE (pf_alarm_queue_is_available(&queue.accountant));
+   pf_alarm_queue_mutex_create (&queue.accountant);
+   pf_alarm_queue_mutex_create (&queue.accountant); /* No-op */
+   EXPECT_TRUE (pf_alarm_queue_is_available(&queue.accountant));
+   pf_alarm_send_queue_reset (&queue);
+   EXPECT_EQ (queue.accountant.count, 0); /* Do not bother with mutex
+                                            (this test runs in single thread) */
 
    /* Fill the queue */
    for (ix = 0; ix < PNET_MAX_ALARMS; ix++)
    {
-      alarm_input.sequence_number = SEQUENCE_START_NUMBER + ix;
-      err = pf_alarm_add_send_queue(&queue, &alarm_input);
+      post_message.sequence_number = SEQUENCE_START_NUMBER + ix;
+      err = pf_alarm_send_queue_post (&queue, &post_message);
       EXPECT_EQ (err, 0);
    }
-   EXPECT_EQ (queue.count, PNET_MAX_ALARMS);
+   EXPECT_EQ (queue.accountant.count, PNET_MAX_ALARMS);
 
    /* Add to full queue */
-   alarm_input.sequence_number += 1;
-   err = pf_alarm_add_send_queue(&queue, &alarm_input);
+   post_message.sequence_number += 1;
+   err = pf_alarm_send_queue_post (&queue, &post_message);
    EXPECT_EQ (err, -1);
-   EXPECT_EQ (queue.count, PNET_MAX_ALARMS);
+   EXPECT_EQ (queue.accountant.count, PNET_MAX_ALARMS);
 
    /* Fetch from the queue */
    for (ix = 0; ix < PNET_MAX_ALARMS; ix++)
    {
-      err = pf_alarm_fetch_send_queue(&queue, &alarm_output);
+      err = pf_alarm_send_queue_fetch (&queue, &fetch_message);
       EXPECT_EQ (err, 0);
-      EXPECT_EQ (alarm_output.sequence_number, SEQUENCE_START_NUMBER + ix);
+      EXPECT_EQ (fetch_message.sequence_number, SEQUENCE_START_NUMBER + ix);
    }
-   EXPECT_EQ (queue.count, 0);
+   EXPECT_EQ (queue.accountant.count, 0);
 
    /* Fetch from empty queue */
-   err = pf_alarm_fetch_send_queue(&queue, &alarm_output);
+   err = pf_alarm_send_queue_fetch (&queue, &fetch_message);
    EXPECT_EQ (err, -1);
-   EXPECT_EQ (queue.count, 0);
+   EXPECT_EQ (queue.accountant.count, 0);
 
-   /* Wrap read_index and write_index */
+   /* Reset the queue */
+   err = pf_alarm_send_queue_post (&queue, &post_message);
+   EXPECT_EQ (err, 0);
+   EXPECT_EQ (queue.accountant.count, 1);
+
+   pf_alarm_send_queue_reset (&queue);
+   EXPECT_EQ (queue.accountant.count, 0);
+
+   /* Wrap read_index and write_index, by adding and fetching a lot */
    for (ix = 0; ix < PNET_MAX_ALARMS * 5; ix++)
    {
-      err = pf_alarm_add_send_queue(&queue, &alarm_input);
+      post_message.sequence_number = SEQUENCE_START_NUMBER + ix;
+      err = pf_alarm_send_queue_post (&queue, &post_message);
       EXPECT_EQ (err, 0);
-      EXPECT_EQ (queue.count, 1);
+      EXPECT_EQ (queue.accountant.count, 1);
 
-      err = pf_alarm_fetch_send_queue(&queue, &alarm_output);
+      err = pf_alarm_send_queue_fetch (&queue, &fetch_message);
       EXPECT_EQ (err, 0);
-      EXPECT_EQ (queue.count, 0);
+      EXPECT_EQ (queue.accountant.count, 0);
+      EXPECT_EQ (fetch_message.sequence_number, SEQUENCE_START_NUMBER + ix);
    }
+
+   /* Close down queue */
+   pf_alarm_send_queue_reset (&queue);
+   EXPECT_EQ (queue.accountant.count, 0);
+   EXPECT_TRUE (pf_alarm_queue_is_available(&queue.accountant));
+   pf_alarm_queue_mutex_destroy (&queue.accountant);
+   pf_alarm_queue_mutex_destroy (&queue.accountant); /* Should be safe */
+   EXPECT_FALSE (pf_alarm_queue_is_available(&queue.accountant));
+
+   /* Post to closed queue */
+   post_message.sequence_number = SEQUENCE_START_NUMBER;
+   err = pf_alarm_send_queue_post (&queue, &post_message);
+   EXPECT_EQ (err, -1);
+
+   /* Fetch from closed queue */
+   err = pf_alarm_send_queue_fetch (&queue, &fetch_message);
+   EXPECT_EQ (err, -1);
+}
+
+TEST_F (AlarmUnitTest, AlarmCheckReceiveQueueHandling)
+{
+   pf_alarm_receive_queue_t queue;
+   pf_apmr_msg_t post_frame;
+   pf_apmr_msg_t fetch_frame;
+   int ix = 0;
+   int err = 0;
+   const uint16_t POSITION_START_NUMBER = 100;
+   const uintptr_t POINTER_START_NUMBER = 1000;
+
+   memset (&post_frame, 0, sizeof (post_frame));
+   memset (&fetch_frame, 0, sizeof (fetch_frame));
+   memset (&queue, 0, sizeof (queue));
+
+   /* Set up queue */
+   EXPECT_FALSE (pf_alarm_queue_is_available(&queue.accountant));
+   pf_alarm_queue_mutex_create (&queue.accountant);
+   pf_alarm_queue_mutex_create (&queue.accountant); /* No-op */
+   EXPECT_TRUE (pf_alarm_queue_is_available(&queue.accountant));
+   pf_alarm_receive_queue_reset (&queue);
+   EXPECT_EQ (queue.accountant.count, 0); /* Do not bother with mutex
+                                            (this test runs in single thread) */
+
+   /* Fill the queue */
+   for (ix = 0; ix < PNET_MAX_ALARMS; ix++)
+   {
+      post_frame.frame_id_pos = POSITION_START_NUMBER + ix;
+      post_frame.p_buf = (pnal_buf_t *)(POINTER_START_NUMBER + ix);
+      err = pf_alarm_receive_queue_post (&queue, &post_frame);
+      EXPECT_EQ (err, 0);
+      EXPECT_EQ (queue.accountant.count, ix + 1);
+   }
+   EXPECT_EQ (queue.accountant.count, PNET_MAX_ALARMS);
+
+   /* Add to full queue */
+   post_frame.frame_id_pos += 1;
+   post_frame.p_buf -= 1;
+   err = pf_alarm_receive_queue_post (&queue, &post_frame);
+   EXPECT_EQ (err, -1);
+   EXPECT_EQ (queue.accountant.count, PNET_MAX_ALARMS);
+
+   /* Fetch from the queue */
+   for (ix = 0; ix < PNET_MAX_ALARMS; ix++)
+   {
+      err = pf_alarm_receive_queue_fetch (&queue, &fetch_frame);
+      EXPECT_EQ (err, 0);
+      EXPECT_EQ (queue.accountant.count, PNET_MAX_ALARMS - ix - 1);
+      EXPECT_EQ (fetch_frame.frame_id_pos, POSITION_START_NUMBER + ix);
+      EXPECT_EQ ((uintptr_t)fetch_frame.p_buf, POINTER_START_NUMBER + ix);
+   }
+   EXPECT_EQ (queue.accountant.count, 0);
+
+   /* Fetch from empty queue */
+   err = pf_alarm_receive_queue_fetch (&queue, &fetch_frame);
+   EXPECT_EQ (err, -1);
+   EXPECT_EQ (queue.accountant.count, 0);
+
+   /* Reset the queue (will free allocated buffers) */
+   post_frame.frame_id_pos = 42;
+   post_frame.p_buf = pnal_buf_alloc (PNAL_BUF_MAX_SIZE);
+   err = pf_alarm_receive_queue_post (&queue, &post_frame);
+   EXPECT_EQ (err, 0);
+   EXPECT_EQ (queue.accountant.count, 1);
+
+   pf_alarm_receive_queue_reset (&queue);
+   EXPECT_EQ (queue.accountant.count, 0);
+
+   /* Wrap read_index and write_index, by adding and fetching a lot */
+   for (ix = 0; ix < PNET_MAX_ALARMS * 5; ix++)
+   {
+      post_frame.frame_id_pos = POSITION_START_NUMBER + ix;
+      post_frame.p_buf = (pnal_buf_t *)(POINTER_START_NUMBER + ix);
+      err = pf_alarm_receive_queue_post (&queue, &post_frame);
+      EXPECT_EQ (err, 0);
+      EXPECT_EQ (queue.accountant.count, 1);
+
+      err = pf_alarm_receive_queue_fetch (&queue, &fetch_frame);
+      EXPECT_EQ (err, 0);
+      EXPECT_EQ (queue.accountant.count, 0);
+      EXPECT_EQ (fetch_frame.frame_id_pos, POSITION_START_NUMBER + ix);
+      EXPECT_EQ ((uintptr_t)fetch_frame.p_buf, POINTER_START_NUMBER + ix);
+   }
+
+   /* Close down queue */
+   pf_alarm_receive_queue_reset (&queue);
+   EXPECT_EQ (queue.accountant.count, 0);
+   EXPECT_TRUE (pf_alarm_queue_is_available(&queue.accountant));
+   pf_alarm_queue_mutex_destroy (&queue.accountant);
+   pf_alarm_queue_mutex_destroy (&queue.accountant); /* Should be safe */
+   EXPECT_FALSE (pf_alarm_queue_is_available(&queue.accountant));
+
+   /* Post to closed queue */
+   post_frame.frame_id_pos = POSITION_START_NUMBER;
+   post_frame.p_buf = (pnal_buf_t *)(POINTER_START_NUMBER);
+   err = pf_alarm_receive_queue_post (&queue, &post_frame);
+   EXPECT_EQ (err, -1);
+
+   /* Fetch from closed queue */
+   err = pf_alarm_receive_queue_fetch (&queue, &fetch_frame);
+   EXPECT_EQ (err, -1);
 }
