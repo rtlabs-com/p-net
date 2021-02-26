@@ -422,13 +422,7 @@ static int app_connect_ind (
 
    if (p_appdata->arguments.verbosity > 0)
    {
-      printf (
-         "Connect call-back. AREP: %u  Status codes: %d %d %d %d\n",
-         arep,
-         p_result->pnio_status.error_code,
-         p_result->pnio_status.error_decode,
-         p_result->pnio_status.error_code_1,
-         p_result->pnio_status.error_code_2);
+      printf ("Connect call-back. AREP: %u\n", arep);
    }
    /*
     *  Handle the request on an application level.
@@ -449,14 +443,7 @@ static int app_release_ind (
 
    if (p_appdata->arguments.verbosity > 0)
    {
-      printf (
-         "Release (disconnect) call-back. AREP: %u  Status codes: %d %d %d "
-         "%d\n",
-         arep,
-         p_result->pnio_status.error_code,
-         p_result->pnio_status.error_decode,
-         p_result->pnio_status.error_code_1,
-         p_result->pnio_status.error_code_2);
+      printf ("Release (disconnect) call-back. AREP: %u\n", arep);
    }
 
    app_set_outputs_default_value (p_appdata->arguments.verbosity);
@@ -724,8 +711,8 @@ static int app_state_ind (
    uint32_t arep,
    pnet_event_values_t state)
 {
-   uint16_t err_cls = 0;
-   uint16_t err_code = 0;
+   uint16_t err_cls = 0;  /* Error code 1 */
+   uint16_t err_code = 0; /* Error code 2 */
    uint16_t slot = 0;
    uint16_t subslot_ix = 0;
    const char * error_class_description = "";
@@ -772,6 +759,16 @@ static int app_state_ind (
                case PNET_ERROR_CODE_2_ABORT_DCP_RESET_TO_FACTORY:
                   error_code_description = "DCP reset to factory or factory "
                                            "reset, device terminated AR";
+                  break;
+               }
+               break;
+            case PNET_ERROR_CODE_1_CTLDINA:
+               error_class_description =
+                  "CTLDINA = Name and IP assignment from controller";
+               switch (err_code)
+               {
+               case PNET_ERROR_CODE_2_CTLDINA_ARP_MULTIPLE_IP_ADDRESSES:
+                  error_code_description = "Multiple users of same IP address";
                   break;
                }
                break;
@@ -900,7 +897,7 @@ static int app_exp_module_ind (
    if (slot >= PNET_MAX_SLOTS)
    {
       printf (
-         "Wrong slot number recieved: %u  It should be less than %u\n",
+         "Wrong slot number received: %u  It should be less than %u\n",
          slot,
          PNET_MAX_SLOTS);
       return -1;
@@ -1810,7 +1807,7 @@ static void app_handle_send_alarm (
       .ch_grouping = PNET_DIAG_CH_INDIVIDUAL_CHANNEL,
       .ch_direction = APP_DIAG_CHANNEL_DIRECTION};
 
-   /* Look for first input slot */
+   /* Loop though slots and subslots to find first input subslot */
    while (!found_inputslot && (slot < PNET_MAX_SLOTS))
    {
       for (subslot_ix = 0; !found_inputslot && (subslot_ix < PNET_MAX_SUBSLOTS);

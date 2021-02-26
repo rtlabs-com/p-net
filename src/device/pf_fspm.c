@@ -496,9 +496,15 @@ void pf_fspm_create_log_book_entry (
 
       LOG_DEBUG (
          PNET_LOG,
-         "FSPM(%d): Added logbook entry to position %u\n",
+         "FSPM(%d): Added logbook entry to position %u. Error: "
+         "0x%02X 0x%02X 0x%02X 0x%02X Detail: %" PRIu32 "\n",
          __LINE__,
-         put);
+         put,
+         p_pnio_status->error_code,
+         p_pnio_status->error_decode,
+         p_pnio_status->error_code_1,
+         p_pnio_status->error_code_2,
+         entry_detail);
    }
 }
 
@@ -1171,9 +1177,10 @@ void pf_fspm_state_ind (
 
    LOG_DEBUG (
       PNET_LOG,
-      "FSPM(%d): Triggering user state-change callback with %s\n",
+      "FSPM(%d): Triggering user state-change callback with %s for AREP %u\n",
       __LINE__,
-      pf_cmdev_event_to_string (event));
+      pf_cmdev_event_to_string (event),
+      p_ar->arep);
 
    if (net->fspm_cfg.state_cb != NULL)
    {

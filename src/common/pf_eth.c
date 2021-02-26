@@ -258,7 +258,7 @@ void pf_eth_frame_id_map_add (
    {
       LOG_DEBUG (
          PF_ETH_LOG,
-         "ETH(%d): Add FrameIds %#x at index %u\n",
+         "ETH(%d): Framehandler is adding FrameId %#x at index %u.\n",
          __LINE__,
          (unsigned)frame_id,
          (unsigned)ix);

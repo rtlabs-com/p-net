@@ -246,6 +246,8 @@ extern "C" {
 #define PNET_ERROR_CODE_2_CMRPC_ARSET_PARAM_CONFLICT    0x0B
 #define PNET_ERROR_CODE_2_CMRPC_PDEV_PORTS_WO_INTERFACE 0x0C
 
+#define PNET_ERROR_CODE_2_CTLDINA_ARP_MULTIPLE_IP_ADDRESSES 0x07
+
 #define PNET_ERROR_CODE_2_CMSM_INVALID_STATE  0x00
 #define PNET_ERROR_CODE_2_CMSM_SIGNALED_ERROR 0x01
 
@@ -527,7 +529,7 @@ typedef struct pnet_result
  * @param net              InOut: The p-net stack instance
  * @param arg              InOut: User-defined data (not used by p-net)
  * @param arep             In:    The AREP.
- * @param p_result         Out:   Detailed error information.
+ * @param p_result         Out:   Detailed error information if return != 0.
  * @return  0  on success.
  *          -1 if an error occurred.
  */
@@ -554,7 +556,7 @@ typedef int (*pnet_connect_ind) (
  * @param net              InOut: The p-net stack instance
  * @param arg              InOut: User-defined data (not used by p-net)
  * @param arep             In:    The AREP.
- * @param p_result         Out:   Detailed error information.
+ * @param p_result         Out:   Detailed error information if return != 0.
  * @return  0  on success.
  *          -1 if an error occurred.
  */
@@ -584,7 +586,7 @@ typedef int (*pnet_release_ind) (
  * @param arg              InOut: User-defined data (not used by p-net)
  * @param arep             In:    The AREP.
  * @param control_command  In:    The DControl command code.
- * @param p_result         Out:   Detailed error information.
+ * @param p_result         Out:   Detailed error information if return != 0.
  * @return  0  on success.
  *          -1 if an error occurred.
  */
@@ -857,9 +859,8 @@ typedef int (*pnet_new_data_status_ind) (
  * This functionality is used for alarms triggered by the IO-controller.
  *
  * When receiving this indication, the application shall
- * respond with \a pnet_alarm_send_ack().
- * pnet_alarm_send_ack may be called in the context of this
- * callback.
+ * respond with \a pnet_alarm_send_ack(), which
+ * may be called in the context of this callback.
  *
  * @param net              InOut: The p-net stack instance
  * @param arg              InOut: User-defined data (not used by p-net)
@@ -1309,11 +1310,15 @@ PNET_EXPORT void pnet_handle_periodic (pnet_t * net);
 /**
  * Application signals ready to exchange data.
  *
- * Sends a ccontrol request to the IO-controller.
+ * Sends a CControl request to the IO-controller.
  *
  * This function must be called _after_ the application has received
  * the \a pnet_state_ind() user callback with PNET_EVENT_PRMEND,
  * in order for a connection to be established.
+ *
+ * If this CControl request ("Application ready") is sent (to the PLC) before
+ * the DControl response ("Param end") is sent (to the PLC) there will
+ * be problems at startup.
  *
  * If this function does not see all PPM data and IOPS areas are set (by the
  * app) then it returns error and the application must try again - otherwise the
@@ -1430,6 +1435,7 @@ PNET_EXPORT int pnet_pull_submodule (
  * @param p_data           In:    Data buffer.
  * @param data_len         In:    Bytes in data buffer.
  * @param iops             In:    The device provider status.
+ *                                See pnet_ioxs_values_t
  * @return  0  if a sub-module data and IOPS was set.
  *          -1 if an error occurred.
  */
@@ -1453,6 +1459,7 @@ PNET_EXPORT int pnet_input_set_data_and_iops (
  * @param slot             In:    The slot.
  * @param subslot          In:    The sub-slot.
  * @param p_iocs           Out:   The controller consumer status.
+ *                                See pnet_ioxs_values_t
  * @return  0  if a sub-module IOCS was set.
  *          -1 if an error occurred.
  */
@@ -1487,6 +1494,7 @@ PNET_EXPORT int pnet_input_get_iocs (
  * @param p_data_len       In:    Size of receive buffer.
  *                         Out:   Received number of data bytes.
  * @param p_iops           Out:   The controller provider status (IOPS).
+ *                                See pnet_ioxs_values_t
  * @return  0  if a sub-module data and IOPS is retrieved.
  *          -1 if an error occurred.
  */
@@ -1503,7 +1511,7 @@ PNET_EXPORT int pnet_output_get_data_and_iops (
 /**
  * Set the device consumer status for one sub-slot.
  *
- * This function is use to set the device consumer status (IOCS)
+ * This function is used to set the device consumer status (IOCS)
  * of a specific sub-slot.
  *
  * @param net              InOut: The p-net stack instance
@@ -1511,6 +1519,7 @@ PNET_EXPORT int pnet_output_get_data_and_iops (
  * @param slot             In:    The slot.
  * @param subslot          In:    The sub-slot.
  * @param iocs             In:    The device consumer status.
+ *                                See pnet_ioxs_values_t
  * @return  0  if a sub-module IOCS was set.
  *          -1 if an error occurred.
  */
@@ -1815,6 +1824,9 @@ PNET_EXPORT int pnet_diag_std_add (
  * Update the "extended channel error additional value", for a diagnosis entry
  * in the standard format.
  *
+ * The Profinet standard says that diagnosis updates should not be done at a
+ * higher frequency than 1 Hz.
+ *
  * This sends a diagnosis alarm.
  *
  * @param net               InOut: The p-net stack instance.
@@ -1866,8 +1878,9 @@ PNET_EXPORT int pnet_diag_std_remove (
  * Use \a pnet_diag_usi_update() instead if you would like to have an error
  * if the diagnosis is missing when trying to update it.
  *
- * A diagnosis in USI format is always assigned to the channel
- * "whole submodule" (not individual channels). The severity is always "Fault".
+ * A diagnosis in USI format is always assigned to the channel “whole submodule”
+ * (not individual channels). The severity is always “Fault”, the accumulative
+ * flag is false and the direction is "Manufacturer specific".
  *
  * It is recommended to use the standard diagnosis format in most cases.
  * Use the manufacturer specific format ("USI format") only if it's not
@@ -1875,6 +1888,7 @@ PNET_EXPORT int pnet_diag_std_remove (
  *
  * Note that the PLC can set the max alarm payload length at startup, and
  * that affects how large diagnosis entries can be sent via alarms.
+ * This payload limit can be 200 to 1432 bytes.
  *
  * This sends a diagnosis alarm.
  *
@@ -1913,6 +1927,10 @@ PNET_EXPORT int pnet_diag_usi_add (
  *
  * Note that the PLC can set the max alarm payload length at startup, and
  * that affects how large diagnosis entries can be sent via alarms.
+ * This payload limit can be 200 to 1432 bytes.
+ *
+ * The Profinet standard says that diagnosis updates should not be done at a
+ * higher frequency than 1 Hz.
  *
  * This sends a diagnosis alarm.
  *
@@ -1973,6 +1991,7 @@ PNET_EXPORT int pnet_diag_usi_remove (
  *
  * Note that the PLC can set the max alarm payload length at startup, and
  * that affects how large diagnosis entries can be sent via alarms.
+ * This payload limit can be 200 to 1432 bytes.
  *
  * This sends a diagnosis alarm.
  *
@@ -2031,6 +2050,7 @@ PNET_EXPORT int pnet_diag_add (
  *
  * Note that the PLC can set the max alarm payload length at startup, and
  * that affects how large diagnosis entries can be sent via alarms.
+ * This payload limit can be 200 to 1432 bytes.
  *
  * This sends a diagnosis alarm.
  *

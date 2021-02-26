@@ -280,7 +280,7 @@ static bool pf_dcp_check_sam (pnet_t * net, const pnet_ethaddr_t * mac)
  * and also that it matches the local MAC address.
  *
  * This check was added to handle situation where network
- * interface is in promiscous mode and the need to filter out
+ * interface is in promiscuous mode and the need to filter out
  * DCP requests intended for other devices.
  *
  * @param local_mac        In: Local MAC address. Should be the
@@ -1980,6 +1980,11 @@ void pf_dcp_init (pnet_t * net)
    net->dcp_led_timeout = 0;
    net->dcp_identresp_timeout = 0;
    net->dcp_sam = mac_nil;
+
+   LOG_DEBUG (
+      PF_DCP_LOG,
+      "DCP(%d): Activate. Register frame handlers.\n",
+      __LINE__);
 
    /* Insert handlers for our specific frame_ids */
    pf_eth_frame_id_map_add (net, PF_DCP_HELLO_FRAME_ID, pf_dcp_hello_ind, NULL);

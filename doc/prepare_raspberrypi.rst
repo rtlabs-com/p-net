@@ -1,7 +1,12 @@
+.. _prepare_raspberry:
+
 Installation and configuration of Raspberry Pi
 ==============================================
-The p-net stack and sample application
-has been tested with:
+This page consists an installation guide to use if you have a Linux laptop,
+and a separate guide to use with a Windows laptop.
+
+The p-net stack and sample application has been tested with:
+
 * Raspberry Pi 3 Model B+
 
 To avoid problems it is recommended to start with a fresh
@@ -9,15 +14,20 @@ Raspberry Pi OS image.
 
 When running the Raspberry Pi as a profinet IO-device using p-net, the
 network settings of the Raspberry Pi will be changed by Profinet.
-Therefore it is highly recommended to use the serial console and not ssh
-or you may end up in a situation were you have difficulties connecting to,
-or recovering your device. If you currently do not have a suitable serial
-dongle you can still build and run p-net with the sample application but
-you will run into problem when a PLC is used for configuration.
+Therefore it is highly recommended to use a keyboard, mouse and monitor or
+a serial cable.
 
-Installation using Linux
-------------------------
-Burn a SD-card with Raspberry Pi OS, by using the Raspberry Pi imager.
+If you use ssh you may end up in a situation were you have difficulties
+connecting to, or recovering your device. If you currently do not have a
+suitable USB-to-serial cable you can still build and run p-net with the
+sample application but you might run into problem when a PLC is used for
+configuration.
+
+
+Installation using a Linux laptop
+---------------------------------
+Burn a SD-card with Raspberry Pi OS, by using the "Raspberry Pi imager"
+software and a SD card reader.
 A card size of 16 - 32 GByte is recommended.
 Follow the instructions on the page https://www.raspberrypi.org/software/
 Select the standard "Raspberry Pi OS" operating system.
@@ -70,8 +80,15 @@ Log in to it::
 
 Enter the password mentioned just above.
 
-Installation using Windows
---------------------------
+If you would connect your Raspberry Pi to a WiFi network, follow the
+guide in https://www.raspberrypi.org/documentation/configuration/wireless/wireless-cli.md
+
+.. note:: If you are following the tutorial and are setting up the IO-device,
+          you should head back now. See :ref:`tutorial`.
+
+
+Installation using a Windows laptop
+-----------------------------------
 This section describes how to install the Raspberry Pi OS
 and how to enable ssh and serial console so that the Raspberry Pi can be
 used in headless mode without a display and keyboard connected.
@@ -132,16 +149,24 @@ Reboot and the Raspberry Pi is now ready to run the p-net sample application::
 
     sudo reboot
 
+If you would connect your Raspberry Pi to a WiFi network, follow the
+guide in https://www.raspberrypi.org/documentation/configuration/wireless/wireless-cli.md
 
-Connect a serial cable to Raspberry Pi
---------------------------------------
+.. note:: If you are following the tutorial and are setting up the IO-device,
+          you should head back now. See :ref:`tutorial`.
+
+
+Optionally connect a serial cable to Raspberry Pi
+-------------------------------------------------
 The p-net Profinet stack will change the IP-address of the Raspberry Pi when
 running it as an IO-Device (as requested by the PLC), why it can be
-inconvenient to connect to it via ssh. Using a serial cable to connect it to
-your laptop can then be helpful.
+inconvenient to connect to it via ssh. You can use a keyboard, mouse and a
+monitor to connect to the Raspberry Pi. Using a serial cable to connect it to
+your laptop can then be helpful if a keyboard etc not is available.
 
 Use a USB-to-serial adapter cable with 3.3 V logic levels. For example
-Adafruit sells a popular version of those cables.
+Adafruit sells a popular version of those cables. Connect the USB end to your
+laptop and the other end to the header connector on the Raspberry Pi.
 
 If not already done, enable the serial port console by writing the line
 ``enable_uart=1`` in the file ``/boot/config.txt``.
@@ -239,10 +264,15 @@ Instead modify the file ``/etc/dhcpcd.conf`` to include these lines::
 You can still ping the <hostname>.local address to find it on the network.
 To re-enable DHCP, remove the lines again from ``/etc/dhcpcd.conf``.
 
+Once you have prepared the IP address etc on the Raspberry Pi intended for
+use as a PLC, it is time to install the Codesys runtime on it. See
+:ref:`using-codesys`.
+
 
 Advanced users only: Automatic start of sample application
 ----------------------------------------------------------
-Use systemd to automatically start the p-net sample application on startup.
+Use systemd to automatically start the p-net sample application at boot on a
+Raspberry Pi.
 Place a systemd unit file here: ``/lib/systemd/system/pnet-sampleapp.service``
 
 An example file is available in the ``sample_app/`` directory of this

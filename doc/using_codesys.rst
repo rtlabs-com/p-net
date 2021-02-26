@@ -1,3 +1,5 @@
+.. _using-codesys:
+
 Using Codesys soft PLC
 ======================
 We run the Codesys ("COntroller DEvelopment SYStem") runtime on a Raspberry Pi,
@@ -15,21 +17,25 @@ Download "CODESYS Development System V3". The file is named for example
 the icon.
 
 Also download "CODESYS Control for Raspberry Pi SL".
+You can still download it without paying the listed price, but it will then
+run as a trial version for which you need to restart the Codesys runtime on the
+Raspberry Pi every two hours.
 Install it by double-clicking the ``.package`` file.
 
 Restart the program after the installation.
 
-If you use the trial version, you need to restart the Codesys runtime on the
-Raspberry Pi every two hours.
 
-
-Scan network to find Raspberry Pi, and install the Codesys runtime onto it
---------------------------------------------------------------------------
+Scan network to find your PLC Raspberry Pi, and install the Codesys runtime onto it
+-----------------------------------------------------------------------------------
 Make sure your Windows machine and the Raspberry Pi are connected to the
 same local network.
 
 In Codesys on Windows, use the menu Tools -> "Update Raspberry Pi".
 Click "Scan" to find the IP address.
+In this tutorial the IP address of the PLC Raspberry Pi is ``192.168.0.100``.
+
+It is possible to install the runtime on the PLC Raspberry Pi as long as you
+know its IP address, even if it doesn't show up during the scan.
 
 Click "Install" for the Codesys Runtime package. Use "Standard" runtime
 in the pop-up window.
@@ -61,8 +67,8 @@ select the GSDML file from your hard drive.
   right-click and select Add Device. Use “Ethernet adapter”, “Ethernet”.
 * On the "Ethernet", right-click and select Add Device.
   Use "Profinet IO master", "PN-Controller".
-* On the "PN_Controller", right-click and select Add Device. Use "rt-labs DEMO device".
-* On the "rt_labs_DEMO_device", right-click and select Add Device. Use "8 bits I 8 bits 0".
+* On the "PN_Controller", right-click and select Add Device. Use "P-Net Sample App".
+* On the "P_Net_Sample_App", right-click and select Add Device. Use "DIO 8xLogicLevel".
 
 Double-click the "Ethernet" node in the left menu. Select interface "eth0".
 The IP address will be updated accordingly.
@@ -70,10 +76,12 @@ The IP address will be updated accordingly.
 Double-click the "PN_controller" node in the left menu. Adjust the IP range
 using "First IP" and "Last IP" to both have the existing IP-address of your
 IO-device (for example a Linux laptop or embedded Linux board running the
-sample_app).
+sample_app). For this tutorial we use the “First IP” ``192.168.0.50``
+and “Last IP” ``192.168.0.60``.
 
-Double-click the "rt_labs_DEMO_device" node in the left menu. Set the
+Double-click the "P_Net_Sample_App" node in the left menu. Set the
 IP-address to the existing address of your IO-device.
+In this tutorial we use ``192.168.0.50``.
 
 
 Structured Text programming language for PLCs
@@ -121,9 +129,12 @@ Program section::
     END_IF
     in_pin_button_LED_previous := in_pin_button_LED;
 
-On the "_8_bits_I_8_bits_O" node, right-click and select "Edit IO mapping".
-Double-click the row that you would like the edit.
-Map "Input Bit 7" to "in_pin_button_LED", and "Output Bit 7" to "out_pin_LED"
+On the "DIO_8xLogicLevel" node in the left-side menu,
+right-click and select "Edit IO mapping".
+Open the "Input 8 bits" row by clicking the small ``+`` sign.
+Double-click the icon on the row that you would like the edit.
+Map "Input Bit 7" (found via Application/PLC_PRG) to "in_pin_button_LED",
+and "Output Bit 7" to "out_pin_LED".
 
 In the "Application -> MainTask" select "Cyclic" with 4 ms.
 
@@ -152,174 +163,10 @@ IP address, and a PN-DCP packet to ask for the IO-device with the name
 
 Running the application
 -----------------------
-See the "Tutorial" page.
+Now it is time to run the application, so head back to the :ref:`tutorial` page.
 
 Once the Codesys softplc running on the Raspberry Pi has been configured,
 you can turn off the personal computer (running the Codesys desktop application)
 used to configure it.
 Remember that you need to power cycle the Raspberry Pi running the softplc every
 two hours, if using the trial version.
-
-The remaining text on this page is about advanced topics, and not necessary
-for running the sample app in the tutorial.
-
-
-Adjust PLC timing settings
---------------------------
-It is possible to adjust the cycle time that the IO-controller (PLC) is using
-for cyclic data communication with an IO-device.
-
-In the left menu, double-click the "rt_labs_DEMO_device", and open the "General"
-tab. The "Communication" section shows the send clock in milliseconds, as read
-from the GSDML file. By using the "Reduction ratio" you can slow down the
-communication, by multiplying the cycle time by the factor given in the
-dropdown.
-
-It is also possible to increase the watchdog time, after which the PLC will set
-an alarm for missing incoming cyclic data. The watchdog will also shut down the
-communication, and trigger a subsequent restart of communication.
-
-In case of problems, increase the reduction ratio (and timeout) value a lot,
-and then gradually reduce it to find the smallest usable value.
-
-
-Writing and reading IO-device parameters
-----------------------------------------
-The parameters for different submodules are written as part of normal startup.
-
-To manually trigger parameter sending via Codesys, double-click the
-_8_bits_I_8_bits_O device in the left menu. Use the General tab, and the
-Settings part of the page. Right-click the parameter you would like to send,
-and select "Write to device".
-
-It is also possible to read a parameter similarly.
-
-When clicking the "Write All Values" icon, one write request is sent per
-parameter.
-
-In order to change a parameter value in the Codesys GUI, you need to first go
-offline.
-
-
-Setting output producer status (IOPS)
--------------------------------------
-Normally Codesys will set the Output PS to GOOD (0x80 = 128) when running.
-Clicking the "Output PS" checkbox on the "IOxS" tab on the Profinet IO-device
-sets the value to BAD (0).
-
-
-Displaying errors
------------------
-Click on the IO-device in the tree structure in the left part of the screen.
-Use the "Log" tab to display errors.
-
-
-Displaying alarms sent from IO-device
--------------------------------------
-Incoming process alarms and diagnosis alarms appear on multiple places in the Codesys desktop application.
-
-* Codesys Raspberry Pi: The "Log" tab show process and diagnosis alarms.
-* PN_Controller: The "Log" tab show process and diagnosis alarms.
-* IO-device: The "Log" tab show process and diagnosis alarms. The “Status” tab shows alarms related to built-in (DAP) modules.
-* Plugged module in IO-device: Process and diagnosis alarms are displayed on the “Status” tab.
-
-
-Connection status
------------------
-Go to the Profinet IO-device page, and see the "PNIO IEC objects" tab. Expand
-the topmost row. The states of these boolean fields are shown:
-
-* xRunning: Periodic data is sent
-* xBusy: The controller is trying to connect to the IO-device
-* xError: Failure to connect to the IO-device
-
-If there is no connection at all to the IO-device, the state will shift to
-xBusy from xError once every 5 seconds.
-
-
-Change IP address of IO-device
-------------------------------
-Change the IP address by double-clicking the "rt_labs_DEMO_device" node
-in the left menu, using the "General" tab. Set the IP-address to new value.
-
-The IO-controller will send the new IP address in a "DCP Set" message to the
-IO-device having the given station name. Then it will use ARP messages to
-the IO-device to find its MAC address, and to detect IP address collisions.
-
-
-Scan for devices, assign IP address, reset devices and change station name
---------------------------------------------------------------------------
-
-Scan
-^^^^
-In the left side menu, right-click the PN_Controller and select "Scan for
-devices". The running IO-devices will show up, and it is possible to see which
-modules are plugged into which slot.
-
-This is implemented in Codesys by sending the "Ident request, all" DCP
-message from the IO-controller.
-It works also if there are no IO-devices loaded in the left side hierarchy menu.
-An IO-device will respond with the "Ident OK" DCP message. Then the IO-controller
-will do a "Read implicit request" for "APIData", on which the IO device
-responds with the APIs it supports. A similar request for
-"RealIdentificationData for one API" is done by the IO-controller, on which the
-IO-device responds which modules (and submodules) are plugged into which slots
-(and subslots).
-
-Factory reset
-^^^^^^^^^^^^^
-To factory reset a device, select it in the list of scanned devices and click
-the "reset" button.
-
-At a factory reset, the IO-controller sends a "Set request" DCP message
-with suboption "Reset factory settings". After sending a response, the
-IO-device will do the factory reset and also send a LLDP message with the
-new values. Then the IO-controller sends a "Ident request, all", to which
-the IO-device responds.
-
-Set name and IP
-^^^^^^^^^^^^^^^
-To modify the station name or IP address, change the corresponding fields
-in the list of scanned devices, and the click "Set name and IP".
-
-The IO-controller sends a "Set request" DCP message
-with suboptions "Name of station" and "IP parameter". After sending a
-response, the IO-device will change IP address and station name. It will
-also send a LLDP message with the new values. Then the
-IO-controller sends a "Ident request, all", to which the IO-device responds.
-
-Flash LED
-^^^^^^^^^
-There is functionality to flash a LED on an IO-device. Select your device in
-the list of scanned devices, and click the "Blink LED" button. The button
-remains activated until you click it again.
-
-LED-blinking is done by sending the "Set request" DCP message with suboption
-"Signal" once every 5 seconds as long as the corresponding button is activated.
-
-Identification & Maintenance (I&M) data
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-In order the read Identification & Maintenance (I&M) data, the device needs to
-be present as an IO-device connected to the IO-controller in the left side menu.
-Select the device in the list of scanned devices, and click the "I&M" button.
-
-Reading I&M data is done by the IO-controller by sending four "Read implicit"
-request DCP messages, one for each of I&M0 to I&M3.
-
-When writing I&M data from Codesys, it will send a connect, write and release.
-
-
-Enabling checking of peer stationname and port ID
--------------------------------------------------
-It is possible to have the IO-device verify that it is connected to the
-correct neighbour (peer) by checking its station name and port ID (as sent
-in LLDP frames by the neighbour).
-
-Double-click the “rt_labs_DEMO_device” node in the left menu. On the "options"
-tab in the resulting window, use the fields "Peer station" and "port". It
-seems only possible to select station names from other devices or controllers
-already available in the project.
-
-During startup the PLC will send the given values to the IO-Device via a
-write command. If the correct neighbour is not present, an alarm will be sent
-by the IO-device to the PLC.

@@ -102,6 +102,9 @@ void pf_get_ar_param (pf_get_info_t * p_info, uint16_t * p_pos, pf_ar_t * p_ar);
 
 /**
  * Extract an IOCR param block from a buffer.
+ *
+ * Updates p_ar->iocrs[ix].param
+ *
  * @param p_info           Inout: The parser state.
  * @param p_pos            InOut: Position in the buffer.
  * @param ix               In:    The current index into p_ar->iocr[].

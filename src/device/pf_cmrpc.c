@@ -677,7 +677,12 @@ static int pf_ar_allocate (pnet_t * net, pf_ar_t ** pp_ar)
    if (ix < PNET_MAX_AR)
    {
       net->cmrpc_ar[ix].arep = ix + 1; /* Avoid AREP == 0 */
-      LOG_DEBUG (PF_RPC_LOG, "CMRPC(%d): Allocate AR %u\n", __LINE__, ix);
+      LOG_DEBUG (
+         PF_RPC_LOG,
+         "CMRPC(%d): Allocate AR %u (AREP %u)\n",
+         __LINE__,
+         ix,
+         net->cmrpc_ar[ix].arep);
    }
 
    return ret;
@@ -696,9 +701,10 @@ static void pf_ar_release (pf_ar_t * p_ar)
       {
          LOG_DEBUG (
             PF_RPC_LOG,
-            "CMRPC(%d): Free AR %u\n",
+            "CMRPC(%d): Free AR %u (AREP %u)\n",
             __LINE__,
-            p_ar->arep - 1);
+            p_ar->arep - 1,
+            p_ar->arep);
          memset (p_ar, 0, sizeof (*p_ar));
       }
       else
@@ -1022,7 +1028,8 @@ static void pf_cmrpc_send_with_timeout (
             {
                LOG_ERROR (
                   PF_RPC_LOG,
-                  "CMRPC(%d): pf_scheduler_add failed for response fragment\n",
+                  "CMRPC(%d): pf_scheduler_add failed for "
+                  "pf_cmrpc_send_with_timeout()\n",
                   __LINE__);
             }
          }
@@ -1179,7 +1186,8 @@ static int pf_cmrpc_rm_connect_interpret_ind (
                   LOG_DEBUG (
                      PF_RPC_LOG,
                      "CMRPC(%d): Requested start up mode: \"%s\" Initiator "
-                     "station name: \"%s\" port: 0x%04x Timeout: %u x 100 ms\n",
+                     "station name: \"%s\" UDP port: 0x%04x Timeout: "
+                     "%u x 100 ms\n",
                      __LINE__,
                      p_ar->ar_param.ar_properties.startup_mode ? "Advanced"
                                                                : "Legacy",
@@ -1194,14 +1202,19 @@ static int pf_cmrpc_rm_connect_interpret_ind (
 
             LOG_DEBUG (
                PF_RPC_LOG,
-               "CMRPC(%d): Requested send cycle time %u (in 1/32 of millisec) "
-               "Reduction ratio:%u  Watchdog factor:%" PRIu32
-               " Data hold factor:%u\n",
+               "CMRPC(%d): Requested send cycle time: %u (in 1/32 of millisec) "
+               "AREP %u CREP %u %6s Reduction ratio: %u Watchdog factor: "
+               "%" PRIu32 " Data hold factor: %u FrameID: 0x%04x\n",
                __LINE__,
                p_ar->iocrs[p_ar->nbr_iocrs].param.send_clock_factor,
+               p_ar->arep,
+               p_ar->nbr_iocrs,
+               pf_iocr_type_to_string (
+                  p_ar->iocrs[p_ar->nbr_iocrs].param.iocr_type),
                p_ar->iocrs[p_ar->nbr_iocrs].param.reduction_ratio,
                p_ar->iocrs[p_ar->nbr_iocrs].param.watchdog_factor,
-               p_ar->iocrs[p_ar->nbr_iocrs].param.data_hold_factor);
+               p_ar->iocrs[p_ar->nbr_iocrs].param.data_hold_factor,
+               p_ar->iocrs[p_ar->nbr_iocrs].param.frame_id);
 
             /* Count the types for error discovery */
             if (p_ar->iocrs[p_ar->nbr_iocrs].param.iocr_type == PF_IOCR_TYPE_INPUT)
@@ -1511,6 +1524,17 @@ static int pf_cmrpc_rm_connect_interpret_ind (
       first_block = false;
    }
 
+   LOG_DEBUG (
+      PF_RPC_LOG,
+      "CMRPC(%d): Connect request AR param: %u CR: %u Input: %u Output: %u "
+      "Alarm: %u\n",
+      __LINE__,
+      p_ar->nbr_ar_param,
+      p_ar->nbr_iocrs,
+      p_ar->input_cr_cnt,
+      p_ar->output_cr_cnt,
+      p_ar->nbr_alarm_cr);
+
    if (ret == 0)
    {
       /* Error discovery. */
@@ -1762,7 +1786,7 @@ static void pf_cmrpc_rm_connect_rsp (
  *
  * @param net              InOut: The p-net stack instance
  * @param p_sess           InOut: The session instance. Will be released on
- * error.
+ *                                error.
  * @param req_pos          In:    Position in the request buffer.
  * @param res_size         In:    The size of the response buffer.
  * @param p_res            Out:   The response buffer.
@@ -1888,8 +1912,9 @@ static int pf_cmrpc_rm_connect_ind (
 /**
  * @internal
  * Parse all blocks in a release RPC request.
- * @param p_sess           InOut:The RPC session instance.
- * @param req_pos          In:   Position in the request buffer.
+ * @param p_sess           InOut: The RPC session instance. The rpc_result
+ *                                field is written when return != 0.
+ * @param req_pos          In:    Position in the request buffer.
  * @param p_release_io     Out:   The release control block.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
@@ -2176,6 +2201,11 @@ static int pf_cmrpc_rm_release_ind (
          (pf_ar_find_by_uuid (net, &release_io.ar_uuid, &p_ar) == 0) &&
          (release_io.session_key == p_ar->ar_param.session_key))
       {
+         LOG_DEBUG (
+            PF_RPC_LOG,
+            "CMRPC(%d): Releasing for AREP %u\n",
+            __LINE__,
+            p_ar->arep);
          /* Overwrite response with correct AR UUID etc */
          pf_cmrpc_rm_release_rsp (
             p_sess,
@@ -2841,7 +2871,7 @@ static int pf_cmrpc_rm_read_ind (
 
 /**
  * @internal
- * Take a DCE RPC EPM  LOOKUP request and create a response.
+ * Take a DCE RPC EPM LOOKUP request and create a response.
  * No callbacks or updates of configuration is triggered
  *
  * @param net              InOut: The p-net stack instance
@@ -3634,9 +3664,10 @@ int pf_cmrpc_rm_ccontrol_req (pnet_t * net, pf_ar_t * p_ar)
          /* NOT a fragmented request - all fits into send buffer */
          LOG_DEBUG (
             PF_RPC_LOG,
-            "CMRPC(%d): Send CControl request, total %u bytes (not "
+            "CMRPC(%d): Send CControl request for AREP %u, total %u bytes (not "
             "fragmented).\n",
             __LINE__,
+            p_ar->arep,
             p_sess->out_buf_len);
          p_sess->out_buf_send_len = p_sess->out_buf_len;
       }
@@ -3645,9 +3676,10 @@ int pf_cmrpc_rm_ccontrol_req (pnet_t * net, pf_ar_t * p_ar)
          /* We need to send a fragmented answer - Send the first fragment now */
          LOG_DEBUG (
             PF_RPC_LOG,
-            "CMRPC(%d): Send fragmented CControl request, total %u, max per "
-            "frame %u bytes.\n",
+            "CMRPC(%d): Send fragmented CControl request AREP %u, total %u, "
+            "max per frame %u bytes.\n",
             __LINE__,
+            p_ar->arep,
             p_sess->out_buf_len,
             max_req_len);
          p_sess->out_buf_send_len = max_req_len; /* This is what is sent in the
@@ -3726,7 +3758,8 @@ int pf_cmrpc_rm_ccontrol_req (pnet_t * net, pf_ar_t * p_ar)
 /**
  * @internal
  * Parse all blocks in a CControl RPC response message.
- * @param p_sess           InOut: The session instance.
+ * @param p_sess           InOut: The session instance. The rpc_result field is
+ *                                set if return != 0.
  * @param req_pos          In:    The position in the input buffer.
  * @param p_control_io     Out:   The CControl control block.
  * @return  0  if operation succeeded.
@@ -3872,7 +3905,10 @@ static int pf_cmrpc_rm_ccontrol_cnf (
    pf_control_block_t ccontrol_io;
    pf_ar_t * p_ar = p_sess->p_ar;
 
-   LOG_INFO (PF_RPC_LOG, "Incoming CCONTROL response via DCE RPC on UDP\n");
+   LOG_INFO (
+      PF_RPC_LOG,
+      "CMRPC(%d): Incoming CCONTROL response via DCE RPC on UDP\n",
+      __LINE__);
    CC_ASSERT (p_ar != NULL);
 
    memset (&ccontrol_io, 0, sizeof (ccontrol_io));
@@ -3904,12 +3940,18 @@ static int pf_cmrpc_rm_ccontrol_cnf (
             }
             else
             {
-               LOG_DEBUG (PF_RPC_LOG, "CMRPC(%d): \n", __LINE__);
+               LOG_DEBUG (
+                  PF_RPC_LOG,
+                  "CMRPC(%d): pf_cmpbe_rm_ccontrol_cnf() failed.\n",
+                  __LINE__);
             }
          }
          else
          {
-            LOG_DEBUG (PF_RPC_LOG, "CMRPC(%d): \n", __LINE__);
+            LOG_DEBUG (
+               PF_RPC_LOG,
+               "CMRPC(%d): pf_cmdev_rm_ccontrol_cnf() failed.\n",
+               __LINE__);
          }
       }
       else

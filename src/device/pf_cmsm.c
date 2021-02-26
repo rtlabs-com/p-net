@@ -167,10 +167,11 @@ int pf_cmsm_cmdev_state_ind (
 
    LOG_DEBUG (
       PNET_LOG,
-      "CMSM(%d): Received event %s from CMDEV. Our state %s.\n",
+      "CMSM(%d): Received event %s from CMDEV. Our state %s. AREP %u\n",
       __LINE__,
       pf_cmdev_event_to_string (event),
-      pf_cmsm_state_to_string (p_ar->cmsm_state));
+      pf_cmsm_state_to_string (p_ar->cmsm_state),
+      p_ar->arep);
 
    switch (p_ar->cmsm_state)
    {
@@ -213,7 +214,11 @@ int pf_cmsm_cmdev_state_ind (
       case PNET_EVENT_ABORT:
          if (p_ar->cmsm_timer != UINT32_MAX)
          {
-            LOG_DEBUG (PNET_LOG, "CMSM(%d): Stopping timer.\n", __LINE__);
+            LOG_DEBUG (
+               PNET_LOG,
+               "CMSM(%d): Stopping communication start-up timer. AREP %u\n",
+               __LINE__,
+               p_ar->arep);
             pf_scheduler_remove (net, cmsm_sync_name, p_ar->cmsm_timer);
             p_ar->cmsm_timer = UINT32_MAX; /* unused */
          }

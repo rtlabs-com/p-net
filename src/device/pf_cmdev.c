@@ -879,6 +879,16 @@ int pf_cmdev_plug_submodule (
 
       /* Inherit AR from slot module */
       p_subslot->p_ar = p_slot->p_ar;
+
+      LOG_DEBUG (
+         PNET_LOG,
+         "CMDEV(%d): Plugged submodule ident 0x%08x number in api %u "
+         "slot %u subslot %u\n",
+         __LINE__,
+         (unsigned)submod_ident_nbr,
+         (unsigned)api_id,
+         (unsigned)slot_nbr,
+         (unsigned)subslot_nbr);
    }
    else
    {
@@ -1699,7 +1709,7 @@ int pf_cmdev_check_ar_type (uint16_t ar_type)
  * @internal
  * Check the AR param for errors.
  * @param p_ar             InOut: The AR instance.
- * @param p_stat           Out:   Detailed error information.
+ * @param p_stat           Out:   Detailed error information if return != 0.
  * @return  0  if no error was detected.
  *          -1 if an error was detected.
  */
@@ -2065,7 +2075,7 @@ static int pf_cmdev_get_exp_sub_data_descriptor (
  * @param p_ar             In:    The AR instance.
  * @param p_iocr           InOut: The IOCR instance.
  * @param dir              In:    The data direction to consider.
- * @param p_stat           Out:   Detailed error information.
+ * @param p_stat           Out:   Detailed error information. Not used.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -2141,14 +2151,16 @@ static int pf_cmdev_iocr_setup_iocs (
          {
             LOG_INFO (
                PNET_LOG,
-               "CMDEV(%d) Read IOCS size from API %u slot %u subslot %u with "
-               "data direction %u. Data %u bytes, IOPS %u bytes, IOCS %u "
-               "bytes\n",
+               "CMDEV(%d) Read          IOCS size from API %u slot %u subslot "
+               "0x%04x with data direction %u. AREP %u CREP %u Data %u "
+               "bytes, IOPS %u bytes, IOCS %u bytes\n",
                __LINE__,
                (unsigned)api_id,
                (unsigned)slot_nbr,
                (unsigned)subslot_nbr,
                (unsigned)p_desc->data_direction,
+               p_ar->arep,
+               p_iocr->crep,
                (unsigned)p_desc->submodule_data_length,
                (unsigned)p_desc->length_iops,
                p_desc->length_iocs);
@@ -2222,7 +2234,7 @@ static int pf_cmdev_iocr_setup_iocs (
  * @param p_ar             In:    The AR instance.
  * @param p_iocr           InOut: The IOCR instance.
  * @param dir              In:    The data direction to consider.
- * @param p_stat           Out:   Detailed error information.
+ * @param p_stat           Out:   Detailed error information. Not used.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -2300,13 +2312,15 @@ static int pf_cmdev_iocr_setup_data_iops (
             LOG_INFO (
                PNET_LOG,
                "CMDEV(%d) Read data and IOPS size from API %u slot %u subslot "
-               "%u with data direction %u. Data %u bytes, IOPS %u bytes, IOCS "
-               "%u bytes\n",
+               "0x%04x with data direction %u. AREP %u CREP %u Data %u bytes, "
+               "IOPS %u bytes, IOCS %u bytes\n",
                __LINE__,
                (unsigned)api_id,
                (unsigned)slot_nbr,
                (unsigned)subslot_nbr,
                (unsigned)p_desc->data_direction,
+               p_ar->arep,
+               p_iocr->crep,
                (unsigned)p_desc->submodule_data_length,
                (unsigned)p_desc->length_iops,
                p_desc->length_iocs);
@@ -2405,7 +2419,7 @@ static int pf_cmdev_iocr_setup_data_iops (
  * expected (sub-)modules.
  * @param p_ar             InOut: The AR instance.
  * @param crep             In:    The IOCR index.
- * @param p_stat           Out:   Detailed error information.
+ * @param p_stat           Out:   Detailed error information. Not used.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -2515,7 +2529,7 @@ int pf_cmdev_check_no_straddle (
  * Check if a data_desc overlaps any previous data_desc in same iocrs[].
  * @param p_iocr           In:    The iocrs instance.
  * @param ix_this          In:    The data_desc index to verify.
- * @param p_stat           Out:   Detailed error information.
+ * @param p_stat           Out:   Detailed error information if return != 0.
  * @return  0  If this area does not overlap any previously defined area.
  *          -1 If there is overlap.
  */
@@ -2602,6 +2616,7 @@ static int pf_cmdev_check_iocr_overlap (
          }
       }
    }
+
    if (ret != 0)
    {
       pf_set_error (
@@ -2649,6 +2664,7 @@ static int pf_cmdev_check_iocr_overlap (
             }
          }
       }
+
       if (ret != 0)
       {
          pf_set_error (
@@ -2667,7 +2683,7 @@ static int pf_cmdev_check_iocr_overlap (
  * @internal
  * Perform final validation of IOCR APIs, after the data_desc has been set up.
  * @param p_ar             In:    The AR instance.
- * @param p_stat           Out:   Detailed error information.
+ * @param p_stat           Out:   Detailed error information if return != 0.
  * @return  0  if no error was found.
  *          -1 if an error was found.
  */
@@ -3040,7 +3056,7 @@ static int pf_cmdev_check_iocr_apis (pf_ar_t * p_ar, pnet_result_t * p_stat)
  * Check the IOCR param of an AR for errors.
  * @param net              InOut: The p-net stack instance
  * @param p_ar             InOut: The AR instance.
- * @param p_stat           Out:   Detailed error information.
+ * @param p_stat           Out:   Detailed error information if return != 0.
  * @return  0  if no error was found
  *          -1 if an error was found.
  */
@@ -3412,7 +3428,7 @@ static int pf_cmdev_check_iocr_param (
  * @param p_exp_mod        In:   The expected sub-module instance.
  * @param p_cfg_api        InOut: The configured API instance.
  * @param p_cfg_slot       InOut: The configured module instance.
- * @param p_stat           Out:   Detailed error information.
+ * @param p_stat           Out:   Detailed error information if return != 0.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -3813,7 +3829,7 @@ static int pf_cmdev_exp_submodule_configure (
  * @param net              InOut: The p-net stack instance
  * @param p_exp_api        In:    The expected API instance.
  * @param p_cfg_api        InOut: The configured API instance.
- * @param p_stat           Out:   Detailed error information.
+ * @param p_stat           Out:   Detailed error information if return != 0.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -3977,7 +3993,7 @@ static int pf_cmdev_exp_modules_configure (
  *
  * @param net              InOut: The p-net stack instance
  * @param p_ar             InOut: The AR instance.
- * @param p_stat           Out:   Detailed error information.
+ * @param p_stat           Out:   Detailed error information if return != 0.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -4036,7 +4052,7 @@ static int pf_cmdev_exp_apis_configure (
  * @internal
  * Check the alarm CR block for errors.
  * @param p_ar             InOut: The AR instance.
- * @param p_stat           Out:   Detailed error information.
+ * @param p_stat           Out:   Detailed error information if return != 0.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -4174,8 +4190,11 @@ static int pf_cmdev_check_alarm_cr (pf_ar_t * p_ar, pnet_result_t * p_stat)
 /**
  * @internal
  * Check the AR RPC block for errors.
+ *
+ * Validates that the UDP port is in correct range.
+ *
  * @param p_ar             InOut: The AR instance.
- * @param p_stat           Out:   Detailed error information.
+ * @param p_stat           Out:   Detailed error information if return != 0.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -4213,7 +4232,7 @@ static int pf_cmdev_check_ar_rpc (pf_ar_t * p_ar, pnet_result_t * p_stat)
  *
  * @param net              InOut: The p-net stack instance
  * @param p_ar             InOut: The AR instance.
- * @param p_stat           Out:   Detailed error information.
+ * @param p_stat           Out:   Detailed error information if return != 0;
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -4350,6 +4369,7 @@ int pf_cmdev_generate_submodule_diff (pnet_t * net, pf_ar_t * p_ar)
    {
       return -1;
    }
+
    /* Generate a diff including all expected (sub)modules */
    for (exp_api_ix = 0; exp_api_ix < p_ar->nbr_exp_apis; exp_api_ix++)
    {
@@ -4638,6 +4658,14 @@ static void pf_cmdev_fix_frame_id (pnet_t * net, pf_ar_t * p_ar)
          if (frame_id <= stop)
          {
             p_iocr_param->frame_id = frame_id;
+            LOG_DEBUG (
+               PNET_LOG,
+               "CMDEV(%d): Using FrameID 0x%04x for output CR with AREP %u "
+               "CREP %u\n",
+               __LINE__,
+               frame_id,
+               p_ar->arep,
+               p_ar->iocrs[ix].crep);
          }
          else
          {

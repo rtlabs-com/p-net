@@ -13,6 +13,13 @@
  * full license information.
  ********************************************************************/
 
+/**
+ * @file
+ * @brief Implements the Parameter Begin End Protocol Machine (PBE)
+ *
+ * Disables and enables alarm sending.
+ */
+
 #ifdef UNIT_TEST
 
 #endif
@@ -131,9 +138,11 @@ int pf_cmpbe_rm_dcontrol_ind (
 
    LOG_DEBUG (
       PNET_LOG,
-      "CMPBE(%d): dcontrol %x in state %s\n",
+      "CMPBE(%d): Received DControl command bitfield 0x%04x for AREP %u "
+      "in state %s\n",
       __LINE__,
       p_control_io->control_command,
+      p_ar->arep,
       pf_cmpbe_state_to_string (p_ar->cmpbe_state));
    switch (p_ar->cmpbe_state)
    {

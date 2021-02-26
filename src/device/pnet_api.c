@@ -288,6 +288,12 @@ int pnet_set_primary_state (pnet_t * net, bool primary)
    uint16_t cr_ix;
    pf_ar_t * p_ar = NULL;
 
+   LOG_DEBUG (
+      PNET_LOG,
+      "API(%d): Application sets primary state to %d\n",
+      __LINE__,
+      primary);
+
    for (ar_ix = 0; ar_ix < PNET_MAX_AR; ar_ix++)
    {
       p_ar = pf_ar_find_by_index (net, ar_ix);
@@ -312,6 +318,12 @@ int pnet_set_redundancy_state (pnet_t * net, bool redundant)
    uint16_t ar_ix;
    uint16_t cr_ix;
    pf_ar_t * p_ar = NULL;
+
+   LOG_DEBUG (
+      PNET_LOG,
+      "API(%d): Application sets redundancy state to %d\n",
+      __LINE__,
+      redundant);
 
    for (ar_ix = 0; ar_ix < PNET_MAX_AR; ar_ix++)
    {
@@ -338,6 +350,12 @@ int pnet_set_provider_state (pnet_t * net, bool run)
    uint16_t cr_ix;
    pf_ar_t * p_ar = NULL;
 
+   LOG_DEBUG (
+      PNET_LOG,
+      "API(%d): Application sets provider state to %d\n",
+      __LINE__,
+      run);
+
    for (ar_ix = 0; ar_ix < PNET_MAX_AR; ar_ix++)
    {
       p_ar = pf_ar_find_by_index (net, ar_ix);
@@ -361,6 +379,12 @@ int pnet_application_ready (pnet_t * net, uint32_t arep)
    int ret = -1;
    pf_ar_t * p_ar = NULL;
 
+   LOG_DEBUG (
+      PNET_LOG,
+      "API(%d): Application calls application ready for AREP %u\n",
+      __LINE__,
+      arep);
+
    if (pf_ar_find_by_arep (net, arep, &p_ar) == 0)
    {
       ret = pf_cmdev_cm_ccontrol_req (net, p_ar);
@@ -374,6 +398,12 @@ int pnet_ar_abort (pnet_t * net, uint32_t arep)
    int ret = -1;
    pf_ar_t * p_ar = NULL;
 
+   LOG_DEBUG (
+      PNET_LOG,
+      "API(%d): Application calls AR abort for AREP %u\n",
+      __LINE__,
+      arep);
+
    if (pf_ar_find_by_arep (net, arep, &p_ar) == 0)
    {
       ret = pf_cmdev_cm_abort (net, p_ar);
@@ -386,6 +416,8 @@ int pnet_factory_reset (pnet_t * net)
 {
    uint16_t ix;
    pf_ar_t * p_ar = NULL;
+
+   LOG_DEBUG (PNET_LOG, "API(%d): Application calls factory reset.\n", __LINE__);
 
    /* Look for active connections */
    for (ix = 0; ix < PNET_MAX_AR; ix++)
@@ -405,6 +437,12 @@ int pnet_factory_reset (pnet_t * net)
 
 int pnet_remove_data_files (const char * file_directory)
 {
+   LOG_DEBUG (
+      PNET_LOG,
+      "API(%d): Application removes data files in %s\n",
+      __LINE__,
+      file_directory);
+
    return pf_cmina_remove_all_data_files (file_directory);
 }
 
@@ -465,6 +503,13 @@ int pnet_alarm_send_ack (
 {
    int ret = -1;
    pf_ar_t * p_ar = NULL;
+
+   LOG_DEBUG (
+      PNET_LOG,
+      "API(%d): Application sends alarm ack for slot %u subslot 0x%04x.\n",
+      __LINE__,
+      p_alarm_argument->slot_nbr,
+      p_alarm_argument->subslot_nbr);
 
    if (pf_ar_find_by_arep (net, arep, &p_ar) == 0)
    {

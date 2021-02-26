@@ -85,7 +85,7 @@ set(PNET_MAX_PHYSICAL_PORTS          1
 set(PNET_MAX_LOG_BOOK_ENTRIES   16
   CACHE STRING "")
 set(PNET_MAX_ALARMS             3
-  CACHE STRING "Per AR and queue. One queue for high and one for low priority alarms.")
+  CACHE STRING "Per AR and queue. One queue for high and one for low priority alarms. 'Automated RT Tester' uses 2.")
 set(PNET_MAX_ALARM_PAYLOAD_DATA_SIZE 28
   CACHE STRING "Min 24 or PNET_MAX_DIAG_MANUF_DATA_SIZE + 12. Max is 1408")
 set(PNET_MAX_DIAG_ITEMS         200

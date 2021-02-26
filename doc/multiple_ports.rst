@@ -144,6 +144,22 @@ To disable the creation of the bridge at reboot::
 
    sudo systemctl disable systemd-networkd
 
+If you do not use systemd, then a script ``enable_bridge.sh`` might be handy::
+
+   ip link add name br0 type bridge
+   ip link set br0 up
+   ip link set eth0 up
+   ip link set eth1 up
+   ip link set eth0 master br0
+   ip link set eth1 master br0
+
+And correspondingly ``disable_bridge.sh``::
+
+   ip link set eth0 nomaster
+   ip link set eth1 nomaster
+   ip link set br0 down
+   ip link delete br0 type bridge
+
 
 Configuration of p-net stack and sample application
 ---------------------------------------------------------

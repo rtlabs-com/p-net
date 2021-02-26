@@ -90,9 +90,10 @@ static void pf_cmio_set_state (pf_ar_t * p_ar, pf_cmio_state_values_t state)
    {
       LOG_DEBUG (
          PNET_LOG,
-         "CMIO(%d): New state %s\n",
+         "CMIO(%d): New state %s for AREP: %u\n",
          __LINE__,
-         pf_cmio_state_to_string (state));
+         pf_cmio_state_to_string (state),
+         p_ar->arep);
       p_ar->cmio_state = state;
    }
 }
@@ -163,10 +164,11 @@ int pf_cmio_cmdev_state_ind (
 
    LOG_DEBUG (
       PNET_LOG,
-      "CMIO(%d): Received event %s from CMDEV. Our state %s.\n",
+      "CMIO(%d): Received event %s from CMDEV. Our state %s. AREP %u\n",
       __LINE__,
       pf_cmdev_event_to_string (event),
-      pf_cmio_state_to_string (p_ar->cmio_state));
+      pf_cmio_state_to_string (p_ar->cmio_state),
+      p_ar->arep);
 
    switch (p_ar->cmio_state)
    {
@@ -300,10 +302,11 @@ int pf_cmio_cpm_state_ind (
          {
             LOG_INFO (
                PNET_LOG,
-               "CMIO(%d): CPM state change. CMIO state is WDATA. crep: %u, CPM "
-               "start=%s\n",
+               "CMIO(%d): CPM state change. CMIO state is WDATA. CREP: %u "
+               "AREP: %u CPM start=%s\n",
                __LINE__,
                crep,
+               p_ar->arep,
                start ? "true" : "false");
          }
          p_ar->iocrs[crep].cpm.cmio_start = start;
@@ -318,10 +321,11 @@ int pf_cmio_cpm_state_ind (
       {
          LOG_INFO (
             PNET_LOG,
-            "CMIO(%d): CPM is stopping. CMIO state is DATA. Aborting. crep: "
-            "%u\n",
+            "CMIO(%d): CPM is stopping. CMIO state is DATA. Aborting. CREP: "
+            "%u AREP: %u\n",
             __LINE__,
-            crep);
+            crep,
+            p_ar->arep);
 
          /* if (crep != crep.mcpm) not possible - handled elsewhere */
          (void)pf_cmdev_state_ind (net, p_ar, PNET_EVENT_ABORT);
@@ -350,9 +354,11 @@ int pf_cmio_cpm_new_data_ind (pf_ar_t * p_ar, uint16_t crep, bool new_data)
          {
             LOG_DEBUG (
                PNET_LOG,
-               "CMIO(%d): New data ind from CPM. (crep=%u) new_data=%s\n",
+               "CMIO(%d): New data ind from CPM. CREP: %u AREP: %u "
+               "new_data=%s\n",
                __LINE__,
                crep,
+               p_ar->arep,
                new_data ? "true" : "false");
          }
 
