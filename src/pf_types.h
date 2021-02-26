@@ -953,6 +953,13 @@ typedef struct pf_diag_item
    uint16_t next; /* Next in list (array index) */
 } pf_diag_item_t;
 
+/* Incoming alarm frames */
+typedef struct pf_apmr_msg
+{
+   uint16_t frame_id_pos;
+   pnal_buf_t * p_buf;
+} pf_apmr_msg_t;
+
 typedef struct pf_alarm_payload
 {
    uint16_t usi;
@@ -984,13 +991,26 @@ typedef struct pf_alarm_data
    pf_alarm_payload_t payload;
 } pf_alarm_data_t;
 
-typedef struct pf_alarm_queue
+typedef struct pf_queue_accountant
 {
-   pf_alarm_data_t items[PNET_MAX_ALARMS];
    uint16_t write_index;
    uint16_t read_index;
    uint16_t count;
-} pf_alarm_queue_t;
+   uint16_t max_items;
+   os_mutex_t * mutex;
+} pf_queue_accountant_t;
+
+typedef struct pf_alarm_send_queue
+{
+   pf_queue_accountant_t accountant;
+   pf_alarm_data_t items[PNET_MAX_ALARMS];
+} pf_alarm_send_queue_t;
+
+typedef struct pf_alarm_receive_queue
+{
+   pf_queue_accountant_t accountant;
+   pf_apmr_msg_t items[PNET_MAX_ALARMS];
+} pf_alarm_receive_queue_t;
 
 #define PF_MAX_SESSION (2 * (PNET_MAX_AR) + 1) /* 2 per ar, and one spare. */
 
@@ -1822,12 +1842,6 @@ typedef enum pf_apmr_state_values
    PF_APMR_STATE_WCNF
 } pf_apmr_state_values_t;
 
-typedef struct pf_apmr_msg
-{
-   uint16_t frame_id_pos;
-   pnal_buf_t * p_buf;
-} pf_apmr_msg_t;
-
 /*
  * This type contains all the information needed for one
  * APMS/APMR pair.
@@ -1851,14 +1865,10 @@ typedef struct pf_apmx
    uint16_t exp_seq_count;
    uint16_t exp_seq_count_o;
 
-   /* The receive queue (mailbox, contains pointers to messages) */
-   os_mbox_t * p_alarm_q;
+   /* The alarm frame receive queue */
+   pf_alarm_receive_queue_t alarm_receive_q;
 
-   /* The actual incoming messages handled in the receive queue (mailbox) */
-   pf_apmr_msg_t apmr_msg[PNET_MAX_ALARMS];
-   uint16_t apmr_msg_nbr;
-
-   /* Latest sent alarm, for possible retransmission */
+   /* Latest sent alarm frame, for possible retransmission */
    pnal_buf_t * p_rta;
 
    bool high_priority; /* True for high priority APMX. For printouts. */
@@ -2015,7 +2025,7 @@ typedef struct pf_ar
 
    /* Alarm queues for outgoing alarms: one for LOW (0) prio and one for HIGH
     * (1) prio. */
-   pf_alarm_queue_t alarm_send_q[2];
+   pf_alarm_send_queue_t alarm_send_q[2];
 
    uint16_t nbr_ar_rpc;
    pf_ar_rpc_request_t ar_rpc_request; /* From connect.req */

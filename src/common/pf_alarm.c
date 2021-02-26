@@ -38,8 +38,18 @@
  * for high prio.
  *
  * A frame handler is registered for each of the high prio and low prio
- * alarm frame IDs. The incoming frames are put into high prio and low prio
- * queues (mboxes). The periodic task handles frames in the queues.
+ * alarm frame IDs.
+ *
+ * Each AR has two alarm receive queues, one for low prio and one for high
+ * prio alarm frames. The thread responsible for processing incoming frames
+ * puts frames into the queues, and another thread (driven by the
+ * periodic task) retrieves messages from the receive queues.
+ * A message in an input queue contains a pointer to an incoming frame buffer.
+ *
+ * Each AR has its own alarm send queue. As alarms can only be processed
+ * one-by-one, a send queue is necessary. The same thread puts messages
+ * into the send queue and retrieves messages from the send queue.
+ * A message in the alarm send queue contains the full alarm, including payload.
  *
  * There are convenience functions to send different types of alarms, for
  * example process alarms.
@@ -262,11 +272,9 @@ void pf_alarm_show (const pf_ar_t * p_ar)
    printf (
       "  sequence_number             = %u\n",
       (unsigned)p_ar->alpmx[0].sequence_number);
-   printf ("  Incoming alarm queue (mbox) = %p\n", p_ar->apmx[0].p_alarm_q);
    printf (
-      "  Message number in incoming queue = %u\n",
-      p_ar->apmx[0].apmr_msg_nbr);
-
+      "  Number of frames in incoming queue = %u\n",
+      p_ar->apmx[0].alarm_receive_q.accountant.count);
    printf ("Alarms   (high prio)\n");
    printf (
       "  alpmi_state                 = %s\n",
@@ -295,10 +303,9 @@ void pf_alarm_show (const pf_ar_t * p_ar)
    printf (
       "  sequence_number             = %u\n",
       (unsigned)p_ar->alpmx[1].sequence_number);
-   printf ("  Incoming alarm queue (mbox) = %p\n", p_ar->apmx[1].p_alarm_q);
    printf (
-      "  Message number in incoming queue = %u\n",
-      p_ar->apmx[1].apmr_msg_nbr);
+      "  Number of frames in incoming queue = %u\n",
+      p_ar->apmx[1].alarm_receive_q.accountant.count);
 }
 
 /*****************************************************************************/
@@ -686,10 +693,10 @@ static int pf_alarm_alpmr_apmr_a_data_ind (
 /**
  * @internal
  * Handle an alarm frame from the IO-controller, and put it into the
- * queue (mbox).
+ * correct alarm frame input queue.
  *
  * There are two instances of this handler, one for low prio alarm frames
- * and one for high prio alarm frames (delivering to separare mboxes).
+ * and one for high prio alarm frames (delivering to separare queues).
  *
  * All incoming Profinet frames with ID = PF_FRAME_ID_ALARM_LOW and
  * ID = PF_FRAME_ID_ALARM_HIGH end up here.
@@ -713,57 +720,33 @@ static int pf_alarm_apmr_frame_handler (
    void * p_arg)
 {
    pf_apmx_t * p_apmx = (pf_apmx_t *)p_arg;
-   pf_apmr_msg_t * p_apmr_msg;
+   pf_apmr_msg_t tempmsg;
    int ret = 0; /* Failed to handle frame. The frame handler needs to free
                    the buffer. */
 
    if (p_buf != NULL)
    {
-      if (p_apmx->p_alarm_q != NULL)
+      tempmsg.p_buf = p_buf;
+      tempmsg.frame_id_pos = frame_id_pos;
+
+      if (pf_alarm_receive_queue_post (&p_apmx->alarm_receive_q, &tempmsg) == 0)
       {
-         p_apmr_msg = &p_apmx->apmr_msg[p_apmx->apmr_msg_nbr];
-         if (os_mbox_post (p_apmx->p_alarm_q, (void *)p_apmr_msg, 0) == 0)
-         {
-            /* Fill message with proper content */
-            /* TODO handle race condition */
-            p_apmr_msg->p_buf = p_buf;
-            p_apmr_msg->frame_id_pos = frame_id_pos;
+         LOG_INFO (
+            PF_ALARM_LOG,
+            "Alarm(%d): Received %s prio alarm frame %p. Put in queue. \n",
+            __LINE__,
+            p_apmx->high_priority ? "high" : "low",
+            p_buf);
 
-            /* Advance the counter for next message number */
-            /* TODO: Make atomic */
-            p_apmx->apmr_msg_nbr++;
-            if (p_apmx->apmr_msg_nbr >= NELEMENTS (p_apmx->apmr_msg))
-            {
-               p_apmx->apmr_msg_nbr = 0;
-            }
-
-            LOG_INFO (
-               PF_ALARM_LOG,
-               "Alarm(%d): Received %s prio alarm frame. Put in mbox. %p\n",
-               __LINE__,
-               p_apmx->high_priority ? "high" : "low",
-               p_buf);
-
-            ret = 1; /* Means that calling function should not free buffer,
-                        as that will be done when reading the mbox */
-         }
-         else
-         {
-            LOG_ERROR (
-               PF_ALARM_LOG,
-               "Alarm(%d): Failed to put incoming %s prio alarm in mbox. "
-               "Framehandler will free %p\n",
-               __LINE__,
-               p_apmx->high_priority ? "high" : "low",
-               p_buf);
-         }
+         ret = 1; /* Means that calling function should not free buffer,
+                     as that will be done when reading the queue */
       }
       else
       {
          LOG_ERROR (
             PF_ALARM_LOG,
-            "Alarm(%d): Could not put incoming %s prio alarm frame in"
-            " mbox, as it is deallocated. Framehandler will free %p\n",
+            "Alarm(%d): Failed to put incoming %s prio alarm frame in queue. "
+            "Framehandler will free %p\n",
             __LINE__,
             p_apmx->high_priority ? "high" : "low",
             p_buf);
@@ -998,12 +981,10 @@ static int pf_alarm_apmx_activate (pnet_t * net, pf_ar_t * p_ar)
             p_ar->apmx[ix].frame_id = PF_FRAME_ID_ALARM_HIGH;
          }
 
-         if (p_ar->apmx[ix].p_alarm_q == NULL)
-         {
-            p_ar->apmx[ix].p_alarm_q = os_mbox_create (PNET_MAX_ALARMS);
-         }
-         memset (p_ar->apmx[ix].apmr_msg, 0, sizeof (p_ar->apmx[ix].apmr_msg));
-         p_ar->apmx[ix].apmr_msg_nbr = 0;
+         /* Input alarm frame queue */
+         pf_alarm_queue_mutex_create (
+            &p_ar->apmx[ix].alarm_receive_q.accountant);
+         pf_alarm_receive_queue_reset (&p_ar->apmx[ix].alarm_receive_q);
 
          p_ar->apmx[ix].timeout_us =
             100 * 1000 * p_ar->alarm_cr_request.rta_timeout_factor;
@@ -1596,11 +1577,9 @@ static int pf_alarm_apmx_close (pnet_t * net, pf_ar_t * p_ar, uint8_t err_code)
       {
          p_ar->apmx[ix].apmr_state = PF_APMR_STATE_CLOSED;
 
-         if (p_ar->apmx[ix].p_alarm_q != NULL)
-         {
-            os_mbox_destroy (p_ar->apmx[ix].p_alarm_q);
-            p_ar->apmx[ix].p_alarm_q = NULL;
-         }
+         pf_alarm_receive_queue_reset (&p_ar->apmx[ix].alarm_receive_q);
+         pf_alarm_queue_mutex_destroy (
+            &p_ar->apmx[ix].alarm_receive_q.accountant);
       }
    }
 
@@ -1973,8 +1952,7 @@ static int pf_alarm_get_diag_summary (
  * @internal
  * Handle the reception of Alarm messages for one AR instance.
  *
- * When called this function reads max 1 alarm message from its input queue
- * (mbox), and is partially parsed.
+ * This function reads alarm frames from both input queues of the AR.
  *
  * The message is normally processed in APMR/ALPMR, and indications may be sent
  * to the application. Repeated for both low and high prio queue.
@@ -1993,13 +1971,13 @@ static int pf_alarm_apmr_periodic (pnet_t * net, pf_ar_t * p_ar)
    int ret = 0;
    pf_apmx_t * p_apmx;
    uint16_t ix;
-   pf_apmr_msg_t * p_alarm_msg;
    pnal_buf_t * p_buf;
    pf_alarm_fixed_t fixed;
    uint16_t var_part_len;
    pnet_pnio_status_t pnio_status;
    pf_get_info_t get_info;
    uint16_t pos;
+   pf_apmr_msg_t inputmsg;
 
    /*
     * Periodic is run cyclically. It may run for some time.
@@ -2011,193 +1989,184 @@ static int pf_alarm_apmr_periodic (pnet_t * net, pf_ar_t * p_ar)
    {
       p_apmx = &p_ar->apmx[ix];
       p_buf = NULL;
-      while ((ret == 0) && (p_apmx->apmr_state != PF_APMR_STATE_CLOSED) &&
-             (os_mbox_fetch (p_apmx->p_alarm_q, (void **)&p_alarm_msg, 0) == 0))
+      while (
+         (ret == 0) && (p_apmx->apmr_state != PF_APMR_STATE_CLOSED) &&
+         (pf_alarm_receive_queue_fetch (&p_apmx->alarm_receive_q, &inputmsg) ==
+          0))
       {
-         if (p_alarm_msg != NULL)
+         /* Got something - extract! */
+         p_buf = inputmsg.p_buf;
+
+         /* Skip frame_id */
+         pos = inputmsg.frame_id_pos + sizeof (uint16_t);
+
+         get_info.result = PF_PARSE_OK;
+         get_info.is_big_endian = true;
+         get_info.p_buf = (uint8_t *)p_buf->payload;
+         get_info.len = p_buf->len;
+
+         /* Parse fixed part of incoming alarm frame */
+         memset (&fixed, 0, sizeof (fixed));
+         pf_get_alarm_fixed (&get_info, &pos, &fixed);
+         var_part_len = pf_get_uint16 (&get_info, &pos);
+
+         if (fixed.pdu_type.version == 1)
          {
-            /* Got something - extract! */
-            p_buf = p_alarm_msg->p_buf;
-
-            /* Skip frame_id */
-            pos = p_alarm_msg->frame_id_pos + sizeof (uint16_t);
-
-            get_info.result = PF_PARSE_OK;
-            get_info.is_big_endian = true;
-            get_info.p_buf = (uint8_t *)p_buf->payload;
-            get_info.len = p_buf->len;
-
-            /* Parse fixed part of incoming alarm frame */
-            memset (&fixed, 0, sizeof (fixed));
-            pf_get_alarm_fixed (&get_info, &pos, &fixed);
-            var_part_len = pf_get_uint16 (&get_info, &pos);
-
-            if (fixed.pdu_type.version == 1)
+            switch (fixed.pdu_type.type)
             {
-               switch (fixed.pdu_type.type)
+            case PF_RTA_PDU_TYPE_ACK:
+               LOG_DEBUG (
+                  PF_ALARM_LOG,
+                  "Alarm(%d): Got %s prio alarm ACK frame from queue. %p\n",
+                  __LINE__,
+                  p_apmx->high_priority ? "high" : "low",
+                  p_buf);
+               if (var_part_len == 0)
                {
-               case PF_RTA_PDU_TYPE_ACK:
-                  LOG_DEBUG (
-                     PF_ALARM_LOG,
-                     "Alarm(%d): Got %s prio alarm ACK frame from mbox. %p\n",
-                     __LINE__,
-                     p_apmx->high_priority ? "high" : "low",
-                     p_buf);
-                  if (var_part_len == 0)
-                  {
-                     /* Tell APMS to check for and handle ACK */
-                     (void)pf_alarm_apms_a_data_ind (net, p_apmx, &fixed);
-                  }
-                  else
-                  {
-                     LOG_ERROR (
-                        PF_ALARM_LOG,
-                        "Alarm(%d): Wrong var_part_len %u for incoming ACK "
-                        "frame\n",
-                        __LINE__,
-                        (unsigned)var_part_len);
-                     ret = 0; /* Just ignore */
-                  }
-                  break;
-               case PF_RTA_PDU_TYPE_NACK:
-                  LOG_DEBUG (
-                     PF_ALARM_LOG,
-                     "Alarm(%d): Got %s prio alarm NACK frame from mbox. %p\n",
-                     __LINE__,
-                     p_apmx->high_priority ? "high" : "low",
-                     p_buf);
-                  /* APMS: A_Data_ind  (Implements parts of it, for NACK) */
-                  if (var_part_len == 0)
-                  {
-                     /* Ignore */
-                     ret = 0;
-                  }
-                  else
-                  {
-                     LOG_ERROR (
-                        PF_ALARM_LOG,
-                        "Alarm(%d): Wrong var_part_len %u for incoming "
-                        "NACK frame\n",
-                        __LINE__,
-                        (unsigned)var_part_len);
-                     ret = 0; /* Just ignore */
-                  }
-                  break;
-               case PF_RTA_PDU_TYPE_DATA:
-                  LOG_DEBUG (
-                     PF_ALARM_LOG,
-                     "Alarm(%d): Got incoming %s prio alarm DATA frame from "
-                     "mbox. %p. "
-                     "Length on wire: %d  Var part len: %d\n",
-                     __LINE__,
-                     p_apmx->high_priority ? "high" : "low",
-                     p_buf,
-                     p_buf->len,
-                     var_part_len);
-                  ret = pf_alarm_apmr_a_data_ind (
-                     net,
-                     p_apmx,
-                     &fixed,
-                     var_part_len,
-                     &get_info,
-                     pos);
-                  break;
-               case PF_RTA_PDU_TYPE_ERR:
-                  if (var_part_len == 4) /* sizeof(pf_pnio_status_t) */
-                  {
-                     /* APMR: A_Data_ind  (Implements parts of it, for ERR) */
-                     /* APMS: A_Data_ind  (Implements parts of it, for ERR) */
-                     pf_get_pnio_status (&get_info, &pos, &pnio_status);
-
-                     /* Should we also be able to receive ERR frames to APMS?
-                      * Should its state have an effect of the result? */
-                     switch (p_apmx->apmr_state)
-                     {
-                     case PF_APMR_STATE_OPEN:
-                        LOG_DEBUG (
-                           PF_ALARM_LOG,
-                           "Alarm(%d): Got incoming alarm ERROR frame from "
-                           "mbox. %p. Error code 1 (ERRCLS): %0x02x  "
-                           "Error code 2 (ERRCODE): %0x02x\n",
-                           __LINE__,
-                           p_buf,
-                           pnio_status.error_code_1,
-                           pnio_status.error_code_2);
-                        pf_alarm_error_ind (
-                           net,
-                           p_apmx,
-                           pnio_status.error_code_1,
-                           pnio_status.error_code_2);
-                        break;
-                     default:
-                        LOG_ERROR (
-                           PF_ALARM_LOG,
-                           "Alarm(%d): Alarm received from IO-controller, but "
-                           "the APMR state is %s\n",
-                           __LINE__,
-                           pf_alarm_apmr_state_to_string (p_apmx->apmr_state));
-                        pf_alarm_error_ind (
-                           net,
-                           p_apmx,
-                           PNET_ERROR_CODE_1_APMR,
-                           PNET_ERROR_CODE_2_APMR_INVALID_STATE);
-                        break;
-                     }
-
-                     ret = 0;
-                  }
-                  else
-                  {
-                     LOG_ERROR (
-                        PF_ALARM_LOG,
-                        "Alarm(%d): Alarm ERROR frame received from "
-                        "IO-controller, but it has wrong var_part_len %u\n",
-                        __LINE__,
-                        (unsigned)var_part_len);
-                     /* Ignore */
-                     ret = 0;
-                  }
-                  break;
-               default:
+                  /* Tell APMS to check for and handle ACK */
+                  (void)pf_alarm_apms_a_data_ind (net, p_apmx, &fixed);
+               }
+               else
+               {
                   LOG_ERROR (
                      PF_ALARM_LOG,
-                     "Alarm(%d): Alarm received from IO-controller, but it "
-                     "has wrong PDU-Type.type %u\n",
+                     "Alarm(%d): Wrong var_part_len %u for incoming ACK "
+                     "frame\n",
                      __LINE__,
-                     (unsigned)fixed.pdu_type.type);
+                     (unsigned)var_part_len);
+                  ret = 0; /* Just ignore */
+               }
+               break;
+            case PF_RTA_PDU_TYPE_NACK:
+               LOG_DEBUG (
+                  PF_ALARM_LOG,
+                  "Alarm(%d): Got %s prio alarm NACK frame from queue. %p\n",
+                  __LINE__,
+                  p_apmx->high_priority ? "high" : "low",
+                  p_buf);
+               /* APMS: A_Data_ind  (Implements parts of it, for NACK) */
+               if (var_part_len == 0)
+               {
                   /* Ignore */
                   ret = 0;
-                  break;
                }
-            }
-            else
-            {
+               else
+               {
+                  LOG_ERROR (
+                     PF_ALARM_LOG,
+                     "Alarm(%d): Wrong var_part_len %u for incoming "
+                     "NACK frame\n",
+                     __LINE__,
+                     (unsigned)var_part_len);
+                  ret = 0; /* Just ignore */
+               }
+               break;
+            case PF_RTA_PDU_TYPE_DATA:
+               LOG_DEBUG (
+                  PF_ALARM_LOG,
+                  "Alarm(%d): Got incoming %s prio alarm DATA frame from "
+                  "queue. %p. "
+                  "Length on wire: %d  Var part len: %d\n",
+                  __LINE__,
+                  p_apmx->high_priority ? "high" : "low",
+                  p_buf,
+                  p_buf->len,
+                  var_part_len);
+               ret = pf_alarm_apmr_a_data_ind (
+                  net,
+                  p_apmx,
+                  &fixed,
+                  var_part_len,
+                  &get_info,
+                  pos);
+               break;
+            case PF_RTA_PDU_TYPE_ERR:
+               if (var_part_len == 4) /* sizeof(pf_pnio_status_t) */
+               {
+                  /* APMR: A_Data_ind  (Implements parts of it, for ERR) */
+                  /* APMS: A_Data_ind  (Implements parts of it, for ERR) */
+                  pf_get_pnio_status (&get_info, &pos, &pnio_status);
+
+                  /* Should we also be able to receive ERR frames to APMS?
+                   * Should its state have an effect of the result? */
+                  switch (p_apmx->apmr_state)
+                  {
+                  case PF_APMR_STATE_OPEN:
+                     LOG_DEBUG (
+                        PF_ALARM_LOG,
+                        "Alarm(%d): Got incoming alarm ERROR frame from "
+                        "queue. %p. Error code 1 (ERRCLS): %0x02x  "
+                        "Error code 2 (ERRCODE): %0x02x\n",
+                        __LINE__,
+                        p_buf,
+                        pnio_status.error_code_1,
+                        pnio_status.error_code_2);
+                     pf_alarm_error_ind (
+                        net,
+                        p_apmx,
+                        pnio_status.error_code_1,
+                        pnio_status.error_code_2);
+                     break;
+                  default:
+                     LOG_ERROR (
+                        PF_ALARM_LOG,
+                        "Alarm(%d): Alarm received from IO-controller, but "
+                        "the APMR state is %s\n",
+                        __LINE__,
+                        pf_alarm_apmr_state_to_string (p_apmx->apmr_state));
+                     pf_alarm_error_ind (
+                        net,
+                        p_apmx,
+                        PNET_ERROR_CODE_1_APMR,
+                        PNET_ERROR_CODE_2_APMR_INVALID_STATE);
+                     break;
+                  }
+
+                  ret = 0;
+               }
+               else
+               {
+                  LOG_ERROR (
+                     PF_ALARM_LOG,
+                     "Alarm(%d): Alarm ERROR frame received from "
+                     "IO-controller, but it has wrong var_part_len %u\n",
+                     __LINE__,
+                     (unsigned)var_part_len);
+                  /* Ignore */
+                  ret = 0;
+               }
+               break;
+            default:
                LOG_ERROR (
                   PF_ALARM_LOG,
-                  "Alarm(%d):  Alarm received from IO-controller, but it "
-                  "has wrong PDU-Type.version %u\n",
+                  "Alarm(%d): Alarm received from IO-controller, but it "
+                  "has wrong PDU-Type.type %u\n",
                   __LINE__,
-                  (unsigned)fixed.pdu_type.version);
+                  (unsigned)fixed.pdu_type.type);
                /* Ignore */
                ret = 0;
+               break;
             }
-
-            LOG_DEBUG (
-               PF_AL_BUF_LOG,
-               "Alarm(%d): Free received buffer %p\n",
-               __LINE__,
-               p_buf);
-            pnal_buf_free (p_buf);
-            p_buf = NULL;
          }
          else
          {
             LOG_ERROR (
                PF_ALARM_LOG,
-               "Alarm(%d): Expected buf from mbox, but got NULL\n",
-               __LINE__);
-            ret = -1;
+               "Alarm(%d):  Alarm received from IO-controller, but it "
+               "has wrong PDU-Type.version %u\n",
+               __LINE__,
+               (unsigned)fixed.pdu_type.version);
+            /* Ignore */
+            ret = 0;
          }
+
+         LOG_DEBUG (
+            PF_AL_BUF_LOG,
+            "Alarm(%d): Free received buffer %p\n",
+            __LINE__,
+            p_buf);
+         pnal_buf_free (p_buf);
+         p_buf = NULL;
       }
    }
 
@@ -2267,45 +2236,332 @@ static int pf_alarm_send_internal (
    return ret;
 }
 
+/************************ Queue handling ************************************/
+
 /**
- * Reset queues for outgoing alarms
- * @param net              InOut: The p-net stack instance
- * @param p_ar             InOut: The AR instance.
- * @return 0 is always returned
+ * @internal
+ * Create a mutex for a queue.
+ *
+ * Note that on first usage, the pf_queue_accountant_t must be fully cleared.
+ *
+ * @param p_accountant     InOut: Queue accountant
  */
-static int pf_alarm_reset_send_queues (pnet_t * net, pf_ar_t * p_ar)
+void pf_alarm_queue_mutex_create (pf_queue_accountant_t * p_accountant)
 {
-   memset (p_ar->alarm_send_q, 0, sizeof (p_ar->alarm_send_q));
+   if (p_accountant->mutex == NULL)
+   {
+      p_accountant->mutex = os_mutex_create();
+   }
+}
+
+/**
+ * @internal
+ * Destroy a mutex for a queue.
+ *
+ * @param p_accountant     InOut: Queue accountant
+ */
+void pf_alarm_queue_mutex_destroy (pf_queue_accountant_t * p_accountant)
+{
+   if (p_accountant->mutex != NULL)
+   {
+      os_mutex_destroy (p_accountant->mutex);
+      p_accountant->mutex = NULL;
+   }
+}
+
+/**
+ * @internal
+ * Check if the queue is available (initialized).
+ *
+ * @param p_accountant     InOut: Queue accountant
+ * @return true if the queue is available
+ *         false if the queue not is initialized
+ */
+bool pf_alarm_queue_is_available (pf_queue_accountant_t * p_accountant)
+{
+   return p_accountant->mutex != NULL;
+}
+
+/**
+ * @internal
+ * Lock a queue.
+ *
+ * @param p_accountant     InOut: Queue accountant
+ */
+static void pf_alarm_queue_lock (pf_queue_accountant_t * p_accountant)
+{
+   CC_ASSERT (p_accountant->mutex != NULL);
+   os_mutex_lock (p_accountant->mutex);
+}
+
+/**
+ * @internal
+ * Unlock a queue.
+ *
+ * @param p_accountant     InOut: Queue accountant
+ */
+static void pf_alarm_queue_unlock (pf_queue_accountant_t * p_accountant)
+{
+   CC_ASSERT (p_accountant->mutex != NULL);
+   os_mutex_unlock (p_accountant->mutex);
+}
+
+/**
+ * @internal
+ * Reset the queue indexes.
+ *
+ * NOTE: Remember to lock/unlock the queue before and after this operation.
+ *
+ * @param p_accountant     InOut: Queue accountant
+ */
+static void pf_alarm_queue_accountant_reset (pf_queue_accountant_t * p_accountant)
+{
+   p_accountant->count = 0;
+   p_accountant->read_index = 0;
+   p_accountant->write_index = 0;
+}
+
+/**
+ * @internal
+ * Get next write index for a queue.
+ *
+ * NOTE: Remember to lock/unlock the queue before and after this operation.
+ *
+ * @param p_accountant     InOut: Queue accountant
+ * @param p_write_index    Out:   Write index to use
+ * @return 0 if there is room in the queue
+ *         -1 if the queue is full
+ */
+static int pf_alarm_queue_get_writeindex (
+   pf_queue_accountant_t * p_accountant,
+   uint16_t * p_write_index)
+{
+   if (p_accountant->count >= PNET_MAX_ALARMS)
+   {
+      return -1;
+   }
+
+   *p_write_index = p_accountant->write_index;
+
+   p_accountant->write_index++;
+   if (p_accountant->write_index >= PNET_MAX_ALARMS)
+   {
+      p_accountant->write_index = 0;
+   }
+   p_accountant->count++;
+
    return 0;
 }
 
 /**
- * Add an alarm to the send queue
- * @param q                InOut: Alarm send queue
- * @param p_alarm_data     In:    Alarm details (Alarm type, slot, subslot,
- *                                possibly payload etc)
- * @return 0  is returned if an alarm is put into the queue
- *         -1 is returned if queue is full
+ * @internal
+ * Get next read index for a queue.
+ *
+ * NOTE: Remember to lock/unlock the queue before and after this operation.
+ *
+ * @param p_accountant     InOut: Queue accountant
+ * @param p_read_index     Out:   Read index to use
+ * @return 0 if the queue has an item to read
+ *         -1 if the queue is empty
  */
-int pf_alarm_add_send_queue (
-   pf_alarm_queue_t * q,
-   const pf_alarm_data_t * p_alarm_data)
+static int pf_alarm_queue_get_readindex (
+   pf_queue_accountant_t * p_accountant,
+   uint16_t * p_read_index)
 {
-   int ret = -1;
-
-   if (q->count < PNET_MAX_ALARMS)
+   if (p_accountant->count == 0)
    {
-      memcpy (&q->items[q->write_index], p_alarm_data, sizeof (*p_alarm_data));
-      q->write_index++;
-      q->write_index %= PNET_MAX_ALARMS;
-      q->count++;
-      ret = 0;
+      return -1;
    }
-   else
+
+   *p_read_index = p_accountant->read_index;
+
+   p_accountant->read_index++;
+   if (p_accountant->read_index >= PNET_MAX_ALARMS)
+   {
+      p_accountant->read_index = 0;
+   }
+   p_accountant->count--;
+
+   return 0;
+}
+
+/**
+ * Reset queue for incoming alarm frames. Will free corresponding buffers.
+ *
+ * Note: The mutex must have been created before.
+ *       First time the pf_alarm_receive_queue_t is used it should be fully
+ *       cleared. So if this function is used immediately thereafter on the
+ *       queue it is a no-op.
+ *
+ * @param q                InOut: Alarm receive queue
+ */
+void pf_alarm_receive_queue_reset (pf_alarm_receive_queue_t * q)
+{
+   uint16_t ix;
+
+   if (pf_alarm_queue_is_available(&q->accountant) == false)
    {
       LOG_ERROR (
          PF_ALARM_LOG,
-         "Alarm(%d): Send queue is full, alarm dropped.\n",
+         "Alarm(%d): Resetting non-initialized queue.\n",
+         __LINE__);
+
+      return;
+   }
+
+   pf_alarm_queue_lock (&q->accountant);
+   pf_alarm_queue_accountant_reset (&q->accountant);
+   for (ix = 0; ix < PNET_MAX_ALARMS; ix++)
+   {
+      if (q->items[ix].p_buf != NULL)
+      {
+         pnal_buf_free (q->items[ix].p_buf);
+         q->items[ix].p_buf = NULL;
+      }
+      q->items[ix].frame_id_pos = 0;
+   }
+   pf_alarm_queue_unlock (&q->accountant);
+}
+
+/**
+ * Post an alarm frame to the receive queue
+ * @param q                InOut: Alarm receive queue
+ * @param p_alarm_frame    In:    Alarm frame
+ * @return 0  is returned if an alarm frame is posted onto the queue
+ *         -1 is returned if queue is non-available or full (Logs an error)
+ */
+int pf_alarm_receive_queue_post (
+   pf_alarm_receive_queue_t * q,
+   const pf_apmr_msg_t * p_alarm_frame)
+{
+   uint16_t write_index;
+   int ret = -1;
+
+   if (pf_alarm_queue_is_available(&q->accountant) == false)
+   {
+      LOG_ERROR (
+         PF_ALARM_LOG,
+         "Alarm(%d): Receive queue is not available, alarm frame dropped.\n",
+         __LINE__);
+
+      return ret;
+   }
+
+   pf_alarm_queue_lock (&q->accountant);
+   if (pf_alarm_queue_get_writeindex (&q->accountant, &write_index) == 0)
+   {
+      q->items[write_index].frame_id_pos = p_alarm_frame->frame_id_pos;
+      q->items[write_index].p_buf = p_alarm_frame->p_buf;
+      ret = 0;
+   }
+   pf_alarm_queue_unlock (&q->accountant);
+
+   if (ret != 0)
+   {
+      LOG_ERROR (
+         PF_ALARM_LOG,
+         "Alarm(%d): Receive queue is full, alarm frame dropped.\n",
+         __LINE__);
+   }
+
+   return ret;
+}
+
+/**
+ * Fetch an alarm frame from the receive queue
+ * @param q                InOut: Alarm receive queue
+ * @param p_alarm_frame    Out:   Alarm frame
+ * @return 0  is returned if an alarm frame is fetched from the queue
+ *         -1 is returned if queue is non-available or empty
+ */
+int pf_alarm_receive_queue_fetch (
+   pf_alarm_receive_queue_t * q,
+   pf_apmr_msg_t * p_alarm_frame)
+{
+   uint16_t read_index;
+   int ret = -1;
+
+   if (pf_alarm_queue_is_available(&q->accountant) == false)
+   {
+      return ret;
+   }
+
+   pf_alarm_queue_lock (&q->accountant);
+   if (pf_alarm_queue_get_readindex (&q->accountant, &read_index) == 0)
+   {
+      p_alarm_frame->frame_id_pos = q->items[read_index].frame_id_pos;
+      q->items[read_index].frame_id_pos = 0;
+
+      p_alarm_frame->p_buf = q->items[read_index].p_buf;
+      q->items[read_index].p_buf = NULL;
+
+      ret = 0;
+   }
+   pf_alarm_queue_unlock (&q->accountant);
+
+   return ret;
+}
+
+/**
+ * Reset queue for outgoing alarms
+ * @param q                InOut: Alarm send queue
+ */
+void pf_alarm_send_queue_reset (pf_alarm_send_queue_t * q)
+{
+   if (pf_alarm_queue_is_available(&q->accountant) == false)
+   {
+      LOG_ERROR (
+         PF_ALARM_LOG,
+         "Alarm(%d): Resetting non-initialized queue.\n",
+         __LINE__);
+
+      return;
+   }
+
+   pf_alarm_queue_lock (&q->accountant);
+   pf_alarm_queue_accountant_reset (&q->accountant);
+   memset (q->items, 0, sizeof (q->items));
+   pf_alarm_queue_unlock (&q->accountant);
+}
+
+/**
+ * Post an alarm to the send queue
+ * @param q                InOut: Alarm send queue
+ * @param p_alarm_data     In:    Alarm details (Alarm type, slot, subslot,
+ *                                possibly payload etc)
+ * @return 0  is returned if an alarm is posted onto the queue
+ *         -1 is returned if queue is non-available or full (Logs an error)
+ */
+int pf_alarm_send_queue_post (
+   pf_alarm_send_queue_t * q,
+   const pf_alarm_data_t * p_alarm_data)
+{
+   uint16_t write_index;
+   int ret = -1;
+
+   if (pf_alarm_queue_is_available(&q->accountant) == false)
+   {
+      LOG_ERROR (
+         PF_ALARM_LOG,
+         "Alarm(%d): Send queue is not available, alarm message dropped.\n",
+         __LINE__);
+
+      return ret;
+   }
+
+   pf_alarm_queue_lock (&q->accountant);
+   if (pf_alarm_queue_get_writeindex (&q->accountant, &write_index) == 0)
+   {
+      memcpy (&q->items[write_index], p_alarm_data, sizeof (*p_alarm_data));
+      ret = 0;
+   }
+   pf_alarm_queue_unlock (&q->accountant);
+
+   if (ret != 0)
+   {
+      LOG_ERROR (
+         PF_ALARM_LOG,
+         "Alarm(%d): Send queue is full, alarm message dropped.\n",
          __LINE__);
    }
 
@@ -2314,26 +2570,36 @@ int pf_alarm_add_send_queue (
 
 /**
  * Fetch an alarm from the send queue
- * @param q               InOut: Alarm send queue
- * @param p_alarm_data    Out: Alarm
+ * @param q                InOut: Alarm send queue
+ * @param p_alarm_data     Out:   Alarm details (Alarm type, slot, subslot,
+ *                                possibly payload etc)
  * @return 0  is returned if an alarm is fetched from the queue
- *         -1 is returned if queue is empty
+ *         -1 is returned if queue is empty or non-available
  */
-int pf_alarm_fetch_send_queue (
-   pf_alarm_queue_t * q,
+int pf_alarm_send_queue_fetch (
+   pf_alarm_send_queue_t * q,
    pf_alarm_data_t * p_alarm_data)
 {
+   uint16_t read_index;
    int ret = -1;
-   if (q->count > 0)
+
+   if (pf_alarm_queue_is_available(&q->accountant) == false)
    {
-      memcpy (p_alarm_data, &q->items[q->read_index], sizeof (*p_alarm_data));
-      q->read_index++;
-      q->read_index %= PNET_MAX_ALARMS;
-      q->count--;
+      return ret;
+   }
+
+   pf_alarm_queue_lock (&q->accountant);
+   if (pf_alarm_queue_get_readindex (&q->accountant, &read_index) == 0)
+   {
+      memcpy (p_alarm_data, &q->items[read_index], sizeof (*p_alarm_data));
       ret = 0;
    }
+   pf_alarm_queue_unlock (&q->accountant);
+
    return ret;
 }
+
+/****************************************************************************/
 
 /**
  * @internal
@@ -2353,7 +2619,7 @@ static void pf_alarm_almpi_periodic (pnet_t * net, pf_ar_t * p_ar)
    int res = 0;
    int16_t prio;
    pf_apmx_t * p_apmx;
-   pf_alarm_queue_t * q;
+   pf_alarm_send_queue_t * q;
    pf_alarm_data_t alarm_data;
 
    if (p_ar->alarm_enable == true)
@@ -2364,12 +2630,12 @@ static void pf_alarm_almpi_periodic (pnet_t * net, pf_ar_t * p_ar)
          q = &p_ar->alarm_send_q[prio];
          if (p_apmx->p_alpmx->alpmi_state == PF_ALPMI_STATE_W_ALARM)
          {
-            res = pf_alarm_fetch_send_queue (q, &alarm_data);
+            res = pf_alarm_send_queue_fetch (q, &alarm_data);
             if (res == 0)
             {
                (void)pf_alarm_send_internal (net, p_ar, p_apmx, &alarm_data);
                /*
-                * If a high prio alarm is found don't check low low prio
+                * If a high prio alarm is found don't check low prio
                 * alarms until next call of this operation.
                 */
                break;
@@ -2379,7 +2645,8 @@ static void pf_alarm_almpi_periodic (pnet_t * net, pf_ar_t * p_ar)
    }
 }
 
-/* ===== Common alarm functions ===== */
+/************************ Common alarm functions *****************************/
+
 void pf_alarm_enable (pf_ar_t * p_ar)
 {
    p_ar->alarm_enable = true;
@@ -2399,6 +2666,10 @@ bool pf_alarm_pending (const pf_ar_t * p_ar)
 int pf_alarm_activate (pnet_t * net, pf_ar_t * p_ar)
 {
    int ret = 0; /* Assume all goes well */
+
+   pf_alarm_queue_mutex_create (&p_ar->alarm_send_q->accountant);
+   pf_alarm_send_queue_reset (p_ar->alarm_send_q);
+
    if (pf_alarm_alpmx_activate (p_ar) != 0)
    {
       ret = -1;
@@ -2409,14 +2680,15 @@ int pf_alarm_activate (pnet_t * net, pf_ar_t * p_ar)
       ret = -1;
    }
 
-   pf_alarm_reset_send_queues (net, p_ar);
-
    return ret;
 }
 
 int pf_alarm_close (pnet_t * net, pf_ar_t * p_ar)
 {
    int ret = 0;
+
+   pf_alarm_send_queue_reset (p_ar->alarm_send_q);
+   pf_alarm_queue_mutex_destroy (&p_ar->alarm_send_q->accountant);
 
    LOG_DEBUG (
       PF_ALARM_LOG,
@@ -2708,7 +2980,7 @@ int pf_alarm_alpmr_alarm_ack (
  *          -1 if an error occurred. Errors include:
  *             Payload oversize (process alarms only)
  *             Alarms not enabled for AR
- *             Queue for outgoing alarms is full
+ *             Queue for outgoing alarms is non-available or full
  */
 static int pf_alarm_send_alarm (
    pnet_t * net,
@@ -2794,7 +3066,7 @@ static int pf_alarm_send_alarm (
       memcpy (alarm_data.payload.data, p_payload, payload_len);
    }
 
-   return pf_alarm_add_send_queue (
+   return pf_alarm_send_queue_post (
       &p_ar->alarm_send_q[high_prio ? 1 : 0],
       &alarm_data);
 }

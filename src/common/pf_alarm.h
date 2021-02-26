@@ -286,6 +286,12 @@ void pf_alarm_show (const pf_ar_t * p_ar);
 
 /************ Internal functions, made available for unit testing ************/
 
+void pf_alarm_queue_mutex_create (pf_queue_accountant_t * p_accountant);
+
+void pf_alarm_queue_mutex_destroy (pf_queue_accountant_t * p_accountant);
+
+bool pf_alarm_queue_is_available (pf_queue_accountant_t * p_accountant);
+
 void pf_alarm_add_diag_item_to_summary (
    const pf_ar_t * p_ar,
    const pf_subslot_t * p_subslot,
@@ -293,12 +299,24 @@ void pf_alarm_add_diag_item_to_summary (
    pnet_alarm_spec_t * p_alarm_spec,
    uint32_t * p_maint_status);
 
-int pf_alarm_add_send_queue (
-   pf_alarm_queue_t * q,
+void pf_alarm_receive_queue_reset (pf_alarm_receive_queue_t * q);
+
+int pf_alarm_receive_queue_post (
+   pf_alarm_receive_queue_t * q,
+   const pf_apmr_msg_t * p_alarm_frame);
+
+int pf_alarm_receive_queue_fetch (
+   pf_alarm_receive_queue_t * q,
+   pf_apmr_msg_t * p_alarm_frame);
+
+void pf_alarm_send_queue_reset (pf_alarm_send_queue_t * q);
+
+int pf_alarm_send_queue_post (
+   pf_alarm_send_queue_t * q,
    const pf_alarm_data_t * p_alarm_data);
 
-int pf_alarm_fetch_send_queue (
-   pf_alarm_queue_t * q,
+int pf_alarm_send_queue_fetch (
+   pf_alarm_send_queue_t * q,
    pf_alarm_data_t * p_alarm_data);
 
 #ifdef __cplusplus
