@@ -21,36 +21,38 @@
 
 int pnal_udp_open (pnal_ipaddr_t addr, pnal_ipport_t port)
 {
-   int ret = -1;
    struct sockaddr_in local;
    int id;
+   const int enable = 1;
 
    id = socket (PF_INET, SOCK_DGRAM, IPPROTO_UDP);
-
-   if (id < 0)
+   if (id == -1)
    {
-      ret = id;
-   }
-   else
-   {
-      /* set IP and port number */
-      local = (struct sockaddr_in){
-         .sin_family = AF_INET,
-         .sin_addr.s_addr = htonl (addr),
-         .sin_port = htons (port),
-      };
-      ret = bind (id, (struct sockaddr *)&local, sizeof (local));
-      if (ret != 0)
-      {
-         close (id);
-      }
-      else
-      {
-         ret = id;
-      }
+      return -1;
    }
 
-   return ret;
+   if (setsockopt(id, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable)) != 0)
+   {
+      goto error;
+   }
+
+   /* set IP and port number */
+   local = (struct sockaddr_in){
+      .sin_family = AF_INET,
+      .sin_addr.s_addr = htonl (addr),
+      .sin_port = htons (port),
+   };
+
+   if (bind (id, (struct sockaddr *)&local, sizeof (local)) != 0)
+   {
+      goto error;
+   }
+
+   return id;
+
+error:
+   close (id);
+   return -1;
 }
 
 int pnal_udp_sendto (
