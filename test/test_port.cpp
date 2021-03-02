@@ -24,49 +24,55 @@ class PortTest : public PnetIntegrationTest
 {
 };
 
-TEST_F (PortTest, PortGetPortList)
+class PortUnitTest : public PnetUnitTest
 {
+};
+
+TEST_F (PortUnitTest, PortGetPortList)
+{
+   pnet_t * dummystack = NULL;
    pf_lldp_port_list_t port_list;
 
    memset (&port_list, 0xff, sizeof (port_list));
 
-   pf_port_get_list_of_ports (net, 1, &port_list);
+   pf_port_get_list_of_ports (dummystack, 1, &port_list);
    EXPECT_EQ (port_list.ports[0], 0x80);
    EXPECT_EQ (port_list.ports[1], 0x00);
 
-   pf_port_get_list_of_ports (net, 2, &port_list);
+   pf_port_get_list_of_ports (dummystack, 2, &port_list);
    EXPECT_EQ (port_list.ports[0], 0xC0);
    EXPECT_EQ (port_list.ports[1], 0x00);
 
-   pf_port_get_list_of_ports (net, 4, &port_list);
+   pf_port_get_list_of_ports (dummystack, 4, &port_list);
    EXPECT_EQ (port_list.ports[0], 0xF0);
    EXPECT_EQ (port_list.ports[1], 0x00);
 
-   pf_port_get_list_of_ports (net, 8, &port_list);
+   pf_port_get_list_of_ports (dummystack, 8, &port_list);
    EXPECT_EQ (port_list.ports[0], 0xFF);
    EXPECT_EQ (port_list.ports[1], 0x00);
 
-   pf_port_get_list_of_ports (net, 9, &port_list);
+   pf_port_get_list_of_ports (dummystack, 9, &port_list);
    EXPECT_EQ (port_list.ports[0], 0xFF);
    EXPECT_EQ (port_list.ports[1], 0x80);
 
-   pf_port_get_list_of_ports (net, 12, &port_list);
+   pf_port_get_list_of_ports (dummystack, 12, &port_list);
    EXPECT_EQ (port_list.ports[0], 0xFF);
    EXPECT_EQ (port_list.ports[1], 0xF0);
 
-   pf_port_get_list_of_ports (net, 16, &port_list);
+   pf_port_get_list_of_ports (dummystack, 16, &port_list);
    EXPECT_EQ (port_list.ports[0], 0xFF);
    EXPECT_EQ (port_list.ports[1], 0xFF);
 }
 
-TEST_F (PortTest, PortCheckIterator)
+TEST_F (PortUnitTest, PortCheckIterator)
 {
+   pnet_t * dummystack = NULL;
    pf_port_iterator_t port_iterator;
    int port;
    int ix;
 
    /* Retrieve first port */
-   pf_port_init_iterator_over_ports (net, &port_iterator);
+   pf_port_init_iterator_over_ports (dummystack, &port_iterator);
    port = pf_port_get_next (&port_iterator);
    EXPECT_EQ (port, 1);
 
@@ -86,41 +92,84 @@ TEST_F (PortTest, PortCheckIterator)
    EXPECT_EQ (port, 0);
 
    /* Restart the iterator */
-   pf_port_init_iterator_over_ports (net, &port_iterator);
+   pf_port_init_iterator_over_ports (dummystack, &port_iterator);
    port = pf_port_get_next (&port_iterator);
    EXPECT_EQ (port, 1);
 }
 
-TEST_F (PortTest, loc_port_num_to_dap_subslot)
+TEST_F (PortUnitTest, PortCheckIteratorRepeatCyclic)
 {
-   uint16_t sub_slot;
-   sub_slot = pf_port_loc_port_num_to_dap_subslot (1);
-   EXPECT_EQ (sub_slot, 0x8001);
+   pnet_t * dummystack = NULL;
+   pf_port_iterator_t port_iterator;
+   int port;
+   int ix;
 
-   sub_slot = pf_port_loc_port_num_to_dap_subslot (2);
-   EXPECT_EQ (sub_slot, 0x8002);
+   /* Retrieve first port */
+   pf_port_init_iterator_over_ports (dummystack, &port_iterator);
+   port = pf_port_get_next_repeat_cyclic (&port_iterator);
+   EXPECT_EQ (port, 1);
 
-   sub_slot = pf_port_loc_port_num_to_dap_subslot (3);
-   EXPECT_EQ (sub_slot, 0x8003);
+   /* More ports might be available dependent on compile time setting */
 
-   sub_slot = pf_port_loc_port_num_to_dap_subslot (4);
-   EXPECT_EQ (sub_slot, 0x8004);
+   for (ix = 2; ix <= PNET_NUMBER_OF_PHYSICAL_PORTS; ix++)
+   {
+      port = pf_port_get_next_repeat_cyclic (&port_iterator);
+      EXPECT_EQ (port, ix);
+   }
+
+   /* Verify that we return 1 again  */
+   port = pf_port_get_next_repeat_cyclic (&port_iterator);
+   EXPECT_EQ (port, 1);
+
+   /* Continue to loop over available ports */
+   for (ix = 2; ix <= PNET_NUMBER_OF_PHYSICAL_PORTS; ix++)
+   {
+      port = pf_port_get_next_repeat_cyclic (&port_iterator);
+      EXPECT_EQ (port, ix);
+   }
+
+   /* Verify that we return 1 again  */
+   port = pf_port_get_next_repeat_cyclic (&port_iterator);
+   EXPECT_EQ (port, 1);
+
+   /* Restart the iterator */
+   pf_port_init_iterator_over_ports (dummystack, &port_iterator);
+   port = pf_port_get_next_repeat_cyclic (&port_iterator);
+   EXPECT_EQ (port, 1);
 }
 
-TEST_F (PortTest, dap_subslot_to_local_port)
+TEST_F (PortUnitTest, loc_port_num_to_dap_subslot)
 {
+   pnet_t * dummystack = NULL;
+   int port;
+   uint16_t sub_slot;
+   pf_port_iterator_t port_iterator;
+
+   pf_port_init_iterator_over_ports (dummystack, &port_iterator);
+   port = pf_port_get_next (&port_iterator);
+
+   while (port != 0)
+   {
+      sub_slot = pf_port_loc_port_num_to_dap_subslot (port);
+      EXPECT_EQ (sub_slot, 0x8000 + port);
+      port = pf_port_get_next (&port_iterator);
+   }
+}
+
+TEST_F (PortUnitTest, dap_subslot_to_local_port)
+{
+   pnet_t * dummystack = NULL;
    int port;
    int local_port_num;
    pf_port_iterator_t port_iterator;
 
-   pf_port_init_iterator_over_ports (net, &port_iterator);
+   pf_port_init_iterator_over_ports (dummystack, &port_iterator);
    port = pf_port_get_next (&port_iterator);
 
    while (port != 0)
    {
       local_port_num = pf_port_dap_subslot_to_local_port (0x8000 + port);
       EXPECT_EQ (local_port_num, port);
-
       port = pf_port_get_next (&port_iterator);
    }
 

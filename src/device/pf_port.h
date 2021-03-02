@@ -28,6 +28,13 @@ extern "C" {
 void pf_port_init (pnet_t * net);
 
 /**
+ * Init main interface data, and schedule Ethernet link monitoring
+ *
+ * @param net              In:    The p-net stack instance.
+ */
+void pf_port_main_interface_init (pnet_t * net);
+
+/**
  * Get list of local ports.
  *
  * This is the list of physical ports on the local interface.
@@ -63,6 +70,8 @@ void pf_port_init_iterator_over_ports (
  *
  * If no more ports are available, 0 is returned.
  *
+ * Will return: 1 2 3 ... PNET_NUMBER_OF_PHYSICAL_PORTS 0 0 0
+ *
  * @param p_iterator       InOut: Port iterator.
  * @return Local port number for next port on local interface.
  *         If no more ports are available, 0 is returned.
@@ -70,7 +79,22 @@ void pf_port_init_iterator_over_ports (
 int pf_port_get_next (pf_port_iterator_t * p_iterator);
 
 /**
+ * Get next local port, over and over again.
+ *
+ * After highest port number has been returned, next time 1 will be returned
+ * (and then 2 etc)
+ *
+ * Will return: 1 2 3 ... PNET_NUMBER_OF_PHYSICAL_PORTS 1 2 3 ... etc
+ *
+ * @param p_iterator       InOut: Port iterator.
+ * @return Local port number for next port on local interface.
+ */
+int pf_port_get_next_repeat_cyclic (pf_port_iterator_t * p_iterator);
+
+/**
  * Get DAP port subslot using local port number
+ *
+ * If the local port number is out of range this operation will assert.
  *
  * @param net              InOut: The p-net stack instance
  * @param loc_port_num     In:    Local port number.

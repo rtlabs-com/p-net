@@ -53,16 +53,17 @@ void pf_pdport_remove_data_files (const char * file_directory);
 /**
  * Notity PDPort that a new AR has been set up.
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In: The AR instance.
+ * @param p_ar             In:    The AR instance.
  */
 void pf_pdport_ar_connect_ind (pnet_t * net, const pf_ar_t * p_ar);
 
 /**
- * Restart lldp transmission
+ * Restart LLDP transmission
+ *
  * The current PDPort port adjustments is checked.
  * @param net              InOut: The p-net stack instance
  */
-void pf_pdport_lldp_restart (pnet_t * net);
+void pf_pdport_lldp_restart_transmission (pnet_t * net);
 
 /**
  * Read a PDPort data record/index
@@ -106,12 +107,12 @@ int pf_pdport_read_ind (
  *   - PF_IDX_DEV_PDEXP_DATA
  *   - PF_IDX_SUB_PDPORT_STATISTIC
  *
- * @param net              InOut:The p-net stack instance
- * @param p_ar             In:   The AR instance.
- * @param p_write_req      In:   The IODWrite request.
- * @param p_req_buf        In:   The request buffer.
- * @param data_length      In:   Size of the data to write.
- * @param p_result         Out:  Detailed error information.
+ * @param net              InOut: The p-net stack instance
+ * @param p_ar             In:    The AR instance.
+ * @param p_write_req      In:    The IODWrite request.
+ * @param p_req_buf        In:    The request buffer.
+ * @param data_length      In:    Size of the data to write.
+ * @param p_result         Out:   Detailed error information.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -124,37 +125,27 @@ int pf_pdport_write_req (
    pnet_result_t * p_result);
 
 /**
- * Notify PDPort that the lldp peer information has changed.
- * Verify that correct peer is connected to the port.
- * Trigger a peer station name mismatch or peer port name mismatch
- * alarm if peer check is enabled and unexpected peer info is
- * received.
+ * Notify PDPort that the LLDP peer information has changed.
+ *
+ * PDPort will later verify that correct peer is connected to the port.
  *
  * @param net              InOut: The p-net stack instance
  * @param loc_port_num     In:    Local port number.
  *                                Valid range:
  *                                1 .. PNET_NUMBER_OF_PHYSICAL_PORTS.
- * @param p_lldp_peer_info In:    Peer info
  */
-void pf_pdport_peer_indication (
-   pnet_t * net,
-   int loc_port_num,
-   const pf_lldp_peer_info_t * p_lldp_peer_info);
+void pf_pdport_peer_indication (pnet_t * net, int loc_port_num);
 
 /**
- * Notify that the lldp receive timeout has expired
- * Trigger a no peer detected alarm if peer check is enabled.
+ * Start Ethernet link monitoring
  *
  * @param net              InOut: The p-net stack instance
- * @param loc_port_num     In:    Local port number.
- *                                Valid range:
- *                                1 .. PNET_NUMBER_OF_PHYSICAL_PORTS.
  */
-void pf_pdport_peer_lldp_timeout (pnet_t * net, int loc_port_num);
+void pf_pdport_start_linkmonitor (pnet_t * net);
 
 /**
  * Run PDPort observers.
- * Run enabled checks and generate alarms.
+ * Run enabled checks and set diagnoses.
  *
  * @param net              InOut: The p-net stack instance
  */
