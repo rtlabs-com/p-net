@@ -375,7 +375,6 @@ void pf_lldp_mac_address_to_string (
 void pf_lldp_init (pnet_t * net);
 
 /**
- * @internal
  * Start or restart a timer that monitors reception of LLDP frames from peer.
  *
  * @param net              InOut: The p-net stack instance
@@ -384,15 +383,37 @@ void pf_lldp_init (pnet_t * net);
  *                                1 .. PNET_NUMBER_OF_PHYSICAL_PORTS
  * @param timeout_in_secs  In:    TTL of the peer, typically 20 seconds.
  */
-void pf_lldp_reset_peer_timeout (
+void pf_lldp_restart_peer_timeout (
    pnet_t * net,
    int loc_port_num,
    uint16_t timeout_in_secs);
 
 /**
- * Enable send of lldp frames on local port
+ * Stop a timer that monitors reception of LLDP frames from peer, if running.
  *
- * An initial lldp frame is transmitted when operation is called.
+ * No diagnosis check will be made.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param loc_port_num     In:    Local port number.
+ *                                Valid range:
+ *                                1 .. PNET_NUMBER_OF_PHYSICAL_PORTS
+ */
+void pf_lldp_stop_peer_timeout (pnet_t * net, int loc_port_num);
+
+/**
+ * Mark LLDP peer data as invalid.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param loc_port_num     In:    Local port number.
+ *                                Valid range:
+ *                                1 .. PNET_NUMBER_OF_PHYSICAL_PORTS
+ */
+void pf_lldp_invalidate_peer_info (pnet_t * net, int loc_port_num);
+
+/**
+ * Enable sending of LLDP frames on local port
+ *
+ * An initial LLDP frame is transmitted when operation is called.
  * @param net              InOut: The p-net stack instance
  * @param loc_port_num     In:    Local port number.
  *                                Valid range:
@@ -401,7 +422,7 @@ void pf_lldp_reset_peer_timeout (
 void pf_lldp_send_enable (pnet_t * net, int loc_port_num);
 
 /**
- * Disable send of lldp frames on local port
+ * Disable sending of LLDP frames on local port
  *
  * @param net              InOut: The p-net stack instance
  * @param loc_port_num     In:    Local port number.

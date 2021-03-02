@@ -23,6 +23,8 @@
  * @brief Management Physical Device Port (PD Port) data
  */
 
+static const char * shed_tag_linkmonitor = "linkmonitor";
+
 /**
  * Get configuration file name for one port
  *
@@ -82,7 +84,6 @@ static int pf_pdport_load (pnet_t * net, int loc_port_num)
 
       memcpy (&p_port_data->pdport, &pdport_config, sizeof (pdport_config));
       p_port_data->pdport.lldp_peer_info_updated = false;
-      p_port_data->pdport.lldp_peer_timeout = false;
 
       if (p_port_data->pdport.check.active == true)
       {
@@ -96,7 +97,7 @@ static int pf_pdport_load (pnet_t * net, int loc_port_num)
             p_port_data->pdport.check.peer.peer_station_name,
             p_port_data->pdport.check.peer.length_peer_port_name,
             p_port_data->pdport.check.peer.peer_port_name);
-         pf_lldp_reset_peer_timeout (
+         pf_lldp_restart_peer_timeout (
             net,
             loc_port_num,
             PF_LLDP_INITIAL_PEER_TIMEOUT);
@@ -139,7 +140,7 @@ static int pf_pdport_load (pnet_t * net, int loc_port_num)
          "peer on port %u.\n",
          __LINE__,
          loc_port_num);
-      pf_lldp_reset_peer_timeout (
+      pf_lldp_restart_peer_timeout (
          net,
          loc_port_num,
          PF_LLDP_INITIAL_PEER_TIMEOUT);
@@ -214,7 +215,6 @@ static int pf_pdport_save (pnet_t * net, int loc_port_num)
  * Initialize pdport diagnostic source
  *
  * @param diag_source      InOut: Diag source to be initialized
- * @param net              InOut: The p-net stack instance
  * @param loc_port_num     In:    Local port number.
  *                                Valid range:
  *                                1 .. PNET_NUMBER_OF_PHYSICAL_PORTS.
@@ -268,8 +268,7 @@ static void pf_pdport_remove_all_diag (pnet_t * net, int loc_port_num)
  * Init PDPort data.
  * Load port configuration from nvm.
 
- * If a check is loaded it will be run when pdport receives
- * data from lldp.
+ * If a check is loaded it will be run when PDPort receives data from LLDP.
  *
  * @param net              InOut: The p-net stack instance
  * @return  0  if the operation succeeded.
@@ -356,7 +355,7 @@ void pf_pdport_ar_connect_ind (pnet_t * net, const pf_ar_t * p_ar)
    }
 }
 
-void pf_pdport_lldp_restart (pnet_t * net)
+void pf_pdport_lldp_restart_transmission (pnet_t * net)
 {
    int port;
    pf_port_iterator_t port_iterator;
@@ -368,6 +367,7 @@ void pf_pdport_lldp_restart (pnet_t * net)
    while (port != 0)
    {
       p_port_data = pf_port_get_state (net, port);
+
       if (p_port_data->pdport.adjust.active == true)
       {
          if (
@@ -587,25 +587,24 @@ int pf_pdport_read_ind (
 
 /**
  * @internal
- * Remove no-peer-detected diagnosis if peer is available.
+ * Set no-peer-detected diagnosis if peer is missing.
+ * Remove the diagnosis if peer is available.
  *
  * @param net              InOut: The p-net stack instance
  * @param loc_port_num     In:    Local port number.
  *                                Valid range:
  *                                1 .. PNET_NUMBER_OF_PHYSICAL_PORTS.
  */
-static void pf_pdport_check_no_peer_detected_diagnosis (
-   pnet_t * net,
-   int loc_port_num)
+static void pf_pdport_check_no_peer_detected (pnet_t * net, int loc_port_num)
 {
    pnet_diag_source_t diag_source;
    uint32_t peer_timestamp;
 
+   pf_pdport_init_diag_source (&diag_source, loc_port_num);
+
    if (pf_lldp_get_peer_timestamp (net, loc_port_num, &peer_timestamp) == 0)
    {
       /* Peer available, remove no-peer-detected diagnosis */
-      pf_pdport_init_diag_source (&diag_source, loc_port_num);
-
       LOG_DEBUG (
          PNET_LOG,
          "PDPORT(%d): Peer is available on port %u. Remove no-peer-detected "
@@ -618,15 +617,35 @@ static void pf_pdport_check_no_peer_detected_diagnosis (
          PF_WRT_ERROR_REMOTE_MISMATCH,
          PF_WRT_ERROR_NO_PEER_DETECTED);
    }
+   else
+   {
+      /* Peer missing, set no-peer-detected diagnosis */
+      LOG_DEBUG (
+         PNET_LOG,
+         "PDPORT(%d): Setting no-peer-detected diagnosis for port %u\n",
+         __LINE__,
+         loc_port_num);
+      (void)pf_diag_std_add (
+         net,
+         &diag_source,
+         PNET_DIAG_CH_PROP_TYPE_UNSPECIFIED,
+         PNET_DIAG_CH_PROP_MAINT_FAULT,
+         PF_WRT_ERROR_REMOTE_MISMATCH,
+         PF_WRT_ERROR_NO_PEER_DETECTED,
+         0,
+         0);
+   }
 }
 
 /**
  * @internal
  * Run peer station name check
  *
- * Compare llpd peer information with configured pdport peer.
- * Trigger an alarm if wrong peer is connected.
+ * Compare LLDP peer information with configured pdport peer.
+ * Trigger a diagnosis if wrong peer is connected.
  * Remove diagnosis if expected peer data is received.
+ *
+ * Does nothing if no peer is available.
  *
  * @param net              InOut: The p-net stack instance
  * @param loc_port_num     In:    Local port number.
@@ -658,7 +677,8 @@ static void pf_pdport_check_peer_station_name (pnet_t * net, int loc_port_num)
       {
          LOG_DEBUG (
             PNET_LOG,
-            "PDPORT(%d): Sending peer station name mismatch alarm: \"%.*s\". "
+            "PDPORT(%d): Setting peer station name mismatch diagnosis: "
+            "\"%.*s\". "
             "Wanted peer station name: \"%.*s\"\n",
             __LINE__,
             (int)lldp_station_name.len,
@@ -698,9 +718,11 @@ static void pf_pdport_check_peer_station_name (pnet_t * net, int loc_port_num)
  * @internal
  * Run peer port name check
  *
- * Compare llpd peer information with configured pdport peer.
+ * Compare LLDP peer information with configured pdport peer.
  * Trigger an diagnosis if unexpected peer data is connected.
  * Remove diagnosis if expected peer data is received.
+ *
+ * Does nothing if no peer is available.
  *
  * @param net              InOut: The p-net stack instance
  * @param loc_port_num     In:    Local port number.
@@ -732,7 +754,7 @@ static void pf_pdport_check_peer_port_name (pnet_t * net, int loc_port_num)
       {
          LOG_DEBUG (
             PNET_LOG,
-            "PDPORT(%d): Sending peer port name mismatch alarm: \"%.*s\". "
+            "PDPORT(%d): Setting peer port name mismatch diagnosis: \"%.*s\". "
             "Wanted peer port name: \"%.*s\"\n",
             __LINE__,
             (int)lldp_port_id.len,
@@ -770,9 +792,11 @@ static void pf_pdport_check_peer_port_name (pnet_t * net, int loc_port_num)
 
 /**
  * @internal
- * Run peer check
+ * Run peer check if active
  *
- * Compare llpd peer information with configured pdport peer.
+ * Compare LLDP peer information with configured PDPort peer, if checking is
+ * active.
+ *
  * Trigger an diagnosis if unexpected peer data is connected.
  * Remove diagnosis if expected peer data is received.
  *
@@ -787,7 +811,7 @@ static void pf_pdport_run_peer_check (pnet_t * net, int loc_port_num)
 
    if (p_port_data->pdport.check.active == true)
    {
-      pf_pdport_check_no_peer_detected_diagnosis (net, loc_port_num);
+      pf_pdport_check_no_peer_detected (net, loc_port_num);
       pf_pdport_check_peer_port_name (net, loc_port_num);
       pf_pdport_check_peer_station_name (net, loc_port_num);
    }
@@ -795,33 +819,149 @@ static void pf_pdport_run_peer_check (pnet_t * net, int loc_port_num)
    {
       LOG_DEBUG (
          PNET_LOG,
-         "PDPORT(%d): We do not check peer name or portID, so no port change "
-         "alarm is sent.\n",
+         "PDPORT(%d): We do not check peer name or portID, so no port-change "
+         "diagnosis is triggered.\n",
          __LINE__);
    }
 }
 
-static void pf_pdport_peer_lldp_timeout_alarm (pnet_t * net, int loc_port_num)
+/**
+ * @internal
+ * Handle that an Ethernet link goes down.
+ *
+ * Trigger a diagnosis if a check is enabled.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param loc_port_num     In:    Local port number.
+ *                                Valid range:
+ *                                1 .. PNET_NUMBER_OF_PHYSICAL_PORTS.
+ */
+static void pf_pdport_handle_link_down (pnet_t * net, int loc_port_num)
 {
-   pnet_diag_source_t diag_source = {0};
-
-   pf_pdport_init_diag_source (&diag_source, loc_port_num);
-
-   LOG_DEBUG (
+   LOG_INFO (
       PNET_LOG,
-      "PDPORT(%d): Sending no-peer-detected alarm for port %u",
+      "PDPORT(%d): Link went down on port %u.\n",
       __LINE__,
       loc_port_num);
+   pf_lldp_stop_peer_timeout (net, loc_port_num);
+   pf_lldp_invalidate_peer_info (net, loc_port_num);
+   pf_pdport_peer_indication (net, loc_port_num);
+}
 
-   (void)pf_diag_std_add (
-      net,
-      &diag_source,
-      PNET_DIAG_CH_PROP_TYPE_UNSPECIFIED,
-      PNET_DIAG_CH_PROP_MAINT_FAULT,
-      PF_WRT_ERROR_REMOTE_MISMATCH,
-      PF_WRT_ERROR_NO_PEER_DETECTED,
-      0,
-      0);
+/**
+ * @internal
+ * Handle that an Ethernet link goes up.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param loc_port_num     In:    Local port number.
+ *                                Valid range:
+ *                                1 .. PNET_NUMBER_OF_PHYSICAL_PORTS.
+ */
+static void pf_pdport_handle_link_up (pnet_t * net, int loc_port_num)
+{
+   LOG_INFO (
+      PNET_LOG,
+      "PDPORT(%d): Link went up on port %u.\n",
+      __LINE__,
+      loc_port_num);
+}
+
+/**
+ * @internal
+ * Monitor the Ethernet link status
+ *
+ * Set approprite diagnosis, if check is enabled.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param loc_port_num     In:    Local port number.
+ *                                Valid range:
+ *                                1 .. PNET_NUMBER_OF_PHYSICAL_PORTS.
+ */
+static void pf_pdport_monitor_link (pnet_t * net, int loc_port_num)
+{
+   pnal_eth_status_t status;
+   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
+
+   if (pnal_eth_get_status (p_port_data->netif.name, &status) != 0)
+   {
+      LOG_ERROR (
+         PNET_LOG,
+         "PDPORT(%d): Failed to read link status for port %u.\n",
+         __LINE__,
+         loc_port_num);
+      return;
+   }
+
+   if (p_port_data->netif.previous_is_link_up == false && status.running)
+   {
+      pf_pdport_handle_link_up (net, loc_port_num);
+   }
+   else if (p_port_data->netif.previous_is_link_up && status.running == false)
+   {
+      pf_pdport_handle_link_down (net, loc_port_num);
+   }
+
+   p_port_data->netif.previous_is_link_up = status.running;
+}
+
+/**
+ * @internal
+ * Trigger monitoring the state of one Ethernet link.
+ *
+ * Set approprite diagnosis, if check is enabled.
+ * Will loop through all Ethernet links, one per call.
+ *
+ * This is a callback for the scheduler. Arguments should fulfill
+ * pf_scheduler_timeout_ftn_t
+ *
+ * Re-schedules itself.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param arg              In:    Not used
+ * @param current_time     In:    Not used.
+ */
+static void pf_lldp_trigger_linkmonitor (
+   pnet_t * net,
+   void * arg,
+   uint32_t current_time)
+{
+   int port =
+      pf_port_get_next_repeat_cyclic (&net->pf_interface.link_monitor_iterator);
+
+   pf_pdport_monitor_link (net, port);
+
+   if (
+      pf_scheduler_add (
+         net,
+         PF_LINK_MONITOR_INTERVAL,
+         shed_tag_linkmonitor,
+         pf_lldp_trigger_linkmonitor,
+         NULL,
+         &net->pf_interface.link_monitor_timeout) != 0)
+   {
+      LOG_ERROR (
+         PF_LLDP_LOG,
+         "LLDP(%d): Failed to reschedule Ethernet link check\n",
+         __LINE__);
+   }
+}
+
+void pf_pdport_start_linkmonitor (pnet_t * net)
+{
+   if (
+      pf_scheduler_add (
+         net,
+         PF_LINK_MONITOR_INTERVAL,
+         shed_tag_linkmonitor,
+         pf_lldp_trigger_linkmonitor,
+         NULL,
+         &net->pf_interface.link_monitor_timeout) != 0)
+   {
+      LOG_ERROR (
+         PF_LLDP_LOG,
+         "LLDP(%d): Failed to schedule Ethernet link check\n",
+         __LINE__);
+   }
 }
 
 void pf_pdport_periodic (pnet_t * net)
@@ -841,12 +981,6 @@ void pf_pdport_periodic (pnet_t * net)
       {
          p_port_data->pdport.lldp_peer_info_updated = false;
          pf_pdport_run_peer_check (net, port);
-      }
-
-      if (p_port_data->pdport.lldp_peer_timeout)
-      {
-         p_port_data->pdport.lldp_peer_timeout = false;
-         pf_pdport_peer_lldp_timeout_alarm (net, port);
       }
 
       port = pf_port_get_next (&port_iterator);
@@ -1071,7 +1205,7 @@ static int pf_pdport_write_interface_adj (
          ? "Standard"
          : "Legacy");
 
-   pf_pdport_lldp_restart (net);
+   pf_pdport_lldp_restart_transmission (net);
 
    return 0;
 }
@@ -1142,17 +1276,8 @@ int pf_pdport_write_req (
    return ret;
 }
 
-void pf_pdport_peer_indication (
-   pnet_t * net,
-   int loc_port_num,
-   const pf_lldp_peer_info_t * p_lldp_peer_info)
+void pf_pdport_peer_indication (pnet_t * net, int loc_port_num)
 {
    pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
    p_port_data->pdport.lldp_peer_info_updated = true;
-}
-
-void pf_pdport_peer_lldp_timeout (pnet_t * net, int loc_port_num)
-{
-   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
-   p_port_data->pdport.lldp_peer_timeout = true;
 }

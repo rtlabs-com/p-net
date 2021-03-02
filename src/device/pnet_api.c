@@ -54,9 +54,7 @@ int pnet_init_only (pnet_t * net, const pnet_cfg_t * p_cfg)
    pf_dcp_exit (net); /* Prepare for re-init. */
    pf_dcp_init (net); /* Start DCP */
    pf_port_init (net);
-   net->pf_interface.name_of_device_mode.mode =
-      PF_LLDP_NAME_OF_DEVICE_MODE_STANDARD;
-   net->pf_interface.name_of_device_mode.active = false;
+   pf_port_main_interface_init (net);
    pf_lldp_init (net);
    pf_pdport_init (net);
 

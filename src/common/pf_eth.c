@@ -25,8 +25,8 @@
  */
 
 #ifdef UNIT_TEST
-#define pnal_eth_init mock_pnal_eth_init
-#define pnal_eth_send mock_pnal_eth_send
+#define pnal_eth_init       mock_pnal_eth_init
+#define pnal_eth_send       mock_pnal_eth_send
 #define pnal_get_macaddress mock_pnal_get_macaddress
 #endif
 
@@ -62,6 +62,8 @@ static int pf_eth_init_netif (
       netif->mac_address.addr,
       pnal_mac_addr.addr,
       sizeof (netif->mac_address.addr));
+
+   netif->previous_is_link_up = false;
 
    return 0;
 }

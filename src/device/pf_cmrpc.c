@@ -1276,7 +1276,6 @@ static int pf_cmrpc_rm_connect_interpret_ind (
                      "CMRPC(%d): Requested max alarm data length: %u bytes\n",
                      __LINE__,
                      p_ar->alarm_cr_request.max_alarm_data_length);
-
                }
             }
             break;
@@ -1809,7 +1808,7 @@ static int pf_cmrpc_rm_connect_ind (
    }
    else
    {
-      pf_pdport_lldp_restart (net);
+      pf_pdport_lldp_restart_transmission (net);
    }
 
    LOG_DEBUG (

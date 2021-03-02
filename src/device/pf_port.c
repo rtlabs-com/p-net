@@ -43,14 +43,31 @@ void pf_port_init (pnet_t * net)
    while (port != 0)
    {
       p_port_data = pf_port_get_state (net, port);
+
       p_port_data->port_num = port;
       snprintf (
          p_port_data->port_name,
          sizeof (p_port_data->port_name),
          "port-%03u",
          (uint8_t)port); /* Cast to avoid format-truncation */
+
       port = pf_port_get_next (&port_iterator);
    }
+}
+
+void pf_port_main_interface_init (pnet_t * net)
+{
+   /* Format of LLDP frames */
+   net->pf_interface.name_of_device_mode.mode =
+      PF_LLDP_NAME_OF_DEVICE_MODE_STANDARD;
+   net->pf_interface.name_of_device_mode.active = false;
+
+   /* Ethernet link monitor */
+   pf_port_init_iterator_over_ports (
+      net,
+      &net->pf_interface.link_monitor_iterator);
+   net->pf_interface.link_monitor_timeout = UINT32_MAX;
+   pf_pdport_start_linkmonitor (net);
 }
 
 void pf_port_get_list_of_ports (
@@ -98,6 +115,22 @@ int pf_port_get_next (pf_port_iterator_t * p_iterator)
    return ret;
 }
 
+int pf_port_get_next_repeat_cyclic (pf_port_iterator_t * p_iterator)
+{
+   int ret = p_iterator->next_port;
+
+   if (p_iterator->next_port == PNET_NUMBER_OF_PHYSICAL_PORTS)
+   {
+      p_iterator->next_port = 1;
+   }
+   else
+   {
+      p_iterator->next_port += 1;
+   }
+
+   return ret;
+}
+
 pf_port_t * pf_port_get_state (pnet_t * net, int loc_port_num)
 {
    CC_ASSERT (
@@ -114,9 +147,10 @@ const pnet_port_cfg_t * pf_port_get_config (pnet_t * net, int loc_port_num)
 
 uint16_t pf_port_loc_port_num_to_dap_subslot (int loc_port_num)
 {
-   uint16_t subslot =
-      PNET_SUBSLOT_DAP_INTERFACE_1_PORT_1_IDENT + loc_port_num - PNET_PORT_1;
-   return subslot;
+   CC_ASSERT (
+      loc_port_num > 0 && loc_port_num <= PNET_NUMBER_OF_PHYSICAL_PORTS);
+   return PNET_SUBSLOT_DAP_INTERFACE_1_PORT_1_IDENT + loc_port_num -
+          PNET_PORT_1;
 }
 
 int pf_port_dap_subslot_to_local_port (uint16_t subslot)

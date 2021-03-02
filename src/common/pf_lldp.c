@@ -457,14 +457,6 @@ static void pf_lldp_add_management (
    pf_put_byte (0, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
 }
 
-/**
- * Mark lldp peer data as invalid.
- *
- * @param net              InOut: The p-net stack instance
- * @param loc_port_num     In:    Local port number.
- *                                Valid range:
- *                                1 .. PNET_NUMBER_OF_PHYSICAL_PORTS
- */
 void pf_lldp_invalidate_peer_info (pnet_t * net, int loc_port_num)
 {
    pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
@@ -509,18 +501,16 @@ static void pf_lldp_receive_timeout (
       __LINE__,
       p_port_data->port_num);
 
-   pf_pdport_peer_lldp_timeout (net, p_port_data->port_num);
    pf_lldp_invalidate_peer_info (net, p_port_data->port_num);
+   pf_pdport_peer_indication (net, p_port_data->port_num);
 }
 
-void pf_lldp_reset_peer_timeout (
+void pf_lldp_restart_peer_timeout (
    pnet_t * net,
    int loc_port_num,
    uint16_t timeout_in_secs)
 {
    pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
-
-   /* TODO Make sure the scheduling works for multiple ports */
 
    if (p_port_data->lldp.rx_timeout != 0)
    {
@@ -554,6 +544,17 @@ void pf_lldp_reset_peer_timeout (
             "LLDP(%d): Failed to add LLDP timeout\n",
             __LINE__);
       }
+   }
+}
+
+void pf_lldp_stop_peer_timeout (pnet_t * net, int loc_port_num)
+{
+   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
+
+   if (p_port_data->lldp.rx_timeout != 0)
+   {
+      pf_scheduler_remove (net, shed_tag_rx, p_port_data->lldp.rx_timeout);
+      p_port_data->lldp.rx_timeout = 0;
    }
 }
 
@@ -1886,7 +1887,7 @@ void pf_lldp_store_peer_info (
 /**
  * Apply updated peer information
  *
- * Trigger an alarm if the peer information not is as expected.
+ * Trigger a diagnosis if the peer information not is as expected.
  * Resets the peer watchdog timer.
  *
  * @param net              InOut: p-net stack instance
@@ -1902,7 +1903,7 @@ void pf_lldp_update_peer (
 {
    pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
-   pf_lldp_reset_peer_timeout (net, loc_port_num, lldp_peer_info->ttl);
+   pf_lldp_restart_peer_timeout (net, loc_port_num, lldp_peer_info->ttl);
 
    if (
       memcmp (
@@ -1913,20 +1914,15 @@ void pf_lldp_update_peer (
       /* No changes */
       return;
    }
-
-   LOG_INFO (
-      PF_LLDP_LOG,
-      "LLDP(%d): Port %d, peer info changed\n",
-      __LINE__,
-      loc_port_num);
-
    if (p_port_data->lldp.is_peer_info_received)
    {
       LOG_INFO (
          PF_LLDP_LOG,
-         "LLDP(%d): Old peer info - MAC: %02X:%02X:%02X:%02X:%02X:%02X "
+         "LLDP(%d): Peer info changed on port %d. Old peer info - MAC: "
+         "%02X:%02X:%02X:%02X:%02X:%02X "
          "Chassis ID: %s Port ID: %s\n",
          __LINE__,
+         loc_port_num,
          p_port_data->lldp.peer_info.mac_address.addr[0],
          p_port_data->lldp.peer_info.mac_address.addr[1],
          p_port_data->lldp.peer_info.mac_address.addr[2],
@@ -1939,9 +1935,10 @@ void pf_lldp_update_peer (
 
    LOG_INFO (
       PF_LLDP_LOG,
-      "LLDP(%d): New peer info - MAC: %02X:%02X:%02X:%02X:%02X:%02X "
+      "LLDP(%d): New peer info on port %d - MAC: %02X:%02X:%02X:%02X:%02X:%02X "
       "Chassis ID: %s Port ID: %s\n",
       __LINE__,
+      loc_port_num,
       lldp_peer_info->mac_address.addr[0],
       lldp_peer_info->mac_address.addr[1],
       lldp_peer_info->mac_address.addr[2],
@@ -1951,9 +1948,8 @@ void pf_lldp_update_peer (
       lldp_peer_info->chassis_id.string,
       lldp_peer_info->port_id.string);
 
-   pf_pdport_peer_indication (net, loc_port_num, lldp_peer_info);
-
    pf_lldp_store_peer_info (net, loc_port_num, lldp_peer_info);
+   pf_pdport_peer_indication (net, loc_port_num);
 }
 
 int pf_lldp_recv (
