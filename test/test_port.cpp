@@ -71,7 +71,7 @@ TEST_F (PortTest, PortCheckIterator)
    EXPECT_EQ (port, 1);
 
    /* More ports might be available dependent on compile time setting */
-   for (ix = 2; ix <= PNET_MAX_PORT; ix++)
+   for (ix = 2; ix <= PNET_NUMBER_OF_PHYSICAL_PORTS; ix++)
    {
       port = pf_port_get_next (&port_iterator);
       EXPECT_EQ (port, ix);
@@ -89,4 +89,47 @@ TEST_F (PortTest, PortCheckIterator)
    pf_port_init_iterator_over_ports (net, &port_iterator);
    port = pf_port_get_next (&port_iterator);
    EXPECT_EQ (port, 1);
+}
+
+TEST_F (PortTest, loc_port_num_to_dap_subslot)
+{
+   uint16_t sub_slot;
+   sub_slot = pf_port_loc_port_num_to_dap_subslot (1);
+   EXPECT_EQ (sub_slot, 0x8001);
+
+   sub_slot = pf_port_loc_port_num_to_dap_subslot (2);
+   EXPECT_EQ (sub_slot, 0x8002);
+
+   sub_slot = pf_port_loc_port_num_to_dap_subslot (3);
+   EXPECT_EQ (sub_slot, 0x8003);
+
+   sub_slot = pf_port_loc_port_num_to_dap_subslot (4);
+   EXPECT_EQ (sub_slot, 0x8004);
+}
+
+TEST_F (PortTest, dap_subslot_to_local_port)
+{
+   int port;
+   int local_port_num;
+   pf_port_iterator_t port_iterator;
+
+   pf_port_init_iterator_over_ports (net, &port_iterator);
+   port = pf_port_get_next (&port_iterator);
+
+   while (port != 0)
+   {
+      local_port_num = pf_port_dap_subslot_to_local_port (0x8000 + port);
+      EXPECT_EQ (local_port_num, port);
+
+      port = pf_port_get_next (&port_iterator);
+   }
+
+   /* Invalid / not port sub slot  (low)*/
+   local_port_num = pf_port_dap_subslot_to_local_port (0x8000);
+   EXPECT_EQ (local_port_num, 0);
+
+   /* Invalid / not port sub slot  (high)*/
+   local_port_num = pf_port_dap_subslot_to_local_port (
+      0x8000 + PNET_NUMBER_OF_PHYSICAL_PORTS + 1);
+   EXPECT_EQ (local_port_num, 0);
 }

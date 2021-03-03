@@ -1,6 +1,12 @@
 # Auto detect text files and perform LF normalization
 * text=auto
 
+# Do not perform LF normalization on bash scripts
+*.service text eol=lf
+*.raspberrypi text eol=lf
+src/ports/linux/set_network_parameters text eol=lf
+src/ports/linux/set_profinet_leds text eol=lf
+
 # Custom for Visual Studio
 *.cs     diff=csharp
 

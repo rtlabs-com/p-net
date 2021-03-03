@@ -187,7 +187,7 @@ static void pf_dcp_responder (pnet_t * net, void * arg, uint32_t current_time)
    {
       if (net->dcp_delayed_response_waiting == true)
       {
-         if (pf_eth_send (net, net->eth_handle, p_buf) > 0)
+         if (pf_eth_send (net, net->pf_interface.main_port.handle, p_buf) > 0)
          {
             LOG_DEBUG (
                PNET_LOG,
@@ -216,7 +216,10 @@ static void pf_dcp_responder (pnet_t * net, void * arg, uint32_t current_time)
  */
 static void pf_dcp_clear_sam (pnet_t * net, void * arg, uint32_t current_time)
 {
-   LOG_DEBUG (PF_DCP_LOG, "DCP(%d): SAM timeout. Clear stored remote MAC address.\n", __LINE__);
+   LOG_DEBUG (
+      PF_DCP_LOG,
+      "DCP(%d): SAM timeout. Clear stored remote MAC address.\n",
+      __LINE__);
    net->dcp_sam = mac_nil;
    net->dcp_sam_timeout = 0;
 }
@@ -269,6 +272,30 @@ static bool pf_dcp_check_sam (pnet_t * net, const pnet_ethaddr_t * mac)
 {
    return ((memcmp (&net->dcp_sam, &mac_nil, sizeof (net->dcp_sam))) == 0) ||
           (memcmp (&net->dcp_sam, mac, sizeof (net->dcp_sam)) == 0);
+}
+
+/**
+ * @internal
+ * Check that address is not a multi-cast address
+ * and also that it matches the local MAC address.
+ *
+ * This check was added to handle situation where network
+ * interface is in promiscous mode and the need to filter out
+ * DCP requests intended for other devices.
+ *
+ * @param local_mac        In: Local MAC address. Should be the
+ *                             MAC address of main (DAP) interface.
+ * @param destination_mac  In: Destination MAC address
+ * @return true if destination address is ok and shall packet shall
+ *         be accepted. false if not.
+ */
+bool pf_dcp_check_destination_address (
+   const pnet_ethaddr_t * local_mac,
+   const pnet_ethaddr_t * destination_mac)
+{
+   return (
+      ((destination_mac->addr[0] & 1) == 0) && /* Not multi-cast */
+      (memcmp (destination_mac, local_mac, sizeof (*destination_mac)) == 0));
 }
 
 /**
@@ -345,7 +372,7 @@ static int pf_dcp_put_block (
  * @param sub                 In:    Sub-option key.
  * @param request_is_identify In:    Usage in response to Identify request
  *                                   (skips some blocks)
- * @param append_alias_name   In:    Append alias name
+ * @param alias_name          In:    Alias name appended if != NULL
  * @return
  */
 static int pf_dcp_get_req (
@@ -356,7 +383,7 @@ static int pf_dcp_get_req (
    uint8_t opt,
    uint8_t sub,
    bool request_is_identify,
-   bool append_alias_name)
+   const char * alias_name)
 {
    int ret = 0; /* Assume all OK */
    uint8_t block_error = PF_DCP_BLOCK_ERROR_NO_ERROR;
@@ -468,8 +495,13 @@ static int pf_dcp_get_req (
          value_length = (uint16_t)strlen ((char *)p_value);
          break;
       case PF_DCP_SUB_DEV_PROP_ALIAS:
-         skip = append_alias_name ? 0 : 1;
-         value_length = (uint16_t)strlen ((char *)p_value);
+         skip = (alias_name == NULL);
+         if (!skip)
+         {
+            value_length = (uint16_t)strlen (alias_name);
+            p_value = (uint8_t *)alias_name;
+            ret = 0;
+         }
          break;
       case PF_DCP_SUB_DEV_PROP_VENDOR:
          value_length = (uint16_t)strlen ((char *)p_value);
@@ -950,7 +982,7 @@ static int pf_dcp_get_set (
       if (
          (p_rsp != NULL) &&
          (pf_dcp_check_sam (net, &p_src_ethhdr->src) == true) &&
-         ((p_src_ethhdr->dest.addr[0] & 1) == 0)) /* Not multi-cast */
+         pf_dcp_check_destination_address (mac_address, &p_src_ethhdr->dest))
       {
          /* Prepare the response */
          p_dst = (uint8_t *)p_rsp->payload;
@@ -958,7 +990,7 @@ static int pf_dcp_get_set (
          p_dst_ethhdr = (pf_ethhdr_t *)&p_dst[dst_pos];
          dst_pos += sizeof (pf_ethhdr_t);
 
-         /* Insert frame ID into reponse */
+         /* Insert frame ID into response */
          p_dst[dst_pos++] = ((PF_DCP_GET_SET_FRAME_ID & 0xff00) >> 8);
          p_dst[dst_pos++] = PF_DCP_GET_SET_FRAME_ID & 0xff;
 
@@ -1067,7 +1099,7 @@ static int pf_dcp_get_set (
          p_dst_dcphdr->data_length = htons (dst_pos - dst_start);
          p_rsp->len = dst_pos;
 
-         if (pf_eth_send (net, net->eth_handle, p_rsp) > 0)
+         if (pf_eth_send (net, net->pf_interface.main_port.handle, p_rsp) > 0)
          {
             LOG_DEBUG (
                PF_DCP_LOG,
@@ -1342,7 +1374,7 @@ int pf_dcp_hello_req (pnet_t * net)
          p_dcphdr->data_length = htons (dst_pos - dst_start_pos);
          p_buf->len = dst_pos;
 
-         (void)pf_eth_send (net, net->eth_handle, p_buf);
+         (void)pf_eth_send (net, net->pf_interface.main_port.handle, p_buf);
       }
       pnal_buf_free (p_buf);
    }
@@ -1415,10 +1447,9 @@ static int pf_dcp_identify_req (
 {
    int ret = 0; /* Assume all OK */
    uint16_t ix;
-   bool first = true;          /* First of the blocks */
-   bool match = false;         /* Is it for us? */
-   bool filter = false;        /* Is it IdentifyFilter or IdentifyAll? */
-   bool alias_request = false; /*Is this a request via an alias name?*/
+   bool first = true;   /* First of the blocks */
+   bool match = false;  /* Is it for us? */
+   bool filter = false; /* Is it IdentifyFilter or IdentifyAll? */
    uint8_t * p_src;
    uint16_t src_pos = 0;
    pf_ethhdr_t * p_src_ethhdr;
@@ -1439,20 +1470,17 @@ static int pf_dcp_identify_req (
    uint8_t * p_value;
    uint8_t block_error;
    const pnet_ethaddr_t * mac_address = pf_cmina_get_device_macaddr (net);
+   char alias[PF_ALIAS_NAME_MAX_SIZE]; /** Terminated */
+   char * p_req_alias_name = NULL;
 
    /* For diagnostic logging */
+#if LOG_INFO_ENABLED(PF_DCP_LOG)
    bool identify_all = false;
    uint16_t stationname_position = 0;
    uint16_t stationname_len = 0;
    uint16_t alias_position = 0;
    uint16_t alias_len = 0;
-
-   /* Avoid non-used-variable warnings when logging is disabled */
-   (void)identify_all;
-   (void)stationname_position;
-   (void)stationname_len;
-   (void)alias_position;
-   (void)alias_len;
+#endif
 
    /*
     * IdentifyReqBlock = DeviceRoleBlock ^ DeviceVendorBlock ^ DeviceIDBlock ^
@@ -1550,8 +1578,9 @@ static int pf_dcp_identify_req (
                switch (p_src_block_hdr->sub_option)
                {
                case PF_DCP_SUB_ALL:
+#if LOG_INFO_ENABLED(PF_DCP_LOG)
                   identify_all = true;
-
+#endif
                   /* ToDo: Is there a bug in the PNIO tester? It sends
                    * src_block_len == 0! */
                   if (
@@ -1649,8 +1678,10 @@ static int pf_dcp_identify_req (
                   }
                   break;
                case PF_DCP_SUB_DEV_PROP_NAME:
+#if LOG_INFO_ENABLED(PF_DCP_LOG)
                   stationname_position = src_pos;
                   stationname_len = src_block_len;
+#endif
                   if (
                      (memcmp (p_value, &p_src[src_pos], src_block_len) == 0) &&
                      (p_value[src_block_len] == '\0'))
@@ -1730,24 +1761,6 @@ static int pf_dcp_identify_req (
                      ret = -1;
                   }
                   break;
-               case PF_DCP_SUB_DEV_PROP_ALIAS:
-                  alias_position = src_pos;
-                  alias_len = src_block_len;
-                  if (
-                     (memcmp (p_value, &p_src[src_pos], value_length) != 0) ||
-                     (src_block_len != value_length))
-                  {
-                     if (first == true)
-                     {
-                        alias_request = true;
-                        filter = true;
-                     }
-                  }
-                  else
-                  {
-                     match = false;
-                  }
-                  break;
                case PF_DCP_SUB_DEV_PROP_INSTANCE:
                   if (filter == true)
                   {
@@ -1816,6 +1829,48 @@ static int pf_dcp_identify_req (
             src_block_len = ntohs (p_src_block_hdr->block_length);
             src_pos += sizeof (*p_src_block_hdr);
          }
+         else if (
+            (p_src_block_hdr->option == PF_DCP_OPT_DEVICE_PROPERTIES) &&
+            (p_src_block_hdr->sub_option == PF_DCP_SUB_DEV_PROP_ALIAS))
+         {
+#if LOG_INFO_ENABLED(PF_DCP_LOG)
+            alias_position = src_pos;
+            alias_len = src_block_len;
+#endif
+            if (src_block_len < PF_ALIAS_NAME_MAX_SIZE)
+            {
+               memcpy (alias, &p_src[src_pos], src_block_len);
+               alias[src_block_len] = '\0';
+               if (pf_lldp_is_alias_matching (net, alias))
+               {
+                  if (first == true)
+                  {
+                     p_req_alias_name = alias;
+                     filter = true;
+                  }
+               }
+               else
+               {
+                  match = false;
+               }
+            }
+            else
+            {
+               match = false;
+            }
+
+            src_pos += src_block_len;
+
+            /* Skip padding to align on uint16_t */
+            while (src_pos & 1)
+            {
+               src_pos++;
+            }
+            /* Prepare for the next round */
+            p_src_block_hdr = (pf_dcp_block_hdr_t *)&p_src[src_pos];
+            src_block_len = ntohs (p_src_block_hdr->block_length);
+            src_pos += sizeof (*p_src_block_hdr);
+         }
          else
          {
             LOG_DEBUG (
@@ -1842,7 +1897,7 @@ static int pf_dcp_identify_req (
                device_options[ix].opt,
                device_options[ix].sub,
                true,
-               alias_request);
+               p_req_alias_name);
          }
 
          /* Insert final response length and ship it! */
@@ -1853,6 +1908,7 @@ static int pf_dcp_identify_req (
          response_delay = pf_dcp_calculate_response_delay (
             mac_address,
             ntohs (p_src_dcphdr->response_delay_factor));
+#if LOG_INFO_ENABLED(PF_DCP_LOG)
          LOG_INFO (
             PF_DCP_LOG,
             "DCP(%d): Responding to incoming DCP identify request. All: %d "
@@ -1864,6 +1920,7 @@ static int pf_dcp_identify_req (
             alias_len,
             &p_src[alias_position], /* Not terminated */
             response_delay);
+#endif
 
          pf_scheduler_add (
             net,
@@ -1875,7 +1932,8 @@ static int pf_dcp_identify_req (
       }
       else
       {
-         LOG_DEBUG (
+#if LOG_INFO_ENABLED(PF_DCP_LOG)
+         LOG_INFO (
             PF_DCP_LOG,
             "DCP(%d): No match for incoming DCP identify request. All: %d "
             "StationName: %.*s Alias: %.*s \n",
@@ -1886,6 +1944,7 @@ static int pf_dcp_identify_req (
             alias_len,
             &p_src[alias_position] /* Not terminated */
          );
+#endif
          pnal_buf_free (p_rsp);
       }
    }

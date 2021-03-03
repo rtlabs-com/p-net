@@ -13,15 +13,17 @@
  * full license information.
  ********************************************************************/
 
-#include <gtest/gtest.h>
+#ifndef PNET_OPTIONS_H
+#define PNET_OPTIONS_H
 
-int main (int argc, char * argv[])
-{
-   if (argc > 0)
-      ::testing::InitGoogleTest (&argc, argv);
-   else
-      ::testing::InitGoogleTest();
+#if !defined (PNET_NUMBER_OF_PHYSICAL_PORTS)
+/** Number of physical ports */
+#define PNET_NUMBER_OF_PHYSICAL_PORTS @PNET_NUMBER_OF_PHYSICAL_PORTS@
+#endif
 
-   int result = RUN_ALL_TESTS();
-   return result;
-}
+#if !defined (PNET_MAX_DIRECTORYPATH_SIZE)
+/** Max directory path size, including termination */
+#define PNET_MAX_DIRECTORYPATH_SIZE @PNET_MAX_DIRECTORYPATH_SIZE@
+#endif
+
+#endif  /* PNET_OPTIONS_H */

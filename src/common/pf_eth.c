@@ -27,18 +27,103 @@
 #ifdef UNIT_TEST
 #define pnal_eth_init mock_pnal_eth_init
 #define pnal_eth_send mock_pnal_eth_send
+#define pnal_get_macaddress mock_pnal_get_macaddress
 #endif
 
 #include <string.h>
 #include "pf_includes.h"
 
-int pf_eth_init (pnet_t * net)
+static int pf_eth_init_netif (
+   pnet_t * net,
+   const char * netif_name,
+   pnal_ethertype_t eth_receive_type,
+   pf_netif_t * netif)
 {
-   int ret = 0;
+   pnal_ethaddr_t pnal_mac_addr;
+
+   snprintf (netif->name, sizeof (netif->name), "%s", netif_name);
+
+   netif->handle =
+      pnal_eth_init (netif->name, eth_receive_type, pf_eth_recv, (void *)net);
+
+   if (netif->handle == NULL)
+   {
+      LOG_ERROR (PNET_LOG, "Failed to init \"%s\"\n", netif_name);
+      return -1;
+   }
+
+   if (pnal_get_macaddress (netif_name, &pnal_mac_addr) != 0)
+   {
+      LOG_ERROR (PNET_LOG, "Failed read mac address on \"%s\"\n", netif_name);
+      return -1;
+   }
+
+   memcpy (
+      netif->mac_address.addr,
+      pnal_mac_addr.addr,
+      sizeof (netif->mac_address.addr));
+
+   return 0;
+}
+
+int pf_eth_init (pnet_t * net, const pnet_cfg_t * p_cfg)
+{
+   int port;
+   pf_port_iterator_t port_iterator;
+   pf_port_t * p_port_data;
+   pnal_ethertype_t main_port_receive_type;
+#if PNET_NUMBER_OF_PHYSICAL_PORTS > 1
+   const pnet_port_cfg_t * p_port_cfg;
+#endif
 
    memset (net->eth_id_map, 0, sizeof (net->eth_id_map));
 
-   return ret;
+#if (PNET_NUMBER_OF_PHYSICAL_PORTS == 1)
+   main_port_receive_type = PNAL_ETHTYPE_ALL;
+#else
+   main_port_receive_type = PNAL_ETHTYPE_PROFINET;
+#endif
+
+   /* Init management port */
+   if (
+      pf_eth_init_netif (
+         net,
+         p_cfg->if_cfg.main_netif_name,
+         main_port_receive_type,
+         &net->pf_interface.main_port) != 0)
+   {
+      return -1;
+   }
+
+   /* Init physical ports */
+   pf_port_init_iterator_over_ports (net, &port_iterator);
+   port = pf_port_get_next (&port_iterator);
+   while (port != 0)
+   {
+      p_port_data = pf_port_get_state (net, port);
+
+#if PNET_NUMBER_OF_PHYSICAL_PORTS > 1
+      p_port_cfg = pf_port_get_config (net, port);
+
+      if (
+         pf_eth_init_netif (
+            net,
+            p_port_cfg->netif_name,
+            PNAL_ETHTYPE_LLDP,
+            &p_port_data->netif) != 0)
+      {
+         return -1;
+      }
+#else
+      /* In single port configuration the managed port is also physical port 1
+       */
+      p_port_data->netif = net->pf_interface.main_port;
+#endif
+
+      port = pf_port_get_next (&port_iterator);
+   }
+
+   return 0;
 }
 
 int pf_eth_send (pnet_t * net, pnal_eth_handle_t * handle, pnal_buf_t * buf)
@@ -56,7 +141,7 @@ int pf_eth_send (pnet_t * net, pnal_eth_handle_t * handle, pnal_buf_t * buf)
    return sent_len;
 }
 
-int pf_eth_recv (void * arg, pnal_buf_t * p_buf)
+int pf_eth_recv (pnal_eth_handle_t * eth_handle, void * arg, pnal_buf_t * p_buf)
 {
    int ret = 0; /* Means: "Not handled" */
    uint16_t eth_type_pos = 2 * sizeof (pnet_ethaddr_t);
@@ -106,7 +191,7 @@ int pf_eth_recv (void * arg, pnal_buf_t * p_buf)
       }
       break;
    case PNAL_ETHTYPE_LLDP:
-      ret = pf_lldp_recv (net, p_buf, frame_pos);
+      ret = pf_lldp_recv (net, eth_handle, p_buf, frame_pos);
       break;
    case PNAL_ETHTYPE_IP:
       /* IP-packets (UDP) are also received via the UDP sockets. Do not count

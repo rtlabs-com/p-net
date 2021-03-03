@@ -846,6 +846,7 @@ int pf_cmrdr_rm_read_ind (
       case PF_IDX_DEV_PDREAL_DATA:
       case PF_IDX_DEV_PDEXP_DATA:
       case PF_IDX_SUB_PDPORT_STATISTIC:
+      case PF_IDX_SUB_PDINTF_ADJUST:
          ret = pf_pdport_read_ind (
             net,
             p_ar,
@@ -875,17 +876,6 @@ int pf_cmrdr_rm_read_ind (
          else
          {
             ret = -1;
-         }
-         break;
-      case PF_IDX_SUB_PDINTF_ADJUST:
-         /* Only check if this is the port subslot */
-         if (
-            (p_read_request->slot_number == PNET_SLOT_DAP_IDENT) &&
-            (p_read_request->subslot_number ==
-             PNET_SUBSLOT_DAP_INTERFACE_1_IDENT))
-         {
-            /* return ok */
-            ret = 0;
          }
          break;
       default:
@@ -926,7 +916,10 @@ int pf_cmrdr_rm_read_ind (
       &data_length_pos); /* Insert actual data length */
 
    /* Restart timer */
-   ret = pf_cmsm_cm_read_ind (net, p_ar, p_read_request);
+   if (pf_cmsm_cm_read_ind (net, p_ar, p_read_request) != 0)
+   {
+      ret = -1;
+   }
 
    return ret;
 }

@@ -2656,7 +2656,7 @@ static void pf_put_diag_item (
    default:
       pf_put_mem (
          p_item->fmt.usi.manuf_data,
-         sizeof (p_item->fmt.usi.manuf_data),
+         p_item->fmt.usi.len,
          res_len,
          p_bytes,
          p_pos);
@@ -3318,7 +3318,10 @@ void pf_put_alarm_block (
          /* Manufacturer data */
          /* Starts with the USI and then followed by raw data bytes */
          pf_put_uint16 (is_big_endian, payload_usi, res_len, p_bytes, p_pos);
-         pf_put_mem (p_payload, payload_len, res_len, p_bytes, p_pos);
+         if (payload_len > 0)
+         {
+            pf_put_mem (p_payload, payload_len, res_len, p_bytes, p_pos);
+         }
          break;
       }
    }
@@ -3572,15 +3575,21 @@ void pf_put_pdport_data_real (
 {
    uint16_t block_pos = *p_pos;
    uint16_t block_len = 0;
-   uint8_t numPeers = 0;
-   pf_lldp_chassis_id_t chassis_id;
+   uint8_t num_peers = 0;
+   uint16_t link_state = 0;
+   pf_lldp_station_name_t station_name;
+   pf_lldp_port_name_t port_name;
+   pnal_eth_status_t eth_status;
    const uint16_t subslot = pf_port_loc_port_num_to_dap_subslot (loc_port_num);
-   const pnet_port_cfg_t * p_port_config =
-      pf_port_get_config (net, loc_port_num);
    const pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
    const pf_lldp_peer_info_t * p_peer_info = &p_port_data->lldp.peer_info;
 
-   numPeers = p_peer_info->ttl ? 1 : 0;
+   num_peers = p_port_data->lldp.is_peer_info_received ? 1 : 0;
+
+   if (pnal_eth_get_status (p_port_data->netif.name, &eth_status) != 0)
+   {
+      memset (&eth_status, 0, sizeof (eth_status));
+   }
 
    /* Block header first */
    pf_put_block_header (
@@ -3599,44 +3608,39 @@ void pf_put_pdport_data_real (
    pf_put_uint16 (is_big_endian, PNET_SLOT_DAP_IDENT, res_len, p_bytes, p_pos);
    pf_put_uint16 (is_big_endian, subslot, res_len, p_bytes, p_pos);
 
-   /* Length OwnerPortID */
-   pf_put_byte (strlen (p_port_config->port_id), res_len, p_bytes, p_pos);
+   /* Length OwnPortName */
+   pf_put_byte (strlen (p_port_data->port_name), res_len, p_bytes, p_pos);
 
-   /* OwnerPortID */
+   /* OwnPortName */
    pf_put_mem (
-      p_port_config->port_id,
-      strlen (p_port_config->port_id),
+      p_port_data->port_name,
+      strlen (p_port_data->port_name),
       res_len,
       p_bytes,
       p_pos);
 
    /* Number of Peers */
-   pf_put_byte (numPeers, res_len, p_bytes, p_pos);
+   pf_put_byte (num_peers, res_len, p_bytes, p_pos);
 
-   /*Input only the number if it's there */
-   if (numPeers > 0)
+   pf_put_padding (2, res_len, p_bytes, p_pos);
+
+   /* Peer info */
+   if (num_peers > 0)
    {
-      pf_put_padding (2, res_len, p_bytes, p_pos);
+      /* Peer port name */
+      pf_lldp_get_peer_port_name (net, loc_port_num, &port_name);
+      pf_put_byte (port_name.len, res_len, p_bytes, p_pos);
+      pf_put_mem (port_name.string, port_name.len, res_len, p_bytes, p_pos);
 
-      /* Length peer_id */
-      pf_put_byte (p_peer_info->port_id.len, res_len, p_bytes, p_pos);
-
-      /* peer_id */
+      /* Peer station name */
+      pf_lldp_get_peer_station_name (net, loc_port_num, &station_name);
+      pf_put_byte (station_name.len, res_len, p_bytes, p_pos);
       pf_put_mem (
-         p_peer_info->port_id.string,
-         p_peer_info->port_id.len,
+         station_name.string,
+         station_name.len,
          res_len,
          p_bytes,
          p_pos);
-
-      /* Get ChassisId of peer device */
-      pf_lldp_get_peer_chassis_id (net, loc_port_num, &chassis_id);
-
-      /* Length ChassisID */
-      pf_put_byte (chassis_id.len, res_len, p_bytes, p_pos);
-
-      /* ChassisID */
-      pf_put_mem (chassis_id.string, chassis_id.len, res_len, p_bytes, p_pos);
 
       pf_put_padding_align (block_pos, 4, res_len, p_bytes, p_pos);
 
@@ -3657,92 +3661,50 @@ void pf_put_pdport_data_real (
          p_pos);
 
       pf_put_padding (2, res_len, p_bytes, p_pos);
+   } /* Peer info */
 
-      /* MAUType */
-      pf_put_uint16 (
-         is_big_endian,
-         p_peer_info->phy_config.operational_mau_type,
-         res_len,
-         p_bytes,
-         p_pos);
+   /* MAUType */
+   pf_put_uint16 (
+      is_big_endian,
+      eth_status.operational_mau_type,
+      res_len,
+      p_bytes,
+      p_pos);
 
-      pf_put_padding (2, res_len, p_bytes, p_pos);
+   pf_put_padding (2, res_len, p_bytes, p_pos);
 
-      /* Domain Boundary */
-      pf_put_uint32 (
-         is_big_endian,
-         p_peer_info->domain_boundary,
-         res_len,
-         p_bytes,
-         p_pos);
+   /* Domain Boundary */
+   /* Todo- hardcoded value*/
+   pf_put_uint32 (is_big_endian, 0, res_len, p_bytes, p_pos);
 
-      /* Multicast Boundary */
-      pf_put_uint32 (
-         is_big_endian,
-         p_peer_info->multicast_boundary,
-         res_len,
-         p_bytes,
-         p_pos);
+   /* Multicast Boundary */
+   /* Todo- hardcoded value*/
+   pf_put_uint32 (is_big_endian, 0, res_len, p_bytes, p_pos);
 
-      /* LinkState.Port */
-      pf_put_byte (p_peer_info->link_state_port, res_len, p_bytes, p_pos);
-
-      /* LinkState.Link  */
-      /* TODO currently always set to up */
-      pf_put_byte (1, res_len, p_bytes, p_pos);
-
-      pf_put_padding (2, res_len, p_bytes, p_pos);
-
-      /* MediaType (Decode what type it is and report it out per
-       * PROFINET AL Protocol Table 717
-       */
-      switch (p_peer_info->phy_config.operational_mau_type)
-      {
-      case PNAL_ETH_MAU_RADIO:
-         /* Radio */
-         pf_put_uint32 (
-            is_big_endian,
-            PF_PD_MEDIATYPE_RADIO,
-            res_len,
-            p_bytes,
-            p_pos);
-         break;
-      case PNAL_ETH_MAU_COPPER_10BaseT:
-      case PNAL_ETH_MAU_COPPER_100BaseTX_HALF_DUPLEX:
-      case PNAL_ETH_MAU_COPPER_100BaseTX_FULL_DUPLEX:
-      case PNAL_ETH_MAU_COPPER_1000BaseT_HALF_DUPLEX:
-      case PNAL_ETH_MAU_COPPER_1000BaseT_FULL_DUPLEX:
-         /* Copper */
-         pf_put_uint32 (
-            is_big_endian,
-            PF_PD_MEDIATYPE_COPPER,
-            res_len,
-            p_bytes,
-            p_pos);
-         break;
-      case PNAL_ETH_MAU_FIBER_100BaseFX_HALF_DUPLEX:
-      case PNAL_ETH_MAU_FIBER_100BaseFX_FULL_DUPLEX:
-      case PNAL_ETH_MAU_FIBER_1000BaseX_HALF_DUPLEX:
-      case PNAL_ETH_MAU_FIBER_1000BaseX_FULL_DUPLEX:
-         /* Fiber */
-         pf_put_uint32 (
-            is_big_endian,
-            PF_PD_MEDIATYPE_FIBER,
-            res_len,
-            p_bytes,
-            p_pos);
-         break;
-      default:
-         /* Unknown */
-         pf_put_uint32 (
-            is_big_endian,
-            PF_PD_MEDIATYPE_UNKNOWN,
-            res_len,
-            p_bytes,
-            p_pos);
-         break;
-      }
+   /* PN-AL-protocol (Mar20) section 5.2.13.23 for LinkState encoding */
+   /* LinkState.Link */
+   if (eth_status.running)
+   {
+      link_state = PF_PD_LINK_STATE_LINK_UP;
    }
+   else
+   {
+      link_state = PF_PD_LINK_STATE_LINK_DOWN;
+   }
+
+   /* LinkState.Port */
+   link_state |= (PF_PD_LINK_STATE_PORT_UNKNOWN << 8);
+
+   pf_put_uint16 (is_big_endian, link_state, res_len, p_bytes, p_pos);
+
+   pf_put_padding (2, res_len, p_bytes, p_pos);
+
+   pf_put_uint32 (
+      is_big_endian,
+      pf_port_get_media_type (eth_status.operational_mau_type),
+      res_len,
+      p_bytes,
+      p_pos);
 
    /* Finally insert the block length into the block header */
    block_len = *p_pos - (block_pos + 4);
@@ -3829,7 +3791,7 @@ void pf_put_pdinterface_data_real (
 {
    uint16_t block_pos = *p_pos;
    uint16_t block_len = 0;
-   pf_lldp_chassis_id_t chassis_id;
+   char station_name[PNET_STATION_NAME_MAX_SIZE]; /** Terminated */
    const pnet_ethaddr_t * mac_address = pf_cmina_get_device_macaddr (net);
    pnal_ipaddr_t ip_address = pf_cmina_get_ipaddr (net);
    pnal_ipaddr_t netmask = pf_cmina_get_netmask (net);
@@ -3846,16 +3808,13 @@ void pf_put_pdinterface_data_real (
       p_bytes,
       p_pos);
 
-   /* Get owner ChassisId */
-   pf_lldp_get_chassis_id (net, &chassis_id);
+   /* Station name */
+   /* If station name length is 0, maybe mac string shall be used instead */
+   pf_cmina_get_station_name (net, station_name);
+   pf_put_byte ((uint8_t)strlen (station_name), res_len, p_bytes, p_pos);
+   pf_put_mem (station_name, strlen (station_name), res_len, p_bytes, p_pos);
 
-   /* Owner ChassisID Length */
-   pf_put_byte ((uint8_t)chassis_id.len, res_len, p_bytes, p_pos);
-
-   /* Owner ChassisID*/
-   pf_put_mem (chassis_id.string, chassis_id.len, res_len, p_bytes, p_pos);
-
-   pf_put_padding (2, res_len, p_bytes, p_pos);
+   pf_put_padding_align (block_pos, 4, res_len, p_bytes, p_pos);
 
    /* DAP interface MAC address */
    pf_put_mem (
@@ -3903,14 +3862,9 @@ static void pf_put_pd_multiblock_interface_and_statistics (
 {
    uint16_t block_pos = *p_pos;
    uint16_t block_len = 0;
-
    pnal_port_stats_t port_stats;
 
-   /* TODO get correct interface/port name */
-   if (
-      pnal_get_port_statistics (
-         net->fspm_cfg.if_cfg.main_port.if_name,
-         &port_stats) != 0)
+   if (pnal_get_port_statistics (net->pf_interface.main_port.name, &port_stats) != 0)
    {
       memset (&port_stats, 0, sizeof (port_stats));
    }
@@ -3967,14 +3921,13 @@ static void pf_put_pd_multiblock_interface_and_statistics (
 
 /**
  * @internal
- * Insert multiblock port and statistics
- *
- * TODO - Add multiport feature - current version only list port 1
+ * Insert multiblock port and statistics for one port
  *
  * @param net              InOut: The p-net stack instance
  * @param is_big_endian    In:    Endianness of the destination buffer.
  * @param loc_port_num     In:    Local port number.
- *                                Valid range: 1 .. PNET_MAX_PORT
+ *                                Valid range:
+ *                                1 .. PNET_NUMBER_OF_PHYSICAL_PORTS.
  * @param p_res            In:    The entity to insert
  * @param res_len          In:    Size of destination buffer.
  * @param p_bytes          Out:   Destination buffer.
@@ -3993,9 +3946,9 @@ static void pf_put_pd_multiblock_port_and_statistics (
    uint16_t block_len = 0;
    pnal_port_stats_t port_stats;
    const uint16_t subslot = pf_port_loc_port_num_to_dap_subslot (loc_port_num);
-   const pnet_port_cfg_t * p_port_cfg = pf_port_get_config (net, loc_port_num);
+   const pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
-   if (pnal_get_port_statistics (p_port_cfg->phy_port.if_name, &port_stats) != 0)
+   if (pnal_get_port_statistics (p_port_data->netif.name, &port_stats) != 0)
    {
       memset (&port_stats, 0, sizeof (port_stats));
    }
@@ -4049,13 +4002,14 @@ static void pf_put_pd_multiblock_port_and_statistics (
 void pf_put_pd_real_data (
    pnet_t * net,
    bool is_big_endian,
-   int loc_port_num,
    const pf_iod_read_result_t * p_res,
    uint16_t res_len,
    uint8_t * p_bytes,
    uint16_t * p_pos)
 {
-   /* Add Interface Data with the interface (port) statistics */
+   int port;
+   pf_port_iterator_t port_iterator;
+
    pf_put_pd_multiblock_interface_and_statistics (
       net,
       is_big_endian,
@@ -4063,19 +4017,23 @@ void pf_put_pd_real_data (
       res_len,
       p_bytes,
       p_pos);
-   /* Added Port Data and Port Statistics
-    * ToDo: Probably should have a loop that knows how
-    * how many interfaces are on the device so this
-    * routine correctly reports out the information
-    */
-   pf_put_pd_multiblock_port_and_statistics (
-      net,
-      is_big_endian,
-      loc_port_num,
-      p_res,
-      res_len,
-      p_bytes,
-      p_pos);
+
+   pf_port_init_iterator_over_ports (net, &port_iterator);
+   port = pf_port_get_next (&port_iterator);
+
+   while (port != 0)
+   {
+      pf_put_pd_multiblock_port_and_statistics (
+         net,
+         is_big_endian,
+         port,
+         p_res,
+         res_len,
+         p_bytes,
+         p_pos);
+
+      port = pf_port_get_next (&port_iterator);
+   }
 }
 
 /**
@@ -4189,6 +4147,47 @@ void pf_put_pdport_data_adj (
       res_len,
       p_bytes,
       p_pos);
+
+   /* Finally insert the block length into the block header */
+   block_len = *p_pos - (block_pos + 4);
+   block_pos += offsetof (pf_block_header_t, block_length); /* Point to correct
+                                                               place */
+   pf_put_uint16 (is_big_endian, block_len, res_len, p_bytes, &block_pos);
+}
+
+void pf_put_pd_interface_adj (
+   pf_lldp_name_of_device_mode_t name_of_device_mode,
+   uint16_t subslot,
+   bool is_big_endian,
+   const pf_iod_read_result_t * p_res,
+   uint16_t res_len,
+   uint8_t * p_bytes,
+   uint16_t * p_pos)
+{
+   uint16_t block_pos = *p_pos;
+   uint16_t block_len = 0;
+   uint32_t temp_u32;
+
+   /* Block header first */
+   pf_put_block_header (
+      is_big_endian,
+      PF_BT_INTERFACE_ADJUST,
+      0, /* Dont know block_len yet */
+      PNET_BLOCK_VERSION_HIGH,
+      PNET_BLOCK_VERSION_LOW,
+      res_len,
+      p_bytes,
+      p_pos);
+
+   pf_put_padding (2, res_len, p_bytes, p_pos);
+
+   /* MultipleInterfaceMode */
+   temp_u32 = 0;
+   pf_put_bits (name_of_device_mode, 1, 0, &temp_u32);
+   pf_put_uint32 (is_big_endian, temp_u32, res_len, p_bytes, p_pos);
+
+   /* Pad with zeroes until block length is a multiple of 4 bytes */
+   pf_put_padding_align (block_pos, 4, res_len, p_bytes, p_pos);
 
    /* Finally insert the block length into the block header */
    block_len = *p_pos - (block_pos + 4);

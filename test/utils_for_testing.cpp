@@ -493,18 +493,7 @@ void PnetIntegrationTestBase::cfg_init()
    strcpy (pnet_default_cfg.station_name, "");
    strcpy (pnet_default_cfg.product_name, "PNET unit tests");
 
-   strcpy (
-      pnet_default_cfg.if_cfg.ports[0].phy_port.if_name,
-      TEST_INTERFACE_NAME);
-   strcpy (pnet_default_cfg.if_cfg.ports[0].port_id, "port-001");
-   pnet_default_cfg.if_cfg.ports[0].phy_port.eth_addr.addr[0] = 0x12;
-   pnet_default_cfg.if_cfg.ports[0].phy_port.eth_addr.addr[1] = 0x34;
-   pnet_default_cfg.if_cfg.ports[0].phy_port.eth_addr.addr[2] = 0x00;
-   pnet_default_cfg.if_cfg.ports[0].phy_port.eth_addr.addr[3] = 0x78;
-   pnet_default_cfg.if_cfg.ports[0].phy_port.eth_addr.addr[4] = 0x90;
-   pnet_default_cfg.if_cfg.ports[0].phy_port.eth_addr.addr[5] = 0xab;
-   pnet_default_cfg.if_cfg.ports[0].rtclass_2_status = 0;
-   pnet_default_cfg.if_cfg.ports[0].rtclass_3_status = 0;
+   pnet_default_cfg.if_cfg.physical_ports[0].netif_name = TEST_INTERFACE_NAME;
 
    /* Timing */
    pnet_default_cfg.min_device_interval = 32; /* Corresponds to 1 ms */
@@ -512,13 +501,7 @@ void PnetIntegrationTestBase::cfg_init()
    /* Network configuration */
    pnet_default_cfg.send_hello = 1; /* Send HELLO */
    pnet_default_cfg.if_cfg.ip_cfg.dhcp_enable = 0;
-   strcpy (pnet_default_cfg.if_cfg.main_port.if_name, TEST_INTERFACE_NAME);
-   pnet_default_cfg.if_cfg.main_port.eth_addr.addr[0] = 0x12;
-   pnet_default_cfg.if_cfg.main_port.eth_addr.addr[1] = 0x34;
-   pnet_default_cfg.if_cfg.main_port.eth_addr.addr[2] = 0x00;
-   pnet_default_cfg.if_cfg.main_port.eth_addr.addr[3] = 0x78;
-   pnet_default_cfg.if_cfg.main_port.eth_addr.addr[4] = 0x90;
-   pnet_default_cfg.if_cfg.main_port.eth_addr.addr[5] = 0xab;
+   pnet_default_cfg.if_cfg.main_netif_name = TEST_INTERFACE_NAME;
    pnet_default_cfg.if_cfg.ip_cfg.ip_addr.a = 192;
    pnet_default_cfg.if_cfg.ip_cfg.ip_addr.b = 168;
    pnet_default_cfg.if_cfg.ip_cfg.ip_addr.c = 1;
@@ -621,7 +604,7 @@ void PnetIntegrationTestBase::send_data (uint8_t * data_packet, uint16_t len)
       *(p_ctr + 1) = appdata.data_cycle_ctr & 0xff;
 
       p_buf->len = len;
-      ret = pf_eth_recv (net, p_buf);
+      ret = pf_eth_recv (mock_os_data.eth_if_handle, net, p_buf);
       EXPECT_EQ (ret, 1);
       if (ret == 0)
       {

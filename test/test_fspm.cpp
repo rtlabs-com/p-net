@@ -37,7 +37,7 @@ TEST_F (FspmUnitTest, FspmCheckValidateConfiguration)
    cfg.tick_us = 1000;
    cfg.min_device_interval = 1;
    cfg.im_0_data.im_supported = 0;
-   strcpy (cfg.if_cfg.main_port.if_name, "eth0");
+   cfg.if_cfg.main_netif_name = "eth0";
 
    EXPECT_EQ (pf_fspm_validate_configuration (&cfg), 0);
 

@@ -32,7 +32,9 @@
 extern "C" {
 #endif
 
-#include <pnet_export.h>
+#include "pnet_export.h"
+#include "pnet_options.h"
+#include "pnet_version.h"
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -105,7 +107,8 @@ extern "C" {
  * Reserved 0x01-0x1F
  * Manufacturer specific 0x20-0x3F (LogBookData) Reserved 0x40-0x80
  */
-#define PNET_ERROR_CODE_PNIO 0x81 /** All other errors */
+#define PNET_ERROR_CODE_NOERROR 0x00
+#define PNET_ERROR_CODE_PNIO    0x81 /** All other errors */
 /** Reserved 0x82-0xDE */
 #define PNET_ERROR_CODE_RTA_ERROR 0xCF /** In ERR-RTA-PDU and ERR-UDP-PDU */
 /** Reserved 0xD0-0xD9 */
@@ -124,17 +127,11 @@ extern "C" {
  *
  * Reserved 0x01-0x7F
  */
+#define PNET_ERROR_DECODE_NOERROR               0x00
 #define PNET_ERROR_DECODE_PNIORW                0x80 /** Only Read/Write */
 #define PNET_ERROR_DECODE_PNIO                  0x81
 #define PNET_ERROR_DECODE_MANUFACTURER_SPECIFIC 0x82
 /** Reserved 0x83-0xFF */
-
-/**
- * # List of error_code_1 values, bits 4..7, for PNET_ERROR_DECODE_PNIORW
- */
-#define PNET_ERROR_CODE_1_PNIORW_APP 0xa0
-#define PNET_ERROR_CODE_1_PNIORW_ACC 0xb0
-#define PNET_ERROR_CODE_1_PNIORW_RES 0xc0
 
 /**
  * # List of error_code_1 values, for PNET_ERROR_DECODE_PNIORW
@@ -143,43 +140,27 @@ extern "C" {
  * ACC = access
  * RES = resource
  */
-#define PNET_ERROR_CODE_1_APP_READ_ERROR  (0x00 + PNET_ERROR_CODE_1_PNIORW_APP)
-#define PNET_ERROR_CODE_1_APP_WRITE_ERROR (0x01 + PNET_ERROR_CODE_1_PNIORW_APP)
-#define PNET_ERROR_CODE_1_APP_MODULE_FAILURE                                   \
-   (0x02 + PNET_ERROR_CODE_1_PNIORW_APP)
-#define PNET_ERROR_CODE_1_APP_BUSY (0x07 + PNET_ERROR_CODE_1_PNIORW_APP)
-#define PNET_ERROR_CODE_1_APP_VERSION_CONFLICT                                 \
-   (0x08 + PNET_ERROR_CODE_1_PNIORW_APP)
-#define PNET_ERROR_CODE_1_APP_NOT_SUPPORTED                                    \
-   (0x09 + PNET_ERROR_CODE_1_PNIORW_APP)
-#define PNET_ERROR_CODE_1_ACC_INVALID_INDEX                                    \
-   (0x00 + PNET_ERROR_CODE_1_PNIORW_ACC)
-#define PNET_ERROR_CODE_1_ACC_WRITE_LENGTH_ERROR                               \
-   (0x01 + PNET_ERROR_CODE_1_PNIORW_ACC)
-#define PNET_ERROR_CODE_1_ACC_INVALID_SLOT_SUBSLOT                             \
-   (0x02 + PNET_ERROR_CODE_1_PNIORW_ACC)
-#define PNET_ERROR_CODE_1_ACC_TYPE_CONFLICT                                    \
-   (0x03 + PNET_ERROR_CODE_1_PNIORW_ACC)
-#define PNET_ERROR_CODE_1_ACC_INVALID_AREA_API                                 \
-   (0x04 + PNET_ERROR_CODE_1_PNIORW_ACC)
-#define PNET_ERROR_CODE_1_ACC_STATE_CONFLICT                                   \
-   (0x05 + PNET_ERROR_CODE_1_PNIORW_ACC)
-#define PNET_ERROR_CODE_1_ACC_ACCESS_DENIED                                    \
-   (0x06 + PNET_ERROR_CODE_1_PNIORW_ACC)
-#define PNET_ERROR_CODE_1_ACC_INVALID_RANGE                                    \
-   (0x07 + PNET_ERROR_CODE_1_PNIORW_ACC)
-#define PNET_ERROR_CODE_1_ACC_INVALID_PARAMETER                                \
-   (0x08 + PNET_ERROR_CODE_1_PNIORW_ACC)
-#define PNET_ERROR_CODE_1_ACC_INVALID_TYPE (0x09 + PNET_ERROR_CODE_1_PNIORW_ACC)
-#define PNET_ERROR_CODE_1_ACC_BACKUP       (0x0a + PNET_ERROR_CODE_1_PNIORW_ACC)
-#define PNET_ERROR_CODE_1_RES_READ_CONFLICT                                    \
-   (0x00 + PNET_ERROR_CODE_1_PNIORW_RES)
-#define PNET_ERROR_CODE_1_RES_WRITE_CONFLICT                                   \
-   (0x01 + PNET_ERROR_CODE_1_PNIORW_RES)
-#define PNET_ERROR_CODE_1_RES_RESOURCE_BUSY                                    \
-   (0x02 + PNET_ERROR_CODE_1_PNIORW_RES)
-#define PNET_ERROR_CODE_1_RES_RESOURCE_UNAVAILABLE                             \
-   (0x03 + PNET_ERROR_CODE_1_PNIORW_RES)
+#define PNET_ERROR_CODE_1_APP_READ_ERROR           0xA0
+#define PNET_ERROR_CODE_1_APP_WRITE_ERROR          0xA1
+#define PNET_ERROR_CODE_1_APP_MODULE_FAILURE       0xA2
+#define PNET_ERROR_CODE_1_APP_BUSY                 0xA7
+#define PNET_ERROR_CODE_1_APP_VERSION_CONFLICT     0xA8
+#define PNET_ERROR_CODE_1_APP_NOT_SUPPORTED        0xA9
+#define PNET_ERROR_CODE_1_ACC_INVALID_INDEX        0xB0
+#define PNET_ERROR_CODE_1_ACC_WRITE_LENGTH_ERROR   0xB1
+#define PNET_ERROR_CODE_1_ACC_INVALID_SLOT_SUBSLOT 0xB2
+#define PNET_ERROR_CODE_1_ACC_TYPE_CONFLICT        0xB3
+#define PNET_ERROR_CODE_1_ACC_INVALID_AREA_API     0xB4
+#define PNET_ERROR_CODE_1_ACC_STATE_CONFLICT       0xB5
+#define PNET_ERROR_CODE_1_ACC_ACCESS_DENIED        0xB6
+#define PNET_ERROR_CODE_1_ACC_INVALID_RANGE        0xB7
+#define PNET_ERROR_CODE_1_ACC_INVALID_PARAMETER    0xB8
+#define PNET_ERROR_CODE_1_ACC_INVALID_TYPE         0xB9
+#define PNET_ERROR_CODE_1_ACC_BACKUP               0xBA
+#define PNET_ERROR_CODE_1_RES_READ_CONFLICT        0xC0
+#define PNET_ERROR_CODE_1_RES_WRITE_CONFLICT       0xC1
+#define PNET_ERROR_CODE_1_RES_RESOURCE_BUSY        0xC2
+#define PNET_ERROR_CODE_1_RES_RESOURCE_UNAVAILABLE 0xC3
 
 /**
  * # List of error_code_1 values, for PNET_ERROR_DECODE_PNIO
@@ -701,7 +682,7 @@ typedef int (*pnet_state_ind) (
  * @param pp_read_data     Out:   A pointer to the binary value.
  * @param p_read_length    InOut: The maximum (in) and actual (out) length in
  *                                bytes of the binary value.
- * @param p_result         Out:   Detailed error information.
+ * @param p_result         Out:   Detailed error information if returning != 0
  * @return  0  on success.
  *          -1 if an error occurred.
  */
@@ -714,9 +695,9 @@ typedef int (*pnet_read_ind) (
    uint16_t subslot,
    uint16_t idx,
    uint16_t sequence_number,
-   uint8_t ** pp_read_data,   /**< Out: A pointer to the data */
-   uint16_t * p_read_length,  /**< Out: Size of data */
-   pnet_result_t * p_result); /**< Error status if returning != 0 */
+   uint8_t ** pp_read_data,
+   uint16_t * p_read_length,
+   pnet_result_t * p_result);
 
 /**
  * Indication to the application that an IODWrite request was received from the
@@ -747,7 +728,7 @@ typedef int (*pnet_read_ind) (
  * @param sequence_number  In:    The sequence number.
  * @param write_length     In:    The length in bytes of the binary value.
  * @param p_write_data     In:    A pointer to the binary value.
- * @param p_result         Out:   Detailed error information.
+ * @param p_result         Out:   Detailed error information if returning != 0
  * @return  0  on success.
  *          -1 if an error occurred.
  */
@@ -1161,33 +1142,28 @@ typedef struct pnet_ethaddr
 #define PNET_STATION_NAME_MAX_SIZE (241)
 
 /* Including termination. Standard says 14 (without termination) */
-#define PNET_PORT_ID_MAX_SIZE (15)
+#define PNET_PORT_NAME_MAX_SIZE (15)
 
 /** Including termination */
 #define PNET_LLDP_CHASSIS_ID_MAX_SIZE (PNET_CHASSIS_ID_MAX_SIZE)
 
 /** Including termination */
 #define PNET_LLDP_PORT_ID_MAX_SIZE                                             \
-   (PNET_STATION_NAME_MAX_SIZE + PNET_PORT_ID_MAX_SIZE)
-
-/**
- * Network interface
- */
-typedef struct pnet_netif
-{
-   char if_name[PNET_INTERFACE_NAME_MAX_SIZE]; /**< Terminated string */
-   pnet_ethaddr_t eth_addr;                    /**< Interface MAC address */
-} pnet_netif_t;
+   (PNET_STATION_NAME_MAX_SIZE + PNET_PORT_NAME_MAX_SIZE)
 
 /**
  * Physical Port Configuration
+ *
+ * The port_name field has the format port-xyz or port-abcde-xyz regardless of
+ * the format used for LLDP ChassisID and PortID.
+ * See section 7.3.3.3.4 "Attributes" in Profinet 2.4 Services.
+ * TODO: Move this field to runtime data instead, and rename the field to
+ * name_of_port
+ * Automatically populate it with port-00x where x is local_port_number
  */
 typedef struct pnet_port_cfg
 {
-   pnet_netif_t phy_port;
-   char port_id[PNET_LLDP_PORT_ID_MAX_SIZE]; /**< Terminated string */
-   uint16_t rtclass_2_status;
-   uint16_t rtclass_3_status;
+   const char * netif_name;
 } pnet_port_cfg_t;
 
 /**
@@ -1213,10 +1189,10 @@ typedef struct pnet_ip_cfg
  */
 typedef struct pnet_if_cfg
 {
-   pnet_netif_t main_port; /**< Main (DAP) network interface. */
-   pnet_ip_cfg_t ip_cfg; /**< IP Settings for main network interface */
+   const char * main_netif_name; /**< Main (DAP) network interface. */
+   pnet_ip_cfg_t ip_cfg;         /**< IP Settings for main network interface */
 
-   pnet_port_cfg_t ports[PNET_MAX_PORT]; /**< Physical ports (DAP ports) */
+   pnet_port_cfg_t physical_ports[PNET_NUMBER_OF_PHYSICAL_PORTS];
 } pnet_if_cfg_t;
 
 /**
@@ -1663,13 +1639,17 @@ PNET_EXPORT void pnet_create_log_book_entry (
  * This function may be used by the application to issue a process alarm.
  * Such alarms are sent to the controller using high-priority alarm messages.
  *
- * Optional payload may be attached to the alarm. If \a payload_usi is != 0 then
+ * Optional payload may be attached to the alarm. If \a payload_usi is != 0
+ * and \a payload_len > 0 then
  * the \a payload_usi and the payload at \a p_payload is attached to the alarm.
  *
  * After calling this function the application must wait for
  * the \a pnet_alarm_cnf() callback before sending another alarm.
  * This function fails if the application does not wait for the
  * \a pnet_alarm_cnf() between sending two alarms.
+ *
+ * Note that the PLC can set the max alarm payload length at startup. This
+ * limit can be 200 to 1432 bytes.
  *
  * This functionality is used for alarms triggered by the IO-device.
  *
@@ -1679,7 +1659,9 @@ PNET_EXPORT void pnet_create_log_book_entry (
  * @param slot             In:    The slot.
  * @param subslot          In:    The sub-slot.
  * @param payload_usi      In:    The USI for the payload. Max 0x7fff
- * @param payload_len      In:    Length in bytes of the payload. Max 1408.
+ * @param payload_len      In:    Length in bytes of the payload. May be 0.
+ *                                Max PNET_MAX_ALARM_PAYLOAD_DATA_SIZE or
+ *                                value from PLC.
  * @param p_payload        In:    The alarm payload (USI specific format).
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred (or waiting for ACK from controller: re-try
@@ -1884,6 +1866,9 @@ PNET_EXPORT int pnet_diag_std_remove (
  * Use the manufacturer specific format ("USI format") only if it's not
  * possible to use the standard format.
  *
+ * Note that the PLC can set the max alarm payload length at startup, and
+ * that affects how large diagnosis entries can be sent via alarms.
+ *
  * This sends a diagnosis alarm.
  *
  * @param net              InOut: The p-net stack instance.
@@ -1891,8 +1876,14 @@ PNET_EXPORT int pnet_diag_std_remove (
  * @param slot             In:    The slot.
  * @param subslot          In:    The sub-slot.
  * @param usi              In:    The USI. Range 0..0x7fff
+ * @param manuf_data_len   In:    Length in bytes of the
+ *                                manufacturer specific diagnosis data.
+ *                                A value 0 is allowed.
+ *                                Max PNET_MAX_DIAG_MANUF_DATA_SIZE or value
+ *                                from PLC.
  * @param p_manuf_data     In:    The manufacturer specific diagnosis data.
- *                                Size PF_DIAG_MANUF_DATA_SIZE.
+ *                                Mandatory if manuf_data_len > 0, otherwise
+ *                                NULL.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -1902,6 +1893,7 @@ PNET_EXPORT int pnet_diag_usi_add (
    uint16_t slot,
    uint16_t subslot,
    uint16_t usi,
+   uint16_t manuf_data_len,
    const uint8_t * p_manuf_data);
 
 /**
@@ -1912,6 +1904,9 @@ PNET_EXPORT int pnet_diag_usi_add (
  * Use \a pnet_diag_usi_add() instead if you would like to create the
  * missing diagnosis when trying to update it.
  *
+ * Note that the PLC can set the max alarm payload length at startup, and
+ * that affects how large diagnosis entries can be sent via alarms.
+ *
  * This sends a diagnosis alarm.
  *
  * @param net              InOut: The p-net stack instance.
@@ -1919,8 +1914,14 @@ PNET_EXPORT int pnet_diag_usi_add (
  * @param slot             In:    The slot.
  * @param subslot          In:    The sub-slot.
  * @param usi              In:    The USI. Range 0..0x7fff
+ * @param manuf_data_len   In:    Length in bytes of the
+ *                                manufacturer specific diagnosis data.
+ *                                A value 0 is allowed.
+ *                                Max PNET_MAX_DIAG_MANUF_DATA_SIZE or
+ *                                value from PLC.
  * @param p_manuf_data     In:    New manufacturer specific diagnosis data.
- *                                Size PF_DIAG_MANUF_DATA_SIZE.
+ *                                Mandatory if manuf_data_len > 0, otherwise
+ *                                NULL.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -1930,6 +1931,7 @@ PNET_EXPORT int pnet_diag_usi_update (
    uint16_t slot,
    uint16_t subslot,
    uint16_t usi,
+   uint16_t manuf_data_len,
    const uint8_t * p_manuf_data);
 
 /**
@@ -1962,6 +1964,9 @@ PNET_EXPORT int pnet_diag_usi_remove (
  *  - pnet_diag_std_add()
  *  - pnet_diag_usi_add()
  *
+ * Note that the PLC can set the max alarm payload length at startup, and
+ * that affects how large diagnosis entries can be sent via alarms.
+ *
  * This sends a diagnosis alarm.
  *
  * @param net                 InOut: The p-net stack instance.
@@ -1974,6 +1979,12 @@ PNET_EXPORT int pnet_diag_usi_remove (
  *                                   value.
  * @param qual_ch_qualifier   In:    The qualified channel qualifier.
  * @param usi                 In:    The USI.
+ * @param manuf_data_len      In:    Length in bytes of the
+ *                                   manufacturer specific diagnosis data.
+ *                                   Max PNET_MAX_DIAG_MANUF_DATA_SIZE or
+ *                                   value from PLC.
+ *                                   (Only needed if USI <= 0x7fff,
+ *                                    and may still be 0).
  * @param p_manuf_data        In:    The manufacturer specific diagnosis data.
  *                                   (Only needed if USI <= 0x7fff).
  * @return  0  if the operation succeeded.
@@ -1989,6 +2000,7 @@ PNET_EXPORT int pnet_diag_add (
    uint32_t ext_ch_add_value,
    uint32_t qual_ch_qualifier,
    uint16_t usi,
+   uint16_t manuf_data_len,
    const uint8_t * p_manuf_data);
 
 /**
@@ -2010,6 +2022,9 @@ PNET_EXPORT int pnet_diag_add (
  * USI in manufacturer-specific range) or the extended channel additional
  * value is updated.
  *
+ * Note that the PLC can set the max alarm payload length at startup, and
+ * that affects how large diagnosis entries can be sent via alarms.
+ *
  * This sends a diagnosis alarm.
  *
  * @param net               InOut: The p-net stack instance.
@@ -2018,8 +2033,14 @@ PNET_EXPORT int pnet_diag_add (
  * @param ext_ch_error_type In:    The extended channel error type, or 0.
  * @param ext_ch_add_value  In:    New extended channel error additional value.
  * @param usi               In:    The USI.
+ * @param manuf_data_len    In:    Length in bytes of the
+ *                                 manufacturer specific diagnosis data.
+ *                                 Max PNET_MAX_DIAG_MANUF_DATA_SIZE or
+ *                                 value from PLC.
+ *                                 (Only needed if USI <= 0x7fff,
+ *                                  and may still be 0).
  * @param p_manuf_data      In:    New manufacturer specific diagnosis data.
- *                                (Only needed if USI <= 0x7fff).
+ *                                 (Only needed if USI <= 0x7fff).
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -2030,6 +2051,7 @@ PNET_EXPORT int pnet_diag_update (
    uint16_t ext_ch_error_type,
    uint32_t ext_ch_add_value,
    uint16_t usi,
+   uint16_t manuf_data_len,
    const uint8_t * p_manuf_data);
 
 /**

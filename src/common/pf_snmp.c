@@ -284,7 +284,7 @@ void pf_snmp_get_system_contact (
       contact->string[0] = '\0';
    }
    contact->string[sizeof (contact->string) - 1] = '\0';
-   pf_snmp_log_loaded_variable (error, "syContact", contact->string);
+   pf_snmp_log_loaded_variable (error, "sysContact", contact->string);
 }
 
 int pf_snmp_set_system_contact (
@@ -354,36 +354,15 @@ void pf_snmp_get_system_description (
    pnet_t * net,
    pf_snmp_system_description_t * description)
 {
-   /* Encode as per Profinet specification:
-    * DeviceType, Blank, OrderID, Blank, IM_Serial_Number, Blank, HWRevision,
-    * Blank, SWRevisionPrefix, SWRevision.
-    *
-    * See IEC CDV 61158-6-10 (PN-AL-Protocol) ch. 5.1.2 "APDU abstract syntax",
-    * field "SystemIdentification".
-    */
-   snprintf (
+   (void)pf_lldp_get_system_description (
+      net,
       description->string,
-      sizeof (description->string),
-      /* clang-format off */
-      "%-" STRINGIFY (PNET_PRODUCT_NAME_MAX_LEN) "s "
-      "%-" STRINGIFY (PNET_ORDER_ID_MAX_LEN) "s "
-      "%-" STRINGIFY (PNET_SERIAL_NUMBER_MAX_LEN) "s "
-      "%5u "
-      "%c%3u%3u%3u",
-      /* clang-format on */
-      net->fspm_cfg.product_name,
-      net->fspm_cfg.im_0_data.im_order_id,
-      net->fspm_cfg.im_0_data.im_serial_number,
-      net->fspm_cfg.im_0_data.im_hardware_revision,
-      net->fspm_cfg.im_0_data.im_sw_revision_prefix,
-      net->fspm_cfg.im_0_data.im_sw_revision_functional_enhancement,
-      net->fspm_cfg.im_0_data.im_sw_revision_bug_fix,
-      net->fspm_cfg.im_0_data.im_sw_revision_internal_change);
+      sizeof (description->string));
 }
 
 void pf_snmp_get_port_list (pnet_t * net, pf_lldp_port_list_t * p_list)
 {
-   pf_port_get_list_of_ports (net, PNET_MAX_PORT, p_list);
+   pf_port_get_list_of_ports (net, PNET_NUMBER_OF_PHYSICAL_PORTS, p_list);
 }
 
 void pf_snmp_init_port_iterator (pnet_t * net, pf_port_iterator_t * p_iterator)

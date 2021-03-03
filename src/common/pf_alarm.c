@@ -72,6 +72,17 @@
 #error "PNET_MAX_ALARMS needs to be at least 1"
 #endif
 
+/* TODO Add reference to Profinet specification section */
+#if PNET_MAX_ALARM_PAYLOAD_DATA_SIZE > 1408
+#error "PNET_MAX_ALARM_PAYLOAD_DATA_SIZE is too large"
+#endif
+
+#if PNET_MAX_DIAG_MANUF_DATA_SIZE > 1396
+#error "PNET_MAX_DIAG_MANUF_DATA_SIZE is too large"
+#endif
+
+CC_STATIC_ASSERT (PNET_MAX_ALARM_PAYLOAD_DATA_SIZE >= sizeof (pf_diag_item_t));
+
 /* The scheduler identifier */
 static const char * apmx_sync_name = "apmx";
 
@@ -690,20 +701,17 @@ static int pf_alarm_apmr_frame_handler (
    uint16_t frame_id_pos,
    void * p_arg)
 {
-   char * priotext = NULL;
    pf_apmx_t * p_apmx = (pf_apmx_t *)p_arg;
    pf_apmr_msg_t * p_apmr_msg;
    uint16_t nbr;
    int ret = 0; /* Failed to handle frame. The calling function needs to free
                    the buffer. */
 
-   priotext = p_apmx->high_priority ? "high" : "low";
-
    LOG_INFO (
       PF_ALARM_LOG,
       "Alarm(%d): Received %s prio alarm frame.\n",
       __LINE__,
-      priotext);
+      p_apmx->high_priority ? "high" : "low");
    if (p_buf != NULL)
    {
       nbr = p_apmx->apmr_msg_nbr++; /* ToDo: Make atomic */
@@ -727,7 +735,7 @@ static int pf_alarm_apmr_frame_handler (
                PF_ALARM_LOG,
                "Alarm(%d): Failed to put incoming %s prio alarm in mbox\n",
                __LINE__,
-               priotext);
+               p_apmx->high_priority ? "high" : "low");
          }
       }
       else
@@ -737,7 +745,7 @@ static int pf_alarm_apmr_frame_handler (
             "Alarm(%d): Could not put incoming %s prio alarm frame in"
             " mbox, as it is deallocated.\n",
             __LINE__,
-            priotext);
+            p_apmx->high_priority ? "high" : "low");
       }
    }
    else
@@ -1105,13 +1113,20 @@ static int pf_alarm_apms_a_data_ind (
  *                                TACK flag, sequence counters etc.
  * @param p_alarm_data     In:    Alarm type, slot, subslot etc.
  *                                Mandatory for DATA messages, otherwise NULL.
+ *                                The payload part of it (if any) is not used.
  * @param maint_status     In:    The Maintenance status used for specific USI
  *                                values (inserted only if not zero).
- * @param payload_usi      In:    The payload USI. Use 0 for no payload.
- * @param payload_len      In:    Payload length. Must be > 0 for manufacturer
- *                                specific payload ("USI format").
- * @param p_payload        In:    Mandatory if payload_usi > 0. May be NULL.
- *                                Custom data or pf_diag_item_t.
+ * @param payload_usi      In:    The payload USI. Only used for
+ *                                block type = alarm notify.
+ *                                Use 0 for no payload.
+ * @param payload_len      In:    Number of bytes of manufaturer data.
+ *                                Only used for manufacturer data ("USI format",
+ *                                payload USI <= 0x7FFF).
+ *                                May be 0 for manufacturer data.
+ * @param p_payload        In:    pf_diag_item_t, manufacturer data or NULL.
+ *                                Mandatory if payload_len > 0 or for USI
+ *                                values for diagnosis in standard format
+ *                                (which expect a pf_diag_item_t)
  * @param p_pnio_status    In:    Mandatory for ERROR messages.
  *                                For DATA messages a NULL value gives an Alarm
  *                                Notification DATA message, otherwise an
@@ -1287,16 +1302,19 @@ static int pf_alarm_apms_a_data_req (
 
             LOG_INFO (
                PF_ALARM_LOG,
-               "Alarm(%d): Send an alarm frame %s  Frame ID: 0x%04X  Tack: %u  "
-               "USI: 0x%04X  Payload len: %u  Send seq: %u  ACK seq: %u\n",
+               "Alarm(%d): Send an alarm frame %s  Frame ID: 0x%04X  "
+               "Alarmtype: %u  Tack: %u  USI: 0x%04X  Payload len: %u  "
+               "Send seq: %u  ACK seq: %u\n",
                __LINE__,
                pf_alarm_pdu_type_to_string (p_fixed->pdu_type.type),
                p_apmx->frame_id,
+               (p_alarm_data != NULL) ? p_alarm_data->alarm_type : 0,
                p_fixed->add_flags.tack,
                payload_usi,
                payload_len,
                p_fixed->send_seq_num,
                p_fixed->ack_seq_nbr);
+
             if (pf_eth_send (net, p_apmx->p_ar->p_sess->eth_handle, p_rta) <= 0)
             {
                LOG_ERROR (
@@ -1358,7 +1376,8 @@ static int pf_alarm_apms_a_data_req (
  * @param net              InOut: The p-net stack instance
  * @param p_apmx           InOut: The APMS instance. Select high or low prio by
  *                                using the correct instance.
- * @param p_alarm_data     In:    Alarm details (Type, slot, subslot etc).
+ * @param p_alarm_data     In:    Alarm details (Alarm type, slot, subslot,
+ *                                possibly payload etc)
  * @param maint_status     In:    The Maintenance status used for specific USI
  *                                values (inserted only if not zero).
  * @param p_pnio_status    In:    Optional. Detailed error information (or NULL)
@@ -1413,20 +1432,21 @@ static int pf_alarm_apms_apms_a_data_req (
       /* APMS: A_Data_cnf     (tells that incoming message is acyclic data)
          In state PF_APMS_STATE_WTACK with A_Data_cnf we should start
          retransmission timer */
-      ret = pf_scheduler_add (
-         net,
-         p_apmx->timeout_us,
-         apmx_sync_name,
-         pf_alarm_apms_timeout,
-         p_apmx,
-         &p_apmx->timeout_id);
-      if (ret != 0)
+      if (
+         pf_scheduler_add (
+            net,
+            p_apmx->timeout_us,
+            apmx_sync_name,
+            pf_alarm_apms_timeout,
+            p_apmx,
+            &p_apmx->timeout_id) != 0)
       {
          p_apmx->timeout_id = UINT32_MAX;
          LOG_ERROR (
             PF_ALARM_LOG,
             "Alarm(%d): Error from pf_scheduler_add\n",
             __LINE__);
+         ret = -1;
       }
    }
 
@@ -2131,7 +2151,10 @@ static int pf_alarm_apmr_periodic (pnet_t * net, pf_ar_t * p_ar)
  * @param net              InOut: The p-net stack instance
  * @param p_ar             InOut: The AR instance.
  * @param p_apmx           InOut: The APMX instance.
- * @param alarm_data       In: Alarm
+ * @param alarm_data       In:    Alarm details (Alarm type, slot, subslot,
+ *                                possibly payload etc)
+ * @return  0  if operation succeeded.
+ *          -1 if an error occurred.
  */
 static int pf_alarm_send_internal (
    pnet_t * net,
@@ -2196,8 +2219,9 @@ static int pf_alarm_reset_send_queues (pnet_t * net, pf_ar_t * p_ar)
 
 /**
  * Add an alarm to the send queue
- * @param q               InOut: Alarm send queue
- * @param p_alarm_data    In: Alarm
+ * @param q                InOut: Alarm send queue
+ * @param p_alarm_data     In:    Alarm details (Alarm type, slot, subslot,
+ *                                possibly payload etc)
  * @return 0  is returned if an alarm is put into the queue
  *         -1 is returned if queue is full
  */
@@ -2281,7 +2305,7 @@ static void pf_alarm_almpi_periodic (pnet_t * net, pf_ar_t * p_ar)
             res = pf_alarm_fetch_send_queue (q, &alarm_data);
             if (res == 0)
             {
-               pf_alarm_send_internal (net, p_ar, p_apmx, &alarm_data);
+               (void)pf_alarm_send_internal (net, p_ar, p_apmx, &alarm_data);
                /*
                 * If a high prio alarm is found don't check low low prio
                 * alarms until next call of this operation.
@@ -2581,6 +2605,9 @@ int pf_alarm_alpmr_alarm_ack (
  * Also look in the diagnostics database to attach information whether
  * there are any relevant diagnosis items.
  *
+ * Note that the PLC can set the max alarm payload length at startup. This
+ * limit can be 200 to 1432 bytes.
+ *
  * ALPMI: ALPMI_Alarm_Notification.req
  *
  * @param net              InOut: The p-net stack instance
@@ -2595,14 +2622,19 @@ int pf_alarm_alpmr_alarm_ack (
  *                                maintenance status.
  * @param module_ident     In:    The module ident number.
  * @param submodule_ident  In:    The sub-module ident number.
- * @param payload_usi      In:    The payload USI. Use 0 for no payload.
- * @param payload_len      In:    Payload length. Must be > 0 for manufacturer
- *                                specific payload ("USI format", which is
- *                                the payload_usi range 0x0001..0x7fff),
- *                                or when sending a diagnosis alarm.
- * @param p_payload        In:    Mandatory if payload_len > 0, or if sending
- *                                a diagnosis alarm. Otherwise NULL.
- *                                Custom data or pf_diag_item_t.
+ * @param payload_usi      In:    The payload USI. Only used for
+ *                                block type = alarm notify.
+ *                                Use 0 for no payload (not even the USI value).
+ * @param payload_len      In:    Number of bytes of manufaturer data,
+ *                                or sizeof(pf_diag_item_t) for diagnosis in
+ *                                standard format.
+ *                                May be 0 also for manufacturer data.
+ *                                Max PNET_MAX_ALARM_PAYLOAD_DATA_SIZE or
+ *                                value from PLC.
+ * @param p_payload        In:    pf_diag_item_t, manufacturer data or NULL.
+ *                                Mandatory if payload_len > 0 or for USI
+ *                                values for diagnosis in standard format
+ *                                (which expect a pf_diag_item_t)
  * @return  0  if operation succeeded.
  *          -1 if an error occurred. Errors include:
  *             Payload oversize (process alarms only)
@@ -2627,26 +2659,57 @@ static int pf_alarm_send_alarm (
    int ret = -1;
    pf_alarm_data_t alarm_data;
 
-   if (
-      net->global_alarm_enable == true && p_ar->alarm_enable == true &&
-      payload_len <= sizeof (alarm_data.payload.data))
+   if (net->global_alarm_enable == true && p_ar->alarm_enable == true)
    {
-      /* Prepare data */
-      memset (&alarm_data, 0, sizeof (alarm_data));
-      alarm_data.alarm_type = alarm_type;
-      alarm_data.api_id = api_id;
-      alarm_data.slot_nbr = slot_nbr;
-      alarm_data.subslot_nbr = subslot_nbr;
-      alarm_data.module_ident = module_ident;
-      alarm_data.submodule_ident = submodule_ident;
+      if (payload_len > sizeof (alarm_data.payload.data))
+      {
+         LOG_ERROR (
+            PF_ALARM_LOG,
+            "Alarm(%d): You provided too long alarm payload (%u bytes) but max "
+            "is %zu. Increase PNET_MAX_ALARM_PAYLOAD_DATA_SIZE.\n",
+            __LINE__,
+            payload_len,
+            sizeof (alarm_data.payload.data));
+      }
+      else if (payload_len > p_ar->alarm_cr_request.max_alarm_data_length)
+      {
+         LOG_ERROR (
+            PF_ALARM_LOG,
+            "Alarm(%d): You provided too long alarm payload (%u bytes) but PLC "
+            "said max %u bytes.\n",
+            __LINE__,
+            payload_len,
+            p_ar->alarm_cr_request.max_alarm_data_length);
+      }
+      else
+      {
+         /* Prepare data */
+         memset (&alarm_data, 0, sizeof (alarm_data));
+         alarm_data.alarm_type = alarm_type;
+         alarm_data.api_id = api_id;
+         alarm_data.slot_nbr = slot_nbr;
+         alarm_data.subslot_nbr = subslot_nbr;
+         alarm_data.module_ident = module_ident;
+         alarm_data.submodule_ident = submodule_ident;
 
-      alarm_data.payload.usi = payload_usi;
-      alarm_data.payload.len = payload_len;
-      memcpy (alarm_data.payload.data, p_payload, payload_len);
+         alarm_data.payload.usi = payload_usi;
+         alarm_data.payload.len = payload_len;
+         memcpy (alarm_data.payload.data, p_payload, payload_len);
 
-      return pf_alarm_add_send_queue (
-         &p_ar->alarm_send_q[high_prio ? 1 : 0],
-         &alarm_data);
+         return pf_alarm_add_send_queue (
+            &p_ar->alarm_send_q[high_prio ? 1 : 0],
+            &alarm_data);
+      }
+   }
+   else
+   {
+      LOG_DEBUG (
+         PF_ALARM_LOG,
+         "Alarm(%d): Alarm sending is diasabled. Global enable: %u, AR enable: "
+         "%u.\n",
+         __LINE__,
+         net->global_alarm_enable,
+         p_ar->alarm_enable);
    }
 
    return ret;
@@ -2664,6 +2727,9 @@ int pf_alarm_send_process (
    uint16_t payload_len,
    const uint8_t * p_payload)
 {
+   uint32_t module_ident = 0;
+   uint32_t submodule_ident = 0;
+
    LOG_INFO (
       PF_ALARM_LOG,
       "Alarm(%d): Sending process alarm. Slot %u, subslot %u, %u bytes, USI "
@@ -2678,12 +2744,42 @@ int pf_alarm_send_process (
    {
       LOG_ERROR (
          PNET_LOG,
-         "DIAG(%d): Wrong USI given for process alarm: %u Slot: %u "
+         "Alarm(%d): Wrong USI given for process alarm: %u Slot: %u "
          "Subslot %u\n",
          __LINE__,
          payload_usi,
          slot_nbr,
          subslot_nbr);
+      return -1;
+   }
+
+   /* Find module and submodule identities */
+   if (pf_cmdev_get_module_ident (net, api_id, slot_nbr, &module_ident) != 0)
+   {
+      LOG_ERROR (
+         PF_ALARM_LOG,
+         "Alarm(%d): Failed to get module ident for slot: %u\n",
+         __LINE__,
+         slot_nbr);
+
+      return -1;
+   }
+   if (
+      pf_cmdev_get_submodule_ident (
+         net,
+         api_id,
+         slot_nbr,
+         subslot_nbr,
+         &submodule_ident) != 0)
+   {
+      LOG_ERROR (
+         PF_ALARM_LOG,
+         "Alarm(%d): Failed to get submodule ident for slot: %u, "
+         "subslot: %u\n",
+         __LINE__,
+         slot_nbr,
+         subslot_nbr);
+
       return -1;
    }
 
@@ -2696,8 +2792,8 @@ int pf_alarm_send_process (
       slot_nbr,
       subslot_nbr,
       NULL, /* No p_diag_item */
-      0,    /* module_ident */
-      0,    /* submodule_ident */
+      module_ident,
+      submodule_ident,
       payload_usi,
       payload_len,
       p_payload);
@@ -2738,6 +2834,7 @@ int pf_alarm_send_diagnosis (
       }
    }
 
+   /* Find module and submodule identities */
    if (pf_cmdev_get_module_ident (net, api_id, slot_nbr, &module_ident) != 0)
    {
       LOG_ERROR (
@@ -2748,7 +2845,6 @@ int pf_alarm_send_diagnosis (
 
       return -1;
    }
-
    if (
       pf_cmdev_get_submodule_ident (
          net,
@@ -2782,6 +2878,26 @@ int pf_alarm_send_diagnosis (
       (unsigned)submodule_ident,
       p_diag_item->usi);
 
+   if (p_diag_item->usi < PF_USI_CHANNEL_DIAGNOSIS)
+   {
+      /* USI format */
+      return pf_alarm_send_alarm (
+         net,
+         p_ar,
+         alarm_type,
+         false, /* Low prio */
+         api_id,
+         slot_nbr,
+         subslot_nbr,
+         p_diag_item,
+         module_ident,
+         submodule_ident,
+         p_diag_item->usi,
+         p_diag_item->fmt.usi.len,
+         (uint8_t *)&p_diag_item->fmt.usi.manuf_data);
+   }
+
+   /* Standard format */
    return pf_alarm_send_alarm (
       net,
       p_ar,
@@ -2796,6 +2912,78 @@ int pf_alarm_send_diagnosis (
       p_diag_item->usi,
       sizeof (*p_diag_item),
       (uint8_t *)p_diag_item);
+}
+
+int pf_alarm_send_usi_diagnosis_disappears (
+   pnet_t * net,
+   pf_ar_t * p_ar,
+   uint32_t api_id,
+   uint16_t slot_nbr,
+   uint16_t subslot_nbr,
+   uint16_t usi)
+{
+   uint32_t module_ident = 0;
+   uint32_t submodule_ident = 0;
+
+   CC_ASSERT (usi < PF_USI_CHANNEL_DIAGNOSIS);
+
+   if (pf_cmdev_get_module_ident (net, api_id, slot_nbr, &module_ident) != 0)
+   {
+      LOG_ERROR (
+         PF_ALARM_LOG,
+         "Alarm(%d): Failed to get module ident for slot: %u\n",
+         __LINE__,
+         slot_nbr);
+
+      return -1;
+   }
+
+   if (
+      pf_cmdev_get_submodule_ident (
+         net,
+         api_id,
+         slot_nbr,
+         subslot_nbr,
+         &submodule_ident) != 0)
+   {
+      LOG_ERROR (
+         PF_ALARM_LOG,
+         "Alarm(%d): Failed to get submodule ident for slot: %u, "
+         "subslot: %u\n",
+         __LINE__,
+         slot_nbr,
+         subslot_nbr);
+
+      return -1;
+   }
+
+   LOG_INFO (
+      PF_ALARM_LOG,
+      "Alarm(%d): Sending diagnosis alarm disappears "
+      "Slot: %u  Subslot: 0x%04X  "
+      "Module ident: %u Submodule ident: %u "
+      "USI: 0x%04X\n",
+      __LINE__,
+      slot_nbr,
+      subslot_nbr,
+      (unsigned)module_ident,
+      (unsigned)submodule_ident,
+      usi);
+
+   return pf_alarm_send_alarm (
+      net,
+      p_ar,
+      PF_ALARM_TYPE_DIAGNOSIS_DISAPPEARS,
+      false, /* Low prio */
+      api_id,
+      slot_nbr,
+      subslot_nbr,
+      NULL,
+      module_ident,
+      submodule_ident,
+      usi,
+      0,
+      NULL);
 }
 
 int pf_alarm_send_pull (

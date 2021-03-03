@@ -128,7 +128,7 @@ static void pf_diag_update_submodule_state (
       pf_cmdev_get_diag_item (net, ix, &p_item);
       while (p_item != NULL)
       {
-         if ((p_item->in_use == true))
+         if (p_item->in_use == true)
          {
             pf_alarm_add_diag_item_to_summary (
                p_ar,
@@ -332,6 +332,7 @@ int pf_diag_add (
    uint32_t ext_ch_add_value,
    uint32_t qual_ch_qualifier,
    uint16_t usi,
+   uint16_t manuf_data_len,
    const uint8_t * p_manuf_data)
 {
    int ret = -1;
@@ -402,7 +403,9 @@ int pf_diag_add (
          "severity=PNET_DIAG_CH_PROP_MAINT_QUALIFIED\n",
          __LINE__);
    }
-   else if (usi >= PF_USI_CHANNEL_DIAGNOSIS && p_manuf_data != NULL)
+   else if (
+      usi >= PF_USI_CHANNEL_DIAGNOSIS &&
+      (p_manuf_data != NULL || manuf_data_len != 0))
    {
       LOG_ERROR (
          PF_ALARM_LOG,
@@ -417,6 +420,16 @@ int pf_diag_add (
          "DIAG(%d): Illegal channel %u\n",
          __LINE__,
          p_diag_source->ch);
+   }
+   else if (manuf_data_len > sizeof (p_item->fmt.usi.manuf_data))
+   {
+      LOG_ERROR (
+         PF_ALARM_LOG,
+         "DIAG(%d): Too long manufacturer specific data given: %u Max: %zu "
+         "Increase PNET_MAX_DIAG_MANUF_DATA_SIZE\n",
+         __LINE__,
+         manuf_data_len,
+         sizeof (p_item->fmt.usi.manuf_data));
    }
    else if (pf_cmdev_get_device (net, &p_dev) == 0)
    {
@@ -459,6 +472,7 @@ int pf_diag_add (
 
             if (usi < PF_USI_CHANNEL_DIAGNOSIS)
             {
+               /* Manufacturer specific (USI) format */
                LOG_DEBUG (
                   PF_ALARM_LOG,
                   "DIAG(%d): Adding manufacturer specific diag, ix %u. USI "
@@ -468,15 +482,14 @@ int pf_diag_add (
                   usi,
                   p_diag_source->slot,
                   p_diag_source->subslot);
-               /* Manufacturer specific format */
+
                p_item->usi = usi;
-               memcpy (
-                  p_item->fmt.usi.manuf_data,
-                  p_manuf_data,
-                  sizeof (p_item->fmt.usi.manuf_data));
+               p_item->fmt.usi.len = manuf_data_len;
+               memcpy (p_item->fmt.usi.manuf_data, p_manuf_data, manuf_data_len);
             }
             else
             {
+               /* Standard format */
                LOG_DEBUG (
                   PF_ALARM_LOG,
                   "DIAG(%d): Adding standard format diagnosis, ix %u. USI "
@@ -489,7 +502,6 @@ int pf_diag_add (
                   p_diag_source->subslot,
                   p_diag_source->ch);
 
-               /* Standard format */
                PF_DIAG_CH_PROP_TYPE_SET (ch_properties, ch_bits);
                PF_DIAG_CH_PROP_ACC_SET (
                   ch_properties,
@@ -534,19 +546,24 @@ int pf_diag_add (
                {
                   /* Time to remove the previous entry */
                   /* Remove the old diag by sending a disappear alarm */
+
                   if (old_item.usi >= PF_USI_CHANNEL_DIAGNOSIS)
                   {
+                     /* Standard format */
                      PF_DIAG_CH_PROP_SPEC_SET (
                         old_item.fmt.std.ch_properties,
                         PF_DIAG_CH_PROP_SPEC_DIS_OTHERS_REMAIN);
+                     ret = pf_alarm_send_diagnosis (
+                        net,
+                        p_ar,
+                        p_diag_source->api,
+                        p_diag_source->slot,
+                        p_diag_source->subslot,
+                        &old_item);
                   }
-                  ret = pf_alarm_send_diagnosis (
-                     net,
-                     p_ar,
-                     p_diag_source->api,
-                     p_diag_source->slot,
-                     p_diag_source->subslot,
-                     &old_item);
+
+                  /* Do not send a disappear alarm when updating diagnosis in
+                     USI format */
                }
             }
             else
@@ -580,6 +597,7 @@ int pf_diag_update (
    uint16_t ext_ch_error_type,
    uint32_t ext_ch_add_value,
    uint16_t usi,
+   uint16_t manuf_data_len,
    const uint8_t * p_manuf_data)
 {
    int ret = -1;
@@ -618,13 +636,23 @@ int pf_diag_update (
          __LINE__,
          usi);
    }
-   else if (usi >= PF_USI_CHANNEL_DIAGNOSIS && p_manuf_data != NULL)
+   else if (
+      usi >= PF_USI_CHANNEL_DIAGNOSIS &&
+      (p_manuf_data != NULL || manuf_data_len != 0))
    {
       LOG_ERROR (
          PF_ALARM_LOG,
          "DIAG(%d): Manufacturer specific data should only be given for USI up "
          "to 0x7fff\n",
          __LINE__);
+   }
+   else if (manuf_data_len > sizeof (p_item->fmt.usi.manuf_data))
+   {
+      LOG_ERROR (
+         PF_ALARM_LOG,
+         "DIAG(%d): Too long manufacturer specific data given: %u\n",
+         __LINE__,
+         manuf_data_len);
    }
    else if (p_diag_source->ch > PNET_CHANNEL_WHOLE_SUBMODULE)
    {
@@ -657,10 +685,8 @@ int pf_diag_update (
             if (p_item->usi < PF_USI_CHANNEL_DIAGNOSIS)
             {
                /* Manufacturer specific */
-               memcpy (
-                  p_item->fmt.usi.manuf_data,
-                  p_manuf_data,
-                  sizeof (p_item->fmt.usi.manuf_data));
+               p_item->fmt.usi.len = manuf_data_len;
+               memcpy (p_item->fmt.usi.manuf_data, p_manuf_data, manuf_data_len);
             }
             else
             {
@@ -689,20 +715,25 @@ int pf_diag_update (
 
                pf_diag_update_station_problem_indicator (net, p_ar, p_subslot);
 
-               /* Remove the old diag by sending a disappear alarm */
+               /* Remove the old diag by sending a disappear alarm.
+                  The old item should be removed after the new is added */
                if (old_item.usi >= PF_USI_CHANNEL_DIAGNOSIS)
                {
+                  /* Standard format */
                   PF_DIAG_CH_PROP_SPEC_SET (
                      old_item.fmt.std.ch_properties,
                      PF_DIAG_CH_PROP_SPEC_DIS_OTHERS_REMAIN);
+                  ret = pf_alarm_send_diagnosis (
+                     net,
+                     p_ar,
+                     p_diag_source->api,
+                     p_diag_source->slot,
+                     p_diag_source->subslot,
+                     &old_item);
                }
-               ret = pf_alarm_send_diagnosis (
-                  net,
-                  p_ar,
-                  p_diag_source->api,
-                  p_diag_source->slot,
-                  p_diag_source->subslot,
-                  &old_item);
+
+               /* Do not send a disappear alarm when updating diagnosis in
+                  USI format */
             }
             else
             {
@@ -827,13 +858,30 @@ int pf_diag_remove (
                      p_item->fmt.std.ch_properties,
                      PF_DIAG_CH_PROP_SPEC_ALL_DISAPPEARS);
                }
-               ret = pf_alarm_send_diagnosis (
-                  net,
-                  p_ar,
-                  p_diag_source->api,
-                  p_diag_source->slot,
-                  p_diag_source->subslot,
-                  p_item);
+
+               /* Remove the old diag by sending a disappear alarm */
+               if (usi >= PF_USI_CHANNEL_DIAGNOSIS)
+               {
+                  /* Standard format */
+                  ret = pf_alarm_send_diagnosis (
+                     net,
+                     p_ar,
+                     p_diag_source->api,
+                     p_diag_source->slot,
+                     p_diag_source->subslot,
+                     p_item);
+               }
+               else
+               {
+                  /* USI format */
+                  ret = pf_alarm_send_usi_diagnosis_disappears (
+                     net,
+                     p_ar,
+                     p_diag_source->api,
+                     p_diag_source->slot,
+                     p_diag_source->subslot,
+                     usi);
+               }
             }
             else
             {
@@ -905,6 +953,7 @@ int pf_diag_std_add (
       ext_ch_add_value,
       qual_ch_qualifier,
       pf_diag_get_preferred_usi (net),
+      0,
       NULL);
 }
 
@@ -922,6 +971,7 @@ int pf_diag_std_update (
       ext_ch_error_type,
       ext_ch_add_value,
       pf_diag_get_preferred_usi (net),
+      0,
       NULL);
 }
 
@@ -947,6 +997,7 @@ int pf_diag_usi_add (
    uint16_t slot_nbr,
    uint16_t subslot_nbr,
    uint16_t usi,
+   uint16_t manuf_data_len,
    const uint8_t * p_manuf_data)
 {
    pnet_diag_source_t diag_source = {
@@ -980,6 +1031,7 @@ int pf_diag_usi_add (
       0,
       0,
       usi,
+      manuf_data_len,
       p_manuf_data);
 }
 
@@ -989,6 +1041,7 @@ int pf_diag_usi_update (
    uint16_t slot_nbr,
    uint16_t subslot_nbr,
    uint16_t usi,
+   uint16_t manuf_data_len,
    const uint8_t * p_manuf_data)
 {
    pnet_diag_source_t diag_source = {
@@ -1012,7 +1065,15 @@ int pf_diag_usi_update (
       return -1;
    }
 
-   return pf_diag_update (net, &diag_source, 0, 0, 0, usi, p_manuf_data);
+   return pf_diag_update (
+      net,
+      &diag_source,
+      0,
+      0,
+      0,
+      usi,
+      manuf_data_len,
+      p_manuf_data);
 }
 
 int pf_diag_usi_remove (

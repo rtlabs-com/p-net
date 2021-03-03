@@ -524,14 +524,19 @@ void pf_put_alarm_fixed (
  * @param is_big_endian    In:    Endianness of the destination buffer.
  * @param bh_type          In:    The block type.
  * @param p_alarm_data     In:    Alarm type, slot, subslot etc. Mandatory.
+ *                                The payload part of it (if any) is not used.
  * @param maint_status     In:    The Maintenance status used for specific USI
  *                                values (inserted only if not zero).
  * @param payload_usi      In:    The payload USI (may be 0). Only used for
  *                                block type = alarm notify.
- * @param payload_len      In:    Payload length. Must be > 0 if payload_usi >
- *                                0.
- * @param p_payload        In:    Mandatory if payload_len > 0. May be NULL.
- *                                Custom data or pf_diag_item_t.
+ *                                Use 0 for no payload.
+ * @param payload_len      In:    Number of bytes of manufaturer data.
+ *                                Only used for manufacturer data
+ *                                (payload USI <= 0x7FFF).
+ *                                May be 0 for manufacturer data.
+ * @param p_payload        In:    pf_diag_item_t, manufacturer data or NULL.
+ *                                Mandatory if payload_len > 0 or for USI
+ *                                values that expect a pf_diag_item_t
  * @param p_status         In:    PNIO status. Only used for block type = alarm
  *                                ack.
  * @param res_len          In:    Size of destination buffer.
@@ -739,13 +744,34 @@ void pf_put_pdport_data_adj (
    uint16_t * p_pos);
 
 /**
+ * Insert pd interface adjust block into a buffer.
+ * @param mode             In:    Multiple interface mode.
+ *                                (name of device mode)
+ * @param subslot          In:    DAP subslot identifying the interface
+ * @param is_big_endian    In:    Endianness of the destination buffer.
+ * @param p_res            In:    Read result
+ * @param res_len          In:    Size of destination buffer.
+ * @param p_bytes          Out:   Destination buffer.
+ * @param p_pos            InOut: Position in destination buffer.
+ */
+void pf_put_pd_interface_adj (
+   pf_lldp_name_of_device_mode_t name_of_device_mode,
+   uint16_t subslot,
+   bool is_big_endian,
+   const pf_iod_read_result_t * p_res,
+   uint16_t res_len,
+   uint8_t * p_bytes,
+   uint16_t * p_pos);
+
+/**
  * Insert pd port real data block into a buffer.
  *
  * Includes peer chassis ID, peer MAC address and peer MAU type.
  *
  * @param net              InOut: The p-net stack instance
  * @param loc_port_num     In:    Local port number.
- *                                Valid range: 1 .. PNET_MAX_PORT
+ *                                Valid range:
+ *                                1 .. PNET_NUMBER_OF_PHYSICAL_PORTS.
  * @param is_big_endian    In:    Endianness of the destination buffer.
  * @param p_res            In:    Read result
  * @param res_len          In:    Size of destination buffer.
@@ -803,8 +829,6 @@ void pf_put_pdinterface_data_real (
  * Insert dp real data block into a buffer.
  * @param net              InOut: The p-net stack instance
  * @param is_big_endian    In:    Endianness of the destination buffer.
- * @param loc_port_num     In:    Local port number.
- *                                Valid range: 1 .. PNET_MAX_PORT
  * @param p_res            In:    Read result
  * @param res_len          In:    Size of destination buffer.
  * @param p_bytes          Out:   Destination buffer.
@@ -813,7 +837,6 @@ void pf_put_pdinterface_data_real (
 void pf_put_pd_real_data (
    pnet_t * net,
    bool is_big_endian,
-   int loc_port_num,
    const pf_iod_read_result_t * p_res,
    uint16_t res_len,
    uint8_t * p_bytes,

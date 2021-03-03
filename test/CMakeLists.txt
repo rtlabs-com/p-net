@@ -13,7 +13,13 @@
 # full license information.
 #*******************************************************************/
 
-option(TEST_DEBUG "Add trace output to tests" OFF)
+option(TEST_DEBUG "Add trace output from test case code" OFF)
+
+set_target_properties (pf_test
+  PROPERTIES
+  C_STANDARD 99
+  CXX_STANDARD 11
+  )
 
 target_sources(pf_test PRIVATE
   # Unit tests
@@ -88,18 +94,22 @@ target_sources(pf_test PRIVATE
   ${PROFINET_SOURCE_DIR}/src/common/pf_udp.c
   )
 
+# Set logging from the stack in tests
 get_target_property(PROFINET_OPTIONS profinet COMPILE_OPTIONS)
 target_compile_options(pf_test PRIVATE
   -DUNIT_TEST
   $<$<BOOL:${TEST_DEBUG}>:-DTEST_DEBUG>
-  -DPF_ETH_LOG=LOG_STATE_OFF
-  -DPF_CPM_LOG=LOG_STATE_OFF
-  -DPF_PPM_LOG=LOG_STATE_OFF
-  -DPF_DCP_LOG=LOG_STATE_OFF
-  -DPF_RPC_LOG=LOG_STATE_OFF
-  -DPF_ALARM_LOG=LOG_STATE_OFF
-  -DPF_AL_BUF_LOG=LOG_STATE_OFF
-  -DPNET_LOG=LOG_STATE_OFF
+  $<$<NOT:$<BOOL:${TEST_DEBUG}>>:-DPF_ETH_LOG=LOG_STATE_OFF>
+  $<$<NOT:$<BOOL:${TEST_DEBUG}>>:-DPF_CPM_LOG=LOG_STATE_OFF>
+  $<$<NOT:$<BOOL:${TEST_DEBUG}>>:-DPF_PPM_LOG=LOG_STATE_OFF>
+  $<$<NOT:$<BOOL:${TEST_DEBUG}>>:-DPF_DCP_LOG=LOG_STATE_OFF>
+  $<$<NOT:$<BOOL:${TEST_DEBUG}>>:-DPF_RPC_LOG=LOG_STATE_OFF>
+  $<$<NOT:$<BOOL:${TEST_DEBUG}>>:-DPF_ALARM_LOG=LOG_STATE_OFF>
+  $<$<NOT:$<BOOL:${TEST_DEBUG}>>:-DPF_AL_BUF_LOG=LOG_STATE_OFF>
+  $<$<NOT:$<BOOL:${TEST_DEBUG}>>:-DPF_LLDP_LOG=LOG_STATE_OFF>
+  $<$<NOT:$<BOOL:${TEST_DEBUG}>>:-DPF_SNMP_LOG=LOG_STATE_OFF>
+  $<$<NOT:$<BOOL:${TEST_DEBUG}>>:-DPF_PNAL_LOG=LOG_STATE_OFF>
+  $<$<NOT:$<BOOL:${TEST_DEBUG}>>:-DPNET_LOG=LOG_STATE_OFF>
   ${PROFINET_OPTIONS}
   )
 
@@ -117,3 +127,6 @@ target_link_libraries(pf_test
   PRIVATE
   profinet
   )
+
+# No need for gmock
+set(BUILD_GMOCK OFF CACHE BOOL "")

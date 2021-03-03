@@ -110,14 +110,11 @@ void pf_fspm_option_show (const pnet_t * net)
       "PNET_MAX_SUBSLOTS                              : %d\n",
       PNET_MAX_SUBSLOTS);
    printf (
-      "PNET_MAX_CHANNELS                              : %d\n",
-      PNET_MAX_CHANNELS);
-   printf (
       "PNET_MAX_DFP_IOCR                              : %d\n",
       PNET_MAX_DFP_IOCR);
    printf (
-      "PNET_MAX_PORT                                  : %d\n",
-      PNET_MAX_PORT);
+      "PNET_NUMBER_OF_PHYSICAL_PORTS                             : %d\n",
+      PNET_NUMBER_OF_PHYSICAL_PORTS);
    printf (
       "PNET_MAX_LOG_BOOK_ENTRIES                      : %d\n",
       PNET_MAX_LOG_BOOK_ENTRIES);
@@ -125,8 +122,14 @@ void pf_fspm_option_show (const pnet_t * net)
       "PNET_MAX_ALARMS                                : %d\n",
       PNET_MAX_ALARMS);
    printf (
+      "PNET_MAX_ALARM_PAYLOAD_DATA_SIZE               : %d\n",
+      PNET_MAX_ALARM_PAYLOAD_DATA_SIZE);
+   printf (
       "PNET_MAX_DIAG_ITEMS                            : %d\n",
       PNET_MAX_DIAG_ITEMS);
+   printf (
+      "PNET_MAX_DIAG_MANUF_DATA_SIZE                  : %d\n",
+      PNET_MAX_DIAG_MANUF_DATA_SIZE);
    printf (
       "PNET_MAX_DIRECTORYPATH_SIZE                    : %d\n",
       PNET_MAX_DIRECTORYPATH_SIZE);
@@ -222,7 +225,7 @@ int pf_fspm_validate_configuration (const pnet_cfg_t * p_cfg)
       return -1;
    }
 
-   if (strlen (p_cfg->if_cfg.main_port.if_name) == 0)
+   if (strlen (p_cfg->if_cfg.main_netif_name) == 0)
    {
       LOG_ERROR (
          PNET_LOG,
@@ -313,7 +316,7 @@ static void pf_fspm_load_im (pnet_t * net)
  */
 static void pf_fspm_save_im (pnet_t * net)
 {
-   pf_im_nvm_t output_im = {0};
+   pf_im_nvm_t output_im;
    pf_im_nvm_t temporary_buffer;
    const char * p_file_directory = pf_cmina_get_file_directory (net);
    int res = 0;
@@ -837,7 +840,7 @@ int pf_fspm_cm_write_ind (
       (PF_IDX_SUB_IM_0 <= p_write_request->index) &&
       (p_write_request->index <= PF_IDX_SUB_IM_15))
    {
-      /* Write I&M data - This is handled internally. */
+      /* Write I&M data - This is handled internally in the stack */
       switch (p_write_request->index)
       {
       case PF_IDX_SUB_IM_0: /* read-only */
@@ -850,7 +853,6 @@ int pf_fspm_cm_write_ind (
          p_write_status->pnio_status.error_code_1 =
             PNET_ERROR_CODE_1_ACC_ACCESS_DENIED;
          p_write_status->pnio_status.error_code_2 = 0;
-         ret = 0;
          break;
       case PF_IDX_SUB_IM_1:
          if ((net->fspm_cfg.im_0_data.im_supported & PNET_SUPPORTED_IM1) > 0)
@@ -1062,7 +1064,10 @@ int pf_fspm_cm_write_ind (
          break;
       }
 
-      pf_fspm_save_im (net);
+      if (ret == 0)
+      {
+         pf_fspm_save_im (net);
+      }
    }
    else
    {

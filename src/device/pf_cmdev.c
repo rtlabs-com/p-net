@@ -3071,13 +3071,27 @@ static int pf_cmdev_check_iocr_param (
          ret = -1;
       }
       else if (
-         ((p_iocr->iocr_properties.rt_class < PF_RT_CLASS_1) &&
-          (p_iocr->iocr_properties.rt_class > PF_RT_CLASS_UDP) &&
-          (p_ar->ar_param.ar_properties.startup_mode == false)) || /* LEGACY */
-         ((p_iocr->iocr_properties.rt_class < PF_RT_CLASS_2) &&
-          (p_iocr->iocr_properties.rt_class > PF_RT_CLASS_UDP) &&
-          (p_ar->ar_param.ar_properties.startup_mode == true))) /* ADVANCED */
+         (p_ar->ar_param.ar_properties.startup_mode == false) &&
+         ((p_iocr->iocr_properties.rt_class < PF_RT_CLASS_1) ||
+          (p_iocr->iocr_properties.rt_class > PF_RT_CLASS_STREAM)))
       {
+         /* Legacy startup mode:     1 <= rtclass <= 5
+            Profinet 2.4 Protocol table 984 "IOCRBlockReq" */
+         pf_set_error (
+            p_stat,
+            PNET_ERROR_CODE_CONNECT,
+            PNET_ERROR_DECODE_PNIO,
+            PNET_ERROR_CODE_1_CONN_FAULTY_IOCR_BLOCK_REQ,
+            7);
+         ret = -1;
+      }
+      else if (
+         (p_ar->ar_param.ar_properties.startup_mode == true) &&
+         ((p_iocr->iocr_properties.rt_class < PF_RT_CLASS_2) ||
+          (p_iocr->iocr_properties.rt_class > PF_RT_CLASS_STREAM)))
+      {
+         /* Advanced startup mode:     2 <= rtclass <= 5
+            Profinet 2.4 Protocol table 984 "IOCRBlockReq" */
          pf_set_error (
             p_stat,
             PNET_ERROR_CODE_CONNECT,
@@ -4613,7 +4627,7 @@ static int pf_cmdev_cm_connect_rsp_neg (
  * Handle a positive answer to a connect request.
  * @param net              InOut: The p-net stack instance
  * @param p_ar             InOut: The AR instance.
- * @param p_stat           Out:   Detailed error information.
+ * @param p_stat           Out:   Detailed error info if returning != 0
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
@@ -4736,9 +4750,7 @@ int pf_cmdev_rm_connect_ind (
             p_ar->alarm_cr_request.alarm_cr_type;
          p_ar->alarm_cr_result.remote_alarm_reference =
             p_ar->alarm_cr_request.local_alarm_reference;
-         p_ar->alarm_cr_result.max_alarm_data_length = 200; /* ToDo: Add a
-                                                               define for this
-                                                               value */
+         p_ar->alarm_cr_result.max_alarm_data_length = PF_MAX_ALARM_DATA_LEN;
 
          pf_cmina_get_station_name (net, station_name);
          strncpy (
@@ -4893,8 +4905,10 @@ int pf_cmdev_rm_ccontrol_cnf (
    if (p_ar->cmdev_state == PF_CMDEV_STATE_W_ARDYCNF)
    {
       if (
-         (p_ccontrol_result->pnio_status.error_code == 0) &&
-         (p_ccontrol_result->pnio_status.error_decode == 0) &&
+         (p_ccontrol_result->pnio_status.error_code ==
+          PNET_ERROR_CODE_NOERROR) &&
+         (p_ccontrol_result->pnio_status.error_decode ==
+          PNET_ERROR_DECODE_NOERROR) &&
          (p_ccontrol_result->pnio_status.error_code_1 == 0) &&
          (p_ccontrol_result->pnio_status.error_code_2 == 0))
       {

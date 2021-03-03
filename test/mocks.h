@@ -37,7 +37,7 @@ typedef struct mock_os_data_obj
     * Note that port numbers start at 1. To simplify test cases, we add a
     * dummy array element at index 0.
     */
-   pnal_eth_status_t eth_status[PNET_MAX_PORT + 1];
+   pnal_eth_status_t eth_status[PNET_NUMBER_OF_PHYSICAL_PORTS + 1];
 
    uint16_t udp_sendto_len;
    uint16_t udp_sendto_count;
@@ -52,6 +52,7 @@ typedef struct mock_os_data_obj
    uint32_t system_uptime_10ms;
 
    int interface_index;
+   pnal_eth_handle_t * eth_if_handle;
 
    char file_fullpath[100]; /* Full file path at latest save operation */
    uint16_t file_size;
@@ -82,7 +83,6 @@ typedef struct mock_file_data
 typedef struct mock_fspm_data
 {
    char im_location[PNET_LOCATION_MAX_SIZE];
-
 } mock_fspm_data_t;
 
 extern mock_os_data_t mock_os_data;
@@ -102,6 +102,9 @@ pnal_eth_handle_t * mock_pnal_eth_init (
    pnal_eth_callback_t * callback,
    void * arg);
 int mock_pnal_eth_send (pnal_eth_handle_t * handle, pnal_buf_t * buf);
+int mock_pnal_get_macaddress (
+   const char * interface_name,
+   pnal_ethaddr_t * p_mac);
 int mock_pnal_eth_get_status (
    const char * interface_name,
    pnal_eth_status_t * status);
