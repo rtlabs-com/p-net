@@ -208,7 +208,7 @@ int pnal_eth_get_status (const char * interface_name, pnal_eth_status_t * status
 
    drv = netif->state;
    ASSERT (drv != NULL);
-   error = drv->ops->ioctl (drv, NULL, IOCTL_ETH_GET_STATUS, &link);
+   error = drv->ops->ioctl (drv, netif, IOCTL_ETH_GET_STATUS, &link);
    if (error)
    {
       return -1;
