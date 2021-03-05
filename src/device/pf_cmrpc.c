@@ -3624,7 +3624,7 @@ int pf_cmrpc_rm_ccontrol_req (pnet_t * net, pf_ar_t * p_ar)
          /* NOT a fragmented request - all fits into send buffer */
          LOG_DEBUG (
             PF_RPC_LOG,
-            "CMRPC(%d): Send CControl request, total %u bytes (not "
+            "CMRPC(%d): Schedule sending CControl request, total %u bytes (not "
             "fragmented).\n",
             __LINE__,
             p_sess->out_buf_len);
@@ -3635,7 +3635,8 @@ int pf_cmrpc_rm_ccontrol_req (pnet_t * net, pf_ar_t * p_ar)
          /* We need to send a fragmented answer - Send the first fragment now */
          LOG_DEBUG (
             PF_RPC_LOG,
-            "CMRPC(%d): Send fragmented CControl request, total %u, max per "
+            "CMRPC(%d): Schedule sending fragmented CControl request, total "
+            "%u, max per "
             "frame %u bytes.\n",
             __LINE__,
             p_sess->out_buf_len,
@@ -3704,10 +3705,29 @@ int pf_cmrpc_rm_ccontrol_req (pnet_t * net, pf_ar_t * p_ar)
          &start_pos);
 
       p_sess->socket = pf_udp_open (net, PF_RPC_CCONTROL_EPHEMERAL_PORT);
-      p_sess->resend_timeout_ctr = 3;
-      pf_cmrpc_send_with_timeout (net, p_sess, os_get_current_time_us());
 
-      ret = 0;
+      /* Try to send and resend. Schedule the first transmission with some
+         delay to make sure the "Application Ready" is sent after
+         "Parameter End". */
+      p_sess->resend_timeout_ctr = 3;
+      if (
+         pf_scheduler_add (
+            net,
+            PF_RPC_CCONTROL_INITIAL_DELAY,
+            rpc_sync_name,
+            pf_cmrpc_send_with_timeout,
+            p_sess,
+            &p_sess->resend_timeout) == 0)
+      {
+         ret = 0;
+      }
+      else
+      {
+         LOG_ERROR (
+            PF_RPC_LOG,
+            "CMRPC(%d): pf_scheduler_add failed for CControl\n",
+            __LINE__);
+      }
    }
 
    return ret;

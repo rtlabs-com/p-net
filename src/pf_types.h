@@ -60,6 +60,8 @@ static inline uint32_t atomic_fetch_sub (atomic_int * p, uint32_t v)
 #define PF_UDP_UNICAST_PORT            0x8892
 #define PF_RPC_CCONTROL_EPHEMERAL_PORT 0xc001
 
+#define PF_RPC_CCONTROL_INITIAL_DELAY 20000 /* microseconds */
+
 #define PF_FRAME_BUFFER_SIZE 1500
 
 /** This should be smaller than PF_FRAME_BUFFER_SIZE with the maximum size of

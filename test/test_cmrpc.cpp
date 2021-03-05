@@ -381,6 +381,7 @@ TEST_F (CmrpcTest, CmrpcConnectReleaseTest)
    TEST_TRACE ("\nSimulate application calling APPL_RDY\n");
    ret = pnet_application_ready (net, appdata.main_arep);
    EXPECT_EQ (ret, 0);
+   run_stack (TEST_UDP_DELAY); /* Wait for delayed transmission */
    EXPECT_EQ (appdata.call_counters.state_calls, 3);
    EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_APPLRDY);
    EXPECT_EQ (mock_os_data.udp_sendto_count, 4);

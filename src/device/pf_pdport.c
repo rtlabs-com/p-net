@@ -13,6 +13,10 @@
  * full license information.
  ********************************************************************/
 
+#ifdef UNIT_TEST
+#define pnal_eth_get_status mock_pnal_eth_get_status
+#endif
+
 #include "pf_includes.h"
 #include "pf_block_writer.h"
 #include "pf_block_reader.h"
