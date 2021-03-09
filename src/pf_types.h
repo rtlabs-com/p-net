@@ -1717,8 +1717,8 @@ typedef struct pf_cpm
    uint16_t dht; /* Set to zero at incoming cyclic frame, increased by
                     pf_cpm_control_interval_expired() */
    bool new_data;
-   uint32_t rxa[PNET_NUMBER_OF_PHYSICAL_PORTS][2]; /* Max 2 frame_ids */
-   int32_t cycle;                                  /* value -1 means "never" */
+   uint32_t rxa[PNET_MAX_PHYSICAL_PORTS][2]; /* Max 2 frame_ids */
+   int32_t cycle;                            /* value -1 means "never" */
 
    uint32_t control_interval;
    bool ci_running;
@@ -2549,6 +2549,7 @@ typedef struct pf_lldp_port_list_t
 typedef struct pf_port_iterator
 {
    int next_port;
+   int number_of_ports;
 } pf_port_iterator_t;
 
 /**
@@ -2839,7 +2840,7 @@ struct pnet
          bool active;
          pf_lldp_name_of_device_mode_t mode;
       } name_of_device_mode;
-      pf_port_t port[PNET_NUMBER_OF_PHYSICAL_PORTS];
+      pf_port_t port[PNET_MAX_PHYSICAL_PORTS];
       pf_port_iterator_t link_monitor_iterator;
       uint32_t link_monitor_timeout; /* Scheduler timeout instance. */
    } pf_interface;

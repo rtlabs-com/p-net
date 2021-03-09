@@ -56,7 +56,7 @@
                   </InterfaceSubmoduleItem>
                   <PortSubmoduleItem ID="IDS_P1" SubmoduleIdentNumber="0x00008001" SubslotNumber="32769" TextId="IDT_NAME_PS1" MaxPortRxDelay="350" MaxPortTxDelay="160">
                      <MAUTypeList>
-<!-- 
+<!--
 MAUTypeItems shall match the actual network interfaces of the device.
 Current list works for Raspberry Pi, Linksys usb/ethernet dongle and xmc sample targets
 -->
@@ -65,8 +65,8 @@ Current list works for Raspberry Pi, Linksys usb/ethernet dongle and xmc sample 
                         <MAUTypeItem Value="5"/>
                      </MAUTypeList>
                   </PortSubmoduleItem>
-<!-- 
-Enable to support additional port. (PNET_NUMBER_OF_PHYSICAL_PORTS == 2)
+<!--
+Enable to support additional port. (PNET_MAX_PHYSICAL_PORTS == 2)
 Add additional PortSubmoduleItems to support additional ports
 -->
 <!--

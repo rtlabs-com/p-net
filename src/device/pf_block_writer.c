@@ -2853,7 +2853,8 @@ static void pf_put_diag_subslot (
    uint16_t * p_pos)
 {
    uint16_t usi = 0;
-   int err = pf_cmdev_get_next_diagnosis_usi (net, p_subslot->diag_list, 0, &usi);
+   int err =
+      pf_cmdev_get_next_diagnosis_usi (net, p_subslot->diag_list, 0, &usi);
 
    while (err == 0)
    {
@@ -2870,7 +2871,8 @@ static void pf_put_diag_subslot (
          p_bytes,
          p_pos);
 
-      err = pf_cmdev_get_next_diagnosis_usi (net, p_subslot->diag_list, usi, &usi);
+      err =
+         pf_cmdev_get_next_diagnosis_usi (net, p_subslot->diag_list, usi, &usi);
    }
 }
 
@@ -3644,7 +3646,8 @@ void pf_put_pdport_data_real (
    pf_lldp_station_name_t station_name;
    pf_lldp_port_name_t port_name;
    pnal_eth_status_t eth_status;
-   const uint16_t subslot = pf_port_loc_port_num_to_dap_subslot (loc_port_num);
+   const uint16_t subslot =
+      pf_port_loc_port_num_to_dap_subslot (net, loc_port_num);
    const pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
    const pf_lldp_peer_info_t * p_peer_info = &p_port_data->lldp.peer_info;
 
@@ -3987,11 +3990,12 @@ static void pf_put_pd_multiblock_interface_and_statistics (
  * @internal
  * Insert multiblock port and statistics for one port
  *
+ * If the local port number is out of range this operation will assert.
+ *
  * @param net              InOut: The p-net stack instance
  * @param is_big_endian    In:    Endianness of the destination buffer.
  * @param loc_port_num     In:    Local port number.
- *                                Valid range:
- *                                1 .. PNET_NUMBER_OF_PHYSICAL_PORTS.
+ *                                Valid range: 1 .. num_physical_ports
  * @param p_res            In:    The entity to insert
  * @param res_len          In:    Size of destination buffer.
  * @param p_bytes          Out:   Destination buffer.
@@ -4009,7 +4013,8 @@ static void pf_put_pd_multiblock_port_and_statistics (
    uint16_t block_pos = *p_pos;
    uint16_t block_len = 0;
    pnal_port_stats_t port_stats;
-   const uint16_t subslot = pf_port_loc_port_num_to_dap_subslot (loc_port_num);
+   const uint16_t subslot =
+      pf_port_loc_port_num_to_dap_subslot (net, loc_port_num);
    const pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
    if (pnal_get_port_statistics (p_port_data->netif.name, &port_stats) != 0)

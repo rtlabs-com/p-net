@@ -16,9 +16,9 @@
 #ifndef PNET_OPTIONS_H
 #define PNET_OPTIONS_H
 
-#if !defined (PNET_NUMBER_OF_PHYSICAL_PORTS)
-/** Number of physical ports */
-#define PNET_NUMBER_OF_PHYSICAL_PORTS @PNET_NUMBER_OF_PHYSICAL_PORTS@
+#if !defined (PNET_MAX_PHYSICAL_PORTS)
+/** Max number of physical ports */
+#define PNET_MAX_PHYSICAL_PORTS @PNET_MAX_PHYSICAL_PORTS@
 #endif
 
 #if !defined (PNET_MAX_DIRECTORYPATH_SIZE)

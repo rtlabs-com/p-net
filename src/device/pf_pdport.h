@@ -131,8 +131,7 @@ int pf_pdport_write_req (
  *
  * @param net              InOut: The p-net stack instance
  * @param loc_port_num     In:    Local port number.
- *                                Valid range:
- *                                1 .. PNET_NUMBER_OF_PHYSICAL_PORTS.
+ *                                Valid range: 1 .. num_physical_ports
  */
 void pf_pdport_peer_indication (pnet_t * net, int loc_port_num);
 

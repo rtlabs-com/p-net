@@ -544,6 +544,8 @@ void PnetIntegrationTestBase::cfg_init()
 
    /* Diagnosis */
    pnet_default_cfg.use_qualified_diagnosis = true;
+
+   pnet_default_cfg.num_physical_ports = PNET_MAX_PHYSICAL_PORTS;
 }
 
 void PnetIntegrationTestBase::run_stack (int us)

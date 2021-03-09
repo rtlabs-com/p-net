@@ -60,7 +60,7 @@ int pf_cmrdr_rm_read_ind (
 
    if (
       (p_read_request->slot_number == PNET_SLOT_DAP_IDENT) &&
-      (pf_port_subslot_is_dap_port_id (p_read_request->subslot_number) == true))
+      (pf_port_subslot_is_dap_port_id (net, p_read_request->subslot_number)))
    {
       LOG_INFO (
          PNET_LOG,
@@ -70,7 +70,7 @@ int pf_cmrdr_rm_read_ind (
          p_read_request->slot_number,
          p_read_request->subslot_number,
          p_read_request->index,
-         pf_port_dap_subslot_to_local_port (p_read_request->subslot_number),
+         pf_port_dap_subslot_to_local_port (net, p_read_request->subslot_number),
          pf_index_to_logstring (p_read_request->index));
    }
    else

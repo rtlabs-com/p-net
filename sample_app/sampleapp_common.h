@@ -130,7 +130,7 @@ static const cfg_submodule_type_t cfg_available_submodule_types[] = {
     PNET_DIR_NO_IO,
     0,
     0},
-#if PNET_NUMBER_OF_PHYSICAL_PORTS >= 2
+#if PNET_MAX_PHYSICAL_PORTS >= 2
    {"DAP Port 2",
     APP_API,
     PNET_MOD_DAP_IDENT,
@@ -139,7 +139,7 @@ static const cfg_submodule_type_t cfg_available_submodule_types[] = {
     0,
     0},
 #endif
-#if PNET_NUMBER_OF_PHYSICAL_PORTS >= 3
+#if PNET_MAX_PHYSICAL_PORTS >= 3
    {"DAP Port 3",
     APP_API,
     PNET_MOD_DAP_IDENT,
@@ -148,7 +148,7 @@ static const cfg_submodule_type_t cfg_available_submodule_types[] = {
     0,
     0},
 #endif
-#if PNET_NUMBER_OF_PHYSICAL_PORTS >= 4
+#if PNET_MAX_PHYSICAL_PORTS >= 4
    {"DAP Port 4",
     APP_API,
     PNET_MOD_DAP_IDENT,
@@ -189,8 +189,8 @@ struct cmd_args
    char path_storage_directory[PNET_MAX_DIRECTORYPATH_SIZE]; /** Terminated */
    char station_name[PNET_STATION_NAME_MAX_SIZE]; /** Terminated string */
    char eth_interfaces
-      [PNET_INTERFACE_NAME_MAX_SIZE * (PNET_NUMBER_OF_PHYSICAL_PORTS + 1) +
-       PNET_NUMBER_OF_PHYSICAL_PORTS]; /** Terminated string */
+      [PNET_INTERFACE_NAME_MAX_SIZE * (PNET_MAX_PHYSICAL_PORTS + 1) +
+       PNET_MAX_PHYSICAL_PORTS]; /** Terminated string */
    int verbosity;
    int show;
    bool factory_reset;
@@ -204,7 +204,7 @@ typedef struct app_netif_name
 
 typedef struct app_netif_namelist
 {
-   app_netif_name_t netif[PNET_NUMBER_OF_PHYSICAL_PORTS + 1];
+   app_netif_name_t netif[PNET_MAX_PHYSICAL_PORTS + 1];
 } app_netif_namelist_t;
 
 typedef struct app_subslot
@@ -315,29 +315,43 @@ int app_pnet_cfg_init_default (pnet_cfg_t * stack_config);
 int app_pnet_cfg_init_netifs (
    const char * netif_list_str,
    app_netif_namelist_t * if_list,
+   uint16_t * p_number_of_ports,
    pnet_cfg_t * p_cfg,
    int verbosity);
 
 /**
  * Parse a comma separated list of network interfaces and check
- * that the number of interfaces match the PNET_NUMBER_OF_PHYSICAL_PORTS
- * configuration. Examples: PNET_NUMBER_OF_PHYSICAL_PORTS     arg_str status 1
- * "eth0"                  ok 1                 "eth0,eth1"             err 2
- * "br0,eth0,eth1"         ok 2                 "br0,eth0,"             err
+ * that the number of interfaces match the PNET_MAX_PHYSICAL_PORTS
+ * configuration.
  *
- * @param arg_str    In:   Network interface list as comma separated,
- *                         terminated string. For example "eth0" or
- *                         "br0,eth0,eth1".
- * @param p_if_list  Out:  List of network interfaces
- * @param max_port   In:   PNET_NUMBER_OF_PHYSICAL_PORTS, passed as argument to
- *                         allow test
- * @return  0  if network interface list matches configuration
+ * For a single Ethernet interface, the \a arg_str should consist of
+ * one name. For two Ethernet interfaces, the  \a arg_str should consist of
+ * three names, as we also need a bridge interface.
+ *
+ * Does only consider the number of commaseparated names. No check of the
+ * names themselves are done.
+ *
+ * Examples:
+ * arg_str                 num_ports
+ * "eth0"                  1
+ * "eth0,eth1"             error (We need a bridge as well)
+ * "br0,eth0,eth1"         2
+ *
+ * @param arg_str      In:   Network interface list as comma separated,
+ *                           terminated string. For example "eth0" or
+ *                           "br0,eth0,eth1".
+ * @param max_port     In:   PNET_MAX_PHYSICAL_PORTS, passed as argument to
+ *                           allow test.
+ * @param p_if_list    Out:  List of network interfaces
+ * @param p_num_ports  Out:  Resulting number of physical ports
+ * @return  0  on success
  *         -1  on error
  */
 int app_get_netif_namelist (
    const char * arg_str,
+   uint16_t max_port,
    app_netif_namelist_t * p_if_list,
-   uint16_t max_port);
+   uint16_t * p_num_ports);
 
 /**
  * Plug DAP (sub-)modules. This operation shall be called after p-net

@@ -828,8 +828,7 @@ static snmp_err_t lldpremtable_get_next_instance (
  * @param value            Out:   Value to be returned in response.
  * @param port             In:    Local port number for port directly
  *                                connected to the remote device.
- *                                Valid range:
- *                                1 .. PNET_NUMBER_OF_PHYSICAL_PORTS.
+ *                                Valid range: 1 .. num_physical_ports
  * @param column           In:    Column index for the cell.
  * @return  Size of returned value, in bytes.
  *          -1 if no valid value could be returned.
@@ -1072,8 +1071,7 @@ static snmp_err_t lldpremmanaddrtable_get_next_instance (
  * @param value            Out:   Value to be returned in response.
  * @param port             In:    Local port number for port directly
  *                                connected to the remote interface.
- *                                Valid range:
- *                                1 .. PNET_NUMBER_OF_PHYSICAL_PORTS.
+ *                                Valid range: 1 .. num_physical_ports
  * @param column           In:    Column index for the cell.
  * @return  Size of returned value, in bytes.
  *          -1 if no valid value could be returned.
