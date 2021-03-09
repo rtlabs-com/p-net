@@ -4869,7 +4869,8 @@ int pf_cmdev_rm_dcontrol_ind (
    pnet_t * net,
    pf_ar_t * p_ar,
    pf_control_block_t * p_control_io,
-   pnet_result_t * p_dcontrol_result)
+   pnet_result_t * p_dcontrol_result,
+   bool * p_set_state_prmend)
 {
    int ret = -1;
 
@@ -4891,7 +4892,11 @@ int pf_cmdev_rm_dcontrol_ind (
                pf_cmdev_set_state (net, p_ar, PF_CMDEV_STATE_W_ARDY);
                if (pf_cmdev_check_pdev() == 0)
                {
-                  pf_cmdev_state_ind (net, p_ar, PNET_EVENT_PRMEND);
+                  LOG_DEBUG (
+                     PNET_LOG,
+                     "CMDEV(%d): Prepare to set state PNET_EVENT_PRMEND\n",
+                     __LINE__);
+                  *p_set_state_prmend = true;
                   /**
                    * The application must issue the applicationReady call
                    * _AFTER_ returning from the pf_fspm_cm_dcontrol_ind_cb()
