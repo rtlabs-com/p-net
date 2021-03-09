@@ -17,13 +17,13 @@
 
 #include <string.h>
 
-#if PNET_NUMBER_OF_PHYSICAL_PORTS < 1
-#error "PNET_NUMBER_OF_PHYSICAL_PORTS needs to be at least 1"
+#if PNET_MAX_PHYSICAL_PORTS < 1
+#error "PNET_MAX_PHYSICAL_PORTS needs to be at least 1"
 #endif
 
-#if PNET_MAX_SUBSLOTS < (2 + PNET_NUMBER_OF_PHYSICAL_PORTS)
+#if PNET_MAX_SUBSLOTS < (2 + PNET_MAX_PHYSICAL_PORTS)
 #error                                                                         \
-   "DAP requires 2 + PNET_NUMBER_OF_PHYSICAL_PORTS subslots. Increase PNET_MAX_SUBSLOTS."
+   "DAP requires 2 + PNET_MAX_PHYSICAL_PORTS subslots. Increase PNET_MAX_SUBSLOTS."
 #endif
 
 /**
@@ -70,17 +70,19 @@ void pf_port_main_interface_init (pnet_t * net)
    pf_pdport_start_linkmonitor (net);
 }
 
-void pf_port_get_list_of_ports (
-   pnet_t * net,
-   uint16_t max_port,
-   pf_lldp_port_list_t * p_list)
+uint8_t pf_port_get_number_of_ports (const pnet_t * net)
+{
+   return net->fspm_cfg.num_physical_ports;
+}
+
+void pf_port_get_list_of_ports (const pnet_t * net, pf_lldp_port_list_t * p_list)
 {
    uint16_t port;
    uint16_t index = 0;
    uint8_t port_bit_mask = 0;
    memset (p_list, 0, sizeof (*p_list));
 
-   for (port = PNET_PORT_1; port <= max_port; port++)
+   for (port = PNET_PORT_1; port <= net->fspm_cfg.num_physical_ports; port++)
    {
       /* See documentation of pf_lldp_port_list_t for details*/
       index = (port - 1) / 8;
@@ -91,10 +93,12 @@ void pf_port_get_list_of_ports (
 }
 
 void pf_port_init_iterator_over_ports (
-   pnet_t * net,
+   const pnet_t * net,
    pf_port_iterator_t * p_iterator)
 {
+   CC_ASSERT (net != NULL);
    p_iterator->next_port = 1;
+   p_iterator->number_of_ports = net->fspm_cfg.num_physical_ports;
 }
 
 int pf_port_get_next (pf_port_iterator_t * p_iterator)
@@ -102,7 +106,7 @@ int pf_port_get_next (pf_port_iterator_t * p_iterator)
    int ret = p_iterator->next_port;
 
    if (
-      p_iterator->next_port == PNET_NUMBER_OF_PHYSICAL_PORTS ||
+      p_iterator->next_port == p_iterator->number_of_ports ||
       p_iterator->next_port == 0)
    {
       p_iterator->next_port = 0;
@@ -119,7 +123,7 @@ int pf_port_get_next_repeat_cyclic (pf_port_iterator_t * p_iterator)
 {
    int ret = p_iterator->next_port;
 
-   if (p_iterator->next_port == PNET_NUMBER_OF_PHYSICAL_PORTS)
+   if (p_iterator->next_port == p_iterator->number_of_ports)
    {
       p_iterator->next_port = 1;
    }
@@ -133,52 +137,56 @@ int pf_port_get_next_repeat_cyclic (pf_port_iterator_t * p_iterator)
 
 pf_port_t * pf_port_get_state (pnet_t * net, int loc_port_num)
 {
-   CC_ASSERT (
-      loc_port_num > 0 && loc_port_num <= PNET_NUMBER_OF_PHYSICAL_PORTS);
+   CC_ASSERT (pf_port_is_valid (net, loc_port_num));
    return &net->pf_interface.port[loc_port_num - 1];
 }
 
 const pnet_port_cfg_t * pf_port_get_config (pnet_t * net, int loc_port_num)
 {
-   CC_ASSERT (
-      loc_port_num > 0 && loc_port_num <= PNET_NUMBER_OF_PHYSICAL_PORTS);
+   CC_ASSERT (pf_port_is_valid (net, loc_port_num));
    return &net->fspm_cfg.if_cfg.physical_ports[loc_port_num - 1];
 }
 
-uint16_t pf_port_loc_port_num_to_dap_subslot (int loc_port_num)
+uint16_t pf_port_loc_port_num_to_dap_subslot (
+   const pnet_t * net,
+   int loc_port_num)
 {
-   CC_ASSERT (
-      loc_port_num > 0 && loc_port_num <= PNET_NUMBER_OF_PHYSICAL_PORTS);
+   CC_ASSERT (pf_port_is_valid (net, loc_port_num));
    return PNET_SUBSLOT_DAP_INTERFACE_1_PORT_1_IDENT + loc_port_num -
           PNET_PORT_1;
 }
 
-int pf_port_dap_subslot_to_local_port (uint16_t subslot)
+int pf_port_dap_subslot_to_local_port (const pnet_t * net, uint16_t subslot)
 {
    int port = PNET_PORT_1 + subslot - PNET_SUBSLOT_DAP_INTERFACE_1_PORT_1_IDENT;
-   if (port < PNET_PORT_1 || port > PNET_NUMBER_OF_PHYSICAL_PORTS)
+
+   if (pf_port_is_valid (net, port) == false)
    {
       port = 0;
    }
+
    return port;
 }
 
-bool pf_port_subslot_is_dap_port_id (uint16_t subslot)
+bool pf_port_subslot_is_dap_port_id (const pnet_t * net, uint16_t subslot)
 {
-   int port = pf_port_dap_subslot_to_local_port (subslot);
+   int port = pf_port_dap_subslot_to_local_port (net, subslot);
    return (port != 0);
 }
 
-bool pf_port_is_valid (pnet_t * net, int loc_port_num)
+bool pf_port_is_valid (const pnet_t * net, int loc_port_num)
 {
-   return (loc_port_num > 0 && loc_port_num <= PNET_NUMBER_OF_PHYSICAL_PORTS);
+   CC_ASSERT (net != NULL);
+
+   return (
+      loc_port_num > 0 && loc_port_num <= net->fspm_cfg.num_physical_ports);
 }
 
-int pf_port_get_port_number (pnet_t * net, pnal_eth_handle_t * eth_handle)
+int pf_port_get_port_number (const pnet_t * net, pnal_eth_handle_t * eth_handle)
 {
    int loc_port_num;
 
-   for (loc_port_num = 1; loc_port_num <= PNET_NUMBER_OF_PHYSICAL_PORTS;
+   for (loc_port_num = 1; loc_port_num <= net->fspm_cfg.num_physical_ports;
         loc_port_num++)
    {
       if (net->pf_interface.port[loc_port_num - 1].netif.handle == eth_handle)

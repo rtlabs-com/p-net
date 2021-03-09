@@ -362,7 +362,7 @@ void pf_snmp_get_system_description (
 
 void pf_snmp_get_port_list (pnet_t * net, pf_lldp_port_list_t * p_list)
 {
-   pf_port_get_list_of_ports (net, PNET_NUMBER_OF_PHYSICAL_PORTS, p_list);
+   pf_port_get_list_of_ports (net, p_list);
 }
 
 void pf_snmp_init_port_iterator (pnet_t * net, pf_port_iterator_t * p_iterator)

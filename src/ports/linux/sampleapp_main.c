@@ -32,23 +32,15 @@
 #include <string.h>
 #include <unistd.h>
 
-#if PNET_NUMBER_OF_PHYSICAL_PORTS == 1
 #define APP_DEFAULT_ETHERNET_INTERFACE "eth0"
-#elif PNET_NUMBER_OF_PHYSICAL_PORTS == 2
-#define APP_DEFAULT_ETHERNET_INTERFACE "br0,eth0,eth1"
-#elif PNET_NUMBER_OF_PHYSICAL_PORTS == 3
-#define APP_DEFAULT_ETHERNET_INTERFACE "br0,eth0,eth1,eth2"
-#else
-#define APP_DEFAULT_ETHERNET_INTERFACE ""
-#endif
 
-#define APP_MAIN_SLEEPTIME_US      5000 * 1000
-#define APP_MAIN_THREAD_PRIORITY   15
-#define APP_MAIN_THREAD_STACKSIZE  4096 /* bytes */
-#define APP_SNMP_THREAD_PRIORITY   1
-#define APP_SNMP_THREAD_STACKSIZE  256 * 1024 /* bytes */
-#define APP_ETH_THREAD_PRIORITY    10
-#define APP_ETH_THREAD_STACKSIZE   4096 /* bytes */
+#define APP_MAIN_SLEEPTIME_US     5000 * 1000
+#define APP_MAIN_THREAD_PRIORITY  15
+#define APP_MAIN_THREAD_STACKSIZE 4096 /* bytes */
+#define APP_SNMP_THREAD_PRIORITY  1
+#define APP_SNMP_THREAD_STACKSIZE 256 * 1024 /* bytes */
+#define APP_ETH_THREAD_PRIORITY   10
+#define APP_ETH_THREAD_STACKSIZE  4096 /* bytes */
 /* Note that this sample application uses os_timer_create() for the timer
    that controls the ticks. It is implemented in OSAL, and the Linux
    implementation uses a thread internally. To modify the timer thread priority,
@@ -370,6 +362,7 @@ int main (int argc, char * argv[])
    app_data_and_stack_t appdata_and_stack;
    app_data_t appdata;
    int ret = 0;
+   uint16_t number_of_ports = 0;
 
    memset (&appdata, 0, sizeof (appdata));
    appdata.alarm_allowed = true;
@@ -389,7 +382,7 @@ int main (int argc, char * argv[])
          PNET_MAX_SLOTS);
       printf ("P-net log level:      %u (DEBUG=0, FATAL=4)\n", LOG_LEVEL);
       printf ("App verbosity level:  %u\n", appdata.arguments.verbosity);
-      printf ("Number of ports:      %u\n", PNET_NUMBER_OF_PHYSICAL_PORTS);
+      printf ("Max number of ports:  %u\n", PNET_MAX_PHYSICAL_PORTS);
       printf ("Network interfaces:   %s\n", appdata.arguments.eth_interfaces);
       printf ("Button1 file:         %s\n", appdata.arguments.path_button1);
       printf ("Button2 file:         %s\n", appdata.arguments.path_button2);
@@ -408,12 +401,14 @@ int main (int argc, char * argv[])
    ret = app_pnet_cfg_init_netifs (
       appdata.arguments.eth_interfaces,
       &appdata.if_list,
+      &number_of_ports,
       &pnet_default_cfg,
       appdata.arguments.verbosity);
    if (ret != 0)
    {
       exit (EXIT_FAILURE);
    }
+   pnet_default_cfg.num_physical_ports = number_of_ports;
 
    ret = app_pnet_cfg_init_storage (&pnet_default_cfg, &appdata.arguments);
    if (ret != 0)

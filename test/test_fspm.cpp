@@ -38,11 +38,25 @@ TEST_F (FspmUnitTest, FspmCheckValidateConfiguration)
    cfg.min_device_interval = 1;
    cfg.im_0_data.im_supported = 0;
    cfg.if_cfg.main_netif_name = "eth0";
+   cfg.num_physical_ports = PNET_MAX_PHYSICAL_PORTS;
 
    EXPECT_EQ (pf_fspm_validate_configuration (&cfg), 0);
 
    /* Check pointer validity */
    EXPECT_EQ (pf_fspm_validate_configuration (NULL), -1);
+
+   /* Check number of ports */
+   cfg.num_physical_ports = PNET_MAX_PHYSICAL_PORTS + 1;
+   EXPECT_EQ (pf_fspm_validate_configuration (&cfg), -1);
+
+   cfg.num_physical_ports = 0;
+   EXPECT_EQ (pf_fspm_validate_configuration (&cfg), -1);
+
+   cfg.num_physical_ports = 1;
+   EXPECT_EQ (pf_fspm_validate_configuration (&cfg), 0);
+
+   cfg.num_physical_ports = PNET_MAX_PHYSICAL_PORTS;
+   EXPECT_EQ (pf_fspm_validate_configuration (&cfg), 0);
 
    /* Check minimum stack update interval */
    cfg.min_device_interval = 0;

@@ -165,6 +165,7 @@ int main (void)
    app_data_t appdata;
    g_net = NULL;
    gp_appdata = &appdata;
+   uint16_t number_of_ports = 0;
 
    /* Prepare appdata */
    memset (&appdata, 0, sizeof (appdata));
@@ -185,7 +186,7 @@ int main (void)
          PNET_MAX_SLOTS);
       printf ("P-net log level:      %u (DEBUG=0, FATAL=4)\n", LOG_LEVEL);
       printf ("App verbosity level:  %u\n", appdata.arguments.verbosity);
-      printf ("Number of ports:      %u\n", PNET_NUMBER_OF_PHYSICAL_PORTS);
+      printf ("Max number of ports:  %u\n", PNET_MAX_PHYSICAL_PORTS);
       printf ("Network interfaces:   %s\n", appdata.arguments.eth_interfaces);
       printf ("Default station name: %s\n", appdata.arguments.station_name);
    }
@@ -199,12 +200,14 @@ int main (void)
    ret = app_pnet_cfg_init_netifs (
       appdata.arguments.eth_interfaces,
       &appdata.if_list,
+      &number_of_ports,
       &pnet_default_cfg,
       appdata.arguments.verbosity);
    if (ret != 0)
    {
       return -1;
    }
+   pnet_default_cfg.num_physical_ports = number_of_ports;
 
    /* Initialize profinet stack */
    g_net = pnet_init (&pnet_default_cfg);

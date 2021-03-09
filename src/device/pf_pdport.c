@@ -29,8 +29,7 @@ static const char * shed_tag_linkmonitor = "linkmonitor";
  * Get configuration file name for one port
  *
  * @param loc_port_num      In:   Local port number.
- *                                Valid range:
- *                                1 .. PNET_NUMBER_OF_PHYSICAL_PORTS.
+ *                                Valid range: 1 .. num_physical_ports
  * @return  The configuration file name
  */
 static const char * pf_pdport_get_filename (int loc_port_num)
@@ -61,8 +60,7 @@ static const char * pf_pdport_get_filename (int loc_port_num)
  *
  * @param net              InOut: The p-net stack instance
  * @param loc_port_num     In:    Local port number.
- *                                Valid range:
- *                                1 .. PNET_NUMBER_OF_PHYSICAL_PORTS.
+ *                                Valid range: 1 .. num_physical_ports
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -155,8 +153,7 @@ static int pf_pdport_load (pnet_t * net, int loc_port_num)
  *
  * @param net              InOut: The p-net stack instance
  * @param loc_port_num     In:    Local port number.
- *                                Valid range:
- *                                1 .. PNET_NUMBER_OF_PHYSICAL_PORTS.
+ *                                Valid range: 1 .. num_physical_ports
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -214,18 +211,22 @@ static int pf_pdport_save (pnet_t * net, int loc_port_num)
  * @internal
  * Initialize pdport diagnostic source
  *
+ * If the local port number is out of range this operation will assert.
+ *
+ * @param net              InOut: The p-net stack instance
  * @param diag_source      InOut: Diag source to be initialized
  * @param loc_port_num     In:    Local port number.
- *                                Valid range:
- *                                1 .. PNET_NUMBER_OF_PHYSICAL_PORTS.
+ *                                Valid range: 1 .. num_physical_ports
  */
 static void pf_pdport_init_diag_source (
+   pnet_t * net,
    pnet_diag_source_t * diag_source,
    int loc_port_num)
 {
    diag_source->api = PNET_API_NO_APPLICATION_PROFILE;
    diag_source->slot = PNET_SLOT_DAP_IDENT;
-   diag_source->subslot = pf_port_loc_port_num_to_dap_subslot (loc_port_num);
+   diag_source->subslot =
+      pf_port_loc_port_num_to_dap_subslot (net, loc_port_num);
    diag_source->ch = PNET_CHANNEL_WHOLE_SUBMODULE;
    diag_source->ch_grouping = PNET_DIAG_CH_INDIVIDUAL_CHANNEL;
    diag_source->ch_direction = PNET_DIAG_CH_PROP_DIR_MANUF_SPEC;
@@ -235,15 +236,14 @@ static void pf_pdport_init_diag_source (
  * Delete all active diagnostics handled by pdport
  *
  * @param net              InOut: The p-net stack instance
- * @param loc_port_num      In:   Local port number.
- *                                Valid range:
- *                                1 .. PNET_NUMBER_OF_PHYSICAL_PORTS.
+ * @param loc_port_num     In:    Local port number.
+ *                                Valid range: 1 .. num_physical_ports.
  */
 static void pf_pdport_remove_all_diag (pnet_t * net, int loc_port_num)
 {
    pnet_diag_source_t diag_source = {0};
 
-   pf_pdport_init_diag_source (&diag_source, loc_port_num);
+   pf_pdport_init_diag_source (net, &diag_source, loc_port_num);
 
    (void)pf_diag_std_remove (
       net,
@@ -319,7 +319,7 @@ void pf_pdport_remove_data_files (const char * file_directory)
    int port;
 
    /* Do not use port iterator as net is not available */
-   for (port = PNET_PORT_1; port <= PNET_NUMBER_OF_PHYSICAL_PORTS; port++)
+   for (port = PNET_PORT_1; port <= PNET_MAX_PHYSICAL_PORTS; port++)
    {
       pf_file_clear (file_directory, pf_pdport_get_filename (port));
    }
@@ -414,9 +414,9 @@ int pf_pdport_read_ind (
    case PF_IDX_SUB_PDPORT_DATA_REAL:
       if (
          (slot == PNET_SLOT_DAP_IDENT) &&
-         (pf_port_subslot_is_dap_port_id (subslot) == true))
+         (pf_port_subslot_is_dap_port_id (net, subslot)))
       {
-         loc_port_num = pf_port_dap_subslot_to_local_port (subslot);
+         loc_port_num = pf_port_dap_subslot_to_local_port (net, subslot);
          pf_put_pdport_data_real (
             net,
             loc_port_num,
@@ -432,9 +432,9 @@ int pf_pdport_read_ind (
    case PF_IDX_SUB_PDPORT_DATA_ADJ:
       if (
          (slot == PNET_SLOT_DAP_IDENT) &&
-         (pf_port_subslot_is_dap_port_id (subslot) == true))
+         (pf_port_subslot_is_dap_port_id (net, subslot)))
       {
-         loc_port_num = pf_port_dap_subslot_to_local_port (subslot);
+         loc_port_num = pf_port_dap_subslot_to_local_port (net, subslot);
          p_port_data = pf_port_get_state (net, loc_port_num);
          if (p_port_data->pdport.adjust.active)
          {
@@ -454,9 +454,9 @@ int pf_pdport_read_ind (
    case PF_IDX_SUB_PDPORT_DATA_CHECK:
       if (slot == PNET_SLOT_DAP_IDENT)
       {
-         if (pf_port_subslot_is_dap_port_id (subslot) == true)
+         if (pf_port_subslot_is_dap_port_id (net, subslot))
          {
-            loc_port_num = pf_port_dap_subslot_to_local_port (subslot);
+            loc_port_num = pf_port_dap_subslot_to_local_port (net, subslot);
             p_port_data = pf_port_get_state (net, loc_port_num);
             if (p_port_data->pdport.check.active)
             {
@@ -530,9 +530,9 @@ int pf_pdport_read_ind (
       if (
          (slot == PNET_SLOT_DAP_IDENT) &&
          ((subslot == PNET_SUBSLOT_DAP_INTERFACE_1_IDENT) ||
-          (pf_port_subslot_is_dap_port_id (subslot) == true)))
+          (pf_port_subslot_is_dap_port_id (net, subslot))))
       {
-         loc_port_num = pf_port_dap_subslot_to_local_port (subslot);
+         loc_port_num = pf_port_dap_subslot_to_local_port (net, subslot);
 
          if (loc_port_num == 0)
          {
@@ -592,15 +592,14 @@ int pf_pdport_read_ind (
  *
  * @param net              InOut: The p-net stack instance
  * @param loc_port_num     In:    Local port number.
- *                                Valid range:
- *                                1 .. PNET_NUMBER_OF_PHYSICAL_PORTS.
+ *                                Valid range: 1 .. num_physical_ports
  */
 static void pf_pdport_check_no_peer_detected (pnet_t * net, int loc_port_num)
 {
    pnet_diag_source_t diag_source;
    uint32_t peer_timestamp;
 
-   pf_pdport_init_diag_source (&diag_source, loc_port_num);
+   pf_pdport_init_diag_source (net, &diag_source, loc_port_num);
 
    if (pf_lldp_get_peer_timestamp (net, loc_port_num, &peer_timestamp) == 0)
    {
@@ -649,8 +648,7 @@ static void pf_pdport_check_no_peer_detected (pnet_t * net, int loc_port_num)
  *
  * @param net              InOut: The p-net stack instance
  * @param loc_port_num     In:    Local port number.
- *                                Valid range:
- *                                1 .. PNET_NUMBER_OF_PHYSICAL_PORTS.
+ *                                Valid range: 1 .. num_physical_ports
  */
 static void pf_pdport_check_peer_station_name (pnet_t * net, int loc_port_num)
 {
@@ -662,7 +660,7 @@ static void pf_pdport_check_peer_station_name (pnet_t * net, int loc_port_num)
 
    if (pf_lldp_get_peer_station_name (net, loc_port_num, &lldp_station_name) == 0)
    {
-      pf_pdport_init_diag_source (&diag_source, loc_port_num);
+      pf_pdport_init_diag_source (net, &diag_source, loc_port_num);
 
       if (
          strncmp (
@@ -726,8 +724,7 @@ static void pf_pdport_check_peer_station_name (pnet_t * net, int loc_port_num)
  *
  * @param net              InOut: The p-net stack instance
  * @param loc_port_num     In:    Local port number.
- *                                Valid range:
- *                                1 .. PNET_NUMBER_OF_PHYSICAL_PORTS.
+ *                                Valid range: 1 .. num_physical_ports
  */
 static void pf_pdport_check_peer_port_name (pnet_t * net, int loc_port_num)
 {
@@ -739,7 +736,7 @@ static void pf_pdport_check_peer_port_name (pnet_t * net, int loc_port_num)
 
    if (pf_lldp_get_peer_port_id (net, loc_port_num, &lldp_port_id) == 0)
    {
-      pf_pdport_init_diag_source (&diag_source, loc_port_num);
+      pf_pdport_init_diag_source (net, &diag_source, loc_port_num);
 
       if (
          strncmp (
@@ -802,8 +799,7 @@ static void pf_pdport_check_peer_port_name (pnet_t * net, int loc_port_num)
  *
  * @param net              InOut: The p-net stack instance
  * @param loc_port_num     In:    Local port number.
- *                                Valid range:
- *                                1 .. PNET_NUMBER_OF_PHYSICAL_PORTS.
+ *                                Valid range: 1 .. num_physical_ports
  */
 static void pf_pdport_run_peer_check (pnet_t * net, int loc_port_num)
 {
@@ -833,8 +829,7 @@ static void pf_pdport_run_peer_check (pnet_t * net, int loc_port_num)
  *
  * @param net              InOut: The p-net stack instance
  * @param loc_port_num     In:    Local port number.
- *                                Valid range:
- *                                1 .. PNET_NUMBER_OF_PHYSICAL_PORTS.
+ *                                Valid range: 1 .. num_physical_ports
  */
 static void pf_pdport_handle_link_down (pnet_t * net, int loc_port_num)
 {
@@ -854,8 +849,7 @@ static void pf_pdport_handle_link_down (pnet_t * net, int loc_port_num)
  *
  * @param net              InOut: The p-net stack instance
  * @param loc_port_num     In:    Local port number.
- *                                Valid range:
- *                                1 .. PNET_NUMBER_OF_PHYSICAL_PORTS.
+ *                                Valid range: 1 .. num_physical_ports
  */
 static void pf_pdport_handle_link_up (pnet_t * net, int loc_port_num)
 {
@@ -874,8 +868,7 @@ static void pf_pdport_handle_link_up (pnet_t * net, int loc_port_num)
  *
  * @param net              InOut: The p-net stack instance
  * @param loc_port_num     In:    Local port number.
- *                                Valid range:
- *                                1 .. PNET_NUMBER_OF_PHYSICAL_PORTS.
+ *                                Valid range: 1 .. num_physical_ports
  */
 static void pf_pdport_monitor_link (pnet_t * net, int loc_port_num)
 {
@@ -995,8 +988,7 @@ void pf_pdport_periodic (pnet_t * net)
  * @param p_ar             In:    The AR instance.
  * @param p_write_req      In:    The IODWrite request.
  * @param loc_port_num     In:    Local port number.
- *                                Valid range:
- *                                1 .. PNET_NUMBER_OF_PHYSICAL_PORTS.
+ *                                Valid range: 1 .. num_physical_ports
  * @param p_bytes          In:    Input data
  * @param p_datalength     In:    Size of the data to write.
  * @param p_result         Out:   Detailed error information.
@@ -1096,8 +1088,7 @@ static int pf_pdport_write_data_check (
  * @param p_ar             In:    The AR instance.
  * @param p_write_req      In:    The IODWrite request.
  * @param loc_port_num     In:    Local port number.
- *                                Valid range:
- *                                1 .. PNET_NUMBER_OF_PHYSICAL_PORTS.
+ *                                Valid range: 1 .. num_physical_ports
  * @param p_bytes          In:    Input data
  * @param p_datalength     In:    Size of the data to write.
  * @param p_result         Out:   Detailed error information.
@@ -1220,7 +1211,7 @@ int pf_pdport_write_req (
 {
    int ret = -1;
    int loc_port_num =
-      pf_port_dap_subslot_to_local_port (p_write_req->subslot_number);
+      pf_port_dap_subslot_to_local_port (net, p_write_req->subslot_number);
 
    if (loc_port_num > 0)
    {

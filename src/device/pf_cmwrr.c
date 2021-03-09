@@ -157,8 +157,7 @@ static int pf_cmwrr_write (
 
    if (
       (p_write_request->slot_number == PNET_SLOT_DAP_IDENT) &&
-      (pf_port_subslot_is_dap_port_id (p_write_request->subslot_number) ==
-       true))
+      (pf_port_subslot_is_dap_port_id (net, p_write_request->subslot_number)))
    {
       LOG_INFO (
          PNET_LOG,
@@ -168,7 +167,9 @@ static int pf_cmwrr_write (
          p_write_request->slot_number,
          p_write_request->subslot_number,
          p_write_request->index,
-         pf_port_dap_subslot_to_local_port (p_write_request->subslot_number),
+         pf_port_dap_subslot_to_local_port (
+            net,
+            p_write_request->subslot_number),
          pf_index_to_logstring (p_write_request->index));
    }
    else

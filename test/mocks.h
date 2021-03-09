@@ -37,7 +37,7 @@ typedef struct mock_os_data_obj
     * Note that port numbers start at 1. To simplify test cases, we add a
     * dummy array element at index 0.
     */
-   pnal_eth_status_t eth_status[PNET_NUMBER_OF_PHYSICAL_PORTS + 1];
+   pnal_eth_status_t eth_status[PNET_MAX_PHYSICAL_PORTS + 1];
 
    uint16_t udp_sendto_len;
    uint16_t udp_sendto_count;
