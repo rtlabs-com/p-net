@@ -703,29 +703,36 @@ static int pf_alarm_apmr_frame_handler (
 {
    pf_apmx_t * p_apmx = (pf_apmx_t *)p_arg;
    pf_apmr_msg_t * p_apmr_msg;
-   uint16_t nbr;
-   int ret = 0; /* Failed to handle frame. The calling function needs to free
+   int ret = 0; /* Failed to handle frame. The frame handler needs to free
                    the buffer. */
 
-   LOG_INFO (
-      PF_ALARM_LOG,
-      "Alarm(%d): Received %s prio alarm frame.\n",
-      __LINE__,
-      p_apmx->high_priority ? "high" : "low");
    if (p_buf != NULL)
    {
-      nbr = p_apmx->apmr_msg_nbr++; /* ToDo: Make atomic */
-      if (p_apmx->apmr_msg_nbr >= NELEMENTS (p_apmx->apmr_msg))
-      {
-         p_apmx->apmr_msg_nbr = 0;
-      }
-      p_apmr_msg = &p_apmx->apmr_msg[nbr];
-      p_apmr_msg->p_buf = p_buf;
-      p_apmr_msg->frame_id_pos = frame_id_pos;
       if (p_apmx->p_alarm_q != NULL)
       {
+         p_apmr_msg = &p_apmx->apmr_msg[p_apmx->apmr_msg_nbr];
          if (os_mbox_post (p_apmx->p_alarm_q, (void *)p_apmr_msg, 0) == 0)
          {
+            /* Fill message with proper content */
+            /* TODO handle race condition */
+            p_apmr_msg->p_buf = p_buf;
+            p_apmr_msg->frame_id_pos = frame_id_pos;
+
+            /* Advance the counter for next message number */
+            /* TODO: Make atomic */
+            p_apmx->apmr_msg_nbr++;
+            if (p_apmx->apmr_msg_nbr >= NELEMENTS (p_apmx->apmr_msg))
+            {
+               p_apmx->apmr_msg_nbr = 0;
+            }
+
+            LOG_INFO (
+               PF_ALARM_LOG,
+               "Alarm(%d): Received %s prio alarm frame. Put in mbox. %p\n",
+               __LINE__,
+               p_apmx->high_priority ? "high" : "low",
+               p_buf);
+
             ret = 1; /* Means that calling function should not free buffer,
                         as that will be done when reading the mbox */
          }
@@ -733,9 +740,11 @@ static int pf_alarm_apmr_frame_handler (
          {
             LOG_ERROR (
                PF_ALARM_LOG,
-               "Alarm(%d): Failed to put incoming %s prio alarm in mbox\n",
+               "Alarm(%d): Failed to put incoming %s prio alarm in mbox. "
+               "Framehandler will free %p\n",
                __LINE__,
-               p_apmx->high_priority ? "high" : "low");
+               p_apmx->high_priority ? "high" : "low",
+               p_buf);
          }
       }
       else
@@ -743,14 +752,16 @@ static int pf_alarm_apmr_frame_handler (
          LOG_ERROR (
             PF_ALARM_LOG,
             "Alarm(%d): Could not put incoming %s prio alarm frame in"
-            " mbox, as it is deallocated.\n",
+            " mbox, as it is deallocated. Framehandler will free %p\n",
             __LINE__,
-            p_apmx->high_priority ? "high" : "low");
+            p_apmx->high_priority ? "high" : "low",
+            p_buf);
       }
    }
    else
    {
-      ret = 1; /* No need for the calling function to free p_buf */
+      /* No need for the frame hander to free p_buf as it is NULL */
+      ret = 1;
    }
 
    return ret;
