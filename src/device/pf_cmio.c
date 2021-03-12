@@ -275,8 +275,23 @@ int pf_cmio_cpm_state_ind (
    switch (p_ar->cmio_state)
    {
    case PF_CMIO_STATE_IDLE:
-   case PF_CMIO_STATE_STARTUP:
       /* Ignore */
+      break;
+   case PF_CMIO_STATE_STARTUP:
+      /* Trigger alarm if we use legacy startup mode
+         Incoming CPM_Stop.ind, which is "data hold timer expired", triggers
+         ABORT. See Table 546 "CMDEV state table" in Profinet protocol
+         ver 2.2 October 2007 */
+      if (p_ar->ar_param.ar_properties.startup_mode == false && start == false)
+      {
+         LOG_INFO (
+            PNET_LOG,
+            "CMIO(%d): CPM is stopping. CMIO state is PF_CMIO_STATE_STARTUP. "
+            "Aborting, as Legacy startup mode is used. crep: %u\n",
+            __LINE__,
+            crep);
+         (void)pf_cmdev_state_ind (net, p_ar, PNET_EVENT_ABORT);
+      }
       break;
    case PF_CMIO_STATE_WDATA:
       if (crep < p_ar->nbr_iocrs)
