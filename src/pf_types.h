@@ -2048,6 +2048,10 @@ typedef struct pf_ar
    uint8_t err_cls;
    uint8_t err_code;
 
+   pf_cmwrr_state_values_t cmwrr_state;
+
+   pf_cmsu_state_values_t cmsu_state;
+
    pf_cmsm_state_values_t cmsm_state;
    uint32_t cmsm_timer;
 
@@ -2806,8 +2810,6 @@ struct pnet
    int cmrpc_rpcreq_socket; /* Main socket for incoming requests */
    uint8_t cmrpc_dcerpc_input_frame[PF_FRAME_BUFFER_SIZE];
    uint8_t cmrpc_dcerpc_output_frame[PF_FRAME_BUFFER_SIZE];
-   pf_cmsu_state_values_t cmsu_state;
-   pf_cmwrr_state_values_t cmwrr_state;
    const pnet_cfg_t * p_fspm_default_cfg; /* Default configuration from user.
                                              Used at factory reset */
    pnet_cfg_t fspm_cfg; /* Configuration from user. Might be updated by stack

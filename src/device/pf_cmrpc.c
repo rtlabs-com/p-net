@@ -665,6 +665,8 @@ static int pf_ar_allocate (pnet_t * net, pf_ar_t ** pp_ar)
    {
       memset (&net->cmrpc_ar[ix], 0, sizeof (net->cmrpc_ar[ix]));
       net->cmrpc_ar[ix].in_use = true;
+      pf_cmsu_init (net, &net->cmrpc_ar[ix]);
+      pf_cmwrr_init (net, &net->cmrpc_ar[ix]);
 
       *pp_ar = &net->cmrpc_ar[ix];
 

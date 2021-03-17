@@ -36,7 +36,6 @@ extern "C" {
 
 #define APP_DATA_LED_ID            1
 #define APP_PROFINET_SIGNAL_LED_ID 2
-#define APP_EVENT_READY_FOR_DATA   BIT (0)
 #define APP_EVENT_TIMER            BIT (1)
 #define APP_EVENT_ALARM            BIT (2)
 #define APP_EVENT_ABORT            BIT (15)

@@ -24,7 +24,7 @@ extern "C" {
  * Initialize the CMWRR component.
  * @param net              InOut: The p-net stack instance
  */
-void pf_cmwrr_init (pnet_t * net);
+void pf_cmwrr_init (pnet_t * net, pf_ar_t * p_ar);
 
 /**
  * Show the CMWRR part of the specified AR.
@@ -44,7 +44,7 @@ void pf_cmwrr_show (const pnet_t * net, const pf_ar_t * p_ar);
  */
 int pf_cmwrr_cmdev_state_ind (
    pnet_t * net,
-   const pf_ar_t * p_ar,
+   pf_ar_t * p_ar,
    pnet_event_values_t event);
 
 /**
