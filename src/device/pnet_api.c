@@ -30,8 +30,6 @@ int pnet_init_only (pnet_t * net, const pnet_cfg_t * p_cfg)
    net->cmdev_initialized = false; /* TODO How to handle that pf_cmdev_exit()
                                       is used before pf_cmdev_init()? */
 
-   pf_cmsu_init (net);
-   pf_cmwrr_init (net);
    pf_cpm_init (net);
    pf_ppm_init (net);
    pf_alarm_init (net);

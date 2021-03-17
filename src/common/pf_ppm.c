@@ -441,21 +441,7 @@ int pf_ppm_close_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
    return 0;
 }
 
-/**
- * @internal
- * Find the AR, input IOCR and IODATA object instances for the specified
- * sub-slot.
- * @param net              InOut: The p-net stack instance
- * @param api_id           In:   The API id.
- * @param slot_nbr         In:   The slot number.
- * @param subslot_nbr      In:   The sub-slot number.
- * @param pp_ar            Out:  The AR instance.
- * @param pp_iocr          Out:  The IOCR instance.
- * @param pp_iodata        Out:  The IODATA object instance.
- * @return  0  If the information has been found.
- *          -1 If the information was not found.
- */
-static int pf_ppm_get_ar_iocr_desc (
+int pf_ppm_get_ar_iocr_desc (
    pnet_t * net,
    uint32_t api_id,
    uint16_t slot_nbr,
