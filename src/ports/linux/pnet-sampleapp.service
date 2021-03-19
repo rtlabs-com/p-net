@@ -12,7 +12,7 @@ ExecStartPre=/bin/sh -c '/bin/echo "49152 60999" > /proc/sys/net/ipv4/ip_local_p
 ExecStartPre=/usr/bin/gpio export 22 in
 ExecStartPre=/usr/bin/gpio export 27 in
 WorkingDirectory=/home/pi/profinet/build/
-ExecStart=/home/pi/profinet/build/pn_dev -v -b /sys/class/gpio/gpio22/value -d /sys/class/gpio/gpio27/value
+ExecStart=/home/pi/profinet/build/pn_dev -v -b /sys/class/gpio/gpio27/value -d /sys/class/gpio/gpio22/value
 Restart=always
 RestartSec=3
 
