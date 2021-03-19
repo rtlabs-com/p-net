@@ -249,7 +249,7 @@ GPIO files for buttons properly first::
 
 Then::
 
-    sudo ./pn_dev -v -b /sys/class/gpio/gpio22/value -d /sys/class/gpio/gpio27/value
+    sudo ./pn_dev -v -b /sys/class/gpio/gpio27/value -d /sys/class/gpio/gpio22/value
 
 It is possible to use plain files as inputs instead of physical buttons::
 
@@ -296,15 +296,15 @@ Print-out from Linux sample application
 This is the typical output from the Linux sample application at startup if
 you enable verbose output::
 
-   sudo ./pn_dev -v -b /sys/class/gpio/gpio22/value -d /sys/class/gpio/gpio27/value
+   sudo ./pn_dev -v -b /sys/class/gpio/gpio27/value -d /sys/class/gpio/gpio22/value
 
     ** Starting Profinet sample application **
     Number of slots:      5 (incl slot for DAP module)
     P-net log level:      4 (DEBUG=0, FATAL=4)
     App verbosity level:  1
     Ethernet interface:   eth0
-    Button1 file:         /sys/class/gpio/gpio22/value
-    Button2 file:         /sys/class/gpio/gpio27/value
+    Button1 file:         /sys/class/gpio/gpio27/value
+    Button2 file:         /sys/class/gpio/gpio22/value
     Default station name: rt-labs-dev
     MAC address:          B8:27:EB:F3:9A:B2
     Current hostname:     pndevice-pi

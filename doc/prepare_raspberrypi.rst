@@ -305,7 +305,7 @@ Add this to the first (and only) line in ``/boot/cmdline.txt``::
 Run the sample application on a specific CPU core, by modifying the
 autostart file ``/lib/systemd/system/pnet-sampleapp.service`` (if installed)::
 
-   ExecStart=taskset -c 2 /home/pi/profinet/build/pn_dev -v -b /sys/class/gpio/gpio22/value -d /sys/class/gpio/gpio27/value
+   ExecStart=taskset -c 2 /home/pi/profinet/build/pn_dev -v -b /sys/class/gpio/gpio27/value -d /sys/class/gpio/gpio22/value
 
 Display which CPU core a process is running on::
 
