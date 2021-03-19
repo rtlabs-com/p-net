@@ -114,6 +114,9 @@ int pf_ppm_set_iocs (
 
 /**
  * Retrieve the data and IOPS for a sub-module.
+ *
+ * Note that this is not from the PLC, but previously set by the application.
+ *
  * @param net              InOut: The p-net stack instance
  * @param api_id           In:    The API id.
  * @param slot_nbr         In:    The slot number.
@@ -139,6 +142,9 @@ int pf_ppm_get_data_and_iops (
 
 /**
  * Retrieve IOCS for a sub-module.
+ *
+ * Note that this is not from the PLC, but previously set by the application.
+ *
  * @param net              InOut: The p-net stack instance
  * @param api_id           In:   The API id.
  * @param slot_nbr         In:   The slot number.
