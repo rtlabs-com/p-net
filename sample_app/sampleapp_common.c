@@ -1370,7 +1370,7 @@ int app_pnet_cfg_init_default (pnet_cfg_t * stack_config)
    stack_config->im_0_data.im_version_minor = 1;
    stack_config->im_0_data.im_supported =
       PNET_SUPPORTED_IM1 | PNET_SUPPORTED_IM2 | PNET_SUPPORTED_IM3;
-   strcpy (stack_config->im_0_data.im_order_id, "12345");
+   strcpy (stack_config->im_0_data.im_order_id, "12345 Abcdefghijk");
    strcpy (stack_config->im_0_data.im_serial_number, "00001");
    strcpy (stack_config->im_1_data.im_tag_function, "my function");
    strcpy (stack_config->im_1_data.im_tag_location, "my location");
