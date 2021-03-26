@@ -5089,9 +5089,9 @@ int pf_cmdev_cm_ccontrol_req (pnet_t * net, pf_ar_t * p_ar)
                            p_iodata->slot_nbr,
                            p_iodata->subslot_nbr,
                            p_owning_ar->arep,
-                           p_owning_iocr->crep,
+                           (unsigned)p_owning_iocr->crep,
                            p_ar->arep,
-                           p_ar->iocrs[ix].crep);
+                           (unsigned)p_ar->iocrs[ix].crep);
                      }
 
                      /* Member data_avail is set directly by the PPM. The value
