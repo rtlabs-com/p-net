@@ -41,6 +41,13 @@ extern "C" {
 int pf_fspm_init (pnet_t * net, const pnet_cfg_t * p_cfg);
 
 /**
+ * Free and clear dynamic objects created by the FSPM component.
+ *
+ * @param net              InOut: The p-net stack instance
+ */
+void pf_fspm_exit (pnet_t * net);
+
+/**
  * Retrieve the minimum device interval, from the configuration.
  *
  * This is the smallest allowed data exchange interval, in units of 31.25 us.

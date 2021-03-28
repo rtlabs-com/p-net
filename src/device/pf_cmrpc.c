@@ -4829,12 +4829,12 @@ void pf_cmrpc_init (pnet_t * net)
    net->cmrpc_session_number = 0x12345678; /* Starting number */
 }
 
-/* Not used */
 void pf_cmrpc_exit (pnet_t * net)
 {
    if (net->p_cmrpc_rpc_mutex != NULL)
    {
       os_mutex_destroy (net->p_cmrpc_rpc_mutex);
+      memset (&net->p_cmrpc_rpc_mutex, 0, sizeof (net->p_cmrpc_rpc_mutex));
       memset (net->cmrpc_ar, 0, sizeof (net->cmrpc_ar));
       memset (net->cmrpc_session_info, 0, sizeof (net->cmrpc_session_info));
    }

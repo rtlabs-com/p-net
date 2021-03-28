@@ -448,6 +448,10 @@ class LldpTest : public PnetIntegrationTestBase
       /* Do not clear mock or callcounters here - we need to verify send at init
        * from LLDP */
    };
+   virtual void TearDown() override
+   {
+      pnet_free_members (net);
+   };
 };
 
 TEST_F (LldpTest, LldpInitTest)

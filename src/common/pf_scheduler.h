@@ -31,6 +31,13 @@ extern "C" {
 void pf_scheduler_init (pnet_t * net, uint32_t tick_interval);
 
 /**
+ * Free and clear dynamic objects created by the scheduler.
+ *
+ * @param net              InOut: The p-net stack instance
+ */
+void pf_scheduler_exit (pnet_t * net);
+
+/**
  * Schedule a call-back at a specific time.
  *
  * @param net              InOut: The p-net stack instance

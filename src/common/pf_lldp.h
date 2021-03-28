@@ -362,6 +362,13 @@ void pf_lldp_mac_address_to_string (
 void pf_lldp_init (pnet_t * net);
 
 /**
+ * Free and clear dynamic objects created by the LLDP component.
+ *
+ * @param net              InOut: The p-net stack instance
+ */
+void pf_lldp_exit (pnet_t * net);
+
+/**
  * Start or restart a timer that monitors reception of LLDP frames from peer.
  *
  * @param net              InOut: The p-net stack instance

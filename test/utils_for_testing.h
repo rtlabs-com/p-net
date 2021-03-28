@@ -283,6 +283,10 @@ class PnetIntegrationTest : public PnetIntegrationTestBase
 
       mock_clear(); /* lldp sends a frame at init */
    };
+   virtual void TearDown() override
+   {
+      pnet_free_members (net);
+   };
 };
 
 /*************************** Assertion helpers ******************************/

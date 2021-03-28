@@ -459,6 +459,20 @@ int pf_fspm_init (pnet_t * net, const pnet_cfg_t * p_cfg)
    return 0;
 }
 
+void pf_fspm_exit (pnet_t * net)
+{
+   if (net->fspm_im_mutex != NULL)
+   {
+      os_mutex_destroy (net->fspm_im_mutex);
+      memset (&net->fspm_im_mutex, 0, sizeof (net->fspm_im_mutex));
+   }
+   if (net->fspm_log_book_mutex != NULL)
+   {
+      os_mutex_destroy (net->fspm_log_book_mutex);
+      memset (&net->fspm_log_book_mutex, 0, sizeof (net->fspm_log_book_mutex));
+   }
+}
+
 void pf_fspm_create_log_book_entry (
    pnet_t * net,
    uint32_t arep,

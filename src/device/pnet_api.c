@@ -73,6 +73,15 @@ int pnet_init_only (pnet_t * net, const pnet_cfg_t * p_cfg)
    return 0;
 }
 
+void pnet_free_members (pnet_t * net)
+{
+   pf_fspm_exit (net);
+   pf_scheduler_exit (net);
+   pf_lldp_exit (net);
+   pf_cmdev_exit (net);
+   pf_cmrpc_exit (net);
+}
+
 pnet_t * pnet_init (const pnet_cfg_t * p_cfg)
 {
    pnet_t * net = NULL;
