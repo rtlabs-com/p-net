@@ -21,7 +21,6 @@
 
 #include <drivers/net.h>
 #include <drivers/eth/phy/phy.h>
-#include <gpio.h>
 #include <lwip/apps/snmp.h>
 #include <lwip/netif.h>
 #include <lwip/snmp.h>
