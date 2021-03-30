@@ -29,6 +29,7 @@
 #define pf_file_save_if_modified     mock_pf_file_save_if_modified
 #define pf_fspm_get_im_location      mock_pf_fspm_get_im_location
 #define pf_fspm_save_im_location     mock_pf_fspm_save_im_location
+#define pnal_get_hostname            mock_pnal_get_hostname
 #endif
 
 #include "pf_includes.h"

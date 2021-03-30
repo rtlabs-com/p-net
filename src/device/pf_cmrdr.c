@@ -57,6 +57,7 @@ int pf_cmrdr_rm_read_ind (
    uint8_t iops_len = 0;
    uint16_t data_len = 0;
    bool new_flag = false;
+   char station_name[PNET_STATION_NAME_MAX_SIZE]; /* Terminated*/
 
    if (
       (p_read_request->slot_number == PNET_SLOT_DAP_IDENT) &&
@@ -862,10 +863,15 @@ int pf_cmrdr_rm_read_ind (
             (p_read_request->subslot_number ==
              PNET_SUBSLOT_DAP_INTERFACE_1_IDENT))
          {
+            pf_cmina_get_station_name (net, station_name);
+
             pf_put_pdinterface_data_real (
-               net,
                true,
-               &read_result,
+               pf_cmina_get_device_macaddr (net),
+               pf_cmina_get_ipaddr (net),
+               pf_cmina_get_netmask (net),
+               pf_cmina_get_gateway (net),
+               station_name,
                res_size,
                p_res,
                p_pos);

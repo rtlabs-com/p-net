@@ -13,6 +13,11 @@
  * full license information.
  ********************************************************************/
 
+#ifdef UNIT_TEST
+#define pnal_eth_get_status      mock_pnal_eth_get_status
+#define pnal_get_port_statistics mock_pnal_get_port_statistics
+#endif
+
 #include "pf_includes.h"
 #include "pf_block_writer.h"
 #include "pf_block_reader.h"
@@ -409,12 +414,17 @@ int pf_pdport_read_ind (
    int ret = -1;
    int loc_port_num;
    pf_port_iterator_t port_iterator;
-   pnal_port_stats_t port_stats;
+   pnal_port_stats_t port_statistics;
    pf_port_t * p_port_data;
    uint16_t slot = p_read_req->slot_number;
    uint16_t subslot = p_read_req->subslot_number;
    uint16_t index = p_read_req->index;
    const char * netif_name;
+   pf_lldp_station_name_t peer_station_name;
+   pf_lldp_port_name_t peer_port_name;
+   pnal_eth_status_t eth_status;
+   char station_name[PNET_STATION_NAME_MAX_SIZE]; /* Terminated*/
+   uint16_t subslot_for_port;
 
    switch (index)
    {
@@ -424,11 +434,28 @@ int pf_pdport_read_ind (
          (pf_port_subslot_is_dap_port_id (net, subslot)))
       {
          loc_port_num = pf_port_dap_subslot_to_local_port (net, subslot);
-         pf_put_pdport_data_real (
+
+         p_port_data = pf_port_get_state (net, loc_port_num);
+         if (pnal_eth_get_status (p_port_data->netif.name, &eth_status) != 0)
+         {
+            memset (&eth_status, 0, sizeof (eth_status));
+         }
+
+         /* Look up peer info. Subfields .len indicates whether peer is found */
+         (void)pf_lldp_get_peer_station_name (
             net,
             loc_port_num,
+            &peer_station_name);
+         (void)pf_lldp_get_peer_port_name (net, loc_port_num, &peer_port_name);
+
+         pf_put_pdport_data_real (
             true,
-            p_read_res,
+            subslot,
+            &peer_station_name,
+            &peer_port_name,
+            p_port_data,
+            pf_port_get_media_type (eth_status.operational_mau_type),
+            &eth_status,
             res_size,
             p_res,
             p_pos);
@@ -446,10 +473,9 @@ int pf_pdport_read_ind (
          if (p_port_data->pdport.adjust.active)
          {
             pf_put_pdport_data_adj (
-               &p_port_data->pdport.adjust.peer_to_peer_boundary,
-               subslot,
                true,
-               p_read_res,
+               subslot,
+               &p_port_data->pdport.adjust.peer_to_peer_boundary,
                res_size,
                p_res,
                p_pos);
@@ -468,9 +494,10 @@ int pf_pdport_read_ind (
             if (p_port_data->pdport.check.active)
             {
                pf_put_pdport_data_check (
-                  &p_port_data->pdport.check.peer,
                   true,
-                  p_read_res,
+                  p_read_res->slot_number,
+                  p_read_res->subslot_number,
+                  &p_port_data->pdport.check.peer,
                   res_size,
                   p_res,
                   p_pos);
@@ -487,9 +514,10 @@ int pf_pdport_read_ind (
                if (p_port_data->pdport.check.active)
                {
                   pf_put_pdport_data_check (
-                     &p_port_data->pdport.check.peer,
                      true,
-                     p_read_res,
+                     p_read_res->slot_number,
+                     p_read_res->subslot_number,
+                     &p_port_data->pdport.check.peer,
                      res_size,
                      p_res,
                      p_pos);
@@ -507,7 +535,74 @@ int pf_pdport_read_ind (
          ((subslot == PNET_SUBSLOT_DAP_WHOLE_MODULE) ||
           (subslot == PNET_SUBSLOT_DAP_IDENT)))
       {
-         pf_put_pd_real_data (net, true, p_read_res, res_size, p_res, p_pos);
+         pf_cmina_get_station_name (net, station_name);
+         if (
+            pnal_get_port_statistics (
+               net->pf_interface.main_port.name,
+               &port_statistics) != 0)
+         {
+            memset (&port_statistics, 0, sizeof (port_statistics));
+         }
+
+         pf_put_pd_multiblock_interface_and_statistics (
+            true,
+            p_read_res->api,
+            pf_cmina_get_device_macaddr (net),
+            pf_cmina_get_ipaddr (net),
+            pf_cmina_get_netmask (net),
+            pf_cmina_get_gateway (net),
+            station_name,
+            &port_statistics,
+            res_size,
+            p_res,
+            p_pos);
+
+         pf_port_init_iterator_over_ports (net, &port_iterator);
+         loc_port_num = pf_port_get_next (&port_iterator);
+         while (loc_port_num != 0)
+         {
+            subslot_for_port =
+               pf_port_loc_port_num_to_dap_subslot (net, loc_port_num);
+            p_port_data = pf_port_get_state (net, loc_port_num);
+
+            if (pnal_eth_get_status (p_port_data->netif.name, &eth_status) != 0)
+            {
+               memset (&eth_status, 0, sizeof (eth_status));
+            }
+            if (
+               pnal_get_port_statistics (
+                  p_port_data->netif.name,
+                  &port_statistics) != 0)
+            {
+               memset (&port_statistics, 0, sizeof (port_statistics));
+            }
+
+            /* Look up peer info. Subfields .len indicates whether peer is found
+             */
+            (void)pf_lldp_get_peer_station_name (
+               net,
+               loc_port_num,
+               &peer_station_name);
+            (void)
+               pf_lldp_get_peer_port_name (net, loc_port_num, &peer_port_name);
+
+            pf_put_pd_multiblock_port_and_statistics (
+               true,
+               p_read_res->api,
+               subslot_for_port,
+               &peer_station_name,
+               &peer_port_name,
+               p_port_data,
+               pf_port_get_media_type (eth_status.operational_mau_type),
+               &eth_status,
+               &port_statistics,
+               res_size,
+               p_res,
+               p_pos);
+
+            loc_port_num = pf_port_get_next (&port_iterator);
+         }
+
          ret = 0;
       }
       break;
@@ -551,12 +646,11 @@ int pf_pdport_read_ind (
             netif_name = p_port_data->netif.name;
          }
 
-         if (pnal_get_port_statistics (netif_name, &port_stats) == 0)
+         if (pnal_get_port_statistics (netif_name, &port_statistics) == 0)
          {
             pf_put_pdport_statistics (
-               &port_stats,
                true,
-               p_read_res,
+               &port_statistics,
                res_size,
                p_res,
                p_pos);
@@ -573,10 +667,9 @@ int pf_pdport_read_ind (
          if (net->pf_interface.name_of_device_mode.active == true)
          {
             pf_put_pd_interface_adj (
-               net->pf_interface.name_of_device_mode.mode,
-               PNET_SUBSLOT_DAP_INTERFACE_1_IDENT,
                true,
-               p_read_res,
+               PNET_SUBSLOT_DAP_INTERFACE_1_IDENT,
+               net->pf_interface.name_of_device_mode.mode,
                res_size,
                p_res,
                p_pos);

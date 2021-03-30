@@ -23,6 +23,18 @@
  * Most functions have (at least) a buffer and a position in the buffer
  * as input arguments.
  *
+ * Try to keep this file as clean as possible:
+ *  - Avoid calling functions from other files
+ *  - Pass data to be written as arguments (avoid passing in pnet_t * net)
+ *
+ * The functions should in general look like:
+ *
+ *    void pf_put_whatever (
+ *       bool is_big_endian,
+ *       const whatever * p_whatever,
+ *       uint16_t res_len,
+ *       uint8_t * p_bytes,
+ *       uint16_t * p_pos);
  */
 
 #ifdef UNIT_TEST
@@ -3560,9 +3572,10 @@ void pf_put_input_data (
 }
 
 void pf_put_pdport_data_check (
-   const pf_check_peer_t * check_peer,
    bool is_big_endian,
-   const pf_iod_read_result_t * p_res,
+   uint16_t slot,
+   uint16_t subslot,
+   const pf_check_peer_t * check_peer,
    uint16_t res_len,
    uint8_t * p_bytes,
    uint16_t * p_pos)
@@ -3584,8 +3597,8 @@ void pf_put_pdport_data_check (
    pf_put_padding (2, res_len, p_bytes, p_pos);
 
    /* Slot and subslot info */
-   pf_put_uint16 (is_big_endian, p_res->slot_number, res_len, p_bytes, p_pos);
-   pf_put_uint16 (is_big_endian, p_res->subslot_number, res_len, p_bytes, p_pos);
+   pf_put_uint16 (is_big_endian, slot, res_len, p_bytes, p_pos);
+   pf_put_uint16 (is_big_endian, subslot, res_len, p_bytes, p_pos);
 
    /* PF_BT_CHECKPEERS Block header first */
    pf_put_block_header (
@@ -3634,32 +3647,22 @@ void pf_put_pdport_data_check (
 }
 
 void pf_put_pdport_data_real (
-   pnet_t * net,
-   int loc_port_num,
    bool is_big_endian,
-   const pf_iod_read_result_t * p_res,
+   uint16_t subslot,
+   const pf_lldp_station_name_t * p_peer_station_name,
+   const pf_lldp_port_name_t * p_peer_port_name,
+   const pf_port_t * p_port_data,
+   pf_mediatype_values_t media_type,
+   const pnal_eth_status_t * p_eth_status,
    uint16_t res_len,
    uint8_t * p_bytes,
    uint16_t * p_pos)
 {
    uint16_t block_pos = *p_pos;
    uint16_t block_len = 0;
-   uint8_t num_peers = 0;
    uint16_t link_state = 0;
-   pf_lldp_station_name_t station_name;
-   pf_lldp_port_name_t port_name;
-   pnal_eth_status_t eth_status;
-   const uint16_t subslot =
-      pf_port_loc_port_num_to_dap_subslot (net, loc_port_num);
-   const pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
+   uint8_t num_peers = p_port_data->lldp.is_peer_info_received ? 1 : 0;
    const pf_lldp_peer_info_t * p_peer_info = &p_port_data->lldp.peer_info;
-
-   num_peers = p_port_data->lldp.is_peer_info_received ? 1 : 0;
-
-   if (pnal_eth_get_status (p_port_data->netif.name, &eth_status) != 0)
-   {
-      memset (&eth_status, 0, sizeof (eth_status));
-   }
 
    /* Block header first */
    pf_put_block_header (
@@ -3698,16 +3701,19 @@ void pf_put_pdport_data_real (
    if (num_peers > 0)
    {
       /* Peer port name */
-      pf_lldp_get_peer_port_name (net, loc_port_num, &port_name);
-      pf_put_byte (port_name.len, res_len, p_bytes, p_pos);
-      pf_put_mem (port_name.string, port_name.len, res_len, p_bytes, p_pos);
+      pf_put_byte (p_peer_port_name->len, res_len, p_bytes, p_pos);
+      pf_put_mem (
+         p_peer_port_name->string,
+         p_peer_port_name->len,
+         res_len,
+         p_bytes,
+         p_pos);
 
       /* Peer station name */
-      pf_lldp_get_peer_station_name (net, loc_port_num, &station_name);
-      pf_put_byte (station_name.len, res_len, p_bytes, p_pos);
+      pf_put_byte (p_peer_station_name->len, res_len, p_bytes, p_pos);
       pf_put_mem (
-         station_name.string,
-         station_name.len,
+         p_peer_station_name->string,
+         p_peer_station_name->len,
          res_len,
          p_bytes,
          p_pos);
@@ -3736,7 +3742,7 @@ void pf_put_pdport_data_real (
    /* MAUType */
    pf_put_uint16 (
       is_big_endian,
-      eth_status.operational_mau_type,
+      p_eth_status->operational_mau_type,
       res_len,
       p_bytes,
       p_pos);
@@ -3753,7 +3759,7 @@ void pf_put_pdport_data_real (
 
    /* PN-AL-protocol (Mar20) section 5.2.13.23 for LinkState encoding */
    /* LinkState.Link */
-   if (eth_status.running)
+   if (p_eth_status->running)
    {
       link_state = PF_PD_LINK_STATE_LINK_UP;
    }
@@ -3769,12 +3775,7 @@ void pf_put_pdport_data_real (
 
    pf_put_padding (2, res_len, p_bytes, p_pos);
 
-   pf_put_uint32 (
-      is_big_endian,
-      pf_port_get_media_type (eth_status.operational_mau_type),
-      res_len,
-      p_bytes,
-      p_pos);
+   pf_put_uint32 (is_big_endian, media_type, res_len, p_bytes, p_pos);
 
    /* Finally insert the block length into the block header */
    block_len = *p_pos - (block_pos + 4);
@@ -3784,9 +3785,8 @@ void pf_put_pdport_data_real (
 }
 
 void pf_put_pdport_statistics (
-   const pnal_port_stats_t * p_port_stats,
    bool is_big_endian,
-   const pf_iod_read_result_t * p_res,
+   const pnal_port_stats_t * p_port_stats,
    uint16_t res_len,
    uint8_t * p_bytes,
    uint16_t * p_pos)
@@ -3852,20 +3852,18 @@ void pf_put_pdport_statistics (
 }
 
 void pf_put_pdinterface_data_real (
-   pnet_t * net,
    bool is_big_endian,
-   const pf_iod_read_result_t * p_res,
+   const pnet_ethaddr_t * mac_address,
+   pnal_ipaddr_t ip_address,
+   pnal_ipaddr_t netmask,
+   pnal_ipaddr_t gateway,
+   const char * station_name,
    uint16_t res_len,
    uint8_t * p_bytes,
    uint16_t * p_pos)
 {
    uint16_t block_pos = *p_pos;
    uint16_t block_len = 0;
-   char station_name[PNET_STATION_NAME_MAX_SIZE]; /** Terminated */
-   const pnet_ethaddr_t * mac_address = pf_cmina_get_device_macaddr (net);
-   pnal_ipaddr_t ip_address = pf_cmina_get_ipaddr (net);
-   pnal_ipaddr_t netmask = pf_cmina_get_netmask (net);
-   pnal_ipaddr_t gateway = pf_cmina_get_gateway (net);
 
    /* Block header first */
    pf_put_block_header (
@@ -3880,7 +3878,6 @@ void pf_put_pdinterface_data_real (
 
    /* Station name */
    /* If station name length is 0, maybe mac string shall be used instead */
-   pf_cmina_get_station_name (net, station_name);
    pf_put_byte ((uint8_t)strlen (station_name), res_len, p_bytes, p_pos);
    pf_put_mem (station_name, strlen (station_name), res_len, p_bytes, p_pos);
 
@@ -3912,32 +3909,21 @@ void pf_put_pdinterface_data_real (
    pf_put_uint16 (is_big_endian, block_len, res_len, p_bytes, &block_pos);
 }
 
-/**
- * @internal
- * Insert multiblock interface and statistics
- * @param net              InOut: The p-net stack instance
- * @param is_big_endian    In:    Endianness of the destination buffer.
- * @param p_res            In:    The entity to insert
- * @param res_len          In:    Size of destination buffer.
- * @param p_bytes          Out:   Destination buffer.
- * @param p_pos            InOut: Position in destination buffer.
- */
-static void pf_put_pd_multiblock_interface_and_statistics (
-   pnet_t * net,
+void pf_put_pd_multiblock_interface_and_statistics (
    bool is_big_endian,
-   const pf_iod_read_result_t * p_res,
+   uint32_t api,
+   const pnet_ethaddr_t * mac_address,
+   pnal_ipaddr_t ip_address,
+   pnal_ipaddr_t netmask,
+   pnal_ipaddr_t gateway,
+   const char * station_name,
+   const pnal_port_stats_t * p_port_statistics,
    uint16_t res_len,
    uint8_t * p_bytes,
    uint16_t * p_pos)
 {
    uint16_t block_pos = *p_pos;
    uint16_t block_len = 0;
-   pnal_port_stats_t port_stats;
-
-   if (pnal_get_port_statistics (net->pf_interface.main_port.name, &port_stats) != 0)
-   {
-      memset (&port_stats, 0, sizeof (port_stats));
-   }
 
    /* Block header first */
    pf_put_block_header (
@@ -3953,7 +3939,7 @@ static void pf_put_pd_multiblock_interface_and_statistics (
    pf_put_padding (2, res_len, p_bytes, p_pos);
 
    /* API */
-   pf_put_uint32 (is_big_endian, p_res->api, res_len, p_bytes, p_pos);
+   pf_put_uint32 (is_big_endian, api, res_len, p_bytes, p_pos);
 
    /* Slot and subslot */
    pf_put_uint16 (is_big_endian, PNET_SLOT_DAP_IDENT, res_len, p_bytes, p_pos);
@@ -3966,18 +3952,20 @@ static void pf_put_pd_multiblock_interface_and_statistics (
 
    /*PDInterfaceDataReal*/
    pf_put_pdinterface_data_real (
-      net,
       is_big_endian,
-      p_res,
+      mac_address,
+      ip_address,
+      netmask,
+      gateway,
+      station_name,
       res_len,
       p_bytes,
       p_pos);
 
    /*PDPortStatistics*/
    pf_put_pdport_statistics (
-      &port_stats,
       is_big_endian,
-      p_res,
+      p_port_statistics,
       res_len,
       p_bytes,
       p_pos);
@@ -3989,41 +3977,22 @@ static void pf_put_pd_multiblock_interface_and_statistics (
    pf_put_uint16 (is_big_endian, block_len, res_len, p_bytes, &block_pos);
 }
 
-/**
- * @internal
- * Insert multiblock port and statistics for one port
- *
- * If the local port number is out of range this operation will assert.
- *
- * @param net              InOut: The p-net stack instance
- * @param is_big_endian    In:    Endianness of the destination buffer.
- * @param loc_port_num     In:    Local port number.
- *                                Valid range: 1 .. num_physical_ports
- * @param p_res            In:    The entity to insert
- * @param res_len          In:    Size of destination buffer.
- * @param p_bytes          Out:   Destination buffer.
- * @param p_pos            InOut: Position in destination buffer.
- */
-static void pf_put_pd_multiblock_port_and_statistics (
-   pnet_t * net,
+void pf_put_pd_multiblock_port_and_statistics (
    bool is_big_endian,
-   int loc_port_num,
-   const pf_iod_read_result_t * p_res,
+   uint32_t api,
+   uint16_t subslot,
+   const pf_lldp_station_name_t * p_peer_station_name,
+   const pf_lldp_port_name_t * p_peer_port_name,
+   const pf_port_t * p_port_data,
+   pf_mediatype_values_t media_type,
+   const pnal_eth_status_t * p_eth_status,
+   const pnal_port_stats_t * p_port_statistics,
    uint16_t res_len,
    uint8_t * p_bytes,
    uint16_t * p_pos)
 {
    uint16_t block_pos = *p_pos;
    uint16_t block_len = 0;
-   pnal_port_stats_t port_stats;
-   const uint16_t subslot =
-      pf_port_loc_port_num_to_dap_subslot (net, loc_port_num);
-   const pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
-
-   if (pnal_get_port_statistics (p_port_data->netif.name, &port_stats) != 0)
-   {
-      memset (&port_stats, 0, sizeof (port_stats));
-   }
 
    /* Block header first */
    pf_put_block_header (
@@ -4039,7 +4008,7 @@ static void pf_put_pd_multiblock_port_and_statistics (
    pf_put_padding (2, res_len, p_bytes, p_pos);
 
    /* API */
-   pf_put_uint32 (is_big_endian, p_res->api, res_len, p_bytes, p_pos);
+   pf_put_uint32 (is_big_endian, api, res_len, p_bytes, p_pos);
 
    /* Slot and subslot */
    pf_put_uint16 (is_big_endian, PNET_SLOT_DAP_IDENT, res_len, p_bytes, p_pos);
@@ -4047,19 +4016,21 @@ static void pf_put_pd_multiblock_port_and_statistics (
 
    /*PDPortDataReal*/
    pf_put_pdport_data_real (
-      net,
-      loc_port_num,
-      is_big_endian,
-      p_res,
+      true,
+      subslot,
+      p_peer_station_name,
+      p_peer_port_name,
+      p_port_data,
+      media_type,
+      p_eth_status,
       res_len,
       p_bytes,
       p_pos);
 
    /*PDPortStatistics*/
    pf_put_pdport_statistics (
-      &port_stats,
       is_big_endian,
-      p_res,
+      p_port_statistics,
       res_len,
       p_bytes,
       p_pos);
@@ -4071,57 +4042,18 @@ static void pf_put_pd_multiblock_port_and_statistics (
    pf_put_uint16 (is_big_endian, block_len, res_len, p_bytes, &block_pos);
 }
 
-void pf_put_pd_real_data (
-   pnet_t * net,
-   bool is_big_endian,
-   const pf_iod_read_result_t * p_res,
-   uint16_t res_len,
-   uint8_t * p_bytes,
-   uint16_t * p_pos)
-{
-   int port;
-   pf_port_iterator_t port_iterator;
-
-   pf_put_pd_multiblock_interface_and_statistics (
-      net,
-      is_big_endian,
-      p_res,
-      res_len,
-      p_bytes,
-      p_pos);
-
-   pf_port_init_iterator_over_ports (net, &port_iterator);
-   port = pf_port_get_next (&port_iterator);
-
-   while (port != 0)
-   {
-      pf_put_pd_multiblock_port_and_statistics (
-         net,
-         is_big_endian,
-         port,
-         p_res,
-         res_len,
-         p_bytes,
-         p_pos);
-
-      port = pf_port_get_next (&port_iterator);
-   }
-}
-
 /**
  * @internal
  * Insert peer to peer boundary
- * @param p_peer_to_peer_boundary In:    The p-net stack instance
  * @param is_big_endian           In:    Endianness of the destination buffer.
- * @param p_res                   In:    The entity to insert
+ * @param p_peer_to_peer_boundary In:    The p-net stack instance
  * @param res_len                 In:    Size of destination buffer.
  * @param p_bytes                 Out:   Destination buffer.
  * @param p_pos                   InOut: Position in destination buffer.
  */
 void pf_put_peer_to_peer_boundary (
-   const pf_adjust_peer_to_peer_boundary_t * p_peer_to_peer_boundary,
    bool is_big_endian,
-   const pf_iod_read_result_t * p_res,
+   const pf_adjust_peer_to_peer_boundary_t * p_peer_to_peer_boundary,
    uint16_t res_len,
    uint8_t * p_bytes,
    uint16_t * p_pos)
@@ -4183,10 +4115,9 @@ void pf_put_peer_to_peer_boundary (
 }
 
 void pf_put_pdport_data_adj (
-   const pf_adjust_peer_to_peer_boundary_t * p_peer_to_peer_boundary,
-   uint16_t subslot,
    bool is_big_endian,
-   const pf_iod_read_result_t * p_res,
+   uint16_t subslot,
+   const pf_adjust_peer_to_peer_boundary_t * p_peer_to_peer_boundary,
    uint16_t res_len,
    uint8_t * p_bytes,
    uint16_t * p_pos)
@@ -4213,9 +4144,8 @@ void pf_put_pdport_data_adj (
 
    /* PeerToPeer_boundary*/
    pf_put_peer_to_peer_boundary (
-      p_peer_to_peer_boundary,
       is_big_endian,
-      p_res,
+      p_peer_to_peer_boundary,
       res_len,
       p_bytes,
       p_pos);
@@ -4228,10 +4158,9 @@ void pf_put_pdport_data_adj (
 }
 
 void pf_put_pd_interface_adj (
-   pf_lldp_name_of_device_mode_t name_of_device_mode,
-   uint16_t subslot,
    bool is_big_endian,
-   const pf_iod_read_result_t * p_res,
+   uint16_t subslot,
+   pf_lldp_name_of_device_mode_t name_of_device_mode,
    uint16_t res_len,
    uint8_t * p_bytes,
    uint16_t * p_pos)

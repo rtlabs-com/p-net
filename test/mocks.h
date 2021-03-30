@@ -38,6 +38,7 @@ typedef struct mock_os_data_obj
     * dummy array element at index 0.
     */
    pnal_eth_status_t eth_status[PNET_MAX_PHYSICAL_PORTS + 1];
+   pnal_port_stats_t port_statistics[PNET_MAX_PHYSICAL_PORTS + 1];
 
    uint16_t udp_sendto_len;
    uint16_t udp_sendto_count;
@@ -109,6 +110,10 @@ int mock_pnal_get_macaddress (
 int mock_pnal_eth_get_status (
    const char * interface_name,
    pnal_eth_status_t * status);
+int mock_pnal_get_port_statistics (
+   const char * interface_name,
+   pnal_port_stats_t * port_stats);
+int mock_pnal_get_hostname (char * hostname);
 void mock_os_cpy_mac_addr (uint8_t * mac_addr);
 int mock_pnal_udp_open (pnal_ipaddr_t addr, pnal_ipport_t port);
 int mock_pnal_udp_sendto (
