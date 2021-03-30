@@ -90,6 +90,24 @@ int mock_pnal_eth_get_status (
    return 0;
 }
 
+int mock_pnal_get_port_statistics (
+   const char * interface_name,
+   pnal_port_stats_t * port_stats)
+{
+   /* TODO get loc_port_num from interface_name */
+   *port_stats = mock_os_data.port_statistics[1];
+
+   return 0;
+}
+
+int mock_pnal_get_hostname (char * hostname)
+{
+   hostname[0] = 'A';
+   hostname[1] = '\0';
+
+   return 0;
+}
+
 int mock_pnal_get_ip_suite (
    const char * interface_name,
    pnal_ipaddr_t * p_ipaddr,

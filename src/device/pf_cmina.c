@@ -31,7 +31,8 @@
  */
 
 #ifdef UNIT_TEST
-#define pnal_set_ip_suite mock_pnal_set_ip_suite
+#define pnal_get_port_statistics mock_pnal_get_port_statistics
+#define pnal_set_ip_suite        mock_pnal_set_ip_suite
 #endif
 
 #include <string.h>

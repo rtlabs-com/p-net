@@ -707,139 +707,190 @@ void pf_put_diag_data (
    uint16_t * p_pos);
 
 /**
- * Insert pd port data check block into a buffer.
+ * Insert PDport data check block into a buffer.
+ * @param is_big_endian    In:    Endianness of the destination buffer.
+ * @param slot             In:    Slot number
+ * @param subslot          In:    Subslot number
  * @param check_peer       In:    check_peer data. ToDo - add support for misc
  *                                port data checks
- * @param is_big_endian    In:    Endianness of the destination buffer.
- * @param p_res            In:    Read result
  * @param res_len          In:    Size of destination buffer.
  * @param p_bytes          Out:   Destination buffer.
  * @param p_pos            InOut: Position in destination buffer.
  */
 void pf_put_pdport_data_check (
-   const pf_check_peer_t * check_peer,
    bool is_big_endian,
-   const pf_iod_read_result_t * p_res,
+   uint16_t slot,
+   uint16_t subslot,
+   const pf_check_peer_t * check_peer,
    uint16_t res_len,
    uint8_t * p_bytes,
    uint16_t * p_pos);
 
 /**
- * Insert pd port data adjust block into a buffer.
- * @param p_peer_to_peer_boundary   In:    Peer to peer boundary ToDo - Add
- *                                         support for other adjust properties
- * @param subslot                   In:    DAP subslot identifying the port.
+ * Insert PDport data adjust block into a buffer.
+ *
+ * ToDo - Add support for other adjust properties
+ *
  * @param is_big_endian             In:    Endianness of the destination buffer.
- * @param p_res                     In:    Read result
+ * @param subslot                   In:    DAP subslot identifying the port.
+ * @param p_peer_to_peer_boundary   In:    Peer to peer boundary
  * @param res_len                   In:    Size of destination buffer.
  * @param p_bytes                   Out:   Destination buffer.
  * @param p_pos                     InOut: Position in destination buffer.
  */
 void pf_put_pdport_data_adj (
-   const pf_adjust_peer_to_peer_boundary_t * p_peer_to_peer_boundary,
-   uint16_t subslot,
    bool is_big_endian,
-   const pf_iod_read_result_t * p_res,
+   uint16_t subslot,
+   const pf_adjust_peer_to_peer_boundary_t * p_peer_to_peer_boundary,
    uint16_t res_len,
    uint8_t * p_bytes,
    uint16_t * p_pos);
 
 /**
  * Insert pd interface adjust block into a buffer.
+ *
+ * @param is_big_endian    In:    Endianness of the destination buffer.
+ * @param subslot          In:    DAP subslot identifying the interface
  * @param mode             In:    Multiple interface mode.
  *                                (name of device mode)
- * @param subslot          In:    DAP subslot identifying the interface
- * @param is_big_endian    In:    Endianness of the destination buffer.
- * @param p_res            In:    Read result
  * @param res_len          In:    Size of destination buffer.
  * @param p_bytes          Out:   Destination buffer.
  * @param p_pos            InOut: Position in destination buffer.
  */
 void pf_put_pd_interface_adj (
-   pf_lldp_name_of_device_mode_t name_of_device_mode,
-   uint16_t subslot,
    bool is_big_endian,
-   const pf_iod_read_result_t * p_res,
+   uint16_t subslot,
+   pf_lldp_name_of_device_mode_t name_of_device_mode,
    uint16_t res_len,
    uint8_t * p_bytes,
    uint16_t * p_pos);
 
 /**
- * Insert pd port real data block into a buffer.
+ * Insert PDport real data block into a buffer.
  *
  * Includes peer chassis ID, peer MAC address and peer MAU type.
  *
- * If the local port number is out of range this operation will assert.
- *
- * @param net              InOut: The p-net stack instance
- * @param loc_port_num     In:    Local port number.
- *                                Valid range: 1 .. num_physical_ports.
- * @param is_big_endian    In:    Endianness of the destination buffer.
- * @param p_res            In:    Read result
- * @param res_len          In:    Size of destination buffer.
- * @param p_bytes          Out:   Destination buffer.
- * @param p_pos            InOut: Position in destination buffer.
+ * @param is_big_endian       In:    Endianness of the destination buffer.
+ * @param subslot             In:    Subslot
+ * @param p_peer_station_name In:    Peer station name
+ * @param p_peer_port_name    In:    Peer port name
+ * @param p_port_data         In:    Port data
+ * @param media_type          In:    Media type
+ * @param p_eth_status        In:    Ethernet status
+ * @param res_len             In:    Size of destination buffer.
+ * @param p_bytes             Out:   Destination buffer.
+ * @param p_pos               InOut: Position in destination buffer.
  */
 void pf_put_pdport_data_real (
-   pnet_t * net,
-   int loc_port_num,
    bool is_big_endian,
-   const pf_iod_read_result_t * p_res,
+   uint16_t subslot,
+   const pf_lldp_station_name_t * p_peer_station_name,
+   const pf_lldp_port_name_t * p_peer_port_name,
+   const pf_port_t * p_port_data,
+   pf_mediatype_values_t media_type,
+   const pnal_eth_status_t * p_eth_status,
    uint16_t res_len,
    uint8_t * p_bytes,
    uint16_t * p_pos);
 
 /**
- * Insert pd port statistics block into a buffer.
- * @param p_port_stats     In:    Port statistics
+ * Insert PD port statistics block into a buffer.
+ *
  * @param is_big_endian    In:    Endianness of the destination buffer.
- * @param p_res            In:    Read result
+ * @param p_port_stats     In:    Port statistics
  * @param res_len          In:    Size of destination buffer.
  * @param p_bytes          Out:   Destination buffer.
  * @param p_pos            InOut: Position in destination buffer.
  */
-
 void pf_put_pdport_statistics (
-   const pnal_port_stats_t * p_port_stats,
    bool is_big_endian,
-   const pf_iod_read_result_t * p_res,
+   const pnal_port_stats_t * p_port_stats,
    uint16_t res_len,
    uint8_t * p_bytes,
    uint16_t * p_pos);
 
 /**
- * Insert dp interface real data block into a buffer.
+ * Insert PD interface real data block into a buffer.
  *
  * This includes chassis ID, MAC address, IP address, subnet and gateway.
  *
- * @param net              InOut: The p-net stack instance
  * @param is_big_endian    In:    Endianness of the destination buffer.
- * @param p_res            In:    Read result
+ * @param mac_address      In:    MAC address for DAP
+ * @param ip_address       In:    IP address
+ * @param netmask          In:    Netmask
+ * @param gateway          In:    Gateway address
+ * @param station_name     In:    Station name, terminated string, buffer
+ *                                size PNET_STATION_NAME_MAX_SIZE
  * @param res_len          In:    Size of destination buffer.
  * @param p_bytes          Out:   Destination buffer.
  * @param p_pos            InOut: Position in destination buffer.
  */
 void pf_put_pdinterface_data_real (
-   pnet_t * net,
    bool is_big_endian,
-   const pf_iod_read_result_t * p_res,
+   const pnet_ethaddr_t * mac_address,
+   pnal_ipaddr_t ip_address,
+   pnal_ipaddr_t netmask,
+   pnal_ipaddr_t gateway,
+   const char * station_name,
    uint16_t res_len,
    uint8_t * p_bytes,
    uint16_t * p_pos);
 
 /**
- * Insert dp real data block into a buffer.
- * @param net              InOut: The p-net stack instance
- * @param is_big_endian    In:    Endianness of the destination buffer.
- * @param p_res            In:    Read result
- * @param res_len          In:    Size of destination buffer.
- * @param p_bytes          Out:   Destination buffer.
- * @param p_pos            InOut: Position in destination buffer.
+ * Insert multiblock port and statistics for one port
+ *
+ * @param is_big_endian       In:    Endianness of the destination buffer.
+ * @param api                 In:    API number
+ * @param subslot             In:    DAP subslot for port
+ * @param p_peer_station_name In:    Peer station name
+ * @param p_peer_port_name    In:    Peer port name
+ * @param p_port_data         In:    Port data
+ * @param media_type          In:    Media type
+ * @param p_eth_status        In:    Ethernet status
+ * @param p_port_statistics   In:    Port statistics
+ * @param res_len             In:    Size of destination buffer.
+ * @param p_bytes             Out:   Destination buffer.
+ * @param p_pos               InOut: Position in destination buffer.
  */
-void pf_put_pd_real_data (
-   pnet_t * net,
+void pf_put_pd_multiblock_port_and_statistics (
    bool is_big_endian,
-   const pf_iod_read_result_t * p_res,
+   uint32_t api,
+   uint16_t subslot,
+   const pf_lldp_station_name_t * p_peer_station_name,
+   const pf_lldp_port_name_t * p_peer_port_name,
+   const pf_port_t * p_port_data,
+   pf_mediatype_values_t media_type,
+   const pnal_eth_status_t * p_eth_status,
+   const pnal_port_stats_t * p_port_statistics,
+   uint16_t res_len,
+   uint8_t * p_bytes,
+   uint16_t * p_pos);
+
+/**
+ * Insert multiblock interface and statistics
+ *
+ * @param is_big_endian     In:    Endianness of the destination buffer.
+ * @param api               In:    API number
+ * @param mac_address       In:    MAC address
+ * @param ip_address        In:    IP address
+ * @param netmask           In:    Netmask
+ * @param gateway           In:    Gateway address
+ * @param station_name      In:    Station name, terminated string, buffer
+ *                                 size PNET_STATION_NAME_MAX_SIZE
+ * @param p_port_statistics In:    Port statistics
+ * @param res_len           In:    Size of destination buffer.
+ * @param p_bytes           Out:   Destination buffer.
+ * @param p_pos             InOut: Position in destination buffer.
+ */
+void pf_put_pd_multiblock_interface_and_statistics (
+   bool is_big_endian,
+   uint32_t api,
+   const pnet_ethaddr_t * mac_address,
+   pnal_ipaddr_t ip_address,
+   pnal_ipaddr_t netmask,
+   pnal_ipaddr_t gateway,
+   const char * station_name,
+   const pnal_port_stats_t * p_port_statistics,
    uint16_t res_len,
    uint8_t * p_bytes,
    uint16_t * p_pos);
