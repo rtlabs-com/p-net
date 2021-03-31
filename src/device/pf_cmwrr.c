@@ -79,6 +79,18 @@ int pf_cmwrr_cmdev_state_ind (
    pf_ar_t * p_ar,
    pnet_event_values_t event)
 {
+   int ret = -1;
+   pf_cmwrr_state_values_t initial_state = p_ar->cmwrr_state;
+
+   LOG_DEBUG (
+      PNET_LOG,
+      "CMWRR(%d): Received event %s from CMDEV. Initial state %s for AREP "
+      "%u.\n",
+      __LINE__,
+      pf_cmdev_event_to_string (event),
+      pf_cmwrr_state_to_string (p_ar->cmwrr_state),
+      p_ar->arep);
+
    switch (p_ar->cmwrr_state)
    {
    case PF_CMWRR_STATE_IDLE:
@@ -86,6 +98,7 @@ int pf_cmwrr_cmdev_state_ind (
       {
          p_ar->cmwrr_state = PF_CMWRR_STATE_STARTUP;
       }
+      ret = 0;
       break;
    case PF_CMWRR_STATE_STARTUP:
       if (event == PNET_EVENT_PRMEND)
@@ -96,6 +109,7 @@ int pf_cmwrr_cmdev_state_ind (
       {
          p_ar->cmwrr_state = PF_CMWRR_STATE_IDLE;
       }
+      ret = 0;
       break;
    case PF_CMWRR_STATE_PRMEND:
       if (event == PNET_EVENT_ABORT)
@@ -106,12 +120,14 @@ int pf_cmwrr_cmdev_state_ind (
       {
          p_ar->cmwrr_state = PF_CMWRR_STATE_DATA;
       }
+      ret = 0;
       break;
    case PF_CMWRR_STATE_DATA:
       if (event == PNET_EVENT_ABORT)
       {
          p_ar->cmwrr_state = PF_CMWRR_STATE_IDLE;
       }
+      ret = 0;
       break;
    default:
       LOG_ERROR (
@@ -122,7 +138,17 @@ int pf_cmwrr_cmdev_state_ind (
       break;
    }
 
-   return -1;
+   if (p_ar->cmwrr_state != initial_state)
+   {
+      LOG_DEBUG (
+         PNET_LOG,
+         "CMWRR(%d): New state state %s for AREP %u.\n",
+         __LINE__,
+         pf_cmwrr_state_to_string (p_ar->cmwrr_state),
+         p_ar->arep);
+   }
+
+   return ret;
 }
 
 /**
