@@ -825,13 +825,11 @@ static int app_state_ind (
          (void)pnet_set_provider_state (net, true);
       }
 
-      if (pnet_application_ready (net, arep) != 0)
-      {
-         printf (
-            "AREP %u Error returned when application telling that it is "
-            "ready for data. Have you set IOCS or IOPS for all subslots?\n",
-            arep);
-      }
+      /* Send application ready at next tick
+         Do not call pnet_application_ready() here as it will affect
+         the internal stack states */
+      p_appdata->arep_for_appl_ready = arep;
+      os_event_set (p_appdata->main_events, APP_EVENT_READY_FOR_DATA);
    }
    else if (state == PNET_EVENT_DATA)
    {
@@ -1585,6 +1583,39 @@ void app_copy_ip_to_struct (
 }
 
 /**
+ * Send application ready to the controller
+ *
+ * @param net              InOut: p-net stack instance
+ * @param arep             In:    Arep
+ * @param verbosity        In:    Verbosity
+ */
+static void app_handle_send_application_ready (
+   pnet_t * net,
+   uint32_t arep,
+   int verbosity)
+{
+   int ret = -1;
+
+   if (verbosity > 0)
+   {
+      printf (
+         "Application will signal that it is ready for data, for "
+         "AREP %u.\n",
+         arep);
+   }
+
+   ret = pnet_application_ready (net, arep);
+   if (ret != 0)
+   {
+      printf ("Error returned when application telling that it is ready for "
+              "data. Have you set IOCS or IOPS for all subslots?\n");
+   }
+
+   /* When the PLC sends a confirmation to this message, the
+      pnet_ccontrol_cnf() callback will be triggered.  */
+}
+
+/**
  * Send alarm ACK to the controller
  *
  * @param net              InOut: p-net stack instance
@@ -2063,7 +2094,8 @@ static void app_handle_send_alarm (
 
 void app_loop_forever (pnet_t * net, app_data_t * p_appdata)
 {
-   uint32_t mask = APP_EVENT_TIMER | APP_EVENT_ALARM | APP_EVENT_ABORT;
+   uint32_t mask = APP_EVENT_READY_FOR_DATA | APP_EVENT_TIMER |
+                   APP_EVENT_ALARM | APP_EVENT_ABORT;
    uint32_t flags = 0;
    bool button1_pressed = false;
    bool button2_pressed = false;
@@ -2086,7 +2118,16 @@ void app_loop_forever (pnet_t * net, app_data_t * p_appdata)
    for (;;)
    {
       os_event_wait (p_appdata->main_events, mask, &flags, OS_WAIT_FOREVER);
-      if (flags & APP_EVENT_ALARM)
+      if (flags & APP_EVENT_READY_FOR_DATA)
+      {
+         os_event_clr (p_appdata->main_events, APP_EVENT_READY_FOR_DATA);
+
+         app_handle_send_application_ready (
+            net,
+            p_appdata->arep_for_appl_ready,
+            p_appdata->arguments.verbosity);
+      }
+      else if (flags & APP_EVENT_ALARM)
       {
          os_event_clr (p_appdata->main_events, APP_EVENT_ALARM); /* Re-arm */
 
