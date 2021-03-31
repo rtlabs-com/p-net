@@ -80,6 +80,7 @@ target_sources(pf_test PRIVATE
   ${PROFINET_SOURCE_DIR}/src/device/pf_cmsm.c
   ${PROFINET_SOURCE_DIR}/src/device/pf_cmsu.c
   ${PROFINET_SOURCE_DIR}/src/device/pf_cmwrr.c
+  ${PROFINET_SOURCE_DIR}/src/device/pf_pdport.c
   ${PROFINET_SOURCE_DIR}/src/device/pnet_api.c
   ${PROFINET_SOURCE_DIR}/src/common/pf_alarm.c
   ${PROFINET_SOURCE_DIR}/src/common/pf_cpm.c
