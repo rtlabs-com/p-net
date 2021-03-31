@@ -30,6 +30,9 @@ extern "C" {
 
 typedef struct pnal_cfg
 {
+   /* This is not used for rt-kernel, however an empty struct is
+      undefined behaviour in C and has a size of 1 byte in C++. */
+   char dummy;
 } pnal_cfg_t;
 
 #ifdef __cplusplus
