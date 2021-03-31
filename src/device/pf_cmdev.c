@@ -1461,6 +1461,14 @@ int pf_cmdev_state_ind (pnet_t * net, pf_ar_t * p_ar, pnet_event_values_t state)
 {
    if (p_ar != NULL)
    {
+      /* If we move pf_fspm_state_ind(), which triggers a user callback, last in
+         this list then it would be possible for users to invoke
+         pnet_application_ready() directly in the callback and not to use
+         some delay mechanism.
+
+         However then the users could not use pnet_get_ar_error_codes() at
+         ABORT, as the AR would already be gone when the callback is triggered.
+       */
       pf_fspm_state_ind (net, p_ar, state);
       pf_cmsu_cmdev_state_ind (net, p_ar, state);
       pf_cmio_cmdev_state_ind (net, p_ar, state);
