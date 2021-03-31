@@ -1451,13 +1451,23 @@ int pf_cmdev_state_ind (pnet_t * net, pf_ar_t * p_ar, pnet_event_values_t state)
 {
    if (p_ar != NULL)
    {
-      pf_fspm_state_ind (net, p_ar, state);
+      LOG_DEBUG (
+         PNET_LOG,
+         "CMDEV(%d): Sending event %s for AREP %u. Current state %s\n",
+         __LINE__,
+         pf_cmdev_event_to_string(state),
+         p_ar->arep,
+         pf_cmdev_state_to_string (p_ar->cmdev_state));
+
       pf_cmsu_cmdev_state_ind (net, p_ar, state);
       pf_cmio_cmdev_state_ind (net, p_ar, state);
       pf_cmwrr_cmdev_state_ind (net, p_ar, state);
       pf_cmsm_cmdev_state_ind (net, p_ar, state);
       pf_cmpbe_cmdev_state_ind (p_ar, state);
       pf_cmrpc_cmdev_state_ind (net, p_ar, state);
+
+      /* Do user callback last, as it might trigger a new state transition. */
+      pf_fspm_state_ind (net, p_ar, state);
    }
    else
    {
