@@ -344,6 +344,26 @@ Replace a device or a PLC
 To replace an IO-device or an IO-controller, right-click on it in the left
 side menu and select "Change device". Follow the wizard.
 
+Reload an GSDML file
+--------------------
+When the GSDML file is updated and needs to be reloaded in the Siemens environment:
+
+1. Delete all devices in your project that are based on the GSDML that shall be changed.
+2. Check the "Force" table.
+
+   * Stop forcing all values.
+   * Delete entries in table.
+
+3. Open "Options/Manage general station description files"
+
+   * In "Installed GSDs" tab, delete GSDML file
+   * in "GSDs in the project", "Find unused GSDs" and delete
+
+4. Save project
+5. Restart TIA and add your updated GSDML file and recreate your device.
+   If you you are still facing problems you can try repeat the described
+   sequence and also completely remove all tags.
+
 
 Factory reset of Simatic ET200SP CPU
 ------------------------------------
@@ -488,7 +508,7 @@ block is found in the right-side menu "Instructions" > "Extended instructions"
 > "Distributed I/O".
 
 The value at the REQ input should be ``true`` and MLEN (number of bytes to read)
-should be ``4``. The INDEX input should be ``123`` as given inte sample app
+should be ``4``. The INDEX input should be ``123`` as given in the sample app
 GSDML file. For the ID input, use the value you did find out above.
 Connect the outputs RECORD to ``"data".param_value``.
 

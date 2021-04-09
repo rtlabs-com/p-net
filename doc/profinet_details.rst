@@ -270,6 +270,7 @@ Subslots 0x8000-0xFFFF are reserved by the Profinet standard.
 
 Subslots in the DAP module:
 
+* 0x1   The device itself
 * 0x8000 (32768) Interface 1 (typically named X1)
 * 0x8001 (32769) Port 1 of interface 1 (typically named X1 P1)
 * 0x8002 (32770) Port 2 of interface 1 (typically named X1 P2)
@@ -549,4 +550,4 @@ Relevant standards
 * ISO/IEC 7498-1  ?
 * ISO 8859-1      ?
 * ISO 15745       ?
-* Open Group C706 Remote procedure calls (RPC)
+* Open Group C706 Remote procedure calls (RPC) DCE 1.1 https://publications.opengroup.org/c706

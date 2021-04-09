@@ -35,7 +35,9 @@
 #define os_get_current_time_us mock_os_get_current_time_us
 #endif
 
+#include <inttypes.h>
 #include <string.h>
+
 #include "pf_includes.h"
 #include "pf_block_reader.h"
 
@@ -242,7 +244,7 @@ int pf_cpm_close_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
 
    LOG_DEBUG (
       PF_CPM_LOG,
-      "CPM(%d): Closing CPM for AREP %u CREP %u\n",
+      "CPM(%d): Closing CPM for AREP %u CREP %" PRIu32 "\n",
       __LINE__,
       p_ar->arep,
       crep);
@@ -578,7 +580,7 @@ int pf_cpm_activate_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
    LOG_DEBUG (
       PF_CPM_LOG,
       "CPM(%d): Activating CPM for output data reception. "
-      "AREP %u CREP %u FrameID: 0x%04x\n",
+      "AREP %u CREP %" PRIu32 " FrameID: 0x%04x\n",
       __LINE__,
       p_ar->arep,
       crep,

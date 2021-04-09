@@ -29,6 +29,7 @@
 
 #endif
 
+#include <inttypes.h>
 #include <string.h>
 
 #include "pf_includes.h"
@@ -314,7 +315,7 @@ static void pf_get_exp_submodule (
 
    LOG_DEBUG (
       PNET_LOG,
-      "BR(%d):   Subslot 0x%04x. Expected submodule 0x%x with direction %u\n",
+      "BR(%d):   Subslot 0x%04x. Expected submodule 0x%" PRIx32 " with direction %u\n",
       __LINE__,
       p_sub->subslot_number,
       p_sub->submodule_ident_number,
@@ -500,7 +501,8 @@ void pf_get_exp_api_module (
 
             LOG_DEBUG (
                PNET_LOG,
-               "BR(%d): Slot %u. Expected module 0x%x with %u submodules.\n",
+               "BR(%d): Slot %u. Expected module 0x%" PRIx32 " with %u "
+               "submodules.\n",
                __LINE__,
                p_mod->slot_number,
                p_mod->module_ident_number,

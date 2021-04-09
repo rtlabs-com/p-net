@@ -285,6 +285,14 @@ Remove all contents of the journalctl logs::
    sudo journalctl --rotate
    sudo journalctl --vacuum-time=1s
 
+The configurations for journalctl are located in ``/etc/systemd/journald.conf``.
+If you do experiments with frequent reboots, it might be useful to change some
+values::
+
+   SyncIntervalSec=10s
+   MaxRetentionSec=4h
+
+
 
 Boot time optimization
 ----------------------
@@ -298,6 +306,15 @@ commands to analyze the startup::
    systemd-analyze
    systemd-analyze blame
    systemd-analyze critical-chain pnet-sampleapp.service
+
+To decrease the startup time, disable services you don't use. On a Raspberry Pi
+it might be for example::
+
+   sudo systemctl disable triggerhappy triggerhappy.socket apt-daily.timer apt-daily-upgrade.timer logrotate.timer  rpi-display-backlight lightdm bluetooth hciuart rsync cups cups-browsed alsa-state avahi-daemon
+
+Other applications that you might disable for experimentation::
+
+   sudo systemctl disable snapd snapd.socket wpa_supplicant systemd-timesyncd dhcpcd
 
 
 Debug the sample application on a Linux Laptop

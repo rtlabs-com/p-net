@@ -425,7 +425,7 @@ int pf_ppm_close_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
 
    LOG_DEBUG (
       PF_PPM_LOG,
-      "PPM(%d): Closing PPM for AREP %u CREP %u\n",
+      "PPM(%d): Closing PPM for AREP %u CREP %" PRIu32 "\n",
       __LINE__,
       p_ar->arep,
       crep);

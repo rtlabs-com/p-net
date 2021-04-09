@@ -451,6 +451,7 @@ int pf_diag_add (
          usi,
          &p_subslot,
          &item_ix);
+
       if (p_subslot != NULL)
       {
          if (item_ix == PF_DIAG_IX_NULL)
@@ -473,6 +474,7 @@ int pf_diag_add (
             (void)pf_cmdev_get_diag_item (net, item_ix, &p_item);
             overwrite = true;
          }
+
          if (p_item != NULL)
          {
             old_item = *p_item; /* In case we need to remove the old - after
@@ -590,15 +592,30 @@ int pf_diag_add (
          }
          else
          {
-            LOG_ERROR (PNET_LOG, "DIAG(%d): p_item is NULL\n", __LINE__);
+            LOG_ERROR (
+               PNET_LOG,
+               "DIAG(%d): Can not add diagnosis. Alarm "
+               "item is NULL\n",
+               __LINE__);
          }
       }
       else
       {
-         LOG_ERROR (PF_ALARM_LOG, "DIAG(%d): Unknown sub-slot\n", __LINE__);
+         LOG_ERROR (
+            PF_ALARM_LOG,
+            "DIAG(%d): Can not add diagnosis. Unknown sub-slot 0x%04x.\n",
+            __LINE__,
+            p_diag_source->subslot);
       }
 
       os_mutex_unlock (p_dev->diag_mutex);
+   }
+   else
+   {
+      LOG_ERROR (
+         PF_ALARM_LOG,
+         "DIAG(%d): Can not add diagnosis, as the CMDEV not is initialized.\n",
+         __LINE__);
    }
 
    return ret;
@@ -933,8 +950,12 @@ int pf_diag_remove (
       {
          LOG_DEBUG (
             PF_ALARM_LOG,
-            "DIAG(%d): Did not find the diagnosis to remove.\n",
-            __LINE__);
+            "DIAG(%d): Did not find the diagnosis to remove. Slot %u Subslot "
+            "0x%04x Channel 0x%04x\n",
+            __LINE__,
+            p_diag_source->slot,
+            p_diag_source->subslot,
+            p_diag_source->ch);
       }
    }
 

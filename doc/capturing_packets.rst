@@ -52,13 +52,14 @@ To hide frames with specific protocols::
 | pn_io_device             | PNIO-CM (connect, read, read implicit, write,      |
 |                          | param end, release)                                |
 +--------------------------+----------------------------------------------------+
+| dcerpc                   | PNIO-CM and EPM                                    |
++--------------------------+----------------------------------------------------+
 | pn_ptcp                  | PN-PTCP                                            |
 +--------------------------+----------------------------------------------------+
 | snmp                     | SNMP                                               |
 +--------------------------+----------------------------------------------------+
 | syslog                   | Syslog                                             |
 +--------------------------+----------------------------------------------------+
-
 
 
 Filter frames in Wireshark based on frame contents
@@ -74,6 +75,35 @@ To show Profinet read and write commands for a specific subslot::
 To look for a specific OID in SNMP messages::
 
    snmp.name == 1.3.6.1.2.1.1.3.0
+
+
+Coloring rules in Wireshark
+---------------------------
+To modify the coloring rules in Wireshark, use the menu View > "Coloring rules".
+Deselect the rules you don't need.
+
+Create a new rule by clicking the ``+`` symbol in the lower left corner.
+Enter the filter expression and the name of the new rule. Enable it using the
+checkbox. With the rule still marked, click the "Background" button to modify
+the background color.
+
++------------+----------------------------------------------------------+
+| Rule name  | Filter                                                   |
++============+==========================================================+
+| LLDP       | lldp                                                     |
++------------+----------------------------------------------------------+
+| Syslog     | syslog                                                   |
++------------+----------------------------------------------------------+
+| DCP        | pn_dcp                                                   |
++------------+----------------------------------------------------------+
+| DCERPC     | dcerpc                                                   |
++------------+----------------------------------------------------------+
+| PNIO ALARM | ``pn_rt.frame_id == 0xfc01 || pn_rt.frame_id == 0xfe01`` |
++------------+----------------------------------------------------------+
+| PNIO       | pn_io                                                    |
++------------+----------------------------------------------------------+
+
+Move the most specific lines to the top.
 
 
 Parsing Profinet cyclic data with Wireshark

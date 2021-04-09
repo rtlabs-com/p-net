@@ -211,9 +211,11 @@ The ``<DeviceAccessPointItem>`` element has the attributes:
   value in the p-net stack.
 * ``MultipleWriteSupported="true"`` Multiple writes in a single request.
   Mandatory ``true`` since V2.31.
+* ``SharedDeviceSupported="false"`` False if not given
+* ``SharedInputSupported="false"`` False if not given
 * ``RequiredSchemaVersion="V2.3"`` This file has features requiring this schema
   version. It must be at least 2.3 if legacy startup mode not is supported.
-* ``CheckDeviceID_Allowed="true"`` If the VendorID and DeviceID are finegrained
+* ``CheckDeviceID_Allowed="true"`` If the VendorID and DeviceID are fine grained
   enough to verify that the same type of device is used at replacement.
 * ``NameOfStationNotTransferable="false"``
 * ``LLDP_NoD_Supported="true"`` Mandatory ``true`` since V2.31.
@@ -290,7 +292,7 @@ has these attributes:
 The communication startup is described in the element ``<ApplicationRelations>``
 with the attribute ``StartupMode``, which typically should be "Advanced" (the
 alternative is "Legacy"). If supporting both modes, use a semicolon separated
-list.
+list. The ``NumberOfAR`` attribute defaults to 1 if not given.
 
 Use the ``<TimingProperties>`` element to define the sending of cyclic IO data.
 The ``SendClock`` attribute contains a list of all supported send cycle times,
