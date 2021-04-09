@@ -10,6 +10,9 @@ jobs:
         with:
           submodules: true
 
+      - name: Apt update
+        run: sudo apt-get update
+
       - name: Install dependencies
         run: sudo apt-get install doxygen libsnmp-dev
 
