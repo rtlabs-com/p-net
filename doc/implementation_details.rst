@@ -266,6 +266,7 @@ Show current details on the CMRPC state machine::
 
    pf_cmrpc_show(0xFFFF);
 
+Explicit AR = The incoming RPC request has same AR UUID as an existing AR.
 
 DCP
 ---

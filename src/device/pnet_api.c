@@ -17,6 +17,7 @@
 #define pnal_snmp_init mock_pnal_snmp_init
 #endif
 
+#include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -383,7 +384,7 @@ int pnet_application_ready (pnet_t * net, uint32_t arep)
 
    LOG_DEBUG (
       PNET_LOG,
-      "API(%d): Application calls application ready for AREP %u\n",
+      "API(%d): Application calls application ready for AREP %" PRIu32 "\n",
       __LINE__,
       arep);
 
@@ -402,7 +403,7 @@ int pnet_ar_abort (pnet_t * net, uint32_t arep)
 
    LOG_DEBUG (
       PNET_LOG,
-      "API(%d): Application calls AR abort for AREP %u\n",
+      "API(%d): Application calls AR abort for AREP %" PRIu32 "\n",
       __LINE__,
       arep);
 

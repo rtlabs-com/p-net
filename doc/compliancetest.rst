@@ -3,7 +3,7 @@ Compliance testing of IO-devices
 All Profinet products need to be certified. That is done after testing by an
 accredited PROFIBUS & PROFINET International test lab (PITL).
 The full hardware, communication stack and application software is tested
-together.
+together. This is also known as certification testing or conformance testing.
 
 Each manufacturer of Profinet equipment needs a Vendor ID, which is obtained
 from the PI Certification Office.
@@ -718,7 +718,7 @@ Use a non-Profinet switch (no LLDP packet filtering) to connect the device
 under test (DUT, port 1), the PLC and the personal computer running the Security
 Level 1 tester software. Connect neighbour device D to port 2 of the DUT.
 
-Syncronize clock of the PLC with the the clock of the laptop running the
+Synchronize clock of the PLC with the the clock of the laptop running the
 tester software, as we later read the diagnostic log of the PLC.
 
 Run the tests
