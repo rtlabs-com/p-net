@@ -111,11 +111,15 @@ static int pf_ppm_state_ind (
  */
 static void pf_ppm_set_state (pf_ppm_t * p_ppm, pf_ppm_state_values_t state)
 {
-   LOG_DEBUG (
-      PF_PPM_LOG,
-      "PPM(%d): New state %s\n",
-      __LINE__,
-      pf_ppm_state_to_string (state));
+   if (state != p_ppm->state)
+   {
+      LOG_DEBUG (
+         PF_PPM_LOG,
+         "PPM(%d): New state %s (was %s)\n",
+         __LINE__,
+         pf_ppm_state_to_string (state),
+         pf_ppm_state_to_string (p_ppm->state));
+   }
    p_ppm->state = state;
 }
 

@@ -754,6 +754,10 @@ Name functions and variables using "snake_case", for example
 Avoid to start pointer names with ``p_``. It can be useful in some special situations
 but we will gradually remove those names from the p-net stack.
 
+For error handling, the use of ``goto`` is acceptable.
+
+If possible, avoid the modulo operator as it is slow on some platforms.
+
 Instead of::
 
    if (have_dhcp == true){...}

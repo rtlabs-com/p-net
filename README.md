@@ -53,17 +53,21 @@ Features:
  * Configurable number of modules and sub-modules
  * Bare-metal or OS
  * Porting layer provided
- * Supports I&M0 - I&M4. The I&M data is supported for the device, but not for individual modules.
+ * Supports I&M0 - I&M4. The I&M data is supported for the device, but not for
+   individual modules.
 
 Limitations or not yet implemented:
 
-* This is a device stack, which means that the IO-controller/master/PLC side is not supported.
+* This is a device stack, which means that the IO-controller/master/PLC side is
+  not supported.
 * No media redundancy (No MRP support)
 * Legacy startup mode is not fully implemented
 * No support for RT_CLASS_UDP
 * No support for DHCP
 * No fast start-up
 * No MC multicast device-to-device
+* No support of shared device (connection to multiple controllers)
+* Supports only full connections, not the limited "DeviceAccess" connection type.
 * No iPar (parameter server) support
 * No support for time synchronization
 * No UDP frames at alarm (just the default alarm mechanism is implemented)

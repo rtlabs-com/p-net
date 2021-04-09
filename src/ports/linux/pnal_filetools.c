@@ -142,7 +142,10 @@ int pnal_execute_script (const char * argv[])
 
    if (argv == NULL)
    {
-      LOG_ERROR (PF_PNAL_LOG, "PNAL(%d): No argument vector given.\n", __LINE__);
+      LOG_ERROR (
+         PF_PNAL_LOG,
+         "PNAL(%d): No argument vector given for running script.\n",
+         __LINE__);
       return -1;
    }
 
@@ -154,7 +157,10 @@ int pnal_execute_script (const char * argv[])
 
    if (pnal_create_searchpath (child_searchpath, sizeof (child_searchpath)) != 0)
    {
-      LOG_ERROR (PF_PNAL_LOG, "PNAL(%d): Could not build PATH.\n", __LINE__);
+      LOG_ERROR (
+         PF_PNAL_LOG,
+         "PNAL(%d): Could not build PATH to run script.\n",
+         __LINE__);
       return -1;
    }
 
@@ -180,7 +186,7 @@ int pnal_execute_script (const char * argv[])
    {
       LOG_ERROR (
          PF_PNAL_LOG,
-         "PNAL(%d): Failed to fork the process.\n",
+         "PNAL(%d): Failed to fork the process to run script.\n",
          __LINE__);
       return -1;
    }
@@ -192,13 +198,20 @@ int pnal_execute_script (const char * argv[])
          matter since we do it in the short-lived child process */
       if (setenv ("PATH", child_searchpath, 1) != 0)
       {
-         printf ("PNAL(%d): Failed to set PATH in child process.\n", __LINE__);
+         printf (
+            "PNAL(%d): Failed to set PATH in child process to run script.\n",
+            __LINE__);
          exit (EXIT_FAILURE);
       }
 
       execvpe (argv[0], (char * const *)argv, scriptenviron);
 
-      printf ("PNAL(%d): Failed to execute in child process.\n", __LINE__);
+      printf (
+         "PNAL(%d): Failed to execute in child process. Is the script file "
+         "missing or lacks execution permission? %s Search path %s\n",
+         __LINE__,
+         argv[0],
+         child_searchpath);
       exit (EXIT_FAILURE);
    }
    else

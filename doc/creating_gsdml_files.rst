@@ -194,30 +194,41 @@ DeviceAccessPointList element hierarchy::
 The ``<DeviceAccessPointItem>`` element has the attributes:
 
 * ``ID="IDD_1"``
-* ``PNIO_Version="V2.35"`` Which version of Profinet specification it is certified against
-* ``PhysicalSlots="0..4"`` Slot 0 is always used by the DAP (bus interface) module. Relates to the PNET_MAX_SLOTS value in the p-net stack.
+* ``PNIO_Version="V2.4"`` Which version of Profinet specification it is
+  certified against.
+* ``PhysicalSlots="0..4"`` Slot 0 is always used by the DAP (bus interface)
+  module. Relates to the ``PNET_MAX_SLOTS`` value in the p-net stack.
 * ``ModuleIdentNumber="0x00000001"`` Unsigned32hex.
-* ``MinDeviceInterval="32"`` Minimum cyclic data update interval, in number of 31.25 us ticks. A value 32 corresponds to cyclic data sending and receiving every millisecond. Unsigned16.
+* ``MinDeviceInterval="32"`` Minimum cyclic data update interval, in number
+  of 31.25 us ticks. A value 32 corresponds to cyclic data sending and
+  receiving every millisecond. Unsigned16.
 * ``DNS_CompatibleName="pno-example-dap"`` (Default station name)
 * ``FixedInSlots="0"`` The DAP module is always in slot 0
 * ``ObjectUUID_LocalIndex="0"``
-* ``DeviceAccessSupported="true"``
-* ``NumberOfDeviceAccessAR="1"`` Number of concurrent connections. Relates to the PNET_MAX_AR value in the p-net stack.
-* ``MultipleWriteSupported="true"``
-* ``RequiredSchemaVersion="V2.3"`` This file has features requiring this schema version. It must be at least 2.3 if legacy startup mode not is supported.
-* ``CheckDeviceID_Allowed="true"``
+* ``DeviceAccessSupported="false"`` If a limited version of AR connection is allowed.
+* ``NumberOfDeviceAccessAR="1"`` Number of Device Access connections. Should only
+  be given if ``DeviceAccessSupported`` is ``true``. Dependent on the ``PNET_MAX_AR``
+  value in the p-net stack.
+* ``MultipleWriteSupported="true"`` Multiple writes in a single request.
+  Mandatory ``true`` since V2.31.
+* ``RequiredSchemaVersion="V2.3"`` This file has features requiring this schema
+  version. It must be at least 2.3 if legacy startup mode not is supported.
+* ``CheckDeviceID_Allowed="true"`` If the VendorID and DeviceID are finegrained
+  enough to verify that the same type of device is used at replacement.
 * ``NameOfStationNotTransferable="false"``
-* ``LLDP_NoD_Supported="true"`` (Should be "true" for recent Profinet versions)
-* ``ResetToFactoryModes="1..2"`` Bits describing reset possibilities. At least "2" should be present. Reset modes 1 and 2 are supported by p-net.
+* ``LLDP_NoD_Supported="true"`` Mandatory ``true`` since V2.31.
+* ``ResetToFactoryModes="1..2"`` Bits describing reset possibilities. At least
+  "2" should be present. Reset modes 1 and 2 are supported by p-net.
 * ``ParameterizationSpeedupSupported="true"`` For fast startup.
-* ``PowerOnToCommReady="700"`` For fast startup, time to first data exchange in milliseconds. Unsigned32.
+* ``PowerOnToCommReady="700"`` For fast startup, time to first data exchange
+  in milliseconds. Unsigned32.
 
 General info on the Profinet IO-Device is given in ``<ModuleInfo>``
 subelements. For example the vendor name and order number are given.
 
 The ``<CertificationInfo>`` element has the attributes:
 
-* ``ConformanceClass="A"``
+* ``ConformanceClass="B"``
 * ``ApplicationClass=""`` Typically empty, but can be for example "FunctionalSafety"
 * ``NetloadClass="I"``
 

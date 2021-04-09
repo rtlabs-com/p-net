@@ -165,16 +165,22 @@ Configuration of p-net stack and sample application
 ---------------------------------------------------------
 To run p-net and the sample application with multiple ports a couple
 of things need to be done. Note that the settings described in the
-following sections are changed by running ``ccmake .`` in the build folder.
-``options.h`` will be regenerated. Another way to set the options is to
-set them on the cmake command line (-DPNET_MAX_PHYSICAL_PORTS=2 -DPNET_MAX_SUBSLOTS=4).
+following sections are changed by running ``ccmake .`` in the build folder,
+and then ``options.h`` will be regenerated.
 
-Reconfigure configuration setting ``num_physical_ports`` to the actual number
-of physical ports available in the system (and must be PNET_MAX_PHYSICAL_PORTS
-or less). For this example the value shall be set to 2.
+Reconfigure setting PNET_MAX_PHYSICAL_PORTS to the actual number of physical
+ports available in the system. For this example the value shall be set to 2.
 
-Reconfigure setting ``PNET_MAX_SUBSLOTS``. Each additional port will require
-an additional subslot. For this example the value should be be set to 4.
+Reconfigure setting PNET_MAX_SUBSLOTS. Each additional port will require an
+additional subslot. For this example the value should be be set to 4.
+
+Another way to set the options is to set them on the cmake command line::
+
+    -DPNET_MAX_PHYSICAL_PORTS=2 -DPNET_MAX_SUBSLOTS=4
+
+The configuration field ``.num_physical_ports`` must be set accordingly. For
+the Linux sample application this is set automatically by parsing the command
+line arguments, which need to be adjusted.
 
 Example of initial log when starting the demo application with a multi port configuration::
 
@@ -212,8 +218,8 @@ Running ART tester with multiple ports
 Use the MAC-address of ``br0`` when running ART tester.
 
 
-Routing traffic with multiple ports
------------------------------------
+Routing traffic with multiple ports on Linux
+---------------------------------------------
 To see the MAC addresses and IP addresses of the neighbours, use the ``arp``
 Linux command::
 
@@ -232,3 +238,35 @@ To see the IP routing table, use the ``route`` Linux command::
    default         192.168.42.1    0.0.0.0         UG    305    0        0 wlan0
    192.168.0.0     0.0.0.0         255.255.255.0   U     0      0        0 br0
    192.168.42.0    0.0.0.0         255.255.255.0   U     305    0        0 wlan0
+
+
+Adding multiple Ethernet ports on a microcontroller
+---------------------------------------------------
+Typically a microcontroller has only one Ethernet controller built in. One way
+to provide more Ethernet ports is to use an external Ethernet switch chip.
+However the Profinet stack must be able to control from which Ethernet port
+a frame is sent from. This is because the outgoing LLDP frames should have
+different contents on different ports (important for neighbourhood detection).
+Similarly, the stack must be able to figure out on which port an incoming
+LLDP frame did arrive, in order to determine the closest neighbour for each
+Ethernet port.
+
+Traffic not intended for the device should be routed between the external
+Ethernet ports.
+
+There are Ethernet switch chips with functionality to route traffic to
+different Ethernet ports from a single Ethernet controller in a microcontroller.
+This is done by "tail tagging", where a few additional bytes are put in the
+end of outgoing frames. The switch chip will remove those bytes, but will
+use the information to route the frame to the correct outgoing Ethernet port.
+
+A detailed description of the concept is given on
+https://www.segger.com/products/connectivity/emnet/technology/port-multiplication/
+
+Examples of useful Ethernet switch chips (not tested):
+
+* Microchip KSZ8863
+* Microchip KSZ8873
+* Microchip KSZ8895
+
+The p-net stack does not implement support for tail tagging by default.

@@ -77,9 +77,12 @@ download.
 
 Create a project
 ----------------
-Use the menu File > New > "Device Test Project". Follow the wizard.
-Enter the MAC address of the IO-Device. On the "Profinet settings" page, select
-the GSDML file for the IO-Device.
+Use the menu File > New > “Device Test Project”. Follow the wizard.
+Enter the MAC address of the IO-Device. If you use the Profinet switch
+(device "B") you can press the button "Get MAC Address", as the ART-tester
+queries the network for the alias ``port-003.b``.
+
+On the “Profinet settings” page, select the GSDML file for the IO-Device.
 
 Populate modules/submodules in slots/subslots by
 marking a module in the left column, and then click the -> arrow. To insert a
@@ -150,6 +153,7 @@ switch. It is called "Device B" in the test setup documentation.
 
 The test specification of version V 2.41 recommends the use of a
 Siemens Scalance X204IRT (article number 6GK5204-0BA00-2BA3).
+The ART Tester is rather strict regarding the model of Siemens Profinet switch.
 It should have IP address ``192.168.0.99``, netmask ``255.255.255.0`` and station name "b".
 Use for example Codesys to scan for the device, and to adjust the IP settings.
 Alternatively, use SinecPni to change the IP address (see the Simatic
@@ -449,7 +453,7 @@ Relevant test cases for conformance class A
 +-------------------------------------------------+-----------------------------------------------------------------+
 | Manual: DCP_Signal                              | Flash Signal LED. Fast.                                         |
 +-------------------------------------------------+-----------------------------------------------------------------+
-| Manual: Behavior of ResetToFactory              |                                                                 |
+| Manual: Behavior of ResetToFactory              | Power cycle 4 times.                                            |
 +-------------------------------------------------+-----------------------------------------------------------------+
 | Manual: Checking of sending RTC frames          | Fast                                                            |
 +-------------------------------------------------+-----------------------------------------------------------------+
@@ -609,39 +613,141 @@ message.
 
 * Record data?
 
+
 Security Level 1 tester
 -----------------------
-Install the tester software on an Ubuntu machine, or in a virtual Ubuntu
-machine running on Windows.
-See the PDF in the "Security Level 1"/"tester" folder in the downloaded
-test bundle.
-
-Use a non-Profinet switch (no LLDP packet filtering) to connect the device
-under test (DUT), the PLC and the personal computer running the Security
-Level 1 tester software. For single port devices, use port 1 on the PLC and
-port 1 on the DUT.
-
 A PLC program is used to both establish cyclic data communication, and to
-repeatedly do acyclic data read out from the IO-device.
+continuously read out parameter values from the IO-device under test (DUT).
+A neighbour device "D" is connected to port 2 of the DUT, and the PLC will
+control the digital inputs and outputs of device D.
 
+A program running on a Linux laptop will generate additional network load.
+Depending on the result, the DUT will be assigned net load class 1 to 3.
+
+See also the guideline "PROFINET IO Security Level 1".
+
+It can be useful to run the other PLC-based tests before, to find out the
+shortest cycle time useful when there is no additional network load.
+
+PLC program
+^^^^^^^^^^^
+Use the STEP7 project from the test bundle, and import it into the TIA portal.
 In Siemens TIA Portal, open the file "normal_d_V2.40.0_V15.1.zap15_1" as
 an existing project. Give the path to a local directory that will be used
 for the project.
 
-Delete the existing "dut" device and "d" device. Insert your IO-device and
-adjust the settings (as described on the page about Siemens PLCs in
-this documentation).
+The block "Main [OB0]" will call the "FC001_Test_Programm", and it will also
+read and set the digital inputs and outputs on neighbour device D.
 
-In the "Main [OB1]" program, change the line with ``Ihw_ID`` to::
+Data block "DB003_RECORD_Index" contains an array of record numbers (parameters)
+that are to be read from the IO-device. It also contains a counter value
+keeping track of which entry in the array that is being used right now.
+The block "Startup" will initialize this counter value.
 
-   Ihw_ID := "rt-labs-dev~Head",
+The "FC001_Test_Programm" function will call "FB001_RDREC", and then
+will the counter value be increased.
 
-Right-click on the PLC icon, and select Compile > "Hardware (rebuild all)" and
-then "Software (rebuild all)". Use "Download to device" > "Hardware
-configuration" and then "Software (all)".
+The "FB001_RDREC" function block will read out a parameter from the IO-device
+and store any error value. It should be maximum 100 ms from one response
+until the next request is sent out by the PLC.
 
+Data block "DB002_RECORD_data" has a large array of bytes for storing the
+record data read from the IO-device.
+
+Device D should have a digital input module and a digital output module. It
+should have a cycle time of 1 ms and an IP address ``192.168.0.98``.
+If the device "D" is not exactly the variant you have, you need to replace it
+with another IO-device with digital inputs and outputs. Default connection:
+
+* Input %I0.0 - Ix_Req  (Enables continuous readout of parameter values)
+* Input %I0.1 - Ix_ACK  (Acknowledges errors)
+* Output %Q0.0 - Qx_Error
+* Output %Q0.1 - Qx_Error_RDREC
+
+Delete the existing "dut" device.
+Import the GSDML file of your device (the DUT), and insert you device.
+Plug relevant modules into the slots.
+Give it the station name "dut", and it should use the IP address
+``192.168.0.50``. Connect it to the PLC via the "Network view".
+
+In the "Device view" select the DUT, and in the "Device overview" select the
+DUT line. In Properties > "System constants" find the hardware identifier
+number for the line "dut~HEAD".
+
+Adjust cyclic time setting of the DUT.
+
+In the "Main [OB1]" block make sure that the hardware identifier is set to
+the relevant value::
+
+    Ihw_ID := "dut~HEAD",
+
+or to the value found above (for example)::
+
+    Ihw_ID := 261,
+
+Create a watch table for the relevant entries.
+
+Compile the hardware configuration and the software, and download to the PLC.
+
+Tester software for additional network load
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Install the tester software on an Ubuntu machine, or in a virtual Ubuntu
+machine running on Windows. The IP address should be ``192.168.0.30``.
+See the PDF in the "Security Level 1"/"tester" folder in the downloaded
+test bundle. The program ends up in ``/root/Netload``. See the PDF
+how to start the program.
+
+The SL1-tester has a number of template ``.pcap`` files, and rewrites those
+files with the MAC address of the SL1-tester laptop and the DUT. The MAC of
+the DUT is found with the ``arping`` Linux command.
+Actual sending of frames is done with the ``packETHcli`` Linux command.
+
+Set up hardware
+^^^^^^^^^^^^^^^
+Set the station name of the DUT to "dut" and the IP address to ``192.168.0.50``.
+Use a temporary station name, to be able to detect device reboots.
+
+Set the station name of device D to "d" and the IP address to ``192.168.0.98``.
+
+The digital input "Ix_Req" is used to enable continuous read out of parameter
+values. Set it to high level to start the readout.
 Verify that there is cyclic communication, and that there is repeated
 acyclic data read out.
+
+Use a non-Profinet switch (no LLDP packet filtering) to connect the device
+under test (DUT, port 1), the PLC and the personal computer running the Security
+Level 1 tester software. Connect neighbour device D to port 2 of the DUT.
+
+Syncronize clock of the PLC with the the clock of the laptop running the
+tester software, as we later read the diagnostic log of the PLC.
+
+Run the tests
+^^^^^^^^^^^^^
+For a class B device with two ports you need to run one "normal" test case and one
+"faulty" test case. After the "faulty" test case the communication should be
+good again after the additional network load has stopped.
+During the "normal" test case the communication should not be lost, and this is
+verified by studying the diagnostic log of the PLC afterwards.
+
+For net load class I, the "normal" test case takes approximately 1 hour 40 min.
+
+In the TIA portal, make sure you are "Offline" with the PLC (otherwise there
+will be even more additional network load).
+
+Make sure that the software version you run on the DUT has the correct settings,
+for example log level.
+
+* Start the PLC program, and verify that the parameter readout is running (using Wireshark)
+* Start the SL1-tester in "faulty" mode.
+* Verify that the PLC communication still is good after the SL1-tester is done.
+* Start the SL1-tester in "normal" mode.
+* Verify that there hasn't been any communication breakdown, by looking in
+  the PLC diagnostic buffer (via TIA portal).
+
+Each test case has a duration of 1 minute, except case 15 - 16 and 116 - 117
+which runs for 3 minutes each. Test case 101 and 102 runs until the sequence
+is completed. If the tests take longer than that, wrong settings have been
+used for the SL1-tester.
 
 
 Troubleshooting

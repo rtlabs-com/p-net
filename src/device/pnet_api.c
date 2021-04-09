@@ -77,6 +77,8 @@ pnet_t * pnet_init (const pnet_cfg_t * p_cfg)
 {
    pnet_t * net = NULL;
 
+   LOG_DEBUG (PNET_LOG, "API(%d): Application calls pnet_init()\n", __LINE__);
+
    net = os_malloc (sizeof (*net));
    if (net == NULL)
    {
@@ -290,9 +292,9 @@ int pnet_set_primary_state (pnet_t * net, bool primary)
 
    LOG_DEBUG (
       PNET_LOG,
-      "API(%d): Application sets primary state to %d\n",
+      "API(%d): Application sets primary state to %s\n",
       __LINE__,
-      primary);
+      primary ? "true" : "false");
 
    for (ar_ix = 0; ar_ix < PNET_MAX_AR; ar_ix++)
    {
@@ -321,9 +323,9 @@ int pnet_set_redundancy_state (pnet_t * net, bool redundant)
 
    LOG_DEBUG (
       PNET_LOG,
-      "API(%d): Application sets redundancy state to %d\n",
+      "API(%d): Application sets redundancy state to %s\n",
       __LINE__,
-      redundant);
+      redundant ? "true" : "false");
 
    for (ar_ix = 0; ar_ix < PNET_MAX_AR; ar_ix++)
    {

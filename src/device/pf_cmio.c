@@ -90,10 +90,11 @@ static void pf_cmio_set_state (pf_ar_t * p_ar, pf_cmio_state_values_t state)
    {
       LOG_DEBUG (
          PNET_LOG,
-         "CMIO(%d): New state %s for AREP: %u\n",
+         "CMIO(%d): New state %s for AREP %u (was %s)\n",
          __LINE__,
          pf_cmio_state_to_string (state),
-         p_ar->arep);
+         p_ar->arep,
+         pf_cmio_state_to_string (p_ar->cmio_state));
       p_ar->cmio_state = state;
    }
 }
@@ -164,7 +165,7 @@ int pf_cmio_cmdev_state_ind (
 
    LOG_DEBUG (
       PNET_LOG,
-      "CMIO(%d): Received event %s from CMDEV. Our state %s. AREP %u\n",
+      "CMIO(%d): Received event %s from CMDEV. Initial state %s for AREP %u.\n",
       __LINE__,
       pf_cmdev_event_to_string (event),
       pf_cmio_state_to_string (p_ar->cmio_state),
