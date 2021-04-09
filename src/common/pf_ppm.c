@@ -382,8 +382,8 @@ int pf_ppm_activate_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
 
       LOG_DEBUG (
          PF_PPM_LOG,
-         "PPM(%d): Starting cyclic data transmission for CREP %" PRIu32 ", period "
-         "%" PRIu32 " microseconds\n",
+         "PPM(%d): Starting cyclic data transmission for CREP %" PRIu32
+         ", period %" PRIu32 " microseconds\n",
          __LINE__,
          crep,
          p_ppm->control_interval);
@@ -441,21 +441,7 @@ int pf_ppm_close_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
    return 0;
 }
 
-/**
- * @internal
- * Find the AR, input IOCR and IODATA object instances for the specified
- * sub-slot.
- * @param net              InOut: The p-net stack instance
- * @param api_id           In:   The API id.
- * @param slot_nbr         In:   The slot number.
- * @param subslot_nbr      In:   The sub-slot number.
- * @param pp_ar            Out:  The AR instance.
- * @param pp_iocr          Out:  The IOCR instance.
- * @param pp_iodata        Out:  The IODATA object instance.
- * @return  0  If the information has been found.
- *          -1 If the information was not found.
- */
-static int pf_ppm_get_ar_iocr_desc (
+int pf_ppm_get_ar_iocr_desc (
    pnet_t * net,
    uint32_t api_id,
    uint16_t slot_nbr,
@@ -592,12 +578,15 @@ int pf_ppm_set_data_and_iops (
          {
             LOG_ERROR (
                PF_PPM_LOG,
-               "PPM(%d): data_len, iops_len %u %u expected lengths %u %u\n",
+               "PPM(%d): Given data size %u and IOPS size %u, "
+               "but PLC expects sizes %u and %u for slot %u subslot 0x%04x\n",
                __LINE__,
                data_len,
                iops_len,
                p_iodata->data_length,
-               p_iodata->iops_length);
+               p_iodata->iops_length,
+               slot_nbr,
+               subslot_nbr);
          }
          break;
       default:
@@ -678,10 +667,13 @@ int pf_ppm_set_iocs (
          {
             LOG_ERROR (
                PF_PPM_LOG,
-               "PPM(%d): iocs_len %u expected length %u\n",
+               "PPM(%d): Given IOCS size %u, but PLC expects size %u "
+               "for slot %u subslot 0x%04x\n",
                __LINE__,
+               iocs_len,
                (unsigned)p_iodata->iocs_length,
-               (unsigned)sizeof (uint8_t));
+               slot_nbr,
+               subslot_nbr);
          }
          break;
       default:
@@ -766,12 +758,16 @@ int pf_ppm_get_data_and_iops (
          {
             LOG_ERROR (
                PF_PPM_LOG,
-               "PPM(%d): data_len %u iops_len %u expected lengths %u %u\n",
+               "PPM(%d): Given data buffer size %u and IOPS buffer size "
+               "%u, but minimum sizes are %u and %u for slot %u subslot "
+               "0x%04x\n",
                __LINE__,
                (unsigned)*p_data_len,
                (unsigned)*p_iops_len,
                (unsigned)p_iodata->data_length,
-               (unsigned)p_iodata->iops_length);
+               (unsigned)p_iodata->iops_length,
+               slot_nbr,
+               subslot_nbr);
          }
          break;
       default:
@@ -795,18 +791,6 @@ int pf_ppm_get_data_and_iops (
    return ret;
 }
 
-/**
- * Retrieve IOCS for a sub-module.
- * @param net              InOut: The p-net stack instance
- * @param api_id           In:   The API id.
- * @param slot_nbr         In:   The slot number.
- * @param subslot_nbr      In:   The sub-slot number.
- * @param p_iocs           Out:  The IOCS of the application data.
- * @param p_iocs_len       In:   Size of buffer at p_iocs.
- *                         Out:  Actual size of IOCS data.
- * @return  0  if the IOCS could be retrieved.
- *          -1 if an error occurred.
- */
 int pf_ppm_get_iocs (
    pnet_t * net,
    uint32_t api_id,
@@ -859,10 +843,13 @@ int pf_ppm_get_iocs (
          {
             LOG_ERROR (
                PF_PPM_LOG,
-               "PPM(%d): iocs_len %u expected length %u\n",
+               "PPM(%d): Given IOCS buffer size %u, but minimum size is %u "
+               "for slot %u subslot 0x%04x\n",
                __LINE__,
                (unsigned)*p_iocs_len,
-               (unsigned)p_iodata->iocs_length);
+               (unsigned)p_iodata->iocs_length,
+               slot_nbr,
+               subslot_nbr);
          }
          break;
       default:

@@ -35,6 +35,7 @@ extern "C" {
 #include "pnet_export.h"
 #include "pnet_options.h"
 #include "pnet_version.h"
+#include "pnal_config.h"
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -1192,7 +1193,7 @@ typedef struct pnet_if_cfg
    const char * main_netif_name; /**< Main (DAP) network interface. */
    pnet_ip_cfg_t ip_cfg;         /**< IP Settings for main network interface */
 
-   pnet_port_cfg_t physical_ports[PNET_NUMBER_OF_PHYSICAL_PORTS];
+   pnet_port_cfg_t physical_ports[PNET_MAX_PHYSICAL_PORTS];
 } pnet_if_cfg_t;
 
 /**
@@ -1254,8 +1255,14 @@ typedef struct pnet_cfg
                                     file. Typically 32, which corresponds to 1
                                     ms. Max 0x1000 (128 ms) */
 
+   /** Operating system dependent settings */
+   pnal_cfg_t pnal_cfg;
+
    /** Capabilities */
    bool send_hello; /**< Send DCP HELLO message on startup if true. */
+
+   /** Number of physical ports. Should respect PNET_MAX_PHYSICAL_PORTS */
+   uint8_t num_physical_ports; // TODO int or uint16_t ?
 
    /** Send diagnosis in the qualified format (otherwise extended format) */
    bool use_qualified_diagnosis;

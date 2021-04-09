@@ -22,8 +22,10 @@ extern "C" {
 
 /**
  * Initialize the CMSU component.
+ * @param net              InOut: The p-net stack instance
+ * @param p_ar             InOut: The AR instance.
  */
-void pf_cmsu_init (pnet_t * net);
+void pf_cmsu_init (pnet_t * net, pf_ar_t * p_ar);
 
 /**
  * Handle CMDEV events.

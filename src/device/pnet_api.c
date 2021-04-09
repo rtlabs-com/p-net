@@ -30,8 +30,6 @@ int pnet_init_only (pnet_t * net, const pnet_cfg_t * p_cfg)
    net->cmdev_initialized = false; /* TODO How to handle that pf_cmdev_exit()
                                       is used before pf_cmdev_init()? */
 
-   pf_cmsu_init (net);
-   pf_cmwrr_init (net);
    pf_cpm_init (net);
    pf_ppm_init (net);
    pf_alarm_init (net);
@@ -54,15 +52,13 @@ int pnet_init_only (pnet_t * net, const pnet_cfg_t * p_cfg)
    pf_dcp_exit (net); /* Prepare for re-init. */
    pf_dcp_init (net); /* Start DCP */
    pf_port_init (net);
-   net->pf_interface.name_of_device_mode.mode =
-      PF_LLDP_NAME_OF_DEVICE_MODE_STANDARD;
-   net->pf_interface.name_of_device_mode.active = false;
+   pf_port_main_interface_init (net);
    pf_lldp_init (net);
    pf_pdport_init (net);
 
    /* Configure SNMP server if enabled */
 #if PNET_OPTION_SNMP == 1
-   if (pnal_snmp_init (net) != 0)
+   if (pnal_snmp_init (net, &p_cfg->pnal_cfg) != 0)
    {
       LOG_ERROR (PNET_LOG, "Failed to configure SNMP\n");
       return -1;

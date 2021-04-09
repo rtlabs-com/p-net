@@ -578,7 +578,7 @@ int pf_cpm_activate_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
           (uint32_t)p_iocr->param.reduction_ratio * 1000U) /
          32U; /* us */
 
-      for (ix = 0; ix < PNET_NUMBER_OF_PHYSICAL_PORTS; ix++)
+      for (ix = 0; ix < pf_port_get_number_of_ports (net); ix++)
       {
          p_cpm->rxa[ix][0] = -1; /* "invalid" cycle counter */
          p_cpm->rxa[ix][1] = -1;
@@ -790,14 +790,24 @@ int pf_cpm_get_data_and_iops (
          break;
       case PF_CPM_STATE_FRUN:
       case PF_CPM_STATE_RUN:
-         if (*p_data_len < p_iodata->data_length)
+         if (
+            (*p_data_len < p_iodata->data_length) ||
+            (*p_iops_len < p_iodata->iops_length))
          {
             *p_data_len = 0;
             *p_new_flag = false;
             LOG_ERROR (
                PF_CPM_LOG,
-               "CPM(%d): Buffer too small in get data\n",
-               __LINE__);
+               "CPM(%d): Given data buffer size %u and IOPS buffer size "
+               "%u, but minimum sizes are %u and %u for slot %u subslot "
+               "0x%04x\n",
+               __LINE__,
+               (unsigned)*p_data_len,
+               (unsigned)*p_iops_len,
+               (unsigned)p_iodata->data_length,
+               (unsigned)p_iodata->iops_length,
+               slot_nbr,
+               subslot_nbr);
          }
          else
          {
@@ -896,7 +906,19 @@ int pf_cpm_get_iocs (
          break;
       case PF_CPM_STATE_FRUN:
       case PF_CPM_STATE_RUN:
-         if (p_iodata->iocs_length == 0)
+         if (*p_iocs_len < p_iodata->iocs_length)
+         {
+            LOG_ERROR (
+               PF_CPM_LOG,
+               "CPM(%d): Given IOCS buffer size %u, but minimum size is %u "
+               "for slot %u subslot 0x%04x\n",
+               __LINE__,
+               (unsigned)*p_iocs_len,
+               (unsigned)p_iodata->iocs_length,
+               slot_nbr,
+               subslot_nbr);
+         }
+         else if (p_iodata->iocs_length == 0)
          {
             LOG_DEBUG (
                PF_CPM_LOG,

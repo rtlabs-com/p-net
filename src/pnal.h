@@ -339,6 +339,7 @@ int pnal_eth_send (pnal_eth_handle_t * handle, pnal_buf_t * buf);
  * @param if_name          In:    Ethernet interface name
  * @param receive_type     In:    Ethernet frame types that shall be received
  *                                by the network interface / port.
+ * @param pnal_cfg         In:    Operating system dependent configuration
  * @param callback         In:    Callback for received raw Ethernet frames
  * @param arg              InOut: User argument passed to the callback
  *
@@ -347,6 +348,7 @@ int pnal_eth_send (pnal_eth_handle_t * handle, pnal_buf_t * buf);
 pnal_eth_handle_t * pnal_eth_init (
    const char * if_name,
    pnal_ethertype_t receive_type,
+   const pnal_cfg_t * pnal_cfg,
    pnal_eth_callback_t * callback,
    void * arg);
 
@@ -412,10 +414,11 @@ void pnal_udp_close (uint32_t id);
  * as well as to write some variables to it.
  *
  * @param net              InOut: The p-net stack instance
+ * @param pnal_cfg         In:    Operating system dependent configuration
  * @return  0 if the operation succeeded.
  *         -1 if an error occurred.
  */
-int pnal_snmp_init (pnet_t * net);
+int pnal_snmp_init (pnet_t * net, const pnal_cfg_t * pnal_cfg);
 
 /**
  * Get network parameters (IP address, netmask etc)

@@ -37,7 +37,7 @@ typedef struct mock_os_data_obj
     * Note that port numbers start at 1. To simplify test cases, we add a
     * dummy array element at index 0.
     */
-   pnal_eth_status_t eth_status[PNET_NUMBER_OF_PHYSICAL_PORTS + 1];
+   pnal_eth_status_t eth_status[PNET_MAX_PHYSICAL_PORTS + 1];
 
    uint16_t udp_sendto_len;
    uint16_t udp_sendto_count;
@@ -99,6 +99,7 @@ void mock_set_pnal_udp_recvfrom_buffer (uint8_t * p_src, uint16_t len);
 
 pnal_eth_handle_t * mock_pnal_eth_init (
    const char * if_name,
+   const pnal_cfg_t * pnal_cfg,
    pnal_eth_callback_t * callback,
    void * arg);
 int mock_pnal_eth_send (pnal_eth_handle_t * handle, pnal_buf_t * buf);
@@ -180,7 +181,7 @@ int mock_pf_lldp_get_peer_link_status (
    int loc_port_num,
    pf_lldp_link_status_t * p_link_status);
 
-int mock_pnal_snmp_init (pnet_t * pnet);
+int mock_pnal_snmp_init (pnet_t * pnet, const pnal_cfg_t * pnal_cfg);
 
 int mock_pf_file_save_if_modified (
    const char * directory,

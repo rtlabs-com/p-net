@@ -28,11 +28,11 @@
                   <Name TextId="IDT_MODULE_NAME_DAP1"/>
                   <InfoText TextId="IDT_INFO_DAP1"/>
                   <VendorName Value="RT-Labs"/>
-                  <OrderNumber Value="12345"/>
+                  <OrderNumber Value="12345 Abcdefghijk"/>
                   <HardwareRelease Value="A1.0"/>
                   <SoftwareRelease Value="V0.1.0"/>
                </ModuleInfo>
-               <CertificationInfo ConformanceClass="A" ApplicationClass="" NetloadClass="I"/>
+               <CertificationInfo ConformanceClass="B" ApplicationClass="" NetloadClass="I"/>
                <IOConfigData MaxInputLength="244" MaxOutputLength="244"/>
                <UseableModules>
                   <ModuleItemRef ModuleItemTarget="IDM_11" AllowedInSlots="1..4"/>
@@ -49,14 +49,14 @@
                   </VirtualSubmoduleItem>
                </VirtualSubmoduleList>
                <SystemDefinedSubmoduleList>
-                  <InterfaceSubmoduleItem ID="IDS_I" SubmoduleIdentNumber="0x00008000" SubslotNumber="32768" TextId="IDT_NAME_IS" SupportedRT_Classes="RT_CLASS_1" SupportedProtocols="LLDP" NetworkComponentDiagnosisSupported="false" PTP_BoundarySupported="true" DCP_BoundarySupported="true">
+                  <InterfaceSubmoduleItem ID="IDS_I" SubmoduleIdentNumber="0x00008000" SubslotNumber="32768" TextId="IDT_NAME_IS" SupportedRT_Classes="RT_CLASS_1" SupportedProtocols="SNMP;LLDP" NetworkComponentDiagnosisSupported="false" PTP_BoundarySupported="true" DCP_BoundarySupported="true">
                      <ApplicationRelations StartupMode="Advanced">
                         <TimingProperties SendClock="32" ReductionRatio="1 2 4 8 16 32 64 128 256 512"/>
                      </ApplicationRelations>
                   </InterfaceSubmoduleItem>
                   <PortSubmoduleItem ID="IDS_P1" SubmoduleIdentNumber="0x00008001" SubslotNumber="32769" TextId="IDT_NAME_PS1" MaxPortRxDelay="350" MaxPortTxDelay="160">
                      <MAUTypeList>
-<!-- 
+<!--
 MAUTypeItems shall match the actual network interfaces of the device.
 Current list works for Raspberry Pi, Linksys usb/ethernet dongle and xmc sample targets
 -->
@@ -65,8 +65,8 @@ Current list works for Raspberry Pi, Linksys usb/ethernet dongle and xmc sample 
                         <MAUTypeItem Value="5"/>
                      </MAUTypeList>
                   </PortSubmoduleItem>
-<!-- 
-Enable to support additional port. (PNET_NUMBER_OF_PHYSICAL_PORTS == 2)
+<!--
+Enable to support additional port. (PNET_MAX_PHYSICAL_PORTS == 2)
 Add additional PortSubmoduleItems to support additional ports
 -->
 <!--

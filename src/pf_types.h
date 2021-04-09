@@ -28,7 +28,7 @@ extern "C" {
 #if PNET_USE_ATOMICS
 #include <stdatomic.h>
 #else
-#define atomic_int         uint32_t
+#define atomic_int uint32_t
 #ifdef ATOMIC_VAR_INIT
 #undef ATOMIC_VAR_INIT
 #endif
@@ -72,6 +72,9 @@ static inline uint32_t atomic_fetch_sub (atomic_int * p, uint32_t v)
  */
 #define PF_CCONTROL_TIMEOUT 2000
 #define PF_FRAG_TIMEOUT     2000
+
+/** Time between Ethernet link status checks, in microseconds */
+#define PF_LINK_MONITOR_INTERVAL 100000
 
 /** One neighbour shall be checked for PDPortDataCheck
  *  See Profinet 2.4 protocol, section 5.2.13.3
@@ -950,7 +953,6 @@ typedef struct pf_diag_item
    uint16_t next; /* Next in list (array index) */
 } pf_diag_item_t;
 
-
 typedef struct pf_alarm_payload
 {
    uint16_t usi;
@@ -1594,7 +1596,7 @@ typedef struct pf_alarm_cr_tag_header
 
 /** The largest alarmdata we can accept
  *  Allowed 200..1432
-*/
+ */
 #define PF_MAX_ALARM_DATA_LEN 200
 
 typedef struct pf_alarm_cr_request
@@ -1715,8 +1717,8 @@ typedef struct pf_cpm
    uint16_t dht; /* Set to zero at incoming cyclic frame, increased by
                     pf_cpm_control_interval_expired() */
    bool new_data;
-   uint32_t rxa[PNET_NUMBER_OF_PHYSICAL_PORTS][2]; /* Max 2 frame_ids */
-   int32_t cycle;                  /* value -1 means "never" */
+   uint32_t rxa[PNET_MAX_PHYSICAL_PORTS][2]; /* Max 2 frame_ids */
+   int32_t cycle;                            /* value -1 means "never" */
 
    uint32_t control_interval;
    bool ci_running;
@@ -2045,6 +2047,10 @@ typedef struct pf_ar
    /* Global error codes */
    uint8_t err_cls;
    uint8_t err_code;
+
+   pf_cmwrr_state_values_t cmwrr_state;
+
+   pf_cmsu_state_values_t cmsu_state;
 
    pf_cmsm_state_values_t cmsm_state;
    uint32_t cmsm_timer;
@@ -2547,6 +2553,7 @@ typedef struct pf_lldp_port_list_t
 typedef struct pf_port_iterator
 {
    int next_port;
+   int number_of_ports;
 } pf_port_iterator_t;
 
 /**
@@ -2695,7 +2702,7 @@ typedef struct pf_lldp_peer_info
 typedef struct pf_pdport
 {
    bool lldp_peer_info_updated;
-   bool lldp_peer_timeout;
+
    struct
    {
       bool active; /* Todo maybe a bitmask for different checks*/
@@ -2747,6 +2754,7 @@ typedef struct pf_netif
    char name[PNET_INTERFACE_NAME_MAX_SIZE]; /**< Terminated string */
    pnet_ethaddr_t mac_address;
    pnal_eth_handle_t * handle;
+   bool previous_is_link_up;
 } pf_netif_t;
 
 /**
@@ -2802,8 +2810,6 @@ struct pnet
    int cmrpc_rpcreq_socket; /* Main socket for incoming requests */
    uint8_t cmrpc_dcerpc_input_frame[PF_FRAME_BUFFER_SIZE];
    uint8_t cmrpc_dcerpc_output_frame[PF_FRAME_BUFFER_SIZE];
-   pf_cmsu_state_values_t cmsu_state;
-   pf_cmwrr_state_values_t cmwrr_state;
    const pnet_cfg_t * p_fspm_default_cfg; /* Default configuration from user.
                                              Used at factory reset */
    pnet_cfg_t fspm_cfg; /* Configuration from user. Might be updated by stack
@@ -2836,7 +2842,9 @@ struct pnet
          bool active;
          pf_lldp_name_of_device_mode_t mode;
       } name_of_device_mode;
-      pf_port_t port[PNET_NUMBER_OF_PHYSICAL_PORTS];
+      pf_port_t port[PNET_MAX_PHYSICAL_PORTS];
+      pf_port_iterator_t link_monitor_iterator;
+      uint32_t link_monitor_timeout; /* Scheduler timeout instance. */
    } pf_interface;
 };
 

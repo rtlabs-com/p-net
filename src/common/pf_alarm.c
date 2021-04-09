@@ -703,29 +703,36 @@ static int pf_alarm_apmr_frame_handler (
 {
    pf_apmx_t * p_apmx = (pf_apmx_t *)p_arg;
    pf_apmr_msg_t * p_apmr_msg;
-   uint16_t nbr;
-   int ret = 0; /* Failed to handle frame. The calling function needs to free
+   int ret = 0; /* Failed to handle frame. The frame handler needs to free
                    the buffer. */
 
-   LOG_INFO (
-      PF_ALARM_LOG,
-      "Alarm(%d): Received %s prio alarm frame.\n",
-      __LINE__,
-      p_apmx->high_priority ? "high" : "low");
    if (p_buf != NULL)
    {
-      nbr = p_apmx->apmr_msg_nbr++; /* ToDo: Make atomic */
-      if (p_apmx->apmr_msg_nbr >= NELEMENTS (p_apmx->apmr_msg))
-      {
-         p_apmx->apmr_msg_nbr = 0;
-      }
-      p_apmr_msg = &p_apmx->apmr_msg[nbr];
-      p_apmr_msg->p_buf = p_buf;
-      p_apmr_msg->frame_id_pos = frame_id_pos;
       if (p_apmx->p_alarm_q != NULL)
       {
+         p_apmr_msg = &p_apmx->apmr_msg[p_apmx->apmr_msg_nbr];
          if (os_mbox_post (p_apmx->p_alarm_q, (void *)p_apmr_msg, 0) == 0)
          {
+            /* Fill message with proper content */
+            /* TODO handle race condition */
+            p_apmr_msg->p_buf = p_buf;
+            p_apmr_msg->frame_id_pos = frame_id_pos;
+
+            /* Advance the counter for next message number */
+            /* TODO: Make atomic */
+            p_apmx->apmr_msg_nbr++;
+            if (p_apmx->apmr_msg_nbr >= NELEMENTS (p_apmx->apmr_msg))
+            {
+               p_apmx->apmr_msg_nbr = 0;
+            }
+
+            LOG_INFO (
+               PF_ALARM_LOG,
+               "Alarm(%d): Received %s prio alarm frame. Put in mbox. %p\n",
+               __LINE__,
+               p_apmx->high_priority ? "high" : "low",
+               p_buf);
+
             ret = 1; /* Means that calling function should not free buffer,
                         as that will be done when reading the mbox */
          }
@@ -733,9 +740,11 @@ static int pf_alarm_apmr_frame_handler (
          {
             LOG_ERROR (
                PF_ALARM_LOG,
-               "Alarm(%d): Failed to put incoming %s prio alarm in mbox\n",
+               "Alarm(%d): Failed to put incoming %s prio alarm in mbox. "
+               "Framehandler will free %p\n",
                __LINE__,
-               p_apmx->high_priority ? "high" : "low");
+               p_apmx->high_priority ? "high" : "low",
+               p_buf);
          }
       }
       else
@@ -743,14 +752,16 @@ static int pf_alarm_apmr_frame_handler (
          LOG_ERROR (
             PF_ALARM_LOG,
             "Alarm(%d): Could not put incoming %s prio alarm frame in"
-            " mbox, as it is deallocated.\n",
+            " mbox, as it is deallocated. Framehandler will free %p\n",
             __LINE__,
-            p_apmx->high_priority ? "high" : "low");
+            p_apmx->high_priority ? "high" : "low",
+            p_buf);
       }
    }
    else
    {
-      ret = 1; /* No need for the calling function to free p_buf */
+      /* No need for the frame hander to free p_buf as it is NULL */
+      ret = 1;
    }
 
    return ret;
@@ -2656,52 +2667,9 @@ static int pf_alarm_send_alarm (
    uint16_t payload_len,
    const uint8_t * p_payload)
 {
-   int ret = -1;
    pf_alarm_data_t alarm_data;
 
-   if (net->global_alarm_enable == true && p_ar->alarm_enable == true)
-   {
-      if (payload_len > sizeof (alarm_data.payload.data))
-      {
-         LOG_ERROR (
-            PF_ALARM_LOG,
-            "Alarm(%d): You provided too long alarm payload (%u bytes) but max "
-            "is %zu. Increase PNET_MAX_ALARM_PAYLOAD_DATA_SIZE.\n",
-            __LINE__,
-            payload_len,
-            sizeof (alarm_data.payload.data));
-      }
-      else if (payload_len > p_ar->alarm_cr_request.max_alarm_data_length)
-      {
-         LOG_ERROR (
-            PF_ALARM_LOG,
-            "Alarm(%d): You provided too long alarm payload (%u bytes) but PLC "
-            "said max %u bytes.\n",
-            __LINE__,
-            payload_len,
-            p_ar->alarm_cr_request.max_alarm_data_length);
-      }
-      else
-      {
-         /* Prepare data */
-         memset (&alarm_data, 0, sizeof (alarm_data));
-         alarm_data.alarm_type = alarm_type;
-         alarm_data.api_id = api_id;
-         alarm_data.slot_nbr = slot_nbr;
-         alarm_data.subslot_nbr = subslot_nbr;
-         alarm_data.module_ident = module_ident;
-         alarm_data.submodule_ident = submodule_ident;
-
-         alarm_data.payload.usi = payload_usi;
-         alarm_data.payload.len = payload_len;
-         memcpy (alarm_data.payload.data, p_payload, payload_len);
-
-         return pf_alarm_add_send_queue (
-            &p_ar->alarm_send_q[high_prio ? 1 : 0],
-            &alarm_data);
-      }
-   }
-   else
+   if (net->global_alarm_enable == false || p_ar->alarm_enable == false)
    {
       LOG_DEBUG (
          PF_ALARM_LOG,
@@ -2710,9 +2678,67 @@ static int pf_alarm_send_alarm (
          __LINE__,
          net->global_alarm_enable,
          p_ar->alarm_enable);
+
+      return -1;
    }
 
-   return ret;
+   if (payload_len > sizeof (alarm_data.payload.data))
+   {
+      LOG_ERROR (
+         PF_ALARM_LOG,
+         "Alarm(%d): You provided too long alarm payload (%u bytes) but max "
+         "is %zu. Increase PNET_MAX_ALARM_PAYLOAD_DATA_SIZE.\n",
+         __LINE__,
+         payload_len,
+         sizeof (alarm_data.payload.data));
+
+      return -1;
+   }
+
+   if (payload_len > p_ar->alarm_cr_request.max_alarm_data_length)
+   {
+      LOG_ERROR (
+         PF_ALARM_LOG,
+         "Alarm(%d): You provided too long alarm payload (%u bytes) but PLC "
+         "said max %u bytes.\n",
+         __LINE__,
+         payload_len,
+         p_ar->alarm_cr_request.max_alarm_data_length);
+
+      return -1;
+   }
+
+   if (payload_len > 0 && p_payload == NULL)
+   {
+      LOG_ERROR (
+         PF_ALARM_LOG,
+         "Alarm(%d): payload_len is %u but no payload is given.\n",
+         __LINE__,
+         payload_len);
+
+      return -1;
+   }
+
+   /* Prepare data */
+   memset (&alarm_data, 0, sizeof (alarm_data));
+   alarm_data.alarm_type = alarm_type;
+   alarm_data.api_id = api_id;
+   alarm_data.slot_nbr = slot_nbr;
+   alarm_data.subslot_nbr = subslot_nbr;
+   alarm_data.module_ident = module_ident;
+   alarm_data.submodule_ident = submodule_ident;
+
+   alarm_data.payload.usi = payload_usi;
+   alarm_data.payload.len = payload_len;
+
+   if (payload_len > 0)
+   {
+      memcpy (alarm_data.payload.data, p_payload, payload_len);
+   }
+
+   return pf_alarm_add_send_queue (
+      &p_ar->alarm_send_q[high_prio ? 1 : 0],
+      &alarm_data);
 }
 
 /************************ Send specific alarm types **************************/

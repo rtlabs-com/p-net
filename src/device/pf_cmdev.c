@@ -398,6 +398,40 @@ void pf_cmdev_free_diag (pnet_t * net, uint16_t item_ix)
    }
 }
 
+int pf_cmdev_get_next_diagnosis_usi (
+   pnet_t * net,
+   uint16_t list_head,
+   uint16_t low_usi_limit,
+   uint16_t * p_next_usi)
+{
+   int ret = -1;
+   pf_diag_item_t * p_item = NULL;
+   uint16_t resulting_value = UINT16_MAX;
+
+   /* Walk the list to find next larger USI value */
+   pf_cmdev_get_diag_item (net, list_head, &p_item);
+   while (p_item != NULL)
+   {
+      if (p_item->usi > low_usi_limit)
+      {
+         if (p_item->usi < resulting_value)
+         {
+            resulting_value = p_item->usi;
+         }
+      }
+
+      pf_cmdev_get_diag_item (net, p_item->next, &p_item);
+   }
+
+   if (resulting_value != UINT16_MAX)
+   {
+      *p_next_usi = resulting_value;
+      ret = 0;
+   }
+
+   return ret;
+}
+
 /*****************************************************************************/
 
 /**
@@ -4432,12 +4466,12 @@ int pf_cmdev_generate_submodule_diff (pnet_t * net, pf_ar_t * p_ar)
                         has_sub_diff = true;
                      }
 
-                     /* Check submodule diagnosis state and update diff. */
                      p_submodule_state = &p_ar->api_diffs[nbr_api_diffs]
                                              .module_diffs[nbr_mod_diffs]
                                              .submodule_diffs[nbr_sub_diffs]
                                              .submodule_state;
 
+                     /* Check submodule diagnosis state and update diff. */
                      if (
                         (p_cfg_subslot->submodule_state.fault == true) ||
                         (p_cfg_subslot->submodule_state.maintenance_demanded ==
@@ -4457,6 +4491,20 @@ int pf_cmdev_generate_submodule_diff (pnet_t * net, pf_ar_t * p_ar)
                            p_cfg_subslot->submodule_state.maintenance_demanded;
                         p_submodule_state->maintenance_required =
                            p_cfg_subslot->submodule_state.maintenance_required;
+                        has_sub_diff = true;
+                     }
+
+                     /* Check if other AR owns the submodule and update diff */
+                     if (p_cfg_subslot->p_ar != NULL && p_cfg_subslot->p_ar != p_ar)
+                     {
+                        p_ar->api_diffs[nbr_api_diffs]
+                           .module_diffs[nbr_mod_diffs]
+                           .submodule_diffs[nbr_sub_diffs]
+                           .submodule_ident_number =
+                           p_cfg_subslot->submodule_ident_number;
+
+                        p_submodule_state->ar_info =
+                           PF_SUBMOD_AR_INFO_LOCKED_BY_IO_CONTROLLER;
                         has_sub_diff = true;
                      }
                   }
@@ -4498,31 +4546,38 @@ int pf_cmdev_generate_submodule_diff (pnet_t * net, pf_ar_t * p_ar)
 
 /**
  * @internal
- * Verify that the frame id is not already used by this AR.
+ * Verify that the frame id is not already used by any AR.
  *
+ * Looks in all ARs, both in input CR and output CR.
+ *
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             In:    The AR instance.
  * @param frame_id         In:    The frame id to check.
  * @return  true  if the frame_id is free to use.
- *          false if the frame id is already used by this AR.
+ *          false if the frame id is already used.
  */
-static bool pf_cmdev_verify_free_frame_id (
-   const pf_ar_t * p_ar,
-   uint16_t frame_id)
+static bool pf_cmdev_verify_free_frame_id (pnet_t * net, uint16_t frame_id)
 {
-   bool is_free = true;
-   uint16_t ix;
-   const pf_iocr_param_t * p_iocr_param;
+   int ix = 0;
+   int iy = 0;
+   pf_ar_t * p_ar = NULL;
 
-   for (ix = 0; ix < p_ar->nbr_iocrs; ix++)
+   for (ix = 0; ix < PNET_MAX_AR; ix++)
    {
-      p_iocr_param = &p_ar->iocrs[ix].param;
-      if (p_iocr_param->frame_id == frame_id)
+      p_ar = pf_ar_find_by_index (net, ix);
+      if ((p_ar != NULL) && (p_ar->in_use == true))
       {
-         is_free = false;
+         for (iy = 0; iy < p_ar->nbr_iocrs; iy++)
+         {
+            if (p_ar->iocrs[iy].param.frame_id == frame_id)
+            {
+               return false;
+            }
+         }
       }
    }
 
-   return is_free;
+   return true;
 }
 
 /**
@@ -4530,9 +4585,10 @@ static bool pf_cmdev_verify_free_frame_id (
  * The controller may send 0xffff as the frame id for output CRs.
  * In that case we must supply a preferred frame id in the response.
  *
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             InOut: The AR instance.
  */
-static void pf_cmdev_fix_frame_id (pf_ar_t * p_ar)
+static void pf_cmdev_fix_frame_id (pnet_t * net, pf_ar_t * p_ar)
 {
    uint16_t ix;
    pf_iocr_param_t * p_iocr_param;
@@ -4574,10 +4630,11 @@ static void pf_cmdev_fix_frame_id (pf_ar_t * p_ar)
 
          frame_id = start;
          while ((frame_id <= stop) &&
-                (pf_cmdev_verify_free_frame_id (p_ar, frame_id) == false))
+                (pf_cmdev_verify_free_frame_id (net, frame_id) == false))
          {
             frame_id++;
          }
+
          if (frame_id <= stop)
          {
             p_iocr_param->frame_id = frame_id;
@@ -4737,7 +4794,7 @@ int pf_cmdev_rm_connect_ind (
             sizeof (pnet_ethaddr_t));
          p_ar->ar_result.responder_udp_rt_port = PF_UDP_UNICAST_PORT;
 
-         pf_cmdev_fix_frame_id (p_ar);
+         pf_cmdev_fix_frame_id (net, p_ar);
 
          for (ix = 0; ix < p_ar->nbr_iocrs; ix++)
          {
@@ -4835,7 +4892,8 @@ int pf_cmdev_rm_dcontrol_ind (
    pnet_t * net,
    pf_ar_t * p_ar,
    pf_control_block_t * p_control_io,
-   pnet_result_t * p_dcontrol_result)
+   pnet_result_t * p_dcontrol_result,
+   bool * p_set_state_prmend)
 {
    int ret = -1;
 
@@ -4857,7 +4915,11 @@ int pf_cmdev_rm_dcontrol_ind (
                pf_cmdev_set_state (net, p_ar, PF_CMDEV_STATE_W_ARDY);
                if (pf_cmdev_check_pdev() == 0)
                {
-                  pf_cmdev_state_ind (net, p_ar, PNET_EVENT_PRMEND);
+                  LOG_DEBUG (
+                     PNET_LOG,
+                     "CMDEV(%d): Prepare to set state PNET_EVENT_PRMEND\n",
+                     __LINE__);
+                  *p_set_state_prmend = true;
                   /**
                    * The application must issue the applicationReady call
                    * _AFTER_ returning from the pf_fspm_cm_dcontrol_ind_cb()
@@ -4973,6 +5035,10 @@ int pf_cmdev_cm_ccontrol_req (pnet_t * net, pf_ar_t * p_ar)
    uint16_t ix;
    uint16_t iy;
    bool data_avail = true; /* Assume all OK */
+   pf_iodata_object_t * p_iodata = NULL;
+   pf_ar_t * p_owning_ar = NULL;
+   pf_iocr_t * p_owning_iocr = NULL;
+   pf_iodata_object_t * p_owning_iodata = NULL;
 
    if (p_ar->ar_param.ar_properties.device_access == false)
    {
@@ -4988,17 +5054,70 @@ int pf_cmdev_cm_ccontrol_req (pnet_t * net, pf_ar_t * p_ar)
             {
                for (iy = 0; iy < p_ar->iocrs[ix].nbr_data_desc; iy++)
                {
-                  /* Member data_avail is set directly by the PPM. The value is
-                   * true also if only the IOPS is set.*/
+                  p_iodata = &p_ar->iocrs[ix].data_desc[iy];
+
+                  /* The application is limited to setting data for a specific
+                     subslot. Check that it has tried to set the data.
+                     If some other AR owns the subslot, check that data is
+                     set for that AR.
+
+                     In the future we might implement reading inputdata from
+                     one subslot to several connections (different PLCs).
+
+                     Find owning AR, CR and descriptor */
                   if (
-                     (p_ar->iocrs[ix].data_desc[iy].iops_length > 0) &&
-                     (p_ar->iocrs[ix].data_desc[iy].data_avail == false))
+                     pf_ppm_get_ar_iocr_desc (
+                        net,
+                        p_iodata->api_id,
+                        p_iodata->slot_nbr,
+                        p_iodata->subslot_nbr,
+                        &p_owning_ar,
+                        &p_owning_iocr,
+                        &p_owning_iodata) == 0)
                   {
+                     if (
+                        p_owning_ar != p_ar ||
+                        p_owning_iocr != &p_ar->iocrs[ix] ||
+                        p_owning_iodata != p_iodata)
+                     {
+                        LOG_DEBUG (
+                           PNET_LOG,
+                           "CMDEV(%d): Slot %u subslot 0x%04x is owned by "
+                           "AREP %u CREP %u but AREP %u CREP %u is asking to "
+                           "use it.\n",
+                           __LINE__,
+                           p_iodata->slot_nbr,
+                           p_iodata->subslot_nbr,
+                           p_owning_ar->arep,
+                           (unsigned)p_owning_iocr->crep,
+                           p_ar->arep,
+                           (unsigned)p_ar->iocrs[ix].crep);
+                     }
+
+                     /* Member data_avail is set directly by the PPM. The value
+                        is true also if only the IOPS is set. */
+                     if (
+                        p_owning_iodata->iops_length > 0 &&
+                        p_owning_iodata->data_avail == false)
+                     {
+                        data_avail = false;
+                     }
+                  }
+                  else
+                  {
+                     LOG_DEBUG (
+                        PNET_LOG,
+                        "CMDEV(%d): Could not find owning AR for slot %u "
+                        "subslot 0x%04x\n",
+                        __LINE__,
+                        p_iodata->slot_nbr,
+                        p_iodata->subslot_nbr);
                      data_avail = false;
                   }
                }
             }
          }
+
          if (data_avail == true)
          {
             pf_cmdev_state_ind (net, p_ar, PNET_EVENT_APPLRDY);
@@ -5007,6 +5126,7 @@ int pf_cmdev_cm_ccontrol_req (pnet_t * net, pf_ar_t * p_ar)
                ret = pf_cmdev_set_state (net, p_ar, PF_CMDEV_STATE_W_ARDYCNF);
             }
          }
+
          break;
       default:
          /* Ignore and stay in all other states. */

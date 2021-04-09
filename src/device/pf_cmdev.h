@@ -277,6 +277,24 @@ int pf_cmdev_new_diag (pnet_t * net, uint16_t * p_item_ix);
 void pf_cmdev_free_diag (pnet_t * net, uint16_t item_ix);
 
 /**
+ * Find next diagnosis USI value (sorted) for a subslot
+ *
+ * Finds the smallest USI value that is greater than \a low_usi_limit
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param list_head        In:    Index of first item of diagnoses for
+ *                                this subslot
+ * @param low_usi_limit    In:    Previous USI value
+ * @param p_next_usi       Out:   Next USI value
+ * @return 0 if an USI value was found, -1 otherwise.
+ */
+int pf_cmdev_get_next_diagnosis_usi (
+   pnet_t * net,
+   uint16_t list_head,
+   uint16_t low_usi_limit,
+   uint16_t * p_next_usi);
+
+/**
  * Generate module diffs, when needed, for the specified AR.
  * @param net              InOut: The p-net stack instance
  * @param p_ar             InOut: The AR instance.
@@ -390,10 +408,12 @@ int pf_cmdev_rm_release_ind (
  * This triggers the user callbacks \a pnet_dcontrol_ind() and
  * \a pnet_state_ind() with PNET_EVENT_PRMEND.
  *
- * @param net              InOut: The p-net stack instance
- * @param p_ar             InOut: The AR instance.
- * @param p_control_io     In:    The control block.
- * @param p_release_result Out:   Detailed result of the connect operation.
+ * @param net                  InOut: The p-net stack instance
+ * @param p_ar                 InOut: The AR instance.
+ * @param p_control_io         In:    The control block.
+ * @param p_release_result     Out:   Detailed result of the connect operation.
+ * @param p_set_state_prmend   Out:   Set state to PNET_EVENT_PRMEND after the
+ *                                    response have been sent.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -401,7 +421,8 @@ int pf_cmdev_rm_dcontrol_ind (
    pnet_t * net,
    pf_ar_t * p_ar,
    pf_control_block_t * p_control_io,
-   pnet_result_t * p_release_result);
+   pnet_result_t * p_release_result,
+   bool * p_set_state_prmend);
 
 /**
  * Convey the APPLRDY indication from the application to the controller.

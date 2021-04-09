@@ -675,10 +675,11 @@ void pf_put_input_data (
  *
  * Implemented using:
  *    pf_put_diag_device()
- *       pf_put_diag_api()            for all APIs
- *          pf_put_diag_slot()        for all slots
- *             pf_put_diag_list()     for all subslots
- *                pf_put_diag_item()  Does actual insertion
+ *       pf_put_diag_api()              for all APIs
+ *          pf_put_diag_slot()          for all slots
+ *             pf_put_diag_subslot()    for all subslots
+ *               pf_put_diag_list()     Header insertion for a USI value
+ *                  pf_put_diag_item()  Insertion of diag item
  *
  * @param net              InOut: The p-net stack instance
  * @param is_big_endian    In:    Endianness of the destination buffer.
@@ -768,10 +769,11 @@ void pf_put_pd_interface_adj (
  *
  * Includes peer chassis ID, peer MAC address and peer MAU type.
  *
+ * If the local port number is out of range this operation will assert.
+ *
  * @param net              InOut: The p-net stack instance
  * @param loc_port_num     In:    Local port number.
- *                                Valid range:
- *                                1 .. PNET_NUMBER_OF_PHYSICAL_PORTS.
+ *                                Valid range: 1 .. num_physical_ports.
  * @param is_big_endian    In:    Endianness of the destination buffer.
  * @param p_res            In:    Read result
  * @param res_len          In:    Size of destination buffer.

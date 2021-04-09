@@ -28,20 +28,31 @@ extern "C" {
 void pf_port_init (pnet_t * net);
 
 /**
+ * Init main interface data, and schedule Ethernet link monitoring
+ *
+ * @param net              In:    The p-net stack instance.
+ */
+void pf_port_main_interface_init (pnet_t * net);
+
+/**
+ * Get number of physical ports.
+ *
+ * @param net              In:    The p-net stack instance.
+ * @return the number of physical ports.
+ */
+uint8_t pf_port_get_number_of_ports (const pnet_t * net);
+
+/**
  * Get list of local ports.
  *
  * This is the list of physical ports on the local interface.
  * The management port is not included.
  *
  * @param net              In:    The p-net stack instance.
- * @param max_port         In:    Max port number supported.
- *                                Typically PNET_NUMBER_OF_PHYSICAL_PORTS.
- *                                Parameter added for testability.
  * @param p_list           Out:   List of local ports.
  */
 void pf_port_get_list_of_ports (
-   pnet_t * net,
-   uint16_t max_port,
+   const pnet_t * net,
    pf_lldp_port_list_t * p_list);
 
 /**
@@ -55,13 +66,15 @@ void pf_port_get_list_of_ports (
  * @param p_iterator       Out:   Port iterator.
  */
 void pf_port_init_iterator_over_ports (
-   pnet_t * net,
+   const pnet_t * net,
    pf_port_iterator_t * p_iterator);
 
 /**
  * Get next local port.
  *
  * If no more ports are available, 0 is returned.
+ *
+ * Will return: 1 2 3 ... num_physical_ports 0 0 0
  *
  * @param p_iterator       InOut: Port iterator.
  * @return Local port number for next port on local interface.
@@ -70,35 +83,51 @@ void pf_port_init_iterator_over_ports (
 int pf_port_get_next (pf_port_iterator_t * p_iterator);
 
 /**
+ * Get next local port, over and over again.
+ *
+ * After highest port number has been returned, next time 1 will be returned
+ * (and then 2 etc)
+ *
+ * Will return: 1 2 3 ... num_physical_ports 1 2 3 ... etc
+ *
+ * @param p_iterator       InOut: Port iterator.
+ * @return Local port number for next port on local interface.
+ */
+int pf_port_get_next_repeat_cyclic (pf_port_iterator_t * p_iterator);
+
+/**
  * Get DAP port subslot using local port number
  *
- * @param net              InOut: The p-net stack instance
+ * If the local port number is out of range this operation will assert.
+ *
+ * @param net              In:    The p-net stack instance
  * @param loc_port_num     In:    Local port number.
- *                                Valid range:
- *                                1 .. PNET_NUMBER_OF_PHYSICAL_PORTS.
+ *                                Valid range:  1 .. num_physical_ports
  * @return DAP subslot number for port identity
  */
-uint16_t pf_port_loc_port_num_to_dap_subslot (int loc_port_num);
+uint16_t pf_port_loc_port_num_to_dap_subslot (
+   const pnet_t * net,
+   int loc_port_num);
 
 /**
  * Check if a DAP port subslot is mapped to a local port
  *
- * @param subslot              In: Subslot number
+ * @param net              In:    The p-net stack instance
+ * @param subslot          In:    Subslot number
  * @return true  if the subslot is mapped to a local port.
  *         false if the subslot is not supported.
  */
-bool pf_port_subslot_is_dap_port_id (uint16_t subslot);
+bool pf_port_subslot_is_dap_port_id (const pnet_t * net, uint16_t subslot);
 
 /**
  * Get local port from DAP port subslot
  *
- * Considers PNET_NUMBER_OF_PHYSICAL_PORTS
- *
- * @param subslot              In: Subslot number
+ * @param net              In:    The p-net stack instance
+ * @param subslot          In:    Subslot number
  * @return The port number mapping to the subslot.
  *         0 if the subslot is not supported.
  */
-int pf_port_dap_subslot_to_local_port (uint16_t subslot);
+int pf_port_dap_subslot_to_local_port (const pnet_t * net, uint16_t subslot);
 
 /**
  * Get port runtime data.
@@ -110,8 +139,7 @@ int pf_port_dap_subslot_to_local_port (uint16_t subslot);
  *
  * @param net              In:    The p-net stack instance
  * @param loc_port_num     In:    Local port number.
- *                                Valid range:
- *                                1 .. PNET_NUMBER_OF_PHYSICAL_PORTS.
+ *                                Valid range: 1 .. num_physical_ports
  * @return port runtime data
  */
 pf_port_t * pf_port_get_state (pnet_t * net, int loc_port_num);
@@ -126,8 +154,7 @@ pf_port_t * pf_port_get_state (pnet_t * net, int loc_port_num);
  *
  * @param net              In:    The p-net stack instance
  * @param loc_port_num     In:    Local port number.
- *                                Valid range:
- *                                1 .. PNET_NUMBER_OF_PHYSICAL_PORTS
+ *                                Valid range: 1 .. num_physical_ports
  * @return port configuration
  */
 const pnet_port_cfg_t * pf_port_get_config (pnet_t * net, int loc_port_num);
@@ -137,12 +164,11 @@ const pnet_port_cfg_t * pf_port_get_config (pnet_t * net, int loc_port_num);
  *
  * @param net              In:    The p-net stack instance
  * @param loc_port_num     In:    Local port number.
- *                                Valid range:
- *                                1 .. PNET_NUMBER_OF_PHYSICAL_PORTS.
+ *                                Valid range: 1 .. num_physical_ports
  * @return  true  if port number is valid,
  *          false if not
  */
-bool pf_port_is_valid (pnet_t * net, int loc_port_num);
+bool pf_port_is_valid (const pnet_t * net, int loc_port_num);
 
 /**
  * Get port number for network interface. If network interface
@@ -153,7 +179,7 @@ bool pf_port_is_valid (pnet_t * net, int loc_port_num);
  * @return local port number
  *         0 if no local port matches the network interface handle
  */
-int pf_port_get_port_number (pnet_t * net, pnal_eth_handle_t * eth_handle);
+int pf_port_get_port_number (const pnet_t * net, pnal_eth_handle_t * eth_handle);
 
 /**
  * Decode media type from Ethernet MAU type.

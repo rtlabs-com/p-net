@@ -413,6 +413,14 @@ int pf_diag_add (
          "to 0x7fff\n",
          __LINE__);
    }
+   else if (manuf_data_len > 0 && p_manuf_data == NULL)
+   {
+      LOG_ERROR (
+         PF_ALARM_LOG,
+         "DIAG(%d): manuf_data_len is %u but no data is given.\n",
+         __LINE__,
+         manuf_data_len);
+   }
    else if (p_diag_source->ch > PNET_CHANNEL_WHOLE_SUBMODULE)
    {
       LOG_ERROR (
@@ -485,7 +493,13 @@ int pf_diag_add (
 
                p_item->usi = usi;
                p_item->fmt.usi.len = manuf_data_len;
-               memcpy (p_item->fmt.usi.manuf_data, p_manuf_data, manuf_data_len);
+               if (manuf_data_len > 0)
+               {
+                  memcpy (
+                     p_item->fmt.usi.manuf_data,
+                     p_manuf_data,
+                     manuf_data_len);
+               }
             }
             else
             {
@@ -646,6 +660,14 @@ int pf_diag_update (
          "to 0x7fff\n",
          __LINE__);
    }
+   else if (manuf_data_len > 0 && p_manuf_data == NULL)
+   {
+      LOG_ERROR (
+         PF_ALARM_LOG,
+         "DIAG(%d): manuf_data_len is %u but no data is given.\n",
+         __LINE__,
+         manuf_data_len);
+   }
    else if (manuf_data_len > sizeof (p_item->fmt.usi.manuf_data))
    {
       LOG_ERROR (
@@ -686,7 +708,13 @@ int pf_diag_update (
             {
                /* Manufacturer specific */
                p_item->fmt.usi.len = manuf_data_len;
-               memcpy (p_item->fmt.usi.manuf_data, p_manuf_data, manuf_data_len);
+               if (manuf_data_len > 0)
+               {
+                  memcpy (
+                     p_item->fmt.usi.manuf_data,
+                     p_manuf_data,
+                     manuf_data_len);
+               }
             }
             else
             {

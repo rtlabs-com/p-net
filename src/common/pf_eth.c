@@ -25,26 +25,43 @@
  */
 
 #ifdef UNIT_TEST
-#define pnal_eth_init mock_pnal_eth_init
-#define pnal_eth_send mock_pnal_eth_send
+#define pnal_eth_init       mock_pnal_eth_init
+#define pnal_eth_send       mock_pnal_eth_send
 #define pnal_get_macaddress mock_pnal_get_macaddress
 #endif
 
 #include <string.h>
 #include "pf_includes.h"
 
+/**
+ * @internal
+ * Initialize network interface
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param netif_name       In:    Interface name
+ * @param eth_receive_type In:    Protocol to receive
+ * @param pnal_cfg         In:    Operating system dependent configuration
+ * @param netif            InOut: Network interface instance
+ * @return   0 on success
+ *          -1 on error
+ */
 static int pf_eth_init_netif (
    pnet_t * net,
    const char * netif_name,
    pnal_ethertype_t eth_receive_type,
+   const pnal_cfg_t * pnal_cfg,
    pf_netif_t * netif)
 {
    pnal_ethaddr_t pnal_mac_addr;
 
    snprintf (netif->name, sizeof (netif->name), "%s", netif_name);
 
-   netif->handle =
-      pnal_eth_init (netif->name, eth_receive_type, pf_eth_recv, (void *)net);
+   netif->handle = pnal_eth_init (
+      netif->name,
+      eth_receive_type,
+      pnal_cfg,
+      pf_eth_recv,
+      (void *)net);
 
    if (netif->handle == NULL)
    {
@@ -58,10 +75,26 @@ static int pf_eth_init_netif (
       return -1;
    }
 
+   LOG_DEBUG (
+      PF_ETH_LOG,
+      "ETH(%d): Initialising interface \"%s\" %02X:%02X:%02X:%02X:%02X:%02X "
+      "type 0x%04X\n",
+      __LINE__,
+      netif_name,
+      pnal_mac_addr.addr[0],
+      pnal_mac_addr.addr[1],
+      pnal_mac_addr.addr[2],
+      pnal_mac_addr.addr[3],
+      pnal_mac_addr.addr[4],
+      pnal_mac_addr.addr[5],
+      eth_receive_type);
+
    memcpy (
       netif->mac_address.addr,
       pnal_mac_addr.addr,
       sizeof (netif->mac_address.addr));
+
+   netif->previous_is_link_up = false;
 
    return 0;
 }
@@ -71,18 +104,12 @@ int pf_eth_init (pnet_t * net, const pnet_cfg_t * p_cfg)
    int port;
    pf_port_iterator_t port_iterator;
    pf_port_t * p_port_data;
-   pnal_ethertype_t main_port_receive_type;
-#if PNET_NUMBER_OF_PHYSICAL_PORTS > 1
+   uint8_t number_of_ports = p_cfg->num_physical_ports;
    const pnet_port_cfg_t * p_port_cfg;
-#endif
+   pnal_ethertype_t main_port_receive_type =
+      (number_of_ports == 1) ? PNAL_ETHTYPE_ALL : PNAL_ETHTYPE_PROFINET;
 
    memset (net->eth_id_map, 0, sizeof (net->eth_id_map));
-
-#if (PNET_NUMBER_OF_PHYSICAL_PORTS == 1)
-   main_port_receive_type = PNAL_ETHTYPE_ALL;
-#else
-   main_port_receive_type = PNAL_ETHTYPE_PROFINET;
-#endif
 
    /* Init management port */
    if (
@@ -90,6 +117,7 @@ int pf_eth_init (pnet_t * net, const pnet_cfg_t * p_cfg)
          net,
          p_cfg->if_cfg.main_netif_name,
          main_port_receive_type,
+         &p_cfg->pnal_cfg,
          &net->pf_interface.main_port) != 0)
    {
       return -1;
@@ -102,23 +130,27 @@ int pf_eth_init (pnet_t * net, const pnet_cfg_t * p_cfg)
    {
       p_port_data = pf_port_get_state (net, port);
 
-#if PNET_NUMBER_OF_PHYSICAL_PORTS > 1
-      p_port_cfg = pf_port_get_config (net, port);
-
-      if (
-         pf_eth_init_netif (
-            net,
-            p_port_cfg->netif_name,
-            PNAL_ETHTYPE_LLDP,
-            &p_port_data->netif) != 0)
+      if (number_of_ports > 1)
       {
-         return -1;
+         p_port_cfg = pf_port_get_config (net, port);
+
+         if (
+            pf_eth_init_netif (
+               net,
+               p_port_cfg->netif_name,
+               PNAL_ETHTYPE_LLDP,
+               &p_cfg->pnal_cfg,
+               &p_port_data->netif) != 0)
+         {
+            return -1;
+         }
       }
-#else
-      /* In single port configuration the managed port is also physical port 1
-       */
-      p_port_data->netif = net->pf_interface.main_port;
-#endif
+      else
+      {
+         /* In single port configuration the managed port is also
+            physical port 1 */
+         p_port_data->netif = net->pf_interface.main_port;
+      }
 
       port = pf_port_get_next (&port_iterator);
    }

@@ -460,7 +460,7 @@ TEST_F (LldpTest, LldpInitTest)
    EXPECT_EQ (appdata.call_counters.ccontrol_calls, 0);
    EXPECT_EQ (appdata.call_counters.read_calls, 0);
    EXPECT_EQ (appdata.call_counters.write_calls, 0);
-   EXPECT_EQ (mock_os_data.eth_send_count, PNET_NUMBER_OF_PHYSICAL_PORTS);
+   EXPECT_EQ (mock_os_data.eth_send_count, PNET_MAX_PHYSICAL_PORTS);
 }
 
 TEST_F (LldpTest, LldpGenerateAliasName)

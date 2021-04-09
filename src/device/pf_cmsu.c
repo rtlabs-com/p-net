@@ -31,9 +31,9 @@
 #include <string.h>
 #include "pf_includes.h"
 
-void pf_cmsu_init (pnet_t * net)
+void pf_cmsu_init (pnet_t * net, pf_ar_t * p_ar)
 {
-   net->cmsu_state = PF_CMSU_STATE_IDLE;
+   p_ar->cmsu_state = PF_CMSU_STATE_IDLE;
 }
 
 /**
@@ -44,9 +44,12 @@ void pf_cmsu_init (pnet_t * net)
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
-static int pf_cmsu_set_state (pnet_t * net, pf_cmsu_state_values_t state)
+static int pf_cmsu_set_state (
+   pnet_t * net,
+   pf_ar_t * p_ar,
+   pf_cmsu_state_values_t state)
 {
-   net->cmsu_state = state;
+   p_ar->cmsu_state = state;
 
    return 0;
 }
@@ -58,7 +61,7 @@ int pf_cmsu_cmdev_state_ind (
 {
    uint32_t crep;
 
-   switch (net->cmsu_state)
+   switch (p_ar->cmsu_state)
    {
    case PF_CMSU_STATE_IDLE:
       break;
@@ -69,8 +72,9 @@ int pf_cmsu_cmdev_state_ind (
          LOG_DEBUG (
             PNET_LOG,
             "CMSU(%d): Received state PNET_EVENT_ABORT from CMDEV. Closing "
-            "PPM, CPM and alarm instances.\n",
-            __LINE__);
+            "PPM, CPM and alarm instances for AREP %u.\n",
+            __LINE__,
+            p_ar->arep);
          for (crep = 0; crep < p_ar->nbr_iocrs; crep++)
          {
             if (p_ar->iocrs[crep].param.iocr_type == PF_IOCR_TYPE_INPUT)
@@ -89,9 +93,9 @@ int pf_cmsu_cmdev_state_ind (
 
          /* ToDo: Cleanup static ARP cache entry */
          /* ACCM_req(Command: REMOVE, ip_address) */
-         pf_cmsu_set_state (net, PF_CMSU_STATE_ABORT);
+         pf_cmsu_set_state (net, p_ar, PF_CMSU_STATE_ABORT);
          /* All *_cnf have been received */
-         pf_cmsu_set_state (net, PF_CMSU_STATE_IDLE);
+         pf_cmsu_set_state (net, p_ar, PF_CMSU_STATE_IDLE);
       }
       break;
    case PF_CMSU_STATE_ABORT:
@@ -100,7 +104,7 @@ int pf_cmsu_cmdev_state_ind (
          PNET_LOG,
          "CMSU(%d): Illegal state in cmsu %d\n",
          __LINE__,
-         net->cmsu_state);
+         p_ar->cmsu_state);
       break;
    }
    return 0;
@@ -111,7 +115,7 @@ int pf_cmsu_start_req (pnet_t * net, pf_ar_t * p_ar, pnet_result_t * p_stat)
    int ret = -1;
    uint32_t crep;
 
-   switch (net->cmsu_state)
+   switch (p_ar->cmsu_state)
    {
    case PF_CMSU_STATE_IDLE:
       ret = 0; /* Assume all goes well */
@@ -178,7 +182,7 @@ int pf_cmsu_start_req (pnet_t * net, pf_ar_t * p_ar, pnet_result_t * p_stat)
       /* ToDo: Create static ARP cache entry */
       /* ACCM_req(Command: ADD, ip_address, mac_address) */
 
-      pf_cmsu_set_state (net, PF_CMSU_STATE_STARTUP);
+      pf_cmsu_set_state (net, p_ar, PF_CMSU_STATE_STARTUP);
       /* CMSU_Start.cnf */
       break;
    case PF_CMSU_STATE_STARTUP:
@@ -196,7 +200,7 @@ int pf_cmsu_start_req (pnet_t * net, pf_ar_t * p_ar, pnet_result_t * p_stat)
          PNET_LOG,
          "CMSU(%d): Illegal state in cmsu %d\n",
          __LINE__,
-         net->cmsu_state);
+         p_ar->cmsu_state);
       break;
    }
 

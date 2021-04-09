@@ -665,6 +665,8 @@ static int pf_ar_allocate (pnet_t * net, pf_ar_t ** pp_ar)
    {
       memset (&net->cmrpc_ar[ix], 0, sizeof (net->cmrpc_ar[ix]));
       net->cmrpc_ar[ix].in_use = true;
+      pf_cmsu_init (net, &net->cmrpc_ar[ix]);
+      pf_cmwrr_init (net, &net->cmrpc_ar[ix]);
 
       *pp_ar = &net->cmrpc_ar[ix];
 
@@ -1871,7 +1873,7 @@ static int pf_cmrpc_rm_connect_ind (
    }
    else
    {
-      pf_pdport_lldp_restart (net);
+      pf_pdport_lldp_restart_transmission (net);
    }
 
    LOG_DEBUG (
@@ -2440,13 +2442,15 @@ static void pf_cmrpc_rm_dcontrol_rsp (
  *  * pnet_dcontrol_ind() with PNET_CONTROL_COMMAND_PRM_END
  *  * pnet_state_ind() with PNET_EVENT_PRMEND
  *
- * @param net              InOut: The p-net stack instance
- * @param p_sess           InOut: The RPC session instance.
- * @param p_rpc            In:    The RPC header.
- * @param req_pos          In:    Position in the request buffer.
- * @param res_size         In:    The size of the response buffer.
- * @param p_res            Out:   The response buffer.
- * @param p_res_pos        InOut: Position within the response buffer.
+ * @param net                  InOut: The p-net stack instance
+ * @param p_sess               InOut: The RPC session instance.
+ * @param p_rpc                In:    The RPC header.
+ * @param req_pos              In:    Position in the request buffer.
+ * @param res_size             In:    The size of the response buffer.
+ * @param p_res                Out:   The response buffer.
+ * @param p_res_pos            InOut: Position within the response buffer.
+ * @param p_set_state_prmend   Out:   Set state to PNET_EVENT_PRMEND after the
+ *                                    response have been sent.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -2457,7 +2461,8 @@ static int pf_cmrpc_rm_dcontrol_ind (
    uint16_t req_pos,
    uint16_t res_size,
    uint8_t * p_res,
-   uint16_t * p_res_pos)
+   uint16_t * p_res_pos,
+   bool * p_set_state_prmend)
 {
    int ret = -1;
    pf_control_block_t control_io;
@@ -2477,7 +2482,8 @@ static int pf_cmrpc_rm_dcontrol_ind (
                   net,
                   p_ar,
                   &control_io,
-                  &p_sess->rpc_result) == 0)
+                  &p_sess->rpc_result,
+                  p_set_state_prmend) == 0)
             {
                ret = pf_cmpbe_rm_dcontrol_ind (
                   net,
@@ -3348,15 +3354,17 @@ static int pf_cmrpc_rm_write_ind (
 /**
  * @internal
  * Take a DCE RPC request and create a DCE RPC response.
- * @param net              InOut: The p-net stack instance
- * @param p_sess           InOut: The session instance. Will be released on
- *                                error.
- * @param req_pos          In:    Position in the input buffer.
- * @param p_rpc            In:    The RPC header.
- * @param res_size         In:    The size of the response buffer.
- * @param p_res            Out:   The response buffer. Already filled with a
- *                                 DCE/RPC header.
- * @param p_res_pos        InOut: Position in the response buffer.
+ * @param net                  InOut: The p-net stack instance
+ * @param p_sess               InOut: The session instance. Will be released on
+ *                                    error.
+ * @param req_pos              In:    Position in the input buffer.
+ * @param p_rpc                In:    The RPC header.
+ * @param res_size             In:    The size of the response buffer.
+ * @param p_res                Out:   The response buffer. Already filled with
+ *                                    a DCE/RPC header.
+ * @param p_res_pos            InOut: Position in the response buffer.
+ * @param p_set_state_prmend   Out:   Set state to PNET_EVENT_PRMEND after the
+ *                                    response have been sent.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -3367,7 +3375,8 @@ static int pf_cmrpc_rpc_request (
    const pf_rpc_header_t * p_rpc,
    uint16_t res_size,
    uint8_t * p_res,
-   uint16_t * p_res_pos)
+   uint16_t * p_res_pos,
+   bool * p_set_state_prmend)
 {
    int ret = -1;
 
@@ -3439,7 +3448,8 @@ static int pf_cmrpc_rpc_request (
          req_pos,
          res_size,
          p_res,
-         p_res_pos);
+         p_res_pos,
+         p_set_state_prmend);
       break;
    case PF_RPC_DEV_OPNUM_READ_IMPLICIT:
       LOG_INFO (
@@ -4007,6 +4017,7 @@ static int pf_cmrpc_dce_packet (
    bool is_new_session = false;
    uint32_t fault_code = 0;
    uint32_t reject_code = 0;
+   bool set_state_paramend = false;
 
    get_info.result = PF_PARSE_OK;
    get_info.p_buf = p_req;
@@ -4286,7 +4297,8 @@ static int pf_cmrpc_dce_packet (
                   &rpc_req,
                   max_rsp_len,
                   p_sess->out_buffer,
-                  &p_sess->out_buf_len);
+                  &p_sess->out_buf_len,
+                  &set_state_paramend);
             }
             else if (
                memcmp (
@@ -4374,6 +4386,11 @@ static int pf_cmrpc_dce_packet (
             {
                /* Non-fragmented responses from us are not re-transmitted */
                ret = pf_cmrpc_send_once (net, p_sess, "response");
+            }
+
+            if (set_state_paramend && p_sess->p_ar != NULL)
+            {
+               pf_cmdev_state_ind (net, p_sess->p_ar, PNET_EVENT_PRMEND);
             }
             break;
          case PF_RPC_PT_FRAG_ACK:

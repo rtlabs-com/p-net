@@ -63,6 +63,7 @@ uint32_t mock_pnal_get_system_uptime_10ms (void)
 
 pnal_eth_handle_t * mock_pnal_eth_init (
    const char * if_name,
+   const pnal_cfg_t * pnal_cfg,
    pnal_eth_callback_t * callback,
    void * arg)
 {
@@ -332,7 +333,7 @@ int mock_pf_lldp_get_peer_link_status (
    return mock_lldp_data.error;
 }
 
-int mock_pnal_snmp_init (pnet_t * pnet)
+int mock_pnal_snmp_init (pnet_t * pnet, const pnal_cfg_t * pnal_cfg)
 {
    return 0;
 }

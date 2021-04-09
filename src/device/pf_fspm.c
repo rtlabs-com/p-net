@@ -113,8 +113,8 @@ void pf_fspm_option_show (const pnet_t * net)
       "PNET_MAX_DFP_IOCR                              : %d\n",
       PNET_MAX_DFP_IOCR);
    printf (
-      "PNET_NUMBER_OF_PHYSICAL_PORTS                             : %d\n",
-      PNET_NUMBER_OF_PHYSICAL_PORTS);
+      "PNET_MAX_PHYSICAL_PORTS                             : %d\n",
+      PNET_MAX_PHYSICAL_PORTS);
    printf (
       "PNET_MAX_LOG_BOOK_ENTRIES                      : %d\n",
       PNET_MAX_LOG_BOOK_ENTRIES);
@@ -231,6 +231,20 @@ int pf_fspm_validate_configuration (const pnet_cfg_t * p_cfg)
          PNET_LOG,
          "FSPM(%d): Length of network interface name must not be 0.\n",
          __LINE__);
+      return -1;
+   }
+
+   if (
+      p_cfg->num_physical_ports == 0 ||
+      p_cfg->num_physical_ports > PNET_MAX_PHYSICAL_PORTS)
+   {
+      LOG_ERROR (
+         PNET_LOG,
+         "FSPM(%d): The number of ports setting is wrong. Given: %d  "
+         "PNET_MAX_PHYSICAL_PORTS: %d\n",
+         __LINE__,
+         p_cfg->num_physical_ports,
+         PNET_MAX_PHYSICAL_PORTS);
       return -1;
    }
 

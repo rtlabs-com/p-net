@@ -47,6 +47,28 @@ int pf_ppm_activate_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep);
 int pf_ppm_close_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep);
 
 /**
+ * Find the AR, input IOCR and IODATA object instances for the specified
+ * sub-slot.
+ * @param net              InOut: The p-net stack instance
+ * @param api_id           In:    The API id.
+ * @param slot_nbr         In:    The slot number.
+ * @param subslot_nbr      In:    The sub-slot number.
+ * @param pp_ar            Out:   The AR instance.
+ * @param pp_iocr          Out:   The IOCR instance.
+ * @param pp_iodata        Out:   The IODATA object instance.
+ * @return  0  If the information has been found.
+ *          -1 If the information was not found.
+ */
+int pf_ppm_get_ar_iocr_desc (
+   pnet_t * net,
+   uint32_t api_id,
+   uint16_t slot_nbr,
+   uint16_t subslot_nbr,
+   pf_ar_t ** pp_ar,
+   pf_iocr_t ** pp_iocr,
+   pf_iodata_object_t ** pp_iodata);
+
+/**
  * Set the data and IOPS for a sub-module.
  * @param net              InOut: The p-net stack instance
  * @param api_id           In:   The API id.
@@ -92,6 +114,9 @@ int pf_ppm_set_iocs (
 
 /**
  * Retrieve the data and IOPS for a sub-module.
+ *
+ * Note that this is not from the PLC, but previously set by the application.
+ *
  * @param net              InOut: The p-net stack instance
  * @param api_id           In:    The API id.
  * @param slot_nbr         In:    The slot number.
@@ -117,6 +142,9 @@ int pf_ppm_get_data_and_iops (
 
 /**
  * Retrieve IOCS for a sub-module.
+ *
+ * Note that this is not from the PLC, but previously set by the application.
+ *
  * @param net              InOut: The p-net stack instance
  * @param api_id           In:   The API id.
  * @param slot_nbr         In:   The slot number.

@@ -801,31 +801,47 @@ static int app_state_ind (
    }
    else if (state == PNET_EVENT_PRMEND)
    {
-      /* Save the arep for later use */
-      p_appdata->main_api.arep = arep;
-
-      /* Set initial data and IOPS for input modules, and IOCS for
-       * output modules
-       */
-      for (slot = 0; slot < PNET_MAX_SLOTS; slot++)
+      /* To simplify sample applicataion, handle the subslot data
+         properly just for first connection (AR) */
+      if (p_appdata->main_api.arep == UINT32_MAX)
       {
-         for (subslot_ix = 0; subslot_ix < PNET_MAX_SUBSLOTS; subslot_ix++)
+         /* Save the arep for later use */
+         p_appdata->main_api.arep = arep;
+
+         /* Set initial data and IOPS for input modules, and IOCS for
+          * output modules */
+         for (slot = 0; slot < PNET_MAX_SLOTS; slot++)
          {
-            if (
-               p_appdata->main_api.slots[slot].plugged &&
-               p_appdata->main_api.slots[slot].subslots[subslot_ix].plugged)
+            for (subslot_ix = 0; subslot_ix < PNET_MAX_SUBSLOTS; subslot_ix++)
             {
-               app_set_initial_data_and_ioxs (
-                  net,
-                  p_appdata,
-                  &p_appdata->main_api.slots[slot].subslots[subslot_ix]);
+               if (
+                  p_appdata->main_api.slots[slot].plugged &&
+                  p_appdata->main_api.slots[slot].subslots[subslot_ix].plugged)
+               {
+                  app_set_initial_data_and_ioxs (
+                     net,
+                     p_appdata,
+                     &p_appdata->main_api.slots[slot].subslots[subslot_ix]);
+               }
             }
          }
+         (void)pnet_set_provider_state (net, true);
       }
-      (void)pnet_set_provider_state (net, true);
 
-      /* Send application ready  */
-      os_event_set (p_appdata->main_events, APP_EVENT_READY_FOR_DATA);
+      if (pnet_application_ready (net, arep) != 0)
+      {
+         printf (
+            "AREP %u Error returned when application telling that it is "
+            "ready for data. Have you set IOCS or IOPS for all subslots?\n",
+            arep);
+      }
+   }
+   else if (state == PNET_EVENT_DATA)
+   {
+      if (p_appdata->arguments.verbosity > 0)
+      {
+         printf ("Cyclic data transmission started\n\n");
+      }
    }
 
    return 0;
@@ -1331,6 +1347,8 @@ int app_pnet_cfg_init_default (pnet_cfg_t * stack_config)
     *    ip_mask
     *    station_name
     *    file_directory
+    *    pnal_cfg
+    *    num_physical_ports
     */
 
    /* Call-backs */
@@ -1368,7 +1386,7 @@ int app_pnet_cfg_init_default (pnet_cfg_t * stack_config)
    stack_config->im_0_data.im_version_minor = 1;
    stack_config->im_0_data.im_supported =
       PNET_SUPPORTED_IM1 | PNET_SUPPORTED_IM2 | PNET_SUPPORTED_IM3;
-   strcpy (stack_config->im_0_data.im_order_id, "12345");
+   strcpy (stack_config->im_0_data.im_order_id, "12345 Abcdefghijk");
    strcpy (stack_config->im_0_data.im_serial_number, "00001");
    strcpy (stack_config->im_1_data.im_tag_function, "my function");
    strcpy (stack_config->im_1_data.im_tag_location, "my location");
@@ -1404,66 +1422,96 @@ int app_pnet_cfg_init_default (pnet_cfg_t * stack_config)
 
 int app_get_netif_namelist (
    const char * arg_str,
+   uint16_t max_port,
    app_netif_namelist_t * p_if_list,
-   uint16_t max_port)
+   uint16_t * p_num_ports)
 {
    int ret = 0;
    uint16_t i = 0;
    uint16_t j = 0;
    uint16_t if_index = 0;
-   uint16_t if_list_size = max_port + 1; /* NELEMENTS (p_if_list->netif) dynamic
-                                            for test. */
+   uint16_t number_of_given_names = 1;
+   uint16_t if_list_size = max_port + 1;
    char c;
+
+   if (max_port == 0)
+   {
+      printf ("Error: max_port is 0.\n");
+      return -1;
+   }
 
    memset (p_if_list, 0, sizeof (*p_if_list));
    c = arg_str[i++];
-   while (c != '\0' && if_index < if_list_size)
+   while (c != '\0')
    {
       if (c != ',')
       {
-         p_if_list->netif[if_index].name[j++] = c;
+         if (if_index < if_list_size)
+         {
+            p_if_list->netif[if_index].name[j++] = c;
+         }
       }
       else
       {
-         p_if_list->netif[if_index].name[j++] = '\0';
-         j = 0;
-         if_index++;
+         if (if_index < if_list_size)
+         {
+            p_if_list->netif[if_index].name[j++] = '\0';
+            j = 0;
+            if_index++;
+         }
+         number_of_given_names++;
       }
+
       c = arg_str[i++];
    }
 
-   if (max_port == 1)
+   if (max_port == 1 && number_of_given_names > 1)
    {
-      if (if_index >= max_port)
-      {
-         printf ("Error: Only 1 network interface expected.\n");
-         ret = -1;
-      }
+      printf ("Error: Only 1 network interface expected as max_port is 1.\n");
+      return -1;
+   }
+   if (number_of_given_names == 2)
+   {
+      printf ("Error: It is illegal to give 2 interface names. Use 1, or one "
+              "more than the number of physical interfaces.\n");
+      return -1;
+   }
+   if (number_of_given_names > max_port + 1)
+   {
+      printf (
+         "Error: You have given %u interface names, but max is %u as "
+         "PNET_MAX_PHYSICAL_PORTS is %u.\n",
+         number_of_given_names,
+         max_port + 1,
+         max_port);
+      return -1;
+   }
 
+   if (number_of_given_names == 1)
+   {
       if (strlen (p_if_list->netif[0].name) == 0)
       {
          printf ("Error: Zero length network interface name.\n");
-         ret = -1;
+         return -1;
       }
-      p_if_list->netif[1] = p_if_list->netif[0];
-   }
-
-   if (max_port > 1)
-   {
-      if (if_index != max_port)
+      else
       {
-         printf ("Error: %u network interfaces expected.\n", max_port + 1);
-         ret = -1;
+         p_if_list->netif[1] = p_if_list->netif[0];
+         *p_num_ports = 1;
       }
-
-      for (i = 0; i <= max_port; i++)
+   }
+   else
+   {
+      for (i = 0; i < number_of_given_names; i++)
       {
          if (strlen (p_if_list->netif[i].name) == 0)
          {
             printf ("Error: Zero length network interface name (%d).\n", i);
-            ret = -1;
+            return -1;
          }
       }
+
+      *p_num_ports = number_of_given_names - 1;
    }
 
    return ret;
@@ -1472,6 +1520,7 @@ int app_get_netif_namelist (
 int app_pnet_cfg_init_netifs (
    const char * netif_list_str,
    app_netif_namelist_t * if_list,
+   uint16_t * p_number_of_ports,
    pnet_cfg_t * p_cfg,
    int verbosity)
 {
@@ -1483,8 +1532,9 @@ int app_pnet_cfg_init_netifs (
 
    ret = app_get_netif_namelist (
       netif_list_str,
+      PNET_MAX_PHYSICAL_PORTS,
       if_list,
-      PNET_NUMBER_OF_PHYSICAL_PORTS);
+      p_number_of_ports);
    if (ret != 0)
    {
       return ret;
@@ -1496,7 +1546,7 @@ int app_pnet_cfg_init_netifs (
       printf ("Management port:      %s\n", p_cfg->if_cfg.main_netif_name);
    }
 
-   for (i = 1; i <= PNET_NUMBER_OF_PHYSICAL_PORTS; i++)
+   for (i = 1; i <= *p_number_of_ports; i++)
    {
       p_cfg->if_cfg.physical_ports[i - 1].netif_name = if_list->netif[i].name;
       if (verbosity > 0)
@@ -1535,38 +1585,6 @@ void app_copy_ip_to_struct (
    destination_struct->b = ((ip >> 16) & 0xFF);
    destination_struct->c = ((ip >> 8) & 0xFF);
    destination_struct->d = (ip & 0xFF);
-}
-
-/**
- * Send application ready to the controller
- *
- * @param net              InOut: p-net stack instance
- * @param arep             In:    Arep
- * @param verbosity        In:    Verbosity
- */
-static void app_handle_send_application_ready (
-   pnet_t * net,
-   uint32_t arep,
-   int verbosity)
-{
-   int ret = -1;
-
-   if (verbosity > 0)
-   {
-      printf ("Application will signal that it is ready for data.\n");
-   }
-
-   ret = pnet_application_ready (net, arep);
-   if (ret != 0)
-   {
-      printf ("Error returned when application telling that it is ready for "
-              "data. Have you set IOCS or IOPS for all subslots?\n");
-   }
-
-   /*
-    * cm_ccontrol_cnf(+/-) is indicated later (app_state_ind(DATA)), when the
-    * confirmation arrives from the controller.
-    */
 }
 
 /**
@@ -2048,8 +2066,7 @@ static void app_handle_send_alarm (
 
 void app_loop_forever (pnet_t * net, app_data_t * p_appdata)
 {
-   uint32_t mask = APP_EVENT_READY_FOR_DATA | APP_EVENT_TIMER |
-                   APP_EVENT_ALARM | APP_EVENT_ABORT;
+   uint32_t mask = APP_EVENT_TIMER | APP_EVENT_ALARM | APP_EVENT_ABORT;
    uint32_t flags = 0;
    bool button1_pressed = false;
    bool button2_pressed = false;
@@ -2072,16 +2089,7 @@ void app_loop_forever (pnet_t * net, app_data_t * p_appdata)
    for (;;)
    {
       os_event_wait (p_appdata->main_events, mask, &flags, OS_WAIT_FOREVER);
-      if (flags & APP_EVENT_READY_FOR_DATA)
-      {
-         os_event_clr (p_appdata->main_events, APP_EVENT_READY_FOR_DATA);
-
-         app_handle_send_application_ready (
-            net,
-            p_appdata->main_api.arep,
-            p_appdata->arguments.verbosity);
-      }
-      else if (flags & APP_EVENT_ALARM)
+      if (flags & APP_EVENT_ALARM)
       {
          os_event_clr (p_appdata->main_events, APP_EVENT_ALARM); /* Re-arm */
 
