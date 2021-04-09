@@ -625,6 +625,15 @@ void pf_fspm_data_status_changed (
 {
    if (net->fspm_cfg.new_data_status_cb != NULL)
    {
+      LOG_DEBUG (
+         PNET_LOG,
+         "FSPM(%d): Triggering data status change callback for AREP %u. Status "
+         "0x%02x changes 0x%02x\n",
+         __LINE__,
+         p_ar->arep,
+         data_status,
+         changes);
+
       (void)net->fspm_cfg.new_data_status_cb (
          net,
          net->fspm_cfg.cb_arg,
@@ -642,6 +651,12 @@ void pf_fspm_ccontrol_cnf (
 {
    if (net->fspm_cfg.ccontrol_cb != NULL)
    {
+      LOG_DEBUG (
+         PNET_LOG,
+         "FSPM(%d): Triggering CControl confirmation callback for AREP %u\n",
+         __LINE__,
+         p_ar->arep);
+
       (void)net->fspm_cfg
          .ccontrol_cb (net, net->fspm_cfg.cb_arg, p_ar->arep, p_result);
    }
@@ -665,6 +680,16 @@ int pf_fspm_cm_read_ind (
       /* Trigger callback for application-specific data records */
       if (net->fspm_cfg.read_cb != NULL)
       {
+         LOG_DEBUG (
+            PNET_LOG,
+            "FSPM(%d): Triggering read callback for AREP %u. Slot %u subslot "
+            "%u index %u\n",
+            __LINE__,
+            p_ar->arep,
+            slot,
+            subslot,
+            index);
+
          ret = net->fspm_cfg.read_cb (
             net,
             net->fspm_cfg.cb_arg,
@@ -680,6 +705,11 @@ int pf_fspm_cm_read_ind (
       }
       else
       {
+         LOG_DEBUG (
+            PNET_LOG,
+            "FSPM(%d): No user callback for reading records implemented.\n",
+            __LINE__);
+
          p_read_status->pnio_status.error_code = PNET_ERROR_CODE_READ;
          p_read_status->pnio_status.error_decode = PNET_ERROR_DECODE_PNIORW;
          p_read_status->pnio_status.error_code_1 =
@@ -834,6 +864,17 @@ int pf_fspm_cm_write_ind (
       /* Trigger callback for application-specific data records */
       if (net->fspm_cfg.write_cb != NULL)
       {
+         LOG_DEBUG (
+            PNET_LOG,
+            "FSPM(%d): Triggering write callback for AREP %u. Slot %u subslot "
+            "%u index %u len %u\n",
+            __LINE__,
+            p_ar->arep,
+            p_write_request->slot_number,
+            p_write_request->subslot_number,
+            p_write_request->index,
+            write_length);
+
          ret = net->fspm_cfg.write_cb (
             net,
             net->fspm_cfg.cb_arg,
@@ -849,6 +890,11 @@ int pf_fspm_cm_write_ind (
       }
       else
       {
+         LOG_DEBUG (
+            PNET_LOG,
+            "FSPM(%d): No user callback for writing records implemented.\n",
+            __LINE__);
+
          p_write_status->pnio_status.error_code = PNET_ERROR_CODE_WRITE;
          p_write_status->pnio_status.error_decode = PNET_ERROR_DECODE_PNIORW;
          p_write_status->pnio_status.error_code_1 =
@@ -1106,8 +1152,21 @@ int pf_fspm_cm_connect_ind (
 
    if (net->fspm_cfg.connect_cb != NULL)
    {
+      LOG_DEBUG (
+         PNET_LOG,
+         "FSPM(%d): Triggering connect callback for AREP %u\n",
+         __LINE__,
+         p_ar->arep);
+
       ret = net->fspm_cfg
                .connect_cb (net, net->fspm_cfg.cb_arg, p_ar->arep, p_result);
+   }
+   else
+   {
+      LOG_DEBUG (
+         PNET_LOG,
+         "FSPM(%d): No user callback for connect implemented.\n",
+         __LINE__);
    }
 
    pf_fspm_create_log_book_entry (
@@ -1128,8 +1187,21 @@ int pf_fspm_cm_release_ind (
 
    if (net->fspm_cfg.release_cb != NULL)
    {
+      LOG_DEBUG (
+         PNET_LOG,
+         "FSPM(%d): Triggering release callback for AREP %u\n",
+         __LINE__,
+         p_ar->arep);
+
       ret = net->fspm_cfg
                .release_cb (net, net->fspm_cfg.cb_arg, p_ar->arep, p_result);
+   }
+   else
+   {
+      LOG_DEBUG (
+         PNET_LOG,
+         "FSPM(%d): No user callback for release implemented.\n",
+         __LINE__);
    }
 
    pf_fspm_create_log_book_entry (
@@ -1151,12 +1223,27 @@ int pf_fspm_cm_dcontrol_ind (
 
    if (net->fspm_cfg.dcontrol_cb != NULL)
    {
+      LOG_DEBUG (
+         PNET_LOG,
+         "FSPM(%d): Triggering DControl callback with command bitfield 0x%04x "
+         "for AREP %u\n",
+         __LINE__,
+         control_command,
+         p_ar->arep);
+
       ret = net->fspm_cfg.dcontrol_cb (
          net,
          net->fspm_cfg.cb_arg,
          p_ar->arep,
          control_command,
          p_result);
+   }
+   else
+   {
+      LOG_DEBUG (
+         PNET_LOG,
+         "FSPM(%d): No user callback for dcontrol ind implemented.\n",
+         __LINE__);
    }
 
    pf_fspm_create_log_book_entry (
@@ -1175,17 +1262,24 @@ void pf_fspm_state_ind (
 {
    CC_ASSERT (p_ar != NULL);
 
-   LOG_DEBUG (
-      PNET_LOG,
-      "FSPM(%d): Triggering user state-change callback with %s for AREP %u\n",
-      __LINE__,
-      pf_cmdev_event_to_string (event),
-      p_ar->arep);
-
    if (net->fspm_cfg.state_cb != NULL)
    {
+      LOG_DEBUG (
+         PNET_LOG,
+         "FSPM(%d): Triggering user state-change callback with event %s for "
+         "AREP %u\n",
+         __LINE__,
+         pf_cmdev_event_to_string (event),
+         p_ar->arep);
       (void)
          net->fspm_cfg.state_cb (net, net->fspm_cfg.cb_arg, p_ar->arep, event);
+   }
+   else
+   {
+      LOG_DEBUG (
+         PNET_LOG,
+         "FSPM(%d): No user callback for state change implemented.\n",
+         __LINE__);
    }
 }
 
@@ -1201,6 +1295,15 @@ int pf_fspm_alpmr_alarm_ind (
 
    if (net->fspm_cfg.alarm_ind_cb != NULL)
    {
+      LOG_DEBUG (
+         PNET_LOG,
+         "FSPM(%d): Triggering alarm callback with USI %u (%u bytes) for AREP "
+         "%u\n",
+         __LINE__,
+         data_usi,
+         data_len,
+         p_ar->arep);
+
       ret = net->fspm_cfg.alarm_ind_cb (
          net,
          net->fspm_cfg.cb_arg,
@@ -1209,6 +1312,13 @@ int pf_fspm_alpmr_alarm_ind (
          data_len,
          data_usi,
          p_data);
+   }
+   else
+   {
+      LOG_DEBUG (
+         PNET_LOG,
+         "FSPM(%d): No user callback for alarm ind implemented.\n",
+         __LINE__);
    }
 
    return ret;
@@ -1221,8 +1331,21 @@ void pf_fspm_alpmi_alarm_cnf (
 {
    if (net->fspm_cfg.alarm_cnf_cb != NULL)
    {
+      LOG_DEBUG (
+         PNET_LOG,
+         "FSPM(%d): Triggering alarm confirmation callback for AREP %u\n",
+         __LINE__,
+         p_ar->arep);
+
       (void)net->fspm_cfg
          .alarm_cnf_cb (net, net->fspm_cfg.cb_arg, p_ar->arep, p_pnio_status);
+   }
+   else
+   {
+      LOG_DEBUG (
+         PNET_LOG,
+         "FSPM(%d): No user callback for alarm cnf implemented.\n",
+         __LINE__);
    }
 }
 
@@ -1230,8 +1353,21 @@ void pf_fspm_alpmr_alarm_ack_cnf (pnet_t * net, const pf_ar_t * p_ar, int res)
 {
    if (net->fspm_cfg.alarm_ack_cnf_cb != NULL)
    {
+      LOG_DEBUG (
+         PNET_LOG,
+         "FSPM(%d): Triggering alarm ACK confirmation callback for AREP %u\n",
+         __LINE__,
+         p_ar->arep);
+
       (void)net->fspm_cfg
          .alarm_ack_cnf_cb (net, net->fspm_cfg.cb_arg, p_ar->arep, res);
+   }
+   else
+   {
+      LOG_DEBUG (
+         PNET_LOG,
+         "FSPM(%d): No user callback for alarm ack cnf implemented.\n",
+         __LINE__);
    }
 }
 
@@ -1242,11 +1378,26 @@ void pf_fspm_reset_ind (
 {
    if (net->fspm_cfg.reset_cb != NULL)
    {
+      LOG_DEBUG (
+         PNET_LOG,
+         "FSPM(%d): Triggering reset callback with mode %u. Application "
+         "reset: %s\n",
+         __LINE__,
+         reset_mode,
+         should_reset_application ? "true" : "false");
+
       (void)net->fspm_cfg.reset_cb (
          net,
          net->fspm_cfg.cb_arg,
          should_reset_application,
          reset_mode);
+   }
+   else
+   {
+      LOG_DEBUG (
+         PNET_LOG,
+         "FSPM(%d): No user callback for reset implemented.\n",
+         __LINE__);
    }
 }
 
@@ -1255,7 +1406,20 @@ int pf_fspm_signal_led_ind (pnet_t * net, bool led_state)
    int ret = 0;
    if (net->fspm_cfg.signal_led_cb != NULL)
    {
+      LOG_DEBUG (
+         PNET_LOG,
+         "FSPM(%d): Triggering signal LED callback with state %u.\n",
+         __LINE__,
+         led_state);
+
       ret = net->fspm_cfg.signal_led_cb (net, net->fspm_cfg.cb_arg, led_state);
+   }
+   else
+   {
+      LOG_DEBUG (
+         PNET_LOG,
+         "FSPM(%d): No user callback for signal LED implemented.\n",
+         __LINE__);
    }
 
    return ret;

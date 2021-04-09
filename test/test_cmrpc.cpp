@@ -411,7 +411,7 @@ TEST_F (CmrpcTest, CmrpcConnectReleaseTest)
    EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_DATA);
    EXPECT_EQ (mock_os_data.udp_sendto_count, 5);
 
-   TEST_TRACE ("nGenerating mock release request\n");
+   TEST_TRACE ("\nGenerating mock release request\n");
    mock_set_pnal_udp_recvfrom_buffer (release_req, sizeof (release_req));
    run_stack (TEST_UDP_DELAY);
    EXPECT_EQ (appdata.call_counters.release_calls, 1);

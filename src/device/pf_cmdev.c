@@ -1425,24 +1425,22 @@ static int pf_cmdev_set_state (
    pf_ar_t * p_ar,
    pf_cmdev_state_values_t state)
 {
+   if (state != p_ar->cmdev_state)
+   {
+      LOG_DEBUG (
+         PNET_LOG,
+         "CMDEV(%d): New state: %s for AREP %u (was %s)\n",
+         __LINE__,
+         pf_cmdev_state_to_string (state),
+         p_ar->arep,
+         pf_cmdev_state_to_string (p_ar->cmdev_state));
+   }
    p_ar->cmdev_state = state;
-   LOG_DEBUG (
-      PNET_LOG,
-      "CMDEV(%d): New state: %s for AR with AREP %u\n",
-      __LINE__,
-      pf_cmdev_state_to_string (state),
-      p_ar->arep);
 
    switch (state)
    {
    case PF_CMDEV_STATE_ABORT:
       pf_cmdev_state_ind (net, p_ar, PNET_EVENT_ABORT);
-      LOG_DEBUG (
-         PNET_LOG,
-         "CMDEV(%d): New state: %s for AR with AREP %u\n",
-         __LINE__,
-         pf_cmdev_state_to_string (PF_CMDEV_STATE_W_CIND),
-         p_ar->arep);
       pf_device_clear (net, p_ar);
       break;
    default:
@@ -1469,6 +1467,14 @@ int pf_cmdev_state_ind (pnet_t * net, pf_ar_t * p_ar, pnet_event_values_t state)
          However then the users could not use pnet_get_ar_error_codes() at
          ABORT, as the AR would already be gone when the callback is triggered.
        */
+      LOG_DEBUG (
+         PNET_LOG,
+         "CMDEV(%d): Sending event %s for AREP %u. Current state %s\n",
+         __LINE__,
+         pf_cmdev_event_to_string (state),
+         p_ar->arep,
+         pf_cmdev_state_to_string (p_ar->cmdev_state));
+
       pf_fspm_state_ind (net, p_ar, state);
       pf_cmsu_cmdev_state_ind (net, p_ar, state);
       pf_cmio_cmdev_state_ind (net, p_ar, state);
@@ -4953,7 +4959,7 @@ int pf_cmdev_rm_dcontrol_ind (
                {
                   LOG_DEBUG (
                      PNET_LOG,
-                     "CMDEV(%d): Prepare to set state PNET_EVENT_PRMEND\n",
+                     "CMDEV(%d): Prepare to send event PNET_EVENT_PRMEND\n",
                      __LINE__);
                   *p_set_state_prmend = true;
                   /**

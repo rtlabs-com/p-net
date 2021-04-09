@@ -5,6 +5,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## 2021-03-31
+### Changed
+- Update GSDML file to conformance class B
+
+## 2021-03-24
+### Added
+- Possibility to configure number of ports, without recompiling.
+
 ## 2021-03-03
 ### Changed
 - Set thread priority and stack size via configuration

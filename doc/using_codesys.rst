@@ -4,7 +4,8 @@ Using Codesys soft PLC
 ======================
 We run the Codesys ("COntroller DEvelopment SYStem") runtime on a Raspberry Pi,
 and the setup is done using a Windows-based software (Codesys Development
-System).
+System). Your Windows laptop is used to make changes to the PLC (IO-controller)
+settings, but it does not act as an IO-controller.
 
 
 Download and installation of Codesys Development System on a Windows PC

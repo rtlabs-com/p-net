@@ -558,6 +558,8 @@ that are populated by modules.
 It will also show the list of current diagnosis for IO-devices.
 Proneta will read out the diagnostics buffer every 5 seconds, as long as the
 device is selected in the graphical view.
+In order to display the diagnostics buffer the IP address of the device must be
+set. Otherwise the message "Diagnostics buffer not supported" will be shown.
 
 By right-clicking on a device in the graphical view, you can set the
 station name and IP address (temporarily or permanently).

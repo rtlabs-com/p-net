@@ -103,9 +103,10 @@ static void pf_cmsm_set_state (pf_ar_t * p_ar, pf_cmsm_state_values_t state)
    {
       LOG_DEBUG (
          PNET_LOG,
-         "CMSM(%d): New state %s\n",
+         "CMSM(%d): New state %s (was %s)\n",
          __LINE__,
-         pf_cmsm_state_to_string (state));
+         pf_cmsm_state_to_string (state),
+         pf_cmsm_state_to_string (p_ar->cmsm_state));
       p_ar->cmsm_state = state;
    }
 }
@@ -167,7 +168,7 @@ int pf_cmsm_cmdev_state_ind (
 
    LOG_DEBUG (
       PNET_LOG,
-      "CMSM(%d): Received event %s from CMDEV. Our state %s. AREP %u\n",
+      "CMSM(%d): Received event %s from CMDEV. Initial state %s for AREP %u.\n",
       __LINE__,
       pf_cmdev_event_to_string (event),
       pf_cmsm_state_to_string (p_ar->cmsm_state),

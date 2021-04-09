@@ -49,7 +49,9 @@ Fieldbus
 fieldbuses
 GByte
 gcc
+gdb
 Github
+gtest
 hostname
 Icinga
 Ident
@@ -128,6 +130,7 @@ Profibus
 Profinet
 Proneta
 PwrCtrl
+qemu
 Raspbian
 realtime
 remanence

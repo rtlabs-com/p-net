@@ -289,6 +289,50 @@ You might need to press the Play button in the Workbench if you have enabled
 breakpoints.
 
 
+Run tests on the QEMU emulator
+------------------------------
+On a Linux laptop, install the package ``rt-collab-qemu``.
+
+Patch the rt-kernel. Use the BSP "integrator", which is intended for emulation.
+You need to increase the main stack size in ``rt-kernel/bsp/integrator/include/config.h``.
+Modify ``CFG_MAIN_STACK_SIZE``.
+
+In the root folder of the rt-kernel directory::
+
+    source setup.sh integrator
+    make clean
+    make -j
+
+In the parent directory of ``p-net``, configure a new build directory::
+
+    RTK=<PATH TO YOUR MODIFIED>/rt-kernel \
+    BSP=integrator \
+    cmake -B build.integrator -S p-net \
+    -DCMAKE_TOOLCHAIN_FILE=cmake/tools/toolchain/rt-kernel.cmake \
+    -G "Unix Makefiles"
+
+If necessary adjust the settings::
+
+    ccmake build.integrator/
+
+Build only the ``pf_test`` binary::
+
+    cmake --build build.integrator/ -j --target pf_test
+
+Start the emulator::
+
+    /opt/rt-tools/qemu/bin/qemu-system-arm -M integratorcp -nographic -semihosting -kernel build.integrator/pf_test.elf
+
+If you add ``-s`` it it possible to connect with ``gdb`` to port 1234 from
+Workbench. By adding ``-S`` qemu will wait for gdb to connect.
+
+To send a command line argument to the gtest binary, add ``--append "<gtest_command"``.
+For example ``--append "--gtest_filter=AlarmUnitTest*"`` or
+``--append "--gtest_filter=CmrpcTest.CmrpcConnectReleaseTest"``.
+
+Exit QEMU with CTRL-A X (not CTRL-A CTRL-X).
+
+
 SNMP
 ----
 To enable SNMP support, set the ``PNET_OPTION_SNMP`` value to ``ON``.

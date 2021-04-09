@@ -1198,6 +1198,10 @@ static int pf_cmrpc_rm_connect_interpret_ind (
             }
             break;
          case PF_BT_IOCR_BLOCK_REQ:
+            /* TODO validate that p_ar->nbr_iocrs not has reached PNET_MAX_CR */
+
+            /* Before it is incremented at the end of this block, the
+            p_ar->nbr_iocrs value is the same as CREP */
             pf_get_iocr_param (&p_sess->get_info, p_pos, p_ar->nbr_iocrs, p_ar);
 
             LOG_DEBUG (
@@ -4899,9 +4903,10 @@ int pf_cmrpc_cmdev_state_ind (
 
    LOG_DEBUG (
       PF_RPC_LOG,
-      "CMRPC(%d): Received event %s from CMDEV.\n",
+      "CMRPC(%d): Received event %s from CMDEV for AREP %u.\n",
       __LINE__,
-      pf_cmdev_event_to_string (event));
+      pf_cmdev_event_to_string (event),
+      p_ar->arep);
 
    switch (event)
    {

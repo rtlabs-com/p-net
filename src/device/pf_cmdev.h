@@ -337,14 +337,14 @@ void pf_cmdev_device_show (pnet_t * net);
 void pf_cmdev_diag_show (const pnet_t * net);
 
 /**
- * Indicate a new state transition of the CMDEV component.
+ * Send a new state transition event of the CMDEV component.
  *
  * Among other actions, it calls the \a pnet_state_ind() user callback.
  *
  * @param net              InOut: The p-net stack instance
  * @param p_ar             InOut: The AR instance.
- * @param state            In:    The new CMDEV state. Use PNET_EVENT_xxx,
- *                                not PF_CMDEV_STATE_xxx
+ * @param state            In:    The CMDEV state transision event. Use
+ *                                PNET_EVENT_xxx, not PF_CMDEV_STATE_xxx
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -413,7 +413,7 @@ int pf_cmdev_rm_release_ind (
  * @param p_ar                 InOut: The AR instance.
  * @param p_control_io         In:    The control block.
  * @param p_release_result     Out:   Detailed result of the connect operation.
- * @param p_set_state_prmend   Out:   Set state to PNET_EVENT_PRMEND after the
+ * @param p_set_state_prmend   Out:   Trigger PNET_EVENT_PRMEND after the
  *                                    response have been sent.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.

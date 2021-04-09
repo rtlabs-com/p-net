@@ -83,6 +83,9 @@ Enter the password mentioned just above.
 If you would connect your Raspberry Pi to a WiFi network, follow the
 guide in https://www.raspberrypi.org/documentation/configuration/wireless/wireless-cli.md
 
+You might also want to disable the splash screen and to expand the file system,
+by using the ``raspi-config`` utility.
+
 .. note:: If you are following the tutorial and are setting up the IO-device,
           you should head back now. See :ref:`tutorial`.
 
@@ -151,6 +154,9 @@ Reboot and the Raspberry Pi is now ready to run the p-net sample application::
 
 If you would connect your Raspberry Pi to a WiFi network, follow the
 guide in https://www.raspberrypi.org/documentation/configuration/wireless/wireless-cli.md
+
+You might also want to disable the splash screen and to expand the file system,
+by using the ``raspi-config`` utility.
 
 .. note:: If you are following the tutorial and are setting up the IO-device,
           you should head back now. See :ref:`tutorial`.
@@ -302,6 +308,16 @@ To see the status of the process, and the log output::
 If using a serial cable, you might need to adjust the number of visible columns::
 
     stty cols 150 rows 40
+
+You can for example add it to your ``.bashrc`` file on the Raspberry Pi.
+
+In order to speed up the boot time, you might want to disable some functionality
+not necessary for Profinet applications. For example::
+
+   sudo systemctl disable cups-browsed.service
+   sudo systemctl disable cups.service
+
+See the section "Boot time optimization" elsewhere in this documentation.
 
 
 Advanced users only: Control of built-in LEDs

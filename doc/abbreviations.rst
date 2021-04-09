@@ -286,7 +286,7 @@ RS
 RSI
     Remote Service Interface
 RTA
-    RealTime Acyclic protocol
+    RealTime Acyclic protocol, for alarms.
 RTC
     Real Time Class
 RTC

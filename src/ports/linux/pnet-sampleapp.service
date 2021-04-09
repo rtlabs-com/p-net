@@ -4,6 +4,8 @@
 [Unit]
 Description=p-net sample application
 After=network.target
+# Change to this line if waiting for snmpd to start
+#After=network.target snmpd.service
 
 [Service]
 Type=simple
@@ -11,8 +13,12 @@ ExecStartPre=/sbin/ifconfig eth0 up
 ExecStartPre=/bin/sh -c '/bin/echo "49152 60999" > /proc/sys/net/ipv4/ip_local_port_range'
 ExecStartPre=/usr/bin/gpio export 22 in
 ExecStartPre=/usr/bin/gpio export 27 in
+# Enable this line if waiting for snmpd to start
+#ExecStartPre=/usr/bin/sleep 0.3
 WorkingDirectory=/home/pi/profinet/build/
 ExecStart=/home/pi/profinet/build/pn_dev -v -b /sys/class/gpio/gpio27/value -d /sys/class/gpio/gpio22/value
+# Use this instead for dual ports:
+#ExecStart=/home/pi/profinet/build/pn_dev -v -i br0,eth0,eth1 -b /sys/class/gpio/gpio27/value -d /sys/class/gpio/gpio22/value
 Restart=always
 RestartSec=3
 

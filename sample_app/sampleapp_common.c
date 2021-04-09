@@ -403,7 +403,7 @@ static void app_handle_data_led_state (bool led_state, int verbosity)
  */
 static void app_set_outputs_default_value (int verbosity)
 {
-   if (verbosity > 0)
+   if (verbosity > 1)
    {
       printf ("Setting outputs to default values.\n");
    }
@@ -422,7 +422,7 @@ static int app_connect_ind (
 
    if (p_appdata->arguments.verbosity > 0)
    {
-      printf ("Connect call-back. AREP: %u\n", arep);
+      printf ("PLC is connecting. AREP: %u\n", arep);
    }
    /*
     *  Handle the request on an application level.
@@ -463,7 +463,7 @@ static int app_dcontrol_ind (
    if (p_appdata->arguments.verbosity > 0)
    {
       printf (
-         "Dcontrol call-back. AREP: %u  Command: %s\n",
+         "PLC has sent DControl message. AREP: %u  Command: %s\n",
          arep,
          dcontrol_command_to_string (control_command));
    }
@@ -482,8 +482,8 @@ static int app_ccontrol_cnf (
    if (p_appdata->arguments.verbosity > 0)
    {
       printf (
-         "Ccontrol confirmation call-back. AREP: %u  Status codes: %d %d %d "
-         "%d\n",
+         "PLC has confirmed our CControl message. AREP: %u  Status codes: %d "
+         "%d %d %d\n",
          arep,
          p_result->pnio_status.error_code,
          p_result->pnio_status.error_decode,
@@ -512,7 +512,7 @@ static int app_write_ind (
    if (p_appdata->arguments.verbosity > 0)
    {
       printf (
-         "Parameter write call-back. AREP: %u API: %u Slot: %2u Subslot: %u "
+         "PLC will write record. AREP: %u API: %u Slot: %2u Subslot: %u "
          "Index: %u Sequence: %2u Length: %u\n",
          arep,
          api,
@@ -594,7 +594,7 @@ static int app_read_ind (
    if (p_appdata->arguments.verbosity > 0)
    {
       printf (
-         "Parameter read call-back. AREP: %u API: %u Slot: %2u Subslot: %u "
+         "PLC will read record. AREP: %u API: %u Slot: %2u Subslot: %u "
          "Index: %u Sequence: %2u  Max length: %u\n",
          arep,
          api,
@@ -853,7 +853,7 @@ static int app_reset_ind (
    if (p_appdata->arguments.verbosity > 0)
    {
       printf (
-         "Reset call-back. Application reset mandatory: %u  Reset mode: %d\n",
+         "PLC orders reset. Application reset mandatory: %u  Reset mode: %d\n",
          should_reset_application,
          reset_mode);
    }

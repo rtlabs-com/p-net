@@ -1012,7 +1012,7 @@ typedef struct pf_alarm_receive_queue
    pf_apmr_msg_t items[PNET_MAX_ALARMS];
 } pf_alarm_receive_queue_t;
 
-#define PF_MAX_SESSION (2 * (PNET_MAX_AR) + 1) /* 2 per ar, and one spare. */
+#define PF_MAX_SESSION (2 * (PNET_MAX_AR) + 1) /* 2 per AR, and one spare. */
 
 /*
  * Keep this value small as it define the number of entries in the
@@ -2029,7 +2029,7 @@ typedef struct pf_ar
    pf_ar_rpc_request_t ar_rpc_request; /* From connect.req */
    pf_ar_rpc_result_t ar_rpc_result;   /* From connect.ind */
 
-   uint16_t nbr_iocrs;           /* From connect.req */
+   uint16_t nbr_iocrs;           /* From connect.req, typically 2*/
    pf_iocr_t iocrs[PNET_MAX_CR]; /* Each has a CPM and a PPM */
 
    uint16_t nbr_exp_apis;
