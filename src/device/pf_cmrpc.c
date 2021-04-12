@@ -4361,6 +4361,11 @@ static int pf_cmrpc_dce_packet (
                   p_sess->out_buffer,
                   &p_sess->out_buf_len);
                *p_is_release = true;
+
+               /* Close session after each EPM request
+                  If future more advanced EPM usage is required, implement a
+                  timeout for closing the session */
+               p_sess->kill_session = true;
             }
             else
             {
