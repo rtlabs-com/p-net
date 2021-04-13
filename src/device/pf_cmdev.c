@@ -138,6 +138,11 @@ int pf_cmdev_cfg_traverse (
 
 int pf_cmdev_get_device (pnet_t * net, pf_device_t ** pp_device)
 {
+   if (net->cmdev_device.diag_mutex == NULL)
+   {
+      return -1;
+   }
+
    *pp_device = &net->cmdev_device;
 
    return 0;

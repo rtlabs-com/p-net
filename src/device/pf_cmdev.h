@@ -165,7 +165,8 @@ int pf_cmdev_cm_abort (pnet_t * net, pf_ar_t * p_ar);
  * Get a pointer to the device configuration.
  * @param net              InOut: The p-net stack instance
  * @param pp_device        Out:   The device configuration.
- * @return  0  Always.
+ * @return  0  if operation succeeded.
+ *          -1 if an error occurred (not yet initialized)
  */
 int pf_cmdev_get_device (pnet_t * net, pf_device_t ** pp_device);
 

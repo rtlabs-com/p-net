@@ -580,8 +580,12 @@ int pf_lldp_get_peer_timestamp (
    bool is_received;
    const pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
-   os_mutex_lock (net->lldp_mutex);
+   if (net->lldp_mutex == NULL)
+   {
+      return -1;
+   }
 
+   os_mutex_lock (net->lldp_mutex);
    *timestamp_10ms = p_port_data->lldp.timestamp_for_last_peer_change;
    is_received = p_port_data->lldp.is_peer_info_received;
 
@@ -644,6 +648,11 @@ int pf_lldp_get_peer_chassis_id (
 {
    const pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
+   if (net->lldp_mutex == NULL)
+   {
+      return -1;
+   }
+
    os_mutex_lock (net->lldp_mutex);
    *p_chassis_id = p_port_data->lldp.peer_info.chassis_id;
    os_mutex_unlock (net->lldp_mutex);
@@ -704,6 +713,11 @@ int pf_lldp_get_peer_port_id (
 {
    const pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
+   if (net->lldp_mutex == NULL)
+   {
+      return -1;
+   }
+
    os_mutex_lock (net->lldp_mutex);
    *p_port_id = p_port_data->lldp.peer_info.port_id;
    os_mutex_unlock (net->lldp_mutex);
@@ -733,6 +747,11 @@ int pf_lldp_get_peer_port_description (
    pf_lldp_port_description_t * p_port_desc)
 {
    const pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
+
+   if (net->lldp_mutex == NULL)
+   {
+      return -1;
+   }
 
    os_mutex_lock (net->lldp_mutex);
    *p_port_desc = p_port_data->lldp.peer_info.port_description;
@@ -766,6 +785,11 @@ int pf_lldp_get_peer_management_address (
 {
    const pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
+   if (net->lldp_mutex == NULL)
+   {
+      return -1;
+   }
+
    os_mutex_lock (net->lldp_mutex);
    *p_man_address = p_port_data->lldp.peer_info.management_address;
    os_mutex_unlock (net->lldp_mutex);
@@ -785,6 +809,11 @@ int pf_lldp_get_peer_station_name (
 
    const pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
    memset (p_station_name, 0, sizeof (*p_station_name));
+
+   if (net->lldp_mutex == NULL)
+   {
+      return -1;
+   }
 
    os_mutex_lock (net->lldp_mutex);
    port_id = p_port_data->lldp.peer_info.port_id;
@@ -845,6 +874,11 @@ int pf_lldp_get_peer_port_name (
    const pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
    memset (p_port_name, 0, sizeof (*p_port_name));
 
+   if (net->lldp_mutex == NULL)
+   {
+      return -1;
+   }
+
    os_mutex_lock (net->lldp_mutex);
    port_id = p_port_data->lldp.peer_info.port_id;
    os_mutex_unlock (net->lldp_mutex);
@@ -894,6 +928,11 @@ int pf_lldp_get_peer_signal_delays (
 {
    const pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
+   if (net->lldp_mutex == NULL)
+   {
+      return -1;
+   }
+
    os_mutex_lock (net->lldp_mutex);
    *p_delays = p_port_data->lldp.peer_info.port_delay;
    os_mutex_unlock (net->lldp_mutex);
@@ -936,6 +975,11 @@ int pf_lldp_get_peer_link_status (
    pf_lldp_link_status_t * p_link_status)
 {
    const pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
+
+   if (net->lldp_mutex == NULL)
+   {
+      return -1;
+   }
 
    os_mutex_lock (net->lldp_mutex);
    *p_link_status = p_port_data->lldp.peer_info.phy_config;
@@ -1870,6 +1914,11 @@ void pf_lldp_store_peer_info (
 {
    pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
    uint32_t timestamp = pnal_get_system_uptime_10ms();
+
+   if (net->lldp_mutex == NULL)
+   {
+      return;
+   }
 
    os_mutex_lock (net->lldp_mutex);
 

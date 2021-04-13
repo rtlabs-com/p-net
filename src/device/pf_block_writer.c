@@ -2109,24 +2109,26 @@ void pf_put_im_0_filter_data (
       p_bytes,
       p_pos);
 
-   pf_cmdev_get_device (net, &p_device);
-   /*
-    * ToDo: Walk the device tree:
-    * If we encounter a sub-slot that contains I&M data then add it here.
-    */
-   pf_put_ident_device (
-      is_big_endian,
-      PF_BT_REAL_IDENTIFICATION_DATA,
-      PF_DEV_FILTER_LEVEL_SUBSLOT,
-      PF_DEV_FILTER_LEVEL_SUBSLOT,
-      NULL,
-      p_device,
-      0,
-      0,
-      1,
-      res_len,
-      p_bytes,
-      p_pos);
+   if (pf_cmdev_get_device (net, &p_device) == 0)
+   {
+      /*
+       * ToDo: Walk the device tree:
+       * If we encounter a sub-slot that contains I&M data then add it here.
+       */
+      pf_put_ident_device (
+         is_big_endian,
+         PF_BT_REAL_IDENTIFICATION_DATA,
+         PF_DEV_FILTER_LEVEL_SUBSLOT,
+         PF_DEV_FILTER_LEVEL_SUBSLOT,
+         NULL,
+         p_device,
+         0,
+         0,
+         1,
+         res_len,
+         p_bytes,
+         p_pos);
+   }
 
    /* Finally insert the block length into the block header */
    block_len = *p_pos - (block_pos + 4);
@@ -2146,20 +2148,23 @@ void pf_put_im_0_filter_data (
       p_bytes,
       p_pos);
 
-   /* ToDo: Find the DAP and then insert it. */
-   pf_put_ident_device (
-      is_big_endian,
-      PF_BT_REAL_IDENTIFICATION_DATA,
-      PF_DEV_FILTER_LEVEL_SUBSLOT,
-      PF_DEV_FILTER_LEVEL_SUBSLOT,
-      NULL,
-      p_device,
-      0,
-      0,
-      1,
-      res_len,
-      p_bytes,
-      p_pos);
+   if (pf_cmdev_get_device (net, &p_device) == 0)
+   {
+      /* ToDo: Find the DAP and then insert it. */
+      pf_put_ident_device (
+         is_big_endian,
+         PF_BT_REAL_IDENTIFICATION_DATA,
+         PF_DEV_FILTER_LEVEL_SUBSLOT,
+         PF_DEV_FILTER_LEVEL_SUBSLOT,
+         NULL,
+         p_device,
+         0,
+         0,
+         1,
+         res_len,
+         p_bytes,
+         p_pos);
+   }
 
    /* Finally insert the block length into the block header */
    block_len = *p_pos - (block_pos + 4);
