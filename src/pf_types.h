@@ -1036,9 +1036,7 @@ typedef struct pf_alarm_receive_queue
 #define PF_CMINA_FS_HELLO_INTERVAL                                             \
    (3 * 1000)                            /* milliseconds. Default is 30 ms */
 #define PF_LLDP_SEND_INTERVAL (5 * 1000) /* milliseconds */
-#define PF_LLDP_INITIAL_PEER_TIMEOUT                                           \
-   ((2 * PF_LLDP_SEND_INTERVAL) / 1000) /* seconds */
-#define PF_LLDP_TTL 20                  /* seconds */
+#define PF_LLDP_TTL           20         /* seconds */
 
 typedef enum pf_cmina_state_values
 {

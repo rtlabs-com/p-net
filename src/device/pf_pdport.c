@@ -28,6 +28,8 @@ static const char * shed_tag_linkmonitor = "linkmonitor";
 /**
  * Get configuration file name for one port
  *
+ * Asserts for invalid port number.
+ *
  * @param loc_port_num      In:   Local port number.
  *                                Valid range: 1 .. num_physical_ports
  * @return  The configuration file name
@@ -57,6 +59,11 @@ static const char * pf_pdport_get_filename (int loc_port_num)
 
 /**
  * Load PDPort data for one port from nvm
+ *
+ * Enables or disable LLDP transmission.
+ * Checks presence of peer.
+ *
+ * Asserts for invalid port number.
  *
  * @param net              InOut: The p-net stack instance
  * @param loc_port_num     In:    Local port number.
@@ -95,10 +102,14 @@ static int pf_pdport_load (pnet_t * net, int loc_port_num)
             p_port_data->pdport.check.peer.peer_station_name,
             p_port_data->pdport.check.peer.length_peer_port_name,
             p_port_data->pdport.check.peer.peer_port_name);
-         pf_lldp_restart_peer_timeout (
-            net,
-            loc_port_num,
-            PF_LLDP_INITIAL_PEER_TIMEOUT);
+
+         /* Check peers directly at the next stack invocation. As this is done
+            at startup, there is likely no peer info available and a diagnosis
+            will be set.
+            Note that the application must have time to plug the relevant
+            submodule before any diagnosis can be triggered, why we must
+            wait to next periodic invocation before doing the check. */
+         pf_lldp_restart_peer_timeout (net, loc_port_num, 0);
       }
       else
       {
@@ -138,10 +149,6 @@ static int pf_pdport_load (pnet_t * net, int loc_port_num)
          "peer on port %u.\n",
          __LINE__,
          loc_port_num);
-      pf_lldp_restart_peer_timeout (
-         net,
-         loc_port_num,
-         PF_LLDP_INITIAL_PEER_TIMEOUT);
       pf_lldp_send_enable (net, loc_port_num);
    }
 
@@ -607,7 +614,7 @@ static void pf_pdport_check_no_peer_detected (pnet_t * net, int loc_port_num)
       LOG_DEBUG (
          PNET_LOG,
          "PDPORT(%d): Peer is available on port %u. Remove no-peer-detected "
-         "diagnosis.\n",
+         "diagnosis, if any.\n",
          __LINE__,
          loc_port_num);
       (void)pf_diag_std_remove (
@@ -619,7 +626,7 @@ static void pf_pdport_check_no_peer_detected (pnet_t * net, int loc_port_num)
    else
    {
       /* Peer missing, set no-peer-detected diagnosis */
-      LOG_DEBUG (
+      LOG_INFO (
          PNET_LOG,
          "PDPORT(%d): Setting no-peer-detected diagnosis for port %u\n",
          __LINE__,
@@ -673,7 +680,7 @@ static void pf_pdport_check_peer_station_name (pnet_t * net, int loc_port_num)
 
       if (peer_stationname_is_correct == false)
       {
-         LOG_DEBUG (
+         LOG_INFO (
             PNET_LOG,
             "PDPORT(%d): Setting peer station name mismatch diagnosis: "
             "\"%.*s\". "
@@ -699,7 +706,7 @@ static void pf_pdport_check_peer_station_name (pnet_t * net, int loc_port_num)
          LOG_DEBUG (
             PNET_LOG,
             "PDPORT(%d): Peer station name is correct: \"%.*s\". "
-            "Remove diagnosis.\n",
+            "Remove diagnosis, if any.\n",
             __LINE__,
             (int)lldp_station_name.len,
             lldp_station_name.string);
@@ -749,7 +756,7 @@ static void pf_pdport_check_peer_port_name (pnet_t * net, int loc_port_num)
 
       if (peer_portname_is_correct == false)
       {
-         LOG_DEBUG (
+         LOG_INFO (
             PNET_LOG,
             "PDPORT(%d): Setting peer port name mismatch diagnosis: \"%.*s\". "
             "Wanted peer port name: \"%.*s\"\n",
@@ -774,7 +781,7 @@ static void pf_pdport_check_peer_port_name (pnet_t * net, int loc_port_num)
          LOG_DEBUG (
             PNET_LOG,
             "PDPORT(%d): Peer port name is correct: \"%.*s\". "
-            "Remove diagnosis.\n",
+            "Remove diagnosis, if any.\n",
             __LINE__,
             (int)lldp_port_id.len,
             lldp_port_id.string);
@@ -1036,7 +1043,7 @@ static int pf_pdport_write_data_check (
 
             LOG_INFO (
                PNET_LOG,
-               "PDPORT(%d): New PDPort data check. Peers: %u First peer "
+               "PDPORT(%d): New PDPort data check. Peers: %u Wanted first peer "
                "station name: %.*s Port: %.*s\n",
                __LINE__,
                check_peers.number_of_peers,
