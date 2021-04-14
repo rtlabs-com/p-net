@@ -25,12 +25,13 @@
 static bool pf_scheduler_is_linked (pnet_t * net, uint32_t first, uint32_t ix)
 {
    bool ret = false;
-   uint32_t cnt = 0;
+   uint32_t cnt = 0; /* Guard against infinite loop */
 
    if (ix < PF_MAX_TIMEOUTS)
    {
-      while ((first < PF_MAX_TIMEOUTS) && (cnt < 20))
+      while (first < PF_MAX_TIMEOUTS)
       {
+         CC_ASSERT(cnt < PF_MAX_TIMEOUTS);
          if (first == ix)
          {
             ret = true;
@@ -412,7 +413,6 @@ void pf_scheduler_tick (pnet_t * net)
 void pf_scheduler_show (pnet_t * net)
 {
    uint32_t ix;
-   uint32_t cnt;
 
    printf (
       "Scheduler (time now=%u microseconds):\n",
@@ -447,8 +447,7 @@ void pf_scheduler_show (pnet_t * net)
    {
       printf ("Free list:\n");
       ix = net->scheduler_timeout_free;
-      cnt = 0;
-      while ((ix < PF_MAX_TIMEOUTS) && (cnt++ < 20))
+      while (ix < PF_MAX_TIMEOUTS)
       {
          printf ("%u  ", (unsigned)ix);
          ix = net->scheduler_timeouts[ix].next;
@@ -456,8 +455,7 @@ void pf_scheduler_show (pnet_t * net)
 
       printf ("\nBusy list:\n");
       ix = net->scheduler_timeout_first;
-      cnt = 0;
-      while ((ix < PF_MAX_TIMEOUTS) && (cnt++ < 20))
+      while (ix < PF_MAX_TIMEOUTS)
       {
          printf (
             "%u  (%u)  ",
