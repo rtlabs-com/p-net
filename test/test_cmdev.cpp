@@ -393,7 +393,7 @@ TEST_F (CmdevUnitTest, CmdevCheckArType)
    {
       ret = pf_cmdev_check_ar_type (ar_type);
 
-      if (ar_type == PF_ART_IOCAR_SINGLE || ar_type == PF_ART_IOSAR)
+      if (ar_type == PF_ART_IOCAR_SINGLE)
       {
          EXPECT_EQ (0, ret);
       }

@@ -1701,7 +1701,6 @@ int pf_cmdev_check_visible_string (const char * s)
  * @internal
  * Check if the Specified AR type is supported.
  *
- * ToDo: Currently only IOCAR_SINGLE and PF_ART_IOSAR is supported.
  * @param ar_type          In:    The AR type to check.
  * @return  0  if the AR type is supported.
  *          -1 if the AR type is not supported.
@@ -1710,7 +1709,7 @@ int pf_cmdev_check_ar_type (uint16_t ar_type)
 {
    int ret = -1;
 
-   if ((ar_type == PF_ART_IOCAR_SINGLE) || (ar_type == PF_ART_IOSAR))
+   if (ar_type == PF_ART_IOCAR_SINGLE)
    {
       ret = 0;
    }
