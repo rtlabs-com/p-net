@@ -2201,9 +2201,7 @@ static int pf_cmrpc_rm_release_ind (
    if (ret == 0)
    {
       /* Check_RPC */
-      if (
-         (pf_ar_find_by_uuid (net, &release_io.ar_uuid, &p_ar) == 0) &&
-         (release_io.session_key == p_ar->ar_param.session_key))
+      if (pf_ar_find_by_uuid (net, &release_io.ar_uuid, &p_ar) == 0)
       {
          LOG_DEBUG (
             PF_RPC_LOG,
