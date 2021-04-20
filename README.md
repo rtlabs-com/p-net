@@ -74,7 +74,8 @@ Limitations or not yet implemented:
 * No ProfiDrive or ProfiSafe profiles.
 
 This software is dual-licensed, with GPL version 3 and a commercial license.
-See LICENSE.md for more details.
+If you intend to use this stack in a commercial product, you likely need to
+buy a license. See LICENSE.md for more details.
 
 
 Requirements
