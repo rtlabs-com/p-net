@@ -1193,6 +1193,14 @@ void pf_lldp_init (pnet_t * net)
    CC_ASSERT (net->lldp_mutex != NULL);
 }
 
+void pf_lldp_exit (pnet_t * net){
+   if (net->lldp_mutex != NULL)
+   {
+      os_mutex_destroy (net->lldp_mutex);
+      memset (&net->lldp_mutex, 0, sizeof (net->lldp_mutex));
+   }
+}
+
 void pf_lldp_send_enable (pnet_t * net, int loc_port_num)
 {
    LOG_DEBUG (

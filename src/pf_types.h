@@ -2870,6 +2870,16 @@ struct pnet
  */
 int pnet_init_only (pnet_t * net, const pnet_cfg_t * p_cfg);
 
+/**
+ * @internal
+ * Free and clear members within the pnet_t structure.
+ *
+ * This does free the pnet_t structure itself.
+ *
+ * @param net              InOut: The p-net stack instance to destroy.
+ */
+void pnet_free_members (pnet_t * net);
+
 #ifdef __cplusplus
 }
 #endif
