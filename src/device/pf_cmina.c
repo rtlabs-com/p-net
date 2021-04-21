@@ -1415,7 +1415,7 @@ void pf_cmina_show (pnet_t * net)
    printf (
       "state                          : %s\n",
       pf_cmina_state_to_string (net));
-   printf ("Default station_name      : <%s>\n", p_cfg->station_name);
+   printf ("Default station_name           : <%s>\n", p_cfg->station_name);
    printf (
       "Perm station_name              : <%s>\n",
       net->cmina_nonvolatile_dcp_ase.station_name);
@@ -1424,7 +1424,7 @@ void pf_cmina_show (pnet_t * net)
       net->cmina_current_dcp_ase.station_name);
    printf ("\n");
 
-   printf ("Default product_name      : <%s>\n", p_cfg->product_name);
+   printf ("Default product_name           : <%s>\n", p_cfg->product_name);
    printf (
       "Perm product_name              : <%s>\n",
       net->cmina_nonvolatile_dcp_ase.product_name);
@@ -1452,7 +1452,7 @@ void pf_cmina_show (pnet_t * net)
       (unsigned)p_cfg->if_cfg.ip_cfg.ip_gateway.c,
       (unsigned)p_cfg->if_cfg.ip_cfg.ip_gateway.d);
 
-   printf ("Perm IP  Netmask  Gateway      : ");
+   printf ("Perm     IP  Netmask  Gateway      : ");
    pf_ip_address_show (
       net->cmina_nonvolatile_dcp_ase.full_ip_suite.ip_suite.ip_addr);
    printf ("  ");

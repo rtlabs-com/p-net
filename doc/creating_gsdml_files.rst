@@ -201,7 +201,10 @@ The ``<DeviceAccessPointItem>`` element has the attributes:
 * ``ModuleIdentNumber="0x00000001"`` Unsigned32hex.
 * ``MinDeviceInterval="32"`` Minimum cyclic data update interval, in number
   of 31.25 us ticks. A value 32 corresponds to cyclic data sending and
-  receiving every millisecond. Unsigned16.
+  receiving every millisecond. Unsigned16. It should match the value
+  ``min_device_interval`` in the p-net configuration. (It must be possible to
+  achieve this time using the values in the ``SendClock`` and ``ReductionRatio``
+  attributes in another element).
 * ``DNS_CompatibleName="pno-example-dap"`` (Default station name)
 * ``FixedInSlots="0"`` The DAP module is always in slot 0
 * ``ObjectUUID_LocalIndex="0"``
@@ -224,6 +227,8 @@ The ``<DeviceAccessPointItem>`` element has the attributes:
 * ``ParameterizationSpeedupSupported="true"`` For fast startup.
 * ``PowerOnToCommReady="700"`` For fast startup, time to first data exchange
   in milliseconds. Unsigned32.
+* ``AddressAssignment="DCP"`` Can also be ``"DHCP"`` and ``"LOCAL"``. Defaults
+  to DCP if not given.
 
 General info on the Profinet IO-Device is given in ``<ModuleInfo>``
 subelements. For example the vendor name and order number are given.
@@ -296,8 +301,9 @@ list. The ``NumberOfAR`` attribute defaults to 1 if not given.
 
 Use the ``<TimingProperties>`` element to define the sending of cyclic IO data.
 The ``SendClock`` attribute contains a list of all supported send cycle times,
-in units of 31.25 us. Defaults to "32", which corresponds to 1 ms.
-It should match the value ``min_device_interval`` in the p-net configuration.
+in units of 31.25 us. Defaults to "32", which corresponds to 1 ms. Note that the
+list must contain the value ``32``.
+(See also the ``MinDeviceInterval`` attribute in another element).
 The attribute ``ReductionRatio`` defines how much the sending can be slowed down,
 and defaults to "1 2 4 8 16 32 64 128 256 512".
 

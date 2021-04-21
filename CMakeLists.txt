@@ -73,7 +73,7 @@ set(PNET_MAX_AR                 2
 set(PNET_MAX_API                1
   CACHE STRING "Number of Application Processes. Must be > 0")
 set(PNET_MAX_CR                 2
-  CACHE STRING "Per AR. 1 input and 1 output")
+  CACHE STRING "Per AR. At least 2 (1 input and 1 output). If unsure, use 2.")
 set(PNET_MAX_SLOTS            5
   CACHE STRING "Per API. Should be > 1 to allow at least one I/O module")
 set(PNET_MAX_SUBSLOTS         3

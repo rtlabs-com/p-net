@@ -120,6 +120,15 @@ project directory. See the ``EthernetDump`` subdirectory.
 To export test reports as PDF, click the small printer icon in the top
 toolbar.
 
+Checklist before starting ART Tester tests. Use correct:
+
+   * Cabling
+   * Software version and compile time options
+   * Ethernet interface settings for ART Tester laptop
+   * GSDML file
+   * Plugged modules in ART Tester
+   * Make sure no other device uses the IP address ``192.168.0.50``
+
 
 Additional hardware
 -------------------

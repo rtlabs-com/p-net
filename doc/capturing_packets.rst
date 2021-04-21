@@ -28,7 +28,7 @@ Filtering frames in Wireshark based on protocol
 To show only frames with specific protocols, enter this into the "display
 filter" text box::
 
-   pn_dcp or pn_io or pn_io_device or pn_io_controller or epm or lldp or snmp or syslog
+   lldp or snmp or pn_dcp or dcerpc or pn_io or syslog
 
 To hide frames with specific protocols::
 
@@ -169,11 +169,34 @@ The lines should be interpreted as the average, minimum and maximum
 packet-to-packet times during the interval (for example 100 ms).
 
 
+Plot Profinet cycle counter
+---------------------------
+The cycle counter should increase between each frame. You can use Wireshark to verify that.
+
+Use the menu “Statistics” -> “I/O Graph”.
+
+* Display filter: ``eth.src == 54:ee:75:ff:95:a6``
+* Style: Dot
+* Y Axis: AVG(Y Field)
+* Y Field: ``pn_rt.cycle_counter``
+* SMA (sample moving average) Period: None
+* Interval: 1 ms
+
+Adapt the MAC address to your p-net IO-device.
+
+Zoom to the relevant time period, and y-axis range of approx 0 to 70000.
+The frame cycle counter increases up to max 65535 before it wraps to 0.
+It is important that the samples are evenly distributed in time (on the
+horiontal axis). See the image below (captured during a trouble-shooting session).
+
+.. image:: illustrations/Cyclecounter.png
+
+
 tcpdump
 -------
 When running on an embedded Linux board, it can be convenient to run without
 a graphical user interface. To capture packets for later display in Wireshark,
-use the tool `tcpdump`.
+use the tool ``tcpdump``.
 
 Install it, for example like::
 
