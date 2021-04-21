@@ -421,6 +421,24 @@ Implements these user functions (via ``pnet_api.c``):
 * ``pnet_set_redundancy_state()``
 * ``pnet_set_provider_state()``
 
+Relevant sections in 61158-6-10 (protocol):
+
++---------------+-------------------------------------------------------------+
+| Section       | Description                                                 |
++===============+=============================================================+
+| 4.5.3         | "WorkingClock"                                              |
++---------------+-------------------------------------------------------------+
+| 4.7.2.1.2     | "Coding of the field CycleCounter"                          |
++---------------+-------------------------------------------------------------+
+| 4.7.4.2       | "Provider protocol machine" PPM                             |
++---------------+-------------------------------------------------------------+
+| 4.12.4.5      | "Send list control"                                         |
++---------------+-------------------------------------------------------------+
+| 5.2.5.58      | "Coding of the field SendClockFactor"                       |
++---------------+-------------------------------------------------------------+
+| 5.2.5.59      | "Coding of the field ReductionRatio"                        |
++---------------+-------------------------------------------------------------+
+
 
 Block reader and writer
 -----------------------
@@ -557,6 +575,51 @@ Sections in 61784-2 (profiles) describing SNMP:
 See also the "Topology and Asset Discovery" guideline published by the Profinet
 organisation, and the list of supported OIDs in the test case specification
 "Topology discovery check".
+
+
+Dynamic Host Configuration Protocol (DHCP)
+------------------------------------------
+The GSDML file should have the ``AddressAssignment`` attribute set to
+``"DCP;DHCP"`` if DHCP is a supported way to set the IP address.
+
+During the ART Tester test case DCP_OPTIONS_SUBOPTIONS some aspects of DHCP
+handling are tested, if the ``AddressAssignment`` attribute is set accordingly.
+
+Sections in 61158-5-10 (services) describing DHCP:
+
++---------------+-------------------------------------------------------------+
+| Section       | Description                                                 |
++===============+=============================================================+
+| 6.3.11.2      | DCP class specification                                     |
++---------------+-------------------------------------------------------------+
+| 6.3.11.3      | DCP service specification                                   |
++---------------+-------------------------------------------------------------+
+| 6.3.12        | Dynamic host configuration ASE                              |
++---------------+-------------------------------------------------------------+
+| 7.3.3.3.6     | Communication Interface Management class - Behavior         |
++---------------+-------------------------------------------------------------+
+
+Sections in 61158-6-10 (protocol) describing DHCP:
+
++---------------+-------------------------------------------------------------+
+| Section       | Description                                                 |
++===============+=============================================================+
+| 4.3.1.2       | DCP APDU abstract syntax                                    |
++---------------+-------------------------------------------------------------+
+| 4.3.1.4       | Coding section of block fields                              |
++---------------+-------------------------------------------------------------+
+| 4.15          | Dynamic host configuration                                  |
++---------------+-------------------------------------------------------------+
+| 5.6.3.11      | "Context Management IP and Name Assignment" CMINA           |
++---------------+-------------------------------------------------------------+
+
+Sections in 61784-2 (profiles) describing DHCP:
+
++---------------+-------------------------------------------------------------+
+| Section       | Description                                                 |
++===============+=============================================================+
+| 7.1.4.12      | "Dynamic Host Configuration Protocol" DHCP options          |
++---------------+-------------------------------------------------------------+
 
 
 Legacy startup mode
