@@ -245,6 +245,11 @@ uint16_t pf_ppm_calculate_cyclecounter (
    uint16_t send_clock_factor,
    uint16_t reduction_ratio);
 
+uint16_t pf_ppm_calculate_next_cyclecounter (
+   uint16_t previous_cyclecounter,
+   uint16_t send_clock_factor,
+   uint16_t reduction_ratio);
+
 #ifdef __cplusplus
 }
 #endif
