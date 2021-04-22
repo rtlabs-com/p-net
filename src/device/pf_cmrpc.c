@@ -4884,11 +4884,8 @@ void pf_cmrpc_periodic (pnet_t * net)
       {
          LOG_DEBUG (
             PF_RPC_LOG,
-            "CMRPC(%d): Closing and reopening socket used for incoming DCE RPC "
-            "requests.\n",
+            "CMRPC(%d): Release is requested by incoming DCE RPC request.\n",
             __LINE__);
-         pf_udp_close (net, net->cmrpc_rpcreq_socket);
-         net->cmrpc_rpcreq_socket = pf_udp_open (net, PF_RPC_SERVER_PORT);
       }
    }
 }
@@ -4955,15 +4952,6 @@ int pf_cmrpc_cmdev_state_ind (
             if (p_ar->p_sess->release_in_progress == false)
             {
                pf_session_release (net, p_ar->p_sess);
-
-               /* Re-open the global RPC socket. */
-               LOG_DEBUG (
-                  PF_RPC_LOG,
-                  "CMRPC(%d): Closing and reopening socket used for incoming "
-                  "DCE RPC requests.\n",
-                  __LINE__);
-               pf_udp_close (net, net->cmrpc_rpcreq_socket);
-               net->cmrpc_rpcreq_socket = pf_udp_open (net, PF_RPC_SERVER_PORT);
             }
          }
          else
