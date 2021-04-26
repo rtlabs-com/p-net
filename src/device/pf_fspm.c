@@ -384,7 +384,7 @@ static void pf_fspm_save_im (pnet_t * net)
  * If location string does not fit in the I&M1 field "IM_Tag_Location",
  * (which is 22 bytes) it will be truncated with termination added.
  *
- * Also see pf_fspm_save_im_location().
+ * See pf_fspm_save_im_location() which also saves to file.
  *
  * @param net              InOut: The p-net stack instance
  * @param location         In:    New device location.

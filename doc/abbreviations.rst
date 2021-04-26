@@ -139,7 +139,9 @@ FACK
     Fragment acknowledge
 FAL
     Fieldbus Application Layer
-FO:
+FD
+    Full Duplex
+FO
    Fiber Optics
 FSPM
     FAL Service Protocol Machines
@@ -227,6 +229,8 @@ NDR
     Network Data Representation. A header as first part of the DCE/RPC payload (sent via UDP). Contains info on how large the payload is, and how large responses that can be accepted.
 NME
     Network Management Engine
+NRT
+   Non-Real Time Ethernet frames
 NVM
     Non-Volatile Memory. Typically flash memory chips.
 OID

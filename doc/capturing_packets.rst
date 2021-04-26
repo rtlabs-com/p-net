@@ -92,6 +92,8 @@ the background color.
 +============+==========================================================+
 | LLDP       | lldp                                                     |
 +------------+----------------------------------------------------------+
+| SNMP       | snmp                                                     |
++------------+----------------------------------------------------------+
 | Syslog     | syslog                                                   |
 +------------+----------------------------------------------------------+
 | DCP        | pn_dcp                                                   |
@@ -157,13 +159,16 @@ Then use the menu "Statistics" -> "I/O Graph".
 * Y Axis: AVG(Y Field)
 * Y Field: ``frame.time_delta_displayed``
 * SMA (sample moving average) Period: None
+* Interval: 10 or 100 ms.
 
 Adapt the MAC address to your p-net IO-device.
-Use an "Interval" setting of 10 or 100 ms.
 You need to zoom the Y-axis to an interesting range, maybe 0-10 ms.
 
 It is also interesting to add a line "MAX(Y Field)" and a line "MIN(Y Field)"
-in the same graph as the first line.
+in the same graph as the first line. See below for an example where the
+average frame interval is 1 ms.
+
+.. image:: illustrations/periodicity.png
 
 The lines should be interpreted as the average, minimum and maximum
 packet-to-packet times during the interval (for example 100 ms).
@@ -187,9 +192,27 @@ Adapt the MAC address to your p-net IO-device.
 Zoom to the relevant time period, and y-axis range of approx 0 to 70000.
 The frame cycle counter increases up to max 65535 before it wraps to 0.
 It is important that the samples are evenly distributed in time (on the
-horiontal axis). See the image below (captured during a trouble-shooting session).
+horizontal axis). See the image below (captured during a trouble-shooting
+session).
 
 .. image:: illustrations/Cyclecounter.png
+
+
+Plot network load
+-----------------
+Use the menu “Statistics” -> “I/O Graph”.
+
+* Display filter: (none)
+* Style: Line
+* Y Axis: Bits
+* Y Field: (none)
+* SMA (sample moving average) Period: None
+* Interval: 100 ms or 1 s
+
+See below for an example captured during a "Security Level 1" network load test,
+where the network load is close to 100 Mbit/s (1E8 bits/s).
+
+.. image:: illustrations/NetworkLoad.png
 
 
 tcpdump

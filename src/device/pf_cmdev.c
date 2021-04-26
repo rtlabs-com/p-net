@@ -1634,6 +1634,9 @@ int pf_cmdev_check_zero (uint8_t * p_start, uint16_t len)
 
 /**
  * Verify that at least one operational port has the required speed (100FD).
+ *
+ * See PdevCheckFailed() in Profinet 2.4 Protocol 5.6.3.2.1.4 CMDEV state table
+ *
  * @return
  */
 static int pf_cmdev_check_pdev (void)

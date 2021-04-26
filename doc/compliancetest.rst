@@ -534,7 +534,7 @@ describes the startup time in milliseconds.
 
 Relevant test cases for DHCP
 ----------------------------
-Set the ``AddressAssignment`` attribute to ``DHCP``.
+In the GSDML file, set the ``AddressAssignment`` attribute to ``"DCP;DHCP"``.
 
 * DHCP
 
@@ -627,8 +627,8 @@ Security Level 1 tester
 -----------------------
 A PLC program is used to both establish cyclic data communication, and to
 continuously read out parameter values from the IO-device under test (DUT).
-A neighbour device "D" is connected to port 2 of the DUT, and the PLC will
-control the digital inputs and outputs of device D.
+If the DUT has more than one port, a neighbour device "D" is connected to
+port 2, and the PLC will control the digital inputs and outputs of device D.
 
 A program running on a Linux laptop will generate additional network load.
 Depending on the result, the DUT will be assigned net load class 1 to 3.
@@ -668,15 +668,15 @@ should have a cycle time of 1 ms and an IP address ``192.168.0.98``.
 If the device "D" is not exactly the variant you have, you need to replace it
 with another IO-device with digital inputs and outputs. Default connection:
 
-* Input %I0.0 - Ix_Req  (Enables continuous readout of parameter values)
-* Input %I0.1 - Ix_ACK  (Acknowledges errors)
-* Output %Q0.0 - Qx_Error
-* Output %Q0.1 - Qx_Error_RDREC
+* Input ``%I0.0`` Ix_Req  (Enables continuous readout of parameter values)
+* Input ``%I0.1`` Ix_ACK  (Acknowledges errors)
+* Output ``%Q0.0`` Qx_Error
+* Output ``%Q0.1`` Qx_Error_RDREC
 
 Delete the existing "dut" device.
 Import the GSDML file of your device (the DUT), and insert you device.
 Plug relevant modules into the slots.
-Give it the station name "dut", and it should use the IP address
+Give it the station name ``dut``, and it should use the IP address
 ``192.168.0.50``. Connect it to the PLC via the "Network view".
 
 In the "Device view" select the DUT, and in the "Device overview" select the
@@ -698,6 +698,18 @@ Create a watch table for the relevant entries.
 
 Compile the hardware configuration and the software, and download to the PLC.
 
+If the DUT only has one port the neighbour device "D" is not needed.
+Normally one of the digital inputs of device "D" is enabling the continuous
+reading out of parameter values, but you need instead to force the corresponding
+PLC program variable to a high level. In the left side menu use "Watch and
+force tables" (below the PLC), and add a new entry by clicking an empty row
+in the "Name" column, and select "Ix_Req". When later in online mode, click
+the small "Show/hide all modify colmns" to show the column. Enter "TRUE" in
+the "Modify value" on the line for "Ix_Req". Select that line by enabling
+the corresponding check box. Press the "Modify all selected values once
+and now".
+
+
 Tester software for additional network load
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Install the tester software on an Ubuntu machine, or in a virtual Ubuntu
@@ -711,12 +723,13 @@ files with the MAC address of the SL1-tester laptop and the DUT. The MAC of
 the DUT is found with the ``arping`` Linux command.
 Actual sending of frames is done with the ``packETHcli`` Linux command.
 
+
 Set up hardware
 ^^^^^^^^^^^^^^^
-Set the station name of the DUT to "dut" and the IP address to ``192.168.0.50``.
+Set the station name of the DUT to ``dut`` and the IP address to ``192.168.0.50``.
 Use a temporary station name, to be able to detect device reboots.
 
-Set the station name of device D to "d" and the IP address to ``192.168.0.98``.
+Set the station name of device D to ``d`` and the IP address to ``192.168.0.98``.
 
 The digital input "Ix_Req" is used to enable continuous read out of parameter
 values. Set it to high level to start the readout.
@@ -732,13 +745,19 @@ tester software, as we later read the diagnostic log of the PLC.
 
 Run the tests
 ^^^^^^^^^^^^^
-For a class B device with two ports you need to run one "normal" test case and one
-"faulty" test case. After the "faulty" test case the communication should be
+For a class B device with two ports you need to run one "normal" mode test and
+one "faulty" mode test. After the "faulty" mode the communication should be
 good again after the additional network load has stopped.
-During the "normal" test case the communication should not be lost, and this is
+During the "normal" mode the communication should not be lost, and this is
 verified by studying the diagnostic log of the PLC afterwards.
 
-For net load class I, the "normal" test case takes approximately 1 hour 40 min.
++----------------+---------------+---------------+-----------------------------------+
+| Operation mode | Run time      | Test cases    | Bus load                          |
++================+===============+===============+===================================+
+| Normal         | 1 hour 40 min | 101-118, 1-63 | Up to 10%, based on netload class |
++----------------+---------------+---------------+-----------------------------------+
+| Faulty         | 1 hour 20 min | 1-63          | 100%                              |
++----------------+---------------+---------------+-----------------------------------+
 
 In the TIA portal, make sure you are "Offline" with the PLC (otherwise there
 will be even more additional network load).
@@ -746,7 +765,10 @@ will be even more additional network load).
 Make sure that the software version you run on the DUT has the correct settings,
 for example log level.
 
-* Start the PLC program, and verify that the parameter readout is running (using Wireshark)
+* Verify that the PLC clock setting is correct.
+* Set the device name to ``dut`` with temporary setting
+* Start the PLC program, and verify that the parameter readout is running
+  (using Wireshark).
 * Start the SL1-tester in "faulty" mode.
 * Verify that the PLC communication still is good after the SL1-tester is done.
 * Start the SL1-tester in "normal" mode.
@@ -758,6 +780,9 @@ which runs for 3 minutes each. Test case 101 and 102 runs until the sequence
 is completed. If the tests take longer than that, wrong settings have been
 used for the SL1-tester.
 
+If there are problems during the "normal" mode, study the error LED on the
+PLC to detect which scenario that is causing the malfunction.
+
 
 Troubleshooting
 ---------------
@@ -765,3 +790,15 @@ If the test case "“Different access ways port-to-port" fails,
 verify that your laptop Ethernet interface speed is set to 100 Mbit/s and
 that any Windows or Siemens (TIA portal) LLDP implementation on the
 Ethernet interface is disabled.
+
+If the "Alarm" test case fails with the message "No valid Transport ACK on
+the Alarm ACK was received", then the Ethernet receive task probably
+has too low priority or too limited resources.
+Note that if increasing the priority, several alarm frames might be
+queued up before the main application have a chance to
+handle them. As the ART Tester sends a burst of 6 alarm frames in the APMS
+scenario, make sure that your alarm input queue can hold at least that number.
+
+If there are problems in test case Behavior scenario 10 regarding reading and
+writing via SNMP after power cycling, verify that there is proper connection to
+the SNMP daemon immediately at startup.

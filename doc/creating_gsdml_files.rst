@@ -278,8 +278,10 @@ Each interface defines for example clock synchronization, and the ports (of that
 interface) define for example if they use radio or 100 Mbit/s copper cables.
 
 The subslot number for the first interface is 0x8000, and next interface (if
-any) has subslot number 0x8100. The first port of the first interface has
-subslot 0x8001, and next port of that interface has subslot number 0x8002.
+any) has subslot number 0x8100. Note that p-net only supports one interface.
+The first port of the first interface has subslot 0x8001,
+and next port of that interface has subslot number 0x8002.
+
 
 Interfaces are described using the ``<InterfaceSubmoduleItem>`` element, which
 has these attributes:
@@ -292,12 +294,21 @@ has these attributes:
 * ``SupportedProtocols="SNMP;LLDP"`` Conformance class B must support SNMP.
 * ``PTP_BoundarySupported="true"``
 * ``DCP_BoundarySupported="true"``
-* ``DCP_HelloSupported="true"`` Often used for fast startup.
+* ``DCP_HelloSupported="true"`` Used for fast startup.
+
+If the ``DCP_HelloSupported`` attribute is set to ``"true"``, you must also
+set the ``PowerOnToCommReady`` attribute of the ``<DeviceAccessPointItem>``
+element.
 
 The communication startup is described in the element ``<ApplicationRelations>``
 with the attribute ``StartupMode``, which typically should be "Advanced" (the
 alternative is "Legacy"). If supporting both modes, use a semicolon separated
 list. The ``NumberOfAR`` attribute defaults to 1 if not given.
+
+There is typically one input-CR and one output-CR per AR, but in the GSDML file
+it is possible to set the attributes ``NumberOfAdditionalInputCR``,
+``NumberOfAdditionalOutputCR``, ``NumberOfAdditionalMulticastProviderCR`` and
+``NumberOfMulticastConsumerCR``. Those attributes are not supported by p-net.
 
 Use the ``<TimingProperties>`` element to define the sending of cyclic IO data.
 The ``SendClock`` attribute contains a list of all supported send cycle times,

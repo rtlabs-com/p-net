@@ -196,6 +196,9 @@ If you like to increase the baud rate of the serial port, change the value in
 the file ``bsp/xmc48relax/src/xmc48relax.c``. For example change
 ``.baudrate = 115200,`` to ``.baudrate = 460800,``.
 
+To be able to run debug logging via serial cable, you need to increase the
+baudrate to 460800 bits/s.
+
 
 PLC timing settings
 -------------------
@@ -229,7 +232,7 @@ Example commands::
 Memory requirements for the tests
 ---------------------------------
 Note that the tests require a stack of at least 6 kB. You may have to increase
-CFG_MAIN_STACK_SIZE in your BSP ``include/config.h`` file.
+``CFG_MAIN_STACK_SIZE`` in your BSP ``include/config.h`` file.
 
 
 Examining flash and RAM usage
@@ -268,16 +271,13 @@ The flash usage is text + data, as the RAM initialization values are stored in f
 
 Run tests on XMC4800 target
 ---------------------------
-In order to compile the test code, make sure to use BUILD_TESTING and that
-TEST_DEBUG is disabled. Set PNET_MAX_AR to 1, and reduce
-PNET_MAX_FILENAME_SIZE to 30 bytes.
+In order to compile the test code, make sure to use ``BUILD_TESTING`` and that
+``TEST_DEBUG`` is disabled. Reduce ``PNET_MAX_FILENAME_SIZE`` to 30 bytes.
 This is done via ccmake, which should be started in the build directory::
 
     ccmake .
 
-In the file ``include/pnet_api.h`` set PNET_MAX_AR to 1.
-
-Set CFG_MAIN_STACK_SIZE to at least 8192 in ``rt-kernel-xmc4/bsp/xmc48relax/include/config.h``
+Set ``CFG_MAIN_STACK_SIZE`` to at least 8192 in ``rt-kernel-xmc4/bsp/xmc48relax/include/config.h``
 
 The resulting file after compiling is named ``pf_test.elf``
 
@@ -341,7 +341,7 @@ See :ref:`network-topology-detection` for more details on SNMP and how to
 verify the SNMP communication to the p-net stack.
 
 
-IP-stack lwip
+IP-stack LWIP
 -------------
 The rt-kernel uses the "lwip" IP stack.
 
@@ -362,3 +362,19 @@ And enable debug logging of the modules you are interested in::
    #define TCPIP_DEBUG                 LWIP_DBG_ON
 
 Rebuild rt-kernel.
+
+
+Increase LWIP resources
+-----------------------
+In order to handle incoming data, you might need to increase buffer sizes for
+the lwip IP stack.
+
+In the file ``lwip/src/include/lwip/lwipopts.h`` or in
+``lwip/src/include/lwip/opt.h`` (which holds the default values), increase the
+values for ``MEMP_NUM_NETBUF`` and ``PBUF_POOL_SIZE``.
+
+It can also be beneficial to increase the values ``eth_cfg.rx_buffers``
+and ``eth_cfg.rx_task_prio`` found in the ``bsp/xmc48relax/src/lwip.c`` file.
+
+For debugging you can enable ``LWIP_STATS_DISPLAY`` in the ``lwipopts.h`` file,
+and then trigger the ``stats_display()`` function.
