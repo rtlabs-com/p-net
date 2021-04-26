@@ -104,7 +104,7 @@ built with the options given above::
       text	   data	    bss	    dec	    hex	filename
    230888	   3304	      8	 234200	  392d8	libprofinet.so
 
-An estimate of the p-net RAM usage can be made from the size of the pnet_t struct.
+An estimate of the p-net RAM usage can be made from the size of the ``pnet_t`` struct.
 The sample application has a command line option to show this value, for the used
 compile time options (for example the maximum number of modules allowed).
 
@@ -296,9 +296,6 @@ values::
 
 Boot time optimization
 ----------------------
-The boot time should be less than approximately 15 seconds, for the "missing
-peer" alarm to be sent within 30 s after the power on.
-
 To improve the startup time of your Linux device, it is useful to study what
 is delaying the start. If you use the "systemd" init system, you can use these
 commands to analyze the startup::
@@ -384,7 +381,7 @@ The given ``"args"`` command line arguments in the example is for
 increasing the verbosity level and to set the Ethernet interface name.
 Adapt those and also paths to your particular setup.
 
-Use the CMAKE_BUILD_TYPE setting as ``Debug`` when running the executable
+Use the ``CMAKE_BUILD_TYPE`` setting as ``Debug`` when running the executable
 via the debugger.
 
 Start the debugging by clicking on the small green "Run" icon on the

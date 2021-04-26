@@ -722,7 +722,7 @@ static int pf_dcp_set_req (
       switch (sub)
       {
       case PF_DCP_SUB_IP_MAC:
-         /* Cant set MAC address */
+         /* Can't set MAC address */
          break;
       case PF_DCP_SUB_IP_PAR:
          if (value_length == sizeof (full_ip_suite.ip_suite))
@@ -798,7 +798,7 @@ static int pf_dcp_set_req (
       case PF_DCP_SUB_DEV_PROP_INSTANCE:
       case PF_DCP_SUB_DEV_PROP_OEM_ID:
       case PF_DCP_SUB_DEV_PROP_GATEWAY:
-         /* Cant set these */
+         /* Can't set these */
          break;
       default:
          break;

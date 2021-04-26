@@ -21,7 +21,7 @@ To be able to change IP address on a Siemens PLC, make sure that the
 Click the “Settings” tab, and enable “PROFINET devices” for “Scan Protocol”, and
 click “Save”. On the “Device list” tab, click “Start network scan”.
 Select the “S7-1500” line, and click “Configure Device”. Adjust the IP address
-to 192.168.0.100 and netmask to 255.255.255.0.
+to ``192.168.0.100`` and netmask to ``255.255.255.0``.
 Click “Load” to store the settings.
 
 
@@ -80,9 +80,9 @@ the directory with your GSD file. Mark the line with the file, and click
 
 In the project view, in the left menu select the PLC and the subitem "Device
 configuration". Click the "Network view" tab. At the right edge open the
-"Hardware catalog". Select "Other field devices" > Profinet IO > I/O > rt-labs >
-rt-labs dev > "P-Net Sample App". Double-click it, and it will appear in the
-main window.
+"Hardware catalog". Select "Other field devices" > Profinet IO > I/O >
+RT-Labs > "P-Net Samples" > "P-Net Sample App".
+Double-click it, and it will appear in the main window.
 
 Use the "Network view" tab, and right-click "Not assigned" on the rt-labs-dev
 icon. Select "Assign to new IO-controller" and "PLC_1.PROFINETinterface_1".
@@ -99,8 +99,9 @@ mask size does not seems to have an impact.
 In the project view, in the left menu select the PLC and the subitem "Device
 configuration". In the "Properties" tab, use the "General" sub-tab. Select
 "PROFINET interface [X1]" and "Ethernet addresses". Enter the IP address
-192.168.0.100 for the PLC. The subnet mask should be 255.255.255.0 and subnet
-"PN/IE_1". Right-click the icon of the PLC, and select "Go online". Use type of
+``192.168.0.100`` for the PLC. The subnet mask should be ``255.255.255.0``
+and subnet "PN/IE_1".
+Right-click the icon of the PLC, and select "Go online". Use type of
 interface "PN/IE", your Ethernet network card and "Direct at slot 1 X1".
 Select "Show accessible devices" in the dropdown.  Click "Start search".
 The table should be updated with "Device type" = "CPU 1215C..."
@@ -110,7 +111,10 @@ To enter the IP-address of the IO-device, go to "Device view" for the IO-device
 and click the IO-device icon. in the "Properties" tab, select the "General"
 sub-tab. Select
 "PROFINET interface [X1]" and "Ethernet addresses". Enter the IP address
-192.168.0.50 for the IO-device.
+``192.168.0.50`` for the IO-device.
+Also in the “PROFINET interface [X1]” section, set the IO cycle update time
+to "Set update time manually" and select 16 ms. (Depending on your hardware
+you can try faster updates later on).
 
 
 Add modules to IO-device
@@ -165,13 +169,13 @@ Note that the IO-device must be connected to the PLC (as seen for example in
 the network view) for the IO-device to have a PLC address assigned.
 
 In the Project tree, select PLC_1 > PLC tags > Show all tags.
-Create a new tag by clicking the first line and enter the name "ButtonIn".
+Create a new tag by clicking the first line and enter the name ``ButtonIn``.
 Use "Default tag table" and DataType Bool. The address should be of operand
 identifier "I" (input). Use address from the "Device view" as described above.
-The bit number should be 7. This is written as "%I2.7".
+The bit number should be 7. This is written as ``%I2.7``.
 
-Create a new tag "LEDout", also of Bool type. The bit number should be 7, so
-the address should be for example "%Q2.7".
+Create a new tag ``LEDout``, also of Bool type. The bit number should be 7, so
+the address should be for example ``%Q2.7``.
 
 In order to study the values while running, you need to create an watch table.
 In the Project tree, select PLC_1 > "Watch and force table" > "Add new watch
@@ -186,21 +190,21 @@ page will be continuously updated.
 Enter PLC program
 -----------------
 In the project tree, under PLC1 > Program blocks > Add new block. In the pop-up
-window, select "Function block" and language SCL. Give it the name "Flasher".
+window, select "Function block" and language SCL. Give it the name ``Flasher``.
 Click "OK".
 
 Note that Structured Control Language (SCL) is Siemens name for Structured Text
 (ST) programming language.
 
 In the "Flasher [FB1]" window upper part, add an input pin in the "Input"
-section. Name it "in_pin_button_LED", and give it the data type Bool. In the
-"Output" section, add a "out_pin_LED" which also should be Bool. In the "Static"
-section, add:
+section. Name it ``in_pin_button_LED``, and give it the data type Bool. In the
+"Output" section, add a ``out_pin_LED`` which also should be Bool.
+In the "Static" section, add:
 
-* in_pin_button_LED_previous: BOOL
-* flashing: BOOL
-* oscillator_state: BOOL
-* oscillator_cycles: Int
+* ``in_pin_button_LED_previous``: BOOL
+* ``flashing``: BOOL
+* ``oscillator_state``: BOOL
+* ``oscillator_cycles``: Int
 
 .. highlight:: none
 
@@ -231,8 +235,13 @@ In the pop up asking for data block, select "Flasher_DB".
 Connect the input on the "Flasher" block by double-clicking it. Select "ButtonIn".
 Similarly connect the output to "LEDout".
 
-The block "Flasher_DB [DB1]" have been created automatically. All the input-,
+.. image:: illustrations/FlasherFunctionBlock.png
+
+The block "Flasher_DB [DB1]" has been created automatically. All the input-,
 output- and static variables should appear inside it.
+
+Compile the program and download it to the PLC. Verify that it works as
+intended.
 
 
 Adjust data cycle time and watchdog

@@ -1133,7 +1133,7 @@ static int pf_check_block_header (
 
 /**
  * @internal
- * Parse all blocks in a connect RPC request message.
+ * Parse all blocks in a Connect RPC request message.
  * @param p_sess           InOut: The RPC session instance.
  * @param p_pos            InOut: Position in the input buffer.
  * @param p_ar             InOut: The AR instance.

@@ -12,7 +12,7 @@ The p-net stack and sample application has been tested with:
 To avoid problems it is recommended to start with a fresh
 Raspberry Pi OS image.
 
-When running the Raspberry Pi as a profinet IO-device using p-net, the
+When running the Raspberry Pi as a Profinet IO-device using p-net, the
 network settings of the Raspberry Pi will be changed by Profinet.
 Therefore it is highly recommended to use a keyboard, mouse and monitor or
 a serial cable.
@@ -364,3 +364,29 @@ for best result)::
    pi@pndevice-pi:~$ chrt -p $(pidof pn_dev)
    pid 438's current scheduling policy: SCHED_OTHER
    pid 438's current scheduling priority: 0
+
+
+SD-card problems
+----------------
+If you have problems with the CPU freezing for a few seconds now and then,
+the SD-card might be damaged. There is a SD-card test program available
+for Raspberry Pi::
+
+   sudo apt update
+   sudo apt install agnostics
+
+Start the test program::
+
+   pi@raspberrypi:~$ sh /usr/share/agnostics/sdtest.sh
+
+Example output for a damaged SD-card::
+
+   Run 1
+   prepare-file;0;0;2029;3
+   seq-write;0;0;2944;5
+   rand-4k-write;0;0;705;176
+   rand-4k-read;7444;1861;0;0
+   Sequential write speed 2944 KB/sec (target 10000) - FAIL
+   Note that sequential write speed declines over time as a card is used - your card may require reformatting
+   Random write speed 176 IOPS (target 500) - FAIL
+   Random read speed 1861 IOPS (target 1500) - PASS

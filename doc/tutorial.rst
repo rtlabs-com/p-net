@@ -501,6 +501,13 @@ See the "Real-time properties of Linux" page in this document for solutions, and
 the "Using Codesys soft PLC" page for workarounds.
 
 
+Debug compilation issues
+------------------------
+To show more details on the compilation, use::
+
+   cmake --build build -v
+
+
 Troubleshooting
 ---------------
 If you have network problems on your IO-device Raspberry Pi, re-run the

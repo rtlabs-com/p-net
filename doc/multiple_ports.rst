@@ -2,7 +2,7 @@ Multiple ports
 ==============
 This section describes how to configure the p-net stack, sample application
 and system for multiple network interfaces or ports.
-So far, multiple port has only been tested using the linux port.
+So far, multiple port has only been tested using the Linux port.
 
 
 Terminology
@@ -110,7 +110,7 @@ Run ``ifconfig -a`` to check that the bridge is up and its network interfaces ar
 
 No IP address has to be assigned to the bridge or any of the Ethernet interfaces
 in order for the bridge to forward packets from one Ethernet interface to
-the other. However the bridge needs to be in UP state.
+the other. However the bridge needs to be in ``UP`` state.
 
 To show bridge status::
 
@@ -168,10 +168,10 @@ of things need to be done. Note that the settings described in the
 following sections are changed by running ``ccmake .`` in the build folder,
 and then ``options.h`` will be regenerated.
 
-Reconfigure setting PNET_MAX_PHYSICAL_PORTS to the actual number of physical
+Reconfigure setting ``PNET_MAX_PHYSICAL_PORTS`` to the actual number of physical
 ports available in the system. For this example the value shall be set to 2.
 
-Reconfigure setting PNET_MAX_SUBSLOTS. Each additional port will require an
+Reconfigure setting ``PNET_MAX_SUBSLOTS``. Each additional port will require an
 additional subslot. For this example the value should be be set to 4.
 
 Another way to set the options is to set them on the cmake command line::
