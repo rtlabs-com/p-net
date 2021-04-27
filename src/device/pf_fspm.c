@@ -564,7 +564,7 @@ void pf_fspm_get_default_cfg (pnet_t * net, const pnet_cfg_t ** pp_cfg)
    }
 }
 
-int16_t pf_cmina_get_min_device_interval (const pnet_t * net)
+int16_t pf_fspm_get_min_device_interval (const pnet_t * net)
 {
    return net->fspm_cfg.min_device_interval;
 }
