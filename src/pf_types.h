@@ -2572,6 +2572,13 @@ typedef struct pf_port
    pf_lldp_port_t lldp;
 } pf_port_t;
 
+typedef struct pf_snmp_data
+{
+   pf_snmp_system_contact_t system_contact;
+   pf_snmp_system_name_t system_name;
+   pf_snmp_system_location_t system_location;
+} pf_snmp_data_t;
+
 struct pnet
 {
    uint32_t pnal_buf_alloc_cnt;
@@ -2649,6 +2656,10 @@ struct pnet
       pf_port_iterator_t link_monitor_iterator;
       uint32_t link_monitor_timeout; /* Scheduler timeout instance. */
    } pf_interface;
+
+#if PNET_OPTION_SNMP
+   pf_snmp_data_t snmp_data;
+#endif
 };
 
 /**

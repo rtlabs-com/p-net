@@ -857,7 +857,6 @@ int pf_fspm_cm_write_ind (
    int ret = -1;
    pf_get_info_t get_info;
    uint16_t pos = 0;
-   const char * p_file_directory = pf_cmina_get_file_directory (net);
 
    if (p_write_request->index <= PF_IDX_USER_MAX)
    {
@@ -941,12 +940,14 @@ int pf_fspm_cm_write_ind (
                   net->fspm_cfg.im_1_data.im_tag_location);
                ret = 0;
 
+#if PNET_OPTION_SNMP
                /* Location data is stored in two different files: the file with
                 * I&M data and a file used by SNMP containing a larger version
                 * of the device's location. The larger version has precedence
                 * over the I&M version, so we need to delete the larger one.
                 */
-               pf_file_clear (p_file_directory, PF_FILENAME_SYSLOCATION);
+               pf_snmp_fspm_im_location_ind(net);
+#endif
             }
             else
             {
