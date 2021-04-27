@@ -152,6 +152,7 @@ int pf_file_load (
    uint32_t magic = 0;
    uint16_t pos = 0;
    char path[PNET_MAX_FILE_FULLPATH_SIZE];
+   uint32_t start_time_us = 0;
 
    bufferinfo.p_buf = versioning_buffer;
    bufferinfo.len = sizeof (versioning_buffer);
@@ -169,6 +170,7 @@ int pf_file_load (
    }
 
    /* Read file */
+   start_time_us = os_get_current_time_us();
    if (
       pnal_load_file (
          path,
@@ -179,6 +181,13 @@ int pf_file_load (
    {
       return -1;
    }
+   LOG_DEBUG (
+      PNET_LOG,
+      "FILE(%d): Did read file %s Access time %" PRIu32 " ms.\n",
+      __LINE__,
+      path,
+      ((os_get_current_time_us() - start_time_us) / 1000));
+
    magic = pf_get_uint32 (&bufferinfo, &pos);
    version = pf_get_uint32 (&bufferinfo, &pos);
 
@@ -219,6 +228,8 @@ int pf_file_save (
    char path[PNET_MAX_FILE_FULLPATH_SIZE]; /**< Terminated string */
    uint8_t versioning_buffer[8] = {0};     /* Two uint32_t */
    uint16_t pos = 0;
+   int ret = 0;
+   uint32_t start_time_us = 0;
 
    if (
       pf_file_join_directory_filename (
@@ -243,12 +254,21 @@ int pf_file_save (
       versioning_buffer,
       &pos); /* Big endian */
 
-   return pnal_save_file (
+   start_time_us = os_get_current_time_us();
+   ret = pnal_save_file (
       path,
       versioning_buffer,
       sizeof (versioning_buffer),
       p_object,
       size);
+   LOG_DEBUG (
+      PNET_LOG,
+      "FILE(%d): Did save file %s Access time %" PRIu32 " ms.\n",
+      __LINE__,
+      path,
+      ((os_get_current_time_us() - start_time_us) / 1000));
+
+   return ret;
 }
 
 int pf_file_save_if_modified (
