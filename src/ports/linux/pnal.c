@@ -73,7 +73,6 @@ int pnal_save_file (
    }
 
    /* Write file contents */
-   LOG_DEBUG (PF_PNAL_LOG, "PNAL(%d): Saving to file %s\n", __LINE__, fullpath);
    if (size_1 > 0)
    {
       if (write (outputfile, object_1, size_1) == -1)
