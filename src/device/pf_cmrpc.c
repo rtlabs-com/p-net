@@ -53,6 +53,10 @@
 #include <stdint.h>
 #include <string.h>
 
+#if PNET_MAX_CR < 2
+#error "There must be at least 2 CR per AR. Increase PNET_MAX_CR."
+#endif
+
 static const char * rpc_sync_name = "rpc";
 static const pf_uuid_t implicit_ar = {0, 0, 0, {0, 0, 0, 0, 0, 0, 0, 0}};
 
@@ -1187,7 +1191,8 @@ static int pf_cmrpc_rm_connect_interpret_ind (
                      PF_RPC_LOG,
                      "CMRPC(%d): AR type: \"%s\" Device access: %u Supervisor "
                      "takeover: %u Requested start up mode: \"%s\" Initiator "
-                     "station name: \"%s\" UDP port: 0x%04x Session: %u Timeout: "
+                     "station name: \"%s\" UDP port: 0x%04x Session: %u "
+                     "Timeout: "
                      "%u x 100 ms\n",
                      __LINE__,
                      pf_ar_type_to_string (p_ar->ar_param.ar_type),
@@ -1203,71 +1208,94 @@ static int pf_cmrpc_rm_connect_interpret_ind (
             }
             break;
          case PF_BT_IOCR_BLOCK_REQ:
-            /* TODO validate that p_ar->nbr_iocrs not has reached PNET_MAX_CR */
+            if (p_ar->nbr_iocrs < PNET_MAX_CR)
+            {
+               /* Before it is incremented at the end of this block, the
+               p_ar->nbr_iocrs value is the same as CREP */
+               pf_get_iocr_param (
+                  &p_sess->get_info,
+                  p_pos,
+                  p_ar->nbr_iocrs,
+                  p_ar);
 
-            /* Before it is incremented at the end of this block, the
-            p_ar->nbr_iocrs value is the same as CREP */
-            pf_get_iocr_param (&p_sess->get_info, p_pos, p_ar->nbr_iocrs, p_ar);
+               LOG_DEBUG (
+                  PF_RPC_LOG,
+                  "CMRPC(%d): Requested send cycle time: %u (in 1/32 of "
+                  "millisec) "
+                  "AREP %u CREP %u %6s Reduction ratio: %u Watchdog "
+                  "factor: %" PRIu32 " Data hold factor: %u FrameID: 0x%04x\n",
+                  __LINE__,
+                  p_ar->iocrs[p_ar->nbr_iocrs].param.send_clock_factor,
+                  p_ar->arep,
+                  p_ar->nbr_iocrs,
+                  pf_iocr_type_to_string (
+                     p_ar->iocrs[p_ar->nbr_iocrs].param.iocr_type),
+                  p_ar->iocrs[p_ar->nbr_iocrs].param.reduction_ratio,
+                  p_ar->iocrs[p_ar->nbr_iocrs].param.watchdog_factor,
+                  p_ar->iocrs[p_ar->nbr_iocrs].param.data_hold_factor,
+                  p_ar->iocrs[p_ar->nbr_iocrs].param.frame_id);
 
-            LOG_DEBUG (
-               PF_RPC_LOG,
-               "CMRPC(%d): Requested send cycle time: %u (in 1/32 of millisec) "
-               "AREP %u CREP %u %6s Reduction ratio: %u Watchdog "
-               "factor: %" PRIu32 " Data hold factor: %u FrameID: 0x%04x\n",
-               __LINE__,
-               p_ar->iocrs[p_ar->nbr_iocrs].param.send_clock_factor,
-               p_ar->arep,
-               p_ar->nbr_iocrs,
-               pf_iocr_type_to_string (
-                  p_ar->iocrs[p_ar->nbr_iocrs].param.iocr_type),
-               p_ar->iocrs[p_ar->nbr_iocrs].param.reduction_ratio,
-               p_ar->iocrs[p_ar->nbr_iocrs].param.watchdog_factor,
-               p_ar->iocrs[p_ar->nbr_iocrs].param.data_hold_factor,
-               p_ar->iocrs[p_ar->nbr_iocrs].param.frame_id);
+               /* Count the types for error discovery */
+               if (p_ar->iocrs[p_ar->nbr_iocrs].param.iocr_type == PF_IOCR_TYPE_INPUT)
+               {
+                  p_ar->input_cr_cnt++;
+               }
+               if (
+                  p_ar->iocrs[p_ar->nbr_iocrs].param.iocr_type ==
+                  PF_IOCR_TYPE_OUTPUT)
+               {
+                  p_ar->output_cr_cnt++;
+               }
+               if (
+                  p_ar->iocrs[p_ar->nbr_iocrs].param.iocr_type ==
+                  PF_IOCR_TYPE_MC_CONSUMER)
+               {
+                  p_ar->mcr_cons_cnt++;
+               }
+               if (
+                  p_ar->iocrs[p_ar->nbr_iocrs].param.iocr_properties.rt_class ==
+                  PF_RT_CLASS_3)
+               {
+                  p_ar->rtc3_present = true;
+               }
 
-            /* Count the types for error discovery */
-            if (p_ar->iocrs[p_ar->nbr_iocrs].param.iocr_type == PF_IOCR_TYPE_INPUT)
-            {
-               p_ar->input_cr_cnt++;
+               if (p_ar->ar_param.ar_properties.device_access == true)
+               {
+                  pf_set_error (
+                     &p_sess->rpc_result,
+                     PNET_ERROR_CODE_CONNECT,
+                     PNET_ERROR_DECODE_PNIO,
+                     PNET_ERROR_CODE_1_CMRPC,
+                     PNET_ERROR_CODE_2_CMRPC_UNKNOWN_BLOCKS);
+                  ret = -1;
+               }
+               else
+               {
+                  ret = pf_check_block_header (
+                     (*p_pos - data_pos) + 2,
+                     &block_header,
+                     PNET_ERROR_CODE_1_CONN_FAULTY_IOCR_BLOCK_REQ,
+                     &p_sess->rpc_result);
+                  if (ret == 0)
+                  {
+                     p_ar->nbr_iocrs++;
+                  }
+               }
             }
-            if (p_ar->iocrs[p_ar->nbr_iocrs].param.iocr_type == PF_IOCR_TYPE_OUTPUT)
+            else
             {
-               p_ar->output_cr_cnt++;
-            }
-            if (
-               p_ar->iocrs[p_ar->nbr_iocrs].param.iocr_type ==
-               PF_IOCR_TYPE_MC_CONSUMER)
-            {
-               p_ar->mcr_cons_cnt++;
-            }
-            if (
-               p_ar->iocrs[p_ar->nbr_iocrs].param.iocr_properties.rt_class ==
-               PF_RT_CLASS_3)
-            {
-               p_ar->rtc3_present = true;
-            }
-
-            if (p_ar->ar_param.ar_properties.device_access == true)
-            {
+               LOG_ERROR (
+                  PF_RPC_LOG,
+                  "CMRPC(%d): Too many CR given. Max %u CR per AR supported\n",
+                  __LINE__,
+                  PNET_MAX_CR);
                pf_set_error (
                   &p_sess->rpc_result,
                   PNET_ERROR_CODE_CONNECT,
                   PNET_ERROR_DECODE_PNIO,
                   PNET_ERROR_CODE_1_CMRPC,
-                  PNET_ERROR_CODE_2_CMRPC_UNKNOWN_BLOCKS);
+                  PNET_ERROR_CODE_2_CMRPC_WRONG_BLOCK_COUNT);
                ret = -1;
-            }
-            else
-            {
-               ret = pf_check_block_header (
-                  (*p_pos - data_pos) + 2,
-                  &block_header,
-                  PNET_ERROR_CODE_1_CONN_FAULTY_IOCR_BLOCK_REQ,
-                  &p_sess->rpc_result);
-               if (ret == 0)
-               {
-                  p_ar->nbr_iocrs++;
-               }
             }
             break;
          case PF_BT_EXPECTED_SUBMODULE_BLOCK:
@@ -2232,7 +2260,8 @@ static int pf_cmrpc_rm_release_ind (
       {
          LOG_DEBUG (
             PF_RPC_LOG,
-            "CMRPC(%d): Releasing AR with AREP %u and session key %u. Incoming session key %u\n",
+            "CMRPC(%d): Releasing AR with AREP %u and session key %u. Incoming "
+            "session key %u\n",
             __LINE__,
             p_ar->arep,
             p_ar->ar_param.session_key,
@@ -4771,10 +4800,7 @@ static int pf_cmrpc_dce_packet (
       /* Kill session if necessary */
       if ((p_sess != NULL) && (p_sess->kill_session == true))
       {
-         LOG_DEBUG (
-               PF_RPC_LOG,
-               "CMRPC(%d): Kill session\n",
-               __LINE__);
+         LOG_DEBUG (PF_RPC_LOG, "CMRPC(%d): Kill session\n", __LINE__);
          pf_session_release (net, p_sess);
       }
    }

@@ -24,6 +24,14 @@
 #include "pf_includes.h"
 #include "pf_block_reader.h"
 
+#if PNET_MAX_AR < 1
+#error "PNET_MAX_AR needs to be at least 1"
+#endif
+
+#if PNET_MAX_API < 1
+#error "PNET_MAX_API needs to be at least 1"
+#endif
+
 int pnet_init_only (pnet_t * net, const pnet_cfg_t * p_cfg)
 {
    memset (net, 0, sizeof (*net));
