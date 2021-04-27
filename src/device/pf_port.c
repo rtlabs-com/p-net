@@ -21,6 +21,10 @@
 #error "PNET_MAX_PHYSICAL_PORTS needs to be at least 1"
 #endif
 
+#if PNET_MAX_SLOTS < 1
+#error "At least one slot must be available for DAP. Increase PNET_MAX_SLOTS."
+#endif
+
 #if PNET_MAX_SUBSLOTS < (2 + PNET_MAX_PHYSICAL_PORTS)
 #error                                                                         \
    "DAP requires 2 + PNET_MAX_PHYSICAL_PORTS subslots. Increase PNET_MAX_SUBSLOTS."

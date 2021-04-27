@@ -47,6 +47,10 @@
 #include "pf_block_reader.h"
 #include "pf_block_writer.h"
 
+#if PNET_MAX_DIAG_ITEMS > 65534
+#error "PNET_MAX_DIAG_ITEMS is too large"
+#endif
+
 int pf_diag_init (void)
 {
    return 0;
