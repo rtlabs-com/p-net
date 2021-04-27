@@ -66,7 +66,8 @@ int pnet_init_only (pnet_t * net, const pnet_cfg_t * p_cfg)
    pf_pdport_init (net);
 
    /* Configure SNMP server if enabled */
-#if PNET_OPTION_SNMP == 1
+#if PNET_OPTION_SNMP
+   pf_snmp_data_init (net);
    if (pnal_snmp_init (net, &p_cfg->pnal_cfg) != 0)
    {
       LOG_ERROR (PNET_LOG, "Failed to configure SNMP\n");

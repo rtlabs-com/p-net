@@ -107,6 +107,13 @@ extern "C" {
 
 #include "pf_lldp.h"
 
+/* SNMP-related filenames used by p-net stack. A filename may not be longer
+ * than PNET_MAX_FILENAME_SIZE (termination included).
+ */
+#define PF_FILENAME_SNMP_SYSCONTACT  "pnet_data_syscontact.bin"
+#define PF_FILENAME_SNMP_SYSNAME     "pnet_data_sysname.bin"
+#define PF_FILENAME_SNMP_SYSLOCATION "pnet_data_syslocation.bin"
+
 /**
  * System name (sysName).
  *
@@ -252,6 +259,44 @@ typedef struct pf_snmp_signal_delay
    uint32_t port_rx_delay_ns;
    uint32_t line_propagation_delay_ns;
 } pf_snmp_signal_delay_t;
+
+/**
+ * Initialize SNMP related data, by reading from file.
+ *
+ * @param net              InOut: The p-net stack instance.
+ */
+void pf_snmp_data_init (pnet_t * net);
+
+/**
+ * Clear SNMP related data.
+ *
+ * Clears in-memory data and calls pf_snmp_remove_data_files().
+ *
+ * Note that it does not clear the IM_Tag_Location" from I&M1
+ * (which typically is the same as SNMP SysLocation).
+ *
+ * @param net              InOut: The p-net stack instance.
+ */
+void pf_snmp_data_clear (pnet_t * net);
+
+/**
+ * Removes SNMP related data files.
+ *
+ * Used by pf_snmp_data_clear() and other operations.
+ *
+ * @param net              InOut: The p-net stack instance.
+ */
+void pf_snmp_remove_data_files (const char * file_directory);
+
+/**
+ * Update SNMP SysLocation with the present I&M1 location value.
+ *
+ * Does remove the corresponding file. Upon next startup will we use the
+ * I&M location value.
+ *
+ * @param net              InOut: The p-net stack instance.
+ */
+void pf_snmp_fspm_im_location_ind(pnet_t * net);
 
 /**
  * Get system description.

@@ -14,6 +14,8 @@
 #*******************************************************************/
 
 # NOTE: add headers to make them show up in an IDE
+# NOTE: Use full path for the <$<BOOL:${PNET_OPTION_SNMP}> expression
+#       to work with certain cmake versions
 target_sources (profinet PRIVATE
   ${PROFINET_SOURCE_DIR}/include/pnet_api.h
   pf_includes.h
@@ -66,7 +68,7 @@ target_sources (profinet PRIVATE
   common/pf_eth.c
   common/pf_file.c
   common/pf_lldp.c
-  common/pf_snmp.c
+  $<$<BOOL:${PNET_OPTION_SNMP}>:${PROFINET_SOURCE_DIR}/src/common/pf_snmp.c>
   common/pf_udp.c
   common/pf_alarm.h
   common/pf_cpm.h

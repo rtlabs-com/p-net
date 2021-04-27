@@ -17,6 +17,9 @@
  * @file
  * @brief Helper functions for use by platform-dependent SNMP server (agent).
  *
+ * Some SNMP related data needs to be stored to file between invocations.
+ * We read from file only at startup, but writing to file might happen any time.
+ *
  */
 
 #ifdef UNIT_TEST
@@ -37,6 +40,15 @@
 
 #define STRINGIFY(s)   STRINGIFIED (s)
 #define STRINGIFIED(s) #s
+
+/* The configurable constant PNET_MAX_FILENAME_SIZE should be at least
+ * as large as the longest filename used, including termination.
+ */
+CC_STATIC_ASSERT (
+   PNET_MAX_FILENAME_SIZE >= sizeof (PF_FILENAME_SNMP_SYSCONTACT));
+CC_STATIC_ASSERT (PNET_MAX_FILENAME_SIZE >= sizeof (PF_FILENAME_SNMP_SYSNAME));
+CC_STATIC_ASSERT (
+   PNET_MAX_FILENAME_SIZE >= sizeof (PF_FILENAME_SNMP_SYSLOCATION));
 
 /**
  * Log result of variable load operation
@@ -225,30 +237,132 @@ static void pf_snmp_encode_signal_delays (
    encoded->line_propagation_delay_ns = plain->cable_delay_local;
 }
 
-void pf_snmp_get_system_name (pnet_t * net, pf_snmp_system_name_t * name)
+void pf_snmp_data_init (pnet_t * net)
 {
    const char * directory = pf_cmina_get_file_directory (net);
+   pf_snmp_data_t * snmp = &net->snmp_data;
    int error;
    int result;
 
-   CC_STATIC_ASSERT (sizeof (name->string) >= PNAL_HOSTNAME_MAX_SIZE);
+   CC_STATIC_ASSERT (
+      sizeof (snmp->system_name.string) >= PNAL_HOSTNAME_MAX_SIZE);
 
-   error = pf_file_load (directory, PF_FILENAME_SYSNAME, name, sizeof (*name));
+   /* sysContact */
+   error = pf_file_load (
+      directory,
+      PF_FILENAME_SNMP_SYSCONTACT,
+      &snmp->system_contact,
+      sizeof (snmp->system_contact));
    if (error)
    {
-      result = pnal_get_hostname (name->string);
+      snmp->system_contact.string[0] = '\0';
+   }
+   snmp->system_contact.string[sizeof (snmp->system_contact.string) - 1] = '\0';
+   pf_snmp_log_loaded_variable (
+      error,
+      "sysContact",
+      snmp->system_contact.string);
+
+   /* sysName */
+   error = pf_file_load (
+      directory,
+      PF_FILENAME_SNMP_SYSNAME,
+      &snmp->system_name,
+      sizeof (snmp->system_name));
+   if (error)
+   {
+      result = pnal_get_hostname (snmp->system_name.string);
       if (result != 0)
       {
-         name->string[0] = '\0';
+         snmp->system_name.string[0] = '\0';
       }
    }
-   name->string[sizeof (name->string) - 1] = '\0';
-   pf_snmp_log_loaded_variable (error, "sysName", name->string);
+   snmp->system_name.string[sizeof (snmp->system_name.string) - 1] = '\0';
+   pf_snmp_log_loaded_variable (error, "sysName", snmp->system_name.string);
+
+   /* sysLocation */
+   error = pf_file_load (
+      directory,
+      PF_FILENAME_SNMP_SYSLOCATION,
+      &snmp->system_location,
+      sizeof (snmp->system_location));
+   if (error)
+   {
+      /* Use "IM_Tag_Location" from I&M1 */
+      pf_fspm_get_im_location (net, snmp->system_location.string);
+   }
+   snmp->system_location.string[sizeof (snmp->system_location.string) - 1] =
+      '\0';
+   pf_snmp_log_loaded_variable (
+      error,
+      "sysLocation",
+      snmp->system_location.string);
+}
+
+void pf_snmp_remove_data_files (const char * file_directory)
+{
+   pf_file_clear (file_directory, PF_FILENAME_SNMP_SYSCONTACT);
+   pf_file_clear (file_directory, PF_FILENAME_SNMP_SYSNAME);
+   pf_file_clear (file_directory, PF_FILENAME_SNMP_SYSLOCATION);
+}
+
+void pf_snmp_data_clear (pnet_t * net)
+{
+   const char * p_file_directory = pf_cmina_get_file_directory (net);
+   pf_snmp_data_t * snmp = &net->snmp_data;
+
+   LOG_DEBUG (PF_SNMP_LOG, "SNMP(%d): Clearing SNMP data.\n", __LINE__);
+   pf_snmp_remove_data_files (p_file_directory);
+
+   memset (
+      snmp->system_contact.string,
+      '\0',
+      sizeof (snmp->system_contact.string));
+   memset (snmp->system_name.string, '\0', sizeof (snmp->system_name.string));
+   memset (
+      snmp->system_location.string,
+      '\0',
+      sizeof (snmp->system_location.string));
+}
+
+void pf_snmp_fspm_im_location_ind (pnet_t * net)
+{
+   const char * p_file_directory = pf_cmina_get_file_directory (net);
+   pf_snmp_data_t * snmp = &net->snmp_data;
+
+   /* Location data is stored in two different files: the file with
+    * I&M data and a file used by SNMP containing a larger version
+    * of the device's location. The larger version has precedence
+    * over the I&M version, so we need to delete the larger one */
+   pf_file_clear (p_file_directory, PF_FILENAME_SNMP_SYSLOCATION);
+
+   /* Use "IM_Tag_Location" from I&M1 */
+   pf_fspm_get_im_location (net, snmp->system_location.string);
+   snmp->system_location.string[sizeof (snmp->system_location.string) - 1] =
+      '\0';
+
+   LOG_DEBUG (
+      PF_SNMP_LOG,
+      "SNMP(%d): I&M1 location has been updated, set SNMP SysLocation to %s.\n",
+      __LINE__,
+      snmp->system_location.string);
+}
+
+void pf_snmp_get_system_name (pnet_t * net, pf_snmp_system_name_t * name)
+{
+   const pf_snmp_data_t * snmp = &net->snmp_data;
+
+   snprintf (
+      name->string,
+      sizeof (name->string),
+      "%s",
+      snmp->system_name.string);
 }
 
 int pf_snmp_set_system_name (pnet_t * net, const pf_snmp_system_name_t * name)
 {
    const char * directory = pf_cmina_get_file_directory (net);
+   pf_snmp_data_t * snmp = &net->snmp_data;
    pf_snmp_system_name_t temporary_buffer;
    int res;
 
@@ -257,9 +371,16 @@ int pf_snmp_set_system_name (pnet_t * net, const pf_snmp_system_name_t * name)
     * Instead, we just save the sysName to file as to ensure it is persistent
     * across restarts.
     */
+
+   snprintf (
+      snmp->system_name.string,
+      sizeof (snmp->system_name.string),
+      "%s",
+      name->string);
+
    res = pf_file_save_if_modified (
       directory,
-      PF_FILENAME_SYSNAME,
+      PF_FILENAME_SNMP_SYSNAME,
       name,
       &temporary_buffer,
       sizeof (*name));
@@ -272,20 +393,13 @@ void pf_snmp_get_system_contact (
    pnet_t * net,
    pf_snmp_system_contact_t * contact)
 {
-   const char * directory = pf_cmina_get_file_directory (net);
-   int error;
+   const pf_snmp_data_t * snmp = &net->snmp_data;
 
-   error = pf_file_load (
-      directory,
-      PF_FILENAME_SYSCONTACT,
-      contact,
-      sizeof (*contact));
-   if (error)
-   {
-      contact->string[0] = '\0';
-   }
-   contact->string[sizeof (contact->string) - 1] = '\0';
-   pf_snmp_log_loaded_variable (error, "sysContact", contact->string);
+   snprintf (
+      contact->string,
+      sizeof (contact->string),
+      "%s",
+      snmp->system_contact.string);
 }
 
 int pf_snmp_set_system_contact (
@@ -293,12 +407,19 @@ int pf_snmp_set_system_contact (
    const pf_snmp_system_contact_t * contact)
 {
    const char * directory = pf_cmina_get_file_directory (net);
+   pf_snmp_data_t * snmp = &net->snmp_data;
    pf_snmp_system_contact_t temporary_buffer;
    int res;
 
+   snprintf (
+      snmp->system_contact.string,
+      sizeof (snmp->system_contact.string),
+      "%s",
+      contact->string);
+
    res = pf_file_save_if_modified (
       directory,
-      PF_FILENAME_SYSCONTACT,
+      PF_FILENAME_SNMP_SYSCONTACT,
       contact,
       &temporary_buffer,
       sizeof (*contact));
@@ -311,22 +432,13 @@ void pf_snmp_get_system_location (
    pnet_t * net,
    pf_snmp_system_location_t * location)
 {
-   const char * directory = pf_cmina_get_file_directory (net);
-   int error;
+   const pf_snmp_data_t * snmp = &net->snmp_data;
 
-   error = pf_file_load (
-      directory,
-      PF_FILENAME_SYSLOCATION,
-      location,
-      sizeof (*location));
-   if (error)
-   {
-      /* Use "IM_Tag_Location" from I&M1 */
-      pf_fspm_get_im_location (net, location->string);
-   }
-   location->string[sizeof (location->string) - 1] = '\0';
-
-   pf_snmp_log_loaded_variable (error, "sysLocation", location->string);
+   snprintf (
+      location->string,
+      sizeof (location->string),
+      "%s",
+      snmp->system_location.string);
 }
 
 int pf_snmp_set_system_location (
@@ -334,12 +446,19 @@ int pf_snmp_set_system_location (
    const pf_snmp_system_location_t * location)
 {
    const char * directory = pf_cmina_get_file_directory (net);
+   pf_snmp_data_t * snmp = &net->snmp_data;
    pf_snmp_system_location_t temporary_buffer;
    int res;
 
+   snprintf (
+      snmp->system_location.string,
+      sizeof (snmp->system_location.string),
+      "%s",
+      location->string);
+
    res = pf_file_save_if_modified (
       directory,
-      PF_FILENAME_SYSLOCATION,
+      PF_FILENAME_SNMP_SYSLOCATION,
       location,
       &temporary_buffer,
       sizeof (*location));
