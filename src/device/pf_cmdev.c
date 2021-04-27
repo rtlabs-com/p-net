@@ -3267,7 +3267,7 @@ static int pf_cmdev_check_iocr_param (
            (p_iocr->send_clock_factor > 64)) ||
           ((p_iocr->reduction_ratio == 512) &&
            (p_iocr->send_clock_factor > 32)) ||
-          (pf_cmina_get_min_device_interval (net) >
+          (pf_fspm_get_min_device_interval (net) >
            p_iocr->send_clock_factor * p_iocr->reduction_ratio)))
       {
          pf_set_error (

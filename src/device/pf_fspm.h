@@ -49,7 +49,7 @@ int pf_fspm_init (pnet_t * net, const pnet_cfg_t * p_cfg);
  * @param net              InOut: The p-net stack instance
  * @return the minimum device interval.
  */
-int16_t pf_cmina_get_min_device_interval (const pnet_t * net);
+int16_t pf_fspm_get_min_device_interval (const pnet_t * net);
 
 /**
  * Create a LogBook entry.
