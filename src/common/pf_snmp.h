@@ -105,6 +105,8 @@
 extern "C" {
 #endif
 
+#include "pf_lldp.h"
+
 /**
  * System name (sysName).
  *
