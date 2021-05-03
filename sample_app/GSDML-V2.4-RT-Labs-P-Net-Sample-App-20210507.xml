@@ -23,7 +23,7 @@
       </DeviceFunction>
       <ApplicationProcess>
          <DeviceAccessPointList>
-            <DeviceAccessPointItem ID="IDD_1" PNIO_Version="V2.4" PhysicalSlots="0..4" ModuleIdentNumber="0x00000001" MinDeviceInterval="32" DNS_CompatibleName="rt-labs-dev" FixedInSlots="0" ObjectUUID_LocalIndex="1" DeviceAccessSupported="false"  MultipleWriteSupported="true" CheckDeviceID_Allowed="true" NameOfStationNotTransferable="false" LLDP_NoD_Supported="true" ResetToFactoryModes="1..2">
+            <DeviceAccessPointItem ID="IDD_1" PNIO_Version="V2.4" PhysicalSlots="0..4" ModuleIdentNumber="0x00000001" MinDeviceInterval="32" DNS_CompatibleName="rt-labs-dev" FixedInSlots="0" ObjectUUID_LocalIndex="1" DeviceAccessSupported="false" MultipleWriteSupported="true" CheckDeviceID_Allowed="true" NameOfStationNotTransferable="false" LLDP_NoD_Supported="true" ResetToFactoryModes="1..2">
                <ModuleInfo>
                   <Name TextId="IDT_MODULE_NAME_DAP1"/>
                   <InfoText TextId="IDT_INFO_DAP1"/>
@@ -35,9 +35,9 @@
                <CertificationInfo ConformanceClass="B" ApplicationClass="" NetloadClass="I"/>
                <IOConfigData MaxInputLength="244" MaxOutputLength="244"/>
                <UseableModules>
-                  <ModuleItemRef ModuleItemTarget="IDM_11" AllowedInSlots="1..4"/>
-                  <ModuleItemRef ModuleItemTarget="IDM_12" AllowedInSlots="1..4"/>
-                  <ModuleItemRef ModuleItemTarget="IDM_13" AllowedInSlots="1..4"/>
+                  <ModuleItemRef ModuleItemTarget="IDM_30" AllowedInSlots="1..4"/>
+                  <ModuleItemRef ModuleItemTarget="IDM_31" AllowedInSlots="1..4"/>
+                  <ModuleItemRef ModuleItemTarget="IDM_32" AllowedInSlots="1..4"/>
                </UseableModules>
                <VirtualSubmoduleList>
                   <VirtualSubmoduleItem ID="IDS_1" SubmoduleIdentNumber="0x00000001" Writeable_IM_Records="1 2 3" MayIssueProcessAlarm="false">
@@ -56,7 +56,7 @@
                   </InterfaceSubmoduleItem>
                   <PortSubmoduleItem ID="IDS_P1" SubmoduleIdentNumber="0x00008001" SubslotNumber="32769" TextId="IDT_NAME_PS1" MaxPortRxDelay="350" MaxPortTxDelay="160">
                      <MAUTypeList>
-<!--
+                        <!--
 MAUTypeItems shall match the actual network interfaces of the device.
 Current list works for Raspberry Pi, Linksys usb/ethernet dongle and xmc sample targets
 -->
@@ -65,11 +65,11 @@ Current list works for Raspberry Pi, Linksys usb/ethernet dongle and xmc sample 
                         <MAUTypeItem Value="5"/>
                      </MAUTypeList>
                   </PortSubmoduleItem>
-<!--
+                  <!--
 Enable to support additional port. (PNET_MAX_PHYSICAL_PORTS == 2)
 Add additional PortSubmoduleItems to support additional ports
 -->
-<!--
+                  <!--
                   <PortSubmoduleItem ID="IDS_P2" SubmoduleIdentNumber="0x00008002" SubslotNumber="32770" TextId="IDT_NAME_PS2" MaxPortRxDelay="350" MaxPortTxDelay="160">
                      <MAUTypeList>
                         <MAUTypeItem Value="30"/>
@@ -85,7 +85,7 @@ Add additional PortSubmoduleItems to support additional ports
             </DeviceAccessPointItem>
          </DeviceAccessPointList>
          <ModuleList>
-            <ModuleItem ID="IDM_11" ModuleIdentNumber="0x00000030">
+            <ModuleItem ID="IDM_30" ModuleIdentNumber="0x00000030">
                <ModuleInfo>
                   <Name TextId="TOK_Name_Module_I8"/>
                   <InfoText TextId="TOK_InfoText_Module_I8"/>
@@ -93,7 +93,7 @@ Add additional PortSubmoduleItems to support additional ports
                   <SoftwareRelease Value="1.0"/>
                </ModuleInfo>
                <VirtualSubmoduleList>
-                  <VirtualSubmoduleItem ID="11" SubmoduleIdentNumber="0x0001" MayIssueProcessAlarm="true">
+                  <VirtualSubmoduleItem ID="IDSM_130" SubmoduleIdentNumber="0x0130" MayIssueProcessAlarm="true">
                      <IOData>
                         <Input Consistency="All items consistency">
                            <DataItem DataType="Unsigned8" TextId="TOK_Input_DataItem_8" UseAsBits="true">
@@ -106,7 +106,7 @@ Add additional PortSubmoduleItems to support additional ports
                               <BitDataItem BitOffset="6" TextId="TOK_Input_DataItem_Bit6"/>
                               <BitDataItem BitOffset="7" TextId="TOK_Input_DataItem_Bit7"/>
                            </DataItem>
-                         </Input>
+                        </Input>
                      </IOData>
                      <ModuleInfo>
                         <Name TextId="TOK_Name_Module_I8"/>
@@ -115,7 +115,7 @@ Add additional PortSubmoduleItems to support additional ports
                   </VirtualSubmoduleItem>
                </VirtualSubmoduleList>
             </ModuleItem>
-            <ModuleItem ID="IDM_12" ModuleIdentNumber="0x00000031">
+            <ModuleItem ID="IDM_31" ModuleIdentNumber="0x00000031">
                <ModuleInfo>
                   <Name TextId="TOK_Name_Module_O8"/>
                   <InfoText TextId="TOK_InfoText_Module_O8"/>
@@ -123,7 +123,7 @@ Add additional PortSubmoduleItems to support additional ports
                   <SoftwareRelease Value="1.0"/>
                </ModuleInfo>
                <VirtualSubmoduleList>
-                  <VirtualSubmoduleItem ID="12" SubmoduleIdentNumber="0x0001" MayIssueProcessAlarm="true">
+                  <VirtualSubmoduleItem ID="IDSM_131" SubmoduleIdentNumber="0x0131" MayIssueProcessAlarm="true">
                      <IOData>
                         <Output Consistency="All items consistency">
                            <DataItem DataType="Unsigned8" TextId="TOK_Output_DataItem_8" UseAsBits="true">
@@ -144,8 +144,8 @@ Add additional PortSubmoduleItems to support additional ports
                      </ModuleInfo>
                   </VirtualSubmoduleItem>
                </VirtualSubmoduleList>
-               </ModuleItem>
-            <ModuleItem ID="IDM_13" ModuleIdentNumber="0x00000032">
+            </ModuleItem>
+            <ModuleItem ID="IDM_32" ModuleIdentNumber="0x00000032">
                <ModuleInfo>
                   <Name TextId="TOK_Name_Module_I8O8"/>
                   <InfoText TextId="TOK_InfoText_Module_I8O8"/>
@@ -153,7 +153,7 @@ Add additional PortSubmoduleItems to support additional ports
                   <SoftwareRelease Value="1.0"/>
                </ModuleInfo>
                <VirtualSubmoduleList>
-                  <VirtualSubmoduleItem ID="13" SubmoduleIdentNumber="0x0001" MayIssueProcessAlarm="true">
+                  <VirtualSubmoduleItem ID="IDSM_132" SubmoduleIdentNumber="0x0132" MayIssueProcessAlarm="true">
                      <IOData>
                         <Input>
                            <DataItem DataType="Unsigned8" UseAsBits="true" TextId="TOK_Input_DataItem_8">
@@ -225,7 +225,7 @@ Add additional PortSubmoduleItems to support additional ports
                <!--module name-->
                <Text TextId="TOK_Name_Module_I8" Value="DI 8xLogicLevel"/>
                <Text TextId="TOK_Name_Module_O8" Value="DO 8xLogicLevel"/>
-               <Text TextId="TOK_Name_Module_I8O8" Value="DIO 8xLogicLevel "/>
+               <Text TextId="TOK_Name_Module_I8O8" Value="DIO 8xLogicLevel"/>
                <!--module info -->
                <Text TextId="TOK_InfoText_Module_I8" Value="Digital In 8xLogicLevel"/>
                <Text TextId="TOK_InfoText_Module_O8" Value="Digital Out 8xLogicLevel"/>

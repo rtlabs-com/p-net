@@ -16,6 +16,9 @@
 #define _GNU_SOURCE /* For asprintf() */
 
 #include "sampleapp_common.h"
+#include "app_gsdml.h"
+#include "app_log.h"
+#include "app_utils.h"
 
 #include "osal.h"
 #include "osal_log.h" /* For LOG_LEVEL */
@@ -32,28 +35,26 @@
 #include <string.h>
 #include <unistd.h>
 
+#if PNET_MAX_PHYSICAL_PORTS == 1
 #define APP_DEFAULT_ETHERNET_INTERFACE "eth0"
+#else
+#define APP_DEFAULT_ETHERNET_INTERFACE "br0,eth0,eth1"
+#endif
 
 #define APP_MAIN_SLEEPTIME_US     5000 * 1000
-#define APP_MAIN_THREAD_PRIORITY  15
-#define APP_MAIN_THREAD_STACKSIZE 4096 /* bytes */
 #define APP_SNMP_THREAD_PRIORITY  1
 #define APP_SNMP_THREAD_STACKSIZE 256 * 1024 /* bytes */
 #define APP_ETH_THREAD_PRIORITY   10
 #define APP_ETH_THREAD_STACKSIZE  4096 /* bytes */
+
 /* Note that this sample application uses os_timer_create() for the timer
    that controls the ticks. It is implemented in OSAL, and the Linux
    implementation uses a thread internally. To modify the timer thread priority,
    modify OSAL or use some other timer */
 
+app_args_t app_args = {0};
+
 /************************* Utilities ******************************************/
-
-static void main_timer_tick (os_timer_t * timer, void * arg)
-{
-   app_data_t * p_appdata = (app_data_t *)arg;
-
-   os_event_set (p_appdata->main_events, APP_EVENT_TIMER);
-}
 
 void show_usage()
 {
@@ -95,7 +96,7 @@ void show_usage()
       APP_DEFAULT_ETHERNET_INTERFACE);
    printf (
       "   -s NAME      Set station name. Defaults to %s  Only used\n",
-      APP_DEFAULT_STATION_NAME);
+      APP_GSDML_DEFAULT_STATION_NAME);
    printf ("                if not already available in storage file.\n");
    printf ("   -b FILE      Path (absolute or relative) to read Button1. "
            "Defaults to not read Button1.\n");
@@ -114,8 +115,11 @@ void show_usage()
  * @param argv      In: Arguments
  * @return Parsed arguments
  */
-struct cmd_args parse_commandline_arguments (int argc, char * argv[])
+app_args_t parse_commandline_arguments (int argc, char * argv[])
 {
+   app_args_t output_arguments = {0};
+   int option;
+
    /* Special handling of long argument */
    if (argc > 1)
    {
@@ -127,18 +131,16 @@ struct cmd_args parse_commandline_arguments (int argc, char * argv[])
    }
 
    /* Default values */
-   struct cmd_args output_arguments;
    strcpy (output_arguments.path_button1, "");
    strcpy (output_arguments.path_button2, "");
    strcpy (output_arguments.path_storage_directory, "");
-   strcpy (output_arguments.station_name, APP_DEFAULT_STATION_NAME);
+   strcpy (output_arguments.station_name, APP_GSDML_DEFAULT_STATION_NAME);
    strcpy (output_arguments.eth_interfaces, APP_DEFAULT_ETHERNET_INTERFACE);
    output_arguments.verbosity = 0;
    output_arguments.show = 0;
    output_arguments.factory_reset = false;
    output_arguments.remove_files = false;
 
-   int option;
    while ((option = getopt (argc, argv, "hvgfri:s:b:d:p:")) != -1)
    {
       switch (option)
@@ -246,29 +248,26 @@ bool read_bool_from_file (const char * filepath)
    return ch == '1';
 }
 
-void app_get_button (const app_data_t * p_appdata, uint16_t id, bool * p_pressed)
+bool app_get_button (uint16_t id)
 {
    if (id == 0)
    {
-      if (p_appdata->arguments.path_button1[0] != '\0')
+      if (app_args.path_button1[0] != '\0')
       {
-         *p_pressed = read_bool_from_file (p_appdata->arguments.path_button1);
+         return read_bool_from_file (app_args.path_button1);
       }
    }
    else if (id == 1)
    {
-      if (p_appdata->arguments.path_button2[0] != '\0')
+      if (app_args.path_button2[0] != '\0')
       {
-         *p_pressed = read_bool_from_file (p_appdata->arguments.path_button2);
+         return read_bool_from_file (app_args.path_button2);
       }
    }
-   else
-   {
-      *p_pressed = false;
-   }
+   return false;
 }
 
-int app_set_led (uint16_t id, bool led_state, int verbosity)
+void app_set_led (uint16_t id, bool led_state)
 {
    char id_str[7] = {0}; /** Terminated string */
    const char * argv[4];
@@ -284,34 +283,10 @@ int app_set_led (uint16_t id, bool led_state, int verbosity)
    if (pnal_execute_script (argv) != 0)
    {
       printf ("Failed to set LED state\n");
-      return -1;
    }
-   return 0;
 }
 
-/**
- * Run main loop in separate thread
- *
- * @param arg              In:    Thread argument   app_data_and_stack_t
- */
-void pn_main_thread (void * arg)
-{
-   pnet_t * net;
-   app_data_t * p_appdata;
-   app_data_and_stack_t * appdata_and_stack;
-
-   appdata_and_stack = (app_data_and_stack_t *)arg;
-   p_appdata = appdata_and_stack->appdata;
-   net = appdata_and_stack->net;
-
-   app_loop_forever (net, p_appdata);
-
-   os_timer_destroy (p_appdata->main_timer);
-   os_event_destroy (p_appdata->main_events);
-   printf ("Quitting the sample application\n\n");
-}
-
-int app_pnet_cfg_init_storage (pnet_cfg_t * p_cfg, struct cmd_args * p_args)
+int app_pnet_cfg_init_storage (pnet_cfg_t * p_cfg, app_args_t * p_args)
 {
    strcpy (p_cfg->file_directory, p_args->path_storage_directory);
 
@@ -357,124 +332,125 @@ int app_pnet_cfg_init_storage (pnet_cfg_t * p_cfg, struct cmd_args * p_args)
 
 int main (int argc, char * argv[])
 {
-   pnet_t * net;
-   pnet_cfg_t pnet_default_cfg;
-   app_data_and_stack_t appdata_and_stack;
-   app_data_t appdata;
-   int ret = 0;
-   uint16_t number_of_ports = 0;
-
-   memset (&appdata, 0, sizeof (appdata));
-   appdata.alarm_allowed = true;
+   int ret;
+   int32_t app_log_level = APP_LOG_LEVEL_FATAL;
+   pnet_cfg_t pnet_cfg = {0};
+   app_data_t * sample_app = NULL;
+   app_utils_netif_namelist_t netif_name_list;
+   pnet_if_cfg_t netif_cfg = {0};
+   uint16_t number_of_ports = 1;
 
    /* Enable line buffering for printouts, especially when logging to
       the journal (which is default when running as a systemd job) */
    setvbuf (stdout, NULL, _IOLBF, 0);
 
    /* Parse and display command line arguments */
-   appdata.arguments = parse_commandline_arguments (argc, argv);
+   app_args = parse_commandline_arguments (argc, argv);
 
-   printf ("\n** Starting Profinet sample application " PNET_VERSION " **\n");
-   if (appdata.arguments.verbosity > 0)
-   {
-      printf (
-         "Number of slots:      %u (incl slot for DAP module)\n",
-         PNET_MAX_SLOTS);
-      printf ("P-net log level:      %u (DEBUG=0, FATAL=4)\n", LOG_LEVEL);
-      printf ("App verbosity level:  %u\n", appdata.arguments.verbosity);
-      printf ("Max number of ports:  %u\n", PNET_MAX_PHYSICAL_PORTS);
-      printf ("Network interfaces:   %s\n", appdata.arguments.eth_interfaces);
-      printf ("Button1 file:         %s\n", appdata.arguments.path_button1);
-      printf ("Button2 file:         %s\n", appdata.arguments.path_button2);
-      printf ("Station name:         %s\n", appdata.arguments.station_name);
-   }
+   app_log_level = APP_LOG_LEVEL_FATAL - app_args.verbosity;
+   app_log_set_log_level (app_log_level);
 
-   app_pnet_cfg_init_default (&pnet_default_cfg);
-   pnet_default_cfg.cb_arg = (void *)&appdata;
-   strcpy (pnet_default_cfg.station_name, appdata.arguments.station_name);
-   pnet_default_cfg.pnal_cfg.snmp_thread.prio = APP_SNMP_THREAD_PRIORITY;
-   pnet_default_cfg.pnal_cfg.snmp_thread.stack_size = APP_SNMP_THREAD_STACKSIZE;
-   pnet_default_cfg.pnal_cfg.eth_recv_thread.prio = APP_ETH_THREAD_PRIORITY;
-   pnet_default_cfg.pnal_cfg.eth_recv_thread.stack_size =
-      APP_ETH_THREAD_STACKSIZE;
+   printf ("\n** Starting P-Net sample application " PNET_VERSION " **\n");
 
-   ret = app_pnet_cfg_init_netifs (
-      appdata.arguments.eth_interfaces,
-      &appdata.if_list,
+   APP_LOG_INFO (
+      "Number of slots:      %u (incl slot for DAP module)\n",
+      PNET_MAX_SLOTS);
+   APP_LOG_INFO ("P-net log level:      %u (DEBUG=0, FATAL=4)\n", LOG_LEVEL);
+   APP_LOG_INFO ("App log level:        %u (DEBUG=0, FATAL=4)\n", app_log_level);
+   APP_LOG_INFO ("Max number of ports:  %u\n", PNET_MAX_PHYSICAL_PORTS);
+   APP_LOG_INFO ("Network interfaces:   %s\n", app_args.eth_interfaces);
+   APP_LOG_INFO ("Button1 file:         %s\n", app_args.path_button1);
+   APP_LOG_INFO ("Button2 file:         %s\n", app_args.path_button2);
+   APP_LOG_INFO ("Default station name: %s\n", app_args.station_name);
+
+   app_pnet_cfg_init_default (&pnet_cfg);
+
+   strcpy (pnet_cfg.station_name, app_args.station_name);
+
+   ret = app_utils_pnet_cfg_init_netifs (
+      app_args.eth_interfaces,
+      &netif_name_list,
       &number_of_ports,
-      &pnet_default_cfg,
-      appdata.arguments.verbosity);
+      &netif_cfg);
    if (ret != 0)
    {
       exit (EXIT_FAILURE);
    }
-   pnet_default_cfg.num_physical_ports = number_of_ports;
 
-   ret = app_pnet_cfg_init_storage (&pnet_default_cfg, &appdata.arguments);
+   pnet_cfg.if_cfg = netif_cfg;
+   pnet_cfg.num_physical_ports = number_of_ports;
+
+   app_utils_print_network_config (&netif_cfg, number_of_ports);
+
+   pnet_cfg.pnal_cfg.snmp_thread.prio = APP_SNMP_THREAD_PRIORITY;
+   pnet_cfg.pnal_cfg.snmp_thread.stack_size = APP_SNMP_THREAD_STACKSIZE;
+   pnet_cfg.pnal_cfg.eth_recv_thread.prio = APP_ETH_THREAD_PRIORITY;
+   pnet_cfg.pnal_cfg.eth_recv_thread.stack_size = APP_ETH_THREAD_STACKSIZE;
+
+   ret = app_pnet_cfg_init_storage (&pnet_cfg, &app_args);
    if (ret != 0)
    {
+      printf ("Failed to initialize storage.\n");
+      printf ("Aborting application\n");
       exit (EXIT_FAILURE);
    }
 
    /* Remove files and exit */
-   if (appdata.arguments.remove_files == true)
+   if (app_args.remove_files == true)
    {
       printf ("\nRemoving stored files\n");
-      (void)pnet_remove_data_files (pnet_default_cfg.file_directory);
+      printf ("Exit application\n");
+      (void)pnet_remove_data_files (pnet_cfg.file_directory);
       exit (EXIT_SUCCESS);
    }
 
-   /* Initialize profinet stack */
-   net = pnet_init (&pnet_default_cfg);
-   if (net == NULL)
+   APP_LOG_INFO ("Init sample application\n");
+   sample_app = app_init (&pnet_cfg);
+   if (sample_app == NULL)
    {
-      printf ("Failed to initialize p-net. Do you have enough Ethernet "
-              "interface permission?\n");
+      printf ("Failed to initialize P-Net.\n");
+      printf ("Do you have enough Ethernet interface permission?\n");
+      printf ("Aborting application\n");
       exit (EXIT_FAILURE);
    }
 
    /* Do factory reset and exit */
-   if (appdata.arguments.factory_reset == true)
+   if (app_args.factory_reset == true)
    {
       printf ("\nPerforming factory reset\n");
-      (void)pnet_factory_reset (net);
+      printf ("Exit application\n");
+      (void)pnet_factory_reset (app_get_pnet_instance (sample_app));
       exit (EXIT_SUCCESS);
    }
 
    /* Show stack info and exit */
-   if (appdata.arguments.show > 0)
+   if (app_args.show > 0)
    {
       int level = 0xFFFF;
 
       printf ("\nShowing stack information.\n\n");
-      if (appdata.arguments.show == 1)
+      if (app_args.show == 1)
       {
          level = 0x2010; /* See documentation for pnet_show() */
       }
 
-      pnet_show (net, level);
+      pnet_show (app_get_pnet_instance (sample_app), level);
+      printf ("Exit application\n");
       exit (EXIT_SUCCESS);
    }
 
-   /* Start thread and timer */
-   appdata_and_stack.appdata = &appdata;
-   appdata_and_stack.net = net;
-   appdata.main_events = os_event_create();
-   appdata.main_timer = os_timer_create (
-      APP_TICK_INTERVAL_US,
-      main_timer_tick,
-      (void *)&appdata,
-      false);
-   os_thread_create (
-      "pn_main_thread",
-      APP_MAIN_THREAD_PRIORITY,
-      APP_MAIN_THREAD_STACKSIZE,
-      pn_main_thread,
-      (void *)&appdata_and_stack);
-   os_timer_start (appdata.main_timer);
+   APP_LOG_INFO ("Start sample application\n");
+   if (app_start (sample_app, RUN_IN_SEPARATE_THREAD) != 0)
+   {
+      printf ("Failed to start\n");
+      printf ("Aborting application\n");
+      exit (EXIT_FAILURE);
+   }
 
    for (;;)
+   {
       os_usleep (APP_MAIN_SLEEPTIME_US);
+   }
 
    return 0;
 }
