@@ -36,6 +36,7 @@ extern "C" {
 
 #define APP_DATA_LED_ID            1
 #define APP_PROFINET_SIGNAL_LED_ID 2
+#define APP_EVENT_READY_FOR_DATA   BIT (0)
 #define APP_EVENT_TIMER            BIT (1)
 #define APP_EVENT_ALARM            BIT (2)
 #define APP_EVENT_ABORT            BIT (15)
@@ -244,6 +245,7 @@ typedef struct app_data_obj
    uint32_t app_param_1;
    uint32_t app_param_2;
    uint8_t inputdata[APP_DATASIZE_INPUT];
+   uint32_t arep_for_appl_ready;
 } app_data_t;
 
 typedef struct app_data_and_stack_obj

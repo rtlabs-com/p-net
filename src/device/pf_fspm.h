@@ -49,7 +49,7 @@ int pf_fspm_init (pnet_t * net, const pnet_cfg_t * p_cfg);
  * @param net              InOut: The p-net stack instance
  * @return the minimum device interval.
  */
-int16_t pf_cmina_get_min_device_interval (const pnet_t * net);
+int16_t pf_fspm_get_min_device_interval (const pnet_t * net);
 
 /**
  * Create a LogBook entry.
@@ -72,14 +72,14 @@ void pf_fspm_create_log_book_entry (
  * If index indicates I&M data records then handle here.
  *
  * If index is user-defined then call application
- * call-back \a pnet_write_ind() (if defined).
+ * call-back \a pnet_write_ind() if defined.
  *
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:    The AR instance.
  * @param p_write_request  In:    The write request record.
  * @param write_length     In:    Length in bytes of write data.
  * @param p_write_data     In:    The data to write.
- * @param p_result         Out:   Result informantion.
+ * @param p_result         Out:   Detailed error information if returning != 0
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -96,11 +96,12 @@ int pf_fspm_cm_write_ind (
  * Triggers the \a pnet_read_ind() user callback for some values.
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:   The AR instance.
- * @param p_read_request   In:   The read request record.
- * @param pp_read_data     Out:  A pointer to the source data.
- * @param p_read_length    Out:  Size of the source data.
- * @param p_result         Out:  The result information.
+ * @param p_ar             In:    The AR instance.
+ * @param p_read_request   In:    The read request record.
+ * @param pp_read_data     Out:   A pointer to the source data.
+ * @param p_read_length    InOut: The maximum (in) and actual (out) length in
+ *                                bytes of the binary value.
+ * @param p_result         Out:   The result information.
  * @return  0  if operation succeeded.
  *          -1 if not handled or an error occurred.
  */
@@ -129,8 +130,8 @@ void pf_fspm_ccontrol_cnf (
 /**
  * Call user call-back \a pnet_connect_ind() when a new connection is requested.
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:   The AR instance.
- * @param p_result         Out:  The result information.
+ * @param p_ar             In:    The AR instance.
+ * @param p_result         Out:   The result information if return != 0.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -142,8 +143,8 @@ int pf_fspm_cm_connect_ind (
 /**
  * Call user call-back \a pnet_release_ind() when a connection is released.
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:   The AR instance.
- * @param p_result         Out:  The result information.
+ * @param p_ar             In:    The AR instance.
+ * @param p_result         Out:   Detailed error information if return != 0.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -155,6 +156,9 @@ int pf_fspm_cm_release_ind (
 /**
  * Call user call-back \a pnet_dcontrol_ind() to indicate a control request
  * from the ProfiNet controller.
+ *
+ * Create a logbook entry.
+ *
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:   The AR instance.
  * @param control_command  In:   The control command.

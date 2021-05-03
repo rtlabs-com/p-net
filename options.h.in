@@ -88,8 +88,8 @@
  * These values directly affect the memory usage of the
  * implementation. Sometimes in complicated ways.
  *
- * Please note that some defines have minimum requirements. These
- * values are used as is by the stack. No validation is performed.
+ * Please note that some defines have minimum requirements.
+ * Only a few of the defines are validated.
  */
 
 #if !defined (PNET_MAX_AR)

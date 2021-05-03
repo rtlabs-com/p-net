@@ -53,6 +53,10 @@
 #include <stdint.h>
 #include <string.h>
 
+#if PNET_MAX_CR < 2
+#error "There must be at least 2 CR per AR. Increase PNET_MAX_CR."
+#endif
+
 static const char * rpc_sync_name = "rpc";
 static const pf_uuid_t implicit_ar = {0, 0, 0, {0, 0, 0, 0, 0, 0, 0, 0}};
 
@@ -226,16 +230,16 @@ static const char * pf_ar_type_to_string (pf_ar_type_values_t type)
    switch (type)
    {
    case PF_ART_IOCAR_SINGLE:
-      s = "PF_ART_IOCAR_SINGLE";
+      s = "Controller AR";
       break;
    case PF_ART_IOSAR:
-      s = "PF_ART_IOSAR";
+      s = "Supervisor AR";
       break;
    case PF_ART_IOCAR_SINGLE_RTC_3:
-      s = "PF_ART_IOCAR_SINGLE_RTC_3";
+      s = "RTC_3 AR";
       break;
    case PF_ART_IOCAR_SR:
-      s = "PF_ART_IOCAR_SR";
+      s = "AR Set";
       break;
    }
 
@@ -475,7 +479,7 @@ void pf_cmrpc_show (pnet_t * net, unsigned level)
  * @param net              InOut: The p-net stack instance
  * @param pp_sess          Out:  A pointer to the new session instance.
  * @return  0  if operation succeeded.
- *          -1 if an error occurred.
+ *          -1 if an error occurred (no available sessions)
  */
 static int pf_session_allocate (pnet_t * net, pf_session_info_t ** pp_sess)
 {
@@ -677,7 +681,12 @@ static int pf_ar_allocate (pnet_t * net, pf_ar_t ** pp_ar)
    if (ix < PNET_MAX_AR)
    {
       net->cmrpc_ar[ix].arep = ix + 1; /* Avoid AREP == 0 */
-      LOG_DEBUG (PF_RPC_LOG, "CMRPC(%d): Allocate AR %u\n", __LINE__, ix);
+      LOG_DEBUG (
+         PF_RPC_LOG,
+         "CMRPC(%d): Allocate AR %u (AREP %u)\n",
+         __LINE__,
+         ix,
+         net->cmrpc_ar[ix].arep);
    }
 
    return ret;
@@ -696,9 +705,10 @@ static void pf_ar_release (pf_ar_t * p_ar)
       {
          LOG_DEBUG (
             PF_RPC_LOG,
-            "CMRPC(%d): Free AR %u\n",
+            "CMRPC(%d): Free AR %u (AREP %u)\n",
             __LINE__,
-            p_ar->arep - 1);
+            p_ar->arep - 1,
+            p_ar->arep);
          memset (p_ar, 0, sizeof (*p_ar));
       }
       else
@@ -1022,7 +1032,8 @@ static void pf_cmrpc_send_with_timeout (
             {
                LOG_ERROR (
                   PF_RPC_LOG,
-                  "CMRPC(%d): pf_scheduler_add failed for response fragment\n",
+                  "CMRPC(%d): pf_scheduler_add failed for "
+                  "pf_cmrpc_send_with_timeout()\n",
                   __LINE__);
             }
          }
@@ -1178,74 +1189,113 @@ static int pf_cmrpc_rm_connect_interpret_ind (
 
                   LOG_DEBUG (
                      PF_RPC_LOG,
-                     "CMRPC(%d): Requested start up mode: \"%s\" Initiator "
-                     "station name: \"%s\" port: 0x%04x Timeout: %u x 100 ms\n",
+                     "CMRPC(%d): AR type: \"%s\" Device access: %u Supervisor "
+                     "takeover: %u Requested start up mode: \"%s\" Initiator "
+                     "station name: \"%s\" UDP port: 0x%04x Session: %u "
+                     "Timeout: "
+                     "%u x 100 ms\n",
                      __LINE__,
+                     pf_ar_type_to_string (p_ar->ar_param.ar_type),
+                     p_ar->ar_param.ar_properties.device_access,
+                     p_ar->ar_param.ar_properties.supervisor_takeover_allowed,
                      p_ar->ar_param.ar_properties.startup_mode ? "Advanced"
                                                                : "Legacy",
                      p_ar->ar_param.cm_initiator_station_name,
                      p_ar->ar_param.cm_initiator_udp_rt_port,
+                     p_ar->ar_param.session_key,
                      p_ar->ar_param.cm_initiator_activity_timeout_factor);
                }
             }
             break;
          case PF_BT_IOCR_BLOCK_REQ:
-            pf_get_iocr_param (&p_sess->get_info, p_pos, p_ar->nbr_iocrs, p_ar);
+            if (p_ar->nbr_iocrs < PNET_MAX_CR)
+            {
+               /* Before it is incremented at the end of this block, the
+               p_ar->nbr_iocrs value is the same as CREP */
+               pf_get_iocr_param (
+                  &p_sess->get_info,
+                  p_pos,
+                  p_ar->nbr_iocrs,
+                  p_ar);
 
-            LOG_DEBUG (
-               PF_RPC_LOG,
-               "CMRPC(%d): Requested send cycle time %u (in 1/32 of millisec) "
-               "Reduction ratio:%u  Watchdog factor:%" PRIu32
-               " Data hold factor:%u\n",
-               __LINE__,
-               p_ar->iocrs[p_ar->nbr_iocrs].param.send_clock_factor,
-               p_ar->iocrs[p_ar->nbr_iocrs].param.reduction_ratio,
-               p_ar->iocrs[p_ar->nbr_iocrs].param.watchdog_factor,
-               p_ar->iocrs[p_ar->nbr_iocrs].param.data_hold_factor);
+               LOG_DEBUG (
+                  PF_RPC_LOG,
+                  "CMRPC(%d): Requested send cycle time: %u (in 1/32 of "
+                  "millisec) "
+                  "AREP %u CREP %u %6s Reduction ratio: %u Watchdog "
+                  "factor: %" PRIu32 " Data hold factor: %u FrameID: 0x%04x\n",
+                  __LINE__,
+                  p_ar->iocrs[p_ar->nbr_iocrs].param.send_clock_factor,
+                  p_ar->arep,
+                  p_ar->nbr_iocrs,
+                  pf_iocr_type_to_string (
+                     p_ar->iocrs[p_ar->nbr_iocrs].param.iocr_type),
+                  p_ar->iocrs[p_ar->nbr_iocrs].param.reduction_ratio,
+                  p_ar->iocrs[p_ar->nbr_iocrs].param.watchdog_factor,
+                  p_ar->iocrs[p_ar->nbr_iocrs].param.data_hold_factor,
+                  p_ar->iocrs[p_ar->nbr_iocrs].param.frame_id);
 
-            /* Count the types for error discovery */
-            if (p_ar->iocrs[p_ar->nbr_iocrs].param.iocr_type == PF_IOCR_TYPE_INPUT)
-            {
-               p_ar->input_cr_cnt++;
-            }
-            if (p_ar->iocrs[p_ar->nbr_iocrs].param.iocr_type == PF_IOCR_TYPE_OUTPUT)
-            {
-               p_ar->output_cr_cnt++;
-            }
-            if (
-               p_ar->iocrs[p_ar->nbr_iocrs].param.iocr_type ==
-               PF_IOCR_TYPE_MC_CONSUMER)
-            {
-               p_ar->mcr_cons_cnt++;
-            }
-            if (
-               p_ar->iocrs[p_ar->nbr_iocrs].param.iocr_properties.rt_class ==
-               PF_RT_CLASS_3)
-            {
-               p_ar->rtc3_present = true;
-            }
+               /* Count the types for error discovery */
+               if (p_ar->iocrs[p_ar->nbr_iocrs].param.iocr_type == PF_IOCR_TYPE_INPUT)
+               {
+                  p_ar->input_cr_cnt++;
+               }
+               if (
+                  p_ar->iocrs[p_ar->nbr_iocrs].param.iocr_type ==
+                  PF_IOCR_TYPE_OUTPUT)
+               {
+                  p_ar->output_cr_cnt++;
+               }
+               if (
+                  p_ar->iocrs[p_ar->nbr_iocrs].param.iocr_type ==
+                  PF_IOCR_TYPE_MC_CONSUMER)
+               {
+                  p_ar->mcr_cons_cnt++;
+               }
+               if (
+                  p_ar->iocrs[p_ar->nbr_iocrs].param.iocr_properties.rt_class ==
+                  PF_RT_CLASS_3)
+               {
+                  p_ar->rtc3_present = true;
+               }
 
-            if (p_ar->ar_param.ar_properties.device_access == true)
+               if (p_ar->ar_param.ar_properties.device_access == true)
+               {
+                  pf_set_error (
+                     &p_sess->rpc_result,
+                     PNET_ERROR_CODE_CONNECT,
+                     PNET_ERROR_DECODE_PNIO,
+                     PNET_ERROR_CODE_1_CMRPC,
+                     PNET_ERROR_CODE_2_CMRPC_UNKNOWN_BLOCKS);
+                  ret = -1;
+               }
+               else
+               {
+                  ret = pf_check_block_header (
+                     (*p_pos - data_pos) + 2,
+                     &block_header,
+                     PNET_ERROR_CODE_1_CONN_FAULTY_IOCR_BLOCK_REQ,
+                     &p_sess->rpc_result);
+                  if (ret == 0)
+                  {
+                     p_ar->nbr_iocrs++;
+                  }
+               }
+            }
+            else
             {
+               LOG_ERROR (
+                  PF_RPC_LOG,
+                  "CMRPC(%d): Too many CR given. Max %u CR per AR supported\n",
+                  __LINE__,
+                  PNET_MAX_CR);
                pf_set_error (
                   &p_sess->rpc_result,
                   PNET_ERROR_CODE_CONNECT,
                   PNET_ERROR_DECODE_PNIO,
                   PNET_ERROR_CODE_1_CMRPC,
-                  PNET_ERROR_CODE_2_CMRPC_UNKNOWN_BLOCKS);
+                  PNET_ERROR_CODE_2_CMRPC_WRONG_BLOCK_COUNT);
                ret = -1;
-            }
-            else
-            {
-               ret = pf_check_block_header (
-                  (*p_pos - data_pos) + 2,
-                  &block_header,
-                  PNET_ERROR_CODE_1_CONN_FAULTY_IOCR_BLOCK_REQ,
-                  &p_sess->rpc_result);
-               if (ret == 0)
-               {
-                  p_ar->nbr_iocrs++;
-               }
             }
             break;
          case PF_BT_EXPECTED_SUBMODULE_BLOCK:
@@ -1511,6 +1561,17 @@ static int pf_cmrpc_rm_connect_interpret_ind (
       first_block = false;
    }
 
+   LOG_DEBUG (
+      PF_RPC_LOG,
+      "CMRPC(%d): Connect request AR param: %u CR: %u Input: %u Output: %u "
+      "Alarm: %u\n",
+      __LINE__,
+      p_ar->nbr_ar_param,
+      p_ar->nbr_iocrs,
+      p_ar->input_cr_cnt,
+      p_ar->output_cr_cnt,
+      p_ar->nbr_alarm_cr);
+
    if (ret == 0)
    {
       /* Error discovery. */
@@ -1762,7 +1823,7 @@ static void pf_cmrpc_rm_connect_rsp (
  *
  * @param net              InOut: The p-net stack instance
  * @param p_sess           InOut: The session instance. Will be released on
- * error.
+ *                                error.
  * @param req_pos          In:    Position in the request buffer.
  * @param res_size         In:    The size of the response buffer.
  * @param p_res            Out:   The response buffer.
@@ -1805,10 +1866,33 @@ static int pf_cmrpc_rm_connect_ind (
          if (pf_ar_find_by_uuid (net, &p_ar->ar_param.ar_uuid, &p_ar_2) != 0)
          {
             /* Valid, unknown AR, NoArSet */
-            p_ar->ar_state = PF_AR_STATE_PRIMARY;
-            p_ar->sync_state = PF_SYNC_STATE_NOT_AVAILABLE;
+            if (p_ar->arep > 1)
+            {
+               /* We only support one AR.
+                  However in order to respond with the correct error code, we
+                  need to know whether a new AR has the same ARUUID as the
+                  previous AR. Thus we need to parse the incoming connect
+                  message, and for that to be possible PNET_MAX_AR must be at
+                  least 2. This is checked by ART Tester. */
+               LOG_ERROR (
+                  PF_RPC_LOG,
+                  "CMRPC(%d): Only one connection (AR) supported! AREP %u\n",
+                  __LINE__,
+                  p_ar->arep);
+               pf_set_error (
+                  &p_sess->rpc_result,
+                  PNET_ERROR_CODE_CONNECT,
+                  PNET_ERROR_DECODE_PNIO,
+                  PNET_ERROR_CODE_1_CMRPC,
+                  PNET_ERROR_CODE_2_CMRPC_NO_AR_RESOURCES);
+            }
+            else
+            {
+               p_ar->ar_state = PF_AR_STATE_PRIMARY;
+               p_ar->sync_state = PF_SYNC_STATE_NOT_AVAILABLE;
 
-            ret = pf_cmdev_rm_connect_ind (net, p_ar, &p_sess->rpc_result);
+               ret = pf_cmdev_rm_connect_ind (net, p_ar, &p_sess->rpc_result);
+            }
          }
          else
          {
@@ -1830,7 +1914,7 @@ static int pf_cmrpc_rm_connect_ind (
       {
          LOG_ERROR (
             PF_RPC_LOG,
-            "CMRPC(%d): Connect interpreter error\n",
+            "CMRPC(%d): Failed to parse incoming connect request\n",
             __LINE__);
          /* Invalid - ret already set */
       }
@@ -1838,7 +1922,7 @@ static int pf_cmrpc_rm_connect_ind (
    else
    {
       /* unavailable */
-      LOG_ERROR (PF_RPC_LOG, "CMRPC(%d): Out of resources (AR)\n", __LINE__);
+      LOG_ERROR (PF_RPC_LOG, "CMRPC(%d): Out of AR resources (AR)\n", __LINE__);
       pf_set_error (
          &p_sess->rpc_result,
          PNET_ERROR_CODE_CONNECT,
@@ -1850,9 +1934,8 @@ static int pf_cmrpc_rm_connect_ind (
    /* Create Connect response */
    LOG_DEBUG (
       PF_RPC_LOG,
-      "CMRPC(%d): Create CONNECT response: ret = %d   error_code=%" PRIu8
-      "  error_decode=%" PRIu8 "  error_code_1=%" PRIu8 "  error_code_2=%" PRIu8
-      "\n",
+      "CMRPC(%d): Create CONNECT response: ret = %d   error: 0x%02X 0x%02X "
+      "0x%02X 0x%02X\n",
       __LINE__,
       ret,
       p_sess->rpc_result.pnio_status.error_code,
@@ -1888,8 +1971,9 @@ static int pf_cmrpc_rm_connect_ind (
 /**
  * @internal
  * Parse all blocks in a release RPC request.
- * @param p_sess           InOut:The RPC session instance.
- * @param req_pos          In:   Position in the request buffer.
+ * @param p_sess           InOut: The RPC session instance. The rpc_result
+ *                                field is written when return != 0.
+ * @param req_pos          In:    Position in the request buffer.
  * @param p_release_io     Out:   The release control block.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
@@ -2172,10 +2256,16 @@ static int pf_cmrpc_rm_release_ind (
    if (ret == 0)
    {
       /* Check_RPC */
-      if (
-         (pf_ar_find_by_uuid (net, &release_io.ar_uuid, &p_ar) == 0) &&
-         (release_io.session_key == p_ar->ar_param.session_key))
+      if (pf_ar_find_by_uuid (net, &release_io.ar_uuid, &p_ar) == 0)
       {
+         LOG_DEBUG (
+            PF_RPC_LOG,
+            "CMRPC(%d): Releasing AR with AREP %u and session key %u. Incoming "
+            "session key %u\n",
+            __LINE__,
+            p_ar->arep,
+            p_ar->ar_param.session_key,
+            release_io.session_key);
          /* Overwrite response with correct AR UUID etc */
          pf_cmrpc_rm_release_rsp (
             p_sess,
@@ -2517,8 +2607,7 @@ static int pf_cmrpc_rm_dcontrol_ind (
    LOG_DEBUG (
       PF_RPC_LOG,
       "CMRPC(%d): Prepare DCONTROL response message: ret = %d   "
-      "error_code=%" PRIu8 "  error_decode=%" PRIu8 "error_code_1=%" PRIu8
-      "  error_code_2=%" PRIu8 "\n",
+      "error: 0x%02X 0x%02X 0x%02X 0x%02X\n",
       __LINE__,
       ret,
       p_sess->rpc_result.pnio_status.error_code,
@@ -2841,7 +2930,7 @@ static int pf_cmrpc_rm_read_ind (
 
 /**
  * @internal
- * Take a DCE RPC EPM  LOOKUP request and create a response.
+ * Take a DCE RPC EPM LOOKUP request and create a response.
  * No callbacks or updates of configuration is triggered
  *
  * @param net              InOut: The p-net stack instance
@@ -3634,9 +3723,10 @@ int pf_cmrpc_rm_ccontrol_req (pnet_t * net, pf_ar_t * p_ar)
          /* NOT a fragmented request - all fits into send buffer */
          LOG_DEBUG (
             PF_RPC_LOG,
-            "CMRPC(%d): Send CControl request, total %u bytes (not "
+            "CMRPC(%d): Send CControl request for AREP %u, total %u bytes (not "
             "fragmented).\n",
             __LINE__,
+            p_ar->arep,
             p_sess->out_buf_len);
          p_sess->out_buf_send_len = p_sess->out_buf_len;
       }
@@ -3645,9 +3735,10 @@ int pf_cmrpc_rm_ccontrol_req (pnet_t * net, pf_ar_t * p_ar)
          /* We need to send a fragmented answer - Send the first fragment now */
          LOG_DEBUG (
             PF_RPC_LOG,
-            "CMRPC(%d): Send fragmented CControl request, total %u, max per "
-            "frame %u bytes.\n",
+            "CMRPC(%d): Send fragmented CControl request AREP %u, total %u, "
+            "max per frame %u bytes.\n",
             __LINE__,
+            p_ar->arep,
             p_sess->out_buf_len,
             max_req_len);
          p_sess->out_buf_send_len = max_req_len; /* This is what is sent in the
@@ -3726,7 +3817,8 @@ int pf_cmrpc_rm_ccontrol_req (pnet_t * net, pf_ar_t * p_ar)
 /**
  * @internal
  * Parse all blocks in a CControl RPC response message.
- * @param p_sess           InOut: The session instance.
+ * @param p_sess           InOut: The session instance. The rpc_result field is
+ *                                set if return != 0.
  * @param req_pos          In:    The position in the input buffer.
  * @param p_control_io     Out:   The CControl control block.
  * @return  0  if operation succeeded.
@@ -3872,7 +3964,10 @@ static int pf_cmrpc_rm_ccontrol_cnf (
    pf_control_block_t ccontrol_io;
    pf_ar_t * p_ar = p_sess->p_ar;
 
-   LOG_INFO (PF_RPC_LOG, "Incoming CCONTROL response via DCE RPC on UDP\n");
+   LOG_INFO (
+      PF_RPC_LOG,
+      "CMRPC(%d): Incoming CCONTROL response via DCE RPC on UDP\n",
+      __LINE__);
    CC_ASSERT (p_ar != NULL);
 
    memset (&ccontrol_io, 0, sizeof (ccontrol_io));
@@ -3904,12 +3999,18 @@ static int pf_cmrpc_rm_ccontrol_cnf (
             }
             else
             {
-               LOG_DEBUG (PF_RPC_LOG, "CMRPC(%d): \n", __LINE__);
+               LOG_DEBUG (
+                  PF_RPC_LOG,
+                  "CMRPC(%d): pf_cmpbe_rm_ccontrol_cnf() failed.\n",
+                  __LINE__);
             }
          }
          else
          {
-            LOG_DEBUG (PF_RPC_LOG, "CMRPC(%d): \n", __LINE__);
+            LOG_DEBUG (
+               PF_RPC_LOG,
+               "CMRPC(%d): pf_cmdev_rm_ccontrol_cnf() failed.\n",
+               __LINE__);
          }
       }
       else
@@ -4319,6 +4420,11 @@ static int pf_cmrpc_dce_packet (
                   p_sess->out_buffer,
                   &p_sess->out_buf_len);
                *p_is_release = true;
+
+               /* Close session after each EPM request
+                  If future more advanced EPM usage is required, implement a
+                  timeout for closing the session */
+               p_sess->kill_session = true;
             }
             else
             {
@@ -4694,6 +4800,7 @@ static int pf_cmrpc_dce_packet (
       /* Kill session if necessary */
       if ((p_sess != NULL) && (p_sess->kill_session == true))
       {
+         LOG_DEBUG (PF_RPC_LOG, "CMRPC(%d): Kill session\n", __LINE__);
          pf_session_release (net, p_sess);
       }
    }
@@ -4803,11 +4910,8 @@ void pf_cmrpc_periodic (pnet_t * net)
       {
          LOG_DEBUG (
             PF_RPC_LOG,
-            "CMRPC(%d): Closing and reopening socket used for incoming DCE RPC "
-            "requests.\n",
+            "CMRPC(%d): Release is requested by incoming DCE RPC request.\n",
             __LINE__);
-         pf_udp_close (net, net->cmrpc_rpcreq_socket);
-         net->cmrpc_rpcreq_socket = pf_udp_open (net, PF_RPC_SERVER_PORT);
       }
    }
 }
@@ -4852,9 +4956,10 @@ int pf_cmrpc_cmdev_state_ind (
 
    LOG_DEBUG (
       PF_RPC_LOG,
-      "CMRPC(%d): Received event %s from CMDEV.\n",
+      "CMRPC(%d): Received event %s from CMDEV for AREP %u.\n",
       __LINE__,
-      pf_cmdev_event_to_string (event));
+      pf_cmdev_event_to_string (event),
+      p_ar->arep);
 
    switch (event)
    {
@@ -4873,15 +4978,6 @@ int pf_cmrpc_cmdev_state_ind (
             if (p_ar->p_sess->release_in_progress == false)
             {
                pf_session_release (net, p_ar->p_sess);
-
-               /* Re-open the global RPC socket. */
-               LOG_DEBUG (
-                  PF_RPC_LOG,
-                  "CMRPC(%d): Closing and reopening socket used for incoming "
-                  "DCE RPC requests.\n",
-                  __LINE__);
-               pf_udp_close (net, net->cmrpc_rpcreq_socket);
-               net->cmrpc_rpcreq_socket = pf_udp_open (net, PF_RPC_SERVER_PORT);
             }
          }
          else

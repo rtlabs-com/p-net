@@ -411,7 +411,7 @@ TEST_F (CmrpcTest, CmrpcConnectReleaseTest)
    EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_DATA);
    EXPECT_EQ (mock_os_data.udp_sendto_count, 5);
 
-   TEST_TRACE ("nGenerating mock release request\n");
+   TEST_TRACE ("\nGenerating mock release request\n");
    mock_set_pnal_udp_recvfrom_buffer (release_req, sizeof (release_req));
    run_stack (TEST_UDP_DELAY);
    EXPECT_EQ (appdata.call_counters.release_calls, 1);
@@ -651,22 +651,23 @@ TEST_F (CmrpcTest, CmrpcConnectFragmentTest)
 
 TEST_F (CmrpcTest, CmrpcConnectReleaseIOSAR_DA)
 {
+   // Device-access AR is not yet supported
    TEST_TRACE ("\nGenerating mock connection request IOSAR_DA\n");
    mock_set_pnal_udp_recvfrom_buffer (
       connect_req_iosar_da,
       sizeof (connect_req_iosar_da));
    run_stack (TEST_UDP_DELAY);
-   EXPECT_EQ (appdata.call_counters.state_calls, 1);
-   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_STARTUP);
-   EXPECT_EQ (appdata.call_counters.connect_calls, 1);
-   EXPECT_EQ (mock_os_data.eth_send_count, PNET_MAX_PHYSICAL_PORTS);
+   EXPECT_EQ (appdata.call_counters.state_calls, 0);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_ABORT);
+   EXPECT_EQ (appdata.call_counters.connect_calls, 0);
+   EXPECT_EQ (mock_os_data.eth_send_count, 0);
 
    TEST_TRACE ("\nGenerating mock release request IOSAR_DA\n");
    mock_set_pnal_udp_recvfrom_buffer (
       release_req_iosar_da,
       sizeof (release_req_iosar_da));
    run_stack (TEST_UDP_DELAY);
-   EXPECT_EQ (appdata.call_counters.state_calls, 2);
+   EXPECT_EQ (appdata.call_counters.state_calls, 0);
    EXPECT_EQ (appdata.call_counters.release_calls, 0);
    EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_ABORT);
 }

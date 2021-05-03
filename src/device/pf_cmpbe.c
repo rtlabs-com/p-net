@@ -13,6 +13,13 @@
  * full license information.
  ********************************************************************/
 
+/**
+ * @file
+ * @brief Implements the Parameter Begin End Protocol Machine (PBE)
+ *
+ * Disables and enables alarm sending.
+ */
+
 #ifdef UNIT_TEST
 
 #endif
@@ -76,11 +83,16 @@ void pf_cmpbe_show (const pf_ar_t * p_ar)
  */
 static void pf_cmpbe_set_state (pf_ar_t * p_ar, pf_cmpbe_state_values_t state)
 {
-   LOG_DEBUG (
-      PNET_LOG,
-      "CMPBE(%d): New state %s\n",
-      __LINE__,
-      pf_cmpbe_state_to_string (state));
+   if (state != p_ar->cmpbe_state)
+   {
+      LOG_DEBUG (
+         PNET_LOG,
+         "CMPBE(%d): New state %s for AREP %u (was %s)\n",
+         __LINE__,
+         pf_cmpbe_state_to_string (state),
+         p_ar->arep,
+         pf_cmpbe_state_to_string (p_ar->cmpbe_state));
+   }
    p_ar->cmpbe_state = state;
 }
 
@@ -88,10 +100,12 @@ int pf_cmpbe_cmdev_state_ind (pf_ar_t * p_ar, pnet_event_values_t event)
 {
    LOG_DEBUG (
       PNET_LOG,
-      "CMPBE(%d): Received event %s from CMDEV. Our state %s.\n",
+      "CMPBE(%d): Received event %s from CMDEV. Initial state %s for AREP "
+      "%u.\n",
       __LINE__,
       pf_cmdev_event_to_string (event),
-      pf_cmpbe_state_to_string (p_ar->cmpbe_state));
+      pf_cmpbe_state_to_string (p_ar->cmpbe_state),
+      p_ar->arep);
    switch (p_ar->cmpbe_state)
    {
    case PF_CMPBE_STATE_IDLE:
@@ -131,9 +145,11 @@ int pf_cmpbe_rm_dcontrol_ind (
 
    LOG_DEBUG (
       PNET_LOG,
-      "CMPBE(%d): dcontrol %x in state %s\n",
+      "CMPBE(%d): Received DControl command bitfield 0x%04x for AREP %u. "
+      "Initial state %s\n",
       __LINE__,
       p_control_io->control_command,
+      p_ar->arep,
       pf_cmpbe_state_to_string (p_ar->cmpbe_state));
    switch (p_ar->cmpbe_state)
    {

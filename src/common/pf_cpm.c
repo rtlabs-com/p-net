@@ -35,7 +35,9 @@
 #define os_get_current_time_us mock_os_get_current_time_us
 #endif
 
+#include <inttypes.h>
 #include <string.h>
+
 #include "pf_includes.h"
 #include "pf_block_reader.h"
 
@@ -84,9 +86,10 @@ static void pf_cpm_set_state (pf_cpm_t * p_cpm, pf_cpm_state_values_t state)
    {
       LOG_DEBUG (
          PF_CPM_LOG,
-         "CPM(%d): New state %s\n",
+         "CPM(%d): New state %s (was %s)\n",
          __LINE__,
-         pf_cpm_state_to_string (state));
+         pf_cpm_state_to_string (state),
+         pf_cpm_state_to_string (p_cpm->state));
       p_cpm->state = state;
    }
 }
@@ -117,7 +120,7 @@ static void pf_cpm_state_ind (
  * pf_scheduler_timeout_ftn_t
  *
  * @param net              InOut: The p-net stack instance
- * @param arg              In:    The IOCR instance.
+ * @param arg              In:    The IOCR instance. pf_iocr_t
  * @param current_time     In:    The current system time, in microseconds,
  *                                when the scheduler is started to execute
  * stored tasks.
@@ -239,7 +242,12 @@ int pf_cpm_close_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
    pf_cpm_t * p_cpm = &p_ar->iocrs[crep].cpm;
    uint32_t cnt;
 
-   LOG_DEBUG (PF_CPM_LOG, "CPM(%d): Closing\n", __LINE__);
+   LOG_DEBUG (
+      PF_CPM_LOG,
+      "CPM(%d): Closing CPM for AREP %u CREP %" PRIu32 "\n",
+      __LINE__,
+      p_ar->arep,
+      crep);
    p_cpm->ci_running = false; /* StopTimer */
    if (p_cpm->ci_timer != UINT32_MAX)
    {
@@ -407,7 +415,7 @@ static void pf_cpm_get_buf (
  * @param frame_id         In:   The frame id of the frame.
  * @param p_buf            In:   The received data.
  * @param frame_id_pos     In:   Position of the frame id in the buffer.
- * @param p_arg            In:   The IOCR instance.
+ * @param p_arg            In:   The IOCR instance. pf_iocr_t
  * @return  0     If the frame was NOT handled by this function.
  *          1     If the frame was handled and the buffer freed.
  */
@@ -568,6 +576,16 @@ int pf_cpm_activate_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
 
    p_iocr = &p_ar->iocrs[crep];
    p_cpm = &p_iocr->cpm;
+
+   LOG_DEBUG (
+      PF_CPM_LOG,
+      "CPM(%d): Activating CPM for output data reception. "
+      "AREP %u CREP %" PRIu32 " FrameID: 0x%04x\n",
+      __LINE__,
+      p_ar->arep,
+      crep,
+      p_iocr->param.frame_id);
+
    switch (p_cpm->state)
    {
    case PF_CPM_STATE_W_START:
@@ -784,9 +802,10 @@ int pf_cpm_get_data_and_iops (
          p_ar->err_code = PNET_ERROR_CODE_2_CPM_INVALID_STATE;
          LOG_DEBUG (
             PF_CPM_LOG,
-            "CPM(%d): Get data in wrong state: %u\n",
+            "CPM(%d): Get data in wrong state: %u for AREP %u\n",
             __LINE__,
-            p_iocr->cpm.state);
+            p_iocr->cpm.state,
+            p_ar->arep);
          break;
       case PF_CPM_STATE_FRUN:
       case PF_CPM_STATE_RUN:
@@ -850,9 +869,10 @@ int pf_cpm_get_data_and_iops (
       default:
          LOG_DEBUG (
             PF_CPM_LOG,
-            "CPM(%d): Set data in wrong state: %u\n",
+            "CPM(%d): Set data in wrong state: %u for AREP %u\n",
             __LINE__,
-            p_iocr->cpm.state);
+            p_iocr->cpm.state,
+            p_ar->arep);
          break;
       }
    }
@@ -900,9 +920,10 @@ int pf_cpm_get_iocs (
          p_ar->err_code = PNET_ERROR_CODE_2_CPM_INVALID_STATE;
          LOG_DEBUG (
             PF_CPM_LOG,
-            "CPM(%d): Get iocs in wrong state: %u\n",
+            "CPM(%d): Get iocs in wrong state: %u for AREP %u\n",
             __LINE__,
-            p_iocr->cpm.state);
+            p_iocr->cpm.state,
+            p_ar->arep);
          break;
       case PF_CPM_STATE_FRUN:
       case PF_CPM_STATE_RUN:
@@ -953,9 +974,10 @@ int pf_cpm_get_iocs (
       default:
          LOG_DEBUG (
             PF_CPM_LOG,
-            "CPM(%d): Get iocs in wrong state: %u\n",
+            "CPM(%d): Get iocs in wrong state: %u for AREP %u\n",
             __LINE__,
-            (unsigned)p_iocr->cpm.state);
+            (unsigned)p_iocr->cpm.state,
+            p_ar->arep);
          break;
       }
    }

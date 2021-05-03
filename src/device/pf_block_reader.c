@@ -29,6 +29,7 @@
 
 #endif
 
+#include <inttypes.h>
 #include <string.h>
 
 #include "pf_includes.h"
@@ -311,6 +312,14 @@ static void pf_get_exp_submodule (
       p_sub->data_descriptor[1].length_iops = pf_get_byte (p_info, p_pos);
       p_sub->nbr_data_descriptors = 2;
    }
+
+   LOG_DEBUG (
+      PNET_LOG,
+      "BR(%d):   Subslot 0x%04x. Expected submodule 0x%" PRIx32 " with direction %u\n",
+      __LINE__,
+      p_sub->subslot_number,
+      p_sub->submodule_ident_number,
+      p_sub->submodule_properties.type);
 }
 
 /* ======================== Public functions ======================== */
@@ -489,6 +498,16 @@ void pf_get_exp_api_module (
             p_mod->module_ident_number = pf_get_uint32 (p_info, p_pos);
             p_mod->module_properties = pf_get_uint16 (p_info, p_pos);
             p_mod->nbr_submodules = pf_get_uint16 (p_info, p_pos);
+
+            LOG_DEBUG (
+               PNET_LOG,
+               "BR(%d): Slot %u. Expected module 0x%" PRIx32 " with %u "
+               "submodules.\n",
+               __LINE__,
+               p_mod->slot_number,
+               p_mod->module_ident_number,
+               p_mod->nbr_submodules);
+
             for (iy = 0; iy < p_mod->nbr_submodules; iy++)
             {
                pf_get_exp_submodule (p_info, p_pos, &p_mod->submodules[iy]);

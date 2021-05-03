@@ -17,11 +17,20 @@
 #define pnal_snmp_init mock_pnal_snmp_init
 #endif
 
+#include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "pf_includes.h"
 #include "pf_block_reader.h"
+
+#if PNET_MAX_AR < 1
+#error "PNET_MAX_AR needs to be at least 1"
+#endif
+
+#if PNET_MAX_API < 1
+#error "PNET_MAX_API needs to be at least 1"
+#endif
 
 int pnet_init_only (pnet_t * net, const pnet_cfg_t * p_cfg)
 {
@@ -76,6 +85,8 @@ int pnet_init_only (pnet_t * net, const pnet_cfg_t * p_cfg)
 pnet_t * pnet_init (const pnet_cfg_t * p_cfg)
 {
    pnet_t * net = NULL;
+
+   LOG_DEBUG (PNET_LOG, "API(%d): Application calls pnet_init()\n", __LINE__);
 
    net = os_malloc (sizeof (*net));
    if (net == NULL)
@@ -288,6 +299,12 @@ int pnet_set_primary_state (pnet_t * net, bool primary)
    uint16_t cr_ix;
    pf_ar_t * p_ar = NULL;
 
+   LOG_DEBUG (
+      PNET_LOG,
+      "API(%d): Application sets primary state to %s\n",
+      __LINE__,
+      primary ? "true" : "false");
+
    for (ar_ix = 0; ar_ix < PNET_MAX_AR; ar_ix++)
    {
       p_ar = pf_ar_find_by_index (net, ar_ix);
@@ -312,6 +329,12 @@ int pnet_set_redundancy_state (pnet_t * net, bool redundant)
    uint16_t ar_ix;
    uint16_t cr_ix;
    pf_ar_t * p_ar = NULL;
+
+   LOG_DEBUG (
+      PNET_LOG,
+      "API(%d): Application sets redundancy state to %s\n",
+      __LINE__,
+      redundant ? "true" : "false");
 
    for (ar_ix = 0; ar_ix < PNET_MAX_AR; ar_ix++)
    {
@@ -338,6 +361,12 @@ int pnet_set_provider_state (pnet_t * net, bool run)
    uint16_t cr_ix;
    pf_ar_t * p_ar = NULL;
 
+   LOG_DEBUG (
+      PNET_LOG,
+      "API(%d): Application sets provider state to %d\n",
+      __LINE__,
+      run);
+
    for (ar_ix = 0; ar_ix < PNET_MAX_AR; ar_ix++)
    {
       p_ar = pf_ar_find_by_index (net, ar_ix);
@@ -361,6 +390,12 @@ int pnet_application_ready (pnet_t * net, uint32_t arep)
    int ret = -1;
    pf_ar_t * p_ar = NULL;
 
+   LOG_DEBUG (
+      PNET_LOG,
+      "API(%d): Application calls application ready for AREP %" PRIu32 "\n",
+      __LINE__,
+      arep);
+
    if (pf_ar_find_by_arep (net, arep, &p_ar) == 0)
    {
       ret = pf_cmdev_cm_ccontrol_req (net, p_ar);
@@ -374,6 +409,12 @@ int pnet_ar_abort (pnet_t * net, uint32_t arep)
    int ret = -1;
    pf_ar_t * p_ar = NULL;
 
+   LOG_DEBUG (
+      PNET_LOG,
+      "API(%d): Application calls AR abort for AREP %" PRIu32 "\n",
+      __LINE__,
+      arep);
+
    if (pf_ar_find_by_arep (net, arep, &p_ar) == 0)
    {
       ret = pf_cmdev_cm_abort (net, p_ar);
@@ -386,6 +427,8 @@ int pnet_factory_reset (pnet_t * net)
 {
    uint16_t ix;
    pf_ar_t * p_ar = NULL;
+
+   LOG_DEBUG (PNET_LOG, "API(%d): Application calls factory reset.\n", __LINE__);
 
    /* Look for active connections */
    for (ix = 0; ix < PNET_MAX_AR; ix++)
@@ -405,6 +448,12 @@ int pnet_factory_reset (pnet_t * net)
 
 int pnet_remove_data_files (const char * file_directory)
 {
+   LOG_DEBUG (
+      PNET_LOG,
+      "API(%d): Application removes data files in %s\n",
+      __LINE__,
+      file_directory);
+
    return pf_cmina_remove_all_data_files (file_directory);
 }
 
@@ -465,6 +514,13 @@ int pnet_alarm_send_ack (
 {
    int ret = -1;
    pf_ar_t * p_ar = NULL;
+
+   LOG_DEBUG (
+      PNET_LOG,
+      "API(%d): Application sends alarm ack for slot %u subslot 0x%04x.\n",
+      __LINE__,
+      p_alarm_argument->slot_nbr,
+      p_alarm_argument->subslot_nbr);
 
    if (pf_ar_find_by_arep (net, arep, &p_ar) == 0)
    {

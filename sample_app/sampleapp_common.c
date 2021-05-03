@@ -403,7 +403,7 @@ static void app_handle_data_led_state (bool led_state, int verbosity)
  */
 static void app_set_outputs_default_value (int verbosity)
 {
-   if (verbosity > 0)
+   if (verbosity > 1)
    {
       printf ("Setting outputs to default values.\n");
    }
@@ -422,13 +422,7 @@ static int app_connect_ind (
 
    if (p_appdata->arguments.verbosity > 0)
    {
-      printf (
-         "Connect call-back. AREP: %u  Status codes: %d %d %d %d\n",
-         arep,
-         p_result->pnio_status.error_code,
-         p_result->pnio_status.error_decode,
-         p_result->pnio_status.error_code_1,
-         p_result->pnio_status.error_code_2);
+      printf ("PLC is connecting. AREP: %u\n", arep);
    }
    /*
     *  Handle the request on an application level.
@@ -449,14 +443,7 @@ static int app_release_ind (
 
    if (p_appdata->arguments.verbosity > 0)
    {
-      printf (
-         "Release (disconnect) call-back. AREP: %u  Status codes: %d %d %d "
-         "%d\n",
-         arep,
-         p_result->pnio_status.error_code,
-         p_result->pnio_status.error_decode,
-         p_result->pnio_status.error_code_1,
-         p_result->pnio_status.error_code_2);
+      printf ("Release (disconnect) call-back. AREP: %u\n", arep);
    }
 
    app_set_outputs_default_value (p_appdata->arguments.verbosity);
@@ -476,7 +463,7 @@ static int app_dcontrol_ind (
    if (p_appdata->arguments.verbosity > 0)
    {
       printf (
-         "Dcontrol call-back. AREP: %u  Command: %s\n",
+         "PLC has sent DControl message. AREP: %u  Command: %s\n",
          arep,
          dcontrol_command_to_string (control_command));
    }
@@ -495,8 +482,8 @@ static int app_ccontrol_cnf (
    if (p_appdata->arguments.verbosity > 0)
    {
       printf (
-         "Ccontrol confirmation call-back. AREP: %u  Status codes: %d %d %d "
-         "%d\n",
+         "PLC has confirmed our CControl message. AREP: %u  Status codes: %d "
+         "%d %d %d\n",
          arep,
          p_result->pnio_status.error_code,
          p_result->pnio_status.error_decode,
@@ -525,7 +512,7 @@ static int app_write_ind (
    if (p_appdata->arguments.verbosity > 0)
    {
       printf (
-         "Parameter write call-back. AREP: %u API: %u Slot: %2u Subslot: %u "
+         "PLC will write record. AREP: %u API: %u Slot: %2u Subslot: %u "
          "Index: %u Sequence: %2u Length: %u\n",
          arep,
          api,
@@ -607,7 +594,7 @@ static int app_read_ind (
    if (p_appdata->arguments.verbosity > 0)
    {
       printf (
-         "Parameter read call-back. AREP: %u API: %u Slot: %2u Subslot: %u "
+         "PLC will read record. AREP: %u API: %u Slot: %2u Subslot: %u "
          "Index: %u Sequence: %2u  Max length: %u\n",
          arep,
          api,
@@ -724,8 +711,8 @@ static int app_state_ind (
    uint32_t arep,
    pnet_event_values_t state)
 {
-   uint16_t err_cls = 0;
-   uint16_t err_code = 0;
+   uint16_t err_cls = 0;  /* Error code 1 */
+   uint16_t err_code = 0; /* Error code 2 */
    uint16_t slot = 0;
    uint16_t subslot_ix = 0;
    const char * error_class_description = "";
@@ -772,6 +759,16 @@ static int app_state_ind (
                case PNET_ERROR_CODE_2_ABORT_DCP_RESET_TO_FACTORY:
                   error_code_description = "DCP reset to factory or factory "
                                            "reset, device terminated AR";
+                  break;
+               }
+               break;
+            case PNET_ERROR_CODE_1_CTLDINA:
+               error_class_description =
+                  "CTLDINA = Name and IP assignment from controller";
+               switch (err_code)
+               {
+               case PNET_ERROR_CODE_2_CTLDINA_ARP_MULTIPLE_IP_ADDRESSES:
+                  error_code_description = "Multiple users of same IP address";
                   break;
                }
                break;
@@ -828,13 +825,11 @@ static int app_state_ind (
          (void)pnet_set_provider_state (net, true);
       }
 
-      if (pnet_application_ready (net, arep) != 0)
-      {
-         printf (
-            "AREP %u Error returned when application telling that it is "
-            "ready for data. Have you set IOCS or IOPS for all subslots?\n",
-            arep);
-      }
+      /* Send application ready at next tick
+         Do not call pnet_application_ready() here as it will affect
+         the internal stack states */
+      p_appdata->arep_for_appl_ready = arep;
+      os_event_set (p_appdata->main_events, APP_EVENT_READY_FOR_DATA);
    }
    else if (state == PNET_EVENT_DATA)
    {
@@ -858,7 +853,7 @@ static int app_reset_ind (
    if (p_appdata->arguments.verbosity > 0)
    {
       printf (
-         "Reset call-back. Application reset mandatory: %u  Reset mode: %d\n",
+         "PLC orders reset. Application reset mandatory: %u  Reset mode: %d\n",
          should_reset_application,
          reset_mode);
    }
@@ -900,7 +895,7 @@ static int app_exp_module_ind (
    if (slot >= PNET_MAX_SLOTS)
    {
       printf (
-         "Wrong slot number recieved: %u  It should be less than %u\n",
+         "Wrong slot number received: %u  It should be less than %u\n",
          slot,
          PNET_MAX_SLOTS);
       return -1;
@@ -1588,6 +1583,39 @@ void app_copy_ip_to_struct (
 }
 
 /**
+ * Send application ready to the controller
+ *
+ * @param net              InOut: p-net stack instance
+ * @param arep             In:    Arep
+ * @param verbosity        In:    Verbosity
+ */
+static void app_handle_send_application_ready (
+   pnet_t * net,
+   uint32_t arep,
+   int verbosity)
+{
+   int ret = -1;
+
+   if (verbosity > 0)
+   {
+      printf (
+         "Application will signal that it is ready for data, for "
+         "AREP %u.\n",
+         arep);
+   }
+
+   ret = pnet_application_ready (net, arep);
+   if (ret != 0)
+   {
+      printf ("Error returned when application telling that it is ready for "
+              "data. Have you set IOCS or IOPS for all subslots?\n");
+   }
+
+   /* When the PLC sends a confirmation to this message, the
+      pnet_ccontrol_cnf() callback will be triggered.  */
+}
+
+/**
  * Send alarm ACK to the controller
  *
  * @param net              InOut: p-net stack instance
@@ -1810,7 +1838,7 @@ static void app_handle_send_alarm (
       .ch_grouping = PNET_DIAG_CH_INDIVIDUAL_CHANNEL,
       .ch_direction = APP_DIAG_CHANNEL_DIRECTION};
 
-   /* Look for first input slot */
+   /* Loop though slots and subslots to find first input subslot */
    while (!found_inputslot && (slot < PNET_MAX_SLOTS))
    {
       for (subslot_ix = 0; !found_inputslot && (subslot_ix < PNET_MAX_SUBSLOTS);
@@ -2066,7 +2094,8 @@ static void app_handle_send_alarm (
 
 void app_loop_forever (pnet_t * net, app_data_t * p_appdata)
 {
-   uint32_t mask = APP_EVENT_TIMER | APP_EVENT_ALARM | APP_EVENT_ABORT;
+   uint32_t mask = APP_EVENT_READY_FOR_DATA | APP_EVENT_TIMER |
+                   APP_EVENT_ALARM | APP_EVENT_ABORT;
    uint32_t flags = 0;
    bool button1_pressed = false;
    bool button2_pressed = false;
@@ -2089,7 +2118,16 @@ void app_loop_forever (pnet_t * net, app_data_t * p_appdata)
    for (;;)
    {
       os_event_wait (p_appdata->main_events, mask, &flags, OS_WAIT_FOREVER);
-      if (flags & APP_EVENT_ALARM)
+      if (flags & APP_EVENT_READY_FOR_DATA)
+      {
+         os_event_clr (p_appdata->main_events, APP_EVENT_READY_FOR_DATA);
+
+         app_handle_send_application_ready (
+            net,
+            p_appdata->arep_for_appl_ready,
+            p_appdata->arguments.verbosity);
+      }
+      else if (flags & APP_EVENT_ALARM)
       {
          os_event_clr (p_appdata->main_events, APP_EVENT_ALARM); /* Re-arm */
 

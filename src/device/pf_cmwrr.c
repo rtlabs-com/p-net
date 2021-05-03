@@ -166,7 +166,7 @@ int pf_cmwrr_cmdev_state_ind (
  * @param p_req_buf        In:    The request buffer.
  * @param data_length      In:    Size of the data to write.
  * @param p_req_pos        InOut: Position within the request buffer.
- * @param p_result         Out:   Detailed error information.
+ * @param p_result         Out:   Detailed error information if returning != 0
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -263,12 +263,18 @@ static int pf_cmwrr_write (
    {
       LOG_INFO (
          PNET_LOG,
-         "CMRSR(%d): Could not write index 0x%04X for slot %u subslot "
-         "0x%04X.\n",
+         "CMRWRR(%d): Could not write index 0x%04X for slot %u subslot "
+         "0x%04X. Error 0x%02X %02X %02X %02X Add %u %u\n",
          __LINE__,
          p_write_request->index,
          p_write_request->slot_number,
-         p_write_request->subslot_number);
+         p_write_request->subslot_number,
+         p_result->pnio_status.error_code,
+         p_result->pnio_status.error_decode,
+         p_result->pnio_status.error_code_1,
+         p_result->pnio_status.error_code_2,
+         p_result->add_data_1,
+         p_result->add_data_2);
    }
    return ret;
 }
@@ -279,9 +285,9 @@ int pf_cmwrr_rm_write_ind (
    const pf_iod_write_request_t * p_write_request,
    pf_iod_write_result_t * p_write_result,
    pnet_result_t * p_result,
-   const uint8_t * p_req_buf, /* request buffer */
+   const uint8_t * p_req_buf,
    uint16_t data_length,
-   uint16_t * p_req_pos) /* In/out: position in request buffer */
+   uint16_t * p_req_pos)
 {
    int ret = -1;
 

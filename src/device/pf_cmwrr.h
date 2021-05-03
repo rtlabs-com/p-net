@@ -50,13 +50,15 @@ int pf_cmwrr_cmdev_state_ind (
 /**
  * Handle RPC write requests.
  *
+ * If the state is correct, it will trigger pf_cmwrr_write()
+ *
  * Triggers the \a pnet_write_ind() user callback for some values.
  *
  * @param net              InOut: The p-net stack instance
  * @param p_ar             InOut: The AR instance.
  * @param p_write_request  In:    The write request block.
  * @param p_write_result   Out:   The write result block.
- * @param p_result         Out:   The result codes.
+ * @param p_result         Out:   Detailed error information if returning != 0
  * @param p_req_buf        In:    The RPC request buffer.
  * @param data_length      In:    The length of the data to write.
  * @param p_req_pos        In:    Position in p_req_buf.

@@ -111,11 +111,15 @@ static int pf_ppm_state_ind (
  */
 static void pf_ppm_set_state (pf_ppm_t * p_ppm, pf_ppm_state_values_t state)
 {
-   LOG_DEBUG (
-      PF_PPM_LOG,
-      "PPM(%d): New state %s\n",
-      __LINE__,
-      pf_ppm_state_to_string (state));
+   if (state != p_ppm->state)
+   {
+      LOG_DEBUG (
+         PF_PPM_LOG,
+         "PPM(%d): New state %s (was %s)\n",
+         __LINE__,
+         pf_ppm_state_to_string (state),
+         pf_ppm_state_to_string (p_ppm->state));
+   }
    p_ppm->state = state;
 }
 
@@ -199,8 +203,8 @@ static void pf_ppm_finish_buffer (
    uint8_t * p_payload = ((pnal_buf_t *)p_ppm->p_send_buffer)->payload;
    uint16_t u16;
 
-   p_ppm->cycle = pf_ppm_calculate_cyclecounter (
-      os_get_current_time_us(),
+   p_ppm->cycle = pf_ppm_calculate_next_cyclecounter (
+      p_ppm->cycle,
       p_ppm->send_clock_factor,
       p_ppm->reduction_ratio);
 
@@ -382,11 +386,13 @@ int pf_ppm_activate_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
 
       LOG_DEBUG (
          PF_PPM_LOG,
-         "PPM(%d): Starting cyclic data transmission for CREP %" PRIu32
-         ", period %" PRIu32 " microseconds\n",
+         "PPM(%d): Starting cyclic input data transmission with PPM. AREP %u "
+         "CREP %" PRIu32 ", period %" PRIu32 " microseconds. FrameID 0x%04x\n",
          __LINE__,
+         p_ar->arep,
          crep,
-         p_ppm->control_interval);
+         p_ppm->control_interval,
+         p_iocr->param.frame_id);
 
       /* Needed for counter calculations */
       p_ppm->send_clock_factor = p_iocr->param.send_clock_factor;
@@ -417,7 +423,12 @@ int pf_ppm_close_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
    pf_ppm_t * p_ppm;
    uint32_t cnt;
 
-   LOG_DEBUG (PF_PPM_LOG, "PPM(%d): Closing\n", __LINE__);
+   LOG_DEBUG (
+      PF_PPM_LOG,
+      "PPM(%d): Closing PPM for AREP %u CREP %" PRIu32 "\n",
+      __LINE__,
+      p_ar->arep,
+      crep);
    p_ppm = &p_ar->iocrs[crep].ppm;
    p_ppm->ci_running = false;
    if (p_ppm->ci_timer != UINT32_MAX)
@@ -544,9 +555,10 @@ int pf_ppm_set_data_and_iops (
          p_ar->err_code = PNET_ERROR_CODE_2_PPM_INVALID_STATE;
          LOG_DEBUG (
             PF_PPM_LOG,
-            "PPM(%d): Set data in wrong state: %u\n",
+            "PPM(%d): Set data in wrong state: %u for AREP %u\n",
             __LINE__,
-            p_iocr->ppm.state);
+            p_iocr->ppm.state,
+            p_ar->arep);
          break;
       case PF_PPM_STATE_RUN:
          if (
@@ -592,9 +604,10 @@ int pf_ppm_set_data_and_iops (
       default:
          LOG_ERROR (
             PF_PPM_LOG,
-            "PPM(%d): Set data in wrong state: %u\n",
+            "PPM(%d): Set data in wrong state: %u for AREP %u\n",
             __LINE__,
-            p_iocr->ppm.state);
+            p_iocr->ppm.state,
+            p_ar->arep);
          break;
       }
    }
@@ -640,9 +653,10 @@ int pf_ppm_set_iocs (
          p_ar->err_code = PNET_ERROR_CODE_2_PPM_INVALID_STATE;
          LOG_DEBUG (
             PF_PPM_LOG,
-            "PPM(%d): Set iocs in wrong state: %u\n",
+            "PPM(%d): Set iocs in wrong state: %u for AREP %u\n",
             __LINE__,
-            p_iocr->ppm.state);
+            p_iocr->ppm.state,
+            p_ar->arep);
          break;
       case PF_PPM_STATE_RUN:
          if (iocs_len == p_iodata->iocs_length)
@@ -679,9 +693,10 @@ int pf_ppm_set_iocs (
       default:
          LOG_ERROR (
             PF_PPM_LOG,
-            "PPM(%d): Set data in wrong state: %u\n",
+            "PPM(%d): Set data in wrong state: %u for AREP %u\n",
             __LINE__,
-            (unsigned)p_iocr->ppm.state);
+            (unsigned)p_iocr->ppm.state,
+            p_ar->arep);
          break;
       }
    }
@@ -729,9 +744,10 @@ int pf_ppm_get_data_and_iops (
          p_ar->err_code = PNET_ERROR_CODE_2_PPM_INVALID_STATE;
          LOG_DEBUG (
             PF_PPM_LOG,
-            "PPM(%d): Get data in wrong state: %u\n",
+            "PPM(%d): Get data in wrong state: %u for AREP %u\n",
             __LINE__,
-            p_iocr->ppm.state);
+            p_iocr->ppm.state,
+            p_ar->arep);
          break;
       case PF_PPM_STATE_RUN:
          if (
@@ -773,9 +789,10 @@ int pf_ppm_get_data_and_iops (
       default:
          LOG_ERROR (
             PF_PPM_LOG,
-            "PPM(%d): Get data in wrong state: %u\n",
+            "PPM(%d): Get data in wrong state: %u for AREP %u\n",
             __LINE__,
-            (unsigned)p_iocr->ppm.state);
+            (unsigned)p_iocr->ppm.state,
+            p_ar->arep);
          break;
       }
    }
@@ -821,9 +838,10 @@ int pf_ppm_get_iocs (
          p_ar->err_code = PNET_ERROR_CODE_2_PPM_INVALID_STATE;
          LOG_DEBUG (
             PF_PPM_LOG,
-            "PPM(%d): Get iocs in wrong state: %u\n",
+            "PPM(%d): Get iocs in wrong state: %u for AREP %u\n",
             __LINE__,
-            p_iocr->ppm.state);
+            p_iocr->ppm.state,
+            p_ar->arep);
          break;
       case PF_PPM_STATE_RUN:
          if (*p_iocs_len >= p_iodata->iocs_length)
@@ -855,9 +873,10 @@ int pf_ppm_get_iocs (
       default:
          LOG_ERROR (
             PF_PPM_LOG,
-            "PPM(%d): Get iocs in wrong state: %u\n",
+            "PPM(%d): Get iocs in wrong state: %u for AREP %u\n",
             __LINE__,
-            (unsigned)p_iocr->ppm.state);
+            (unsigned)p_iocr->ppm.state,
+            p_ar->arep);
          break;
       }
    }
@@ -993,9 +1012,11 @@ void pf_ppm_set_problem_indicator (pf_ar_t * p_ar, bool problem_indicator)
  *
  * @param timestamp         In:   Current time in microseconds.
  * @param send_clock_factor In:   Defines the length of a cycle, in units
- * of 31.25 us. Allowed 1 .. 128. Typically powers of two.
+ *                                of 31.25 us. Allowed 1 .. 128.
+ *                                Typically powers of two.
  * @param reduction_ratio   In:   Reduction ratio. If transmission should be
- * done every cycle. Allowed 1 .. 512. Typically powers of two.
+ *                                done every cycle. Allowed 1 .. 512.
+ *                                Typically powers of two.
  * @return                  The current cyclecounter
  */
 uint16_t pf_ppm_calculate_cyclecounter (
@@ -1004,23 +1025,62 @@ uint16_t pf_ppm_calculate_cyclecounter (
    uint16_t reduction_ratio)
 {
    uint64_t raw_cyclecounter;
-   uint32_t transmission_interval_in_timebases;
    uint32_t number_of_transmissions;
+   const uint32_t transmission_interval_in_timebases =
+      send_clock_factor * reduction_ratio;
 
    raw_cyclecounter = (32UL * timestamp) / 1000UL;
-   transmission_interval_in_timebases = send_clock_factor * reduction_ratio;
-   number_of_transmissions =
-      raw_cyclecounter / transmission_interval_in_timebases; /* Integer division
-                                                                for truncation
-                                                              */
 
-   return number_of_transmissions *
-          transmission_interval_in_timebases; /* Now a
-                                                 multiple
-                                                 of
-                                                 transmission
-                                                 intervals
-                                               */
+   /* Integer division for truncation */
+   number_of_transmissions =
+      raw_cyclecounter / transmission_interval_in_timebases;
+
+   /* Now a multiple of transmission intervals */
+   return number_of_transmissions * transmission_interval_in_timebases;
+}
+
+/**
+ * Calculate the next cyclecounter value from the previous one.
+ *
+ * The timebase is 1/32 of a millisecond (31.25 us).
+ *
+ * One cycle length is send_clock_factor x 31.25 us.
+ *
+ * The reduction_ratio describes if transmit and receive should
+ * be done every cycle. A value of 1 corresponds to every cycle,
+ * while a value of 4 corresponds to transmit and receive every fourth cycle.
+ *
+ * For example, send_clock_factor=2 and reduction_ratio=4 gives a
+ * cycle time of 62.5 us, and a frame is sent every 250 us.
+ * In the first frame the cyclecounter value should be 0, and in the next should
+ * the value be 8.
+ *
+ * @param previous_cyclecounter In:   Previous cyclecounter value
+ * @param send_clock_factor     In:   Defines the length of a cycle, in units
+ *                                    of 31.25 us. Allowed 1 .. 128.
+ *                                    Typically powers of two.
+ * @param reduction_ratio       In:   Reduction ratio. If transmission should be
+ *                                    done every cycle. Allowed 1 .. 512.
+ *                                    Typically powers of two.
+ * @return Next cyclecounter value
+ */
+uint16_t pf_ppm_calculate_next_cyclecounter (
+   uint16_t previous_cyclecounter,
+   uint16_t send_clock_factor,
+   uint16_t reduction_ratio)
+{
+   uint16_t number_of_previous_transmissions;
+   const uint32_t transmission_interval_in_timebases =
+      send_clock_factor * reduction_ratio;
+
+   /* Integer division for truncation */
+   number_of_previous_transmissions =
+      previous_cyclecounter / transmission_interval_in_timebases;
+
+   /* Make sure we return a multiple of transmission intervals, regardless
+      of the previous_cyclecounter value */
+   return (number_of_previous_transmissions + 1) *
+          transmission_interval_in_timebases;
 }
 
 /**************** Diagnostic strings *****************************************/

@@ -31,7 +31,8 @@
  */
 
 #ifdef UNIT_TEST
-#define pnal_set_ip_suite mock_pnal_set_ip_suite
+#define pnal_get_port_statistics mock_pnal_get_port_statistics
+#define pnal_set_ip_suite        mock_pnal_set_ip_suite
 #endif
 
 #include <string.h>
@@ -531,6 +532,12 @@ int pf_cmina_init (pnet_t * net)
          if (net->cmina_current_dcp_ase.device_initiative == 1)
          {
             net->cmina_hello_count = PF_CMINA_FS_HELLO_RETRY;
+            LOG_DEBUG (
+               PF_DCP_LOG,
+               "CMINA(%d): Start sending %u HELLO messages.\n",
+               __LINE__,
+               net->cmina_hello_count);
+
             /* Send first HELLO now! */
             ret = pf_scheduler_add (
                net,
