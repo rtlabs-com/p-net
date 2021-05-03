@@ -14,6 +14,9 @@
  ********************************************************************/
 
 #include "sampleapp_common.h"
+#include "app_utils.h"
+#include "app_log.h"
+#include "app_gsdml.h"
 
 #include "osal_log.h"
 #include "osal.h"
@@ -32,16 +35,17 @@
 #define GPIO_BUTTON2                   GPIO_P15_12
 #define APP_DEFAULT_ETHERNET_INTERFACE "en1"
 #define APP_DEFAULT_FILE_DIRECTORY     "/disk1"
+#define APP_LOG_LEVEL                  APP_LOG_LEVEL_DEBUG
 
 /********************************** Globals ***********************************/
 
-static app_data_t * gp_appdata = NULL;
-static pnet_t * g_net = NULL;
-static pnet_cfg_t pnet_default_cfg;
+static app_data_t * sample_app = NULL;
+static pnet_cfg_t pnet_cfg = {0};
+app_args_t app_args = {0};
 
 /************************* Utilities ******************************************/
 
-int app_set_led (uint16_t id, bool led_state, int verbosity)
+void app_set_led (uint16_t id, bool led_state)
 {
    if (id == APP_DATA_LED_ID)
    {
@@ -51,29 +55,19 @@ int app_set_led (uint16_t id, bool led_state, int verbosity)
    {
       gpio_set (GPIO_LED2, led_state ? 1 : 0); /* "LED2" on circuit board */
    }
-
-   return 0;
 }
 
-void app_get_button (const app_data_t * p_appdata, uint16_t id, bool * p_pressed)
+bool app_get_button (uint16_t id)
 {
    if (id == 0)
    {
-      *p_pressed = (gpio_get (GPIO_BUTTON1) == 0);
+      return (gpio_get (GPIO_BUTTON1) == 0);
    }
    else if (id == 1)
    {
-      *p_pressed = (gpio_get (GPIO_BUTTON2) == 0);
+      return (gpio_get (GPIO_BUTTON2) == 0);
    }
-   else
-   {
-      *p_pressed = false;
-   }
-}
-
-static void main_timer_tick (os_timer_t * timer, void * arg)
-{
-   os_event_set (gp_appdata->main_events, APP_EVENT_TIMER);
+   return false;
 }
 
 /************************* Shell commands *************************************/
@@ -105,14 +99,7 @@ static int _cmd_pnio_show (int argc, char * argv[])
       return -1;
    }
 
-   pnet_show (g_net, level);
-   printf ("\n");
-   printf (
-      "App parameter 1 = 0x%08x\n",
-      (unsigned)ntohl (gp_appdata->app_param_1));
-   printf (
-      "App parameter 2 = 0x%08x\n",
-      (unsigned)ntohl (gp_appdata->app_param_2));
+   pnet_show (app_get_pnet_instance (sample_app), level);
    printf ("\n");
    printf ("p-net revision: " PNET_VERSION "\n");
    printf ("rt-kernel revision: %s\n", os_kernel_revision);
@@ -130,7 +117,7 @@ SHELL_CMD (cmd_pnio_show);
 static int _cmd_pnio_factory_reset (int argc, char * argv[])
 {
    printf ("Factory reset\n");
-   (void)pnet_factory_reset (g_net);
+   (void)pnet_factory_reset (app_get_pnet_instance (sample_app));
 
    return 0;
 }
@@ -157,73 +144,86 @@ const shell_cmd_t cmd_pnio_remove_files = {
    .help_long = "Remove data files"};
 SHELL_CMD (cmd_pnio_remove_files);
 
+/**
+ * Suppress RT-Kernel banner during startup
+ */
+void shell_banner (void)
+{
+   /* Do not print message since it is run in another context
+    * and is not aligned with application log
+    */
+}
+
 /****************************** Main ******************************************/
 
 int main (void)
 {
-   int ret = -1;
-   app_data_t appdata;
-   g_net = NULL;
-   gp_appdata = &appdata;
-   uint16_t number_of_ports = 0;
+   int ret;
+   int32_t app_log_level = APP_LOG_LEVEL;
+   app_utils_netif_namelist_t netif_name_list;
+   pnet_if_cfg_t netif_cfg = {0};
+   uint16_t number_of_ports;
 
-   /* Prepare appdata */
-   memset (&appdata, 0, sizeof (appdata));
-   appdata.alarm_allowed = true;
-   strcpy (appdata.arguments.eth_interfaces, APP_DEFAULT_ETHERNET_INTERFACE);
-   strcpy (appdata.arguments.station_name, APP_DEFAULT_STATION_NAME);
-   appdata.arguments.verbosity = (LOG_LEVEL <= LOG_LEVEL_WARNING) ? 1 : 0;
+   strcpy (app_args.eth_interfaces, APP_DEFAULT_ETHERNET_INTERFACE);
+   strcpy (app_args.station_name, APP_GSDML_DEFAULT_STATION_NAME);
+   app_log_set_log_level (app_log_level);
 
-   appdata.main_events = os_event_create();
-   appdata.main_timer =
-      os_timer_create (APP_TICK_INTERVAL_US, main_timer_tick, NULL, false);
+   APP_LOG_INFO ("\n** Starting P-Net sample application " PNET_VERSION
+                 " **\n");
+   APP_LOG_INFO ("\nType help to a list ofsupported shell commands.\n"
+                 "Type help <cmd> to get a command description.\n"
+                 "For example: help pnio_show\n\n");
+   APP_LOG_INFO (
+      "Number of slots:      %u (incl slot for DAP module)\n",
+      PNET_MAX_SLOTS);
+   APP_LOG_INFO ("P-net log level:      %u (DEBUG=0, FATAL=4)\n", LOG_LEVEL);
+   APP_LOG_INFO ("App log level:        %u (DEBUG=0, FATAL=4)\n", app_log_level);
+   APP_LOG_INFO ("Max number of ports:  %u\n", PNET_MAX_PHYSICAL_PORTS);
+   APP_LOG_INFO ("Network interfaces:   %s\n", app_args.eth_interfaces);
+   APP_LOG_INFO ("Default station name: %s\n", app_args.station_name);
 
-   printf ("\n** Profinet sample application **\n");
-   if (appdata.arguments.verbosity > 0)
-   {
-      printf (
-         "Number of slots:      %u (incl slot for DAP module)\n",
-         PNET_MAX_SLOTS);
-      printf ("P-net log level:      %u (DEBUG=0, FATAL=4)\n", LOG_LEVEL);
-      printf ("App verbosity level:  %u\n", appdata.arguments.verbosity);
-      printf ("Max number of ports:  %u\n", PNET_MAX_PHYSICAL_PORTS);
-      printf ("Network interfaces:   %s\n", appdata.arguments.eth_interfaces);
-      printf ("Default station name: %s\n", appdata.arguments.station_name);
-   }
+   app_pnet_cfg_init_default (&pnet_cfg);
 
-   app_pnet_cfg_init_default (&pnet_default_cfg);
-   pnet_default_cfg.cb_arg = (void *)&appdata;
-   strcpy (pnet_default_cfg.station_name, appdata.arguments.station_name);
-   strcpy (pnet_default_cfg.file_directory, APP_DEFAULT_FILE_DIRECTORY);
+   /* Note: station name is defined by app_gsdml.h */
+
+   strcpy (pnet_cfg.file_directory, APP_DEFAULT_FILE_DIRECTORY);
+
    /* Note: pnal_cfg not is used for rt-kernel  */
 
-   ret = app_pnet_cfg_init_netifs (
-      appdata.arguments.eth_interfaces,
-      &appdata.if_list,
+   ret = app_utils_pnet_cfg_init_netifs (
+      app_args.eth_interfaces,
+      &netif_name_list,
       &number_of_ports,
-      &pnet_default_cfg,
-      appdata.arguments.verbosity);
+      &netif_cfg);
    if (ret != 0)
    {
       return -1;
    }
-   pnet_default_cfg.num_physical_ports = number_of_ports;
+
+   pnet_cfg.if_cfg = netif_cfg;
+   pnet_cfg.num_physical_ports = number_of_ports;
+
+   app_utils_print_network_config (&netif_cfg, number_of_ports);
 
    /* Initialize profinet stack */
-   g_net = pnet_init (&pnet_default_cfg);
-   if (g_net == NULL)
+   APP_LOG_INFO ("Init sample application\n");
+   sample_app = app_init (&pnet_cfg);
+   if (sample_app == NULL)
    {
-      printf ("Failed to initialize p-net application.\n");
+      printf ("Failed to initialize P-Net.\n");
+      printf ("Aborting application\n");
       return -1;
    }
 
-   os_timer_start (gp_appdata->main_timer);
+   APP_LOG_INFO ("Start sample application\n");
+   if (app_start (sample_app, RUN_IN_MAIN_THREAD) != 0)
+   {
+      printf ("Failed to start\n");
+      printf ("Aborting application\n");
+      return -1;
+   }
 
-   app_loop_forever (g_net, &appdata);
-
-   os_timer_destroy (appdata.main_timer);
-   os_event_destroy (appdata.main_events);
-   printf ("Quitting the sample application\n\n");
+   app_loop_forever (sample_app);
 
    return 0;
 }

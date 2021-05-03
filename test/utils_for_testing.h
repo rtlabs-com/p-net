@@ -110,7 +110,7 @@ typedef struct app_data_for_testing_obj
    os_timer_t * periodic_timer;
    pnet_event_values_t cmdev_state;
    uint16_t data_cycle_ctr;
-   uint32_t data_ctr;
+   uint32_t counter_data;
    os_event_t * main_events;
    uint32_t main_arep;
    bool alarm_allowed;

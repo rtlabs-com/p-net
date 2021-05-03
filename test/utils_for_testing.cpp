@@ -559,7 +559,7 @@ void PnetIntegrationTestBase::run_stack (int us)
       if ((appdata.main_arep != 0) && (appdata.tick_ctr > 10))
       {
          appdata.tick_ctr = 0;
-         appdata.inputdata[0] = appdata.data_ctr++;
+         appdata.inputdata[0] = appdata.counter_data++;
 
          /* Set data for custom input modules, if any */
          for (slot = 0; slot < PNET_MAX_SLOTS; slot++)
