@@ -1274,6 +1274,15 @@ int pf_cmina_remove_all_data_files (const char * file_directory)
    return 0;
 }
 
+bool pf_cmina_has_timed_out (
+   uint32_t now_us,
+   uint32_t previous_us,
+   uint16_t period,
+   uint16_t factor)
+{
+   return (now_us - previous_us) >= ((uint32_t) (period * factor) * 1000 / 32);
+}
+
 /*************** Diagnostic strings *****************************************/
 
 void pf_cmina_ip_to_string (pnal_ipaddr_t ip, char * outputstring)

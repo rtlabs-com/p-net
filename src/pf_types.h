@@ -2639,6 +2639,9 @@ struct pnet
    pf_log_book_t fspm_log_book;
    os_mutex_t * fspm_log_book_mutex;
 
+   /* Last time pnet_handle_periodic() was invoked */
+   uint32_t timestamp_handle_periodic_us;
+
    /* Mutex for protecting access to writable I&M data.
     *
     * Note I&M may be both read and written by SNMP, which executes from
