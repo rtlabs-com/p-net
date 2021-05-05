@@ -57,7 +57,8 @@ int pnal_save_file (
    int ret = 0; /* Assume everything goes well */
    int outputfile;
 
-   /* Open file */
+   /* Open file
+      Use synchronized write to make sure it ends up on disk immediately */
    outputfile = open (
       fullpath,
       O_WRONLY | O_CREAT | O_TRUNC | O_SYNC,
@@ -121,11 +122,11 @@ int pnal_load_file (
    size_t size_2)
 {
    int ret = 0; /* Assume everything goes well */
-   FILE * inputfile;
+   int inputfile;
 
    /* Open file */
-   inputfile = fopen (fullpath, "rb");
-   if (inputfile == NULL)
+   inputfile = open (fullpath, O_RDONLY);
+   if (inputfile == -1)
    {
       LOG_DEBUG (
          PF_PNAL_LOG,
@@ -138,7 +139,7 @@ int pnal_load_file (
    /* Read file contents */
    if (size_1 > 0)
    {
-      if (fread (object_1, size_1, 1, inputfile) != 1)
+      if (read (inputfile, object_1, size_1) <= 0)
       {
          ret = -1;
          LOG_ERROR (
@@ -151,7 +152,7 @@ int pnal_load_file (
 
    if (size_2 > 0 && ret == 0)
    {
-      if (fread (object_2, size_2, 1, inputfile) != 1)
+      if (read (inputfile, object_2, size_2) <= 0)
       {
          ret = -1;
          LOG_ERROR (
@@ -163,7 +164,10 @@ int pnal_load_file (
    }
 
    /* Close file */
-   fclose (inputfile);
+   if (close (inputfile) != 0)
+   {
+      ret = -1;
+   }
 
    return ret;
 }
