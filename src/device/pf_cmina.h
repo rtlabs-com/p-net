@@ -192,6 +192,27 @@ int pf_cmina_dcp_get_req (
    uint8_t ** pp_value,
    uint8_t * p_block_error);
 
+/**
+ * Check if a time interval has passed
+ *
+ * @param now_us           In:    Interval end in microseconds
+ * @param previous_us      In:    Interval start in microseconds
+ * @param period           In:    Time interval length in 1/32 of millisecond.
+ *                                For 1 millisecond use 32
+ *                                    2 milliseconds use 64 etc
+ * @param factor           In:    Multiplication factor for the timeout.
+ *                                Use 1 if the given time interval length should
+ *                                be used, or 3 if we should return true after
+ *                                3 time interval lengths etc
+ * @return  true if the measured time interval is longer than period*factor
+ *          false if it not has passed
+ */
+bool pf_cmina_has_timed_out (
+   uint32_t now_us,
+   uint32_t previous_us,
+   uint16_t period,
+   uint16_t factor);
+
 /************ Internal functions, made available for unit testing ************/
 
 bool pf_cmina_is_stationname_valid (const char * station_name, uint16_t len);
