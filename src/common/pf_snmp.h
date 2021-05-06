@@ -296,7 +296,7 @@ void pf_snmp_remove_data_files (const char * file_directory);
  *
  * @param net              InOut: The p-net stack instance.
  */
-void pf_snmp_fspm_im_location_ind(pnet_t * net);
+void pf_snmp_fspm_im_location_ind (pnet_t * net);
 
 /**
  * Get system description.
@@ -861,6 +861,13 @@ int pf_snmp_get_peer_link_status (
    pnet_t * net,
    int loc_port_num,
    pf_snmp_link_status_t * p_link_status);
+
+/**
+ * Show SNMP details
+ *
+ * @param net              InOut: The p-net stack instance
+ */
+void pf_snmp_show (pnet_t * net);
 
 #ifdef __cplusplus
 }

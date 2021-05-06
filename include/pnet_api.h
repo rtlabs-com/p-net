@@ -2123,14 +2123,16 @@ PNET_EXPORT int pnet_diag_remove (
  *
  *     0x0010              | Show compile time options
  *     0x0020              | Show CMDEV
- *     0x0400              | Show logbook
+ *     0x0080              | Show SNMP
+ *     0x0100              | Show Ports
  *     0x0200              | Show diagnosis
+ *     0x0400              | Show logbook
  *     0x0800              | Show all sessions.
  *     0x1000              | Show all ARs.
  *     0x1001              |     include IOCR.
  *     0x1002              |     include data_descriptors.
  *     0x1003              |     include IOCR and data_descriptors.
- *     0x2000              | Show CFG information.
+ *     0x2000              | Show config/CMINA information.
  *     0x4000              | Show scheduler information.
  *     0x8000              | Show I&M data.
  *
@@ -2143,6 +2145,8 @@ PNET_EXPORT int pnet_diag_remove (
  *                  1                         Sessions
  *                     1                      Logbook
  *                       1                    Diagnosis
+ *                         1                  Ports
+ *                           1                SNMP
  *                               1            CMDEV
  *                                 1          Options
  *                                       1    More IOCR info on AR

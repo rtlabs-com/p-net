@@ -67,7 +67,7 @@ static void pf_snmp_log_loaded_variable (
    {
       LOG_INFO (
          PF_SNMP_LOG,
-         "SNMP(%d): Could not yet read %s from nvm. Using '%s'\n",
+         "SNMP(%d): Could not yet read %s from nvm. Using \"%s\"\n",
          __LINE__,
          variable_name,
          variable_value);
@@ -685,4 +685,14 @@ int pf_snmp_get_peer_link_status (
    }
 
    return error;
+}
+
+void pf_snmp_show (pnet_t * net)
+{
+   pf_snmp_data_t * snmp = &net->snmp_data;
+
+   printf ("\nSNMP\n");
+   printf (" SysName     : \"%s\"\n", snmp->system_name.string);
+   printf (" SysLocation : \"%s\"\n", snmp->system_location.string);
+   printf (" SysContact  : \"%s\"\n", snmp->system_contact.string);
 }
