@@ -398,8 +398,9 @@ void pf_cmrpc_show (pnet_t * net, unsigned level)
                   for (iy = 0; iy < p_iocr->nbr_data_desc; iy++)
                   {
                      p_desc = &p_iocr->data_desc[iy];
+
                      printf (
-                        "%3u,%3u: in_use       = %u\n",
+                        "\n%3u,%3u: in_use       = %u\n",
                         (unsigned)ix,
                         (unsigned)iy,
                         (unsigned)p_desc->in_use);
@@ -419,7 +420,7 @@ void pf_cmrpc_show (pnet_t * net, unsigned level)
                         (unsigned)iy,
                         (unsigned)p_desc->slot_nbr);
                      printf (
-                        "%3u,%3u: subslot      = %u\n",
+                        "%3u,%3u: subslot      = 0x%04x\n",
                         (unsigned)ix,
                         (unsigned)iy,
                         (unsigned)p_desc->subslot_nbr);
@@ -904,7 +905,7 @@ static int pf_cmrpc_send_once_from_buffer (
       pf_cmina_ip_to_string (p_sess->ip_addr, ip_string);
       LOG_INFO (
          PF_RPC_LOG,
-         "CMRPC(%d): Sending %u bytes on socket %u to %s:%u Payload:'%s' "
+         "CMRPC(%d): Sending %u bytes on socket %u to %s:%u Payload:\"%s\" "
          "Session from me:%u Session index:%u\n",
          __LINE__,
          size,

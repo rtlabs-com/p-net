@@ -48,17 +48,19 @@ void pf_fspm_im_show (const pnet_t * net)
 {
    printf ("Identification & Maintenance\n");
    printf (
-      "I&M1.im_tag_function     : <%s>\n",
+      "I&M1.im_tag_function     : \"%s\"\n",
       net->fspm_cfg.im_1_data.im_tag_function);
    printf (
-      "I&M1.im_tag_location     : <%s>\n",
+      "I&M1.im_tag_location     : \"%s\"\n",
       net->fspm_cfg.im_1_data.im_tag_location);
-   printf ("I&M2.date                : <%s>\n", net->fspm_cfg.im_2_data.im_date);
    printf (
-      "I&M3.im_descriptor       : <%s>\n",
+      "I&M2.date                : \"%s\"\n",
+      net->fspm_cfg.im_2_data.im_date);
+   printf (
+      "I&M3.im_descriptor       : \"%s\"\n",
       net->fspm_cfg.im_3_data.im_descriptor);
    printf (
-      "I&M4.im_signature        : <%s>\n",
+      "I&M4.im_signature        : \"%s\"\n",
       net->fspm_cfg.im_4_data.im_signature); /* Should be binary data, but works
                                                 for now */
 }
@@ -946,7 +948,7 @@ int pf_fspm_cm_write_ind (
                 * of the device's location. The larger version has precedence
                 * over the I&M version, so we need to delete the larger one.
                 */
-               pf_snmp_fspm_im_location_ind(net);
+               pf_snmp_fspm_im_location_ind (net);
 #endif
             }
             else

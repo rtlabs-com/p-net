@@ -294,7 +294,7 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
           * in all supported reset modes. This seems to contradict
           * PN-AL-Services ch. 6.3.11.3.2.
           */
-         pf_snmp_data_clear(net);
+         pf_snmp_data_clear (net);
 #endif
       }
 
@@ -320,7 +320,7 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
          pf_file_clear (p_file_directory, PF_FILENAME_IP);
          pf_file_clear (p_file_directory, PF_FILENAME_DIAGNOSTICS);
 #if PNET_OPTION_SNMP
-         pf_snmp_data_clear(net);
+         pf_snmp_data_clear (net);
 #endif
          pf_pdport_reset_all (net);
       }
@@ -1340,10 +1340,9 @@ void pf_cmina_port_statistics_show (pnet_t * net)
    if (pnal_get_port_statistics (net->pf_interface.main_port.name, &stats) == 0)
    {
       printf (
-         "Main interface %s    In: %" PRIu32 " bytes %" PRIu32
+         "Main interface %10s  In: %" PRIu32 " bytes %" PRIu32
          " errors %" PRIu32 " discards  Out: %" PRIu32 " bytes %" PRIu32
-         " errors %" PRIu32 " discards"
-         "s\n",
+         " errors %" PRIu32 " discards\n",
          net->pf_interface.main_port.name,
          stats.if_in_octets,
          stats.if_in_errors,
@@ -1368,10 +1367,9 @@ void pf_cmina_port_statistics_show (pnet_t * net)
       if (pnal_get_port_statistics (p_port_data->netif.name, &stats) == 0)
       {
          printf (
-            "Port        %s    In: %" PRIu32 " bytes %" PRIu32
+            "Port           %10s  In: %" PRIu32 " bytes %" PRIu32
             " errors %" PRIu32 " discards  Out: %" PRIu32 " bytes %" PRIu32
-            " errors %" PRIu32 " discards"
-            "s\n",
+            " errors %" PRIu32 " discards\n",
             p_port_data->netif.name,
             stats.if_in_octets,
             stats.if_in_errors,
@@ -1399,21 +1397,21 @@ void pf_cmina_show (pnet_t * net)
    printf (
       "state                          : %s\n",
       pf_cmina_state_to_string (net));
-   printf ("Default station_name           : <%s>\n", p_cfg->station_name);
+   printf ("Default station_name           : \"%s\"\n", p_cfg->station_name);
    printf (
-      "Perm station_name              : <%s>\n",
+      "Perm station_name              : \"%s\"\n",
       net->cmina_nonvolatile_dcp_ase.station_name);
    printf (
-      "Temp station_name              : <%s>\n",
+      "Temp station_name              : \"%s\"\n",
       net->cmina_current_dcp_ase.station_name);
    printf ("\n");
 
-   printf ("Default product_name           : <%s>\n", p_cfg->product_name);
+   printf ("Default product_name           : \"%s\"\n", p_cfg->product_name);
    printf (
-      "Perm product_name              : <%s>\n",
+      "Perm product_name              : \"%s\"\n",
       net->cmina_nonvolatile_dcp_ase.product_name);
    printf (
-      "Temp product_name              : <%s>\n",
+      "Temp product_name              : \"%s\"\n",
       net->cmina_current_dcp_ase.product_name);
    printf ("\n");
 
@@ -1436,7 +1434,7 @@ void pf_cmina_show (pnet_t * net)
       (unsigned)p_cfg->if_cfg.ip_cfg.ip_gateway.c,
       (unsigned)p_cfg->if_cfg.ip_cfg.ip_gateway.d);
 
-   printf ("Perm     IP  Netmask  Gateway      : ");
+   printf ("Perm    IP  Netmask  Gateway   : ");
    pf_ip_address_show (
       net->cmina_nonvolatile_dcp_ase.full_ip_suite.ip_suite.ip_addr);
    printf ("  ");
@@ -1458,7 +1456,7 @@ void pf_cmina_show (pnet_t * net)
    printf ("\n");
 
    printf (
-      "MAC                            : %02x:%02x:%02x:%02x:%02x:%02x\n",
+      "MAC                            : %02x:%02x:%02x:%02x:%02x:%02x\n\n",
       net->pf_interface.main_port.mac_address.addr[0],
       net->pf_interface.main_port.mac_address.addr[1],
       net->pf_interface.main_port.mac_address.addr[2],

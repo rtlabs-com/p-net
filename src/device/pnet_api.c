@@ -160,6 +160,18 @@ void pnet_show (pnet_t * net, unsigned level)
          printf ("\n\n");
          pf_fspm_im_show (net);
       }
+      if (level & 0x0100)
+      {
+         pf_port_show (net);
+      }
+      if (level & 0x0080)
+      {
+#if PNET_OPTION_SNMP
+         pf_snmp_show (net);
+#else
+         printf ("No support for SNMP\n\n");
+#endif
+      }
    }
    else
    {
