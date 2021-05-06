@@ -63,6 +63,8 @@ static inline uint32_t atomic_fetch_sub (atomic_int * p, uint32_t v)
 #define PF_UDP_UNICAST_PORT            0x8892
 #define PF_RPC_CCONTROL_EPHEMERAL_PORT 0xc001
 
+#define PF_ALARM_NUMBER_OF_PRIORITY_LEVELS 2 /* High and low */
+
 #define PF_FRAME_BUFFER_SIZE 1500
 
 /** This should be smaller than PF_FRAME_BUFFER_SIZE with the maximum size of
@@ -2029,14 +2031,14 @@ typedef struct pf_ar
    bool alarm_enable;
    /* Alarm handling ALPMI/ALPMR machines: one for LOW (0) prio and one for HIGH
     * (1) prio. */
-   pf_alpmx_t alpmx[2];
+   pf_alpmx_t alpmx[PF_ALARM_NUMBER_OF_PRIORITY_LEVELS];
    /* Alarm handling APMS/APMR machines: one for LOW (0) prio and one for HIGH
     * (1) prio. */
-   pf_apmx_t apmx[2];
+   pf_apmx_t apmx[PF_ALARM_NUMBER_OF_PRIORITY_LEVELS];
 
    /* Alarm queues for outgoing alarms: one for LOW (0) prio and one for HIGH
     * (1) prio. */
-   pf_alarm_send_queue_t alarm_send_q[2];
+   pf_alarm_send_queue_t alarm_send_q[PF_ALARM_NUMBER_OF_PRIORITY_LEVELS];
 
    uint16_t nbr_ar_rpc;
    pf_ar_rpc_request_t ar_rpc_request; /* From connect.req */

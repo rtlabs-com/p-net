@@ -2517,7 +2517,7 @@ int pf_alarm_receive_queue_fetch (
 
 /**
  * Reset queue for outgoing alarms
- * @param q                InOut: Alarm send queue
+ * @param q                InOut: Alarm send queue (High or low prio)
  */
 void pf_alarm_send_queue_reset (pf_alarm_send_queue_t * q)
 {
@@ -2539,7 +2539,7 @@ void pf_alarm_send_queue_reset (pf_alarm_send_queue_t * q)
 
 /**
  * Post an alarm to the send queue
- * @param q                InOut: Alarm send queue
+ * @param q                InOut: Alarm send queue (High or low prio)
  * @param p_alarm_data     In:    Alarm details (Alarm type, slot, subslot,
  *                                possibly payload etc)
  * @return 0  is returned if an alarm is posted onto the queue
@@ -2551,7 +2551,6 @@ int pf_alarm_send_queue_post (
 {
    uint16_t write_index;
    int ret = -1;
-
    if (pf_alarm_queue_is_available (&q->accountant) == false)
    {
       LOG_ERROR (
@@ -2583,7 +2582,7 @@ int pf_alarm_send_queue_post (
 
 /**
  * Fetch an alarm from the send queue
- * @param q                InOut: Alarm send queue
+ * @param q                InOut: Alarm send queue (High or low prio)
  * @param p_alarm_data     Out:   Alarm details (Alarm type, slot, subslot,
  *                                possibly payload etc)
  * @return 0  is returned if an alarm is fetched from the queue
@@ -2679,9 +2678,15 @@ bool pf_alarm_pending (const pf_ar_t * p_ar)
 int pf_alarm_activate (pnet_t * net, pf_ar_t * p_ar)
 {
    int ret = 0; /* Assume all goes well */
+   int16_t i;
+   pf_alarm_send_queue_t * q;
 
-   pf_alarm_queue_mutex_create (&p_ar->alarm_send_q->accountant);
-   pf_alarm_send_queue_reset (p_ar->alarm_send_q);
+   for (i = 0; i < PF_ALARM_NUMBER_OF_PRIORITY_LEVELS; i++)
+   {
+      q = &p_ar->alarm_send_q[i];
+      pf_alarm_queue_mutex_create (&q->accountant);
+      pf_alarm_send_queue_reset (q);
+   }
 
    if (pf_alarm_alpmx_activate (p_ar) != 0)
    {
@@ -2699,9 +2704,15 @@ int pf_alarm_activate (pnet_t * net, pf_ar_t * p_ar)
 int pf_alarm_close (pnet_t * net, pf_ar_t * p_ar)
 {
    int ret = 0;
+   int16_t i;
+   pf_alarm_send_queue_t * q;
 
-   pf_alarm_send_queue_reset (p_ar->alarm_send_q);
-   pf_alarm_queue_mutex_destroy (&p_ar->alarm_send_q->accountant);
+   for (i = 0; i < PF_ALARM_NUMBER_OF_PRIORITY_LEVELS; i++)
+   {
+      q = &p_ar->alarm_send_q[i];
+      pf_alarm_send_queue_reset (q);
+      pf_alarm_queue_mutex_destroy (&q->accountant);
+   }
 
    LOG_DEBUG (
       PF_ALARM_LOG,
@@ -3078,6 +3089,15 @@ static int pf_alarm_send_alarm (
    {
       memcpy (alarm_data.payload.data, p_payload, payload_len);
    }
+
+   LOG_DEBUG (
+      PF_ALARM_LOG,
+      "Alarm(%d): Putting alarm data in %s prio output queue. Alarm type %u "
+      "Payload %u bytes.\n",
+      __LINE__,
+      high_prio ? "high" : "low",
+      alarm_type,
+      payload_len);
 
    return pf_alarm_send_queue_post (
       &p_ar->alarm_send_q[high_prio ? 1 : 0],
