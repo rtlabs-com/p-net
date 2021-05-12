@@ -1961,7 +1961,8 @@ typedef struct pf_session_info
                               */
    bool kill_session; /* On error or when done. This will kill the session at
                          the end of handling the incoming RPC frame. */
-   int socket;
+   int socket; /* Socket for CControl messaging, or reference to the main CMRPC
+                  socket. Close it only if from_me==true */
    pnal_eth_handle_t * eth_handle;
    struct pf_ar * p_ar; /* Parent AR */
    bool from_me;        /* True if the session originates from the device (i.e.
