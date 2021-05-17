@@ -4130,6 +4130,20 @@ static int pf_cmrpc_dce_packet (
    /* Parse RPC header. This function also sets get_info.is_big_endian */
    pf_get_dce_rpc_header (&get_info, &req_pos, &rpc_req);
 
+   LOG_DEBUG (
+      PF_RPC_LOG,
+      "CMRPC(%d): Incoming RPC frame. Seq: %" PRIu32 ", "
+      "Serial: %u, Frag num: %u, Frag Len: %u "
+      "Fragment flag: \"%s\" Last Fragment flag: \"%s\", No fack: \"%s\"\n",
+      __LINE__,
+      rpc_req.sequence_nmb,
+      rpc_req.serial_low,
+      rpc_req.fragment_nmb,
+      rpc_req.length_of_body,
+      rpc_req.flags.fragment ? "Set" : "Not set",
+      rpc_req.flags.last_fragment ? "Set" : "Not set",
+      rpc_req.flags.no_fack ? "Set" : "Not set");
+
    /* Find the session (by RPC activity UUID) or allocate a new session */
    pf_session_locate_by_uuid (net, &rpc_req.activity_uuid, &p_sess);
    if (p_sess == NULL)
@@ -4749,11 +4763,7 @@ static int pf_cmrpc_dce_packet (
          /* Respond to intermediate incoming fragments */
          if ((rpc_req.flags.fragment == true) && (rpc_req.flags.no_fack == false))
          {
-            LOG_INFO (
-               PF_RPC_LOG,
-               "CMRPC(%d): Received a fragment of a DCE RPC message on UDP. "
-               "Send an ACK.\n",
-               __LINE__);
+            LOG_INFO (PF_RPC_LOG, "CMRPC(%d): Send fragment ACK\n", __LINE__);
             /* Create Fragment ACK */
             /* Send ACK */
             rpc_res = rpc_req;
