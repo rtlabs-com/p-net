@@ -57,6 +57,10 @@
 #error "There must be at least 2 CR per AR. Increase PNET_MAX_CR."
 #endif
 
+#if PNET_MAX_SESSION_BUFFER_SIZE > UINT16_MAX
+#error "PNET_MAX_SESSION_BUFFER_SIZE must be less than or equal to 65535"
+#endif
+
 static const pf_uuid_t implicit_ar = {0, 0, 0, {0, 0, 0, 0, 0, 0, 0, 0}};
 
 static const pf_uuid_t uuid_epmap_interface = {
@@ -4116,6 +4120,7 @@ static int pf_cmrpc_dce_packet (
    uint16_t req_pos = 0;
    uint16_t res_pos = 0;
    uint16_t max_rsp_len;
+   uint32_t max_rsp_len_remote;
    pf_get_info_t get_info;
    pf_session_info_t * p_sess = NULL;
    bool is_new_session = false;
@@ -4339,12 +4344,16 @@ static int pf_cmrpc_dce_packet (
 
                /* Our response is limited by the size of the requesters response
                 * buffer */
-               max_rsp_len = req_pos + p_sess->ndr_data.args_maximum;
-               if (max_rsp_len > sizeof (p_sess->out_buffer))
+               max_rsp_len_remote = req_pos + p_sess->ndr_data.args_maximum;
+               if (max_rsp_len_remote > sizeof (p_sess->out_buffer))
                {
                   /* Our response is also limited by what our buffer can
                    * accommodate */
                   max_rsp_len = sizeof (p_sess->out_buffer);
+               }
+               else
+               {
+                  max_rsp_len = max_rsp_len_remote;
                }
             }
             else

@@ -101,7 +101,7 @@ set(PNET_MAX_AR_VENDOR_BLOCK_DATA_LENGTH 512
 set(PNET_MAX_MAN_SPECIFIC_FAST_STARTUP_DATA_LENGTH 0
   CACHE STRING "or 512 (bytes")
 set(PNET_MAX_SESSION_BUFFER_SIZE 4500
-  CACHE STRING "Max fragmented RPC request/response length")
+  CACHE STRING "Max fragmented RPC request/response length. Max value 65535")
 set(PNET_MAX_DIRECTORYPATH_SIZE 240
   CACHE STRING "Max size of directory path, including termination")
 set(PNET_MAX_FILENAME_SIZE 30
