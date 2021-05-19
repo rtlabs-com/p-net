@@ -37,6 +37,9 @@
 #define APP_DEFAULT_FILE_DIRECTORY     "/disk1"
 #define APP_LOG_LEVEL                  APP_LOG_LEVEL_DEBUG
 
+#define APP_BG_WORKER_THREAD_PRIORITY  2
+#define APP_BG_WORKER_THREAD_STACKSIZE 4096 /* bytes */
+
 /********************************** Globals ***********************************/
 
 static app_data_t * sample_app = NULL;
@@ -204,6 +207,10 @@ int main (void)
    pnet_cfg.num_physical_ports = number_of_ports;
 
    app_utils_print_network_config (&netif_cfg, number_of_ports);
+
+   pnet_cfg.pnal_cfg.bg_worker_thread.prio = APP_BG_WORKER_THREAD_PRIORITY;
+   pnet_cfg.pnal_cfg.bg_worker_thread.stack_size =
+      APP_BG_WORKER_THREAD_STACKSIZE;
 
    /* Initialize profinet stack */
    APP_LOG_INFO ("Init sample application\n");

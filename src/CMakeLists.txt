@@ -60,6 +60,7 @@ target_sources (profinet PRIVATE
   device/pf_pdport.h
   device/pf_port.h
   common/pf_alarm.c
+  common/pf_bg_worker.c
   common/pf_cpm.c
   common/pf_dcp.c
   common/pf_ppm.c
@@ -71,6 +72,7 @@ target_sources (profinet PRIVATE
   $<$<BOOL:${PNET_OPTION_SNMP}>:${PROFINET_SOURCE_DIR}/src/common/pf_snmp.c>
   common/pf_udp.c
   common/pf_alarm.h
+  common/pf_bg_worker.h
   common/pf_cpm.h
   common/pf_dcp.h
   common/pf_file.h

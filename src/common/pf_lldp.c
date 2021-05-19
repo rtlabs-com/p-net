@@ -894,19 +894,7 @@ void pf_lldp_get_link_status (
    int loc_port_num,
    pf_lldp_link_status_t * p_link_status)
 {
-   pnal_eth_status_t status;
-   const pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
-
-   /* TODO: Better error handling */
-   if (pnal_eth_get_status (p_port_data->netif.name, &status) != 0)
-   {
-      LOG_ERROR (
-         PF_LLDP_LOG,
-         "LLDP(%d): Failed to read Ethernet port status for port %d\n",
-         __LINE__,
-         loc_port_num);
-      memset (&status, 0, sizeof (status));
-   }
+   pnal_eth_status_t status = pf_pdport_get_eth_status (net, loc_port_num);
 
    p_link_status->is_autonegotiation_supported =
       status.is_autonegotiation_supported;

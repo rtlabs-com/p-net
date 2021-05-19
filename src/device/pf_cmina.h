@@ -213,6 +213,18 @@ bool pf_cmina_has_timed_out (
    uint16_t period,
    uint16_t factor);
 
+/**
+ * Save the IP settings (and station name) to nonvolatile memory if necessary.
+ * This is a blocking call intended to be executed by the background worker.
+ *
+ * Compares with the content of already stored settings (in order not to
+ * wear out the flash chip)
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param p_ase            In:    Settings to be saved
+ */
+void pf_cmina_save_ase (pnet_t * net, pf_cmina_dcp_ase_t * p_ase);
+
 /************ Internal functions, made available for unit testing ************/
 
 bool pf_cmina_is_stationname_valid (const char * station_name, uint16_t len);

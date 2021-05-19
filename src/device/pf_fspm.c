@@ -321,16 +321,7 @@ static void pf_fspm_load_im (pnet_t * net)
    }
 }
 
-/**
- * @internal
- * Save the I&M settings to nonvolatile memory, if necessary.
- *
- * Compares with the content of already stored settings (in order not to
- * wear out the flash chip)
- *
- * @param net              InOut: The p-net stack instance
- */
-static void pf_fspm_save_im (pnet_t * net)
+void pf_fspm_save_im (pnet_t * net)
 {
    pf_im_nvm_t output_im;
    pf_im_nvm_t temporary_buffer;
@@ -416,7 +407,7 @@ void pf_fspm_get_im_location (pnet_t * net, char * location)
 void pf_fspm_save_im_location (pnet_t * net, const char * location)
 {
    pf_fspm_set_im_location (net, location);
-   pf_fspm_save_im (net);
+   (void)pf_bg_worker_start_job (net, PF_BGJOB_SAVE_IM_NVM_DATA);
 }
 
 int pf_fspm_init (pnet_t * net, const pnet_cfg_t * p_cfg)
@@ -545,7 +536,7 @@ int pf_fspm_clear_im_data (pnet_t * net)
       sizeof (net->fspm_cfg.im_4_data.im_signature));
    os_mutex_unlock (net->fspm_im_mutex);
 
-   pf_fspm_save_im (net);
+   (void)pf_bg_worker_start_job (net, PF_BGJOB_SAVE_IM_NVM_DATA);
 
    return 0;
 }

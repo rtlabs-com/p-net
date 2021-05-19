@@ -2583,6 +2583,7 @@ typedef struct pf_port
    uint8_t port_num;
    pf_pdport_t pdport;
    pf_lldp_port_t lldp;
+   pnal_eth_status_t eth_status; /* Updated by background task */
 } pf_port_t;
 
 typedef struct pf_snmp_data
@@ -2619,6 +2620,7 @@ struct pnet
                                                     stored in nvm */
    pf_cmina_dcp_ase_t cmina_current_dcp_ase;     /* Reflects current settings
                                                     (possibly not yet commited) */
+   os_mutex_t * cmina_mutex;
    pf_cmina_state_values_t cmina_state;
    uint8_t cmina_error_decode;
    uint8_t cmina_error_code_1;
@@ -2671,9 +2673,19 @@ struct pnet
       pf_port_t port[PNET_MAX_PHYSICAL_PORTS];
       pf_port_iterator_t link_monitor_iterator;
 
+      /* Mutex for protecting port data.
+       * Common for all ports.
+       */
+      os_mutex_t * port_mutex;
+
       /* Scheduler handle for Ethernet link monitoring */
       pf_scheduler_handle_t link_monitor_timeout;
    } pf_interface;
+
+   struct
+   {
+      os_event_t * events;
+   } pf_bg_worker;
 
 #if PNET_OPTION_SNMP
    pf_snmp_data_t snmp_data;

@@ -126,6 +126,11 @@ TEST_F (FspmTest, FspmSaveImLocation)
    /* Note that extra spaces are added at the end */
    pf_fspm_save_im_location (net, written);
 
+   /* The file save operation below is performed by the background worker
+    *  during normal execution of the stack.
+    */
+   pf_fspm_save_im (net);
+
    pf_fspm_get_im_location (net, actual);
    EXPECT_STREQ (actual, expected);
    EXPECT_EQ (strlen (actual), 22u);
@@ -142,6 +147,11 @@ TEST_F (FspmTest, FspmSaveImLocationShouldAddTermination)
 
    pf_fspm_save_im_location (net, not_terminated);
 
+   /* The file save operation below is performed by the background worker
+    *  during normal execution of the stack.
+    */
+   pf_fspm_save_im (net);
+
    pf_fspm_get_im_location (net, actual);
    EXPECT_EQ (actual[sizeof (actual) - 1], '\0');
    EXPECT_EQ (strlen (actual), 22u);
@@ -157,6 +167,11 @@ TEST_F (FspmTest, FspmSaveImLocationShouldTruncateLargeStrings)
    memset (actual, 0xff, sizeof (actual));
 
    pf_fspm_save_im_location (net, large);
+
+   /* The file save operation below is performed by the background worker
+    *  during normal execution of the stack.
+    */
+   pf_fspm_save_im (net);
 
    pf_fspm_get_im_location (net, actual);
    EXPECT_STREQ (actual, expected);
