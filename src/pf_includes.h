@@ -36,6 +36,7 @@ extern "C" {
 
 /* common */
 #include "pf_alarm.h"
+#include "pf_bg_worker.h"
 #include "pf_cpm.h"
 #include "pf_dcp.h"
 #include "pf_eth.h"

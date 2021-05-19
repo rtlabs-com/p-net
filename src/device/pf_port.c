@@ -41,6 +41,8 @@ void pf_port_init (pnet_t * net)
    pf_port_iterator_t port_iterator;
    pf_port_t * p_port_data = NULL;
 
+   net->pf_interface.port_mutex = os_mutex_create();
+
    pf_port_init_iterator_over_ports (net, &port_iterator);
    port = pf_port_get_next (&port_iterator);
 

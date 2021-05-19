@@ -376,6 +376,17 @@ void pf_fspm_save_im_location (pnet_t * net, const char * location);
 int pf_fspm_clear_im_data (pnet_t * net);
 
 /**
+ * Save the I&M settings to nonvolatile memory, if necessary.
+ * Blocking call, intended to be called from the background worker.
+ *
+ * Compares with the content of already stored settings (in order not to
+ * wear out the flash chip)
+ *
+ * @param net              InOut: The p-net stack instance
+ */
+void pf_fspm_save_im (pnet_t * net);
+
+/**
  * Show identification & maintenance settings.
  *
  * @param net              InOut: The p-net stack instance

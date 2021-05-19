@@ -835,6 +835,9 @@ TEST_F (LldpTest, LldpGetLinkStatus)
       PNAL_ETH_MAU_COPPER_100BaseTX_FULL_DUPLEX;
    memset (&link_status, 0xff, sizeof (link_status));
 
+   /* The ethernet status is updated by the background worker */
+   pf_pdport_update_eth_status (net);
+
    pf_lldp_get_link_status (net, LOCAL_PORT, &link_status);
    EXPECT_EQ (link_status.is_autonegotiation_supported, true);
    EXPECT_EQ (link_status.is_autonegotiation_enabled, true);
@@ -858,6 +861,8 @@ TEST_F (LldpTest, LldpGetLinkStatusGivenAutonegotiationDisabled)
    mock_os_data.eth_status[LOCAL_PORT].operational_mau_type =
       PNAL_ETH_MAU_COPPER_100BaseTX_HALF_DUPLEX;
    memset (&link_status, 0xff, sizeof (link_status));
+
+   pf_pdport_update_eth_status (net);
 
    pf_lldp_get_link_status (net, LOCAL_PORT, &link_status);
    EXPECT_EQ (link_status.is_autonegotiation_supported, false);

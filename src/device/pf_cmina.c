@@ -79,18 +79,9 @@ static void pf_cmina_send_hello (pnet_t * net, void * arg, uint32_t current_time
    }
 }
 
-/**
- * @internal
- * Save the IP settings (and station name) to nonvolatile memory if necessary.
- *
- * Compares with the content of already stored settings (in order not to
- * wear out the flash chip)
- *
- * @param net              InOut: The p-net stack instance
- * @param p_ase            In:    Settings to be saved
- */
-static void pf_cmina_save_ase (pnet_t * net, pf_cmina_dcp_ase_t * p_ase)
+void pf_cmina_save_ase (pnet_t * net, pf_cmina_dcp_ase_t * p_ase)
 {
+   pf_cmina_dcp_ase_t ase_nvm;
    pf_cmina_dcp_ase_t temporary_buffer;
    char ip_string[PNAL_INET_ADDRSTR_SIZE] = {0};      /** Terminated string */
    char netmask_string[PNAL_INET_ADDRSTR_SIZE] = {0}; /** Terminated string */
@@ -98,10 +89,19 @@ static void pf_cmina_save_ase (pnet_t * net, pf_cmina_dcp_ase_t * p_ase)
    const char * p_file_directory = pf_cmina_get_file_directory (net);
    int res = 0;
 
-   pf_cmina_ip_to_string (p_ase->full_ip_suite.ip_suite.ip_addr, ip_string);
-   pf_cmina_ip_to_string (p_ase->full_ip_suite.ip_suite.ip_mask, netmask_string);
+   /* This operation is called from the background worker.
+    * Ase data is protected by a mutex.
+    */
+   os_mutex_lock (net->cmina_mutex);
+   ase_nvm = *p_ase;
+   os_mutex_unlock (net->cmina_mutex);
+
+   pf_cmina_ip_to_string (ase_nvm.full_ip_suite.ip_suite.ip_addr, ip_string);
    pf_cmina_ip_to_string (
-      p_ase->full_ip_suite.ip_suite.ip_gateway,
+      ase_nvm.full_ip_suite.ip_suite.ip_mask,
+      netmask_string);
+   pf_cmina_ip_to_string (
+      ase_nvm.full_ip_suite.ip_suite.ip_gateway,
       gateway_string);
 
    res = pf_file_save_if_modified (
@@ -121,7 +121,7 @@ static void pf_cmina_save_ase (pnet_t * net, pf_cmina_dcp_ase_t * p_ase)
          ip_string,
          netmask_string,
          gateway_string,
-         p_ase->station_name);
+         ase_nvm.station_name);
       break;
    case 1:
       LOG_DEBUG (
@@ -132,7 +132,7 @@ static void pf_cmina_save_ase (pnet_t * net, pf_cmina_dcp_ase_t * p_ase)
          ip_string,
          netmask_string,
          gateway_string,
-         p_ase->station_name);
+         ase_nvm.station_name);
       break;
    case 0:
       LOG_DEBUG (
@@ -143,7 +143,7 @@ static void pf_cmina_save_ase (pnet_t * net, pf_cmina_dcp_ase_t * p_ase)
          ip_string,
          netmask_string,
          gateway_string,
-         p_ase->station_name);
+         ase_nvm.station_name);
       break;
    default:
    case -1:
@@ -353,8 +353,7 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
       }
       net->cmina_nonvolatile_dcp_ase.product_name[ix] = '\0';
 
-      /* Save to file */
-      pf_cmina_save_ase (net, &net->cmina_nonvolatile_dcp_ase);
+      (void)pf_bg_worker_start_job (net, PF_BGJOB_SAVE_ASE_NVM_DATA);
 
       /* Init the current communication values */
       net->cmina_current_dcp_ase = net->cmina_nonvolatile_dcp_ase;
@@ -434,6 +433,7 @@ int pf_cmina_init (pnet_t * net)
 {
    int ret = 0;
 
+   net->cmina_mutex = os_mutex_create();
    net->cmina_hello_count = 0;
    pf_scheduler_init_handle (&net->cmina_hello_timeout, "hello");
    net->cmina_error_decode = 0;
@@ -893,11 +893,11 @@ int pf_cmina_dcp_set_ind (
       break;
    }
 
-   /* Use parsed DCP SET request, depending on acual CMINA state */
+   /* Use parsed DCP SET request, depending on actual CMINA state */
    if (ret == 0)
    {
       /* Save to file */
-      pf_cmina_save_ase (net, &net->cmina_nonvolatile_dcp_ase);
+      (void)pf_bg_worker_start_job (net, PF_BGJOB_SAVE_ASE_NVM_DATA);
 
       /* Evaluate what we have and where to go */
       have_name = (strlen (net->cmina_current_dcp_ase.station_name) > 0);

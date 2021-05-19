@@ -41,11 +41,13 @@
 #define APP_DEFAULT_ETHERNET_INTERFACE "br0,eth0,eth1"
 #endif
 
-#define APP_MAIN_SLEEPTIME_US     5000 * 1000
-#define APP_SNMP_THREAD_PRIORITY  1
-#define APP_SNMP_THREAD_STACKSIZE 256 * 1024 /* bytes */
-#define APP_ETH_THREAD_PRIORITY   10
-#define APP_ETH_THREAD_STACKSIZE  4096 /* bytes */
+#define APP_MAIN_SLEEPTIME_US          5000 * 1000
+#define APP_SNMP_THREAD_PRIORITY       1
+#define APP_SNMP_THREAD_STACKSIZE      256 * 1024 /* bytes */
+#define APP_ETH_THREAD_PRIORITY        10
+#define APP_ETH_THREAD_STACKSIZE       4096 /* bytes */
+#define APP_BG_WORKER_THREAD_PRIORITY  5
+#define APP_BG_WORKER_THREAD_STACKSIZE 4096 /* bytes */
 
 /* Note that this sample application uses os_timer_create() for the timer
    that controls the ticks. It is implemented in OSAL, and the Linux
@@ -386,6 +388,9 @@ int main (int argc, char * argv[])
    pnet_cfg.pnal_cfg.snmp_thread.stack_size = APP_SNMP_THREAD_STACKSIZE;
    pnet_cfg.pnal_cfg.eth_recv_thread.prio = APP_ETH_THREAD_PRIORITY;
    pnet_cfg.pnal_cfg.eth_recv_thread.stack_size = APP_ETH_THREAD_STACKSIZE;
+   pnet_cfg.pnal_cfg.bg_worker_thread.prio = APP_BG_WORKER_THREAD_PRIORITY;
+   pnet_cfg.pnal_cfg.bg_worker_thread.stack_size =
+      APP_BG_WORKER_THREAD_STACKSIZE;
 
    ret = app_pnet_cfg_init_storage (&pnet_cfg, &app_args);
    if (ret != 0)

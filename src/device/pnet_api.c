@@ -61,6 +61,7 @@ int pnet_init_only (pnet_t * net, const pnet_cfg_t * p_cfg)
    }
 
    pf_scheduler_init (net, p_cfg->tick_us);
+   pf_bg_worker_init (net);
    pf_cmina_init (net); /* Read from permanent pool */
 
    pf_dcp_exit (net); /* Prepare for re-init. */
