@@ -35,7 +35,7 @@
 #define GPIO_BUTTON2                   GPIO_P15_12
 #define APP_DEFAULT_ETHERNET_INTERFACE "en1"
 #define APP_DEFAULT_FILE_DIRECTORY     "/disk1"
-#define APP_LOG_LEVEL                  APP_LOG_LEVEL_DEBUG
+#define APP_LOG_LEVEL                  APP_LOG_LEVEL_INFO
 
 #define APP_BG_WORKER_THREAD_PRIORITY  2
 #define APP_BG_WORKER_THREAD_STACKSIZE 4096 /* bytes */
