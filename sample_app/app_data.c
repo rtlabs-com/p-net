@@ -115,6 +115,7 @@ int app_data_set_output_data (
          submodule_id == APP_GSDML_SUBMOD_ID_DIGITAL_OUT ||
          submodule_id == APP_GSDML_SUBMOD_ID_DIGITAL_IN_OUT)
       {
+         memcpy (outputdata, data, size);
          led_state = (outputdata[0] & 0x80) > 0;
          app_handle_data_led_state (led_state);
          return 0;
