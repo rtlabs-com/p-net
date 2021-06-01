@@ -15,6 +15,40 @@ Use USE_SCHED_FIFO option
 Select the FIFO Linux kernel scheduling option. This is done by passing
 ``-DUSE_SCHED_FIFO=ON`` command line argument to cmake.
 
+Display real time properties of a process (should typically be ``SCHED_FIFO``
+for best result)::
+
+   pi@pndevice-pi:~$ chrt -p $(pidof pn_dev)
+   pid 438's current scheduling policy: SCHED_OTHER
+   pid 438's current scheduling priority: 0
+
+To show all threads, with scheduling mechanism::
+
+   ps -efLc
+
+or for the sample application::
+
+   ps -efLc | grep pn_dev
+
+The column "NLWP" shows number of threads, and the column "LWP" shows the thread ID.
+In the column "CLS" is the thread scheduling policy shown. It can be for example
+``TS`` for time sharing, ``RR`` for round robin or ``FF`` for FIFO scheduling.
+
+To show the names of the threads, use custom output of the ``ps`` command::
+
+   pi@raspberrypi:~$ ps H -o 'pid ppid nlwp tid lwp comm cls pri psr time' $(pidof pn_dev)
+   PID  PPID NLWP   TID   LWP COMMAND         CLS PRI PSR     TIME
+   1018     1    8  1018  1018 pn_dev           TS  19   2 00:00:00
+   1018     1    8  1020  1020 os_eth_task      FF  50   0 00:00:00
+   1018     1    8  1021  1021 os_eth_task      FF  50   0 00:00:00
+   1018     1    8  1022  1022 os_eth_task      FF  50   0 00:00:00
+   1018     1    8  1023  1023 p-net_bg_worker  FF  45   0 00:00:08
+   1018     1    8  1029  1029 pn_snmp          FF  41   1 00:00:00
+   1018     1    8  1030  1030 os_timer         FF  70   3 00:01:37
+   1018     1    8  1031  1031 pn_dev           FF  55   2 00:01:54
+
+The "PSR" column shows which processor (core) the thread is running on.
+
 
 Run the application on a separate processor core
 ------------------------------------------------
@@ -42,6 +76,10 @@ Put your Profinet application on the isolated CPU core. It is done using::
 
 where ``-c 2`` tells which CPU core to use.
 
+Display which CPU core a process is running on::
+
+   pi@pndevice-pi:~$ taskset -c -p $(pidof pn_dev)
+   pid 443's current affinity list: 2
 
 Real-time patches
 -----------------

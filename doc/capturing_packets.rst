@@ -76,6 +76,10 @@ To look for a specific OID in SNMP messages::
 
    snmp.name == 1.3.6.1.2.1.1.3.0
 
+Select frames with a specific DCE RPC Activity UUID::
+
+   dcerpc.dg_act_id == 38353218-0002-1010-ae64-ac6417366047
+
 
 Coloring rules in Wireshark
 ---------------------------

@@ -786,10 +786,14 @@ PLC to detect which scenario that is causing the malfunction.
 
 Troubleshooting
 ---------------
-If the test case "“Different access ways port-to-port" fails,
+If the test case "Different access ways port-to-port" fails,
 verify that your laptop Ethernet interface speed is set to 100 Mbit/s and
 that any Windows or Siemens (TIA portal) LLDP implementation on the
 Ethernet interface is disabled.
+
+If you in the test case "Different access ways port-to-port" end up with
+the error "NumberOfPeers is not valid" make sure that the device "D" is
+disconnected from port 2 of your device under test.
 
 If the "Alarm" test case fails with the message "No valid Transport ACK on
 the Alarm ACK was received", then the Ethernet receive task probably

@@ -235,6 +235,27 @@ Examples of block identifiers:
 * 0x8009 IODReadResHeader
 
 
+DCE/RPC UUID entities
+---------------------
+
++-----------------------+-------------+-------------------------------------------------------------------------------+
+| UUID variant          | Section     | Description                                                                   |
++=======================+=============+===============================================================================+
+| Object UUID           | 4.10.3.2.8  | ``dea00000-6c97-11d1-8271-`` then vendorID, device ID etc                     |
++-----------------------+-------------+-------------------------------------------------------------------------------+
+| PNIO Interface UUID   | 4.10.3.2.9  | ``dea00001-6c97-11d1-8271-00a02442df7d`` for IO devices                       |
++-----------------------+-------------+-------------------------------------------------------------------------------+
+| Activity UUID         | 4.10.3.2.10 | Same in request and response for one group of Connect-Write-DControl-Ccontrol |
++-----------------------+-------------+-------------------------------------------------------------------------------+
+| AR UUID               | 5.2.5.47    | Can be the same between several connect attempts.                             |
++-----------------------+-------------+-------------------------------------------------------------------------------+
+| CMInitiatorObjectUUID | 5.1.2       | ``dea00000-6c97-11d1-8271-`` then InstanceID and deviceIdentNumber.           |
+|                       |             | Only available in Connect requests.                                           |
++-----------------------+-------------+-------------------------------------------------------------------------------+
+
+The section column refers to the Profinet 2.4 Protocol document.
+
+
 UDP message fragmentation
 -------------------------
 Profinet has a mechanism (part of DCE/RPC via UDP) to split large frames

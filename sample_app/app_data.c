@@ -40,14 +40,10 @@ uint8_t outputdata[APP_GSDML_OUTPUT_DATA_SIZE] = {0};
 
 /**
  * Set LED state.
- * Compares new state with previous state to avoid disk operations.
- * Important:
- * By default the sample application uses files to represent
- * the LED status. File operations shall be avoided within the main
- * task as they may affect the timing of the profinet communication
- * depending on file system implementation.
  *
- * if the GPIOs file are not
+ * Compares new state with previous state, to minimize system calls.
+ *
+ * Uses the hardware specific app_set_led() function.
  *
  * @param led_state        In:    New LED state
  */
