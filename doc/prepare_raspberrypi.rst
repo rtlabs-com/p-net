@@ -353,18 +353,6 @@ autostart file ``/lib/systemd/system/pnet-sampleapp.service`` (if installed)::
 
    ExecStart=taskset -c 2 /home/pi/profinet/build/pn_dev -v -b /sys/class/gpio/gpio27/value -d /sys/class/gpio/gpio22/value
 
-Display which CPU core a process is running on::
-
-   pi@pndevice-pi:~$ taskset -c -p $(pidof pn_dev)
-   pid 443's current affinity list: 2
-
-Display real time properties of a process (should typically be ``SCHED_FIFO``
-for best result)::
-
-   pi@pndevice-pi:~$ chrt -p $(pidof pn_dev)
-   pid 438's current scheduling policy: SCHED_OTHER
-   pid 438's current scheduling priority: 0
-
 
 SD-card problems
 ----------------
