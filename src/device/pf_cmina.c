@@ -41,8 +41,6 @@
 
 #include "pf_includes.h"
 
-static const char * hello_sync_name = "hello";
-
 /**
  * @internal
  * Trigger sending a DCP HELLO message.
@@ -67,37 +65,23 @@ static void pf_cmina_send_hello (pnet_t * net, void * arg, uint32_t current_time
 
       /* Reschedule */
       net->cmina_hello_count--;
-      if (
-         pf_scheduler_add (
-            net,
-            PF_CMINA_FS_HELLO_INTERVAL * 1000,
-            hello_sync_name,
-            pf_cmina_send_hello,
-            NULL,
-            &net->cmina_hello_timeout) != 0)
-      {
-         net->cmina_hello_timeout = UINT32_MAX;
-      }
+      (void)pf_scheduler_add (
+         net,
+         PF_CMINA_FS_HELLO_INTERVAL * 1000,
+         pf_cmina_send_hello,
+         NULL,
+         &net->cmina_hello_timeout);
    }
    else
    {
-      net->cmina_hello_timeout = UINT32_MAX;
+      pf_scheduler_reset_handle (&net->cmina_hello_timeout);
       net->cmina_hello_count = 0;
    }
 }
 
-/**
- * @internal
- * Save the IP settings (and station name) to nonvolatile memory if necessary.
- *
- * Compares with the content of already stored settings (in order not to
- * wear out the flash chip)
- *
- * @param net              InOut: The p-net stack instance
- * @param p_ase            In:    Settings to be saved
- */
-static void pf_cmina_save_ase (pnet_t * net, pf_cmina_dcp_ase_t * p_ase)
+void pf_cmina_save_ase (pnet_t * net, pf_cmina_dcp_ase_t * p_ase)
 {
+   pf_cmina_dcp_ase_t ase_nvm;
    pf_cmina_dcp_ase_t temporary_buffer;
    char ip_string[PNAL_INET_ADDRSTR_SIZE] = {0};      /** Terminated string */
    char netmask_string[PNAL_INET_ADDRSTR_SIZE] = {0}; /** Terminated string */
@@ -105,10 +89,19 @@ static void pf_cmina_save_ase (pnet_t * net, pf_cmina_dcp_ase_t * p_ase)
    const char * p_file_directory = pf_cmina_get_file_directory (net);
    int res = 0;
 
-   pf_cmina_ip_to_string (p_ase->full_ip_suite.ip_suite.ip_addr, ip_string);
-   pf_cmina_ip_to_string (p_ase->full_ip_suite.ip_suite.ip_mask, netmask_string);
+   /* This operation is called from the background worker.
+    * Ase data is protected by a mutex.
+    */
+   os_mutex_lock (net->cmina_mutex);
+   ase_nvm = *p_ase;
+   os_mutex_unlock (net->cmina_mutex);
+
+   pf_cmina_ip_to_string (ase_nvm.full_ip_suite.ip_suite.ip_addr, ip_string);
    pf_cmina_ip_to_string (
-      p_ase->full_ip_suite.ip_suite.ip_gateway,
+      ase_nvm.full_ip_suite.ip_suite.ip_mask,
+      netmask_string);
+   pf_cmina_ip_to_string (
+      ase_nvm.full_ip_suite.ip_suite.ip_gateway,
       gateway_string);
 
    res = pf_file_save_if_modified (
@@ -128,7 +121,7 @@ static void pf_cmina_save_ase (pnet_t * net, pf_cmina_dcp_ase_t * p_ase)
          ip_string,
          netmask_string,
          gateway_string,
-         p_ase->station_name);
+         ase_nvm.station_name);
       break;
    case 1:
       LOG_DEBUG (
@@ -139,7 +132,7 @@ static void pf_cmina_save_ase (pnet_t * net, pf_cmina_dcp_ase_t * p_ase)
          ip_string,
          netmask_string,
          gateway_string,
-         p_ase->station_name);
+         ase_nvm.station_name);
       break;
    case 0:
       LOG_DEBUG (
@@ -150,7 +143,7 @@ static void pf_cmina_save_ase (pnet_t * net, pf_cmina_dcp_ase_t * p_ase)
          ip_string,
          netmask_string,
          gateway_string,
-         p_ase->station_name);
+         ase_nvm.station_name);
       break;
    default:
    case -1:
@@ -295,14 +288,14 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
          /* Reset I&M data */
          (void)pf_fspm_clear_im_data (net);
 
+#if PNET_OPTION_SNMP
          /* According to section 8.4 "Behavior to ResetToFactory" in
           * "Test case specification: Behavior" the MIB data should be reset
           * in all supported reset modes. This seems to contradict
           * PN-AL-Services ch. 6.3.11.3.2.
           */
-         pf_file_clear (p_file_directory, PF_FILENAME_SYSCONTACT);
-         pf_file_clear (p_file_directory, PF_FILENAME_SYSNAME);
-         pf_file_clear (p_file_directory, PF_FILENAME_SYSLOCATION);
+         pf_snmp_data_clear (net);
+#endif
       }
 
       if (reset_mode == 2 || reset_mode >= 3)
@@ -326,9 +319,9 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
 
          pf_file_clear (p_file_directory, PF_FILENAME_IP);
          pf_file_clear (p_file_directory, PF_FILENAME_DIAGNOSTICS);
-         pf_file_clear (p_file_directory, PF_FILENAME_SYSCONTACT);
-         pf_file_clear (p_file_directory, PF_FILENAME_SYSNAME);
-         pf_file_clear (p_file_directory, PF_FILENAME_SYSLOCATION);
+#if PNET_OPTION_SNMP
+         pf_snmp_data_clear (net);
+#endif
          pf_pdport_reset_all (net);
       }
 
@@ -360,8 +353,7 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
       }
       net->cmina_nonvolatile_dcp_ase.product_name[ix] = '\0';
 
-      /* Save to file */
-      pf_cmina_save_ase (net, &net->cmina_nonvolatile_dcp_ase);
+      (void)pf_bg_worker_start_job (net, PF_BGJOB_SAVE_ASE_NVM_DATA);
 
       /* Init the current communication values */
       net->cmina_current_dcp_ase = net->cmina_nonvolatile_dcp_ase;
@@ -441,8 +433,9 @@ int pf_cmina_init (pnet_t * net)
 {
    int ret = 0;
 
+   net->cmina_mutex = os_mutex_create();
    net->cmina_hello_count = 0;
-   net->cmina_hello_timeout = UINT32_MAX;
+   pf_scheduler_init_handle (&net->cmina_hello_timeout, "hello");
    net->cmina_error_decode = 0;
    net->cmina_error_code_1 = 0;
    net->cmina_commit_ip_suite = false;
@@ -539,17 +532,12 @@ int pf_cmina_init (pnet_t * net)
                net->cmina_hello_count);
 
             /* Send first HELLO now! */
-            ret = pf_scheduler_add (
+            (void)pf_scheduler_add (
                net,
                0,
-               hello_sync_name,
                pf_cmina_send_hello,
                NULL,
                &net->cmina_hello_timeout);
-            if (ret != 0)
-            {
-               net->cmina_hello_timeout = UINT32_MAX;
-            }
          }
          else
          {
@@ -646,11 +634,7 @@ int pf_cmina_dcp_set_ind (
    uint16_t reset_mode = 0;
 
    /* Stop sending Hello packets */
-   if (net->cmina_hello_timeout != UINT32_MAX)
-   {
-      pf_scheduler_remove (net, hello_sync_name, net->cmina_hello_timeout);
-      net->cmina_hello_timeout = UINT32_MAX;
-   }
+   pf_scheduler_remove_if_running (net, &net->cmina_hello_timeout);
 
    /* Parse incoming DCP SET, without caring about actual CMINA state.
       Update cmina_current_dcp_ase and cmina_nonvolatile_dcp_ase*/
@@ -909,11 +893,11 @@ int pf_cmina_dcp_set_ind (
       break;
    }
 
-   /* Use parsed DCP SET request, depending on acual CMINA state */
+   /* Use parsed DCP SET request, depending on actual CMINA state */
    if (ret == 0)
    {
       /* Save to file */
-      pf_cmina_save_ase (net, &net->cmina_nonvolatile_dcp_ase);
+      (void)pf_bg_worker_start_job (net, PF_BGJOB_SAVE_ASE_NVM_DATA);
 
       /* Evaluate what we have and where to go */
       have_name = (strlen (net->cmina_current_dcp_ase.station_name) > 0);
@@ -1282,12 +1266,21 @@ int pf_cmina_remove_all_data_files (const char * file_directory)
    pf_file_clear (file_directory, PF_FILENAME_IM);
    pf_file_clear (file_directory, PF_FILENAME_IP);
    pf_file_clear (file_directory, PF_FILENAME_DIAGNOSTICS);
-   pf_file_clear (file_directory, PF_FILENAME_SYSCONTACT);
-   pf_file_clear (file_directory, PF_FILENAME_SYSNAME);
-   pf_file_clear (file_directory, PF_FILENAME_SYSLOCATION);
+#if PNET_OPTION_SNMP
+   pf_snmp_remove_data_files (file_directory);
+#endif
    pf_pdport_remove_data_files (file_directory);
 
    return 0;
+}
+
+bool pf_cmina_has_timed_out (
+   uint32_t now_us,
+   uint32_t previous_us,
+   uint16_t period,
+   uint16_t factor)
+{
+   return (now_us - previous_us) >= ((uint32_t) (period * factor) * 1000 / 32);
 }
 
 /*************** Diagnostic strings *****************************************/
@@ -1356,10 +1349,9 @@ void pf_cmina_port_statistics_show (pnet_t * net)
    if (pnal_get_port_statistics (net->pf_interface.main_port.name, &stats) == 0)
    {
       printf (
-         "Main interface %s    In: %" PRIu32 " bytes %" PRIu32
+         "Main interface %10s  In: %" PRIu32 " bytes %" PRIu32
          " errors %" PRIu32 " discards  Out: %" PRIu32 " bytes %" PRIu32
-         " errors %" PRIu32 " discards"
-         "s\n",
+         " errors %" PRIu32 " discards\n",
          net->pf_interface.main_port.name,
          stats.if_in_octets,
          stats.if_in_errors,
@@ -1384,10 +1376,9 @@ void pf_cmina_port_statistics_show (pnet_t * net)
       if (pnal_get_port_statistics (p_port_data->netif.name, &stats) == 0)
       {
          printf (
-            "Port        %s    In: %" PRIu32 " bytes %" PRIu32
+            "Port           %10s  In: %" PRIu32 " bytes %" PRIu32
             " errors %" PRIu32 " discards  Out: %" PRIu32 " bytes %" PRIu32
-            " errors %" PRIu32 " discards"
-            "s\n",
+            " errors %" PRIu32 " discards\n",
             p_port_data->netif.name,
             stats.if_in_octets,
             stats.if_in_errors,
@@ -1415,21 +1406,21 @@ void pf_cmina_show (pnet_t * net)
    printf (
       "state                          : %s\n",
       pf_cmina_state_to_string (net));
-   printf ("Default station_name      : <%s>\n", p_cfg->station_name);
+   printf ("Default station_name           : \"%s\"\n", p_cfg->station_name);
    printf (
-      "Perm station_name              : <%s>\n",
+      "Perm station_name              : \"%s\"\n",
       net->cmina_nonvolatile_dcp_ase.station_name);
    printf (
-      "Temp station_name              : <%s>\n",
+      "Temp station_name              : \"%s\"\n",
       net->cmina_current_dcp_ase.station_name);
    printf ("\n");
 
-   printf ("Default product_name      : <%s>\n", p_cfg->product_name);
+   printf ("Default product_name           : \"%s\"\n", p_cfg->product_name);
    printf (
-      "Perm product_name              : <%s>\n",
+      "Perm product_name              : \"%s\"\n",
       net->cmina_nonvolatile_dcp_ase.product_name);
    printf (
-      "Temp product_name              : <%s>\n",
+      "Temp product_name              : \"%s\"\n",
       net->cmina_current_dcp_ase.product_name);
    printf ("\n");
 
@@ -1452,7 +1443,7 @@ void pf_cmina_show (pnet_t * net)
       (unsigned)p_cfg->if_cfg.ip_cfg.ip_gateway.c,
       (unsigned)p_cfg->if_cfg.ip_cfg.ip_gateway.d);
 
-   printf ("Perm IP  Netmask  Gateway      : ");
+   printf ("Perm    IP  Netmask  Gateway   : ");
    pf_ip_address_show (
       net->cmina_nonvolatile_dcp_ase.full_ip_suite.ip_suite.ip_addr);
    printf ("  ");
@@ -1474,7 +1465,7 @@ void pf_cmina_show (pnet_t * net)
    printf ("\n");
 
    printf (
-      "MAC                            : %02x:%02x:%02x:%02x:%02x:%02x\n",
+      "MAC                            : %02x:%02x:%02x:%02x:%02x:%02x\n\n",
       net->pf_interface.main_port.mac_address.addr[0],
       net->pf_interface.main_port.mac_address.addr[1],
       net->pf_interface.main_port.mac_address.addr[2],

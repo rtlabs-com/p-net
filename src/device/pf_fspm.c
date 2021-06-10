@@ -48,17 +48,19 @@ void pf_fspm_im_show (const pnet_t * net)
 {
    printf ("Identification & Maintenance\n");
    printf (
-      "I&M1.im_tag_function     : <%s>\n",
+      "I&M1.im_tag_function     : \"%s\"\n",
       net->fspm_cfg.im_1_data.im_tag_function);
    printf (
-      "I&M1.im_tag_location     : <%s>\n",
+      "I&M1.im_tag_location     : \"%s\"\n",
       net->fspm_cfg.im_1_data.im_tag_location);
-   printf ("I&M2.date                : <%s>\n", net->fspm_cfg.im_2_data.im_date);
    printf (
-      "I&M3.im_descriptor       : <%s>\n",
+      "I&M2.date                : \"%s\"\n",
+      net->fspm_cfg.im_2_data.im_date);
+   printf (
+      "I&M3.im_descriptor       : \"%s\"\n",
       net->fspm_cfg.im_3_data.im_descriptor);
    printf (
-      "I&M4.im_signature        : <%s>\n",
+      "I&M4.im_signature        : \"%s\"\n",
       net->fspm_cfg.im_4_data.im_signature); /* Should be binary data, but works
                                                 for now */
 }
@@ -113,7 +115,7 @@ void pf_fspm_option_show (const pnet_t * net)
       "PNET_MAX_DFP_IOCR                              : %d\n",
       PNET_MAX_DFP_IOCR);
    printf (
-      "PNET_MAX_PHYSICAL_PORTS                             : %d\n",
+      "PNET_MAX_PHYSICAL_PORTS                        : %d\n",
       PNET_MAX_PHYSICAL_PORTS);
    printf (
       "PNET_MAX_LOG_BOOK_ENTRIES                      : %d\n",
@@ -319,16 +321,7 @@ static void pf_fspm_load_im (pnet_t * net)
    }
 }
 
-/**
- * @internal
- * Save the I&M settings to nonvolatile memory, if necessary.
- *
- * Compares with the content of already stored settings (in order not to
- * wear out the flash chip)
- *
- * @param net              InOut: The p-net stack instance
- */
-static void pf_fspm_save_im (pnet_t * net)
+void pf_fspm_save_im (pnet_t * net)
 {
    pf_im_nvm_t output_im;
    pf_im_nvm_t temporary_buffer;
@@ -384,7 +377,7 @@ static void pf_fspm_save_im (pnet_t * net)
  * If location string does not fit in the I&M1 field "IM_Tag_Location",
  * (which is 22 bytes) it will be truncated with termination added.
  *
- * Also see pf_fspm_save_im_location().
+ * See pf_fspm_save_im_location() which also saves to file.
  *
  * @param net              InOut: The p-net stack instance
  * @param location         In:    New device location.
@@ -414,7 +407,7 @@ void pf_fspm_get_im_location (pnet_t * net, char * location)
 void pf_fspm_save_im_location (pnet_t * net, const char * location)
 {
    pf_fspm_set_im_location (net, location);
-   pf_fspm_save_im (net);
+   (void)pf_bg_worker_start_job (net, PF_BGJOB_SAVE_IM_NVM_DATA);
 }
 
 int pf_fspm_init (pnet_t * net, const pnet_cfg_t * p_cfg)
@@ -543,7 +536,7 @@ int pf_fspm_clear_im_data (pnet_t * net)
       sizeof (net->fspm_cfg.im_4_data.im_signature));
    os_mutex_unlock (net->fspm_im_mutex);
 
-   pf_fspm_save_im (net);
+   (void)pf_bg_worker_start_job (net, PF_BGJOB_SAVE_IM_NVM_DATA);
 
    return 0;
 }
@@ -857,7 +850,6 @@ int pf_fspm_cm_write_ind (
    int ret = -1;
    pf_get_info_t get_info;
    uint16_t pos = 0;
-   const char * p_file_directory = pf_cmina_get_file_directory (net);
 
    if (p_write_request->index <= PF_IDX_USER_MAX)
    {
@@ -941,12 +933,14 @@ int pf_fspm_cm_write_ind (
                   net->fspm_cfg.im_1_data.im_tag_location);
                ret = 0;
 
+#if PNET_OPTION_SNMP
                /* Location data is stored in two different files: the file with
                 * I&M data and a file used by SNMP containing a larger version
                 * of the device's location. The larger version has precedence
                 * over the I&M version, so we need to delete the larger one.
                 */
-               pf_file_clear (p_file_directory, PF_FILENAME_SYSLOCATION);
+               pf_snmp_fspm_im_location_ind (net);
+#endif
             }
             else
             {

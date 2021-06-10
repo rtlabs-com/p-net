@@ -41,8 +41,6 @@
 #include "pf_includes.h"
 #include "pf_block_reader.h"
 
-static const char * cpm_sync_name = "cpm";
-
 /**
  * @internal
  * Return a string representation of the CPM state.
@@ -134,7 +132,8 @@ static void pf_cpm_control_interval_expired (
    uint32_t start = os_get_current_time_us();
    uint32_t exec;
 
-   p_iocr->cpm.ci_timer = UINT32_MAX;
+   pf_scheduler_reset_handle (&p_iocr->cpm.ci_timeout);
+
    if (p_iocr->cpm.ci_running == true) /* Timer running */
    {
       switch (p_iocr->cpm.state)
@@ -171,13 +170,10 @@ static void pf_cpm_control_interval_expired (
             pf_scheduler_add (
                net,
                p_iocr->cpm.control_interval,
-               cpm_sync_name,
                pf_cpm_control_interval_expired,
                arg,
-               &p_iocr->cpm.ci_timer) != 0)
+               &p_iocr->cpm.ci_timeout) != 0)
          {
-            p_iocr->cpm.ci_timer = UINT32_MAX;
-
             LOG_ERROR (PF_CPM_LOG, "CPM(%d): Timeout not started\n", __LINE__);
             p_iocr->p_ar->err_cls = PNET_ERROR_CODE_1_CPM;
             p_iocr->p_ar->err_code = PNET_ERROR_CODE_2_CPM_INVALID;
@@ -249,11 +245,7 @@ int pf_cpm_close_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
       p_ar->arep,
       crep);
    p_cpm->ci_running = false; /* StopTimer */
-   if (p_cpm->ci_timer != UINT32_MAX)
-   {
-      pf_scheduler_remove (net, cpm_sync_name, p_cpm->ci_timer);
-      p_cpm->ci_timer = UINT32_MAX;
-   }
+   pf_scheduler_remove_if_running (net, &p_cpm->ci_timeout);
    pf_cpm_set_state (p_cpm, PF_CPM_STATE_W_START);
 
    pf_eth_frame_id_map_remove (net, p_cpm->frame_id[0]);
@@ -647,17 +639,16 @@ int pf_cpm_activate_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
        * for RTClass1/2?) */
       pf_cpm_set_state (p_cpm, PF_CPM_STATE_FRUN);
       p_cpm->ci_running = true;
+
+      pf_scheduler_init_handle (&p_cpm->ci_timeout, "cpm");
       ret = pf_scheduler_add (
          net,
          p_cpm->control_interval,
-         cpm_sync_name,
          pf_cpm_control_interval_expired,
          p_iocr,
-         &p_cpm->ci_timer);
+         &p_cpm->ci_timeout);
       if (ret != 0)
       {
-         p_cpm->ci_timer = UINT32_MAX;
-
          LOG_ERROR (PF_CPM_LOG, "CPM(%d): Timeout not started\n", __LINE__);
          p_ar->err_cls = PNET_ERROR_CODE_1_CPM;
          p_ar->err_code = PNET_ERROR_CODE_2_CPM_INVALID;
@@ -1024,7 +1015,9 @@ void pf_cpm_show (const pnet_t * net, const pf_cpm_t * p_cpm)
       p_cpm->p_buffer_cpm ? ((pnal_buf_t *)(p_cpm->p_buffer_cpm))->len : 0);
    printf ("   new_buf            = %u\n", (unsigned)p_cpm->new_buf);
    printf ("   ci_running         = %u\n", (unsigned)p_cpm->ci_running);
-   printf ("   ci_timer           = %u\n", (unsigned)p_cpm->ci_timer);
+   printf (
+      "   ci_timer           = %u\n",
+      (unsigned)pf_scheduler_get_value (&p_cpm->ci_timeout));
    printf ("   buffer_status      = %x\n", (unsigned)p_cpm->data_status);
    printf ("   buffer_length      = %u\n", (unsigned)p_cpm->buffer_length);
    printf ("   buffer_pos         = %u\n", (unsigned)p_cpm->buffer_pos);

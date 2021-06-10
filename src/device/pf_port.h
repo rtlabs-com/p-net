@@ -189,6 +189,13 @@ int pf_port_get_port_number (const pnet_t * net, pnal_eth_handle_t * eth_handle)
  */
 pf_mediatype_values_t pf_port_get_media_type (pnal_eth_mau_t mau_type);
 
+/**
+ * Show port details
+ *
+ * @param net              InOut: The p-net stack instance
+ */
+void pf_port_show (pnet_t * net);
+
 #ifdef __cplusplus
 }
 #endif

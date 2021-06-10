@@ -93,9 +93,6 @@
 
 CC_STATIC_ASSERT (PNET_MAX_ALARM_PAYLOAD_DATA_SIZE >= sizeof (pf_diag_item_t));
 
-/* The scheduler identifier */
-static const char * apmx_sync_name = "apmx";
-
 /*************** Diagnostic strings *****************************************/
 
 /**
@@ -596,12 +593,8 @@ static void pf_alarm_alpmr_apms_a_data_cnf (
       else
       {
          /* Handle pos cnf */
-         pf_fspm_alpmr_alarm_ack_cnf (
-            net,
-            p_apmx->p_ar,
-            res); /* ALPMR:
-                     ALPMR_Alarm_Ack.cnf(+)
-                   */
+         /* ALPMR: ALPMR_Alarm_Ack.cnf(+) */
+         pf_fspm_alpmr_alarm_ack_cnf (net, p_apmx->p_ar, res);
          p_apmx->p_alpmx->alpmr_state = PF_ALPMR_STATE_W_NOTIFY;
       }
       break;
@@ -755,6 +748,12 @@ static int pf_alarm_apmr_frame_handler (
    else
    {
       /* No need for the frame hander to free p_buf as it is NULL */
+      LOG_ERROR (
+         PF_ALARM_LOG,
+         "Alarm(%d): Did not put incoming %s prio alarm frame in queue, "
+         "as p_buf is NULL.\n",
+         __LINE__,
+         p_apmx->high_priority ? "high" : "low");
       ret = 1;
    }
 
@@ -793,7 +792,8 @@ static void pf_alarm_apms_timeout (
    pf_apmx_t * p_apmx = (pf_apmx_t *)arg;
    pnal_buf_t * p_rta;
 
-   p_apmx->timeout_id = UINT32_MAX;
+   pf_scheduler_reset_handle (&p_apmx->resend_timeout);
+
    if (p_apmx->apms_state == PF_APMS_STATE_WTACK)
    {
       if (p_apmx->p_rta == NULL)
@@ -803,9 +803,9 @@ static void pf_alarm_apms_timeout (
             "Alarm(%d): No alarm frame available for resending.\n",
             __LINE__);
       }
-      else if (p_apmx->retry > 0)
+      else if (p_apmx->resend_counter > 0)
       {
-         p_apmx->retry--;
+         p_apmx->resend_counter--;
 
          /* Retransmit */
          if (p_apmx->p_ar->alarm_cr_request.alarm_cr_properties.transport_udp == true)
@@ -830,19 +830,14 @@ static void pf_alarm_apms_timeout (
             pf_scheduler_add (
                net,
                p_apmx->timeout_us,
-               apmx_sync_name,
                pf_alarm_apms_timeout,
                p_apmx,
-               &p_apmx->timeout_id) != 0)
+               &p_apmx->resend_timeout) != 0)
          {
             LOG_ERROR (
                PF_ALARM_LOG,
-               "Alarm(%d): Error from pf_scheduler_add\n",
+               "Alarm(%d): Failed to schedule resending of alarm frame\n",
                __LINE__);
-         }
-         else
-         {
-            p_apmx->timeout_id = UINT32_MAX;
          }
       }
       else
@@ -988,13 +983,14 @@ static int pf_alarm_apmx_activate (pnet_t * net, pf_ar_t * p_ar)
 
          p_ar->apmx[ix].timeout_us =
             100 * 1000 * p_ar->alarm_cr_request.rta_timeout_factor;
-         p_ar->apmx[ix].retry = 0; /* Updated in pf_alarm_apms_apms_a_data_req()
-                                    */
+         p_ar->apmx[ix].resend_counter = 0; /* Updated in
+                                             * pf_alarm_apms_apms_a_data_req()
+                                             */
 
          p_ar->apmx[ix].p_ar = p_ar;
          p_ar->apmx[ix].p_alpmx = &p_ar->alpmx[ix];
 
-         p_ar->apmx[ix].timeout_id = UINT32_MAX;
+         pf_scheduler_init_handle (&p_ar->apmx[ix].resend_timeout, "apmx");
 
          p_ar->apmx[ix].apms_state = PF_APMS_STATE_OPEN;
          p_ar->apmx[ix].apmr_state = PF_APMR_STATE_OPEN;
@@ -1050,8 +1046,8 @@ static int pf_alarm_apms_a_data_ind (
 
             LOG_DEBUG (
                PF_AL_BUF_LOG,
-               "Alarm(%d): Valid TACK received. Free saved outgoing %s prio "
-               "alarm buffer if necessary %p\n",
+               "Alarm(%d): Valid TACK received via DATA or ACK frame. Free "
+               "saved outgoing %s prio alarm buffer if necessary %p\n",
                __LINE__,
                p_apmx->high_priority ? "high" : "low",
                p_apmx->p_rta);
@@ -1062,12 +1058,9 @@ static int pf_alarm_apms_a_data_ind (
                pnal_buf_free (p_rta);
             }
 
-            pf_alarm_alpmi_apms_a_data_cnf (
-               net,
-               p_apmx,
-               0); /* This is
-                      APMS_A_Data.cnf(+)
-                    */
+            /* This is APMS_A_Data.cnf(+) */
+            pf_alarm_alpmi_apms_a_data_cnf (net, p_apmx, 0);
+
             pf_alarm_alpmr_apms_a_data_cnf (net, p_apmx, 0);
 
             ret = 0;
@@ -1081,6 +1074,13 @@ static int pf_alarm_apms_a_data_ind (
              * Wrong sequence number.
              * A timeout occurs and the frame will be re-sent.
              */
+            LOG_WARNING (
+               PF_ALARM_LOG,
+               "Alarm(%d): Wrong ACK sequence number. Received %u but it "
+               "should be %u. Ignore.\n",
+               __LINE__,
+               p_fixed->ack_seq_nbr,
+               p_apmx->send_seq_count);
             ret = 0;
          }
       }
@@ -1090,6 +1090,11 @@ static int pf_alarm_apms_a_data_ind (
           * Ignore!
           * A timeout occurred and the frame has already been freed.
           */
+         LOG_DEBUG (
+            PF_ALARM_LOG,
+            "Alarm(%d): We are not waiting for transport ack, so do not clean "
+            "alarm frame output buffer.\n",
+            __LINE__);
          ret = 0;
       }
    }
@@ -1319,11 +1324,12 @@ static int pf_alarm_apms_a_data_req (
 
             LOG_INFO (
                PF_ALARM_LOG,
-               "Alarm(%d): Send an alarm frame %s  Frame ID: 0x%04X  "
+               "Alarm(%d): Send an alarm frame %s %p Frame ID: 0x%04X  "
                "Alarmtype: %u  Tack: %u  USI: 0x%04X  Payload len: %u  "
                "Send seq: %u  ACK seq: %u\n",
                __LINE__,
                pf_alarm_pdu_type_to_string (p_fixed->pdu_type.type),
+               p_rta,
                p_apmx->frame_id,
                (p_alarm_data != NULL) ? p_alarm_data->alarm_type : 0,
                p_fixed->add_flags.tack,
@@ -1436,7 +1442,7 @@ static int pf_alarm_apms_apms_a_data_req (
       fixed.send_seq_num = p_apmx->send_seq_count;
       fixed.ack_seq_nbr = p_apmx->exp_seq_count_o;
 
-      p_apmx->retry = p_apmx->p_ar->alarm_cr_request.rta_retries;
+      p_apmx->resend_counter = p_apmx->p_ar->alarm_cr_request.rta_retries;
 
       ret = pf_alarm_apms_a_data_req (
          net,
@@ -1458,15 +1464,13 @@ static int pf_alarm_apms_apms_a_data_req (
          pf_scheduler_add (
             net,
             p_apmx->timeout_us,
-            apmx_sync_name,
             pf_alarm_apms_timeout,
             p_apmx,
-            &p_apmx->timeout_id) != 0)
+            &p_apmx->resend_timeout) != 0)
       {
-         p_apmx->timeout_id = UINT32_MAX;
          LOG_ERROR (
             PF_ALARM_LOG,
-            "Alarm(%d): Error from pf_scheduler_add\n",
+            "Alarm(%d): Failed to schedule sending of alarm frame\\n",
             __LINE__);
          ret = -1;
       }
@@ -1547,11 +1551,7 @@ static int pf_alarm_apmx_close (pnet_t * net, pf_ar_t * p_ar, uint8_t err_code)
       {
          /* Free resources */
          /* StopTimer */
-         if (p_ar->apmx[ix].timeout_id != UINT32_MAX)
-         {
-            pf_scheduler_remove (net, apmx_sync_name, p_ar->apmx[ix].timeout_id);
-            p_ar->apmx[ix].timeout_id = UINT32_MAX;
-         }
+         pf_scheduler_remove_if_running (net, &p_ar->apmx[ix].resend_timeout);
 
          p_ar->apmx[ix].p_ar = NULL;
          p_ar->apmx[ix].apms_state = PF_APMS_STATE_CLOSED;
@@ -1588,7 +1588,7 @@ static int pf_alarm_apmx_close (pnet_t * net, pf_ar_t * p_ar, uint8_t err_code)
 
 /**
  * @internal
- * Send alarm APMR ACK
+ * Send alarm APMR ACK (a TACK = transport acknowledge)
  *
  * It uses APMS  pf_alarm_apms_a_data_req() for the sending.
  *
@@ -1725,6 +1725,12 @@ static int pf_alarm_apmr_a_data_ind (
             {
                /* This message is an Alarm ACK PDU. Parse it and deliver to
                 * ALPMI. */
+               LOG_DEBUG (
+                  PF_ALARM_LOG,
+                  "Alarm(%d): The incoming Alarm DATA message is an ACK PDU. "
+                  "Send seq: %u Trigger a TACK response.\n",
+                  __LINE__,
+                  p_fixed->send_seq_num);
 
                /* Tell APMS to handle ack_seq_num in message */
                (void)pf_alarm_apms_a_data_ind (net, p_apmx, p_fixed);
@@ -1754,6 +1760,12 @@ static int pf_alarm_apmr_a_data_ind (
             {
                /* This message is an Alarm Notification PDU. Parse it and
                 * deliver to ALPMR. */
+               LOG_DEBUG (
+                  PF_ALARM_LOG,
+                  "Alarm(%d): The incoming Alarm DATA message is an alarm "
+                  "notification PDU. Send seq: %u Trigger a TACK response.\n",
+                  __LINE__,
+                  p_fixed->send_seq_num);
 
                /* Tell APMS to handle ack_seq_num in message */
                (void)pf_alarm_apms_a_data_ind (net, p_apmx, p_fixed);
@@ -2314,7 +2326,8 @@ static void pf_alarm_queue_unlock (pf_queue_accountant_t * p_accountant)
  *
  * @param p_accountant     InOut: Queue accountant
  */
-static void pf_alarm_queue_accountant_reset (pf_queue_accountant_t * p_accountant)
+static void pf_alarm_queue_accountant_reset (
+   pf_queue_accountant_t * p_accountant)
 {
    p_accountant->count = 0;
    p_accountant->read_index = 0;
@@ -2399,7 +2412,7 @@ void pf_alarm_receive_queue_reset (pf_alarm_receive_queue_t * q)
 {
    uint16_t ix;
 
-   if (pf_alarm_queue_is_available(&q->accountant) == false)
+   if (pf_alarm_queue_is_available (&q->accountant) == false)
    {
       LOG_ERROR (
          PF_ALARM_LOG,
@@ -2437,7 +2450,7 @@ int pf_alarm_receive_queue_post (
    uint16_t write_index;
    int ret = -1;
 
-   if (pf_alarm_queue_is_available(&q->accountant) == false)
+   if (pf_alarm_queue_is_available (&q->accountant) == false)
    {
       LOG_ERROR (
          PF_ALARM_LOG,
@@ -2481,7 +2494,7 @@ int pf_alarm_receive_queue_fetch (
    uint16_t read_index;
    int ret = -1;
 
-   if (pf_alarm_queue_is_available(&q->accountant) == false)
+   if (pf_alarm_queue_is_available (&q->accountant) == false)
    {
       return ret;
    }
@@ -2504,11 +2517,11 @@ int pf_alarm_receive_queue_fetch (
 
 /**
  * Reset queue for outgoing alarms
- * @param q                InOut: Alarm send queue
+ * @param q                InOut: Alarm send queue (High or low prio)
  */
 void pf_alarm_send_queue_reset (pf_alarm_send_queue_t * q)
 {
-   if (pf_alarm_queue_is_available(&q->accountant) == false)
+   if (pf_alarm_queue_is_available (&q->accountant) == false)
    {
       LOG_ERROR (
          PF_ALARM_LOG,
@@ -2526,7 +2539,7 @@ void pf_alarm_send_queue_reset (pf_alarm_send_queue_t * q)
 
 /**
  * Post an alarm to the send queue
- * @param q                InOut: Alarm send queue
+ * @param q                InOut: Alarm send queue (High or low prio)
  * @param p_alarm_data     In:    Alarm details (Alarm type, slot, subslot,
  *                                possibly payload etc)
  * @return 0  is returned if an alarm is posted onto the queue
@@ -2538,8 +2551,7 @@ int pf_alarm_send_queue_post (
 {
    uint16_t write_index;
    int ret = -1;
-
-   if (pf_alarm_queue_is_available(&q->accountant) == false)
+   if (pf_alarm_queue_is_available (&q->accountant) == false)
    {
       LOG_ERROR (
          PF_ALARM_LOG,
@@ -2570,7 +2582,7 @@ int pf_alarm_send_queue_post (
 
 /**
  * Fetch an alarm from the send queue
- * @param q                InOut: Alarm send queue
+ * @param q                InOut: Alarm send queue (High or low prio)
  * @param p_alarm_data     Out:   Alarm details (Alarm type, slot, subslot,
  *                                possibly payload etc)
  * @return 0  is returned if an alarm is fetched from the queue
@@ -2583,7 +2595,7 @@ int pf_alarm_send_queue_fetch (
    uint16_t read_index;
    int ret = -1;
 
-   if (pf_alarm_queue_is_available(&q->accountant) == false)
+   if (pf_alarm_queue_is_available (&q->accountant) == false)
    {
       return ret;
    }
@@ -2666,9 +2678,15 @@ bool pf_alarm_pending (const pf_ar_t * p_ar)
 int pf_alarm_activate (pnet_t * net, pf_ar_t * p_ar)
 {
    int ret = 0; /* Assume all goes well */
+   int16_t i;
+   pf_alarm_send_queue_t * q;
 
-   pf_alarm_queue_mutex_create (&p_ar->alarm_send_q->accountant);
-   pf_alarm_send_queue_reset (p_ar->alarm_send_q);
+   for (i = 0; i < PF_ALARM_NUMBER_OF_PRIORITY_LEVELS; i++)
+   {
+      q = &p_ar->alarm_send_q[i];
+      pf_alarm_queue_mutex_create (&q->accountant);
+      pf_alarm_send_queue_reset (q);
+   }
 
    if (pf_alarm_alpmx_activate (p_ar) != 0)
    {
@@ -2686,9 +2704,15 @@ int pf_alarm_activate (pnet_t * net, pf_ar_t * p_ar)
 int pf_alarm_close (pnet_t * net, pf_ar_t * p_ar)
 {
    int ret = 0;
+   int16_t i;
+   pf_alarm_send_queue_t * q;
 
-   pf_alarm_send_queue_reset (p_ar->alarm_send_q);
-   pf_alarm_queue_mutex_destroy (&p_ar->alarm_send_q->accountant);
+   for (i = 0; i < PF_ALARM_NUMBER_OF_PRIORITY_LEVELS; i++)
+   {
+      q = &p_ar->alarm_send_q[i];
+      pf_alarm_send_queue_reset (q);
+      pf_alarm_queue_mutex_destroy (&q->accountant);
+   }
 
    LOG_DEBUG (
       PF_ALARM_LOG,
@@ -3065,6 +3089,15 @@ static int pf_alarm_send_alarm (
    {
       memcpy (alarm_data.payload.data, p_payload, payload_len);
    }
+
+   LOG_DEBUG (
+      PF_ALARM_LOG,
+      "Alarm(%d): Putting alarm data in %s prio output queue. Alarm type %u "
+      "Payload %u bytes.\n",
+      __LINE__,
+      high_prio ? "high" : "low",
+      alarm_type,
+      payload_len);
 
    return pf_alarm_send_queue_post (
       &p_ar->alarm_send_q[high_prio ? 1 : 0],

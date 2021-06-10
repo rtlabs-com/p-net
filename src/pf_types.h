@@ -25,6 +25,9 @@
 extern "C" {
 #endif
 
+#include "pf_lldp.h"
+#include "pf_snmp.h"
+
 #if PNET_USE_ATOMICS
 #include <stdatomic.h>
 #else
@@ -59,6 +62,8 @@ static inline uint32_t atomic_fetch_sub (atomic_int * p, uint32_t v)
 #define PF_RPC_SERVER_PORT             0x8894 /* PROFInet Context Manager */
 #define PF_UDP_UNICAST_PORT            0x8892
 #define PF_RPC_CCONTROL_EPHEMERAL_PORT 0xc001
+
+#define PF_ALARM_NUMBER_OF_PRIORITY_LEVELS 2 /* High and low */
 
 #define PF_FRAME_BUFFER_SIZE 1500
 
@@ -1030,7 +1035,8 @@ typedef struct pf_alarm_receive_queue
  * The DCP uses the scheduler for responding to multi-cast messages.
  * pf_cmsm uses it to supervise the startup sequence.
  */
-#define PF_MAX_TIMEOUTS (2 * (PNET_MAX_AR) * (PNET_MAX_CR) + 10)
+#define PF_MAX_TIMEOUTS                                                        \
+   (2 * (PNET_MAX_AR) * (PNET_MAX_CR) + 2 * (PNET_MAX_PHYSICAL_PORTS) + 9)
 
 #define PF_CMINA_FS_HELLO_RETRY 3
 #define PF_CMINA_FS_HELLO_INTERVAL                                             \
@@ -1077,8 +1083,8 @@ typedef void (*pf_scheduler_timeout_ftn_t) (
 
 typedef struct pf_scheduler_timeouts
 {
-   const char * p_name; /* For debugging only */
-   bool in_use;         /* For debugging only */
+   const char * name; /* For debugging only */
+   bool in_use;       /* For debugging only */
 
    uint32_t when; /* absolute time of timeout */
    uint32_t next; /* Next in list */
@@ -1087,6 +1093,12 @@ typedef struct pf_scheduler_timeouts
    pf_scheduler_timeout_ftn_t cb; /* Call-back to call on timeout */
    void * arg;                    /* call-back argument */
 } pf_scheduler_timeouts_t;
+
+typedef struct pf_scheduler_handle
+{
+   const char * name;    /* private */
+   uint32_t timer_index; /* private */
+} pf_scheduler_handle_t;
 
 /**
  * This is the prototype for the Profinet frame handler.
@@ -1611,7 +1623,7 @@ typedef struct pf_alarm_cr_tag_header
                                    USER_PRIORITY_HIGH (6) */
 } pf_alarm_cr_tag_header_t;
 
-/** The largest alarmdata we can accept
+/** The largest incoming alarmdata we can accept
  *  Allowed 200..1432
  */
 #define PF_MAX_ALARM_DATA_LEN 200
@@ -1700,9 +1712,9 @@ typedef struct pf_ppm
                                   32 */
    uint16_t reduction_ratio;   /* Allowed: 1..512 */
    uint32_t control_interval;  /* Period in microseconds between frames */
-   bool ci_running;   /* True if the timer is running. Used for stopping
-                         transmission before next scheduled sending.  */
-   uint32_t ci_timer; /* Scheduler timeout instance. UINT32_MAX when stopped */
+   bool ci_running; /* True if the timer is running. Used for stopping
+                       transmission before next scheduled sending.  */
+   pf_scheduler_handle_t ci_timeout;
 } pf_ppm_t;
 
 typedef struct pf_cpm
@@ -1739,7 +1751,8 @@ typedef struct pf_cpm
 
    uint32_t control_interval;
    bool ci_running;
-   uint32_t ci_timer;
+
+   pf_scheduler_handle_t ci_timeout;
 
    /* CMIO data */
    bool cmio_start; /* cmInstance.start/stop */
@@ -1876,8 +1889,10 @@ typedef struct pf_apmx
    uint16_t frame_id;
 
    uint32_t timeout_us;
-   uint32_t timeout_id; /* Scheduler handle for Alarm retransmission */
-   uint32_t retry;
+
+   pf_scheduler_handle_t resend_timeout; /* Scheduler handle for Alarm
+                                            retransmission */
+   uint32_t resend_counter;
 } pf_apmx_t;
 
 typedef enum pf_alpmr_state_values
@@ -1946,7 +1961,8 @@ typedef struct pf_session_info
                               */
    bool kill_session; /* On error or when done. This will kill the session at
                          the end of handling the incoming RPC frame. */
-   int socket;
+   int socket; /* Socket for CControl messaging, or reference to the main CMRPC
+                  socket. Close it only if from_me==true */
    pnal_eth_handle_t * eth_handle;
    struct pf_ar * p_ar; /* Parent AR */
    bool from_me;        /* True if the session originates from the device (i.e.
@@ -1986,8 +2002,8 @@ typedef struct pf_session_info
    pnet_result_t dcontrol_result;
 
    /* This timer is used to handle ccontrol and fragment re-transmissions */
-   uint32_t resend_timeout; /* Handle for removing scheduled event */
-   uint32_t resend_timeout_ctr;
+   pf_scheduler_handle_t resend_timeout;
+   uint32_t resend_counter;
 } pf_session_info_t;
 
 typedef struct pf_ar
@@ -2016,14 +2032,14 @@ typedef struct pf_ar
    bool alarm_enable;
    /* Alarm handling ALPMI/ALPMR machines: one for LOW (0) prio and one for HIGH
     * (1) prio. */
-   pf_alpmx_t alpmx[2];
+   pf_alpmx_t alpmx[PF_ALARM_NUMBER_OF_PRIORITY_LEVELS];
    /* Alarm handling APMS/APMR machines: one for LOW (0) prio and one for HIGH
     * (1) prio. */
-   pf_apmx_t apmx[2];
+   pf_apmx_t apmx[PF_ALARM_NUMBER_OF_PRIORITY_LEVELS];
 
    /* Alarm queues for outgoing alarms: one for LOW (0) prio and one for HIGH
     * (1) prio. */
-   pf_alarm_send_queue_t alarm_send_q[2];
+   pf_alarm_send_queue_t alarm_send_q[PF_ALARM_NUMBER_OF_PRIORITY_LEVELS];
 
    uint16_t nbr_ar_rpc;
    pf_ar_rpc_request_t ar_rpc_request; /* From connect.req */
@@ -2063,11 +2079,11 @@ typedef struct pf_ar
    pf_cmsu_state_values_t cmsu_state;
 
    pf_cmsm_state_values_t cmsm_state;
-   uint32_t cmsm_timer;
+   pf_scheduler_handle_t cmsm_timeout;
 
    pf_cmio_state_values_t cmio_state;
-   uint32_t cmio_timer;
-   bool cmio_timer_run;
+   pf_scheduler_handle_t cmio_timeout;
+   bool cmio_timer_should_reschedule;
 
    pf_cmpbe_state_values_t cmpbe_state;
    uint16_t cmpbe_stored_command;
@@ -2499,216 +2515,6 @@ typedef struct pf_port_data_adjust_peer_to_peer_boundary
                                   Ch.5.2.13.14 */
 } pf_adjust_peer_to_peer_boundary_t;
 
-/**
- * Link status
- *
- * See IEEE 802.1AB-2005 (LLDPv1) Annex G.2 "MAC/PHY Configuration/Status TLV".
- * See also pnal_eth_status_t
- */
-typedef struct pf_lldp_link_status
-{
-   bool is_autonegotiation_supported;
-   bool is_autonegotiation_enabled;
-   uint16_t autonegotiation_advertised_capabilities;
-   uint16_t operational_mau_type;
-   bool is_valid;
-} pf_lldp_link_status_t;
-
-/**
- * Port description
- *
- * "The port description field shall contain an alpha-numeric string
- * that indicates the port's description. If RFC 2863
- * is implemented, the ifDescr object should be used for this field."
- * - IEEE 802.1AB (LLDP) ch. 9.5.5.2 "port description".
- *
- * Note: According to the SNMP specification, the string could be up
- * to 255 characters (excluding termination). The p-net stack limits it to
- * PNET_MAX_PORT_DESCRIPTION_SIZE (including termination).
- */
-typedef struct pf_lldp_port_description
-{
-   char string[PNET_MAX_PORT_DESCRIPTION_SIZE]; /* Terminated string */
-   bool is_valid;
-   size_t len;
-} pf_lldp_port_description_t;
-
-/**
- * Port list
- *
- * "Each octet within this value specifies a set of eight ports,
- * with the first octet specifying ports 1 through 8, the second
- * octet specifying ports 9 through 16, etc. Within each octet,
- * the most significant bit represents the lowest numbered port,
- * and the least significant bit represents the highest numbered
- * port. Thus, each port of the system is represented by a
- * single bit within the value of this object. If that bit has
- * a value of '1' then that port is included in the set of ports;
- * the port is not included if its bit has a value of '0'."
- * - IEEE 802.1AB (LLDP) ch. 12.2 "LLDP MIB module" (lldpPortList).
- *
- * Se also section about lldpConfigManAddrTable in PN-Topology.
- */
-typedef struct pf_lldp_port_list_t
-{
-   uint8_t ports[2];
-} pf_lldp_port_list_t;
-
-/**
- * Port iterator
- *
- * This iterator may be used for iterating over all physical ports
- * on the local interface. The management port is not included.
- */
-typedef struct pf_port_iterator
-{
-   int next_port;
-   int number_of_ports;
-} pf_port_iterator_t;
-
-/**
- * Chassis ID
- *
- * See IEEE 802.1AB-2005 (LLDPv1) ch. 9.5.2.3 "chassis ID".
- */
-typedef struct pf_lldp_chassis_id
-{
-   char string[PNET_LLDP_CHASSIS_ID_MAX_SIZE]; /**< Terminated string */
-   uint8_t subtype;                            /* PF_LLDP_SUBTYPE_xxx */
-   bool is_valid;
-   size_t len;
-} pf_lldp_chassis_id_t;
-
-/**
- * Port ID
- *
- * See IEEE 802.1AB-2005 (LLDPv1) ch. 9.5.3 "Port ID TLV".
- */
-typedef struct pf_lldp_port_id
-{
-   char string[PNET_LLDP_PORT_ID_MAX_SIZE]; /**< Terminated string */
-   uint8_t subtype;                         /* PF_LLDP_SUBTYPE_xxx */
-   bool is_valid;
-   size_t len;
-} pf_lldp_port_id_t;
-
-/**
- * Interface number
- *
- * "The interface number field shall contain the assigned number within
- * the system that identifies the specific interface associated with this
- * management address. If the value of the interface subtype is unknown,
- * this field shall be set to zero."
- * - IEEE 802.1AB-2005 (LLDPv1) ch. 9.5.9 "Management Address TLV".
- *
- * Also see PN-Topology ch. 6.5.1 "Mapping of Ports and PROFINET Interfaces
- * in LLDP MIB and MIB-II".
- */
-typedef struct pf_lldp_interface_number
-{
-   int32_t value;
-   uint8_t subtype; /* 1 = unknown, 2 = ifIndex, 3 = systemPortNumber */
-} pf_lldp_interface_number_t;
-
-/**
- * Management address
- *
- * Usually, this is an IPv4 address. It may also be a MAC address
- * or other kinds of addresses, such as IPv6.
- *
- * See IEEE 802.1AB-2005 (LLDPv1) ch. 9.5.9 "Management Address TLV".
- */
-typedef struct pf_lldp_management_address
-{
-   uint8_t value[31];
-   uint8_t subtype;
-   size_t len;
-   pf_lldp_interface_number_t interface_number;
-   bool is_valid;
-} pf_lldp_management_address_t;
-
-/**
- * Station name
- *
- * This is the name of an interface. It is called NameOfStation in
- * the Profinet specification. It is usually a string, but may also
- * be a MAC address.
- *
- * See IEC CDV 61158-6-10 (PN-AL-Protocol) ch. 4.3.1.4.16.
- */
-typedef struct pf_lldp_station_name
-{
-   char string[PNET_STATION_NAME_MAX_SIZE]; /** Terminated string */
-   size_t len;
-} pf_lldp_station_name_t;
-
-/**
- * Port Name
- * In standard name-of-device mode this is first part of Port ID
- * In legacy mode Port ID and Port Name are the same.
- */
-typedef struct pf_lldp_port_name
-{
-   char string[PNET_PORT_NAME_MAX_SIZE]; /** Terminated string */
-   size_t len;
-} pf_lldp_port_name_t;
-
-/**
- * Measured signal delays in nanoseconds
- *
- * Valid range is 0x1 - 0xFFF.
- * If a signal delay was not measured, its value is zero.
- *
- * See IEC CDV 61158-6-10 (PN-AL-Protocol) ch. 4.11.2.2: "LLDP APDU
- * abstract syntax", element "LLDP_PNIO_DELAY".
- *
- * See also pf_snmp_signal_delay_t.
- */
-typedef struct pf_lldp_signal_delay
-{
-   uint32_t rx_delay_local;
-   uint32_t rx_delay_remote;
-   uint32_t tx_delay_local;
-   uint32_t tx_delay_remote;
-   uint32_t cable_delay_local;
-   bool is_valid;
-} pf_lldp_signal_delay_t;
-
-typedef struct pf_lldp_boundary
-{
-   bool not_send_LLDP_Frames;
-   bool send_PTCP_Delay;
-   bool send_PATH_Delay;
-   bool reserved_bit4;
-   uint8_t reserved_8;
-   uint16_t rserved_16;
-} pf_lldp_boundary_t;
-
-typedef struct pf_lldp_peer_to_peer_boundary
-{
-   pf_lldp_boundary_t boundary;
-   uint16_t properites;
-} pf_lldp_peer_to_peer_boundary_t;
-
-/**
- * LLDP Peer information used by the Profinet stack.
- */
-typedef struct pf_lldp_peer_info
-{
-   /* LLDP TLVs */
-   pf_lldp_chassis_id_t chassis_id;
-   pf_lldp_port_id_t port_id;
-   uint16_t ttl;
-   pf_lldp_port_description_t port_description;
-   pf_lldp_management_address_t management_address;
-   /* PROFIBUS TLVs */
-   pf_lldp_signal_delay_t port_delay;
-   uint8_t port_status[4];
-   pnet_ethaddr_t mac_address;
-   uint32_t line_delay;
-   pf_lldp_link_status_t phy_config;
-} pf_lldp_peer_info_t;
-
 typedef struct pf_pdport
 {
    bool lldp_peer_info_updated;
@@ -2745,10 +2551,10 @@ typedef struct pf_lldp_port
    uint32_t timestamp_for_last_peer_change;
 
    /* Scheduler handle for LLDP receive timeout */
-   uint32_t rx_timeout;
+   pf_scheduler_handle_t rx_timeout;
 
    /* Scheduler handle for periodic LLDP sending */
-   uint32_t tx_timeout;
+   pf_scheduler_handle_t tx_timeout;
 
    /* Is information about peer device received?
     *
@@ -2777,7 +2583,15 @@ typedef struct pf_port
    uint8_t port_num;
    pf_pdport_t pdport;
    pf_lldp_port_t lldp;
+   pnal_eth_status_t eth_status; /* Updated by background task */
 } pf_port_t;
+
+typedef struct pf_snmp_data
+{
+   pf_snmp_system_contact_t system_contact;
+   pf_snmp_system_name_t system_name;
+   pf_snmp_system_location_t system_location;
+} pf_snmp_data_t;
 
 struct pnet
 {
@@ -2791,10 +2605,9 @@ struct pnet
    pnet_ethaddr_t dcp_sam; /* Source address (MAC) of current DCP remote peer */
    bool dcp_delayed_response_waiting; /* A response to DCP IDENTIFY is waiting
                                          to be sent */
-   uint32_t dcp_led_timeout;          /* Handle to the LED timeout instance */
-   uint32_t dcp_sam_timeout;          /* Handle to the SAM timeout instance */
-   uint32_t dcp_identresp_timeout;    /* Handle to the DCP identify timeout
-                                         instance */
+   pf_scheduler_handle_t dcp_led_timeout;
+   pf_scheduler_handle_t dcp_sam_timeout;
+   pf_scheduler_handle_t dcp_identresp_timeout;
    pf_eth_frame_id_map_t eth_id_map[PF_ETH_MAX_MAP];
    volatile pf_scheduler_timeouts_t scheduler_timeouts[PF_MAX_TIMEOUTS];
    volatile uint32_t scheduler_timeout_first;
@@ -2807,11 +2620,13 @@ struct pnet
                                                     stored in nvm */
    pf_cmina_dcp_ase_t cmina_current_dcp_ase;     /* Reflects current settings
                                                     (possibly not yet commited) */
+   os_mutex_t * cmina_mutex;
    pf_cmina_state_values_t cmina_state;
    uint8_t cmina_error_decode;
    uint8_t cmina_error_code_1;
    uint16_t cmina_hello_count;
-   uint32_t cmina_hello_timeout;
+   pf_scheduler_handle_t cmina_hello_timeout;
+
    bool cmina_commit_ip_suite;
    os_mutex_t * p_cmrpc_rpc_mutex;
    uint32_t cmrpc_session_number;
@@ -2826,6 +2641,9 @@ struct pnet
                            during runtime */
    pf_log_book_t fspm_log_book;
    os_mutex_t * fspm_log_book_mutex;
+
+   /* Last time pnet_handle_periodic() was invoked */
+   uint32_t timestamp_handle_periodic_us;
 
    /* Mutex for protecting access to writable I&M data.
     *
@@ -2854,8 +2672,24 @@ struct pnet
       } name_of_device_mode;
       pf_port_t port[PNET_MAX_PHYSICAL_PORTS];
       pf_port_iterator_t link_monitor_iterator;
-      uint32_t link_monitor_timeout; /* Scheduler timeout instance. */
+
+      /* Mutex for protecting port data.
+       * Common for all ports.
+       */
+      os_mutex_t * port_mutex;
+
+      /* Scheduler handle for Ethernet link monitoring */
+      pf_scheduler_handle_t link_monitor_timeout;
    } pf_interface;
+
+   struct
+   {
+      os_event_t * events;
+   } pf_bg_worker;
+
+#if PNET_OPTION_SNMP
+   pf_snmp_data_t snmp_data;
+#endif
 };
 
 /**

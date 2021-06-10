@@ -28,8 +28,6 @@
  * @brief Management Physical Device Port (PD Port) data
  */
 
-static const char * shed_tag_linkmonitor = "linkmonitor";
-
 /**
  * Get configuration file name for one port
  *
@@ -178,7 +176,9 @@ static int pf_pdport_save (pnet_t * net, int loc_port_num)
    const char * p_file_directory = pf_cmina_get_file_directory (net);
    pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
+   os_mutex_lock (net->pf_interface.port_mutex);
    memcpy (&pdport_config, &p_port_data->pdport, sizeof (pdport_config));
+   os_mutex_unlock (net->pf_interface.port_mutex);
 
    save_result = pf_file_save_if_modified (
       p_file_directory,
@@ -217,6 +217,27 @@ static int pf_pdport_save (pnet_t * net, int loc_port_num)
       break;
    }
    return ret;
+}
+
+int pf_pdport_save_all (pnet_t * net)
+{
+   int port;
+   pf_port_iterator_t port_iterator;
+
+   if (net->pf_interface.port_mutex == NULL)
+   {
+      /* Handle case during init when port data is not yet initialized. */
+      return -1;
+   }
+
+   pf_port_init_iterator_over_ports (net, &port_iterator);
+   port = pf_port_get_next (&port_iterator);
+   while (port != 0)
+   {
+      (void)pf_pdport_save (net, port);
+      port = pf_port_get_next (&port_iterator);
+   }
+   return 0;
 }
 
 /**
@@ -319,10 +340,12 @@ int pf_pdport_reset_all (pnet_t * net)
       p_port_data = pf_port_get_state (net, port);
       memset (&p_port_data->pdport, 0, sizeof (p_port_data->pdport));
       pf_pdport_remove_all_diag (net, port);
-      pf_pdport_save (net, port);
 
       port = pf_port_get_next (&port_iterator);
    }
+
+   (void)pf_bg_worker_start_job (net, PF_BGJOB_SAVE_PDPORT_NVM_DATA);
+
    return 0;
 }
 
@@ -436,11 +459,7 @@ int pf_pdport_read_ind (
          loc_port_num = pf_port_dap_subslot_to_local_port (net, subslot);
 
          p_port_data = pf_port_get_state (net, loc_port_num);
-         if (pnal_eth_get_status (p_port_data->netif.name, &eth_status) != 0)
-         {
-            memset (&eth_status, 0, sizeof (eth_status));
-         }
-
+         eth_status = pf_pdport_get_eth_status (net, loc_port_num);
          /* Look up peer info. Subfields .len indicates whether peer is found */
          (void)pf_lldp_get_peer_station_name (
             net,
@@ -565,10 +584,7 @@ int pf_pdport_read_ind (
                pf_port_loc_port_num_to_dap_subslot (net, loc_port_num);
             p_port_data = pf_port_get_state (net, loc_port_num);
 
-            if (pnal_eth_get_status (p_port_data->netif.name, &eth_status) != 0)
-            {
-               memset (&eth_status, 0, sizeof (eth_status));
-            }
+            eth_status = pf_pdport_get_eth_status (net, loc_port_num);
             if (
                pnal_get_port_statistics (
                   p_port_data->netif.name,
@@ -972,29 +988,19 @@ static void pf_pdport_handle_link_up (pnet_t * net, int loc_port_num)
  */
 static void pf_pdport_monitor_link (pnet_t * net, int loc_port_num)
 {
-   pnal_eth_status_t status;
    pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
+   pnal_eth_status_t eth_status = pf_pdport_get_eth_status (net, loc_port_num);
 
-   if (pnal_eth_get_status (p_port_data->netif.name, &status) != 0)
-   {
-      LOG_ERROR (
-         PNET_LOG,
-         "PDPORT(%d): Failed to read link status for port %u.\n",
-         __LINE__,
-         loc_port_num);
-      return;
-   }
-
-   if (p_port_data->netif.previous_is_link_up == false && status.running)
+   if (p_port_data->netif.previous_is_link_up == false && eth_status.running)
    {
       pf_pdport_handle_link_up (net, loc_port_num);
    }
-   else if (p_port_data->netif.previous_is_link_up && status.running == false)
+   else if (p_port_data->netif.previous_is_link_up && eth_status.running == false)
    {
       pf_pdport_handle_link_down (net, loc_port_num);
    }
 
-   p_port_data->netif.previous_is_link_up = status.running;
+   p_port_data->netif.previous_is_link_up = eth_status.running;
 }
 
 /**
@@ -1018,8 +1024,11 @@ static void pf_lldp_trigger_linkmonitor (
    void * arg,
    uint32_t current_time)
 {
+
    int port =
       pf_port_get_next_repeat_cyclic (&net->pf_interface.link_monitor_iterator);
+
+   (void)pf_bg_worker_start_job (net, PF_BGJOB_UPDATE_PORTS_STATUS);
 
    pf_pdport_monitor_link (net, port);
 
@@ -1027,7 +1036,6 @@ static void pf_lldp_trigger_linkmonitor (
       pf_scheduler_add (
          net,
          PF_LINK_MONITOR_INTERVAL,
-         shed_tag_linkmonitor,
          pf_lldp_trigger_linkmonitor,
          NULL,
          &net->pf_interface.link_monitor_timeout) != 0)
@@ -1045,7 +1053,6 @@ void pf_pdport_start_linkmonitor (pnet_t * net)
       pf_scheduler_add (
          net,
          PF_LINK_MONITOR_INTERVAL,
-         shed_tag_linkmonitor,
          pf_lldp_trigger_linkmonitor,
          NULL,
          &net->pf_interface.link_monitor_timeout) != 0)
@@ -1343,7 +1350,7 @@ int pf_pdport_write_req (
 
       if (ret == 0)
       {
-         (void)pf_pdport_save (net, loc_port_num);
+         (void)pf_bg_worker_start_job (net, PF_BGJOB_SAVE_PDPORT_NVM_DATA);
       }
    }
    else
@@ -1371,4 +1378,52 @@ void pf_pdport_peer_indication (pnet_t * net, int loc_port_num)
 {
    pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
    p_port_data->pdport.lldp_peer_info_updated = true;
+}
+
+void pf_pdport_update_eth_status (pnet_t * net)
+{
+   int loc_port_num;
+   pf_port_iterator_t port_iterator;
+   pf_port_t * p_port_data = NULL;
+   pnal_eth_status_t eth_status;
+
+   if (net->pf_interface.port_mutex == NULL)
+   {
+      /* Handle case during init when port data is not yet initialized. */
+      return;
+   }
+
+   pf_port_init_iterator_over_ports (net, &port_iterator);
+   loc_port_num = pf_port_get_next (&port_iterator);
+
+   while (loc_port_num != 0)
+   {
+      p_port_data = pf_port_get_state (net, loc_port_num);
+      if (pnal_eth_get_status (p_port_data->netif.name, &eth_status) != 0)
+      {
+         memset (&eth_status, 0, sizeof (eth_status));
+         LOG_ERROR (
+            PNET_LOG,
+            "PDPORT(%d): Failed to read link status for port %u.\n",
+            __LINE__,
+            loc_port_num);
+      }
+      os_mutex_lock (net->pf_interface.port_mutex);
+      p_port_data->eth_status = eth_status;
+      os_mutex_unlock (net->pf_interface.port_mutex);
+
+      loc_port_num = pf_port_get_next (&port_iterator);
+   }
+}
+
+pnal_eth_status_t pf_pdport_get_eth_status (pnet_t * net, int loc_port_num)
+{
+   pnal_eth_status_t eth_status;
+   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
+
+   os_mutex_lock (net->pf_interface.port_mutex);
+   eth_status = p_port_data->eth_status;
+   os_mutex_unlock (net->pf_interface.port_mutex);
+
+   return eth_status;
 }

@@ -94,9 +94,6 @@ typedef struct pf_lldp_org_header
 static const char org_id_pnio[] = {0x00, 0x0e, 0xcf};
 static const char org_id_ieee_8023[] = {0x00, 0x12, 0x0f};
 
-static const char * shed_tag_tx = "lldp_tx";
-static const char * shed_tag_rx = "lldp_rx";
-
 typedef enum lldp_pnio_subtype_values
 {
    LLDP_PNIO_SUBTYPE_RESERVED = 0,
@@ -494,7 +491,7 @@ static void pf_lldp_receive_timeout (
 {
    pf_port_t * p_port_data = (pf_port_t *)arg;
 
-   p_port_data->lldp.rx_timeout = 0;
+   pf_scheduler_reset_handle (&p_port_data->lldp.rx_timeout);
    LOG_INFO (
       PF_LLDP_LOG,
       "LLDP(%d): Port %d, receive timeout expired\n",
@@ -512,11 +509,7 @@ void pf_lldp_restart_peer_timeout (
 {
    pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
-   if (p_port_data->lldp.rx_timeout != 0)
-   {
-      pf_scheduler_remove (net, shed_tag_rx, p_port_data->lldp.rx_timeout);
-      p_port_data->lldp.rx_timeout = 0;
-   }
+   pf_scheduler_remove_if_running (net, &p_port_data->lldp.rx_timeout);
 
    /*
     *  Profinet states that the time to live shall be 20 seconds,
@@ -534,7 +527,6 @@ void pf_lldp_restart_peer_timeout (
          pf_scheduler_add (
             net,
             timeout_in_secs * 1000000,
-            shed_tag_rx,
             pf_lldp_receive_timeout,
             p_port_data,
             &p_port_data->lldp.rx_timeout) != 0)
@@ -551,11 +543,7 @@ void pf_lldp_stop_peer_timeout (pnet_t * net, int loc_port_num)
 {
    pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
-   if (p_port_data->lldp.rx_timeout != 0)
-   {
-      pf_scheduler_remove (net, shed_tag_rx, p_port_data->lldp.rx_timeout);
-      p_port_data->lldp.rx_timeout = 0;
-   }
+   pf_scheduler_remove_if_running (net, &p_port_data->lldp.rx_timeout);
 }
 
 /**
@@ -906,19 +894,7 @@ void pf_lldp_get_link_status (
    int loc_port_num,
    pf_lldp_link_status_t * p_link_status)
 {
-   pnal_eth_status_t status;
-   const pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
-
-   /* TODO: Better error handling */
-   if (pnal_eth_get_status (p_port_data->netif.name, &status) != 0)
-   {
-      LOG_ERROR (
-         PF_LLDP_LOG,
-         "LLDP(%d): Failed to read Ethernet port status for port %d\n",
-         __LINE__,
-         loc_port_num);
-      memset (&status, 0, sizeof (status));
-   }
+   pnal_eth_status_t status = pf_pdport_get_eth_status (net, loc_port_num);
 
    p_link_status->is_autonegotiation_supported =
       status.is_autonegotiation_supported;
@@ -1120,7 +1096,6 @@ static void pf_lldp_trigger_sending (
       pf_scheduler_add (
          net,
          PF_LLDP_SEND_INTERVAL * 1000,
-         shed_tag_tx,
          pf_lldp_trigger_sending,
          p_port_data,
          &p_port_data->lldp.tx_timeout) != 0)
@@ -1145,17 +1120,10 @@ static void pf_lldp_tx_restart (pnet_t * net, int loc_port_num, bool send)
 {
    pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
-   if (p_port_data->lldp.tx_timeout != 0)
-   {
-      pf_scheduler_remove (net, shed_tag_tx, p_port_data->lldp.tx_timeout);
-      p_port_data->lldp.tx_timeout = 0;
-   }
-
    if (
-      pf_scheduler_add (
+      pf_scheduler_restart (
          net,
          PF_LLDP_SEND_INTERVAL * 1000,
-         shed_tag_tx,
          pf_lldp_trigger_sending,
          p_port_data,
          &p_port_data->lldp.tx_timeout) != 0)
@@ -1184,7 +1152,10 @@ void pf_lldp_init (pnet_t * net)
    while (port != 0)
    {
       p_port_data = pf_port_get_state (net, port);
+
       memset (&p_port_data->lldp, 0, sizeof (p_port_data->lldp));
+      pf_scheduler_init_handle (&p_port_data->lldp.rx_timeout, "lldp_rx");
+      pf_scheduler_init_handle (&p_port_data->lldp.tx_timeout, "lldp_tx");
 
       port = pf_port_get_next (&port_iterator);
    }
@@ -1205,17 +1176,14 @@ void pf_lldp_send_enable (pnet_t * net, int loc_port_num)
 
 void pf_lldp_send_disable (pnet_t * net, int loc_port_num)
 {
+   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
+
    LOG_DEBUG (
       PF_LLDP_LOG,
       "LLDP(%d): Disabling LLDP transmission for port %d\n",
       __LINE__,
       loc_port_num);
-   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
-   if (p_port_data->lldp.tx_timeout != 0)
-   {
-      pf_scheduler_remove (net, shed_tag_tx, p_port_data->lldp.tx_timeout);
-      p_port_data->lldp.tx_timeout = 0;
-   }
+   pf_scheduler_remove_if_running (net, &p_port_data->lldp.tx_timeout);
 }
 
 /**

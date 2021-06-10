@@ -32,6 +32,8 @@
 #error "PNET_MAX_API needs to be at least 1"
 #endif
 
+#define PNET_PERIODIC_WARNING_FACTOR 3
+
 int pnet_init_only (pnet_t * net, const pnet_cfg_t * p_cfg)
 {
    memset (net, 0, sizeof (*net));
@@ -51,11 +53,15 @@ int pnet_init_only (pnet_t * net, const pnet_cfg_t * p_cfg)
 
    if (pf_eth_init (net, p_cfg) != 0)
    {
-      LOG_ERROR (PNET_LOG, "Failed to initialise network interfaces\n");
+      LOG_ERROR (
+         PNET_LOG,
+         "API(%d): Failed to initialise network interfaces\n",
+         __LINE__);
       return -1;
    }
 
    pf_scheduler_init (net, p_cfg->tick_us);
+   pf_bg_worker_init (net);
    pf_cmina_init (net); /* Read from permanent pool */
 
    pf_dcp_exit (net); /* Prepare for re-init. */
@@ -66,10 +72,11 @@ int pnet_init_only (pnet_t * net, const pnet_cfg_t * p_cfg)
    pf_pdport_init (net);
 
    /* Configure SNMP server if enabled */
-#if PNET_OPTION_SNMP == 1
+#if PNET_OPTION_SNMP
+   pf_snmp_data_init (net);
    if (pnal_snmp_init (net, &p_cfg->pnal_cfg) != 0)
    {
-      LOG_ERROR (PNET_LOG, "Failed to configure SNMP\n");
+      LOG_ERROR (PNET_LOG, "API(%d): Failed to configure SNMP\n", __LINE__);
       return -1;
    }
 #endif
@@ -78,6 +85,8 @@ int pnet_init_only (pnet_t * net, const pnet_cfg_t * p_cfg)
    pf_cmdev_init (net);
 
    pf_cmrpc_init (net);
+
+   net->timestamp_handle_periodic_us = os_get_current_time_us();
 
    return 0;
 }
@@ -93,7 +102,8 @@ pnet_t * pnet_init (const pnet_cfg_t * p_cfg)
    {
       LOG_ERROR (
          PNET_LOG,
-         "Failed to allocate memory for pnet_t (%zu bytes)\n",
+         "API(%d): Failed to allocate memory for pnet_t (%zu bytes)\n",
+         __LINE__,
          sizeof (*net));
       return NULL;
    }
@@ -109,6 +119,25 @@ pnet_t * pnet_init (const pnet_cfg_t * p_cfg)
 
 void pnet_handle_periodic (pnet_t * net)
 {
+#if LOG_DEBUG_ENABLED(PNET_LOG)
+   uint32_t start_time_us = os_get_current_time_us();
+   uint32_t end_time_us = 0;
+
+   if (pf_cmina_has_timed_out (
+          start_time_us,
+          net->timestamp_handle_periodic_us,
+          net->fspm_cfg.min_device_interval,
+          PNET_PERIODIC_WARNING_FACTOR))
+   {
+      LOG_DEBUG (
+         PNET_LOG,
+         "API(%d): Too long since pnet_handle_periodic() was called: %u "
+         "microseconds\n",
+         __LINE__,
+         start_time_us - net->timestamp_handle_periodic_us);
+   }
+#endif
+
    pf_cmrpc_periodic (net);
    pf_alarm_periodic (net);
 
@@ -116,6 +145,23 @@ void pnet_handle_periodic (pnet_t * net)
    pf_scheduler_tick (net);
 
    pf_pdport_periodic (net);
+
+#if LOG_DEBUG_ENABLED(PNET_LOG)
+   end_time_us = os_get_current_time_us();
+   if (pf_cmina_has_timed_out (
+          end_time_us,
+          start_time_us,
+          net->fspm_cfg.min_device_interval,
+          1))
+   {
+      LOG_DEBUG (
+         PNET_LOG,
+         "API(%d): pnet_handle_periodic() took too long: %u microseconds\n",
+         __LINE__,
+         end_time_us - start_time_us);
+   }
+   net->timestamp_handle_periodic_us = end_time_us;
+#endif
 }
 
 void pnet_show (pnet_t * net, unsigned level)
@@ -158,6 +204,18 @@ void pnet_show (pnet_t * net, unsigned level)
       {
          printf ("\n\n");
          pf_fspm_im_show (net);
+      }
+      if (level & 0x0100)
+      {
+         pf_port_show (net);
+      }
+      if (level & 0x0080)
+      {
+#if PNET_OPTION_SNMP
+         pf_snmp_show (net);
+#else
+         printf ("No support for SNMP\n\n");
+#endif
       }
    }
    else

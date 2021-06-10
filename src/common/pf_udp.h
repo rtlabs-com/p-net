@@ -25,7 +25,8 @@ extern "C" {
  *
  * @param net              InOut: The p-net stack instance
  * @param port             In:    UDP port to listen to.
- * @return Socket ID, or -1 if an error occurred.
+ * @return Socket ID, or -1 if an error occurred. Note that socket ID 0
+ *         is valid.
  */
 int pf_udp_open (pnet_t * net, pnal_ipport_t port);
 

@@ -24,7 +24,7 @@ class CminaUnitTest : public PnetUnitTest
 {
 };
 
-TEST_F (CminaUnitTest, CmdevCheckIsStationNameValid)
+TEST_F (CminaUnitTest, CminaCheckIsStationNameValid)
 {
    EXPECT_TRUE (pf_cmina_is_stationname_valid ("", 0));
    EXPECT_TRUE (pf_cmina_is_stationname_valid ("abc", 3));
@@ -74,7 +74,7 @@ TEST_F (CminaUnitTest, CmdevCheckIsStationNameValid)
    EXPECT_FALSE (pf_cmina_is_stationname_valid ("port-123-98765", 14));
 }
 
-TEST_F (CminaUnitTest, CmdevCheckIsNetmaskValid)
+TEST_F (CminaUnitTest, CminaCheckIsNetmaskValid)
 {
    EXPECT_TRUE (pf_cmina_is_netmask_valid (PNAL_MAKEU32 (0, 0, 0, 0)));
    EXPECT_TRUE (pf_cmina_is_netmask_valid (PNAL_MAKEU32 (255, 255, 255, 255)));
@@ -115,7 +115,7 @@ TEST_F (CminaUnitTest, CmdevCheckIsNetmaskValid)
    EXPECT_FALSE (pf_cmina_is_netmask_valid (PNAL_MAKEU32 (255, 254, 255, 0)));
 }
 
-TEST_F (CminaUnitTest, CmdevCheckIsIPaddressValid)
+TEST_F (CminaUnitTest, CminaCheckIsIPaddressValid)
 {
    /* 0.0.0.0 /32 Mandatory 0.0.0.0 up to 0.0.0.0
       Special case: No IPsuite assigned in conjunction with
@@ -177,7 +177,7 @@ TEST_F (CminaUnitTest, CmdevCheckIsIPaddressValid)
       PNAL_MAKEU32 (10, 10, 0, 35)));
 }
 
-TEST_F (CminaUnitTest, CmdevCheckIsGatewayValid)
+TEST_F (CminaUnitTest, CminaCheckIsGatewayValid)
 {
    EXPECT_TRUE (pf_cmina_is_gateway_valid (
       PNAL_MAKEU32 (192, 168, 1, 4),
@@ -198,4 +198,68 @@ TEST_F (CminaUnitTest, CmdevCheckIsGatewayValid)
       PNAL_MAKEU32 (192, 168, 1, 4),
       PNAL_MAKEU32 (255, 255, 255, 0),
       PNAL_MAKEU32 (192, 168, 0, 1)));
+}
+
+TEST_F (CminaUnitTest, CminaCheckHasTimedOut)
+{
+   // Interval length 1 ms (= 32), factor 1
+   EXPECT_FALSE (pf_cmina_has_timed_out (0, 0, 32, 1));
+   EXPECT_FALSE (pf_cmina_has_timed_out (999, 0, 32, 1));
+   EXPECT_TRUE (pf_cmina_has_timed_out (1000, 0, 32, 1));
+   EXPECT_TRUE (pf_cmina_has_timed_out (1001, 0, 32, 1));
+   EXPECT_TRUE (pf_cmina_has_timed_out (UINT32_MAX, 0, 32, 1));
+
+   EXPECT_TRUE (pf_cmina_has_timed_out (0, 1000, 32, 1));
+   EXPECT_TRUE (pf_cmina_has_timed_out (999, 1000, 32, 1));
+   EXPECT_FALSE (pf_cmina_has_timed_out (1000, 1000, 32, 1));
+   EXPECT_FALSE (pf_cmina_has_timed_out (1001, 1000, 32, 1));
+   EXPECT_FALSE (pf_cmina_has_timed_out (1999, 1000, 32, 1));
+   EXPECT_TRUE (pf_cmina_has_timed_out (2000, 1000, 32, 1));
+   EXPECT_TRUE (pf_cmina_has_timed_out (2001, 1000, 32, 1));
+   EXPECT_TRUE (pf_cmina_has_timed_out (3000, 1000, 32, 1));
+   EXPECT_TRUE (pf_cmina_has_timed_out (4000, 1000, 32, 1));
+   EXPECT_TRUE (pf_cmina_has_timed_out (UINT32_MAX, 1000, 32, 1));
+
+   EXPECT_FALSE (pf_cmina_has_timed_out (0, UINT32_MAX, 32, 1));
+   EXPECT_FALSE (pf_cmina_has_timed_out (998, UINT32_MAX, 32, 1));
+   EXPECT_TRUE (pf_cmina_has_timed_out (999, UINT32_MAX, 32, 1));
+   EXPECT_TRUE (pf_cmina_has_timed_out (1000, UINT32_MAX, 32, 1));
+   EXPECT_TRUE (pf_cmina_has_timed_out (1001, UINT32_MAX, 32, 1));
+   EXPECT_TRUE (pf_cmina_has_timed_out (UINT32_MAX - 1, UINT32_MAX, 32, 1));
+   EXPECT_FALSE (pf_cmina_has_timed_out (UINT32_MAX, UINT32_MAX, 32, 1));
+
+   // Interval length 1 ms, factor 3
+   EXPECT_TRUE (pf_cmina_has_timed_out (0, 1000, 32, 3));
+   EXPECT_TRUE (pf_cmina_has_timed_out (999, 1000, 32, 3));
+   EXPECT_FALSE (pf_cmina_has_timed_out (1000, 1000, 32, 3));
+   EXPECT_FALSE (pf_cmina_has_timed_out (1001, 1000, 32, 3));
+   EXPECT_FALSE (pf_cmina_has_timed_out (3999, 1000, 32, 3));
+   EXPECT_TRUE (pf_cmina_has_timed_out (4000, 1000, 32, 3));
+   EXPECT_TRUE (pf_cmina_has_timed_out (4001, 1000, 32, 3));
+   EXPECT_TRUE (pf_cmina_has_timed_out (5000, 1000, 32, 3));
+   EXPECT_TRUE (pf_cmina_has_timed_out (UINT32_MAX, 1000, 32, 3));
+
+   // Interval length 31.25 microseconds, factor 1
+   EXPECT_TRUE (pf_cmina_has_timed_out (0, 1000, 1, 1));
+   EXPECT_TRUE (pf_cmina_has_timed_out (999, 1000, 1, 1));
+   EXPECT_FALSE (pf_cmina_has_timed_out (1000, 1000, 1, 1));
+   EXPECT_FALSE (pf_cmina_has_timed_out (1001, 1000, 1, 1));
+   EXPECT_FALSE (pf_cmina_has_timed_out (1030, 1000, 1, 1));
+   EXPECT_TRUE (pf_cmina_has_timed_out (1031, 1000, 1, 1));
+   EXPECT_TRUE (pf_cmina_has_timed_out (1032, 1000, 1, 1));
+   EXPECT_TRUE (pf_cmina_has_timed_out (2000, 1000, 1, 1));
+   EXPECT_TRUE (pf_cmina_has_timed_out (UINT32_MAX, 1000, 1, 1));
+
+   // No interval
+   EXPECT_TRUE (pf_cmina_has_timed_out (0, 1000, 0, 1));
+   EXPECT_TRUE (pf_cmina_has_timed_out (999, 1000, 0, 1));
+   EXPECT_TRUE (pf_cmina_has_timed_out (1000, 1000, 0, 1));
+   EXPECT_TRUE (pf_cmina_has_timed_out (1001, 1000, 0, 1));
+   EXPECT_TRUE (pf_cmina_has_timed_out (UINT32_MAX, 1000, 0, 1));
+
+   EXPECT_TRUE (pf_cmina_has_timed_out (0, 1000, 32, 0));
+   EXPECT_TRUE (pf_cmina_has_timed_out (999, 1000, 32, 0));
+   EXPECT_TRUE (pf_cmina_has_timed_out (1000, 1000, 32, 0));
+   EXPECT_TRUE (pf_cmina_has_timed_out (1001, 1000, 32, 0));
+   EXPECT_TRUE (pf_cmina_has_timed_out (UINT32_MAX, 1000, 32, 0));
 }

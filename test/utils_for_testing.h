@@ -31,10 +31,12 @@ extern "C" {
 #define TEST_TRACE(...)
 #endif
 
-#define TEST_UDP_DELAY     (500 * 1000)      /* us */
-#define TEST_DATA_DELAY    (2 * 1000)        /* us */
-#define TEST_TIMEOUT_DELAY (3 * 1000 * 1000) /* us */
-#define TICK_INTERVAL_US   1000              /* us */
+#define TEST_UDP_DELAY                (500 * 1000)                 /* us */
+#define TEST_TICK_INTERVAL_US         1000                         /* us */
+#define TEST_DATA_DELAY               (2 * TEST_TICK_INTERVAL_US)  /* us */
+#define TEST_TIMEOUT_DELAY            (3 * 1000 * 1000)            /* us */
+#define TEST_SCHEDULER_CALLBACK_DELAY (4 * TEST_TICK_INTERVAL_US)  /* us */
+#define TEST_SCHEDULER_RUNTIME        (10 * TEST_TICK_INTERVAL_US) /* us */
 
 #define TEST_API_IDENT                            0
 #define TEST_API_NONEXIST_IDENT                   2
@@ -98,6 +100,8 @@ typedef struct call_counters_obj
    uint16_t write_calls;
    uint16_t led_on_calls;
    uint16_t led_off_calls;
+   uint16_t scheduler_callback_a_calls;
+   uint16_t scheduler_callback_b_calls;
 } call_counters_t;
 
 typedef struct app_data_for_testing_obj
@@ -106,7 +110,7 @@ typedef struct app_data_for_testing_obj
    os_timer_t * periodic_timer;
    pnet_event_values_t cmdev_state;
    uint16_t data_cycle_ctr;
-   uint32_t data_ctr;
+   uint32_t counter_data;
    os_event_t * main_events;
    uint32_t main_arep;
    bool alarm_allowed;
@@ -121,6 +125,8 @@ typedef struct app_data_for_testing_obj
    bool init_done;
    uint16_t read_fails;
    call_counters_t call_counters;
+   pf_scheduler_handle_t scheduler_handle_a;
+   pf_scheduler_handle_t scheduler_handle_b;
 } app_data_for_testing_t;
 
 /******************** Callbacks defined by p-net *****************************/

@@ -176,7 +176,8 @@ TEST_F (SnmpTest, SnmpGetLocationGivenLargeString)
    pf_snmp_system_location_t actual;
 
    memset (&actual, 0xff, sizeof (actual));
-   mock_pf_file_save (NULL, PF_FILENAME_SYSLOCATION, &stored, sizeof (stored));
+   mock_pf_file_save (NULL, PF_FILENAME_SNMP_SYSLOCATION, &stored, sizeof (stored));
+   pf_snmp_data_init (net);
 
    pf_snmp_get_system_location (net, &actual);
 
@@ -190,7 +191,8 @@ TEST_F (SnmpTest, SnmpGetLocationGivenSmallString)
    pf_snmp_system_location_t actual;
 
    memset (&actual, 0xcd, sizeof (actual));
-   mock_pf_file_save (NULL, PF_FILENAME_SYSLOCATION, &stored, sizeof (stored));
+   mock_pf_file_save (NULL, PF_FILENAME_SNMP_SYSLOCATION, &stored, sizeof (stored));
+   pf_snmp_data_init (net);
 
    pf_snmp_get_system_location (net, &actual);
 
@@ -208,6 +210,7 @@ TEST_F (SnmpTest, SnmpGetLocationGivenError)
    mock_file_data.is_load_failing = true;
    memset (&actual, 0xff, sizeof (actual));
    mock_pf_fspm_save_im_location (net, expected);
+   pf_snmp_data_init (net);
 
    pf_snmp_get_system_location (net, &actual);
 
@@ -224,7 +227,7 @@ TEST_F (SnmpTest, SnmpSetLocationGivenLargeString)
    error = pf_snmp_set_system_location (net, &written);
 
    EXPECT_EQ (error, 0);
-   EXPECT_STREQ (mock_file_data.filename, PF_FILENAME_SYSLOCATION);
+   EXPECT_STREQ (mock_file_data.filename, PF_FILENAME_SNMP_SYSLOCATION);
    EXPECT_EQ (mock_file_data.size, sizeof (written));
    EXPECT_EQ (memcmp (mock_file_data.object, &written, sizeof (written)), 0);
    EXPECT_STREQ (mock_fspm_data.im_location, "1234567890123456789012");
@@ -239,7 +242,7 @@ TEST_F (SnmpTest, SnmpSetLocationGivenSmallString)
    error = pf_snmp_set_system_location (net, &written);
 
    EXPECT_EQ (error, 0);
-   EXPECT_STREQ (mock_file_data.filename, PF_FILENAME_SYSLOCATION);
+   EXPECT_STREQ (mock_file_data.filename, PF_FILENAME_SNMP_SYSLOCATION);
    EXPECT_EQ (mock_file_data.size, sizeof (written));
    EXPECT_EQ (memcmp (mock_file_data.object, &written, sizeof (written)), 0);
    EXPECT_STREQ (mock_fspm_data.im_location, "small                 ");

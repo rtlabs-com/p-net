@@ -150,6 +150,39 @@ void pf_pdport_start_linkmonitor (pnet_t * net);
  */
 void pf_pdport_periodic (pnet_t * net);
 
+/**
+ * Save PDPort configuration to NVM for all ports.
+ * This function is intended to be executed in the background task,
+ * as the system calls to save files may be blocking.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @return  0  if operation succeeded.
+ *          -1 if an error occurred.
+ */
+int pf_pdport_save_all (pnet_t * net);
+
+/**
+ * Update the ethernet status for all ports.
+ * This function is intended to be executed in a background task,
+ * as the system calls to read the ethernet status may be blocking.
+ *
+ * @param net              InOut: The p-net stack instance
+ */
+void pf_pdport_update_eth_status (pnet_t * net);
+
+/**
+ * Get current ethernet status for local port.
+ * This is a non-blocking function reading from mutex-protected memory.
+ * The status values are updated by the background worker task
+ * in a periodic job executing the pf_pdport_update_eth_status() function.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param loc_port_num     In:    Local port number.
+ *                                Valid range: 1 .. num_physical_ports
+ * @return The ethernet staus for local port
+ */
+pnal_eth_status_t pf_pdport_get_eth_status (pnet_t * net, int loc_port_num);
+
 #ifdef __cplusplus
 }
 #endif

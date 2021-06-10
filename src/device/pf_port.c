@@ -41,6 +41,8 @@ void pf_port_init (pnet_t * net)
    pf_port_iterator_t port_iterator;
    pf_port_t * p_port_data = NULL;
 
+   net->pf_interface.port_mutex = os_mutex_create();
+
    pf_port_init_iterator_over_ports (net, &port_iterator);
    port = pf_port_get_next (&port_iterator);
 
@@ -70,7 +72,9 @@ void pf_port_main_interface_init (pnet_t * net)
    pf_port_init_iterator_over_ports (
       net,
       &net->pf_interface.link_monitor_iterator);
-   net->pf_interface.link_monitor_timeout = UINT32_MAX;
+   pf_scheduler_init_handle (
+      &net->pf_interface.link_monitor_timeout,
+      "link_monitor");
    pf_pdport_start_linkmonitor (net);
 }
 
@@ -221,5 +225,75 @@ pf_mediatype_values_t pf_port_get_media_type (pnal_eth_mau_t mau_type)
       return PF_PD_MEDIATYPE_FIBER;
    default:
       return PF_PD_MEDIATYPE_UNKNOWN;
+   }
+}
+
+void pf_port_show (pnet_t * net)
+{
+   int port;
+   pf_port_iterator_t port_iterator;
+   pf_port_t * p_port_data;
+   const pnet_port_cfg_t * p_port_config;
+
+   printf ("\nPorts\n");
+
+   pf_port_init_iterator_over_ports (net, &port_iterator);
+   port = pf_port_get_next (&port_iterator);
+   while (port != 0)
+   {
+      p_port_data = pf_port_get_state (net, port);
+      p_port_config = pf_port_get_config (net, port);
+
+      printf ("Port %u\n", port);
+      printf (" Port name               : \"%s\"\n", p_port_data->port_name);
+      printf (" ETH name                : \"%s\"\n", p_port_config->netif_name);
+      printf (
+         " MAC                     : %02x:%02x:%02x:%02x:%02x:%02x\n",
+         p_port_data->netif.mac_address.addr[0],
+         p_port_data->netif.mac_address.addr[1],
+         p_port_data->netif.mac_address.addr[2],
+         p_port_data->netif.mac_address.addr[3],
+         p_port_data->netif.mac_address.addr[4],
+         p_port_data->netif.mac_address.addr[5]);
+      printf (
+         " Link is up?             : %u\n",
+         p_port_data->netif.previous_is_link_up);
+      printf (
+         " Peer check active       : %u\n",
+         p_port_data->pdport.check.active);
+      printf (
+         " Peer check station name : \"%s\"\n",
+         p_port_data->pdport.check.peer.peer_station_name);
+      printf (
+         " Peer check port name    : \"%s\"\n",
+         p_port_data->pdport.check.peer.peer_port_name);
+      printf (
+         " Adjust active           : %u\n",
+         p_port_data->pdport.adjust.active);
+      printf (
+         " Do not send LLDP        : %u\n",
+         p_port_data->pdport.adjust.peer_to_peer_boundary.peer_to_peer_boundary
+            .do_not_send_LLDP_frames);
+      printf (
+         " Peer info received      : %u\n",
+         p_port_data->lldp.is_peer_info_received);
+      printf (
+         " Peer chassis id         : Valid %u \"%s\"\n",
+         p_port_data->lldp.peer_info.chassis_id.is_valid,
+         p_port_data->lldp.peer_info.chassis_id.string);
+      printf (
+         " Peer port id            : Valid %u \"%s\"\n",
+         p_port_data->lldp.peer_info.port_id.is_valid,
+         p_port_data->lldp.peer_info.port_id.string);
+      printf (
+         " Peer port descr         : Valid %u \"%s\"\n",
+         p_port_data->lldp.peer_info.port_description.is_valid,
+         p_port_data->lldp.peer_info.port_description.string);
+      printf (
+         " Peer MAU type           : Valid %u %u\n",
+         p_port_data->lldp.peer_info.phy_config.is_valid,
+         p_port_data->lldp.peer_info.phy_config.operational_mau_type);
+
+      port = pf_port_get_next (&port_iterator);
    }
 }

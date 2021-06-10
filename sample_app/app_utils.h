@@ -1,0 +1,372 @@
+/*********************************************************************
+ *        _       _         _
+ *  _ __ | |_  _ | |  __ _ | |__   ___
+ * | '__|| __|(_)| | / _` || '_ \ / __|
+ * | |   | |_  _ | || (_| || |_) |\__ \
+ * |_|    \__|(_)|_| \__,_||_.__/ |___/
+ *
+ * www.rt-labs.com
+ * Copyright 2018 rt-labs AB, Sweden.
+ *
+ * This software is dual-licensed under GPLv3 and a commercial
+ * license. See the file LICENSE.md distributed with this software for
+ * full license information.
+ ********************************************************************/
+
+#ifndef APP_UTILS_H
+#define APP_UTILS_H
+
+/**
+ * @file
+ * @brief Application utilities and helper functions
+ *
+ * Functions for getting string representation of
+ * P-Net events, error codes and more.
+ *
+ * API, slot and subslot administration.
+ *
+ * Initialization of P-Net configuration from app_gsdml.h.
+ */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include "osal.h"
+#include "pnal.h"
+#include <pnet_api.h>
+
+typedef struct app_utils_netif_name
+{
+   char name[PNET_INTERFACE_NAME_MAX_SIZE];
+} app_utils_netif_name_t;
+
+typedef struct app_utils_netif_namelist
+{
+   app_utils_netif_name_t netif[PNET_MAX_PHYSICAL_PORTS + 1];
+} app_utils_netif_namelist_t;
+
+typedef struct app_subslot app_subslot_t;
+typedef void (*app_utils_cyclic_callback) (app_subslot_t * subslot, void * tag);
+
+/**
+ * Information of submodule plugged into a subslot.
+ * Note that submodule data is not stored here but must
+ * be handled by the submodule implementation.
+ * All parameters are initialized by the app_utils_plug_submodule()
+ * function.
+ * The cyclic_callback is generated when app_utils_cyclic_data_poll()
+ * is called. Typically on the tick event in the main task.
+ * tag parameter is passed with the cyclic_callback and
+ * is typically a handle to a submodule on application.
+ */
+typedef struct app_subslot
+{
+   bool used;
+   bool plugged;
+   uint16_t slot_nbr;
+   uint16_t subslot_nbr;
+   uint32_t submodule_id;
+   const char * submodule_name;
+   pnet_data_cfg_t data_cfg;
+   uint8_t iocs;
+   uint8_t iops;
+
+   app_utils_cyclic_callback cyclic_callback;
+   void * tag;
+} app_subslot_t;
+
+/**
+ * Information of module plugged into
+ * slot and array of subslots for admin
+ * of submodules.
+ */
+typedef struct app_slot
+{
+   bool plugged;
+   uint32_t module_id;
+   const char * name;
+   app_subslot_t subslots[PNET_MAX_SUBSLOTS];
+} app_slot_t;
+
+/**
+ * Profinet API state
+ * Used to admin modules is plugged into
+ * slots and submodules into subslots.
+ */
+typedef struct app_api_t
+{
+   uint32_t api_id;
+   uint32_t arep;
+   app_slot_t slots[PNET_MAX_SLOTS];
+} app_api_t;
+
+/**
+ * Convert IP address to string
+ * @param ip               In:    IP address
+ * @param outputstring     Out:   Resulting string buffer. Should have size
+ *                                PNAL_INET_ADDRSTR_SIZE.
+ */
+void app_utils_ip_to_string (pnal_ipaddr_t ip, char * outputstring);
+
+/**
+ * Get string description of data direction
+ * @param direction               In:    Submodule data direction
+ * @return String represention of data direction
+ */
+const char * app_utils_submod_dir_to_string (pnet_submodule_dir_t direction);
+
+/**
+ * Get string description of pnio produced or consumer status
+ * @param ioxs               In:    Producer or consumer status (iops/iocs)
+ * @return String represention of ioxs (iops/iocs)
+ */
+const char * app_utils_ioxs_to_string (pnet_ioxs_values_t ioxs);
+
+/**
+ * Convert MAC address to string
+ * @param mac              In:    MAC address
+ * @param outputstring     Out:   Resulting string buffer. Should have size
+ *                                PNAL_ETH_ADDRSTR_SIZE.
+ */
+void app_utils_mac_to_string (pnet_ethaddr_t mac, char * outputstring);
+
+/**
+ * Convert error code to string format
+ * Only common error codes supported.
+ * Todo: Add rest of error codes.
+ *
+ * @param err_cls        In:   The error class. See PNET_ERROR_CODE_1_*
+ * @param err_code       In:   The error code. See PNET_ERROR_CODE_2_*
+ * @param err_cls_str    Out:   The error class string
+ * @param err_code_str   Out:   The error code string
+ */
+void app_utils_get_error_code_strings (
+   uint16_t err_cls,
+   uint16_t err_code,
+   const char ** err_cls_str,
+   const char ** err_code_str);
+
+/**
+ * Copy an IP address (as an integer) to a struct
+ * @param destination_struct  Out:   Destination
+ * @param ip                  In:    IP address
+ */
+void app_utils_copy_ip_to_struct (
+   pnet_cfg_ip_addr_t * destination_struct,
+   pnal_ipaddr_t ip);
+
+/**
+ * Return a string representation of
+ * the given dcontrol command.
+ * @param event            In:    control_command
+ * @return  A string representing the command
+ */
+const char * app_utils_dcontrol_cmd_to_string (
+   pnet_control_command_t control_command);
+
+/**
+ * Return a string representation of the given event.
+ * @param event            In:    event
+ * @return  A string representing the event
+ */
+const char * app_utils_event_to_string (pnet_event_values_t event);
+
+/**
+ * Get network configuration from a string
+ * defining a list of network interfaces examples:
+ * "eth0" or "br0,eth0,eth1"
+ * @param netif_list_str      In: list of network ifs
+ * @param if_list             Out: Array of network ifs
+ * @param number_of_ports     Out: Number of ports
+ * @param if_cfg              Out: P-Net network configuration
+ * @return 0 on success, -1 on error
+ */
+int app_utils_pnet_cfg_init_netifs (
+   const char * netif_list_str,
+   app_utils_netif_namelist_t * if_list,
+   uint16_t * number_of_ports,
+   pnet_if_cfg_t * if_cfg);
+
+/**
+ * Parse a comma separated list of network interfaces and check
+ * that the number of interfaces match the PNET_MAX_PHYSICAL_PORTS
+ * configuration.
+ *
+ * For a single Ethernet interface, the \a arg_str should consist of
+ * one name. For two Ethernet interfaces, the  \a arg_str should consist of
+ * three names, as we also need a bridge interface.
+ *
+ * Does only consider the number of commaseparated names. No check of the
+ * names themselves are done.
+ *
+ * Examples:
+ * arg_str                 num_ports
+ * "eth0"                  1
+ * "eth0,eth1"             error (We need a bridge as well)
+ * "br0,eth0,eth1"         2
+ *
+ * @param arg_str      In:   Network interface list as comma separated,
+ *                           terminated string. For example "eth0" or
+ *                           "br0,eth0,eth1".
+ * @param max_port     In:   PNET_MAX_PHYSICAL_PORTS, passed as argument to
+ *                           allow test.
+ * @param p_if_list    Out:  List of network interfaces
+ * @param p_num_ports  Out:  Resulting number of physical ports
+ * @return  0  on success
+ *         -1  on error
+ */
+int app_utils_get_netif_namelist (
+   const char * arg_str,
+   uint16_t max_port,
+   app_utils_netif_namelist_t * p_if_list,
+   uint16_t * p_num_ports);
+
+/**
+ * Print network configuration using APP_LOG_INFO().
+ * @param if_cfg           In:   Network configuration
+ * @param number_of_ports  In:   Number of used ports
+ */
+void app_utils_print_network_config (
+   pnet_if_cfg_t * if_cfg,
+   uint16_t number_of_ports);
+
+/**
+ * Print iocs warning message if ioxs is changed.
+ * @param subslot          In: Subslot
+ * @param ioxs_str         In: String decription Producer or Consumer
+ * @param ioxs_current     In: Current status
+ * @param ioxs_new         In: New status
+ */
+void app_utils_print_ioxs_change (
+   app_subslot_t * subslot,
+   const char * ioxs_str,
+   uint8_t ioxs_current,
+   uint8_t ioxs_new);
+
+/**
+ * Init the p-net configuration to default values.
+ * Some values hardcoded, some picked from app_gsdlm.h
+ * Network configuration not initialized.
+ * This means'.if_cfg' must be set by application.
+ * Use this function to init P-Net configuration before
+ * before passing config to app_init().
+ * @param pnet_cfg     Out:   Configuration for use by p-net
+ * @return  0  if the operation succeeded.
+ *          -1 if an error occurred.
+ */
+int app_utils_pnet_cfg_init_default (pnet_cfg_t * pnet_cfg);
+
+/**
+ * Plug application module.
+ * @param p_api            InOut: API
+ * @param slot_nbr         In:    Slot number
+ * @param module_id        In:    Module identity
+ * @return 0 on success, -1 on error
+ */
+int app_utils_plug_module (
+   app_api_t * p_api,
+   uint16_t slot_nbr,
+   uint32_t id,
+   const char * name);
+
+/**
+ * Pull any application module in given slot.
+ * @param p_api            InOut: API
+ * @param slot_nbr         In:    Slot number
+ * @return 0 on success, -1 on error
+ */
+int app_utils_pull_module (app_api_t * p_api, uint16_t slot_nbr);
+
+/**
+ * Plug application submodule.
+ * @param p_api            InOut: API
+ * @param slot_nbr         In:    Slot number
+ * @param subslot_nbr      In:    Subslot number
+ * @param submodule_id     In:    Submodule identity
+ * @param p_data_cfg       In:    Data configuration,
+ *                                direction, in and out sizes
+ * @param submodule_name   In:    Submodule name
+ * @param cyclic_callback  In:    Submodule data callback
+ * @param tag              In:    Tag passed in cyclic callback
+ *                                Typicall application or
+ *                                submodule handle
+ *
+ * @return Reference to allocated subslot,
+ *         NULL if no free subslot is available. This should
+ *         never happen if application is aligned with p-net state.
+ */
+app_subslot_t * app_utils_plug_submodule (
+   app_api_t * p_api,
+   uint16_t slot_nbr,
+   uint16_t subslot_nbr,
+   uint32_t submodule_id,
+   const pnet_data_cfg_t * p_data_cfg,
+   const char * submodule_name,
+   app_utils_cyclic_callback cyclic_callback,
+   void * tag);
+
+/**
+ * Unplug any application submodule from given subslot.
+ * @param p_api            InOut: API
+ * @param slot_nbr         In:    Slot number
+ * @param subslot_nbr      In:    Subslot number
+ * @return 0 on success, -1 on error.
+ */
+int app_utils_pull_submodule (
+   app_api_t * p_api,
+   uint16_t slot_nbr,
+   uint16_t subslot_nbr);
+
+/**
+ * Generate data callback for all plugged
+ * submodules. The callback passsed in
+ * app_utils_plug_submodule is used.
+ * @param p_api         In:   API
+ */
+void app_utils_cyclic_data_poll (app_api_t * p_api);
+
+/**
+ * Get subslot application information.
+ *
+ * @param p_appdata        InOut: Application state.
+ * @param slot_nbr         In:    Slot number.
+ * @param subslot_nbr      In:    Subslot number. Range 0 - 0x9FFF.
+ * @return Reference to application subslot,
+ *         NULL if subslot is not found/plugged.
+ */
+app_subslot_t * app_utils_subslot_get (
+   app_api_t * p_api,
+   uint16_t slot_nbr,
+   uint16_t subslot_nbr);
+
+/**
+ * Return true if subslot is input.
+ * @param p_subslot        In:    Reference to subslot.
+ * @return true if subslot is input or input/output.
+ *         false if not.
+ */
+bool app_utils_subslot_is_input (const app_subslot_t * p_subslot);
+
+/**
+ * Return true if subslot is neither input or output.
+ * This is applies for DAP submodules/slots
+ * @param p_subslot     In: Reference to subslot.
+ * @return true if subslot is input or input/output.
+ *         false if not.
+ */
+bool app_utils_subslot_is_no_io (const app_subslot_t * p_subslot);
+
+/**
+ * Return true if subslot is output.
+ * @param p_subslot     In: Reference to subslot.
+ * @return true if subslot is output or input/output,
+ *         false if not.
+ */
+bool app_utils_subslot_is_output (const app_subslot_t * p_subslot);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* APP_UTILS_H */

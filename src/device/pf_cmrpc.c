@@ -57,7 +57,10 @@
 #error "There must be at least 2 CR per AR. Increase PNET_MAX_CR."
 #endif
 
-static const char * rpc_sync_name = "rpc";
+#if PNET_MAX_SESSION_BUFFER_SIZE > UINT16_MAX
+#error "PNET_MAX_SESSION_BUFFER_SIZE must be less than or equal to 65535"
+#endif
+
 static const pf_uuid_t implicit_ar = {0, 0, 0, {0, 0, 0, 0, 0, 0, 0, 0}};
 
 static const pf_uuid_t uuid_epmap_interface = {
@@ -71,6 +74,8 @@ static const pf_uuid_t uuid_io_device_interface = {
    0x6C97,
    0x11D1,
    {0x82, 0x71, 0x00, 0xA0, 0x24, 0x42, 0xDF, 0x7D}};
+
+#define PF_CMRPC_NUMBER_OF_RESENDS 3
 
 /**************** Diagnostic strings *****************************************/
 
@@ -259,6 +264,7 @@ void pf_cmrpc_show (pnet_t * net, unsigned level)
    if (level & 0x0800)
    {
       printf ("\nCMRPC sessions:\n");
+      printf (" Main socket  = %u\n", net->cmrpc_rpcreq_socket);
       for (ix = 0; ix < PF_MAX_SESSION; ix++)
       {
          p_sess = &net->cmrpc_session_info[ix];
@@ -268,7 +274,7 @@ void pf_cmrpc_show (pnet_t * net, unsigned level)
          printf (
             "   release in progress= %s\n",
             p_sess->release_in_progress ? "YES" : "NO");
-         printf ("   socket             = %u\n", (unsigned)p_sess->socket);
+         printf ("   socket             = %d\n", p_sess->socket);
          printf ("   @AR                = %p\n", p_sess->p_ar);
          printf ("   from me            = %s\n", p_sess->from_me ? "YES" : "NO");
          printf (
@@ -397,8 +403,9 @@ void pf_cmrpc_show (pnet_t * net, unsigned level)
                   for (iy = 0; iy < p_iocr->nbr_data_desc; iy++)
                   {
                      p_desc = &p_iocr->data_desc[iy];
+
                      printf (
-                        "%3u,%3u: in_use       = %u\n",
+                        "\n%3u,%3u: in_use       = %u\n",
                         (unsigned)ix,
                         (unsigned)iy,
                         (unsigned)p_desc->in_use);
@@ -418,7 +425,7 @@ void pf_cmrpc_show (pnet_t * net, unsigned level)
                         (unsigned)iy,
                         (unsigned)p_desc->slot_nbr);
                      printf (
-                        "%3u,%3u: subslot      = %u\n",
+                        "%3u,%3u: subslot      = 0x%04x\n",
                         (unsigned)ix,
                         (unsigned)iy,
                         (unsigned)p_desc->subslot_nbr);
@@ -499,12 +506,14 @@ static int pf_session_allocate (pnet_t * net, pf_session_info_t ** pp_sess)
    {
       p_sess = &net->cmrpc_session_info[ix];
       memset (p_sess, 0, sizeof (*p_sess));
+      p_sess->socket = -1;
       p_sess->in_use = true;
       p_sess->eth_handle = net->pf_interface.main_port.handle;
       p_sess->p_ar = NULL;
       p_sess->sequence_nmb_send = 0;
       p_sess->dcontrol_sequence_nmb = UINT32_MAX;
       p_sess->ix = ix;
+      pf_scheduler_init_handle (&p_sess->resend_timeout, "rpc");
 
       /* Set activity UUID. Will be overwritten for incoming requests. */
       pf_generate_uuid (
@@ -542,25 +551,26 @@ static void pf_session_release (pnet_t * net, pf_session_info_t * p_sess)
    {
       if (p_sess->in_use == true)
       {
-         if (p_sess->socket > 0)
+         if (p_sess->socket > -1)
          {
             if (p_sess->from_me)
             {
                pf_udp_close (net, p_sess->socket);
+               p_sess->socket = -1;
             }
          }
-         if (p_sess->resend_timeout != 0)
-         {
-            pf_scheduler_remove (net, rpc_sync_name, p_sess->resend_timeout);
-            p_sess->resend_timeout = 0;
-         }
+
+         pf_scheduler_remove_if_running (net, &p_sess->resend_timeout);
+
          LOG_DEBUG (
             PF_RPC_LOG,
             "CMRPC(%d): Released session %u\n",
             __LINE__,
             (unsigned)p_sess->ix);
+
          memset (p_sess, 0, sizeof (*p_sess));
          p_sess->in_use = false;
+         p_sess->socket = -1;
       }
       else
       {
@@ -671,6 +681,8 @@ static int pf_ar_allocate (pnet_t * net, pf_ar_t ** pp_ar)
       net->cmrpc_ar[ix].in_use = true;
       pf_cmsu_init (net, &net->cmrpc_ar[ix]);
       pf_cmwrr_init (net, &net->cmrpc_ar[ix]);
+      pf_scheduler_init_handle (&net->cmrpc_ar[ix].cmio_timeout, "cmio");
+      net->cmrpc_ar[ix].cmio_timer_should_reschedule = false;
 
       *pp_ar = &net->cmrpc_ar[ix];
 
@@ -901,7 +913,7 @@ static int pf_cmrpc_send_once_from_buffer (
       pf_cmina_ip_to_string (p_sess->ip_addr, ip_string);
       LOG_INFO (
          PF_RPC_LOG,
-         "CMRPC(%d): Sending %u bytes on socket %u to %s:%u Payload:'%s' "
+         "CMRPC(%d): Sending %u bytes on socket %u to %s:%u Payload:\"%s\" "
          "Session from me:%u Session index:%u\n",
          __LINE__,
          size,
@@ -979,7 +991,7 @@ static int pf_cmrpc_send_once (
  * @param arg              InOut: The session.
  * @param current_time     In:    The current system time, in microseconds,
  *                                when the scheduler is started to execute
- * stored tasks.
+ *                                stored tasks.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -1008,12 +1020,12 @@ static void pf_cmrpc_send_with_timeout (
    }
    else
    {
-      p_sess->resend_timeout = 0;
+      pf_scheduler_reset_handle (&p_sess->resend_timeout);
 
-      if (p_sess->resend_timeout_ctr > 0)
+      if (p_sess->resend_counter > 0)
       {
          /* Send */
-         p_sess->resend_timeout_ctr--;
+         p_sess->resend_counter--;
          delay = p_sess->from_me ? (PF_CCONTROL_TIMEOUT * 1000)
                                  : (PF_FRAG_TIMEOUT * 1000);
          payload_description = p_sess->from_me ? "CControl request (possibly "
@@ -1025,7 +1037,6 @@ static void pf_cmrpc_send_with_timeout (
                pf_scheduler_add (
                   p_net,
                   delay,
-                  rpc_sync_name,
                   pf_cmrpc_send_with_timeout,
                   arg,
                   &p_sess->resend_timeout) != 0)
@@ -1052,9 +1063,10 @@ static void pf_cmrpc_send_with_timeout (
             p_sess->p_ar->err_code =
                PNET_ERROR_CODE_2_ABORT_AR_RPC_CONTROL_ERROR;
             (void)pf_cmdev_cm_abort (p_net, p_sess->p_ar);
-            if (p_sess->socket > 0)
+            if (p_sess->socket > -1)
             {
                pf_udp_close (p_net, p_sess->socket);
+               p_sess->socket = -1;
             }
          }
          else
@@ -1130,7 +1142,7 @@ static int pf_check_block_header (
 
 /**
  * @internal
- * Parse all blocks in a connect RPC request message.
+ * Parse all blocks in a Connect RPC request message.
  * @param p_sess           InOut: The RPC session instance.
  * @param p_pos            InOut: Position in the input buffer.
  * @param p_ar             InOut: The AR instance.
@@ -3587,7 +3599,10 @@ int pf_cmrpc_rm_ccontrol_req (pnet_t * net, pf_ar_t * p_ar)
 
    if (pf_session_allocate (net, &p_sess) != 0)
    {
-      LOG_ERROR (PF_RPC_LOG, "CMRPC(%d): Out of session resources\n", __LINE__);
+      LOG_ERROR (
+         PF_RPC_LOG,
+         "CMRPC(%d): Out of session resources for outgoing CControl.\n",
+         __LINE__);
    }
    else
    {
@@ -3804,8 +3819,9 @@ int pf_cmrpc_rm_ccontrol_req (pnet_t * net, pf_ar_t * p_ar)
          p_sess->out_buffer,
          &start_pos);
 
+      /* Open socket for CControl interchange */
       p_sess->socket = pf_udp_open (net, PF_RPC_CCONTROL_EPHEMERAL_PORT);
-      p_sess->resend_timeout_ctr = 3;
+      p_sess->resend_counter = PF_CMRPC_NUMBER_OF_RESENDS;
       pf_cmrpc_send_with_timeout (net, p_sess, os_get_current_time_us());
 
       ret = 0;
@@ -4088,9 +4104,9 @@ static int pf_cmrpc_rpc_response (
  *                         Out:   The length of the output message. If set to 0
  *                                the caller will typically not send any UDP
  *                                response.
- * @param p_is_release     Out:   Set to true if operation is a release op. The
- *                                caller will then typically close and reopen
- *                                the corresponding UDP socket.
+ * @param p_close_socket   Out:   Set to true if operation is a release op. The
+ *                                caller will then close the corresponding UDP
+ *                                socket.
  * @return  0  if operation succeeded.  (Typically not used by the caller)
  *          -1 if an error occurred.
  */
@@ -4102,7 +4118,7 @@ static int pf_cmrpc_dce_packet (
    uint32_t req_len,
    uint8_t * p_res,
    uint16_t * p_res_len,
-   bool * p_is_release)
+   bool * p_close_socket)
 {
    int ret = -1;
    pf_rpc_header_t rpc_req;
@@ -4113,6 +4129,7 @@ static int pf_cmrpc_dce_packet (
    uint16_t req_pos = 0;
    uint16_t res_pos = 0;
    uint16_t max_rsp_len;
+   uint32_t max_rsp_len_remote;
    pf_get_info_t get_info;
    pf_session_info_t * p_sess = NULL;
    bool is_new_session = false;
@@ -4126,6 +4143,20 @@ static int pf_cmrpc_dce_packet (
 
    /* Parse RPC header. This function also sets get_info.is_big_endian */
    pf_get_dce_rpc_header (&get_info, &req_pos, &rpc_req);
+
+   LOG_DEBUG (
+      PF_RPC_LOG,
+      "CMRPC(%d): Incoming RPC frame. Seq: %" PRIu32 ", "
+      "Serial: %u, Frag num: %u, Frag Len: %u "
+      "Fragment flag: \"%s\" Last Fragment flag: \"%s\", No fack: \"%s\"\n",
+      __LINE__,
+      rpc_req.sequence_nmb,
+      rpc_req.serial_low,
+      rpc_req.fragment_nmb,
+      rpc_req.length_of_body,
+      rpc_req.flags.fragment ? "Set" : "Not set",
+      rpc_req.flags.last_fragment ? "Set" : "Not set",
+      rpc_req.flags.no_fack ? "Set" : "Not set");
 
    /* Find the session (by RPC activity UUID) or allocate a new session */
    pf_session_locate_by_uuid (net, &rpc_req.activity_uuid, &p_sess);
@@ -4146,7 +4177,10 @@ static int pf_cmrpc_dce_packet (
    if (p_sess == NULL)
    {
       /* Unavailable */
-      LOG_ERROR (PF_RPC_LOG, "CMRPC(%d): Out of session resources.\n", __LINE__);
+      LOG_ERROR (
+         PF_RPC_LOG,
+         "CMRPC(%d): Out of session resources for incoming frame.\n",
+         __LINE__);
    }
    else
    {
@@ -4260,11 +4294,7 @@ static int pf_cmrpc_dce_packet (
       }
 
       /* Any incoming message stops resending */
-      if (p_sess->resend_timeout != 0)
-      {
-         pf_scheduler_remove (net, rpc_sync_name, p_sess->resend_timeout);
-         p_sess->resend_timeout = 0;
-      }
+      pf_scheduler_remove_if_running (net, &p_sess->resend_timeout);
 
       /* Decide what to do with incoming message */
       /* Enter here _even_if_ an error is already detected because we may need
@@ -4340,12 +4370,16 @@ static int pf_cmrpc_dce_packet (
 
                /* Our response is limited by the size of the requesters response
                 * buffer */
-               max_rsp_len = req_pos + p_sess->ndr_data.args_maximum;
-               if (max_rsp_len > sizeof (p_sess->out_buffer))
+               max_rsp_len_remote = req_pos + p_sess->ndr_data.args_maximum;
+               if (max_rsp_len_remote > sizeof (p_sess->out_buffer))
                {
                   /* Our response is also limited by what our buffer can
                    * accommodate */
                   max_rsp_len = sizeof (p_sess->out_buffer);
+               }
+               else
+               {
+                  max_rsp_len = max_rsp_len_remote;
                }
             }
             else
@@ -4381,7 +4415,7 @@ static int pf_cmrpc_dce_packet (
             if (rpc_req.opnum == PF_RPC_DEV_OPNUM_RELEASE)
             {
                p_sess->release_in_progress = true; /* Tell everybody */
-               *p_is_release = true;               /* Tell caller */
+               *p_close_socket = p_sess->from_me;
             }
 
             if (
@@ -4419,7 +4453,7 @@ static int pf_cmrpc_dce_packet (
                   max_rsp_len,
                   p_sess->out_buffer,
                   &p_sess->out_buf_len);
-               *p_is_release = true;
+               *p_close_socket = p_sess->from_me;
 
                /* Close session after each EPM request
                   If future more advanced EPM usage is required, implement a
@@ -4482,7 +4516,7 @@ static int pf_cmrpc_dce_packet (
             {
                /* Fragmented respones from us (with ack) are supposed to be
                 * re-transmitted according to the spec. */
-               p_sess->resend_timeout_ctr = 3;
+               p_sess->resend_counter = PF_CMRPC_NUMBER_OF_RESENDS;
                pf_cmrpc_send_with_timeout (
                   net,
                   p_sess,
@@ -4628,7 +4662,7 @@ static int pf_cmrpc_dce_packet (
                p_sess->out_buf_send_len += start_pos;
 
                /* Fragments from us are supposed to be re-transmitted */
-               p_sess->resend_timeout_ctr = 3;
+               p_sess->resend_counter = PF_CMRPC_NUMBER_OF_RESENDS;
                pf_cmrpc_send_with_timeout (
                   net,
                   p_sess,
@@ -4664,7 +4698,7 @@ static int pf_cmrpc_dce_packet (
                   "CMRPC(%d): Responses should be part of existing sessions. "
                   "Unknown incoming activity UUID.\n",
                   __LINE__);
-               *p_is_release = true; /* Tell caller */
+               *p_close_socket = p_sess->from_me;
                p_sess->kill_session = true;
                res_pos = 0; /* Send nothing in response */
                ret = 0;
@@ -4684,12 +4718,12 @@ static int pf_cmrpc_dce_packet (
              * The ProfiNet spec say little about how to handle these packets.
              * The DCE RPC spec says to cancel the connection.
              */
-            LOG_ERROR (PF_RPC_LOG, "CMRPC(%d): CANCEL received\n", __LINE__);
+            LOG_INFO (PF_RPC_LOG, "CMRPC(%d): CANCEL received\n", __LINE__);
 
             (void)pf_cmdev_cm_abort (net, p_sess->p_ar);
 
-            *p_is_release = true; /* Tell caller */
-            /* ToDo: Should we actually send a PF_RPC_PT_CANCEL_ACK? */
+            *p_close_socket = p_sess->from_me;
+            p_sess->kill_session = true;
             res_pos = 0; /* Send nothing in response */
             ret = 0;
             break;
@@ -4710,8 +4744,9 @@ static int pf_cmrpc_dce_packet (
 
             (void)pf_cmdev_cm_abort (net, p_sess->p_ar);
 
-            *p_is_release = true; /* Tell caller */
-            res_pos = 0;          /* Send nothing in response */
+            *p_close_socket = p_sess->from_me;
+            p_sess->kill_session = true;
+            res_pos = 0; /* Send nothing in response */
             ret = 0;
             break;
          case PF_RPC_PT_REJECT:
@@ -4731,8 +4766,9 @@ static int pf_cmrpc_dce_packet (
 
             (void)pf_cmdev_cm_abort (net, p_sess->p_ar);
 
-            *p_is_release = true; /* Tell caller */
-            res_pos = 0;          /* Send nothing in response */
+            *p_close_socket = p_sess->from_me;
+            p_sess->kill_session = true;
+            res_pos = 0; /* Send nothing in response */
             ret = 0;
             break;
          default:
@@ -4750,11 +4786,7 @@ static int pf_cmrpc_dce_packet (
          /* Respond to intermediate incoming fragments */
          if ((rpc_req.flags.fragment == true) && (rpc_req.flags.no_fack == false))
          {
-            LOG_INFO (
-               PF_RPC_LOG,
-               "CMRPC(%d): Received a fragment of a DCE RPC message on UDP. "
-               "Send an ACK.\n",
-               __LINE__);
+            LOG_INFO (PF_RPC_LOG, "CMRPC(%d): Send fragment ACK\n", __LINE__);
             /* Create Fragment ACK */
             /* Send ACK */
             rpc_res = rpc_req;
@@ -4815,14 +4847,14 @@ void pf_cmrpc_periodic (pnet_t * net)
    int dcerpc_input_len;
    uint16_t dcerpc_resp_len = 0;
    uint16_t ix;
-   bool is_release = false;
+   bool close_socket = false;
    char ip_string[PNAL_INET_ADDRSTR_SIZE] = {0}; /** Terminated string */
 
    /* TODO Use a common function to avoid code duplication, remove some
     * arguments for pf_cmrpc_dce_packet() */
 
    /* Poll for RPC session confirmations */
-   for (ix = 1; ix < NELEMENTS (net->cmrpc_session_info); ix++)
+   for (ix = 0; ix < NELEMENTS (net->cmrpc_session_info); ix++)
    {
       if (
          (net->cmrpc_session_info[ix].in_use == true) &&
@@ -4850,7 +4882,7 @@ void pf_cmrpc_periodic (pnet_t * net)
                dcerpc_port,
                net->cmrpc_session_info[ix].socket,
                ix);
-            is_release = false;
+            close_socket = false;
             (void)pf_cmrpc_dce_packet (
                net,
                dcerpc_addr,
@@ -4859,9 +4891,9 @@ void pf_cmrpc_periodic (pnet_t * net)
                dcerpc_input_len,
                net->cmrpc_dcerpc_output_frame,
                &dcerpc_resp_len,
-               &is_release);
+               &close_socket);
 
-            if (is_release == true)
+            if (close_socket)
             {
                LOG_DEBUG (
                   PF_RPC_LOG,
@@ -4869,6 +4901,7 @@ void pf_cmrpc_periodic (pnet_t * net)
                   __LINE__,
                   ix);
                pf_udp_close (net, net->cmrpc_session_info[ix].socket);
+               net->cmrpc_session_info[ix].socket = -1;
             }
          }
       }
@@ -4895,7 +4928,7 @@ void pf_cmrpc_periodic (pnet_t * net)
          ip_string,
          dcerpc_port,
          net->cmrpc_rpcreq_socket);
-      is_release = false;
+      close_socket = false;
       (void)pf_cmrpc_dce_packet (
          net,
          dcerpc_addr,
@@ -4904,13 +4937,14 @@ void pf_cmrpc_periodic (pnet_t * net)
          dcerpc_input_len,
          net->cmrpc_dcerpc_output_frame,
          &dcerpc_resp_len,
-         &is_release);
+         &close_socket);
 
-      if (is_release == true)
+      if (close_socket)
       {
-         LOG_DEBUG (
+         LOG_ERROR (
             PF_RPC_LOG,
-            "CMRPC(%d): Release is requested by incoming DCE RPC request.\n",
+            "CMRPC(%d): pf_cmrpc_dce_packet() wants to close the main RPC UDP "
+            "socket, but that is not valid.\n",
             __LINE__);
       }
    }
@@ -4920,11 +4954,17 @@ void pf_cmrpc_periodic (pnet_t * net)
 
 void pf_cmrpc_init (pnet_t * net)
 {
+   uint16_t ix = 0;
+
    if (net->p_cmrpc_rpc_mutex == NULL)
    {
       net->p_cmrpc_rpc_mutex = os_mutex_create();
       memset (net->cmrpc_ar, 0, sizeof (net->cmrpc_ar));
       memset (net->cmrpc_session_info, 0, sizeof (net->cmrpc_session_info));
+      for (ix = 0; ix < NELEMENTS (net->cmrpc_session_info); ix++)
+      {
+         net->cmrpc_session_info[ix].socket = -1;
+      }
 
       net->cmrpc_rpcreq_socket = pf_udp_open (net, PF_RPC_SERVER_PORT);
    }

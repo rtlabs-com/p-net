@@ -119,10 +119,6 @@ static const pnet_ethaddr_t dcp_mc_addr_hello = {
 
 static const pnet_ethaddr_t mac_nil = PF_MAC_NIL;
 
-static const char * dcp_led_sync_name = "dcp_led";
-static const char * dcp_sam_sync_name = "dcp_sam";
-static const char * dcp_identresp_sync_name = "dcp_identresp";
-
 /*
  * A list of options that we can get/set/filter.
  * Use in identify filter and identify response.
@@ -175,14 +171,13 @@ static const pf_dcp_opt_sub_t device_options[] = {
  * @param arg              In:    DCP responder data. Should be pnal_buf_t.
  * @param current_time     In:    The current system time, in microseconds,
  *                                when the scheduler is started to execute
- *                                stored tasks.
- *                                Not used here.
+ *                                stored tasks. Not used here.
  */
 static void pf_dcp_responder (pnet_t * net, void * arg, uint32_t current_time)
 {
    pnal_buf_t * p_buf = (pnal_buf_t *)arg;
 
-   net->dcp_identresp_timeout = 0;
+   pf_scheduler_reset_handle (&net->dcp_identresp_timeout);
 
    if (p_buf != NULL)
    {
@@ -222,7 +217,7 @@ static void pf_dcp_clear_sam (pnet_t * net, void * arg, uint32_t current_time)
       "DCP(%d): SAM timeout. Clear stored remote MAC address.\n",
       __LINE__);
    net->dcp_sam = mac_nil;
-   net->dcp_sam_timeout = 0;
+   pf_scheduler_reset_handle (&net->dcp_sam_timeout);
 }
 
 /**
@@ -244,15 +239,9 @@ static void pf_dcp_restart_sam_timeout (pnet_t * net, const pnet_ethaddr_t * mac
       __LINE__);
 
    memcpy (&net->dcp_sam, mac, sizeof (net->dcp_sam));
-   if (net->dcp_sam_timeout != 0)
-   {
-      (void)pf_scheduler_remove (net, dcp_sam_sync_name, net->dcp_sam_timeout);
-      net->dcp_sam_timeout = 0;
-   }
-   (void)pf_scheduler_add (
+   (void)pf_scheduler_restart (
       net,
       PF_DCP_SAM_TIMEOUT,
-      dcp_sam_sync_name,
       pf_dcp_clear_sam,
       NULL,
       &net->dcp_sam_timeout);
@@ -639,17 +628,16 @@ static void pf_dcp_control_signal_led (
       state--;
 
       /* Schedule another round */
-      pf_scheduler_add (
+      (void)pf_scheduler_add (
          net,
          PF_DCP_SIGNAL_LED_HALF_INTERVAL,
-         dcp_led_sync_name,
          pf_dcp_control_signal_led,
          (void *)(uintptr_t)state,
          &net->dcp_led_timeout);
    }
    else
    {
-      net->dcp_led_timeout = 0;
+      pf_scheduler_reset_handle (&net->dcp_led_timeout);
    }
 }
 
@@ -665,16 +653,15 @@ static void pf_dcp_control_signal_led (
  */
 int pf_dcp_trigger_signal_led (pnet_t * net)
 {
-   if (net->dcp_led_timeout == 0)
+   if (pf_scheduler_is_running (&net->dcp_led_timeout) == false)
    {
       LOG_INFO (
          PF_DCP_LOG,
          "DCP(%d): Received request to flash LED\n",
          __LINE__);
-      pf_scheduler_add (
+      (void)pf_scheduler_add (
          net,
          PF_DCP_SIGNAL_LED_HALF_INTERVAL,
-         dcp_led_sync_name,
          pf_dcp_control_signal_led,
          (void *)(2 * PF_DCP_SIGNAL_LED_NUMBER_OF_FLASHES - 1),
          &net->dcp_led_timeout);
@@ -735,7 +722,7 @@ static int pf_dcp_set_req (
       switch (sub)
       {
       case PF_DCP_SUB_IP_MAC:
-         /* Cant set MAC address */
+         /* Can't set MAC address */
          break;
       case PF_DCP_SUB_IP_PAR:
          if (value_length == sizeof (full_ip_suite.ip_suite))
@@ -811,7 +798,7 @@ static int pf_dcp_set_req (
       case PF_DCP_SUB_DEV_PROP_INSTANCE:
       case PF_DCP_SUB_DEV_PROP_OEM_ID:
       case PF_DCP_SUB_DEV_PROP_GATEWAY:
-         /* Cant set these */
+         /* Can't set these */
          break;
       default:
          break;
@@ -1928,10 +1915,9 @@ static int pf_dcp_identify_req (
             ntohl (p_src_dcphdr->xid));
 #endif
 
-         pf_scheduler_add (
+         (void)pf_scheduler_add (
             net,
             response_delay,
-            dcp_identresp_sync_name,
             pf_dcp_responder,
             p_rsp,
             &net->dcp_identresp_timeout);
@@ -1982,10 +1968,10 @@ void pf_dcp_init (pnet_t * net)
 {
    net->dcp_global_block_qualifier = 0;
    net->dcp_delayed_response_waiting = false;
-   net->dcp_sam_timeout = 0;
-   net->dcp_led_timeout = 0;
-   net->dcp_identresp_timeout = 0;
    net->dcp_sam = mac_nil;
+   pf_scheduler_init_handle (&net->dcp_sam_timeout, "dcp_sam");
+   pf_scheduler_init_handle (&net->dcp_led_timeout, "dcp_led");
+   pf_scheduler_init_handle (&net->dcp_identresp_timeout, "dcp_identresp");
 
    LOG_DEBUG (
       PF_DCP_LOG,
