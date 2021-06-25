@@ -1526,8 +1526,15 @@ static int pf_dcp_identify_req (
       src_pos += sizeof (*p_src_block_hdr); /* Point to the block value */
 
       src_block_len = ntohs (p_src_block_hdr->block_length);
+      /* Check if we have a valid dcp data length */
+      if (!(src_dcplen >= (src_pos + src_block_len)))
+      {
+          ret = -1;
+      }
+      else {
+          match = true; /* So far so good */
+      }
 
-      match = true; /* So far so good */
       while ((ret == 0) && (first || (filter && match)) &&
              (src_dcplen >= (src_pos + src_block_len)) &&
              (dst_pos < PF_FRAME_BUFFER_SIZE))
@@ -1946,6 +1953,11 @@ static int pf_dcp_identify_req (
          "DCP(%d): Could not allocate memory for incoming DCP identify "
          "request.\n",
          __LINE__);
+   }
+
+   if ((ret <= 0) && (match == false))
+   {
+       return ret; /* Not handled, not matched or something went wrong */
    }
 
    if (p_buf != NULL)
