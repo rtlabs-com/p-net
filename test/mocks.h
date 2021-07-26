@@ -32,6 +32,8 @@ typedef struct mock_os_data_obj
    uint8_t eth_send_copy[PF_FRAME_BUFFER_SIZE];
    uint16_t eth_send_len;
    uint16_t eth_send_count;
+   uint16_t eth_lldp_count;
+   uint16_t eth_profinet_count;
 
    /* Per port Ethernet link status.
     * Note that port numbers start at 1. To simplify test cases, we add a
