@@ -224,7 +224,7 @@ int pf_ppm_set_data_status_provider (pf_ar_t * p_ar, uint32_t crep, bool run);
 int pf_ppm_get_data_status (const pf_ppm_t * p_ppm, uint8_t * p_data_status);
 
 /**
- * Set/Reset the station problem indicator which is inclued in all data
+ * Set/Reset the station problem indicator which is included in all data
  * messages.
  *
  * @param p_ar                InOut: The AR instance.

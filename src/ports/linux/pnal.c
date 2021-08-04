@@ -316,10 +316,10 @@ static pnal_eth_mau_t calculate_mau_type (uint32_t speed, uint8_t duplex)
 }
 
 /**
- * Calculate advertised capabilites
+ * Calculate advertised capabilities
  *
- * @param advertised       In:    Linux advertised capabilites as a bitfield
- * @return Profinet advertised capabilites as a bitfield
+ * @param advertised       In:    Linux advertised capabilities as a bitfield
+ * @return Profinet advertised capabilities as a bitfield
  */
 static uint16_t calculate_capabilities (uint32_t advertised)
 {

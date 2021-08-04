@@ -46,7 +46,7 @@ bool pnal_does_file_exist (const char * filepath);
  *                                the script.
  *                                The last element should be NULL.
  * @return 0 on success
- *         -1 if an error occured
+ *         -1 if an error occurred
  */
 int pnal_execute_script (const char * argv[]);
 

@@ -22,7 +22,7 @@
  *
  * Functions for:
  * - Getting input data (Button 1 and counter value)
- * - Setting ouput data (LED 1)
+ * - Setting output data (LED 1)
  * - Setting default output state. This should be
  *   part of all device implementations for setting
  *   defined state when device is not connected to PLC
@@ -106,7 +106,7 @@ int app_data_write_parameter (
  * Read parameter index.
  * @param submodule_id  In:  Submodule id
  * @param index         In:  Parameter index
- * @param data          In:  Refernce to parameter data
+ * @param data          In:  Reference to parameter data
  * @param size          In:  Length of parameter data
  * @return 0 on success, -1 on error
  */

@@ -970,7 +970,7 @@ int pf_diag_remove (
 
 /**
  * @internal
- * Get the prefered diagnosis USI, for use with standard format.
+ * Get the preferred diagnosis USI, for use with standard format.
  *
  * @param net              InOut: The p-net stack instance.
  * @return the USI

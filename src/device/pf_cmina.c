@@ -1182,7 +1182,7 @@ int pf_cmina_dcp_get_req (
          ret = -1;
          break;
       case PF_DCP_SUB_DHCP_CONTROL:
-         /* Cant get this */
+         /* Can't get this */
          *p_block_error = PF_DCP_BLOCK_ERROR_SUBOPTION_NOT_SUPPORTED;
          ret = -1;
          break;
@@ -1193,7 +1193,7 @@ int pf_cmina_dcp_get_req (
       }
       break;
    case PF_DCP_OPT_CONTROL:
-      /* Cant get control */
+      /* Can't get control */
       *p_block_error = PF_DCP_BLOCK_ERROR_OPTION_NOT_SUPPORTED;
       ret = -1;
       break;
@@ -1259,7 +1259,7 @@ const pnet_ethaddr_t * pf_cmina_get_device_macaddr (const pnet_t * net)
    return &net->pf_interface.main_port.mac_address;
 }
 
-/************************* Utilites ******************************************/
+/************************* Utilities ******************************************/
 
 int pf_cmina_remove_all_data_files (const char * file_directory)
 {
@@ -1653,7 +1653,7 @@ bool pf_cmina_is_ipsuite_valid (const pf_ip_suite_t * p_ipsuite)
  * Defined in Profinet 2.4, section
  *
  * @param full_ipsuite     In: IP suite with IP, netmask, gateway and DNS
- * adresses
+ * addresses
  * @return  0  if the IP suite is valid
  *          -1 if the IP suite is invalid
  */

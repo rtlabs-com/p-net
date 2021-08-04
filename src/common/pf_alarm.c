@@ -747,7 +747,7 @@ static int pf_alarm_apmr_frame_handler (
    }
    else
    {
-      /* No need for the frame hander to free p_buf as it is NULL */
+      /* No need for the frame handler to free p_buf as it is NULL */
       LOG_ERROR (
          PF_ALARM_LOG,
          "Alarm(%d): Did not put incoming %s prio alarm frame in queue, "

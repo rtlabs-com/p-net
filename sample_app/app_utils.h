@@ -234,7 +234,7 @@ void app_utils_print_network_config (
 /**
  * Print iocs warning message if ioxs is changed.
  * @param subslot          In: Subslot
- * @param ioxs_str         In: String decription Producer or Consumer
+ * @param ioxs_str         In: String description Producer or Consumer
  * @param ioxs_current     In: Current status
  * @param ioxs_new         In: New status
  */
@@ -289,7 +289,7 @@ int app_utils_pull_module (app_api_t * p_api, uint16_t slot_nbr);
  * @param submodule_name   In:    Submodule name
  * @param cyclic_callback  In:    Submodule data callback
  * @param tag              In:    Tag passed in cyclic callback
- *                                Typicall application or
+ *                                Typically application or
  *                                submodule handle
  *
  * @return Reference to allocated subslot,

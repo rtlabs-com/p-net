@@ -3225,7 +3225,7 @@ void pf_put_alarm_fixed (
  * Insert maint_status into a buffer
  *
  * @param is_big_endian    In:    true if buffer is big-endian.
- * @param maint_status     In:    Maintainance status.
+ * @param maint_status     In:    Maintenance status.
  * @param res_len          In:    Size of destination buffer.
  * @param p_bytes          Out:   Destination buffer.
  * @param p_pos            InOut: Position in destination buffer.

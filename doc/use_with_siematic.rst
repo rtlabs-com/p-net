@@ -455,7 +455,7 @@ instead of in SCL.
 
 In order to flash the LED we use an available clock bit. In the "Device view"
 for the PLC, use the "Properties" tab and "General" sub-tab. Select "System
-and clock memory", and enable the checkbox "Enabe the use of clock memory
+and clock memory", and enable the checkbox "Enable the use of clock memory
 byte". Enter the value 100 in the "Address of clock memory byte" text box.
 This results in the "Clock_1.25Hz" having the address ``%M100.4``.
 For this change to take effect in the PLC, you need to compile the hardware
@@ -523,7 +523,7 @@ Connect the outputs RECORD to ``"data".param_value``.
 
 To study the result, compile and download the program to the PLC. Go online,
 and enable monitoring by clicking the small glasses-icon. The parameter value
-will be seen in the ladder logic diagram. The PLC wll read out the parameter
+will be seen in the ladder logic diagram. The PLC will read out the parameter
 value many times per second. The VALID and BUSY outputs are switching on
 and off rapidly.
 

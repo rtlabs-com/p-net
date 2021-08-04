@@ -470,7 +470,7 @@ TEST_F (SchedulerTest, SchedulerAddRemove)
    is_scheduled = pf_scheduler_is_running (p_b);
    EXPECT_FALSE (is_scheduled);
 
-   /* Shedule and restart */
+   /* Schedule and restart */
    ret = pf_scheduler_add (
       net,
       TEST_SCHEDULER_CALLBACK_DELAY,

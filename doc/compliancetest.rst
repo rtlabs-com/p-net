@@ -704,7 +704,7 @@ reading out of parameter values, but you need instead to force the corresponding
 PLC program variable to a high level. In the left side menu use "Watch and
 force tables" (below the PLC), and add a new entry by clicking an empty row
 in the "Name" column, and select "Ix_Req". When later in online mode, click
-the small "Show/hide all modify colmns" to show the column. Enter "TRUE" in
+the small "Show/hide all modify columns" to show the column. Enter "TRUE" in
 the "Modify value" on the line for "Ix_Req". Select that line by enabling
 the corresponding check box. Press the "Modify all selected values once
 and now".

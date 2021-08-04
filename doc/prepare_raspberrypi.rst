@@ -64,7 +64,7 @@ Unmount the SD-card, and plug it in into your Raspberry Pi. Power up the
 Raspberry Pi. Log in to it via a serial cable (see below).
 Use the username ``pi`` and the default password ``raspberry``.
 
-If you do not have any serial cable (and not have disabled DCHP), connect
+If you do not have any serial cable (and not have disabled DHCP), connect
 the Raspberry Pi to your local network.
 Find the IP address of it by running this on a Linux machine on the network
 (replace the hostname if you have changed it)::

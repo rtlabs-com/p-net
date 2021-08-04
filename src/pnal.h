@@ -515,7 +515,7 @@ int pnal_get_hostname (char * hostname);
  * @param p_netmask        In:    Netmask
  * @param p_gw             In:    Default gateway
  * @param hostname         In:    Host name, for example my_laptop_4
- * @param permanent        In:    1 if changes are permanent, or 0 if temportary
+ * @param permanent        In:    1 if changes are permanent, or 0 if temporary
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */

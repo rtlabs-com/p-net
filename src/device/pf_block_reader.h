@@ -210,7 +210,7 @@ void pf_get_ir_info_request (
  * @param p_info           InOut: The parser information. Sets
  *                                p_info->is_big_endian
  * @param p_pos            InOut: The current parsing position.
- * @param p_rpc            Out:   Destination struture.
+ * @param p_rpc            Out:   Destination structure.
  */
 void pf_get_dce_rpc_header (
    pf_get_info_t * p_info,

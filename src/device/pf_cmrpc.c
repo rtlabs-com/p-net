@@ -3344,7 +3344,7 @@ static int pf_cmrpc_rm_write_ind (
                {
                   req_pos++;
                }
-               /* Prepare for next bloc */
+               /* Prepare for next block */
                memset (&write_stat_multi, 0, sizeof (write_stat_multi));
             }
             if (req_pos != p_sess->get_info.len)

@@ -48,7 +48,7 @@ bool pnal_does_file_exist (const char * filepath)
  *                                enough for the full path to the binary.
  *
  * @return 0 on success.
- *         -1 if an error occured.
+ *         -1 if an error occurred.
  */
 static int pnal_get_directory_of_binary (
    char * tempstring,
@@ -91,7 +91,7 @@ static int pnal_get_directory_of_binary (
  *                                sizeof(PNAL_DEFAULT_SEARCHPATH) +
  *                                PNET_MAX_DIRECTORYPATH_SIZE
  * @return 0 on success.
- *         -1 if an error occured.
+ *         -1 if an error occurred.
  */
 int pnal_create_searchpath (char * path, size_t size)
 {

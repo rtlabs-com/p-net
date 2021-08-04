@@ -1215,7 +1215,7 @@ void pf_lldp_get_org_header_from_packet (
  * 1-255 Chassis ID
  *
  * @param parse_info       InOut: Parsing information.
- * @param offet            InOut: Byte offset in buffer.
+ * @param offset            InOut: Byte offset in buffer.
  * @param tlv_len          In:    Length of TLV in bytes.
  * @param chassis_id       Out:   Parsed Chassis ID.
  */
@@ -1266,7 +1266,7 @@ static void pf_lldp_get_chassis_id_from_packet (
  * 1-255 Port ID
  *
  * @param parse_info       InOut: Parsing information.
- * @param offet            InOut: Byte offset in buffer.
+ * @param offset            InOut: Byte offset in buffer.
  * @param tlv_len          In:    Length of TLV in bytes.
  * @param port_id          Out:   Parsed Port ID.
  */
@@ -1316,7 +1316,7 @@ static void pf_lldp_get_port_id_from_packet (
  * 2     Time to live (TTL)
  *
  * @param parse_info       InOut: Parsing information.
- * @param offet            InOut: Byte offset in buffer.
+ * @param offset            InOut: Byte offset in buffer.
  * @param tlv_len          In:    Length of TLV in bytes.
  * @param ttl              Out:   Parsed TTL.
  */
@@ -1348,7 +1348,7 @@ static void pf_lldp_get_ttl_from_packet (
  * 0-255 Port description
  *
  * @param parse_info       InOut: Parsing information.
- * @param offet            InOut: Byte offset in buffer.
+ * @param offset            InOut: Byte offset in buffer.
  * @param tlv_len          In:    Length of TLV in bytes.
  * @param port_description Out:   Parsed port description.
  */
@@ -1392,7 +1392,7 @@ static void pf_lldp_get_port_description_from_packet (
  * 0-128 Object identifier
  *
  * @param parse_info       InOut: Parsing information.
- * @param offet            InOut: Byte offset in buffer.
+ * @param offset            InOut: Byte offset in buffer.
  * @param tlv_len          In:    Length of TLV in bytes.
  * @param management_address Out: Parsed management address.
  */
@@ -1450,7 +1450,7 @@ static void pf_lldp_get_management_address_from_packet (
  * 4     CableDelayLocal
  *
  * @param parse_info       InOut: Parsing information.
- * @param offet            InOut: Byte offset in buffer.
+ * @param offset            InOut: Byte offset in buffer.
  * @param tlv_len          In:    Length of TLV in bytes.
  * @param delay            Out:   Parsed delay values.
  */
@@ -1485,7 +1485,7 @@ static void pf_lldp_get_signal_delay_from_packet (
  * 2     RTClass3_PortStatus
  *
  * @param parse_info       InOut: Parsing information.
- * @param offet            InOut: Byte offset in buffer.
+ * @param offset            InOut: Byte offset in buffer.
  * @param tlv_len          In:    Length of TLV in bytes.
  * @param status           Out:   Parsed port status.
  */
@@ -1515,7 +1515,7 @@ static void pf_lldp_get_port_status_from_packet (
  * 6     Chassis MAC address
  *
  * @param parse_info       InOut: Parsing information.
- * @param offet            InOut: Byte offset in buffer.
+ * @param offset            InOut: Byte offset in buffer.
  * @param tlv_len          In:    Length of TLV in bytes.
  * @param chassis_mac      Out:   Parsed Chassis MAC address.
  */
@@ -1551,7 +1551,7 @@ static void pf_lldp_get_chassis_mac_from_packet (
  * 2     Operational MAU typ
  *
  * @param parse_info       InOut: Parsing information.
- * @param offet            InOut: Byte offset in buffer.
+ * @param offset            InOut: Byte offset in buffer.
  * @param tlv_len          In:    Length of TLV in bytes.
  * @param link_status      Out:   Parsed link status.
  */
