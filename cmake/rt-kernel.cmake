@@ -55,6 +55,14 @@ target_sources(pn_dev
   src/ports/rt-kernel/sampleapp_main.c
   )
 
+target_compile_options(pn_dev
+  PRIVATE
+  -Wall
+  -Wextra
+  -Werror
+  -Wno-unused-parameter
+  )
+
 install (FILES
   src/ports/rt-kernel/pnal_config.h
   DESTINATION include

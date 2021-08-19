@@ -43,11 +43,6 @@ target_sources(profinet
   $<$<BOOL:${PNET_OPTION_SNMP}>:src/ports/linux/mib/lldpXPnoRemTable.c>
   )
 
-target_link_options(pn_dev
-   PRIVATE
-   -Wl,--gc-sections
-)
-
 target_compile_options(profinet
   PRIVATE
   -Wall
@@ -83,6 +78,21 @@ target_sources(pn_dev
   sample_app/app_data.c
   src/ports/linux/sampleapp_main.c
   )
+
+target_compile_options(pn_dev
+  PRIVATE
+  -Wall
+  -Wextra
+  -Werror
+  -Wno-unused-parameter
+  -ffunction-sections
+  -fdata-sections
+  )
+
+target_link_options(pn_dev
+   PRIVATE
+   -Wl,--gc-sections
+)
 
 install (FILES
   src/ports/linux/pnal_config.h
