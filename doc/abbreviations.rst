@@ -141,6 +141,8 @@ FAL
     Fieldbus Application Layer
 FD
     Full Duplex
+FDB
+    Forwarding Database, used in MRP
 FO
    Fiber Optics
 FSPM
@@ -217,10 +219,22 @@ MDNS
     Multicast DNS. A UDS based protocol for resolving hostname to IP address. Implemented by Bonjour and Avahi.
 MIB
     Management Information Base. A text file format describing Object Identifiers (OID) for Simple Network Management Protocol (SNMP) frames.
+MIC
+    MRP interconnection Client. Routes traffic between two Ethernet rings (which are using MRP).
+MIM
+    MRP Interconnection Manager. Controls the traffic between two Ethernet rings (which are using MRP).
+MRA
+    Media redundancy manager with auto negotiation
+MRC
+    Media redundancy client
+MRM
+    Media redundancy manager
 MRP
-    Media Redundancy Protocol
+    Media Redundancy Protocol. Use a normally off path in the Ethernet network, to form a ring topology.
+MRPIC
+    Media Redundancy Protocol Interconnect (connects two MRP rings). Nodes have MIM or MIC roles.
 MRPD
-    Media Redundancy for Planned Duplication
+    Media Redundancy for Planned Duplication. Send similar frames in both directions on an Ethernet ring.
 MTU
     Maximum Transfer Unit. The largest packet a network interface can handle. Typically 1500 bytes. This includes the IP header, but not the Ethernet header.
 NACK
@@ -315,6 +329,8 @@ SOE
     Sequence Of Events
 ST
     Structured Text. A programming language for PLCs.
+STP
+    Spanning Tree Protocol. An alternative to MRP (but slower)
 STX
     Structured Text. See ST.
 TACK

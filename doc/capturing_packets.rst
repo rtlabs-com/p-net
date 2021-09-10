@@ -22,6 +22,8 @@ In order to be able to capture packets you need to add yourself to the
 For details on how to add yourself to the ``wireshark`` user group, see
 https://linuxhint.com/install_wireshark_ubuntu/
 
+Wireshark is also available on Windows. Download it from https://www.wireshark.org/
+
 
 Filtering frames in Wireshark based on protocol
 -----------------------------------------------

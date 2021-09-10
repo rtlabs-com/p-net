@@ -537,6 +537,75 @@ will ask the IO-device to use the standard LLDP mode. This is done by writing
 to the PDInterfaceAdjust index.
 
 
+Media redundancy
+----------------
+With media redundancy an Ethernet ring topology is used, so that Ethernet frames
+can reach all devices in the case of a link failure. To prevent frames to
+circulate in the ring forever, a manager will keep one of its links blocked
+for normal packets.
+If the manager detects a failure in the ring, it will open both its links.
+
+The detection of the ring integrity is done using the Media Redundancy Protocol
+(MRP). The manager sends MRP_Test frames in both direction, and verifies that
+it self can receive them. In case of ring failure, it will send a
+MRP_TopologyChange frame to all clients to inform them that they should clean
+their routing tables. Clients can also tell the manager that a link has failed,
+by sending a MRP_LinkChange frame.
+
+The MRP implementation will open and close network ports, but will not
+affect the Profinet class A and B operation.
+
+Devices supporting media redundancy needs to have at least two Ethernet ports
+and an integrated switch.
+
+For Profinet class C there is also Media redundancy with duplicated frames
+(MRPD), also known as seamless or bumpless redundancy. It sends two similar
+frames with cyclic data in the different ring directions. The frames have
+identical FrameID but use different VLAN IDs. In case of a link failure there
+is cyclic data available from the other direction.
+
+Profinet also has the concept of system redundancy, where two PLCs with
+automatic switchover are used. There are different levels of system
+redundancy, named R1, R2, S1 and S2.
+
+====================== ================= ===============
+Media redundancy class Conformance class Comments
+====================== ================= ===============
+RED_CLASS_1            A and B           Uses MRP
+RED_CLASS_3            C                 Uses MRPD
+RED_CLASS_STREAM       D
+====================== ================= ===============
+
+An "interconnect ring" connects two MRP rings together, and has four nodes (two
+from each normal MRP ring). This requires 3 Ethernet ports on each device.
+The interconnect functionality have two modes:
+
+* LC: Link Check (used by Profinet). The status of each link is monitored by the
+  Ethernet hardware
+* RC: Ring Check. Test frames are sent in the interconnect ring.
+
+In summary, these are the available MRP roles:
+
+* MRP client (MRC). Mandatory if MRP is used for Profinet.
+* MRP manager (MRM)
+* MRP manager with auto negotiation (MRA)
+* MRP interconnection client (MIC)
+* MRP interconnection manager (MIM)
+
+The nodes participating in the interconnection ring will also have a role in
+the normal ring. Thus a node can be for example bot a MRC and a MIM
+simultaneusly.
+
+Profinet defines alarms for different events in the MRP implementation, for
+example if multiple MRP managers exist in the same ring or if the neighbour
+belongs to wrong MRP ring.
+
+It is possible to to read out the MRP status via the SNMP protocol. This is
+done using the MRP-MIB. It is optional for Profinet devices to implement this.
+
+See IEC 62439-2 for MRP protocol details.
+
+
 Relevant standards
 ------------------
 
@@ -545,7 +614,7 @@ Relevant standards
 * IEC 61158-6-10  PROFINET IO: Application Layer protocol for decentralized periphery (Also known as PNO-2.722)
 * IEC 61784       Describes several fieldbuses, for example Foundation Fieldbus, Profibus and Profinet.
 * IEC 61784-2     Profiles for decentralized periphery (Also known as PNO-2.742)
-* IEC-62439-2     Media Redundancy Protocol
+* IEC 62439-2     Media Redundancy Protocol
 * IEEE 802        LANs
 * IEEE 802.1      Higher Layer LAN Protocols
 * IEEE 802.1AB    LLDP (A topology detection protocol)
