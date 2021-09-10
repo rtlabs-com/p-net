@@ -538,6 +538,26 @@ In the GSDML file, set the ``AddressAssignment`` attribute to ``"DCP;DHCP"``.
 
 * DHCP
 
+Relevant test cases for MRP
+---------------------------
+In the GSDML file, adjust the ``MediaRedundancy`` and ``SupportedRole``
+attributes.
+
+* MRP_1
+* MRP_2
+* MRP_chk1
+* MRP_chk2
+* MRP_OFF1
+* MRP_OFF2
+* MRP_On1
+* MRP_On2
+
+These are named "MRP_Pdev", and are described in
+"TCS_00004126_MRP_Pdev_ctrl_not_automated_V2.42.1.pdf".
+
+The PLC (CPU 1516-3 PN/DP) and the neighbour device (Interface module IM
+155-6PN/2) used in the standard setup both have support for MRP.
+
 
 Other tests
 -----------
@@ -782,6 +802,18 @@ used for the SL1-tester.
 
 If there are problems during the "normal" mode, study the error LED on the
 PLC to detect which scenario that is causing the malfunction.
+
+To find which of the test case that is causing any problems in the "Faulty"
+test suite, you can increase the time between the test cases to 30 seconds.
+Then the communication will have time to recover between the test cases,
+and you can verify communication using the LEDs of the PLC.
+If the error LED (on the PLC) does not turn off after a specific test case, then
+you have found the test case that causes permanent communication breakdown.
+
+Modify this line in the ``/root/Netload/Scripts/Netload-Tester.sh`` script::
+
+    # -> Delay between the individual frame sequences
+    Delay="30s"
 
 
 Troubleshooting

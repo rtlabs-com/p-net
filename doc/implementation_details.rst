@@ -622,6 +622,156 @@ Sections in 61784-2 (profiles) describing DHCP:
 +---------------+-------------------------------------------------------------+
 
 
+Media Redundancy Protocol (MRP)
+-------------------------------
+
+Sections in 61784-2-3 2021 (profiles) describing MRP:
+
++---------------+---------------------------------------------------------------+
+| Section       | Description                                                   |
++===============+===============================================================+
+| 4.2.3.3       | Media redundancy protocol (Max time and packet size)          |
++---------------+---------------------------------------------------------------+
+| 4.2.5         | Media redundancy classes                                      |
++---------------+---------------------------------------------------------------+
+| 4.2.3.13.2.4  | PDEV parameters (PDInterfaceMrpDataAdjust etc)                |
++---------------+---------------------------------------------------------------+
+| 4.2.9.2       | Index (PDInterfaceMrpDataAdjust etc)                          |
++---------------+---------------------------------------------------------------+
+| 4.4.4.2.8     | Basic network topology dependency on Redundancy recovery time |
++---------------+---------------------------------------------------------------+
+| 4.5.3.1.5     | Options (Services for Class B, "MRP is an optional service")  |
++---------------+---------------------------------------------------------------+
+
+
+IEC 61158-5-10 2021 (services) describing MRP:
+
++---------------+---------------------------------------------------------------+
+| Section       | Description                                                   |
++===============+===============================================================+
+| 6.3.9.2       | RTC class specification (for MRP in Profinet class C)         |
++---------------+---------------------------------------------------------------+
+| 6.3.9.3.3     | PPM Activate (for MRP in Profinet class C)                    |
++---------------+---------------------------------------------------------------+
+| 6.3.9.3.9     | CPM Set RedRole (for Profinet class C)                        |
++---------------+---------------------------------------------------------------+
+| 6.3.9.3.10    | CPM Activate (for MRP in Profinet class C)                    |
++---------------+---------------------------------------------------------------+
+| 6.3.11.4.2    | Set (RESET_COMMUNICATION_PARAMETER)                           |
++---------------+---------------------------------------------------------------+
+| 6.3.13.2      | IEEE 802.1AB class specification (LLDP PnioMRPPortStatus)     |
++---------------+---------------------------------------------------------------+
+| 6.3.14        | **Media redundancy ASE**                                      |
++---------------+---------------------------------------------------------------+
+| 6.3.19        | Fragmentation ASE (MRP frames are not fragmented)             |
++---------------+---------------------------------------------------------------+
+| 7.3.1.6.1.2   | Alarm types attached to diagnosis ASE                         |
++---------------+---------------------------------------------------------------+
+| 7.3.1.7.6.1.1 | Read (References to 7.3.3.9.5)                                |
++---------------+---------------------------------------------------------------+
+| 7.3.1.7.6.2.1 | Write (References to 7.3.3.9.5)                               |
++---------------+---------------------------------------------------------------+
+| 7.3.2.5.2     | Relations (Mismatch)                                          |
++---------------+---------------------------------------------------------------+
+| 7.3.2.5.5     | Services (References to 7.3.3.9.5)                            |
++---------------+---------------------------------------------------------------+
+| 7.3.3.3.5.2   | Read PD Real Data (References to 7.3.3.9.5)                   |
++---------------+---------------------------------------------------------------+
+| 7.3.3.3.5.3   | Read PD Expected Data (References to 7.3.3.9.5)               |
++---------------+---------------------------------------------------------------+
+| 7.3.3.7       | IEEE 802.1Q class (Yellow Time for conformance class C and D) |
++---------------+---------------------------------------------------------------+
+| 7.3.3.9       | **Media Redundancy class**                                    |
++---------------+---------------------------------------------------------------+
+| 7.3.3.11.7    | MRP-MIB (for SNMP)                                            |
++---------------+---------------------------------------------------------------+
+| 7.4.2         | Network topology                                              |
++---------------+---------------------------------------------------------------+
+| Annex F       | Preconditions for channel error type                          |
++---------------+---------------------------------------------------------------+
+
+Sections in 61158-6-10 2021 (protocol) describing MRP:
+
++---------------+---------------------------------------------------------------+
+| Section       | Description                                                   |
++===============+===============================================================+
+| 4.2.2.4       | Coding of the field LT (0x88E3 for MRP)                       |
++---------------+---------------------------------------------------------------+
+| 4.6           | Media redundancy                                              |
++---------------+---------------------------------------------------------------+
+| 4.11.2.2      | LLDP APDU abstract syntax                                     |
++---------------+---------------------------------------------------------------+
+| 4.11.3        | LLDP transfer syntax                                          |
++---------------+---------------------------------------------------------------+
+| 5.1.2         | APDU abstract syntax (RecordDataRead + RecordDataWrite)       |
++---------------+---------------------------------------------------------------+
+| 5.2.8.5       | Coding of the field ExtChannelErrorType                       |
++---------------+---------------------------------------------------------------+
+| 5.2.12.3.23   | Coding of the field LinkState                                 |
++---------------+---------------------------------------------------------------+
+| 5.2.12.10     | Coding section related to Media Redundancy                    |
++---------------+---------------------------------------------------------------+
+| Annex S       | List of supported MIBs                                        |
++---------------+---------------------------------------------------------------+
+| Annex V       | Cross reference to the IEC 62439-2                            |
++---------------+---------------------------------------------------------------+
+| Annex W       | Maintaining statistic counters for Ethernet (mandatory)       |
++---------------+---------------------------------------------------------------+
+
+It is possible to read and write MRP parameters via DCE-RPC, using the index
+range 0x8050-0x8057. It uses these blocks:
+
+=================================== ========================================================
+Block                               Description
+=================================== ========================================================
+PDInterfaceMrpDataReal (read only)  Actual interval time and frame count setting.
+PDInterfaceMrpDataAdjust            Setting of interval time and frame count.
+PDInterfaceMrpDataCheck             Two booleans whether to check Domain UUID and set alarm
+PDPortMrpDataAdjust                 Setting of MRP instance and UUID values
+PDPortMrpDataReal (read only)       Actual MRP instance and UUID values
+MrpManagerParams
+MrpClientParams
+MrpRingStateData
+MrpInstanceDataAdjustBlock
+MrpInstanceDataRealBlock
+PDPortMrpIcDataAdjust               For interconnecion ring
+PDPortMrpIcDataCheck                For interconnecion ring
+PDPortMrpIcDataReal (read only)     For interconnecion ring
+=================================== ========================================================
+
+The MRP client uses a state machine with these states:
+
+* Power_On
+* AC_STAT1. Waiting for the first Ethernet port.
+* DE_IDLE. First port available. This will be named the primary port.
+* PT. Temporary state when both ports just have been available.
+  Send MRP_LinkChange frames. The UpTimer is running.
+* PT_IDLE. Normal condition where both ports are available.
+* DE. Temporary state when one port is lost. Send MRP_LinkChange frames. The
+  DownTimer is running.
+
+A MRP client has three settings; the delay between frames at port down, the
+corresponding delay at port_up and the number of frames to send.
+The client state is controlled by the state of the links (as given by the
+Ethernet hardware) and incoming MRP_TopologyChange frames. It will update or
+clean the forwarding table, set ports to BLOCKED or FORWARDING and it will
+send MRP_LinkChange frames to the MRP manager.
+
+A separate state machine is used to keep track of the time until the forwarding
+table should be cleaned (as given in the incoming MRP_TopologyChange frame).
+
+A MRP client should support these services:
+
+* Start MRC:  UUID, port IDs, VLAN ID, imtervals, count, Blocked supported
+* Stop MRC: UUID
+* Read MRC: UUID. Returns current values.
+
+See the standard IEC 62439-2 for details on how to implement the MRP protocol.
+
+The Linux kernel has support for the MRM and MRC roles since version 5.8. A
+userspace daemon is available at https://github.com/microchip-ung/mrp/
+
+
 Legacy startup mode
 -------------------
 The startup mode is parsed at connect. It uses legacy start up mode when
