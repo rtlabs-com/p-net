@@ -43,7 +43,7 @@ void app_log_print_bytes (int32_t level, const uint8_t * bytes, uint32_t len)
    if (level >= log_level)
    {
       printf ("  Bytes: ");
-      for (int i = 0; i < len; i++)
+      for (uint32_t i = 0; i < len; i++)
       {
          printf ("%02X ", bytes[i]);
       }

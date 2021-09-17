@@ -107,11 +107,7 @@ static void app_plug_dap (app_data_t * app, uint16_t number_of_ports);
 static int app_set_initial_data_and_ioxs (app_data_t * app);
 static void app_cyclic_data_callback (app_subslot_t * subslot, void * tag);
 
-static void app_pnet_cfg_init (
-   pnet_cfg_t * pnet_cfg,
-   const pnet_if_cfg_t * if_cfg);
-
-app_data_t app_state;
+static app_data_t app_state;
 
 pnet_t * app_get_pnet_instance (app_data_t * app)
 {
@@ -201,8 +197,6 @@ static int app_connect_ind (
    uint32_t arep,
    pnet_result_t * p_result)
 {
-   app_data_t * app = (app_data_t *)arg;
-
    APP_LOG_DEBUG ("PLC connect indication. AREP: %u\n", arep);
    /*
     *  Handle the request on an application level.
@@ -219,8 +213,6 @@ static int app_release_ind (
    uint32_t arep,
    pnet_result_t * p_result)
 {
-   app_data_t * app = (app_data_t *)arg;
-
    APP_LOG_DEBUG ("PLC release (disconnect) indication. AREP: %u\n", arep);
 
    app_set_outputs_default_value();
@@ -235,8 +227,6 @@ static int app_dcontrol_ind (
    pnet_control_command_t control_command,
    pnet_result_t * p_result)
 {
-   app_data_t * app = (app_data_t *)arg;
-
    APP_LOG_DEBUG (
       "PLC dcontrol message. AREP: %u  Command: %s\n",
       arep,
@@ -251,8 +241,6 @@ static int app_ccontrol_cnf (
    uint32_t arep,
    pnet_result_t * p_result)
 {
-   app_data_t * app = (app_data_t *)arg;
-
    APP_LOG_DEBUG (
       "PLC ccontrol message confirmation. AREP: %u  Status codes: %d "
       "%d %d %d\n",
@@ -379,8 +367,6 @@ static int app_state_ind (
 {
    uint16_t err_cls = 0;  /* Error code 1 */
    uint16_t err_code = 0; /* Error code 2 */
-   uint16_t slot = 0;
-   uint16_t subslot_ix = 0;
    const char * error_class_description = "";
    const char * error_code_description = "";
 
@@ -449,8 +435,6 @@ static int app_reset_ind (
    bool should_reset_application,
    uint16_t reset_mode)
 {
-   app_data_t * app = (app_data_t *)arg;
-
    APP_LOG_DEBUG (
       "PLC reset indication. Application reset mandatory: %u  Reset mode: %d\n",
       should_reset_application,
@@ -461,8 +445,6 @@ static int app_reset_ind (
 
 static int app_signal_led_ind (pnet_t * net, void * arg, bool led_state)
 {
-   app_data_t * app = (app_data_t *)arg;
-
    APP_LOG_INFO ("Profinet signal LED indication. New state: %u\n", led_state);
 
    app_set_led (APP_PROFINET_SIGNAL_LED_ID, led_state);
@@ -478,7 +460,6 @@ static int app_exp_module_ind (
 {
    int ret = -1;
    int result = 0;
-   uint16_t ix;
    app_data_t * app = (app_data_t *)arg;
    const char * module_name = "unknown";
    const app_gsdml_module_t * module_config;
@@ -553,7 +534,6 @@ static int app_exp_submodule_ind (
 {
    int ret = -1;
    int result = 0;
-   uint16_t ix = 0;
    pnet_data_cfg_t data_cfg = {0};
    app_data_t * app = (app_data_t *)arg;
    const app_gsdml_submodule_t * submod_cfg;
@@ -683,7 +663,6 @@ static int app_new_data_status_ind (
    uint8_t changes,
    uint8_t data_status)
 {
-   app_data_t * app = (app_data_t *)arg;
    bool is_running = data_status & BIT (PNET_DATA_STATUS_BIT_PROVIDER_STATE);
    bool is_valid = data_status & BIT (PNET_DATA_STATUS_BIT_DATA_VALID);
 
@@ -766,8 +745,6 @@ static int app_alarm_cnf (
 
 static int app_alarm_ack_cnf (pnet_t * net, void * arg, uint32_t arep, int res)
 {
-   app_data_t * app = (app_data_t *)arg;
-
    APP_LOG_DEBUG (
       "PLC alarm ACK confirmation. AREP: %u  Result: "
       "%d\n",
