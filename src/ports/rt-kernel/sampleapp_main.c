@@ -22,17 +22,12 @@
 #include "osal.h"
 #include <pnet_api.h>
 
-#include <gpio.h>
 #include <kern/kern.h>
 #include <lwip/netif.h>
 #include <shell.h>
 
 #include <string.h>
 
-#define GPIO_LED1                      GPIO_P5_9
-#define GPIO_LED2                      GPIO_P5_8
-#define GPIO_BUTTON1                   GPIO_P15_13
-#define GPIO_BUTTON2                   GPIO_P15_12
 #define APP_DEFAULT_ETHERNET_INTERFACE "en1"
 #define APP_DEFAULT_FILE_DIRECTORY     "/disk1"
 #define APP_LOG_LEVEL                  APP_LOG_LEVEL_INFO
@@ -45,33 +40,6 @@
 static app_data_t * sample_app = NULL;
 static pnet_cfg_t pnet_cfg = {0};
 app_args_t app_args = {0};
-
-/************************* Utilities ******************************************/
-
-void app_set_led (uint16_t id, bool led_state)
-{
-   if (id == APP_DATA_LED_ID)
-   {
-      gpio_set (GPIO_LED1, led_state ? 1 : 0); /* "LED1" on circuit board */
-   }
-   else if (id == APP_PROFINET_SIGNAL_LED_ID)
-   {
-      gpio_set (GPIO_LED2, led_state ? 1 : 0); /* "LED2" on circuit board */
-   }
-}
-
-bool app_get_button (uint16_t id)
-{
-   if (id == 0)
-   {
-      return (gpio_get (GPIO_BUTTON1) == 0);
-   }
-   else if (id == 1)
-   {
-      return (gpio_get (GPIO_BUTTON2) == 0);
-   }
-   return false;
-}
 
 /************************* Shell commands *************************************/
 /*  Press enter in the terminal to get to the built-in shell.                 */
