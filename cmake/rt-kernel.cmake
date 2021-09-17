@@ -45,6 +45,12 @@ target_include_directories(pn_dev
   src/ports/rt-kernel
   )
 
+if (EXISTS ${PROFINET_SOURCE_DIR}/src/ports/rt-kernel/sampleapp_${BSP}.c)
+  set(BSP_SOURCE sampleapp_${BSP}.c)
+else()
+  set(BSP_SOURCE sampleapp_bsp.c)
+endif()
+
 target_sources(pn_dev
   PRIVATE
   sample_app/sampleapp_common.c
@@ -53,6 +59,7 @@ target_sources(pn_dev
   sample_app/app_gsdml.c
   sample_app/app_data.c
   src/ports/rt-kernel/sampleapp_main.c
+  src/ports/rt-kernel/${BSP_SOURCE}
   )
 
 target_compile_options(pn_dev
