@@ -436,7 +436,7 @@ Later on kill the ``pn_dev`` process by using ``sudo pkill pn_dev``.
 
 Study the resulting communication
 ---------------------------------
-Press Button1 to see the LED1 start flashing. Press it again to stop the
+LED1 should be flashing by default. Press Button1 to toogle LED1
 flashing.
 
 By pressing Button2 you can trigger alarms, add diagnosis etc. See the

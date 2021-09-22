@@ -105,7 +105,7 @@ Variables section::
         out_pin_LED: BOOL;
 
         in_pin_button_LED_previous: BOOL;
-        flashing: BOOL;
+        flashing: BOOL := TRUE;
         oscillator_state: BOOL := FALSE;
         oscillator_cycles: UINT := 0;
     END_VAR
