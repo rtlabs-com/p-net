@@ -20,6 +20,10 @@
 
 #include "pnal.h"
 
+#include "pnet_options.h"
+#include "options.h"
+#include "osal_log.h"
+
 #include <net/ethernet.h>
 #include <net/if.h>
 #include <netpacket/packet.h>
@@ -92,6 +96,8 @@ pnal_eth_handle_t * pnal_eth_init (
    struct sockaddr_ll sll;
    int ifindex;
    struct timeval timeout;
+   struct packet_mreq mreq;
+   const uint8_t pn_mcast_addr[ETH_ALEN] = {0x01, 0x0e, 0xcf, 0x00, 0x00, 0x00};
    const uint16_t linux_receive_type =
       (receive_type == PNAL_ETHTYPE_ALL) ? ETH_P_ALL : receive_type;
 
@@ -141,6 +147,26 @@ pnal_eth_handle_t * pnal_eth_init (
    sll.sll_ifindex = ifindex;
    sll.sll_protocol = htons (linux_receive_type);
    bind (handle->socket, (struct sockaddr *)&sll, sizeof (sll));
+
+   /* Join profinet multicast group */
+   mreq.mr_ifindex = ifindex;
+   mreq.mr_type = PACKET_HOST | PACKET_MR_MULTICAST;
+   mreq.mr_alen = ETH_ALEN;
+   memcpy (mreq.mr_address, pn_mcast_addr, ETH_ALEN);
+
+   if (
+      setsockopt (
+         handle->socket,
+         SOL_PACKET,
+         PACKET_ADD_MEMBERSHIP,
+         &mreq,
+         sizeof (mreq)) != 0)
+   {
+      LOG_WARNING (
+         PF_PNAL_LOG,
+         "PNAL(%d): Failed to join Profinet multicast group\n",
+         __LINE__);
+   }
 
    if (handle->socket > -1)
    {
