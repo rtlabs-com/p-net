@@ -18,6 +18,7 @@ documentation.
    tutorial.rst
    additional_linux_details.rst
    getting_started_rtkernel.rst
+   getting_started_freertos.rst
    using_codesys.rst
    codesys_details.rst
    use_with_siematic.rst

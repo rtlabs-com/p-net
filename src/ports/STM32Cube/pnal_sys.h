@@ -6,23 +6,30 @@
  * |_|    \__|(_)|_| \__,_||_.__/ |___/
  *
  * www.rt-labs.com
- * Copyright 2018 rt-labs AB, Sweden.
+ * Copyright 2021 rt-labs AB, Sweden.
  *
  * This software is dual-licensed under GPLv3 and a commercial
  * license. See the file LICENSE.md distributed with this software for
  * full license information.
  ********************************************************************/
 
-#include <gtest/gtest.h>
-#include "osal.h"
+#ifndef PNAL_SYS_H
+#define PNAL_SYS_H
 
-OS_MAIN (int argc, char * argv[])
-{
-   if (argc > 0)
-      ::testing::InitGoogleTest (&argc, argv);
-   else
-      ::testing::InitGoogleTest();
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-   int result = RUN_ALL_TESTS();
-   return result;
+#include <lwip/def.h> /* For htonl etc */
+#include <lwip/pbuf.h>
+
+#define PNAL_BUF_MAX_SIZE PBUF_POOL_BUFSIZE
+
+/* Re-use lwIP pbuf for rt-kernel */
+typedef struct pbuf pnal_buf_t;
+
+#ifdef __cplusplus
 }
+#endif
+
+#endif /* PNAL_SYS_H */
