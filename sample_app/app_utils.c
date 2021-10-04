@@ -490,7 +490,7 @@ void app_utils_print_ioxs_change (
    {
       if (iocs_new == PNET_IOXS_BAD)
       {
-         APP_LOG_WARNING (
+         APP_LOG_DEBUG (
             "PLC reports %s BAD for slot %u subslot %u \"%s\"\n",
             ioxs_str,
             subslot->slot_nbr,
@@ -508,7 +508,7 @@ void app_utils_print_ioxs_change (
       }
       else if (iocs_new != PNET_IOXS_GOOD)
       {
-         APP_LOG_WARNING (
+         APP_LOG_DEBUG (
             "PLC reports %s %u for input slot %u subslot %u \"%s\".\n"
             "  Is it in STOP mode?\n",
             ioxs_str,
