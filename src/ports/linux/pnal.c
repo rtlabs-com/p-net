@@ -17,8 +17,8 @@
 
 #include "pnal.h"
 
-#include "osal.h"
 #include "options.h"
+#include "osal.h"
 #include "osal_log.h"
 #include "pnal_filetools.h"
 

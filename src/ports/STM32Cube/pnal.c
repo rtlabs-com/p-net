@@ -15,9 +15,9 @@
 
 #include "pnal.h"
 
+#include "options.h"
 #include "osal.h"
 #include "osal_log.h"
-#include "options.h"
 
 #include <fatfs.h>
 #include <lwip/apps/snmp.h>

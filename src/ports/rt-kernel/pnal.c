@@ -15,9 +15,9 @@
 
 #include "pnal.h"
 
+#include "options.h"
 #include "osal.h"
 #include "osal_log.h"
-#include "options.h"
 
 #include <drivers/net.h>
 #include <drivers/eth/phy/phy.h>
