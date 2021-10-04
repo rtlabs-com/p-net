@@ -130,14 +130,13 @@ void shell_banner (void)
 int main (void)
 {
    int ret;
-   int32_t app_log_level = APP_LOG_LEVEL;
    app_utils_netif_namelist_t netif_name_list;
    pnet_if_cfg_t netif_cfg = {0};
    uint16_t number_of_ports;
 
    strcpy (app_args.eth_interfaces, APP_DEFAULT_ETHERNET_INTERFACE);
    strcpy (app_args.station_name, APP_GSDML_DEFAULT_STATION_NAME);
-   app_log_set_log_level (app_log_level);
+   app_log_set_log_level (APP_LOG_LEVEL);
 
    APP_LOG_INFO ("\n** Starting P-Net sample application " PNET_VERSION
                  " **\n");
@@ -148,7 +147,7 @@ int main (void)
       "Number of slots:      %u (incl slot for DAP module)\n",
       PNET_MAX_SLOTS);
    APP_LOG_INFO ("P-net log level:      %u (DEBUG=0, FATAL=4)\n", LOG_LEVEL);
-   APP_LOG_INFO ("App log level:        %u (DEBUG=0, FATAL=4)\n", app_log_level);
+   APP_LOG_INFO ("App log level:        %u (DEBUG=0, FATAL=4)\n", APP_LOG_LEVEL);
    APP_LOG_INFO ("Max number of ports:  %u\n", PNET_MAX_PHYSICAL_PORTS);
    APP_LOG_INFO ("Network interfaces:   %s\n", app_args.eth_interfaces);
    APP_LOG_INFO ("Default station name: %s\n", app_args.station_name);
@@ -158,8 +157,6 @@ int main (void)
    /* Note: station name is defined by app_gsdml.h */
 
    strcpy (pnet_cfg.file_directory, APP_DEFAULT_FILE_DIRECTORY);
-
-   /* Note: pnal_cfg not is used for rt-kernel  */
 
    ret = app_utils_pnet_cfg_init_netifs (
       app_args.eth_interfaces,
