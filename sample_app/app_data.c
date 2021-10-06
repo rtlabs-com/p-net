@@ -124,6 +124,7 @@ int app_data_set_default_outputs (void)
 {
    outputdata[0] = APP_DATA_DEFAULT_OUTPUT_DATA;
    app_handle_data_led_state (false);
+   return 0;
 }
 
 int app_data_write_parameter (
