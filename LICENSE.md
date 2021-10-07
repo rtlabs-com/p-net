@@ -7,6 +7,10 @@ This software is dual-licensed.
 This software is distributed under GPLv3. You are allowed to use this
 software for an open-source project with a compatible license.
 
+Use of IPC interface(s) provided by the project is understood to be 
+ordinary use, not within the meaning of "covered work" as defined in 
+the GPLv3 license.
+
 [GNU GPL license v3](https://www.gnu.org/licenses/gpl-3.0.html)
 
 ## Commercial license
