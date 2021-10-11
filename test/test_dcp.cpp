@@ -129,6 +129,7 @@ TEST_F (DcpTest, DcpRunTest)
    pnal_buf_t * p_buf;
    int ret;
    int successful_replies = 0;
+   int changed_byte = 0;
 
    TEST_TRACE ("\nGenerating mock set name request\n");
    p_buf = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE);
@@ -165,12 +166,14 @@ TEST_F (DcpTest, DcpRunTest)
 
    TEST_TRACE ("\nCheck invalid length set ident by device id request fails\n");
    p_buf = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE);
+   changed_byte = ident_by_device_id_req[32];
    ident_by_device_id_req[32] = 0x01;
    memcpy (
       p_buf->payload,
       ident_by_device_id_req,
       sizeof (ident_by_device_id_req));
    ret = pf_eth_recv (mock_os_data.eth_if_handle, net, p_buf);
+   ident_by_device_id_req[32] = changed_byte;
    EXPECT_EQ (ret, 0);
 
    TEST_TRACE ("\nGenerating mock factory reset request\n");
