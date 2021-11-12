@@ -149,6 +149,7 @@ void app_utils_get_error_code_strings (
       break;
    }
 }
+
 void app_utils_copy_ip_to_struct (
    pnet_cfg_ip_addr_t * destination_struct,
    pnal_ipaddr_t ip)
@@ -614,14 +615,6 @@ int app_utils_pull_submodule (
    return -1;
 }
 
-/**
- * Get subslot application information.
- * @param p_appdata        InOut: Application state.
- * @param slot_nbr         In:    Slot number.
- * @param subslot_nbr      In:    Subslot number. Range 0 - 0x9FFF.
- * @return Reference to application subslot,
- *         NULL if subslot is not found/plugged.
- */
 app_subslot_t * app_utils_subslot_get (
    app_api_t * p_api,
    uint16_t slot_nbr,
@@ -657,14 +650,6 @@ bool app_utils_subslot_is_input (const app_subslot_t * p_subslot)
    return false;
 }
 
-/**
- * Return true if subslot is neither input or output.
- *
- * This is applies for DAP submodules/slots
- * @param p_subslot     In: Reference to subslot.
- * @return true if subslot is input or input/output.
- *         false if not.
- */
 bool app_utils_subslot_is_no_io (const app_subslot_t * p_subslot)
 {
    if (p_subslot != NULL && p_subslot->data_cfg.data_dir == PNET_DIR_NO_IO)
@@ -675,13 +660,6 @@ bool app_utils_subslot_is_no_io (const app_subslot_t * p_subslot)
    return false;
 }
 
-/**
- * Return true if subslot is output.
- *
- * @param p_subslot     In: Reference to subslot.
- * @return true if subslot is output or input/output,
- *         false if not.
- */
 bool app_utils_subslot_is_output (const app_subslot_t * p_subslot)
 {
    if (

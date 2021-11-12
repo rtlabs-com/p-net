@@ -283,6 +283,7 @@ static int app_write_ind (
    subslot = app_utils_subslot_get (&app->main_api, slot_nbr, subslot_nbr);
    if (subslot != NULL)
    {
+      /* TODO check return value */
       app_data_write_parameter (
          subslot->submodule_id,
          idx,
@@ -354,7 +355,7 @@ static int app_read_ind (
    }
 
    /* Todo: update p_result on error.
-    * Check return code of app_data_write_parameter.
+    * Check return code of app_data_read_parameter.
     */
    return 0;
 }
