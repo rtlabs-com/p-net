@@ -14,8 +14,9 @@
  ********************************************************************/
 
 #include <gtest/gtest.h>
+#include "osal.h"
 
-int main (int argc, char * argv[])
+OS_MAIN (int argc, char * argv[])
 {
    if (argc > 0)
       ::testing::InitGoogleTest (&argc, argv);

@@ -159,11 +159,11 @@ int app_data_write_parameter (
 
    if (index == APP_GSDM_PARAMETER_1_IDX)
    {
-      memcpy (&app_param_1, data, sizeof (length));
+      memcpy (&app_param_1, data, length);
    }
    else if (index == APP_GSDM_PARAMETER_2_IDX)
    {
-      memcpy (&app_param_2, data, sizeof (length));
+      memcpy (&app_param_2, data, length);
    }
    APP_LOG_DEBUG ("  Writing %s\n", par_cfg->name);
    app_log_print_bytes (APP_LOG_LEVEL_DEBUG, data, length);
