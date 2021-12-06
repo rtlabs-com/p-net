@@ -4400,6 +4400,8 @@ static int pf_cmrpc_dce_packet (
             rpc_res.flags.broadcast = false;
             rpc_res.flags2.cancel_pending = false;
             rpc_res.fragment_nmb = p_sess->out_fragment_nbr;
+            rpc_res.serial_high = (uint8_t) (rpc_res.fragment_nmb >> 8U);
+            rpc_res.serial_low = rpc_res.fragment_nmb & UINT8_MAX;
             rpc_res.is_big_endian = p_sess->get_info.is_big_endian;
 
             /* Insert the response header to get pos of rpc response body. */
@@ -4574,6 +4576,8 @@ static int pf_cmrpc_dce_packet (
                rpc_res.flags.broadcast = false;
                rpc_res.flags2.cancel_pending = false;
                rpc_res.fragment_nmb = p_sess->out_fragment_nbr;
+               rpc_res.serial_high = (uint8_t) (rpc_res.fragment_nmb >> 8U);
+               rpc_res.serial_low = rpc_res.fragment_nmb & UINT8_MAX;
                rpc_res.is_big_endian =
                   p_sess->from_me ? true : p_sess->get_info.is_big_endian;
 
