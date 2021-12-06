@@ -2095,6 +2095,7 @@ static int pf_cmdev_get_exp_sub_data_descriptor (
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
+
 static int pf_cmdev_iocr_setup_iocs (
    pf_ar_t * p_ar,
    pf_iocr_t * p_iocr,
@@ -2132,7 +2133,7 @@ static int pf_cmdev_iocr_setup_iocs (
          if (
             pf_cmdev_get_exp_sub (
                p_ar,
-               api_ix,
+               api_id,
                slot_nbr,
                subslot_nbr,
                &p_exp_sub) != 0)
@@ -2202,7 +2203,7 @@ static int pf_cmdev_iocr_setup_iocs (
                p_iodata->in_use = true;
                iodata_cnt++;
 
-               p_iodata->api_id = api_ix;
+               p_iodata->api_id = api_id;
                p_iodata->slot_nbr = slot_nbr;
                p_iodata->subslot_nbr = subslot_nbr;
 
@@ -5135,8 +5136,8 @@ int pf_cmdev_cm_ccontrol_req (pnet_t * net, pf_ar_t * p_ar)
                         LOG_DEBUG (
                            PNET_LOG,
                            "CMDEV(%d): Slot %u subslot 0x%04x is owned by "
-                           "AREP %u CREP %" PRIu32 " but AREP %u CREP %"
-                           PRIu32 " is asking to use it.\n",
+                           "AREP %u CREP %" PRIu32 " but AREP %u CREP %" PRIu32
+                           " is asking to use it.\n",
                            __LINE__,
                            p_iodata->slot_nbr,
                            p_iodata->subslot_nbr,
