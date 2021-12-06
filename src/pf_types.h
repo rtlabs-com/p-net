@@ -300,7 +300,7 @@ typedef struct pf_rpc_header
    bool is_big_endian;
    uint8_t float_repr; /* Allowed: IEEE (0) */
    uint8_t reserved;
-   uint8_t serial_high;
+   uint8_t serial_high;      /* High octet of fragment number */
    pf_uuid_t object_uuid;    /* Identifies IO device, IO controller or IO
                                 supervisor */
    pf_uuid_t interface_uuid; /* Identify PNIO interface */
@@ -314,7 +314,7 @@ typedef struct pf_rpc_header
    uint16_t length_of_body; /* AKA fragment_length */
    uint16_t fragment_nmb;
    uint8_t auth_protocol; /* Allowed: 0 (zero) */
-   uint8_t serial_low;
+   uint8_t serial_low;    /* Low octet of fragment number */
 } pf_rpc_header_t;
 
 typedef enum pf_write_req_error_type_values
