@@ -97,7 +97,7 @@ void show_usage()
       "   -i INTERF    Name of Ethernet interface to use. Defaults to %s\n",
       APP_DEFAULT_ETHERNET_INTERFACE);
    printf (
-      "   -s NAME      Set station name. Defaults to %s  Only used\n",
+      "   -s NAME      Set station name. Defaults to \"%s\". Only used\n",
       APP_GSDML_DEFAULT_STATION_NAME);
    printf ("                if not already available in storage file.\n");
    printf ("   -b FILE      Path (absolute or relative) to read Button1. "

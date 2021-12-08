@@ -16,7 +16,6 @@
 #ifdef UNIT_TEST
 #define pnal_get_system_uptime_10ms mock_pnal_get_system_uptime_10ms
 #define pnal_get_interface_index    mock_pnal_get_interface_index
-#define pnal_eth_get_status         mock_pnal_eth_get_status
 #endif
 
 #define STRINGIFY(s)   STRINGIFIED (s)

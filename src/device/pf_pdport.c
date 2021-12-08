@@ -1272,6 +1272,19 @@ static int pf_pdport_write_data_adj (
    return ret;
 }
 
+/**
+ * @internal
+ * Write PDPort interface adjust
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param p_ar             In:    The AR instance.
+ * @param p_write_req      In:    The IODWrite request.
+ * @param p_bytes          In:    Input data
+ * @param p_datalength     In:    Size of the data to write.
+ * @param p_result         Out:   Detailed error information.
+ * @return  0  if operation succeeded.
+ *          -1 if an error occurred.
+ */
 static int pf_pdport_write_interface_adj (
    pnet_t * net,
    const pf_ar_t * p_ar,

@@ -326,7 +326,7 @@ laptop.
 Next step is to be able to run it from the terminal within Visual Studio Code.
 In case of compilation error messages, you can click on the code line given
 in the terminal (within Visual Studio Code) and the corresponding file will
-be opened.
+be opened. Hold the CTRL key while clicking on the line.
 
 To use debug features while running (for example breakpoints) you need to adapt
 the settings file for Visual Studio Code. Click the "Run and Debug" icon

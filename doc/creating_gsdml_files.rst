@@ -1,5 +1,8 @@
 Creating GSD (GSDML) files
 ==========================
+A GSD (General Station Description) file is an XML file describing a
+Profinet IO-Device. The XML-based language is called GSDML (GSD Markup Language).
+
 For Profinet members, the "Profinet GSD Checker" tool is available for
 download. It contains GSD example files showing different aspects of the file
 format.
@@ -12,6 +15,14 @@ Below is a brief introduction to the most common elements and attributes in
 GSDML files given. It contains simplifications and does not describe special
 cases. For full details on GSDML file syntax, see the official GSDML
 specification.
+
+An example GSDML file is available in the sample_app directory of the p-net
+repository: https://github.com/rtlabs-com/p-net/tree/master/sample_app
+
+A GSDML file is used to describe an IO-device. The corresponding file
+for describing a controller is a CDML (Controller Description Markup Language)
+file (with file ending ``.xml``). The CDML is used during controller certification
+(not discussed here).
 
 
 XML editors
