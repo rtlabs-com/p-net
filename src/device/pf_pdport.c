@@ -240,6 +240,50 @@ int pf_pdport_save_all (pnet_t * net)
    return 0;
 }
 
+bool pf_pdport_is_a_fast_port_in_use (pnet_t * net)
+{
+   int loc_port_num;
+   pf_port_iterator_t port_iterator;
+   pnal_eth_status_t eth_status;
+   bool found = false;
+   bool fast_enough = false;
+#if LOG_DEBUG_ENABLED(PNET_LOG)
+   const pnet_port_cfg_t * port_config;
+#endif
+
+   pf_port_init_iterator_over_ports (net, &port_iterator);
+   loc_port_num = pf_port_get_next (&port_iterator);
+   while (loc_port_num != 0)
+   {
+      eth_status = pf_pdport_get_eth_status (net, loc_port_num);
+      fast_enough = eth_status.operational_mau_type >=
+                    PNAL_ETH_MAU_COPPER_100BaseTX_FULL_DUPLEX;
+
+#if LOG_DEBUG_ENABLED(PNET_LOG)
+      port_config = pf_port_get_config (net, loc_port_num);
+      LOG_DEBUG (
+         PNET_LOG,
+         "PDPORT(%d): Checking local Ethernet port %u \"%s\". MAU type: %u  "
+         "%s.  Running: %s.\n",
+         __LINE__,
+         loc_port_num,
+         port_config->netif_name,
+         eth_status.operational_mau_type,
+         fast_enough ? "Fast enough" : "Too slow",
+         eth_status.running ? "Yes" : "No");
+#endif
+      if (fast_enough && eth_status.running)
+      {
+         /* Do not return early, to list all ports in the debug output */
+         found = true;
+      }
+
+      loc_port_num = pf_port_get_next (&port_iterator);
+   }
+
+   return found;
+}
+
 /**
  * @internal
  * Initialize pdport diagnostic source

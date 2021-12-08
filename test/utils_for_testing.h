@@ -287,6 +287,8 @@ class PnetIntegrationTest : public PnetIntegrationTestBase
 
       pnet_init_only (net, &pnet_default_cfg);
 
+      pf_pdport_update_eth_status (net);
+
       mock_clear(); /* lldp sends a frame at init */
    };
 };
