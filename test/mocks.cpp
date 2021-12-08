@@ -43,6 +43,9 @@ void mock_clear (void)
    memset (&mock_lldp_data, 0, sizeof (mock_lldp_data));
    memset (&mock_file_data, 0, sizeof (mock_file_data));
    memset (&mock_fspm_data, 0, sizeof (mock_fspm_data));
+   mock_os_data.eth_status[1].operational_mau_type =
+      PNAL_ETH_MAU_COPPER_100BaseTX_FULL_DUPLEX;
+   mock_os_data.eth_status[1].running = true;
 }
 
 void mock_init (void)

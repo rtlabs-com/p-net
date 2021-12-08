@@ -1632,17 +1632,19 @@ int pf_cmdev_check_zero (uint8_t * p_start, uint16_t len)
 }
 
 /**
- * Verify that at least one operational port has the required speed (100FD).
+ * Verify that at least one operational port has a speed of at
+ * least 100 MBit/s, full duplex.
+ *
+ * Otherwise we should refuse to make a connection.
  *
  * See PdevCheckFailed() in Profinet 2.4 Protocol 5.6.3.2.1.4 CMDEV state table
  *
- * @return
+ * @param net              InOut: The p-net stack instance
+ * @return 0 if at least one port has the required speed, else -1.
  */
-static int pf_cmdev_check_pdev (void)
+static int pf_cmdev_check_pdev (pnet_t * net)
 {
-
-   /* ToDo: Actually perform the check for 100FD */
-   return 0;
+   return (pf_pdport_is_a_fast_port_in_use (net)) ? 0 : -1;
 }
 
 /**
@@ -4964,7 +4966,7 @@ int pf_cmdev_rm_dcontrol_ind (
                   p_dcontrol_result) == 0)
             {
                pf_cmdev_set_state (net, p_ar, PF_CMDEV_STATE_W_ARDY);
-               if (pf_cmdev_check_pdev() == 0)
+               if (pf_cmdev_check_pdev (net) == 0)
                {
                   LOG_DEBUG (
                      PNET_LOG,
@@ -4981,12 +4983,13 @@ int pf_cmdev_rm_dcontrol_ind (
                }
                else
                {
-                  pf_set_error (
-                     p_dcontrol_result,
-                     PNET_ERROR_CODE_PNIO,
-                     PNET_ERROR_DECODE_PNIO,
-                     PNET_ERROR_CODE_1_RTA_ERR_CLS_PROTOCOL,
-                     PNET_ERROR_CODE_2_ABORT_PDEV_CHECK_FAILED);
+                  LOG_ERROR (
+                     PNET_LOG,
+                     "CMDEV(%d): There is no local Ethernet port with high "
+                     "enough speed.\n",
+                     __LINE__);
+                  p_ar->err_cls = PNET_ERROR_CODE_1_RTA_ERR_CLS_PROTOCOL;
+                  p_ar->err_code = PNET_ERROR_CODE_2_ABORT_PDEV_CHECK_FAILED;
                }
             }
          }

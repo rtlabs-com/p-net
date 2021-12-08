@@ -162,6 +162,22 @@ void pf_pdport_periodic (pnet_t * net);
 int pf_pdport_save_all (pnet_t * net);
 
 /**
+ * Verify that at least one operational port has a speed of at
+ * least 100 MBit/s, full duplex.
+ *
+ * Otherwise we should refuse to make a connection.
+ *
+ * To support the special case of devices with 10 Mbit/s, this function must be
+ * modified.
+ *
+ * See PdevCheckFailed() in Profinet 2.4 Protocol 5.6.3.2.1.4 CMDEV state table
+ *
+ * @param net              InOut: The p-net stack instance
+ * @return true if at least one port has the required speed, else false.
+ */
+bool pf_pdport_is_a_fast_port_in_use (pnet_t * net);
+
+/**
  * Update the ethernet status for all ports.
  * This function is intended to be executed in a background task,
  * as the system calls to read the ethernet status may be blocking.
