@@ -511,7 +511,7 @@ void app_utils_print_ioxs_change (
       {
          APP_LOG_DEBUG (
             "PLC reports %s %u for input slot %u subslot %u \"%s\".\n"
-            "  Is it in STOP mode?\n",
+            "  Is the PLC in STOP mode?\n",
             ioxs_str,
             iocs_new,
             subslot->slot_nbr,

@@ -65,6 +65,8 @@ CBA
     Component Based Automation, for the legacy Profinet CBA system. It used communication profile CP 3/3.
 CC
     Conformance Class (Performance level A to D)
+CDML
+    Controller Description Markup Language. An XML file describing a controller, for certification.
 CE
     A marking for European Union declaration of conformity
 CIDR

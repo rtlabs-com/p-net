@@ -2716,9 +2716,11 @@ int pf_alarm_close (pnet_t * net, pf_ar_t * p_ar)
 
    LOG_DEBUG (
       PF_ALARM_LOG,
-      "Alarm(%d): Closing alarm instance for AREP %u.\n",
+      "Alarm(%d): Closing alarm instance for AREP %u. Sending alarm with "
+      "error_code2 = 0x%X\n",
       __LINE__,
-      p_ar->arep);
+      p_ar->arep,
+      p_ar->err_code);
    if (pf_alarm_alpmx_close (p_ar) != 0)
    {
       ret = -1;

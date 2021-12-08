@@ -571,6 +571,15 @@ enable LLDP transmission on the Ethernet interface of your laptop. Note that
 this interferes with the ART tester software. See the section on installing
 ART tester in this documentation.
 
+Except from sending the "DCP identify", Proneta will scan the subnet with
+PING and ARP messages if enabled in the settings.
+It is possible to customise which address range to scan.
+Found DCP-enabled hosts will be probed using EPM lookup and SNMP queries.
+
+Proneta will show details about modules in found devices, if it has access to the
+corresponding GSDML file. Use the page "Settings" and the tab "GSDML Manager" to
+load GSDML files.
+
 
 Full SNMP readout example
 -------------------------

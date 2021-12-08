@@ -1143,7 +1143,8 @@ static int pf_check_block_header (
 /**
  * @internal
  * Parse all blocks in a Connect RPC request message.
- * @param p_sess           InOut: The RPC session instance.
+ * @param p_sess           InOut: The RPC session instance. The rpc_result
+ *                                field is written when return != 0.
  * @param p_pos            InOut: Position in the input buffer.
  * @param p_ar             InOut: The AR instance.
  * @return  0  if operation succeeded.
@@ -1835,7 +1836,8 @@ static void pf_cmrpc_rm_connect_rsp (
  *
  * @param net              InOut: The p-net stack instance
  * @param p_sess           InOut: The session instance. Will be released on
- *                                error.
+ *                                error. The rpc_result field is written
+ *                                when return != 0.
  * @param req_pos          In:    Position in the request buffer.
  * @param res_size         In:    The size of the response buffer.
  * @param p_res            Out:   The response buffer.
@@ -2208,7 +2210,8 @@ static void pf_cmrpc_rm_release_rsp (
  * @internal
  * Take a DCE RPC release request and create a DCE RPC release response.
  * @param net              InOut: The p-net stack instance
- * @param p_sess           InOut: The RPC session instance.
+ * @param p_sess           InOut: The RPC session instance. The rpc_result
+ *                                field is written when return != 0.
  * @param req_pos          In:    Position in the request buffer.
  * @param res_size         In:    The size of the response buffer.
  * @param p_res            Out:   The response buffer. Already filled with
@@ -2315,7 +2318,8 @@ static int pf_cmrpc_rm_release_ind (
 /**
  * @internal
  * Parse all blocks in a DControl RPC request message.
- * @param p_sess           InOut: The RPC session instance.
+ * @param p_sess           InOut: The RPC session instance. The rpc_result
+ *                                field is written when return != 0.
  * @param req_pos          In:    Position in the request buffer.
  * @param p_control_io     Out:   The DControl control block.
  * @return  0  if operation succeeded.
@@ -2545,7 +2549,8 @@ static void pf_cmrpc_rm_dcontrol_rsp (
  *  * pnet_state_ind() with PNET_EVENT_PRMEND
  *
  * @param net                  InOut: The p-net stack instance
- * @param p_sess               InOut: The RPC session instance.
+ * @param p_sess               InOut: The RPC session instance. The rpc_result
+ *                                    field is written when return != 0.
  * @param p_rpc                In:    The RPC header.
  * @param req_pos              In:    Position in the request buffer.
  * @param res_size             In:    The size of the response buffer.
@@ -2605,7 +2610,7 @@ static int pf_cmrpc_rm_dcontrol_ind (
             p_sess->kill_session = true;
          }
 
-         /* Store dcontrol result in we later detect a re-run */
+         /* Store dcontrol result if we later detect a re-run */
          p_sess->dcontrol_result = p_sess->rpc_result;
          p_sess->dcontrol_sequence_nmb = p_rpc->sequence_nmb;
       }
@@ -2641,7 +2646,8 @@ static int pf_cmrpc_rm_dcontrol_ind (
 /**
  * @internal
  * Parse all blocks in a IODRead RPC request message.
- * @param p_sess           InOut: The RPC session instance.
+ * @param p_sess           InOut: The RPC session instance. The rpc_result
+ *                                field is written when return != 0.
  * @param req_pos          In:    Position in the request buffer.
  * @param p_read_request   Out:   The IODRead request block.
  * @return  0  if operation succeeded.
@@ -2747,7 +2753,8 @@ static int pf_cmrpc_rm_read_interpret_ind (
  * parameters.
  *
  * @param net              InOut: The p-net stack instance
- * @param p_sess           InOut: The session instance.
+ * @param p_sess           InOut: The session instance. The rpc_result
+ *                                field is written when return != 0.
  * @param opnum            In:    The RPC operation number. Should be
  *                                PF_RPC_DEV_OPNUM_READ or
  *                                PF_RPC_DEV_OPNUM_READ_IMPLICIT.
@@ -2946,7 +2953,8 @@ static int pf_cmrpc_rm_read_ind (
  * No callbacks or updates of configuration is triggered
  *
  * @param net              InOut: The p-net stack instance
- * @param p_sess           InOut: The session instance.
+ * @param p_sess           InOut: The session instance. The rpc_result
+ *                                field is written when return != 0.
  * @param p_rpc_req        In:    RPC Request
  * @param req_pos          In:    Position in the request buffer.
  * @param res_size         In:    The size of the response buffer.
@@ -3189,7 +3197,8 @@ static int pf_cmrpc_perform_one_write (
  * parameters.
  *
  * @param net              InOut: The p-net stack instance
- * @param p_sess           InOut  The RPC session instance.
+ * @param p_sess           InOut  The RPC session instance. The rpc_result
+ *                                field is written when return != 0.
  * @param req_pos          In:    Position in the request buffer.
  * @param res_size         In:    The size of the response buffer.
  * @param p_res            Out:   The response buffer.
