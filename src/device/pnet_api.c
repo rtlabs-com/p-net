@@ -131,8 +131,8 @@ void pnet_handle_periodic (pnet_t * net)
    {
       LOG_DEBUG (
          PNET_LOG,
-         "API(%d): Too long since pnet_handle_periodic() was called: %u "
-         "microseconds\n",
+         "API(%d): Too long since pnet_handle_periodic() was called: %" PRIu32
+         " microseconds\n",
          __LINE__,
          start_time_us - net->timestamp_handle_periodic_us);
    }
@@ -156,7 +156,8 @@ void pnet_handle_periodic (pnet_t * net)
    {
       LOG_DEBUG (
          PNET_LOG,
-         "API(%d): pnet_handle_periodic() took too long: %u microseconds\n",
+         "API(%d): pnet_handle_periodic() took too long: %" PRIu32
+         " microseconds\n",
          __LINE__,
          end_time_us - start_time_us);
    }
