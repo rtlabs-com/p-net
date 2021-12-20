@@ -71,13 +71,13 @@ install (FILES
   DESTINATION include
   )
 
+generate_bin(pn_dev)
+
 if (BUILD_TESTING)
   target_include_directories(pf_test
     PRIVATE
     src/ports/STM32Cube
     )
   target_link_libraries(pf_test PRIVATE cube-bsp)
+  generate_bin(pf_test)
 endif()
-
-generate_bin(pn_dev)
-generate_bin(pf_test)
