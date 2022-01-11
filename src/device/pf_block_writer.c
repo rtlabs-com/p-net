@@ -4638,7 +4638,7 @@ void pf_put_lookup_response_data (
       p_bytes,
       p_pos);
 
-   pf_put_padding_align (2, block_position, res_len, p_bytes, p_pos);
+   pf_put_padding_align (block_position, 2, res_len, p_bytes, p_pos);
 
    pf_put_uint32 (
       is_big_endian,
