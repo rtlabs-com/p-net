@@ -249,7 +249,7 @@ static void pf_diag_find_entry (
                   (p_item->fmt.std.ch_error_type == ch_error_type) &&
                   (p_item->fmt.std.ext_ch_error_type == ext_ch_error_type) &&
                   (PF_DIAG_CH_PROP_ACC_GET (p_item->fmt.std.ch_properties) ==
-                   p_diag_source->ch_grouping) &&
+                   (int16_t) p_diag_source->ch_grouping) &&
                   (PF_DIAG_CH_PROP_DIR_GET (p_item->fmt.std.ch_properties) ==
                    p_diag_source->ch_direction))
                {
