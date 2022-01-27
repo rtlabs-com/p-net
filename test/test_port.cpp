@@ -26,8 +26,8 @@ class PortTest : public PnetIntegrationTest
 
 class PortUnitTest : public PnetUnitTest
 {
-   protected:
-      pnet_t dummystack = {};
+ protected:
+   pnet_t dummystack = {};
 };
 
 TEST_F (PortUnitTest, PortGetPortList)
@@ -92,6 +92,12 @@ TEST_F (PortUnitTest, PortCheckIterator)
    EXPECT_EQ (pf_port_get_next (&port_iterator), 0);
    EXPECT_EQ (pf_port_get_next (&port_iterator), 0);
 
+   /* Verify behaviour if the interator for unknown reason has
+    * value that is out of port range */
+   port_iterator.next_port = 10;
+   EXPECT_EQ (pf_port_get_next (&port_iterator), 0);
+   EXPECT_EQ (pf_port_get_next (&port_iterator), 0);
+
    /* Restart the iterator */
    pf_port_init_iterator_over_ports (&dummystack, &port_iterator);
 
@@ -137,6 +143,12 @@ TEST_F (PortUnitTest, PortCheckIteratorRepeatCyclic)
    EXPECT_EQ (pf_port_get_next_repeat_cyclic (&port_iterator), 1);
    EXPECT_EQ (pf_port_get_next_repeat_cyclic (&port_iterator), 2);
    EXPECT_EQ (pf_port_get_next_repeat_cyclic (&port_iterator), 3);
+
+   /* Verify behaviour if the interator for unknown reason has
+    * value that is out of port range */
+   port_iterator.next_port = 10;
+   EXPECT_EQ (pf_port_get_next_repeat_cyclic (&port_iterator), 1);
+   EXPECT_EQ (pf_port_get_next_repeat_cyclic (&port_iterator), 2);
 
    /* Restart the iterator from first port */
    pf_port_init_iterator_over_ports (&dummystack, &port_iterator);

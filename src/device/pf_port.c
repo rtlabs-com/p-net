@@ -119,6 +119,11 @@ int pf_port_get_next (pf_port_iterator_t * p_iterator)
    {
       p_iterator->next_port = 0;
    }
+   else if (p_iterator->next_port > p_iterator->number_of_ports)
+   {
+      ret = 0;
+      p_iterator->next_port = 0;
+   }
    else
    {
       p_iterator->next_port += 1;
@@ -129,7 +134,14 @@ int pf_port_get_next (pf_port_iterator_t * p_iterator)
 
 int pf_port_get_next_repeat_cyclic (pf_port_iterator_t * p_iterator)
 {
-   int ret = p_iterator->next_port;
+   int ret;
+
+   if (p_iterator->next_port > p_iterator->number_of_ports)
+   {
+      p_iterator->next_port = 1;
+   }
+
+   ret = p_iterator->next_port;
 
    if (p_iterator->next_port == p_iterator->number_of_ports)
    {
