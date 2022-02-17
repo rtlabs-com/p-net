@@ -1062,6 +1062,8 @@ static void pf_lldp_send (pnet_t * net, int loc_port_num)
          p_buffer->len =
             pf_lldp_construct_frame (net, loc_port_num, p_buffer->payload);
 
+         pnal_set_port_num(p_buffer, loc_port_num);
+
          (void)pf_eth_send (net, p_port_data->netif.handle, p_buffer);
       }
 
@@ -1925,6 +1927,8 @@ int pf_lldp_recv (
    pf_lldp_peer_info_t peer_data;
    int loc_port_num = pf_port_get_port_number (net, eth_handle);
    int err = 0;
+
+   pnal_get_port_num(p_frame_buf, &loc_port_num);
 
    err = pf_lldp_parse_packet (buf, buf_len, &peer_data);
 

@@ -177,3 +177,13 @@ int pnal_eth_send (pnal_eth_handle_t * handle, pnal_buf_t * buf)
    }
    return ret;
 }
+
+void pnal_get_port_num (pnal_buf_t * p, int * loc_port_num)
+{
+   /* Not yet applicable for STM32Cube */
+}
+
+void pnal_set_port_num (pnal_buf_t * p, int loc_port_num)
+{
+   /* Not yet applicable for STM32Cube */
+}

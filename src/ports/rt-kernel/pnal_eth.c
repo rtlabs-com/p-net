@@ -25,8 +25,9 @@
 #include <lwip/apps/snmp_core.h>
 #include <lwip/lwip_hooks.h>
 #include <drivers/dev.h>
+#include <config.h>
 
-#define MAX_NUMBER_OF_IF 1
+#define MAX_NUMBER_OF_IF 3
 
 struct pnal_eth_handle
 {
@@ -125,17 +126,11 @@ pnal_eth_handle_t * pnal_eth_init (
    pnal_eth_callback_t * callback,
    void * arg)
 {
+   static struct netif * first_netif = NULL;
    pnal_eth_handle_t * handle;
    struct netif * netif;
 
    (void)receive_type; /* Ignore, for now all frames will be received. */
-
-   netif = netif_find (if_name);
-   if (netif == NULL)
-   {
-      os_log (LOG_LEVEL_ERROR, "Network interface \"%s\" not found!\n", if_name);
-      return NULL;
-   }
 
    handle = pnal_eth_allocate_handle();
    if (handle == NULL)
@@ -144,11 +139,27 @@ pnal_eth_handle_t * pnal_eth_init (
       return NULL;
    }
 
+   if (first_netif == NULL)
+   {
+      first_netif = netif_find (if_name);
+      if (first_netif == NULL)
+      {
+         os_log (LOG_LEVEL_ERROR, "Network interface \"%s\" not found!\n", if_name);
+         return NULL;
+      }
+      netif = first_netif;
+
+      lwip_set_hook_for_unknown_eth_protocol (netif, pnal_eth_sys_recv);
+   }
+   else
+   {
+      netif = malloc (sizeof (struct netif));
+      memcpy (netif, first_netif, sizeof (struct netif));
+   }
+
    handle->arg = arg;
    handle->eth_rx_callback = callback;
    handle->netif = netif;
-
-   lwip_set_hook_for_unknown_eth_protocol (netif, pnal_eth_sys_recv);
 
    return handle;
 }
@@ -169,4 +180,18 @@ int pnal_eth_send (pnal_eth_handle_t * handle, pnal_buf_t * buf)
       ret = buf->len;
    }
    return ret;
+}
+
+void pnal_get_port_num (pnal_buf_t * p, int * loc_port_num)
+{
+#ifdef CFG_TAIL_TAGGING
+   *loc_port_num = p->port_num;
+#endif
+}
+
+void pnal_set_port_num (pnal_buf_t * p, int loc_port_num)
+{
+#ifdef CFG_TAIL_TAGGING
+   p->port_num = loc_port_num;
+#endif
 }

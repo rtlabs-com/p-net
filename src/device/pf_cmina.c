@@ -1389,7 +1389,7 @@ void pf_cmina_port_statistics_show (pnet_t * net)
       }
       else
       {
-         printf ("Did not find port %s\n", p_port_data->netif.name);
+         printf ("Did not find statistics for port %s\n", p_port_data->netif.name);
       }
 
       port = pf_port_get_next (&port_iterator);

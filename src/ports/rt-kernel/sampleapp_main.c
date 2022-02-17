@@ -28,7 +28,10 @@
 
 #include <string.h>
 
-#define APP_DEFAULT_ETHERNET_INTERFACE "en1"
+/* Make it look like there are three interfaces,
+ * even if only one interface is initialized.
+ */
+#define APP_DEFAULT_ETHERNET_INTERFACE "en1,en2,en3"
 #define APP_DEFAULT_FILE_DIRECTORY     "/disk1"
 #define APP_LOG_LEVEL                  APP_LOG_LEVEL_INFO
 
@@ -140,7 +143,7 @@ int main (void)
 
    APP_LOG_INFO ("\n** Starting P-Net sample application " PNET_VERSION
                  " **\n");
-   APP_LOG_INFO ("\nType help to a list ofsupported shell commands.\n"
+   APP_LOG_INFO ("\nType help to get a list of supported shell commands.\n"
                  "Type help <cmd> to get a command description.\n"
                  "For example: help pnio_show\n\n");
    APP_LOG_INFO (

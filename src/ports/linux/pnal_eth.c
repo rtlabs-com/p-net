@@ -164,3 +164,13 @@ int pnal_eth_send (pnal_eth_handle_t * handle, pnal_buf_t * buf)
    int ret = send (handle->socket, buf->payload, buf->len, 0);
    return ret;
 }
+
+void pnal_get_port_num (pnal_buf_t * p, int * loc_port_num)
+{
+   /* Not applicable for Linux */
+}
+
+void pnal_set_port_num (pnal_buf_t * p, int loc_port_num)
+{
+   /* Not applicable for Linux */
+}
