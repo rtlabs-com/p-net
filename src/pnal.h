@@ -263,6 +263,10 @@ pnal_buf_t * pnal_buf_alloc (uint16_t length);
 void pnal_buf_free (pnal_buf_t * p);
 uint8_t pnal_buf_header (pnal_buf_t * p, int16_t header_size_increment);
 
+/* Functions to use when tail-tagging is enabled */
+void pnal_get_port_num (pnal_buf_t * p, int * loc_port_num);
+void pnal_set_port_num (pnal_buf_t * p, int loc_port_num);
+
 /**
  * Network interface handle, forward declaration.
  */

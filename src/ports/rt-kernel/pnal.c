@@ -53,7 +53,11 @@ int pnal_set_ip_suite (
 
 int pnal_get_macaddress (const char * interface_name, pnal_ethaddr_t * mac_addr)
 {
-   memcpy (mac_addr, netif_default->hwaddr, sizeof (pnal_ethaddr_t));
+   phy_t * phy = phy_get_default_driver ();
+   uint8_t port = atoi (&interface_name[2]) - 1;
+   phy_mac_address_t phy_mac_addr = phy_get_port_mac_address (phy, port);
+   memcpy (mac_addr, phy_mac_addr.address, sizeof (pnal_ethaddr_t));
+
    return 0;
 }
 
@@ -107,6 +111,12 @@ int pnal_get_port_statistics (
    const char * interface_name,
    pnal_port_stats_t * port_stats)
 {
+   if (memcmp(interface_name, "en1", 3) != 0)
+   {
+      /* TODO: statistics for the external ports are not yet supported */
+      return -1;
+   }
+
    port_stats->if_in_octets = netif_default->mib2_counters.ifinoctets;
    port_stats->if_in_errors = netif_default->mib2_counters.ifinerrors;
    port_stats->if_in_discards = netif_default->mib2_counters.ifindiscards;
@@ -202,11 +212,15 @@ int pnal_eth_get_status (const char * interface_name, pnal_eth_status_t * status
    ioctl_eth_status_t link;
    int error;
 
-   netif = netif_find (interface_name);
+   netif = netif_find ("en1");  /* There is only one initialized interface */
    ASSERT (netif != NULL);
 
    drv = netif->state;
    ASSERT (drv != NULL);
+
+   uint8_t port = atoi (&interface_name[2]) - 1;
+   link.state = port;
+
    error = drv->ops->ioctl (drv, netif, IOCTL_ETH_GET_STATUS, &link);
    if (error)
    {
