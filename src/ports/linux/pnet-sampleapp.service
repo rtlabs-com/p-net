@@ -11,8 +11,7 @@ After=network.target
 Type=simple
 ExecStartPre=/sbin/ifconfig eth0 up
 ExecStartPre=/bin/sh -c '/bin/echo "49152 60999" > /proc/sys/net/ipv4/ip_local_port_range'
-ExecStartPre=/usr/bin/gpio export 22 in
-ExecStartPre=/usr/bin/gpio export 27 in
+ExecStartPre=/usr/bin/enable-rpi-gpio-pins.sh
 # Enable this line if waiting for snmpd to start
 #ExecStartPre=/usr/bin/sleep 0.3
 WorkingDirectory=/home/pi/profinet/build/
