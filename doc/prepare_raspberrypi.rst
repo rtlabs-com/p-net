@@ -284,9 +284,11 @@ Place a systemd unit file here: ``/lib/systemd/system/pnet-sampleapp.service``
 An example file is available in the ``sample_app/`` directory of this
 repository. It assumes that the code is checked out into
 ``/home/pi/profinet/p-net/`` on your Raspberry Pi.
-Install the file::
+Install the files::
 
     sudo cp /home/pi/profinet/p-net/src/ports/linux/pnet-sampleapp.service /lib/systemd/system/
+    sudo cp /home/pi/profinet/p-net/src/ports/linux/enable-rpi-gpio-pins.sh /usr/bin/
+    sudo chmod +x /usr/bin/enable-rpi-gpio-pins.sh
 
 Adapt the contents to your paths and hardware.
 
