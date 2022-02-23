@@ -1440,7 +1440,7 @@ static int pf_dcp_identify_req (
    uint16_t ix;
    bool first = true;   /* First of the blocks */
    bool match = false;  /* Is it for us? */
-   bool filter = false; /* Is it IdentifyFilter or IdentifyAll? */
+   bool filter = true; /* Is it IdentifyFilter or IdentifyAll? */
    uint8_t * p_src;
    uint16_t src_pos = 0;
    pf_ethhdr_t * p_src_ethhdr;
@@ -1673,18 +1673,18 @@ static int pf_dcp_identify_req (
                   stationname_position = src_pos;
                   stationname_len = src_block_len;
 #endif
-                  if (
-                     (memcmp (p_value, &p_src[src_pos], src_block_len) == 0) &&
-                     (p_value[src_block_len] == '\0'))
+                  if (filter == true)
                   {
-                     if (first == true)
+                     if (
+                        (memcmp (p_value, &p_src[src_pos], src_block_len) != 0) ||
+                        (p_value[src_block_len] != '\0'))
                      {
-                        filter = true;
+                        match = false;
                      }
                   }
                   else
                   {
-                     match = false;
+                     ret = -1;
                   }
                   break;
                case PF_DCP_SUB_DEV_PROP_ID:
@@ -1837,7 +1837,6 @@ static int pf_dcp_identify_req (
                   if (first == true)
                   {
                      p_req_alias_name = alias;
-                     filter = true;
                   }
                }
                else
