@@ -966,6 +966,11 @@ static int pf_dcp_get_set (
    src_pos += sizeof (pf_dcp_header_t);
    src_dcplen = (src_pos + ntohs (p_src_dcphdr->data_length));
 
+   if (src_dcplen > p_buf->len)
+   {
+      goto out;
+   }
+
    p_rsp = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE); /* Get a transmit buffer
                                                    for the response */
    if (p_rsp == NULL)
@@ -1505,6 +1510,11 @@ static int pf_dcp_identify_req (
    p_src_dcphdr = (pf_dcp_header_t *)&p_src[src_pos];
    src_pos += sizeof (pf_dcp_header_t);
    src_dcplen = (src_pos + ntohs (p_src_dcphdr->data_length));
+
+   if (src_dcplen > p_buf->len)
+   {
+      goto out1;
+   }
 
    p_rsp = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE); /* Get a transmit buffer
                                                    for the response */
