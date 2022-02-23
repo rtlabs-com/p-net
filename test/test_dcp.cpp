@@ -103,7 +103,8 @@ TEST_F (DcpTest, DcpHelloTest)
    memcpy (p_buf->payload, get_name_req, sizeof (get_name_req));
    ret = pf_eth_recv (mock_os_data.eth_if_handle, net, p_buf);
 
-   EXPECT_EQ (ret, 1);
+   EXPECT_EQ (ret, 1); // Incoming frame is handled
+   // LLDP frames and one additional frame
    EXPECT_EQ (mock_os_data.eth_send_count, PNET_MAX_PHYSICAL_PORTS + 1);
 
    EXPECT_EQ (appdata.call_counters.led_off_calls, 1);
@@ -125,30 +126,40 @@ TEST_F (DcpTest, DcpRunTest)
    TEST_TRACE ("\nGenerating mock set name request\n");
    p_buf = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE);
    memcpy (p_buf->payload, set_name_req, sizeof (set_name_req));
+   p_buf->len = sizeof (set_name_req);
+
    ret = pf_eth_recv (mock_os_data.eth_if_handle, net, p_buf);
    EXPECT_EQ (ret, 1);
 
    TEST_TRACE ("\nGenerating mock set IP request\n");
    p_buf = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE);
    memcpy (p_buf->payload, set_ip_req, sizeof (set_ip_req));
+   p_buf->len = sizeof (set_ip_req);
+
    ret = pf_eth_recv (mock_os_data.eth_if_handle, net, p_buf);
    EXPECT_EQ (ret, 1);
 
    TEST_TRACE ("\nGenerating mock set ident request\n");
    p_buf = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE);
    memcpy (p_buf->payload, ident_req, sizeof (ident_req));
+   p_buf->len = sizeof (ident_req);
+
    ret = pf_eth_recv (mock_os_data.eth_if_handle, net, p_buf);
    EXPECT_EQ (ret, 1);
 
    TEST_TRACE ("\nGenerating mock factory reset request\n");
    p_buf = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE);
    memcpy (p_buf->payload, factory_reset_req, sizeof (factory_reset_req));
+   p_buf->len = sizeof (factory_reset_req);
+
    ret = pf_eth_recv (mock_os_data.eth_if_handle, net, p_buf);
    EXPECT_EQ (ret, 1);
 
    TEST_TRACE ("\nGenerating mock flash LED request\n");
    p_buf = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE);
    memcpy (p_buf->payload, signal_req, sizeof (signal_req));
+   p_buf->len = sizeof (signal_req);
+
    ret = pf_eth_recv (mock_os_data.eth_if_handle, net, p_buf);
    EXPECT_EQ (ret, 1);
    /* Wait for LED to flash three times at 1 Hz */
