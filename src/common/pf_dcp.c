@@ -179,22 +179,23 @@ static void pf_dcp_responder (pnet_t * net, void * arg, uint32_t current_time)
 
    pf_scheduler_reset_handle (&net->dcp_identresp_timeout);
 
-   if (p_buf != NULL)
+   if (p_buf == NULL)
    {
-      if (net->dcp_delayed_response_waiting == true)
-      {
-         if (pf_eth_send (net, net->pf_interface.main_port.handle, p_buf) > 0)
-         {
-            LOG_DEBUG (
-               PNET_LOG,
-               "DCP(%d): Sent a DCP identify response.\n",
-               __LINE__);
-         }
-
-         pnal_buf_free (p_buf);
-         net->dcp_delayed_response_waiting = false;
-      }
+      return;
    }
+
+   if (net->dcp_delayed_response_waiting == false)
+   {
+      return;
+   }
+
+   if (pf_eth_send (net, net->pf_interface.main_port.handle, p_buf) > 0)
+   {
+      LOG_DEBUG (PNET_LOG, "DCP(%d): Sent a DCP identify response.\n", __LINE__);
+   }
+
+   pnal_buf_free (p_buf);
+   net->dcp_delayed_response_waiting = false;
 }
 
 /**
@@ -314,40 +315,39 @@ static int pf_dcp_put_block (
    uint16_t value_length, /* Not including length of block_info */
    const void * p_value)
 {
-   int ret = -1;
    uint16_t b_len;
 
-   if ((*p_dst_pos + value_length) < dst_max)
+   if ((*p_dst_pos + value_length) >= dst_max)
    {
-      /* Adjust written block length if block_info is included */
-      b_len = value_length;
-      if (with_block_info)
-      {
-         b_len += sizeof (b_len);
-      }
-
-      pf_put_byte (opt, dst_max, p_dst, p_dst_pos);
-      pf_put_byte (sub, dst_max, p_dst, p_dst_pos);
-      pf_put_uint16 (true, b_len, dst_max, p_dst, p_dst_pos);
-      if (with_block_info == true)
-      {
-         pf_put_uint16 (true, block_info, dst_max, p_dst, p_dst_pos);
-      }
-      if ((p_value != NULL) && (value_length > 0))
-      {
-         pf_put_mem (p_value, value_length, dst_max, p_dst, p_dst_pos);
-      }
-
-      /* Add padding to align on uint16_t */
-      while ((*p_dst_pos) & 1)
-      {
-         pf_put_byte (0, dst_max, p_dst, p_dst_pos);
-      }
+      return 0; /* Skip excess data silently */
    }
 
-   ret = 0; /* Skip excess data silently !! */
+   /* Adjust written block length if block_info is included */
+   b_len = value_length;
+   if (with_block_info)
+   {
+      b_len += sizeof (b_len);
+   }
 
-   return ret;
+   pf_put_byte (opt, dst_max, p_dst, p_dst_pos);
+   pf_put_byte (sub, dst_max, p_dst, p_dst_pos);
+   pf_put_uint16 (true, b_len, dst_max, p_dst, p_dst_pos);
+   if (with_block_info == true)
+   {
+      pf_put_uint16 (true, block_info, dst_max, p_dst, p_dst_pos);
+   }
+   if ((p_value != NULL) && (value_length > 0))
+   {
+      pf_put_mem (p_value, value_length, dst_max, p_dst, p_dst_pos);
+   }
+
+   /* Add padding to align on uint16_t */
+   while ((*p_dst_pos) & 1)
+   {
+      pf_put_byte (0, dst_max, p_dst, p_dst_pos);
+   }
+
+   return 0;
 }
 
 /**
@@ -529,9 +529,9 @@ static int pf_dcp_get_req (
       break;
    }
 
-   if (ret == 0)
+   if (skip == false)
    {
-      if (skip == false)
+      if (ret == 0)
       {
          ret = pf_dcp_put_block (
             p_dst,
@@ -544,10 +544,7 @@ static int pf_dcp_get_req (
             value_length,
             p_value);
       }
-   }
-   else
-   {
-      if (skip == false)
+      else
       {
          /* GetNegResBlock consists of:
           * - option = Control                              1 byte
@@ -952,163 +949,168 @@ static int pf_dcp_get_set (
    pf_dcp_header_t * p_dst_dcphdr;
    const pnet_ethaddr_t * mac_address = pf_cmina_get_device_macaddr (net);
 
-   if (p_buf != NULL)
+   if (p_buf == NULL)
    {
-      /* Extract info from the request */
-      p_src = (uint8_t *)p_buf->payload;
-      src_pos = 0;
-      p_src_ethhdr = (pf_ethhdr_t *)&p_src[src_pos];
-
-      src_pos = frame_id_pos;
-      src_pos += sizeof (uint16_t); /* FrameId */
-      p_src_dcphdr = (pf_dcp_header_t *)&p_src[src_pos];
-
-      src_pos += sizeof (pf_dcp_header_t);
-      src_dcplen = (src_pos + ntohs (p_src_dcphdr->data_length));
-
-      p_rsp = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE); /* Get a transmit buffer
-                                                      for the response */
-      if (
-         (p_rsp != NULL) &&
-         (pf_dcp_check_sam (net, &p_src_ethhdr->src) == true) &&
-         pf_dcp_check_destination_address (mac_address, &p_src_ethhdr->dest))
-      {
-         /* Prepare the response */
-         p_dst = (uint8_t *)p_rsp->payload;
-         dst_pos = 0;
-         p_dst_ethhdr = (pf_ethhdr_t *)&p_dst[dst_pos];
-         dst_pos += sizeof (pf_ethhdr_t);
-
-         /* Insert frame ID into response */
-         p_dst[dst_pos++] = ((PF_DCP_GET_SET_FRAME_ID & 0xff00) >> 8);
-         p_dst[dst_pos++] = PF_DCP_GET_SET_FRAME_ID & 0xff;
-
-         p_dst_dcphdr = (pf_dcp_header_t *)&p_dst[dst_pos];
-         dst_pos += sizeof (pf_dcp_header_t);
-
-         /* Save position for later */
-         dst_start = dst_pos;
-
-         /* Set eth header in the response */
-         memcpy (
-            p_dst_ethhdr->dest.addr,
-            p_src_ethhdr->src.addr,
-            sizeof (pnet_ethaddr_t));
-         memcpy (
-            p_dst_ethhdr->src.addr,
-            mac_address->addr,
-            sizeof (pnet_ethaddr_t));
-         p_dst_ethhdr->type = htons (PNAL_ETHTYPE_PROFINET);
-
-         /* Copy DCP header from the request, and modify what is needed. */
-         *p_dst_dcphdr = *p_src_dcphdr;
-         p_dst_dcphdr->service_type = PF_DCP_SERVICE_TYPE_SUCCESS;
-         p_dst_dcphdr->response_delay_factor = htons (0);
-
-         if (p_src_dcphdr->service_id == PF_DCP_SERVICE_SET)
-         {
-            LOG_DEBUG (
-               PF_DCP_LOG,
-               "DCP(%d): Incoming DCP Set request. Xid: %" PRIu32 "\n",
-               __LINE__,
-               ntohl (p_src_dcphdr->xid));
-            p_src_block_hdr = (pf_dcp_block_hdr_t *)&p_src[src_pos];
-            src_pos += sizeof (*p_src_block_hdr); /* Point to the block value */
-            src_block_len = ntohs (p_src_block_hdr->block_length);
-
-            while (src_dcplen >= (src_pos + src_block_len))
-            {
-               /* Extract block qualifier */
-               src_block_qualifier = ntohs (*(uint16_t *)&p_src[src_pos]);
-               src_pos += sizeof (uint16_t);
-               src_block_len -= sizeof (uint16_t);
-
-               (void)pf_dcp_set_req (
-                  net,
-                  p_dst,
-                  &dst_pos,
-                  PF_FRAME_BUFFER_SIZE,
-                  p_src_block_hdr->option,
-                  p_src_block_hdr->sub_option,
-                  src_block_qualifier,
-                  src_block_len,
-                  &p_src[src_pos]);
-
-               /* Point to next block */
-               src_pos += src_block_len;
-
-               /* Skip padding to align on uint16_t */
-               while (src_pos & 1)
-               {
-                  src_pos++;
-               }
-               p_src_block_hdr = (pf_dcp_block_hdr_t *)&p_src[src_pos];
-               src_pos += sizeof (*p_src_block_hdr); /* Point to the block value
-                                                      */
-               src_block_len = ntohs (p_src_block_hdr->block_length);
-            }
-
-            pf_dcp_restart_sam_timeout (net, &p_src_ethhdr->src);
-         }
-         else if (p_src_dcphdr->service_id == PF_DCP_SERVICE_GET)
-         {
-            LOG_DEBUG (
-               PF_DCP_LOG,
-               "DCP(%d): Incoming DCP Get request. Xid: %" PRIu32 "\n",
-               __LINE__,
-               ntohl (p_src_dcphdr->xid));
-            while (src_dcplen >=
-                   (src_pos + sizeof (uint8_t) + sizeof (uint8_t)))
-            {
-               (void)pf_dcp_get_req (
-                  net,
-                  p_dst,
-                  &dst_pos,
-                  PF_FRAME_BUFFER_SIZE,
-                  p_src[src_pos],
-                  p_src[src_pos + 1],
-                  false,
-                  false);
-
-               /* Point to next block */
-               src_pos += sizeof (uint8_t) + sizeof (uint8_t);
-            }
-
-            pf_dcp_restart_sam_timeout (net, &p_src_ethhdr->src);
-         }
-         else
-         {
-            LOG_ERROR (
-               PF_DCP_LOG,
-               "DCP(%d): Unknown DCP service id %u. Xid: %" PRIu32 "\n",
-               __LINE__,
-               (unsigned)p_src_dcphdr->service_id,
-               ntohl (p_src_dcphdr->xid));
-            p_dst_dcphdr->service_type = PF_DCP_SERVICE_TYPE_NOT_SUPPORTED;
-         }
-
-         /* Insert final response length and ship it! */
-         p_dst_dcphdr->data_length = htons (dst_pos - dst_start);
-         p_rsp->len = dst_pos;
-
-         if (pf_eth_send (net, net->pf_interface.main_port.handle, p_rsp) > 0)
-         {
-            LOG_DEBUG (
-               PF_DCP_LOG,
-               "DCP(%d): Sent DCP Get/Set response\n",
-               __LINE__);
-         }
-
-         if (p_src_dcphdr->service_id == PF_DCP_SERVICE_SET)
-         {
-            pf_cmina_dcp_set_commit (net);
-         }
-
-         /* Send LLDP _after_ the response in order to pass I/O-tester tests. */
-         pf_pdport_lldp_restart_transmission (net);
-      }
+      return 1; /* Buffer handled */
    }
 
+   /* Extract info from the request */
+   p_src = (uint8_t *)p_buf->payload;
+   src_pos = 0;
+   p_src_ethhdr = (pf_ethhdr_t *)&p_src[src_pos];
+
+   src_pos = frame_id_pos;
+   src_pos += sizeof (uint16_t); /* FrameId */
+   p_src_dcphdr = (pf_dcp_header_t *)&p_src[src_pos];
+
+   src_pos += sizeof (pf_dcp_header_t);
+   src_dcplen = (src_pos + ntohs (p_src_dcphdr->data_length));
+
+   p_rsp = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE); /* Get a transmit buffer
+                                                   for the response */
+   if (p_rsp == NULL)
+   {
+      goto out;
+   }
+
+   if (pf_dcp_check_sam (net, &p_src_ethhdr->src) == false)
+   {
+      goto out;
+   }
+
+   if (pf_dcp_check_destination_address (mac_address, &p_src_ethhdr->dest) == false)
+   {
+      goto out;
+   }
+
+   /* Prepare the response */
+   p_dst = (uint8_t *)p_rsp->payload;
+   dst_pos = 0;
+   p_dst_ethhdr = (pf_ethhdr_t *)&p_dst[dst_pos];
+   dst_pos += sizeof (pf_ethhdr_t);
+
+   /* Insert frame ID into response */
+   p_dst[dst_pos++] = ((PF_DCP_GET_SET_FRAME_ID & 0xff00) >> 8);
+   p_dst[dst_pos++] = PF_DCP_GET_SET_FRAME_ID & 0xff;
+
+   p_dst_dcphdr = (pf_dcp_header_t *)&p_dst[dst_pos];
+   dst_pos += sizeof (pf_dcp_header_t);
+
+   /* Save position for later */
+   dst_start = dst_pos;
+
+   /* Set eth header in the response */
+   memcpy (
+      p_dst_ethhdr->dest.addr,
+      p_src_ethhdr->src.addr,
+      sizeof (pnet_ethaddr_t));
+   memcpy (p_dst_ethhdr->src.addr, mac_address->addr, sizeof (pnet_ethaddr_t));
+   p_dst_ethhdr->type = htons (PNAL_ETHTYPE_PROFINET);
+
+   /* Copy DCP header from the request, and modify what is needed. */
+   *p_dst_dcphdr = *p_src_dcphdr;
+   p_dst_dcphdr->service_type = PF_DCP_SERVICE_TYPE_SUCCESS;
+   p_dst_dcphdr->response_delay_factor = htons (0);
+
+   if (p_src_dcphdr->service_id == PF_DCP_SERVICE_SET)
+   {
+      LOG_DEBUG (
+         PF_DCP_LOG,
+         "DCP(%d): Incoming DCP Set request. Xid: %" PRIu32 "\n",
+         __LINE__,
+         ntohl (p_src_dcphdr->xid));
+      p_src_block_hdr = (pf_dcp_block_hdr_t *)&p_src[src_pos];
+      src_pos += sizeof (*p_src_block_hdr); /* Point to the block value */
+      src_block_len = ntohs (p_src_block_hdr->block_length);
+
+      while (src_dcplen >= (src_pos + src_block_len))
+      {
+         /* Extract block qualifier */
+         src_block_qualifier = ntohs (*(uint16_t *)&p_src[src_pos]);
+         src_pos += sizeof (uint16_t);
+         src_block_len -= sizeof (uint16_t);
+
+         (void)pf_dcp_set_req (
+            net,
+            p_dst,
+            &dst_pos,
+            PF_FRAME_BUFFER_SIZE,
+            p_src_block_hdr->option,
+            p_src_block_hdr->sub_option,
+            src_block_qualifier,
+            src_block_len,
+            &p_src[src_pos]);
+
+         /* Point to next block */
+         src_pos += src_block_len;
+
+         /* Skip padding to align on uint16_t */
+         while (src_pos & 1)
+         {
+            src_pos++;
+         }
+         p_src_block_hdr = (pf_dcp_block_hdr_t *)&p_src[src_pos];
+         src_pos += sizeof (*p_src_block_hdr); /* Point to the block value
+                                                */
+         src_block_len = ntohs (p_src_block_hdr->block_length);
+      }
+
+      pf_dcp_restart_sam_timeout (net, &p_src_ethhdr->src);
+   }
+   else if (p_src_dcphdr->service_id == PF_DCP_SERVICE_GET)
+   {
+      LOG_DEBUG (
+         PF_DCP_LOG,
+         "DCP(%d): Incoming DCP Get request. Xid: %" PRIu32 "\n",
+         __LINE__,
+         ntohl (p_src_dcphdr->xid));
+      while (src_dcplen >= (src_pos + sizeof (uint8_t) + sizeof (uint8_t)))
+      {
+         (void)pf_dcp_get_req (
+            net,
+            p_dst,
+            &dst_pos,
+            PF_FRAME_BUFFER_SIZE,
+            p_src[src_pos],
+            p_src[src_pos + 1],
+            false,
+            false);
+
+         /* Point to next block */
+         src_pos += sizeof (uint8_t) + sizeof (uint8_t);
+      }
+
+      pf_dcp_restart_sam_timeout (net, &p_src_ethhdr->src);
+   }
+   else
+   {
+      LOG_ERROR (
+         PF_DCP_LOG,
+         "DCP(%d): Unknown DCP service id %u. Xid: %" PRIu32 "\n",
+         __LINE__,
+         (unsigned)p_src_dcphdr->service_id,
+         ntohl (p_src_dcphdr->xid));
+      p_dst_dcphdr->service_type = PF_DCP_SERVICE_TYPE_NOT_SUPPORTED;
+   }
+
+   /* Insert final response length and ship it! */
+   p_dst_dcphdr->data_length = htons (dst_pos - dst_start);
+   p_rsp->len = dst_pos;
+
+   if (pf_eth_send (net, net->pf_interface.main_port.handle, p_rsp) > 0)
+   {
+      LOG_DEBUG (PF_DCP_LOG, "DCP(%d): Sent DCP Get/Set response\n", __LINE__);
+   }
+
+   if (p_src_dcphdr->service_id == PF_DCP_SERVICE_SET)
+   {
+      pf_cmina_dcp_set_commit (net);
+   }
+
+   /* Send LLDP _after_ the response in order to pass I/O-tester tests. */
+   pf_pdport_lldp_restart_transmission (net);
+
+out:
    if (p_buf != NULL)
    {
       pnal_buf_free (p_buf);
@@ -1220,157 +1222,165 @@ int pf_dcp_hello_req (pnet_t * net)
    pf_ip_suite_t ip_suite;
    const pnet_ethaddr_t * mac_address = pf_cmina_get_device_macaddr (net);
 
-   if (p_buf != NULL)
+   if (p_buf == NULL)
    {
-      p_dst = (uint8_t *)p_buf->payload;
-      if (p_dst != NULL)
-      {
-         dst_pos = 0;
-         p_ethhdr = (pf_ethhdr_t *)&p_dst[dst_pos];
-         memcpy (
-            p_ethhdr->dest.addr,
-            dcp_mc_addr_hello.addr,
-            sizeof (p_ethhdr->dest.addr));
-         memcpy (p_ethhdr->src.addr, mac_address->addr, sizeof (pnet_ethaddr_t));
-
-         p_ethhdr->type = htons (PNAL_ETHTYPE_PROFINET);
-         dst_pos += sizeof (pf_ethhdr_t);
-
-         /* Insert FrameId */
-         p_dst[dst_pos++] = (PF_DCP_HELLO_FRAME_ID & 0xff00) >> 8;
-         p_dst[dst_pos++] = PF_DCP_HELLO_FRAME_ID & 0x00ff;
-
-         p_dcphdr = (pf_dcp_header_t *)&p_dst[dst_pos];
-         p_dcphdr->service_id = PF_DCP_SERVICE_HELLO;
-         p_dcphdr->service_type = PF_DCP_SERVICE_TYPE_REQUEST;
-         p_dcphdr->xid = htonl (1);
-         p_dcphdr->response_delay_factor = htons (0);
-         p_dcphdr->data_length = htons (0); /* At the moment */
-         dst_pos += sizeof (pf_dcp_header_t);
-
-         dst_start_pos = dst_pos;
-
-         if (
-            pf_cmina_dcp_get_req (
-               net,
-               PF_DCP_OPT_DEVICE_PROPERTIES,
-               PF_DCP_SUB_DEV_PROP_NAME,
-               &value_length,
-               &p_value,
-               &block_error) == 0)
-         {
-            LOG_DEBUG (
-               PF_DCP_LOG,
-               "DCP(%d): Sending DCP Hello request. Station name: %s\n",
-               __LINE__,
-               (char *)p_value);
-            (void)pf_dcp_put_block (
-               p_dst,
-               &dst_pos,
-               PF_FRAME_BUFFER_SIZE,
-               PF_DCP_OPT_DEVICE_PROPERTIES,
-               PF_DCP_SUB_DEV_PROP_NAME,
-               true,
-               0,
-               (uint16_t)strlen ((char *)p_value),
-               p_value);
-         }
-
-         if (
-            pf_cmina_dcp_get_req (
-               net,
-               PF_DCP_OPT_IP,
-               PF_DCP_SUB_IP_PAR,
-               &value_length,
-               &p_value,
-               &block_error) == 0)
-         {
-            memcpy (&ip_suite, p_value, sizeof (ip_suite));
-            ip_suite.ip_addr = htonl (ip_suite.ip_addr);
-            ip_suite.ip_mask = htonl (ip_suite.ip_mask);
-            ip_suite.ip_gateway = htonl (ip_suite.ip_gateway);
-            (void)pf_dcp_put_block (
-               p_dst,
-               &dst_pos,
-               PF_FRAME_BUFFER_SIZE,
-               PF_DCP_OPT_IP,
-               PF_DCP_SUB_IP_PAR,
-               true,
-               0,
-               value_length,
-               &ip_suite);
-         }
-
-         if (
-            pf_cmina_dcp_get_req (
-               net,
-               PF_DCP_OPT_DEVICE_PROPERTIES,
-               PF_DCP_SUB_DEV_PROP_ID,
-               &value_length,
-               &p_value,
-               &block_error) == 0)
-         {
-            (void)pf_dcp_put_block (
-               p_dst,
-               &dst_pos,
-               PF_FRAME_BUFFER_SIZE,
-               PF_DCP_OPT_DEVICE_PROPERTIES,
-               PF_DCP_SUB_DEV_PROP_ID,
-               true,
-               0,
-               value_length,
-               p_value);
-         }
-         if (
-            pf_cmina_dcp_get_req (
-               net,
-               PF_DCP_OPT_DEVICE_PROPERTIES,
-               PF_DCP_SUB_DEV_PROP_OEM_ID,
-               &value_length,
-               &p_value,
-               &block_error) == 0)
-         {
-            (void)pf_dcp_put_block (
-               p_dst,
-               &dst_pos,
-               PF_FRAME_BUFFER_SIZE,
-               PF_DCP_OPT_DEVICE_PROPERTIES,
-               PF_DCP_SUB_DEV_PROP_OEM_ID,
-               true,
-               0,
-               value_length,
-               p_value);
-         }
-         if (
-            pf_cmina_dcp_get_req (
-               net,
-               PF_DCP_OPT_DEVICE_INITIATIVE,
-               PF_DCP_SUB_DEV_INITIATIVE_SUPPORT,
-               &value_length,
-               &p_value,
-               &block_error) == 0)
-         {
-            temp16 = htons (*p_value);
-            (void)pf_dcp_put_block (
-               p_dst,
-               &dst_pos,
-               PF_FRAME_BUFFER_SIZE,
-               PF_DCP_OPT_DEVICE_INITIATIVE,
-               PF_DCP_SUB_DEV_INITIATIVE_SUPPORT,
-               true,
-               0,
-               value_length,
-               &temp16);
-         }
-
-         /* Insert final response length and ship it! */
-         p_dcphdr->data_length = htons (dst_pos - dst_start_pos);
-         p_buf->len = dst_pos;
-
-         (void)pf_eth_send (net, net->pf_interface.main_port.handle, p_buf);
-      }
-      pnal_buf_free (p_buf);
+      return -1;
    }
+
+   p_dst = (uint8_t *)p_buf->payload;
+   if (p_dst == NULL)
+   {
+      pnal_buf_free (p_buf);
+      return -1;
+   }
+
+   dst_pos = 0;
+   p_ethhdr = (pf_ethhdr_t *)&p_dst[dst_pos];
+   memcpy (
+      p_ethhdr->dest.addr,
+      dcp_mc_addr_hello.addr,
+      sizeof (p_ethhdr->dest.addr));
+   memcpy (p_ethhdr->src.addr, mac_address->addr, sizeof (pnet_ethaddr_t));
+
+   p_ethhdr->type = htons (PNAL_ETHTYPE_PROFINET);
+   dst_pos += sizeof (pf_ethhdr_t);
+
+   /* Insert FrameId */
+   p_dst[dst_pos++] = (PF_DCP_HELLO_FRAME_ID & 0xff00) >> 8;
+   p_dst[dst_pos++] = PF_DCP_HELLO_FRAME_ID & 0x00ff;
+
+   p_dcphdr = (pf_dcp_header_t *)&p_dst[dst_pos];
+   p_dcphdr->service_id = PF_DCP_SERVICE_HELLO;
+   p_dcphdr->service_type = PF_DCP_SERVICE_TYPE_REQUEST;
+   p_dcphdr->xid = htonl (1);
+   p_dcphdr->response_delay_factor = htons (0);
+   p_dcphdr->data_length = htons (0); /* At the moment */
+   dst_pos += sizeof (pf_dcp_header_t);
+
+   dst_start_pos = dst_pos;
+
+   if (
+      pf_cmina_dcp_get_req (
+         net,
+         PF_DCP_OPT_DEVICE_PROPERTIES,
+         PF_DCP_SUB_DEV_PROP_NAME,
+         &value_length,
+         &p_value,
+         &block_error) == 0)
+   {
+      LOG_DEBUG (
+         PF_DCP_LOG,
+         "DCP(%d): Sending DCP Hello request. Station name: %s\n",
+         __LINE__,
+         (char *)p_value);
+      (void)pf_dcp_put_block (
+         p_dst,
+         &dst_pos,
+         PF_FRAME_BUFFER_SIZE,
+         PF_DCP_OPT_DEVICE_PROPERTIES,
+         PF_DCP_SUB_DEV_PROP_NAME,
+         true,
+         0,
+         (uint16_t)strlen ((char *)p_value),
+         p_value);
+   }
+
+   if (
+      pf_cmina_dcp_get_req (
+         net,
+         PF_DCP_OPT_IP,
+         PF_DCP_SUB_IP_PAR,
+         &value_length,
+         &p_value,
+         &block_error) == 0)
+   {
+      memcpy (&ip_suite, p_value, sizeof (ip_suite));
+      ip_suite.ip_addr = htonl (ip_suite.ip_addr);
+      ip_suite.ip_mask = htonl (ip_suite.ip_mask);
+      ip_suite.ip_gateway = htonl (ip_suite.ip_gateway);
+      (void)pf_dcp_put_block (
+         p_dst,
+         &dst_pos,
+         PF_FRAME_BUFFER_SIZE,
+         PF_DCP_OPT_IP,
+         PF_DCP_SUB_IP_PAR,
+         true,
+         0,
+         value_length,
+         &ip_suite);
+   }
+
+   if (
+      pf_cmina_dcp_get_req (
+         net,
+         PF_DCP_OPT_DEVICE_PROPERTIES,
+         PF_DCP_SUB_DEV_PROP_ID,
+         &value_length,
+         &p_value,
+         &block_error) == 0)
+   {
+      (void)pf_dcp_put_block (
+         p_dst,
+         &dst_pos,
+         PF_FRAME_BUFFER_SIZE,
+         PF_DCP_OPT_DEVICE_PROPERTIES,
+         PF_DCP_SUB_DEV_PROP_ID,
+         true,
+         0,
+         value_length,
+         p_value);
+   }
+
+   if (
+      pf_cmina_dcp_get_req (
+         net,
+         PF_DCP_OPT_DEVICE_PROPERTIES,
+         PF_DCP_SUB_DEV_PROP_OEM_ID,
+         &value_length,
+         &p_value,
+         &block_error) == 0)
+   {
+      (void)pf_dcp_put_block (
+         p_dst,
+         &dst_pos,
+         PF_FRAME_BUFFER_SIZE,
+         PF_DCP_OPT_DEVICE_PROPERTIES,
+         PF_DCP_SUB_DEV_PROP_OEM_ID,
+         true,
+         0,
+         value_length,
+         p_value);
+   }
+
+   if (
+      pf_cmina_dcp_get_req (
+         net,
+         PF_DCP_OPT_DEVICE_INITIATIVE,
+         PF_DCP_SUB_DEV_INITIATIVE_SUPPORT,
+         &value_length,
+         &p_value,
+         &block_error) == 0)
+   {
+      temp16 = htons (*p_value);
+      (void)pf_dcp_put_block (
+         p_dst,
+         &dst_pos,
+         PF_FRAME_BUFFER_SIZE,
+         PF_DCP_OPT_DEVICE_INITIATIVE,
+         PF_DCP_SUB_DEV_INITIATIVE_SUPPORT,
+         true,
+         0,
+         value_length,
+         &temp16);
+   }
+
+   /* Insert final response length and ship it! */
+   p_dcphdr->data_length = htons (dst_pos - dst_start_pos);
+   p_buf->len = dst_pos;
+
+   (void)pf_eth_send (net, net->pf_interface.main_port.handle, p_buf);
+
+   pnal_buf_free (p_buf);
 
    return 0;
 }
@@ -1452,7 +1462,7 @@ static int pf_dcp_identify_req (
    pf_dcp_block_hdr_t * p_src_block_hdr;
    uint16_t src_block_len;
 
-   pnal_buf_t * p_rsp;
+   pnal_buf_t * p_rsp = NULL;
    uint8_t * p_dst;
    uint16_t dst_pos = 0;
    uint16_t dst_start = 0;
@@ -1481,150 +1491,198 @@ static int pf_dcp_identify_req (
     * DeviceOptionsBlock ^ OEMDeviceIDBlock ^ MACAddressBlock ^ IPParameterBlock
     * ^ DHCPParameterBlock ^ ManufacturerSpecificParameterBlock
     */
-   p_rsp = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE); /* Get a transmit buffer for
-                                                   the response */
-   if ((p_buf != NULL) && (p_rsp != NULL))
+
+   if (p_buf == NULL)
    {
-      /* Setup access to the request */
-      p_src = (uint8_t *)p_buf->payload;
-      p_src_ethhdr = (pf_ethhdr_t *)p_src;
-      src_pos = frame_id_pos;
-      src_pos += sizeof (uint16_t); /* FrameId */
-      p_src_dcphdr = (pf_dcp_header_t *)&p_src[src_pos];
-      src_pos += sizeof (pf_dcp_header_t);
-      src_dcplen = (src_pos + ntohs (p_src_dcphdr->data_length));
+      return 1; /* Means: handled */
+   }
 
-      /* Prepare the response */
-      p_dst = (uint8_t *)p_rsp->payload;
-      dst_pos = 0;
-      p_dst_ethhdr = (pf_ethhdr_t *)p_dst;
-      dst_pos += sizeof (pf_ethhdr_t);
-      /* frame ID */
-      p_dst[dst_pos++] = ((PF_DCP_ID_RES_FRAME_ID & 0xff00) >> 8);
-      p_dst[dst_pos++] = PF_DCP_ID_RES_FRAME_ID & 0xff;
+   /* Setup access to the request */
+   p_src = (uint8_t *)p_buf->payload;
+   p_src_ethhdr = (pf_ethhdr_t *)p_src;
+   src_pos = frame_id_pos;
+   src_pos += sizeof (uint16_t); /* FrameId */
+   p_src_dcphdr = (pf_dcp_header_t *)&p_src[src_pos];
+   src_pos += sizeof (pf_dcp_header_t);
+   src_dcplen = (src_pos + ntohs (p_src_dcphdr->data_length));
 
-      p_dst_dcphdr = (pf_dcp_header_t *)&p_dst[dst_pos];
-      dst_pos += sizeof (pf_dcp_header_t);
+   p_rsp = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE); /* Get a transmit buffer
+                                                   for the response */
+   if (p_rsp == NULL)
+   {
+      LOG_ERROR (
+         PF_DCP_LOG,
+         "DCP(%d): Could not allocate memory for response to incoming DCP "
+         "identify request.\n",
+         __LINE__);
 
-      /* Save position for later */
-      dst_start = dst_pos;
+      goto out1;
+   }
 
-      memcpy (
-         p_dst_ethhdr->dest.addr,
-         p_src_ethhdr->src.addr,
-         sizeof (pnet_ethaddr_t));
-      memcpy (
-         p_dst_ethhdr->src.addr,
-         mac_address->addr,
-         sizeof (pnet_ethaddr_t));
-      p_dst_ethhdr->type = htons (PNAL_ETHTYPE_PROFINET);
+   /* Prepare the response */
+   p_dst = (uint8_t *)p_rsp->payload;
+   dst_pos = 0;
+   p_dst_ethhdr = (pf_ethhdr_t *)p_dst;
+   dst_pos += sizeof (pf_ethhdr_t);
+   /* frame ID */
+   p_dst[dst_pos++] = ((PF_DCP_ID_RES_FRAME_ID & 0xff00) >> 8);
+   p_dst[dst_pos++] = PF_DCP_ID_RES_FRAME_ID & 0xff;
 
-      /* Start with the request header and modify what is needed. */
-      *p_dst_dcphdr = *p_src_dcphdr;
-      p_dst_dcphdr->service_type = PF_DCP_SERVICE_TYPE_SUCCESS;
-      p_dst_dcphdr->response_delay_factor = htons (0);
+   p_dst_dcphdr = (pf_dcp_header_t *)&p_dst[dst_pos];
+   dst_pos += sizeof (pf_dcp_header_t);
 
-      /* The block header is expected to be 16-bit aligned */
-      p_src_block_hdr = (pf_dcp_block_hdr_t *)&p_src[src_pos];
-      src_pos += sizeof (*p_src_block_hdr); /* Point to the block value */
+   /* Save position for later */
+   dst_start = dst_pos;
 
-      src_block_len = ntohs (p_src_block_hdr->block_length);
+   memcpy (
+      p_dst_ethhdr->dest.addr,
+      p_src_ethhdr->src.addr,
+      sizeof (pnet_ethaddr_t));
+   memcpy (p_dst_ethhdr->src.addr, mac_address->addr, sizeof (pnet_ethaddr_t));
+   p_dst_ethhdr->type = htons (PNAL_ETHTYPE_PROFINET);
 
-      match = true; /* So far so good */
-      while ((ret == 0) && (first || (filter && match)) &&
-             (src_dcplen >= (src_pos + src_block_len)) &&
-             (dst_pos < PF_FRAME_BUFFER_SIZE))
+   /* Start with the request header and modify what is needed. */
+   *p_dst_dcphdr = *p_src_dcphdr;
+   p_dst_dcphdr->service_type = PF_DCP_SERVICE_TYPE_SUCCESS;
+   p_dst_dcphdr->response_delay_factor = htons (0);
+
+   /* The block header is expected to be 16-bit aligned */
+   p_src_block_hdr = (pf_dcp_block_hdr_t *)&p_src[src_pos];
+   src_pos += sizeof (*p_src_block_hdr); /* Point to the block value */
+
+   src_block_len = ntohs (p_src_block_hdr->block_length);
+
+   match = true; /* So far so good */
+   while ((ret == 0) && (first || (filter && match)) &&
+          (src_dcplen >= (src_pos + src_block_len)) &&
+          (dst_pos < PF_FRAME_BUFFER_SIZE))
+   {
+      /*
+       * At the start of the loop p_src_block_hdr shall point to the source
+       * block header and src_pos shall point to the block value. Also,
+       * src_block_len shall be set to block_length of the current buffer.
+       */
+      /*
+       * DCP-Identify-ReqPDU = DCP-IdentifyFilter-ReqPDU ^
+       * DCP-IdentifyAll-ReqPDU
+       *
+       * DCP-IdentifyAll-ReqPDU = DCP-MC-Header, AllSelectorOption (=0xff),
+       * SuboptionAllSelector (=0xff), DCPBlockLength (=0x02)
+       * DCP-IdentifyFilter-ReqPDU = DCP-MC-Header, [NameOfStationBlock] ^
+       * [AliasNameBlock], [IdentifyReqBlock] * a
+       *
+       * DCP-MC-Header = ServiceID, ServiceType, Xid, ResponseDelayFactor,
+       * DCPDataLength
+       *
+       * IdentifyReqBlock = DeviceRoleBlock ^ DeviceVendorBlock ^
+       * DeviceIDBlock ^ DeviceOptionsBlock ^ OEMDeviceIDBlock ^
+       * MACAddressBlock ^ IPParameterBlock ^ DHCPParameterBlock ^
+       * ManufacturerSpecificParameterBlock
+       */
+      if (
+         pf_cmina_dcp_get_req (
+            net,
+            p_src_block_hdr->option,
+            p_src_block_hdr->sub_option,
+            &value_length,
+            &p_value,
+            &block_error) == 0)
       {
-         /*
-          * At the start of the loop p_src_block_hdr shall point to the source
-          * block header and src_pos shall point to the block value. Also,
-          * src_block_len shall be set to block_length of the current buffer.
-          */
-         /*
-          * DCP-Identify-ReqPDU = DCP-IdentifyFilter-ReqPDU ^
-          * DCP-IdentifyAll-ReqPDU
-          *
-          * DCP-IdentifyAll-ReqPDU = DCP-MC-Header, AllSelectorOption (=0xff),
-          * SuboptionAllSelector (=0xff), DCPBlockLength (=0x02)
-          * DCP-IdentifyFilter-ReqPDU = DCP-MC-Header, [NameOfStationBlock] ^
-          * [AliasNameBlock], [IdentifyReqBlock] * a
-          *
-          * DCP-MC-Header = ServiceID, ServiceType, Xid, ResponseDelayFactor,
-          * DCPDataLength
-          *
-          * IdentifyReqBlock = DeviceRoleBlock ^ DeviceVendorBlock ^
-          * DeviceIDBlock ^ DeviceOptionsBlock ^ OEMDeviceIDBlock ^
-          * MACAddressBlock ^ IPParameterBlock ^ DHCPParameterBlock ^
-          * ManufacturerSpecificParameterBlock
-          */
-         if (
-            pf_cmina_dcp_get_req (
-               net,
-               p_src_block_hdr->option,
-               p_src_block_hdr->sub_option,
-               &value_length,
-               &p_value,
-               &block_error) == 0)
+         switch (p_src_block_hdr->option)
          {
-            switch (p_src_block_hdr->option)
+         case PF_DCP_OPT_ALL:
+            switch (p_src_block_hdr->sub_option)
             {
-            case PF_DCP_OPT_ALL:
+            case PF_DCP_SUB_ALL:
+#if LOG_INFO_ENABLED(PF_DCP_LOG)
+               identify_all = true;
+#endif
+               /* ToDo: Is there a bug in the PNIO tester? It sends
+                * src_block_len == 0! */
+               if (
+                  (first == true) &&
+                  ((src_block_len == 0x02) || (src_block_len == 0x00)))
+               {
+                  filter = false;
+               }
+               else
+               {
+                  ret = -1;
+               }
+               break;
+            default:
+               ret = -1;
+               break;
+            }
+            break;
+         case PF_DCP_OPT_IP:
+            if (filter == true)
+            {
+               /*
+                * MACAddressBlock = 0x01, 0x01, DCPBlockLength,
+                * MACAddressValue IPParameterBlock = 0x01, 0x02,
+                * DCPBlockLength, IPAddress, Subnetmask, StandardGateway
+                * Note: No query for FullSuite
+                */
                switch (p_src_block_hdr->sub_option)
                {
-               case PF_DCP_SUB_ALL:
-#if LOG_INFO_ENABLED(PF_DCP_LOG)
-                  identify_all = true;
-#endif
-                  /* ToDo: Is there a bug in the PNIO tester? It sends
-                   * src_block_len == 0! */
+               case PF_DCP_SUB_IP_MAC:
                   if (
-                     (first == true) &&
-                     ((src_block_len == 0x02) || (src_block_len == 0x00)))
+                     (memcmp (p_value, &p_src[src_pos], value_length) != 0) ||
+                     (src_block_len != value_length))
                   {
-                     filter = false;
+                     match = false;
                   }
-                  else
+                  break;
+               case PF_DCP_SUB_IP_PAR:
+                  if (
+                     (memcmp (p_value, &p_src[src_pos], value_length) != 0) ||
+                     (src_block_len != value_length))
                   {
-                     ret = -1;
+                     match = false;
                   }
                   break;
                default:
                   ret = -1;
                   break;
                }
-               break;
-            case PF_DCP_OPT_IP:
+            }
+            else
+            {
+               ret = -1;
+            }
+            break;
+         case PF_DCP_OPT_DEVICE_PROPERTIES:
+            /*
+             * DeviceVendorBlock = 0x02, 0x01, DCPBlockLength,
+             * DeviceVendorValue
+             *
+             * NameOfStationBlock = 0x02, 0x02, DCPBlockLength,
+             * NameOfStationValue
+             *
+             * DeviceIDBlock = 0x02, 0x03, DCPBlockLength, VendorIDHigh,
+             * VendorIDLow, DeviceIDHigh, DeviceIDLow
+             *
+             * DeviceRoleBlock = 0x02, 0x04, DCPBlockLength, DeviceRoleValue
+             *
+             * DeviceOptionsBlock = 0x02, 0x05, DCPBlockLength, (Option,
+             * Suboption)
+             *
+             * AliasNameBlock = 0x02, 0x06, DCPBlockLength, AliasNameValue
+             *
+             * OEMDeviceIDBlock = 0x02, 0x08, DCPBlockLength, VendorIDHigh,
+             * VendorIDLow, DeviceIDHigh, DeviceIDLow
+             */
+            switch (p_src_block_hdr->sub_option)
+            {
+            case PF_DCP_SUB_DEV_PROP_VENDOR:
                if (filter == true)
                {
-                  /*
-                   * MACAddressBlock = 0x01, 0x01, DCPBlockLength,
-                   * MACAddressValue IPParameterBlock = 0x01, 0x02,
-                   * DCPBlockLength, IPAddress, Subnetmask, StandardGateway
-                   * Note: No query for FullSuite
-                   */
-                  switch (p_src_block_hdr->sub_option)
+                  if (
+                     (memcmp (p_value, &p_src[src_pos], value_length) != 0) ||
+                     (src_block_len != value_length))
                   {
-                  case PF_DCP_SUB_IP_MAC:
-                     if (
-                        (memcmp (p_value, &p_src[src_pos], value_length) !=
-                         0) ||
-                        (src_block_len != value_length))
-                     {
-                        match = false;
-                     }
-                     break;
-                  case PF_DCP_SUB_IP_PAR:
-                     if (
-                        (memcmp (p_value, &p_src[src_pos], value_length) !=
-                         0) ||
-                        (src_block_len != value_length))
-                     {
-                        match = false;
-                     }
-                     break;
-                  default:
-                     ret = -1;
-                     break;
+                     match = false;
                   }
                }
                else
@@ -1632,167 +1690,102 @@ static int pf_dcp_identify_req (
                   ret = -1;
                }
                break;
-            case PF_DCP_OPT_DEVICE_PROPERTIES:
-               /*
-                * DeviceVendorBlock = 0x02, 0x01, DCPBlockLength,
-                * DeviceVendorValue
-                *
-                * NameOfStationBlock = 0x02, 0x02, DCPBlockLength,
-                * NameOfStationValue
-                *
-                * DeviceIDBlock = 0x02, 0x03, DCPBlockLength, VendorIDHigh,
-                * VendorIDLow, DeviceIDHigh, DeviceIDLow
-                *
-                * DeviceRoleBlock = 0x02, 0x04, DCPBlockLength, DeviceRoleValue
-                *
-                * DeviceOptionsBlock = 0x02, 0x05, DCPBlockLength, (Option,
-                * Suboption)
-                *
-                * AliasNameBlock = 0x02, 0x06, DCPBlockLength, AliasNameValue
-                *
-                * OEMDeviceIDBlock = 0x02, 0x08, DCPBlockLength, VendorIDHigh,
-                * VendorIDLow, DeviceIDHigh, DeviceIDLow
-                */
-               switch (p_src_block_hdr->sub_option)
-               {
-               case PF_DCP_SUB_DEV_PROP_VENDOR:
-                  if (filter == true)
-                  {
-                     if (
-                        (memcmp (p_value, &p_src[src_pos], value_length) !=
-                         0) ||
-                        (src_block_len != value_length))
-                     {
-                        match = false;
-                     }
-                  }
-                  else
-                  {
-                     ret = -1;
-                  }
-                  break;
-               case PF_DCP_SUB_DEV_PROP_NAME:
+            case PF_DCP_SUB_DEV_PROP_NAME:
 #if LOG_INFO_ENABLED(PF_DCP_LOG)
-                  stationname_position = src_pos;
-                  stationname_len = src_block_len;
+               stationname_position = src_pos;
+               stationname_len = src_block_len;
 #endif
-                  if (
-                     (memcmp (p_value, &p_src[src_pos], src_block_len) == 0) &&
-                     (p_value[src_block_len] == '\0'))
+               if (
+                  (memcmp (p_value, &p_src[src_pos], src_block_len) == 0) &&
+                  (p_value[src_block_len] == '\0'))
+               {
+                  if (first == true)
                   {
-                     if (first == true)
-                     {
-                        filter = true;
-                     }
+                     filter = true;
                   }
-                  else
+               }
+               else
+               {
+                  match = false;
+               }
+               break;
+            case PF_DCP_SUB_DEV_PROP_ID:
+               if (filter == true)
+               {
+                  if (
+                     (memcmp (p_value, &p_src[src_pos], value_length) != 0) ||
+                     (src_block_len != value_length))
                   {
                      match = false;
                   }
-                  break;
-               case PF_DCP_SUB_DEV_PROP_ID:
-                  if (filter == true)
-                  {
-                     if (
-                        (memcmp (p_value, &p_src[src_pos], value_length) !=
-                         0) ||
-                        (src_block_len != value_length))
-                     {
-                        match = false;
-                     }
-                  }
-                  else
-                  {
-                     ret = -1;
-                  }
-                  break;
-               case PF_DCP_SUB_DEV_PROP_ROLE:
-                  if (filter == true)
-                  {
-                     p_src_block_hdr->block_length += 1;
-                     if (
-                        (memcmp (p_value, &p_src[src_pos], value_length) !=
-                         0) ||
-                        (src_block_len != value_length))
-                     {
-                        match = false;
-                     }
-                  }
-                  else
-                  {
-                     ret = -1;
-                  }
-                  break;
-               case PF_DCP_SUB_DEV_PROP_OPTIONS:
-                  if (filter == true)
-                  {
-                     if (
-                        (memcmp (p_value, &p_src[src_pos], value_length) !=
-                         0) ||
-                        (src_block_len != value_length))
-                     {
-                        match = false;
-                     }
-                  }
-                  else
-                  {
-                     ret = -1;
-                  }
-                  break;
-               case PF_DCP_SUB_DEV_PROP_OEM_ID:
-                  if (filter == true)
-                  {
-                     if (
-                        (memcmp (p_value, &p_src[src_pos], value_length) !=
-                         0) ||
-                        (src_block_len != value_length))
-                     {
-                        match = false;
-                     }
-                  }
-                  else
-                  {
-                     ret = -1;
-                  }
-                  break;
-               case PF_DCP_SUB_DEV_PROP_INSTANCE:
-                  if (filter == true)
-                  {
-                     if (
-                        (memcmp (p_value, &p_src[src_pos], value_length) !=
-                         0) ||
-                        (src_block_len != value_length))
-                     {
-                        match = false;
-                     }
-                  }
-                  else
-                  {
-                     ret = -1;
-                  }
-                  break;
-               case PF_DCP_SUB_DEV_PROP_GATEWAY:
-                  if (filter == true)
-                  {
-                     if (
-                        (memcmp (p_value, &p_src[src_pos], value_length) !=
-                         0) ||
-                        (src_block_len != value_length))
-                     {
-                        match = false;
-                     }
-                  }
-                  else
-                  {
-                     ret = -1;
-                  }
-                  break;
-               default:
+               }
+               else
+               {
                   ret = -1;
-                  break;
                }
                break;
-            case PF_DCP_OPT_DHCP:
+            case PF_DCP_SUB_DEV_PROP_ROLE:
+               if (filter == true)
+               {
+                  p_src_block_hdr->block_length += 1;
+                  if (
+                     (memcmp (p_value, &p_src[src_pos], value_length) != 0) ||
+                     (src_block_len != value_length))
+                  {
+                     match = false;
+                  }
+               }
+               else
+               {
+                  ret = -1;
+               }
+               break;
+            case PF_DCP_SUB_DEV_PROP_OPTIONS:
+               if (filter == true)
+               {
+                  if (
+                     (memcmp (p_value, &p_src[src_pos], value_length) != 0) ||
+                     (src_block_len != value_length))
+                  {
+                     match = false;
+                  }
+               }
+               else
+               {
+                  ret = -1;
+               }
+               break;
+            case PF_DCP_SUB_DEV_PROP_OEM_ID:
+               if (filter == true)
+               {
+                  if (
+                     (memcmp (p_value, &p_src[src_pos], value_length) != 0) ||
+                     (src_block_len != value_length))
+                  {
+                     match = false;
+                  }
+               }
+               else
+               {
+                  ret = -1;
+               }
+               break;
+            case PF_DCP_SUB_DEV_PROP_INSTANCE:
+               if (filter == true)
+               {
+                  if (
+                     (memcmp (p_value, &p_src[src_pos], value_length) != 0) ||
+                     (src_block_len != value_length))
+                  {
+                     match = false;
+                  }
+               }
+               else
+               {
+                  ret = -1;
+               }
+               break;
+            case PF_DCP_SUB_DEV_PROP_GATEWAY:
                if (filter == true)
                {
                   if (
@@ -1811,147 +1804,162 @@ static int pf_dcp_identify_req (
                ret = -1;
                break;
             }
-            src_pos += src_block_len;
-
-            /* Skip padding to align on uint16_t */
-            while (src_pos & 1)
+            break;
+         case PF_DCP_OPT_DHCP:
+            if (filter == true)
             {
-               src_pos++;
-            }
-            /* Prepare for the next round */
-            p_src_block_hdr = (pf_dcp_block_hdr_t *)&p_src[src_pos];
-            src_block_len = ntohs (p_src_block_hdr->block_length);
-            src_pos += sizeof (*p_src_block_hdr);
-         }
-         else if (
-            (p_src_block_hdr->option == PF_DCP_OPT_DEVICE_PROPERTIES) &&
-            (p_src_block_hdr->sub_option == PF_DCP_SUB_DEV_PROP_ALIAS))
-         {
-#if LOG_INFO_ENABLED(PF_DCP_LOG)
-            alias_position = src_pos;
-            alias_len = src_block_len;
-#endif
-            if (src_block_len < PF_ALIAS_NAME_MAX_SIZE)
-            {
-               memcpy (alias, &p_src[src_pos], src_block_len);
-               alias[src_block_len] = '\0';
-               if (pf_lldp_is_alias_matching (net, alias))
-               {
-                  if (first == true)
-                  {
-                     p_req_alias_name = alias;
-                     filter = true;
-                  }
-               }
-               else
+               if (
+                  (memcmp (p_value, &p_src[src_pos], value_length) != 0) ||
+                  (src_block_len != value_length))
                {
                   match = false;
                }
             }
             else
             {
+               ret = -1;
+            }
+            break;
+         default:
+            ret = -1;
+            break;
+         }
+         src_pos += src_block_len;
+
+         /* Skip padding to align on uint16_t */
+         while (src_pos & 1)
+         {
+            src_pos++;
+         }
+         /* Prepare for the next round */
+         p_src_block_hdr = (pf_dcp_block_hdr_t *)&p_src[src_pos];
+         src_block_len = ntohs (p_src_block_hdr->block_length);
+         src_pos += sizeof (*p_src_block_hdr);
+      }
+      else if (
+         (p_src_block_hdr->option == PF_DCP_OPT_DEVICE_PROPERTIES) &&
+         (p_src_block_hdr->sub_option == PF_DCP_SUB_DEV_PROP_ALIAS))
+      {
+#if LOG_INFO_ENABLED(PF_DCP_LOG)
+         alias_position = src_pos;
+         alias_len = src_block_len;
+#endif
+         if (src_block_len < PF_ALIAS_NAME_MAX_SIZE)
+         {
+            memcpy (alias, &p_src[src_pos], src_block_len);
+            alias[src_block_len] = '\0';
+            if (pf_lldp_is_alias_matching (net, alias))
+            {
+               if (first == true)
+               {
+                  p_req_alias_name = alias;
+                  filter = true;
+               }
+            }
+            else
+            {
                match = false;
             }
-
-            src_pos += src_block_len;
-
-            /* Skip padding to align on uint16_t */
-            while (src_pos & 1)
-            {
-               src_pos++;
-            }
-            /* Prepare for the next round */
-            p_src_block_hdr = (pf_dcp_block_hdr_t *)&p_src[src_pos];
-            src_block_len = ntohs (p_src_block_hdr->block_length);
-            src_pos += sizeof (*p_src_block_hdr);
          }
          else
          {
-            LOG_DEBUG (
-               PF_DCP_LOG,
-               "DCP(%d): Unknown incoming DCP identify request.\n",
-               __LINE__);
-            ret = -1; /* Give up on bad request */
+            match = false;
          }
 
-         first = false;
-      }
+         src_pos += src_block_len;
 
-      if ((ret == 0) && (match == true))
-      {
-
-         /* Build the response */
-         for (ix = 0; ix < NELEMENTS (device_options); ix++)
+         /* Skip padding to align on uint16_t */
+         while (src_pos & 1)
          {
-            pf_dcp_get_req (
-               net,
-               p_dst,
-               &dst_pos,
-               PF_FRAME_BUFFER_SIZE,
-               device_options[ix].opt,
-               device_options[ix].sub,
-               true,
-               p_req_alias_name);
+            src_pos++;
          }
-
-         /* Insert final response length and ship it! */
-         p_dst_dcphdr->data_length = htons (dst_pos - dst_start);
-         p_rsp->len = dst_pos;
-
-         net->dcp_delayed_response_waiting = true;
-         response_delay = pf_dcp_calculate_response_delay (
-            mac_address,
-            ntohs (p_src_dcphdr->response_delay_factor));
-#if LOG_INFO_ENABLED(PF_DCP_LOG)
-         LOG_INFO (
-            PF_DCP_LOG,
-            "DCP(%d): Responding to incoming DCP identify request. All: %d "
-            "StationName: %.*s Alias: %.*s  Delay %" PRIu32 " us. Xid: %" PRIu32
-            "\n",
-            __LINE__,
-            identify_all,
-            stationname_len,
-            &p_src[stationname_position], /* Not terminated */
-            alias_len,
-            &p_src[alias_position], /* Not terminated */
-            response_delay,
-            ntohl (p_src_dcphdr->xid));
-#endif
-
-         (void)pf_scheduler_add (
-            net,
-            response_delay,
-            pf_dcp_responder,
-            p_rsp,
-            &net->dcp_identresp_timeout);
+         /* Prepare for the next round */
+         p_src_block_hdr = (pf_dcp_block_hdr_t *)&p_src[src_pos];
+         src_block_len = ntohs (p_src_block_hdr->block_length);
+         src_pos += sizeof (*p_src_block_hdr);
       }
       else
       {
-#if LOG_INFO_ENABLED(PF_DCP_LOG)
-         LOG_INFO (
+         LOG_DEBUG (
             PF_DCP_LOG,
-            "DCP(%d): No match for incoming DCP identify request. All: %d "
-            "StationName: %.*s Alias: %.*s Xid: %" PRIu32 "\n",
-            __LINE__,
-            identify_all,
-            stationname_len,
-            &p_src[stationname_position], /* Not terminated */
-            alias_len,
-            &p_src[alias_position], /* Not terminated */
-            ntohl (p_src_dcphdr->xid));
-#endif
-         pnal_buf_free (p_rsp);
+            "DCP(%d): Unknown incoming DCP identify request.\n",
+            __LINE__);
+         ret = -1; /* Give up on bad request */
       }
+
+      first = false;
+   }
+
+   if ((ret == 0) && (match == true))
+   {
+
+      /* Build the response */
+      for (ix = 0; ix < NELEMENTS (device_options); ix++)
+      {
+         pf_dcp_get_req (
+            net,
+            p_dst,
+            &dst_pos,
+            PF_FRAME_BUFFER_SIZE,
+            device_options[ix].opt,
+            device_options[ix].sub,
+            true,
+            p_req_alias_name);
+      }
+
+      /* Insert final response length and ship it! */
+      p_dst_dcphdr->data_length = htons (dst_pos - dst_start);
+      p_rsp->len = dst_pos;
+
+      net->dcp_delayed_response_waiting = true;
+      response_delay = pf_dcp_calculate_response_delay (
+         mac_address,
+         ntohs (p_src_dcphdr->response_delay_factor));
+#if LOG_INFO_ENABLED(PF_DCP_LOG)
+      LOG_INFO (
+         PF_DCP_LOG,
+         "DCP(%d): Responding to incoming DCP identify request. All: %d "
+         "StationName: %.*s Alias: %.*s  Delay %" PRIu32 " us. Xid: %" PRIu32
+         "\n",
+         __LINE__,
+         identify_all,
+         stationname_len,
+         &p_src[stationname_position], /* Not terminated */
+         alias_len,
+         &p_src[alias_position], /* Not terminated */
+         response_delay,
+         ntohl (p_src_dcphdr->xid));
+#endif
+
+      (void)pf_scheduler_add (
+         net,
+         response_delay,
+         pf_dcp_responder,
+         p_rsp,
+         &net->dcp_identresp_timeout);
+
+      /* Note: Do not free p_rsp, it is used in pf_dcp_responder() */
    }
    else
    {
-      LOG_ERROR (
+#if LOG_INFO_ENABLED(PF_DCP_LOG)
+      LOG_INFO (
          PF_DCP_LOG,
-         "DCP(%d): Could not allocate memory for incoming DCP identify "
-         "request.\n",
-         __LINE__);
+         "DCP(%d): No match for incoming DCP identify request. All: %d "
+         "StationName: %.*s Alias: %.*s Xid: %" PRIu32 "\n",
+         __LINE__,
+         identify_all,
+         stationname_len,
+         &p_src[stationname_position], /* Not terminated */
+         alias_len,
+         &p_src[alias_position], /* Not terminated */
+         ntohl (p_src_dcphdr->xid));
+#endif
+
+      pnal_buf_free (p_rsp);
    }
 
+out1:
    if (p_buf != NULL)
    {
       pnal_buf_free (p_buf);
