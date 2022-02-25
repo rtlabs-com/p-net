@@ -42,3 +42,12 @@ doc/_copied
 
 # Editor files
 .vscode/
+
+# Sampleapp dummy LED files
+pnet_led*.txt
+
+# Sampleapp dummy button files (typically named by user)
+*button*.txt
+
+# Persistent data storage
+pnet_data*.bin

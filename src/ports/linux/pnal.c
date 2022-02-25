@@ -236,10 +236,10 @@ static void os_ip_to_string (pnal_ipaddr_t ip, char * outputstring)
       outputstring,
       PNAL_INET_ADDRSTR_SIZE,
       "%u.%u.%u.%u",
-      (uint8_t) ((ip >> 24) & 0xFF),
-      (uint8_t) ((ip >> 16) & 0xFF),
-      (uint8_t) ((ip >> 8) & 0xFF),
-      (uint8_t) (ip & 0xFF));
+      (uint8_t)((ip >> 24) & 0xFF),
+      (uint8_t)((ip >> 16) & 0xFF),
+      (uint8_t)((ip >> 8) & 0xFF),
+      (uint8_t)(ip & 0xFF));
 }
 
 int pnal_set_ip_suite (
@@ -316,10 +316,10 @@ static pnal_eth_mau_t calculate_mau_type (uint32_t speed, uint8_t duplex)
 }
 
 /**
- * Calculate advertised capabilites
+ * Calculate advertised capabilities
  *
- * @param advertised       In:    Linux advertised capabilites as a bitfield
- * @return Profinet advertised capabilites as a bitfield
+ * @param advertised       In:    Linux advertised capabilities as a bitfield
+ * @return Profinet advertised capabilities as a bitfield
  */
 static uint16_t calculate_capabilities (uint32_t advertised)
 {

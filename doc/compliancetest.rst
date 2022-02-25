@@ -578,6 +578,9 @@ Run with PLC for 10 minutes without errors.
 If the device under test has more than one port, there should be 5 IO-devices
 connected to the non-PLC port.
 
+For the cyclic data, use one input module and one output module.
+The PLC should be programmed to continuously read out record data.
+
 The timing should be the fastest allowed according to the GSDML
 file, and use 3 "accepted update cycles without IO data".
 Record startup and data exchange using Wireshark.
@@ -694,7 +697,7 @@ with another IO-device with digital inputs and outputs. Default connection:
 * Output ``%Q0.1`` Qx_Error_RDREC
 
 Delete the existing "dut" device.
-Import the GSDML file of your device (the DUT), and insert you device.
+Import the GSDML file of your device (the DUT), and insert your device.
 Plug relevant modules into the slots.
 Give it the station name ``dut``, and it should use the IP address
 ``192.168.0.50``. Connect it to the PLC via the "Network view".
@@ -724,7 +727,7 @@ reading out of parameter values, but you need instead to force the corresponding
 PLC program variable to a high level. In the left side menu use "Watch and
 force tables" (below the PLC), and add a new entry by clicking an empty row
 in the "Name" column, and select "Ix_Req". When later in online mode, click
-the small "Show/hide all modify colmns" to show the column. Enter "TRUE" in
+the small "Show/hide all modify columns" to show the column. Enter "TRUE" in
 the "Modify value" on the line for "Ix_Req". Select that line by enabling
 the corresponding check box. Press the "Modify all selected values once
 and now".
@@ -739,8 +742,9 @@ test bundle. The program ends up in ``/root/Netload``. See the PDF
 how to start the program.
 
 The SL1-tester has a number of template ``.pcap`` files, and rewrites those
-files with the MAC address of the SL1-tester laptop and the DUT. The MAC of
-the DUT is found with the ``arping`` Linux command.
+files with the MAC address of the SL1-tester laptop and the DUT.
+Rewriting is done using the Bittwist editor tool (``bittwiste``).
+The MAC of the DUT is found with the ``arping`` Linux command.
 Actual sending of frames is done with the ``packETHcli`` Linux command.
 
 
@@ -779,10 +783,12 @@ verified by studying the diagnostic log of the PLC afterwards.
 | Faulty         | 1 hour 20 min | 1-63          | 100%                              |
 +----------------+---------------+---------------+-----------------------------------+
 
+For the "faulty" test set up, there is no difference between the different netload classes.
+
 In the TIA portal, make sure you are "Offline" with the PLC (otherwise there
 will be even more additional network load).
 
-Make sure that the software version you run on the DUT has the correct settings,
+Make sure that the software you run on the DUT has the correct compile time settings,
 for example log level.
 
 * Verify that the PLC clock setting is correct.
@@ -795,10 +801,61 @@ for example log level.
 * Verify that there hasn't been any communication breakdown, by looking in
   the PLC diagnostic buffer (via TIA portal).
 
+If the device under test has a 100 Mbit/s, use the 100 Mbit/s setting in the test
+program otherwise 1 Gbit/s.
+
 Each test case has a duration of 1 minute, except case 15 - 16 and 116 - 117
 which runs for 3 minutes each. Test case 101 and 102 runs until the sequence
 is completed. If the tests take longer than that, wrong settings have been
 used for the SL1-tester.
+
+Test cases for Netload class I. Duration is 1 minute, except where noted otherwise:
+
+========= ===================================== ================== ==================
+Test case Description                           "Normal" packets/s "Faulty" packets/s
+========= ===================================== ================== ==================
+101       DCP scanning (manual review)          Approx 5           -
+102       ARP scanning (manual review)          Approx 5           -
+103-104   Ping                                  10                 -
+105-108   UDP malformed                         10                 -
+109       IP malformed                          10                 -
+110-114   SNMP                                  10                 -
+115       UDP malformed                         10                 -
+1-6       Configuration test protocol "CRAP"    820-15000          8000-150000
+7-8       Ping                                  10-15              110000-150000
+9-11      TCP                                   1-15               8000-150000
+12-14     UDP                                   8-150              8000-150000
+15-16     ARP, 3 minutes                        50                 150000
+17        ARP                                   15                 150000
+18-20     UDP                                   0.8-15             8000-150000
+21        LLDP                                  8                  87000
+22-23     Ping                                  10000-15000        110000-150000
+24-26     TCP                                   800-15000          8000-150000
+27-29     UDP                                   800-15000          8000-150000
+30        DHCPv6                                7                  70000
+31-33     ICMPv6                                11-14              110000-140000
+34        LLMNR                                 10                 98000
+35        MDNS                                  11                 110000
+36        SSDP                                  6                  62000
+37-42     Profinet cyclic data (RTC)            0.8-15             8000-150000
+43-44     Profinet alarm (RTA)                  15                 150000
+45-50     Profinet cyclic data (RTC)            800-15000          8000-150000
+51-52     Profinet alarm (RTA)                  14000-15000        150000
+53-54     DCP                                   50-70              100000-150000
+55        PTCP                                  14                 140000
+56-60     MRP                                   1400-1500          140000-150000
+61-63     PTCP                                  15-140             1100000-150000
+========= ===================================== ================== ==================
+
+Calculation example for 100 Mbit/s, which allows approximately 10 MByte/s payload:
+
+============= ==========
+Packet size   Packets/s
+============= ==========
+10 Bytes      1000000
+100 Bytes     100000
+1000 Bytes    10000
+============= ==========
 
 If there are problems during the "normal" mode, study the error LED on the
 PLC to detect which scenario that is causing the malfunction.

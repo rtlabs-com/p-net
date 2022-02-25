@@ -5,3 +5,4 @@ breathe
 sphinxcontrib-googleanalytics
 sphinxcontrib-spelling
 rst2pdf
+codespell

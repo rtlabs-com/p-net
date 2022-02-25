@@ -38,11 +38,10 @@ extern "C" {
 #include "pnal_sys.h"
 
 #define PNAL_MAKEU32(a, b, c, d)                                               \
-   (((uint32_t) ((a)&0xff) << 24) | ((uint32_t) ((b)&0xff) << 16) |            \
-    ((uint32_t) ((c)&0xff) << 8) | (uint32_t) ((d)&0xff))
+   (((uint32_t)((a)&0xff) << 24) | ((uint32_t)((b)&0xff) << 16) |              \
+    ((uint32_t)((c)&0xff) << 8) | (uint32_t)((d)&0xff))
 
-#define PNAL_MAKEU16(a, b)                                                     \
-   (((uint16_t) ((a)&0xff) << 8) | (uint16_t) ((b)&0xff))
+#define PNAL_MAKEU16(a, b) (((uint16_t)((a)&0xff) << 8) | (uint16_t)((b)&0xff))
 
 #define PNAL_INET_ADDRSTR_SIZE 16 /** Incl termination */
 #define PNAL_ETH_ADDRSTR_SIZE  18 /** Incl termination */
@@ -515,7 +514,7 @@ int pnal_get_hostname (char * hostname);
  * @param p_netmask        In:    Netmask
  * @param p_gw             In:    Default gateway
  * @param hostname         In:    Host name, for example my_laptop_4
- * @param permanent        In:    1 if changes are permanent, or 0 if temportary
+ * @param permanent        In:    1 if changes are permanent, or 0 if temporary
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */

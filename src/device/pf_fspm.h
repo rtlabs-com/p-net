@@ -57,7 +57,7 @@ int16_t pf_fspm_get_min_device_interval (const pnet_t * net);
  * Logbooks are described in Profinet 2.4 Services, section 7.3.6 "LogBook ASE"
  *
  * @param net              InOut: The p-net stack instance
- * @param arep             In:   The AREP, indentifying the AR.
+ * @param arep             In:   The AREP, identifying the AR.
  * @param p_pnio_status    In:   The PNIO status.
  * @param entry_detail     In:   Additional application information.
  */

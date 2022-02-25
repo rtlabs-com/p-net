@@ -13,15 +13,15 @@ Download and installation of Codesys Development System on a Windows PC
 The program can be downloaded from https://store.codesys.com/codesys.html
 A trial version is available. Registration is required.
 
-Download "CODESYS Development System V3". The file is named for example
-"CODESYS 64 3.5.15.30.exe". Install it on a Windows machine by double clicking
-the icon.
+Download “CODESYS Development System V3", in the latest available version.
+The file is named :file:`CODESYS 64 <VERSION>.exe`. Install it on a Windows
+machine by double clicking the icon.
 
-Also download "CODESYS Control for Raspberry Pi SL".
-You can still download it without paying the listed price, but it will then
-run as a trial version for which you need to restart the Codesys runtime on the
-Raspberry Pi every two hours.
-Install it by double-clicking the ``.package`` file.
+From within Codesys, install the "Codesys control for Raspberry Pi"
+by using the menu Tools/"Codesys installer". In the "AddOns" section
+use "Browse" and search for "raspberry". Select the relevant row in the
+results, and click "Install". When completed, there should be an entry
+"Update Raspberry Pi" available in the Tools menu.
 
 Restart the program after the installation.
 
@@ -40,6 +40,8 @@ know its IP address, even if it doesn't show up during the scan.
 
 Click "Install" for the Codesys Runtime package. Use "Standard" runtime
 in the pop-up window.
+
+The runtime will be installed in the :file:`/opt/codesys` directory on the Raspberry Pi.
 
 
 Create a project in Codesys
@@ -78,7 +80,7 @@ Double-click the "PN_controller" node in the left menu. Adjust the IP range
 using "First IP" and "Last IP" to both have the existing IP-address of your
 IO-device (for example a Linux laptop or embedded Linux board running the
 sample_app). For this tutorial we use the “First IP” ``192.168.0.50``
-and “Last IP” ``192.168.0.60``.
+and also the “Last IP” ``192.168.0.50``.
 
 Double-click the "P_Net_Sample_App" node in the left menu. Set the
 IP-address to the existing address of your IO-device.
@@ -134,19 +136,19 @@ On the "DIO_8xLogicLevel" node in the left-side menu,
 right-click and select "Edit IO mapping".
 Open the "Input 8 bits" row by clicking the small ``+`` sign.
 Double-click the icon on the row that you would like the edit.
-Map "Input Bit 7" (found via Application/PLC_PRG) to "in_pin_button_LED",
+Map "Input Bit 7" to "in_pin_button_LED" (found via Application/PLC_PRG),
 and "Output Bit 7" to "out_pin_LED".
 
 In the "Application -> MainTask" select "Cyclic" with 4 ms.
 
 In the "Application -> Profinet_CommunicationTask" select "Cyclic" with 10 ms.
-Use priority 30.
+Use priority 14.
 
 
 Transfer controller application to (controller) Raspberry Pi
 ------------------------------------------------------------
 
-* In the top menu, use Build -> Build.
+* In the top menu, use Build -> "Generate Code".
 * Transfer the application to the Raspberry Pi by using the top menu
   Online -> Login. Press "Yes" in the pop-up window.
 * In the top menu, use Debug -> Start

@@ -140,7 +140,7 @@ int main (void)
 
    APP_LOG_INFO ("\n** Starting P-Net sample application " PNET_VERSION
                  " **\n");
-   APP_LOG_INFO ("\nType help to a list ofsupported shell commands.\n"
+   APP_LOG_INFO ("\nType help to a list of supported shell commands.\n"
                  "Type help <cmd> to get a command description.\n"
                  "For example: help pnio_show\n\n");
    APP_LOG_INFO (

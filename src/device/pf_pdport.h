@@ -51,7 +51,7 @@ int pf_pdport_reset_all (pnet_t * net);
 void pf_pdport_remove_data_files (const char * file_directory);
 
 /**
- * Notity PDPort that a new AR has been set up.
+ * Notify PDPort that a new AR has been set up.
  * @param net              InOut: The p-net stack instance
  * @param p_ar             In:    The AR instance.
  */
@@ -195,7 +195,7 @@ void pf_pdport_update_eth_status (pnet_t * net);
  * @param net              InOut: The p-net stack instance
  * @param loc_port_num     In:    Local port number.
  *                                Valid range: 1 .. num_physical_ports
- * @return The ethernet staus for local port
+ * @return The ethernet status for local port
  */
 pnal_eth_status_t pf_pdport_get_eth_status (pnet_t * net, int loc_port_num);
 

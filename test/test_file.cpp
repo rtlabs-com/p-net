@@ -280,7 +280,7 @@ TEST_F (FileUnitTest, FileCheckMagicAndVersion)
    mock_os_data.file_content[4] = temporary_byte; /* Reset to initial value */
 
    /* Verify that mock does not delete file for other name */
-   pf_file_clear (TEST_FILE_DIRECTORY, "nonexistant file");
+   pf_file_clear (TEST_FILE_DIRECTORY, "nonexistent file");
    EXPECT_GT (mock_os_data.file_size, 1);
 
    /* Clear: Invalid directory */

@@ -255,7 +255,7 @@ static void pf_dcp_restart_sam_timeout (pnet_t * net, const pnet_ethaddr_t * mac
  *
  * @param net              InOut: The p-net stack instance
  * @param mac              In: Remote MAC address
- * @return true if DDP communication is allowed with respect to SAM.
+ * @return true if DCP communication is allowed with respect to SAM.
  *         false if not.
  */
 static bool pf_dcp_check_sam (pnet_t * net, const pnet_ethaddr_t * mac)
@@ -598,7 +598,7 @@ static void pf_dcp_control_signal_led (
    void * arg,
    uint32_t current_time)
 {
-   uint32_t state = (uint32_t) (uintptr_t)arg;
+   uint32_t state = (uint32_t)(uintptr_t)arg;
 
    if ((state % 2) == 1)
    {
@@ -924,6 +924,7 @@ static int pf_dcp_set_req (
  * @param frame_id         In:    The frame id.
  * @param p_buf            InOut: The Ethernet frame. Will be freed.
  * @param frame_id_pos     In:    Position of the frame id in the buffer.
+ *                                Depends on whether VLAN tagging is used.
  * @param p_arg            In:    Not used.
  * @return  0     If the frame was NOT handled by this function.
  *          1     If the frame was handled and the buffer freed.
@@ -1134,6 +1135,7 @@ static int pf_dcp_get_set (
  * @param frame_id         In:    The frame id.
  * @param p_buf            InOut: The Ethernet frame. Will be freed.
  * @param frame_id_pos     In:    Position of the frame id in the buffer.
+ *                                Depends on whether VLAN tagging is used.
  * @param p_arg            In:    Not used.
  * @return  0     If the frame was NOT handled by this function.
  *          1     If the frame was handled and the buffer freed.
@@ -1425,6 +1427,7 @@ uint32_t pf_dcp_calculate_response_delay (
  * @param frame_id         In:    The frame id.
  * @param p_buf            In:    The Ethernet frame.
  * @param frame_id_pos     In:    Position of the frame id in the buffer.
+ *                                Depends on whether VLAN tagging is used.
  * @param p_arg            In:    Not used.
  * @return  0     If the frame was NOT handled by this function.
  *          1     If the frame was handled and the buffer freed.

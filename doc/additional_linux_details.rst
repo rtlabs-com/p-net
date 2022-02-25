@@ -10,7 +10,7 @@ You need to have cmake version at least 3.14 installed. It is available in
 Ubuntu 19.04 and later.
 
 To install on Ubuntu 16.04 or 18.04, follow the instructions here:
-https://blog.kitware.com/ubuntu-cmake-repository-now-available/
+https://www.kitware.com/ubuntu-cmake-repository-now-available/
 
 It is also possible to install it via snap::
 

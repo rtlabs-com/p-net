@@ -192,4 +192,46 @@ This is an example if you populate slot 1 to 3 with different modules.
 | 3    | 1       | "8-bit out" module                         | IOCS                                    | data (1 byte) + IOPS                       |
 +------+---------+--------------------------------------------+-----------------------------------------+--------------------------------------------+
 
-Note that the submodules (in subslots) in slot 0 do not send any cyclic data, but they behave as inputs (as they send cyclic IOPS).
+Note that the submodules (in subslots) in slot 0 do not send any cyclic data,
+but they behave as inputs (as they send cyclic IOPS).
+
+Output (from PLC)::
+
+   +----------------+                +-----------+
+   | IO-device      |                | PLC       |
+   |  +----------+  |    DATA        |           |
+   |  |          |  |  <-----------  |           |
+   |  |  CPM     |  |                |           |
+   |  |          |  |    IOPS        |           |
+   |  |          |  |  <-----------  |           |
+   |  +----------+  |                |           |
+   |                |                |           |
+   |  +----------+  |                |           |
+   |  |          |  |                |           |
+   |  |  PPM     |  |                |           |
+   |  |          |  |    IOCS        |           |
+   |  |          |  |  ----------->  |           |
+   |  +----------+  |                |           |
+   |                |                |           |
+   +----------------+                +-----------+
+
+
+Input (to PLC)::
+
+   +----------------+                +-----------+
+   | IO-device      |                | PLC       |
+   |  +----------+  |    IOCS        |           |
+   |  |          |  |  <-----------  |           |
+   |  |  CPM     |  |                |           |
+   |  |          |  |                |           |
+   |  |          |  |                |           |
+   |  +----------+  |                |           |
+   |                |                |           |
+   |  +----------+  |    DATA        |           |
+   |  |          |  |  ----------->  |           |
+   |  |  PPM     |  |                |           |
+   |  |          |  |    IOPS        |           |
+   |  |          |  |  ----------->  |           |
+   |  +----------+  |                |           |
+   |                |                |           |
+   +----------------+                +-----------+
