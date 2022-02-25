@@ -293,7 +293,7 @@ void pf_put_read_result (
 
 /**
  * Insert read data (from the application) into a buffer.
- * Use a block header with the specificied block_type.
+ * Use a block header with the specified block_type.
  * @param is_big_endian    In:   Endianness of the destination buffer.
  * @param block_type       In:   The block type to use for the data.
  * @param raw_length       In:   The length in bytes of the user data.

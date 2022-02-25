@@ -54,7 +54,7 @@ int pf_alarm_close (pnet_t * net, pf_ar_t * p_ar);
  *
  * This is the default setting.
  *
- * @param p_ar             InOut  The AR instance.
+ * @param p_ar             InOut: The AR instance.
  */
 void pf_alarm_enable (pf_ar_t * p_ar);
 
@@ -97,7 +97,7 @@ int pf_alarm_periodic (pnet_t * net);
  * Related to whole submodule, not related to channels).
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             InOut  The AR instance.
+ * @param p_ar             InOut: The AR instance.
  * @param api_id           In:    The API identifier.
  * @param slot_nbr         In:    The slot number.
  * @param subslot_nbr      In:    The sub-slot number.

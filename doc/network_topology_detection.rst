@@ -537,9 +537,11 @@ Siemens PRONETA - Profinet Network Analysis tool
 The Proneta tool can scan the network to discover the topology of connected
 Profinet equipment.
 
-Download "Proneta Basic" (free version) from the Siemens web page.
-Unzip the downloaded file onto a Windows personal computer.
-Double-click the ``PRONETA.exe`` file to start the program.
+To install Proneta on Windows, use the "Download Proneta Basic free" link
+on the Siemens web page:
+https://new.siemens.com/global/en/products/automation/industrial-communication/profinet/proneta.html
+The file is named ``proneta_VERSION.zip``. Registration is required.
+Unzip the downloaded file, and double-click the ``PRONETA.exe`` file to start the program.
 
 Turn off the ART tester tool before starting Proneta, otherwise Proneta can
 not scan the network.
@@ -552,6 +554,9 @@ A graphical view with all Profinet equipment will be shown, including
 the connections between all ports. An example screenshot is shown below.
 
 .. image:: illustrations/proneta_example.png
+
+For the Proneta tool to be able to fully map the network, most of the nodes
+must have valid IP addresses (and have SNMP enabled).
 
 The program will show details about interfaces and ports, and which of the slots
 that are populated by modules.

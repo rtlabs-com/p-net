@@ -105,7 +105,7 @@ void pf_get_ar_param (pf_get_info_t * p_info, uint16_t * p_pos, pf_ar_t * p_ar);
  *
  * Updates p_ar->iocrs[ix].param
  *
- * @param p_info           Inout: The parser state.
+ * @param p_info           InOut: The parser state.
  * @param p_pos            InOut: Position in the buffer.
  * @param ix               In:    The current index into p_ar->iocr[].
  * @param p_ar             Out:   Contains the destination structure.
@@ -167,7 +167,7 @@ void pf_get_ar_vendor_request (
 #if PNET_OPTION_PARAMETER_SERVER
 /**
  * Extract a parameter server block from a buffer.
- * @param p_info           Inout: The parser state.
+ * @param p_info           InOut: The parser state.
  * @param p_pos            InOut: Position in the buffer.
  * @param p_ar             Out:   Contains the destination structure.
  */
@@ -210,7 +210,7 @@ void pf_get_ir_info_request (
  * @param p_info           InOut: The parser information. Sets
  *                                p_info->is_big_endian
  * @param p_pos            InOut: The current parsing position.
- * @param p_rpc            Out:   Destination struture.
+ * @param p_rpc            Out:   Destination structure.
  */
 void pf_get_dce_rpc_header (
    pf_get_info_t * p_info,
@@ -309,7 +309,7 @@ void pf_get_alarm_ack (
 
 /**
  * Extract a PNIO status block from a buffer.
- * @param p_info           Inout: The parser information.
+ * @param p_info           InOut: The parser information.
  * @param p_pos            InOut: The current parsing position.
  * @param p_status         Out:   Destination structure.
  */

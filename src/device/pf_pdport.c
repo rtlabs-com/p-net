@@ -1024,7 +1024,7 @@ static void pf_pdport_handle_link_up (pnet_t * net, int loc_port_num)
  * @internal
  * Monitor the Ethernet link status
  *
- * Set approprite diagnosis, if check is enabled.
+ * Set appropriate diagnosis, if check is enabled.
  *
  * @param net              InOut: The p-net stack instance
  * @param loc_port_num     In:    Local port number.
@@ -1051,7 +1051,7 @@ static void pf_pdport_monitor_link (pnet_t * net, int loc_port_num)
  * @internal
  * Trigger monitoring the state of one Ethernet link.
  *
- * Set approprite diagnosis, if check is enabled.
+ * Set appropriate diagnosis, if check is enabled.
  * Will loop through all Ethernet links, one per call.
  *
  * This is a callback for the scheduler. Arguments should fulfill

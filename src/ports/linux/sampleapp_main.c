@@ -90,12 +90,16 @@ void show_usage()
    printf ("   -v           Incresase verbosity. Can be repeated.\n");
    printf ("   -f           Reset to factory settings, and store to file. "
            "Exit.\n");
+   printf ("                Remember to give the -p flag if necessary.\n");
    printf ("   -r           Remove stored files and exit.\n");
+   printf ("                Remember to give the -p flag if necessary.\n");
    printf ("   -g           Show stack details and exit. Repeat for more "
            "details.\n");
    printf (
       "   -i INTERF    Name of Ethernet interface to use. Defaults to %s\n",
       APP_DEFAULT_ETHERNET_INTERFACE);
+   printf ("                Comma separated list if more than one interface "
+           "given.\n");
    printf (
       "   -s NAME      Set station name. Defaults to \"%s\". Only used\n",
       APP_GSDML_DEFAULT_STATION_NAME);

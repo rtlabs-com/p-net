@@ -6,8 +6,8 @@ Wireshark on your laptop, but in order to capture packets on for example
 a Raspberry Pi you can use the program tcpdump (described below).
 
 
-Wireshark
----------
+Install Wireshark on Linux
+--------------------------
 To install a relatively new Wireshark version on Ubuntu::
 
     sudo add-apt-repository ppa:wireshark-dev/stable
@@ -23,6 +23,11 @@ For details on how to add yourself to the ``wireshark`` user group, see
 https://linuxhint.com/install_wireshark_ubuntu/
 
 Wireshark is also available on Windows. Download it from https://www.wireshark.org/
+
+
+Install Wireshark on Windows
+----------------------------
+Download Wireshark from https://www.wireshark.org/download.html
 
 
 Filtering frames in Wireshark based on protocol

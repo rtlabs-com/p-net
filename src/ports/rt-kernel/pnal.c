@@ -160,11 +160,11 @@ static pnal_eth_mau_t calculate_mau_type (uint8_t link_state)
 }
 
 /**
- * Calculate advertised capabilites
+ * Calculate advertised capabilities
  *
  * @param capabilities     In:    rt-kernel advertised capabilities as a
  *                                bitfield.
- * @return Profinet advertised capabilites as a bitfield.
+ * @return Profinet advertised capabilities as a bitfield.
  */
 static uint16_t calculate_capabilities (uint16_t capabilities)
 {

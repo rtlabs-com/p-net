@@ -22,7 +22,7 @@
  *
  * Functions for:
  * - Getting input data (Button 1 and counter value)
- * - Setting ouput data (LED 1)
+ * - Setting output data (LED 1)
  * - Setting default output state. This should be
  *   part of all device implementations for setting
  *   defined state when device is not connected to PLC
@@ -54,8 +54,9 @@ extern "C" {
  * @param size          Out: Size of pnio data
  * @param iops          Out: Provider status. If for example
  *                           a sensor is failing or a short
- *                           circuit detected on digital
+ *                           circuit is detected on digital
  *                           input this shall be set to BAD.
+ *                           Updated also on error.
  * @return Reference to PNIO data, NULL on error
  */
 uint8_t * app_data_get_input_data (
@@ -81,9 +82,6 @@ int app_data_set_output_data (
  * Set default outputs.
  * For the sample application this means that
  * LED 1 is turned off.
- * @param submodule_id  In:  Submodule id
- * @param data          In:  Reference to output data
- * @param size          In:  Length of output data
  * @return 0 on success, -1 on error
  */
 int app_data_set_default_outputs (void);
@@ -93,7 +91,7 @@ int app_data_set_default_outputs (void);
  * @param submodule_id  In:  Submodule id
  * @param index         In:  Parameter index
  * @param data          In:  New parameter value
- * @param size          In:  Length of parameter data
+ * @param write_length  In:  Length of parameter data
  * @return 0 on success, -1 on error
  */
 int app_data_write_parameter (
@@ -104,10 +102,11 @@ int app_data_write_parameter (
 
 /**
  * Read parameter index.
- * @param submodule_id  In:  Submodule id
- * @param index         In:  Parameter index
- * @param data          In:  Refernce to parameter data
- * @param size          In:  Length of parameter data
+ * @param submodule_id  In:    Submodule id
+ * @param index         In:    Parameter index
+ * @param data          In:    Reference to parameter data
+ * @param length        InOut: The maximum (in) and actual (out) length in
+ *                             bytes of the data.
  * @return 0 on success, -1 on error
  */
 int app_data_read_parameter (

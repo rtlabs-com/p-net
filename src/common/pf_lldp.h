@@ -49,7 +49,7 @@ typedef struct pf_lldp_link_status
 /**
  * Port description
  *
- * "The port description field shall contain an alpha-numeric string
+ * "The port description field shall contain an alphanumeric string
  * that indicates the port's description. If RFC 2863
  * is implemented, the ifDescr object should be used for this field."
  * - IEEE 802.1AB (LLDP) ch. 9.5.5.2 "port description".

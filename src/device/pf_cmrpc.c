@@ -1608,7 +1608,7 @@ static int pf_cmrpc_rm_connect_interpret_ind (
                "\n",
                __LINE__,
                p_sess->ndr_data.args_length,
-               (uint32_t) (*p_pos - start_pos));
+               (uint32_t)(*p_pos - start_pos));
             pf_set_error (
                &p_sess->rpc_result,
                PNET_ERROR_CODE_CONNECT,
@@ -2049,7 +2049,7 @@ static int pf_cmrpc_rm_release_interpret_req (
                PNET_ERROR_CODE_2_CMRPC_ARGSLENGTH_INVALID);
             ret = -1;
          }
-         else if ((uint32_t) (req_pos - start_pos) != p_sess->ndr_data.args_length)
+         else if ((uint32_t)(req_pos - start_pos) != p_sess->ndr_data.args_length)
          {
             LOG_ERROR (
                PF_RPC_LOG,
@@ -2057,7 +2057,7 @@ static int pf_cmrpc_rm_release_interpret_req (
                "\n",
                __LINE__,
                p_sess->ndr_data.args_length,
-               (uint32_t) (req_pos - start_pos));
+               (uint32_t)(req_pos - start_pos));
             pf_set_error (
                &p_sess->rpc_result,
                PNET_ERROR_CODE_RELEASE,
@@ -2385,7 +2385,7 @@ static int pf_cmrpc_rm_dcontrol_interpret_req (
                PNET_ERROR_CODE_2_CMRPC_ARGSLENGTH_INVALID);
             ret = -1;
          }
-         else if ((uint32_t) (req_pos - start_pos) != p_sess->ndr_data.args_length)
+         else if ((uint32_t)(req_pos - start_pos) != p_sess->ndr_data.args_length)
          {
             LOG_DEBUG (
                PF_RPC_LOG,
@@ -2393,7 +2393,7 @@ static int pf_cmrpc_rm_dcontrol_interpret_req (
                "\n",
                __LINE__,
                p_sess->ndr_data.args_length,
-               (uint32_t) (req_pos - start_pos));
+               (uint32_t)(req_pos - start_pos));
             pf_set_error (
                &p_sess->rpc_result,
                PNET_ERROR_CODE_CONTROL,
@@ -2711,7 +2711,7 @@ static int pf_cmrpc_rm_read_interpret_ind (
                PNET_ERROR_CODE_2_CMRPC_ARGSLENGTH_INVALID);
             ret = -1;
          }
-         else if ((uint32_t) (req_pos - start_pos) != p_sess->ndr_data.args_length)
+         else if ((uint32_t)(req_pos - start_pos) != p_sess->ndr_data.args_length)
          {
             LOG_DEBUG (
                PF_RPC_LOG,
@@ -2719,7 +2719,7 @@ static int pf_cmrpc_rm_read_interpret_ind (
                "\n",
                __LINE__,
                p_sess->ndr_data.args_length,
-               (uint32_t) (req_pos - start_pos));
+               (uint32_t)(req_pos - start_pos));
             pf_set_error (
                &p_sess->rpc_result,
                PNET_ERROR_CODE_READ,
@@ -3197,7 +3197,7 @@ static int pf_cmrpc_perform_one_write (
  * parameters.
  *
  * @param net              InOut: The p-net stack instance
- * @param p_sess           InOut  The RPC session instance. The rpc_result
+ * @param p_sess           InOut: The RPC session instance. The rpc_result
  *                                field is written when return != 0.
  * @param req_pos          In:    Position in the request buffer.
  * @param res_size         In:    The size of the response buffer.
@@ -3353,7 +3353,7 @@ static int pf_cmrpc_rm_write_ind (
                {
                   req_pos++;
                }
-               /* Prepare for next bloc */
+               /* Prepare for next block*/
                memset (&write_stat_multi, 0, sizeof (write_stat_multi));
             }
             if (req_pos != p_sess->get_info.len)
@@ -3384,7 +3384,7 @@ static int pf_cmrpc_rm_write_ind (
       {
          if (p_sess->get_info.result == PF_PARSE_OK)
          {
-            if ((uint32_t) (req_pos - req_start_pos) != p_sess->ndr_data.args_length)
+            if ((uint32_t)(req_pos - req_start_pos) != p_sess->ndr_data.args_length)
             {
                LOG_ERROR (
                   PF_RPC_LOG,
@@ -3915,7 +3915,7 @@ static int pf_cmrpc_rm_ccontrol_interpret_cnf (
                PNET_ERROR_CODE_2_CMRPC_ARGSLENGTH_INVALID);
             ret = -1;
          }
-         else if ((uint32_t) (req_pos - start_pos) != p_sess->ndr_data.args_length)
+         else if ((uint32_t)(req_pos - start_pos) != p_sess->ndr_data.args_length)
          {
             LOG_DEBUG (
                PF_RPC_LOG,
@@ -3923,7 +3923,7 @@ static int pf_cmrpc_rm_ccontrol_interpret_cnf (
                "\n",
                __LINE__,
                p_sess->ndr_data.args_length,
-               (uint32_t) (req_pos - start_pos));
+               (uint32_t)(req_pos - start_pos));
             pf_set_error (
                &p_sess->rpc_result,
                PNET_ERROR_CODE_CONTROL,
@@ -4409,7 +4409,7 @@ static int pf_cmrpc_dce_packet (
             rpc_res.flags.broadcast = false;
             rpc_res.flags2.cancel_pending = false;
             rpc_res.fragment_nmb = p_sess->out_fragment_nbr;
-            rpc_res.serial_high = (uint8_t) (rpc_res.fragment_nmb >> 8U);
+            rpc_res.serial_high = (uint8_t)(rpc_res.fragment_nmb >> 8U);
             rpc_res.serial_low = rpc_res.fragment_nmb & UINT8_MAX;
             rpc_res.is_big_endian = p_sess->get_info.is_big_endian;
 
@@ -4518,7 +4518,7 @@ static int pf_cmrpc_dce_packet (
             /* Insert the real value of length_of_body in the rpc header */
             pf_put_uint16 (
                rpc_res.is_big_endian,
-               (uint16_t) (p_sess->out_buf_send_len - start_pos),
+               (uint16_t)(p_sess->out_buf_send_len - start_pos),
                p_sess->out_buf_send_len,
                p_sess->out_buffer,
                &length_of_body_pos);
@@ -4585,7 +4585,7 @@ static int pf_cmrpc_dce_packet (
                rpc_res.flags.broadcast = false;
                rpc_res.flags2.cancel_pending = false;
                rpc_res.fragment_nmb = p_sess->out_fragment_nbr;
-               rpc_res.serial_high = (uint8_t) (rpc_res.fragment_nmb >> 8U);
+               rpc_res.serial_high = (uint8_t)(rpc_res.fragment_nmb >> 8U);
                rpc_res.serial_low = rpc_res.fragment_nmb & UINT8_MAX;
                rpc_res.is_big_endian =
                   p_sess->from_me ? true : p_sess->get_info.is_big_endian;
@@ -4602,7 +4602,7 @@ static int pf_cmrpc_dce_packet (
                start_pos = res_pos; /* Save for later */
 
                if (
-                  (uint16_t) (p_sess->out_buf_len - p_sess->out_buf_sent_pos) <
+                  (uint16_t)(p_sess->out_buf_len - p_sess->out_buf_sent_pos) <
                   (PF_MAX_UDP_PAYLOAD_SIZE - start_pos))
                {
                   LOG_DEBUG (

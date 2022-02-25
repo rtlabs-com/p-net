@@ -506,7 +506,7 @@ static void pf_alarm_alpmi_apms_a_data_cnf (
  * ALPMI: APMR_A_Data.ind  (Implements part of it)
  *
  * @param net              InOut: The p-net stack instance
- * @param p_apmx           InOut  The APMS instance sending the confirmation.
+ * @param p_apmx           InOut: The APMS instance sending the confirmation.
  * @param p_pnio_status    In:    Detailed ACK information.
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
@@ -701,6 +701,7 @@ static int pf_alarm_alpmr_apmr_a_data_ind (
  * @param frame_id         In:    The Ethernet frame id.
  * @param p_buf            In:    The Ethernet frame buffer.
  * @param frame_id_pos     In:    Position in the buffer of the frame id.
+ *                                Depends on whether VLAN tagging is used.
  * @param p_arg            In:    The APMX instance. Should be pf_apmx_t
  * @return  0 if the frame was NOT handled by this function.
  *          1 if the frame was handled and the buffer was freed.
@@ -747,7 +748,7 @@ static int pf_alarm_apmr_frame_handler (
    }
    else
    {
-      /* No need for the frame hander to free p_buf as it is NULL */
+      /* No need for the frame handler to free p_buf as it is NULL */
       LOG_ERROR (
          PF_ALARM_LOG,
          "Alarm(%d): Did not put incoming %s prio alarm frame in queue, "

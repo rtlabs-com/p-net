@@ -3225,7 +3225,7 @@ void pf_put_alarm_fixed (
  * Insert maint_status into a buffer
  *
  * @param is_big_endian    In:    true if buffer is big-endian.
- * @param maint_status     In:    Maintainance status.
+ * @param maint_status     In:    Maintenance status.
  * @param res_len          In:    Size of destination buffer.
  * @param p_bytes          Out:   Destination buffer.
  * @param p_pos            InOut: Position in destination buffer.
@@ -4249,7 +4249,7 @@ static void pf_put_rpc_floor_1_uuid (
 
    pf_put_uint16 (
       is_big_endian,
-      (uint16_t) (sizeof (p_floor->version_minor)),
+      (uint16_t)(sizeof (p_floor->version_minor)),
       res_len,
       p_bytes,
       p_pos);
@@ -4297,7 +4297,7 @@ static void pf_put_rpc_floor_3_rpc (
 {
    pf_put_uint16 (
       is_big_endian,
-      (uint16_t) (sizeof (p_floor->protocol_id)),
+      (uint16_t)(sizeof (p_floor->protocol_id)),
       res_len,
       p_bytes,
       p_pos);
@@ -4306,7 +4306,7 @@ static void pf_put_rpc_floor_3_rpc (
 
    pf_put_uint16 (
       is_big_endian,
-      (uint16_t) (sizeof (p_floor->version_minor)),
+      (uint16_t)(sizeof (p_floor->version_minor)),
       res_len,
       p_bytes,
       p_pos);
@@ -4336,7 +4336,7 @@ static void pf_put_rpc_floor_4_udp (
 {
    pf_put_uint16 (
       is_big_endian,
-      (uint16_t) (sizeof (p_floor->protocol_id)),
+      (uint16_t)(sizeof (p_floor->protocol_id)),
       res_len,
       p_bytes,
       p_pos);
@@ -4345,7 +4345,7 @@ static void pf_put_rpc_floor_4_udp (
 
    pf_put_uint16 (
       is_big_endian,
-      (uint16_t) (sizeof (p_floor->port)),
+      (uint16_t)(sizeof (p_floor->port)),
       res_len,
       p_bytes,
       p_pos);
@@ -4370,7 +4370,7 @@ static void pf_put_rpc_floor_5_ip (
 {
    pf_put_uint16 (
       is_big_endian,
-      (uint16_t) (sizeof (p_floor->protocol_id)),
+      (uint16_t)(sizeof (p_floor->protocol_id)),
       res_len,
       p_bytes,
       p_pos);
@@ -4379,7 +4379,7 @@ static void pf_put_rpc_floor_5_ip (
 
    pf_put_uint16 (
       is_big_endian,
-      (uint16_t) (sizeof (p_floor->ip_address)),
+      (uint16_t)(sizeof (p_floor->ip_address)),
       res_len,
       p_bytes,
       p_pos);

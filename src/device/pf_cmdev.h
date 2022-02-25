@@ -347,7 +347,7 @@ void pf_cmdev_diag_show (const pnet_t * net);
  *
  * @param net              InOut: The p-net stack instance
  * @param p_ar             InOut: The AR instance.
- * @param event            In:    The CMDEV state transision event. Use
+ * @param event            In:    The CMDEV state transition event. Use
  *                                PNET_EVENT_xxx, not PF_CMDEV_STATE_xxx
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
@@ -439,7 +439,7 @@ int pf_cmdev_rm_dcontrol_ind (
  * Triggers the \a pnet_state_ind() user callback with PNET_EVENT_APPLRDY.
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             Inout  The AR instance.
+ * @param p_ar             InOut: The AR instance.
  * @return  0  if a ccontrol request was sent.
  *          -1 if a ccontrol request was not sent.
  */

@@ -1,6 +1,9 @@
 Getting started using STM32Cube / FreeRTOS / lwIP
 =================================================
 
+Install ST-link on your laptop to have access to the serial port of the device.
+
+
 Cloning STM32Cube firmware
 --------------------------
 

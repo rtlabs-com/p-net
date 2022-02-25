@@ -29,7 +29,7 @@ Installation using a Linux laptop
 Burn a SD-card with Raspberry Pi OS, by using the "Raspberry Pi imager"
 software and a SD card reader.
 A card size of 16 - 32 GByte is recommended.
-Follow the instructions on the page https://www.raspberrypi.org/software/
+Follow the instructions on the page https://www.raspberrypi.com/software/
 Select the standard "Raspberry Pi OS" operating system.
 
 Unplug, and reinsert your SD-card to mount it. To enable SSH logging in on the
@@ -64,7 +64,7 @@ Unmount the SD-card, and plug it in into your Raspberry Pi. Power up the
 Raspberry Pi. Log in to it via a serial cable (see below).
 Use the username ``pi`` and the default password ``raspberry``.
 
-If you do not have any serial cable (and not have disabled DCHP), connect
+If you do not have any serial cable (and not have disabled DHCP), connect
 the Raspberry Pi to your local network.
 Find the IP address of it by running this on a Linux machine on the network
 (replace the hostname if you have changed it)::
@@ -81,7 +81,7 @@ Log in to it::
 Enter the password mentioned just above.
 
 If you would connect your Raspberry Pi to a WiFi network, follow the
-guide in https://www.raspberrypi.org/documentation/configuration/wireless/wireless-cli.md
+guide in https://www.raspberrypi.com/documentation/computers/configuration.html
 
 You might also want to disable the splash screen and to expand the file system,
 by using the ``raspi-config`` utility.
@@ -99,7 +99,7 @@ used in headless mode without a display and keyboard connected.
 Step 1. Write Raspberry Pi OS image to SD card using Raspberry Pi Imager.
 
 * Download and install Raspberry Pi Imager from
-  https://www.raspberrypi.org/software/
+  https://www.raspberrypi.com/software/
 * Start Raspberry Pi Imager
 * In the Select OS dialog choose full version
 * Select SD-card
@@ -153,7 +153,7 @@ Reboot and the Raspberry Pi is now ready to run the p-net sample application::
     sudo reboot
 
 If you would connect your Raspberry Pi to a WiFi network, follow the
-guide in https://www.raspberrypi.org/documentation/configuration/wireless/wireless-cli.md
+guide in https://www.raspberrypi.com/documentation/computers/configuration.html
 
 You might also want to disable the splash screen and to expand the file system,
 by using the ``raspi-config`` utility.

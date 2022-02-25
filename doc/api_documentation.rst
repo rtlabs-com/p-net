@@ -105,18 +105,18 @@ to perform specific functionality.
 
 Selected enums
 --------------
-.. doxygenenum:: pnet_event_values_t
-.. doxygenenum:: pnet_ioxs_values_t
-.. doxygenenum:: pnet_submodule_dir_t
-.. doxygenenum:: pnet_control_command_t
-.. doxygenenum:: pnet_data_status_bits_t
-.. doxygenenum:: pnet_diag_ch_prop_type_values_t
-.. doxygenenum:: pnet_diag_ch_prop_dir_values_t
-.. doxygenenum:: pnet_diag_ch_prop_maint_values_t
+.. doxygenenum:: pnet_event_values
+.. doxygenenum:: pnet_ioxs_values
+.. doxygenenum:: pnet_submodule_dir
+.. doxygenenum:: pnet_control_command
+.. doxygenenum:: pnet_data_status_bits
+.. doxygenenum:: pnet_diag_ch_prop_type_values
+.. doxygenenum:: pnet_diag_ch_prop_dir_values
+.. doxygenenum:: pnet_diag_ch_prop_maint_values
 
 
-Selected typedefs
------------------
+Selected structs
+----------------
 Network and device configuration.
 
 Configuration of the stack is performed by transferring a structure
@@ -126,13 +126,42 @@ Along with the configuration the initial (default) values of the
 I&M data records are conveyed as well as the values used for
 sending LLDP frames.
 
-.. doxygenstruct:: pnet_im_0_t
-.. doxygenstruct:: pnet_im_1_t
-.. doxygenstruct:: pnet_im_2_t
-.. doxygenstruct:: pnet_im_3_t
-.. doxygenstruct:: pnet_im_4_t
-.. doxygenstruct:: pnet_cfg_device_id_t
-.. doxygenstruct:: pnet_cfg_t
-.. doxygenstruct:: pnet_alarm_spec_t
-.. doxygenstruct:: pnet_alarm_argument_t
-.. doxygenstruct:: pnet_diag_source_t
+.. doxygenstruct:: pnet_im_0
+   :members:
+   :undoc-members:
+
+.. doxygenstruct:: pnet_im_1
+   :members:
+   :undoc-members:
+
+.. doxygenstruct:: pnet_im_2
+   :members:
+   :undoc-members:
+
+.. doxygenstruct:: pnet_im_3
+   :members:
+   :undoc-members:
+
+.. doxygenstruct:: pnet_im_4
+   :members:
+   :undoc-members:
+
+.. doxygenstruct:: pnet_cfg_device_id
+   :members:
+   :undoc-members:
+
+.. doxygenstruct:: pnet_cfg
+   :members:
+   :undoc-members:
+
+.. doxygenstruct:: pnet_alarm_spec
+   :members:
+   :undoc-members:
+
+.. doxygenstruct:: pnet_alarm_argument
+   :members:
+   :undoc-members:
+
+.. doxygenstruct:: pnet_diag_source
+   :members:
+   :undoc-members:

@@ -1262,7 +1262,11 @@ typedef struct pnet_cfg
    /** Capabilities */
    bool send_hello; /**< Send DCP HELLO message on startup if true. */
 
-   /** Number of physical ports. Should respect PNET_MAX_PHYSICAL_PORTS */
+   /** Number of physical ports. Should respect PNET_MAX_PHYSICAL_PORTS.
+       This parameter is useful when shipping a single compiled version of the
+       library, but there are several applications with different number of
+       ports.
+    */
    uint8_t num_physical_ports; // TODO int or uint16_t ?
 
    /** Send diagnosis in the qualified format (otherwise extended format) */
@@ -1432,7 +1436,8 @@ PNET_EXPORT int pnet_pull_submodule (
  * @param api              In:    The API.
  * @param slot             In:    The slot.
  * @param subslot          In:    The sub-slot.
- * @param p_data           In:    Data buffer.
+ * @param p_data           In:    Data buffer. If NULL the data will not
+ *                                be updated.
  * @param data_len         In:    Bytes in data buffer.
  * @param iops             In:    The device provider status.
  *                                See pnet_ioxs_values_t
