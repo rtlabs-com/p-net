@@ -28,7 +28,7 @@ extern "C" {
 
 #include "pnal.h"
 
-#define PF_LLDP_SUBTYPE_MAC              4
+#define PF_LLDP_SUBTYPE_MAC              4 /** Valid for ChassisID */
 #define PF_LLDP_SUBTYPE_LOCALLY_ASSIGNED 7
 
 /**
@@ -105,9 +105,18 @@ typedef struct pf_port_iterator
  */
 typedef struct pf_lldp_chassis_id
 {
-   char string[PNET_LLDP_CHASSIS_ID_MAX_SIZE]; /**< Terminated string */
-   uint8_t subtype;                            /* PF_LLDP_SUBTYPE_xxx */
+   /** Terminated string
+       Typically this field is a string (PF_LLDP_SUBTYPE_LOCALLY_ASSIGNED)
+       If the subtype indicates a MAC address, the content is the
+       raw MAC address bytes (and trailing null termination).
+       Similarly for other subtypes */
+   char string[PNET_LLDP_CHASSIS_ID_MAX_SIZE];
+
+   /** PF_LLDP_SUBTYPE_xxx */
+   uint8_t subtype;
+
    bool is_valid;
+
    size_t len;
 } pf_lldp_chassis_id_t;
 
@@ -118,9 +127,18 @@ typedef struct pf_lldp_chassis_id
  */
 typedef struct pf_lldp_port_id
 {
-   char string[PNET_LLDP_PORT_ID_MAX_SIZE]; /**< Terminated string */
-   uint8_t subtype;                         /* PF_LLDP_SUBTYPE_xxx */
+   /** Terminated string
+       Typically this field is a string (PF_LLDP_SUBTYPE_LOCALLY_ASSIGNED)
+       If the subtype indicates a MAC address, the content is the
+       raw MAC address bytes (and trailing null termination).
+       Similarly for other subtypes */
+   char string[PNET_LLDP_PORT_ID_MAX_SIZE];
+
+   /** PF_LLDP_SUBTYPE_xxx */
+   uint8_t subtype;
+
    bool is_valid;
+
    size_t len;
 } pf_lldp_port_id_t;
 
