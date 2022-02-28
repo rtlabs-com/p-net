@@ -341,14 +341,18 @@ void pf_cmdev_diag_show (const pnet_t * net);
  *
  * Among other actions, it calls the \a pnet_state_ind() user callback.
  *
+ * If the event is PNET_EVENT_ABORT, it might send an alarm frame. Make sure
+ * to set p_ar->err_cls and p_ar->err_code, in order to have the correct
+ * error values in the alarm frame.
+ *
  * @param net              InOut: The p-net stack instance
  * @param p_ar             InOut: The AR instance.
- * @param state            In:    The CMDEV state transision event. Use
+ * @param event            In:    The CMDEV state transision event. Use
  *                                PNET_EVENT_xxx, not PF_CMDEV_STATE_xxx
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_cmdev_state_ind (pnet_t * net, pf_ar_t * p_ar, pnet_event_values_t state);
+int pf_cmdev_state_ind (pnet_t * net, pf_ar_t * p_ar, pnet_event_values_t event);
 
 /**
  * Get the CMDEV state of the specified AR.

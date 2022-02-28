@@ -1451,10 +1451,9 @@ static int pf_cmdev_set_state (
    return 0;
 }
 
-/* ================================================
- *       Local primitives
- */
-int pf_cmdev_state_ind (pnet_t * net, pf_ar_t * p_ar, pnet_event_values_t state)
+/************************ Local primitives *****************************/
+
+int pf_cmdev_state_ind (pnet_t * net, pf_ar_t * p_ar, pnet_event_values_t event)
 {
    if (p_ar != NULL)
    {
@@ -1470,17 +1469,17 @@ int pf_cmdev_state_ind (pnet_t * net, pf_ar_t * p_ar, pnet_event_values_t state)
          PNET_LOG,
          "CMDEV(%d): Sending event %s for AREP %u. Current state %s\n",
          __LINE__,
-         pf_cmdev_event_to_string (state),
+         pf_cmdev_event_to_string (event),
          p_ar->arep,
          pf_cmdev_state_to_string (p_ar->cmdev_state));
 
-      pf_fspm_state_ind (net, p_ar, state);
-      pf_cmsu_cmdev_state_ind (net, p_ar, state);
-      pf_cmio_cmdev_state_ind (net, p_ar, state);
-      pf_cmwrr_cmdev_state_ind (net, p_ar, state);
-      pf_cmsm_cmdev_state_ind (net, p_ar, state);
-      pf_cmpbe_cmdev_state_ind (p_ar, state);
-      pf_cmrpc_cmdev_state_ind (net, p_ar, state);
+      pf_fspm_state_ind (net, p_ar, event);
+      pf_cmsu_cmdev_state_ind (net, p_ar, event);
+      pf_cmio_cmdev_state_ind (net, p_ar, event);
+      pf_cmwrr_cmdev_state_ind (net, p_ar, event);
+      pf_cmsm_cmdev_state_ind (net, p_ar, event);
+      pf_cmpbe_cmdev_state_ind (p_ar, event);
+      pf_cmrpc_cmdev_state_ind (net, p_ar, event);
    }
    else
    {
@@ -1633,17 +1632,19 @@ int pf_cmdev_check_zero (uint8_t * p_start, uint16_t len)
 }
 
 /**
- * Verify that at least one operational port has the required speed (100FD).
+ * Verify that at least one operational port has a speed of at
+ * least 100 MBit/s, full duplex.
+ *
+ * Otherwise we should refuse to make a connection.
  *
  * See PdevCheckFailed() in Profinet 2.4 Protocol 5.6.3.2.1.4 CMDEV state table
  *
- * @return
+ * @param net              InOut: The p-net stack instance
+ * @return 0 if at least one port has the required speed, else -1.
  */
-static int pf_cmdev_check_pdev (void)
+static int pf_cmdev_check_pdev (pnet_t * net)
 {
-
-   /* ToDo: Actually perform the check for 100FD */
-   return 0;
+   return (pf_pdport_is_a_fast_port_in_use (net)) ? 0 : -1;
 }
 
 /**
@@ -2132,7 +2133,7 @@ static int pf_cmdev_iocr_setup_iocs (
          if (
             pf_cmdev_get_exp_sub (
                p_ar,
-               api_ix,
+               api_id,
                slot_nbr,
                subslot_nbr,
                &p_exp_sub) != 0)
@@ -2202,7 +2203,7 @@ static int pf_cmdev_iocr_setup_iocs (
                p_iodata->in_use = true;
                iodata_cnt++;
 
-               p_iodata->api_id = api_ix;
+               p_iodata->api_id = api_id;
                p_iodata->slot_nbr = slot_nbr;
                p_iodata->subslot_nbr = subslot_nbr;
 
@@ -4965,7 +4966,7 @@ int pf_cmdev_rm_dcontrol_ind (
                   p_dcontrol_result) == 0)
             {
                pf_cmdev_set_state (net, p_ar, PF_CMDEV_STATE_W_ARDY);
-               if (pf_cmdev_check_pdev() == 0)
+               if (pf_cmdev_check_pdev (net) == 0)
                {
                   LOG_DEBUG (
                      PNET_LOG,
@@ -4982,12 +4983,13 @@ int pf_cmdev_rm_dcontrol_ind (
                }
                else
                {
-                  pf_set_error (
-                     p_dcontrol_result,
-                     PNET_ERROR_CODE_PNIO,
-                     PNET_ERROR_DECODE_PNIO,
-                     PNET_ERROR_CODE_1_RTA_ERR_CLS_PROTOCOL,
-                     PNET_ERROR_CODE_2_ABORT_PDEV_CHECK_FAILED);
+                  LOG_ERROR (
+                     PNET_LOG,
+                     "CMDEV(%d): There is no local Ethernet port with high "
+                     "enough speed.\n",
+                     __LINE__);
+                  p_ar->err_cls = PNET_ERROR_CODE_1_RTA_ERR_CLS_PROTOCOL;
+                  p_ar->err_code = PNET_ERROR_CODE_2_ABORT_PDEV_CHECK_FAILED;
                }
             }
          }
@@ -5135,8 +5137,8 @@ int pf_cmdev_cm_ccontrol_req (pnet_t * net, pf_ar_t * p_ar)
                         LOG_DEBUG (
                            PNET_LOG,
                            "CMDEV(%d): Slot %u subslot 0x%04x is owned by "
-                           "AREP %u CREP %" PRIu32 " but AREP %u CREP %"
-                           PRIu32 " is asking to use it.\n",
+                           "AREP %u CREP %" PRIu32 " but AREP %u CREP %" PRIu32
+                           " is asking to use it.\n",
                            __LINE__,
                            p_iodata->slot_nbr,
                            p_iodata->subslot_nbr,
