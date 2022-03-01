@@ -38,10 +38,10 @@ void app_utils_ip_to_string (pnal_ipaddr_t ip, char * outputstring)
       outputstring,
       PNAL_INET_ADDRSTR_SIZE,
       "%u.%u.%u.%u",
-      (uint8_t) ((ip >> 24) & 0xFF),
-      (uint8_t) ((ip >> 16) & 0xFF),
-      (uint8_t) ((ip >> 8) & 0xFF),
-      (uint8_t) (ip & 0xFF));
+      (uint8_t)((ip >> 24) & 0xFF),
+      (uint8_t)((ip >> 16) & 0xFF),
+      (uint8_t)((ip >> 8) & 0xFF),
+      (uint8_t)(ip & 0xFF));
 }
 
 void app_utils_mac_to_string (pnet_ethaddr_t mac, char * outputstring)
@@ -224,25 +224,53 @@ int app_utils_pnet_cfg_init_default (pnet_cfg_t * cfg)
    cfg->im_0_data.im_vendor_id_hi = GET_HIGH_BYTE (APP_GSDML_VENDOR_ID);
    cfg->im_0_data.im_vendor_id_lo = GET_LOW_BYTE (APP_GSDML_VENDOR_ID);
 
-   cfg->im_0_data.im_hardware_revision = 1;
+   cfg->im_0_data.im_hardware_revision = APP_GSDML_IM_HARDWARE_REVISION;
    cfg->im_0_data.im_sw_revision_prefix = APP_GSDML_SW_REV_PREFIX;
    cfg->im_0_data.im_sw_revision_functional_enhancement = PNET_VERSION_MAJOR;
    cfg->im_0_data.im_sw_revision_bug_fix = PNET_VERSION_MINOR;
    cfg->im_0_data.im_sw_revision_internal_change = PNET_VERSION_PATCH;
-   cfg->im_0_data.im_revision_counter = 0; /* Only 0 allowed according
-                                                       to standard */
+   cfg->im_0_data.im_revision_counter = APP_GSDML_IM_REVISION_COUNTER;
    cfg->im_0_data.im_profile_id = APP_GSDML_PROFILE_ID;
    cfg->im_0_data.im_profile_specific_type = APP_GSDML_PROFILE_SPEC_TYPE;
-   cfg->im_0_data.im_version_major = 1;
-   cfg->im_0_data.im_version_minor = 1;
+   cfg->im_0_data.im_version_major = 1; /** Always 1 */
+   cfg->im_0_data.im_version_minor = 1; /** Always 1 */
    cfg->im_0_data.im_supported = APP_GSDML_IM_SUPPORTED;
-   strcpy (cfg->im_0_data.im_order_id, APP_GSDML_ORDER_ID);
-   strcpy (cfg->im_0_data.im_serial_number, "00001");
-   strcpy (cfg->im_1_data.im_tag_function, "my function");
-   strcpy (cfg->im_1_data.im_tag_location, "my location");
-   strcpy (cfg->im_2_data.im_date, "2020-09-03 13:53");
-   strcpy (cfg->im_3_data.im_descriptor, "my descriptor");
-   strcpy (cfg->im_4_data.im_signature, ""); /* Functional safety */
+
+   snprintf (
+      cfg->im_0_data.im_order_id,
+      sizeof (cfg->im_0_data.im_order_id),
+      "%s",
+      APP_GSDML_ORDER_ID);
+   snprintf (
+      cfg->im_0_data.im_serial_number,
+      sizeof (cfg->im_0_data.im_serial_number),
+      "%s",
+      APP_GSDML_EXAMPLE_SERIAL_NUMBER);
+   snprintf (
+      cfg->im_1_data.im_tag_function,
+      sizeof (cfg->im_1_data.im_tag_function),
+      "%s",
+      APP_GSDML_TAG_FUNCTION);
+   snprintf (
+      cfg->im_1_data.im_tag_location,
+      sizeof (cfg->im_1_data.im_tag_location),
+      "%s",
+      APP_GSDML_TAG_LOCATION);
+   snprintf (
+      cfg->im_2_data.im_date,
+      sizeof (cfg->im_2_data.im_date),
+      "%s",
+      APP_GSDML_IM_DATE);
+   snprintf (
+      cfg->im_3_data.im_descriptor,
+      sizeof (cfg->im_3_data.im_descriptor),
+      "%s",
+      APP_GSDML_DESCRIPTOR);
+   snprintf (
+      cfg->im_4_data.im_signature,
+      sizeof (cfg->im_4_data.im_signature),
+      "%s",
+      APP_GSDML_SIGNATURE);
 
    /* Device configuration */
    cfg->device_id.vendor_id_hi = GET_HIGH_BYTE (APP_GSDML_VENDOR_ID);
@@ -250,11 +278,16 @@ int app_utils_pnet_cfg_init_default (pnet_cfg_t * cfg)
    cfg->device_id.device_id_hi = GET_HIGH_BYTE (APP_GSDML_DEVICE_ID);
    cfg->device_id.device_id_lo = GET_LOW_BYTE (APP_GSDML_DEVICE_ID);
 
-   cfg->oem_device_id.vendor_id_hi = 0xc0;
-   cfg->oem_device_id.vendor_id_lo = 0xff;
-   cfg->oem_device_id.device_id_hi = 0xee;
-   cfg->oem_device_id.device_id_lo = 0x01;
-   strcpy (cfg->product_name, APP_GSDML_PRODUCT_NAME);
+   cfg->oem_device_id.vendor_id_hi = GET_HIGH_BYTE (APP_GSDML_OEM_VENDOR_ID);
+   cfg->oem_device_id.vendor_id_lo = GET_LOW_BYTE (APP_GSDML_OEM_VENDOR_ID);
+   cfg->oem_device_id.device_id_hi = GET_HIGH_BYTE (APP_GSDML_OEM_DEVICE_ID);
+   cfg->oem_device_id.device_id_lo = GET_LOW_BYTE (APP_GSDML_OEM_DEVICE_ID);
+
+   snprintf (
+      cfg->product_name,
+      sizeof (cfg->product_name),
+      "%s",
+      APP_GSDML_PRODUCT_NAME);
 
    cfg->send_hello = true;
 
@@ -267,6 +300,7 @@ int app_utils_pnet_cfg_init_default (pnet_cfg_t * cfg)
    snprintf (
       cfg->station_name,
       sizeof (cfg->station_name),
+      "%s",
       APP_GSDML_DEFAULT_STATION_NAME);
 
    /* Diagnosis mechanism */

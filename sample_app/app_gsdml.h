@@ -47,10 +47,30 @@ extern "C" {
 /* GSDML tag: DeviceID */
 #define APP_GSDML_DEVICE_ID 0xbeef
 
+/* Used in DCP communication */
+#define APP_GSDML_OEM_VENDOR_ID 0xcafe
+#define APP_GSDML_OEM_DEVICE_ID 0xee01
+
+/* Used in I&M0 */
+#define APP_GSDML_IM_HARDWARE_REVISION 3
+#define APP_GSDML_IM_VERSION_MAJOR     1
+#define APP_GSDML_IM_VERSION_MINOR     2
+
 /* Allowed: 'V', 'R', 'P', 'U', 'T' */
-#define APP_GSDML_SW_REV_PREFIX     'V'
-#define APP_GSDML_PROFILE_ID        0x1234
-#define APP_GSDML_PROFILE_SPEC_TYPE 0x5678
+#define APP_GSDML_SW_REV_PREFIX       'V'
+#define APP_GSDML_PROFILE_ID          0x1234
+#define APP_GSDML_PROFILE_SPEC_TYPE   0x5678
+#define APP_GSDML_IM_REVISION_COUNTER 0 /* Typically 0 */
+
+/* Note: You need to use the actual serial number instead */
+#define APP_GSDML_EXAMPLE_SERIAL_NUMBER "007"
+
+/* Initial values. Can be overwritten by PLC */
+#define APP_GSDML_TAG_FUNCTION "my function"
+#define APP_GSDML_TAG_LOCATION "my location"
+#define APP_GSDML_IM_DATE      "2022-03-01 10:03"
+#define APP_GSDML_DESCRIPTOR   "my descriptor"
+#define APP_GSDML_SIGNATURE    ""
 
 /* GSDML tag: Writeable_IM_Records */
 #define APP_GSDML_IM_SUPPORTED                                                 \
@@ -77,7 +97,7 @@ extern "C" {
 #define APP_GSDM_PARAMETER_2_IDX  124
 #define APP_GSDM_PARAMETER_LENGTH 4
 
-typedef struct cfg_module
+typedef struct app_gsdml_module
 {
    uint32_t id;
    const char * name;
