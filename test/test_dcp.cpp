@@ -54,9 +54,16 @@ static uint8_t get_name_req[] = {
 
 static uint8_t ident_req[] = {
    0x01, 0x0e, 0xcf, 0x00, 0x00, 0x00, 0xc8, 0x5b, 0x76, 0xe6, 0x89, 0xdf,
-   0x88, 0x92, 0xfe, 0xfe, 0x05, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x01,
+   0x88, 0x92, 0xfe, 0xfe, 0x05, 0x00, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00,
    0x00, 0x10, 0x02, 0x02, 0x00, 0x0c, 0x72, 0x74, 0x2d, 0x6c, 0x61, 0x62,
    0x73, 0x2d, 0x64, 0x65, 0x6d, 0x6f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+
+static uint8_t ident_by_device_id_req[] = {
+   0x01, 0x0e, 0xcf, 0x00, 0x00, 0x00, 0x74, 0xda, 0x38, 0xc2, 0x5e, 0xa4,
+   0x88, 0x92, 0xfe, 0xfe, 0x05, 0x00, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00,
+   0x00, 0x08, 0x02, 0x03, 0x00, 0x04, 0xfe, 0xed, 0xbe, 0xef, 0x00, 0x00,
+   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 static uint8_t set_name_req[] = {
@@ -121,42 +128,78 @@ TEST_F (DcpTest, DcpRunTest)
 {
    pnal_buf_t * p_buf;
    int ret;
+   int successful_replies = 0;
+   int changed_byte = 0;
 
    TEST_TRACE ("\nGenerating mock set name request\n");
    p_buf = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE);
    memcpy (p_buf->payload, set_name_req, sizeof (set_name_req));
    ret = pf_eth_recv (mock_os_data.eth_if_handle, net, p_buf);
    EXPECT_EQ (ret, 1);
+   successful_replies += ret;
 
    TEST_TRACE ("\nGenerating mock set IP request\n");
    p_buf = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE);
    memcpy (p_buf->payload, set_ip_req, sizeof (set_ip_req));
    ret = pf_eth_recv (mock_os_data.eth_if_handle, net, p_buf);
    EXPECT_EQ (ret, 1);
+   successful_replies += ret;
 
    TEST_TRACE ("\nGenerating mock set ident request\n");
    p_buf = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE);
    memcpy (p_buf->payload, ident_req, sizeof (ident_req));
    ret = pf_eth_recv (mock_os_data.eth_if_handle, net, p_buf);
    EXPECT_EQ (ret, 1);
+   successful_replies += ret;
+
+   run_stack (2 * 1000);
+
+   TEST_TRACE ("\nGenerating mock set ident by device id request\n");
+   p_buf = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE);
+   memcpy (
+      p_buf->payload,
+      ident_by_device_id_req,
+      sizeof (ident_by_device_id_req));
+   ret = pf_eth_recv (mock_os_data.eth_if_handle, net, p_buf);
+   EXPECT_EQ (ret, 1);
+   successful_replies += ret;
+
+   TEST_TRACE ("\nCheck invalid length set ident by device id request fails\n");
+   p_buf = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE);
+   changed_byte = ident_by_device_id_req[32];
+   ident_by_device_id_req[32] = 0x01;
+   memcpy (
+      p_buf->payload,
+      ident_by_device_id_req,
+      sizeof (ident_by_device_id_req));
+   ret = pf_eth_recv (mock_os_data.eth_if_handle, net, p_buf);
+   ident_by_device_id_req[32] = changed_byte;
+   EXPECT_EQ (ret, 0);
 
    TEST_TRACE ("\nGenerating mock factory reset request\n");
    p_buf = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE);
    memcpy (p_buf->payload, factory_reset_req, sizeof (factory_reset_req));
    ret = pf_eth_recv (mock_os_data.eth_if_handle, net, p_buf);
    EXPECT_EQ (ret, 1);
+   successful_replies += ret;
 
    TEST_TRACE ("\nGenerating mock flash LED request\n");
    p_buf = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE);
    memcpy (p_buf->payload, signal_req, sizeof (signal_req));
    ret = pf_eth_recv (mock_os_data.eth_if_handle, net, p_buf);
    EXPECT_EQ (ret, 1);
+   successful_replies += ret;
+
    /* Wait for LED to flash three times at 1 Hz */
    run_stack (4 * 1000 * 1000);
 
-   EXPECT_EQ (
-      mock_os_data.eth_send_count,
-      9 + (PNET_MAX_PHYSICAL_PORTS - 1) * 4);
+   TEST_TRACE (
+      "Pkts Recv, %d lldp, %d profinet, %d total\n",
+      mock_os_data.eth_lldp_count,
+      mock_os_data.eth_profinet_count,
+      mock_os_data.eth_send_count);
+
+   EXPECT_EQ (mock_os_data.eth_profinet_count, successful_replies);
    EXPECT_EQ (mock_os_data.set_ip_suite_count, 2);
 
    EXPECT_EQ (appdata.call_counters.led_on_calls, 3);

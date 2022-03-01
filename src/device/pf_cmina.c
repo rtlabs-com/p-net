@@ -1129,7 +1129,7 @@ int pf_cmina_dcp_get_req (
          *pp_value = (uint8_t *)net->cmina_current_dcp_ase.product_name;
          break;
       case PF_DCP_SUB_DEV_PROP_NAME:
-         *p_value_length = sizeof (net->cmina_current_dcp_ase.station_name);
+         *p_value_length = strlen(net->cmina_current_dcp_ase.station_name);
          *pp_value = (uint8_t *)net->cmina_current_dcp_ase.station_name;
          break;
       case PF_DCP_SUB_DEV_PROP_ID:

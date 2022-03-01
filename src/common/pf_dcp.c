@@ -1443,7 +1443,7 @@ static int pf_dcp_identify_req (
    uint16_t ix;
    bool first = true;   /* First of the blocks */
    bool match = false;  /* Is it for us? */
-   bool filter = false; /* Is it IdentifyFilter or IdentifyAll? */
+   bool filter = true; /* Is it IdentifyFilter or IdentifyAll? */
    uint8_t * p_src;
    uint16_t src_pos = 0;
    pf_ethhdr_t * p_src_ethhdr;
@@ -1529,8 +1529,15 @@ static int pf_dcp_identify_req (
       src_pos += sizeof (*p_src_block_hdr); /* Point to the block value */
 
       src_block_len = ntohs (p_src_block_hdr->block_length);
+      /* Check if we have a valid dcp data length */
+      if (!(src_dcplen >= (src_pos + src_block_len)))
+      {
+          ret = -1;
+      }
+      else {
+          match = true; /* So far so good */
+      }
 
-      match = true; /* So far so good */
       while ((ret == 0) && (first || (filter && match)) &&
              (src_dcplen >= (src_pos + src_block_len)) &&
              (dst_pos < PF_FRAME_BUFFER_SIZE))
@@ -1676,18 +1683,18 @@ static int pf_dcp_identify_req (
                   stationname_position = src_pos;
                   stationname_len = src_block_len;
 #endif
-                  if (
-                     (memcmp (p_value, &p_src[src_pos], src_block_len) == 0) &&
-                     (p_value[src_block_len] == '\0'))
+                  if (filter == true)
                   {
-                     if (first == true)
+                     if (
+                        (memcmp (p_value, &p_src[src_pos], src_block_len) != 0) ||
+                        (p_value[src_block_len] != '\0'))
                      {
-                        filter = true;
+                        match = false;
                      }
                   }
                   else
                   {
-                     match = false;
+                     ret = -1;
                   }
                   break;
                case PF_DCP_SUB_DEV_PROP_ID:
@@ -1840,7 +1847,6 @@ static int pf_dcp_identify_req (
                   if (first == true)
                   {
                      p_req_alias_name = alias;
-                     filter = true;
                   }
                }
                else
@@ -1950,6 +1956,11 @@ static int pf_dcp_identify_req (
          "DCP(%d): Could not allocate memory for incoming DCP identify "
          "request.\n",
          __LINE__);
+   }
+
+   if ((ret <= 0) && (match == false))
+   {
+       return ret; /* Not handled, not matched or something went wrong */
    }
 
    if (p_buf != NULL)

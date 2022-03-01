@@ -133,12 +133,48 @@ int mock_pnal_set_ip_suite (
    return 0;
 }
 
+static uint16_t mock_get_eth_packet_type (pnal_buf_t * p_buf)
+{
+   uint16_t eth_type_pos = 2 * sizeof (pnet_ethaddr_t);
+   uint16_t eth_type = 0;
+   const uint16_t * p_data = NULL;
+
+   /* Skip ALL VLAN tags */
+   p_data = (uint16_t *)(&((uint8_t *)p_buf->payload)[eth_type_pos]);
+   eth_type = ntohs (p_data[0]);
+   while (eth_type == PNAL_ETHTYPE_VLAN)
+   {
+      eth_type_pos += 4; /* Sizeof VLAN tag */
+
+      p_data = (uint16_t *)(&((uint8_t *)p_buf->payload)[eth_type_pos]);
+      eth_type = ntohs (p_data[0]);
+   }
+
+   return eth_type;
+}
+
 int mock_pnal_eth_send (pnal_eth_handle_t * handle, pnal_buf_t * p_buf)
 {
+   uint16_t eth_type = 0;
+
+   eth_type = mock_get_eth_packet_type (p_buf);
+
    memcpy (mock_os_data.eth_send_copy, p_buf->payload, p_buf->len);
    mock_os_data.eth_send_len = p_buf->len;
-   mock_os_data.eth_send_count++;
 
+   /* Count packet types sent, so we can differentiate between them */
+   switch (eth_type)
+   {
+   case PNAL_ETHTYPE_LLDP:
+      mock_os_data.eth_lldp_count++;
+      break;
+   case PNAL_ETHTYPE_PROFINET:
+      mock_os_data.eth_profinet_count++;
+   default:
+      break;
+   }
+
+   mock_os_data.eth_send_count++;
    return p_buf->len;
 }
 
