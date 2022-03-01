@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 
 #############################################
 # Script for setting Profinet LEDs on Linux #
@@ -22,13 +22,13 @@ LED_STATE=$2
 # Uncomment next line for debugging
 #echo "Script for Profinet LEDs on RPi. LED number ${LED_NUMBER}, new state ${LED_STATE}"
 
-if ! [ ${LED_STATE} == "0" -o ${LED_STATE} == "1" ]; then
+if ! [ "${LED_STATE}" = "0" -o "${LED_STATE}" = "1" ]; then
    echo "Wrong LED state: ${LED_STATE}"
    exit 1
 fi
-if  [ ${LED_NUMBER} == "1" ]; then
+if  [ "${LED_NUMBER}" = "1" ]; then
    GPIO=17
-elif [ ${LED_NUMBER} == "2" ]; then
+elif [ "${LED_NUMBER}" = "2" ]; then
    GPIO=23
 else
    echo "Wrong LED number: ${LED_NUMBER}"
