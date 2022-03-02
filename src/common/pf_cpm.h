@@ -97,18 +97,18 @@ int pf_cpm_get_iocs (
  * User must supply a buffer large enough to hold the received IOPS.
  * Maximum buffer size is 256 bytes.
  *
- * @param net              InOut: The p-net stack instance
- * @param api_id        In:   The API identifier.
- * @param slot_nbr      In:   The slot number.
- * @param subslot_nbr   In:   The sub-slot number.
- * @param p_new_flag    Out:  true means new valid data (and IOPS) frame
- * available since last call.
- * @param p_data        Out:  Copy of the received data.
- * @param p_data_len    In:   Buffer size.
- *                      Out:  Length of received data.
- * @param p_iops        Out:  The received IOPS.
- * @param p_iops_len    In:   Size of buffer at p_iops.
- *                      Out:  The length of the received IOPS.
+ * @param net           InOut: The p-net stack instance
+ * @param api_id        In:    The API identifier.
+ * @param slot_nbr      In:    The slot number.
+ * @param subslot_nbr   In:    The sub-slot number.
+ * @param p_new_flag    Out:   true means new valid data (and IOPS) frame
+ *                             available since last call.
+ * @param p_data        Out:   Copy of the received data.
+ * @param p_data_len    In:    Buffer size.
+ *                      Out:   Length of received data.
+ * @param p_iops        Out:   The received IOPS.
+ * @param p_iops_len    In:    Size of buffer at p_iops.
+ *                      Out:   The length of the received IOPS.
  * @return  0  if the data and IOPS could be retrieved.
  *          -1 if an error occurred.
  */

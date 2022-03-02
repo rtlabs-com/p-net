@@ -144,7 +144,7 @@ static inline uint32_t atomic_fetch_sub (atomic_int * p, uint32_t v)
       (x) |= (v) << PF_DIAG_CH_PROP_MAINT_POS;                                 \
    } while (0)
 
-/* ch_properties appears or disappers */
+/* ch_properties appears or disappears */
 #define PF_DIAG_CH_PROP_SPEC_MASK 0x1800
 #define PF_DIAG_CH_PROP_SPEC_POS  11
 #define PF_DIAG_CH_PROP_SPEC_GET(x)                                            \
@@ -1572,7 +1572,7 @@ typedef struct pf_ir_info
 typedef struct pf_sr_info
 {
    bool valid;
-   uint16_t redundancy_data_hold_factor; /** res: 1ms, range: 1..0xC8
+   uint16_t redundancy_data_hold_factor; /** res: 1 ms, range: 1..0xC8
                                             (optional), 0xc9..0xffff (mandatory)
                                           */
    struct
@@ -2123,7 +2123,7 @@ typedef struct pf_ar
 } pf_ar_t;
 
 /*
- * ============= Plugable typedefs ==================
+ * ============= Pluggable typedefs ==================
  */
 
 typedef enum pf_submod_plug_state
@@ -2619,7 +2619,7 @@ struct pnet
    pf_cmina_dcp_ase_t cmina_nonvolatile_dcp_ase; /* Reflects what is/should be
                                                     stored in nvm */
    pf_cmina_dcp_ase_t cmina_current_dcp_ase;     /* Reflects current settings
-                                                    (possibly not yet commited) */
+                                                    (possibly not yet committed) */
    os_mutex_t * cmina_mutex;
    pf_cmina_state_values_t cmina_state;
    uint8_t cmina_error_decode;

@@ -62,7 +62,7 @@ extern "C" {
 #define APP_GSDML_PRODUCT_NAME "P-Net Sample Application"
 
 /* GSDML tag: MinDeviceInterval */
-#define APP_GSDML_MIN_DEVICE_INTERVAL 32 /* 1ms */
+#define APP_GSDML_MIN_DEVICE_INTERVAL 32 /* 1 ms */
 
 #define APP_GSDML_DIAG_CUSTOM_USI 0x1234
 
@@ -81,7 +81,7 @@ typedef struct cfg_module
 {
    uint32_t id;
    const char * name;
-   uint32_t submodules[]; /* Variable length, ends with 0*/
+   uint32_t submodules[]; /* Variable length, ends with 0 */
 } app_gsdml_module_t;
 
 typedef struct app_gsdml_submodule

@@ -46,6 +46,7 @@ typedef struct app_utils_netif_namelist
    app_utils_netif_name_t netif[PNET_MAX_PHYSICAL_PORTS + 1];
 } app_utils_netif_namelist_t;
 
+/* Forward declaration */
 typedef struct app_subslot app_subslot_t;
 typedef void (*app_utils_cyclic_callback) (app_subslot_t * subslot, void * tag);
 
@@ -85,7 +86,7 @@ typedef struct app_slot
 {
    bool plugged;
    uint32_t module_id;
-   const char * name;
+   const char * name; /** Module name */
    app_subslot_t subslots[PNET_MAX_SUBSLOTS];
 } app_slot_t;
 
@@ -173,9 +174,12 @@ const char * app_utils_dcontrol_cmd_to_string (
 const char * app_utils_event_to_string (pnet_event_values_t event);
 
 /**
- * Get network configuration from a string
+ * Update network configuration from a string
  * defining a list of network interfaces examples:
  * "eth0" or "br0,eth0,eth1"
+ *
+ * Read IP, netmask etc from operating system.
+ *
  * @param netif_list_str      In: list of network ifs
  * @param if_list             Out: Array of network ifs
  * @param number_of_ports     Out: Number of ports
@@ -234,7 +238,7 @@ void app_utils_print_network_config (
 /**
  * Print iocs warning message if ioxs is changed.
  * @param subslot          In: Subslot
- * @param ioxs_str         In: String decription Producer or Consumer
+ * @param ioxs_str         In: String description Producer or Consumer
  * @param ioxs_current     In: Current status
  * @param ioxs_new         In: New status
  */
@@ -261,7 +265,8 @@ int app_utils_pnet_cfg_init_default (pnet_cfg_t * pnet_cfg);
  * Plug application module.
  * @param p_api            InOut: API
  * @param slot_nbr         In:    Slot number
- * @param module_id        In:    Module identity
+ * @param id               In:    Module identity
+ * @param name             In:    Module name
  * @return 0 on success, -1 on error
  */
 int app_utils_plug_module (
@@ -289,9 +294,8 @@ int app_utils_pull_module (app_api_t * p_api, uint16_t slot_nbr);
  * @param submodule_name   In:    Submodule name
  * @param cyclic_callback  In:    Submodule data callback
  * @param tag              In:    Tag passed in cyclic callback
- *                                Typicall application or
+ *                                Typically application or
  *                                submodule handle
- *
  * @return Reference to allocated subslot,
  *         NULL if no free subslot is available. This should
  *         never happen if application is aligned with p-net state.
@@ -319,9 +323,10 @@ int app_utils_pull_submodule (
    uint16_t subslot_nbr);
 
 /**
- * Generate data callback for all plugged
- * submodules. The callback passsed in
- * app_utils_plug_submodule is used.
+ * Trigger data callback for all plugged submodules.
+ *
+ * The callback given in \a app_utils_plug_submodule() is used.
+ *
  * @param p_api         In:   API
  */
 void app_utils_cyclic_data_poll (app_api_t * p_api);

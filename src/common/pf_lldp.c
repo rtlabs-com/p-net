@@ -1214,7 +1214,7 @@ void pf_lldp_get_org_header_from_packet (
  * 1-255 Chassis ID
  *
  * @param parse_info       InOut: Parsing information.
- * @param offet            InOut: Byte offset in buffer.
+ * @param offset            InOut: Byte offset in buffer.
  * @param tlv_len          In:    Length of TLV in bytes.
  * @param chassis_id       Out:   Parsed Chassis ID.
  */
@@ -1265,7 +1265,7 @@ static void pf_lldp_get_chassis_id_from_packet (
  * 1-255 Port ID
  *
  * @param parse_info       InOut: Parsing information.
- * @param offet            InOut: Byte offset in buffer.
+ * @param offset            InOut: Byte offset in buffer.
  * @param tlv_len          In:    Length of TLV in bytes.
  * @param port_id          Out:   Parsed Port ID.
  */
@@ -1315,7 +1315,7 @@ static void pf_lldp_get_port_id_from_packet (
  * 2     Time to live (TTL)
  *
  * @param parse_info       InOut: Parsing information.
- * @param offet            InOut: Byte offset in buffer.
+ * @param offset            InOut: Byte offset in buffer.
  * @param tlv_len          In:    Length of TLV in bytes.
  * @param ttl              Out:   Parsed TTL.
  */
@@ -1347,7 +1347,7 @@ static void pf_lldp_get_ttl_from_packet (
  * 0-255 Port description
  *
  * @param parse_info       InOut: Parsing information.
- * @param offet            InOut: Byte offset in buffer.
+ * @param offset            InOut: Byte offset in buffer.
  * @param tlv_len          In:    Length of TLV in bytes.
  * @param port_description Out:   Parsed port description.
  */
@@ -1391,7 +1391,7 @@ static void pf_lldp_get_port_description_from_packet (
  * 0-128 Object identifier
  *
  * @param parse_info       InOut: Parsing information.
- * @param offet            InOut: Byte offset in buffer.
+ * @param offset            InOut: Byte offset in buffer.
  * @param tlv_len          In:    Length of TLV in bytes.
  * @param management_address Out: Parsed management address.
  */
@@ -1449,7 +1449,7 @@ static void pf_lldp_get_management_address_from_packet (
  * 4     CableDelayLocal
  *
  * @param parse_info       InOut: Parsing information.
- * @param offet            InOut: Byte offset in buffer.
+ * @param offset            InOut: Byte offset in buffer.
  * @param tlv_len          In:    Length of TLV in bytes.
  * @param delay            Out:   Parsed delay values.
  */
@@ -1484,7 +1484,7 @@ static void pf_lldp_get_signal_delay_from_packet (
  * 2     RTClass3_PortStatus
  *
  * @param parse_info       InOut: Parsing information.
- * @param offet            InOut: Byte offset in buffer.
+ * @param offset            InOut: Byte offset in buffer.
  * @param tlv_len          In:    Length of TLV in bytes.
  * @param status           Out:   Parsed port status.
  */
@@ -1514,7 +1514,7 @@ static void pf_lldp_get_port_status_from_packet (
  * 6     Chassis MAC address
  *
  * @param parse_info       InOut: Parsing information.
- * @param offet            InOut: Byte offset in buffer.
+ * @param offset            InOut: Byte offset in buffer.
  * @param tlv_len          In:    Length of TLV in bytes.
  * @param chassis_mac      Out:   Parsed Chassis MAC address.
  */
@@ -1550,7 +1550,7 @@ static void pf_lldp_get_chassis_mac_from_packet (
  * 2     Operational MAU typ
  *
  * @param parse_info       InOut: Parsing information.
- * @param offet            InOut: Byte offset in buffer.
+ * @param offset            InOut: Byte offset in buffer.
  * @param tlv_len          In:    Length of TLV in bytes.
  * @param link_status      Out:   Parsed link status.
  */
@@ -1876,39 +1876,61 @@ void pf_lldp_update_peer (
       /* No changes */
       return;
    }
+
    if (p_port_data->lldp.is_peer_info_received)
+   {
+      if (
+         p_port_data->lldp.peer_info.chassis_id.subtype ==
+            PF_LLDP_SUBTYPE_LOCALLY_ASSIGNED &&
+         p_port_data->lldp.peer_info.port_id.subtype ==
+            PF_LLDP_SUBTYPE_LOCALLY_ASSIGNED)
+      {
+         LOG_INFO (
+            PF_LLDP_LOG,
+            "LLDP(%d): Peer info changed on port %d. Old peer info - MAC: "
+            "%02X:%02X:%02X:%02X:%02X:%02X "
+            "Chassis ID: %s Port ID: %s\n",
+            __LINE__,
+            loc_port_num,
+            p_port_data->lldp.peer_info.mac_address.addr[0],
+            p_port_data->lldp.peer_info.mac_address.addr[1],
+            p_port_data->lldp.peer_info.mac_address.addr[2],
+            p_port_data->lldp.peer_info.mac_address.addr[3],
+            p_port_data->lldp.peer_info.mac_address.addr[4],
+            p_port_data->lldp.peer_info.mac_address.addr[5],
+            p_port_data->lldp.peer_info.chassis_id.string,
+            p_port_data->lldp.peer_info.port_id.string);
+      }
+      else
+      {
+         LOG_INFO (
+            PF_LLDP_LOG,
+            "LLDP(%d): Peer info changed on port %d.\n",
+            __LINE__,
+            loc_port_num);
+      }
+   }
+
+   if (
+      lldp_peer_info->chassis_id.subtype == PF_LLDP_SUBTYPE_LOCALLY_ASSIGNED &&
+      lldp_peer_info->port_id.subtype == PF_LLDP_SUBTYPE_LOCALLY_ASSIGNED)
    {
       LOG_INFO (
          PF_LLDP_LOG,
-         "LLDP(%d): Peer info changed on port %d. Old peer info - MAC: "
+         "LLDP(%d): New peer info on port %d - MAC: "
          "%02X:%02X:%02X:%02X:%02X:%02X "
          "Chassis ID: %s Port ID: %s\n",
          __LINE__,
          loc_port_num,
-         p_port_data->lldp.peer_info.mac_address.addr[0],
-         p_port_data->lldp.peer_info.mac_address.addr[1],
-         p_port_data->lldp.peer_info.mac_address.addr[2],
-         p_port_data->lldp.peer_info.mac_address.addr[3],
-         p_port_data->lldp.peer_info.mac_address.addr[4],
-         p_port_data->lldp.peer_info.mac_address.addr[5],
-         p_port_data->lldp.peer_info.chassis_id.string,
-         p_port_data->lldp.peer_info.port_id.string);
+         lldp_peer_info->mac_address.addr[0],
+         lldp_peer_info->mac_address.addr[1],
+         lldp_peer_info->mac_address.addr[2],
+         lldp_peer_info->mac_address.addr[3],
+         lldp_peer_info->mac_address.addr[4],
+         lldp_peer_info->mac_address.addr[5],
+         lldp_peer_info->chassis_id.string,
+         lldp_peer_info->port_id.string);
    }
-
-   LOG_INFO (
-      PF_LLDP_LOG,
-      "LLDP(%d): New peer info on port %d - MAC: %02X:%02X:%02X:%02X:%02X:%02X "
-      "Chassis ID: %s Port ID: %s\n",
-      __LINE__,
-      loc_port_num,
-      lldp_peer_info->mac_address.addr[0],
-      lldp_peer_info->mac_address.addr[1],
-      lldp_peer_info->mac_address.addr[2],
-      lldp_peer_info->mac_address.addr[3],
-      lldp_peer_info->mac_address.addr[4],
-      lldp_peer_info->mac_address.addr[5],
-      lldp_peer_info->chassis_id.string,
-      lldp_peer_info->port_id.string);
 
    pf_lldp_store_peer_info (net, loc_port_num, lldp_peer_info);
    pf_pdport_peer_indication (net, loc_port_num);
@@ -1930,21 +1952,49 @@ int pf_lldp_recv (
 
    if (!err)
    {
-      LOG_DEBUG (
-         PF_LLDP_LOG,
-         "LLDP(%d): Receive port %u MAC: %02X:%02X:%02X:%02X:%02X:%02X "
-         "Len: %d Chassis ID: %s Port ID: %s\n",
-         __LINE__,
-         loc_port_num,
-         peer_data.mac_address.addr[0],
-         peer_data.mac_address.addr[1],
-         peer_data.mac_address.addr[2],
-         peer_data.mac_address.addr[3],
-         peer_data.mac_address.addr[4],
-         peer_data.mac_address.addr[5],
-         p_frame_buf->len,
-         peer_data.chassis_id.string,
-         peer_data.port_id.string);
+      if (
+         peer_data.chassis_id.subtype == PF_LLDP_SUBTYPE_LOCALLY_ASSIGNED &&
+         peer_data.port_id.subtype == PF_LLDP_SUBTYPE_LOCALLY_ASSIGNED)
+      {
+         LOG_DEBUG (
+            PF_LLDP_LOG,
+            "LLDP(%d): Receive port %u MAC: "
+            "%02X:%02X:%02X:%02X:%02X:%02X "
+            "Len: %d Chassis ID: %s Port ID: %s\n",
+            __LINE__,
+            loc_port_num,
+            peer_data.mac_address.addr[0],
+            peer_data.mac_address.addr[1],
+            peer_data.mac_address.addr[2],
+            peer_data.mac_address.addr[3],
+            peer_data.mac_address.addr[4],
+            peer_data.mac_address.addr[5],
+            p_frame_buf->len,
+            peer_data.chassis_id.string,
+            peer_data.port_id.string);
+      }
+      else if (peer_data.port_id.subtype == PF_LLDP_SUBTYPE_LOCALLY_ASSIGNED)
+      {
+         LOG_DEBUG (
+            PF_LLDP_LOG,
+            "LLDP(%d): LLDP frame received on port %u Len: %d Port "
+            "ID: %s\n",
+            __LINE__,
+            loc_port_num,
+            p_frame_buf->len,
+            peer_data.port_id.string);
+      }
+      else
+      {
+         LOG_DEBUG (
+            PF_LLDP_LOG,
+            "LLDP(%d): Non-profinet LLDP frame received on port %u "
+            "Len: "
+            "%d\n",
+            __LINE__,
+            loc_port_num,
+            p_frame_buf->len);
+      }
 
       if (pf_port_is_valid (net, loc_port_num))
       {

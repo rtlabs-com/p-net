@@ -133,11 +133,11 @@ static const app_gsdml_submodule_t submod_digital_inout = {
    .outsize = APP_GSDML_OUTPUT_DATA_SIZE,
    .parameters = {APP_GSDM_PARAMETER_1_IDX, APP_GSDM_PARAMETER_2_IDX, 0}};
 
-/* List of supported modules */
+/** List of supported modules */
 static const app_gsdml_module_t * app_gsdml_modules[] =
    {&dap_1, &module_digital_in, &module_digital_out, &module_digital_in_out};
 
-/* List of supported submodules */
+/** List of supported submodules */
 static const app_gsdml_submodule_t * app_gsdml_submodules[] = {
    &dap_indentity_1,
    &dap_interface_1,

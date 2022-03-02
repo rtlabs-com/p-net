@@ -103,6 +103,7 @@ typedef struct app_data_t
    uint8_t counter_data;
 } app_data_t;
 
+/* Forward declarations */
 static void app_plug_dap (app_data_t * app, uint16_t number_of_ports);
 static int app_set_initial_data_and_ioxs (app_data_t * app);
 static void app_cyclic_data_callback (app_subslot_t * subslot, void * tag);
@@ -901,11 +902,10 @@ static void app_handle_send_alarm_ack (
 }
 
 /**
- * Handle cyclic data for all plugged submodules
+ * Handle cyclic data for a subslot.
  * Data is read from / written to the app_data file
  * which handles the data and update the physical
  * input /outputs.
- *
  *
  * @param subslot    In:   Subslot reference
  * @param tag        In:   Application handle
@@ -1113,11 +1113,11 @@ static int app_set_initial_data_and_ioxs (app_data_t * app)
 }
 
 /**
- * Send and receive cyclic / process data
+ * Send and receive cyclic/process data.
  *
- * Generate callback for all plugged submodules
- * the sample application handles all submodules
- * in the app_cyclic_data_callback() function.
+ * The sample application handles all submodules
+ * in the \a app_cyclic_data_callback() function.
+ *
  * A complex device may register separate callbacks
  * for each submodule.
  *

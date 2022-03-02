@@ -128,7 +128,7 @@ TEST_F (SchedulerUnitTest, SchedulerSanitizeDelayTest)
    result = pf_scheduler_sanitize_delay (input_delay, cycle_len, false);
    ASSERT_NEAR (result, 1000, margin);
 
-   input_delay = (uint32_t) (-4); /* Next execution has already passed */
+   input_delay = (uint32_t)(-4); /* Next execution has already passed */
    result = pf_scheduler_sanitize_delay (input_delay, cycle_len, true);
    ASSERT_NEAR (result, 500, margin);
    result = pf_scheduler_sanitize_delay (input_delay, cycle_len, false);
@@ -470,7 +470,7 @@ TEST_F (SchedulerTest, SchedulerAddRemove)
    is_scheduled = pf_scheduler_is_running (p_b);
    EXPECT_FALSE (is_scheduled);
 
-   /* Shedule and restart */
+   /* Schedule and restart */
    ret = pf_scheduler_add (
       net,
       TEST_SCHEDULER_CALLBACK_DELAY,

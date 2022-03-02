@@ -591,7 +591,7 @@ void pf_scheduler_show (pnet_t * net)
  *
  * This function calculates the delay time required to make the
  * scheduler fire at a specific stack tick. However the time jitter in the
- * firing is largely dependent on the underlaying operating system's ablitity to
+ * firing is largely dependent on the underlying operating system's ablitity to
  * trigger the stack execution with a high time precision.
  *
  * @param wanted_delay                    In:    Delay in microseconds.
