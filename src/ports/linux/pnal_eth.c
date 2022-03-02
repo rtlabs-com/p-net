@@ -15,7 +15,7 @@
 
 /**
  * @file
- * @brief Linux Ethernet related functions that use \a pnal_eth_handle_t
+ * @brief Functions for raw Ethernet frames on Linux
  */
 
 #include "pnal.h"
@@ -28,13 +28,68 @@
 #include <stdlib.h>
 #include <string.h>
 
-struct pnal_eth_handle
+typedef struct eth_port_handle
 {
    pnal_eth_callback_t * callback;
    void * arg;
    int socket;
    os_thread_t * thread;
-};
+   bool is_management_port;
+   int loc_port_num;
+} eth_port_handle_t;
+
+static uint8_t total_number_of_ports = 0;
+static eth_port_handle_t handles[PNET_MAX_PHYSICAL_PORTS + 1] = {0};
+
+/**
+ * Get handle to stored port info.
+ *
+ *  One physical port    Two physical ports
+ *  total_ports=1        total_ports=3            Index
+ *  ┌─────────────────┐  ┌─────────────────┐
+ *  │ Management port │  │ Management port │      0
+ *  │ Physical port 1 │  │                 │
+ *  └─────────────────┘  ├─────────────────┤
+ *                       │ Physical port 1 │      1
+ *                       │                 │
+ *                       ├─────────────────┤
+ *                       │ Physical port 2 │      2
+ *                       │                 │
+ *                       └─────────────────┘
+ * @param is_management_port    In: True if we look for the management port
+ * @param loc_port_num          In: Local port number we look for (or 0 when
+ *                                  looking for management port)
+ * @param total_ports           In: Total number of ports
+ * @return  Address, or NULL if an error occurred.
+ */
+static eth_port_handle_t * get_handle (
+   bool is_management_port,
+   int loc_port_num,
+   uint8_t total_ports)
+{
+   if (is_management_port)
+   {
+      return &handles[0];
+   }
+
+   if (loc_port_num <= 0 || total_ports == 0 || total_ports == 2)
+   {
+      return NULL;
+   }
+
+   if (total_ports == 1 && loc_port_num > 1)
+   {
+      return NULL;
+   }
+
+   /* When management port is same as physical port 1 */
+   if (total_ports == 1 && loc_port_num == 1)
+   {
+      return &handles[0];
+   }
+
+   return &handles[loc_port_num];
+}
 
 /**
  * @internal
@@ -44,11 +99,11 @@ struct pnal_eth_handle
  * This is a function to be passed into os_thread_create()
  * Do not change the argument types.
  *
- * @param thread_arg     InOut: Will be converted to pnal_eth_handle_t
+ * @param thread_arg     InOut: Will be converted to eth_port_handle_t
  */
 static void os_eth_task (void * thread_arg)
 {
-   pnal_eth_handle_t * eth_handle = thread_arg;
+   eth_port_handle_t * eth_handle = thread_arg;
    ssize_t readlen;
    int handled = 0;
 
@@ -64,7 +119,11 @@ static void os_eth_task (void * thread_arg)
 
       if (eth_handle->callback != NULL)
       {
-         handled = eth_handle->callback (eth_handle, eth_handle->arg, p);
+         handled = eth_handle->callback (
+            eth_handle->is_management_port,
+            eth_handle->loc_port_num,
+            eth_handle->arg,
+            p);
       }
       else
       {
@@ -79,14 +138,17 @@ static void os_eth_task (void * thread_arg)
    }
 }
 
-pnal_eth_handle_t * pnal_eth_init (
+int pnal_eth_init (
    const char * if_name,
+   bool is_management_port,
+   int loc_port_num,
    pnal_ethertype_t receive_type,
    const pnal_cfg_t * pnal_cfg,
    pnal_eth_callback_t * callback,
-   void * arg)
+   void * arg,
+   uint8_t total_ports)
 {
-   pnal_eth_handle_t * handle;
+   eth_port_handle_t * handle;
    int i;
    struct ifreq ifr;
    struct sockaddr_ll sll;
@@ -95,15 +157,20 @@ pnal_eth_handle_t * pnal_eth_init (
    const uint16_t linux_receive_type =
       (receive_type == PNAL_ETHTYPE_ALL) ? ETH_P_ALL : receive_type;
 
-   handle = malloc (sizeof (pnal_eth_handle_t));
+   handle = get_handle (is_management_port, loc_port_num, total_ports);
    if (handle == NULL)
    {
-      return NULL;
+      return -1;
    }
 
-   handle->arg = arg;
+   handle->is_management_port = is_management_port;
+   handle->loc_port_num = loc_port_num;
    handle->callback = callback;
+   handle->arg = arg;
    handle->socket = socket (PF_PACKET, SOCK_RAW, htons (linux_receive_type));
+
+   /* Update static variable */
+   total_number_of_ports = total_ports;
 
    /* Adjust send timeout */
    timeout.tv_sec = 0;
@@ -150,17 +217,35 @@ pnal_eth_handle_t * pnal_eth_init (
          pnal_cfg->eth_recv_thread.stack_size,
          os_eth_task,
          handle);
-      return handle;
+      return 0;
    }
    else
    {
-      free (handle);
-      return NULL;
+      return -1;
    }
 }
 
-int pnal_eth_send (pnal_eth_handle_t * handle, pnal_buf_t * buf)
+int pnal_eth_send_on_management_port (pnal_buf_t * buf)
 {
-   int ret = send (handle->socket, buf->payload, buf->len, 0);
-   return ret;
+   eth_port_handle_t * handle = get_handle (true, 0, total_number_of_ports);
+
+   if (handle == NULL)
+   {
+      return -1;
+   }
+
+   return send (handle->socket, buf->payload, buf->len, 0);
+}
+
+int pnal_eth_send_on_physical_port (int loc_port_num, pnal_buf_t * buf)
+{
+   eth_port_handle_t * handle =
+      get_handle (false, loc_port_num, total_number_of_ports);
+
+   if (handle == NULL)
+   {
+      return -1;
+   }
+
+   return send (handle->socket, buf->payload, buf->len, 0);
 }

@@ -35,35 +35,69 @@
 
 /**
  * @internal
- * Initialize network interface
+ * Initialize one network interface
  *
- * @param net              InOut: The p-net stack instance
- * @param netif_name       In:    Interface name
- * @param eth_receive_type In:    Protocol to receive
- * @param pnal_cfg         In:    Operating system dependent configuration
- * @param netif            InOut: Network interface instance
+ * @param net                 InOut: The p-net stack instance
+ * @param netif_name          In:    Interface name
+ * @param is_management_port  In:    True if the port is a management port
+ * @param loc_port_num        In:    Physical pocal port number, or 0 if
+ *                                   separare management port.
+ * @param eth_receive_type    In:    Protocol to receive
+ * @param pnal_cfg            In:    Operating system dependent configuration
+ * @param total_ports         In:    Total number of ports
+ * @param netif               InOut: Network interface instance
  * @return   0 on success
  *          -1 on error
  */
 static int pf_eth_init_netif (
    pnet_t * net,
    const char * netif_name,
+   bool is_management_port,
+   int loc_port_num,
    pnal_ethertype_t eth_receive_type,
    const pnal_cfg_t * pnal_cfg,
+   uint8_t total_ports,
    pf_netif_t * netif)
 {
    pnal_ethaddr_t pnal_mac_addr;
 
+   if (loc_port_num < 0 || loc_port_num > PNET_MAX_PHYSICAL_PORTS)
+   {
+      return -1;
+   }
+
+   if (total_ports == 0 || total_ports == 2)
+   {
+      return -1;
+   }
+
+   if (PNET_MAX_PHYSICAL_PORTS == 1)
+   {
+      if (total_ports > 1)
+      {
+         return -1;
+      }
+   }
+   else
+   {
+      if (total_ports > PNET_MAX_PHYSICAL_PORTS + 1)
+      {
+         return -1;
+      }
+   }
+
    snprintf (netif->name, sizeof (netif->name), "%s", netif_name);
 
-   netif->handle = pnal_eth_init (
-      netif->name,
-      eth_receive_type,
-      pnal_cfg,
-      pf_eth_recv,
-      (void *)net);
-
-   if (netif->handle == NULL)
+   if (
+      pnal_eth_init (
+         netif->name,
+         is_management_port,
+         loc_port_num,
+         eth_receive_type,
+         pnal_cfg,
+         pf_eth_recv,
+         (void *)net,
+         total_ports) == -1)
    {
       LOG_ERROR (PNET_LOG, "Failed to init \"%s\"\n", netif_name);
       return -1;
@@ -78,7 +112,8 @@ static int pf_eth_init_netif (
    LOG_DEBUG (
       PF_ETH_LOG,
       "ETH(%d): Initialising interface \"%s\" %02X:%02X:%02X:%02X:%02X:%02X "
-      "type 0x%04X\n",
+      "Local port number: %d Management interface: %s "
+      "Ethertype: 0x%04X (total %u ports)\n",
       __LINE__,
       netif_name,
       pnal_mac_addr.addr[0],
@@ -87,7 +122,10 @@ static int pf_eth_init_netif (
       pnal_mac_addr.addr[3],
       pnal_mac_addr.addr[4],
       pnal_mac_addr.addr[5],
-      eth_receive_type);
+      loc_port_num,
+      is_management_port ? "true" : "false",
+      eth_receive_type,
+      total_ports);
 
    memcpy (
       netif->mac_address.addr,
@@ -106,74 +144,125 @@ int pf_eth_init (pnet_t * net, const pnet_cfg_t * p_cfg)
    pf_port_t * p_port_data;
    uint8_t number_of_ports = p_cfg->num_physical_ports;
    const pnet_port_cfg_t * p_port_cfg;
-   pnal_ethertype_t main_port_receive_type =
-      (number_of_ports == 1) ? PNAL_ETHTYPE_ALL : PNAL_ETHTYPE_PROFINET;
 
    memset (net->eth_id_map, 0, sizeof (net->eth_id_map));
 
-   /* Init management port */
-   if (
-      pf_eth_init_netif (
-         net,
-         p_cfg->if_cfg.main_netif_name,
-         main_port_receive_type,
-         &p_cfg->pnal_cfg,
-         &net->pf_interface.main_port) != 0)
+   if (number_of_ports == 1)
    {
-      return -1;
-   }
-
-   /* Init physical ports */
-   pf_port_init_iterator_over_ports (net, &port_iterator);
-   port = pf_port_get_next (&port_iterator);
-   while (port != 0)
-   {
-      p_port_data = pf_port_get_state (net, port);
-
-      if (number_of_ports > 1)
+      /* Init management port, which also is physical port 1 */
+      if (
+         pf_eth_init_netif (
+            net,
+            p_cfg->if_cfg.main_netif_name,
+            true,
+            PNET_PORT_1,
+            PNAL_ETHTYPE_ALL,
+            &p_cfg->pnal_cfg,
+            number_of_ports,
+            &net->pf_interface.main_port) != 0)
       {
+         return -1;
+      }
+
+      p_port_data = pf_port_get_state (net, PNET_PORT_1);
+      p_port_data->netif = net->pf_interface.main_port; // TODO?
+   }
+   else
+   {
+      /* Init management port */
+      if (
+         pf_eth_init_netif (
+            net,
+            p_cfg->if_cfg.main_netif_name,
+            true,
+            0,
+            PNAL_ETHTYPE_PROFINET,
+            &p_cfg->pnal_cfg,
+            number_of_ports,
+            &net->pf_interface.main_port) != 0)
+      {
+         return -1;
+      }
+
+      /* Init physical ports */
+      pf_port_init_iterator_over_ports (net, &port_iterator);
+      port = pf_port_get_next (&port_iterator);
+      while (port != 0)
+      {
+         p_port_data = pf_port_get_state (net, port);
          p_port_cfg = pf_port_get_config (net, port);
 
          if (
             pf_eth_init_netif (
                net,
                p_port_cfg->netif_name,
+               false,
+               port,
                PNAL_ETHTYPE_LLDP,
                &p_cfg->pnal_cfg,
+               number_of_ports,
                &p_port_data->netif) != 0)
          {
             return -1;
          }
-      }
-      else
-      {
-         /* In single port configuration the managed port is also
-            physical port 1 */
-         p_port_data->netif = net->pf_interface.main_port;
-      }
 
-      port = pf_port_get_next (&port_iterator);
+         port = pf_port_get_next (&port_iterator);
+      }
    }
 
    return 0;
 }
 
-int pf_eth_send (pnet_t * net, pnal_eth_handle_t * handle, pnal_buf_t * buf)
+int pf_eth_send_on_physical_port (
+   pnet_t * net,
+   int loc_port_num,
+   pnal_buf_t * buf)
 {
    int sent_len = 0;
 
-   sent_len = pnal_eth_send (handle, buf);
+   if (loc_port_num <= 0 || loc_port_num > net->fspm_cfg.num_physical_ports)
+   {
+      LOG_ERROR (
+         PF_ETH_LOG,
+         "ETH(%d): Illegal local port number: %u\n",
+         __LINE__,
+         loc_port_num);
+      return -1;
+   }
+
+   sent_len = pnal_eth_send_on_physical_port (loc_port_num, buf);
    if (sent_len <= 0)
    {
-      LOG_ERROR (PF_ETH_LOG, "ETH(%d): Error from pnal_eth_send\n", __LINE__);
+      LOG_ERROR (
+         PF_ETH_LOG,
+         "ETH(%d): Error from pf_eth_send_on_physical_port()\n",
+         __LINE__);
    }
-   else
-   {
-   }
+
    return sent_len;
 }
 
-int pf_eth_recv (pnal_eth_handle_t * eth_handle, void * arg, pnal_buf_t * p_buf)
+int pf_eth_send_on_management_port (pnet_t * net, pnal_buf_t * buf)
+{
+   int sent_len = 0;
+
+   sent_len = pnal_eth_send_on_management_port (buf);
+   if (sent_len <= 0)
+   {
+      LOG_ERROR (
+         PF_ETH_LOG,
+         "ETH(%d): Error from pnal_send_on_management_port()\n",
+         __LINE__);
+   }
+
+   return sent_len;
+}
+
+int pf_eth_recv (
+   bool is_management_port,
+   int loc_port_num,
+   void * arg,
+   pnal_buf_t * p_buf)
 {
    int ret = 0; /* Means: "Not handled" */
    uint16_t eth_type_pos = 2 * sizeof (pnet_ethaddr_t);
@@ -223,7 +312,7 @@ int pf_eth_recv (pnal_eth_handle_t * eth_handle, void * arg, pnal_buf_t * p_buf)
       }
       break;
    case PNAL_ETHTYPE_LLDP:
-      ret = pf_lldp_recv (net, eth_handle, p_buf, frame_pos);
+      ret = pf_lldp_recv (net, loc_port_num, p_buf, frame_pos);
       break;
    case PNAL_ETHTYPE_IP:
       /* IP-packets (UDP) are also received via the UDP sockets. Do not count

@@ -1053,7 +1053,6 @@ static void pf_lldp_send (pnet_t * net, int loc_port_num)
 {
    /* FIXME: Buffer size should include Ethernet header (14 bytes) */
    pnal_buf_t * p_buffer = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE);
-   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
    if (p_buffer == NULL)
    {
@@ -1064,7 +1063,7 @@ static void pf_lldp_send (pnet_t * net, int loc_port_num)
    {
       p_buffer->len =
          pf_lldp_construct_frame (net, loc_port_num, p_buffer->payload);
-      (void)pf_eth_send (net, p_port_data->netif.handle, p_buffer);
+      (void)pf_eth_send_on_physical_port (net, loc_port_num, p_buffer);
    }
 
    pnal_buf_free (p_buffer);
@@ -1956,14 +1955,13 @@ void pf_lldp_update_peer (
 
 int pf_lldp_recv (
    pnet_t * net,
-   pnal_eth_handle_t * eth_handle,
+   int loc_port_num,
    pnal_buf_t * p_frame_buf,
    uint16_t offset)
 {
    uint8_t * buf = p_frame_buf->payload + offset;
    uint16_t buf_len = p_frame_buf->len - offset;
    pf_lldp_peer_info_t peer_data;
-   int loc_port_num = pf_port_get_port_number (net, eth_handle);
    int err = 0;
 
    err = pf_lldp_parse_packet (buf, buf_len, &peer_data);

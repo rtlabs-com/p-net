@@ -190,22 +190,6 @@ bool pf_port_is_valid (const pnet_t * net, int loc_port_num)
       loc_port_num > 0 && loc_port_num <= net->fspm_cfg.num_physical_ports);
 }
 
-int pf_port_get_port_number (const pnet_t * net, pnal_eth_handle_t * eth_handle)
-{
-   int loc_port_num;
-
-   for (loc_port_num = 1; loc_port_num <= net->fspm_cfg.num_physical_ports;
-        loc_port_num++)
-   {
-      if (net->pf_interface.port[loc_port_num - 1].netif.handle == eth_handle)
-      {
-         return loc_port_num;
-      }
-   }
-
-   return 0;
-}
-
 pf_mediatype_values_t pf_port_get_media_type (pnal_eth_mau_t mau_type)
 {
    switch (mau_type)

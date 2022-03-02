@@ -263,22 +263,22 @@ void pnal_buf_free (pnal_buf_t * p);
 uint8_t pnal_buf_header (pnal_buf_t * p, int16_t header_size_increment);
 
 /**
- * Network interface handle, forward declaration.
- */
-typedef struct pnal_eth_handle pnal_eth_handle_t;
-
-/**
  * The prototype of raw Ethernet reception call-back functions.
  *
- * @param eth_handle       InOut: Network interface handle
- * @param arg              InOut: User-defined (may be NULL).
- * @param p_buf            InOut: The incoming Ethernet frame
+ * @param is_management_port  In:    True if the frame was received on the
+ *                                   management port
+ * @param loc_port_num        In:    Local port number the frame was received
+ *                                   on, or 0 if received on separare
+ *                                   management port.
+ * @param arg                 InOut: User-defined (may be NULL).
+ * @param p_buf               InOut: The incoming Ethernet frame
  *
  * @return  0  If the frame was NOT handled by this function.
  *          1  If the frame was handled and the buffer freed.
  */
 typedef int (pnal_eth_callback_t) (
-   pnal_eth_handle_t * eth_handle,
+   bool is_management_port,
+   int loc_port_num,
    void * arg,
    pnal_buf_t * p_buf);
 
@@ -324,32 +324,51 @@ int pnal_get_port_statistics (
    pnal_port_stats_t * port_stats);
 
 /**
- * Send raw Ethernet data
+ * Send raw Ethernet data on physical port
  *
- * @param handle           In:    Ethernet handle
+ * @param loc_port_num     In:    Local port number for port directly
+ *                                connected to the remote device.
+ *                                Valid range: 1 .. num_physical_ports
  * @param buf              In:    Buffer with data to be sent
  * @return  The number of bytes sent, or -1 if an error occurred.
  */
-int pnal_eth_send (pnal_eth_handle_t * handle, pnal_buf_t * buf);
+int pnal_eth_send_on_physical_port (int loc_port_num, pnal_buf_t * buf);
 
 /**
- * Initialize receiving of raw Ethernet frames (in separate thread)
+ * Send raw Ethernet data on management port
  *
- * @param if_name          In:    Ethernet interface name
- * @param receive_type     In:    Ethernet frame types that shall be received
- *                                by the network interface / port.
- * @param pnal_cfg         In:    Operating system dependent configuration
- * @param callback         In:    Callback for received raw Ethernet frames
- * @param arg              InOut: User argument passed to the callback
- *
- * @return  the Ethernet handle, or NULL if an error occurred.
+ * @param buf              In:    Buffer with data to be sent
+ * @return  The number of bytes sent, or -1 if an error occurred.
  */
-pnal_eth_handle_t * pnal_eth_init (
+int pnal_eth_send_on_management_port (pnal_buf_t * buf);
+
+/**
+ * Initialize receiving of raw Ethernet frames on one interface (in a separate
+ * thread)
+ *
+ * @param if_name             In:    Ethernet interface name
+ * @param is_management_port  In:    True if the port is a management port
+ * @param loc_port_num        In:    Physical pocal port number, or 0 if
+ *                                   separare management port.
+ * @param receive_type        In:    Ethernet frame types that shall be received
+ *                                   by the network interface / port.
+ * @param pnal_cfg            In:    Operating system dependent configuration
+ * @param callback            In:    Callback for received raw Ethernet frames
+ * @param arg                 InOut: User argument passed to the callback
+ * @param total_ports         In:    Total number of ports
+ *
+ * @return  0  if the operation succeeded.
+ *          -1 if an error occurred.
+ */
+int pnal_eth_init (
    const char * if_name,
+   bool is_management_port,
+   int loc_port_num,
    pnal_ethertype_t receive_type,
    const pnal_cfg_t * pnal_cfg,
    pnal_eth_callback_t * callback,
-   void * arg);
+   void * arg,
+   uint8_t total_ports);
 
 /**
  * Open an UDP socket
