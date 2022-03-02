@@ -168,6 +168,7 @@ lldp_tlv_t pf_lldp_get_tlv_from_packet (pf_get_info_t * p_info, uint16_t * p_pos
       tlv.len = 0;
       tlv.p_data = NULL;
    }
+
    return tlv;
 }
 
@@ -520,21 +521,23 @@ void pf_lldp_restart_peer_timeout (
     *  Timeout will always be started if a profinet enabled switch
     *  with 20s LLDP peer ttl is used.
     */
-   if (timeout_in_secs <= LLDP_PEER_MAX_TTL_IN_SECS)
+   if (timeout_in_secs > LLDP_PEER_MAX_TTL_IN_SECS)
    {
-      if (
-         pf_scheduler_add (
-            net,
-            timeout_in_secs * 1000000,
-            pf_lldp_receive_timeout,
-            p_port_data,
-            &p_port_data->lldp.rx_timeout) != 0)
-      {
-         LOG_ERROR (
-            PF_LLDP_LOG,
-            "LLDP(%d): Failed to add LLDP timeout\n",
-            __LINE__);
-      }
+      return;
+   }
+
+   if (
+      pf_scheduler_add (
+         net,
+         timeout_in_secs * 1000000,
+         pf_lldp_receive_timeout,
+         p_port_data,
+         &p_port_data->lldp.rx_timeout) != 0)
+   {
+      LOG_ERROR (
+         PF_LLDP_LOG,
+         "LLDP(%d): Failed to add LLDP timeout\n",
+         __LINE__);
    }
 }
 
@@ -568,11 +571,10 @@ int pf_lldp_get_peer_timestamp (
    const pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
    os_mutex_lock (net->lldp_mutex);
-
    *timestamp_10ms = p_port_data->lldp.timestamp_for_last_peer_change;
    is_received = p_port_data->lldp.is_peer_info_received;
-
    os_mutex_unlock (net->lldp_mutex);
+
    return is_received ? 0 : -1;
 }
 
@@ -836,26 +838,24 @@ int pf_lldp_get_peer_port_name (
    port_id = p_port_data->lldp.peer_info.port_id;
    os_mutex_unlock (net->lldp_mutex);
 
-   if (port_id.is_valid)
-   {
-      for (i = 0; (i < port_id.len) && (port_id.string[i] != '\0') &&
-                  (i < (sizeof (p_port_name->string) - 1));
-           i++)
-      {
-         if (port_id.string[i] == '.')
-         {
-            /* PF_LLDP_NAME_OF_DEVICE_MODE_STANDARD */
-            break;
-         }
-         p_port_name->string[i] = port_id.string[i];
-      }
-
-      p_port_name->len = strlen (p_port_name->string);
-   }
-   else
+   if (!port_id.is_valid)
    {
       return -1;
    }
+
+   for (i = 0; (i < port_id.len) && (port_id.string[i] != '\0') &&
+               (i < (sizeof (p_port_name->string) - 1));
+        i++)
+   {
+      if (port_id.string[i] == '.')
+      {
+         /* PF_LLDP_NAME_OF_DEVICE_MODE_STANDARD */
+         break;
+      }
+      p_port_name->string[i] = port_id.string[i];
+   }
+
+   p_port_name->len = strlen (p_port_name->string);
 
    return p_port_name->len ? 0 : -1;
 }
@@ -1056,18 +1056,19 @@ static void pf_lldp_send (pnet_t * net, int loc_port_num)
    pnal_buf_t * p_buffer = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE);
    pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
-   if (p_buffer != NULL)
+   if (p_buffer == NULL)
    {
-      if (p_buffer->payload != NULL)
-      {
-         p_buffer->len =
-            pf_lldp_construct_frame (net, loc_port_num, p_buffer->payload);
-
-         (void)pf_eth_send (net, p_port_data->netif.handle, p_buffer);
-      }
-
-      pnal_buf_free (p_buffer);
+      return;
    }
+
+   if (p_buffer->payload != NULL)
+   {
+      p_buffer->len =
+         pf_lldp_construct_frame (net, loc_port_num, p_buffer->payload);
+      (void)pf_eth_send (net, p_port_data->netif.handle, p_buffer);
+   }
+
+   pnal_buf_free (p_buffer);
 }
 
 /**
@@ -1234,6 +1235,7 @@ static void pf_lldp_get_chassis_id_from_packet (
          "LLDP(%d): Ignoring Chassis Id, tlv len=%d\n",
          __LINE__,
          (int)tlv_len);
+
       return;
    }
 
@@ -1248,6 +1250,7 @@ static void pf_lldp_get_chassis_id_from_packet (
          (int)chassis_id->len);
       /* Should not happen. Reconfigure PNET_LLDP_CHASSIS_ID_MAX_LEN
        * if it does*/
+
       return;
    }
 
@@ -1285,6 +1288,7 @@ static void pf_lldp_get_port_id_from_packet (
          "LLDP(%d): Ignoring Port Id, tlv len=%d\n",
          __LINE__,
          (int)tlv_len);
+
       return;
    }
 
@@ -1299,6 +1303,7 @@ static void pf_lldp_get_port_id_from_packet (
          (int)port_id->len);
       /* Should not happen. Reconfigure PNET_LLDP_PORT_ID_MAX_LEN
        * if it does*/
+
       return;
    }
 
@@ -1334,6 +1339,7 @@ static void pf_lldp_get_ttl_from_packet (
          "LLDP(%d): Ignoring TTL, unexpected tlv len %d(2)\n",
          __LINE__,
          (int)tlv_len);
+
       return;
    }
 
@@ -1368,6 +1374,7 @@ static void pf_lldp_get_port_description_from_packet (
          "LLDP(%d): Port Description too long (%d)\n",
          __LINE__,
          (int)tlv_len);
+
       return;
    }
 
@@ -1415,8 +1422,10 @@ static void pf_lldp_get_management_address_from_packet (
          "LLDP(%d): Invalid management address length (%d)\n",
          __LINE__,
          (int)management_address->len);
+
       return;
    }
+
    management_address->subtype = pf_get_byte (parse_info, offset);
    pf_get_mem (
       parse_info,
@@ -1463,6 +1472,7 @@ static void pf_lldp_get_signal_delay_from_packet (
    if (tlv_len != LLDP_PNIO_SUBTYPE_MEAS_DELAY_VALUES_TLV_LEN)
    {
       parse_info->result = PF_PARSE_ERROR;
+
       return;
    }
 
@@ -1498,6 +1508,7 @@ static void pf_lldp_get_port_status_from_packet (
    if (tlv_len != LLDP_PNIO_SUBTYPE_PORT_STATUS_TLV_LEN)
    {
       parse_info->result = PF_PARSE_ERROR;
+
       return;
    }
 
@@ -1528,6 +1539,7 @@ static void pf_lldp_get_chassis_mac_from_packet (
    if (tlv_len != LLDP_PNIO_SUBTYPE_CHASSIS_MAC_TLV_LEN)
    {
       parse_info->result = PF_PARSE_ERROR;
+
       return;
    }
 
@@ -1568,6 +1580,7 @@ static void pf_lldp_get_link_status_from_packet (
    if (tlv_len != LLDP_IEEE_SUBTYPE_MAC_PHY_TLV_LEN)
    {
       parse_info->result = PF_PARSE_ERROR;
+
       return;
    }
 
@@ -1592,6 +1605,7 @@ static void pf_lldp_get_link_status_from_packet (
  * @param buf              In:    LLDP data.
  * @param len              In:    Length of LLDP data.
  * @param lldp_peer_info   Out:   Record holding parsed LLDP information.
+ *                                Nulled initially (also on failure).
  * @return 0 if parsing is successful, -1 on error.
  */
 int pf_lldp_parse_packet (
@@ -1725,8 +1739,10 @@ int pf_lldp_parse_packet (
          PF_LLDP_LOG,
          "LLDP(%d): Received LLDP frame, but failed to parse it.\n",
          __LINE__);
+
       return -1;
    }
+
    return 0;
 }
 
@@ -1783,6 +1799,7 @@ int pf_lldp_generate_alias_name (
          return -1;
       }
    }
+
    return 0;
 }
 
@@ -1814,6 +1831,7 @@ bool pf_lldp_is_alias_matching (pnet_t * net, const char * alias)
 
       port = pf_port_get_next (&port_iterator);
    }
+
    return false;
 }
 
