@@ -503,7 +503,7 @@ int pf_pdport_read_ind (
          loc_port_num = pf_port_dap_subslot_to_local_port (net, subslot);
 
          p_port_data = pf_port_get_state (net, loc_port_num);
-         eth_status = pf_pdport_get_eth_status (net, loc_port_num);
+         eth_status = pf_pdport_get_eth_status_filtered_mau (net, loc_port_num);
          /* Look up peer info. Subfields .len indicates whether peer is found */
          (void)pf_lldp_get_peer_station_name (
             net,
@@ -628,7 +628,8 @@ int pf_pdport_read_ind (
                pf_port_loc_port_num_to_dap_subslot (net, loc_port_num);
             p_port_data = pf_port_get_state (net, loc_port_num);
 
-            eth_status = pf_pdport_get_eth_status (net, loc_port_num);
+            eth_status =
+               pf_pdport_get_eth_status_filtered_mau (net, loc_port_num);
             if (
                pnal_get_port_statistics (
                   p_port_data->netif.name,
@@ -1473,6 +1474,30 @@ void pf_pdport_update_eth_status (pnet_t * net)
    }
 }
 
+/**
+ * Replace the Ethernet MAU type with the default value, if
+ * the actual value is unknown.
+ *
+ * @param mau_type         In: MAU type read from hardware
+ * @param running          In: True if link is up
+ * @param default_mau_type In: Default MAU type from config
+ * @return  Filtered MAU type
+ */
+static pnal_eth_mau_t pf_pdport_filter_mau_type (
+   pnal_eth_mau_t mau_type,
+   bool running,
+   pnal_eth_mau_t default_mau_type)
+{
+   /** The MAU type 0 represents "unknown" when the link is down.
+    *  When the link is up a MAU type 0 represents "Radio". */
+   if (mau_type == PNAL_ETH_MAU_UNKNOWN && !running)
+   {
+      return default_mau_type;
+   }
+
+   return mau_type;
+}
+
 pnal_eth_status_t pf_pdport_get_eth_status (pnet_t * net, int loc_port_num)
 {
    pnal_eth_status_t eth_status;
@@ -1481,6 +1506,22 @@ pnal_eth_status_t pf_pdport_get_eth_status (pnet_t * net, int loc_port_num)
    os_mutex_lock (net->pf_interface.port_mutex);
    eth_status = p_port_data->eth_status;
    os_mutex_unlock (net->pf_interface.port_mutex);
+
+   return eth_status;
+}
+
+pnal_eth_status_t pf_pdport_get_eth_status_filtered_mau (
+   pnet_t * net,
+   int loc_port_num)
+{
+   const pnet_port_cfg_t * p_port_config =
+      pf_port_get_config (net, loc_port_num);
+   pnal_eth_status_t eth_status = pf_pdport_get_eth_status (net, loc_port_num);
+
+   eth_status.operational_mau_type = pf_pdport_filter_mau_type (
+      eth_status.operational_mau_type,
+      eth_status.running,
+      p_port_config->default_mau_type);
 
    return eth_status;
 }

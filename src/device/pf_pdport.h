@@ -199,6 +199,26 @@ void pf_pdport_update_eth_status (pnet_t * net);
  */
 pnal_eth_status_t pf_pdport_get_eth_status (pnet_t * net, int loc_port_num);
 
+/**
+ * Get current ethernet status for local port.
+ * This is a non-blocking function reading from mutex-protected memory.
+ * The status values are updated by the background worker task
+ * in a periodic job executing the pf_pdport_update_eth_status() function.
+ *
+ * The MAU type value in the resulting \a pnal_eth_status_t struct
+ * will be replaced by the default MAU type from the configuration
+ * when the link is down (and the actual MAU type not can be read from
+ * hardware).
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param loc_port_num     In:    Local port number.
+ *                                Valid range: 1 .. num_physical_ports
+ * @return The ethernet status for local port
+ */
+pnal_eth_status_t pf_pdport_get_eth_status_filtered_mau (
+   pnet_t * net,
+   int loc_port_num);
+
 #ifdef __cplusplus
 }
 #endif

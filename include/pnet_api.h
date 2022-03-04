@@ -1155,17 +1155,17 @@ typedef struct pnet_ethaddr
 
 /**
  * Physical Port Configuration
- *
- * The port_name field has the format port-xyz or port-abcde-xyz regardless of
- * the format used for LLDP ChassisID and PortID.
- * See section 7.3.3.3.4 "Attributes" in Profinet 2.4 Services.
- * TODO: Move this field to runtime data instead, and rename the field to
- * name_of_port
- * Automatically populate it with port-00x where x is local_port_number
  */
 typedef struct pnet_port_cfg
 {
    const char * netif_name;
+
+   /** Ethernet MAU type to use when it not can be read from hardware.
+    *  For example
+    *     0x0010 = Copper 100 Mbit/s Full duplex.
+    *     0x001E = Copper 1000 Mbit/s Full duplex.
+    *  See \a pnal_eth_mau_t for more examples. */
+   uint16_t default_mau_type;
 } pnet_port_cfg_t;
 
 /**

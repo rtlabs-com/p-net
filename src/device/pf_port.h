@@ -184,6 +184,13 @@ int pf_port_get_port_number (const pnet_t * net, pnal_eth_handle_t * eth_handle)
 /**
  * Decode media type from Ethernet MAU type.
  * Media types listed in PN-AL-protocol (Mar20) Table 727.
+ *
+ * The MAU type 0 represents "unknown" when the link is down.
+ * When the link is up a MAU type 0 represents "Radio".
+ *
+ * This function assumes that the link is up. Make sure you use
+ * some default MAU type if the link is down, before using this function.
+ *
  * @param mau_type         In:   Ethernet MAU type
  * @return media type
  */

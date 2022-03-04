@@ -78,11 +78,12 @@ extern "C" {
  * IEEE 802.3 Medium Attachment Units (MAUs)", objects
  * "IANAifMauTypeListBits" and "dot3MauType".
  *
- * See Profinet 2.4, section 5.2.13.12.
+ * See Profinet "5.2.12.3.12 Coding of the field MAUType"
  */
 typedef enum pnal_eth_mau
 {
-   PNAL_ETH_MAU_RADIO = 0x00,
+   PNAL_ETH_MAU_UNKNOWN = 0x00, /* When link is down */
+   PNAL_ETH_MAU_RADIO = 0x00,   /* When link is up */
    PNAL_ETH_MAU_COPPER_10BaseT = 0x05,
    PNAL_ETH_MAU_COPPER_100BaseTX_HALF_DUPLEX = 0x0F,
    PNAL_ETH_MAU_COPPER_100BaseTX_FULL_DUPLEX = 0x10,

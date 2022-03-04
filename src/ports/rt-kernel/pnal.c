@@ -155,7 +155,7 @@ static pnal_eth_mau_t calculate_mau_type (uint8_t link_state)
    case PHY_LINK_OK | PHY_LINK_1000MBIT | PHY_LINK_FULL_DUPLEX:
       return PNAL_ETH_MAU_COPPER_1000BaseT_FULL_DUPLEX;
    default:
-      return PNAL_ETH_MAU_RADIO;
+      return PNAL_ETH_MAU_UNKNOWN;
    }
 }
 
