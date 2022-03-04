@@ -274,45 +274,86 @@ int pnal_set_ip_suite (
 /**
  * Calculate MAU type.
  *
+ * @param port_type        In:    Port type, one of Linux PORT_xxx
  * @param speed            In:    Speed in Mbit/s
  * @param duplex           In:    DUPLEX_FULL, DUPLEX_HALF or DUPLEX_UNKNOWN
  * @return  The MAU type
  */
-static pnal_eth_mau_t calculate_mau_type (uint32_t speed, uint8_t duplex)
+static pnal_eth_mau_t calculate_mau_type (
+   uint8_t port_type,
+   uint32_t speed,
+   uint8_t duplex)
 {
-   /* TODO Differentiate between copper, fiber and radio.
-           Better handling of edge cases. */
-
-   if (duplex == DUPLEX_FULL)
+   /* Copper cable */
+   if (port_type == PORT_TP || port_type == PORT_MII)
    {
-      switch (speed)
+      if (duplex == DUPLEX_FULL)
       {
-      case SPEED_10:
-         return PNAL_ETH_MAU_COPPER_10BaseT;
-      case SPEED_100:
-         return PNAL_ETH_MAU_COPPER_100BaseTX_FULL_DUPLEX;
-      case SPEED_1000:
-         return PNAL_ETH_MAU_COPPER_1000BaseT_FULL_DUPLEX;
-      default:
-         break;
+         switch (speed)
+         {
+         case SPEED_10:
+            return PNAL_ETH_MAU_COPPER_10BaseT;
+         case SPEED_100:
+            return PNAL_ETH_MAU_COPPER_100BaseTX_FULL_DUPLEX;
+         case SPEED_1000:
+            return PNAL_ETH_MAU_COPPER_1000BaseT_FULL_DUPLEX;
+         default:
+            break;
+         }
+      }
+      if (duplex == DUPLEX_HALF)
+      {
+         switch (speed)
+         {
+         case SPEED_10:
+            return PNAL_ETH_MAU_COPPER_10BaseT;
+         case SPEED_100:
+            return PNAL_ETH_MAU_COPPER_100BaseTX_HALF_DUPLEX;
+         case SPEED_1000:
+            return PNAL_ETH_MAU_COPPER_1000BaseT_HALF_DUPLEX;
+         default:
+            break;
+         }
       }
    }
-   else if (duplex == DUPLEX_HALF)
+
+   /* Fiber cable */
+   if (port_type == PORT_FIBRE)
    {
-      switch (speed)
+      if (duplex == DUPLEX_FULL)
       {
-      case SPEED_10:
-         return PNAL_ETH_MAU_COPPER_10BaseT;
-      case SPEED_100:
-         return PNAL_ETH_MAU_COPPER_100BaseTX_HALF_DUPLEX;
-      case SPEED_1000:
-         return PNAL_ETH_MAU_COPPER_1000BaseT_HALF_DUPLEX;
-      default:
-         break;
+         switch (speed)
+         {
+         case SPEED_100:
+            return PNAL_ETH_MAU_FIBER_100BaseFX_FULL_DUPLEX;
+         case SPEED_1000:
+            return PNAL_ETH_MAU_FIBER_1000BaseX_FULL_DUPLEX;
+         default:
+            break;
+         }
+      }
+      if (duplex == DUPLEX_HALF)
+      {
+         switch (speed)
+         {
+         case SPEED_100:
+            return PNAL_ETH_MAU_FIBER_100BaseFX_HALF_DUPLEX;
+         case SPEED_1000:
+            return PNAL_ETH_MAU_FIBER_1000BaseX_HALF_DUPLEX;
+         default:
+            break;
+         }
       }
    }
 
-   return PNAL_ETH_MAU_RADIO;
+   /* Ethtool can not find details for Wifi interfaces.
+      The MAU type for "unknown, link down" and for "radio, link up" are the
+      same in the Profinet standard.
+
+      The pnet stack use the MAU type and the link status to figure out
+      whether the communication is radio or not. */
+
+   return PNAL_ETH_MAU_UNKNOWN;
 }
 
 /**
@@ -368,7 +409,8 @@ int pnal_eth_get_status (const char * interface_name, pnal_eth_status_t * status
    int control_socket;
    struct ifreq ifr;
    struct ethtool_cmd eth_status_linux;
-   uint32_t speed = 0; /* Mbit/s */
+   uint32_t speed = 0;          /* Mbit/s */
+   uint8_t port_type = PORT_TP; /* Linux PORT_xxx */
 
    control_socket = socket (PF_INET, SOCK_DGRAM, IPPROTO_IP);
    if (control_socket < 0)
@@ -383,13 +425,13 @@ int pnal_eth_get_status (const char * interface_name, pnal_eth_status_t * status
    if (ioctl (control_socket, SIOCETHTOOL, &ifr) >= 0)
    {
       speed = ethtool_cmd_speed (&eth_status_linux);
-
+      port_type = eth_status_linux.port;
       status->is_autonegotiation_enabled =
          (eth_status_linux.autoneg == AUTONEG_ENABLE);
       status->is_autonegotiation_supported = eth_status_linux.advertising &
                                              ADVERTISED_Autoneg;
       status->operational_mau_type =
-         calculate_mau_type (speed, eth_status_linux.duplex);
+         calculate_mau_type (port_type, speed, eth_status_linux.duplex);
       status->autonegotiation_advertised_capabilities =
          calculate_capabilities (eth_status_linux.advertising);
 

@@ -436,6 +436,8 @@ int app_utils_pnet_cfg_init_netifs (
    for (i = 1; i <= *number_of_ports; i++)
    {
       if_cfg->physical_ports[i - 1].netif_name = if_list->netif[i].name;
+      if_cfg->physical_ports[i - 1].default_mau_type =
+         APP_GSDML_DEFAULT_MAUTYPE;
    }
 
    /* Read IP, netmask, gateway from operating system */

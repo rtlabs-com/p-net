@@ -97,6 +97,8 @@ extern "C" {
 #define APP_GSDM_PARAMETER_2_IDX  124
 #define APP_GSDM_PARAMETER_LENGTH 4
 
+#define APP_GSDML_DEFAULT_MAUTYPE 0x10 /* Copper 100 Mbit/s Full duplex */
+
 typedef struct app_gsdml_module
 {
    uint32_t id;
