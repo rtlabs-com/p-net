@@ -35,7 +35,7 @@
 
 /**
  * @internal
- * Initialize network interface
+ * Initialize one network interface
  *
  * @param net              InOut: The p-net stack instance
  * @param netif_name       In:    Interface name
@@ -78,7 +78,7 @@ static int pf_eth_init_netif (
    LOG_DEBUG (
       PF_ETH_LOG,
       "ETH(%d): Initialising interface \"%s\" %02X:%02X:%02X:%02X:%02X:%02X "
-      "type 0x%04X\n",
+      "Ethertype 0x%04X\n",
       __LINE__,
       netif_name,
       pnal_mac_addr.addr[0],
@@ -158,18 +158,39 @@ int pf_eth_init (pnet_t * net, const pnet_cfg_t * p_cfg)
    return 0;
 }
 
-int pf_eth_send (pnet_t * net, pnal_eth_handle_t * handle, pnal_buf_t * buf)
+int pf_eth_send_on_physical_port (
+   pnet_t * net,
+   int loc_port_num,
+   pnal_buf_t * buf)
+{
+   int sent_len = 0;
+   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
+
+   sent_len = pnal_eth_send (p_port_data->netif.handle, buf);
+   if (sent_len <= 0)
+   {
+      LOG_ERROR (
+         PF_ETH_LOG,
+         "ETH(%d): Error from pnal_eth_send_on_physical_port()\n",
+         __LINE__);
+   }
+
+   return sent_len;
+}
+
+int pf_eth_send_on_management_port (pnet_t * net, pnal_buf_t * buf)
 {
    int sent_len = 0;
 
-   sent_len = pnal_eth_send (handle, buf);
+   sent_len = pnal_eth_send (net->pf_interface.main_port.handle, buf);
    if (sent_len <= 0)
    {
-      LOG_ERROR (PF_ETH_LOG, "ETH(%d): Error from pnal_eth_send\n", __LINE__);
+      LOG_ERROR (
+         PF_ETH_LOG,
+         "ETH(%d): Error from pnal_send_on_management_port()\n",
+         __LINE__);
    }
-   else
-   {
-   }
+
    return sent_len;
 }
 
@@ -182,6 +203,7 @@ int pf_eth_recv (pnal_eth_handle_t * eth_handle, void * arg, pnal_buf_t * p_buf)
    uint16_t frame_pos = 0;
    const uint16_t * p_data = NULL;
    uint16_t ix = 0;
+   int loc_port_num = 0;
    pnet_t * net = (pnet_t *)arg;
 
    /* Skip ALL VLAN tags */
@@ -223,7 +245,8 @@ int pf_eth_recv (pnal_eth_handle_t * eth_handle, void * arg, pnal_buf_t * p_buf)
       }
       break;
    case PNAL_ETHTYPE_LLDP:
-      ret = pf_lldp_recv (net, eth_handle, p_buf, frame_pos);
+      loc_port_num = pf_port_get_port_number (net, eth_handle);
+      ret = pf_lldp_recv (net, loc_port_num, p_buf, frame_pos);
       break;
    case PNAL_ETHTYPE_IP:
       /* IP-packets (UDP) are also received via the UDP sockets. Do not count

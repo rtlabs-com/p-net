@@ -34,14 +34,29 @@ extern "C" {
 int pf_eth_init (pnet_t * net, const pnet_cfg_t * p_cfg);
 
 /**
- * Send raw Ethernet data.
+ * Send raw Ethernet frame on a specific physical port.
+ *
+ * Not for use with management port.
  *
  * @param net              InOut: The p-net stack instance
- * @param handle           In:    Ethernet handle
+ * @param loc_port_num     In:    Local port number.
+ *                                Valid range: 1 .. num_physical_ports
  * @param buf              In:    Buffer with data to be sent
  * @return  The number of bytes sent, or -1 if an error occurred.
  */
-int pf_eth_send (pnet_t * net, pnal_eth_handle_t * handle, pnal_buf_t * buf);
+int pf_eth_send_on_physical_port (
+   pnet_t * net,
+   int loc_port_num,
+   pnal_buf_t * buf);
+
+/**
+ * Send raw Ethernet frame on management port.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param buf              In:    Buffer with data to be sent
+ * @return  The number of bytes sent, or -1 if an error occurred.
+ */
+int pf_eth_send_on_management_port (pnet_t * net, pnal_buf_t * buf);
 
 /**
  * Add a frame_id entry to the frame id filter map.
@@ -49,6 +64,8 @@ int pf_eth_send (pnet_t * net, pnal_eth_handle_t * handle, pnal_buf_t * buf);
  * This function adds an entry to the frame id table.
  * This table is used to map incoming frames to the right handler functions,
  * based on the frame id.
+ *
+ * Used only for incoming frames with Ethtype = Profinet.
  *
  * @param net              InOut: The p-net stack instance
  * @param frame_id         In:   The frame ID to look for.
@@ -70,11 +87,11 @@ void pf_eth_frame_id_map_add (
 void pf_eth_frame_id_map_remove (pnet_t * net, uint16_t frame_id);
 
 /**
- * Inspect and possibly handle Ethernet frames:
+ * Inspect and possibly handle a raw Ethernet frame
  *
  * Find the packet type. If it is for Profinet then send it to the right
  * handler, depending on the frame_id within the packet. The frame_id is located
- * right after the packet type. Take care of handling the VLAN tag!!
+ * right after the packet type. Take care of handling the VLAN tag.
  *
  * Note also that this function is a callback and will be passed as an argument
  * to pnal_eth_init().

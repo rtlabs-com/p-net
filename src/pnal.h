@@ -351,7 +351,8 @@ int pnal_get_port_statistics (
 int pnal_eth_send (pnal_eth_handle_t * handle, pnal_buf_t * buf);
 
 /**
- * Initialize receiving of raw Ethernet frames (in separate thread)
+ * Initialize receiving of raw Ethernet frames on one interface (in separate
+ * thread)
  *
  * @param if_name          In:    Ethernet interface name
  * @param receive_type     In:    Ethernet frame types that shall be received

@@ -1959,6 +1959,9 @@ typedef struct pf_get_info
  */
 typedef struct pf_session_info
 {
+   /* The session uses pf_eth_send_on_management_port() for sending raw
+    * Ethernet frames on the management port */
+
    uint16_t ix;
    bool in_use;
    bool release_in_progress; /* The session handles an incoming release request
@@ -1967,7 +1970,6 @@ typedef struct pf_session_info
                          the end of handling the incoming RPC frame. */
    int socket; /* Socket for CControl messaging, or reference to the main CMRPC
                   socket. Close it only if from_me==true */
-   pnal_eth_handle_t * eth_handle;
    struct pf_ar * p_ar; /* Parent AR */
    bool from_me;        /* True if the session originates from the device (i.e.
                            CControl requests and responses). */

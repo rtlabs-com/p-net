@@ -259,11 +259,7 @@ static void pf_ppm_send (pnet_t * net, void * arg, uint32_t current_time)
       pf_ppm_finish_buffer (net, &p_arg->ppm, p_arg->in_length);
 
       /* Now send it */
-      if (
-         pf_eth_send (
-            net,
-            p_arg->p_ar->p_sess->eth_handle,
-            p_arg->ppm.p_send_buffer) > 0)
+      if (pf_eth_send_on_management_port (net, p_arg->ppm.p_send_buffer) > 0)
       {
          /* Schedule next execution */
          p_arg->ppm.next_exec += p_arg->ppm.control_interval;
