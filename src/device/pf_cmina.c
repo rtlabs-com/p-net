@@ -33,6 +33,7 @@
 #ifdef UNIT_TEST
 #define pnal_get_port_statistics mock_pnal_get_port_statistics
 #define pnal_set_ip_suite        mock_pnal_set_ip_suite
+#define pf_bg_worker_start_job   mock_pf_bg_worker_start_job
 #endif
 
 #include <string.h>
