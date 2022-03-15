@@ -16,6 +16,7 @@
 #ifdef UNIT_TEST
 #define pnal_eth_get_status      mock_pnal_eth_get_status
 #define pnal_get_port_statistics mock_pnal_get_port_statistics
+#define pf_bg_worker_start_job   mock_pf_bg_worker_start_job
 #endif
 
 #include "pf_includes.h"
