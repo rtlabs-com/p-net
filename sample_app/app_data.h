@@ -27,13 +27,6 @@
  *   part of all device implementations for setting
  *   defined state when device is not connected to PLC
  * - Reading and writing parameters
- *
- * Todo:
- * Currently sample application uses a single byte
- * for both input and output data. Add float and other
- * types.
- * Currently sample application never convert parameters
- * to native uint32_t value. Fix this.
  */
 
 #ifdef __cplusplus
@@ -44,13 +37,14 @@ extern "C" {
 #include <stdbool.h>
 
 /**
- * Get PNIO input data using module id.
- * The main sample application keep track
- * of button and counter state so these are
- * parameters to this function.
+ * Get PNIO input data
+ * The main sample application keeps track
+ * of button so it is a parameter to this function.
+ *
+ * @param slot_nbr      In:  Slot number
+ * @param subslot_nbr   In:  Subslot number
  * @param submodule_id  In:  Submodule id
  * @param button_state  In:  State of button 1
- * @param counter       In:  Sample app counter value
  * @param size          Out: Size of pnio data
  * @param iops          Out: Provider status. If for example
  *                           a sensor is failing or a short
@@ -60,34 +54,45 @@ extern "C" {
  * @return Reference to PNIO data, NULL on error
  */
 uint8_t * app_data_get_input_data (
+   uint16_t slot_nbr,
+   uint16_t subslot_nbr,
    uint32_t submodule_id,
    bool button_state,
-   uint8_t counter,
    uint16_t * size,
    uint8_t * iops);
 
 /**
- * Set PNIO output data using module id.
+ * Set PNIO output data
+ *
+ * @param slot_nbr      In:  Slot number
+ * @param subslot_nbr   In:  Subslot number
  * @param submodule_id  In:  Submodule id
  * @param data          In:  Reference to output data
  * @param size          In:  Length of output data
  * @return 0 on success, -1 on error
  */
 int app_data_set_output_data (
+   uint16_t slot_nbr,
+   uint16_t subslot_nbr,
    uint32_t submodule_id,
    uint8_t * data,
    uint16_t size);
 
 /**
- * Set default outputs.
+ * Set default outputs for all subslots.
+ *
  * For the sample application this means that
  * LED 1 is turned off.
+ *
  * @return 0 on success, -1 on error
  */
 int app_data_set_default_outputs (void);
 
 /**
- * Write parameter index.
+ * Write parameter index for a subslot
+ *
+ * @param slot_nbr      In:  Slot number
+ * @param subslot_nbr   In:  Subslot number
  * @param submodule_id  In:  Submodule id
  * @param index         In:  Parameter index
  * @param data          In:  New parameter value
@@ -95,13 +100,18 @@ int app_data_set_default_outputs (void);
  * @return 0 on success, -1 on error
  */
 int app_data_write_parameter (
+   uint16_t slot_nbr,
+   uint16_t subslot_nbr,
    uint32_t submodule_id,
    uint32_t index,
    const uint8_t * data,
    uint16_t write_length);
 
 /**
- * Read parameter index.
+ * Read parameter index from a subslot
+ *
+ * @param slot_nbr      In:    Slot number
+ * @param subslot_nbr   In:    Subslot number
  * @param submodule_id  In:    Submodule id
  * @param index         In:    Parameter index
  * @param data          In:    Reference to parameter data
@@ -110,6 +120,8 @@ int app_data_write_parameter (
  * @return 0 on success, -1 on error
  */
 int app_data_read_parameter (
+   uint16_t slot_nbr,
+   uint16_t subslot_nbr,
    uint32_t submodule_id,
    uint32_t index,
    uint8_t ** data,

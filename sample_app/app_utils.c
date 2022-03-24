@@ -277,7 +277,6 @@ int app_utils_pnet_cfg_init_default (pnet_cfg_t * cfg)
    cfg->device_id.vendor_id_lo = GET_LOW_BYTE (APP_GSDML_VENDOR_ID);
    cfg->device_id.device_id_hi = GET_HIGH_BYTE (APP_GSDML_DEVICE_ID);
    cfg->device_id.device_id_lo = GET_LOW_BYTE (APP_GSDML_DEVICE_ID);
-
    cfg->oem_device_id.vendor_id_hi = GET_HIGH_BYTE (APP_GSDML_OEM_VENDOR_ID);
    cfg->oem_device_id.vendor_id_lo = GET_LOW_BYTE (APP_GSDML_OEM_VENDOR_ID);
    cfg->oem_device_id.device_id_hi = GET_HIGH_BYTE (APP_GSDML_OEM_DEVICE_ID);
@@ -304,7 +303,7 @@ int app_utils_pnet_cfg_init_default (pnet_cfg_t * cfg)
       APP_GSDML_DEFAULT_STATION_NAME);
 
    /* Diagnosis mechanism */
-   /* Use "Extended channel diagnosis" instead of
+   /* We prefer using "Extended channel diagnosis" instead of
     * "Qualified channel diagnosis" format on the wire,
     * as this is better supported by Wireshark.
     */
@@ -516,7 +515,7 @@ void app_utils_print_network_config (
 }
 
 void app_utils_print_ioxs_change (
-   app_subslot_t * subslot,
+   const app_subslot_t * subslot,
    const char * ioxs_str,
    uint8_t iocs_current,
    uint8_t iocs_new)
@@ -602,6 +601,7 @@ app_subslot_t * app_utils_plug_submodule (
       return NULL;
    }
 
+   /** Find a free subslot */
    for (subslot_ix = 0; subslot_ix < PNET_MAX_SUBSLOTS; subslot_ix++)
    {
       if (p_api->slots[slot_nbr].subslots[subslot_ix].used == false)
@@ -639,14 +639,15 @@ int app_utils_pull_submodule (
    }
 
    p_subslot = app_utils_subslot_get (p_api, slot_nbr, subslot_nbr);
-   if (p_subslot != NULL)
+   if (p_subslot == NULL)
    {
-      memset (p_subslot, 0, sizeof (app_subslot_t));
-      p_subslot->used = false;
-      return 0;
+      return -1;
    }
 
-   return -1;
+   memset (p_subslot, 0, sizeof (app_subslot_t));
+   p_subslot->used = false;
+
+   return 0;
 }
 
 app_subslot_t * app_utils_subslot_get (
@@ -674,9 +675,14 @@ app_subslot_t * app_utils_subslot_get (
 
 bool app_utils_subslot_is_input (const app_subslot_t * p_subslot)
 {
+   if (p_subslot == NULL || p_subslot->used == false)
+   {
+      return false;
+   }
+
    if (
-      p_subslot != NULL && (p_subslot->data_cfg.data_dir == PNET_DIR_INPUT ||
-                            p_subslot->data_cfg.data_dir == PNET_DIR_IO))
+      p_subslot->data_cfg.data_dir == PNET_DIR_INPUT ||
+      p_subslot->data_cfg.data_dir == PNET_DIR_IO)
    {
       return true;
    }
@@ -686,19 +692,24 @@ bool app_utils_subslot_is_input (const app_subslot_t * p_subslot)
 
 bool app_utils_subslot_is_no_io (const app_subslot_t * p_subslot)
 {
-   if (p_subslot != NULL && p_subslot->data_cfg.data_dir == PNET_DIR_NO_IO)
+   if (p_subslot == NULL || p_subslot->used == false)
    {
-      return true;
+      return false;
    }
 
-   return false;
+   return p_subslot->data_cfg.data_dir == PNET_DIR_NO_IO;
 }
 
 bool app_utils_subslot_is_output (const app_subslot_t * p_subslot)
 {
+   if (p_subslot == NULL || p_subslot->used == false)
+   {
+      return false;
+   }
+
    if (
-      p_subslot != NULL && (p_subslot->data_cfg.data_dir == PNET_DIR_OUTPUT ||
-                            p_subslot->data_cfg.data_dir == PNET_DIR_IO))
+      p_subslot->data_cfg.data_dir == PNET_DIR_OUTPUT ||
+      p_subslot->data_cfg.data_dir == PNET_DIR_IO)
    {
       return true;
    }
@@ -708,15 +719,16 @@ bool app_utils_subslot_is_output (const app_subslot_t * p_subslot)
 
 void app_utils_cyclic_data_poll (app_api_t * p_api)
 {
-   uint16_t slot;
-   uint16_t subslot;
+   uint16_t slot_nbr;
+   uint16_t subslot_index;
    app_subslot_t * p_subslot;
 
-   for (slot = 0; slot < PNET_MAX_SLOTS; slot++)
+   for (slot_nbr = 0; slot_nbr < PNET_MAX_SLOTS; slot_nbr++)
    {
-      for (subslot = 0; subslot < PNET_MAX_SUBSLOTS; subslot++)
+      for (subslot_index = 0; subslot_index < PNET_MAX_SUBSLOTS;
+           subslot_index++)
       {
-         p_subslot = &p_api->slots[slot].subslots[subslot];
+         p_subslot = &p_api->slots[slot_nbr].subslots[subslot_index];
          if (p_subslot->plugged && p_subslot->cyclic_callback != NULL)
          {
             p_subslot->cyclic_callback (p_subslot, p_subslot->tag);

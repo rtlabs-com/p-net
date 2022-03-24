@@ -25,6 +25,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+/******************* Supported modules ***************************/
+
 static const app_gsdml_module_t dap_1 = {
    .id = PNET_MOD_DAP_IDENT,
    .name = "DAP 1",
@@ -51,6 +53,13 @@ static const app_gsdml_module_t module_digital_in_out = {
    .id = APP_GSDML_MOD_ID_8_8_DIGITAL_IN_OUT,
    .name = "DIO 8xLogicLevel",
    .submodules = {APP_GSDML_SUBMOD_ID_DIGITAL_IN_OUT, 0}};
+
+static const app_gsdml_module_t module_echo = {
+   .id = APP_GSDML_MOD_ID_ECHO,
+   .name = "Echo module",
+   .submodules = {APP_GSDML_SUBMOD_ID_ECHO, 0}};
+
+/******************* Supported submodules ************************/
 
 static const app_gsdml_submodule_t dap_indentity_1 = {
    .name = "DAP Identity 1",
@@ -111,7 +120,7 @@ static const app_gsdml_submodule_t submod_digital_in = {
    .name = "Digital Input",
    .api = APP_GSDML_API,
    .data_dir = PNET_DIR_INPUT,
-   .insize = APP_GSDML_INPUT_DATA_SIZE,
+   .insize = APP_GSDML_INPUT_DATA_DIGITAL_SIZE,
    .outsize = 0,
    .parameters = {0}};
 
@@ -121,7 +130,7 @@ static const app_gsdml_submodule_t submod_digital_out = {
    .api = APP_GSDML_API,
    .data_dir = PNET_DIR_OUTPUT,
    .insize = 0,
-   .outsize = APP_GSDML_OUTPUT_DATA_SIZE,
+   .outsize = APP_GSDML_OUTPUT_DATA_DIGITAL_SIZE,
    .parameters = {0}};
 
 static const app_gsdml_submodule_t submod_digital_inout = {
@@ -129,13 +138,26 @@ static const app_gsdml_submodule_t submod_digital_inout = {
    .name = "Digital Input/Output",
    .api = APP_GSDML_API,
    .data_dir = PNET_DIR_IO,
-   .insize = APP_GSDML_INPUT_DATA_SIZE,
-   .outsize = APP_GSDML_OUTPUT_DATA_SIZE,
-   .parameters = {APP_GSDM_PARAMETER_1_IDX, APP_GSDM_PARAMETER_2_IDX, 0}};
+   .insize = APP_GSDML_INPUT_DATA_DIGITAL_SIZE,
+   .outsize = APP_GSDML_OUTPUT_DATA_DIGITAL_SIZE,
+   .parameters = {APP_GSDML_PARAMETER_1_IDX, APP_GSDML_PARAMETER_2_IDX, 0}};
+
+static const app_gsdml_submodule_t submod_echo = {
+   .id = APP_GSDML_SUBMOD_ID_ECHO,
+   .name = "Echo submodule",
+   .api = APP_GSDML_API,
+   .data_dir = PNET_DIR_IO,
+   .insize = APP_GSDML_INPUT_DATA_ECHO_SIZE,
+   .outsize = APP_GSDML_OUTPUT_DATA_ECHO_SIZE,
+   .parameters = {APP_GSDML_PARAMETER_ECHO_IDX, 0}};
 
 /** List of supported modules */
-static const app_gsdml_module_t * app_gsdml_modules[] =
-   {&dap_1, &module_digital_in, &module_digital_out, &module_digital_in_out};
+static const app_gsdml_module_t * app_gsdml_modules[] = {
+   &dap_1,
+   &module_digital_in,
+   &module_digital_out,
+   &module_digital_in_out,
+   &module_echo};
 
 /** List of supported submodules */
 static const app_gsdml_submodule_t * app_gsdml_submodules[] = {
@@ -149,24 +171,31 @@ static const app_gsdml_submodule_t * app_gsdml_submodules[] = {
    &submod_digital_in,
    &submod_digital_out,
    &submod_digital_inout,
+
+   &submod_echo,
 };
 
 /* List of supported parameters.
- * Note that paramerers are submodule attribute.
+ * Note that parameters are submodule attributes.
  * This list contain all parameters while each
  * submodule list its supported parameters using
  * their indexes.
  */
 static app_gsdml_param_t app_gsdml_parameters[] = {
    {
-      .index = APP_GSDM_PARAMETER_1_IDX,
+      .index = APP_GSDML_PARAMETER_1_IDX,
       .name = "Demo 1",
-      .length = APP_GSDM_PARAMETER_LENGTH,
+      .length = APP_GSDML_PARAMETER_LENGTH,
    },
    {
-      .index = APP_GSDM_PARAMETER_2_IDX,
+      .index = APP_GSDML_PARAMETER_2_IDX,
       .name = "Demo 2",
-      .length = APP_GSDM_PARAMETER_LENGTH,
+      .length = APP_GSDML_PARAMETER_LENGTH,
+   },
+   {
+      .index = APP_GSDML_PARAMETER_ECHO_IDX,
+      .name = "Echo gain setting",
+      .length = APP_GSDML_PARAMETER_LENGTH,
    }};
 
 const app_gsdml_module_t * app_gsdml_get_module_cfg (uint32_t id)
@@ -199,7 +228,8 @@ const app_gsdml_param_t * app_gsdml_get_parameter_cfg (
    uint32_t submodule_id,
    uint32_t index)
 {
-   uint16_t i, j;
+   uint16_t i;
+   uint16_t j;
 
    const app_gsdml_submodule_t * submodule_cfg =
       app_gsdml_get_submodule_cfg (submodule_id);

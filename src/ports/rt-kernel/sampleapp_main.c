@@ -178,7 +178,6 @@ int main (void)
       APP_BG_WORKER_THREAD_STACKSIZE;
 
    /* Initialize profinet stack */
-   APP_LOG_INFO ("Init sample application\n");
    sample_app = app_init (&pnet_cfg);
    if (sample_app == NULL)
    {
@@ -187,7 +186,7 @@ int main (void)
       return -1;
    }
 
-   APP_LOG_INFO ("Start sample application\n");
+   /* Start main loop */
    if (app_start (sample_app, RUN_IN_MAIN_THREAD) != 0)
    {
       printf ("Failed to start\n");
