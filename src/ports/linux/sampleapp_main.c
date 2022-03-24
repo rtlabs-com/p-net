@@ -305,7 +305,16 @@ void app_set_led (uint16_t id, bool led_state)
    }
 }
 
-int app_pnet_cfg_init_storage (pnet_cfg_t * p_cfg, app_args_t * p_args)
+/** Update configuration with file storage path.
+ *  Validate this path, and Linux button file paths
+ *
+ * @param p_cfg      InOut: Configuration to be updated
+ * @param p_args     In:    Command line arguments
+ * @return 0 on success, -1 on error.
+ */
+static int app_pnet_cfg_init_storage (
+   pnet_cfg_t * p_cfg,
+   const app_args_t * p_args)
 {
    strcpy (p_cfg->file_directory, p_args->path_storage_directory);
 
@@ -383,10 +392,9 @@ int main (int argc, char * argv[])
    APP_LOG_INFO ("Button2 file:         %s\n", app_args.path_button2);
    APP_LOG_INFO ("Default station name: %s\n", app_args.station_name);
 
+   /* Prepare configuration */
    app_pnet_cfg_init_default (&pnet_cfg);
-
    strcpy (pnet_cfg.station_name, app_args.station_name);
-
    ret = app_utils_pnet_cfg_init_netifs (
       app_args.eth_interfaces,
       &netif_name_list,
@@ -396,12 +404,12 @@ int main (int argc, char * argv[])
    {
       exit (EXIT_FAILURE);
    }
-
    pnet_cfg.if_cfg = netif_cfg;
    pnet_cfg.num_physical_ports = number_of_ports;
 
    app_utils_print_network_config (&netif_cfg, number_of_ports);
 
+   /* Operating system specific settings */
    pnet_cfg.pnal_cfg.snmp_thread.prio = APP_SNMP_THREAD_PRIORITY;
    pnet_cfg.pnal_cfg.snmp_thread.stack_size = APP_SNMP_THREAD_STACKSIZE;
    pnet_cfg.pnal_cfg.eth_recv_thread.prio = APP_ETH_THREAD_PRIORITY;
@@ -427,7 +435,7 @@ int main (int argc, char * argv[])
       exit (EXIT_SUCCESS);
    }
 
-   APP_LOG_INFO ("Init sample application\n");
+   /* Initialise stack and application */
    sample_app = app_init (&pnet_cfg);
    if (sample_app == NULL)
    {
@@ -462,7 +470,7 @@ int main (int argc, char * argv[])
       exit (EXIT_SUCCESS);
    }
 
-   APP_LOG_INFO ("Start sample application\n");
+   /* Start main loop */
    if (app_start (sample_app, RUN_IN_SEPARATE_THREAD) != 0)
    {
       printf ("Failed to start\n");

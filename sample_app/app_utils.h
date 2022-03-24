@@ -48,23 +48,37 @@ typedef struct app_utils_netif_namelist
 
 /* Forward declaration */
 typedef struct app_subslot app_subslot_t;
+
+/**
+ * Callback for updated cyclic data
+ *
+ * @param subslot    InOut: Subslot structure
+ * @param tag        InOut: Typically a handle to a submodule
+ */
 typedef void (*app_utils_cyclic_callback) (app_subslot_t * subslot, void * tag);
 
 /**
  * Information of submodule plugged into a subslot.
+ *
  * Note that submodule data is not stored here but must
  * be handled by the submodule implementation.
+ *
  * All parameters are initialized by the app_utils_plug_submodule()
  * function.
- * The cyclic_callback is generated when app_utils_cyclic_data_poll()
+ *
+ * The cyclic_callback is used when app_utils_cyclic_data_poll()
  * is called. Typically on the tick event in the main task.
- * tag parameter is passed with the cyclic_callback and
+ * The \a tag parameter is passed with the cyclic_callback and
  * is typically a handle to a submodule on application.
  */
 typedef struct app_subslot
 {
+   /** True when the position in the subslot array is occupied */
    bool used;
+
+   /** True when the subslot is plugged */
    bool plugged;
+
    uint16_t slot_nbr;
    uint16_t subslot_nbr;
    uint32_t submodule_id;
@@ -73,32 +87,37 @@ typedef struct app_subslot
    uint8_t iocs;
    uint8_t iops;
 
+   /** Callback for cyclic input- or output data, or NULL if not implemented */
    app_utils_cyclic_callback cyclic_callback;
    void * tag;
 } app_subslot_t;
 
 /**
- * Information of module plugged into
- * slot and array of subslots for admin
- * of submodules.
+ * Information of module plugged into a slot,
+ * and array of subslots for admin of submodules.
  */
 typedef struct app_slot
 {
    bool plugged;
    uint32_t module_id;
    const char * name; /** Module name */
+
+   /** Subslots. Use a separate index, as the subslot number might be large.
+    *  For example the subslot for DAP port 1 has number 0x8001 */
    app_subslot_t subslots[PNET_MAX_SUBSLOTS];
 } app_slot_t;
 
 /**
- * Profinet API state
- * Used to admin modules is plugged into
- * slots and submodules into subslots.
+ * Profinet API state for application
+ *
+ * Used to manage plugged modules into slots (and submodules into subslots).
  */
 typedef struct app_api_t
 {
    uint32_t api_id;
    uint32_t arep;
+
+   /** Slots. Use slot number as index */
    app_slot_t slots[PNET_MAX_SLOTS];
 } app_api_t;
 
@@ -118,9 +137,9 @@ void app_utils_ip_to_string (pnal_ipaddr_t ip, char * outputstring);
 const char * app_utils_submod_dir_to_string (pnet_submodule_dir_t direction);
 
 /**
- * Get string description of pnio produced or consumer status
- * @param ioxs               In:    Producer or consumer status (iops/iocs)
- * @return String represention of ioxs (iops/iocs)
+ * Get string description of pnio producer or consumer status
+ * @param ioxs               In:    Producer or consumer status (IOPS/IOCS)
+ * @return String represention of ioxs (IOPS/IOCS)
  */
 const char * app_utils_ioxs_to_string (pnet_ioxs_values_t ioxs);
 
@@ -180,10 +199,10 @@ const char * app_utils_event_to_string (pnet_event_values_t event);
  *
  * Read IP, netmask etc from operating system.
  *
- * @param netif_list_str      In: list of network ifs
+ * @param netif_list_str      In:  Comma separated string of network ifs
  * @param if_list             Out: Array of network ifs
  * @param number_of_ports     Out: Number of ports
- * @param if_cfg              Out: P-Net network configuration
+ * @param if_cfg              Out: P-Net network configuration to be updated
  * @return 0 on success, -1 on error
  */
 int app_utils_pnet_cfg_init_netifs (
@@ -201,7 +220,7 @@ int app_utils_pnet_cfg_init_netifs (
  * one name. For two Ethernet interfaces, the  \a arg_str should consist of
  * three names, as we also need a bridge interface.
  *
- * Does only consider the number of commaseparated names. No check of the
+ * Does only consider the number of comma separated names. No check of the
  * names themselves are done.
  *
  * Examples:
@@ -228,6 +247,7 @@ int app_utils_get_netif_namelist (
 
 /**
  * Print network configuration using APP_LOG_INFO().
+ *
  * @param if_cfg           In:   Network configuration
  * @param number_of_ports  In:   Number of used ports
  */
@@ -236,25 +256,32 @@ void app_utils_print_network_config (
    uint16_t number_of_ports);
 
 /**
- * Print iocs warning message if ioxs is changed.
+ * Print message if IOXS has changed.
+ *
+ * Uses APP_LOG_INFO()
+ *
  * @param subslot          In: Subslot
  * @param ioxs_str         In: String description Producer or Consumer
  * @param ioxs_current     In: Current status
  * @param ioxs_new         In: New status
  */
 void app_utils_print_ioxs_change (
-   app_subslot_t * subslot,
+   const app_subslot_t * subslot,
    const char * ioxs_str,
    uint8_t ioxs_current,
    uint8_t ioxs_new);
 
 /**
  * Init the p-net configuration to default values.
- * Some values hardcoded, some picked from app_gsdlm.h
+ *
+ * Most values are picked from app_gsdml.h
+ *
  * Network configuration not initialized.
- * This means'.if_cfg' must be set by application.
+ * This means that \a '.if_cfg' must be set by application.
+ *
  * Use this function to init P-Net configuration before
  * before passing config to app_init().
+ *
  * @param pnet_cfg     Out:   Configuration for use by p-net
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
@@ -262,7 +289,11 @@ void app_utils_print_ioxs_change (
 int app_utils_pnet_cfg_init_default (pnet_cfg_t * pnet_cfg);
 
 /**
- * Plug application module.
+ * Plug application module
+ *
+ * This is for the application to remember which slots are
+ * populated in the p-net stack.
+ *
  * @param p_api            InOut: API
  * @param slot_nbr         In:    Slot number
  * @param id               In:    Module identity
@@ -277,6 +308,10 @@ int app_utils_plug_module (
 
 /**
  * Pull any application module in given slot.
+ *
+ * This is for the application to remember which slots are
+ * populated in the p-net stack.
+ *
  * @param p_api            InOut: API
  * @param slot_nbr         In:    Slot number
  * @return 0 on success, -1 on error
@@ -285,6 +320,10 @@ int app_utils_pull_module (app_api_t * p_api, uint16_t slot_nbr);
 
 /**
  * Plug application submodule.
+ *
+ * This is for the application to remember which subslots are
+ * populated in the p-net stack.
+ *
  * @param p_api            InOut: API
  * @param slot_nbr         In:    Slot number
  * @param subslot_nbr      In:    Subslot number
@@ -312,6 +351,10 @@ app_subslot_t * app_utils_plug_submodule (
 
 /**
  * Unplug any application submodule from given subslot.
+ *
+ * This is for the application to remember which subslots are
+ * populated in the p-net stack.
+ *
  * @param p_api            InOut: API
  * @param slot_nbr         In:    Slot number
  * @param subslot_nbr      In:    Subslot number
@@ -323,9 +366,9 @@ int app_utils_pull_submodule (
    uint16_t subslot_nbr);
 
 /**
- * Trigger data callback for all plugged submodules.
+ * Trigger data callback for all plugged submodules in all slots.
  *
- * The callback given in \a app_utils_plug_submodule() is used.
+ * The callbacks given in \a app_utils_plug_submodule() are used.
  *
  * @param p_api         In:   API
  */
@@ -347,6 +390,7 @@ app_subslot_t * app_utils_subslot_get (
 
 /**
  * Return true if subslot is input.
+ *
  * @param p_subslot        In:    Reference to subslot.
  * @return true if subslot is input or input/output.
  *         false if not.
@@ -355,7 +399,9 @@ bool app_utils_subslot_is_input (const app_subslot_t * p_subslot);
 
 /**
  * Return true if subslot is neither input or output.
+ *
  * This is applies for DAP submodules/slots
+ *
  * @param p_subslot     In: Reference to subslot.
  * @return true if subslot is input or input/output.
  *         false if not.
@@ -364,6 +410,7 @@ bool app_utils_subslot_is_no_io (const app_subslot_t * p_subslot);
 
 /**
  * Return true if subslot is output.
+ *
  * @param p_subslot     In: Reference to subslot.
  * @return true if subslot is output or input/output,
  *         false if not.
