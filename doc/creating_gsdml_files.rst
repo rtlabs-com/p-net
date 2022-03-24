@@ -134,6 +134,9 @@ Adjust the ``Value`` in ``<VendorName>``.
 In the ``<Family>`` adjust the attributes for ``MainFamily`` (typically "I/O")
 and ``ProductFamily``.
 
+Those values are for example used by the engineering tool to display the device
+in the hardware catalog. The catalog is typically sorted by
+"Profinet IO"/<MainFamily>/<VendorName>/<ProductFamily>/<IDT_MODULE_NAME_DAP1>
 
 Details on the DeviceAccessPoint
 --------------------------------
@@ -475,7 +478,8 @@ and also has subelements with information on the submodule name etc.
 
 The ``<Input>`` and ``<Output>`` elements have the optional attribute
 ``Consistency``, which can be "Item consistency" (default if not given) or
-"All items consistency".
+"All items consistency" (consistency between all input/output fields for
+the submodule).
 
 The ``<DataItem>`` elements have the attributes ``TextId`` and ``DataType``
 (which can be for example "Unsigned8", "Unsigned64", "Float32", "Integer8",
@@ -493,7 +497,8 @@ be used to set for example an input delay time. To describe parameters use
 ``<ParameterRecordDataItem>`` elements.  They have the attributes
 ``Index="123"`` and ``Length="4"`` (in bytes).
 Use the ``<Name>`` subelement to give it a name.
-To initialize the content, use the ``<Const>`` element.
+To initialize the content, use the ``<Const>`` element (if subelement
+``<Ref>`` not is given).
 The subelement ``<Ref>`` has these attributes:
 
 * ``DataType="Unsigned32"``
@@ -505,9 +510,29 @@ The subelement ``<Ref>`` has these attributes:
 * ``TextId="DEMO_1"``
 * ``ValueItemTarget="IDV_InputDelay"`` Optional, to reference an enum (see ``<ValueItem>``).
 
+Each module parameter can contain several ``<Ref>`` subelements, as long as
+they fit in the total ``Length`` size.
+
 It is possible to connect parameter values to enums for use in menus in
 engineering tools. This is done via the ``<MenuItem>`` element (and
 subelements).
+
+============================= ============== ============ =============== ======================
+Data type                     GSDML name     Size (bytes) Name in Codesys Name in Simatic Step 7
+============================= ============== ============ =============== ======================
+Bit (part of lager data)      (none)         (none)       BIT
+Boolean (added in ver 2.32)   Boolean        1            BOOL
+Integer 8 bits                Integer8       1            SINT            SINT
+Integer 16 bits               Integer16      2            INT             INT
+Integer 32 bits               Integer32      3            DINT            DINT
+Integer 64 bits               Integer64      4            LINT            LINT
+Unsigned int 8 bits           Unsigned8      1            USINT, BYTE     USINT, BYTE
+Unsigned int 16 bits          Unsigned16     2            UINT, WORD      UINT, WORD
+Unsigned int 32 bits          Unsigned32     4            UDINT, DWORD    UDINT, DWORD
+Unsigned int 64 bits          Unsigned64     8            ULINT, LWORD    ULINT, LWORD
+Float                         Float32        4            REAL            REAL
+Double precision float        Float64        8            LREAL           LREAL
+============================= ============== ============ =============== ======================
 
 
 Details on the value list

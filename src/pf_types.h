@@ -2579,7 +2579,11 @@ typedef struct pf_netif
 typedef struct pf_port
 {
    pf_netif_t netif;
-   char port_name[PNET_PORT_NAME_MAX_SIZE]; /* Terminated string */
+
+   /** Port name, for example port-001
+    * Terminated string */
+   char port_name[PNET_PORT_NAME_MAX_SIZE];
+
    uint8_t port_num;
    pf_pdport_t pdport;
    pf_lldp_port_t lldp;

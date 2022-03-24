@@ -257,6 +257,11 @@ Also in the GSD file is description on the data exchange?
 +----------------------+-------------------------------------+
 
 
+Payload
+-------
+The Profinet payload is sent as big endian (network endian) on the wire.
+
+
 I&M data records
 ----------------
 This is Identification & Maintenance records, which are human-readable

@@ -734,9 +734,9 @@ MrpClientParams
 MrpRingStateData
 MrpInstanceDataAdjustBlock
 MrpInstanceDataRealBlock
-PDPortMrpIcDataAdjust               For interconnecion ring
-PDPortMrpIcDataCheck                For interconnecion ring
-PDPortMrpIcDataReal (read only)     For interconnecion ring
+PDPortMrpIcDataAdjust               For interconnection ring
+PDPortMrpIcDataCheck                For interconnection ring
+PDPortMrpIcDataReal (read only)     For interconnection ring
 =================================== ========================================================
 
 The MRP client uses a state machine with these states:
@@ -762,14 +762,14 @@ table should be cleaned (as given in the incoming MRP_TopologyChange frame).
 
 A MRP client should support these services:
 
-* Start MRC:  UUID, port IDs, VLAN ID, imtervals, count, Blocked supported
+* Start MRC:  UUID, port IDs, VLAN ID, intervals, count, Blocked supported
 * Stop MRC: UUID
 * Read MRC: UUID. Returns current values.
 
 See the standard IEC 62439-2 for details on how to implement the MRP protocol.
 
 The Linux kernel has support for the MRM and MRC roles since version 5.8. A
-userspace daemon is available at https://github.com/microchip-ung/mrp/
+user space daemon is available at https://github.com/microchip-ung/mrp/
 
 
 Legacy startup mode
@@ -827,7 +827,7 @@ Sections in 61158-6-10 (protocol) describing Legacy Startup mode:
 +---------------+-------------------------------------------------------------+
 | 5.2.42.2.4    | "ARBlockReq" Checking of CMInitiatorActivityTimeoutFactor   |
 +---------------+-------------------------------------------------------------+
-| 5.6.3.1.1     | "General" Use profinet v 2.2 for Legacy startup mode.       |
+| 5.6.3.1.1     | "General" Use Profinet v 2.2 for Legacy startup mode.       |
 +---------------+-------------------------------------------------------------+
 | 5.6.3.3.4     | "CMSU state table" Legacy startup mode implemented in CMSU, |
 |               | PPM and CPM.                                                |

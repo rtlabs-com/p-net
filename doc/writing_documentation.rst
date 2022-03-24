@@ -30,8 +30,9 @@ Install Sphinx by running this in the ``doc`` subdirectory::
     doc$ sudo apt install python3-pip
     doc$ pip3 install -r doc_requirements.txt
 
-Build documentation::
+Build documentation (in the ``doc`` subdirectory)::
 
+    doc$ cmake --build ../build --target docs
     doc$ make html
     doc$ make pdf
 

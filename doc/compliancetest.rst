@@ -381,6 +381,11 @@ Use the menu Tools > "Set DUT name and IP".
 It will change the settings of the IO device via DCP communication. It is also
 possible to do a factory reset of the IO device.
 
+It can be useful to show the ART tester log messages in the target output.
+On your Linux target run (replace interface name if necessary)::
+
+   tcpdump -i br0 udp port 514 -v -a
+
 
 Reduce timeout values to speed up testing
 -----------------------------------------
@@ -456,7 +461,7 @@ Relevant test cases for conformance class A
 +-------------------------------------------------+-----------------------------------------------------------------+
 | RTC                                             | Requires additional hardware ("Device B")                       |
 +-------------------------------------------------+-----------------------------------------------------------------+
-| VLAN                                            | Use port-to-port set up                                         |
+| VLAN                                            | Fast. Use port-to-port set up.                                  |
 +-------------------------------------------------+-----------------------------------------------------------------+
 | Different access ways port-to-port              | Use port-to-port set up                                         |
 +-------------------------------------------------+-----------------------------------------------------------------+
@@ -875,6 +880,9 @@ Modify this line in the ``/root/Netload/Scripts/Netload-Tester.sh`` script::
 
 Troubleshooting
 ---------------
+For the "Get MAC Address" button in ART tester to work, you need to
+have the "Device b" connected.
+
 If the test case "Different access ways port-to-port" fails,
 verify that your laptop Ethernet interface speed is set to 100 Mbit/s and
 that any Windows or Siemens (TIA portal) LLDP implementation on the

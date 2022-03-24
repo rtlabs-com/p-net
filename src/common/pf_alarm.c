@@ -3028,9 +3028,9 @@ static int pf_alarm_send_alarm (
 
    if (net->global_alarm_enable == false || p_ar->alarm_enable == false)
    {
-      LOG_DEBUG (
+      LOG_INFO (
          PF_ALARM_LOG,
-         "Alarm(%d): Alarm sending is diasabled. Global enable: %u, AR enable: "
+         "Alarm(%d): Alarm sending is disabled. Global enable: %u, AR enable: "
          "%u.\n",
          __LINE__,
          net->global_alarm_enable,

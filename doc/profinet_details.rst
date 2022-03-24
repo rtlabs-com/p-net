@@ -445,7 +445,7 @@ TLV types:
 
 * 0: (End of LLDP frame indicator)
 * 1: Chassis ID. Subtypes 4: MAC address. 7: Locally assigned name
-* 2: Port ID. Subtype 7: Locally assigned name
+* 2: Port ID. Subtypes 3: MAC address. 7: Locally assigned name
 * 3: Time to live in seconds
 * 4: Port description
 * 5: System name

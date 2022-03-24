@@ -2005,7 +2005,7 @@ int pf_lldp_recv (
       {
          LOG_ERROR (
             PF_LLDP_LOG,
-            "LLDP(%d): Unexpected local port %u, frame discarded\n",
+            "LLDP(%d): Unexpected local port %u, frame discarded.\n",
             __LINE__,
             loc_port_num);
       }

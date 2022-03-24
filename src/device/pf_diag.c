@@ -955,11 +955,15 @@ int pf_diag_remove (
          LOG_DEBUG (
             PF_ALARM_LOG,
             "DIAG(%d): Did not find the diagnosis to remove. Slot %u Subslot "
-            "0x%04x Channel 0x%04x\n",
+            "0x%04x Channel 0x%04x Ch err type 0x%04x Ext err type 0x%04x Usi "
+            "0x%04x\n",
             __LINE__,
             p_diag_source->slot,
             p_diag_source->subslot,
-            p_diag_source->ch);
+            p_diag_source->ch,
+            ch_error_type,
+            ext_ch_error_type,
+            usi);
       }
    }
 
