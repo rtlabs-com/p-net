@@ -136,6 +136,16 @@ When clicking the "Write All Values" icon, one write request is sent per
 parameter.
 
 
+Forcing cyclic data values
+--------------------------
+To force an output value from the PLC, open the PLC_PRG window while online.
+Double-click on the value you would like to change, to open the "Prepare value" pop-up.
+Click the "Prepare a new value ..." radio button, and enter the new numerical value in the textbox.
+Click "OK". Right-click the value again, and select "Force all values ...".
+The new value is sent from the PLC to the IO-device. A red "F" symbol is shown.
+To stop forcing the value, right-click it and select "Unforce all values ...".
+
+
 Displaying alarms sent from IO-device
 -------------------------------------
 Incoming process alarms and diagnosis alarms appear on multiple places in
@@ -176,3 +186,39 @@ Writing PLC programs
 --------------------
 Documentation of available function blocks is found at
 https://help.codesys.com/webapp/_pnio_f_profinet_io_configuration;product=core_ProfinetIO_Configuration_Editor
+
+
+Using the Echo module
+---------------------
+The echo module will receive an integer and a float from the PLC, and multiply them with a constant
+value before sending them back to the PLC. The multiplier is module parameter, and can be adjusted
+at startup. The integer is an unsigned 32 bit integer, and the float is a single precision float
+(32 bits).
+
+To test it, unplug any existing modules, and plug one Echo module into slot 1.
+
+Enter this program::
+
+   PROGRAM PLC_PRG
+   VAR
+      out_echo_int: UDINT;
+      out_echo_float: REAL;
+      in_echo_int: UDINT;
+      in_echo_float: REAL;
+      temp_int: UDINT;
+      temp_float: REAL;
+   END_VAR
+
+   out_echo_int := 1000001;
+   out_echo_float := 1001.23456;
+
+   temp_int := in_echo_int;
+   temp_float := in_echo_float;
+
+On the Echo_module page, use the "PNIO Module I/O Mapping" to connect the
+four program variables to the corresponding channels. Connect "in_echo_float" to
+"Input float to controller" etc.
+
+Start the PLC, and go online to follow the values. You can force (described elsewhere)
+the ``out_echo_int`` and ``out_echo_float`` values to study how the resulting
+input values from the IO-device changes.

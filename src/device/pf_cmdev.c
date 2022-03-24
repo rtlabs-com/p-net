@@ -2169,13 +2169,14 @@ static int pf_cmdev_iocr_setup_iocs (
             LOG_INFO (
                PNET_LOG,
                "CMDEV(%d) Read          IOCS size from API %u slot %u subslot "
-               "0x%04x with data direction %u. AREP %u CREP %" PRIu32 " Data "
-               "%u bytes, IOPS %u bytes, IOCS %u bytes\n",
+               "0x%04x with data direction %s. AREP %u CREP %" PRIu32 ". Data+"
+               "IOPS+IOCS %3u+%u+%u bytes\n",
                __LINE__,
                (unsigned)api_id,
                (unsigned)slot_nbr,
                (unsigned)subslot_nbr,
-               (unsigned)p_desc->data_direction,
+               p_desc->data_direction == PF_DIRECTION_INPUT ? " input"
+                                                            : "output",
                p_ar->arep,
                p_iocr->crep,
                (unsigned)p_desc->submodule_data_length,
@@ -2329,13 +2330,14 @@ static int pf_cmdev_iocr_setup_data_iops (
             LOG_INFO (
                PNET_LOG,
                "CMDEV(%d) Read data and IOPS size from API %u slot %u subslot "
-               "0x%04x with data direction %u. AREP %u CREP %" PRIu32 " Data "
-               "%u bytes, IOPS %u bytes, IOCS %u bytes\n",
+               "0x%04x with data direction %s. AREP %u CREP %" PRIu32 ". Data+"
+               "IOPS+IOCS %3u+%u+%u bytes\n",
                __LINE__,
                (unsigned)api_id,
                (unsigned)slot_nbr,
                (unsigned)subslot_nbr,
-               (unsigned)p_desc->data_direction,
+               p_desc->data_direction == PF_DIRECTION_INPUT ? " input"
+                                                            : "output",
                p_ar->arep,
                p_iocr->crep,
                (unsigned)p_desc->submodule_data_length,

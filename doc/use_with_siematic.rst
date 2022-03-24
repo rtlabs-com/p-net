@@ -260,6 +260,18 @@ In the "Properties" tab and the "General" subtab, select "Module parameters".
 A list of parameters is seen. Set the value in the text box.
 
 
+Forcing output signals
+----------------------
+In the Project tree, select PLC_1 > "Watch and force table" > "Force table".
+In the first empty line, double-click on the small icon on the Name field.
+Select "LEDout". In the "Force value" column enter `TRUE`, and enable
+the checkbox in the "F" column.
+Go online, and then click the small "Start or replace forcing ..." icon.
+Confirm in the pop-up window. To stop forcing the signal, press the small
+"Stops forcing of ..." icon. Note that it not possible to download software
+to the PLC while it is forcing output signals.
+
+
 Opening an archived project
 ----------------------------
 Open an archived project by using the project view menu Project > Retrieve
@@ -353,6 +365,61 @@ Replace a device or a PLC
 To replace an IO-device or an IO-controller, right-click on it in the left
 side menu and select "Change device". Follow the wizard.
 
+
+Using the Echo module
+---------------------
+The echo module will receive an integer and a float from the PLC, and multiply them with a constant
+value before sending them back to the PLC. The multiplier is module parameter, and can be adjusted
+at startup. The integer is an unsigned 32 bit integer, and the float is a single precision float
+(32 bits).
+
+To test it, unplug any existing modules, and plug one Echo module into slot 1.
+
+Check the resulting addresses for the inputs and outputs of the module (by looking in the
+"Device overview"). Typically the addresses are "0..7" for both the input (I) and output (Q) addresses.
+
+Assuming these addresses, add these tags:
+
+============== =========== =======
+Name           Data type   Address
+============== =========== =======
+EchoFloatIn    LReal       %ID0
+EchoIntIn      UDInt       %ID4
+EchoFloatOut   LReal       %QD0
+EchoIntOut     UDInt       %QD4
+============== =========== =======
+
+In a program block, define these values:
+
+======== =========== ============
+Section  Name        Data type
+======== =========== ============
+Input    in_float    Real
+Input    in_int      UDInt
+Output   out_float   Real
+Output   out_int     UDInt
+Temp     temp_float  Real
+Temp     temp_int    UDInt
+======== =========== ============
+
+and enter this program::
+
+   #out_float := 1001.2345;
+   #out_int := 16;
+
+   #temp_float := #in_float;
+   #temp_int := #in_int;
+
+It is not clear why the IO data signals not are shown in the user interface.
+
+Add the program block to the "Main" program block. Connect "in_float" to "EchoFloatIn" etc.
+
+Add "EchoFloatIn" and the three other signals to the watch table.
+Add "EchoFloatOut" and "EchoIntOut" to the Force table. See description elsewhere on how to force the values.
+
+Start the PLC, and go online. Study the values sent to and from the IO-device.
+
+
 Reload an GSDML file
 --------------------
 When the GSDML file is updated and needs to be reloaded in the Siemens environment:
@@ -410,6 +477,7 @@ from the hardware catalog in the STEP7 software.
 
 In STEP7, add the digital output module (DQ) in slot 1 and the digital input
 module (DI) in slot 2. The server module should be inserted into slot 3.
+
 
 Step7 naming
 ------------

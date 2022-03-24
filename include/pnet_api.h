@@ -391,7 +391,8 @@ typedef enum pnet_submodule_dir
 } pnet_submodule_dir_t;
 
 /*
- * Data configuration
+ * Data configuration for one submodule.
+ *
  * Used when indicating an expected submodule.
  */
 typedef struct pnet_data_cfg
@@ -568,7 +569,8 @@ typedef int (*pnet_release_ind) (
 
 /**
  * Indication to the application that a DControl request was received from the
- * controller.
+ * controller. Typically this means that the controller is done writing
+ * parameters.
  *
  * This application call-back function is called by the Profinet stack on every
  * DControl request from the Profinet controller.
@@ -599,7 +601,8 @@ typedef int (*pnet_dcontrol_ind) (
 
 /**
  * Indication to the application that a CControl confirmation was received from
- * the controller.
+ * the controller. Typically this means that the controller has received our
+ * "Application ready" message.
  *
  * This application call-back function is called by the Profinet stack on every
  * CControl confirmation from the Profinet controller.
@@ -787,21 +790,21 @@ typedef int (*pnet_exp_module_ind) (
  *
  * This application call-back function is called by the Profinet stack to
  * indicate that the controller has requested the presence of a specific
- * sub-module, ident number \a submodule_ident, in the sub-slot number \a
- * subslot, with module ident number \a module_ident in slot \a slot.
+ * sub-module with ident number \a submodule_ident, in the sub-slot number
+ * \a subslot, with module ident number \a module_ident in slot \a slot.
  *
  * If a module has not been plugged in the slot \a slot then an automatic plug
  * request is issued internally by the stack.
  *
  * The application must react to this by configuring itself accordingly (if
- * possible) and call function pnet_plug_submodule() to configure the stack with
- * the correct input/output data sizes.
+ * possible) and call function \a pnet_plug_submodule() to configure the stack
+ * with the correct input/output data sizes.
  *
  * If the wrong sub-module ident number is plugged then the stack will accept
  * this, but signal to the controller that a substitute sub-module is fitted.
  *
- * This function should return 0 (zero) if a valid sub-module was plugged. Or
- * return -1 if the application cannot handle this request.
+ * This function should return 0 (zero) if a valid sub-module was plugged,
+ * or return -1 if the application cannot handle this request.
  *
  * @param net              InOut: The p-net stack instance
  * @param arg              InOut: User-defined data (not used by p-net)
@@ -810,7 +813,8 @@ typedef int (*pnet_exp_module_ind) (
  * @param subslot          In:    The sub-slot number.
  * @param module_ident     In:    The module ident number.
  * @param submodule_ident  In:    The sub-module ident number.
- * @param p_exp_data       In:    The expected data configuration
+ * @param p_exp_data       In:    The expected data configuration (sizes and
+ *                                direction)
  * @return  0  on success.
  *          -1 if an error occurred.
  */
@@ -1155,13 +1159,6 @@ typedef struct pnet_ethaddr
 
 /**
  * Physical Port Configuration
- *
- * The port_name field has the format port-xyz or port-abcde-xyz regardless of
- * the format used for LLDP ChassisID and PortID.
- * See section 7.3.3.3.4 "Attributes" in Profinet 2.4 Services.
- * TODO: Move this field to runtime data instead, and rename the field to
- * name_of_port
- * Automatically populate it with port-00x where x is local_port_number
  */
 typedef struct pnet_port_cfg
 {
@@ -1181,13 +1178,15 @@ typedef struct pnet_ip_cfg
 
 /**
  * Interface Configuration
+ *
  * Configuration of network interfaces used by the stack.
  * The main_port defines the network interface used by a controller/PLC
  * to access the device (called Management Port in Profinet).
  * The ports array defines the physical ports connected to the
  * main_port.
- * In the case one network interface is used, main_port and port[0].phy_port
- * will refer to the same network interface.
+ *
+ * In the case one network interface is used, \a main_port and
+ * \a port[0].phy_port will refer to the same network interface.
  */
 typedef struct pnet_if_cfg
 {
@@ -1456,8 +1455,8 @@ PNET_EXPORT int pnet_input_set_data_and_iops (
 /**
  * Fetch the controller consumer status of one sub-slot.
  *
- * This function may be called to retrieve the IOCS value of a sub-slot
- * sent from the controller.
+ * This function is used to retrieve the consumer status (IOCS) value of
+ * an input sub-slot (data sent to the controller) back from the controller.
  *
  * @param net              InOut: The p-net stack instance
  * @param api              In:    The API.
@@ -1480,6 +1479,12 @@ PNET_EXPORT int pnet_input_get_iocs (
  *
  * This function may be called to retrieve the latest data and IOPS values
  * of a sub-slot sent from the controller.
+ *
+ * Note that this function retrieves output data from the controller. The
+ * function \a pnet_input_set_data_and_iops() sends input data to the
+ * controller. Those are different data streams, so you can not expect to read
+ * back data that has been set by \a pnet_input_set_data_and_iops() using this
+ * function.
  *
  * If a valid new data (and IOPS) frame has arrived from the IO-controller since
  * your last call to this function (regardless of the slot/subslot arguments)
@@ -1517,7 +1522,8 @@ PNET_EXPORT int pnet_output_get_data_and_iops (
  * Set the device consumer status for one sub-slot.
  *
  * This function is used to set the device consumer status (IOCS)
- * of a specific sub-slot.
+ * of a specific sub-slot. It is used for output sub-slots (data from the
+ * controller) to send consumer status back to the controller.
  *
  * @param net              InOut: The p-net stack instance
  * @param api              In:    The API.

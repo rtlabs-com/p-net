@@ -150,6 +150,18 @@ sending LLDP frames.
    :members:
    :undoc-members:
 
+.. doxygenstruct:: pnet_if_cfg
+   :members:
+   :undoc-members:
+
+.. doxygenstruct:: pnet_port_cfg
+   :members:
+   :undoc-members:
+
+.. doxygenstruct:: pnet_ip_cfg
+   :members:
+   :undoc-members:
+
 .. doxygenstruct:: pnet_cfg
    :members:
    :undoc-members:
