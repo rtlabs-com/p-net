@@ -3186,6 +3186,11 @@ static int pf_cmrpc_perform_one_write (
          4);
    }
 
+   if (ret != 0)
+   {
+      p_write_result->pnio_status = p_stat->pnio_status;
+   }
+
    return ret;
 }
 
