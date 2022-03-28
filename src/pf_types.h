@@ -1083,8 +1083,12 @@ typedef void (*pf_scheduler_timeout_ftn_t) (
 
 typedef struct pf_scheduler_timeouts
 {
-   const char * name; /* For debugging only */
-   bool in_use;       /* For debugging only */
+   /** For debugging only */
+   const char * name;
+
+   /** Will be set to false when the timer is triggered.
+       For debugging only */
+   bool in_use;
 
    uint32_t when; /* absolute time of timeout */
    uint32_t next; /* Next in list */
