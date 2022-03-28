@@ -414,15 +414,16 @@ void pf_scheduler_remove (pnet_t * net, pf_scheduler_handle_t * handle)
       }
       else if (net->scheduler_timeouts[ix].in_use == false)
       {
-         LOG_ERROR (
+         LOG_DEBUG (
             PNET_LOG,
-            "SCHEDULER(%d): Tried to remove timeout \"%s\", but it says "
-            "not-in-use.\n",
+            "SCHEDULER(%d): Tried to remove timeout \"%s\", but it has already "
+            "been triggered.\n",
             __LINE__,
             handle->name);
       }
       else
       {
+         /* Unlink from busy list */
          pf_scheduler_unlink (net, &net->scheduler_timeout_first, ix);
 
          /* Insert into free list. */
