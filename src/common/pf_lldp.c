@@ -893,7 +893,8 @@ void pf_lldp_get_link_status (
    int loc_port_num,
    pf_lldp_link_status_t * p_link_status)
 {
-   pnal_eth_status_t status = pf_pdport_get_eth_status (net, loc_port_num);
+   pnal_eth_status_t status =
+      pf_pdport_get_eth_status_filtered_mau (net, loc_port_num);
 
    p_link_status->is_autonegotiation_supported =
       status.is_autonegotiation_supported;

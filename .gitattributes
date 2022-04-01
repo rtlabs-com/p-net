@@ -4,6 +4,7 @@
 # Do not perform LF normalization on bash scripts
 *.service text eol=lf
 *.raspberrypi text eol=lf
+*.sh text eol=lf
 src/ports/linux/set_network_parameters text eol=lf
 src/ports/linux/set_profinet_leds text eol=lf
 
