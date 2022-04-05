@@ -157,7 +157,6 @@ uint8_t * app_data_get_input_data (
    }
 
    /* Automated RT Tester scenario 2 - unsupported (sub)module */
-   *iops = PNET_IOXS_BAD;
    return NULL;
 }
 

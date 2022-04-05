@@ -37,20 +37,24 @@ extern "C" {
 #include <stdbool.h>
 
 /**
- * Get PNIO input data
+ * Get application specific PNIO input data (for sending to PLC)
+ *
  * The main sample application keeps track
  * of button so it is a parameter to this function.
+ *
+ * This function is not called for the DAP submodules (slot_nbr==0).
  *
  * @param slot_nbr      In:  Slot number
  * @param subslot_nbr   In:  Subslot number
  * @param submodule_id  In:  Submodule id
  * @param button_state  In:  State of button 1
- * @param size          Out: Size of pnio data
+ * @param size          Out: Size of pnio data.
+ *                           Not modified on error.
  * @param iops          Out: Provider status. If for example
  *                           a sensor is failing or a short
  *                           circuit is detected on digital
  *                           input this shall be set to BAD.
- *                           Updated also on error.
+ *                           Not modified on error.
  * @return Reference to PNIO data, NULL on error
  */
 uint8_t * app_data_get_input_data (
@@ -62,7 +66,9 @@ uint8_t * app_data_get_input_data (
    uint8_t * iops);
 
 /**
- * Set PNIO output data
+ * Set application specific PNIO output data (received from PLC)
+ *
+ * This function is not called for the DAP submodules (slot_nbr==0).
  *
  * @param slot_nbr      In:  Slot number
  * @param subslot_nbr   In:  Subslot number
