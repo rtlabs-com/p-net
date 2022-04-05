@@ -14,6 +14,7 @@
  ********************************************************************/
 
 #include "sampleapp_common.h"
+
 #include "app_utils.h"
 #include "app_gsdml.h"
 #include "app_data.h"
@@ -107,11 +108,6 @@ static void app_cyclic_data_callback (app_subslot_t * subslot, void * tag);
 /** Static app data */
 static app_data_t app_state;
 
-/** Get the p-net instance handle
- *
- * @param app             InOut:    Application handle
- * @return handle on success, NULL on failure
- */
 pnet_t * app_get_pnet_instance (app_data_t * app)
 {
    if (app == NULL)
@@ -127,7 +123,7 @@ pnet_t * app_get_pnet_instance (app_data_t * app)
  * @param app             InOut:    Application handle
  * @return true if we are connected to the IO-controller
  */
-bool app_is_connected_to_controller (app_data_t * app)
+static bool app_is_connected_to_controller (app_data_t * app)
 {
    return app->main_api.arep != UINT32_MAX;
 }
@@ -827,6 +823,8 @@ static int app_alarm_ack_cnf (pnet_t * net, void * arg, uint32_t arep, int res)
    return 0;
 }
 
+/******************************************************************************/
+
 /**
  * Plug all DAP (sub)modules
  * Use existing callback functions to plug the (sub-)modules
@@ -986,14 +984,13 @@ static void app_handle_send_alarm_ack (
 static void app_cyclic_data_callback (app_subslot_t * subslot, void * tag)
 {
    app_data_t * app = (app_data_t *)tag;
-   uint8_t iops = PNET_IOXS_BAD;
-   uint8_t iocs = PNET_IOXS_BAD;
+   uint8_t indata_iops = PNET_IOXS_BAD;
+   uint8_t indata_iocs = PNET_IOXS_BAD;
    uint8_t * indata;
-   uint16_t indata_size;
+   uint16_t indata_size = 0;
    bool outdata_updated;
    uint16_t outdata_length;
    uint8_t outdata_iops;
-
    uint8_t outdata_buf[20]; /* Todo: Remove temporary buffer */
 
    if (app == NULL)
@@ -1002,11 +999,12 @@ static void app_cyclic_data_callback (app_subslot_t * subslot, void * tag)
       return;
    }
 
-   if (subslot->data_cfg.outsize > 0)
+   if (subslot->slot_nbr != PNET_SLOT_DAP_IDENT && subslot->data_cfg.outsize > 0)
    {
       outdata_length = subslot->data_cfg.outsize;
       CC_ASSERT (outdata_length < sizeof (outdata_buf));
 
+      /* Get output data from the PLC */
       (void)pnet_output_get_data_and_iops (
          app->net,
          APP_GSDML_API,
@@ -1020,9 +1018,9 @@ static void app_cyclic_data_callback (app_subslot_t * subslot, void * tag)
       app_utils_print_ioxs_change (
          subslot,
          "Provider Status (IOPS)",
-         subslot->iops,
+         subslot->outdata_iops,
          outdata_iops);
-      subslot->iops = outdata_iops;
+      subslot->outdata_iops = outdata_iops;
 
       if (outdata_length != subslot->data_cfg.outsize)
       {
@@ -1031,7 +1029,8 @@ static void app_cyclic_data_callback (app_subslot_t * subslot, void * tag)
       }
       else if (outdata_iops == PNET_IOXS_GOOD)
       {
-         /* Set output data for submodule */
+         /* Application specific handling of the output data to a submodule.
+            For the sample application, the data sets a LED. */
          (void)app_data_set_output_data (
             subslot->slot_nbr,
             subslot->subslot_nbr,
@@ -1045,25 +1044,21 @@ static void app_cyclic_data_callback (app_subslot_t * subslot, void * tag)
       }
    }
 
-   if (subslot->data_cfg.insize > 0)
+   if (subslot->slot_nbr != PNET_SLOT_DAP_IDENT && subslot->data_cfg.insize > 0)
    {
-      /* Get input data for submodule
-       * For the sample application data includes
-       * includes button state and a counter value
-       */
+      /* Get application specific input data from a submodule (not DAP)
+       *
+       * For the sample application, the data includes a button
+       * state and a counter value. */
       indata = app_data_get_input_data (
          subslot->slot_nbr,
          subslot->subslot_nbr,
          subslot->submodule_id,
          app->button1_pressed,
          &indata_size,
-         &iops);
+         &indata_iops);
 
-      if (indata != NULL)
-      {
-         iops = PNET_IOXS_GOOD;
-      }
-
+      /* Send input data to the PLC */
       (void)pnet_input_set_data_and_iops (
          app->net,
          APP_GSDML_API,
@@ -1071,21 +1066,21 @@ static void app_cyclic_data_callback (app_subslot_t * subslot, void * tag)
          subslot->subslot_nbr,
          indata,
          indata_size,
-         iops);
+         indata_iops);
 
       (void)pnet_input_get_iocs (
          app->net,
          APP_GSDML_API,
          subslot->slot_nbr,
          subslot->subslot_nbr,
-         &iocs);
+         &indata_iocs);
 
       app_utils_print_ioxs_change (
          subslot,
          "Consumer Status (IOCS)",
-         subslot->iocs,
-         iocs);
-      subslot->iocs = iocs;
+         subslot->indata_iocs,
+         indata_iocs);
+      subslot->indata_iocs = indata_iocs;
    }
 }
 
@@ -1097,12 +1092,12 @@ static void app_cyclic_data_callback (app_subslot_t * subslot, void * tag)
 static int app_set_initial_data_and_ioxs (app_data_t * app)
 {
    int ret;
-   uint8_t iops;
    uint16_t slot;
    uint16_t subslot_index;
    const app_subslot_t * p_subslot;
    uint8_t * indata;
    uint16_t indata_size;
+   uint8_t indata_iops;
 
    for (slot = 0; slot < PNET_MAX_SLOTS; slot++)
    {
@@ -1112,19 +1107,23 @@ static int app_set_initial_data_and_ioxs (app_data_t * app)
          p_subslot = &app->main_api.slots[slot].subslots[subslot_index];
          if (p_subslot->plugged)
          {
-            iops = PNET_IOXS_GOOD;
+            indata = NULL;
+            indata_size = 0;
+            indata_iops = PNET_IOXS_BAD;
+
             if (
                p_subslot->data_cfg.insize > 0 ||
                p_subslot->data_cfg.data_dir == PNET_DIR_NO_IO)
             {
-               indata = NULL;
-               indata_size = 0;
 
                /* Get input data for submodule
+                *
                 * For the sample application data includes
                 * includes button state and a counter value
                 */
-               if (p_subslot->data_cfg.insize > 0)
+               if (
+                  p_subslot->slot_nbr != PNET_SLOT_DAP_IDENT &&
+                  p_subslot->data_cfg.insize > 0)
                {
                   indata = app_data_get_input_data (
                      p_subslot->slot_nbr,
@@ -1132,7 +1131,11 @@ static int app_set_initial_data_and_ioxs (app_data_t * app)
                      p_subslot->submodule_id,
                      app->button1_pressed,
                      &indata_size,
-                     &iops);
+                     &indata_iops);
+               }
+               else if (p_subslot->slot_nbr == PNET_SLOT_DAP_IDENT)
+               {
+                  indata_iops = PNET_IOXS_GOOD;
                }
 
                ret = pnet_input_set_data_and_iops (
@@ -1142,11 +1145,11 @@ static int app_set_initial_data_and_ioxs (app_data_t * app)
                   p_subslot->subslot_nbr,
                   indata,
                   indata_size,
-                  iops);
+                  indata_iops);
 
                /*
                 * If a submodule is still plugged but not used in current AR,
-                * setting the data and iops will fail.
+                * setting the data and IOPS will fail.
                 * This is not a problem.
                 * Log message below will only be printed for active submodules.
                 */
@@ -1157,7 +1160,7 @@ static int app_set_initial_data_and_ioxs (app_data_t * app)
                      "%5u %9s size %3d \"%s\" \n",
                      p_subslot->slot_nbr,
                      p_subslot->subslot_nbr,
-                     app_utils_ioxs_to_string (iops),
+                     app_utils_ioxs_to_string (indata_iops),
                      p_subslot->data_cfg.insize,
                      p_subslot->submodule_name);
                }

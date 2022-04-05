@@ -114,7 +114,7 @@ void app_loop_forever (void * arg);
  * Get P-Net instance from application
  *
  * @param app                 In:    Application handle
- * @return P-Net instance
+ * @return P-Net instance, NULL on failure
  */
 pnet_t * app_get_pnet_instance (app_data_t * app);
 
