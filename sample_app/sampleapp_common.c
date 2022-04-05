@@ -1002,49 +1002,6 @@ static void app_cyclic_data_callback (app_subslot_t * subslot, void * tag)
       return;
    }
 
-   if (subslot->data_cfg.insize > 0)
-   {
-      /* Get input data for submodule
-       * For the sample application data includes
-       * includes button state and a counter value
-       */
-      indata = app_data_get_input_data (
-         subslot->slot_nbr,
-         subslot->subslot_nbr,
-         subslot->submodule_id,
-         app->button1_pressed,
-         &indata_size,
-         &iops);
-
-      if (indata != NULL)
-      {
-         iops = PNET_IOXS_GOOD;
-      }
-
-      (void)pnet_input_set_data_and_iops (
-         app->net,
-         APP_GSDML_API,
-         subslot->slot_nbr,
-         subslot->subslot_nbr,
-         indata,
-         indata_size,
-         iops);
-
-      (void)pnet_input_get_iocs (
-         app->net,
-         APP_GSDML_API,
-         subslot->slot_nbr,
-         subslot->subslot_nbr,
-         &iocs);
-
-      app_utils_print_ioxs_change (
-         subslot,
-         "Consumer Status (IOCS)",
-         subslot->iocs,
-         iocs);
-      subslot->iocs = iocs;
-   }
-
    if (subslot->data_cfg.outsize > 0)
    {
       outdata_length = subslot->data_cfg.outsize;
@@ -1086,6 +1043,49 @@ static void app_cyclic_data_callback (app_subslot_t * subslot, void * tag)
       {
          app_set_outputs_default_value();
       }
+   }
+
+   if (subslot->data_cfg.insize > 0)
+   {
+      /* Get input data for submodule
+       * For the sample application data includes
+       * includes button state and a counter value
+       */
+      indata = app_data_get_input_data (
+         subslot->slot_nbr,
+         subslot->subslot_nbr,
+         subslot->submodule_id,
+         app->button1_pressed,
+         &indata_size,
+         &iops);
+
+      if (indata != NULL)
+      {
+         iops = PNET_IOXS_GOOD;
+      }
+
+      (void)pnet_input_set_data_and_iops (
+         app->net,
+         APP_GSDML_API,
+         subslot->slot_nbr,
+         subslot->subslot_nbr,
+         indata,
+         indata_size,
+         iops);
+
+      (void)pnet_input_get_iocs (
+         app->net,
+         APP_GSDML_API,
+         subslot->slot_nbr,
+         subslot->subslot_nbr,
+         &iocs);
+
+      app_utils_print_ioxs_change (
+         subslot,
+         "Consumer Status (IOCS)",
+         subslot->iocs,
+         iocs);
+      subslot->iocs = iocs;
    }
 }
 
