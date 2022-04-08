@@ -1337,13 +1337,25 @@ static int pf_cmrpc_rm_connect_interpret_ind (
                }
                break;
             case PF_PARSE_NULL_POINTER:
+               pf_set_error (
+                  &p_sess->rpc_result,
+                  PNET_ERROR_CODE_CONNECT,
+                  PNET_ERROR_DECODE_PNIO,
+                  PNET_ERROR_CODE_1_CMRPC,
+                  PNET_ERROR_CODE_2_CMRPC_UNKNOWN_BLOCKS);
                ret = -1;
                break;
             case PF_PARSE_END_OF_INPUT:
                LOG_DEBUG (
                   PF_RPC_LOG,
-                  "CMRPC(%d): Out of expected API resources\n",
+                  "CMRPC(%d): Out of expected API resources (end of input)\n",
                   __LINE__);
+               pf_set_error (
+                  &p_sess->rpc_result,
+                  PNET_ERROR_CODE_CONNECT,
+                  PNET_ERROR_DECODE_PNIO,
+                  PNET_ERROR_CODE_1_CMRPC,
+                  PNET_ERROR_CODE_2_CMRPC_OUT_OF_MEMORY);
                ret = -1;
                break;
             case PF_PARSE_OUT_OF_API_RESOURCES:
@@ -1351,6 +1363,12 @@ static int pf_cmrpc_rm_connect_interpret_ind (
                   PF_RPC_LOG,
                   "CMRPC(%d): Out of expected API resources\n",
                   __LINE__);
+               pf_set_error (
+                  &p_sess->rpc_result,
+                  PNET_ERROR_CODE_CONNECT,
+                  PNET_ERROR_DECODE_PNIO,
+                  PNET_ERROR_CODE_1_CMRPC,
+                  PNET_ERROR_CODE_2_CMRPC_OUT_OF_MEMORY);
                ret = -1;
                break;
             case PF_PARSE_OUT_OF_EXP_SUBMODULE_RESOURCES:
@@ -1358,10 +1376,22 @@ static int pf_cmrpc_rm_connect_interpret_ind (
                   PF_RPC_LOG,
                   "CMRPC(%d): Out of expected submodule resources\n",
                   __LINE__);
+               pf_set_error (
+                  &p_sess->rpc_result,
+                  PNET_ERROR_CODE_CONNECT,
+                  PNET_ERROR_DECODE_PNIO,
+                  PNET_ERROR_CODE_1_CMRPC,
+                  PNET_ERROR_CODE_2_CMRPC_OUT_OF_MEMORY);
                ret = -1;
                break;
             case PF_PARSE_ERROR:
                /* Already handled */
+               pf_set_error (
+                  &p_sess->rpc_result,
+                  PNET_ERROR_CODE_CONNECT,
+                  PNET_ERROR_DECODE_PNIO,
+                  PNET_ERROR_CODE_1_CMRPC,
+                  PNET_ERROR_CODE_2_CMRPC_UNKNOWN_BLOCKS);
                ret = -1;
                break;
             default:
@@ -1370,6 +1400,12 @@ static int pf_cmrpc_rm_connect_interpret_ind (
                   "CMRPC(%d): Unhandled parser error %d\n",
                   __LINE__,
                   ret);
+               pf_set_error (
+                  &p_sess->rpc_result,
+                  PNET_ERROR_CODE_CONNECT,
+                  PNET_ERROR_DECODE_PNIO,
+                  PNET_ERROR_CODE_1_CMRPC,
+                  PNET_ERROR_CODE_2_CMRPC_UNKNOWN_BLOCKS);
                ret = -1;
                break;
             }
@@ -1569,6 +1605,12 @@ static int pf_cmrpc_rm_connect_interpret_ind (
             PF_RPC_LOG,
             "CMRPC(%d): Unexpected end of input\n",
             __LINE__);
+         pf_set_error (
+            &p_sess->rpc_result,
+            PNET_ERROR_CODE_CONNECT,
+            PNET_ERROR_DECODE_PNIO,
+            PNET_ERROR_CODE_1_CMRPC,
+            PNET_ERROR_CODE_2_CMRPC_UNKNOWN_BLOCKS);
          ret = -1;
       }
       first_block = false;
@@ -1576,14 +1618,15 @@ static int pf_cmrpc_rm_connect_interpret_ind (
 
    LOG_DEBUG (
       PF_RPC_LOG,
-      "CMRPC(%d): Connect request AR param: %u CR: %u Input: %u Output: %u "
-      "Alarm: %u\n",
+      "CMRPC(%d): Connect request num AR param: %u CR: %u Input: %u Output: %u "
+      "Alarm: %u Result: %s\n",
       __LINE__,
       p_ar->nbr_ar_param,
       p_ar->nbr_iocrs,
       p_ar->input_cr_cnt,
       p_ar->output_cr_cnt,
-      p_ar->nbr_alarm_cr);
+      p_ar->nbr_alarm_cr,
+      (ret == 0) ? "OK" : "Error");
 
    if (ret == 0)
    {
