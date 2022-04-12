@@ -312,6 +312,13 @@ int pf_cmdev_generate_submodule_diff (pnet_t * net, pf_ar_t * p_ar);
 const char * pf_cmdev_state_to_string (pf_cmdev_state_values_t state);
 
 /**
+ * Return a string describing the submodule direction.
+ * @param direction            In:    submodule direction
+ * @return  A string representation
+ */
+const char * pf_cmdev_submod_dir_to_string (pnet_submodule_dir_t direction);
+
+/**
  * Return a string representation of the specified CMDEV event.
  * @param event            In:    The CMDEV event.
  * @return  A string representation of the CMDEV event.
