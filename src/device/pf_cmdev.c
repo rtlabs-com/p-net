@@ -1016,6 +1016,29 @@ static void pf_device_clear (pnet_t * net, pf_ar_t * p_ar)
 
 /*************** Diagnostic strings ****************************************/
 
+const char * pf_cmdev_submod_dir_to_string (pnet_submodule_dir_t direction)
+{
+   const char * s = "<error>";
+
+   switch (direction)
+   {
+   case PNET_DIR_NO_IO:
+      s = "NO_IO";
+      break;
+   case PNET_DIR_INPUT:
+      s = "INPUT";
+      break;
+   case PNET_DIR_OUTPUT:
+      s = "OUTPUT";
+      break;
+   case PNET_DIR_IO:
+      s = "INPUT_OUTPUT";
+      break;
+   }
+
+   return s;
+}
+
 const char * pf_cmdev_state_to_string (pf_cmdev_state_values_t state)
 {
    const char * s = "unknown";
