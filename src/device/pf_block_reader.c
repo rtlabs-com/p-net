@@ -315,11 +315,12 @@ static void pf_get_exp_submodule (
 
    LOG_DEBUG (
       PNET_LOG,
-      "BR(%d):   Subslot 0x%04x. Expected submodule 0x%" PRIx32 " with direction %u\n",
+      "BR(%d):   Subslot 0x%04x. Expected submodule 0x%" PRIx32
+      " with direction %s\n",
       __LINE__,
       p_sub->subslot_number,
       p_sub->submodule_ident_number,
-      p_sub->submodule_properties.type);
+      pf_cmdev_submod_dir_to_string (p_sub->submodule_properties.type));
 }
 
 /* ======================== Public functions ======================== */
