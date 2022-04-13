@@ -85,7 +85,7 @@ To get an estimate of the binary size, partially link it (use release, without
 standard libraries)::
 
    p-net/build$ make all
-   p-net/build$ /usr/bin/cc -O3 -DNDEBUG CMakeFiles/pn_dev.dir/sample_app/sampleapp_common.o CMakeFiles/pn_dev.dir/src/ports/linux/sampleapp_main.o -o pn_dev libprofinet.a -nostdlib -r
+   p-net/build$ /usr/bin/cc -O3 -DNDEBUG CMakeFiles/pn_dev.dir/samples/pn_dev/sampleapp_common.o CMakeFiles/pn_dev.dir/src/ports/linux/sampleapp_main.o -o pn_dev libprofinet.a -nostdlib -r
 
 Resulting size::
 

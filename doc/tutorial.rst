@@ -71,7 +71,7 @@ use a Siemens Simatic PLC. See another page of this documentation.
 
 Available files
 ---------------
-The ``sample_app`` directory in the p-net repository contains the source code
+The ``samples/pn_dev`` directory in the p-net repository contains the source code
 for this example. It also contains a GSD file (written in GSDML), which tells
 the IO-controller how to communicate with the IO-device.
 
