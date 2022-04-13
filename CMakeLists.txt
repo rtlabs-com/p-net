@@ -222,7 +222,7 @@ install (FILES
   )
 
 add_subdirectory (src)
-add_subdirectory (sample_app)
+add_subdirectory (samples/pn_dev)
 
 if (CMAKE_PROJECT_NAME STREQUAL PROFINET AND BUILD_TESTING)
   add_subdirectory (test)

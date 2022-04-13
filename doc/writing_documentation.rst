@@ -40,4 +40,4 @@ Run checks::
 
     doc$ make spelling
     doc$ make linkcheck
-    $ codespell -I doc/codespell_ignore.txt -S "*.patch" include/ sample_app/ src/ test/
+    $ codespell -I doc/codespell_ignore.txt -S "*.patch" include/ samples/pn_dev/ src/ test/

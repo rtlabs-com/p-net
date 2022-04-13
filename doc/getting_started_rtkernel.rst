@@ -250,7 +250,7 @@ To estimate the binary size, link partially (without standard
 libraries). This example is for cortex-m4f MCU:s, such as XMC4800::
 
    build$ make all
-   build$ /opt/rt-tools/compilers/arm-eabi/bin/arm-eabi-gcc -O3 -DNDEBUG -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 CMakeFiles/pn_dev.dir/sample_app/sampleapp_common.o CMakeFiles/pn_dev.dir/src/ports/rt-kernel/sampleapp_main.o -o pn_dev.elf libprofinet.a -nostartfiles -nostdlib -r
+   build$ /opt/rt-tools/compilers/arm-eabi/bin/arm-eabi-gcc -O3 -DNDEBUG -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 CMakeFiles/pn_dev.dir/samples/pn_dev/sampleapp_common.o CMakeFiles/pn_dev.dir/src/ports/rt-kernel/sampleapp_main.o -o pn_dev.elf libprofinet.a -nostartfiles -nostdlib -r
 
 Study the resulting executable::
 

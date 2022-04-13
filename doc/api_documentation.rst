@@ -9,7 +9,7 @@ also contains error code definitions etc.
 You can also build the Doxygen documentation for all functions by following
 the instructions given on the page "Additional Linux Details".
 
-Study the sample_app to get more information on how to use the API.
+Study samples/pn_dev to get more information on how to use the API.
 
 
 General

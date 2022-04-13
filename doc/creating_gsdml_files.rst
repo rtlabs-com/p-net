@@ -16,8 +16,8 @@ GSDML files given. It contains simplifications and does not describe special
 cases. For full details on GSDML file syntax, see the official GSDML
 specification.
 
-An example GSDML file is available in the sample_app directory of the p-net
-repository: https://github.com/rtlabs-com/p-net/tree/master/sample_app
+An example GSDML file is available in the samples/pn_dev directory of the p-net
+repository: https://github.com/rtlabs-com/p-net/tree/master/samples/pn_dev
 
 A GSDML file is used to describe an IO-device. The corresponding file
 for describing a controller is a CDML (Controller Description Markup Language)

@@ -281,7 +281,7 @@ Use systemd to automatically start the p-net sample application at boot on a
 Raspberry Pi.
 Place a systemd unit file here: ``/lib/systemd/system/pnet-sampleapp.service``
 
-An example file is available in the ``sample_app/`` directory of this
+An example file is available in the ``samples/pn_dev/`` directory of this
 repository. It assumes that the code is checked out into
 ``/home/pi/profinet/p-net/`` on your Raspberry Pi.
 Install the files::
