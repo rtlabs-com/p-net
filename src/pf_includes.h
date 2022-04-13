@@ -31,18 +31,20 @@ extern "C" {
 #include "pnal.h"
 
 #include "pnet_api.h"
-
+#include "pf_driver.h"
 #include "pf_types.h"
 
 /* common */
 #include "pf_alarm.h"
 #include "pf_bg_worker.h"
 #include "pf_cpm.h"
+#include "pf_cpm_driver_sw.h"
 #include "pf_dcp.h"
 #include "pf_eth.h"
 #include "pf_file.h"
 #include "pf_lldp.h"
 #include "pf_ppm.h"
+#include "pf_ppm_driver_sw.h"
 #include "pf_ptcp.h"
 #include "pf_scheduler.h"
 #include "pf_snmp.h"

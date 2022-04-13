@@ -36,6 +36,9 @@ extern "C" {
 #include "pnet_options.h"
 #include "pnet_version.h"
 #include "pnal_config.h"
+#if PNET_OPTION_DRIVER_ENABLE
+#include "driver_config.h" /* Configuration options for enabled driver */
+#endif
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -1279,6 +1282,11 @@ typedef struct pnet_cfg
    bool use_qualified_diagnosis;
 
    pnet_if_cfg_t if_cfg;
+
+#if PNET_OPTION_DRIVER_ENABLE
+   bool driver_enable;
+   pnet_driver_config_t driver_config;
+#endif
 
    /** Storage between runs */
    char file_directory[PNET_MAX_DIRECTORYPATH_SIZE]; /**< Terminated string

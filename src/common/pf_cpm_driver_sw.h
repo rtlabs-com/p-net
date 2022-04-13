@@ -13,21 +13,21 @@
  * full license information.
  ********************************************************************/
 
-#ifndef PNET_OPTIONS_H
-#define PNET_OPTIONS_H
+#ifndef PF_CPM_DRIVER_SW_H
+#define PF_CPM_DRIVER_SW_H
 
-#if !defined (PNET_MAX_PHYSICAL_PORTS)
-/** Max number of physical ports */
-#define PNET_MAX_PHYSICAL_PORTS @PNET_MAX_PHYSICAL_PORTS@
+#ifdef __cplusplus
+extern "C" {
 #endif
 
-#if !defined (PNET_MAX_DIRECTORYPATH_SIZE)
-/** Max directory path size, including termination */
-#define PNET_MAX_DIRECTORYPATH_SIZE @PNET_MAX_DIRECTORYPATH_SIZE@
+/**
+ * Initialize p-net default cpm driver.
+ * @param net              InOut: The p-net stack instance
+ */
+void pf_cpm_driver_sw_init (pnet_t * net);
+
+#ifdef __cplusplus
+}
 #endif
 
-#if !defined (PNET_OPTION_DRIVER_ENABLE)
-#cmakedefine01 PNET_OPTION_DRIVER_ENABLE
-#endif
-
-#endif  /* PNET_OPTIONS_H */
+#endif /* PF_CPM_DRIVER_SW_H */

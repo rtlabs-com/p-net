@@ -62,8 +62,10 @@ target_sources (profinet PRIVATE
   common/pf_alarm.c
   common/pf_bg_worker.c
   common/pf_cpm.c
+  common/pf_cpm_driver_sw.c
   common/pf_dcp.c
   common/pf_ppm.c
+  common/pf_ppm_driver_sw.c
   common/pf_ptcp.c
   common/pf_scheduler.c
   common/pf_eth.c
@@ -74,9 +76,11 @@ target_sources (profinet PRIVATE
   common/pf_alarm.h
   common/pf_bg_worker.h
   common/pf_cpm.h
+  common/pf_cpm_driver_sw.h
   common/pf_dcp.h
   common/pf_file.h
   common/pf_ppm.h
+  common/pf_ppm_driver_sw.h
   common/pf_ptcp.h
   common/pf_scheduler.h
   common/pf_eth.h
