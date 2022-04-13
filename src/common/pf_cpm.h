@@ -98,17 +98,17 @@ int pf_cpm_get_iocs (
  * Maximum buffer size is 256 bytes.
  *
  * @param net           InOut: The p-net stack instance
- * @param api_id        In:    The API identifier.
- * @param slot_nbr      In:    The slot number.
- * @param subslot_nbr   In:    The sub-slot number.
- * @param p_new_flag    Out:   true means new valid data (and IOPS) frame
- *                             available since last call.
- * @param p_data        Out:   Copy of the received data.
- * @param p_data_len    In:    Buffer size.
- *                      Out:   Length of received data.
- * @param p_iops        Out:   The received IOPS.
- * @param p_iops_len    In:    Size of buffer at p_iops.
- *                      Out:   The length of the received IOPS.
+ * @param api_id        In:   The API identifier.
+ * @param slot_nbr      In:   The slot number.
+ * @param subslot_nbr   In:   The sub-slot number.
+ * @param p_new_flag    Out:  true means new valid data (and IOPS) frame
+ *                            available since last call.
+ * @param p_data        Out:  Copy of the received data.
+ * @param p_data_len    In:   Buffer size.
+ *                      Out:  Length of received data.
+ * @param p_iops        Out:  The received IOPS.
+ * @param p_iops_len    In:   Size of buffer at p_iops.
+ *                      Out:  The length of the received IOPS.
  * @return  0  if the data and IOPS could be retrieved.
  *          -1 if an error occurred.
  */
@@ -122,20 +122,6 @@ int pf_cpm_get_data_and_iops (
    uint16_t * p_data_len,
    uint8_t * p_iops,
    uint8_t * p_iops_len);
-
-/* Not yet used */
-/**
- * Handle new UDP layer frames.
- *
- * This function handles RTClass_UDP frames.
- * UDP frames are not supported.
- *
- * @param frame_id         In:   The frame id of the frame.
- * @param p_buf            In:   The received data.
- * @return  0     If the frame was NOT handled by this function.
- *          1     If the frame was handled and the buffer freed.
- */
-int pf_cpm_udp_c_data_ind (uint16_t frame_id, pnal_buf_t * p_buf);
 
 /**
  * Get the data status of the CPM connection.
@@ -152,8 +138,51 @@ int pf_cpm_get_data_status (const pf_cpm_t * p_cpm, uint8_t * p_data_status);
  */
 void pf_cpm_show (const pnet_t * net, const pf_cpm_t * p_cpm);
 
+/* Functions used by cpm driver */
+
+/**
+ * Change the CPM state.
+ * @param p_spm            InOut: The CPM instance.
+ * @param state            In:    The new CPM state.
+ */
+void pf_cpm_set_state (pf_cpm_t * p_cpm, pf_cpm_state_values_t state);
+
+/**
+ * Notify other components about CPM events.
+ * @param net              InOut: The p-net stack instance
+ * @param p_ar             InOut: The AR instance.
+ * @param crep             In:    The IOCR index
+ * @param start            In:    Start/Stop indicator. True if CPM is starting.
+ */
+void pf_cpm_state_ind (pnet_t * net, pf_ar_t * p_ar, uint32_t crep, bool start);
+
+/**
+ * Perform a check of the source address of the received frame.
+ * @param p_cpm            In:    The CPM instance.
+ * @param p_buf            In:    The frame buffer.
+ * @return 0 if the source address is OK.
+ *         -1 if the source address is wrong.
+ */
+int pf_cpm_check_src_addr (const pf_cpm_t * p_cpm, const pnal_buf_t * p_buf);
+
 /************ Internal functions, made available for unit testing ************/
 
+/**
+ * Perform the cycle counter check of the received frame.
+ *
+ * Profinet 2.4, section 4.7.2.1.2
+ *
+ * In general, the current counter value should be larger than the
+ * previous counter value.
+ *
+ * However as we use cyclic counters, also allow it to be a lot less (not the
+ * same or slightly less).
+ *
+ * @param prev             In:   The previous cycle counter.
+ * @param now              In:   The current cycle counter.
+ * @return  0  If the cycle check is OK.
+ *          -1 if the cycle check fails.
+ */
 int pf_cpm_check_cycle (int32_t prev, uint16_t now);
 
 #ifdef __cplusplus

@@ -101,7 +101,7 @@ static void pf_diag_update_station_problem_indicator (
       }
    }
 
-   pf_ppm_set_problem_indicator (p_ar, is_problem);
+   pf_ppm_set_problem_indicator (net, p_ar, is_problem);
 }
 
 /**

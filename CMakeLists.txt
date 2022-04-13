@@ -64,6 +64,7 @@ option (PNET_OPTION_RS "" ON)
 option (PNET_OPTION_MC_CR "" ON)
 option (PNET_OPTION_SRL "" OFF)
 option (PNET_OPTION_SNMP "" OFF)
+option (PNET_OPTION_DRIVER_ENABLE "Enable drivers. Specific driver must be enabled." OFF )
 
 # TODO: this should be handled in cc.h
 option (PNET_USE_ATOMICS "Enable use of atomic operations (stdatomic.h)" OFF)
@@ -154,6 +155,8 @@ configure_file (
   ${PROFINET_BINARY_DIR}/include/pnet_version.h
   )
 
+include(${CMAKE_CURRENT_SOURCE_DIR}/src/drivers/drivers_options.cmake)
+
 # Generate config options
 configure_file (
   options.h.in
@@ -168,6 +171,10 @@ configure_file (
 # platform
 add_library(profinet "")
 add_executable(pn_dev "")
+
+if (PNET_OPTION_DRIVER_ENABLE)
+  include(${CMAKE_CURRENT_SOURCE_DIR}/src/drivers/drivers.cmake)
+endif ()
 
 if (CMAKE_PROJECT_NAME STREQUAL PROFINET AND BUILD_TESTING)
   add_executable(pf_test "")
