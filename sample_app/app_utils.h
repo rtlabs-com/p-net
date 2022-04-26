@@ -24,17 +24,29 @@
  * P-Net events, error codes and more.
  *
  * API, slot and subslot administration.
- *
- * Initialization of P-Net configuration from app_gsdml.h.
  */
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+#include "app_data_api.h"
+
 #include "osal.h"
 #include "pnal.h"
 #include <pnet_api.h>
+
+/* Events handled by main task */
+#define APP_EVENT_READY_FOR_DATA BIT (0)
+#define APP_EVENT_TIMER          BIT (1)
+#define APP_EVENT_ALARM          BIT (2)
+#define APP_EVENT_ABORT          BIT (15)
+
+typedef enum
+{
+   RUN_IN_SEPARATE_THREAD,
+   RUN_IN_MAIN_THREAD
+} app_run_in_separate_task_t;
 
 typedef struct app_utils_netif_name
 {
@@ -53,7 +65,7 @@ typedef struct app_subslot app_subslot_t;
  * Callback for updated cyclic data
  *
  * @param subslot    InOut: Subslot structure
- * @param tag        InOut: Typically a handle to a submodule
+ * @param tag        InOut: Typically a handle to a submodule ??
  */
 typedef void (*app_utils_cyclic_callback) (app_subslot_t * subslot, void * tag);
 
@@ -104,7 +116,9 @@ typedef struct app_slot
 {
    bool plugged;
    uint32_t module_id;
-   const char * name; /** Module name */
+
+   /** Module name */
+   const char * name;
 
    /** Subslots. Use a separate index, as the subslot number might be large.
     *  For example the subslot for DAP port 1 has number 0x8001 */
@@ -124,6 +138,37 @@ typedef struct app_api_t
    /** Slots. Use slot number as index */
    app_slot_t slots[PNET_MAX_SLOTS];
 } app_api_t;
+
+typedef struct app_data_t
+{
+   pnet_t * net;
+
+   /** P-Net configuration passed in app_utils_init(). */
+   const pnet_cfg_t * pnet_cfg;
+
+   /** Application API for administration of plugged
+    * modules and submodules, and connection state. */
+   app_api_t main_api;
+
+   os_timer_t * main_timer;
+   os_event_t * main_events;
+
+   /** Only one outgoing alarm simultaneously */
+   bool alarm_allowed;
+
+   /** Incoming alarm arguments */
+   pnet_alarm_argument_t alarm_arg;
+
+   uint32_t arep_for_appl_ready;
+
+   uint32_t ticks_between_polls;
+
+   /** Counter used to control when process data is updated */
+   uint32_t process_data_tick_counter;
+
+   void * user_data;
+
+} app_data_t;
 
 /**
  * Convert IP address to string
@@ -204,6 +249,7 @@ const char * app_utils_event_to_string (pnet_event_values_t event);
  * Read IP, netmask etc from operating system.
  *
  * @param netif_list_str      In:  Comma separated string of network ifs
+ * @param default_mau_type    In:  Default MAU type
  * @param if_list             Out: Array of network ifs
  * @param number_of_ports     Out: Number of ports
  * @param if_cfg              Out: P-Net network configuration to be updated
@@ -211,6 +257,7 @@ const char * app_utils_event_to_string (pnet_event_values_t event);
  */
 int app_utils_pnet_cfg_init_netifs (
    const char * netif_list_str,
+   uint16_t default_mau_type,
    app_utils_netif_namelist_t * if_list,
    uint16_t * number_of_ports,
    pnet_if_cfg_t * if_cfg);
@@ -226,6 +273,8 @@ int app_utils_pnet_cfg_init_netifs (
  *
  * Does only consider the number of comma separated names. No check of the
  * names themselves are done.
+ *
+ * No communication with the operating system is done.
  *
  * Examples:
  * arg_str                 num_ports
@@ -264,10 +313,11 @@ void app_utils_print_network_config (
  *
  * Uses APP_LOG_INFO()
  *
- * @param subslot          In: Subslot
- * @param ioxs_str         In: String description Producer or Consumer
- * @param ioxs_current     In: Current status
- * @param ioxs_new         In: New status
+ * @param subslot       In: Subslot
+ * @param ioxs_str      In: String description, for example "Producer" or
+ *                          "Consumer"
+ *  @param ioxs_current In: Current status
+ * @param ioxs_new      In: New status
  */
 void app_utils_print_ioxs_change (
    const app_subslot_t * subslot,
@@ -278,19 +328,27 @@ void app_utils_print_ioxs_change (
 /**
  * Init the p-net configuration to default values.
  *
+ * Partially initialise config values, and use proper callbacks
+ *
  * Most values are picked from app_gsdml.h
  *
  * Network configuration not initialized.
  * This means that \a '.if_cfg' must be set by application.
  *
  * Use this function to init P-Net configuration before
- * before passing config to app_init().
+ * before passing config to app_utils_init().
  *
- * @param pnet_cfg     Out:   Configuration for use by p-net
+ * @param pnet_cfg         Out:   Configuration for use by p-net
+ * @param tick_interval_us In:    Interval between ticks in microseconds
+ * @param app              In:    Application handle
  * @return  0  if the operation succeeded.
  *          -1 if an error occurred.
  */
-int app_utils_pnet_cfg_init_default (pnet_cfg_t * pnet_cfg);
+int app_utils_pnet_cfg_init_default (
+   pnet_cfg_t * cfg,
+   uint32_t tick_interval_us,
+   const char * serial_number,
+   app_data_t * app);
 
 /**
  * Plug application module
@@ -420,6 +478,262 @@ bool app_utils_subslot_is_no_io (const app_subslot_t * p_subslot);
  *         false if not.
  */
 bool app_utils_subslot_is_output (const app_subslot_t * p_subslot);
+
+/**
+ * Get P-Net instance from application
+ *
+ * @param app                 In:    Application handle
+ * @return P-Net instance, NULL on failure
+ */
+pnet_t * app_utils_get_pnet_instance (app_data_t * app);
+
+/** Check if we are connected to the controller
+ *
+ * @param app             InOut:    Application handle
+ * @return true if we are connected to the IO-controller
+ */
+bool app_utils_is_connected_to_controller (app_data_t * app);
+
+/**
+ * Callback for timer tick.
+ *
+ * This is a callback for the timer defined in OSAL.
+ * See \a os_timer_create() for details.
+ *
+ * @param timer   InOut: Timer instance
+ * @param arg     InOut: User defined argument, app_data_t pointer
+ */
+void app_utils_main_timer_tick (os_timer_t * timer, void * arg);
+
+/**
+ * Set outputs to default value
+ *
+ * @param user_data                InOut: User data
+ */
+void app_utils_set_outputs_default_value (void * user_data);
+
+/*********************************** Callbacks ********************************/
+
+int app_utils_connect_ind (
+   pnet_t * net,
+   void * arg,
+   uint32_t arep,
+   pnet_result_t * p_result);
+
+int app_utils_release_ind (
+   pnet_t * net,
+   void * arg,
+   uint32_t arep,
+   pnet_result_t * p_result);
+
+int app_utils_dcontrol_ind (
+   pnet_t * net,
+   void * arg,
+   uint32_t arep,
+   pnet_control_command_t control_command,
+   pnet_result_t * p_result);
+
+int app_utils_ccontrol_cnf (
+   pnet_t * net,
+   void * arg,
+   uint32_t arep,
+   pnet_result_t * p_result);
+
+int app_utils_write_ind (
+   pnet_t * net,
+   void * arg,
+   uint32_t arep,
+   uint32_t api,
+   uint16_t slot_nbr,
+   uint16_t subslot_nbr,
+   uint16_t idx,
+   uint16_t sequence_number,
+   uint16_t write_length,
+   const uint8_t * p_write_data,
+   pnet_result_t * p_result);
+
+int app_utils_read_ind (
+   pnet_t * net,
+   void * arg,
+   uint32_t arep,
+   uint32_t api,
+   uint16_t slot_nbr,
+   uint16_t subslot_nbr,
+   uint16_t idx,
+   uint16_t sequence_number,
+   uint8_t ** pp_read_data,
+   uint16_t * p_read_length,
+   pnet_result_t * p_result);
+
+int app_utils_state_ind (
+   pnet_t * net,
+   void * arg,
+   uint32_t arep,
+   pnet_event_values_t event);
+
+int app_utils_exp_module_ind (
+   pnet_t * net,
+   void * arg,
+   uint32_t api,
+   uint16_t slot,
+   uint32_t module_ident);
+
+int app_utils_exp_submodule_ind (
+   pnet_t * net,
+   void * arg,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
+   uint32_t module_id,
+   uint32_t submodule_id,
+   const pnet_data_cfg_t * p_exp_data);
+
+int app_utils_new_data_status_ind (
+   pnet_t * net,
+   void * arg,
+   uint32_t arep,
+   uint32_t crep,
+   uint8_t changes,
+   uint8_t data_status);
+
+int app_utils_alarm_ind (
+   pnet_t * net,
+   void * arg,
+   uint32_t arep,
+   const pnet_alarm_argument_t * p_alarm_arg,
+   uint16_t data_len,
+   uint16_t data_usi,
+   const uint8_t * p_data);
+
+int app_utils_alarm_cnf (
+   pnet_t * net,
+   void * arg,
+   uint32_t arep,
+   const pnet_pnio_status_t * p_pnio_status);
+
+int app_utils_alarm_ack_cnf (pnet_t * net, void * arg, uint32_t arep, int res);
+
+int app_utils_reset_ind (
+   pnet_t * net,
+   void * arg,
+   bool should_reset_application,
+   uint16_t reset_mode);
+
+int app_utils_signal_led (pnet_t * net, void * arg, bool led_state);
+
+/*****************************************************************************/
+
+/**
+ * Set initial input data, provider and consumer status for a subslot.
+ *
+ * @param app              In:    Application handle
+ */
+int app_utils_set_initial_data_and_ioxs (app_data_t * app);
+
+/**
+ * Handle cyclic input- and output data for a subslot.
+ *
+ * Data is read and written using functions in the .c file,
+ * which handles the data and update the physical input and outputs.
+ *
+ * @param subslot    InOut: Subslot reference
+ * @param tag        In:    Application handle, here \a app_data_t pointer
+ */
+void app_utils_cyclic_data_callback (app_subslot_t * subslot, void * tag);
+
+/**
+ * Send and receive cyclic/process data for all subslots.
+ *
+ * Updates the data only on every \a app->ticks_between_polls invocation
+ *
+ * @param app                 In:    Application handle
+ */
+void app_utils_handle_cyclic_data (app_data_t * app);
+
+/**
+ * Send alarm ACK to the PLC
+ *
+ * @param net              InOut: p-net stack instance
+ * @param arep             In:    Arep
+ * @param p_alarm_arg      In:    Alarm argument (slot, subslot etc)
+ */
+void app_utils_handle_send_alarm_ack (
+   pnet_t * net,
+   uint32_t arep,
+   const pnet_alarm_argument_t * p_alarm_arg);
+
+/**
+ * Send application ready to the PLC
+ * @param net              InOut: p-net stack instance
+ * @param arep             In:    Arep
+ */
+void app_utils_handle_send_application_ready (pnet_t * net, uint32_t arep);
+
+/**
+ * Plug all DAP (sub)modules
+ * Use existing callback functions to plug the (sub-)modules
+ * @param app              InOut:   Application handle
+ * @param number_of_ports  In:      Number of active ports
+ */
+void app_utils_plug_dap (app_data_t * app, uint16_t number_of_ports);
+
+/**
+ * Application task definition. Handles events in eternal loop.
+ *
+ * This is a callback to \a os_thread_create().
+ *
+ * @param arg                 In: Application handle, pnet_cfg_t
+ */
+void app_utils_loop_forever (void * arg);
+
+/**
+ * Initialize P-Net stack and application.
+ *
+ * The \a pnet_cfg argument shall have been initialized using
+ * \a app_utils_pnet_cfg_init_default() before this function is
+ * called.
+ *
+ * @param app                 In:    Application handle
+ * @param pnet_cfg            In:    P-Net configuration
+ * @param ticks_between_polls In:    Number of ticks between each data poll
+ * @param user_data           InOut: User data
+ * @return 0 on success, -1 on error
+ */
+int app_utils_init (
+   app_data_t * app,
+   const pnet_cfg_t * pnet_cfg,
+   uint32_t ticks_between_polls,
+   void * user_data);
+
+/**
+ * Start application main loop
+ *
+ * Application must have been initialized using \a app_utils_init() before
+ * this function is called.
+ *
+ * If \a task_config parameters is set to RUN_IN_SEPARATE_THREAD a
+ * thread execution the \a app_utils_loop_forever() function is started.
+ * If task_config is set to RUN_IN_MAIN_THREAD no such thread is
+ * started and the caller must call the \a app_utils_loop_forever() after
+ * calling this function.
+ *
+ * RUN_IN_MAIN_THREAD is intended for rt-kernel targets.
+ * RUN_IN_SEPARATE_THREAD is intended for linux targets.
+ *
+ * @param app                 In:    Application handle
+ * @param task_config         In:    Defines if stack and application
+ *                                   is run in main or separate task.
+ * @param priority            In:    Priority for separate thread (if any)
+ * @param stacksize           In:    Stack size for separate thread (if any)
+ * @param tick_interval_us    In:    Tick interval in microseconds
+ * @return 0 on success, -1 on error
+ */
+int app_utils_start (
+   app_data_t * app,
+   app_run_in_separate_task_t task_config,
+   uint32_t priority,
+   uint32_t stacksize,
+   uint32_t tick_interval_us);
 
 #ifdef __cplusplus
 }

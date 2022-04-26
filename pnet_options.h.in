@@ -16,14 +16,20 @@
 #ifndef PNET_OPTIONS_H
 #define PNET_OPTIONS_H
 
-#if !defined (PNET_MAX_PHYSICAL_PORTS)
+#if !defined(PNET_MAX_PHYSICAL_PORTS)
 /** Max number of physical ports */
 #define PNET_MAX_PHYSICAL_PORTS @PNET_MAX_PHYSICAL_PORTS@
 #endif
 
-#if !defined (PNET_MAX_DIRECTORYPATH_SIZE)
+#if !defined(PNET_MAX_DIRECTORYPATH_SIZE)
 /** Max directory path size, including termination */
 #define PNET_MAX_DIRECTORYPATH_SIZE @PNET_MAX_DIRECTORYPATH_SIZE@
 #endif
 
-#endif  /* PNET_OPTIONS_H */
+#if !defined(PNET_MAX_FILENAME_SIZE)
+/** Max size of filename, including termination */
+#define PNET_MAX_FILENAME_SIZE @PNET_MAX_FILENAME_SIZE@
+#endif
+
+
+#endif /* PNET_OPTIONS_H */

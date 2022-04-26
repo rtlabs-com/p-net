@@ -16,7 +16,7 @@
 #define _GNU_SOURCE /* For asprintf() */
 
 #include "sampleapp_common.h"
-#include "app_gsdml.h"
+#include "sampleapp_gsdml.h"
 #include "app_log.h"
 #include "app_utils.h"
 
@@ -363,10 +363,11 @@ int main (int argc, char * argv[])
    int ret;
    int32_t app_log_level = APP_LOG_LEVEL_FATAL;
    pnet_cfg_t pnet_cfg = {0};
-   app_data_t * sample_app = NULL;
    app_utils_netif_namelist_t netif_name_list;
    pnet_if_cfg_t netif_cfg = {0};
    uint16_t number_of_ports = 1;
+   static app_data_t app_state = {0};
+   static app_userdata_t userdata = {0};
 
    /* Enable line buffering for printouts, especially when logging to
       the journal (which is default when running as a systemd job) */
@@ -393,10 +394,16 @@ int main (int argc, char * argv[])
    APP_LOG_INFO ("Default station name: %s\n", app_args.station_name);
 
    /* Prepare configuration */
-   app_pnet_cfg_init_default (&pnet_cfg);
+   app_utils_pnet_cfg_init_default (
+      &pnet_cfg,
+      APP_TICK_INTERVAL_US,
+      "007",
+      &app_state);
+
    strcpy (pnet_cfg.station_name, app_args.station_name);
    ret = app_utils_pnet_cfg_init_netifs (
       app_args.eth_interfaces,
+      APP_GSDML_DEFAULT_MAUTYPE,
       &netif_name_list,
       &number_of_ports,
       &netif_cfg);
@@ -436,8 +443,9 @@ int main (int argc, char * argv[])
    }
 
    /* Initialise stack and application */
-   sample_app = app_init (&pnet_cfg);
-   if (sample_app == NULL)
+   ret =
+      app_utils_init (&app_state, &pnet_cfg, APP_TICKS_UPDATE_DATA, &userdata);
+   if (ret != 0)
    {
       printf ("Failed to initialize P-Net.\n");
       printf ("Do you have enough Ethernet interface permission?\n");
@@ -450,7 +458,7 @@ int main (int argc, char * argv[])
    {
       printf ("\nPerforming factory reset\n");
       printf ("Exit application\n");
-      (void)pnet_factory_reset (app_get_pnet_instance (sample_app));
+      (void)pnet_factory_reset (app_utils_get_pnet_instance (&app_state));
       exit (EXIT_SUCCESS);
    }
 
@@ -465,13 +473,19 @@ int main (int argc, char * argv[])
          level = 0x2010; /* See documentation for pnet_show() */
       }
 
-      pnet_show (app_get_pnet_instance (sample_app), level);
+      pnet_show (app_utils_get_pnet_instance (&app_state), level);
       printf ("Exit application\n");
       exit (EXIT_SUCCESS);
    }
 
    /* Start main loop */
-   if (app_start (sample_app, RUN_IN_SEPARATE_THREAD) != 0)
+   if (
+      app_utils_start (
+         &app_state,
+         RUN_IN_SEPARATE_THREAD,
+         APP_MAIN_THREAD_PRIORITY,
+         APP_MAIN_THREAD_STACKSIZE,
+         APP_TICK_INTERVAL_US) != 0)
    {
       printf ("Failed to start\n");
       printf ("Aborting application\n");

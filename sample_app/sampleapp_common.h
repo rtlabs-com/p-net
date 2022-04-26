@@ -16,8 +16,7 @@
 #ifndef SAMPLEAPP_COMMON_H
 #define SAMPLEAPP_COMMON_H
 
-#include "osal.h"
-#include "pnal.h"
+#include "sampleapp_gsdml.h"
 #include <pnet_api.h>
 
 #ifdef __cplusplus
@@ -39,6 +38,31 @@ extern "C" {
 #define APP_TICKS_READ_BUTTONS 10
 #define APP_TICKS_UPDATE_DATA  100
 
+#define APP_ALARM_PAYLOAD_SIZE 1 /* bytes */
+
+/* Defines used for alarm demo functionality */
+
+#define CHANNEL_ERRORTYPE_SHORT_CIRCUIT                       0x0001
+#define CHANNEL_ERRORTYPE_LINE_BREAK                          0x0006
+#define CHANNEL_ERRORTYPE_DATA_TRANSMISSION_IMPOSSIBLE        0x8000
+#define CHANNEL_ERRORTYPE_NETWORK_COMPONENT_FUNCTION_MISMATCH 0x8008
+#define EXTENDED_CHANNEL_ERRORTYPE_FRAME_DROPPED              0x8000
+#define EXTENDED_CHANNEL_ERRORTYPE_MAUTYPE_MISMATCH           0x8001
+#define EXTENDED_CHANNEL_ERRORTYPE_LINE_DELAY_MISMATCH        0x8002
+
+#define APP_ALARM_USI                       0x0010
+#define APP_DIAG_CHANNEL_NUMBER             4
+#define APP_DIAG_CHANNEL_DIRECTION          PNET_DIAG_CH_PROP_DIR_INPUT
+#define APP_DIAG_CHANNEL_NUMBER_OF_BITS     PNET_DIAG_CH_PROP_TYPE_1_BIT
+#define APP_DIAG_CHANNEL_SEVERITY           PNET_DIAG_CH_PROP_MAINT_FAULT
+#define APP_DIAG_CHANNEL_ERRORTYPE          CHANNEL_ERRORTYPE_SHORT_CIRCUIT
+#define APP_DIAG_CHANNEL_ADDVALUE_A         0
+#define APP_DIAG_CHANNEL_ADDVALUE_B         1234
+#define APP_DIAG_CHANNEL_EXTENDED_ERRORTYPE 0
+#define APP_DIAG_CHANNEL_QUAL_SEVERITY      0 /* Not used (Max one bit set) */
+
+#define APP_DATA_DEFAULT_OUTPUT_DATA 0
+
 /** Command line arguments for sample application */
 typedef struct app_args
 {
@@ -55,68 +79,60 @@ typedef struct app_args
    bool remove_files;
 } app_args_t;
 
-typedef enum
+typedef enum app_demo_state
 {
-   RUN_IN_SEPARATE_THREAD,
-   RUN_IN_MAIN_THREAD
-} app_run_in_separate_task_t;
+   APP_DEMO_STATE_ALARM_SEND = 0,
+   APP_DEMO_STATE_LOGBOOK_ENTRY,
+   APP_DEMO_STATE_ABORT_AR,
+   APP_DEMO_STATE_CYCLIC_REDUNDANT,
+   APP_DEMO_STATE_CYCLIC_NORMAL,
+   APP_DEMO_STATE_DIAG_STD_ADD,
+   APP_DEMO_STATE_DIAG_STD_UPDATE,
+   APP_DEMO_STATE_DIAG_STD_REMOVE,
+   APP_DEMO_STATE_DIAG_USI_ADD,
+   APP_DEMO_STATE_DIAG_USI_UPDATE,
+   APP_DEMO_STATE_DIAG_USI_REMOVE,
+} app_demo_state_t;
 
-typedef struct app_data_t app_data_t;
+typedef struct app_userdata
+{
+   bool button1_pressed;
+   bool button2_pressed;
+   bool button2_pressed_previous;
 
-/** Partially initialise config values, and use proper callbacks
- *
- * @param pnet_cfg     Out:   Configuration to be updated
- */
-void app_pnet_cfg_init_default (pnet_cfg_t * pnet_cfg);
+   /** Counter to control when buttons are read */
+   uint32_t buttons_tick_counter;
 
-/**
- * Initialize P-Net stack and application.
- *
- * The \a pnet_cfg argument shall have been initialized using
- * \a app_pnet_cfg_init_default() before this function is
- * called.
- *
- * @param pnet_cfg               In:    P-Net configuration
- * @return Application handle, NULL on error
- */
-app_data_t * app_init (const pnet_cfg_t * pnet_cfg);
+   app_demo_state_t alarm_demo_state;
+   uint8_t alarm_payload[APP_ALARM_PAYLOAD_SIZE];
 
-/**
- * Start application main loop
- *
- * Application must have been initialized using \a app_init() before
- * this function is called.
- *
- * If \a task_config parameters is set to RUN_IN_SEPARATE_THREAD a
- * thread execution the \a app_loop_forever() function is started.
- * If task_config is set to RUN_IN_MAIN_THREAD no such thread is
- * started and the caller must call the \a app_loop_forever() after
- * calling this function.
- *
- * RUN_IN_MAIN_THREAD is intended for rt-kernel targets.
- * RUN_IN_SEPARATE_THREAD is intended for linux targets.
- *
- * @param app                 In:    Application handle
- * @param task_config         In:    Defines if stack and application
- *                                   is run in main or separate task.
- * @return 0 on success, -1 on error
- */
-int app_start (app_data_t * app, app_run_in_separate_task_t task_config);
+   /** Parameter data for echo submodules
+    * The stored value is shared between all echo submodules in this example.
+    *
+    * Todo: Data is always in pnio data format. Add conversion to uint32_t.
+    */
+   uint32_t app_param_echo_gain; /* Network endianness */
 
-/**
- * Application task definition. Handles events in eternal loop.
- *
- * @param arg                 In: Application handle
- */
-void app_loop_forever (void * arg);
+   /* Parameter data for digital submodules
+    * The stored value is shared between all digital submodules in this example.
+    *
+    * Todo: Data is always in pnio data format. Add conversion to uint32_t.
+    */
+   uint32_t app_param_1; /* Network endianness */
+   uint32_t app_param_2; /* Network endianness */
 
-/**
- * Get P-Net instance from application
- *
- * @param app                 In:    Application handle
- * @return P-Net instance, NULL on failure
- */
-pnet_t * app_get_pnet_instance (app_data_t * app);
+   /* Network endianness */
+   uint8_t echo_inputdata[APP_GSDML_INPUT_DATA_ECHO_SIZE];
+   uint8_t echo_outputdata[APP_GSDML_OUTPUT_DATA_ECHO_SIZE];
+
+   /* Digital submodule process data
+    * The stored value is shared between all digital submodules in this example.
+    */
+   uint8_t count;
+   uint8_t inputdata[APP_GSDML_INPUT_DATA_DIGITAL_SIZE];
+   uint8_t outputdata[APP_GSDML_OUTPUT_DATA_DIGITAL_SIZE];
+
+} app_userdata_t;
 
 /**
  * Set LED state

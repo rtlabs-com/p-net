@@ -71,6 +71,7 @@ int _main (void)
 
    ret = app_utils_pnet_cfg_init_netifs (
       app_args.eth_interfaces,
+      APP_GSDML_DEFAULT_MAUTYPE,
       &netif_name_list,
       &number_of_ports,
       &netif_cfg);
@@ -89,7 +90,7 @@ int _main (void)
       APP_BG_WORKER_THREAD_STACKSIZE;
 
    /* Initialize profinet stack */
-   sample_app = app_init (&pnet_cfg);
+   sample_app = app_utils_init (&pnet_cfg);
    if (sample_app == NULL)
    {
       printf ("Failed to initialize P-Net.\n");
@@ -98,14 +99,14 @@ int _main (void)
    }
 
    /* Start main loop */
-   if (app_start (sample_app, RUN_IN_MAIN_THREAD) != 0)
+   if (app_utils_start (sample_app, RUN_IN_MAIN_THREAD) != 0)
    {
       printf ("Failed to start\n");
       printf ("Aborting application\n");
       return -1;
    }
 
-   app_loop_forever (sample_app);
+   app_utils_loop_forever (sample_app);
 
    return 0;
 }

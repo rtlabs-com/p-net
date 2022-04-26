@@ -71,11 +71,10 @@ target_include_directories(pn_dev
 
 target_sources(pn_dev
   PRIVATE
-  sample_app/sampleapp_common.c
   sample_app/app_utils.c
   sample_app/app_log.c
-  sample_app/app_gsdml.c
-  sample_app/app_data.c
+  sample_app/sampleapp_gsdml.c
+  sample_app/sampleapp_data.c
   src/ports/linux/sampleapp_main.c
   )
 

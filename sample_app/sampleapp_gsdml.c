@@ -13,17 +13,15 @@
  * full license information.
  ********************************************************************/
 
-#include "sampleapp_common.h"
-#include "app_utils.h"
-#include "app_gsdml.h"
+#include "app_gsdml_api.h"
+#include "sampleapp_gsdml.h"
+
 #include "app_log.h"
 #include "osal.h"
-#include "pnal.h"
 #include <pnet_api.h>
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#define GET_LOW_BYTE(id)  (id & 0xFF)
+#define GET_HIGH_BYTE(id) ((id >> 8) & 0xFF)
 
 /******************* Supported modules ***************************/
 
@@ -63,7 +61,7 @@ static const app_gsdml_module_t module_echo = {
 
 static const app_gsdml_submodule_t dap_indentity_1 = {
    .name = "DAP Identity 1",
-   .api = APP_GSDML_API,
+   .api = PNET_API_NO_APPLICATION_PROFILE,
    .id = PNET_SUBMOD_DAP_IDENT,
    .data_dir = PNET_DIR_NO_IO,
    .insize = 0,
@@ -72,7 +70,7 @@ static const app_gsdml_submodule_t dap_indentity_1 = {
 
 static const app_gsdml_submodule_t dap_interface_1 = {
    .name = "DAP Interface 1",
-   .api = APP_GSDML_API,
+   .api = PNET_API_NO_APPLICATION_PROFILE,
    .id = PNET_SUBMOD_DAP_INTERFACE_1_IDENT,
    .data_dir = PNET_DIR_NO_IO,
    .insize = 0,
@@ -81,7 +79,7 @@ static const app_gsdml_submodule_t dap_interface_1 = {
 
 static const app_gsdml_submodule_t dap_port_1 = {
    .name = "DAP Port 1",
-   .api = APP_GSDML_API,
+   .api = PNET_API_NO_APPLICATION_PROFILE,
    .id = PNET_SUBMOD_DAP_INTERFACE_1_PORT_1_IDENT,
    .data_dir = PNET_DIR_NO_IO,
    .insize = 0,
@@ -90,7 +88,7 @@ static const app_gsdml_submodule_t dap_port_1 = {
 
 static const app_gsdml_submodule_t dap_port_2 = {
    .name = "DAP Port 2",
-   .api = APP_GSDML_API,
+   .api = PNET_API_NO_APPLICATION_PROFILE,
    .id = PNET_SUBMOD_DAP_INTERFACE_1_PORT_2_IDENT,
    .data_dir = PNET_DIR_NO_IO,
    .insize = 0,
@@ -99,7 +97,7 @@ static const app_gsdml_submodule_t dap_port_2 = {
 
 static const app_gsdml_submodule_t dap_port_3 = {
    .name = "DAP Port 3",
-   .api = APP_GSDML_API,
+   .api = PNET_API_NO_APPLICATION_PROFILE,
    .id = PNET_SUBMOD_DAP_INTERFACE_1_PORT_3_IDENT,
    .data_dir = PNET_DIR_NO_IO,
    .insize = 0,
@@ -108,7 +106,7 @@ static const app_gsdml_submodule_t dap_port_3 = {
 
 static const app_gsdml_submodule_t dap_port_4 = {
    .name = "DAP Port 4",
-   .api = APP_GSDML_API,
+   .api = PNET_API_NO_APPLICATION_PROFILE,
    .id = PNET_SUBMOD_DAP_INTERFACE_1_PORT_4_IDENT,
    .data_dir = PNET_DIR_NO_IO,
    .insize = 0,
@@ -118,7 +116,7 @@ static const app_gsdml_submodule_t dap_port_4 = {
 static const app_gsdml_submodule_t submod_digital_in = {
    .id = APP_GSDML_SUBMOD_ID_DIGITAL_IN,
    .name = "Digital Input",
-   .api = APP_GSDML_API,
+   .api = PNET_API_NO_APPLICATION_PROFILE,
    .data_dir = PNET_DIR_INPUT,
    .insize = APP_GSDML_INPUT_DATA_DIGITAL_SIZE,
    .outsize = 0,
@@ -127,7 +125,7 @@ static const app_gsdml_submodule_t submod_digital_in = {
 static const app_gsdml_submodule_t submod_digital_out = {
    .id = APP_GSDML_SUBMOD_ID_DIGITAL_OUT,
    .name = "Digital Output",
-   .api = APP_GSDML_API,
+   .api = PNET_API_NO_APPLICATION_PROFILE,
    .data_dir = PNET_DIR_OUTPUT,
    .insize = 0,
    .outsize = APP_GSDML_OUTPUT_DATA_DIGITAL_SIZE,
@@ -136,7 +134,7 @@ static const app_gsdml_submodule_t submod_digital_out = {
 static const app_gsdml_submodule_t submod_digital_inout = {
    .id = APP_GSDML_SUBMOD_ID_DIGITAL_IN_OUT,
    .name = "Digital Input/Output",
-   .api = APP_GSDML_API,
+   .api = PNET_API_NO_APPLICATION_PROFILE,
    .data_dir = PNET_DIR_IO,
    .insize = APP_GSDML_INPUT_DATA_DIGITAL_SIZE,
    .outsize = APP_GSDML_OUTPUT_DATA_DIGITAL_SIZE,
@@ -145,7 +143,7 @@ static const app_gsdml_submodule_t submod_digital_inout = {
 static const app_gsdml_submodule_t submod_echo = {
    .id = APP_GSDML_SUBMOD_ID_ECHO,
    .name = "Echo submodule",
-   .api = APP_GSDML_API,
+   .api = PNET_API_NO_APPLICATION_PROFILE,
    .data_dir = PNET_DIR_IO,
    .insize = APP_GSDML_INPUT_DATA_ECHO_SIZE,
    .outsize = APP_GSDML_OUTPUT_DATA_ECHO_SIZE,
@@ -197,6 +195,92 @@ static app_gsdml_param_t app_gsdml_parameters[] = {
       .name = "Echo gain setting",
       .length = APP_GSDML_PARAMETER_LENGTH,
    }};
+
+/******************** Public API ****************************/
+
+int app_gsdml_update_config (pnet_cfg_t * cfg)
+{
+
+   /* Identification & Maintenance */
+
+   cfg->im_0_data.im_vendor_id_hi = GET_HIGH_BYTE (APP_GSDML_VENDOR_ID);
+   cfg->im_0_data.im_vendor_id_lo = GET_LOW_BYTE (APP_GSDML_VENDOR_ID);
+
+   cfg->im_0_data.im_hardware_revision = APP_GSDML_IM_HARDWARE_REVISION;
+   cfg->im_0_data.im_sw_revision_prefix = APP_GSDML_SW_REV_PREFIX;
+   cfg->im_0_data.im_sw_revision_functional_enhancement =
+      APP_GSDML_SW_REV_FUNCTIONAL_ENHANCEMENT;
+   cfg->im_0_data.im_sw_revision_bug_fix = APP_GSDML_SW_REV_BUGFIX;
+   cfg->im_0_data.im_sw_revision_internal_change =
+      APP_GSDML_SW_REV_INTERNAL_CHANGE;
+   cfg->im_0_data.im_revision_counter = APP_GSDML_IM_REVISION_COUNTER;
+   cfg->im_0_data.im_profile_id = APP_GSDML_PROFILE_ID;
+   cfg->im_0_data.im_profile_specific_type = APP_GSDML_PROFILE_SPEC_TYPE;
+   cfg->im_0_data.im_version_major = 1; /** Always 1 */
+   cfg->im_0_data.im_version_minor = 1; /** Always 1 */
+   cfg->im_0_data.im_supported = APP_GSDML_IM_SUPPORTED;
+
+   /* Serial number is handled elsewhere */
+   snprintf (
+      cfg->im_0_data.im_order_id,
+      sizeof (cfg->im_0_data.im_order_id),
+      "%s",
+      APP_GSDML_ORDER_ID);
+   snprintf (
+      cfg->im_1_data.im_tag_function,
+      sizeof (cfg->im_1_data.im_tag_function),
+      "%s",
+      APP_GSDML_TAG_FUNCTION);
+   snprintf (
+      cfg->im_1_data.im_tag_location,
+      sizeof (cfg->im_1_data.im_tag_location),
+      "%s",
+      APP_GSDML_TAG_LOCATION);
+   snprintf (
+      cfg->im_2_data.im_date,
+      sizeof (cfg->im_2_data.im_date),
+      "%s",
+      APP_GSDML_IM_DATE);
+   snprintf (
+      cfg->im_3_data.im_descriptor,
+      sizeof (cfg->im_3_data.im_descriptor),
+      "%s",
+      APP_GSDML_DESCRIPTOR);
+   snprintf (
+      cfg->im_4_data.im_signature,
+      sizeof (cfg->im_4_data.im_signature),
+      "%s",
+      APP_GSDML_SIGNATURE);
+
+   /* Device configuration */
+   cfg->device_id.vendor_id_hi = GET_HIGH_BYTE (APP_GSDML_VENDOR_ID);
+   cfg->device_id.vendor_id_lo = GET_LOW_BYTE (APP_GSDML_VENDOR_ID);
+   cfg->device_id.device_id_hi = GET_HIGH_BYTE (APP_GSDML_DEVICE_ID);
+   cfg->device_id.device_id_lo = GET_LOW_BYTE (APP_GSDML_DEVICE_ID);
+   cfg->oem_device_id.vendor_id_hi = GET_HIGH_BYTE (APP_GSDML_OEM_VENDOR_ID);
+   cfg->oem_device_id.vendor_id_lo = GET_LOW_BYTE (APP_GSDML_OEM_VENDOR_ID);
+   cfg->oem_device_id.device_id_hi = GET_HIGH_BYTE (APP_GSDML_OEM_DEVICE_ID);
+   cfg->oem_device_id.device_id_lo = GET_LOW_BYTE (APP_GSDML_OEM_DEVICE_ID);
+
+   snprintf (
+      cfg->product_name,
+      sizeof (cfg->product_name),
+      "%s",
+      APP_GSDML_PRODUCT_NAME);
+
+   cfg->send_hello = true;
+
+   /* Timing */
+   cfg->min_device_interval = APP_GSDML_MIN_DEVICE_INTERVAL;
+
+   snprintf (
+      cfg->station_name,
+      sizeof (cfg->station_name),
+      "%s",
+      APP_GSDML_DEFAULT_STATION_NAME);
+
+   return 0;
+}
 
 const app_gsdml_module_t * app_gsdml_get_module_cfg (uint32_t id)
 {

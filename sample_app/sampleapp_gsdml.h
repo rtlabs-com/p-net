@@ -13,15 +13,12 @@
  * full license information.
  ********************************************************************/
 
-#ifndef APP_GSDML_H
-#define APP_GSDML_H
+#ifndef SAMPLEAPP_GSDML_H
+#define SAMPLEAPP_GSDML_H
 
 /**
  * @file
  * @brief Device properties defined by the GSDML device definition
- *
- * Functions for getting module, submodule and parameter
- * configurations using their ids.
  *
  * Important:
  * Any change in this file may require an update of the GSDML file.
@@ -36,8 +33,6 @@ extern "C" {
 #endif
 
 #include <pnet_api.h>
-
-#define APP_GSDML_API 0
 
 #define APP_GSDML_DEFAULT_STATION_NAME "rt-labs-dev"
 
@@ -57,13 +52,15 @@ extern "C" {
 #define APP_GSDML_IM_VERSION_MINOR     2
 
 /* Allowed: 'V', 'R', 'P', 'U', 'T' */
-#define APP_GSDML_SW_REV_PREFIX       'V'
+#define APP_GSDML_SW_REV_PREFIX 'V'
+
+#define APP_GSDML_SW_REV_FUNCTIONAL_ENHANCEMENT PNET_VERSION_MAJOR
+#define APP_GSDML_SW_REV_BUGFIX                 PNET_VERSION_MINOR
+#define APP_GSDML_SW_REV_INTERNAL_CHANGE        PNET_VERSION_PATCH
+
 #define APP_GSDML_PROFILE_ID          0x1234
 #define APP_GSDML_PROFILE_SPEC_TYPE   0x5678
 #define APP_GSDML_IM_REVISION_COUNTER 0 /* Typically 0 */
-
-/* Note: You need to read out the actual hardware serial number instead */
-#define APP_GSDML_EXAMPLE_SERIAL_NUMBER "007"
 
 /* Initial values. Can be overwritten by PLC */
 #define APP_GSDML_TAG_FUNCTION "my function"
@@ -103,41 +100,6 @@ extern "C" {
 
 #define APP_GSDML_DEFAULT_MAUTYPE 0x10 /* Copper 100 Mbit/s Full duplex */
 
-typedef struct app_gsdml_module
-{
-   uint32_t id;
-
-   /** Module name */
-   const char * name;
-
-   /** Submodule IDs. Variable length, ends with 0. */
-   uint32_t submodules[];
-} app_gsdml_module_t;
-
-typedef struct app_gsdml_submodule
-{
-   uint32_t id;
-
-   /** Submodule name */
-   const char * name;
-
-   uint32_t api;
-   pnet_submodule_dir_t data_dir;
-   uint16_t insize;
-   uint16_t outsize;
-
-   /** Parameter indexes. See app_gsdml_parameters.
-    * Variable length, ends with 0. */
-   uint16_t parameters[];
-} app_gsdml_submodule_t;
-
-typedef struct
-{
-   uint32_t index;
-   const char * name;
-   uint16_t length;
-} app_gsdml_param_t;
-
 #define APP_GSDML_MOD_ID_8_0_DIGITAL_IN     0x00000030
 #define APP_GSDML_MOD_ID_0_8_DIGITAL_OUT    0x00000031
 #define APP_GSDML_MOD_ID_8_8_DIGITAL_IN_OUT 0x00000032
@@ -150,35 +112,9 @@ typedef struct
 #define APP_GSDML_OUTPUT_DATA_DIGITAL_SIZE  1 /* bytes */
 #define APP_GSDML_INPUT_DATA_ECHO_SIZE      8 /* bytes */
 #define APP_GSDML_OUTPUT_DATA_ECHO_SIZE     APP_GSDML_INPUT_DATA_ECHO_SIZE
-#define APP_GSDML_ALARM_PAYLOAD_SIZE        1 /* bytes */
-
-/**
- * Get module configuration from module ID
- * @param module_id  In: Module ID
- * @return Module configuration, NULL if not found
- */
-const app_gsdml_module_t * app_gsdml_get_module_cfg (uint32_t module_id);
-
-/**
- * Get submodule module configuration from submodule ID
- * @param submodule_id  In: Submodule ID
- * @return Submodule configuration, NULL if not found
- */
-const app_gsdml_submodule_t * app_gsdml_get_submodule_cfg (
-   uint32_t submodule_id);
-
-/**
- * Get parameter configuration from parameter index
- * @param submodule_id  In: Submodule ID
- * @param index         In: Parameters index
- * @return Parameter configuration, NULL if not found
- */
-const app_gsdml_param_t * app_gsdml_get_parameter_cfg (
-   uint32_t submodule_id,
-   uint32_t index);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* APP_GSDML_H */
+#endif /* SAMPLEAPP_GSDML_H */
