@@ -1,10 +1,10 @@
-From c0e25ff85245cd7ab756e2e0aebbf46f9d27f9e9 Mon Sep 17 00:00:00 2001
+From 6c80d905968601ea397d63809690b3c9754f3146 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Fredrik=20M=C3=B6ller?= <fredrik.moller@rt-labs.com>
 Date: Tue, 15 Sep 2020 18:22:53 +0200
 Subject: [PATCH] rtkernel for Profinet
 
 Changes made to rt-kernel tree from rt-collab
-Toolbox 2020.1 as to support the p-net Profinet
+Toolbox 2021.1 as to support the p-net Profinet
 stack:
 - lwip:
   - Build SNMP server.
@@ -24,6 +24,11 @@ stack:
   - Lock mutex for Tx, as p-net stack may send
     frames outside of lwip context.
   - Report accurate ifSpeed to SNMP.
+- drivers/eth/dwgmac:
+  - Add ioctl for getting link status.
+  - Lock mutex for Tx, as p-net stack may send
+    frames outside of lwip context.
+  - Report accurate ifSpeed to SNMP.
 - drivers/eth/phy:
   - Add function for retrieving link capabilities.
 - bsp/xmc48relax:
@@ -33,33 +38,83 @@ stack:
   - Let Ethernet driver task have higher priority
     than lwip task.
   - Put .bss and heap in 256kB memory section.
+- bsp/h750dk:
+  - Increase stack size for main task.
+  - Increase stack size for Ethernet driver task.
+  - Let Ethernet driver task have higher priority
+    than lwip task.
+
+Change-Id: Ie335fd029b503db842d3ca16331629444db70b9a
 ---
+ bsp/h750dk/include/config.h               |   2 +-
+ bsp/h750dk/src/lwip.c                     |   8 +-
  bsp/xmc48relax/include/config.h           |  10 +-
  bsp/xmc48relax/src/lwip.c                 |   4 +-
- bsp/xmc48relax/xmc48relax.ld              |  26 +-
- drivers/eth/dwmac1000.c                   | 162 +++++++++---
+ bsp/xmc48relax/xmc48relax.ld              |  24 +-
+ drivers/eth/dwgmac.c                      |  89 ++++++-
+ drivers/eth/dwmac1000.c                   | 162 ++++++++---
  drivers/eth/phy/mii.c                     |  13 +-
  include/drivers/eth/phy/mii.h             |   1 +
  include/drivers/eth/phy/phy.h             |   9 +
  include/drivers/ioctl.h                   |  51 ++++
  kern/arch/xmc4/hal.h                      |   2 +-
+ lwip/CMakeLists.txt                       |   1 +
  lwip/src/apps/Makefile                    |  12 +
  lwip/src/apps/snmp/Makefile               |  16 ++
  lwip/src/apps/snmp/snmp_mib2_interfaces.c |   6 +-
- lwip/src/apps/snmp/snmp_mib2_system.c     | 309 ++--------------------
+ lwip/src/apps/snmp/snmp_mib2_system.c     | 310 ++--------------------
  lwip/src/core/lwip_hooks.c                |  23 ++
  lwip/src/core/udp.c                       |  12 +
  lwip/src/include/lwip/apps/snmp_mib2.h    |  24 +-
  lwip/src/include/lwip/lwip_hooks.h        |  41 +++
  lwip/src/include/lwip/lwipopts.h          |  39 ++-
- 18 files changed, 417 insertions(+), 343 deletions(-)
+ 22 files changed, 511 insertions(+), 348 deletions(-)
  create mode 100644 lwip/src/apps/Makefile
  create mode 100644 lwip/src/apps/snmp/Makefile
  create mode 100644 lwip/src/core/lwip_hooks.c
  create mode 100644 lwip/src/include/lwip/lwip_hooks.h
 
+diff --git a/bsp/h750dk/include/config.h b/bsp/h750dk/include/config.h
+index 05ed51b8b..4963aad37 100644
+--- a/bsp/h750dk/include/config.h
++++ b/bsp/h750dk/include/config.h
+@@ -107,7 +107,7 @@
+  * implemented in the user application and is the task that will be
+  * started immediately after the kernel has finished initialising.
+  */
+-#define CFG_MAIN_STACK_SIZE     1280
++#define CFG_MAIN_STACK_SIZE     14374
+ 
+ /* Configure the priority of the main task. */
+ #define CFG_MAIN_PRIORITY       10
+diff --git a/bsp/h750dk/src/lwip.c b/bsp/h750dk/src/lwip.c
+index e22b17f33..9a7281005 100644
+--- a/bsp/h750dk/src/lwip.c
++++ b/bsp/h750dk/src/lwip.c
+@@ -26,8 +26,8 @@
+ #define RX_BUFFERS 8            /* Number of Rx buffers */
+ #define TX_BUFFERS 8            /* Number of Tx buffers */
+ 
+-#define RX_BUFFER_SIZE 1520     /* Max size of Rx buffers */
+-#define TX_BUFFER_SIZE 1520     /* Max size of Tx buffers */
++#define RX_BUFFER_SIZE PBUF_POOL_BUFSIZE     /* Max size of Rx buffers */
++#define TX_BUFFER_SIZE PBUF_POOL_BUFSIZE     /* Max size of Tx buffers */
+ 
+ static dwgmac_descriptor_t rx_dma[RX_BUFFERS] CC_ATTRIBUTE_SECTION (".dma");
+ static dwgmac_descriptor_t tx_dma[TX_BUFFERS] CC_ATTRIBUTE_SECTION (".dma");
+@@ -114,8 +114,8 @@ err_t bsp_eth_init (struct netif * netif)
+          .buffer_size = TX_BUFFER_SIZE,
+          .num_buffers = TX_BUFFERS,
+       },
+-      .rx_task_prio  = TCPIP_THREAD_PRIO - 1,
+-      .rx_task_stack = 1100,
++      .rx_task_prio  = TCPIP_THREAD_PRIO + 1,
++      .rx_task_stack = 6250,
+       .mac_address   = CFG_LWIP_MAC_ADDRESS
+    };
+ 
 diff --git a/bsp/xmc48relax/include/config.h b/bsp/xmc48relax/include/config.h
-index 850ce674..07d80b1e 100644
+index 91549e483..54cb9d39f 100644
 --- a/bsp/xmc48relax/include/config.h
 +++ b/bsp/xmc48relax/include/config.h
 @@ -53,14 +53,14 @@
@@ -81,7 +136,7 @@ index 850ce674..07d80b1e 100644
  #endif
  
  /* Enable SD Card if defined */
-@@ -115,7 +115,7 @@
+@@ -132,7 +132,7 @@
   * implemented in the user application and is the task that will be
   * started immediately after the kernel has finished initialising.
   */
@@ -91,7 +146,7 @@ index 850ce674..07d80b1e 100644
  /* Configure the priority of the main task. */
  #define CFG_MAIN_PRIORITY       10
 diff --git a/bsp/xmc48relax/src/lwip.c b/bsp/xmc48relax/src/lwip.c
-index f8b7d94a..858a794b 100644
+index f8b7d94af..858a794bc 100644
 --- a/bsp/xmc48relax/src/lwip.c
 +++ b/bsp/xmc48relax/src/lwip.c
 @@ -94,8 +94,8 @@ err_t bsp_eth_init (struct netif * netif)
@@ -106,7 +161,7 @@ index f8b7d94a..858a794b 100644
     };
  #ifdef CFG_RTC_INIT
 diff --git a/bsp/xmc48relax/xmc48relax.ld b/bsp/xmc48relax/xmc48relax.ld
-index e59a5939..bf075030 100644
+index 9deadfd32..3e1ac030a 100644
 --- a/bsp/xmc48relax/xmc48relax.ld
 +++ b/bsp/xmc48relax/xmc48relax.ld
 @@ -18,6 +18,7 @@ EXTERN(vectors)
@@ -163,19 +218,176 @@ index e59a5939..bf075030 100644
 -   } > sram
 +   } > ram
  
-    .heap :
+    .sdsram (NOLOAD) :
     {
--    	heap_start = .;
+         heap_start = .;
 -   } > sdsram
-+      heap_start = .;
 +   } > ram
-    
+ 
 -   heap_end = ORIGIN(sdsram) + LENGTH(sdsram);
 +   heap_end = ORIGIN(ram) + LENGTH(ram);
     heap_size = heap_end - heap_start;
  }
+diff --git a/drivers/eth/dwgmac.c b/drivers/eth/dwgmac.c
+index 91518e412..e54bc5443 100644
+--- a/drivers/eth/dwgmac.c
++++ b/drivers/eth/dwgmac.c
+@@ -274,6 +274,7 @@ typedef struct dwgmac
+    drv_t drv;
+ 
+    irq_t irq;
++   mtx_t * mtx_tx;
+    task_t * tRcv;
+    phy_t * phy;
+    volatile eth_mac_t * mac;
+@@ -291,6 +292,19 @@ typedef struct dwgmac
+ 
+    /* MIIAR CR divider */
+    uint32_t cr;
++
++   /* Link state retrieved in last call to probe function
++    * See defines PHY_LINK_OK, PHY_LINK_100MBIT, etc.
++    */
++   uint8_t last_link_state;
++
++   /* Link auto-negotiation capabilities read from PHY at startup
++    * See defines PHY_CAPABILITY_100_FD, PHY_CAPABILITY_100, etc.
++    */
++   uint16_t link_capabilities;
++
++   /* lwip network interface handle */
++   struct netif * netif;
+ } dwgmac_t;
+ 
+ #ifdef DEBUG_DATA
+@@ -325,6 +339,24 @@ static void dwgmac_pbuf_dump (struct pbuf *p)
+ }
+ #endif  /* DEBUG_DATA */
+ 
++#if MIB2_STATS
++static uint32_t dwgmac_snmp_link_speed (uint8_t link_state)
++{
++   if (link_state & PHY_LINK_10MBIT)
++   {
++      return 10 * 1000 * 1000;
++   }
++   else if (link_state & PHY_LINK_100MBIT)
++   {
++      return 100 * 1000 * 1000;
++   }
++   else
++   {
++      return 0;
++   }
++}
++#endif /* MIB2_STATS */
++
+ static uint16_t dwgmac_read_phy (void * arg, uint8_t address, uint8_t reg)
+ {
+    dwgmac_t *dwgmac = arg;
+@@ -490,6 +522,9 @@ static err_t dwgmac_hw_transmit_frame (struct netif *netif, struct pbuf *p)
+       return ERR_OK;
+    }
+ 
++   /* Lock TX handling */
++   mtx_lock (dwgmac->mtx_tx);
++
+ #if ETH_PAD_SIZE
+    pbuf_header (p, -ETH_PAD_SIZE);  /* drop the padding word */
+ #endif
+@@ -548,6 +583,7 @@ static err_t dwgmac_hw_transmit_frame (struct netif *netif, struct pbuf *p)
+    pbuf_header (p, ETH_PAD_SIZE);   /* reclaim the padding word */
+ #endif
+ 
++   mtx_unlock (dwgmac->mtx_tx);
+    return ERR_OK;
+ }
+ 
+@@ -763,16 +799,64 @@ static dev_state_t dwgmac_probe (drv_t * drv)
+ 
+    link_state = dwgmac->phy->ops->get_link_state (dwgmac->phy);
+ 
++   /* Save link state for IOCTL_ETH_GET_STATUS */
++   dwgmac->last_link_state = link_state;
++
++   /* Set ifSpeed in SNMP MIB-II ifTable */
++#if MIB2_STATS
++   dwgmac->netif->link_speed = dwgmac_snmp_link_speed (link_state);
++#endif /* MIB2_STATS */
++
++
+    return (link_state & PHY_LINK_OK) ? StateAttached : StateDetached;
+ }
+ 
++static void dwgmac_get_status (
++   dwgmac_t * dwgmac,
++   struct netif * netif,
++   ioctl_eth_status_t * link)
++{
++   if (dwgmac->phy->loopback_mode)
++   {
++      link->is_autonegotiation_supported = false;
++      link->is_autonegotiation_enabled = false;
++      link->capabilities = 0x0000;
++   }
++   else
++   {
++      link->is_autonegotiation_supported = true;
++      link->is_autonegotiation_enabled = true;
++      link->capabilities = dwgmac->link_capabilities;
++   }
++
++   link->state = dwgmac->last_link_state;
++   link->is_operational = netif_is_up (netif) && netif_is_link_up (netif);
++}
++
++static int dwgmac_ioctl (drv_t * drv, void * arg, int req, void * param)
++{
++   dwgmac_t * dwgmac = (dwgmac_t *)drv;
++   int status = EARG;
++
++   switch (req)
++   {
++   case IOCTL_ETH_GET_STATUS:
++      dwgmac_get_status (dwgmac, arg, param);
++      return 0;
++   default:
++      UASSERT (0, EARG);
++   }
++
++   return status;
++}
++
+ static const drv_ops_t dwgmac_ops =
+ {
+    .open    = NULL,
+    .read    = NULL,
+    .write   = NULL,
+    .close   = NULL,
+-   .ioctl   = NULL,
++   .ioctl   = dwgmac_ioctl,
+    .hotplug = dwgmac_hotplug,
+ };
+ 
+@@ -802,6 +886,7 @@ drv_t * dwgmac_init (const char * name, const dwgmac_cfg_t * cfg,
+    /* Initialise driver state */
+    dwgmac->phy = phy;
+    dwgmac->irq = cfg->irq;
++   dwgmac->mtx_tx = mtx_create();
+    dwgmac->mac = (eth_mac_t *)cfg->base;
+    dwgmac->mtl = (eth_mtl_t *)(cfg->base + 0xC00);
+    dwgmac->dma = (eth_dma_t *)(cfg->base + 0x1000);
+@@ -813,6 +898,8 @@ drv_t * dwgmac_init (const char * name, const dwgmac_cfg_t * cfg,
+    dwgmac->tx.num_buffers = cfg->tx.num_buffers;
+    dwgmac->rx.ix = 0;
+    dwgmac->tx.ix = 0;
++   dwgmac->last_link_state = 0x00;
++   dwgmac->netif = netif;
+ 
+    /* Create receive task */
+    dwgmac->tRcv = task_spawn ("EthRcv",
 diff --git a/drivers/eth/dwmac1000.c b/drivers/eth/dwmac1000.c
-index ece017a5..45698621 100644
+index ece017a59..456986211 100644
 --- a/drivers/eth/dwmac1000.c
 +++ b/drivers/eth/dwmac1000.c
 @@ -26,7 +26,13 @@
@@ -478,7 +690,7 @@ index ece017a5..45698621 100644
     /* Create receive task */
     dwmac1000->tRcv = task_spawn ("EthRcv",
 diff --git a/drivers/eth/phy/mii.c b/drivers/eth/phy/mii.c
-index a670d1bf..6581da00 100644
+index 2cbaef613..7eb31315b 100644
 --- a/drivers/eth/phy/mii.c
 +++ b/drivers/eth/phy/mii.c
 @@ -305,11 +305,18 @@ uint8_t mii_get_link_state (phy_t * phy)
@@ -504,7 +716,7 @@ index a670d1bf..6581da00 100644
  
  phy_t * mii_init (const phy_cfg_t * cfg)
 diff --git a/include/drivers/eth/phy/mii.h b/include/drivers/eth/phy/mii.h
-index 57364bdc..dd69ceae 100644
+index 57364bdc6..dd69ceaee 100644
 --- a/include/drivers/eth/phy/mii.h
 +++ b/include/drivers/eth/phy/mii.h
 @@ -19,6 +19,7 @@ phy_t * mii_init (const phy_cfg_t * cfg);
@@ -516,7 +728,7 @@ index 57364bdc..dd69ceae 100644
  /** \internal Exposed for testing purposes only
   *
 diff --git a/include/drivers/eth/phy/phy.h b/include/drivers/eth/phy/phy.h
-index 22aea4cc..a34a0a61 100644
+index 22aea4ccf..a34a0a616 100644
 --- a/include/drivers/eth/phy/phy.h
 +++ b/include/drivers/eth/phy/phy.h
 @@ -19,6 +19,14 @@
@@ -543,7 +755,7 @@ index 22aea4cc..a34a0a61 100644
  
  typedef struct phy
 diff --git a/include/drivers/ioctl.h b/include/drivers/ioctl.h
-index ee450744..85f88815 100644
+index 4471b4ae6..d7be0d261 100644
 --- a/include/drivers/ioctl.h
 +++ b/include/drivers/ioctl.h
 @@ -142,6 +142,57 @@ typedef struct ioctl_i2c_access
@@ -605,7 +817,7 @@ index ee450744..85f88815 100644
  int ioctl (int fd, int request, ...);
  
 diff --git a/kern/arch/xmc4/hal.h b/kern/arch/xmc4/hal.h
-index 8508b3cf..8cda1255 100644
+index 20694b6bb..58fd606d9 100644
 --- a/kern/arch/xmc4/hal.h
 +++ b/kern/arch/xmc4/hal.h
 @@ -18,7 +18,7 @@
@@ -617,9 +829,21 @@ index 8508b3cf..8cda1255 100644
  
  /* This macro enables interrupts globally. */
  #define HAL_INTERRUPT_UNLOCK()                  \
+diff --git a/lwip/CMakeLists.txt b/lwip/CMakeLists.txt
+index 1e5a3d2bd..122fde5fb 100644
+--- a/lwip/CMakeLists.txt
++++ b/lwip/CMakeLists.txt
+@@ -16,6 +16,7 @@ file(GLOB SOURCES CONFIGURE_DEPENDS
+   src/core/*.c
+   src/core/ipv4/*.c
+   src/netif/*.c
++  src/apps/snmp/*.c
+   )
+ add_library(lwip ${SOURCES})
+ 
 diff --git a/lwip/src/apps/Makefile b/lwip/src/apps/Makefile
 new file mode 100644
-index 00000000..e92bb4ee
+index 000000000..e92bb4eed
 --- /dev/null
 +++ b/lwip/src/apps/Makefile
 @@ -0,0 +1,12 @@
@@ -637,7 +861,7 @@ index 00000000..e92bb4ee
 +include $(PRJ_ROOT)/make/subdir.mk
 diff --git a/lwip/src/apps/snmp/Makefile b/lwip/src/apps/snmp/Makefile
 new file mode 100644
-index 00000000..e1383bfe
+index 000000000..e1383bfe1
 --- /dev/null
 +++ b/lwip/src/apps/snmp/Makefile
 @@ -0,0 +1,16 @@
@@ -658,64 +882,64 @@ index 00000000..e1383bfe
 +
 +include $(PRJ_ROOT)/make/subdir.mk
 diff --git a/lwip/src/apps/snmp/snmp_mib2_interfaces.c b/lwip/src/apps/snmp/snmp_mib2_interfaces.c
-index 979b5073..e38d79a1 100644
+index 5f12dd552..85e80f9b0 100644
 --- a/lwip/src/apps/snmp/snmp_mib2_interfaces.c
 +++ b/lwip/src/apps/snmp/snmp_mib2_interfaces.c
-@@ -165,6 +165,7 @@ interfaces_Table_get_value(struct snmp_node_instance* instance, void* value)
-   struct netif *netif = (struct netif*)instance->reference.ptr;
-   u32_t* value_u32 = (u32_t*)value;
-   s32_t* value_s32 = (s32_t*)value;
-+  char* value_string = (char*)value;
+@@ -159,6 +159,7 @@ interfaces_Table_get_value(struct snmp_node_instance *instance, void *value)
+   struct netif *netif = (struct netif *)instance->reference.ptr;
+   u32_t *value_u32 = (u32_t *)value;
+   s32_t *value_s32 = (s32_t *)value;
++  char *value_string = (char *)value;
    u16_t value_len;
  
-   switch (SNMP_TABLE_GET_COLUMN_FROM_OID(instance->instance_oid.id))
-@@ -174,8 +175,9 @@ interfaces_Table_get_value(struct snmp_node_instance* instance, void* value)
-     value_len = sizeof(*value_s32);
-     break;
-   case 2: /* ifDescr */
--    value_len = sizeof(netif->name);
--    MEMCPY(value, netif->name, value_len);
-+    value_len = sizeof(netif->name) + 1;
-+    MEMCPY(value_string, netif->name, sizeof(netif->name));
-+    value_string[sizeof(netif->name)] = '0' + netif->num;
-     break;
-   case 3: /* ifType */
-     *value_s32 = netif->link_type;
+   switch (SNMP_TABLE_GET_COLUMN_FROM_OID(instance->instance_oid.id)) {
+@@ -167,8 +168,9 @@ interfaces_Table_get_value(struct snmp_node_instance *instance, void *value)
+       value_len = sizeof(*value_s32);
+       break;
+     case 2: /* ifDescr */
+-      value_len = sizeof(netif->name);
+-      MEMCPY(value, netif->name, value_len);
++      value_len = sizeof(netif->name) + 1;
++      MEMCPY(value_string, netif->name, sizeof(netif->name));
++      value_string[sizeof(netif->name)] = '0' + netif->num;
+       break;
+     case 3: /* ifType */
+       *value_s32 = netif->link_type;
 diff --git a/lwip/src/apps/snmp/snmp_mib2_system.c b/lwip/src/apps/snmp/snmp_mib2_system.c
-index 90e57805..0242ce5c 100644
+index 71c1c29c0..9331b6080 100644
 --- a/lwip/src/apps/snmp/snmp_mib2_system.c
 +++ b/lwip/src/apps/snmp/snmp_mib2_system.c
-@@ -56,310 +56,57 @@
+@@ -56,309 +56,57 @@
  
  /* --- system .1.3.6.1.2.1.1 ----------------------------------------------------- */
  
 -/** mib-2.system.sysDescr */
 -static const u8_t   sysdescr_default[] = SNMP_LWIP_MIB2_SYSDESC;
--static const u8_t*  sysdescr           = sysdescr_default;
--static const u16_t* sysdescr_len       = NULL; /* use strlen for determining len */
+-static const u8_t  *sysdescr           = sysdescr_default;
+-static const u16_t *sysdescr_len       = NULL; /* use strlen for determining len */
 -
 -/** mib-2.system.sysContact */
 -static const u8_t   syscontact_default[]     = SNMP_LWIP_MIB2_SYSCONTACT;
--static const u8_t*  syscontact               = syscontact_default;
--static const u16_t* syscontact_len           = NULL; /* use strlen for determining len */
--static u8_t*        syscontact_wr            = NULL; /* if writable, points to the same buffer as syscontact (required for correct constness) */
--static u16_t*       syscontact_wr_len        = NULL; /* if writable, points to the same buffer as syscontact_len (required for correct constness) */
+-static const u8_t  *syscontact               = syscontact_default;
+-static const u16_t *syscontact_len           = NULL; /* use strlen for determining len */
+-static u8_t        *syscontact_wr            = NULL; /* if writable, points to the same buffer as syscontact (required for correct constness) */
+-static u16_t       *syscontact_wr_len        = NULL; /* if writable, points to the same buffer as syscontact_len (required for correct constness) */
 -static u16_t        syscontact_bufsize       = 0;    /* 0=not writable */
 -
 -/** mib-2.system.sysName */
 -static const u8_t   sysname_default[]        = SNMP_LWIP_MIB2_SYSNAME;
--static const u8_t*  sysname                  = sysname_default;
--static const u16_t* sysname_len              = NULL; /* use strlen for determining len */
--static u8_t*        sysname_wr               = NULL; /* if writable, points to the same buffer as sysname (required for correct constness) */
--static u16_t*       sysname_wr_len           = NULL; /* if writable, points to the same buffer as sysname_len (required for correct constness) */
+-static const u8_t  *sysname                  = sysname_default;
+-static const u16_t *sysname_len              = NULL; /* use strlen for determining len */
+-static u8_t        *sysname_wr               = NULL; /* if writable, points to the same buffer as sysname (required for correct constness) */
+-static u16_t       *sysname_wr_len           = NULL; /* if writable, points to the same buffer as sysname_len (required for correct constness) */
 -static u16_t        sysname_bufsize          = 0;    /* 0=not writable */
 -
 -/** mib-2.system.sysLocation */
 -static const u8_t   syslocation_default[]    = SNMP_LWIP_MIB2_SYSLOCATION;
--static const u8_t*  syslocation              = syslocation_default;
--static const u16_t* syslocation_len           = NULL; /* use strlen for determining len */
--static u8_t*        syslocation_wr            = NULL; /* if writable, points to the same buffer as syslocation (required for correct constness) */
--static u16_t*       syslocation_wr_len        = NULL; /* if writable, points to the same buffer as syslocation_len (required for correct constness) */
+-static const u8_t  *syslocation              = syslocation_default;
+-static const u16_t *syslocation_len           = NULL; /* use strlen for determining len */
+-static u8_t        *syslocation_wr            = NULL; /* if writable, points to the same buffer as syslocation (required for correct constness) */
+-static u16_t       *syslocation_wr_len        = NULL; /* if writable, points to the same buffer as syslocation_len (required for correct constness) */
 -static u16_t        syslocation_bufsize       = 0;    /* 0=not writable */
 -
 -/**
@@ -765,7 +989,15 @@ index 90e57805..0242ce5c 100644
 - */
 -void
 -snmp_mib2_set_syscontact_readonly(const u8_t *ocstr, const u16_t *ocstrlen)
--{
++static snmp_mib2_get_callback_fct snmp_mib2_system_get;
++static snmp_mib2_test_set_callback_fct snmp_mib2_system_test_set;
++static snmp_mib2_set_callback_fct snmp_mib2_system_set;
++
++void snmp_mib2_system_set_callbacks(
++  snmp_mib2_get_callback_fct get,
++  snmp_mib2_test_set_callback_fct test_set,
++  snmp_mib2_set_callback_fct set)
+ {
 -  if (ocstr != NULL) {
 -    syscontact         = ocstr;
 -    syscontact_len     = ocstrlen;
@@ -773,8 +1005,11 @@ index 90e57805..0242ce5c 100644
 -    syscontact_wr_len  = NULL;
 -    syscontact_bufsize = 0;
 -  }
--}
--
++  snmp_mib2_system_get = get;
++  snmp_mib2_system_test_set = test_set;
++  snmp_mib2_system_set = set;
+ }
+ 
 -
 -/**
 - * @ingroup snmp_mib2
@@ -848,15 +1083,7 @@ index 90e57805..0242ce5c 100644
 - */
 -void
 -snmp_mib2_set_syslocation_readonly(const u8_t *ocstr, const u16_t *ocstrlen)
-+static snmp_mib2_get_callback_fct snmp_mib2_system_get;
-+static snmp_mib2_test_set_callback_fct snmp_mib2_system_test_set;
-+static snmp_mib2_set_callback_fct snmp_mib2_system_set;
-+
-+void snmp_mib2_system_set_callbacks(
-+  snmp_mib2_get_callback_fct get, 
-+  snmp_mib2_test_set_callback_fct test_set,
-+  snmp_mib2_set_callback_fct set)
- {
+-{
 -  if (ocstr != NULL) {
 -    syslocation         = ocstr;
 -    syslocation_len     = ocstrlen;
@@ -864,51 +1091,47 @@ index 90e57805..0242ce5c 100644
 -    syslocation_wr_len  = NULL;
 -    syslocation_bufsize = 0;
 -  }
-+  snmp_mib2_system_get = get;
-+  snmp_mib2_system_test_set = test_set;
-+  snmp_mib2_system_set = set;
- }
- 
+-}
+-
 -
  static s16_t
  system_get_value(const struct snmp_scalar_array_node_def *node, void *value)
  {
--  const u8_t*  var = NULL;
--  const s16_t* var_len;
+-  const u8_t  *var = NULL;
+-  const s16_t *var_len;
 -  u16_t result;
 -
 -  switch (node->oid) {
--  case 1: /* sysDescr */
--    var     = sysdescr;
--    var_len = (const s16_t*)sysdescr_len;
--    break;
--  case 2: /* sysObjectID */
--    {
--      const struct snmp_obj_id* dev_enterprise_oid = snmp_get_device_enterprise_oid();
+-    case 1: /* sysDescr */
+-      var     = sysdescr;
+-      var_len = (const s16_t *)sysdescr_len;
+-      break;
+-    case 2: { /* sysObjectID */
+-      const struct snmp_obj_id *dev_enterprise_oid = snmp_get_device_enterprise_oid();
 -      MEMCPY(value, dev_enterprise_oid->id, dev_enterprise_oid->len * sizeof(u32_t));
 -      return dev_enterprise_oid->len * sizeof(u32_t);
 -    }
--  case 3: /* sysUpTime */
--    MIB2_COPY_SYSUPTIME_TO((u32_t*)value);
--    return sizeof(u32_t);
--  case 4: /* sysContact */
--    var     = syscontact;
--    var_len = (const s16_t*)syscontact_len;
--    break;
--  case 5: /* sysName */
--    var     = sysname;
--    var_len = (const s16_t*)sysname_len;
--    break;
--  case 6: /* sysLocation */
--    var     = syslocation;
--    var_len = (const s16_t*)syslocation_len;
--    break;
--  case 7: /* sysServices */
--    *(s32_t*)value = SNMP_SYSSERVICES;
--    return sizeof(s32_t);
--  default:
--    LWIP_DEBUGF(SNMP_MIB_DEBUG,("system_get_value(): unknown id: %"S32_F"\n", node->oid));
--    return 0;
+-    case 3: /* sysUpTime */
+-      MIB2_COPY_SYSUPTIME_TO((u32_t *)value);
+-      return sizeof(u32_t);
+-    case 4: /* sysContact */
+-      var     = syscontact;
+-      var_len = (const s16_t *)syscontact_len;
+-      break;
+-    case 5: /* sysName */
+-      var     = sysname;
+-      var_len = (const s16_t *)sysname_len;
+-      break;
+-    case 6: /* sysLocation */
+-      var     = syslocation;
+-      var_len = (const s16_t *)syslocation_len;
+-      break;
+-    case 7: /* sysServices */
+-      *(s32_t *)value = SNMP_SYSSERVICES;
+-      return sizeof(s32_t);
+-    default:
+-      LWIP_DEBUGF(SNMP_MIB_DEBUG, ("system_get_value(): unknown id: %"S32_F"\n", node->oid));
+-      return 0;
 +  if (snmp_mib2_system_get == NULL)
 +  {
 +    return SNMP_ERR_GENERROR;
@@ -917,7 +1140,7 @@ index 90e57805..0242ce5c 100644
 -  /* handle string values (OID 1,4,5 and 6) */
 -  LWIP_ASSERT("", (value != NULL));
 -  if (var_len == NULL) {
--    result = (s16_t)strlen((const char*)var);
+-    result = (s16_t)strlen((const char *)var);
 -  } else {
 -    result = *var_len;
 +  else
@@ -932,27 +1155,27 @@ index 90e57805..0242ce5c 100644
  system_set_test(const struct snmp_scalar_array_node_def *node, u16_t len, void *value)
  {
 -  snmp_err_t ret = SNMP_ERR_WRONGVALUE;
--  const u16_t* var_bufsize  = NULL;
--  const u16_t* var_wr_len;
+-  const u16_t *var_bufsize  = NULL;
+-  const u16_t *var_wr_len;
 -
 -  LWIP_UNUSED_ARG(value);
 -
 -  switch (node->oid) {
--  case 4: /* sysContact */
--    var_bufsize  = &syscontact_bufsize;
--    var_wr_len   = syscontact_wr_len;
--    break;
--  case 5: /* sysName */
--    var_bufsize  = &sysname_bufsize;
--    var_wr_len   = sysname_wr_len;
--    break;
--  case 6: /* sysLocation */
--    var_bufsize  = &syslocation_bufsize;
--    var_wr_len   = syslocation_wr_len;
--    break;
--  default:
--    LWIP_DEBUGF(SNMP_MIB_DEBUG,("system_set_test(): unknown id: %"S32_F"\n", node->oid));
--    return ret;
+-    case 4: /* sysContact */
+-      var_bufsize  = &syscontact_bufsize;
+-      var_wr_len   = syscontact_wr_len;
+-      break;
+-    case 5: /* sysName */
+-      var_bufsize  = &sysname_bufsize;
+-      var_wr_len   = sysname_wr_len;
+-      break;
+-    case 6: /* sysLocation */
+-      var_bufsize  = &syslocation_bufsize;
+-      var_wr_len   = syslocation_wr_len;
+-      break;
+-    default:
+-      LWIP_DEBUGF(SNMP_MIB_DEBUG, ("system_set_test(): unknown id: %"S32_F"\n", node->oid));
+-      return ret;
 +  if (snmp_mib2_system_test_set == NULL)
 +  {
 +    return SNMP_ERR_GENERROR;
@@ -983,33 +1206,34 @@ index 90e57805..0242ce5c 100644
  static snmp_err_t
  system_set_value(const struct snmp_scalar_array_node_def *node, u16_t len, void *value)
  {
--  u8_t*  var_wr = NULL;
--  u16_t* var_wr_len;
+-  u8_t  *var_wr = NULL;
+-  u16_t *var_wr_len;
 -
 -  switch (node->oid) {
--  case 4: /* sysContact */
--    var_wr     = syscontact_wr;
--    var_wr_len = syscontact_wr_len;
--    break;
--  case 5: /* sysName */
--    var_wr     = sysname_wr;
--    var_wr_len = sysname_wr_len;
--    break;
--  case 6: /* sysLocation */
--    var_wr     = syslocation_wr;
--    var_wr_len = syslocation_wr_len;
--    break;
--  default:
--    LWIP_DEBUGF(SNMP_MIB_DEBUG,("system_set_value(): unknown id: %"S32_F"\n", node->oid));
+-    case 4: /* sysContact */
+-      var_wr     = syscontact_wr;
+-      var_wr_len = syscontact_wr_len;
+-      break;
+-    case 5: /* sysName */
+-      var_wr     = sysname_wr;
+-      var_wr_len = sysname_wr_len;
+-      break;
+-    case 6: /* sysLocation */
+-      var_wr     = syslocation_wr;
+-      var_wr_len = syslocation_wr_len;
+-      break;
+-    default:
+-      LWIP_DEBUGF(SNMP_MIB_DEBUG, ("system_set_value(): unknown id: %"S32_F"\n", node->oid));
+-      return SNMP_ERR_GENERROR;
 +  if (snmp_mib2_system_set == NULL)
 +  {
-     return SNMP_ERR_GENERROR;
++    return SNMP_ERR_GENERROR;
    }
 -
 -  /* no need to check size of target buffer, this was already done in set_test method */
 -  LWIP_ASSERT("", var_wr != NULL);
 -  MEMCPY(var_wr, value, len);
--  
+-
 -  if (var_wr_len == NULL) {
 -    /* add terminating 0 */
 -    var_wr[len] = 0;
@@ -1026,7 +1250,7 @@ index 90e57805..0242ce5c 100644
  static const struct snmp_scalar_array_node_def system_nodes[] = {
 diff --git a/lwip/src/core/lwip_hooks.c b/lwip/src/core/lwip_hooks.c
 new file mode 100644
-index 00000000..ad6229f8
+index 000000000..ad6229f82
 --- /dev/null
 +++ b/lwip/src/core/lwip_hooks.c
 @@ -0,0 +1,23 @@
@@ -1054,10 +1278,10 @@ index 00000000..ad6229f8
 +}
 +#endif /* LWIP_HOOK_UNKNOWN_ETH_PROTOCOL */
 diff --git a/lwip/src/core/udp.c b/lwip/src/core/udp.c
-index ce2e3d29..7946cb05 100644
+index 0b609d333..05166989c 100644
 --- a/lwip/src/core/udp.c
 +++ b/lwip/src/core/udp.c
-@@ -345,6 +345,18 @@ udp_input(struct pbuf *p, struct netif *inp)
+@@ -372,6 +372,18 @@ udp_input(struct pbuf *p, struct netif *inp)
        goto end;
      }
  
@@ -1077,7 +1301,7 @@ index ce2e3d29..7946cb05 100644
        MIB2_STATS_INC(mib2.udpindatagrams);
  #if SO_REUSE && SO_REUSE_RXTOALL
 diff --git a/lwip/src/include/lwip/apps/snmp_mib2.h b/lwip/src/include/lwip/apps/snmp_mib2.h
-index 2f4a6893..1df6bb0d 100644
+index 2f4a68935..1df6bb0dc 100644
 --- a/lwip/src/include/lwip/apps/snmp_mib2.h
 +++ b/lwip/src/include/lwip/apps/snmp_mib2.h
 @@ -60,13 +60,23 @@ extern struct snmp_threadsync_instance snmp_mib2_lwip_locks;
@@ -1113,7 +1337,7 @@ index 2f4a6893..1df6bb0d 100644
  #endif /* LWIP_SNMP */
 diff --git a/lwip/src/include/lwip/lwip_hooks.h b/lwip/src/include/lwip/lwip_hooks.h
 new file mode 100644
-index 00000000..c48f1c57
+index 000000000..c48f1c57b
 --- /dev/null
 +++ b/lwip/src/include/lwip/lwip_hooks.h
 @@ -0,0 +1,41 @@
@@ -1159,10 +1383,10 @@ index 00000000..c48f1c57
 +
 +#endif /* LWIP_HOOKS_H */
 diff --git a/lwip/src/include/lwip/lwipopts.h b/lwip/src/include/lwip/lwipopts.h
-index c48a69b7..c3fdf058 100644
+index 34d44ecc0..480045bc3 100644
 --- a/lwip/src/include/lwip/lwipopts.h
 +++ b/lwip/src/include/lwip/lwipopts.h
-@@ -46,10 +46,31 @@
+@@ -44,12 +44,33 @@
  #define LWIP_NETIF_LINK_CALLBACK    1
  #define LWIP_NETIF_STATUS_CALLBACK  1
  #define LWIP_NETIF_LOOPBACK         1
@@ -1170,6 +1394,8 @@ index c48a69b7..c3fdf058 100644
  #define LWIP_SOCKET                 1
  #define LWIP_IGMP                   1
  #define LWIP_TCP_KEEPALIVE          1
+ #define LWIP_SO_RCVTIMEO            1
+ #define LWIP_SO_SNDTIMEO            1
 +#define LWIP_SNMP                   1
 +#define SNMP_USE_NETCONN            1
 +#define SNMP_USE_RAW                0
@@ -1246,5 +1472,5 @@ index c48a69b7..c3fdf058 100644
  
  #endif  /* __LWIPOPTS_H__ */
 -- 
-2.28.0.windows.1
+2.25.1
 
