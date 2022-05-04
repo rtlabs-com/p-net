@@ -821,10 +821,7 @@ static void pf_alarm_apms_timeout (
                __LINE__,
                p_apmx->high_priority ? "high" : "low",
                p_apmx->p_rta);
-            (void)pf_eth_send (
-               net,
-               p_apmx->p_ar->p_sess->eth_handle,
-               p_apmx->p_rta);
+            (void)pf_eth_send_on_management_port (net, p_apmx->p_rta);
          }
 
          if (
@@ -1339,7 +1336,7 @@ static int pf_alarm_apms_a_data_req (
                p_fixed->send_seq_num,
                p_fixed->ack_seq_nbr);
 
-            if (pf_eth_send (net, p_apmx->p_ar->p_sess->eth_handle, p_rta) <= 0)
+            if (pf_eth_send_on_management_port (net, p_rta) <= 0)
             {
                LOG_ERROR (
                   PF_ALARM_LOG,
@@ -3028,9 +3025,9 @@ static int pf_alarm_send_alarm (
 
    if (net->global_alarm_enable == false || p_ar->alarm_enable == false)
    {
-      LOG_DEBUG (
+      LOG_INFO (
          PF_ALARM_LOG,
-         "Alarm(%d): Alarm sending is diasabled. Global enable: %u, AR enable: "
+         "Alarm(%d): Alarm sending is disabled. Global enable: %u, AR enable: "
          "%u.\n",
          __LINE__,
          net->global_alarm_enable,

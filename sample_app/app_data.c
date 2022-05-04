@@ -28,15 +28,45 @@
 
 #define APP_DATA_DEFAULT_OUTPUT_DATA 0
 
-/* Parameters data
+/* Parameter data for digital submodules
+ * The stored value is shared between all digital submodules in this example.
+ *
  * Todo: Data is always in pnio data format. Add conversion to uint32_t.
  */
-uint32_t app_param_1 = 0;
-uint32_t app_param_2 = 0;
+static uint32_t app_param_1 = 0; /* Network endianness */
+static uint32_t app_param_2 = 0; /* Network endianness */
 
-/* Process data */
-uint8_t inputdata[APP_GSDML_INPUT_DATA_SIZE] = {0};
-uint8_t outputdata[APP_GSDML_OUTPUT_DATA_SIZE] = {0};
+/* Parameter data for echo submodules
+ * The stored value is shared between all echo submodules in this example.
+ *
+ * Todo: Data is always in pnio data format. Add conversion to uint32_t.
+ */
+static uint32_t app_param_echo_gain = 1; /* Network endianness */
+
+/* Digital submodule process data
+ * The stored value is shared between all digital submodules in this example. */
+static uint8_t inputdata[APP_GSDML_INPUT_DATA_DIGITAL_SIZE] = {0};
+static uint8_t outputdata[APP_GSDML_OUTPUT_DATA_DIGITAL_SIZE] = {0};
+static uint8_t counter = 0;
+
+/* Network endianness */
+static uint8_t echo_inputdata[APP_GSDML_INPUT_DATA_ECHO_SIZE] = {0};
+static uint8_t echo_outputdata[APP_GSDML_OUTPUT_DATA_ECHO_SIZE] = {0};
+
+CC_PACKED_BEGIN
+typedef struct CC_PACKED app_echo_data
+{
+   /* Network endianness.
+      Used as a float, but we model it as a 4-byte integer to easily
+      do endianness conversion */
+   uint32_t echo_float_bytes;
+
+   /* Network endianness */
+   uint32_t echo_int;
+} app_echo_data_t;
+CC_PACKED_END
+CC_STATIC_ASSERT (sizeof (app_echo_data_t) == APP_GSDML_INPUT_DATA_ECHO_SIZE);
+CC_STATIC_ASSERT (sizeof (app_echo_data_t) == APP_GSDML_OUTPUT_DATA_ECHO_SIZE);
 
 /**
  * Set LED state.
@@ -59,64 +89,117 @@ static void app_handle_data_led_state (bool led_state)
 }
 
 uint8_t * app_data_get_input_data (
+   uint16_t slot_nbr,
+   uint16_t subslot_nbr,
    uint32_t submodule_id,
    bool button_pressed,
-   uint8_t counter,
    uint16_t * size,
    uint8_t * iops)
 {
+   float inputfloat;
+   float outputfloat;
+   uint32_t hostorder_inputfloat_bytes;
+   uint32_t hostorder_outputfloat_bytes;
+   app_echo_data_t * p_echo_inputdata = (app_echo_data_t *)&echo_inputdata;
+   app_echo_data_t * p_echo_outputdata = (app_echo_data_t *)&echo_outputdata;
+
    if (size == NULL || iops == NULL)
    {
       return NULL;
    }
 
    if (
-      submodule_id != APP_GSDML_SUBMOD_ID_DIGITAL_IN &&
-      submodule_id != APP_GSDML_SUBMOD_ID_DIGITAL_IN_OUT)
+      submodule_id == APP_GSDML_SUBMOD_ID_DIGITAL_IN ||
+      submodule_id == APP_GSDML_SUBMOD_ID_DIGITAL_IN_OUT)
    {
-      /* Automated RT Tester scenario 2 - unsupported (sub)module */
-      *iops = PNET_IOXS_BAD;
-      return NULL;
+      /* Prepare digital input data
+       * Lowest 7 bits: Counter    Most significant bit: Button
+       */
+      inputdata[0] = counter++;
+      if (button_pressed)
+      {
+         inputdata[0] |= 0x80;
+      }
+      else
+      {
+         inputdata[0] &= 0x7F;
+      }
+
+      *size = APP_GSDML_INPUT_DATA_DIGITAL_SIZE;
+      *iops = PNET_IOXS_GOOD;
+      return inputdata;
    }
 
-   /* Prepare input data
-    * Lowest 7 bits: Counter    Most significant bit: Button
-    */
-   inputdata[0] = counter;
-   if (button_pressed)
+   if (submodule_id == APP_GSDML_SUBMOD_ID_ECHO)
    {
-      inputdata[0] |= 0x80;
-   }
-   else
-   {
-      inputdata[0] &= 0x7F;
+      /* Calculate echodata input (to the PLC)
+       * by multiplying the output (from the PLC) with a gain factor
+       */
+
+      /* Integer */
+      p_echo_inputdata->echo_int = CC_TO_BE32 (
+         CC_FROM_BE32 (p_echo_outputdata->echo_int) *
+         CC_FROM_BE32 (app_param_echo_gain));
+
+      /* Float */
+      /* Use memcopy to avoid strict-aliasing rule warnings */
+      hostorder_outputfloat_bytes =
+         CC_FROM_BE32 (p_echo_outputdata->echo_float_bytes);
+      memcpy (&outputfloat, &hostorder_outputfloat_bytes, sizeof (outputfloat));
+      inputfloat = outputfloat * CC_FROM_BE32 (app_param_echo_gain);
+      memcpy (&hostorder_inputfloat_bytes, &inputfloat, sizeof (outputfloat));
+      p_echo_inputdata->echo_float_bytes =
+         CC_TO_BE32 (hostorder_inputfloat_bytes);
+
+      *size = APP_GSDML_INPUT_DATA_ECHO_SIZE;
+      *iops = PNET_IOXS_GOOD;
+      return echo_inputdata;
    }
 
-   *size = APP_GSDML_INPUT_DATA_SIZE;
-   *iops = PNET_IOXS_GOOD;
-
-   return inputdata;
+   /* Automated RT Tester scenario 2 - unsupported (sub)module */
+   *iops = PNET_IOXS_BAD;
+   return NULL;
 }
 
 int app_data_set_output_data (
+   uint16_t slot_nbr,
+   uint16_t subslot_nbr,
    uint32_t submodule_id,
    uint8_t * data,
    uint16_t size)
 {
    bool led_state;
 
-   if (data != NULL && size == APP_GSDML_OUTPUT_DATA_SIZE)
+   if (data == NULL)
    {
-      if (
-         submodule_id == APP_GSDML_SUBMOD_ID_DIGITAL_OUT ||
-         submodule_id == APP_GSDML_SUBMOD_ID_DIGITAL_IN_OUT)
+      return -1;
+   }
+
+   if (
+      submodule_id == APP_GSDML_SUBMOD_ID_DIGITAL_OUT ||
+      submodule_id == APP_GSDML_SUBMOD_ID_DIGITAL_IN_OUT)
+   {
+      if (size == APP_GSDML_OUTPUT_DATA_DIGITAL_SIZE)
       {
          memcpy (outputdata, data, size);
+
+         /* Most significant bit: LED */
          led_state = (outputdata[0] & 0x80) > 0;
          app_handle_data_led_state (led_state);
+
          return 0;
       }
    }
+   else if (submodule_id == APP_GSDML_SUBMOD_ID_ECHO)
+   {
+      if (size == APP_GSDML_OUTPUT_DATA_ECHO_SIZE)
+      {
+         memcpy (echo_outputdata, data, size);
+
+         return 0;
+      }
+   }
+
    return -1;
 }
 
@@ -128,6 +211,8 @@ int app_data_set_default_outputs (void)
 }
 
 int app_data_write_parameter (
+   uint16_t slot_nbr,
+   uint16_t subslot_nbr,
    uint32_t submodule_id,
    uint32_t index,
    const uint8_t * data,
@@ -157,21 +242,28 @@ int app_data_write_parameter (
       return -1;
    }
 
-   if (index == APP_GSDM_PARAMETER_1_IDX)
+   if (index == APP_GSDML_PARAMETER_1_IDX)
    {
       memcpy (&app_param_1, data, length);
    }
-   else if (index == APP_GSDM_PARAMETER_2_IDX)
+   else if (index == APP_GSDML_PARAMETER_2_IDX)
    {
       memcpy (&app_param_2, data, length);
    }
-   APP_LOG_DEBUG ("  Writing %s\n", par_cfg->name);
+   else if (index == APP_GSDML_PARAMETER_ECHO_IDX)
+   {
+      memcpy (&app_param_echo_gain, data, length);
+   }
+
+   APP_LOG_DEBUG ("  Writing parameter \"%s\"\n", par_cfg->name);
    app_log_print_bytes (APP_LOG_LEVEL_DEBUG, data, length);
 
    return 0;
 }
 
 int app_data_read_parameter (
+   uint16_t slot_nbr,
+   uint16_t subslot_nbr,
    uint32_t submodule_id,
    uint32_t index,
    uint8_t ** data,
@@ -201,16 +293,21 @@ int app_data_read_parameter (
       return -1;
    }
 
-   APP_LOG_DEBUG ("  Reading %s\n", par_cfg->name);
-   if (index == APP_GSDM_PARAMETER_1_IDX)
+   APP_LOG_DEBUG ("  Reading \"%s\"\n", par_cfg->name);
+   if (index == APP_GSDML_PARAMETER_1_IDX)
    {
       *data = (uint8_t *)&app_param_1;
       *length = sizeof (app_param_1);
    }
-   else if (index == APP_GSDM_PARAMETER_2_IDX)
+   else if (index == APP_GSDML_PARAMETER_2_IDX)
    {
       *data = (uint8_t *)&app_param_2;
       *length = sizeof (app_param_2);
+   }
+   else if (index == APP_GSDML_PARAMETER_ECHO_IDX)
+   {
+      *data = (uint8_t *)&app_param_echo_gain;
+      *length = sizeof (app_param_echo_gain);
    }
 
    app_log_print_bytes (APP_LOG_LEVEL_DEBUG, *data, *length);

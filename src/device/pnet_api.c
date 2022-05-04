@@ -14,7 +14,8 @@
  ********************************************************************/
 
 #ifdef UNIT_TEST
-#define pnal_snmp_init mock_pnal_snmp_init
+#define pnal_snmp_init    mock_pnal_snmp_init
+#define pf_bg_worker_init mock_pf_bg_worker_init
 #endif
 
 #include <inttypes.h>

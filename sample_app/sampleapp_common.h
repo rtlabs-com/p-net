@@ -39,6 +39,7 @@ extern "C" {
 #define APP_TICKS_READ_BUTTONS 10
 #define APP_TICKS_UPDATE_DATA  100
 
+/** Command line arguments for sample application */
 typedef struct app_args
 {
    char path_button1[PNET_MAX_FILE_FULLPATH_SIZE]; /** Terminated string */
@@ -62,45 +63,50 @@ typedef enum
 
 typedef struct app_data_t app_data_t;
 
+/** Partially initialise config values, and use proper callbacks
+ *
+ * @param pnet_cfg     Out:   Configuration to be updated
+ */
 void app_pnet_cfg_init_default (pnet_cfg_t * pnet_cfg);
 
 /**
- * Initialize application
- *
  * Initialize P-Net stack and application.
- * The pnet_cfg argument shall have been initialized using
- * app_pnet_cfg_init_default() before this function is
+ *
+ * The \a pnet_cfg argument shall have been initialized using
+ * \a app_pnet_cfg_init_default() before this function is
  * called.
- * @param pnet_cfg               In:    P-Net start configuration
+ *
+ * @param pnet_cfg               In:    P-Net configuration
  * @return Application handle, NULL on error
  */
-app_data_t * app_init (pnet_cfg_t * pnet_cfg);
+app_data_t * app_init (const pnet_cfg_t * pnet_cfg);
 
 /**
- * Start application
+ * Start application main loop
  *
- * Application must have been initialized using app_init() before
- * app_start() is called.
- * If task_config parameters is set to RUN_IN_SEPARATE_THREAD a
- * thread execution the app_loop_forever() function is started.
+ * Application must have been initialized using \a app_init() before
+ * this function is called.
+ *
+ * If \a task_config parameters is set to RUN_IN_SEPARATE_THREAD a
+ * thread execution the \a app_loop_forever() function is started.
  * If task_config is set to RUN_IN_MAIN_THREAD no such thread is
- * started and the caller must call the app_loop_forever() after
+ * started and the caller must call the \a app_loop_forever() after
  * calling this function.
+ *
  * RUN_IN_MAIN_THREAD is intended for rt-kernel targets.
  * RUN_IN_SEPARATE_THREAD is intended for linux targets.
+ *
  * @param app                 In:    Application handle
  * @param task_config         In:    Defines if stack and application
  *                                   is run in main or separate task.
- *
  * @return 0 on success, -1 on error
  */
 int app_start (app_data_t * app, app_run_in_separate_task_t task_config);
 
 /**
- * Application task definition. Handles events
- * in eternal loop.
+ * Application task definition. Handles events in eternal loop.
+ *
  * @param arg                 In: Application handle
- * return Should not
  */
 void app_loop_forever (void * arg);
 
@@ -108,7 +114,6 @@ void app_loop_forever (void * arg);
  * Get P-Net instance from application
  *
  * @param app                 In:    Application handle
- *
  * @return P-Net instance
  */
 pnet_t * app_get_pnet_instance (app_data_t * app);

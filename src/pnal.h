@@ -254,13 +254,30 @@ int pnal_save_file (
  */
 void pnal_clear_file (const char * fullpath);
 
-/* pnal_buf_t should at least contain:
- *  void * payload;
- *  uint16_t len;
+/*
  */
 
+/**
+ * Allocate a buffer
+ *
+ * The resulting \a pnal_buf_t  buffer is defined for
+ * each operating system, and should at least contain:
+ *     void * payload;
+ *     uint16_t len;
+ *
+ * @param length           In:    Length, in bytes
+ * @return a pnal_buf_t, or NULL at failure
+ */
 pnal_buf_t * pnal_buf_alloc (uint16_t length);
+
+/**
+ * Free a buffer
+ *
+ * @param p           In:    Buffer to free
+ */
 void pnal_buf_free (pnal_buf_t * p);
+
+/** Not yet used */
 uint8_t pnal_buf_header (pnal_buf_t * p, int16_t header_size_increment);
 
 /**
@@ -334,7 +351,8 @@ int pnal_get_port_statistics (
 int pnal_eth_send (pnal_eth_handle_t * handle, pnal_buf_t * buf);
 
 /**
- * Initialize receiving of raw Ethernet frames (in separate thread)
+ * Initialize receiving of raw Ethernet frames on one interface (in separate
+ * thread)
  *
  * @param if_name          In:    Ethernet interface name
  * @param receive_type     In:    Ethernet frame types that shall be received

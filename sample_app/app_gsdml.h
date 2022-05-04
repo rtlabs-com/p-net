@@ -28,7 +28,7 @@
  * Note that when the GSDML file is updated it has to be reloaded
  * in your Profinet engineering tool. PLC applications may be affected.
  *
- * Design requires unique submodule ids.
+ * Design requires unique submodule IDs and unique parameter indexes.
  */
 
 #ifdef __cplusplus
@@ -42,14 +42,14 @@ extern "C" {
 #define APP_GSDML_DEFAULT_STATION_NAME "rt-labs-dev"
 
 /* GSDML tag: VendorID */
-#define APP_GSDML_VENDOR_ID 0xfeed
+#define APP_GSDML_VENDOR_ID 0x0493
 
 /* GSDML tag: DeviceID */
-#define APP_GSDML_DEVICE_ID 0xbeef
+#define APP_GSDML_DEVICE_ID 0x0002
 
 /* Used in DCP communication */
 #define APP_GSDML_OEM_VENDOR_ID 0xcafe
-#define APP_GSDML_OEM_DEVICE_ID 0xee01
+#define APP_GSDML_OEM_DEVICE_ID 0xee02
 
 /* Used in I&M0 */
 #define APP_GSDML_IM_HARDWARE_REVISION 3
@@ -62,7 +62,7 @@ extern "C" {
 #define APP_GSDML_PROFILE_SPEC_TYPE   0x5678
 #define APP_GSDML_IM_REVISION_COUNTER 0 /* Typically 0 */
 
-/* Note: You need to use the actual serial number instead */
+/* Note: You need to read out the actual hardware serial number instead */
 #define APP_GSDML_EXAMPLE_SERIAL_NUMBER "007"
 
 /* Initial values. Can be overwritten by PLC */
@@ -78,6 +78,7 @@ extern "C" {
 
 /* GSDML tag: OrderNumber */
 #define APP_GSDML_ORDER_ID "12345 Abcdefghijk"
+
 /* GSDML tag: ModuleInfo / Name */
 #define APP_GSDML_PRODUCT_NAME "P-Net Sample Application"
 
@@ -93,28 +94,41 @@ extern "C" {
 #define APP_GSDML_LOGBOOK_ERROR_CODE_2 0x00       /* Manufacturer specific */
 #define APP_GSDML_LOGBOOK_ENTRY_DETAIL 0xFEE1DEAD /* Manufacturer specific */
 
-#define APP_GSDM_PARAMETER_1_IDX  123
-#define APP_GSDM_PARAMETER_2_IDX  124
-#define APP_GSDM_PARAMETER_LENGTH 4
+#define APP_GSDML_PARAMETER_1_IDX    123
+#define APP_GSDML_PARAMETER_2_IDX    124
+#define APP_GSDML_PARAMETER_ECHO_IDX 125
+
+/* Use same size for all parameters in example */
+#define APP_GSDML_PARAMETER_LENGTH 4
 
 #define APP_GSDML_DEFAULT_MAUTYPE 0x10 /* Copper 100 Mbit/s Full duplex */
 
 typedef struct app_gsdml_module
 {
    uint32_t id;
+
+   /** Module name */
    const char * name;
-   uint32_t submodules[]; /* Variable length, ends with 0 */
+
+   /** Submodule IDs. Variable length, ends with 0. */
+   uint32_t submodules[];
 } app_gsdml_module_t;
 
 typedef struct app_gsdml_submodule
 {
    uint32_t id;
+
+   /** Submodule name */
    const char * name;
+
    uint32_t api;
    pnet_submodule_dir_t data_dir;
    uint16_t insize;
    uint16_t outsize;
-   uint16_t parameters[]; /* Variable length, ends with 0 */
+
+   /** Parameter indexes. See app_gsdml_parameters.
+    * Variable length, ends with 0. */
+   uint16_t parameters[];
 } app_gsdml_submodule_t;
 
 typedef struct
@@ -127,24 +141,27 @@ typedef struct
 #define APP_GSDML_MOD_ID_8_0_DIGITAL_IN     0x00000030
 #define APP_GSDML_MOD_ID_0_8_DIGITAL_OUT    0x00000031
 #define APP_GSDML_MOD_ID_8_8_DIGITAL_IN_OUT 0x00000032
+#define APP_GSDML_MOD_ID_ECHO               0x00000040
 #define APP_GSDML_SUBMOD_ID_DIGITAL_IN      0x00000130
 #define APP_GSDML_SUBMOD_ID_DIGITAL_OUT     0x00000131
 #define APP_GSDML_SUBMOD_ID_DIGITAL_IN_OUT  0x00000132
-
-#define APP_GSDML_INPUT_DATA_SIZE   1 /* bytes, for digital inputs data */
-#define APP_GSDML_OUTPUT_DATA_SIZE  1 /* bytes, for digital outputs data */
-#define APP_GSDM_ALARM_PAYLOAD_SIZE 1 /* bytes */
+#define APP_GSDML_SUBMOD_ID_ECHO            0x00000140
+#define APP_GSDML_INPUT_DATA_DIGITAL_SIZE   1 /* bytes */
+#define APP_GSDML_OUTPUT_DATA_DIGITAL_SIZE  1 /* bytes */
+#define APP_GSDML_INPUT_DATA_ECHO_SIZE      8 /* bytes */
+#define APP_GSDML_OUTPUT_DATA_ECHO_SIZE     APP_GSDML_INPUT_DATA_ECHO_SIZE
+#define APP_GSDML_ALARM_PAYLOAD_SIZE        1 /* bytes */
 
 /**
- * Get module configuration from module id
- * @param module_id  In: Module id
+ * Get module configuration from module ID
+ * @param module_id  In: Module ID
  * @return Module configuration, NULL if not found
  */
 const app_gsdml_module_t * app_gsdml_get_module_cfg (uint32_t module_id);
 
 /**
- * Get submodule module configuration from submodule id
- * @param submodule_id  In: Submodule id
+ * Get submodule module configuration from submodule ID
+ * @param submodule_id  In: Submodule ID
  * @return Submodule configuration, NULL if not found
  */
 const app_gsdml_submodule_t * app_gsdml_get_submodule_cfg (
@@ -152,7 +169,7 @@ const app_gsdml_submodule_t * app_gsdml_get_submodule_cfg (
 
 /**
  * Get parameter configuration from parameter index
- * @param submodule_id  In: Submodule id
+ * @param submodule_id  In: Submodule ID
  * @param index         In: Parameters index
  * @return Parameter configuration, NULL if not found
  */

@@ -213,6 +213,10 @@ void mock_pf_fspm_get_im_location (pnet_t * net, char * location);
 
 void mock_pf_fspm_save_im_location (pnet_t * net, const char * location);
 
+void mock_pf_bg_worker_init (pnet_t * net);
+
+int mock_pf_bg_worker_start_job (pnet_t * net, pf_bg_job_t job_id);
+
 #ifdef __cplusplus
 }
 #endif

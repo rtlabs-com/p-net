@@ -45,6 +45,39 @@ class DcpUnitTest : public PnetUnitTest
 {
 };
 
+static uint8_t get_wrong_length_req[] = {
+   // clang-format off
+
+   // Destination MAC address. Pos 0
+   0x12, 0x34, 0x00, 0x78, 0x90, 0xab,
+
+   // Source MAC address. Pos 6
+   0xc8, 0x5b, 0x76, 0xe6, 0x89, 0xdf,
+
+   // Ethernet type = Profinet RT. Pos 12
+   0x88, 0x92,
+
+   // DCP set/get. Pos 14
+   0xfe, 0xfd,
+
+   // Get, request. Pos 16
+   0x03, 0x00,
+
+   // XID. Pos 20
+   0x00, 0x00, 0x00, 0x01,
+
+   // Reserved. Pos 22
+   0x04, 0x01,
+
+   // DCP data length. Wrong value. Pos 24
+   0x04, 0x00,
+
+   // Options. Pos 26
+   0x00, 0x00
+
+   // clang-format on
+};
+
 static uint8_t get_name_req[] = {
    0x12, 0x34, 0x00, 0x78, 0x90, 0xab, 0xc8, 0x5b, 0x76, 0xe6, 0x89, 0xdf,
    0x88, 0x92, 0xfe, 0xfd, 0x03, 0x00, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00,
@@ -106,6 +139,33 @@ TEST_F (DcpTest, DcpHelloTest)
    EXPECT_EQ (ret, 1); // Incoming frame is handled
    // LLDP frames and one additional frame
    EXPECT_EQ (mock_os_data.eth_send_count, PNET_MAX_PHYSICAL_PORTS + 1);
+
+   EXPECT_EQ (appdata.call_counters.led_off_calls, 1);
+   EXPECT_EQ (appdata.call_counters.led_on_calls, 0);
+   EXPECT_EQ (appdata.call_counters.state_calls, 0);
+   EXPECT_EQ (appdata.call_counters.connect_calls, 0);
+   EXPECT_EQ (appdata.call_counters.release_calls, 0);
+   EXPECT_EQ (appdata.call_counters.dcontrol_calls, 0);
+   EXPECT_EQ (appdata.call_counters.ccontrol_calls, 0);
+   EXPECT_EQ (appdata.call_counters.read_calls, 0);
+   EXPECT_EQ (appdata.call_counters.write_calls, 0);
+}
+
+TEST_F (DcpTest, DcpGetWrongLengthTest)
+{
+   pnal_buf_t * p_buf;
+   int ret;
+
+   mock_clear();
+
+   p_buf = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE);
+   memcpy (p_buf->payload, get_wrong_length_req, sizeof (get_wrong_length_req));
+   p_buf->len = sizeof (get_wrong_length_req);
+
+   ret = pf_eth_recv (mock_os_data.eth_if_handle, net, p_buf);
+
+   EXPECT_EQ (ret, 1);                         // Incoming frame is handled
+   EXPECT_EQ (mock_os_data.eth_send_count, 0); // Drop malformed frame
 
    EXPECT_EQ (appdata.call_counters.led_off_calls, 1);
    EXPECT_EQ (appdata.call_counters.led_on_calls, 0);

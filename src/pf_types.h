@@ -1083,8 +1083,12 @@ typedef void (*pf_scheduler_timeout_ftn_t) (
 
 typedef struct pf_scheduler_timeouts
 {
-   const char * name; /* For debugging only */
-   bool in_use;       /* For debugging only */
+   /** For debugging only */
+   const char * name;
+
+   /** Will be set to false when the timer is triggered.
+       For debugging only */
+   bool in_use;
 
    uint32_t when; /* absolute time of timeout */
    uint32_t next; /* Next in list */
@@ -1955,6 +1959,9 @@ typedef struct pf_get_info
  */
 typedef struct pf_session_info
 {
+   /* The session uses pf_eth_send_on_management_port() for sending raw
+    * Ethernet frames on the management port */
+
    uint16_t ix;
    bool in_use;
    bool release_in_progress; /* The session handles an incoming release request
@@ -1963,7 +1970,6 @@ typedef struct pf_session_info
                          the end of handling the incoming RPC frame. */
    int socket; /* Socket for CControl messaging, or reference to the main CMRPC
                   socket. Close it only if from_me==true */
-   pnal_eth_handle_t * eth_handle;
    struct pf_ar * p_ar; /* Parent AR */
    bool from_me;        /* True if the session originates from the device (i.e.
                            CControl requests and responses). */
@@ -2579,7 +2585,11 @@ typedef struct pf_netif
 typedef struct pf_port
 {
    pf_netif_t netif;
-   char port_name[PNET_PORT_NAME_MAX_SIZE]; /* Terminated string */
+
+   /** Port name, for example port-001
+    * Terminated string */
+   char port_name[PNET_PORT_NAME_MAX_SIZE];
+
    uint8_t port_num;
    pf_pdport_t pdport;
    pf_lldp_port_t lldp;

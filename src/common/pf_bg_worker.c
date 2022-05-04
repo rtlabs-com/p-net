@@ -18,6 +18,16 @@
 
 #include <inttypes.h>
 
+#ifdef UNIT_TEST
+/* Background worker is disabled during unit tests.
+ * Stack reinitialization during test recreates
+ * the background task which cause problems.
+ * Disabling is implemented using mock functions
+ * - mock_pf_bg_worker_init
+ * - mock_pf_bg_worker_start_job
+ */
+#endif
+
 /* Events handled by bg worker task */
 
 #define BG_JOB_EVENT_UPDATE_PORTS_STATUS  BIT (0)

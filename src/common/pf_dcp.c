@@ -189,7 +189,7 @@ static void pf_dcp_responder (pnet_t * net, void * arg, uint32_t current_time)
       return;
    }
 
-   if (pf_eth_send (net, net->pf_interface.main_port.handle, p_buf) > 0)
+   if (pf_eth_send_on_management_port (net, p_buf) > 0)
    {
       LOG_DEBUG (PNET_LOG, "DCP(%d): Sent a DCP identify response.\n", __LINE__);
    }
@@ -966,6 +966,11 @@ static int pf_dcp_get_set (
    src_pos += sizeof (pf_dcp_header_t);
    src_dcplen = (src_pos + ntohs (p_src_dcphdr->data_length));
 
+   if (src_dcplen > p_buf->len)
+   {
+      goto out;
+   }
+
    p_rsp = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE); /* Get a transmit buffer
                                                    for the response */
    if (p_rsp == NULL)
@@ -1097,7 +1102,7 @@ static int pf_dcp_get_set (
    p_dst_dcphdr->data_length = htons (dst_pos - dst_start);
    p_rsp->len = dst_pos;
 
-   if (pf_eth_send (net, net->pf_interface.main_port.handle, p_rsp) > 0)
+   if (pf_eth_send_on_management_port (net, p_rsp) > 0)
    {
       LOG_DEBUG (PF_DCP_LOG, "DCP(%d): Sent DCP Get/Set response\n", __LINE__);
    }
@@ -1378,7 +1383,7 @@ int pf_dcp_hello_req (pnet_t * net)
    p_dcphdr->data_length = htons (dst_pos - dst_start_pos);
    p_buf->len = dst_pos;
 
-   (void)pf_eth_send (net, net->pf_interface.main_port.handle, p_buf);
+   (void)pf_eth_send_on_management_port (net, p_buf);
 
    pnal_buf_free (p_buf);
 
@@ -1505,6 +1510,11 @@ static int pf_dcp_identify_req (
    p_src_dcphdr = (pf_dcp_header_t *)&p_src[src_pos];
    src_pos += sizeof (pf_dcp_header_t);
    src_dcplen = (src_pos + ntohs (p_src_dcphdr->data_length));
+
+   if (src_dcplen > p_buf->len)
+   {
+      goto out1;
+   }
 
    p_rsp = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE); /* Get a transmit buffer
                                                    for the response */

@@ -16,6 +16,7 @@
 #ifdef UNIT_TEST
 #define pnal_eth_get_status      mock_pnal_eth_get_status
 #define pnal_get_port_statistics mock_pnal_get_port_statistics
+#define pf_bg_worker_start_job   mock_pf_bg_worker_start_job
 #endif
 
 #include "pf_includes.h"
@@ -321,6 +322,13 @@ static void pf_pdport_remove_all_diag (pnet_t * net, int loc_port_num)
    pnet_diag_source_t diag_source = {0};
 
    pf_pdport_init_diag_source (net, &diag_source, loc_port_num);
+
+   LOG_DEBUG (
+      PNET_LOG,
+      "PDPORT(%d): Remove diagnosis about remote mismatch (if any) "
+      "for port %u.\n",
+      __LINE__,
+      loc_port_num);
 
    (void)pf_diag_std_remove (
       net,
