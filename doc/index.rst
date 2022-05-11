@@ -33,6 +33,7 @@ documentation.
    linuxtiming.rst
    compliancetest.rst
    yoctobuild.rst
+   getting_started_LAN9662.rst
    abbreviations.rst
    api_documentation.rst
    _copied/LICENSE.md

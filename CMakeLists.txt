@@ -155,8 +155,6 @@ configure_file (
   ${PROFINET_BINARY_DIR}/include/pnet_version.h
   )
 
-include(${CMAKE_CURRENT_SOURCE_DIR}/src/drivers/drivers_options.cmake)
-
 # Generate config options
 configure_file (
   options.h.in

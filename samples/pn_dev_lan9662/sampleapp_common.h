@@ -6,7 +6,7 @@
  * |_|    \__|(_)|_| \__,_||_.__/ |___/
  *
  * www.rt-labs.com
- * Copyright 2018 rt-labs AB, Sweden.
+ * Copyright 2021 rt-labs AB, Sweden.
  *
  * This software is dual-licensed under GPLv3 and a commercial
  * license. See the file LICENSE.md distributed with this software for
@@ -36,10 +36,8 @@ extern "C" {
 #define APP_DATA_LED_ID            1
 #define APP_PROFINET_SIGNAL_LED_ID 2
 
-#define APP_TICKS_READ_BUTTONS 10
-#define APP_TICKS_UPDATE_DATA  100
+#define APP_TICKS_UPDATE_DATA 100
 
-/** HW Offload configuration. */
 typedef enum
 {
    MODE_HW_OFFLOAD_NONE = 0,
@@ -47,7 +45,6 @@ typedef enum
    MODE_HW_OFFLOAD_FULL,
 } app_mode_t;
 
-/** Command line arguments for sample application */
 typedef struct app_args
 {
    char path_button1[PNET_MAX_FILE_FULLPATH_SIZE]; /** Terminated string */
@@ -72,51 +69,45 @@ typedef enum
 
 typedef struct app_data_t app_data_t;
 
-/** Partially initialise config values, and use proper callbacks
- *
- * @param pnet_cfg     Out:   Configuration to be updated
- */
 void app_pnet_cfg_init_default (pnet_cfg_t * pnet_cfg);
 
 /**
+ * Initialize application
+ *
  * Initialize P-Net stack and application.
- *
- * The \a pnet_cfg argument shall have been initialized using
- * \a app_pnet_cfg_init_default() before this function is
+ * The pnet_cfg argument shall have been initialized using
+ * app_pnet_cfg_init_default() before this function is
  * called.
- *
- * @param pnet_cfg               In:    P-Net configuration
- * @param app_args               In:    Application arguments
+ * @param pnet_cfg               In:    P-Net start configuration
  * @return Application handle, NULL on error
  */
-app_data_t * app_init (const pnet_cfg_t * pnet_cfg, const app_args_t * app_args);
+app_data_t * app_init (pnet_cfg_t * pnet_cfg, const app_args_t * app_args);
 
 /**
- * Start application main loop
+ * Start application
  *
- * Application must have been initialized using \a app_init() before
- * this function is called.
- *
- * If \a task_config parameters is set to RUN_IN_SEPARATE_THREAD a
- * thread execution the \a app_loop_forever() function is started.
+ * Application must have been initialized using app_init() before
+ * app_start() is called.
+ * If task_config parameters is set to RUN_IN_SEPARATE_THREAD a
+ * thread execution the app_loop_forever() function is started.
  * If task_config is set to RUN_IN_MAIN_THREAD no such thread is
- * started and the caller must call the \a app_loop_forever() after
+ * started and the caller must call the app_loop_forever() after
  * calling this function.
- *
  * RUN_IN_MAIN_THREAD is intended for rt-kernel targets.
  * RUN_IN_SEPARATE_THREAD is intended for linux targets.
- *
  * @param app                 In:    Application handle
  * @param task_config         In:    Defines if stack and application
  *                                   is run in main or separate task.
+ *
  * @return 0 on success, -1 on error
  */
 int app_start (app_data_t * app, app_run_in_separate_task_t task_config);
 
 /**
- * Application task definition. Handles events in eternal loop.
- *
+ * Application task definition. Handles events
+ * in eternal loop.
  * @param arg                 In: Application handle
+ * return Should not
  */
 void app_loop_forever (void * arg);
 
@@ -124,7 +115,8 @@ void app_loop_forever (void * arg);
  * Get P-Net instance from application
  *
  * @param app                 In:    Application handle
- * @return P-Net instance, NULL on failure
+ *
+ * @return P-Net instance
  */
 pnet_t * app_get_pnet_instance (app_data_t * app);
 

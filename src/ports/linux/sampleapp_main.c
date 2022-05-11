@@ -110,6 +110,13 @@ void show_usage()
            "Defaults to not read Button2.\n");
    printf ("   -p PATH      Absolute path to storage directory. Defaults to "
            "use current directory.\n");
+#if PNET_OPTION_DRIVER_ENABLE
+   printf ("   -m MODE      Application offload mode. Only used if P-Net is\n");
+   printf ("                built with hw offload enabled "
+           "                (PNET_OPTION_DRIVER_ENABLE). \n");
+   printf ("                Supported modes: none, cpu, full\n");
+   printf ("                Defaults to none\n");
+#endif
    printf ("\n");
    printf ("p-net revision: " PNET_VERSION "\n");
 }
@@ -146,8 +153,9 @@ app_args_t parse_commandline_arguments (int argc, char * argv[])
    output_arguments.show = 0;
    output_arguments.factory_reset = false;
    output_arguments.remove_files = false;
+   output_arguments.mode = MODE_HW_OFFLOAD_NONE;
 
-   while ((option = getopt (argc, argv, "hvgfri:s:b:d:p:")) != -1)
+   while ((option = getopt (argc, argv, "hvgfri:s:b:d:p:m:")) != -1)
    {
       switch (option)
       {
@@ -198,6 +206,27 @@ app_args_t parse_commandline_arguments (int argc, char * argv[])
          }
          strcpy (output_arguments.path_storage_directory, optarg);
          break;
+#if PNET_OPTION_DRIVER_ENABLE
+      case 'm':
+         if (strcmp ("none", optarg) == 0)
+         {
+            output_arguments.mode = MODE_HW_OFFLOAD_NONE;
+         }
+         else if (strcmp ("cpu", optarg) == 0)
+         {
+            output_arguments.mode = MODE_HW_OFFLOAD_CPU;
+         }
+         else if (strcmp ("full", optarg) == 0)
+         {
+            output_arguments.mode = MODE_HW_OFFLOAD_FULL;
+         }
+         else
+         {
+            printf ("Error: mode (-m) not supported.\n");
+            exit (EXIT_FAILURE);
+         }
+         break;
+#endif
       case 'h':
          /* fallthrough */
       case '?':
@@ -436,7 +465,7 @@ int main (int argc, char * argv[])
    }
 
    /* Initialise stack and application */
-   sample_app = app_init (&pnet_cfg);
+   sample_app = app_init (&pnet_cfg, &app_args);
    if (sample_app == NULL)
    {
       printf ("Failed to initialize P-Net.\n");
