@@ -1,0 +1,417 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<ISO15745Profile xmlns="http://www.profibus.com/GSDML/2003/11/DeviceProfile" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.profibus.com/GSDML/2003/11/DeviceProfile ..\xsd\GSDML-DeviceProfile-V2.4.xsd">
+   <!-- ProfileHeader definition as defined in ISO 15745-1. Please do not change the content. -->
+   <ProfileHeader>
+      <ProfileIdentification>PROFINET Device Profile</ProfileIdentification>
+      <ProfileRevision>1.00</ProfileRevision>
+      <ProfileName>Device Profile for PROFINET Devices</ProfileName>
+      <ProfileSource>PROFIBUS Nutzerorganisation e. V. (PNO)</ProfileSource>
+      <ProfileClassID>Device</ProfileClassID>
+      <ISO15745Reference>
+         <ISO15745Part>4</ISO15745Part>
+         <ISO15745Edition>1</ISO15745Edition>
+         <ProfileTechnology>GSDML</ProfileTechnology>
+      </ISO15745Reference>
+   </ProfileHeader>
+   <ProfileBody>
+      <DeviceIdentity VendorID="0x0493" DeviceID="0x9662">
+         <InfoText TextId="IDT_INFO_Device"/>
+         <VendorName Value="RT-Labs"/>
+      </DeviceIdentity>
+      <DeviceFunction>
+         <Family MainFamily="I/O" ProductFamily="P-Net Samples"/>
+      </DeviceFunction>
+      <ApplicationProcess>
+         <DeviceAccessPointList>
+            <DeviceAccessPointItem ID="IDD_1" PNIO_Version="V2.4" PhysicalSlots="0..12" ModuleIdentNumber="0x00000001" MinDeviceInterval="32" DNS_CompatibleName="lan9662-dev" FixedInSlots="0" ObjectUUID_LocalIndex="1" DeviceAccessSupported="false" MultipleWriteSupported="true" CheckDeviceID_Allowed="true" NameOfStationNotTransferable="false" LLDP_NoD_Supported="true" ResetToFactoryModes="1..2">
+               <ModuleInfo>
+                  <Name TextId="IDT_MODULE_NAME_DAP1"/>
+                  <InfoText TextId="IDT_INFO_DAP1"/>
+                  <VendorName Value="RT-Labs"/>
+                  <OrderNumber Value="12345 Abcdefghijk"/>
+                  <HardwareRelease Value="A1.0"/>
+                  <SoftwareRelease Value="V0.1.0"/>
+               </ModuleInfo>
+               <CertificationInfo ConformanceClass="A" ApplicationClass="" NetloadClass="I"/>
+               <IOConfigData MaxInputLength="1440" MaxOutputLength="1440"/>
+               <UseableModules>
+                  <ModuleItemRef ModuleItemTarget="IDM_1" AllowedInSlots="1"/>
+                  <ModuleItemRef ModuleItemTarget="IDM_2" AllowedInSlots="2"/>
+                  <ModuleItemRef ModuleItemTarget="IDM_3" AllowedInSlots="3"/>
+                  <ModuleItemRef ModuleItemTarget="IDM_4" AllowedInSlots="4"/>
+                  <ModuleItemRef ModuleItemTarget="IDM_5" AllowedInSlots="5"/>
+                  <ModuleItemRef ModuleItemTarget="IDM_6" AllowedInSlots="6"/>
+                  <ModuleItemRef ModuleItemTarget="IDM_7" AllowedInSlots="7"/>
+                  <ModuleItemRef ModuleItemTarget="IDM_8" AllowedInSlots="8"/>
+                  <ModuleItemRef ModuleItemTarget="IDM_9" AllowedInSlots="9"/>
+                  <ModuleItemRef ModuleItemTarget="IDM_10" AllowedInSlots="10"/>
+                  <ModuleItemRef ModuleItemTarget="IDM_11" AllowedInSlots="11"/>
+                  <ModuleItemRef ModuleItemTarget="IDM_12" AllowedInSlots="12"/>
+               </UseableModules>
+               <VirtualSubmoduleList>
+                  <VirtualSubmoduleItem ID="IDS_1" SubmoduleIdentNumber="0x00000001" Writeable_IM_Records="1 2 3" MayIssueProcessAlarm="false">
+                     <IOData/>
+                     <ModuleInfo>
+                        <Name TextId="IDT_MODULE_NAME_DAP1"/>
+                        <InfoText TextId="IDT_INFO_DAP1"/>
+                     </ModuleInfo>
+                  </VirtualSubmoduleItem>
+               </VirtualSubmoduleList>
+               <SystemDefinedSubmoduleList>
+                  <InterfaceSubmoduleItem ID="IDS_I" SubmoduleIdentNumber="0x00008000" SubslotNumber="32768" TextId="IDT_NAME_IS" SupportedRT_Classes="RT_CLASS_1" SupportedProtocols="LLDP" NetworkComponentDiagnosisSupported="false" PTP_BoundarySupported="true" DCP_BoundarySupported="true">
+                     <ApplicationRelations StartupMode="Advanced">
+                        <TimingProperties SendClock="32" ReductionRatio="1 2 4 8 16 32 64 128 256 512"/>
+                     </ApplicationRelations>
+                  </InterfaceSubmoduleItem>
+                  <PortSubmoduleItem ID="IDS_P1" SubmoduleIdentNumber="0x00008001" SubslotNumber="32769" TextId="IDT_NAME_PS1" MaxPortRxDelay="350" MaxPortTxDelay="160">
+                     <MAUTypeList>
+                        <MAUTypeItem Value="30"/>
+                        <MAUTypeItem Value="16"/>
+                        <MAUTypeItem Value="5"/>
+                     </MAUTypeList>
+                  </PortSubmoduleItem>
+                  <PortSubmoduleItem ID="IDS_P2" SubmoduleIdentNumber="0x00008002" SubslotNumber="32770" TextId="IDT_NAME_PS2" MaxPortRxDelay="350" MaxPortTxDelay="160">
+                     <MAUTypeList>
+                        <MAUTypeItem Value="30"/>
+                        <MAUTypeItem Value="16"/>
+                        <MAUTypeItem Value="5"/>
+                     </MAUTypeList>
+                  </PortSubmoduleItem>
+               </SystemDefinedSubmoduleList>
+            </DeviceAccessPointItem>
+         </DeviceAccessPointList>
+         <ModuleList>
+            <ModuleItem ID="IDM_1" ModuleIdentNumber="0x00001001">
+               <ModuleInfo>
+                  <Name TextId="TOK_Name_Module_1"/>
+                  <InfoText TextId="TOK_InfoText_Module_1"/>
+                  <HardwareRelease Value="1.0"/>
+                  <SoftwareRelease Value="1.0"/>
+               </ModuleInfo>
+               <VirtualSubmoduleList>
+                  <VirtualSubmoduleItem ID="IDSM_1" SubmoduleIdentNumber="0x00002001" MayIssueProcessAlarm="false">
+                     <IOData>
+                        <Input Consistency="All items consistency">
+                           <DataItem DataType="Unsigned8" TextId="TOK_Dummy" UseAsBits="false">
+                           </DataItem>
+                        </Input>
+                     </IOData>
+                     <ModuleInfo>
+                        <Name TextId="TOK_Name_Module_1"/>
+                        <InfoText TextId="TOK_InfoText_Module_1"/>
+                     </ModuleInfo>
+                  </VirtualSubmoduleItem>
+               </VirtualSubmoduleList>
+            </ModuleItem>
+            <ModuleItem ID="IDM_2" ModuleIdentNumber="0x00001002">
+               <ModuleInfo>
+                  <Name TextId="TOK_Name_Module_2"/>
+                  <InfoText TextId="TOK_InfoText_Module_2"/>
+                  <HardwareRelease Value="1.0"/>
+                  <SoftwareRelease Value="1.0"/>
+               </ModuleInfo>
+               <VirtualSubmoduleList>
+                  <VirtualSubmoduleItem ID="IDSM_2" SubmoduleIdentNumber="0x00002002" MayIssueProcessAlarm="false">
+                     <IOData>
+                        <Output Consistency="All items consistency">
+                           <DataItem DataType="Unsigned8" TextId="TOK_Dummy" UseAsBits="false">
+                           </DataItem>
+                        </Output>
+                     </IOData>
+                     <ModuleInfo>
+                        <Name TextId="TOK_Name_Module_2"/>
+                        <InfoText TextId="TOK_InfoText_Module_2"/>
+                     </ModuleInfo>
+                  </VirtualSubmoduleItem>
+               </VirtualSubmoduleList>
+            </ModuleItem>
+            <ModuleItem ID="IDM_3" ModuleIdentNumber="0x00001003">
+               <ModuleInfo>
+                  <Name TextId="TOK_Name_Module_3"/>
+                  <InfoText TextId="TOK_InfoText_Module_3"/>
+                  <HardwareRelease Value="1.0"/>
+                  <SoftwareRelease Value="1.0"/>
+               </ModuleInfo>
+               <VirtualSubmoduleList>
+                  <VirtualSubmoduleItem ID="IDSM_3" SubmoduleIdentNumber="0x00002003" MayIssueProcessAlarm="false">
+                     <IOData>
+                        <Input Consistency="All items consistency">
+                           <DataItem DataType="Unsigned64" TextId="TOK_Dummy" UseAsBits="false">
+                           </DataItem>
+                        </Input>
+                     </IOData>
+                     <ModuleInfo>
+                        <Name TextId="TOK_Name_Module_3"/>
+                        <InfoText TextId="TOK_InfoText_Module_3"/>
+                     </ModuleInfo>
+                  </VirtualSubmoduleItem>
+               </VirtualSubmoduleList>
+            </ModuleItem>
+            <ModuleItem ID="IDM_4" ModuleIdentNumber="0x00001004">
+               <ModuleInfo>
+                  <Name TextId="TOK_Name_Module_4"/>
+                  <InfoText TextId="TOK_InfoText_Module_4"/>
+                  <HardwareRelease Value="1.0"/>
+                  <SoftwareRelease Value="1.0"/>
+               </ModuleInfo>
+               <VirtualSubmoduleList>
+                  <VirtualSubmoduleItem ID="IDSM_4" SubmoduleIdentNumber="0x00002004" MayIssueProcessAlarm="false">
+                     <IOData>
+                        <Input Consistency="All items consistency">
+                           <DataItem DataType="Unsigned32" TextId="TOK_Dummy" UseAsBits="false">
+                           </DataItem>
+                           <DataItem DataType="Unsigned32" TextId="TOK_Dummy" UseAsBits="false">
+                           </DataItem>
+                        </Input>
+                     </IOData>
+                     <ModuleInfo>
+                        <Name TextId="TOK_Name_Module_4"/>
+                        <InfoText TextId="TOK_InfoText_Module_4"/>
+                     </ModuleInfo>
+                  </VirtualSubmoduleItem>
+               </VirtualSubmoduleList>
+            </ModuleItem>
+            <ModuleItem ID="IDM_5" ModuleIdentNumber="0x00001005">
+               <ModuleInfo>
+                  <Name TextId="TOK_Name_Module_5"/>
+                  <InfoText TextId="TOK_InfoText_Module_5"/>
+                  <HardwareRelease Value="1.0"/>
+                  <SoftwareRelease Value="1.0"/>
+               </ModuleInfo>
+               <VirtualSubmoduleList>
+                  <VirtualSubmoduleItem ID="IDSM_5" SubmoduleIdentNumber="0x00002005" MayIssueProcessAlarm="false">
+                     <IOData>
+                        <Input Consistency="All items consistency">
+                           <DataItem DataType="Unsigned32" TextId="TOK_Dummy" UseAsBits="false">
+                           </DataItem>
+                           <DataItem DataType="Unsigned32" TextId="TOK_Dummy" UseAsBits="false">
+                           </DataItem>
+                        </Input>
+                     </IOData>
+                     <ModuleInfo>
+                        <Name TextId="TOK_Name_Module_5"/>
+                        <InfoText TextId="TOK_InfoText_Module_5"/>
+                     </ModuleInfo>
+                  </VirtualSubmoduleItem>
+               </VirtualSubmoduleList>
+            </ModuleItem>
+            <ModuleItem ID="IDM_6" ModuleIdentNumber="0x00001006">
+               <ModuleInfo>
+                  <Name TextId="TOK_Name_Module_6"/>
+                  <InfoText TextId="TOK_InfoText_Module_6"/>
+                  <HardwareRelease Value="1.0"/>
+                  <SoftwareRelease Value="1.0"/>
+               </ModuleInfo>
+               <VirtualSubmoduleList>
+                  <VirtualSubmoduleItem ID="IDSM_6" SubmoduleIdentNumber="0x00002006" MayIssueProcessAlarm="false">
+                     <IOData>
+                        <Input Consistency="All items consistency">
+                           <DataItem DataType="OctetString" Length="100" TextId="TOK_Dummy" UseAsBits="false">
+                           </DataItem>
+                        </Input>
+                     </IOData>
+                     <ModuleInfo>
+                        <Name TextId="TOK_Name_Module_6"/>
+                        <InfoText TextId="TOK_InfoText_Module_6"/>
+                     </ModuleInfo>
+                  </VirtualSubmoduleItem>
+               </VirtualSubmoduleList>
+            </ModuleItem>
+            <ModuleItem ID="IDM_7" ModuleIdentNumber="0x00001007">
+               <ModuleInfo>
+                  <Name TextId="TOK_Name_Module_7"/>
+                  <InfoText TextId="TOK_InfoText_Module_7"/>
+                  <HardwareRelease Value="1.0"/>
+                  <SoftwareRelease Value="1.0"/>
+               </ModuleInfo>
+               <VirtualSubmoduleList>
+                  <VirtualSubmoduleItem ID="IDSM_7" SubmoduleIdentNumber="0x00002007" MayIssueProcessAlarm="false">
+                     <IOData>
+                        <Output Consistency="All items consistency">
+                           <DataItem DataType="Unsigned64" TextId="TOK_Dummy" UseAsBits="false">
+                           </DataItem>
+                        </Output>
+                     </IOData>
+                     <ModuleInfo>
+                        <Name TextId="TOK_Name_Module_7"/>
+                        <InfoText TextId="TOK_InfoText_Module_7"/>
+                     </ModuleInfo>
+                  </VirtualSubmoduleItem>
+               </VirtualSubmoduleList>
+            </ModuleItem>
+            <ModuleItem ID="IDM_8" ModuleIdentNumber="0x00001008">
+               <ModuleInfo>
+                  <Name TextId="TOK_Name_Module_8"/>
+                  <InfoText TextId="TOK_InfoText_Module_8"/>
+                  <HardwareRelease Value="1.0"/>
+                  <SoftwareRelease Value="1.0"/>
+               </ModuleInfo>
+               <VirtualSubmoduleList>
+                  <VirtualSubmoduleItem ID="IDSM_8" SubmoduleIdentNumber="0x00002008" MayIssueProcessAlarm="false">
+                     <IOData>
+                        <Output Consistency="All items consistency">
+                           <DataItem DataType="Unsigned32" TextId="TOK_Dummy" UseAsBits="false">
+                           </DataItem>
+                           <DataItem DataType="Unsigned32" TextId="TOK_Dummy" UseAsBits="false">
+                           </DataItem>
+                        </Output>
+                     </IOData>
+                     <ModuleInfo>
+                        <Name TextId="TOK_Name_Module_8"/>
+                        <InfoText TextId="TOK_InfoText_Module_8"/>
+                     </ModuleInfo>
+                  </VirtualSubmoduleItem>
+               </VirtualSubmoduleList>
+            </ModuleItem>
+            <ModuleItem ID="IDM_9" ModuleIdentNumber="0x00001009">
+               <ModuleInfo>
+                  <Name TextId="TOK_Name_Module_9"/>
+                  <InfoText TextId="TOK_InfoText_Module_9"/>
+                  <HardwareRelease Value="1.0"/>
+                  <SoftwareRelease Value="1.0"/>
+               </ModuleInfo>
+               <VirtualSubmoduleList>
+                  <VirtualSubmoduleItem ID="IDSM_9" SubmoduleIdentNumber="0x00002009" MayIssueProcessAlarm="false">
+                     <IOData>
+                        <Output Consistency="All items consistency">
+                           <DataItem DataType="Unsigned32" TextId="TOK_Dummy" UseAsBits="false">
+                           </DataItem>
+                           <DataItem DataType="Unsigned32" TextId="TOK_Dummy" UseAsBits="false">
+                           </DataItem>
+                        </Output>
+                     </IOData>
+                     <ModuleInfo>
+                        <Name TextId="TOK_Name_Module_9"/>
+                        <InfoText TextId="TOK_InfoText_Module_9"/>
+                     </ModuleInfo>
+                  </VirtualSubmoduleItem>
+               </VirtualSubmoduleList>
+            </ModuleItem>
+            <ModuleItem ID="IDM_10" ModuleIdentNumber="0x0000100A">
+               <ModuleInfo>
+                  <Name TextId="TOK_Name_Module_10"/>
+                  <InfoText TextId="TOK_InfoText_Module_10"/>
+                  <HardwareRelease Value="1.0"/>
+                  <SoftwareRelease Value="1.0"/>
+               </ModuleInfo>
+               <VirtualSubmoduleList>
+                  <VirtualSubmoduleItem ID="IDSM_10" SubmoduleIdentNumber="0x0000200A" MayIssueProcessAlarm="false">
+                     <IOData>
+                        <Output Consistency="All items consistency">
+                           <DataItem DataType="OctetString" Length="100" TextId="TOK_Dummy" UseAsBits="false">
+                           </DataItem>
+                        </Output>
+                     </IOData>
+                     <ModuleInfo>
+                        <Name TextId="TOK_Name_Module_10"/>
+                        <InfoText TextId="TOK_InfoText_Module_10"/>
+                     </ModuleInfo>
+                  </VirtualSubmoduleItem>
+               </VirtualSubmoduleList>
+            </ModuleItem>
+            <ModuleItem ID="IDM_11" ModuleIdentNumber="0x0000100B">
+               <ModuleInfo>
+                  <Name TextId="TOK_Name_Module_11"/>
+                  <InfoText TextId="TOK_InfoText_Module_11"/>
+                  <HardwareRelease Value="1.0"/>
+                  <SoftwareRelease Value="1.0"/>
+               </ModuleInfo>
+               <VirtualSubmoduleList>
+                  <VirtualSubmoduleItem ID="IDSM_11" SubmoduleIdentNumber="0x0000200B" MayIssueProcessAlarm="false">
+                     <IOData>
+                        <Input Consistency="All items consistency">
+                           <DataItem DataType="Unsigned32"  TextId="TOK_Dummy" UseAsBits="false">
+                           </DataItem>
+                        </Input>
+                     </IOData>
+                     <ModuleInfo>
+                        <Name TextId="TOK_Name_Module_11"/>
+                        <InfoText TextId="TOK_InfoText_Module_11"/>
+                     </ModuleInfo>
+                  </VirtualSubmoduleItem>
+               </VirtualSubmoduleList>
+            </ModuleItem>
+             <ModuleItem ID="IDM_12" ModuleIdentNumber="0x0000100C">
+               <ModuleInfo>
+                  <Name TextId="TOK_Name_Module_12"/>
+                  <InfoText TextId="TOK_InfoText_Module_12"/>
+                  <HardwareRelease Value="1.0"/>
+                  <SoftwareRelease Value="1.0"/>
+               </ModuleInfo>
+               <VirtualSubmoduleList>
+                  <VirtualSubmoduleItem ID="IDSM_12" SubmoduleIdentNumber="0x0000200C" MayIssueProcessAlarm="false">
+                     <IOData>
+                        <Output Consistency="All items consistency">
+                           <DataItem DataType="Unsigned32"  TextId="TOK_Dummy" UseAsBits="false">
+                           </DataItem>
+                        </Output>
+                     </IOData>
+                     <ModuleInfo>
+                        <Name TextId="TOK_Name_Module_12"/>
+                        <InfoText TextId="TOK_InfoText_Module_12"/>
+                     </ModuleInfo>
+                  </VirtualSubmoduleItem>
+               </VirtualSubmoduleList>
+            </ModuleItem>
+         </ModuleList>
+         <LogBookEntryList>
+            <LogBookEntryItem Status="2130510">
+               <!--Custom log book entry for sample application-->
+               <!--Error code 0x20  Error decode 0x82  Error code 1 0x4E-->
+               <ErrorCode2Value>
+                  <Name TextId="IDT_CUSTOM_LOGBOOK_1"/>
+               </ErrorCode2Value>
+            </LogBookEntryItem>
+         </LogBookEntryList>
+         <GraphicsList>
+            <GraphicItem ID="RT-LabsStackImage" GraphicFile="GSDML-RT-LABS-STACK" />
+         </GraphicsList>
+         <ExternalTextList>
+            <PrimaryLanguage>
+               <Text TextId="IDT_INFO_Device" Value="https://github.com/rtlabs-com/p-net"/>
+               <Text TextId="IDT_MODULE_NAME_DAP1" Value="P-Net LAN9662 Sample"/>
+               <Text TextId="IDT_INFO_DAP1" Value="Profinet LAN9662 sample https://github.com/rtlabs-com/p-net"/>
+               <Text TextId="IDT_CUSTOM_DIAG_1" Value="Custom diagnosis in USI format"/>
+               <Text TextId="IDT_CUSTOM_DIAG_1_VALUE" Value="Custom diagnosis value"/>
+               <Text TextId="IDT_CUSTOM_LOGBOOK_1" Value="Custom Logbook entry"/>
+
+               <Text TextId="IDT_NAME_IS" Value="X1"/>
+               <Text TextId="IDT_NAME_PS1" Value="X1 P1"/>
+               <Text TextId="IDT_NAME_PS2" Value="X1 P2"/>
+
+               <!--module names-->
+               <Text TextId="TOK_Name_Module_1" Value="DI 1x8"/>
+               <Text TextId="TOK_Name_Module_2" Value="DO 1x8"/>
+               <Text TextId="TOK_Name_Module_3" Value="DI 1x64"/>
+               <Text TextId="TOK_Name_Module_4" Value="DI 2x32a"/>
+               <Text TextId="TOK_Name_Module_5" Value="DI 2x32b"/>
+               <Text TextId="TOK_Name_Module_6" Value="DI 1x800"/>
+               <Text TextId="TOK_Name_Module_7" Value="DO 1x64"/>
+               <Text TextId="TOK_Name_Module_8" Value="DO 2x32a"/>
+               <Text TextId="TOK_Name_Module_9" Value="DO 2x32b"/>
+               <Text TextId="TOK_Name_Module_10" Value="DO 1x800"/>
+               <Text TextId="TOK_Name_Module_11" Value="DI Port A"/>
+               <Text TextId="TOK_Name_Module_12" Value="DO Port A"/>
+
+               <!--module info -->
+               <Text TextId="TOK_InfoText_Module_1" Value="Digital In 1x8"/>
+               <Text TextId="TOK_InfoText_Module_2" Value="Digital Out 1x8"/>
+               <Text TextId="TOK_InfoText_Module_3" Value="Digital In 1x64"/>
+               <Text TextId="TOK_InfoText_Module_4" Value="Digital In 2x32"/>
+               <Text TextId="TOK_InfoText_Module_5" Value="Digital In 2x32"/>
+               <Text TextId="TOK_InfoText_Module_6" Value="Digital In 1x800"/>
+               <Text TextId="TOK_InfoText_Module_7" Value="Digital Out 1x64"/>
+               <Text TextId="TOK_InfoText_Module_8" Value="Digital Out 2x32"/>
+               <Text TextId="TOK_InfoText_Module_9" Value="Digital Out 2x32"/>
+               <Text TextId="TOK_InfoText_Module_10" Value="Digital Out 1x800"/>
+               <Text TextId="TOK_InfoText_Module_11" Value="Digital In Port A"/>
+               <Text TextId="TOK_InfoText_Module_12" Value="Digital Out Port A"/>
+
+               <!--dataitem name-->
+               <Text TextId="TOK_Dummy" Value="Dummy"/>
+
+            </PrimaryLanguage>
+         </ExternalTextList>
+      </ApplicationProcess>
+   </ProfileBody>
+</ISO15745Profile>
