@@ -620,7 +620,8 @@ app_subslot_t * app_utils_plug_submodule (
          p_subslot->data_cfg = *p_data_cfg;
          p_subslot->cyclic_callback = cyclic_callback;
          p_subslot->tag = tag;
-         p_subslot->iocs = 0;
+         p_subslot->indata_iocs = PNET_IOXS_BAD;
+         p_subslot->outdata_iops = PNET_IOXS_BAD;
          return p_subslot;
       }
    }
