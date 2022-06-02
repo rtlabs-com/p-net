@@ -84,8 +84,12 @@ typedef struct app_subslot
    uint32_t submodule_id;
    const char * submodule_name;
    pnet_data_cfg_t data_cfg;
-   uint8_t iocs;
-   uint8_t iops;
+
+   /** Status indicator from PLC */
+   uint8_t indata_iocs;
+
+   /** Status indicator from PLC */
+   uint8_t outdata_iops;
 
    /** Callback for cyclic input- or output data, or NULL if not implemented */
    app_utils_cyclic_callback cyclic_callback;
@@ -137,7 +141,7 @@ void app_utils_ip_to_string (pnal_ipaddr_t ip, char * outputstring);
 const char * app_utils_submod_dir_to_string (pnet_submodule_dir_t direction);
 
 /**
- * Get string description of pnio producer or consumer status
+ * Get string description of PNIO producer or consumer status
  * @param ioxs               In:    Producer or consumer status (IOPS/IOCS)
  * @return String represention of ioxs (IOPS/IOCS)
  */
