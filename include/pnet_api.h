@@ -1473,6 +1473,10 @@ PNET_EXPORT int pnet_input_set_data_and_iops (
  * This function is used to retrieve the consumer status (IOCS) value of
  * an input sub-slot (data sent to the controller) back from the controller.
  *
+ * Note that this function will reset the \a p_new_flag flag that is available
+ * in the \a pnet_output_get_data_and_iops() function. See that documentation
+ * entry for details.
+ *
  * @param net              InOut: The p-net stack instance
  * @param api              In:    The API.
  * @param slot             In:    The slot.
@@ -1505,7 +1509,10 @@ PNET_EXPORT int pnet_input_get_iocs (
  * your last call to this function (regardless of the slot/subslot arguments)
  * then the flag \a p_new_flag is set to true, else it is set to false.
  * Note that this does not check whether the data content has changed from
- * any previous frame.
+ * any previous frame. This flag will be reset also by using
+ * \a pnet_input_get_iocs(), so it is recommended to execute
+ * \a pnet_output_get_data_and_iops() first if you are to execute both
+ * (and the value of the flag is important to your application).
  *
  * Note that the latest data and IOPS values are copied to the application
  * buffers regardless of the value of \a p_new_flag.
