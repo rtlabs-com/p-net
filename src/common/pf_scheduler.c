@@ -273,6 +273,7 @@ void pf_scheduler_init (pnet_t * net, uint32_t tick_interval)
 
    net->scheduler_timeout_first = PF_MAX_TIMEOUTS; /* Nothing in queue */
    net->scheduler_timeout_free = PF_MAX_TIMEOUTS;  /* Nothing in queue. */
+   net->scheduler_previous_time = os_get_current_time_us();
 
    if (net->scheduler_timeout_mutex == NULL)
    {
@@ -444,20 +445,40 @@ void pf_scheduler_remove (pnet_t * net, pf_scheduler_handle_t * handle)
 void pf_scheduler_tick (pnet_t * net)
 {
    uint32_t ix;
+   uint32_t when;
    pf_scheduler_timeout_ftn_t ftn;
    void * arg;
    uint32_t pf_current_time = os_get_current_time_us();
+   uint32_t pf_previous_time = net->scheduler_previous_time;
+   net->scheduler_previous_time = pf_current_time;
 
    os_mutex_lock (net->scheduler_timeout_mutex);
 
    /* Send event to all expired delay entries. */
-   while ((net->scheduler_timeout_first < PF_MAX_TIMEOUTS) &&
-          ((int32_t) (
-              pf_current_time -
-              net->scheduler_timeouts[net->scheduler_timeout_first].when) >= 0))
+   while (net->scheduler_timeout_first < PF_MAX_TIMEOUTS)
    {
-      /* Unlink from busy list */
       ix = net->scheduler_timeout_first;
+      when = net->scheduler_timeouts[ix].when;
+
+      /* Exit loop if not yet expired */
+      if (pf_current_time < when) {
+         if (pf_previous_time <= pf_current_time) {
+            /* Most common case; |--------PCW--------| */
+            break;
+         } else if (pf_previous_time > when) {
+            /* Overflow of both current time and when; |CW----------------P| */
+            break;
+         }
+         /* Else overflow of current time; |C-----------------PW| */
+      } else if (
+         pf_current_time > when &&
+         pf_previous_time > when &&
+         pf_previous_time <= pf_current_time) {
+         /* Overflow of when; |W-----------------PC| */
+         break;
+      }
+
+      /* Unlink from busy list */
       pf_scheduler_unlink (net, &net->scheduler_timeout_first, ix);
 
       ftn = net->scheduler_timeouts[ix].cb;

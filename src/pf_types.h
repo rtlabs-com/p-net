@@ -2891,6 +2891,7 @@ struct pnet
    volatile uint32_t scheduler_timeout_free;
    os_mutex_t * scheduler_timeout_mutex;
    uint32_t scheduler_tick_interval; /* microseconds */
+   uint32_t scheduler_previous_time;
    bool cmdev_initialized;
    pf_device_t cmdev_device;                     /* APIs and diag items */
    pf_cmina_dcp_ase_t cmina_nonvolatile_dcp_ase; /* Reflects what is/should be
