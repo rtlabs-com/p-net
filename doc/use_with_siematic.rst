@@ -7,24 +7,6 @@ This have been tested with:
 It uses a 24 V DC supply voltage.
 
 
-Using Siemens SinecPni (Primary Network Initialization)
--------------------------------------------------------
-This is a tool for configuration of Profinet network equipment. Use it
-to adjust the IP address of your PLC.
-
-Download the program from the Siemens homepage, and unzip the file.
-Start the program by double clicking the SinecPni executable.
-
-To be able to change IP address on a Siemens PLC, make sure that the
-"mode switch" on the front panel is in the "STOP" position.
-
-Click the “Settings” tab, and enable “PROFINET devices” for “Scan Protocol”, and
-click “Save”. On the “Device list” tab, click “Start network scan”.
-Select the “S7-1500” line, and click “Configure Device”. Adjust the IP address
-to ``192.168.0.100`` and netmask to ``255.255.255.0``.
-Click “Load” to store the settings.
-
-
 Install Siemens TIA on a Windows PC
 -----------------------------------
 Install TIA (SIMATIC STEP 7 and WinCC) V15.1
@@ -94,7 +76,7 @@ Connect to the Siemens PLC directly via an Ethernet cable to your laptop. For
 the Simatic S7-1200 PLC you can use any of the two X1 RJ45 connectors. Your
 laptop should have a manual IP address in the same subnet range as the PLC
 (first three groups in IP address should be the same). Changing the subnet
-mask size does not seems to have an impact.
+mask size does not seem to have an impact.
 
 In the project view, in the left menu select the PLC and the subitem "Device
 configuration". In the "Properties" tab, use the "General" sub-tab. Select
@@ -211,7 +193,7 @@ In the "Static" section, add:
 In the program part of the window, insert this::
 
    #oscillator_cycles := #oscillator_cycles + 1;
-   IF #oscillator_cycles > 2000 THEN
+   IF #oscillator_cycles > 400 THEN
       #oscillator_cycles := 0;
       #oscillator_state := NOT #oscillator_state;
    END_IF;
@@ -626,6 +608,24 @@ In the "Main [OB1]" window, drag the "RecReader" block to the Network1 line.
 Accept the name of the datablock.
 
 The result is the same as above.
+
+
+Using Siemens SinecPni (Primary Network Initialization)
+-------------------------------------------------------
+This is a tool for configuration of Profinet network equipment. Use it
+to adjust the IP address of your PLC.
+
+Download the program from the Siemens homepage, and unzip the file.
+Start the program by double clicking the SinecPni executable.
+
+To be able to change IP address on a Siemens PLC, make sure that the
+"mode switch" on the front panel is in the "STOP" position.
+
+Click the “Settings” tab, and enable “PROFINET devices” for “Scan Protocol”, and
+click “Save”. On the “Device list” tab, click “Start network scan”.
+Select the “S7-1500” line, and click “Configure Device”. Adjust the IP address
+to ``192.168.0.100`` and netmask to ``255.255.255.0``.
+Click “Load” to store the settings.
 
 
 Setting up a Simatic HMI

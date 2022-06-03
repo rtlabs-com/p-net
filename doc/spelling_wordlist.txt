@@ -9,6 +9,7 @@ Avahi
 BaseT
 BaseTX
 BaseTXFD
+baudrate
 Bittwist
 Bonjour
 Bool
@@ -18,6 +19,7 @@ breakpoint
 bsp
 bss
 Buildroot
+bumpless
 ccmake
 CControl
 ccontrol
@@ -48,6 +50,7 @@ dropdown
 dut
 DWord
 Einstellung
+endian
 Endian
 endianness
 enums
@@ -58,6 +61,7 @@ eXtended
 Fieldbus
 fieldbuses
 FilterData
+Gbit
 GByte
 gcc
 gdb
@@ -112,6 +116,7 @@ lwip
 lwIP
 makefiles
 Mbit
+MByte
 MIB
 mib
 microcontroller

@@ -1090,12 +1090,12 @@ typedef struct pf_scheduler_timeouts
        For debugging only */
    bool in_use;
 
-   uint32_t when; /* absolute time of timeout */
-   uint32_t next; /* Next in list */
-   uint32_t prev; /* Previous in list */
+   uint32_t when; /** Absolute time of timeout, in microseconds */
+   uint32_t next; /** Next in list. PF_MAX_TIMEOUTS if none. */
+   uint32_t prev; /** Previous in list. PF_MAX_TIMEOUTS if none.  */
 
-   pf_scheduler_timeout_ftn_t cb; /* Call-back to call on timeout */
-   void * arg;                    /* call-back argument */
+   pf_scheduler_timeout_ftn_t cb; /** Call-back to call on timeout */
+   void * arg;                    /** Call-back argument */
 } pf_scheduler_timeouts_t;
 
 typedef struct pf_scheduler_handle
@@ -2840,7 +2840,9 @@ typedef struct pf_lldp_port
 /** Network interface */
 typedef struct pf_netif
 {
-   char name[PNET_INTERFACE_NAME_MAX_SIZE]; /**< Terminated string */
+   /** Terminated string */
+   char name[PNET_INTERFACE_NAME_MAX_SIZE];
+
    pnet_ethaddr_t mac_address;
    pnal_eth_handle_t * handle;
    bool previous_is_link_up;
@@ -2874,29 +2876,55 @@ struct pnet
 {
    uint32_t pnal_buf_alloc_cnt;
    bool global_alarm_enable;
+
+   /********** CPM **********/
+
    os_mutex_t * cpm_buf_lock;
    atomic_int cpm_instance_cnt;
+
+   /********** PPM **********/
+
    os_mutex_t * ppm_buf_lock;
    atomic_int ppm_instance_cnt;
+
+   /********** DCP **********/
+
    uint16_t dcp_global_block_qualifier;
-   pnet_ethaddr_t dcp_sam; /* Source address (MAC) of current DCP remote peer */
-   bool dcp_delayed_response_waiting; /* A response to DCP IDENTIFY is waiting
-                                         to be sent */
+
+   /** Source address (MAC) of current DCP remote peer */
+   pnet_ethaddr_t dcp_sam;
+
+   /** A response to DCP IDENTIFY is waiting to be sent */
+   bool dcp_delayed_response_waiting;
+
    pf_scheduler_handle_t dcp_led_timeout;
    pf_scheduler_handle_t dcp_sam_timeout;
    pf_scheduler_handle_t dcp_identresp_timeout;
+
+   /********** Profinet frame ID mapping **********/
+
    pf_eth_frame_id_map_t eth_id_map[PF_ETH_MAX_MAP];
    volatile pf_scheduler_timeouts_t scheduler_timeouts[PF_MAX_TIMEOUTS];
    volatile uint32_t scheduler_timeout_first;
    volatile uint32_t scheduler_timeout_free;
    os_mutex_t * scheduler_timeout_mutex;
    uint32_t scheduler_tick_interval; /* microseconds */
+
+   /********** CMDEV **********/
+
    bool cmdev_initialized;
-   pf_device_t cmdev_device;                     /* APIs and diag items */
-   pf_cmina_dcp_ase_t cmina_nonvolatile_dcp_ase; /* Reflects what is/should be
-                                                    stored in nvm */
-   pf_cmina_dcp_ase_t cmina_current_dcp_ase;     /* Reflects current settings
-                                                    (possibly not yet committed) */
+
+   /** APIs and diag items */
+   pf_device_t cmdev_device;
+
+   /********** CMINA **********/
+
+   /** Reflects what is/should be stored in NVM */
+   pf_cmina_dcp_ase_t cmina_nonvolatile_dcp_ase;
+
+   /** Reflects current settings (possibly not yet committed) */
+   pf_cmina_dcp_ase_t cmina_current_dcp_ase;
+
    os_mutex_t * cmina_mutex;
    pf_cmina_state_values_t cmina_state;
    uint8_t cmina_error_decode;
@@ -2905,21 +2933,36 @@ struct pnet
    pf_scheduler_handle_t cmina_hello_timeout;
 
    bool cmina_commit_ip_suite;
+
+   /********** CMRPC **********/
+
    os_mutex_t * p_cmrpc_rpc_mutex;
    uint32_t cmrpc_session_number;
-   pf_ar_t cmrpc_ar[PNET_MAX_AR];                        /* ARs */
-   pf_session_info_t cmrpc_session_info[PF_MAX_SESSION]; /* Sessions */
-   int cmrpc_rpcreq_socket; /* Main socket for incoming requests */
+
+   /** ARs */
+   pf_ar_t cmrpc_ar[PNET_MAX_AR];
+
+   /** Sessions */
+   pf_session_info_t cmrpc_session_info[PF_MAX_SESSION];
+
+   /** Main socket for incoming requests */
+   int cmrpc_rpcreq_socket;
+
    uint8_t cmrpc_dcerpc_input_frame[PF_FRAME_BUFFER_SIZE];
    uint8_t cmrpc_dcerpc_output_frame[PF_FRAME_BUFFER_SIZE];
-   const pnet_cfg_t * p_fspm_default_cfg; /* Default configuration from user.
-                                             Used at factory reset */
-   pnet_cfg_t fspm_cfg; /* Configuration from user. Might be updated by stack
-                           during runtime */
+
+   /********** FSPM **********/
+
+   /** Default configuration from user. Used at factory reset */
+   const pnet_cfg_t * p_fspm_default_cfg;
+
+   /** Configuration from user. Might be updated by stack during runtime */
+   pnet_cfg_t fspm_cfg;
+
    pf_log_book_t fspm_log_book;
    os_mutex_t * fspm_log_book_mutex;
 
-   /* Last time pnet_handle_periodic() was invoked */
+   /** Last \a time pnet_handle_periodic() was invoked */
    uint32_t timestamp_handle_periodic_us;
 
    /* Mutex for protecting access to writable I&M data.
@@ -2928,6 +2971,8 @@ struct pnet
     * its own thread context.
     */
    os_mutex_t * fspm_im_mutex;
+
+   /********** LLDP **********/
 
    /* LLDP mutex
     *
@@ -2967,7 +3012,8 @@ struct pnet
    const pf_ppm_driver_t * ppm_drv;
    const pf_cpm_driver_t * cpm_drv;
 
-   pf_drv_t * hwo_drv; /* Handle to HW offload driver. NULL if not used */
+   /** Handle to HW offload driver. NULL if not used */
+   pf_drv_t * hwo_drv;
 
 #if PNET_OPTION_SNMP
    pf_snmp_data_t snmp_data;

@@ -3,6 +3,10 @@ Creating GSD (GSDML) files
 A GSD (General Station Description) file is an XML file describing a
 Profinet IO-Device. The XML-based language is called GSDML (GSD Markup Language).
 
+A single GSDML file describes a single VendorID and ProductID combination.
+A family of devices can be described in the same file; Then they will share
+the ProductID but have different DAP (head module) ID values.
+
 For Profinet members, the "Profinet GSD Checker" tool is available for
 download. It contains GSD example files showing different aspects of the file
 format.
@@ -125,14 +129,16 @@ The GSD files are structured like::
           +--ChannelDiagList
           +--ChannelProcessAlarmList
           +--UnitDiagTypeList
+          +--GraphicsList
           +--ExternalTextList
 
+The encoding is given in the first line of the XML file. Use ``utf-8`` if using non-ASCII characters in any of the text fields.
 Do not change the ``<ProfileHeader>`` contents.
 
 In the ``<DeviceIdentity>`` adjust the attributes ``VendorID``, ``DeviceID``.
 Adjust the ``Value`` in ``<VendorName>``.
-In the ``<Family>`` adjust the attributes for ``MainFamily`` (typically "I/O")
-and ``ProductFamily``.
+In the ``<Family>`` adjust the attributes for ``MainFamily`` (typically "I/O", should be from the list of allowed values)
+and ``ProductFamily`` which is vendor specific.
 
 Those values are for example used by the engineering tool to display the device
 in the hardware catalog. The catalog is typically sorted by
@@ -192,18 +198,22 @@ DeviceAccessPointList element hierarchy::
            |           +--Ref
            |
            +--SystemDefinedSubmoduleList
+           |  |
+           |  +--InterfaceSubmoduleItem
+           |  |  |
+           |  |  +--ApplicationRelations
+           |  |     |
+           |  |     +--TimingProperties
+           |  |
+           |  +--PortSubmoduleItem
+           |     |
+           |     +--MAUTypeList
+           |        |
+           |        +--MAUTypeItem
+           |
+           +--Graphics
               |
-              +--InterfaceSubmoduleItem
-              |  |
-              |  +--ApplicationRelations
-              |     |
-              |     +--TimingProperties
-              |
-              +--PortSubmoduleItem
-                 |
-                 +--MAUTypeList
-                    |
-                    +--MAUTypeItem
+              +--GraphicItemRef
 
 The ``<DeviceAccessPointItem>`` element has the attributes:
 
@@ -258,8 +268,8 @@ element has the attributes ``SubslotNumber`` and ``TextId``.
 
 The ``<IOConfigData>`` element has the attributes:
 
-* ``MaxInputLength="24"`` Unsigned16.
-* ``MaxOutputLength="24"`` Unsigned16.
+* ``MaxInputLength="24"`` Unsigned16, valid 0..1440
+* ``MaxOutputLength="24"`` Unsigned16, valid 0..1440
 * ``MaxDataLength="40"`` Defaults to MaxInputLength + MaxOutputLength. Unsigned16.
 
 The values are in bytes and are for all submodules. For details on how to
@@ -285,6 +295,7 @@ One specific detail for a DAP virtual submodule is that it has the
 ``Writeable_IM_Records="1 2 3"`` attribute, which informs about writable
 Identification & Maintenance (I&M) records. Note that record 0 and 5 are
 read only, so they should never appear in this list.
+You must support writing to I&M1-3 for at least one of the DAP submodules.
 
 Other special submodules for DAP modules are ``<InterfaceSubmoduleItem>`` and
 ``<PortSubmoduleItem>``, both subelements to ``<SystemDefinedSubmoduleList>``.
@@ -324,13 +335,13 @@ it is possible to set the attributes ``NumberOfAdditionalInputCR``,
 ``NumberOfAdditionalOutputCR``, ``NumberOfAdditionalMulticastProviderCR`` and
 ``NumberOfMulticastConsumerCR``. Those attributes are not supported by p-net.
 
-Use the ``<TimingProperties>`` element to define the sending of cyclic IO data.
+The ``<TimingProperties>`` element describes the sending of cyclic IO data.
 The ``SendClock`` attribute contains a list of all supported send cycle times,
 in units of 31.25 us. Defaults to "32", which corresponds to 1 ms. Note that the
 list must contain the value ``32``.
-(See also the ``MinDeviceInterval`` attribute in another element).
 The attribute ``ReductionRatio`` defines how much the sending can be slowed down,
-and defaults to "1 2 4 8 16 32 64 128 256 512".
+and it seems that it must be “1 2 4 8 16 32 64 128 256 512”.
+The actual speed of the device should be set by the ``MinDeviceInterval`` attribute in another element.
 
 Ethernet port properties are descried using the ``<PortSubmoduleItem>``, which
 has these attributes:
@@ -346,6 +357,10 @@ Use an ``<MAUTypeItem>`` element to describe the Medium Attachment Unit type,
 which can be radio (0), copper at 100 Mbit/s (16), copper at 1000 Mbit/s (30)
 or fiber optics etc.
 
+With the ``<GraphicItemRef>`` element it is possible to add a logo or other symbol
+to your device. It will appear in the engineering tool. Use a file in the .BMP file format.
+The attribute ``Type`` should typically be ``DeviceSymbol``, and the ``GraphicItemTarget``
+is a reference to the file name given in the ``<GraphicsList>`` (see below).
 
 Additional ports
 ----------------
@@ -636,8 +651,27 @@ ExternalTextList element hierarchy::
 Within each ``<Text>`` element, the attributes ``TextId`` and ``Value``
 are used to store the information.
 
-Only ``<PrimaryLanguage>`` is mandatory. If ``<Language>`` is given, the actual
+Only ``<PrimaryLanguage>`` is mandatory, and corresponds to English.
+If ``<Language>`` is given, the actual
 language is set by for example a ``xml:lang="fr"`` attribute.
+
+This is how the different text fields are used in engineering tools:
+
+======================= ===================================================================================================================
+Item                    TIA portal and Codesys
+======================= ===================================================================================================================
+DeviceIdentity infotext Unclear?
+DAP module name         Device name in hardware catalog, on icon in network view and in Network overview table. Typically some model name.
+DAP module infotext     Device detailed description in hardware catalog. Use up to a few hundred characters.
+DAP submodule name      Codesys show this in the tree on the Device/IOxS page
+DAP submodule infotext  Unclear?
+InterfaceSubmodule      Interface name
+PortSubmodule           Port name
+Module name             List of plugged modules in Device Overview
+Module infotext         Catalog information in Properties -> General
+Submodule name          Codesys show this in the tree on the Device/IOxS page
+Submodule infotext      Unclear?
+======================= ===================================================================================================================
 
 
 Details on diagnosis
@@ -765,3 +799,20 @@ alarms.
 An extension to system defined process alarms is created by the element
 ``<SystemDefinedChannelProcessAlarmItem>``. Profiles can define process alarms
 using the ``<ProfileChannelProcessAlarmItem>`` element.
+
+
+Details on the graphics list
+---------------------------------
+File names for graphic items are mapped to IDs here.
+
+GraphicsList element hierarchy::
+
+    GraphicsList
+    |
+    +--GraphicItem
+
+
+Within each ``<GraphicItem>`` element, the attributes ``ID`` and ``GraphicFile``
+are used to store the information.
+
+The ``GraphicFile`` is the filename without the BMP file extension.

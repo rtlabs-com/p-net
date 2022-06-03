@@ -92,7 +92,7 @@ TEST_F (PortUnitTest, PortCheckIterator)
    EXPECT_EQ (pf_port_get_next (&port_iterator), 0);
    EXPECT_EQ (pf_port_get_next (&port_iterator), 0);
 
-   /* Verify behaviour if the interator for unknown reason has
+   /* Verify behaviour if the iterator for unknown reason has
     * value that is out of port range */
    port_iterator.next_port = 10;
    EXPECT_EQ (pf_port_get_next (&port_iterator), 0);
@@ -144,7 +144,7 @@ TEST_F (PortUnitTest, PortCheckIteratorRepeatCyclic)
    EXPECT_EQ (pf_port_get_next_repeat_cyclic (&port_iterator), 2);
    EXPECT_EQ (pf_port_get_next_repeat_cyclic (&port_iterator), 3);
 
-   /* Verify behaviour if the interator for unknown reason has
+   /* Verify behaviour if the iterator for unknown reason has
     * value that is out of port range */
    port_iterator.next_port = 10;
    EXPECT_EQ (pf_port_get_next_repeat_cyclic (&port_iterator), 1);

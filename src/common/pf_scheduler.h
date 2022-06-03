@@ -26,7 +26,8 @@ extern "C" {
  * Initialize the scheduler.
  * @param net              InOut: The p-net stack instance
  * @param tick_interval    In:    System calls the tick function at these
- * intervals, in microseconds.
+ *                                intervals, in microseconds. Must be
+ *                                larger than 0.
  */
 void pf_scheduler_init (pnet_t * net, uint32_t tick_interval);
 

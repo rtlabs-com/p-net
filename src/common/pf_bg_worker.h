@@ -25,11 +25,17 @@ extern "C" {
  */
 typedef enum pf_bg_job
 {
-   PF_BGJOB_UPDATE_PORTS_STATUS = 0, /**< Update status for all ports  */
-   PF_BGJOB_SAVE_ASE_NVM_DATA,       /**< Save non volatile ASE data to file */
-   PF_BGJOB_SAVE_IM_NVM_DATA,        /**< Save non volatile IM data to file */
-   PF_BGJOB_SAVE_PDPORT_NVM_DATA,    /**< Save non volatile PDPort data to file
-                                      */
+   /** Update status for all ports  */
+   PF_BGJOB_UPDATE_PORTS_STATUS = 0,
+
+   /** Save non volatile ASE data to file */
+   PF_BGJOB_SAVE_ASE_NVM_DATA,
+
+   /** Save non volatile IM data to file */
+   PF_BGJOB_SAVE_IM_NVM_DATA,
+
+   /** Save non volatile PDPort data to file */
+   PF_BGJOB_SAVE_PDPORT_NVM_DATA,
 } pf_bg_job_t;
 
 /**

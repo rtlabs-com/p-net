@@ -113,6 +113,9 @@ Selected enums
 .. doxygenenum:: pnet_diag_ch_prop_type_values
 .. doxygenenum:: pnet_diag_ch_prop_dir_values
 .. doxygenenum:: pnet_diag_ch_prop_maint_values
+.. doxygenenum:: pnet_diag_ch_group_values
+.. doxygenenum:: pnet_im_supported_values
+.. doxygenenum:: pnal_eth_mau
 
 
 Selected structs

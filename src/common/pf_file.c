@@ -223,7 +223,7 @@ int pf_file_save (
    size_t size)
 {
    char path[PNET_MAX_FILE_FULLPATH_SIZE]; /**< Terminated string */
-   uint8_t versioning_buffer[8] = {0};     /* Two uint32_t */
+   uint8_t versioning_buffer[8] = {0};     /**< Two uint32_t */
    uint16_t pos = 0;
    int ret = 0;
    uint32_t start_time_us = 0;

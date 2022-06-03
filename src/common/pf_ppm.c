@@ -17,7 +17,7 @@
  * @file
  * @brief Implements the Cyclic Provider Protocol Machine (PPM)
  *
- * This handles cyclic sending of data (and IOPS). Initalizes transmit buffers.
+ * This handles cyclic sending of data (and IOPS). Initializes transmit buffers.
  *
  * One instance of PPM exist per CR (together with a CPM).
  *

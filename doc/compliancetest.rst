@@ -903,3 +903,9 @@ scenario, make sure that your alarm input queue can hold at least that number.
 If there are problems in test case Behavior scenario 10 regarding reading and
 writing via SNMP after power cycling, verify that there is proper connection to
 the SNMP daemon immediately at startup.
+
+If you get the error "Device did answer ping request although it shouldn't", the device is probably not powered
+off during the test as required. Make sure your device is not powered via some USB cable, for example.
+
+If the Alarm test case fails with the message "No valid Transport ACK on the Alarm ACK was received",
+then the Ethernet receieve task might have too low priority.
