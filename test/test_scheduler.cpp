@@ -135,6 +135,69 @@ TEST_F (SchedulerUnitTest, SchedulerSanitizeDelayTest)
    ASSERT_NEAR (result, 1000, margin);
 }
 
+TEST_F (SchedulerUnitTest, SchedulerIsTimeBeforeTest)
+{
+   /* Validate that the test case is compiled with enough timeouts */
+   ASSERT_GE (PF_MAX_TIMEOUTS, 6);
+
+   volatile pf_scheduler_data_t scheduler_data;
+   scheduler_data.mutex = NULL;
+
+   pf_scheduler_init (&scheduler_data, TEST_TICK_INTERVAL_US);
+
+   scheduler_data.timeouts[0].in_use = true;
+   scheduler_data.timeouts[0].name = "No_0";
+   scheduler_data.timeouts[0].when = 100;
+   scheduler_data.timeouts[0].prev = PF_MAX_TIMEOUTS;
+   scheduler_data.timeouts[0].next = 1;
+
+   scheduler_data.timeouts[1].in_use = true;
+   scheduler_data.timeouts[1].name = "No_1";
+   scheduler_data.timeouts[1].when = 200;
+   scheduler_data.timeouts[1].prev = 0;
+   scheduler_data.timeouts[1].next = 2;
+
+   scheduler_data.timeouts[2].in_use = true;
+   scheduler_data.timeouts[2].name = "No_2";
+   scheduler_data.timeouts[2].when = 300;
+   scheduler_data.timeouts[2].prev = 1;
+   scheduler_data.timeouts[2].next = 3;
+
+   scheduler_data.timeouts[3].in_use = true;
+   scheduler_data.timeouts[3].name = "No_3";
+   scheduler_data.timeouts[3].when = 300;
+   scheduler_data.timeouts[3].prev = 2;
+   scheduler_data.timeouts[3].next = 4;
+
+   scheduler_data.timeouts[4].in_use = true;
+   scheduler_data.timeouts[4].name = "No_4";
+   scheduler_data.timeouts[4].when = 400;
+   scheduler_data.timeouts[4].prev = 3;
+   scheduler_data.timeouts[4].next = 5;
+
+   scheduler_data.timeouts[5].in_use = true;
+   scheduler_data.timeouts[5].name = "No_5";
+   scheduler_data.timeouts[5].when = 500;
+   scheduler_data.timeouts[5].prev = 4;
+   scheduler_data.timeouts[5].next = PF_MAX_TIMEOUTS;
+
+   scheduler_data.busylist_head = 0;
+   scheduler_data.freelist_head = 6;
+
+   pf_scheduler_show (&scheduler_data, 50);
+
+   ASSERT_TRUE (pf_scheduler_is_time_before (&scheduler_data, 0, 1));
+   ASSERT_TRUE (pf_scheduler_is_time_before (&scheduler_data, 1, 2));
+   ASSERT_TRUE (pf_scheduler_is_time_before (&scheduler_data, 2, 3));
+   ASSERT_TRUE (pf_scheduler_is_time_before (&scheduler_data, 3, 4));
+   ASSERT_TRUE (pf_scheduler_is_time_before (&scheduler_data, 4, 5));
+
+   ASSERT_TRUE (pf_scheduler_is_time_before (&scheduler_data, 0, 0));
+
+   ASSERT_FALSE (pf_scheduler_is_time_before (&scheduler_data, 1, 0));
+   ASSERT_FALSE (pf_scheduler_is_time_before (&scheduler_data, 2, 1));
+}
+
 TEST_F (SchedulerTest, SchedulerAddRemoveInStack)
 {
    int ret;

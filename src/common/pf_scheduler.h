@@ -196,6 +196,11 @@ uint32_t pf_scheduler_sanitize_delay (
    uint32_t stack_cycle_time,
    bool schedule_half_tick_in_advance);
 
+bool pf_scheduler_is_time_before (
+   volatile pf_scheduler_data_t * scheduler_data,
+   uint32_t ix_a,
+   uint32_t ix_b);
+
 #ifdef __cplusplus
 }
 #endif

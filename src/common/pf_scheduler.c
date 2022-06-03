@@ -274,6 +274,27 @@ static void pf_scheduler_link_before (
    }
 }
 
+/**
+ * Check if timeout \a a is scheduled before timeout \a b.
+ *
+ *
+ * @param scheduler_data   InOut: Scheduler instance
+ * @param ix_a             In:    Index for timeout a
+ * @param ix_b             In:    Index for timeout b
+ * @return true if timeout a is scheduled before timeout b,
+ *         or if they are simultaneous.
+ */
+bool pf_scheduler_is_time_before (
+   volatile pf_scheduler_data_t * scheduler_data,
+   uint32_t ix_a,
+   uint32_t ix_b)
+{
+
+   return ((int32_t) (
+         scheduler_data->timeouts[ix_a].when -
+         scheduler_data->timeouts[ix_b].when)) <= 0;
+}
+
 /****************************** Public functions ***************************/
 
 void pf_scheduler_reset_handle (pf_scheduler_handle_t * handle)
@@ -407,10 +428,11 @@ int pf_scheduler_add (
          ix_free,
          PF_MAX_TIMEOUTS);
    }
-   else if (
-      ((int32_t) (
-         scheduler_data->timeouts[ix_free].when -
-         scheduler_data->timeouts[scheduler_data->busylist_head].when)) <= 0)
+   else if (pf_scheduler_is_time_before (
+               scheduler_data,
+               ix_free,
+               scheduler_data->busylist_head))
+
    {
       /* Put first in non-empty queue */
       pf_scheduler_link_before (
@@ -425,9 +447,7 @@ int pf_scheduler_add (
       ix_prev = scheduler_data->busylist_head;
       ix_this = scheduler_data->timeouts[scheduler_data->busylist_head].next;
       while ((ix_this < PF_MAX_TIMEOUTS) &&
-             (((int32_t) (
-                 scheduler_data->timeouts[ix_free].when -
-                 scheduler_data->timeouts[ix_this].when)) > 0))
+             pf_scheduler_is_time_before (scheduler_data, ix_this, ix_free))
       {
          ix_prev = ix_this;
          ix_this = scheduler_data->timeouts[ix_this].next;
