@@ -139,10 +139,10 @@ parameter.
 Forcing cyclic data values
 --------------------------
 To force an output value from the PLC, open the PLC_PRG window while online.
-Double-click on the value you would like to change, to open the "Prepare value" pop-up.
-Click the "Prepare a new value ..." radio button, and enter the new numerical value in the textbox.
-Click "OK". Right-click the value again, and select "Force all values ...".
-The new value is sent from the PLC to the IO-device. A red "F" symbol is shown.
+In the table on the top of the page, on the line you would like to force click the "Prepared value"
+until it shows "TRUE". Use the line "out_pin_LED" if running the sample application.
+Right-click on the line, and select "Force all values ...". The new value is sent from the PLC to the IO-device.
+A red `F` symbol is shown.
 To stop forcing the value, right-click it and select "Unforce all values ...".
 
 

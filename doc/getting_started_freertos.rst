@@ -1,7 +1,16 @@
 Getting started using STM32Cube / FreeRTOS / lwIP
 =================================================
 
-Install ST-link on your laptop to have access to the serial port of the device.
+This tutorial uses the STM32F769i discovery kit, see
+https://www.st.com/en/evaluation-tools/32f769idiscovery.html
+
+Preparations
+------------
+Run the build on a Linux x86 machine. The build chain uses an ARM cross compiler. Install it::
+
+   sudo apt install gcc-arm-none-eabi
+
+Install ST-link on your Linux machine to have access to the serial port of the device.
 
 
 Cloning STM32Cube firmware
@@ -37,3 +46,5 @@ repository::
 When the build completes you can find the sample-app binary in
 ``build.cube/pn_dev.bin``. Flash this binary to your board by
 uploading it to the USB disk as usual for STM32 boards.
+
+A serial port will also be available via the USB cable.

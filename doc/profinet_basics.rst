@@ -261,6 +261,14 @@ Payload
 -------
 The Profinet payload is sent as big endian (network endian) on the wire.
 
+The maximum data (and status) size in total in each direction for a device is 1440 bytes.
+If this is consumed by a single subslot the maximum data size is 1438 byte (plus one or two bytes for IOPS and IOCS).
+See the IOData entry in the GSDML specification.
+
+If the IOPS (producer status) for a subslot goes to BAD, the PLC will indicate an error
+"User data failure of hardware component".
+It will persist until the communication is restarted to the IO-device.
+
 
 I&M data records
 ----------------
@@ -269,6 +277,7 @@ information about the model type, software version etc.
 Some fields are writable, for example where the device is located.
 
 Up to I&M15 is described in the standard. The p-net stack supports I&M0 - I&M4.
+You must support writing to I&M1-3 for at least one of the DAP submodules.
 
 +-------------+-----------+-----------------------+--------------------------------------------------------------+
 | Data record | Mandatory | Controller can write? | Description                                                  |

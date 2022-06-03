@@ -95,8 +95,10 @@ extern "C" {
 #define PNET_PORT_3 3
 #define PNET_PORT_4 4
 
+/**************************** Error codes ***********************************/
+
 /**
- * # Error Codes
+ * Error Codes
  *
  * The Profinet error code consists of 4 values. The data structure for this is
  * defined in the typedef pnet_pnio_status_t.
@@ -358,35 +360,46 @@ extern "C" {
  */
 #define PNET_ERROR_CODE_2_DCTRL_FAULTY_CONNECT_CONTROLCOMMAND 0x08
 
+/******************************** Events ******************************/
+
 /**
  * The events are sent from CMDEV to the application using the
  * \a pnet_state_ind() call-back function.
  */
 typedef enum pnet_event_values
 {
-   PNET_EVENT_ABORT,   /**< The AR has been closed. */
-   PNET_EVENT_STARTUP, /**< A connection has been initiated. */
-   PNET_EVENT_PRMEND,  /**< Controller has sent all write records. */
-   PNET_EVENT_APPLRDY, /**< Controller has acknowledged the APPL_RDY message */
+   /** The AR has been closed. */
+   PNET_EVENT_ABORT,
+
+   /** A connection has been initiated. */
+   PNET_EVENT_STARTUP,
+
+   /** Controller has sent all write records. */
+   PNET_EVENT_PRMEND,
+
+   /** Controller has acknowledged the APPL_RDY message */
+   PNET_EVENT_APPLRDY,
+
+   /** The cyclic data transmission is now properly set up */
    PNET_EVENT_DATA
 } pnet_event_values_t;
 
 /**
- * Values used for IOCS and IOPS.
+ * Values used for IOCS and IOPS. The actual values are important, as they are
+ * sent on the wire.
  */
 typedef enum pnet_ioxs_values
 {
-   /* Values are important */
    PNET_IOXS_BAD = 0x00,
    PNET_IOXS_GOOD = 0x80
 } pnet_ioxs_values_t;
 
 /**
  * Values used when plugging a sub-module using \a pnet_plug_submodule().
+ * The actual values are important, as they are sent on the wire.
  */
 typedef enum pnet_submodule_dir
 {
-   /* Values are important */
    PNET_DIR_NO_IO = 0x00,
    PNET_DIR_INPUT = 0x01,
    PNET_DIR_OUTPUT = 0x02,
@@ -414,8 +427,11 @@ typedef enum pnet_control_command
    PNET_CONTROL_COMMAND_PRM_END,
    PNET_CONTROL_COMMAND_APP_RDY,
    PNET_CONTROL_COMMAND_RELEASE,
-   /* ToDo: These are not currently implemented */
+
+   /** Not yet implemented */
    PNET_CONTROL_COMMAND_RDY_FOR_COMPANION,
+
+   /** Not yet implemented */
    PNET_CONTROL_COMMAND_RDY_FOR_RTC3,
 } pnet_control_command_t;
 
@@ -425,17 +441,28 @@ typedef enum pnet_control_command
  */
 typedef enum pnet_data_status_bits
 {
-   PNET_DATA_STATUS_BIT_STATE = 0,  /** 0 => BACKUP, 1 => PRIMARY */
-   PNET_DATA_STATUS_BIT_REDUNDANCY, /** Meaning depends on STATE bit */
-   PNET_DATA_STATUS_BIT_DATA_VALID, /** 0 => INVALID, 1 => VALID */
+   /** 0 => BACKUP, 1 => PRIMARY */
+   PNET_DATA_STATUS_BIT_STATE = 0,
+
+   /** Meaning depends on STATE bit */
+   PNET_DATA_STATUS_BIT_REDUNDANCY,
+
+   /** 0 => INVALID, 1 => VALID */
+   PNET_DATA_STATUS_BIT_DATA_VALID,
+
    PNET_DATA_STATUS_BIT_RESERVED_1,
-   PNET_DATA_STATUS_BIT_PROVIDER_STATE,            /** 0 => STOP, 1 => RUN */
-   PNET_DATA_STATUS_BIT_STATION_PROBLEM_INDICATOR, /** 0 => Problem detected, 1
-                                                      => Normal operation */
+
+   /** 0 => STOP, 1 => RUN */
+   PNET_DATA_STATUS_BIT_PROVIDER_STATE,
+
+   /** 0 => Problem detected, 1 => Normal operation */
+   PNET_DATA_STATUS_BIT_STATION_PROBLEM_INDICATOR,
+
    PNET_DATA_STATUS_BIT_RESERVED_2,
-   PNET_DATA_STATUS_BIT_IGNORE /** 0 => Evaluate data status, 1 => Ignore the
-                                  data status (typically used on a frame with
-                                  subframes) */
+
+   /** 0 => Evaluate data status,
+    *  1 => Ignore the data status (typically used on a frame with subframes) */
+   PNET_DATA_STATUS_BIT_IGNORE
 } pnet_data_status_bits_t;
 
 /** Network handle */
@@ -452,10 +479,7 @@ typedef struct pnet_pnio_status
    uint8_t error_code_2;
 } pnet_pnio_status_t;
 
-/*
- * Alarm and Diagnosis
- *
- */
+/************************ Alarm and Diagnosis ********************************/
 
 /** Summary of all diagnosis items, sent in an alarm.
    Only valid for alarms attached to the Diagnosis ASE
@@ -478,6 +502,9 @@ typedef struct pnet_alarm_spec
    bool ar_diagnosis;
 } pnet_alarm_spec_t;
 
+/**
+ * Shows location and summary of diagnosis items in an alarm
+ */
 typedef struct pnet_alarm_argument
 {
    uint32_t api_id;
@@ -486,7 +513,6 @@ typedef struct pnet_alarm_argument
    uint16_t alarm_type;
    uint16_t sequence_number;
    pnet_alarm_spec_t alarm_specifier;
-
 } pnet_alarm_argument_t;
 
 /**
@@ -494,10 +520,17 @@ typedef struct pnet_alarm_argument
  */
 typedef struct pnet_result
 {
-   pnet_pnio_status_t pnio_status; /**< Profinet-specific error information. */
-   uint16_t add_data_1; /**< Application-specific error information. */
-   uint16_t add_data_2; /**< Application-specific error information. */
+   /** Profinet-specific error information. */
+   pnet_pnio_status_t pnio_status;
+
+   /** Application-specific error information. */
+   uint16_t add_data_1;
+
+   /** Application-specific error information. */
+   uint16_t add_data_2;
 } pnet_result_t;
+
+/******************************* Callbacks ************************************/
 
 /*
  * Application call-back functions
@@ -857,7 +890,7 @@ typedef int (*pnet_new_data_status_ind) (
    void * arg,
    uint32_t arep,
    uint32_t crep,
-   uint8_t changes, /**< Only modified bits from pnet_data_status_bits_t */
+   uint8_t changes,
    uint8_t data_status);
 
 /**
@@ -1015,14 +1048,20 @@ typedef int (*pnet_signal_led_ind) (pnet_t * net, void * arg, bool led_state);
  * Configuration values are taken as is. No validation is performed.
  */
 
-typedef enum pnet_im_supported_value
+/**
+ * Describe which I&M values are supported.
+ *
+ * I&M0 is always supported.
+ *
+ */
+typedef enum pnet_im_supported_values
 {
-   /* I&M0 is always supported */
    PNET_SUPPORTED_IM1 = 0x0002,
    PNET_SUPPORTED_IM2 = 0x0004,
    PNET_SUPPORTED_IM3 = 0x0008,
-   PNET_SUPPORTED_IM4 = 0x0010, /* Should only be used together with Functional
-                                   Safety*/
+
+   /** Should only be used together with functional safety */
+   PNET_SUPPORTED_IM4 = 0x0010,
 } pnet_im_supported_values_t;
 
 /**
@@ -1034,8 +1073,13 @@ typedef struct pnet_im_0
 {
    uint8_t im_vendor_id_hi;
    uint8_t im_vendor_id_lo;
-   char im_order_id[PNET_ORDER_ID_MAX_LEN + 1]; /**< Terminated string */
-   char im_serial_number[PNET_SERIAL_NUMBER_MAX_LEN + 1]; /**< Terminated */
+
+   /** Terminated string */
+   char im_order_id[PNET_ORDER_ID_MAX_LEN + 1];
+
+   /** Terminated string */
+   char im_serial_number[PNET_SERIAL_NUMBER_MAX_LEN + 1];
+
    uint16_t im_hardware_revision;
    char im_sw_revision_prefix;
    uint8_t im_sw_revision_functional_enhancement;
@@ -1044,11 +1088,16 @@ typedef struct pnet_im_0
    uint16_t im_revision_counter;
    uint16_t im_profile_id;
    uint16_t im_profile_specific_type;
-   uint8_t im_version_major; /**< Always 1 */
-   uint8_t im_version_minor; /**< Always 1 */
-   uint16_t im_supported;    /**< One bit for each supported I&M1..15.
-                                  I&M0 is always supported.
-                                  Use pnet_im_supported_values_t.*/
+
+   /** Always 1 */
+   uint8_t im_version_major;
+
+   /** Always 1 */
+   uint8_t im_version_minor;
+
+   /** One bit for each supported I&M1..15. I&M0 is always supported.
+       Use pnet_im_supported_values_t. */
+   uint16_t im_supported;
 } pnet_im_0_t;
 
 /**
@@ -1060,8 +1109,11 @@ typedef struct pnet_im_0
  */
 typedef struct pnet_im_1
 {
-   char im_tag_function[32 + 1];                 /**< Terminated string */
-   char im_tag_location[PNET_LOCATION_MAX_SIZE]; /**< Terminated string */
+   /** Terminated string */
+   char im_tag_function[32 + 1];
+
+   /** Terminated string */
+   char im_tag_location[PNET_LOCATION_MAX_SIZE];
 } pnet_im_1_t;
 
 /**
@@ -1073,7 +1125,8 @@ typedef struct pnet_im_1
  */
 typedef struct pnet_im_2
 {
-   char im_date[16 + 1]; /**< "YYYY-MM-DD HH:MM" terminated string */
+   /** Terminated string in the format "YYYY-MM-DD HH:MM"  */
+   char im_date[16 + 1];
 } pnet_im_2_t;
 
 /**
@@ -1085,7 +1138,8 @@ typedef struct pnet_im_2
  */
 typedef struct pnet_im_3
 {
-   char im_descriptor[54 + 1]; /**< Terminated string padded with spaces */
+   /** Terminated string padded with spaces */
+   char im_descriptor[54 + 1];
 } pnet_im_3_t;
 
 /**
@@ -1099,8 +1153,8 @@ typedef struct pnet_im_3
  */
 typedef struct pnet_im_4
 {
-   char im_signature[54]; /**< Non-terminated binary string, padded with zeroes
-                           */
+   /** Non-terminated binary string, padded with zeroes */
+   char im_signature[54];
 } pnet_im_4_t;
 
 /**
@@ -1180,7 +1234,9 @@ typedef struct pnet_port_cfg
  */
 typedef struct pnet_ip_cfg
 {
-   bool dhcp_enable; /**< Not supported by stack. */
+   /** Not yet supported by stack. */
+   bool dhcp_enable;
+
    pnet_cfg_ip_addr_t ip_addr;
    pnet_cfg_ip_addr_t ip_mask;
    pnet_cfg_ip_addr_t ip_gateway;
@@ -1190,18 +1246,21 @@ typedef struct pnet_ip_cfg
  * Interface Configuration
  *
  * Configuration of network interfaces used by the stack.
- * The main_port defines the network interface used by a controller/PLC
+ * The \a main_netif_name defines the network interface used by a controller/PLC
  * to access the device (called Management Port in Profinet).
- * The ports array defines the physical ports connected to the
+ * The \a physical_ports array defines the physical ports connected to the
  * main_port.
  *
- * In the case one network interface is used, \a main_port and
- * \a port[0].phy_port will refer to the same network interface.
+ * In the case one network interface is used, \a main_netif_name and
+ * \a physical_ports[0].netif_name will refer to the same network interface.
  */
 typedef struct pnet_if_cfg
 {
-   const char * main_netif_name; /**< Main (DAP) network interface. */
-   pnet_ip_cfg_t ip_cfg;         /**< IP Settings for main network interface */
+   /** Main (DAP) network interface */
+   const char * main_netif_name;
+
+   /** IP Settings for main network interface */
+   pnet_ip_cfg_t ip_cfg;
 
    pnet_port_cfg_t physical_ports[PNET_MAX_PHYSICAL_PORTS];
 } pnet_if_cfg_t;
@@ -1209,16 +1268,16 @@ typedef struct pnet_if_cfg
 /**
  * This is all the configuration needed to use the Profinet stack.
  *
- * The application must supply the values in the call to function pnet_init().
+ * The application must supply the values in the call to
+ * function \a pnet_init().
  */
 typedef struct pnet_cfg
 {
    /** Tick interval in us.
-    *  Specifies the time between calls to pnet_handle_periodic().
+    *  Specifies the time between calls to \a pnet_handle_periodic().
     */
    uint32_t tick_us;
 
-   /** Application call-backs */
    pnet_state_ind state_cb;
    pnet_connect_ind connect_cb;
    pnet_release_ind release_cb;
@@ -1234,19 +1293,21 @@ typedef struct pnet_cfg
    pnet_alarm_ack_cnf alarm_ack_cnf_cb;
    pnet_reset_ind reset_cb;
    pnet_signal_led_ind signal_led_cb;
-   void * cb_arg; /* Userdata passed to callbacks, not used by stack */
 
-   /** I&M initial data */
+   /** Userdata passed to callbacks, not used by stack */
+   void * cb_arg;
+
    pnet_im_0_t im_0_data;
    pnet_im_1_t im_1_data;
    pnet_im_2_t im_2_data;
    pnet_im_3_t im_3_data;
    pnet_im_4_t im_4_data;
 
-   /** Identities */
    pnet_cfg_device_id_t device_id;
    pnet_cfg_device_id_t oem_device_id;
-   char station_name[PNET_STATION_NAME_MAX_SIZE]; /**< Terminated string */
+
+   /** Default station name. Terminated string */
+   char station_name[PNET_STATION_NAME_MAX_SIZE];
 
    /**
     * Product name
@@ -1255,27 +1316,26 @@ typedef struct pnet_cfg
     * specification. It constitutes the first part of SystemIdentification
     * (sysDescr in SNMP). It may also be used to construct the Chassis ID.
     * See IEC CDV 61158-6-10 ch. 4.10.3.3.1.
+    *
+    * Terminated string.
     */
-   char product_name[PNET_PRODUCT_NAME_MAX_LEN + 1]; /**< Terminated string */
+   char product_name[PNET_PRODUCT_NAME_MAX_LEN + 1];
 
-   /* Timing */
-   uint16_t min_device_interval; /** Smallest allowed data exchange interval, in
-                                    units of 31.25 us. Used for triggering error
-                                    messages to the PLC. Should match GSDML
-                                    file. Typically 32, which corresponds to 1
-                                    ms. Max 0x1000 (128 ms) */
+   /** Smallest allowed data exchange interval, in units of 31.25 us.
+    *  Used for triggering error messages to the PLC. Should match GSDML file.
+    *  Typically 32, which corresponds to 1 ms. Max 0x1000 (128 ms) */
+   uint16_t min_device_interval;
 
    /** Operating system dependent settings */
    pnal_cfg_t pnal_cfg;
 
-   /** Capabilities */
-   bool send_hello; /**< Send DCP HELLO message on startup if true. */
+   /** Send DCP HELLO message on startup if true. */
+   bool send_hello;
 
    /** Number of physical ports. Should respect PNET_MAX_PHYSICAL_PORTS.
        This parameter is useful when shipping a single compiled version of the
        library, but there are several applications with different number of
-       ports.
-    */
+       ports. */
    uint8_t num_physical_ports; // TODO int or uint16_t ?
 
    /** Send diagnosis in the qualified format (otherwise extended format) */
@@ -1288,12 +1348,10 @@ typedef struct pnet_cfg
    pnet_driver_config_t driver_config;
 #endif
 
-   /** Storage between runs */
-   char file_directory[PNET_MAX_DIRECTORYPATH_SIZE]; /**< Terminated string
-                                                          with absolute path.
-                                                          Use NULL or empty
-                                                          string for current
-                                                          directory. */
+   /** Storage between runs
+    *  Terminated string with absolute path.
+    *  Use NULL or empty string for current directory. */
+   char file_directory[PNET_MAX_DIRECTORYPATH_SIZE];
 
 } pnet_cfg_t;
 
@@ -1756,7 +1814,7 @@ PNET_EXPORT int pnet_alarm_send_ack (
 #define PNET_CHANNEL_WHOLE_SUBMODULE 0x8000
 
 /**
- * Channel size in bits.
+ * Channel size in bits. Values 8..255 are reserved.
  */
 typedef enum pnet_diag_ch_prop_type_values
 {
@@ -1768,10 +1826,9 @@ typedef enum pnet_diag_ch_prop_type_values
    PNET_DIAG_CH_PROP_TYPE_16_BIT = 5,
    PNET_DIAG_CH_PROP_TYPE_32_BIT = 6,
    PNET_DIAG_CH_PROP_TYPE_64_BIT = 7,
-   /* 8..255 Reserved */
 } pnet_diag_ch_prop_type_values_t;
 
-/* Channel group or individual channel. Also known as "Accumulative" */
+/** Channel group or individual channel. Also known as "Accumulative" */
 typedef enum pnet_diag_ch_group_values
 {
    PNET_DIAG_CH_INDIVIDUAL_CHANNEL = 0,
@@ -1800,12 +1857,18 @@ typedef enum pnet_diag_ch_prop_maint_values
    PNET_DIAG_CH_PROP_MAINT_QUALIFIED = 3,
 } pnet_diag_ch_prop_maint_values_t;
 
+/**
+ * Diagnosis source.
+ */
 typedef struct pnet_diag_source
 {
    uint32_t api;
    uint16_t slot;
    uint16_t subslot;
-   uint16_t ch; /** 0 - 0x7FFF manufacturer specific, 0x8000 whole submodule */
+
+   /** 0 - 0x7FFF manufacturer specific, 0x8000 whole submodule */
+   uint16_t ch;
+
    pnet_diag_ch_group_values_t ch_grouping;
    pnet_diag_ch_prop_dir_values_t ch_direction;
 } pnet_diag_source_t;
