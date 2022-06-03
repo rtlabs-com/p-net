@@ -88,7 +88,7 @@ static void pf_cpm_control_interval_expired (
          /* Timer auto-reload */
          if (
             pf_scheduler_add (
-               net,
+               &net->scheduler_data,
                p_iocr->cpm.control_interval,
                pf_cpm_control_interval_expired,
                arg,
@@ -155,7 +155,7 @@ static int pf_cpm_driver_sw_close_req (
    pf_cpm_t * p_cpm = &p_ar->iocrs[crep].cpm;
 
    p_cpm->ci_running = false; /* StopTimer */
-   pf_scheduler_remove_if_running (net, &p_cpm->ci_timeout);
+   pf_scheduler_remove_if_running (&net->scheduler_data, &p_cpm->ci_timeout);
 
    pf_eth_frame_id_map_remove (net, p_cpm->frame_id[0]);
    if (p_cpm->nbr_frame_id == 2)
@@ -425,7 +425,7 @@ static int pf_cpm_driver_sw_activate_req (
    }
    pf_scheduler_init_handle (&p_cpm->ci_timeout, "cpm");
    ret = pf_scheduler_add (
-      net,
+      &net->scheduler_data,
       p_cpm->control_interval,
       pf_cpm_control_interval_expired,
       p_iocr,

@@ -242,7 +242,7 @@ static void pf_dcp_restart_sam_timeout (pnet_t * net, const pnet_ethaddr_t * mac
 
    memcpy (&net->dcp_sam, mac, sizeof (net->dcp_sam));
    (void)pf_scheduler_restart (
-      net,
+      &net->scheduler_data,
       PF_DCP_SAM_TIMEOUT,
       pf_dcp_clear_sam,
       NULL,
@@ -627,7 +627,7 @@ static void pf_dcp_control_signal_led (
 
       /* Schedule another round */
       (void)pf_scheduler_add (
-         net,
+         &net->scheduler_data,
          PF_DCP_SIGNAL_LED_HALF_INTERVAL,
          pf_dcp_control_signal_led,
          (void *)(uintptr_t)state,
@@ -659,7 +659,7 @@ int pf_dcp_trigger_signal_led (pnet_t * net)
          "DCP(%d): Received request to flash LED\n",
          __LINE__);
       (void)pf_scheduler_add (
-         net,
+         &net->scheduler_data,
          PF_DCP_SIGNAL_LED_HALF_INTERVAL,
          pf_dcp_control_signal_led,
          (void *)(2 * PF_DCP_SIGNAL_LED_NUMBER_OF_FLASHES - 1),
@@ -1945,7 +1945,7 @@ static int pf_dcp_identify_req (
 #endif
 
       (void)pf_scheduler_add (
-         net,
+         &net->scheduler_data,
          response_delay,
          pf_dcp_responder,
          p_rsp,

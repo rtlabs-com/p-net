@@ -49,7 +49,7 @@ int pnet_init_only (pnet_t * net, const pnet_cfg_t * p_cfg)
    net->cmdev_initialized = false; /* TODO How to handle that pf_cmdev_exit()
                                       is used before pf_cmdev_init()? */
 
-   pf_scheduler_init (net, p_cfg->tick_us);
+   pf_scheduler_init (&net->scheduler_data, p_cfg->tick_us);
 
 #if PNET_OPTION_DRIVER_ENABLE
    if (net->fspm_cfg.driver_enable)
@@ -152,7 +152,7 @@ void pnet_handle_periodic (pnet_t * net)
    pf_alarm_periodic (net);
 
    /* Handle expired timeout events */
-   pf_scheduler_tick (net, os_get_current_time_us());
+   pf_scheduler_tick (net, &net->scheduler_data, os_get_current_time_us());
 
    pf_pdport_periodic (net);
 
@@ -209,7 +209,7 @@ void pnet_show (pnet_t * net, unsigned level)
       if (level & 0x4000)
       {
          printf ("\n\n");
-         pf_scheduler_show (net, os_get_current_time_us());
+         pf_scheduler_show (&net->scheduler_data, os_get_current_time_us());
       }
       if (level & 0x8000)
       {

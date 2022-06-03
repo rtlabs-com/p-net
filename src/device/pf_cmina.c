@@ -68,7 +68,7 @@ static void pf_cmina_send_hello (pnet_t * net, void * arg, uint32_t current_time
       /* Reschedule */
       net->cmina_hello_count--;
       (void)pf_scheduler_add (
-         net,
+         &net->scheduler_data,
          PF_CMINA_FS_HELLO_INTERVAL * 1000,
          pf_cmina_send_hello,
          NULL,
@@ -545,7 +545,7 @@ int pf_cmina_init (pnet_t * net)
 
             /* Send first HELLO now! */
             (void)pf_scheduler_add (
-               net,
+               &net->scheduler_data,
                0,
                pf_cmina_send_hello,
                NULL,
@@ -647,7 +647,9 @@ int pf_cmina_dcp_set_ind (
    uint16_t reset_mode = 0;
 
    /* Stop sending Hello packets */
-   pf_scheduler_remove_if_running (net, &net->cmina_hello_timeout);
+   pf_scheduler_remove_if_running (
+      &net->scheduler_data,
+      &net->cmina_hello_timeout);
 
    /* Parse incoming DCP SET, without caring about actual CMINA state.
       Update cmina_current_dcp_ase and cmina_nonvolatile_dcp_ase*/

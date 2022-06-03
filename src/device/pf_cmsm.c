@@ -188,7 +188,7 @@ int pf_cmsm_cmdev_state_ind (
             __LINE__,
             (unsigned)p_ar->ar_param.cm_initiator_activity_timeout_factor);
          (void)pf_scheduler_restart (
-            net,
+            &net->scheduler_data,
             p_ar->ar_param.cm_initiator_activity_timeout_factor * 100 *
                1000, /* time in us */
             pf_cmsm_timeout,
@@ -216,7 +216,9 @@ int pf_cmsm_cmdev_state_ind (
                __LINE__,
                p_ar->arep);
          }
-         pf_scheduler_remove_if_running (net, &p_ar->cmsm_timeout);
+         pf_scheduler_remove_if_running (
+            &net->scheduler_data,
+            &p_ar->cmsm_timeout);
          pf_cmsm_set_state (p_ar, PF_CMSM_STATE_IDLE);
          ret = 0;
          break;
@@ -254,7 +256,7 @@ int pf_cmsm_rm_read_ind (
       {
          /* Restart timeout period */
          (void)pf_scheduler_restart (
-            net,
+            &net->scheduler_data,
             p_ar->ar_param.cm_initiator_activity_timeout_factor * 100 *
                1000, /* time in us */
             pf_cmsm_timeout,
@@ -290,7 +292,7 @@ int pf_cmsm_cm_read_ind (
    case PF_CMSM_STATE_RUN:
       /* Restart timeout period */
       (void)pf_scheduler_restart (
-         net,
+         &net->scheduler_data,
          p_ar->ar_param.cm_initiator_activity_timeout_factor * 100 * 1000,
          pf_cmsm_timeout,
          (void *)p_ar,
@@ -324,7 +326,7 @@ int pf_cmsm_cm_write_ind (
    case PF_CMSM_STATE_RUN:
       /* Restart timeout period */
       (void)pf_scheduler_restart (
-         net,
+         &net->scheduler_data,
          p_ar->ar_param.cm_initiator_activity_timeout_factor * 100 * 1000,
          pf_cmsm_timeout,
          (void *)p_ar,

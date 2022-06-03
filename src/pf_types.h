@@ -1081,7 +1081,7 @@ typedef void (*pf_scheduler_timeout_ftn_t) (
    void * arg,
    uint32_t current_time);
 
-typedef struct pf_scheduler_timeouts
+typedef struct pf_scheduler_timeout
 {
    /** For debugging only */
    const char * name;
@@ -1096,7 +1096,23 @@ typedef struct pf_scheduler_timeouts
 
    pf_scheduler_timeout_ftn_t cb; /* Call-back to call on timeout */
    void * arg;                    /* call-back argument */
-} pf_scheduler_timeouts_t;
+} pf_scheduler_timeout_t;
+
+typedef struct pf_scheduler_data
+{
+   pf_scheduler_timeout_t timeouts[PF_MAX_TIMEOUTS];
+
+   /** Will be PF_MAX_TIMEOUTS at empty queue */
+   uint32_t busylist_head;
+
+   /** Will be PF_MAX_TIMEOUTS at empty queue */
+   uint32_t freelist_head;
+
+   os_mutex_t * mutex;
+
+   /** Time between stack executions, in microseconds */
+   uint32_t tick_interval;
+} pf_scheduler_data_t;
 
 typedef struct pf_scheduler_handle
 {
@@ -2886,11 +2902,11 @@ struct pnet
    pf_scheduler_handle_t dcp_sam_timeout;
    pf_scheduler_handle_t dcp_identresp_timeout;
    pf_eth_frame_id_map_t eth_id_map[PF_ETH_MAX_MAP];
-   volatile pf_scheduler_timeouts_t scheduler_timeouts[PF_MAX_TIMEOUTS];
-   volatile uint32_t scheduler_timeout_first;
-   volatile uint32_t scheduler_timeout_free;
-   os_mutex_t * scheduler_timeout_mutex;
-   uint32_t scheduler_tick_interval; /* microseconds */
+
+   /**************** Scheduler *******************************/
+
+   volatile pf_scheduler_data_t scheduler_data;
+
    bool cmdev_initialized;
    pf_device_t cmdev_device;                     /* APIs and diag items */
    pf_cmina_dcp_ase_t cmina_nonvolatile_dcp_ase; /* Reflects what is/should be

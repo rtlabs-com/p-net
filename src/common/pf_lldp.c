@@ -510,7 +510,9 @@ void pf_lldp_restart_peer_timeout (
 {
    pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
-   pf_scheduler_remove_if_running (net, &p_port_data->lldp.rx_timeout);
+   pf_scheduler_remove_if_running (
+      &net->scheduler_data,
+      &p_port_data->lldp.rx_timeout);
 
    /*
     *  Profinet states that the time to live shall be 20 seconds,
@@ -529,7 +531,7 @@ void pf_lldp_restart_peer_timeout (
 
    if (
       pf_scheduler_add (
-         net,
+         &net->scheduler_data,
          timeout_in_secs * 1000000,
          pf_lldp_receive_timeout,
          p_port_data,
@@ -547,7 +549,9 @@ void pf_lldp_stop_peer_timeout (pnet_t * net, int loc_port_num)
 {
    pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
-   pf_scheduler_remove_if_running (net, &p_port_data->lldp.rx_timeout);
+   pf_scheduler_remove_if_running (
+      &net->scheduler_data,
+      &p_port_data->lldp.rx_timeout);
 }
 
 /**
@@ -1096,7 +1100,7 @@ static void pf_lldp_trigger_sending (
 
    if (
       pf_scheduler_add (
-         net,
+         &net->scheduler_data,
          PF_LLDP_SEND_INTERVAL * 1000,
          pf_lldp_trigger_sending,
          p_port_data,
@@ -1125,7 +1129,7 @@ static void pf_lldp_tx_restart (pnet_t * net, int loc_port_num, bool send)
 
    if (
       pf_scheduler_restart (
-         net,
+         &net->scheduler_data,
          PF_LLDP_SEND_INTERVAL * 1000,
          pf_lldp_trigger_sending,
          p_port_data,
@@ -1187,7 +1191,9 @@ void pf_lldp_send_disable (pnet_t * net, int loc_port_num)
       "LLDP(%d): Disabling LLDP transmission for port %d\n",
       __LINE__,
       loc_port_num);
-   pf_scheduler_remove_if_running (net, &p_port_data->lldp.tx_timeout);
+   pf_scheduler_remove_if_running (
+      &net->scheduler_data,
+      &p_port_data->lldp.tx_timeout);
 }
 
 /**

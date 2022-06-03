@@ -148,7 +148,7 @@ static void pf_cmio_timer_expired (
       pf_cmdev_cmio_info_ind (net, p_ar, data_possible);
 
       (void)pf_scheduler_add (
-         net,
+         &net->scheduler_data,
          PF_CMIO_TIMER_PERIOD,
          pf_cmio_timer_expired,
          p_ar,
@@ -236,7 +236,7 @@ int pf_cmio_cmdev_state_ind (
          /* StartTimer() */
          p_ar->cmio_timer_should_reschedule = true;
          (void)pf_scheduler_add (
-            net,
+            &net->scheduler_data,
             PF_CMIO_TIMER_PERIOD,
             pf_cmio_timer_expired,
             p_ar,
@@ -257,7 +257,9 @@ int pf_cmio_cmdev_state_ind (
       {
          /* StopTimer() */
          p_ar->cmio_timer_should_reschedule = false;
-         pf_scheduler_remove_if_running (net, &p_ar->cmio_timeout);
+         pf_scheduler_remove_if_running (
+            &net->scheduler_data,
+            &p_ar->cmio_timeout);
 
          pf_cmio_set_state (p_ar, PF_CMIO_STATE_DATA);
       }

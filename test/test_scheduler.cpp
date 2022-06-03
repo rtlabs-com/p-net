@@ -135,7 +135,7 @@ TEST_F (SchedulerUnitTest, SchedulerSanitizeDelayTest)
    ASSERT_NEAR (result, 1000, margin);
 }
 
-TEST_F (SchedulerTest, SchedulerAddRemove)
+TEST_F (SchedulerTest, SchedulerAddRemoveInStack)
 {
    int ret;
    pf_scheduler_handle_t * p_a = &appdata.scheduler_handle_a;
@@ -146,7 +146,7 @@ TEST_F (SchedulerTest, SchedulerAddRemove)
    uint32_t value;
    bool is_scheduled;
 
-   pf_scheduler_init (net, TEST_TICK_INTERVAL_US);
+   pf_scheduler_init (&net->scheduler_data, TEST_TICK_INTERVAL_US);
    run_stack (TEST_SCHEDULER_RUNTIME);
    EXPECT_EQ (appdata.call_counters.scheduler_callback_a_calls, 0);
 
@@ -183,7 +183,7 @@ TEST_F (SchedulerTest, SchedulerAddRemove)
 
    /* Schedule callback A */
    ret = pf_scheduler_add (
-      net,
+      &net->scheduler_data,
       TEST_SCHEDULER_CALLBACK_DELAY,
       test_scheduler_callback_a,
       &appdata,
@@ -243,7 +243,7 @@ TEST_F (SchedulerTest, SchedulerAddRemove)
 
    /* Schedule both callbacks */
    ret = pf_scheduler_add (
-      net,
+      &net->scheduler_data,
       TEST_SCHEDULER_CALLBACK_DELAY,
       test_scheduler_callback_a,
       &appdata,
@@ -251,7 +251,7 @@ TEST_F (SchedulerTest, SchedulerAddRemove)
       mock_os_data.current_time_us);
    EXPECT_EQ (ret, 0);
    ret = pf_scheduler_add (
-      net,
+      &net->scheduler_data,
       TEST_SCHEDULER_RUNTIME + TEST_SCHEDULER_CALLBACK_DELAY,
       test_scheduler_callback_b,
       &appdata,
@@ -329,14 +329,14 @@ TEST_F (SchedulerTest, SchedulerAddRemove)
    /* Remove non-scheduled event */
    run_stack (TEST_SCHEDULER_RUNTIME);
 
-   pf_scheduler_remove_if_running (net, p_a);
+   pf_scheduler_remove_if_running (&net->scheduler_data, p_a);
    EXPECT_EQ (appdata.call_counters.scheduler_callback_a_calls, 2);
    value = pf_scheduler_get_value (p_a);
    EXPECT_EQ (value, UINT32_MAX); /* Implementation detail */
    is_scheduled = pf_scheduler_is_running (p_a);
    EXPECT_FALSE (is_scheduled);
 
-   pf_scheduler_remove (net, p_a); /* Will log error message */
+   pf_scheduler_remove (&net->scheduler_data, p_a); /* Will log error message */
    EXPECT_EQ (appdata.call_counters.scheduler_callback_a_calls, 2);
    value = pf_scheduler_get_value (p_a);
    EXPECT_EQ (value, UINT32_MAX); /* Implementation detail */
@@ -347,7 +347,7 @@ TEST_F (SchedulerTest, SchedulerAddRemove)
    run_stack (TEST_SCHEDULER_RUNTIME);
 
    ret = pf_scheduler_add (
-      net,
+      &net->scheduler_data,
       TEST_SCHEDULER_CALLBACK_DELAY,
       test_scheduler_callback_a,
       &appdata,
@@ -381,7 +381,7 @@ TEST_F (SchedulerTest, SchedulerAddRemove)
    is_scheduled = pf_scheduler_is_running (p_b);
    EXPECT_FALSE (is_scheduled);
 
-   pf_scheduler_remove (net, p_a);
+   pf_scheduler_remove (&net->scheduler_data, p_a);
 
    EXPECT_EQ (appdata.call_counters.scheduler_callback_a_calls, 2);
    value = pf_scheduler_get_value (p_a);
@@ -413,7 +413,7 @@ TEST_F (SchedulerTest, SchedulerAddRemove)
    run_stack (TEST_SCHEDULER_RUNTIME);
 
    ret = pf_scheduler_add (
-      net,
+      &net->scheduler_data,
       TEST_SCHEDULER_CALLBACK_DELAY,
       test_scheduler_callback_a,
       &appdata,
@@ -447,7 +447,7 @@ TEST_F (SchedulerTest, SchedulerAddRemove)
    is_scheduled = pf_scheduler_is_running (p_b);
    EXPECT_FALSE (is_scheduled);
 
-   pf_scheduler_remove_if_running (net, p_a);
+   pf_scheduler_remove_if_running (&net->scheduler_data, p_a);
 
    EXPECT_EQ (appdata.call_counters.scheduler_callback_a_calls, 2);
    value = pf_scheduler_get_value (p_a);
@@ -477,7 +477,7 @@ TEST_F (SchedulerTest, SchedulerAddRemove)
 
    /* Schedule and restart */
    ret = pf_scheduler_add (
-      net,
+      &net->scheduler_data,
       TEST_SCHEDULER_CALLBACK_DELAY,
       test_scheduler_callback_a,
       &appdata,
@@ -508,7 +508,7 @@ TEST_F (SchedulerTest, SchedulerAddRemove)
    EXPECT_FALSE (is_scheduled);
 
    ret = pf_scheduler_restart (
-      net,
+      &net->scheduler_data,
       TEST_SCHEDULER_RUNTIME + TEST_SCHEDULER_CALLBACK_DELAY,
       test_scheduler_callback_a,
       &appdata,

@@ -827,7 +827,7 @@ static void pf_alarm_apms_timeout (
 
          if (
             pf_scheduler_add (
-               net,
+               &net->scheduler_data,
                p_apmx->timeout_us,
                pf_alarm_apms_timeout,
                p_apmx,
@@ -1462,7 +1462,7 @@ static int pf_alarm_apms_apms_a_data_req (
          retransmission timer */
       if (
          pf_scheduler_add (
-            net,
+            &net->scheduler_data,
             p_apmx->timeout_us,
             pf_alarm_apms_timeout,
             p_apmx,
@@ -1552,7 +1552,9 @@ static int pf_alarm_apmx_close (pnet_t * net, pf_ar_t * p_ar, uint8_t err_code)
       {
          /* Free resources */
          /* StopTimer */
-         pf_scheduler_remove_if_running (net, &p_ar->apmx[ix].resend_timeout);
+         pf_scheduler_remove_if_running (
+            &net->scheduler_data,
+            &p_ar->apmx[ix].resend_timeout);
 
          p_ar->apmx[ix].p_ar = NULL;
          p_ar->apmx[ix].apms_state = PF_APMS_STATE_CLOSED;

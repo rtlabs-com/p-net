@@ -1088,7 +1088,7 @@ static void pf_lldp_trigger_linkmonitor (
 
    if (
       pf_scheduler_add (
-         net,
+         &net->scheduler_data,
          PF_LINK_MONITOR_INTERVAL,
          pf_lldp_trigger_linkmonitor,
          NULL,
@@ -1106,7 +1106,7 @@ void pf_pdport_start_linkmonitor (pnet_t * net)
 {
    if (
       pf_scheduler_add (
-         net,
+         &net->scheduler_data,
          PF_LINK_MONITOR_INTERVAL,
          pf_lldp_trigger_linkmonitor,
          NULL,
