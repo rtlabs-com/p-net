@@ -22,7 +22,7 @@
  */
 
 #ifdef UNIT_TEST
-#define os_get_current_time_us mock_os_get_current_time_us
+#define os_get_current_time_us mock_os_get_current_time_us /* TODO remove */
 #endif
 
 #include "pf_includes.h"
@@ -30,6 +30,14 @@
 #include <inttypes.h>
 #include <string.h>
 
+/**
+ * Check if a timeout index is present in a linked list.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param first            In:    Head of the list
+ * @param ix               In:    Timeout index to look for
+ * @return true if timeout index is found in the list
+ */
 static bool pf_scheduler_is_linked (pnet_t * net, uint32_t first, uint32_t ix)
 {
    bool ret = false;
@@ -52,12 +60,19 @@ static bool pf_scheduler_is_linked (pnet_t * net, uint32_t first, uint32_t ix)
    return ret;
 }
 
+/**
+ * Unlink a timeout from a linked list
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param p_q              InOut: Head of the list
+ * @param ix               In:    Timeout index to unlink. Might be invalid if
+ *                                out of free timeouts.
+ */
 static void pf_scheduler_unlink (
    pnet_t * net,
    volatile uint32_t * p_q,
    uint32_t ix)
 {
-   /* Unlink from busy list */
    uint32_t prev_ix;
    uint32_t next_ix;
 
@@ -65,7 +80,7 @@ static void pf_scheduler_unlink (
    {
       LOG_ERROR (
          PNET_LOG,
-         "Sched(%d): ix (%u) is invalid\n",
+         "Sched(%d): Timeout index %u is invalid.\n",
          __LINE__,
          (unsigned)ix);
    }
@@ -73,7 +88,7 @@ static void pf_scheduler_unlink (
    {
       LOG_ERROR (
          PNET_LOG,
-         "Sched(%d): %s is not in Q\n",
+         "Sched(%d): Timeout %s is not in this queue\n",
          __LINE__,
          net->scheduler_timeouts[ix].name);
    }
@@ -96,6 +111,16 @@ static void pf_scheduler_unlink (
    }
 }
 
+/**
+ * Link a timeout after a position in a linked list
+ *
+ * Will be put first in the list if \a pos is PF_MAX_TIMEOUTS or larger.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param p_q              InOut: Head of the list
+ * @param ix               In:    Timeout index to link
+ * @param pos              In:    Position.
+ */
 static void pf_scheduler_link_after (
    pnet_t * net,
    volatile uint32_t * p_q,
@@ -122,7 +147,7 @@ static void pf_scheduler_link_after (
    }
    else if (pos >= PF_MAX_TIMEOUTS)
    {
-      /* Put first in possible non-empty Q */
+      /* Insert it first in possibly non-empty queue */
       net->scheduler_timeouts[ix].prev = PF_MAX_TIMEOUTS;
       net->scheduler_timeouts[ix].next = *p_q;
       if (*p_q < PF_MAX_TIMEOUTS)
@@ -134,7 +159,7 @@ static void pf_scheduler_link_after (
    }
    else if (*p_q >= PF_MAX_TIMEOUTS)
    {
-      /* Q is empty - insert first in Q */
+      /* This queue is empty - Insert it first in the queue */
       net->scheduler_timeouts[ix].prev = PF_MAX_TIMEOUTS;
       net->scheduler_timeouts[ix].next = PF_MAX_TIMEOUTS;
 
@@ -155,6 +180,16 @@ static void pf_scheduler_link_after (
    }
 }
 
+/**
+ * Link a timeout before a position in a linked list
+ *
+ * Will be put first in the list if \a pos is PF_MAX_TIMEOUTS or larger.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param p_q              InOut: Head of the list
+ * @param ix               In:    Timeout index to link
+ * @param pos              In:    Position
+ */
 static void pf_scheduler_link_before (
    pnet_t * net,
    volatile uint32_t * p_q,
@@ -181,7 +216,7 @@ static void pf_scheduler_link_before (
    }
    else if (pos >= PF_MAX_TIMEOUTS)
    {
-      /* Put first in possible non-empty Q */
+      /* Insert it first in possibly non-empty queue */
       net->scheduler_timeouts[ix].prev = PF_MAX_TIMEOUTS;
       net->scheduler_timeouts[ix].next = *p_q;
       if (*p_q < PF_MAX_TIMEOUTS)
@@ -193,7 +228,7 @@ static void pf_scheduler_link_before (
    }
    else if (*p_q >= PF_MAX_TIMEOUTS)
    {
-      /* Q is empty - insert first in Q */
+      /* This queue is empty - Insert it first in the queue */
       net->scheduler_timeouts[ix].prev = PF_MAX_TIMEOUTS;
       net->scheduler_timeouts[ix].next = PF_MAX_TIMEOUTS;
 
@@ -214,7 +249,7 @@ static void pf_scheduler_link_before (
 
       if (*p_q == pos)
       {
-         /* ix is now first in the Q */
+         /* ix is now first in the queue */
          *p_q = ix;
       }
    }
@@ -286,6 +321,7 @@ void pf_scheduler_init (pnet_t * net, uint32_t tick_interval)
    /* Link all entries into a list and put them into the free queue. */
    for (ix = PF_MAX_TIMEOUTS; ix > 0; ix--)
    {
+      /* TODO use j in the loop instead, and ix = j-1 */
       net->scheduler_timeouts[ix - 1].name = "<free>";
       net->scheduler_timeouts[ix - 1].in_use = false;
       pf_scheduler_link_before (
@@ -311,8 +347,8 @@ int pf_scheduler_add (
    delay =
       pf_scheduler_sanitize_delay (delay, net->scheduler_tick_interval, true);
 
-   os_mutex_lock (net->scheduler_timeout_mutex);
    /* Unlink from the free list */
+   os_mutex_lock (net->scheduler_timeout_mutex);
    ix_free = net->scheduler_timeout_free;
    pf_scheduler_unlink (net, &net->scheduler_timeout_free, ix_free);
    os_mutex_unlock (net->scheduler_timeout_mutex);
@@ -336,7 +372,7 @@ int pf_scheduler_add (
    os_mutex_lock (net->scheduler_timeout_mutex);
    if (net->scheduler_timeout_first >= PF_MAX_TIMEOUTS)
    {
-      /* Put into empty q */
+      /* Put into empty queue */
       pf_scheduler_link_before (
          net,
          &net->scheduler_timeout_first,
@@ -348,7 +384,7 @@ int pf_scheduler_add (
          net->scheduler_timeouts[ix_free].when -
          net->scheduler_timeouts[net->scheduler_timeout_first].when)) <= 0)
    {
-      /* Put first in non-empty q */
+      /* Put first in non-empty queue */
       pf_scheduler_link_before (
          net,
          &net->scheduler_timeout_first,
@@ -357,7 +393,7 @@ int pf_scheduler_add (
    }
    else
    {
-      /* Find pos in non-empty q */
+      /* Find correct position in non-empty queue */
       ix_prev = net->scheduler_timeout_first;
       ix_this = net->scheduler_timeouts[net->scheduler_timeout_first].next;
       while ((ix_this < PF_MAX_TIMEOUTS) &&
@@ -407,7 +443,7 @@ void pf_scheduler_remove (pnet_t * net, pf_scheduler_handle_t * handle)
       {
          LOG_ERROR (
             PNET_LOG,
-            "SCHEDULER(%d): Expected %s but got %s. No removal.\n",
+            "SCHEDULER(%d): Expected \"%s\" but got \"%s\". No removal.\n",
             __LINE__,
             net->scheduler_timeouts[ix].name,
             handle->name);
@@ -443,6 +479,7 @@ void pf_scheduler_remove (pnet_t * net, pf_scheduler_handle_t * handle)
 
 void pf_scheduler_tick (pnet_t * net)
 {
+   /* TODO current_time should be parameter */
    uint32_t ix;
    pf_scheduler_timeout_ftn_t ftn;
    void * arg;
@@ -482,6 +519,8 @@ void pf_scheduler_tick (pnet_t * net)
 
 void pf_scheduler_show (pnet_t * net)
 {
+   /* TODO current_time should be parameter
+           Remove uptime  */
    uint32_t ix;
 
    printf (
@@ -597,9 +636,10 @@ void pf_scheduler_show (pnet_t * net)
  *
  * @param wanted_delay                    In:    Delay in microseconds.
  * @param stack_cycle_time                In:    Stack cycle time in
- * microseconds. Must be larger than 0.
+ *                                               microseconds.
+ *                                               Must be larger than 0.
  * @param schedule_half_tick_in_advance   In:    Schedule event slightly
- * earlier, to not be missed.
+ *                                               earlier, to not be missed.
  * @return Number of microseconds of delay to use with the scheduler.
  */
 uint32_t pf_scheduler_sanitize_delay (
