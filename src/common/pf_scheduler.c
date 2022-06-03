@@ -40,24 +40,26 @@
  */
 static bool pf_scheduler_is_linked (pnet_t * net, uint32_t first, uint32_t ix)
 {
-   bool ret = false;
+   uint32_t current = first;
    uint32_t cnt = 0; /* Guard against infinite loop */
 
-   if (ix < PF_MAX_TIMEOUTS)
+   if (ix >= PF_MAX_TIMEOUTS)
    {
-      while (first < PF_MAX_TIMEOUTS)
-      {
-         CC_ASSERT (cnt < PF_MAX_TIMEOUTS);
-         if (first == ix)
-         {
-            ret = true;
-         }
-         first = net->scheduler_timeouts[first].next;
-         cnt++;
-      }
+      return false;
    }
 
-   return ret;
+   while (current < PF_MAX_TIMEOUTS)
+   {
+      CC_ASSERT (cnt < PF_MAX_TIMEOUTS);
+      if (current == ix)
+      {
+         return true;
+      }
+      current = net->scheduler_timeouts[current].next;
+      cnt++;
+   }
+
+   return false;
 }
 
 /**
@@ -83,31 +85,32 @@ static void pf_scheduler_unlink (
          "Sched(%d): Timeout index %u is invalid.\n",
          __LINE__,
          (unsigned)ix);
+      return;
    }
-   else if (pf_scheduler_is_linked (net, *p_q, ix) == false)
+
+   if (pf_scheduler_is_linked (net, *p_q, ix) == false)
    {
       LOG_ERROR (
          PNET_LOG,
          "Sched(%d): Timeout %s is not in this queue\n",
          __LINE__,
          net->scheduler_timeouts[ix].name);
+      return;
    }
-   else
+
+   prev_ix = net->scheduler_timeouts[ix].prev;
+   next_ix = net->scheduler_timeouts[ix].next;
+   if (*p_q == ix)
    {
-      prev_ix = net->scheduler_timeouts[ix].prev;
-      next_ix = net->scheduler_timeouts[ix].next;
-      if (*p_q == ix)
-      {
-         *p_q = next_ix;
-      }
-      if (next_ix < PF_MAX_TIMEOUTS)
-      {
-         net->scheduler_timeouts[next_ix].prev = prev_ix;
-      }
-      if (prev_ix < PF_MAX_TIMEOUTS)
-      {
-         net->scheduler_timeouts[prev_ix].next = next_ix;
-      }
+      *p_q = next_ix;
+   }
+   if (next_ix < PF_MAX_TIMEOUTS)
+   {
+      net->scheduler_timeouts[next_ix].prev = prev_ix;
+   }
+   if (prev_ix < PF_MAX_TIMEOUTS)
+   {
+      net->scheduler_timeouts[prev_ix].next = next_ix;
    }
 }
 
@@ -136,16 +139,20 @@ static void pf_scheduler_link_after (
          "Sched(%d): ix (%u) is invalid\n",
          __LINE__,
          (unsigned)ix);
+      return;
    }
-   else if (pf_scheduler_is_linked (net, *p_q, ix) == true)
+
+   if (pf_scheduler_is_linked (net, *p_q, ix) == true)
    {
       LOG_ERROR (
          PNET_LOG,
          "Sched(%d): %s is already in Q\n",
          __LINE__,
          net->scheduler_timeouts[ix].name);
+      return;
    }
-   else if (pos >= PF_MAX_TIMEOUTS)
+
+   if (pos >= PF_MAX_TIMEOUTS)
    {
       /* Insert it first in possibly non-empty queue */
       net->scheduler_timeouts[ix].prev = PF_MAX_TIMEOUTS;
@@ -156,28 +163,29 @@ static void pf_scheduler_link_after (
       }
 
       *p_q = ix;
+      return;
    }
-   else if (*p_q >= PF_MAX_TIMEOUTS)
+
+   if (*p_q >= PF_MAX_TIMEOUTS)
    {
       /* This queue is empty - Insert it first in the queue */
       net->scheduler_timeouts[ix].prev = PF_MAX_TIMEOUTS;
       net->scheduler_timeouts[ix].next = PF_MAX_TIMEOUTS;
 
       *p_q = ix;
+      return;
    }
-   else
+
+   next_ix = net->scheduler_timeouts[pos].next;
+
+   if (next_ix < PF_MAX_TIMEOUTS)
    {
-      next_ix = net->scheduler_timeouts[pos].next;
-
-      if (next_ix < PF_MAX_TIMEOUTS)
-      {
-         net->scheduler_timeouts[next_ix].prev = ix;
-      }
-      net->scheduler_timeouts[pos].next = ix;
-
-      net->scheduler_timeouts[ix].prev = pos;
-      net->scheduler_timeouts[ix].next = next_ix;
+      net->scheduler_timeouts[next_ix].prev = ix;
    }
+   net->scheduler_timeouts[pos].next = ix;
+
+   net->scheduler_timeouts[ix].prev = pos;
+   net->scheduler_timeouts[ix].next = next_ix;
 }
 
 /**
@@ -205,16 +213,20 @@ static void pf_scheduler_link_before (
          "Sched(%d): ix (%u) is invalid\n",
          __LINE__,
          (unsigned)ix);
+      return;
    }
-   else if (pf_scheduler_is_linked (net, *p_q, ix) == true)
+
+   if (pf_scheduler_is_linked (net, *p_q, ix) == true)
    {
       LOG_ERROR (
          PNET_LOG,
-         "Sched(%d): %s is already in Q\n",
+         "Sched(%d): %s is already in this queue\n",
          __LINE__,
          net->scheduler_timeouts[ix].name);
+      return;
    }
-   else if (pos >= PF_MAX_TIMEOUTS)
+
+   if (pos >= PF_MAX_TIMEOUTS)
    {
       /* Insert it first in possibly non-empty queue */
       net->scheduler_timeouts[ix].prev = PF_MAX_TIMEOUTS;
@@ -225,33 +237,34 @@ static void pf_scheduler_link_before (
       }
 
       *p_q = ix;
+      return;
    }
-   else if (*p_q >= PF_MAX_TIMEOUTS)
+
+   if (*p_q >= PF_MAX_TIMEOUTS)
    {
       /* This queue is empty - Insert it first in the queue */
       net->scheduler_timeouts[ix].prev = PF_MAX_TIMEOUTS;
       net->scheduler_timeouts[ix].next = PF_MAX_TIMEOUTS;
 
       *p_q = ix;
+      return;
    }
-   else
+
+   prev_ix = net->scheduler_timeouts[pos].prev;
+
+   if (prev_ix < PF_MAX_TIMEOUTS)
    {
-      prev_ix = net->scheduler_timeouts[pos].prev;
+      net->scheduler_timeouts[prev_ix].next = ix;
+   }
+   net->scheduler_timeouts[pos].prev = ix;
 
-      if (prev_ix < PF_MAX_TIMEOUTS)
-      {
-         net->scheduler_timeouts[prev_ix].next = ix;
-      }
-      net->scheduler_timeouts[pos].prev = ix;
+   net->scheduler_timeouts[ix].next = pos;
+   net->scheduler_timeouts[ix].prev = prev_ix;
 
-      net->scheduler_timeouts[ix].next = pos;
-      net->scheduler_timeouts[ix].prev = prev_ix;
-
-      if (*p_q == pos)
-      {
-         /* ix is now first in the queue */
-         *p_q = ix;
-      }
+   if (*p_q == pos)
+   {
+      /* ix is now first in the queue */
+      *p_q = ix;
    }
 }
 
@@ -305,6 +318,7 @@ int pf_scheduler_restart (
 void pf_scheduler_init (pnet_t * net, uint32_t tick_interval)
 {
    uint32_t ix;
+   uint32_t j;
 
    net->scheduler_timeout_first = PF_MAX_TIMEOUTS; /* Nothing in queue */
    net->scheduler_timeout_free = PF_MAX_TIMEOUTS;  /* Nothing in queue. */
@@ -319,15 +333,15 @@ void pf_scheduler_init (pnet_t * net, uint32_t tick_interval)
    CC_ASSERT (net->scheduler_tick_interval > 0);
 
    /* Link all entries into a list and put them into the free queue. */
-   for (ix = PF_MAX_TIMEOUTS; ix > 0; ix--)
+   for (j = PF_MAX_TIMEOUTS; j > 0; j--)
    {
-      /* TODO use j in the loop instead, and ix = j-1 */
-      net->scheduler_timeouts[ix - 1].name = "<free>";
-      net->scheduler_timeouts[ix - 1].in_use = false;
+      ix = j - 1;
+      net->scheduler_timeouts[ix].name = "<free>";
+      net->scheduler_timeouts[ix].in_use = false;
       pf_scheduler_link_before (
          net,
          &net->scheduler_timeout_free,
-         ix - 1,
+         ix,
          net->scheduler_timeout_free);
    }
 }
@@ -432,49 +446,48 @@ void pf_scheduler_remove (pnet_t * net, pf_scheduler_handle_t * handle)
          __LINE__,
          handle->timer_index,
          handle->name);
+      return;
+   }
+
+   /* See pf_scheduler_add() for handle->timer_index details */
+   ix = handle->timer_index - 1;
+   os_mutex_lock (net->scheduler_timeout_mutex);
+
+   if (net->scheduler_timeouts[ix].name != handle->name)
+   {
+      LOG_ERROR (
+         PNET_LOG,
+         "SCHEDULER(%d): Expected \"%s\" but got \"%s\". No removal.\n",
+         __LINE__,
+         net->scheduler_timeouts[ix].name,
+         handle->name);
+   }
+   else if (net->scheduler_timeouts[ix].in_use == false)
+   {
+      LOG_DEBUG (
+         PNET_LOG,
+         "SCHEDULER(%d): Tried to remove timeout \"%s\", but it has already "
+         "been triggered.\n",
+         __LINE__,
+         handle->name);
    }
    else
    {
-      /* See pf_scheduler_add() for handle->timer_index details */
-      ix = handle->timer_index - 1;
-      os_mutex_lock (net->scheduler_timeout_mutex);
+      /* Unlink from busy list */
+      pf_scheduler_unlink (net, &net->scheduler_timeout_first, ix);
 
-      if (net->scheduler_timeouts[ix].name != handle->name)
-      {
-         LOG_ERROR (
-            PNET_LOG,
-            "SCHEDULER(%d): Expected \"%s\" but got \"%s\". No removal.\n",
-            __LINE__,
-            net->scheduler_timeouts[ix].name,
-            handle->name);
-      }
-      else if (net->scheduler_timeouts[ix].in_use == false)
-      {
-         LOG_DEBUG (
-            PNET_LOG,
-            "SCHEDULER(%d): Tried to remove timeout \"%s\", but it has already "
-            "been triggered.\n",
-            __LINE__,
-            handle->name);
-      }
-      else
-      {
-         /* Unlink from busy list */
-         pf_scheduler_unlink (net, &net->scheduler_timeout_first, ix);
+      /* Insert into free list. */
+      net->scheduler_timeouts[ix].in_use = false;
+      pf_scheduler_link_before (
+         net,
+         &net->scheduler_timeout_free,
+         ix,
+         net->scheduler_timeout_free);
 
-         /* Insert into free list. */
-         net->scheduler_timeouts[ix].in_use = false;
-         pf_scheduler_link_before (
-            net,
-            &net->scheduler_timeout_free,
-            ix,
-            net->scheduler_timeout_free);
-
-         handle->timer_index = UINT32_MAX;
-      }
-
-      os_mutex_unlock (net->scheduler_timeout_mutex);
+      handle->timer_index = UINT32_MAX;
    }
+
+   os_mutex_unlock (net->scheduler_timeout_mutex);
 }
 
 void pf_scheduler_tick (pnet_t * net)
