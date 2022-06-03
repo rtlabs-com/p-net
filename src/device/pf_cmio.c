@@ -28,7 +28,7 @@
  */
 
 #ifdef UNIT_TEST
-
+#define os_get_current_time_us mock_os_get_current_time_us
 #endif
 
 #include "pf_includes.h"
@@ -117,7 +117,7 @@ static void pf_cmio_set_state (pf_ar_t * p_ar, pf_cmio_state_values_t state)
  * @param arg              In:    The AR instance. pf_ar_t
  * @param current_time     In:    The current system time, in microseconds,
  *                                when the scheduler is started to execute
- *                                stored tasks. Not used here.
+ *                                stored tasks.
  */
 static void pf_cmio_timer_expired (
    pnet_t * net,
@@ -152,7 +152,8 @@ static void pf_cmio_timer_expired (
          PF_CMIO_TIMER_PERIOD,
          pf_cmio_timer_expired,
          p_ar,
-         &p_ar->cmio_timeout);
+         &p_ar->cmio_timeout,
+         current_time);
    }
    else
    {
@@ -239,7 +240,8 @@ int pf_cmio_cmdev_state_ind (
             PF_CMIO_TIMER_PERIOD,
             pf_cmio_timer_expired,
             p_ar,
-            &p_ar->cmio_timeout);
+            &p_ar->cmio_timeout,
+            os_get_current_time_us());
 
          pf_cmio_set_state (p_ar, PF_CMIO_STATE_WDATA);
       }

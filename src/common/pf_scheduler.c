@@ -309,10 +309,11 @@ int pf_scheduler_restart (
    uint32_t delay,
    pf_scheduler_timeout_ftn_t cb,
    void * arg,
-   pf_scheduler_handle_t * handle)
+   pf_scheduler_handle_t * handle,
+   uint32_t current_time)
 {
    pf_scheduler_remove_if_running (net, handle);
-   return pf_scheduler_add (net, delay, cb, arg, handle);
+   return pf_scheduler_add (net, delay, cb, arg, handle, current_time);
 }
 
 void pf_scheduler_init (pnet_t * net, uint32_t tick_interval)
@@ -351,12 +352,12 @@ int pf_scheduler_add (
    uint32_t delay,
    pf_scheduler_timeout_ftn_t cb,
    void * arg,
-   pf_scheduler_handle_t * handle)
+   pf_scheduler_handle_t * handle,
+   uint32_t current_time)
 {
    uint32_t ix_this;
    uint32_t ix_prev;
    uint32_t ix_free;
-   uint32_t now = os_get_current_time_us();
 
    delay =
       pf_scheduler_sanitize_delay (delay, net->scheduler_tick_interval, true);
@@ -381,7 +382,7 @@ int pf_scheduler_add (
    net->scheduler_timeouts[ix_free].name = handle->name;
    net->scheduler_timeouts[ix_free].cb = cb;
    net->scheduler_timeouts[ix_free].arg = arg;
-   net->scheduler_timeouts[ix_free].when = now + delay;
+   net->scheduler_timeouts[ix_free].when = current_time + delay;
 
    os_mutex_lock (net->scheduler_timeout_mutex);
    if (net->scheduler_timeout_first >= PF_MAX_TIMEOUTS)
@@ -490,20 +491,18 @@ void pf_scheduler_remove (pnet_t * net, pf_scheduler_handle_t * handle)
    os_mutex_unlock (net->scheduler_timeout_mutex);
 }
 
-void pf_scheduler_tick (pnet_t * net)
+void pf_scheduler_tick (pnet_t * net, uint32_t current_time)
 {
-   /* TODO current_time should be parameter */
    uint32_t ix;
    pf_scheduler_timeout_ftn_t ftn;
    void * arg;
-   uint32_t pf_current_time = os_get_current_time_us();
 
    os_mutex_lock (net->scheduler_timeout_mutex);
 
    /* Send event to all expired delay entries. */
    while ((net->scheduler_timeout_first < PF_MAX_TIMEOUTS) &&
           ((int32_t) (
-              pf_current_time -
+              current_time -
               net->scheduler_timeouts[net->scheduler_timeout_first].when) >= 0))
    {
       /* Unlink from busy list */
@@ -523,22 +522,18 @@ void pf_scheduler_tick (pnet_t * net)
 
       /* Send event without holding the mutex. */
       os_mutex_unlock (net->scheduler_timeout_mutex);
-      ftn (net, arg, pf_current_time);
+      ftn (net, arg, current_time);
       os_mutex_lock (net->scheduler_timeout_mutex);
    }
 
    os_mutex_unlock (net->scheduler_timeout_mutex);
 }
 
-void pf_scheduler_show (pnet_t * net)
+void pf_scheduler_show (pnet_t * net, uint32_t current_time)
 {
-   /* TODO current_time should be parameter
-           Remove uptime  */
    uint32_t ix;
 
-   printf (
-      "Scheduler (time now=%u microseconds):\n",
-      (unsigned)os_get_current_time_us());
+   printf ("Scheduler (time now=%" PRIu32 " microseconds):\n", current_time);
 
    if (net->scheduler_timeout_mutex != NULL)
    {
@@ -589,9 +584,6 @@ void pf_scheduler_show (pnet_t * net)
       os_mutex_unlock (net->scheduler_timeout_mutex);
    }
    printf ("\n");
-   printf (
-      "Uptime (in quanta of 10 ms): %" PRIu32 " \n",
-      pnal_get_system_uptime_10ms());
 }
 
 /**

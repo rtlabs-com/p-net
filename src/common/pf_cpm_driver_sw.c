@@ -92,7 +92,8 @@ static void pf_cpm_control_interval_expired (
                p_iocr->cpm.control_interval,
                pf_cpm_control_interval_expired,
                arg,
-               &p_iocr->cpm.ci_timeout) != 0)
+               &p_iocr->cpm.ci_timeout,
+               current_time) != 0)
          {
             LOG_ERROR (
                PF_CPM_LOG,
@@ -428,7 +429,8 @@ static int pf_cpm_driver_sw_activate_req (
       p_cpm->control_interval,
       pf_cpm_control_interval_expired,
       p_iocr,
-      &p_cpm->ci_timeout);
+      &p_cpm->ci_timeout,
+      os_get_current_time_us());
    if (ret != 0)
    {
       LOG_ERROR (PF_CPM_LOG, "CPM_DRV_SW(%d): Timeout not started\n", __LINE__);

@@ -59,6 +59,7 @@
  */
 
 #ifdef UNIT_TEST
+#define os_get_current_time_us mock_os_get_current_time_us
 #endif
 
 /*
@@ -830,7 +831,8 @@ static void pf_alarm_apms_timeout (
                p_apmx->timeout_us,
                pf_alarm_apms_timeout,
                p_apmx,
-               &p_apmx->resend_timeout) != 0)
+               &p_apmx->resend_timeout,
+               current_time) != 0)
          {
             LOG_ERROR (
                PF_ALARM_LOG,
@@ -1464,7 +1466,8 @@ static int pf_alarm_apms_apms_a_data_req (
             p_apmx->timeout_us,
             pf_alarm_apms_timeout,
             p_apmx,
-            &p_apmx->resend_timeout) != 0)
+            &p_apmx->resend_timeout,
+            os_get_current_time_us()) != 0)
       {
          LOG_ERROR (
             PF_ALARM_LOG,

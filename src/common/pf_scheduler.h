@@ -97,6 +97,7 @@ const char * pf_scheduler_get_name (const pf_scheduler_handle_t * handle);
  * @param cb               In:    The call-back.
  * @param arg              In:    Argument to the call-back.
  * @param handle           InOut: Timeout handle.
+ * @param current_time     In:    Current time in microseconds
  * @return  0  if the call-back was scheduled.
  *          -1 if an error occurred.
  */
@@ -105,7 +106,8 @@ int pf_scheduler_add (
    uint32_t delay,
    pf_scheduler_timeout_ftn_t cb,
    void * arg,
-   pf_scheduler_handle_t * handle);
+   pf_scheduler_handle_t * handle,
+   uint32_t current_time);
 
 /**
  * Re-schedule a call-back at a specific time.
@@ -121,6 +123,7 @@ int pf_scheduler_add (
  * @param cb               In:    The call-back.
  * @param arg              In:    Argument to the call-back.
  * @param handle           InOut: Timeout handle.
+ * @param current_time     In:    Current time in microseconds
  * @return  0  if the call-back was scheduled.
  *          -1 if an error occurred.
  */
@@ -129,7 +132,8 @@ int pf_scheduler_restart (
    uint32_t delay,
    pf_scheduler_timeout_ftn_t cb,
    void * arg,
-   pf_scheduler_handle_t * handle);
+   pf_scheduler_handle_t * handle,
+   uint32_t current_time);
 
 /**
  * Stop a timeout, if it is running.
@@ -154,8 +158,9 @@ void pf_scheduler_remove (pnet_t * net, pf_scheduler_handle_t * handle);
  * Check if it is time to call a scheduled call-back.
  * Run scheduled call-backs - if any.
  * @param net              InOut: The p-net stack instance
+ * @param current_time     In:    Current time in microseconds
  */
-void pf_scheduler_tick (pnet_t * net);
+void pf_scheduler_tick (pnet_t * net, uint32_t current_time);
 
 /**
  * Show scheduler (busy and free) instances.
@@ -163,8 +168,9 @@ void pf_scheduler_tick (pnet_t * net);
  * Locks the mutex temporarily.
  *
  * @param net              InOut: The p-net stack instance
+ * @param current_time     In:    Current time in microseconds
  */
-void pf_scheduler_show (pnet_t * net);
+void pf_scheduler_show (pnet_t * net, uint32_t current_time);
 
 /************ Internal functions, made available for unit testing ************/
 

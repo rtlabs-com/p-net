@@ -17,6 +17,7 @@
 #define pnal_eth_get_status      mock_pnal_eth_get_status
 #define pnal_get_port_statistics mock_pnal_get_port_statistics
 #define pf_bg_worker_start_job   mock_pf_bg_worker_start_job
+#define os_get_current_time_us   mock_os_get_current_time_us
 #endif
 
 #include "pf_includes.h"
@@ -1070,7 +1071,7 @@ static void pf_pdport_monitor_link (pnet_t * net, int loc_port_num)
  *
  * @param net              InOut: The p-net stack instance
  * @param arg              In:    Not used
- * @param current_time     In:    Not used.
+ * @param current_time     In:    Current time, in microseconds
  */
 static void pf_lldp_trigger_linkmonitor (
    pnet_t * net,
@@ -1091,7 +1092,8 @@ static void pf_lldp_trigger_linkmonitor (
          PF_LINK_MONITOR_INTERVAL,
          pf_lldp_trigger_linkmonitor,
          NULL,
-         &net->pf_interface.link_monitor_timeout) != 0)
+         &net->pf_interface.link_monitor_timeout,
+         current_time) != 0)
    {
       LOG_ERROR (
          PF_LLDP_LOG,
@@ -1108,7 +1110,8 @@ void pf_pdport_start_linkmonitor (pnet_t * net)
          PF_LINK_MONITOR_INTERVAL,
          pf_lldp_trigger_linkmonitor,
          NULL,
-         &net->pf_interface.link_monitor_timeout) != 0)
+         &net->pf_interface.link_monitor_timeout,
+         os_get_current_time_us()) != 0)
    {
       LOG_ERROR (
          PF_LLDP_LOG,

@@ -14,8 +14,9 @@
  ********************************************************************/
 
 #ifdef UNIT_TEST
-#define pnal_snmp_init    mock_pnal_snmp_init
-#define pf_bg_worker_init mock_pf_bg_worker_init
+#define pnal_snmp_init         mock_pnal_snmp_init
+#define pf_bg_worker_init      mock_pf_bg_worker_init
+#define os_get_current_time_us mock_os_get_current_time_us
 #endif
 
 #include <inttypes.h>
@@ -151,7 +152,7 @@ void pnet_handle_periodic (pnet_t * net)
    pf_alarm_periodic (net);
 
    /* Handle expired timeout events */
-   pf_scheduler_tick (net);
+   pf_scheduler_tick (net, os_get_current_time_us());
 
    pf_pdport_periodic (net);
 
@@ -208,7 +209,7 @@ void pnet_show (pnet_t * net, unsigned level)
       if (level & 0x4000)
       {
          printf ("\n\n");
-         pf_scheduler_show (net);
+         pf_scheduler_show (net, os_get_current_time_us());
       }
       if (level & 0x8000)
       {

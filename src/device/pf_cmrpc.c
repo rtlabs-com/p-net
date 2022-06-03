@@ -1038,7 +1038,8 @@ static void pf_cmrpc_send_with_timeout (
                   delay,
                   pf_cmrpc_send_with_timeout,
                   arg,
-                  &p_sess->resend_timeout) != 0)
+                  &p_sess->resend_timeout,
+                  current_time) != 0)
             {
                LOG_ERROR (
                   PF_RPC_LOG,

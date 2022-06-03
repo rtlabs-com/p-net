@@ -34,7 +34,7 @@
  */
 
 #ifdef UNIT_TEST
-
+#define os_get_current_time_us mock_os_get_current_time_us
 #endif
 
 #include "pf_includes.h"
@@ -193,7 +193,8 @@ int pf_cmsm_cmdev_state_ind (
                1000, /* time in us */
             pf_cmsm_timeout,
             (void *)p_ar,
-            &p_ar->cmsm_timeout);
+            &p_ar->cmsm_timeout,
+            os_get_current_time_us());
          ret = 0;
          break;
       default:
@@ -258,7 +259,8 @@ int pf_cmsm_rm_read_ind (
                1000, /* time in us */
             pf_cmsm_timeout,
             (void *)p_ar,
-            &p_ar->cmsm_timeout);
+            &p_ar->cmsm_timeout,
+            os_get_current_time_us());
       }
       ret = 0;
       break;
@@ -292,7 +294,8 @@ int pf_cmsm_cm_read_ind (
          p_ar->ar_param.cm_initiator_activity_timeout_factor * 100 * 1000,
          pf_cmsm_timeout,
          (void *)p_ar,
-         &p_ar->cmsm_timeout);
+         &p_ar->cmsm_timeout,
+         os_get_current_time_us());
       ret = 0;
       break;
    }
@@ -325,7 +328,8 @@ int pf_cmsm_cm_write_ind (
          p_ar->ar_param.cm_initiator_activity_timeout_factor * 100 * 1000,
          pf_cmsm_timeout,
          (void *)p_ar,
-         &p_ar->cmsm_timeout);
+         &p_ar->cmsm_timeout,
+         os_get_current_time_us());
       ret = 0;
       break;
    }

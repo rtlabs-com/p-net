@@ -187,7 +187,8 @@ TEST_F (SchedulerTest, SchedulerAddRemove)
       TEST_SCHEDULER_CALLBACK_DELAY,
       test_scheduler_callback_a,
       &appdata,
-      p_a);
+      p_a,
+      mock_os_data.current_time_us);
    EXPECT_EQ (ret, 0);
 
    EXPECT_EQ (appdata.call_counters.scheduler_callback_a_calls, 0);
@@ -246,14 +247,16 @@ TEST_F (SchedulerTest, SchedulerAddRemove)
       TEST_SCHEDULER_CALLBACK_DELAY,
       test_scheduler_callback_a,
       &appdata,
-      p_a);
+      p_a,
+      mock_os_data.current_time_us);
    EXPECT_EQ (ret, 0);
    ret = pf_scheduler_add (
       net,
       TEST_SCHEDULER_RUNTIME + TEST_SCHEDULER_CALLBACK_DELAY,
       test_scheduler_callback_b,
       &appdata,
-      p_b);
+      p_b,
+      mock_os_data.current_time_us);
    EXPECT_EQ (ret, 0);
 
    EXPECT_EQ (appdata.call_counters.scheduler_callback_a_calls, 1);
@@ -348,7 +351,8 @@ TEST_F (SchedulerTest, SchedulerAddRemove)
       TEST_SCHEDULER_CALLBACK_DELAY,
       test_scheduler_callback_a,
       &appdata,
-      p_a);
+      p_a,
+      mock_os_data.current_time_us);
    EXPECT_EQ (ret, 0);
 
    EXPECT_EQ (appdata.call_counters.scheduler_callback_a_calls, 2);
@@ -413,7 +417,8 @@ TEST_F (SchedulerTest, SchedulerAddRemove)
       TEST_SCHEDULER_CALLBACK_DELAY,
       test_scheduler_callback_a,
       &appdata,
-      p_a);
+      p_a,
+      mock_os_data.current_time_us);
    EXPECT_EQ (ret, 0);
 
    EXPECT_EQ (appdata.call_counters.scheduler_callback_a_calls, 2);
@@ -476,7 +481,8 @@ TEST_F (SchedulerTest, SchedulerAddRemove)
       TEST_SCHEDULER_CALLBACK_DELAY,
       test_scheduler_callback_a,
       &appdata,
-      p_a);
+      p_a,
+      mock_os_data.current_time_us);
    EXPECT_EQ (ret, 0);
 
    EXPECT_EQ (appdata.call_counters.scheduler_callback_a_calls, 2);
@@ -506,7 +512,8 @@ TEST_F (SchedulerTest, SchedulerAddRemove)
       TEST_SCHEDULER_RUNTIME + TEST_SCHEDULER_CALLBACK_DELAY,
       test_scheduler_callback_a,
       &appdata,
-      p_a);
+      p_a,
+      mock_os_data.current_time_us);
 
    run_stack (TEST_SCHEDULER_RUNTIME);
 

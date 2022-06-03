@@ -34,6 +34,7 @@
 #define pnal_get_port_statistics mock_pnal_get_port_statistics
 #define pnal_set_ip_suite        mock_pnal_set_ip_suite
 #define pf_bg_worker_start_job   mock_pf_bg_worker_start_job
+#define os_get_current_time_us   mock_os_get_current_time_us
 #endif
 
 #include <string.h>
@@ -54,7 +55,7 @@
  *
  * @param net              InOut: The p-net stack instance
  * @param arg              In:    Not used.
- * @param current_time     In:    Not used.
+ * @param current_time     In:    Current time, in microseconds.
  */
 static void pf_cmina_send_hello (pnet_t * net, void * arg, uint32_t current_time)
 {
@@ -71,7 +72,8 @@ static void pf_cmina_send_hello (pnet_t * net, void * arg, uint32_t current_time
          PF_CMINA_FS_HELLO_INTERVAL * 1000,
          pf_cmina_send_hello,
          NULL,
-         &net->cmina_hello_timeout);
+         &net->cmina_hello_timeout,
+         current_time);
    }
    else
    {
@@ -547,7 +549,8 @@ int pf_cmina_init (pnet_t * net)
                0,
                pf_cmina_send_hello,
                NULL,
-               &net->cmina_hello_timeout);
+               &net->cmina_hello_timeout,
+               os_get_current_time_us());
          }
          else
          {
