@@ -111,6 +111,24 @@ int pf_cmsu_cmdev_state_ind (
    case PF_CMSU_STATE_IDLE:
       break;
    case PF_CMSU_STATE_STARTUP:
+      if (event == PNET_EVENT_PRMEND)
+      {
+         for (crep = 0; crep < p_ar->nbr_iocrs; crep++)
+         {
+            if (p_ar->iocrs[crep].param.iocr_type == PF_IOCR_TYPE_INPUT)
+            {
+               if (pf_ppm_activate_req (net, p_ar, crep) != 0)
+               {
+                  LOG_ERROR (
+                     PNET_LOG,
+                     "CMSU(%d): Failed to activate_ppm for AREP %u.\n",
+                     __LINE__,
+                     p_ar->arep);
+               }
+            }
+         }
+      }
+      /* fallthrough */
    case PF_CMSU_STATE_RUN:
       if (event == PNET_EVENT_ABORT)
       {
@@ -190,7 +208,7 @@ int pf_cmsu_start_req (pnet_t * net, pf_ar_t * p_ar, pnet_result_t * p_stat)
          {
             if (p_ar->iocrs[crep].param.iocr_type == PF_IOCR_TYPE_INPUT)
             {
-               if (pf_ppm_activate_req (net, p_ar, crep) != 0)
+               if (pf_ppm_create (net, p_ar, crep) != 0)
                {
                   p_stat->pnio_status.error_code_2 =
                      PNET_ERROR_CODE_2_CMSU_AR_ADD_PROV_CONS_FAILED;

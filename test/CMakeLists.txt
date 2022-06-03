@@ -84,12 +84,13 @@ target_sources(pf_test PRIVATE
   ${PROFINET_SOURCE_DIR}/src/device/pnet_api.c
   ${PROFINET_SOURCE_DIR}/src/common/pf_alarm.c
   ${PROFINET_SOURCE_DIR}/src/common/pf_bg_worker.c
-  ${PROFINET_SOURCE_DIR}/src/common/pf_cpm.c
+  ${PROFINET_SOURCE_DIR}/src/common/pf_cpm_driver_sw.c
   ${PROFINET_SOURCE_DIR}/src/common/pf_dcp.c
   ${PROFINET_SOURCE_DIR}/src/common/pf_eth.c
   ${PROFINET_SOURCE_DIR}/src/common/pf_lldp.c
   ${PROFINET_SOURCE_DIR}/src/common/pf_file.c
   ${PROFINET_SOURCE_DIR}/src/common/pf_ppm.c
+  ${PROFINET_SOURCE_DIR}/src/common/pf_ppm_driver_sw.c
   ${PROFINET_SOURCE_DIR}/src/common/pf_ptcp.c
   ${PROFINET_SOURCE_DIR}/src/common/pf_scheduler.c
   $<$<BOOL:${PNET_OPTION_SNMP}>:${PROFINET_SOURCE_DIR}/src/common/pf_snmp.c>

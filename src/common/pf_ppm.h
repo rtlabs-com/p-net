@@ -27,6 +27,16 @@ extern "C" {
 void pf_ppm_init (pnet_t * net);
 
 /**
+ * Create a PPM instance.
+ * @param net              InOut: The p-net stack instance
+ * @param p_ar             InOut: The AR instance.
+ * @param crep             In:    The IOCR index.
+ * @return  0  if the PPM instance was created.
+ *          -1 if an error occurred.
+ */
+int pf_ppm_create (pnet_t * net, pf_ar_t * p_ar, uint32_t crep);
+
+/**
  * Instantiate and start a PPM instance.
  * @param net              InOut: The p-net stack instance
  * @param p_ar             InOut: The AR instance.
@@ -56,6 +66,7 @@ int pf_ppm_close_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep);
  * @param pp_ar            Out:   The AR instance.
  * @param pp_iocr          Out:   The IOCR instance.
  * @param pp_iodata        Out:   The IODATA object instance.
+ * @param p_crep           Out:   The CREP index
  * @return  0  If the information has been found.
  *          -1 If the information was not found.
  */
@@ -66,7 +77,8 @@ int pf_ppm_get_ar_iocr_desc (
    uint16_t subslot_nbr,
    pf_ar_t ** pp_ar,
    pf_iocr_t ** pp_iocr,
-   pf_iodata_object_t ** pp_iodata);
+   pf_iodata_object_t ** pp_iodata,
+   uint32_t * p_crep);
 
 /**
  * Set the data and IOPS for a sub-module.
@@ -171,13 +183,18 @@ int pf_ppm_get_iocs (
  *
  * See Profinet 2.4 Protocol, section 4.7.2.1.3 "Coding of the field DataStatus"
  *
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             InOut: The AR instance.
  * @param crep             In:    The IOCR instance.
  * @param primary          In:    true if the state is "primary".
  * @return  0  if the state was set.
  *          -1 if an error occurred.
  */
-int pf_ppm_set_data_status_state (pf_ar_t * p_ar, uint32_t crep, bool primary);
+int pf_ppm_set_data_status_state (
+   pnet_t * net,
+   pf_ar_t * p_ar,
+   uint32_t crep,
+   bool primary);
 
 /**
  * Set the redundant bit in the cyclic data sent to the IO-Controller.
@@ -189,6 +206,7 @@ int pf_ppm_set_data_status_state (pf_ar_t * p_ar, uint32_t crep, bool primary);
  *
  * See Profinet 2.4 Protocol, section 4.7.2.1.3 "Coding of the field DataStatus"
  *
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             InOut: The AR instance.
  * @param crep             In:    The IOCR instance.
  * @param redundant        In:    true if the state is "redundant".
@@ -196,6 +214,7 @@ int pf_ppm_set_data_status_state (pf_ar_t * p_ar, uint32_t crep, bool primary);
  *          -1 if an error occurred.
  */
 int pf_ppm_set_data_status_redundancy (
+   pnet_t * net,
    pf_ar_t * p_ar,
    uint32_t crep,
    bool redundant);
@@ -207,13 +226,18 @@ int pf_ppm_set_data_status_redundancy (
  *
  * See Profinet 2.4 Protocol, section 4.7.2.1.3 "Coding of the field DataStatus"
  *
+ * @param net              InOut: The p-net stack instance
  * @param p_ar             InOut: The AR instance.
  * @param crep             In:    The IOCR instance.
  * @param run              In:    true if the application is "running".
  * @return  0  if the provider status was set.
  *          -1 if an error occurred.
  */
-int pf_ppm_set_data_status_provider (pf_ar_t * p_ar, uint32_t crep, bool run);
+int pf_ppm_set_data_status_provider (
+   pnet_t * net,
+   pf_ar_t * p_ar,
+   uint32_t crep,
+   bool run);
 
 /**
  * Get the data status of the PPM connection.
@@ -227,16 +251,47 @@ int pf_ppm_get_data_status (const pf_ppm_t * p_ppm, uint8_t * p_data_status);
  * Set/Reset the station problem indicator which is included in all data
  * messages.
  *
+ * @param net                 InOut: The p-net stack instance
  * @param p_ar                InOut: The AR instance.
  * @param problem_indicator   In:    The problem indicator.
  */
-void pf_ppm_set_problem_indicator (pf_ar_t * p_ar, bool problem_indicator);
+void pf_ppm_set_problem_indicator (
+   pnet_t * net,
+   pf_ar_t * p_ar,
+   bool problem_indicator);
 
 /**
  * Show information about a PPM instance.
  * @param p_ppm            In:   The PPM instance.
  */
 void pf_ppm_show (const pf_ppm_t * p_ppm);
+
+/************ Internal functions, used by PPM driver ************/
+
+/**
+ * Finalize a PPM transmit message in the send buffer.
+ *
+ * Insert data, cycle counter, data status and transfer status.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param p_ppm            In:   The PPM instance.
+ * @param data_length      In:   The length of the message.
+ */
+void pf_ppm_finish_buffer (pnet_t * net, pf_ppm_t * p_ppm, uint16_t data_length);
+
+/**
+ * Send error indications to other components.
+ * @param net              InOut: The p-net stack instance
+ * @param p_ar             InOut: The AR instance.
+ * @param p_ppm            In:   The PPM instance.
+ * @param error            In:   An error flag.
+ * @return  0  always.
+ */
+int pf_ppm_state_ind (
+   pnet_t * net,
+   pf_ar_t * p_ar,
+   pf_ppm_t * p_ppm,
+   bool error);
 
 /************ Internal functions, made available for unit testing ************/
 

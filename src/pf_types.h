@@ -1679,6 +1679,18 @@ typedef struct pf_ar_vendor_result_t
 } pf_ar_vendor_result_t;
 #endif
 
+/* HW offload driver */
+typedef struct pf_drv
+{
+   bool initialized;
+} pf_drv_t;
+
+/* HW offload driver frame */
+typedef struct pf_drv_frame
+{
+   bool initialized;
+} pf_drv_frame_t;
+
 typedef struct pf_ppm
 {
    pf_ppm_state_values_t state;
@@ -1719,6 +1731,9 @@ typedef struct pf_ppm
    bool ci_running; /* True if the timer is running. Used for stopping
                        transmission before next scheduled sending.  */
    pf_scheduler_handle_t ci_timeout;
+
+   pf_drv_frame_t * frame; /* Driver specific ppm frame configuration */
+
 } pf_ppm_t;
 
 typedef struct pf_cpm
@@ -1760,6 +1775,9 @@ typedef struct pf_cpm
 
    /* CMIO data */
    bool cmio_start; /* cmInstance.start/stop */
+
+   pf_drv_frame_t * frame; /* Driver specific cpm frame configuration */
+
 } pf_cpm_t;
 
 typedef struct pf_iodata_object
@@ -2421,6 +2439,255 @@ typedef struct pf_log_book
    bool wrap;    /* All entries valid */
 } pf_log_book_t;
 
+typedef struct pf_ppm_driver
+{
+   /**
+    * Create a PPM driver instance.
+    * @param net              InOut: The p-net stack instance
+    * @param p_ar             InOut: The AR instance.
+    * @param crep             In:    The IOCR index.
+    * @return  0  if the PPM driver instance was created.
+    *          -1 if an error occurred.
+    */
+   int (*create) (pnet_t * net, pf_ar_t * p_ar, uint32_t crep);
+
+   /**
+    * Start a PPM driver instance.
+    * @param net              InOut: The p-net stack instance
+    * @param p_ar             InOut: The AR instance.
+    * @param crep             In:    The IOCR index.
+    * @return  0  if the PPM driver instance was activated.
+    *          -1 if an error occurred.
+    */
+   int (*activate_req) (pnet_t * net, pf_ar_t * p_ar, uint32_t crep);
+
+   /**
+    * Close and de-commission a PPM driver instance.
+    * @param net              InOut: The p-net stack instance
+    * @param p_ar             InOut: The AR instance.
+    * @param crep             In:    The IOCR index.
+    * @return  0  if the PPM driver instance was closed.
+    *          -1 if an error occurred.
+    */
+   int (*close_req) (pnet_t * net, pf_ar_t * p_ar, uint32_t crep);
+
+   /**
+    * Set the data and IOPS for a sub-module.
+    * @param net              InOut: The p-net stack instance
+    * @param iocr             InOut: The IOCR instance.
+    * @param p_iodata         In:    Iodata object information
+    * @param data             In:    The application data.
+    *                                If NULL is passed, frame data is
+    *                                not updated.
+    * @param len              In:    The length of the application data.
+    * @param p_iops           In:    The IOPS of the application data.
+    * @param iops_len         In:    The length of the IOPS.
+    * @return  0  if the input data and IOPS was set.
+    *          -1 if an error occurred.
+    */
+   int (*write_data_and_iops) (
+      pnet_t * net,
+      pf_iocr_t * iocr,
+      const pf_iodata_object_t * p_iodata,
+      const uint8_t * data,
+      uint16_t len,
+      const uint8_t * p_iops,
+      uint8_t iops_len);
+
+   /**
+    * Retrieve the data and IOPS for a sub-module.
+    *
+    * Note that this is not from the PLC, but previously set by the application.
+    *
+    * @param net              InOut: The p-net stack instance
+    * @param iocr             InOut: The IOCR instance.
+    * @param p_iodata         In:    Iodata object information
+    * @param data             Out:   Data buffer.
+    * @param data_len         In:    The length of the data.
+    * @param p_iops           Out:   The IOPS of the application data.
+    * @param iops_len         In:    The size of iops.
+    * @return  0  if the input data and IOPS could e retrieved.
+    *          -1 if an error occurred.
+    */
+   int (*read_data_and_iops) (
+      pnet_t * net,
+      pf_iocr_t * iocr,
+      const pf_iodata_object_t * p_iodata,
+      uint8_t * data,
+      uint16_t data_len,
+      uint8_t * p_iops,
+      uint8_t iops_len);
+
+   /**
+    * Set IOCS for a sub-module.
+    * @param net              InOut: The p-net stack instance
+    * @param iocr             InOut: The IOCR instance.
+    * @param p_iodata         In:    Iodata object information
+    * @param iocs             In:    The IOCS of the application data.
+    * @param iocs_len         In:    The length of the IOCS data.
+    * @return  0  if the IOCS was set.
+    *          -1 if an error occurred.
+    */
+   int (*write_iocs) (
+      pnet_t * net,
+      pf_iocr_t * iocr,
+      const pf_iodata_object_t * p_iodata,
+      const uint8_t * iocs,
+      uint8_t iocs_len);
+
+   /**
+    * Retrieve IOCS for a sub-module.
+    * Note that this is not from the PLC, but previously set by the application.
+    * @param net              InOut: The p-net stack instance
+    * @param iocr             InOut: The IOCR instance.
+    * @param p_iodata         In:    Iodata object information
+    * @param iocs             Out:   The IOCS of the application data.
+    * @param iocs_len         In:    The size of iocs.
+    * @return  0  if the IOCS could be retrieved.
+    *          -1 if an error occurred.
+    */
+   int (*read_iocs) (
+      pnet_t * net,
+      pf_iocr_t * iocr,
+      const pf_iodata_object_t * p_iodata,
+      uint8_t * iocs,
+      uint8_t iocs_len);
+
+   /**
+    * Set the data status of the PPM connection.
+    * @param net              InOut: The p-net stack instance
+    * @param iocr             InOut: The IOCR instance.
+    * @param data_status      In:    The PPM data status. See
+    *                                pnet_data_status_bits_t for details.
+    * @return 0  if the data status could be retrieved.
+    *         -1 if an error occurred.
+    */
+   int (
+      *write_data_status) (pnet_t * net, pf_iocr_t * iocr, uint8_t data_status);
+
+   /* int (*read_data_status) (pf_ppm_t * p_ppm, uint8_t * p_data_status); */
+
+   /**
+    * Show PPM instance details
+    * @param p_ppm            In: The PPM instance
+    */
+   void (*show) (const pf_ppm_t * p_ppm);
+
+} pf_ppm_driver_t;
+
+typedef struct pf_cpm_driver
+{
+   /**
+    * Create a CPM for a specific IOCR instance.
+    *
+    * This function creates a CPM instance for the specified IOCR instance.
+    * Set the CPM state to W_START.
+    * Allocate the buffer mutex on first call.
+    *
+    * @param net              InOut: The p-net stack instance
+    * @param p_ar             InOut: The AR instance.
+    * @param crep             In:    The IOCR index.
+    * @return  0  if the CPM instance was created.
+    *          -1 if an error occurred.
+    */
+   int (*create) (pnet_t * net, pf_ar_t * p_ar, uint32_t crep);
+
+   /**
+    * Activate a CPM instance of the specified CR instance.
+    *
+    * Registers a frame handler for incoming Ethernet frames.
+    *
+    * @param net              InOut: The p-net stack instance
+    * @param p_ar             InOut: The AR instance.
+    * @param crep             In:    The IOCR index.
+    * @return  0  if the CPM instance could be activated.
+    *          -1 if an error occurred.
+    */
+   int (*activate_req) (pnet_t * net, pf_ar_t * p_ar, uint32_t crep);
+
+   /**
+    * Close a CPM instance.
+    *
+    * This function terminates the specified CPM instance.
+    * De-registers a frame handler for incoming Ethernet frames.
+    * The buffer mutex is destroyed on the last call.
+    *
+    * @param net              InOut: The p-net stack instance
+    * @param p_ar             InOut: The AR instance.
+    * @param crep             In:    The IOCR index.
+    * @return  0  if the CPM instance was closed.
+    *          -1 if an error occurred.
+    */
+   int (*close_req) (pnet_t * net, pf_ar_t * p_ar, uint32_t crep);
+
+   /**
+    * Retrieve the specified sub-slot IOCS sent from the controller.
+    * User must supply a buffer large enough to hold the received IOCS.
+    * Maximum buffer size is 255 bytes.
+    * @param net           InOut: The p-net stack instance
+    * @param iocr          InOut:    The IOCR instance.
+    * @param p_iodata      In:    Iodata object information
+    * @param p_iocs        Out:   Copy of the received IOCS.
+    * @param iocs_len      In:    Size of IOCS.
+    * @return 0 on success, -1 on error
+    */
+   int (*get_iocs) (
+      pnet_t * net,
+      pf_iocr_t * iocr,
+      const pf_iodata_object_t * p_iodata,
+      uint8_t * p_iocs,
+      uint8_t iocs_len);
+
+   /**
+    * Retrieve the specified sub-slot data and IOPS received from the
+    * controller.
+    *
+    * User must supply a buffer large enough to hold the received
+    * data. Maximum buffer size is PF_FRAME_BUFFER_SIZE (1500) bytes.
+    *
+    * User must also supply a buffer large enough to hold the received IOPS.
+    * Maximum buffer size is 255 bytes.
+    *
+    * @param net           InOut: The p-net stack instance
+    * @param iocr          InOut: The IOCR instance.
+    * @param p_iodata      In:    Iodata object information
+    * @param p_new_flag    Out:   true means new valid data (and IOPS) frame
+    *                             available since last call.
+    * @param p_data        Out:   Copy of the received data.
+    * @param data_len      In:    Buffer size.
+    * @param p_iops        Out:   The received IOPS.
+    * @param iops_len      In:    Size of buffer at IOPS.
+    * @return  0  if the data and IOPS could be retrieved.
+    *          -1 if an error occurred.
+    */
+   int (*get_data_and_iops) (
+      pnet_t * net,
+      pf_iocr_t * iocr,
+      const pf_iodata_object_t * p_iodata,
+      bool * p_new_flag,
+      uint8_t * p_data,
+      uint16_t data_len,
+      uint8_t * p_iops,
+      uint8_t iops_len);
+
+   /**
+    * Get the data status of the CPM connection.
+    * @param p_cpm            In:   The CPM instance.
+    * @param p_data_status    Out:  The CPM data status. See
+    *                               pnet_data_status_bits_t for details.
+    * @return 0 on success, -1 on error
+    */
+   int (*get_data_status) (const pf_cpm_t * p_cpm, uint8_t * p_data_status);
+
+   /**
+    * Show CPM instance details
+    * @param net           In:    The p-net stack instance
+    * @param p_cpm         In:    The CPM instance
+    */
+   void (*show) (const pnet_t * net, const pf_cpm_t * p_cpm);
+
+} pf_cpm_driver_t;
+
 /**
  *
  * Substitution name: PDPortDataCheck
@@ -2696,6 +2963,11 @@ struct pnet
    {
       os_event_t * events;
    } pf_bg_worker;
+
+   const pf_ppm_driver_t * ppm_drv;
+   const pf_cpm_driver_t * cpm_drv;
+
+   pf_drv_t * hwo_drv; /* Handle to HW offload driver. NULL if not used */
 
 #if PNET_OPTION_SNMP
    pf_snmp_data_t snmp_data;

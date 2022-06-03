@@ -5095,6 +5095,7 @@ int pf_cmdev_cm_ccontrol_req (pnet_t * net, pf_ar_t * p_ar)
    pf_ar_t * p_owning_ar = NULL;
    pf_iocr_t * p_owning_iocr = NULL;
    pf_iodata_object_t * p_owning_iodata = NULL;
+   uint32_t crep;
 
    if (p_ar->ar_param.ar_properties.device_access == false)
    {
@@ -5129,7 +5130,8 @@ int pf_cmdev_cm_ccontrol_req (pnet_t * net, pf_ar_t * p_ar)
                         p_iodata->subslot_nbr,
                         &p_owning_ar,
                         &p_owning_iocr,
-                        &p_owning_iodata) == 0)
+                        &p_owning_iodata,
+                        &crep) == 0)
                   {
                      if (
                         p_owning_ar != p_ar ||

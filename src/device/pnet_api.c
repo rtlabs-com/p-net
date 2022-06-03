@@ -39,18 +39,27 @@ int pnet_init_only (pnet_t * net, const pnet_cfg_t * p_cfg)
 {
    memset (net, 0, sizeof (*net));
 
-   net->cmdev_initialized = false; /* TODO How to handle that pf_cmdev_exit()
-                                      is used before pf_cmdev_init()? */
-
-   pf_cpm_init (net);
-   pf_ppm_init (net);
-   pf_alarm_init (net);
-
-   /* initialize configuration */
+   /* Initialize configuration */
    if (pf_fspm_init (net, p_cfg) != 0)
    {
       return -1;
    }
+
+   net->cmdev_initialized = false; /* TODO How to handle that pf_cmdev_exit()
+                                      is used before pf_cmdev_init()? */
+
+   pf_scheduler_init (net, p_cfg->tick_us);
+
+#if PNET_OPTION_DRIVER_ENABLE
+   if (net->fspm_cfg.driver_enable)
+   {
+      pf_driver_init (net);
+   }
+#endif
+
+   pf_cpm_init (net);
+   pf_ppm_init (net);
+   pf_alarm_init (net);
 
    if (pf_eth_init (net, p_cfg) != 0)
    {
@@ -61,7 +70,6 @@ int pnet_init_only (pnet_t * net, const pnet_cfg_t * p_cfg)
       return -1;
    }
 
-   pf_scheduler_init (net, p_cfg->tick_us);
    pf_bg_worker_init (net);
    pf_cmina_init (net); /* Read from permanent pool */
 
@@ -372,7 +380,7 @@ int pnet_set_primary_state (pnet_t * net, bool primary)
       {
          for (cr_ix = 0; cr_ix < p_ar->nbr_iocrs; cr_ix++)
          {
-            if (pf_ppm_set_data_status_state (p_ar, cr_ix, primary) != 0)
+            if (pf_ppm_set_data_status_state (net, p_ar, cr_ix, primary) != 0)
             {
                ret = -1;
             }
@@ -403,7 +411,7 @@ int pnet_set_redundancy_state (pnet_t * net, bool redundant)
       {
          for (cr_ix = 0; cr_ix < p_ar->nbr_iocrs; cr_ix++)
          {
-            if (pf_ppm_set_data_status_redundancy (p_ar, cr_ix, redundant) != 0)
+            if (pf_ppm_set_data_status_redundancy (net, p_ar, cr_ix, redundant) != 0)
             {
                ret = -1;
             }
@@ -434,7 +442,7 @@ int pnet_set_provider_state (pnet_t * net, bool run)
       {
          for (cr_ix = 0; cr_ix < p_ar->nbr_iocrs; cr_ix++)
          {
-            if (pf_ppm_set_data_status_provider (p_ar, cr_ix, run) != 0)
+            if (pf_ppm_set_data_status_provider (net, p_ar, cr_ix, run) != 0)
             {
                ret = -1;
             }

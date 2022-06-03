@@ -17,7 +17,7 @@
  * @file
  * @brief Implements the Cyclic Provider Protocol Machine (PPM)
  *
- * This handles cyclic sending of data (and IOPS). Initializes transmit buffers.
+ * This handles cyclic sending of data (and IOPS). Initalizes transmit buffers.
  *
  * One instance of PPM exist per CR (together with a CPM).
  *
@@ -47,15 +47,29 @@
 void pf_ppm_init (pnet_t * net)
 {
    net->ppm_instance_cnt = ATOMIC_VAR_INIT (0);
+
+   LOG_DEBUG (PF_PPM_LOG, "PPM(%d): Init driver\n", __LINE__);
+
+#if PNET_OPTION_DRIVER_ENABLE
+   if (net->fspm_cfg.driver_enable)
+   {
+      pf_driver_ppm_init (net);
+   }
+   else
+   {
+      pf_ppm_driver_sw_init (net);
+   }
+#else
+   pf_ppm_driver_sw_init (net);
+#endif
 }
 
 /**
- * @internal
  * Return a string representation of the PPM state.
  * @param state            In:   The PPM state.
  * @return  A string representing the PPM state.
  */
-static const char * pf_ppm_state_to_string (pf_ppm_state_values_t state)
+const char * pf_ppm_state_to_string (pf_ppm_state_values_t state)
 {
    const char * s = "<unknown>";
 
@@ -72,22 +86,7 @@ static const char * pf_ppm_state_to_string (pf_ppm_state_values_t state)
    return s;
 }
 
-/********************* Error handling ****************************************/
-
-/**
- * @internal
- * Send error indications to other components.
- * @param net              InOut: The p-net stack instance
- * @param p_ar             InOut: The AR instance.
- * @param p_ppm            In:   The PPM instance.
- * @param error            In:   An error flag.
- * @return  0  always.
- */
-static int pf_ppm_state_ind (
-   pnet_t * net,
-   pf_ar_t * p_ar,
-   pf_ppm_t * p_ppm,
-   bool error)
+int pf_ppm_state_ind (pnet_t * net, pf_ar_t * p_ar, pf_ppm_t * p_ppm, bool error)
 {
    if (error == true)
    {
@@ -99,15 +98,12 @@ static int pf_ppm_state_ind (
    return 0;
 }
 
-/******************** Start, stop, send, state *******************************/
-
 /**
- * @internal
  * Handle state changes in the PPM instance.
  * @param p_ppm            InOut: The PPM instance.
  * @param state            In:   The new PPM state.
  */
-static void pf_ppm_set_state (pf_ppm_t * p_ppm, pf_ppm_state_values_t state)
+void pf_ppm_set_state (pf_ppm_t * p_ppm, pf_ppm_state_values_t state)
 {
    if (state != p_ppm->state)
    {
@@ -183,20 +179,7 @@ static void pf_ppm_init_buf (
    /* No further pos advancement, to suppress clang warning */
 }
 
-/**
- * @internal
- * Finalize a PPM transmit message in the send buffer.
- *
- * Insert data, cycle counter, data status and transfer status.
- *
- * @param net              InOut: The p-net stack instance
- * @param p_ppm            In:   The PPM instance.
- * @param data_length      In:   The length of the message.
- */
-static void pf_ppm_finish_buffer (
-   pnet_t * net,
-   pf_ppm_t * p_ppm,
-   uint16_t data_length)
+void pf_ppm_finish_buffer (pnet_t * net, pf_ppm_t * p_ppm, uint16_t data_length)
 {
    uint8_t * p_payload = ((pnal_buf_t *)p_ppm->p_send_buffer)->payload;
    uint16_t u16;
@@ -229,181 +212,180 @@ static void pf_ppm_finish_buffer (
 }
 
 /**
- * @internal
- * Send the PPM data message to the controller.
+ * Initialize ppm configuration from AR data.
+ *  - Compute and set frame offsets to
+ *    cycle counter, status and more
+ *  - sender address (sa)
+ *  - destination address (da)
+ *  - send interval config
+ *  - status
  *
- * This is a callback for the scheduler. Arguments should fulfill
- * pf_scheduler_timeout_ftn_t
- *
- * If the PPM has not been stopped during the wait, then a data message
- * is sent and the function is rescheduled.
- *
- * @param net              InOut: The p-net stack instance
- * @param arg              In:    The IOCR instance.
- * @param current_time     In:    The current system time, in microseconds,
- *                                when the scheduler is started to execute
- * stored tasks.
+ * @param net              InOut: The NET instance.
+ * @param p_ar             InOut: The AR instance.
+ * @param crep             In:    The IOCR instance.
+ * @return  0  on success.
+ *          -1 if an error occurred.
  */
-static void pf_ppm_send (pnet_t * net, void * arg, uint32_t current_time)
+static int pf_ppm_init_cr_config (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
 {
-   pf_iocr_t * p_arg = (pf_iocr_t *)arg;
-   uint32_t delay = 0;
+   const uint16_t vlan_size = 4;
+   pf_iocr_t * p_iocr = &p_ar->iocrs[crep];
+   pf_ppm_t * p_ppm = &p_iocr->ppm;
 
-   /* ToDo: Handle RT_CLASS_UDP */
+   p_ppm->first_transmit = false;
 
-   pf_scheduler_reset_handle (&p_arg->ppm.ci_timeout);
-   if (p_arg->ppm.ci_running == true)
-   {
-      /* Insert data, status etc. The in_length is the size of input to the
-       * controller */
-      pf_ppm_finish_buffer (net, &p_arg->ppm, p_arg->in_length);
+   memcpy (
+      &p_ppm->sa,
+      &p_ar->ar_result.cm_responder_mac_add,
+      sizeof (p_ppm->sa));
 
-      /* Now send it */
-      if (pf_eth_send_on_management_port (net, p_arg->ppm.p_send_buffer) > 0)
-      {
-         /* Schedule next execution */
-         p_arg->ppm.next_exec += p_arg->ppm.control_interval;
-         delay = p_arg->ppm.next_exec - current_time;
-         if (
-            pf_scheduler_add (
-               net,
-               delay,
-               pf_ppm_send,
-               arg,
-               &p_arg->ppm.ci_timeout) == 0)
-         {
-            p_arg->ppm.trx_cnt++;
-            if (p_arg->ppm.first_transmit == false)
-            {
-               pf_ppm_state_ind (net, p_arg->p_ar, &p_arg->ppm, false); /* No
-                                                                           error
-                                                                         */
-               p_arg->ppm.first_transmit = true;
-            }
-         }
-         else
-         {
-            pf_ppm_state_ind (net, p_arg->p_ar, &p_arg->ppm, true); /* Error */
-         }
-      }
-   }
+   memcpy (&p_ppm->da, &p_ar->ar_param.cm_initiator_mac_add, sizeof (p_ppm->da));
+
+   p_ppm->buffer_pos = 2 * sizeof (pnet_ethaddr_t) + vlan_size +
+                       sizeof (uint16_t) + sizeof (uint16_t);
+   p_ppm->cycle = 0;
+   p_ppm->transfer_status = 0;
+
+   /* Pre-compute send buffer offsets*/
+   p_ppm->cycle_counter_offset = p_ppm->buffer_pos + /* ETH frame header */
+                                 p_iocr->param.c_sdu_length; /* Profinet data
+                                                                length */
+
+   p_ppm->data_status_offset = p_ppm->buffer_pos + /* ETH frame header */
+                               p_iocr->param.c_sdu_length + /* Profinet data
+                                                               length */
+                               sizeof (uint16_t);           /* cycle counter */
+
+   p_ppm->transfer_status_offset = p_ppm->buffer_pos + /* ETH frame header */
+                                   p_iocr->param.c_sdu_length + /* Profinet
+                                                                   data
+                                                                   length */
+                                   sizeof (uint16_t) + /* cycle counter */
+                                   1;                  /* data status */
+
+   p_ppm->buffer_length = p_ppm->buffer_pos +          /* ETH frame header */
+                          p_iocr->param.c_sdu_length + /* Profinet data
+                                                          length */
+                          sizeof (uint16_t) +          /* cycle counter */
+                          1 +                          /* data status */
+                          1;                           /* transfer status */
+
+   p_ppm->data_status =
+      BIT (PNET_DATA_STATUS_BIT_STATE) | /* PRIMARY */
+      BIT (PNET_DATA_STATUS_BIT_DATA_VALID) |
+      BIT (PNET_DATA_STATUS_BIT_STATION_PROBLEM_INDICATOR); /* Normal */
+
+   p_ppm->control_interval = ((uint32_t)p_iocr->param.send_clock_factor *
+                              (uint32_t)p_iocr->param.reduction_ratio * 1000U) /
+                             32U; /* us */
+
+   p_ppm->send_clock_factor = p_iocr->param.send_clock_factor;
+   p_ppm->reduction_ratio = p_iocr->param.reduction_ratio;
+
+   return 0;
 }
 
-int pf_ppm_activate_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
+int pf_ppm_create (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
 {
-   int ret = -1;
-   const uint16_t vlan_size = 4;
    pf_iocr_t * p_iocr = &p_ar->iocrs[crep];
    pf_ppm_t * p_ppm;
    uint32_t cnt;
+
+   CC_ASSERT (net && net->ppm_drv && net->ppm_drv->activate_req && p_ar);
+
+   LOG_DEBUG (
+      PF_PPM_LOG,
+      "PPM(%d): Create PPM instance. AREP %u "
+      "CREP %" PRIu32 "\n",
+      __LINE__,
+      p_ar->arep,
+      crep);
 
    cnt = atomic_fetch_add (&net->ppm_instance_cnt, 1);
    if (cnt == 0)
    {
       net->ppm_buf_lock = os_mutex_create();
+      CC_ASSERT (net->ppm_buf_lock != NULL);
    }
 
    p_ppm = &p_iocr->ppm;
+
+   if (p_ppm->state != PF_PPM_STATE_W_START)
+   {
+      p_ar->err_cls = PNET_ERROR_CODE_1_PPM;
+      p_ar->err_code = PNET_ERROR_CODE_2_PPM_INVALID_STATE;
+      return -1;
+   }
+
+   if (pf_ppm_init_cr_config (net, p_ar, crep) != 0)
+   {
+      p_ar->err_cls = PNET_ERROR_CODE_1_PPM;
+      p_ar->err_code = PNET_ERROR_CODE_2_PPM_INVALID_STATE;
+      return -1;
+   }
+
+   /* Get the buffer to store the outgoing frame into. */
+   p_ppm->p_send_buffer = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE);
+
+   if (p_ppm->p_send_buffer == NULL)
+   {
+      p_ar->err_cls = PNET_ERROR_CODE_1_PPM;
+      p_ar->err_code = PNET_ERROR_CODE_2_PPM_INVALID_STATE;
+      return -1;
+   }
+
+   /* Default_values: Set buffer to zero and IOxS to BAD (=0) */
+   /* Default_status: Set cycle_counter to invalid, transfer_status = 0,
+    * data_status = 0 */
+   pf_ppm_init_buf (
+      p_ppm,
+      p_ppm->p_send_buffer,
+      p_iocr->param.frame_id,
+      &p_iocr->param.iocr_tag_header);
+
+   return net->ppm_drv->create (net, p_ar, crep);
+}
+
+int pf_ppm_activate_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
+{
+   int ret = -1;
+   pf_iocr_t * p_iocr = &p_ar->iocrs[crep];
+   pf_ppm_t * p_ppm;
+
+   p_ppm = &p_iocr->ppm;
+
    if (p_ppm->state == PF_PPM_STATE_RUN)
    {
       p_ar->err_cls = PNET_ERROR_CODE_1_PPM;
       p_ar->err_code = PNET_ERROR_CODE_2_PPM_INVALID_STATE;
+      return ret;
    }
-   else
+
+   p_ppm->next_exec = os_get_current_time_us();
+   p_ppm->next_exec += p_ppm->control_interval;
+
+   LOG_DEBUG (
+      PF_PPM_LOG,
+      "PPM(%d): Activate PPM. AREP %u "
+      "CREP %" PRIu32 ", period %" PRIu32 " microseconds. FrameID 0x%04x\n",
+      __LINE__,
+      p_ar->arep,
+      crep,
+      p_ppm->control_interval,
+      p_iocr->param.frame_id);
+
+   pf_ppm_set_state (p_ppm, PF_PPM_STATE_RUN);
+
+   p_ppm->ci_running = true;
+
+   /* Initialize input data and iops */
+   pf_ppm_finish_buffer (net, p_ppm, p_iocr->in_length);
+
+   ret = net->ppm_drv->activate_req (net, p_ar, crep);
+
+   if (ret != 0)
    {
-      p_ppm->first_transmit = false;
-
-      memcpy (
-         &p_ppm->sa,
-         &p_ar->ar_result.cm_responder_mac_add,
-         sizeof (p_ppm->sa));
-      memcpy (
-         &p_ppm->da,
-         &p_ar->ar_param.cm_initiator_mac_add,
-         sizeof (p_ppm->da));
-
-      p_ppm->buffer_pos = 2 * sizeof (pnet_ethaddr_t) + vlan_size +
-                          sizeof (uint16_t) + sizeof (uint16_t);
-      p_ppm->cycle = 0;
-      p_ppm->transfer_status = 0;
-
-      /* Pre-compute some offsets into the send buffer */
-      p_ppm->cycle_counter_offset = p_ppm->buffer_pos + /* ETH frame header */
-                                    p_iocr->param.c_sdu_length; /* Profinet data
-                                                                   length */
-
-      p_ppm->data_status_offset = p_ppm->buffer_pos + /* ETH frame header */
-                                  p_iocr->param.c_sdu_length + /* Profinet data
-                                                                  length */
-                                  sizeof (uint16_t); /* cycle counter */
-
-      p_ppm->transfer_status_offset = p_ppm->buffer_pos + /* ETH frame header */
-                                      p_iocr->param.c_sdu_length + /* Profinet
-                                                                      data
-                                                                      length */
-                                      sizeof (uint16_t) + /* cycle counter */
-                                      1;                  /* data status */
-
-      p_ppm->buffer_length = p_ppm->buffer_pos +          /* ETH frame header */
-                             p_iocr->param.c_sdu_length + /* Profinet data
-                                                             length */
-                             sizeof (uint16_t) +          /* cycle counter */
-                             1 +                          /* data status */
-                             1;                           /* transfer status */
-
-      p_ppm->data_status =
-         BIT (PNET_DATA_STATUS_BIT_STATE) + /* PRIMARY */
-         BIT (PNET_DATA_STATUS_BIT_DATA_VALID) +
-         BIT (PNET_DATA_STATUS_BIT_STATION_PROBLEM_INDICATOR); /* Normal */
-
-      /* Get the buffer to store the outgoing frame into. */
-      p_ppm->p_send_buffer = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE);
-
-      /* Default_values: Set buffer to zero and IOxS to BAD (=0) */
-      /* Default_status: Set cycle_counter to invalid, transfer_status = 0,
-       * data_status = 0 */
-      pf_ppm_init_buf (
-         p_ppm,
-         p_ppm->p_send_buffer,
-         p_iocr->param.frame_id,
-         &p_iocr->param.iocr_tag_header);
-
-      p_ppm->control_interval =
-         ((uint32_t)p_iocr->param.send_clock_factor *
-          (uint32_t)p_iocr->param.reduction_ratio * 1000U) /
-         32U; /* us */
-
-      p_ppm->next_exec = os_get_current_time_us();
-      p_ppm->next_exec += p_ppm->control_interval;
-
-      LOG_DEBUG (
-         PF_PPM_LOG,
-         "PPM(%d): Starting cyclic input data transmission with PPM. AREP %u "
-         "CREP %" PRIu32 ", period %" PRIu32 " microseconds. FrameID 0x%04x\n",
-         __LINE__,
-         p_ar->arep,
-         crep,
-         p_ppm->control_interval,
-         p_iocr->param.frame_id);
-
-      /* Needed for counter calculations */
-      p_ppm->send_clock_factor = p_iocr->param.send_clock_factor;
-      p_ppm->reduction_ratio = p_iocr->param.reduction_ratio;
-
-      pf_ppm_set_state (p_ppm, PF_PPM_STATE_RUN);
-
-      p_ppm->ci_running = true;
-      pf_scheduler_init_handle (&p_ppm->ci_timeout, "ppm");
-      ret = pf_scheduler_add (
-         net,
-         p_ppm->control_interval,
-         pf_ppm_send,
-         p_iocr,
-         &p_ppm->ci_timeout);
-      if (ret != 0)
-      {
-         pf_ppm_state_ind (net, p_ar, p_ppm, true); /* Error */
-      }
+      pf_ppm_state_ind (net, p_ar, p_ppm, true); /* Error */
    }
 
    return ret;
@@ -411,7 +393,8 @@ int pf_ppm_activate_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
 
 int pf_ppm_close_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
 {
-   pf_ppm_t * p_ppm;
+
+   pf_ppm_t * p_ppm = &p_ar->iocrs[crep].ppm;
    uint32_t cnt;
 
    LOG_DEBUG (
@@ -420,19 +403,22 @@ int pf_ppm_close_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
       __LINE__,
       p_ar->arep,
       crep);
-   p_ppm = &p_ar->iocrs[crep].ppm;
-   p_ppm->ci_running = false;
-   pf_scheduler_remove_if_running (net, &p_ppm->ci_timeout);
-   pnal_buf_free (p_ppm->p_send_buffer);
-   pf_ppm_set_state (p_ppm, PF_PPM_STATE_W_START);
 
+   p_ppm->ci_running = false;
+
+   /* Stop driver handling cyclic transmits */
+   net->ppm_drv->close_req (net, p_ar, crep);
+
+   pnal_buf_free (p_ppm->p_send_buffer);
+   // TODO - set p_send_buffer to NULL ??
+
+   pf_ppm_set_state (p_ppm, PF_PPM_STATE_W_START);
+   p_ppm->data_status = 0;
    cnt = atomic_fetch_sub (&net->ppm_instance_cnt, 1);
    if (cnt == 1)
    {
       os_mutex_destroy (net->ppm_buf_lock);
       net->ppm_buf_lock = NULL;
-
-      p_ppm->data_status = 0;
    }
 
    return 0;
@@ -445,7 +431,8 @@ int pf_ppm_get_ar_iocr_desc (
    uint16_t subslot_nbr,
    pf_ar_t ** pp_ar,
    pf_iocr_t ** pp_iocr,
-   pf_iodata_object_t ** pp_iodata)
+   pf_iodata_object_t ** pp_iodata,
+   uint32_t * p_crep)
 {
    int ret = -1;
    uint32_t crep;
@@ -492,6 +479,7 @@ int pf_ppm_get_ar_iocr_desc (
                   *pp_iodata = &p_iocr->data_desc[iodata_ix];
                   *pp_iocr = p_iocr;
                   *pp_ar = p_ar;
+                  *p_crep = crep;
                   found = true;
                }
             }
@@ -507,8 +495,6 @@ int pf_ppm_get_ar_iocr_desc (
    return ret;
 }
 
-/**************** Set and get data, IOPS and IOCS ****************************/
-
 int pf_ppm_set_data_and_iops (
    pnet_t * net,
    uint32_t api_id,
@@ -523,6 +509,7 @@ int pf_ppm_set_data_and_iops (
    pf_iocr_t * p_iocr = NULL;
    pf_iodata_object_t * p_iodata = NULL;
    pf_ar_t * p_ar = NULL;
+   uint32_t crep;
 
    if (
       pf_ppm_get_ar_iocr_desc (
@@ -532,45 +519,27 @@ int pf_ppm_set_data_and_iops (
          subslot_nbr,
          &p_ar,
          &p_iocr,
-         &p_iodata) == 0)
+         &p_iodata,
+         &crep) == 0)
    {
       switch (p_iocr->ppm.state)
       {
       case PF_PPM_STATE_W_START:
-         p_ar->err_cls = PNET_ERROR_CODE_1_PPM;
-         p_ar->err_code = PNET_ERROR_CODE_2_PPM_INVALID_STATE;
-         LOG_DEBUG (
-            PF_PPM_LOG,
-            "PPM(%d): Set data in wrong state: %u for AREP %u\n",
-            __LINE__,
-            p_iocr->ppm.state,
-            p_ar->arep);
-         break;
       case PF_PPM_STATE_RUN:
          if (
             (data_len == p_iodata->data_length) &&
             (iops_len == p_iodata->iops_length))
          {
-            CC_ASSERT (net->ppm_buf_lock != NULL);
-            os_mutex_lock (net->ppm_buf_lock);
-            if (data_len > 0 && p_data != NULL)
-            {
-               memcpy (
-                  &p_iocr->ppm.buffer_data[p_iodata->data_offset],
-                  p_data,
-                  data_len);
-            }
-            if (iops_len > 0)
-            {
-               memcpy (
-                  &p_iocr->ppm.buffer_data[p_iodata->iops_offset],
-                  p_iops,
-                  iops_len);
-            }
-            os_mutex_unlock (net->ppm_buf_lock);
+            ret = net->ppm_drv->write_data_and_iops (
+               net,
+               p_iocr,
+               p_iodata,
+               p_data,
+               data_len,
+               p_iops,
+               iops_len);
 
             p_iodata->data_avail = true;
-            ret = 0;
          }
          else
          {
@@ -621,6 +590,7 @@ int pf_ppm_set_iocs (
    pf_iocr_t * p_iocr = NULL;
    pf_iodata_object_t * p_iodata = NULL;
    pf_ar_t * p_ar = NULL;
+   uint32_t crep;
 
    if (
       pf_ppm_get_ar_iocr_desc (
@@ -630,32 +600,17 @@ int pf_ppm_set_iocs (
          subslot_nbr,
          &p_ar,
          &p_iocr,
-         &p_iodata) == 0)
+         &p_iodata,
+         &crep) == 0)
    {
       switch (p_iocr->ppm.state)
       {
       case PF_PPM_STATE_W_START:
-         p_ar->err_cls = PNET_ERROR_CODE_1_PPM;
-         p_ar->err_code = PNET_ERROR_CODE_2_PPM_INVALID_STATE;
-         LOG_DEBUG (
-            PF_PPM_LOG,
-            "PPM(%d): Set iocs in wrong state: %u for AREP %u\n",
-            __LINE__,
-            p_iocr->ppm.state,
-            p_ar->arep);
-         break;
       case PF_PPM_STATE_RUN:
          if (iocs_len == p_iodata->iocs_length)
          {
-            CC_ASSERT (net->ppm_buf_lock != NULL);
-            os_mutex_lock (net->ppm_buf_lock);
-            memcpy (
-               &p_iocr->ppm.buffer_data[p_iodata->iocs_offset],
-               p_iocs,
-               iocs_len);
-            os_mutex_unlock (net->ppm_buf_lock);
-
-            ret = 0;
+            ret = net->ppm_drv
+                     ->write_iocs (net, p_iocr, p_iodata, p_iocs, iocs_len);
          }
          else if (p_iodata->iocs_length == 0)
          {
@@ -712,6 +667,7 @@ int pf_ppm_get_data_and_iops (
    pf_iocr_t * p_iocr = NULL;
    pf_iodata_object_t * p_iodata = NULL;
    pf_ar_t * p_ar = NULL;
+   uint32_t crep;
 
    if (
       pf_ppm_get_ar_iocr_desc (
@@ -721,7 +677,8 @@ int pf_ppm_get_data_and_iops (
          subslot_nbr,
          &p_ar,
          &p_iocr,
-         &p_iodata) == 0)
+         &p_iodata,
+         &crep) == 0)
    {
       switch (p_iocr->ppm.state)
       {
@@ -740,21 +697,16 @@ int pf_ppm_get_data_and_iops (
             (*p_data_len >= p_iodata->data_length) &&
             (*p_iops_len >= p_iodata->iops_length))
          {
-            CC_ASSERT (net->ppm_buf_lock != NULL);
-            os_mutex_lock (net->ppm_buf_lock);
-            memcpy (
-               p_data,
-               &p_iocr->ppm.buffer_data[p_iodata->data_offset],
-               p_iodata->data_length);
-            memcpy (
-               p_iops,
-               &p_iocr->ppm.buffer_data[p_iodata->iops_offset],
-               p_iodata->iops_length);
-            os_mutex_unlock (net->ppm_buf_lock);
-
             *p_data_len = p_iodata->data_length;
-            *p_iops_len = (uint8_t)p_iodata->iops_length;
-            ret = 0;
+            *p_iops_len = p_iodata->iops_length;
+            ret = net->ppm_drv->read_data_and_iops (
+               net,
+               p_iocr,
+               p_iodata,
+               p_data,
+               *p_data_len,
+               p_iops,
+               *p_iops_len);
          }
          else
          {
@@ -806,6 +758,7 @@ int pf_ppm_get_iocs (
    pf_iocr_t * p_iocr = NULL;
    pf_iodata_object_t * p_iodata = NULL;
    pf_ar_t * p_ar = NULL;
+   uint32_t crep;
 
    if (
       pf_ppm_get_ar_iocr_desc (
@@ -815,7 +768,8 @@ int pf_ppm_get_iocs (
          subslot_nbr,
          &p_ar,
          &p_iocr,
-         &p_iodata) == 0)
+         &p_iodata,
+         &crep) == 0)
    {
       switch (p_iocr->ppm.state)
       {
@@ -832,16 +786,9 @@ int pf_ppm_get_iocs (
       case PF_PPM_STATE_RUN:
          if (*p_iocs_len >= p_iodata->iocs_length)
          {
-            CC_ASSERT (net->ppm_buf_lock != NULL);
-            os_mutex_lock (net->ppm_buf_lock);
-            memcpy (
-               p_iocs,
-               &p_iocr->ppm.buffer_data[p_iodata->iocs_offset],
-               p_iodata->iocs_length);
-            os_mutex_unlock (net->ppm_buf_lock);
-
-            *p_iocs_len = (uint8_t)p_iodata->iocs_length;
-            ret = 0;
+            *p_iocs_len = p_iodata->iocs_length;
+            ret = net->ppm_drv
+                     ->read_iocs (net, p_iocr, p_iodata, p_iocs, *p_iocs_len);
          }
          else
          {
@@ -878,9 +825,11 @@ int pf_ppm_get_iocs (
    return ret;
 }
 
-/****************************** Data status **********************************/
-
-int pf_ppm_set_data_status_state (pf_ar_t * p_ar, uint32_t crep, bool primary)
+int pf_ppm_set_data_status_state (
+   pnet_t * net,
+   pf_ar_t * p_ar,
+   uint32_t crep,
+   bool primary)
 {
    pf_ppm_t * p_ppm;
 
@@ -894,10 +843,15 @@ int pf_ppm_set_data_status_state (pf_ar_t * p_ar, uint32_t crep, bool primary)
    {
       p_ppm->data_status &= ~BIT (PNET_DATA_STATUS_BIT_STATE);
    }
-   return 0;
+
+   return net->ppm_drv->write_data_status (
+      net,
+      &p_ar->iocrs[crep],
+      p_ppm->data_status);
 }
 
 int pf_ppm_set_data_status_redundancy (
+   pnet_t * net,
    pf_ar_t * p_ar,
    uint32_t crep,
    bool redundant)
@@ -914,10 +868,18 @@ int pf_ppm_set_data_status_redundancy (
    {
       p_ppm->data_status &= ~BIT (PNET_DATA_STATUS_BIT_REDUNDANCY);
    }
-   return 0;
+
+   return net->ppm_drv->write_data_status (
+      net,
+      &p_ar->iocrs[crep],
+      p_ppm->data_status);
 }
 
-int pf_ppm_set_data_status_provider (pf_ar_t * p_ar, uint32_t crep, bool run)
+int pf_ppm_set_data_status_provider (
+   pnet_t * net,
+   pf_ar_t * p_ar,
+   uint32_t crep,
+   bool run)
 {
    pf_ppm_t * p_ppm;
 
@@ -931,21 +893,25 @@ int pf_ppm_set_data_status_provider (pf_ar_t * p_ar, uint32_t crep, bool run)
    {
       p_ppm->data_status &= ~BIT (PNET_DATA_STATUS_BIT_PROVIDER_STATE);
    }
-   return 0;
+
+   return net->ppm_drv->write_data_status (
+      net,
+      &p_ar->iocrs[crep],
+      p_ppm->data_status);
 }
 
 int pf_ppm_get_data_status (const pf_ppm_t * p_ppm, uint8_t * p_data_status)
 {
    *p_data_status = p_ppm->data_status;
-
    return 0;
 }
 
-void pf_ppm_set_problem_indicator (pf_ar_t * p_ar, bool problem_indicator)
+void pf_ppm_set_problem_indicator (
+   pnet_t * net,
+   pf_ar_t * p_ar,
+   bool problem_indicator)
 {
    uint16_t ix;
-
-   /* Save so it may be included in all data messages */
 
    for (ix = 0; ix < NELEMENTS (p_ar->iocrs); ix++)
    {
@@ -955,12 +921,19 @@ void pf_ppm_set_problem_indicator (pf_ar_t * p_ar, bool problem_indicator)
       {
          if (problem_indicator == true)
          {
-            p_ar->iocrs[ix].ppm.data_status &= ~BIT (5);
+            p_ar->iocrs[ix].ppm.data_status &=
+               ~BIT (PNET_DATA_STATUS_BIT_STATION_PROBLEM_INDICATOR);
          }
          else
          {
-            p_ar->iocrs[ix].ppm.data_status |= BIT (5); /* OK */
+            p_ar->iocrs[ix].ppm.data_status |=
+               BIT (PNET_DATA_STATUS_BIT_STATION_PROBLEM_INDICATOR);
          }
+
+         net->ppm_drv->write_data_status (
+            net,
+            &p_ar->iocrs[ix],
+            p_ar->iocrs[ix].ppm.data_status);
       }
    }
 }
