@@ -19,6 +19,10 @@
  *
  */
 
+#ifdef UNIT_TEST
+#define os_get_current_time_us mock_os_get_current_time_us
+#endif
+
 #include <string.h>
 #include "pf_includes.h"
 #include "pf_block_writer.h"

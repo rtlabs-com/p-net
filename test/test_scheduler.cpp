@@ -135,7 +135,70 @@ TEST_F (SchedulerUnitTest, SchedulerSanitizeDelayTest)
    ASSERT_NEAR (result, 1000, margin);
 }
 
-TEST_F (SchedulerTest, SchedulerAddRemove)
+TEST_F (SchedulerUnitTest, SchedulerIsTimeBeforeTest)
+{
+   /* Validate that the test case is compiled with enough timeouts */
+   ASSERT_GE (PF_MAX_TIMEOUTS, 6);
+
+   volatile pf_scheduler_data_t scheduler_data;
+   scheduler_data.mutex = NULL;
+
+   pf_scheduler_init (&scheduler_data, TEST_TICK_INTERVAL_US);
+
+   scheduler_data.timeouts[0].in_use = true;
+   scheduler_data.timeouts[0].name = "No_0";
+   scheduler_data.timeouts[0].when = 100;
+   scheduler_data.timeouts[0].prev = PF_MAX_TIMEOUTS;
+   scheduler_data.timeouts[0].next = 1;
+
+   scheduler_data.timeouts[1].in_use = true;
+   scheduler_data.timeouts[1].name = "No_1";
+   scheduler_data.timeouts[1].when = 200;
+   scheduler_data.timeouts[1].prev = 0;
+   scheduler_data.timeouts[1].next = 2;
+
+   scheduler_data.timeouts[2].in_use = true;
+   scheduler_data.timeouts[2].name = "No_2";
+   scheduler_data.timeouts[2].when = 300;
+   scheduler_data.timeouts[2].prev = 1;
+   scheduler_data.timeouts[2].next = 3;
+
+   scheduler_data.timeouts[3].in_use = true;
+   scheduler_data.timeouts[3].name = "No_3";
+   scheduler_data.timeouts[3].when = 300;
+   scheduler_data.timeouts[3].prev = 2;
+   scheduler_data.timeouts[3].next = 4;
+
+   scheduler_data.timeouts[4].in_use = true;
+   scheduler_data.timeouts[4].name = "No_4";
+   scheduler_data.timeouts[4].when = 400;
+   scheduler_data.timeouts[4].prev = 3;
+   scheduler_data.timeouts[4].next = 5;
+
+   scheduler_data.timeouts[5].in_use = true;
+   scheduler_data.timeouts[5].name = "No_5";
+   scheduler_data.timeouts[5].when = 500;
+   scheduler_data.timeouts[5].prev = 4;
+   scheduler_data.timeouts[5].next = PF_MAX_TIMEOUTS;
+
+   scheduler_data.busylist_head = 0;
+   scheduler_data.freelist_head = 6;
+
+   pf_scheduler_show (&scheduler_data, 50);
+
+   ASSERT_TRUE (pf_scheduler_is_time_before (&scheduler_data, 0, 1));
+   ASSERT_TRUE (pf_scheduler_is_time_before (&scheduler_data, 1, 2));
+   ASSERT_TRUE (pf_scheduler_is_time_before (&scheduler_data, 2, 3));
+   ASSERT_TRUE (pf_scheduler_is_time_before (&scheduler_data, 3, 4));
+   ASSERT_TRUE (pf_scheduler_is_time_before (&scheduler_data, 4, 5));
+
+   ASSERT_TRUE (pf_scheduler_is_time_before (&scheduler_data, 0, 0));
+
+   ASSERT_FALSE (pf_scheduler_is_time_before (&scheduler_data, 1, 0));
+   ASSERT_FALSE (pf_scheduler_is_time_before (&scheduler_data, 2, 1));
+}
+
+TEST_F (SchedulerTest, SchedulerAddRemoveInStack)
 {
    int ret;
    pf_scheduler_handle_t * p_a = &appdata.scheduler_handle_a;
@@ -146,7 +209,7 @@ TEST_F (SchedulerTest, SchedulerAddRemove)
    uint32_t value;
    bool is_scheduled;
 
-   pf_scheduler_init (net, TEST_TICK_INTERVAL_US);
+   pf_scheduler_init (&net->scheduler_data, TEST_TICK_INTERVAL_US);
    run_stack (TEST_SCHEDULER_RUNTIME);
    EXPECT_EQ (appdata.call_counters.scheduler_callback_a_calls, 0);
 
@@ -183,11 +246,12 @@ TEST_F (SchedulerTest, SchedulerAddRemove)
 
    /* Schedule callback A */
    ret = pf_scheduler_add (
-      net,
+      &net->scheduler_data,
       TEST_SCHEDULER_CALLBACK_DELAY,
       test_scheduler_callback_a,
       &appdata,
-      p_a);
+      p_a,
+      mock_os_data.current_time_us);
    EXPECT_EQ (ret, 0);
 
    EXPECT_EQ (appdata.call_counters.scheduler_callback_a_calls, 0);
@@ -242,18 +306,20 @@ TEST_F (SchedulerTest, SchedulerAddRemove)
 
    /* Schedule both callbacks */
    ret = pf_scheduler_add (
-      net,
+      &net->scheduler_data,
       TEST_SCHEDULER_CALLBACK_DELAY,
       test_scheduler_callback_a,
       &appdata,
-      p_a);
+      p_a,
+      mock_os_data.current_time_us);
    EXPECT_EQ (ret, 0);
    ret = pf_scheduler_add (
-      net,
+      &net->scheduler_data,
       TEST_SCHEDULER_RUNTIME + TEST_SCHEDULER_CALLBACK_DELAY,
       test_scheduler_callback_b,
       &appdata,
-      p_b);
+      p_b,
+      mock_os_data.current_time_us);
    EXPECT_EQ (ret, 0);
 
    EXPECT_EQ (appdata.call_counters.scheduler_callback_a_calls, 1);
@@ -326,14 +392,14 @@ TEST_F (SchedulerTest, SchedulerAddRemove)
    /* Remove non-scheduled event */
    run_stack (TEST_SCHEDULER_RUNTIME);
 
-   pf_scheduler_remove_if_running (net, p_a);
+   pf_scheduler_remove_if_running (&net->scheduler_data, p_a);
    EXPECT_EQ (appdata.call_counters.scheduler_callback_a_calls, 2);
    value = pf_scheduler_get_value (p_a);
    EXPECT_EQ (value, UINT32_MAX); /* Implementation detail */
    is_scheduled = pf_scheduler_is_running (p_a);
    EXPECT_FALSE (is_scheduled);
 
-   pf_scheduler_remove (net, p_a); /* Will log error message */
+   pf_scheduler_remove (&net->scheduler_data, p_a); /* Will log error message */
    EXPECT_EQ (appdata.call_counters.scheduler_callback_a_calls, 2);
    value = pf_scheduler_get_value (p_a);
    EXPECT_EQ (value, UINT32_MAX); /* Implementation detail */
@@ -344,11 +410,12 @@ TEST_F (SchedulerTest, SchedulerAddRemove)
    run_stack (TEST_SCHEDULER_RUNTIME);
 
    ret = pf_scheduler_add (
-      net,
+      &net->scheduler_data,
       TEST_SCHEDULER_CALLBACK_DELAY,
       test_scheduler_callback_a,
       &appdata,
-      p_a);
+      p_a,
+      mock_os_data.current_time_us);
    EXPECT_EQ (ret, 0);
 
    EXPECT_EQ (appdata.call_counters.scheduler_callback_a_calls, 2);
@@ -377,7 +444,7 @@ TEST_F (SchedulerTest, SchedulerAddRemove)
    is_scheduled = pf_scheduler_is_running (p_b);
    EXPECT_FALSE (is_scheduled);
 
-   pf_scheduler_remove (net, p_a);
+   pf_scheduler_remove (&net->scheduler_data, p_a);
 
    EXPECT_EQ (appdata.call_counters.scheduler_callback_a_calls, 2);
    value = pf_scheduler_get_value (p_a);
@@ -409,11 +476,12 @@ TEST_F (SchedulerTest, SchedulerAddRemove)
    run_stack (TEST_SCHEDULER_RUNTIME);
 
    ret = pf_scheduler_add (
-      net,
+      &net->scheduler_data,
       TEST_SCHEDULER_CALLBACK_DELAY,
       test_scheduler_callback_a,
       &appdata,
-      p_a);
+      p_a,
+      mock_os_data.current_time_us);
    EXPECT_EQ (ret, 0);
 
    EXPECT_EQ (appdata.call_counters.scheduler_callback_a_calls, 2);
@@ -442,7 +510,7 @@ TEST_F (SchedulerTest, SchedulerAddRemove)
    is_scheduled = pf_scheduler_is_running (p_b);
    EXPECT_FALSE (is_scheduled);
 
-   pf_scheduler_remove_if_running (net, p_a);
+   pf_scheduler_remove_if_running (&net->scheduler_data, p_a);
 
    EXPECT_EQ (appdata.call_counters.scheduler_callback_a_calls, 2);
    value = pf_scheduler_get_value (p_a);
@@ -472,11 +540,12 @@ TEST_F (SchedulerTest, SchedulerAddRemove)
 
    /* Schedule and restart */
    ret = pf_scheduler_add (
-      net,
+      &net->scheduler_data,
       TEST_SCHEDULER_CALLBACK_DELAY,
       test_scheduler_callback_a,
       &appdata,
-      p_a);
+      p_a,
+      mock_os_data.current_time_us);
    EXPECT_EQ (ret, 0);
 
    EXPECT_EQ (appdata.call_counters.scheduler_callback_a_calls, 2);
@@ -502,11 +571,12 @@ TEST_F (SchedulerTest, SchedulerAddRemove)
    EXPECT_FALSE (is_scheduled);
 
    ret = pf_scheduler_restart (
-      net,
+      &net->scheduler_data,
       TEST_SCHEDULER_RUNTIME + TEST_SCHEDULER_CALLBACK_DELAY,
       test_scheduler_callback_a,
       &appdata,
-      p_a);
+      p_a,
+      mock_os_data.current_time_us);
 
    run_stack (TEST_SCHEDULER_RUNTIME);
 

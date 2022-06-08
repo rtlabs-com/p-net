@@ -34,6 +34,7 @@
 #define pnal_get_port_statistics mock_pnal_get_port_statistics
 #define pnal_set_ip_suite        mock_pnal_set_ip_suite
 #define pf_bg_worker_start_job   mock_pf_bg_worker_start_job
+#define os_get_current_time_us   mock_os_get_current_time_us
 #endif
 
 #include <string.h>
@@ -54,7 +55,7 @@
  *
  * @param net              InOut: The p-net stack instance
  * @param arg              In:    Not used.
- * @param current_time     In:    Not used.
+ * @param current_time     In:    Current time, in microseconds.
  */
 static void pf_cmina_send_hello (pnet_t * net, void * arg, uint32_t current_time)
 {
@@ -67,11 +68,12 @@ static void pf_cmina_send_hello (pnet_t * net, void * arg, uint32_t current_time
       /* Reschedule */
       net->cmina_hello_count--;
       (void)pf_scheduler_add (
-         net,
+         &net->scheduler_data,
          PF_CMINA_FS_HELLO_INTERVAL * 1000,
          pf_cmina_send_hello,
          NULL,
-         &net->cmina_hello_timeout);
+         &net->cmina_hello_timeout,
+         current_time);
    }
    else
    {
@@ -543,11 +545,12 @@ int pf_cmina_init (pnet_t * net)
 
             /* Send first HELLO now! */
             (void)pf_scheduler_add (
-               net,
+               &net->scheduler_data,
                0,
                pf_cmina_send_hello,
                NULL,
-               &net->cmina_hello_timeout);
+               &net->cmina_hello_timeout,
+               os_get_current_time_us());
          }
          else
          {
@@ -644,7 +647,9 @@ int pf_cmina_dcp_set_ind (
    uint16_t reset_mode = 0;
 
    /* Stop sending Hello packets */
-   pf_scheduler_remove_if_running (net, &net->cmina_hello_timeout);
+   pf_scheduler_remove_if_running (
+      &net->scheduler_data,
+      &net->cmina_hello_timeout);
 
    /* Parse incoming DCP SET, without caring about actual CMINA state.
       Update cmina_current_dcp_ase and cmina_nonvolatile_dcp_ase*/

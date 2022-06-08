@@ -36,6 +36,7 @@
  */
 
 #ifdef UNIT_TEST
+#define os_get_current_time_us mock_os_get_current_time_us
 #endif
 
 #include <string.h>
@@ -241,11 +242,12 @@ static void pf_dcp_restart_sam_timeout (pnet_t * net, const pnet_ethaddr_t * mac
 
    memcpy (&net->dcp_sam, mac, sizeof (net->dcp_sam));
    (void)pf_scheduler_restart (
-      net,
+      &net->scheduler_data,
       PF_DCP_SAM_TIMEOUT,
       pf_dcp_clear_sam,
       NULL,
-      &net->dcp_sam_timeout);
+      &net->dcp_sam_timeout,
+      os_get_current_time_us());
 }
 
 /**
@@ -588,7 +590,6 @@ static int pf_dcp_get_req (
  * @param current_time     In:    The current system time, in microseconds,
  *                                when the scheduler is started to execute
  *                                stored tasks.
- *                                Not used here.
  */
 static void pf_dcp_control_signal_led (
    pnet_t * net,
@@ -626,11 +627,12 @@ static void pf_dcp_control_signal_led (
 
       /* Schedule another round */
       (void)pf_scheduler_add (
-         net,
+         &net->scheduler_data,
          PF_DCP_SIGNAL_LED_HALF_INTERVAL,
          pf_dcp_control_signal_led,
          (void *)(uintptr_t)state,
-         &net->dcp_led_timeout);
+         &net->dcp_led_timeout,
+         current_time);
    }
    else
    {
@@ -657,11 +659,12 @@ int pf_dcp_trigger_signal_led (pnet_t * net)
          "DCP(%d): Received request to flash LED\n",
          __LINE__);
       (void)pf_scheduler_add (
-         net,
+         &net->scheduler_data,
          PF_DCP_SIGNAL_LED_HALF_INTERVAL,
          pf_dcp_control_signal_led,
          (void *)(2 * PF_DCP_SIGNAL_LED_NUMBER_OF_FLASHES - 1),
-         &net->dcp_led_timeout);
+         &net->dcp_led_timeout,
+         os_get_current_time_us());
    }
    else
    {
@@ -1942,11 +1945,12 @@ static int pf_dcp_identify_req (
 #endif
 
       (void)pf_scheduler_add (
-         net,
+         &net->scheduler_data,
          response_delay,
          pf_dcp_responder,
          p_rsp,
-         &net->dcp_identresp_timeout);
+         &net->dcp_identresp_timeout,
+         os_get_current_time_us());
 
       /* Note: Do not free p_rsp, it is used in pf_dcp_responder() */
    }

@@ -16,6 +16,7 @@
 #ifdef UNIT_TEST
 #define pnal_get_system_uptime_10ms mock_pnal_get_system_uptime_10ms
 #define pnal_get_interface_index    mock_pnal_get_interface_index
+#define os_get_current_time_us      mock_os_get_current_time_us
 #endif
 
 #define STRINGIFY(s)   STRINGIFIED (s)
@@ -509,7 +510,9 @@ void pf_lldp_restart_peer_timeout (
 {
    pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
-   pf_scheduler_remove_if_running (net, &p_port_data->lldp.rx_timeout);
+   pf_scheduler_remove_if_running (
+      &net->scheduler_data,
+      &p_port_data->lldp.rx_timeout);
 
    /*
     *  Profinet states that the time to live shall be 20 seconds,
@@ -528,11 +531,12 @@ void pf_lldp_restart_peer_timeout (
 
    if (
       pf_scheduler_add (
-         net,
+         &net->scheduler_data,
          timeout_in_secs * 1000000,
          pf_lldp_receive_timeout,
          p_port_data,
-         &p_port_data->lldp.rx_timeout) != 0)
+         &p_port_data->lldp.rx_timeout,
+         os_get_current_time_us()) != 0)
    {
       LOG_ERROR (
          PF_LLDP_LOG,
@@ -545,7 +549,9 @@ void pf_lldp_stop_peer_timeout (pnet_t * net, int loc_port_num)
 {
    pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
-   pf_scheduler_remove_if_running (net, &p_port_data->lldp.rx_timeout);
+   pf_scheduler_remove_if_running (
+      &net->scheduler_data,
+      &p_port_data->lldp.rx_timeout);
 }
 
 /**
@@ -1081,7 +1087,7 @@ static void pf_lldp_send (pnet_t * net, int loc_port_num)
  *
  * @param net              InOut: The p-net stack instance
  * @param arg              In:    Reference to port_data
- * @param current_time     In:    Not used.
+ * @param current_time     In:    Current time, in microseconds
  */
 static void pf_lldp_trigger_sending (
    pnet_t * net,
@@ -1094,11 +1100,12 @@ static void pf_lldp_trigger_sending (
 
    if (
       pf_scheduler_add (
-         net,
+         &net->scheduler_data,
          PF_LLDP_SEND_INTERVAL * 1000,
          pf_lldp_trigger_sending,
          p_port_data,
-         &p_port_data->lldp.tx_timeout) != 0)
+         &p_port_data->lldp.tx_timeout,
+         current_time) != 0)
    {
       LOG_ERROR (
          PF_LLDP_LOG,
@@ -1122,11 +1129,12 @@ static void pf_lldp_tx_restart (pnet_t * net, int loc_port_num, bool send)
 
    if (
       pf_scheduler_restart (
-         net,
+         &net->scheduler_data,
          PF_LLDP_SEND_INTERVAL * 1000,
          pf_lldp_trigger_sending,
          p_port_data,
-         &p_port_data->lldp.tx_timeout) != 0)
+         &p_port_data->lldp.tx_timeout,
+         os_get_current_time_us()) != 0)
    {
       LOG_ERROR (
          PF_ETH_LOG,
@@ -1183,7 +1191,9 @@ void pf_lldp_send_disable (pnet_t * net, int loc_port_num)
       "LLDP(%d): Disabling LLDP transmission for port %d\n",
       __LINE__,
       loc_port_num);
-   pf_scheduler_remove_if_running (net, &p_port_data->lldp.tx_timeout);
+   pf_scheduler_remove_if_running (
+      &net->scheduler_data,
+      &p_port_data->lldp.tx_timeout);
 }
 
 /**

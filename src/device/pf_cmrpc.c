@@ -559,7 +559,9 @@ static void pf_session_release (pnet_t * net, pf_session_info_t * p_sess)
             }
          }
 
-         pf_scheduler_remove_if_running (net, &p_sess->resend_timeout);
+         pf_scheduler_remove_if_running (
+            &net->scheduler_data,
+            &p_sess->resend_timeout);
 
          LOG_DEBUG (
             PF_RPC_LOG,
@@ -1034,11 +1036,12 @@ static void pf_cmrpc_send_with_timeout (
          {
             if (
                pf_scheduler_add (
-                  p_net,
+                  &p_net->scheduler_data,
                   delay,
                   pf_cmrpc_send_with_timeout,
                   arg,
-                  &p_sess->resend_timeout) != 0)
+                  &p_sess->resend_timeout,
+                  current_time) != 0)
             {
                LOG_ERROR (
                   PF_RPC_LOG,
@@ -4350,7 +4353,9 @@ static int pf_cmrpc_dce_packet (
       }
 
       /* Any incoming message stops resending */
-      pf_scheduler_remove_if_running (net, &p_sess->resend_timeout);
+      pf_scheduler_remove_if_running (
+         &net->scheduler_data,
+         &p_sess->resend_timeout);
 
       /* Decide what to do with incoming message */
       /* Enter here _even_if_ an error is already detected because we may need

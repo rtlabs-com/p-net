@@ -18,6 +18,10 @@
 #include <string.h>
 #include <inttypes.h>
 
+#ifdef UNIT_TEST
+// TODO #define os_get_current_time_us mock_os_get_current_time_us
+#endif
+
 /**
  * @internal
  * Send the process data frame.
@@ -54,11 +58,12 @@ static void pf_ppm_drv_sw_send (pnet_t * net, void * arg, uint32_t current_time)
          delay = p_arg->ppm.next_exec - current_time;
          if (
             pf_scheduler_add (
-               net,
+               &net->scheduler_data,
                delay,
                pf_ppm_drv_sw_send,
                arg,
-               &p_arg->ppm.ci_timeout) == 0)
+               &p_arg->ppm.ci_timeout,
+               current_time) == 0)
          {
             p_arg->ppm.trx_cnt++;
             if (p_arg->ppm.first_transmit == false)
@@ -97,11 +102,12 @@ int pf_ppm_drv_sw_activate_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
 
    pf_scheduler_init_handle (&p_ppm->ci_timeout, "ppm");
    ret = pf_scheduler_add (
-      net,
+      &net->scheduler_data,
       p_ppm->control_interval,
       pf_ppm_drv_sw_send,
       p_iocr,
-      &p_ppm->ci_timeout);
+      &p_ppm->ci_timeout,
+      os_get_current_time_us());
 
    return ret;
 }
@@ -118,7 +124,7 @@ int pf_ppm_drv_sw_close_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
       p_ar->arep,
       crep);
 
-   pf_scheduler_remove_if_running (net, &p_ppm->ci_timeout);
+   pf_scheduler_remove_if_running (&net->scheduler_data, &p_ppm->ci_timeout);
 
    return 0;
 }

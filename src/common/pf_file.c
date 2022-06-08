@@ -23,9 +23,10 @@
  */
 
 #ifdef UNIT_TEST
-#define pnal_clear_file mock_pnal_clear_file
-#define pnal_load_file  mock_pnal_load_file
-#define pnal_save_file  mock_pnal_save_file
+#define pnal_clear_file        mock_pnal_clear_file
+#define pnal_load_file         mock_pnal_load_file
+#define pnal_save_file         mock_pnal_save_file
+#define os_get_current_time_us mock_os_get_current_time_us
 #endif
 
 #include "pf_includes.h"

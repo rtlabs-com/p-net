@@ -59,6 +59,7 @@
  */
 
 #ifdef UNIT_TEST
+#define os_get_current_time_us mock_os_get_current_time_us
 #endif
 
 /*
@@ -826,11 +827,12 @@ static void pf_alarm_apms_timeout (
 
          if (
             pf_scheduler_add (
-               net,
+               &net->scheduler_data,
                p_apmx->timeout_us,
                pf_alarm_apms_timeout,
                p_apmx,
-               &p_apmx->resend_timeout) != 0)
+               &p_apmx->resend_timeout,
+               current_time) != 0)
          {
             LOG_ERROR (
                PF_ALARM_LOG,
@@ -1460,11 +1462,12 @@ static int pf_alarm_apms_apms_a_data_req (
          retransmission timer */
       if (
          pf_scheduler_add (
-            net,
+            &net->scheduler_data,
             p_apmx->timeout_us,
             pf_alarm_apms_timeout,
             p_apmx,
-            &p_apmx->resend_timeout) != 0)
+            &p_apmx->resend_timeout,
+            os_get_current_time_us()) != 0)
       {
          LOG_ERROR (
             PF_ALARM_LOG,
@@ -1549,7 +1552,9 @@ static int pf_alarm_apmx_close (pnet_t * net, pf_ar_t * p_ar, uint8_t err_code)
       {
          /* Free resources */
          /* StopTimer */
-         pf_scheduler_remove_if_running (net, &p_ar->apmx[ix].resend_timeout);
+         pf_scheduler_remove_if_running (
+            &net->scheduler_data,
+            &p_ar->apmx[ix].resend_timeout);
 
          p_ar->apmx[ix].p_ar = NULL;
          p_ar->apmx[ix].apms_state = PF_APMS_STATE_CLOSED;

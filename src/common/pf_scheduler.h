@@ -20,15 +20,23 @@
 extern "C" {
 #endif
 
+#include <stdbool.h>
+#include <stdint.h>
+
 #define PF_SCHEDULER_MAX_DELAY_US 100000000U /* 100 seconds */
 
 /**
  * Initialize the scheduler.
- * @param net              InOut: The p-net stack instance
+ *
+ * Will assert for tick_interval == 0
+ *
+ * @param scheduler_data   InOut: Scheduler instance
  * @param tick_interval    In:    System calls the tick function at these
- * intervals, in microseconds.
+ *                                intervals, in microseconds.
  */
-void pf_scheduler_init (pnet_t * net, uint32_t tick_interval);
+void pf_scheduler_init (
+   volatile pf_scheduler_data_t * scheduler_data,
+   uint32_t tick_interval);
 
 /**
  * Initialize a timeout handle.
@@ -90,22 +98,24 @@ const char * pf_scheduler_get_name (const pf_scheduler_handle_t * handle);
  * done by calling \a pf_scheduler_reset_handle() or again calling
  * \ pf_scheduler_add().
  *
- * @param net              InOut: The p-net stack instance
+ * @param scheduler_data   InOut: Scheduler instance
  * @param delay            In:    The delay until the function shall be called,
  *                                in microseconds. Max
  *                                PF_SCHEDULER_MAX_DELAY_US.
  * @param cb               In:    The call-back.
  * @param arg              In:    Argument to the call-back.
  * @param handle           InOut: Timeout handle.
+ * @param current_time     In:    Current time in microseconds
  * @return  0  if the call-back was scheduled.
  *          -1 if an error occurred.
  */
 int pf_scheduler_add (
-   pnet_t * net,
+   volatile pf_scheduler_data_t * scheduler_data,
    uint32_t delay,
    pf_scheduler_timeout_ftn_t cb,
    void * arg,
-   pf_scheduler_handle_t * handle);
+   pf_scheduler_handle_t * handle,
+   uint32_t current_time);
 
 /**
  * Re-schedule a call-back at a specific time.
@@ -114,57 +124,70 @@ int pf_scheduler_add (
  *
  * Do not use in a scheduler callback.
  *
- * @param net              InOut: The p-net stack instance
+ * @param scheduler_data   InOut: Scheduler instance
  * @param delay            In:    The delay until the function shall be called,
  *                                in microseconds. Max
  *                                PF_SCHEDULER_MAX_DELAY_US.
  * @param cb               In:    The call-back.
  * @param arg              In:    Argument to the call-back.
  * @param handle           InOut: Timeout handle.
+ * @param current_time     In:    Current time in microseconds
  * @return  0  if the call-back was scheduled.
  *          -1 if an error occurred.
  */
 int pf_scheduler_restart (
-   pnet_t * net,
+   volatile pf_scheduler_data_t * scheduler_data,
    uint32_t delay,
    pf_scheduler_timeout_ftn_t cb,
    void * arg,
-   pf_scheduler_handle_t * handle);
+   pf_scheduler_handle_t * handle,
+   uint32_t current_time);
 
 /**
  * Stop a timeout, if it is running.
  *
  * Silently ignoring the timeout if not running.
  *
- * @param net              InOut: The p-net stack instance
+ * @param scheduler_data   InOut: Scheduler instance
  * @param handle           InOut: Timeout handle.
  */
 void pf_scheduler_remove_if_running (
-   pnet_t * net,
+   volatile pf_scheduler_data_t * scheduler_data,
    pf_scheduler_handle_t * handle);
 
 /**
  * Stop a timeout.
- * @param net              InOut: The p-net stack instance
+ * @param scheduler_data   InOut: Scheduler instance
  * @param handle           InOut: Timeout handle.
  */
-void pf_scheduler_remove (pnet_t * net, pf_scheduler_handle_t * handle);
+void pf_scheduler_remove (
+   volatile pf_scheduler_data_t * scheduler_data,
+   pf_scheduler_handle_t * handle);
 
 /**
  * Check if it is time to call a scheduled call-back.
  * Run scheduled call-backs - if any.
  * @param net              InOut: The p-net stack instance
+ *                                Will be passed to the callback
+ * @param scheduler_data   InOut: Scheduler instance
+ * @param current_time     In:    Current time in microseconds
  */
-void pf_scheduler_tick (pnet_t * net);
+void pf_scheduler_tick (
+   pnet_t * net,
+   volatile pf_scheduler_data_t * scheduler_data,
+   uint32_t current_time);
 
 /**
  * Show scheduler (busy and free) instances.
  *
  * Locks the mutex temporarily.
  *
- * @param net              InOut: The p-net stack instance
+ * @param scheduler_data   InOut: Scheduler instance
+ * @param current_time     In:    Current time in microseconds
  */
-void pf_scheduler_show (pnet_t * net);
+void pf_scheduler_show (
+   volatile pf_scheduler_data_t * scheduler_data,
+   uint32_t current_time);
 
 /************ Internal functions, made available for unit testing ************/
 
@@ -172,6 +195,11 @@ uint32_t pf_scheduler_sanitize_delay (
    uint32_t wanted_delay,
    uint32_t stack_cycle_time,
    bool schedule_half_tick_in_advance);
+
+bool pf_scheduler_is_time_before (
+   volatile pf_scheduler_data_t * scheduler_data,
+   uint32_t ix_a,
+   uint32_t ix_b);
 
 #ifdef __cplusplus
 }
