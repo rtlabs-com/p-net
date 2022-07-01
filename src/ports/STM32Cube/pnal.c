@@ -81,7 +81,13 @@ pnal_ipaddr_t pnal_get_gateway (const char * interface_name)
 
 int pnal_get_hostname (char * hostname)
 {
-   strcpy (hostname, netif_default->hostname);
+   if (netif_default->hostname == NULL)
+   {
+      return -1;
+   }
+
+   strncpy (hostname, netif_default->hostname, PNAL_HOSTNAME_MAX_SIZE);
+   hostname[PNAL_HOSTNAME_MAX_SIZE - 1] = '\0';
    return 0;
 }
 
