@@ -222,9 +222,14 @@ typedef struct pf_snmp_system_location
  */
 typedef struct pf_snmp_management_address
 {
-   uint8_t value[1 + 31]; /**< First byte is size of actual address */
-   uint8_t subtype;       /**< 1 for IPv4 */
-   size_t len;            /**< 5 for IPv4 */
+   /** First byte is size of actual address */
+   uint8_t value[1 + 31];
+
+   /** 1 for IPv4 */
+   uint8_t subtype;
+
+   /** 5 for IPv4 */
+   size_t len;
 } pf_snmp_management_address_t;
 
 /**
@@ -235,9 +240,15 @@ typedef struct pf_snmp_management_address
  */
 typedef struct pf_snmp_link_status
 {
-   int32_t auto_neg_supported;         /**< 1 if true, 2 if false */
-   int32_t auto_neg_enabled;           /**< 1 if true, 2 if false */
-   uint8_t auto_neg_advertised_cap[2]; /**< OCTET STRING encoding of BITS */
+   /** 1 if true, 2 if false */
+   int32_t auto_neg_supported;
+
+   /** 1 if true, 2 if false */
+   int32_t auto_neg_enabled;
+
+   /** OCTET STRING encoding of BITS */
+   uint8_t auto_neg_advertised_cap[2];
+
    int32_t oper_mau_type;
 } pf_snmp_link_status_t;
 

@@ -86,8 +86,11 @@ typedef struct lldp_tlv
 /** Header for Organizationally Specific TLV */
 typedef struct pf_lldp_org_header
 {
-   uint8_t id[3];   /**< Organizationally unique identifier */
-   uint8_t subtype; /**< Organizationally defined subtype */
+   /** Organizationally unique identifier */
+   uint8_t id[3];
+
+   /** Organizationally defined subtype */
+   uint8_t subtype;
 } pf_lldp_org_header_t;
 
 static const char org_id_pnio[] = {0x00, 0x0e, 0xcf};

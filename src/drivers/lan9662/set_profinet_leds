@@ -1,0 +1,37 @@
+#!/bin/sh
+
+#############################################
+# Script for setting Profinet LEDs on Linux #
+#############################################
+#
+# This writes the output to files instead of real LEDs.
+# It can be useful when running on for example Ubuntu or some other
+# desktop Linux variant.
+#
+# Modify this script to fit your setup, by for example changing output path.
+
+if [ $# -ne 2 ]; then
+   echo "Usage: ${0} led_number led_state"
+   echo "   where:"
+   echo "       led_number:      LED number. Number 1 for sample app data LED"
+   echo "                                    Number 2 for mandatory Profinet signal LED"
+   echo "       led_state:       1 for on, 0 for off"
+   echo "   Exit code:           0 on success, 1 on error"
+   exit 1
+fi
+
+LED_NUMBER=$1
+LED_STATE=$2
+
+# Uncomment next line for debugging
+#echo "Script for setting Profinet LED state in dummy file. LED number ${LED_NUMBER}, new state ${LED_STATE}"
+
+if ! [ ${LED_STATE} == "0" -o ${LED_STATE} == "1" ]; then
+   echo "Wrong LED state: ${LED_STATE}"
+   exit 1
+fi
+
+# Todo - map to GPIOs
+echo "LED ${LED_NUMBER} new state ${LED_STATE}"
+
+exit 0
