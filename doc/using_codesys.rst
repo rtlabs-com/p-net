@@ -66,8 +66,8 @@ tab "Device" and "Send Echo Service" to verify the communication.
 In the Codesys menu "Tools", select "Device Repository". Click "Install" and
 select the GSDML file from your hard drive.
 For the sample application the GSDML file is available in the
-sample_app folder in the repository that you have cloned, or
-from https://github.com/rtlabs-com/p-net/tree/master/sample_app
+:file:`samples/pn_dev` folder in the repository that you have cloned, or
+from https://github.com/rtlabs-com/p-net/tree/master/samples/pn_dev
 
 * On the “Device (CODESY Control for Raspberry Pi SL)” in the left hand panel,
   right-click and select Add Device. Use “Ethernet adapter”, “Ethernet”.
