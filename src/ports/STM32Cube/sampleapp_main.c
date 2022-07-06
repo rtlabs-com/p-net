@@ -89,7 +89,7 @@ int _main (void)
       APP_BG_WORKER_THREAD_STACKSIZE;
 
    /* Initialize profinet stack */
-   sample_app = app_init (&pnet_cfg);
+   sample_app = app_init (&pnet_cfg, &app_args);
    if (sample_app == NULL)
    {
       printf ("Failed to initialize P-Net.\n");
