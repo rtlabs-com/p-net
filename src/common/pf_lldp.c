@@ -1968,6 +1968,10 @@ int pf_lldp_recv (
    pf_lldp_peer_info_t peer_data;
    int err = 0;
 
+   if (net->lldp_mutex == NULL) {
+      return -1;
+   }
+   
    err = pf_lldp_parse_packet (buf, buf_len, &peer_data);
 
    if (!err)
