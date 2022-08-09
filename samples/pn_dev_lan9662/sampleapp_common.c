@@ -968,9 +968,9 @@ static void app_cyclic_data_callback (app_subslot_t * subslot, void * tag)
       app_utils_print_ioxs_change (
          subslot,
          "Consumer Status (IOCS)",
-         subslot->iocs,
+         subslot->indata_iocs,
          iocs);
-      subslot->iocs = iocs;
+      subslot->indata_iocs = iocs;
    }
 
    if (subslot->data_cfg.outsize > 0)
@@ -992,9 +992,9 @@ static void app_cyclic_data_callback (app_subslot_t * subslot, void * tag)
       app_utils_print_ioxs_change (
          subslot,
          "Provider Status (IOPS)",
-         subslot->iops,
+         subslot->outdata_iops,
          outdata_iops);
-      subslot->iops = outdata_iops;
+      subslot->outdata_iops = outdata_iops;
 
       if (outdata_length != subslot->data_cfg.outsize)
       {
