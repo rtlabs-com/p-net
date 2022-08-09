@@ -525,7 +525,9 @@ int pf_pdport_read_ind (
             &peer_station_name,
             &peer_port_name,
             p_port_data,
-            pf_port_get_media_type (eth_status.operational_mau_type),
+            eth_status.running
+               ? pf_port_get_media_type (eth_status.operational_mau_type)
+               : PF_PD_MEDIATYPE_COPPER,
             &eth_status,
             res_size,
             p_res,
@@ -662,7 +664,9 @@ int pf_pdport_read_ind (
                &peer_station_name,
                &peer_port_name,
                p_port_data,
-               pf_port_get_media_type (eth_status.operational_mau_type),
+               eth_status.running
+                  ? pf_port_get_media_type (eth_status.operational_mau_type)
+                  : PF_PD_MEDIATYPE_COPPER,
                &eth_status,
                &port_statistics,
                res_size,
