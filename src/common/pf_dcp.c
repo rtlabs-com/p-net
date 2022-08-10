@@ -191,8 +191,12 @@ static void pf_dcp_responder (pnet_t * net, void * arg, uint32_t current_time)
 
    if (pf_eth_send_on_management_port (net, p_buf) > 0)
    {
-      LOG_DEBUG (PNET_LOG, "DCP(%d): Sent a DCP identify response.\n", __LINE__);
+      LOG_DEBUG (
+         PF_DCP_LOG,
+         "DCP(%d): Sent a DCP identify response.\n",
+         __LINE__);
    }
+   /* pf_eth_send_on_management_port() will log error if any */
 
    pnal_buf_free (p_buf);
    net->dcp_delayed_response_waiting = false;
@@ -1500,6 +1504,17 @@ static int pf_dcp_identify_req (
    if (p_buf == NULL)
    {
       return 1; /* Means: handled */
+   }
+
+   if (net->dcp_delayed_response_waiting)
+   {
+      LOG_INFO (
+         PF_DCP_LOG,
+         "DCP(%d): Did not parse incoming DCP identify request, as we are "
+         "waiting to send response to previous one.\n",
+         __LINE__);
+
+      goto out1;
    }
 
    /* Setup access to the request */
