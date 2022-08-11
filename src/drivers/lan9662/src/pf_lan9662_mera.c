@@ -40,7 +40,6 @@
 #define PF_MERA_PPM_IODATA_OFFSET     6   /* frame ID + vlan ID */
 #define PF_MERA_CPM_IODATA_OFFSET     2   /* frame ID + vlan ID */
 #define PF_MERA_RAL_TIME_OFFSET       100 /* Time in ns */
-#define PF_MERA_OB_RTP_TIME_OFFSET    300 /* Time in ns */
 
 /* Default behaviour is that pf_mera assigns SRAM address for iodata/subslot
  * Enabling this define allows the application to set the SRAM address using
@@ -669,32 +668,6 @@ static void pf_mera_wal_id_free (pf_mera_t * handle, uint16_t id)
 }
 
 /**
- * Get the wal id from a CPM frame using the iocr ref.
- * @param handle           In: Ref to mera instance
- * @param iocr             In: IOCR reference
- * @param wal_id           Out: Write Action List Id
- * @return 0 on success, -1 on error
- */
-static int pf_mera_get_cpm_wal_id (
-   pf_mera_t * handle,
-   pf_iocr_t * iocr,
-   mera_ob_wal_id_t * wal_id)
-{
-   uint16_t i;
-   for (i = 0; i < PNET_LAN9662_MAX_FRAMES; i++)
-   {
-      if (
-         handle->frame[i].used == true &&
-         handle->frame[i].config.p_iocr->p_ar == iocr->p_ar &&
-         handle->frame[i].is_cpm)
-      {
-         *wal_id = handle->frame[i].ob_wal_id;
-         return 0;
-      }
-   }
-   return -1;
-}
-/**
  * Add RTE data group for an iodata object.
  * Maps the data source to frame/pdu offset.
  * @param mera_lib   In: Ref to mera lib instance
@@ -1064,6 +1037,7 @@ static int pf_mera_ppm_start_rte (pf_mera_t * handle, pf_mera_frame_t * frame)
    int err = 0;
    pf_iocr_t * p_iocr = frame->config.p_iocr;
    uint16_t slot, subslot;
+   mera_ob_wal_conf_t wal_conf;
 
    err = pf_mera_ib_add_vcam_rule (
       frame->vcam_id,
@@ -1092,17 +1066,26 @@ static int pf_mera_ppm_start_rte (pf_mera_t * handle, pf_mera_frame_t * frame)
       return err;
    }
 
-   err = pf_mera_get_cpm_wal_id (
-      handle,
-      frame->config.p_iocr,
-      &frame->internal_wal_id);
-   if (err != 0)
+   /*
+    * Add WAL used for internal write actions QSPI -> SRAM
+    * The names of the called functions is a bit misleading
+    * since the WAL is for internal writes and has no data group (dg)
+    * or rtp id associated with it and no relation to outbound data.
+    */
+   mera_ob_wal_conf_get (handle->mera_lib, frame->internal_wal_id, &wal_conf);
+   wal_conf.time.offset = 100000;
+   wal_conf.time.interval = frame->interval;
+
+   if (
+      mera_ob_wal_conf_set (
+         handle->mera_lib,
+         frame->internal_wal_id,
+         &wal_conf) != 0)
    {
       LOG_ERROR (
          PF_MERA_LOG,
-         "MERA(%d): Failed to get PPM internal WAL id from CPM\n",
+         "MERA(%d): Failed to set WAL for internal transfers\n",
          __LINE__);
-      return err;
    }
 
    for (slot = 0; slot < PNET_MAX_SLOTS; slot++)
@@ -1334,7 +1317,7 @@ pf_drv_frame_t * pf_mera_ppm_alloc (
 
    frame->vcam_id = pf_mera_vcam_id_alloc (handle);
    frame->rtp_id = pf_mera_rtp_id_alloc (handle);
-   /* frame->internal_wal_id assigned later */
+   frame->internal_wal_id = pf_mera_wal_id_alloc (handle);
    frame->vlan_idx = pf_mera_vlan_index_alloc (handle);
    frame->rte_data_offset = PF_MERA_PPM_IODATA_OFFSET;
 
@@ -1351,6 +1334,7 @@ int pf_mera_ppm_free (pnet_t * net, pf_drv_frame_t * drv_frame)
    {
       pf_mera_vcam_id_free (handle, frame->vcam_id);
       pf_mera_vlan_index_free (handle, frame->vlan_idx);
+      pf_mera_wal_id_free (handle, frame->internal_wal_id);
       pf_mera_rtp_id_free (handle, frame->rtp_id);
       pf_sram_frame_free (frame->sram_frame_address);
       pf_mera_free_frame (handle, frame);
@@ -1783,6 +1767,9 @@ int pf_mera_ppm_stop (pnet_t * net, pf_drv_frame_t * drv_frame)
 
 /**
  * Set the general RTE configuration for a CPM frame.
+ * CPM timing configuration is applied by the function
+ * pf_mera_cpm_activate_rte_dht() at a later point
+ * in the AR establishment procedure.
  * @param mera_lib   In: Ref to mera lib instance
  * @param frame      In: Ref to frame
  * @return 0 on success, -1 on error
@@ -1812,7 +1799,7 @@ static int pf_mera_ob_rtp_config (
    ob_rtp_config.wal_enable = true;
    ob_rtp_config.wal_id = frame->ob_wal_id;
 
-   ob_rtp_config.time.offset = PF_MERA_OB_RTP_TIME_OFFSET;
+   ob_rtp_config.time.offset = MERA_TIME_OFFSET_NONE;
    ob_rtp_config.time.interval = 0;
    ob_rtp_config.time_cnt = 0;
 
