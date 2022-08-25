@@ -65,7 +65,11 @@ if ! ip link set dev $INTERFACE up; then
 fi
 
 if [ "${DEFAULT_GATEWAY}" != "0.0.0.0" ]; then
-   if ! ip route add default via $DEFAULT_GATEWAY; then
+   IFS=. read -r i1 i2 i3 i4 <<< $DEFAULT_GATEWAY
+   IFS=. read -r m1 m2 m3 m4 <<< $NETMASK
+   NETWORK=$(printf "%d.%d.%d.%d\n" "$((i1 & m1))" "$((i2 & m2))" "$((i3 & m3))" "$((i4 & m4))")
+   
+   if ! ip route add $NETWORK via $DEFAULT_GATEWAY; then
       echo "Failed to set default gateway"
       exit 1
    fi
