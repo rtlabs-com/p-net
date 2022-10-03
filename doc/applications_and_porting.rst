@@ -9,9 +9,9 @@ If you prefer not to implement some of the callbacks, set the corresponding
 fields in the configuration struct to NULL instead of a function pointer.
 See :ref:`api-documentation` on which callbacks that are optional.
 
-To read output data from the PLC, use ``pnet_output_get_data_and_iops()``.
+To read output data from the PLC, use :c:func:`pnet_output_get_data_and_iops`.
 To write data to the PLC (which is input data in Profinet terminology), use
-``pnet_input_set_data_and_iops()``.
+:c:func:`pnet_input_set_data_and_iops`.
 
 
 Adapting to other hardware

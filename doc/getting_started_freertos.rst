@@ -34,7 +34,7 @@ Downloading and compiling P-Net
 
    If you already cloned
    the repository without the ``--recurse-submodules`` flag then run this
-   in the ``p-net`` folder::
+   in the :file:`p-net` folder::
 
     git submodule update --init --recursive
 
@@ -48,7 +48,7 @@ Downloading and compiling P-Net
     cmake --build build.cube
 
 #. When the build completes you can find the sample-app binary in
-   ``build.cube/pn_dev.bin``. Flash this binary to your board by
+   :file:`build.cube/pn_dev.bin`. Flash this binary to your board by
    uploading it to the USB disk as usual for STM32 boards.
 
    A serial port will also be available via the USB cable.

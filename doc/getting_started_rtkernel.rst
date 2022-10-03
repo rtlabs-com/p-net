@@ -38,7 +38,7 @@ Copying the rt-kernel sources
 
     patch -p1 < PATH_TO_PNET/src/ports/rt-kernel/0001-rtkernel-for-Profinet.patch
 
-#. You may want to change IP settings in ``rt-kernel-xmc4/bsp/xmc48relax/include/config.h``.
+#. You may want to change IP settings in :file:`rt-kernel-xmc4/bsp/xmc48relax/include/config.h`.
 
 #. In the root folder of the rt-kernel directory::
 
@@ -54,7 +54,7 @@ Downloading and compiling P-Net
 
    This will clone the repository with submodules. If you already cloned
    the repository without the ``--recurse-submodules`` flag then run this
-   in the ``p-net`` folder::
+   in the :file:`p-net` folder::
 
     git submodule update --init --recursive
 
@@ -67,7 +67,7 @@ Downloading and compiling P-Net
     cmake -B build -S p-net \
     -DCMAKE_TOOLCHAIN_FILE=cmake/tools/toolchain/rt-kernel.cmake \
     -DCMAKE_ECLIPSE_EXECUTABLE=/opt/rt-tools/workbench/Workbench \
-    -DCMAKE_ECLIPSE_GENERATE_SOURCE_PROJECT=TRUE -G "Eclipse CDT4 - Unix Makefiles"
+    -DCMAKE_ECLIPSE_GENERATE_SOURCE_PROJECT=TRUE -G "Eclipse CDT4 - Ninja"
 
 #. If you are using Windows, start the program "Command line" found in
    the rt-labs rt-collab Toolbox installation (adapt paths to your setup)::
@@ -83,7 +83,7 @@ Downloading and compiling P-Net
 
 #. Depending on how you installed cmake, you might need to run ``snap run
    cmake`` instead of ``cmake``. This creates build files in a folder
-   named ``build``. You can choose any name for the build folder, for
+   named :file:`build`. You can choose any name for the build folder, for
    instance if you want to build for multiple targets.
 
    After running ``cmake`` you can run ``ccmake build`` or ``cmake-gui``
@@ -97,10 +97,10 @@ Downloading and compiling P-Net
    the code, the other is for the P-Net source code. You need at least to
    import the project for building the code.
 
-#. Use the menu "File > Import". Select "General > Existing Projects". Click
-   "Browse" and select the ``build`` directory that was created earlier.
+#. Use the menu :menuselection:`File --> Import`. Select "General > Existing Projects". Click
+   :guilabel:`Browse` and select the :file:`build` directory that was created earlier.
 
-#. Use the menu "Project > Build All" to build it.
+#. Use the menu :menuselection:`Project --> Build All` to build it.
 
    An OSAL layer hosted in a separate directory is used by P-Net, and is installed
    automatically during setup. For details see :ref:`running-sample-app`.
@@ -108,14 +108,14 @@ Downloading and compiling P-Net
 More Workbench settings
 -----------------------
 If you intend to edit the P-Net source code in the Workbench tool, you
-should also import the P-Net source project. The files ``.project``
-and ``.cproject`` have been created in the P-Net repo by cmake.
+should also import the P-Net source project. The files :file:`.project`
+and :file:`.cproject` have been created in the P-Net repo by cmake.
 
-Use the menu "File > Import". Select "General > Existing Projects". Click
-"Browse" and select the ``p-net`` repo directory.
+Use the menu :menuselection:`File --> Import`. Select "General > Existing Projects". Click
+:guilabel:`Browse`  and select the :file:`p-net` repo directory.
 
-After importing, right-click on the project and choose "New > Convert
-to a C/C++ project". This will setup the project so that the indexer
+After importing, right-click on the project and choose :menuselection:`New --> Convert
+to a C/C++ project`. This will setup the project so that the indexer
 works correctly and the Workbench revision control tools can be used.
 
 Running on target
@@ -132,19 +132,19 @@ Running on target
 #. Run the compiled code on target by right-clicking the Profinet build project,
    and selecting "Debug as > Hardware debugging". Select J-Link.
 
-#. On the "Startup" tab enter ``monitor reset 0`` in the "Run commands".
+#. On the :guilabel:`Startup` tab enter ``monitor reset 0`` in the :guilabel:`Run commands`.
 
-#. Click Apply and Close. 
+#. Click :guilabel:`Apply` and :guilabel:`Close`.
 
-#. Select ``pn_dev.elf`` and click OK.
+#. Select ``pn_dev.elf`` and click :guilabel:`OK`.
    The download progress pop-up window should appear.
 
-The resulting ``.elf`` file contains the sample application, the P-Net stack,
+The resulting :file:`.elf` file contains the sample application, the P-Net stack,
 the rt-kernel, lwip and drivers.
 
 If you need to adjust debugger settings later, right-click the Profinet build
-project, and select "Debug as > Debug configurations". Select the "Profinet... "
-node. You might need to double click "Hardware Debugging" if the child node
+project, and select :menuselection:`Debug as --> Debug configurations`. Select the "Profinet... "
+node. You might need to double click :guilabel:`Hardware Debugging` if the child node
 does not appear. Typically these values have been automatically entered:
 
 * Tab "Main" C/C++ application: ``pn_dev.elf``.
@@ -160,13 +160,13 @@ for example ``/dev/ttyACM0``. An example of a terminal program is picocom
 
     sudo picocom -b 115200 /dev/ttyACM0
 
-You can step-debug in the Workbench GUI. Press the small "Resume" icon to have
+You can step-debug in the Workbench GUI. Press the small :guilabel:`Resume` icon to have
 the target run continuously.
 
 Adjusting the log level
 -----------------------
 In order to learn the Profinet communication model, it is very informative to
-adjust the log level to see the incoming and outgoing messages. 
+adjust the log level to see the incoming and outgoing messages.
 See :ref:`running-sample-app` for details on how to adjust the log level.
 
 However note that printing out log strings is slow, so you probably need
@@ -195,7 +195,7 @@ This creates standalone makefiles.
 Increasing the serial port baud rate
 ------------------------------------
 If you like to increase the baud rate of the serial port, change the value in
-the file ``bsp/xmc48relax/src/xmc48relax.c``. For example change
+the file :file:`bsp/xmc48relax/src/xmc48relax.c`. For example change
 ``.baudrate = 115200,`` to ``.baudrate = 460800,``.
 
 To be able to run debug logging via serial cable, you need to increase the
@@ -239,7 +239,7 @@ Note that the tests require a stack of at least 6 kB. You may have to increase
 
 Examining flash and RAM usage
 -----------------------------
-The flash and RAM usage is shown by the tool ``arm-eabi-size``.
+The flash and RAM usage is shown by the tool :command:`arm-eabi-size`.
 In this example we use::
 
    CMAKE_BUILD_TYPE Release
@@ -283,7 +283,7 @@ Running tests on XMC4800 target
    The resulting file after compiling is named ``pf_test.elf``
 
 #. Add a new hardware debugging configuration, where the C/C++ application on the
-   "Main" tab is set to ``pn_dev.elf``.
+   :guilabel:`Main` tab is set to ``pn_dev.elf``.
 
    The test will run on the target board when starting hardware debugging.
    You might need to press the Play button in the Workbench if you have enabled
@@ -369,12 +369,12 @@ Increasing LWIP resources
 In order to handle incoming data, you might need to increase buffer sizes for
 the lwip IP stack.
 
-In the file ``lwip/src/include/lwip/lwipopts.h`` or in
-``lwip/src/include/lwip/opt.h`` (which holds the default values), increase the
+In the file :file:`lwip/src/include/lwip/lwipopts.h` or in
+:file:`lwip/src/include/lwip/opt.h` (which holds the default values), increase the
 values for ``MEMP_NUM_NETBUF`` and ``PBUF_POOL_SIZE``.
 
 It can also be beneficial to increase the values ``eth_cfg.rx_buffers``
-and ``eth_cfg.rx_task_prio`` found in the ``bsp/xmc48relax/src/lwip.c`` file.
+and ``eth_cfg.rx_task_prio`` found in the :file:`bsp/xmc48relax/src/lwip.c` file.
 
-For debugging you can enable ``LWIP_STATS_DISPLAY`` in the ``lwipopts.h`` file,
+For debugging you can enable ``LWIP_STATS_DISPLAY`` in the :file:`lwipopts.h` file,
 and then trigger the ``stats_display()`` function.

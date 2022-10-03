@@ -9,14 +9,6 @@ import re
 import sys
 import time
 
-# Workaround for issue https://github.com/sphinx-contrib/googleanalytics/issues/2
-# Note that a warning still will be issued "unsupported object from its setup() function"
-# Remove this workaround when the issue has been resolved upstream
-import sphinx.application
-import sphinx.errors
-sphinx.application.ExtensionError = sphinx.errors.ExtensionError
-
-
 # -- Path setup --------------------------------------------------------------
 
 # If extensions (or modules to document with autodoc) are in another directory,
@@ -40,8 +32,8 @@ except:
     version = "unknown version"
 
 project = 'p-net'
-copyright = '2023, rt-labs'
-author = 'rt-labs'
+copyright = '2023, RT-Labs'
+author = 'RT-Labs'
 
 # -- General configuration ---------------------------------------------------
 
@@ -54,27 +46,19 @@ extensions = [
     "rst2pdf.pdfbuilder",
     "sphinx_rtd_theme",
     "sphinxcontrib.spelling",
-    "sphinxcontrib.googleanalytics",
 ]
 
 needs_sphinx = "1.8"
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = ["_templates"]
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 spelling_word_list_filename = "spelling_wordlist.txt"
-
-googleanalytics_id = "UA-4171737-2"
-googleanalytics_enabled = True
-
-# Breathe Configuration
-breathe_default_project = "pnet"
-
 
 source_suffix = {
     '.rst': 'restructuredtext',
@@ -89,30 +73,34 @@ source_suffix = {
 #
 html_theme = "sphinx_rtd_theme"
 
-html_theme_options = {
-    "logo_only": False,
-    "display_version": True,
-}
-
-
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['static']
+html_static_path = ["static"]
 
-html_last_updated_fmt = '%Y-%m-%d %H:%M'
+html_theme_options = {
+    "analytics_id": "G-378E9EVTG5",
+    "display_version": True,
+    "navigation_depth": 2,
+}
+
+html_last_updated_fmt = "%Y-%m-%d %H:%M"
+breathe_projects = {project: "../build/doc/xml/"}
+breathe_default_project = project
 
 html_css_files = [
-    '../../css/custom_rtd.css',  # Requested by web developer
-    'css/fix_table_width.css',
-    'css/change_header_size.css'
-    ]
+    "../../css/custom_rtd.css",  # Requested by web developer
+    "css/fix_table_width.css",
+    "css/change_header_size.css",
+]
 
 
 # -- Options for PDF output -------------------------------------------------
 
 pdf_filename = "{}_{}".format(project.replace("-", ""), time.strftime("%Y-%m-%d"))
 pdf_title = "{} Profinet device stack".format(project)
-pdf_documents = [('index', pdf_filename, pdf_title, author),]
+pdf_documents = [
+    ("index", pdf_filename, pdf_title, author),
+]
 
 pdf_break_level = 2
