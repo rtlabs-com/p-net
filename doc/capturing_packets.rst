@@ -31,8 +31,8 @@ Download Wireshark from https://www.wireshark.org/download.html
 
 Filtering frames in Wireshark based on protocol
 -----------------------------------------------
-To show only frames with specific protocols, enter this into the "display
-filter" text box::
+To show only frames with specific protocols, enter this into the
+:guilabel:`display filter` text box::
 
    lldp or snmp or pn_dcp or dcerpc or pn_io or syslog
 
@@ -87,14 +87,31 @@ Select frames with a specific DCE RPC Activity UUID::
    dcerpc.dg_act_id == 38353218-0002-1010-ae64-ac6417366047
 
 
+Profinet startup sequence
+-------------------------
+See the image for an example of the Profinet startup sequence.
+Right-click and use "Open image in new tab" on the image below to see a larger version of it.
+
+.. image:: illustrations/ScreenshotWireshark.png
+
+=================== =============================
+Color in screenshot Description
+=================== =============================
+Blue                LLDP
+Brown               DCP
+Violet              Startup handshake (via UDP)
+Yellow              Cyclic data
+=================== =============================
+
+
 Coloring rules in Wireshark
 ---------------------------
-To modify the coloring rules in Wireshark, use the menu View > "Coloring rules".
+To modify the coloring rules in Wireshark, use the menu :menuselection:`View --> "Coloring rules"`.
 Deselect the rules you don't need.
 
-Create a new rule by clicking the ``+`` symbol in the lower left corner.
+Create a new rule by clicking the :guilabel:`+` symbol in the lower left corner.
 Enter the filter expression and the name of the new rule. Enable it using the
-checkbox. With the rule still marked, click the "Background" button to modify
+checkbox. With the rule still marked, click the :guilabel:`Background` button to modify
 the background color.
 
 +------------+----------------------------------------------------------+
@@ -121,7 +138,8 @@ Parsing Profinet cyclic data with Wireshark
 -------------------------------------------
 It is possible to load a GSDML file into recent versions of Wireshark, for
 parsing the cyclic data.
-In the Wireshark menu, select Edit > Preferences > Protocols > PNIO.
+In the Wireshark menu, select
+:menuselection:`Edit --> Preferences --> Protocols --> PNIO`.
 Enter the directory where you have your GSDML file.
 
 For this functionality to work, the Wireshark capture must include the start-up
@@ -132,18 +150,19 @@ Diagnosis data in Wireshark
 ---------------------------
 Note that Wireshark can not yet decode QualifiedChannelDiagnosisData.
 See the ``dissect_AlarmUserStructure ()`` function in
-the ``packet-dcerpc-pn-io.c`` file in the source code for Wireshark.
+the :file:`packet-dcerpc-pn-io.c` file in the source code for Wireshark.
 
 Showing wall time in Wireshark
 ------------------------------
 In order to correlate captured Wireshark frames to other logs, it can be
 convenient to display wall time in the time column in Wireshark.
 
-Right-click the column header, and select "Edit Column".
+Right-click the column header, and select :guilabel:`Edit Column`.
 
-For "Type" use "Time (format as specified)". Click OK.
+For :guilabel:`Type` use :guilabel:`Time (format as specified)`. Click :guilabel:`OK`.
 
-In the main menu View > "Time Format Display" select "Time of day".
+In the main menu :menuselection:`View --> Time Format Display` select
+:guilabel:`Time of day`.
 
 
 Show transmission time periodicity using Wireshark
@@ -153,16 +172,16 @@ main screen select the MAC address of the P-Net IO-device, for example::
 
     eth.src == 54:ee:75:ff:95:a6 and pn_io
 
-In the column header, right-click and select "Column Preferences ...". Press "+"
-to add a new column. Change "Title" to "Delta displayed" and "Type" to
-"Delta time displayed".
+In the column header, right-click and select :guilabel:`Column Preferences ...`.
+Press :guilabel:`+` to add a new column. Change :guilabel:`Title` to
+:guilabel:`Delta displayed` and :guilabel:`Type` to :guilabel:`Delta time displayed`.
 
 Plotting transmission time periodicity using Wireshark
 ------------------------------------------------------
 To plot the periodicity of sent frames, you first need to filter the displayed
 frames in the main Wireshark window, as described above.
 
-Then use the menu "Statistics" -> "I/O Graph".
+Then use the menu :menuselection:`Statistics --> I/O Graph`.
 
 * Display filter: ``eth.src == 54:ee:75:ff:95:a6 and pn_io``
 * Y Axis: AVG(Y Field)
@@ -186,7 +205,7 @@ Plotting Profinet cycle counter
 -------------------------------
 The cycle counter should increase between each frame. You can use Wireshark to verify that.
 
-Use the menu “Statistics” -> “I/O Graph”.
+Use the menu :menuselection:`Statistics --> I/O Graph`.
 
 * Display filter: ``eth.src == 54:ee:75:ff:95:a6``
 * Style: Dot
@@ -208,7 +227,7 @@ session).
 
 Plotting network load
 ---------------------
-Use the menu “Statistics” -> “I/O Graph”.
+Use the menu :menuselection:`Statistics --> I/O Graph`.
 
 * Display filter: (none)
 * Style: Line
@@ -226,7 +245,7 @@ Using tcpdump
 -------------
 When running on an embedded Linux board, it can be convenient to run without
 a graphical user interface. To capture packets for later display in Wireshark,
-use the tool ``tcpdump``.
+use the tool :command:`tcpdump`.
 
 Install it, for example like::
 
@@ -242,7 +261,7 @@ Transfer the resulting file to your laptop, where you can open it in Wireshark.
 
 Note that Wireshark and tcpdump modifies the network interface settings on Linux.
 The promiscuous bit will be enabled, as seen when looking at
-``/sys/class/net/eth0/flags``. It will not be visible via ``ifconfig`` though.
+:file:`/sys/class/net/eth0/flags`. It will not be visible via :command:`ifconfig` though.
 
 
 Hardware for capturing packets on network

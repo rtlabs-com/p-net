@@ -45,7 +45,7 @@ Create Doxygen documentation::
 
     cmake --build build --target docs
 
-The Doxygen documentation ends up in ``build/html/index.html``
+The Doxygen documentation ends up in :file:`build/html/index.html`.
 
 See :ref:`writing-documentation` if you would like to install
 the toolchain to build the entire Sphinx documentation.
@@ -186,7 +186,7 @@ However snmpd must be started with permissions to open relevant sockets,
 typically root permissions.
 
 If you use "system V init" instead of systemd, then snmpd is typically started
-by a script file named ``/etc/init.d/snmpd``. Change the snmpd command line
+by a script file named :file:`/etc/init.d/snmpd`. Change the snmpd command line
 arguments in the file, typically via ``SNMPDOPTS``. Stop and start the
 service with::
 
@@ -196,10 +196,10 @@ service with::
 
 Configuration file for snmpd
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-The file ``snmpd.conf`` controls access to the snmp agent. It should be
+The file :file:`snmpd.conf` controls access to the snmp agent. It should be
 set to listen on all interfaces and allow read-write access to the
 Profinet MIB:s. On Ubuntu Linux you should change
-``/etc/snmp/snmpd.conf`` to read::
+:file:`/etc/snmp/snmpd.conf` to read::
 
    master  agentx
    agentaddress  udp:161
@@ -210,7 +210,7 @@ Profinet MIB:s. On Ubuntu Linux you should change
    rwcommunity  private default -V systemonly
 
 If your Linux distribution does give a long description for ``ifDesc`` you can
-override it by adding a line to the ``snmpd.conf`` file. Adapt the interface
+override it by adding a line to the :file:`snmpd.conf` file. Adapt the interface
 index (last digit in OID) and the interface name::
 
    override 1.3.6.1.2.1.2.2.1.2.3 octet_str "enp0s31f6"
@@ -287,13 +287,12 @@ Remove all contents of the journalctl logs::
    sudo journalctl --rotate
    sudo journalctl --vacuum-time=1s
 
-The configurations for journalctl are located in ``/etc/systemd/journald.conf``.
+The configurations for journalctl are located in :file:`/etc/systemd/journald.conf`.
 If you do experiments with frequent reboots, it might be useful to change some
 values::
 
    SyncIntervalSec=10s
    MaxRetentionSec=4h
-
 
 
 Boot time optimization
@@ -331,25 +330,25 @@ in the terminal (within Visual Studio Code) and the corresponding file will
 be opened. Hold the CTRL key while clicking on the line.
 
 To use debug features while running (for example breakpoints) you need to adapt
-the settings file for Visual Studio Code. Click the "Run and Debug" icon
-in the left side tool bar. Then click "Create a launch.json file". In the
-"Select environment", use "C++ (GDB/LLDB)".
+the settings file for Visual Studio Code. Click the :guilabel:`Run and Debug"` icon
+in the left side tool bar. Then click :guilabel:`Create a launch.json file`. In the
+:guilabel:`Select environment`, use :guilabel:`C++ (GDB/LLDB)`.
 
-Modify the ``launch.json`` file to point at the correct executable, working
+Modify the :file:`launch.json` file to point at the correct executable, working
 directory and to use correct command line arguments.
 
 If you need to run the application with root permissions, you need to add a path in the
 ``"miDebuggerPath"`` field. It should point to a text file typically named
-``gdb``, with this content::
+:file:`gdb`, with this content::
 
    pkexec /usr/bin/gdb "$@"
 
-Put the ``gdb`` file for example in the ``.vscode`` subdirectory within
-the ``p-net`` directory. Set the executable flag::
+Put the :file:`gdb` file for example in the :file:`.vscode` subdirectory within
+the :file:`p-net` directory. Set the executable flag::
 
    chmod +x gdb
 
-An example of a ``launch.json`` file::
+An example of a :file:`launch.json` file::
 
    {
       "version": "0.2.0",

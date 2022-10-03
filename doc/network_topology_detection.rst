@@ -84,11 +84,11 @@ To stop the daemon (to avoid sending additional LLDP packets)::
 
 SNMPwalk tool for querying SNMP agents
 --------------------------------------
-To install ``snmpwalk`` and standard description files on Ubuntu::
+To install :command:`snmpwalk` and standard description files on Ubuntu::
 
    sudo apt install snmp snmp-mibs-downloader
 
-Use ``snmpwalk`` to read all info from a device. This is the result when
+Use :command:`snmpwalk` to read all info from a device. This is the result when
 querying a Siemens Profinet-enabled switch::
 
    $ snmpwalk -v2c -c public 192.168.0.99
@@ -136,7 +136,7 @@ querying a Siemens Profinet-enabled switch::
 
 Use the command line argument ``-v`` for the SNMP version to use, and ``-c``
 for the "community string" which is a password.
-The default community string for devices is often "public".
+The default community string for devices is often ``public``.
 
 The values in the left column are the OID (Object Identifier) values.
 For example ``1.3.6.1.2.1.2.2.1.6.3`` is used for the MAC address of the third
@@ -159,7 +159,7 @@ Base) text file is used.
 
 The example OID is defined in the ``IF-MIB``, which describes interface
 information. The text is from :rfc:`2863`,
-and typically installed in ``/var/lib/snmp/mibs/ietf/IF-MIB`` on Linux::
+and typically installed in :file:`/var/lib/snmp/mibs/ietf/IF-MIB` on Linux::
 
    ifPhysAddress OBJECT-TYPE
       SYNTAX      PhysAddress
@@ -175,7 +175,7 @@ and typically installed in ``/var/lib/snmp/mibs/ietf/IF-MIB`` on Linux::
                an octet string of zero length."
       ::= { ifEntry 6 }
 
-Add the ``-m ALL`` flag to ``snmpwalk`` to use the installed MIB files. The
+Add the ``-m ALL`` flag to :command:`snmpwalk` to use the installed MIB files. The
 example line will then display as::
 
    IF-MIB::ifPhysAddress.3 = STRING: 20:87:56:ff:aa:86
@@ -184,7 +184,7 @@ instead of the previous::
 
    iso.3.6.1.2.1.2.2.1.6.3 = Hex-STRING: 20 87 56 FF AA 86
 
-To always load specific MIB files, you can add them to a ``.snmp/snmp.conf``
+To always load specific MIB files, you can add them to a :file:`.snmp/snmp.conf`
 configuration file in your home directory. For example::
 
     mibs +LLDP-MIB
@@ -204,7 +204,7 @@ Write a new string describing the device location::
 
 Using more MIB files for snmpwalk
 ---------------------------------
-Add any additional MIB files in the directory ``.snmp/mibs/`` in your home
+Add any additional MIB files in the directory :file:`.snmp/mibs/` in your home
 directory. For Profinet you need at least these files:
 
 * IEC-62439-2-MGMT-MIB-20140509.mib
@@ -213,7 +213,7 @@ directory. For Profinet you need at least these files:
 * LLDP-MIB.my
 
 The first three files are available in the test bundle (in subdirectory
-``PN-Spec``) from the Profinet organization.
+:file:`PN-Spec`) from the Profinet organization.
 
 The last file is available for download on several locations.
 
@@ -296,7 +296,7 @@ Walking a subtree using snmpwalk
 --------------------------------
 By default the ``snmpwalk`` searches the ``SNMPv2-SMI::mib-2`` subtree. You can
 search a smaller or larger subtree by giving the OID (or the corresponding
-name) to ``snmpwalk`` as the argument after the host argument.
+name) to :command:`snmpwalk` as the argument after the host argument.
 
 As an example, here are the number of found variables for different
 subtrees for a Siemens Profinet switch:
@@ -325,7 +325,7 @@ subtrees for a Siemens Profinet switch:
 | 1                   | iso                                      |            2669 |
 +---------------------+------------------------------------------+-----------------+
 
-In order to show all available variables when running ``snmpwalk``, use the
+In order to show all available variables when running :command:`snmpwalk`, use the
 OID ``1``. However, in this example this would result in displaying over 2600
 variables.
 
@@ -351,7 +351,7 @@ line (the symbolic name must be given)::
 
    snmptable -v1 -c public 192.168.0.50 IF-MIB::ifTable
 
-Add ``-Cw 120`` to the command line to limit the ``snmptable`` output line length.
+Add ``-Cw 120`` to the command line to limit the :command:`snmptable` output line length.
 
 Relevant tables:
 
@@ -494,8 +494,8 @@ See :ref:`additional-linux-details`.
 
 Verification of SNMP communication to P-Net
 -------------------------------------------
-To verify the SNMP capabilities of the P-Net stack, first use ``ping`` to
-make sure you have a connection to the device, and then use ``snmpwalk``::
+To verify the SNMP capabilities of the P-Net stack, first use :command:`ping` to
+make sure you have a connection to the device, and then use :command:`snmpwalk`::
 
    ping 192.168.0.50
    snmpwalk -v1 -c public 192.168.0.50 1
@@ -539,8 +539,8 @@ Profinet equipment.
 To install Proneta on Windows, use the "Download Proneta Basic free" link
 on the Siemens web page:
 https://new.siemens.com/global/en/products/automation/industrial-communication/profinet/proneta.html
-The file is named ``proneta_VERSION.zip``. Registration is required.
-Unzip the downloaded file, and double-click the ``PRONETA.exe`` file to start the program.
+The file is named :file:`proneta_VERSION.zip`. Registration is required.
+Unzip the downloaded file, and double-click the :file:`PRONETA.exe` file to start the program.
 
 Turn off the ART tester tool before starting Proneta, otherwise Proneta can
 not scan the network.
@@ -571,7 +571,9 @@ It is also possible to edit the I&M information, to flash the signal LED and
 to do a factory reset.
 
 For PRONETA to be able to map the connection to the closest device, you need to
-enable LLDP transmission on the Ethernet interface of your laptop. Note that
+enable LLDP transmission on the Ethernet interface of your laptop.
+Use the "PROFINET IO protocol (DCP LLDP)" setting.
+Restart your PC after you have done any changes to this setting. Note that
 this interferes with the ART tester software. See the section on installing
 ART tester in this documentation.
 
@@ -581,8 +583,8 @@ It is possible to customise which address range to scan.
 Found DCP-enabled hosts will be probed using EPM lookup and SNMP queries.
 
 Proneta will show details about modules in found devices, if it has access to the
-corresponding GSDML file. Use the page "Settings" and the tab "GSDML Manager" to
-load GSDML files.
+corresponding GSDML file. Use the page :guilabel:`Settings` and the tab
+:guilabel:`GSDML Manager` to load GSDML files.
 
 
 Full SNMP readout example

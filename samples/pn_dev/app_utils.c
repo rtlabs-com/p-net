@@ -127,6 +127,9 @@ void app_utils_get_error_code_strings (
       case PNET_ERROR_CODE_2_ABORT_AR_RELEASE_IND_RECEIVED:
          *err_code_str = "AR release indication received";
          break;
+      case PNET_ERROR_CODE_2_ABORT_AR_RPC_READ_ERROR:
+         *err_code_str = "AR RPC-Read error";
+         break;
       case PNET_ERROR_CODE_2_ABORT_DCP_STATION_NAME_CHANGED:
          *err_code_str = "DCP station name changed, "
                          "device terminated AR";
@@ -519,12 +522,12 @@ void app_utils_print_network_config (
 void app_utils_print_ioxs_change (
    const app_subslot_t * subslot,
    const char * ioxs_str,
-   uint8_t iocs_current,
-   uint8_t iocs_new)
+   uint8_t ioxs_current,
+   uint8_t ioxs_new)
 {
-   if (iocs_current != iocs_new)
+   if (ioxs_current != ioxs_new)
    {
-      if (iocs_new == PNET_IOXS_BAD)
+      if (ioxs_new == PNET_IOXS_BAD)
       {
          APP_LOG_DEBUG (
             "PLC reports %s BAD for slot %u subslot %u \"%s\"\n",
@@ -533,7 +536,7 @@ void app_utils_print_ioxs_change (
             subslot->subslot_nbr,
             subslot->submodule_name);
       }
-      else if (iocs_new == PNET_IOXS_GOOD)
+      else if (ioxs_new == PNET_IOXS_GOOD)
       {
          APP_LOG_DEBUG (
             "PLC reports %s GOOD for slot %u subslot %u \"%s\".\n",
@@ -542,13 +545,13 @@ void app_utils_print_ioxs_change (
             subslot->subslot_nbr,
             subslot->submodule_name);
       }
-      else if (iocs_new != PNET_IOXS_GOOD)
+      else if (ioxs_new != PNET_IOXS_GOOD)
       {
          APP_LOG_DEBUG (
-            "PLC reports %s %u for input slot %u subslot %u \"%s\".\n"
+            "PLC reports %s %u for slot %u subslot %u \"%s\".\n"
             "  Is the PLC in STOP mode?\n",
             ioxs_str,
-            iocs_new,
+            ioxs_new,
             subslot->slot_nbr,
             subslot->subslot_nbr,
             subslot->submodule_name);

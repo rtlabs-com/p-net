@@ -36,8 +36,8 @@ Installing TIA (SIMATIC STEP 7 and WinCC) V15.1
 #. To start the installation, double-click the exe file. Restart of your computer
    is required.
 
-#. To show installed software version, use the "Portal view" and the "Start" tab
-   to the left of the screen. Click "Installed software".
+#. To show installed software version, use the :guilabel:`Portal view` and the :guilabel:`Start` tab
+   to the left of the screen. Click :guilabel:`Installed software`.
 
 #. After installation, make sure "PROFINET IO protocol (DCP/LLDP)" is enabled
    for your Ethernet interface on your laptop. Otherwise you will have problems
@@ -52,32 +52,32 @@ Using Siemens TIA on a Windows PC: Adding devices
 
 #. In the start screen, select "Create new project" and enter the details.
 
-#. Also on the start screen, select "Devices and networks", "Add new device" and
+#. Also on the start screen, select :guilabel:`Devices and networks`, :guilabel:`Add new device` and
    select your PLC model (a CPU that will act as IO-controller).
    If you only know the series of your PLC, but not the exact model, then select
    for example "Controller" > "SIMATIC S7-1200" > "CPU" > "Unspecified CPU 1200" >
    "6ES7 2XX-".
 
-#. Click Add. In the "Device view" you will be notified that the
+#. Click Add. In the :guilabel:`Device view` you will be notified that the
    device not is specified.
 
-#. Click "detect". Make sure your PLC is powered on.
-   Select "PN/IE" and your Ethernet interface and "Start search". Mark the found
-   PLC and click "Detect".
+#. Click :guilabel:`detect`. Make sure your PLC is powered on.
+   Select :guilabel:`PN/IE` and your Ethernet interface and :guilabel:`Start search`. Mark the found
+   PLC and click :guilabel:`Detect`.
 
-#. Import a GSD file by using the menu "Options > Manage GSD files". Browse to
+#. Import a GSD file by using the menu :menuselection:`Options --> Manage GSD files`. Browse to
    the directory with your GSD file. Mark the line with the file, and click
-   "Install".
+   :guilabel:`Install`.
 
-#. In the project view, in the left menu select the PLC and the subitem "Device
-   configuration". Click the "Network view" tab. At the right edge open the
-   "Hardware catalog". Select "Other field devices" > Profinet IO > I/O >
-   RT-Labs > "P-Net Samples" > "P-Net Sample App".
+#. In the project view, in the left menu select the PLC and the subitem :guilabel:`Device
+   configuration`. Click the :guilabel:`Network view` tab. At the right edge open the
+   :guilabel:`Hardware catalog`. Select :menuselection:`Other field devices --> Profinet IO --> I/O -->
+   RT-Labs --> P-Net Samples --> P-Net Sample App`.
 
 #. Double-click it, and it will appear in the main window.
 
-#. Use the "Network view" tab, and right-click "Not assigned" on the rt-labs-dev
-   icon. Select "Assign to new IO-controller" and "PLC_1.PROFINETinterface_1".
+#. Use the :guilabel:`Network view` tab, and right-click :guilabel:`Not assigned` on the rt-labs-dev
+   icon. Select :guilabel:`Assign to new IO-controller` and :guilabel:`PLC_1.PROFINETinterface_1`.
 
 
 Setting IP addresses and connecting physically
@@ -88,63 +88,63 @@ Setting IP addresses and connecting physically
    (first three groups in IP address should be the same). Changing the subnet
    mask size does not seem to have an impact.
 
-#. In the project view, in the left menu select the PLC and the subitem "Device
-   configuration".
+#. In the project view, in the left menu select the PLC and the subitem :guilabel:`Device
+   configuration`.
 
-#. In the "Properties" tab, use the "General" sub-tab. Select
-   "PROFINET interface [X1]" and "Ethernet addresses". Enter the IP address
+#. In the :guilabel:`Properties` tab, use the :guilabel:`General` sub-tab. Select
+   :guilabel:`PROFINET interface [X1]` and :guilabel:`Ethernet addresses`. Enter the IP address
    ``192.168.0.100`` for the PLC. The subnet mask should be ``255.255.255.0``
    and subnet "PN/IE_1".
 
-#. Right-click the icon of the PLC, and select "Go online". Use type of
-   interface "PN/IE", your Ethernet network card and "Direct at slot 1 X1".
+#. Right-click the icon of the PLC, and select :guilabel:`Go online`. Use type of
+   interface :guilabel:`PN/IE`, your Ethernet network card and :guilabel:`Direct at slot 1 X1`.
 
-#. Select "Show accessible devices" in the dropdown.  Click "Start search".
+#. Select :guilabel:`Show accessible devices` in the dropdown.  Click :guilabel:`Start search`.
    The table should be updated with "Device type" = "CPU 1215C..."
    if the connection is OK.
 
-#. To enter the IP-address of the IO-device, go to "Device view" for the IO-device
-   and click the IO-device icon. in the "Properties" tab, select the "General"
+#. To enter the IP-address of the IO-device, go to :guilabel:`Device view` for the IO-device
+   and click the IO-device icon. in the :guilabel:`Properties` tab, select the :guilabel:`General`
    sub-tab.
-#. Select "PROFINET interface [X1]" and "Ethernet addresses". Enter the IP address
+#. Select :guilabel:`PROFINET interface [X1]` and :guilabel:`Ethernet addresses`. Enter the IP address
    ``192.168.0.50`` for the IO-device.
 
-#. Also in the “PROFINET interface [X1]” section, set the IO cycle update time
-   to "Set update time manually" and select 16 ms. (Depending on your hardware
+#. Also in the :guilabel:`PROFINET interface [X1]` section, set the IO cycle update time
+   to :guilabel:`Set update time manually` and select 16 ms. (Depending on your hardware
    you can try faster updates later on).
 
 
 Adding modules to IO-device
 ---------------------------
-#. In the device view, select the "rt-labs-dev" device (by using the dropdown).
+#. In the device view, select the :guilabel:`rt-labs-dev` device (by using the dropdown).
 
-#. Add a module to the "Device overview" tab. That is done by dragging a module
-   from the "Hardware catalog", which is located to the right of screen.
-   The modules are found in "Other field devices" > Profinet IO > I/O > rt-labs >
-   rt-labs dev > Module. Drop the module in the correct slot row in the "Device
-   overview table". For the :ref:`running-sample-app` tutorial use a
-   "DIO 8xLogicLevel" module in slot 1.
+#. Add a module to the :guilabel:`Device overview` tab. That is done by dragging a module
+   from the :guilabel:`Hardware catalog`, which is located to the right of screen.
+   The modules are found in :menuselection:`Other field devices --> Profinet IO --> I/O --> rt-labs -->
+   rt-labs dev --> Module`. Drop the module in the correct slot row in the :guilabel:`Device
+   overview table`. For the :ref:`running-sample-app` tutorial use a
+   :guilabel:`DIO 8xLogicLevel` module in slot 1.
    Only modules that fit in the respective slot seems to stick.
 
 
 Running the application
 -----------------------
 #. Connect one Ethernet cable between the PLC and the Windows laptop, and one
-    Ethernet cable between the PLC and the IO-device.
+   Ethernet cable between the PLC and the IO-device.
 
-#. In the network view, right-click the PLC icon and select Compile > "Hardware
-   (rebuild all)".
+#. In the network view, right-click the PLC icon and select :menuselection:`Compile --> "Hardware
+   (rebuild all)"`.
 
-#. Repeat for Compile > "Software (rebuild all)".
+#. Repeat for :menuselection:`Compile --> "Software (rebuild all)"`.
 
-#. Right-click and select "Download to device" > "Hardware configuration".
+#. Right-click and select :menuselection:`"Download to device" --> "Hardware configuration"`.
 
-#. Click Load in the pop-up window, and then Finish.
+#. Click :guilabel:`Load` in the pop-up window, and then :guilabel:`Finish`.
 
-#. Repeat for "Download to device" > "Software (all)".
+#. Repeat for :menuselection:`"Download to device" --> "Software (all)"`.
 
-#. In the main menu, use Online > "Go online". In the right part of the screen,
-   use "Online tools" to see the PLC LED states and to go to RUN and STOP modes.
+#. In the main menu, use :menuselection:`Online --> "Go online"`. In the right part of the screen,
+   use :guilabel:`Online tools` to see the PLC LED states and to go to RUN and STOP modes.
 
 There will be cyclic communication regardless whether the PLC is in RUN or
 STOP mode, and the run state information is available in the cyclic data.
@@ -166,17 +166,17 @@ Changing IO-device station name
 Connecting inputs and outputs
 -----------------------------
 #. Find the address of the IO-device input byte and output byte. In the
-   “Device view” for the IO-device, look in the “Device overview” table.
-   The module "8 bits I 8 bits O" should appear (if previously inserted).
+   :guilabel:`Device view` for the IO-device, look in the :guilabel:`Device overview` table.
+   The module :guilabel:`8 bits I 8 bits O` should appear (if previously inserted).
    Look for the I (input) address and Q (output) address. The value can be for example 2.
    Note that the IO-device must be connected to the PLC (as seen for example in
    the network view) for the IO-device to have a PLC address assigned.
 
-#. In the Project tree, select PLC_1 > PLC tags > Show all tags.
+#. In the Project tree, select :menuselection:`PLC_1 --> PLC tags --> Show all tags`.
 
 #. Create a new tag by clicking the first line and enter the name ``ButtonIn``.
 
-#. Use "Default tag table" and DataType Bool. The address should be of operand
+#. Use :guilabel:`Default tag table` and DataType Bool. The address should be of operand
    identifier "I" (input). Use address from the "Device view" as described above.
    The bit number should be 7. This is written as ``%I2.7``.
 
@@ -184,35 +184,38 @@ Connecting inputs and outputs
    the address should be for example ``%Q2.7``.
 
 #. In order to study the values while running, you need to create an watch table.
-   In the Project tree, select PLC_1 > "Watch and force table" > "Add new watch
-   table".
+   In the Project tree, select :menuselection:`PLC_1 --> "Watch and force table" --> "Add new watch
+   table"`.
 
 #. In the first empty line, double-click on the small icon on the Name field.
    Select "ButtonIn". Repeat on next line with "LEDout".
+   Add a few items to the watch table to be able to monitor the internals of
+   the PLC program. Add ``Flasher_DB".oscillator_state`` and ``Flasher_DB".flashing``.
 
 #. When running, in order to study the values, connect to the PLC ("Online"). On
-   the "Watch table_1" page, click the small "Monitor all" icon. The values on the
+   the :guilabel:`Watch table_1` page, click the small :guilabel:`Monitor all` icon. The values on the
    page will be continuously updated.
 
+.. image:: illustrations/TiaUpdatedWatchTable.png
 
 Entering PLC program
 --------------------
-#. In the project tree, under PLC1 > Program blocks > Add new block.
+#. In the project tree, under :menuselection:`PLC1 --> Program blocks --> Add new block`.
 
-#. In the pop-up window, select "Function block" and language SCL. Give it the name ``Flasher``.
-   Click "OK".
+#. In the pop-up window, select :guilabel:`Function block` and language SCL. Give it the name ``Flasher``.
+   Click :guilabel:`OK`.
 
    Note that Structured Control Language (SCL) is Siemens name for Structured Text
    (ST) programming language.
 
-#. In the "Flasher [FB1]" window upper part, add an input pin in the "Input"
+#. In the "Flasher [FB1]" window upper part, add an input pin in the :guilabel:`Input`
    section.
 
 #. Name it ``in_pin_button_LED``, and give it the data type Bool.
 
-#. In the "Output" section, add a ``out_pin_LED`` which also should be Bool.
+#. In the :guilabel:`Output` section, add a ``out_pin_LED`` which also should be Bool.
 
-#. In the "Static" section, add:
+#. In the `Static` section, add:
 
    * ``in_pin_button_LED_previous``: BOOL
    * ``flashing``: BOOL
@@ -241,79 +244,87 @@ Entering PLC program
       END_IF;
       #in_pin_button_LED_previous := #in_pin_button_LED;
 
-#. In the "Main [OB1]" block, drag the "Flasher" icon to the "Network 1" line.
-   The icon is found in the left-side menu "PLC_1" > "Program blocks".
+#. In the :guilabel:`Main [OB1]` block, drag the :guilabel:`Flasher` icon to the :guilabel:`Network 1` line.
+   The icon is found in the left-side menu :menuselection:`PLC_1 --> "Program blocks"`.
 
-#. In the pop up asking for data block, select "Flasher_DB".
+#. In the pop up asking for data block, select :guilabel:`Flasher_DB`.
 
-#. Connect the input on the "Flasher" block by double-clicking it. Select "ButtonIn".
+#. Connect the input on the :guilabel:`Flasher` block by double-clicking it. Select :guilabel:`ButtonIn`.
 
 #. Similarly connect the output to "LEDout".
 
    .. image:: illustrations/FlasherFunctionBlock.png
 
-   The block "Flasher_DB [DB1]" has been created automatically. All the input-,
+   The block :guilabel:`Flasher_DB [DB1]` has been created automatically. All the input-,
    output- and static variables should appear inside it.
 
 #. Compile the program and download it to the PLC. Verify that it works as
-   intended.
+   intended. The data LED on the Raspberry Pi should be flashing, and you
+   can start and stop the flashing by pressing the data button on the Raspberry Pi.
+   If you do not have physical LEDs and buttons connected to your
+   Raspberry Pi, use regular text files instead (described elsewhere).
 
 
 Adjusting data cycle time and watchdog
 --------------------------------------
-#. In the device view, select the IO-device in the dropdown. Use the "Properties"
-   tag and "General" subtab.
+You might need to adjust the cycle time and watchdog setting for the
+sample app to fit the speed of your device.
 
-#. Select "PROFINET interface [X1]" > Advanced options > Real time settings.
+#. In the device view, select the IO-device in the dropdown. Use the :guilabel:`Properties`
+   tag and :guilabel:`General` subtab.
 
-#. Adjust "Update time" in ms and the watchdog time (which
+#. Select :menuselection:`"PROFINET interface [X1]" --> Advanced options --> Real time settings`.
+
+#. Adjust :guilabel:`Update time` in ms and the watchdog time (which
    is the allowed number of cycles without data before an alarm is triggered).
 
 
 Adjusting parameter values for a slot
 -------------------------------------
-#. Use the "Device view" for the IO-device while you are offline from the PLC.
+#. Use the :guilabel:`Device view` for the IO-device while you are offline from the PLC.
 
-#. In the "Device overview", select the line for the relevant slot.
+#. In the :guilabel:`Device overview`, select the line for the relevant slot.
 
-#. In the "Properties" tab and the "General" subtab, select "Module parameters".
+#. In the :guilabel:`Properties`` tab and the :guilabel:`General` subtab, select :guilabel:`Module parameters`.
 
 #. A list of parameters is shown. Set the value in the text box.
 
 
 Forcing output signals
 ----------------------
-#. In the Project tree, select PLC_1 > "Watch and force table" > "Force table".
+#. In the Project tree, select :menuselection:`PLC_1 --> "Watch and force table" --> "Force table"`.
 
 #. In the first empty line, double-click on the small icon on the Name field.
 
-#. Select "LEDout". In the "Force value" column enter `TRUE`, and enable
-   the checkbox in the "F" column.
+#. Select "LEDout". In the :guilabel:`Force value` column enter `TRUE`, and enable
+   the checkbox in the :guilabel:`F`` column.
 
-#. Go online, and then click the small "Start or replace forcing ..." icon.
+#. Go online, and then click the small :guilabel:`Start or replace forcing ...` icon.
 
 #. Confirm in the pop-up window.
 
 #. To stop forcing the signal, press the small
-   "Stops forcing of ..." icon. Note that it not possible to download software
+   :guilabel:`Stops forcing of ...` icon. This seems to work even if
+   the project not is the same as the one loaded in the PLC.
+   Note that it not possible to download software
    to the PLC while it is forcing output signals.
 
 
 Opening an archived project
 ----------------------------
-#. Open an archived project by using the project view menu Project > Retrieve
-   and select the ``.zap15_1`` file.
+#. Open an archived project by using the project view menu :menuselection:`Project --> Retrieve`
+   and select the :file:`.zap15_1` file.
 #. Create a new empty folder when asked for target directory.
 
 
 Setting date and time on PLC
 ----------------------------
-* To set the time zone, in the "Device view" select Properties > General >
-  "Time of day". Use appropriate time zone.
+* To set the time zone, in the :guilabel:`Device view:guilabel:` select
+  :menuselection:`Properties --> General --> "Time of day"`. Use appropriate time zone.
 
 * To set the date and time, go online to the PLC. In the Project tree on
-  the "PLC_1", right-click and select "Online & diagnostics". Use Functions >
-  "Set time".
+  the :guilabel:`PLC_1`, right-click and select :guilabel:`Online & diagnostics`.
+  Use :menuselection:`Functions --> "Set time"`.
 
 
 Alarm when IO-device is terminated
@@ -328,8 +339,8 @@ The Wireshark tool will display::
 
 Displaying alarms in the PLC
 ----------------------------
-While online, right-click on the PLC and enable "Receive alarms". Alarms are
-then visible in "Device view" > Diagnostics > "Alarm display".
+While online, right-click on the PLC and enable :guilabel:`Receive alarms`. Alarms are
+then visible in :menuselection:`"Device view" --> Diagnostics --> "Alarm display"`.
 
 
 Showing connection errors to IO-device
@@ -337,56 +348,56 @@ Showing connection errors to IO-device
 If you are connected to the PLC ("online"), it is possible to see if
 there are communication problems to the IO-device.
 
-In the project tree > PLC_1 > Distributed I/O > Profinet IO-System > rt-labs-dev.
+In the :menuselection:`project tree --> PLC_1 --> Distributed I/O --> Profinet IO-System --> rt-labs-dev`.
 
 In case of communication errors, the hover text on the small icon is showing "Not reachable".
 
 
 Displaying diagnosis in the PLC
 -------------------------------
-#. To see diagnosis in standard format for an IO-device, use the "Device view" for
+#. To see diagnosis in standard format for an IO-device, use the :guilabel:`Device view`` for
    the IO-device while you are "Online" with the PLC.
 
-#. Press the "Go online" in the menu bar.
+#. Press the :guilabel:`Go online`` in the menu bar.
 
-#. In the "Device overview"
+#. In the :guilabel:`Device overview`
    there is a table of slots and subslots. A red icon will be shown for the slot
    with the diagnosis. Double-click the icon. In the new window select
-   "Diagnostics" > "Channel diagnostics". The error will be described and it is
+   :menuselection:`Diagnostics --> "Channel diagnostics"`. The error will be described and it is
    possible to see for which channel it is reported.
 
 #. To see a list of previous communication failures for the PLC, make sure you
-   are online with the PLC. In the Project tree on the "PLC_1", right-click and
-   select "Online & diagnostics".
+   are online with the PLC. In the Project tree on the :guilabel:`PLC_1`, right-click and
+   select :guilabel:`Online & diagnostics`.
 
-#. Select Diagnostics -> "Diagnostics buffer" in the left part of the new window.
+#. Select :menuselection:`Diagnostics --> "Diagnostics buffer"` in the left part of the new window.
    A list of previous problems is seen. Click on relevant row to see details.
 
-There is also a "Diagnosis status" page that shows a summary of the current
+There is also a :guilabel:`Diagnosis status` page that shows a summary of the current
 status.
 
 
 Scanning for devices from TIA portal
 ------------------------------------
-#. In the "Portal view", click "Online & Diagnostics" and then "Accessible devices".
+#. In the :guilabel:`Portal view`, click :guilabel:`Online & Diagnostics` and then :guilabel:`Accessible devices`.
 
-#. In the pop-up window, select "PN/IE" and the name of the Ethernet interface
-   of your laptop. Click "Start search".
+#. In the pop-up window, select :guilabel:`PN/IE` and the name of the Ethernet interface
+   of your laptop. Click :guilabel:`Start search`.
 
    * You can flash a LED on your device by marking the relevant line in the
-     result table, and mark the "Flash LED" check-box.
+     result table, and mark the :guilabel:`Flash LED`` check-box.
 
    * To change network settings for a device, mark the relevant line in the table
-     of found devices, and click "Show". The "Project tree" will open, and under
-     "Online access" in the left menu, select the relevant Ethernet interface.
+     of found devices, and click :guilabel:`Show`. The :guilabel:`Project tree` will open, and under
+     :guilabel:`Online access` in the left menu, select the relevant Ethernet interface.
 
-   * If necessary click "Update accessible devices". Select relevant found device,
-     and use the small triangle to access its "Online & diagnostics" button.
-     Double-click it. A new window will open, and in its "Functions" sections it is
+   * If necessary click :guilabel:`Update accessible devices`. Select relevant found device,
+     and use the small triangle to access its :guilabel:`Online & diagnostics` button.
+     Double-click it. A new window will open, and in its :guilabel:`Functions` sections it is
      possible to assign IP address and to assign Profinet device name.
 
 It is also possible to reach the tool to scan for devices via the main top menu
-Online > "Accessible devices".
+:menuselection:`Online --> "Accessible devices"`.
 
 
 Troubleshooting
@@ -395,10 +406,55 @@ Note that the PLC might complain if there is a non-Profinet switch between the
 IO-device and the IO-controller. This is probably due to wrong port names in LLDP messages.
 
 
+Create an archive of a project
+------------------------------
+Use the menu :menuselection:`Project --> Archive`. Select :guilabel:`Archive as compressed file`.
+Click the :guilabel:`Archive` button.
+
+
+Move license files between computers
+------------------------------------
+Use the separate program "Automation License Manager" to transfer the license file to
+an USB memory stick, and then to another computer.
+
+
 Replacing a device or a PLC
 ---------------------------
 To replace an IO-device or an IO-controller, right-click on it in the left
-side menu and select "Change device". Follow the wizard.
+side menu and select :guilabel:`Change device`. Follow the wizard.
+
+
+Enable web server in the PLC
+----------------------------
+Some PLCs (at least in the S7-1500 series) have a built in web server, where it is
+possible to monitor and modify the state of the PLC. Once enabled, enter the IP
+address of the PLC in your browser to access the PLC web server.
+
+Enable the web server by using the :menuselection:`Device view --> Properties --> General --> Web server`
+entry in the TIA portal. In :guilabel:`General` activate the web server. In :guilabel:`User management`
+create a new user with a password, and use the :guilabel:`Access level` column to select
+which features that should be available via the web server.
+
+You must also enable access to the web server for each network interface. In
+:menuselection:`Device view --> Properties --> General --> PROFINET interface [X1] --> "Web server access"`,
+make sure to enable the access. Repeat for interface X2 (if available).
+
+.. image:: illustrations/PlcWebserver.png
+
+
+Control whether IP addresses are assigned temporarily or permanently
+--------------------------------------------------------------------
+The PLC can assign IP addresses to the devices temporarily at PLC startup. That setting in the device
+results in that the device IP address is lost at the next device power up.
+Use the menu :menuselection:`Options --> Settings --> Hardware configuration --> Topology overview`.
+Use the checkbox :guilabel:`Assign IP address temporarily` to control whether the PLC
+should assign IP addresses to devices temporarily or permanently.
+
+
+Setting IOPS status from PLC
+----------------------------
+The IOPS status for all subslots will be set to BAD when the PLC is in STOP mode (there will still be
+cyclic data). However the provider status in the frame from the PLC will be set to STOPPED.
 
 
 Using the Echo module
@@ -413,7 +469,7 @@ To test it:
 #. Unplug any existing modules, and plug one Echo module into slot 1.
 
 #. Check the resulting addresses for the inputs and outputs of the module (by looking in the
-   "Device overview"). Typically the addresses are "0..7" for both the input (I) and output (Q) addresses.
+   :guilabel:`Device overview`). Typically the addresses are "0..7" for both the input (I) and output (Q) addresses.
 
 #. Assuming these addresses, add these tags:
 
@@ -449,7 +505,7 @@ To test it:
 
    It is not clear why the IO data signals not are shown in the user interface.
 
-#. Add the program block to the "Main" program block. Connect "in_float" to "EchoFloatIn" etc.
+#. Add the program block to the :guilabel:`Main` program block. Connect "in_float" to "EchoFloatIn" etc.
 
 #. Add "EchoFloatIn" and the three other signals to the watch table.
 
@@ -468,10 +524,10 @@ When the GSDML file is updated and needs to be reloaded in the Siemens environme
    * Stop forcing all values.
    * Delete entries in table.
 
-#. Open "Options/Manage general station description files"
+#. Open :menuselection:`Options --> Manage general station description files`
 
-   * In "Installed GSDs" tab, delete GSDML file
-   * in "GSDs in the project", "Find unused GSDs" and delete
+   * In :guilabel:`Installed GSDs` tab, delete GSDML file
+   * In :guilabel:`GSDs in the project`, :guilabel:`Find unused GSDs` and delete
 
 #. Save project
 #. Restart TIA and add your updated GSDML file and recreate your device.
@@ -494,12 +550,12 @@ Upgrading firmware on a Siemens PLC
 #. Select the proper firmware to use for your PLC from the Siemens downloads
 page. With the latest firmware you need a recent version of the STEP7 software.
 
-#. Download the file, which is in ``.zip`` format. Unzip the file.
+#. Download the file, which is in :file:`.zip` format. Unzip the file.
 
-#. In TIA Portal, right-click the PLC and select "Online and Diagnostics".
+#. In TIA Portal, right-click the PLC and select :guilabel:`Online and Diagnostics`.
 
-#. In the "Functions" sections, use "Firmware update". Browse to the downloaded file
-   (in ``.upd`` format) and start the update.
+#. In the :guilabel:`Functions` sections, use :guilabel:`Firmware update`. Browse to the downloaded file
+   (in :file:`.upd` format) and start the update.
 
 
 Using a Simatic ET200SP IO-device for conformance test
@@ -534,6 +590,7 @@ Data types in Step7
 A few of the available data types:
 
 * Bool
+* Byte - 8 bit unsigned
 * Int - 16 bit
 * UInt - 16 bit unsigned
 * DInt - 32 bit
@@ -679,7 +736,7 @@ Reading parameter data from the sample app using the SCL language
 
 #. In the "Main [OB1]" window, drag the "RecReader" block to the Network1 line.
 
-#. Accept the name of the datablock.
+#. Accept the name of the data block.
 
    The result is the same as above.
 

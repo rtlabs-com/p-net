@@ -35,12 +35,12 @@ Optional hardware:
 
 Available files:
 ^^^^^^^^^^^^^^^^
-The ``samples/pn_dev`` directory in the P-Net repository contains the source code
+The :file:`samples/pn_dev` directory in the P-Net repository contains the source code
 for this example. It also contains a GSD file (written in GSDML), which tells
 the IO-controller how to communicate with the IO-device.
 
 Those parts of the sample application that are dependent on whether you run
-Linux or an RTOS are located in ``src/ports``.
+Linux or an RTOS are located in :file:`src/ports`.
 
 
 Sample application description
@@ -114,7 +114,7 @@ To setup Raspbian on a Raspberry Pi, and optionally connect buttons and LEDs,
 see :ref:`prepare-raspberrypi`.
 
 A LED is controlled by the Linux sample app by writing to a file, for example
-``/sys/class/gpio/gpio17/value``. A ``0`` or ``1`` will be written to the
+:file:`/sys/class/gpio/gpio17/value`. A ``0`` or ``1`` will be written to the
 file upon LED state changes. This is done by a script, for easy adaptation to
 your hardware.
 
@@ -127,7 +127,7 @@ Your Raspberry Pi needs to be connected to Internet via LAN or WiFi to be
 able to download software.
 
 In order to compile P-Net on Raspberry Pi, you need a recent version of
-``cmake``.
+:command:`cmake`.
 
 #. Install it::
 
@@ -143,7 +143,7 @@ In order to compile P-Net on Raspberry Pi, you need a recent version of
 #. Compare the installed version with the minimum version required for P-Net
    (see the README).
 
-#. You also need ``git`` to download P-Net. Install it using::
+#. You also need :command:`git` to download P-Net. Install it using::
 
     sudo apt install git
 
@@ -183,7 +183,7 @@ Downloading and compiling P-Net
 Notes to advanced users
 ^^^^^^^^^^^^^^^^^^^^^^^
 If you already cloned the repository without the ``--recurse-submodules``
-flag then run this in the ``p-net`` folder::
+flag then run this in the :file:`p-net` folder::
 
     git submodule update --init --recursive
 
@@ -194,9 +194,9 @@ Alternate cmake command to also adjust some settings::
 You can choose any name for the build folder, for instance if you want
 to build different configurations.
 
-You can use the ``-j`` flag to ``make`` if you like to enable parallel build.
+You can use the ``-j`` flag to :command:`make` if you like to enable parallel build.
 
-Depending on how you installed cmake, you might need to run ``snap run cmake``
+Depending on how you installed :command:`make`, you might need to run ``snap run cmake``
 instead of ``cmake``.
 
 It is possible to specify the location of the submodule repositories.
@@ -427,6 +427,9 @@ release::
    echo 1 > /home/pi/profinet/build/button1.txt
    echo 0 > /home/pi/profinet/build/button1.txt
 
+or::
+    echo 1 > /home/pi/profinet/build/button1.txt ; sleep 1; echo 0 > /home/pi/profinet/build/button1.txt
+
 If you only have one terminal, you need to run ``pn_dev`` in the background
 to be able to run these commands.
 That is done by adding a ``&`` at the end of the command to start ``pn_dev`` .
@@ -508,7 +511,7 @@ To show more details on the compilation, use::
 Network issues
 ^^^^^^^^^^^^^^
 If you have network problems on your IO-device Raspberry Pi, re-run the
-``ifconfig`` command given above.
+:command:`ifconfig` command given above.
 
 If you have problems establishing a connection to your PLC, connect it
 directly to your laptop and run the program Wireshark on the corresponding
@@ -545,7 +548,7 @@ Run CMake configuration by issuing e.g.::
 During CMake configuration, if OSAL is found then P-Net will just link
 against the external library.
 CMake will find the external OSAL library if it is installed in a
-default location such as ``/usr/include`` or ``/usr/local/include``. This
+default location such as :file:`/usr/include` or :file:`/usr/local/include`. This
 could be the case for a native build or a cross-compiled Linux system
 with a staging folder.
 

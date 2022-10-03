@@ -133,7 +133,7 @@ To disable the creation of the bridge at reboot::
 
    sudo systemctl disable systemd-networkd
 
-If you do not use systemd, then a script ``enable_bridge.sh`` might be handy::
+If you do not use systemd, then a script :file:`enable_bridge.sh` might be handy::
 
    ip link add name br0 type bridge
    ip link set br0 up
@@ -142,7 +142,7 @@ If you do not use systemd, then a script ``enable_bridge.sh`` might be handy::
    ip link set eth0 master br0
    ip link set eth1 master br0
 
-And correspondingly ``disable_bridge.sh``::
+And correspondingly :file:`disable_bridge.sh`::
 
    ip link set eth0 nomaster
    ip link set eth1 nomaster
@@ -155,7 +155,7 @@ Configuring the P-Net stack and sample application
 To run P-Net and the sample application with multiple ports a couple
 of things need to be done. Note that the settings described in the
 following sections are changed by running ``ccmake .`` in the build folder,
-and then ``options.h`` will be regenerated.
+and then :file:`options.h` will be regenerated.
 
 Reconfigure setting ``PNET_MAX_PHYSICAL_PORTS`` to the actual number of physical
 ports available in the system. For this example the value shall be set to 2.
@@ -209,7 +209,7 @@ Use the MAC-address of ``br0`` when running ART tester.
 
 Routing traffic with multiple ports on Linux
 ---------------------------------------------
-To see the MAC addresses and IP addresses of the neighbours, use the ``arp``
+To see the MAC addresses and IP addresses of the neighbours, use the :command:`arp`
 Linux command::
 
    pi@pndevice-pi:~$ arp
@@ -219,7 +219,7 @@ Linux command::
    192.168.0.98             ether   ac:4a:56:f4:02:89   C                     br0
    192.168.0.30             ether   54:ee:75:ff:95:a6   C                     br0
 
-To see the IP routing table, use the ``route`` Linux command::
+To see the IP routing table, use the :command:`route` Linux command::
 
    pi@pndevice-pi:~$ route
    Kernel IP routing table
@@ -227,6 +227,8 @@ To see the IP routing table, use the ``route`` Linux command::
    default         192.168.42.1    0.0.0.0         UG    305    0        0 wlan0
    192.168.0.0     0.0.0.0         255.255.255.0   U     0      0        0 br0
    192.168.42.0    0.0.0.0         255.255.255.0   U     305    0        0 wlan0
+
+To send a ARP request, use the command :command:`arping`.
 
 
 Adding multiple Ethernet ports on a microcontroller

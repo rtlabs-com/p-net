@@ -33,25 +33,25 @@ Installation using a Linux laptop
    Select the standard "Raspberry Pi OS" operating system.
 
 #. Unplug, and reinsert your SD-card to mount it. To enable SSH logging in on the
-   Raspberry Pi, create an empty file on the named ``ssh`` in the boot partition::
+   Raspberry Pi, create an empty file on the named :file:`ssh` in the boot partition::
 
     touch ssh
 
 #. To enable the serial port console add this line to the
-   file ``config.txt`` in the boot partition::
+   file :file:`config.txt` in the boot partition::
 
     enable_uart=1
 
    The DHCP client daemon will adjust the network interface settings automatically.
    This interferes with the P-Net control of the Ethernet interface. So if you
    run your Raspberry Pi as a Profinet IO-Device (NOT if you use it as a PLC)
-   and have a serial cable, you need to add this line to ``/etc/dhcpcd.conf``
+   and have a serial cable, you need to add this line to :file:`/etc/dhcpcd.conf`
    in the root file system::
 
     denyinterfaces eth*
 
 #. If you would like to change hostname from ``raspberrypi`` to ``pndevice-pi``, change
-   the texts in the files ``etc/hostname`` and ``etc/hosts`` in the rootfs
+   the texts in the files :file:`etc/hostname` and :file:`etc/hosts` in the rootfs
    partition.
 
 #. To make sure that you subsequently are logging in to the correct Raspberry Pi,
@@ -85,7 +85,7 @@ If you would connect your Raspberry Pi to a WiFi network, follow the
 guide in https://www.raspberrypi.com/documentation/computers/configuration.html
 
 You might also want to disable the splash screen and to expand the file system,
-by using the ``raspi-config`` utility.
+by using the :command:`raspi-config` utility.
 
 .. note:: If you are following the "Running the sample application on a Raspberry Pi" tutorial and are setting up the IO-device,
           you should head back now. See :ref:`running-sample-app`.
@@ -109,11 +109,11 @@ used in headless mode without a display and keyboard connected.
 
    * Eject SD-card
    * Reinsert SD-card in windows PC. The SD-card will be shown as external drive named ``boot``.
-   * Enable ssh by creating an empty file named ``ssh`` in the root folder of ``boot``.
+   * Enable ssh by creating an empty file named :file:`ssh` in the root folder of ``boot``.
      The windows file explorer can be used for this.
-     Note that the file ``ssh`` shall not have a txt file extension.
+     Note that the file :file:`ssh` shall not have a txt file extension.
    * Enable serial port console.
-     Open ``config.txt`` in root folder of ``boot`` using Notepad.
+     Open :file:`config.txt` in root folder of ``boot`` using Notepad.
      Add the line ``enable_uart=1`` to the end of the file.
      Save file and close Notepad.
    * Eject SD-card
@@ -126,7 +126,7 @@ used in headless mode without a display and keyboard connected.
 #4. Network configuration.
 
    Use the nano editor to edit the configuration files as described below.
-   For example to edit the ``/etc/dhcpcd.conf``::
+   For example to edit the :file:`/etc/dhcpcd.conf`::
 
     sudo nano /etc/dhcpcd.conf
 
@@ -135,12 +135,12 @@ used in headless mode without a display and keyboard connected.
    The DHCP client daemon will adjust the network interface settings automatically.
    This interferes with the P-Net control of the Ethernet interface. So if you
    run your Raspberry Pi as a Profinet IO-Device (NOT if you use it as a PLC)
-   and have a serial cable, you should add the line below to ``/etc/dhcpcd.conf``::
+   and have a serial cable, you should add the line below to :file:`/etc/dhcpcd.conf`::
 
     denyinterfaces eth*
 
    Optionally, to change hostname from ``raspberrypi`` to ``pndevice-pi``, change
-   the configuration in the files ``/etc/hostname`` and ``/etc/hosts``.
+   the configuration in the files :file:`/etc/hostname` and :file:`/etc/hosts`.
 
    To make sure that you subsequently are logging in to the correct Raspberry Pi,
    you can create a file in the home directory in the rootfs partition. Change
@@ -156,7 +156,7 @@ used in headless mode without a display and keyboard connected.
    guide in https://www.raspberrypi.com/documentation/computers/configuration.html
 
    You might also want to disable the splash screen and to expand the file system,
-   by using the ``raspi-config`` utility.
+   by using the :command:`raspi-config` utility.
 
 .. note:: If you are following the "Running a sample application on a Raspberry Pi" tutorial and are setting up the IO-device,
           you should head back now. See :ref:`running-sample-app`.
@@ -175,9 +175,9 @@ your laptop can then be helpful if a keyboard etc not is available.
    laptop and the other end to the header connector on the Raspberry Pi.
 
 #. If not already done, enable the serial port console by writing the line
-   ``enable_uart=1`` in the file ``/boot/config.txt``.
+   ``enable_uart=1`` in the file :file:`/boot/config.txt`.
 
-   The serial port within the Raspberry Pi will be named ``/dev/ttyS0``.
+   The serial port within the Raspberry Pi will be named :file:`/dev/ttyS0`.
 
    +-----+-----------+---------------------+-----------------------+
    | Pin | Name      | Terminal on cable   | Adafruit cable color  |
@@ -261,13 +261,13 @@ Adjusting IP address if using the Raspberry Pi as a PLC
 -------------------------------------------------------
 If running your Raspberry Pi as a PLC (Profinet IO-Controller), you would like
 to have a static IP address (it will not work if running as a Profinet IO-Device).
-Instead modify the file ``/etc/dhcpcd.conf`` to include these lines::
+Instead modify the file :file:`/etc/dhcpcd.conf` to include these lines::
 
    interface eth0
    static ip_address=192.168.0.100/24
 
 You can still ping the <hostname>.local address to find it on the network.
-To re-enable DHCP, remove the lines again from ``/etc/dhcpcd.conf``.
+To re-enable DHCP, remove the lines again from :file:`/etc/dhcpcd.conf`.
 
 Once you have prepared the IP address etc on the Raspberry Pi intended for
 use as a PLC, it is time to install the Codesys runtime on it. See
@@ -277,11 +277,11 @@ Automatic starting of sample application (advanced users only)
 --------------------------------------------------------------
 Use systemd to automatically start the P-Net sample application at boot on a
 Raspberry Pi.
-Place a systemd unit file here: ``/lib/systemd/system/pnet-sampleapp.service``
+Place a systemd unit file here: :file:`/lib/systemd/system/pnet-sampleapp.service`
 
-An example file is available in the ``samples/pn_dev/`` directory of this
+An example file is available in the :file:`samples/pn_dev/` directory of this
 repository. It assumes that the code is checked out into
-``/home/pi/profinet/p-net/`` on your Raspberry Pi.
+:file:`/home/pi/profinet/p-net/` on your Raspberry Pi.
 Install the files::
 
     sudo cp /home/pi/profinet/p-net/src/ports/linux/pnet-sampleapp.service /lib/systemd/system/
@@ -309,7 +309,7 @@ If using a serial cable, you might need to adjust the number of visible columns:
 
     stty cols 150 rows 40
 
-You can for example add it to your ``.bashrc`` file on the Raspberry Pi.
+You can for example add it to your :file:`.bashrc` file on the Raspberry Pi.
 
 In order to speed up the boot time, you might want to disable some functionality
 not necessary for Profinet applications. For example::
@@ -343,12 +343,12 @@ Control Linux real-time properties (advanced users only)
 --------------------------------------------------------
 See :ref:`linuxtiming` for an introduction to the subject.
 
-Add this to the first (and only) line in ``/boot/cmdline.txt``::
+Add this to the first (and only) line in :file:`/boot/cmdline.txt`::
 
    isolcpus=2
 
 Run the sample application on a specific CPU core, by modifying the
-autostart file ``/lib/systemd/system/pnet-sampleapp.service`` (if installed)::
+autostart file :file:`/lib/systemd/system/pnet-sampleapp.service` (if installed)::
 
    ExecStart=taskset -c 2 /home/pi/profinet/build/pn_dev -v -b /sys/class/gpio/gpio27/value -d /sys/class/gpio/gpio22/value
 
