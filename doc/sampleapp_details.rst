@@ -1,5 +1,7 @@
-Sample app details
-==================
+.. _sampleapp-details:
+
+Sample application details
+==========================
 
 Cyclic data timing
 ------------------

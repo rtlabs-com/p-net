@@ -136,14 +136,14 @@ void app_utils_ip_to_string (pnal_ipaddr_t ip, char * outputstring);
 /**
  * Get string description of data direction
  * @param direction               In:    Submodule data direction
- * @return String represention of data direction
+ * @return String representation of data direction
  */
 const char * app_utils_submod_dir_to_string (pnet_submodule_dir_t direction);
 
 /**
  * Get string description of PNIO producer or consumer status
  * @param ioxs               In:    Producer or consumer status (IOPS/IOCS)
- * @return String represention of ioxs (IOPS/IOCS)
+ * @return String representation of ioxs (IOPS/IOCS)
  */
 const char * app_utils_ioxs_to_string (pnet_ioxs_values_t ioxs);
 

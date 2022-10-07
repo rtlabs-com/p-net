@@ -1,3 +1,5 @@
+.. _capturing-packets:
+
 Capturing and analyzing Ethernet packets
 ========================================
 In order to understand the Profinet traffic, it is useful to capture network
@@ -5,9 +7,8 @@ packets and analyze them in a tool like Wireshark. You typically run
 Wireshark on your laptop, but in order to capture packets on for example
 a Raspberry Pi you can use the program tcpdump (described below).
 
-
-Install Wireshark on Linux
---------------------------
+Installing Wireshark on Linux
+-----------------------------
 To install a relatively new Wireshark version on Ubuntu::
 
     sudo add-apt-repository ppa:wireshark-dev/stable
@@ -24,11 +25,9 @@ https://linuxhint.com/install_wireshark_ubuntu/
 
 Wireshark is also available on Windows. Download it from https://www.wireshark.org/
 
-
-Install Wireshark on Windows
-----------------------------
+Installing Wireshark on Windows
+-------------------------------
 Download Wireshark from https://www.wireshark.org/download.html
-
 
 Filtering frames in Wireshark based on protocol
 -----------------------------------------------
@@ -69,8 +68,8 @@ To hide frames with specific protocols::
 +--------------------------+----------------------------------------------------+
 
 
-Filter frames in Wireshark based on frame contents
---------------------------------------------------
+Filtering frames in Wireshark based on frame contents
+-----------------------------------------------------
 To show Profinet read and write commands for a specific index::
 
    pn_io.index == 0x8071
@@ -118,7 +117,6 @@ the background color.
 
 Move the most specific lines to the top.
 
-
 Parsing Profinet cyclic data with Wireshark
 -------------------------------------------
 It is possible to load a GSDML file into recent versions of Wireshark, for
@@ -130,27 +128,28 @@ For this functionality to work, the Wireshark capture must include the start-up
 sequence. When a packet is interpreted according to a GSDML file, the name of
 the GSDML file is displayed in the detail view of the packet.
 
-
 Diagnosis data in Wireshark
 ---------------------------
 Note that Wireshark can not yet decode QualifiedChannelDiagnosisData.
 See the ``dissect_AlarmUserStructure ()`` function in
 the ``packet-dcerpc-pn-io.c`` file in the source code for Wireshark.
 
-
-Show wall time in Wireshark
----------------------------
+Showing wall time in Wireshark
+------------------------------
 In order to correlate captured Wireshark frames to other logs, it can be
 convenient to display wall time in the time column in Wireshark.
+
 Right-click the column header, and select "Edit Column".
+
 For "Type" use "Time (format as specified)". Click OK.
+
 In the main menu View > "Time Format Display" select "Time of day".
 
 
 Show transmission time periodicity using Wireshark
 --------------------------------------------------
 In order to study the periodicity of sent frames, in the filter heading on the
-main screen select the MAC address of the p-net IO-device, for example::
+main screen select the MAC address of the P-Net IO-device, for example::
 
     eth.src == 54:ee:75:ff:95:a6 and pn_io
 
@@ -158,9 +157,8 @@ In the column header, right-click and select "Column Preferences ...". Press "+"
 to add a new column. Change "Title" to "Delta displayed" and "Type" to
 "Delta time displayed".
 
-
-Plot transmission time periodicity using Wireshark
---------------------------------------------------
+Plotting transmission time periodicity using Wireshark
+------------------------------------------------------
 To plot the periodicity of sent frames, you first need to filter the displayed
 frames in the main Wireshark window, as described above.
 
@@ -172,11 +170,11 @@ Then use the menu "Statistics" -> "I/O Graph".
 * SMA (sample moving average) Period: None
 * Interval: 10 or 100 ms.
 
-Adapt the MAC address to your p-net IO-device.
+Adapt the MAC address to your P-Net IO-device.
 You need to zoom the Y-axis to an interesting range, maybe 0-10 ms.
 
 It is also interesting to add a line "MAX(Y Field)" and a line "MIN(Y Field)"
-in the same graph as the first line. See below for an example where the
+in the same graph as the first line. See the image below for an example where the
 average frame interval is 1 ms.
 
 .. image:: illustrations/periodicity.png
@@ -184,9 +182,8 @@ average frame interval is 1 ms.
 The lines should be interpreted as the average, minimum and maximum
 packet-to-packet times during the interval (for example 100 ms).
 
-
-Plot Profinet cycle counter
----------------------------
+Plotting Profinet cycle counter
+-------------------------------
 The cycle counter should increase between each frame. You can use Wireshark to verify that.
 
 Use the menu “Statistics” -> “I/O Graph”.
@@ -198,7 +195,7 @@ Use the menu “Statistics” -> “I/O Graph”.
 * SMA (sample moving average) Period: None
 * Interval: 1 ms
 
-Adapt the MAC address to your p-net IO-device.
+Adapt the MAC address to your P-Net IO-device.
 
 Zoom to the relevant time period, and y-axis range of approx 0 to 70000.
 The frame cycle counter increases up to max 65535 before it wraps to 0.
@@ -209,8 +206,8 @@ session).
 .. image:: illustrations/Cyclecounter.png
 
 
-Plot network load
------------------
+Plotting network load
+---------------------
 Use the menu “Statistics” -> “I/O Graph”.
 
 * Display filter: (none)
@@ -220,14 +217,13 @@ Use the menu “Statistics” -> “I/O Graph”.
 * SMA (sample moving average) Period: None
 * Interval: 100 ms or 1 s
 
-See below for an example captured during a "Security Level 1" network load test,
+See the image below for an example captured during a "Security Level 1" network load test,
 where the network load is close to 100 Mbit/s (1E8 bits/s).
 
 .. image:: illustrations/NetworkLoad.png
 
-
-tcpdump
--------
+Using tcpdump
+-------------
 When running on an embedded Linux board, it can be convenient to run without
 a graphical user interface. To capture packets for later display in Wireshark,
 use the tool ``tcpdump``.

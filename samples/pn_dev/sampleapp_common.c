@@ -1323,7 +1323,7 @@ static void app_handle_demo_pnet_api (app_data_t * app)
       }
       if (pnet_set_redundancy_state (app->net, true) != 0)
       {
-         APP_LOG_WARNING ("   Could not set cyclic data state to reundant.\n");
+         APP_LOG_WARNING ("   Could not set cyclic data state to redundant.\n");
       }
       break;
 
@@ -1338,7 +1338,7 @@ static void app_handle_demo_pnet_api (app_data_t * app)
       if (pnet_set_redundancy_state (app->net, false) != 0)
       {
          APP_LOG_ERROR (
-            "   Could not set cyclic data state to non-reundant.\n");
+            "   Could not set cyclic data state to non-redundant.\n");
       }
       break;
 

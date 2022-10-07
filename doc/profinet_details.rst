@@ -1,3 +1,5 @@
+.. _profinet-details:
+
 Profinet details
 ================
 
@@ -594,7 +596,7 @@ In summary, these are the available MRP roles:
 
 The nodes participating in the interconnection ring will also have a role in
 the normal ring. Thus a node can be for example bot a MRC and a MIM
-simultaneusly.
+simultaneously.
 
 Profinet defines alarms for different events in the MRP implementation, for
 example if multiple MRP managers exist in the same ring or if the neighbour

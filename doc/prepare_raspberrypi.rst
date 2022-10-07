@@ -1,84 +1,85 @@
-.. _prepare_raspberry:
+.. _prepare-raspberrypi:
 
 Installation and configuration of Raspberry Pi
 ==============================================
-This page consists an installation guide to use if you have a Linux laptop,
+This page consists of an installation guide to use if you have a Linux laptop,
 and a separate guide to use with a Windows laptop.
 
-The p-net stack and sample application has been tested with:
+The P-Net stack and sample application has been tested with:
 
 * Raspberry Pi 3 Model B+
 
 To avoid problems it is recommended to start with a fresh
 Raspberry Pi OS image.
 
-When running the Raspberry Pi as a Profinet IO-device using p-net, the
+When running the Raspberry Pi as a Profinet IO-device using P-Net, the
 network settings of the Raspberry Pi will be changed by Profinet.
 Therefore it is highly recommended to use a keyboard, mouse and monitor or
 a serial cable.
 
-If you use ssh you may end up in a situation were you have difficulties
+If you use SSH you may end up in a situation were you have difficulties
 connecting to, or recovering your device. If you currently do not have a
-suitable USB-to-serial cable you can still build and run p-net with the
+suitable USB-to-serial cable you can still build and run P-Net with the
 sample application but you might run into problem when a PLC is used for
 configuration.
 
 
 Installation using a Linux laptop
 ---------------------------------
-Burn a SD-card with Raspberry Pi OS, by using the "Raspberry Pi imager"
-software and a SD card reader.
-A card size of 16 - 32 GByte is recommended.
-Follow the instructions on the page https://www.raspberrypi.com/software/
-Select the standard "Raspberry Pi OS" operating system.
+#. Burn an SD-card with Raspberry Pi OS, by using the "Raspberry Pi imager"
+   software and an SD card reader.
+   A card size of 16 - 32 GByte is recommended.
+   Follow the instructions on the page https://www.raspberrypi.com/software/
+   Select the standard "Raspberry Pi OS" operating system.
 
-Unplug, and reinsert your SD-card to mount it. To enable SSH logging in on the
-Raspberry Pi, create an empty file on the named ``ssh`` in the boot partition::
+#. Unplug, and reinsert your SD-card to mount it. To enable SSH logging in on the
+   Raspberry Pi, create an empty file on the named ``ssh`` in the boot partition::
 
     touch ssh
 
-To enable the serial port console add this line to the
-file ``config.txt`` in the boot partition::
+#. To enable the serial port console add this line to the
+   file ``config.txt`` in the boot partition::
 
     enable_uart=1
 
-The DHCP client daemon will adjust the network interface settings automatically.
-This interferes with the p-net control of the Ethernet interface. So if you
-run your Raspberry Pi as a Profinet IO-Device (NOT if you use it as a PLC)
-and have a serial cable, you need to add this line to ``/etc/dhcpcd.conf``
-in the root file system::
+   The DHCP client daemon will adjust the network interface settings automatically.
+   This interferes with the P-Net control of the Ethernet interface. So if you
+   run your Raspberry Pi as a Profinet IO-Device (NOT if you use it as a PLC)
+   and have a serial cable, you need to add this line to ``/etc/dhcpcd.conf``
+   in the root file system::
 
     denyinterfaces eth*
 
-If you would like to change hostname from ``raspberrypi`` to ``pndevice-pi``, change
-the texts in the files ``etc/hostname`` and ``etc/hosts`` in the rootfs
-partition.
+#. If you would like to change hostname from ``raspberrypi`` to ``pndevice-pi``, change
+   the texts in the files ``etc/hostname`` and ``etc/hosts`` in the rootfs
+   partition.
 
-To make sure that you subsequently are logging in to the correct Raspberry Pi,
-you can create a file in the home directory in the rootfs partition. Change
-name to something informative, for example::
+#. To make sure that you subsequently are logging in to the correct Raspberry Pi,
+   you can create a file in the home directory in the rootfs partition. Change
+   name to something informative, for example::
 
     touch home/pi/IAmAProfinetDevice
 
-Unmount the SD-card, and plug it in into your Raspberry Pi. Power up the
-Raspberry Pi. Log in to it via a serial cable (see below).
-Use the username ``pi`` and the default password ``raspberry``.
+#. Unmount the SD-card, and plug it in into your Raspberry Pi.
 
-If you do not have any serial cable (and not have disabled DHCP), connect
-the Raspberry Pi to your local network.
-Find the IP address of it by running this on a Linux machine on the network
-(replace the hostname if you have changed it)::
+#. Power up the Raspberry Pi and log in to it via a serial cable (see below).
+   Use the username ``pi`` and the default password ``raspberry``.
+
+   If you do not have any serial cable (and not have disabled DHCP), connect
+   the Raspberry Pi to your local network.
+   Find the IP address of it by running this on a Linux machine on the network
+   (replace the hostname if you have changed it)::
 
     ping raspberrypi.local
 
-Verify that it is the correct machine by checking that is disappears when the
-power is disconnected.
+   Verify that it is the correct machine by checking that is disappears when the
+   power is disconnected.
 
-Log in to it::
+   Log in to it::
 
     ssh pi@<IP>
 
-Enter the password mentioned just above.
+   Enter the password mentioned just above.
 
 If you would connect your Raspberry Pi to a WiFi network, follow the
 guide in https://www.raspberrypi.com/documentation/computers/configuration.html
@@ -86,9 +87,8 @@ guide in https://www.raspberrypi.com/documentation/computers/configuration.html
 You might also want to disable the splash screen and to expand the file system,
 by using the ``raspi-config`` utility.
 
-.. note:: If you are following the tutorial and are setting up the IO-device,
-          you should head back now. See :ref:`tutorial`.
-
+.. note:: If you are following the "Running the sample application on a Raspberry Pi" tutorial and are setting up the IO-device,
+          you should head back now. See :ref:`running-sample-app`.
 
 Installation using a Windows laptop
 -----------------------------------
@@ -96,110 +96,109 @@ This section describes how to install the Raspberry Pi OS
 and how to enable ssh and serial console so that the Raspberry Pi can be
 used in headless mode without a display and keyboard connected.
 
-Step 1. Write Raspberry Pi OS image to SD card using Raspberry Pi Imager.
+#. Write Raspberry Pi OS image to SD card using Raspberry Pi Imager.
 
-* Download and install Raspberry Pi Imager from
-  https://www.raspberrypi.com/software/
-* Start Raspberry Pi Imager
-* In the Select OS dialog choose full version
-* Select SD-card
-* Press Write
+   * Download and install Raspberry Pi Imager from
+     https://www.raspberrypi.com/software/
+   * Start Raspberry Pi Imager
+   * In the Select OS dialog choose full version
+   * Select SD-card
+   * Press Write
 
-Step 2. Initial configuration of Raspberry Pi OS.
+#. Initial configuration of Raspberry Pi OS.
 
-* Eject SD-card
-* Reinsert SD-card in windows PC. The SD-card will be shown as external drive named ``boot``.
-* Enable ssh by creating an empty file named ``ssh`` in the root folder of ``boot``.
-  The windows file explorer can be used for this.
-  Note that the file ``ssh`` shall not have a txt file extension.
-* Enable serial port console.
-  Open ``config.txt`` in root folder of ``boot`` using Notepad.
-  Add the line ``enable_uart=1`` to the end of the file.
-  Save file and close Notepad.
-* Eject SD-card
+   * Eject SD-card
+   * Reinsert SD-card in windows PC. The SD-card will be shown as external drive named ``boot``.
+   * Enable ssh by creating an empty file named ``ssh`` in the root folder of ``boot``.
+     The windows file explorer can be used for this.
+     Note that the file ``ssh`` shall not have a txt file extension.
+   * Enable serial port console.
+     Open ``config.txt`` in root folder of ``boot`` using Notepad.
+     Add the line ``enable_uart=1`` to the end of the file.
+     Save file and close Notepad.
+   * Eject SD-card
 
-Step 3. Start Raspberry Pi
+#. Start Raspberry Pi
 
-* Insert SD-card and power on Raspberry Pi.
-* Login (preferably using serial console) with default user ``pi`` and password ``raspberry``.
+   * Insert SD-card and power on Raspberry Pi.
+   * Login (preferably using serial console) with default user ``pi`` and password ``raspberry``.
 
-Step 4. Network configuration.
+#4. Network configuration.
 
-Use the nano editor to edit the configuration files as described below.
-For example to edit the ``/etc/dhcpcd.conf``::
+   Use the nano editor to edit the configuration files as described below.
+   For example to edit the ``/etc/dhcpcd.conf``::
 
     sudo nano /etc/dhcpcd.conf
 
-Save the file in nano by pressing ``CTRL-X``, then ``Y`` and ``Enter``.
+   Save the file in nano by pressing ``CTRL-X``, then ``Y`` and ``Enter``.
 
-The DHCP client daemon will adjust the network interface settings automatically.
-This interferes with the p-net control of the Ethernet interface. So if you
-run your Raspberry Pi as a Profinet IO-Device (NOT if you use it as a PLC)
-and have a serial cable, you should add the line below to ``/etc/dhcpcd.conf``::
+   The DHCP client daemon will adjust the network interface settings automatically.
+   This interferes with the P-Net control of the Ethernet interface. So if you
+   run your Raspberry Pi as a Profinet IO-Device (NOT if you use it as a PLC)
+   and have a serial cable, you should add the line below to ``/etc/dhcpcd.conf``::
 
     denyinterfaces eth*
 
-Optionally, to change hostname from ``raspberrypi`` to ``pndevice-pi``, change
-the configuration in the files ``/etc/hostname`` and ``/etc/hosts``.
+   Optionally, to change hostname from ``raspberrypi`` to ``pndevice-pi``, change
+   the configuration in the files ``/etc/hostname`` and ``/etc/hosts``.
 
-To make sure that you subsequently are logging in to the correct Raspberry Pi,
-you can create a file in the home directory in the rootfs partition. Change
-name to something informative, for example::
+   To make sure that you subsequently are logging in to the correct Raspberry Pi,
+   you can create a file in the home directory in the rootfs partition. Change
+   name to something informative, for example::
 
     touch /home/pi/IAmAProfinetDevice
 
-Reboot and the Raspberry Pi is now ready to run the p-net sample application::
+   Reboot and the Raspberry Pi is now ready to run the P-Net sample application::
 
     sudo reboot
 
-If you would connect your Raspberry Pi to a WiFi network, follow the
-guide in https://www.raspberrypi.com/documentation/computers/configuration.html
+   If you would connect your Raspberry Pi to a WiFi network, follow the
+   guide in https://www.raspberrypi.com/documentation/computers/configuration.html
 
-You might also want to disable the splash screen and to expand the file system,
-by using the ``raspi-config`` utility.
+   You might also want to disable the splash screen and to expand the file system,
+   by using the ``raspi-config`` utility.
 
-.. note:: If you are following the tutorial and are setting up the IO-device,
-          you should head back now. See :ref:`tutorial`.
+.. note:: If you are following the "Running a sample application on a Raspberry Pi" tutorial and are setting up the IO-device,
+          you should head back now. See :ref:`running-sample-app`.
 
 
-Optionally connect a serial cable to Raspberry Pi
--------------------------------------------------
-The p-net Profinet stack will change the IP-address of the Raspberry Pi when
+Optionally connecting a serial cable to Raspberry Pi
+----------------------------------------------------
+The P-Net Profinet stack will change the IP-address of the Raspberry Pi when
 running it as an IO-Device (as requested by the PLC), why it can be
 inconvenient to connect to it via ssh. You can use a keyboard, mouse and a
 monitor to connect to the Raspberry Pi. Using a serial cable to connect it to
 your laptop can then be helpful if a keyboard etc not is available.
 
-Use a USB-to-serial adapter cable with 3.3 V logic levels. For example
-Adafruit sells a popular version of those cables. Connect the USB end to your
-laptop and the other end to the header connector on the Raspberry Pi.
+#. Use a USB-to-serial adapter cable with 3.3 V logic levels. For example
+   Adafruit sells a popular version of those cables. Connect the USB end to your
+   laptop and the other end to the header connector on the Raspberry Pi.
 
-If not already done, enable the serial port console by writing the line
-``enable_uart=1`` in the file ``/boot/config.txt``.
+#. If not already done, enable the serial port console by writing the line
+   ``enable_uart=1`` in the file ``/boot/config.txt``.
 
-The serial port within the Raspberry Pi will be named ``/dev/ttyS0``.
+   The serial port within the Raspberry Pi will be named ``/dev/ttyS0``.
 
-+-----+-----------+---------------------+-----------------------+
-| Pin | Name      | Terminal on cable   | Adafruit cable color  |
-+=====+===========+=====================+=======================+
-| 6   | GND       | GND                 | Black                 |
-+-----+-----------+---------------------+-----------------------+
-| 8   | UART0_TXD | RX                  | White                 |
-+-----+-----------+---------------------+-----------------------+
-| 10  | UART0_RXD | TX                  | Green                 |
-+-----+-----------+---------------------+-----------------------+
+   +-----+-----------+---------------------+-----------------------+
+   | Pin | Name      | Terminal on cable   | Adafruit cable color  |
+   +=====+===========+=====================+=======================+
+   | 6   | GND       | GND                 | Black                 |
+   +-----+-----------+---------------------+-----------------------+
+   | 8   | UART0_TXD | RX                  | White                 |
+   +-----+-----------+---------------------+-----------------------+
+   | 10  | UART0_RXD | TX                  | Green                 |
+   +-----+-----------+---------------------+-----------------------+
 
-Use a communication program with a baud rate of 115200.
+   Use a communication program with a baud rate of 115200.
 
-Before connecting the serial cable to your Raspberry Pi you can verify the
-functionality of the cable by connecting the USB connector to your Laptop,
-and connect the RX-terminal to the TX terminal of the cable. Use a communication
-program to verify that text that you enter is echoed back. When removing
-the RX-to-TX connection the echo should stop.
+#. Before connecting the serial cable to your Raspberry Pi you can verify the
+   functionality of the cable by connecting the USB connector to your Laptop,
+   and connect the RX-terminal to the TX terminal of the cable. Use a communication
+   program to verify that text that you enter is echoed back. When removing
+   the RX-to-TX connection the echo should stop.
 
-
-Optionally connect LEDs and buttons to Raspberry Pi
----------------------------------------------------
+Optionally connecting LEDs and buttons to Raspberry Pi
+------------------------------------------------------
 You need these components:
 
 +-----------------------+-----------------+
@@ -212,7 +211,7 @@ You need these components:
 | Resistor 220 Ohm      | 4               |
 +-----------------------+-----------------+
 
-Connect them like:
+Connect them as follows:
 
 +------+---------+-----------------------------------------------------+
 | Pin  | Name    | Description                                         |
@@ -258,9 +257,9 @@ Show state of buttons::
 .. image:: illustrations/RaspberryPiLedButtons.jpg
 
 
-Adjust IP address if using the Raspberry Pi as a PLC
-----------------------------------------------------
-If running your Raspberry Pi as a PLC (Profinet IO-Controller). you would like
+Adjusting IP address if using the Raspberry Pi as a PLC
+-------------------------------------------------------
+If running your Raspberry Pi as a PLC (Profinet IO-Controller), you would like
 to have a static IP address (it will not work if running as a Profinet IO-Device).
 Instead modify the file ``/etc/dhcpcd.conf`` to include these lines::
 
@@ -274,10 +273,9 @@ Once you have prepared the IP address etc on the Raspberry Pi intended for
 use as a PLC, it is time to install the Codesys runtime on it. See
 :ref:`using-codesys`.
 
-
-Advanced users only: Automatic start of sample application
-----------------------------------------------------------
-Use systemd to automatically start the p-net sample application at boot on a
+Automatic starting of sample application (advanced users only)
+--------------------------------------------------------------
+Use systemd to automatically start the P-Net sample application at boot on a
 Raspberry Pi.
 Place a systemd unit file here: ``/lib/systemd/system/pnet-sampleapp.service``
 
@@ -322,8 +320,8 @@ not necessary for Profinet applications. For example::
 See the section "Boot time optimization" elsewhere in this documentation.
 
 
-Advanced users only: Control of built-in LEDs
----------------------------------------------
+Control of built-in LEDs (advanced users only)
+----------------------------------------------
 The Raspberry Pi board has LEDs on the board, typically a red PWR LED and a
 green ACT (activity) LED.
 
@@ -341,10 +339,9 @@ Note that you need root privileges to control the LEDs.
 Similarly for the red (power) LED, which is called ``led1``.
 
 
-Advanced users only: Control Linux real-time properties
--------------------------------------------------------
-See the page on Linux timing in this documentation for an introduction to
-the subject.
+Control Linux real-time properties (advanced users only)
+--------------------------------------------------------
+See :ref:`linuxtiming` for an introduction to the subject.
 
 Add this to the first (and only) line in ``/boot/cmdline.txt``::
 

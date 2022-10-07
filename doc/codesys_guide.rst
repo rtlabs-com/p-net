@@ -1,10 +1,11 @@
-Codesys Details
-===============
+.. _codesys-guide:
+
+Codesys guide
+=============
 This page contains additional information on how to use the Codesys soft PLC.
 
-
-Adjust PLC timing settings
---------------------------
+Adjusting PLC timing settings
+-----------------------------
 It is possible to adjust the cycle time that the IO-controller (PLC) is using
 for cyclic data communication with an IO-device.
 
@@ -21,15 +22,13 @@ communication, and trigger a subsequent restart of communication.
 In case of problems, increase the reduction ratio (and timeout) value a lot,
 and then gradually reduce it to find the smallest usable value.
 
-
 Displaying errors
 -----------------
 Click on the IO-device in the tree structure in the left part of the screen.
 Use the "Log" tab to display errors.
 
-
-Connection status
------------------
+Showing connection status
+-------------------------
 Go to the Profinet IO-device page, and see the "PNIO IEC objects" tab. Expand
 the topmost row. The states of these boolean fields are shown:
 
@@ -40,9 +39,8 @@ the topmost row. The states of these boolean fields are shown:
 If there is no connection at all to the IO-device, the state will shift to
 xBusy from xError once every 5 seconds.
 
-
-Change IP address of IO-device
-------------------------------
+Changing IP address of IO-device
+--------------------------------
 Change the IP address by double-clicking the "P_Net_Sample_App" node
 in the left menu, using the "General" tab. Set the IP-address to new value.
 
@@ -50,12 +48,10 @@ The IO-controller will send the new IP address in a "DCP Set" message to the
 IO-device having the given station name. Then it will use ARP messages to
 the IO-device to find its MAC address, and to detect IP address collisions.
 
-
-Scan for devices, assign IP address, reset devices and change station name
---------------------------------------------------------------------------
-
-Scan
-^^^^
+Scanning for devices, assign IP address, reset devices and change station name
+------------------------------------------------------------------------------
+Scanning
+^^^^^^^^
 In the left side menu, right-click the PN_Controller and select "Scan for
 devices". The running IO-devices will show up, and it is possible to see which
 modules are plugged into which slot.
@@ -85,8 +81,8 @@ IO-device will do the factory reset and also send a LLDP message with the
 new values. Then the IO-controller sends a "Ident request, all", to which
 the IO-device responds.
 
-Set name and IP
-^^^^^^^^^^^^^^^
+Setting name and IP
+^^^^^^^^^^^^^^^^^^^
 To modify the station name or IP address, change the corresponding fields
 in the list of scanned devices, and the click "Set name and IP".
 
@@ -96,8 +92,8 @@ response, the IO-device will change IP address and station name. It will
 also send a LLDP message with the new values. Then the
 IO-controller sends a "Ident request, all", to which the IO-device responds.
 
-Flash LED
-^^^^^^^^^
+Flashing a LED
+^^^^^^^^^^^^^^
 There is functionality to flash a LED on an IO-device. Select your device in
 the list of scanned devices, and click the "Blink LED" button. The button
 remains activated until you click it again.
@@ -105,8 +101,8 @@ remains activated until you click it again.
 LED-blinking is done by sending the "Set request" DCP message with suboption
 "Signal" once every 5 seconds as long as the corresponding button is activated.
 
-Identification & Maintenance (I&M) data
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Reading Identification & Maintenance (I&M) data
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 In order the read Identification & Maintenance (I&M) data, the device needs to
 be present as an IO-device connected to the IO-controller in the left side menu.
 Select the device in the list of scanned devices, and click the "I&M" button.
@@ -145,7 +141,6 @@ Right-click on the line, and select "Force all values ...". The new value is sen
 A red `F` symbol is shown.
 To stop forcing the value, right-click it and select "Unforce all values ...".
 
-
 Displaying alarms sent from IO-device
 -------------------------------------
 Incoming process alarms and diagnosis alarms appear on multiple places in
@@ -158,13 +153,11 @@ the Codesys desktop application.
 * Plugged module in IO-device: Process and diagnosis alarms are displayed on
   the “Status” tab.
 
-
 Setting output producer status (IOPS)
 -------------------------------------
 Normally Codesys will set the Output PS to GOOD (0x80 = 128) when running.
 Clicking the "Output PS" checkbox on the "IOxS" tab on the Profinet IO-device
 sets the value to BAD (0).
-
 
 Enabling checking of peer stationname and port ID
 -------------------------------------------------
@@ -181,12 +174,10 @@ During startup the PLC will send the given values to the IO-Device via a
 write command. If the correct neighbour is not present, an alarm will be sent
 by the IO-device to the PLC.
 
-
 Writing PLC programs
 --------------------
 Documentation of available function blocks is found at
 https://help.codesys.com/webapp/_pnio_f_profinet_io_configuration;product=core_ProfinetIO_Configuration_Editor
-
 
 Using the Echo module
 ---------------------

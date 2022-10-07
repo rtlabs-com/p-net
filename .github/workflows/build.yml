@@ -14,7 +14,13 @@ jobs:
         run: sudo apt-get update
 
       - name: Install dependencies
-        run: sudo apt-get install doxygen libsnmp-dev
+        run: sudo apt-get install doxygen libsnmp-dev python3-pip texlive-latex-recommended texlive-fonts-recommended tex-gyre texlive-latex-extra latexmk
+
+      - name: Install Python dependencies
+        run: pip3 install -r ${{github.workspace}}/doc/doc_requirements.txt
+
+      - name: Show Python dependencies
+        run: pip3 freeze
 
       - name: Configure
         shell: bash
@@ -27,9 +33,36 @@ jobs:
       - name: Build
         shell: bash
         run: |
-          cmake --build ${{github.workspace}}/build --target all docs install -j4
+          cmake --build ${{github.workspace}}/build --target all install -j4
 
       - name: Test
         shell: bash
         run: |
           cmake --build ${{github.workspace}}/build --target check
+
+      - name: Codespell
+        shell: bash
+        run: |
+          cmake --build ${{github.workspace}}/build --target codespell
+
+      - name: HTML documentation
+        shell: bash
+        run: |
+          cmake --build ${{github.workspace}}/build --target sphinx-html
+
+      - name: Store HTML documentation artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: pnet-html
+          path: ${{github.workspace}}/build/doc/sphinx/html/
+
+      - name: PDF documentation
+        shell: bash
+        run: |
+          cmake --build ${{github.workspace}}/build --target sphinx-pdf
+
+      - name: Store PDF documentation artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: pnet-pdf
+          path: ${{github.workspace}}/build/doc/sphinx/latex/p-net.pdf

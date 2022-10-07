@@ -1,9 +1,11 @@
+.. _getting-started-LAN9662:
+
 LAN9662
 =======
 
 Introduction
 ------------
-Add description of LAN9662 when datasheet is available.
+Note: Add description of LAN9662 when datasheet is available.
 
 For links to Microchip LAN9662 resources see section  :ref:`lan9662-resources`.
 
@@ -71,7 +73,7 @@ Table below shows how the the P-Net API for handling the process data is affecte
 
 Build-time configuration
 ------------------------
-Support for LAN9962 features in the P-Net stack is enabled using the following CMake options:
+Support for LAN9662 features in the P-Net stack is enabled using the following CMake options:
 
 - PNET_OPTION_DRIVER_ENABLE - Enable the P-Net support for hardware drivers in general
 - PNET_OPTION_DRIVER_LAN9662 - Enable the support for the LAN9662 driver
@@ -84,9 +86,9 @@ The LAN9662 sample is built with the following P-Net options::
     set(PNET_OPTION_DRIVER_ENABLE ON)
     set(PNET_OPTION_DRIVER_LAN9662 ON)
     set(PNET_OPTION_LAN9662_SHOW_RTE_INFO OFF)
-    set(PNET_MAX_PHYSICAL_PORTS "2" CACHE STRING "LAN9962 2 Ports" FORCE)
-    set(PNET_MAX_SLOTS "13" CACHE STRING "LAN9962 sample application" FORCE)
-    set(PNET_MAX_SUBSLOTS "4" CACHE STRING "LAN9962 2 Ports" FORCE)
+    set(PNET_MAX_PHYSICAL_PORTS "2" CACHE STRING "LAN9662 2 Ports" FORCE)
+    set(PNET_MAX_SLOTS "13" CACHE STRING "LAN9662 sample application" FORCE)
+    set(PNET_MAX_SUBSLOTS "4" CACHE STRING "LAN9662 2 Ports" FORCE)
     set(LOG_LEVEL "FATAL" CACHE STRING "Enable logging" FORCE)
 
 
@@ -114,7 +116,7 @@ EVB-LAN9662 Features used by P-Net samples:
 
 - Shell is available on the EVB-LAN9662 USB connector marked ``CONSOLE``. Use 115200 baud, no flow control.
 - The io-fpga is connected to the EVB-LAN9662-Carrier USB connector marked ``FPGA SPI``.
-- Two ethernet ports are supported. Sample scripts show how to configure a network bridge.
+- Two Ethernet ports are supported. Sample scripts show how to configure a network bridge.
 
 LAN9662 Sample Application
 --------------------------
@@ -347,12 +349,12 @@ log::
 
 Building the LAN9662 Sample Application
 ---------------------------------------
-Add step by step guide describing how to build the LAN9662
+Note: Add step by step guide describing how to build the LAN9662
 sample application and which Microchip resources to download
 when that information is available.
 
 
-P-Net on LAN9962 Application Summary
+P-Net on LAN9662 Application Summary
 ------------------------------------
 - To map process data to QSPI the application must use the operations ``pnet_output_set_rte_config()`` and ``pnet_input_set_rte_config()``
 - If process data is handled by the application and not mapped to QSPI the hardware offload can be enabled and used without any change in the application. API usage is identical except that the hardware offload is enabled during stack initialization.
@@ -377,4 +379,3 @@ Documentation and data sheets:
 
 - http://mscc-ent-open-source.s3-eu-west-1.amazonaws.com/public_root/bsp/mscc-brsdk-doc-2021.09.html
 - Add more documents when LAN9662 documentation is available.
-

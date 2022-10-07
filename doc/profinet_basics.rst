@@ -1,3 +1,5 @@
+.. _profinet-basics:
+
 Profinet basics
 ===============
 Profinet is a field bus that communicates over Ethernet, typically at a speed
@@ -17,7 +19,7 @@ GSD files
 A GSD (General Station Description) file is an XML file describing a Profinet
 IO-Device. The XML-based language is called GSDML (GSD Markup Language).
 
-Note that the GSD file is not used by the p-net stack or application. It is
+Note that the GSD file is not used by the P-Net stack or application. It is
 a machine readable file describing the capabilities, hardware- and software
 versions etc, and is used by the engineering tool to adjust the PLC settings.
 
@@ -57,37 +59,33 @@ Nodes classes and device details
 --------------------------------
 Profinet defines three node classes:
 
-.. table::
-    :widths: 25 50 25
-
-    +---------------+------------------------------------------------------------------+----------------------------+
-    | Node class    | Description                                                      | |  Supported by            |
-    |               |                                                                  | |  this software           |
-    +===============+==================================================================+============================+
-    | IO-Device     | "Slave"                                                          | Yes                        |
-    +---------------+------------------------------------------------------------------+----------------------------+
-    | IO-Controller | "Master", often a PLC.                                           | No                         |
-    +---------------+------------------------------------------------------------------+----------------------------+
-    | IO-Supervisor | For commissioning and diagnostics, typically a personal computer | No                         |
-    +---------------+------------------------------------------------------------------+----------------------------+
-
++---------------+------------------------------------------------------------------+-------------------------+
+| Node class    | Description                                                      | Supported by            |
+|               |                                                                  | this software           |
++===============+==================================================================+=========================+
+| IO-Device     | "Slave"                                                          | Yes                     |
++---------------+------------------------------------------------------------------+-------------------------+
+| IO-Controller | "Master", often a PLC.                                           | No                      |
++---------------+------------------------------------------------------------------+-------------------------+
+| IO-Supervisor | For commissioning and diagnostics, typically a personal computer | No                      |
++---------------+------------------------------------------------------------------+-------------------------+
 
 Depending on the capabilities, different conformance classes are assigned.
 
-+------------------------+---------------------------------------------+----------------------------+----------------------------+
-| |  Conformance         | Description                                 | |  Supported by            | |  Communication           |
-| |  class (CC)          |                                             | |  this software           | |  profile (CP)            |
-+========================+=============================================+============================+============================+
-| A                      | Wireless is only allowed for class A        | Yes                        | CP 3/4                     |
-+------------------------+---------------------------------------------+----------------------------+----------------------------+
-| B                      | Class A + SNMP (network topology detection) | Yes                        | CP 3/5                     |
-+------------------------+---------------------------------------------+----------------------------+----------------------------+
-| B (PA)                 | Class B + System redundancy                 | No                         |                            |
-+------------------------+---------------------------------------------+----------------------------+----------------------------+
-| C                      | Class B + IRT communication                 | No                         | CP 3/6                     |
-+------------------------+---------------------------------------------+----------------------------+----------------------------+
-| D                      | Uses time sensitive networking Ethernet     | No                         | CP 3/7                     |
-+------------------------+---------------------------------------------+----------------------------+----------------------------+
++---------------------+---------------------------------------------+-------------------------+-------------------------+
+| Conformance         | Description                                 | Supported by            | Communication           |
+| class (CC)          |                                             | this software           | profile (CP)            |
++=====================+=============================================+=========================+=========================+
+| A                   | Wireless is only allowed for class A        | Yes                     | CP 3/4                  |
++---------------------+---------------------------------------------+-------------------------+-------------------------+
+| B                   | Class A + SNMP (network topology detection) | Yes                     | CP 3/5                  |
++---------------------+---------------------------------------------+-------------------------+-------------------------+
+| B (PA)              | Class B + System redundancy                 | No                      |                         |
++---------------------+---------------------------------------------+-------------------------+-------------------------+
+| C                   | Class B + IRT communication                 | No                      | CP 3/6                  |
++---------------------+---------------------------------------------+-------------------------+-------------------------+
+| D                   | Uses time sensitive networking Ethernet     | No                      | CP 3/7                  |
++---------------------+---------------------------------------------+-------------------------+-------------------------+
 
 The first digit in the Communication Profile (CP) is the Communication Profile Family (CPF). Profinet and Profibus are CPF 3,
 while for example Ethercat is CPF 12.
@@ -142,16 +140,16 @@ Communication
 
 Profinet uses three protocol levels:
 
-+-----------------------------+--------------------+-------------+---------------+----------------------------+
-| Protocol                    | | Typical          | Description | Ethertype     | | Supported by             |
-|                             | | cycle time       |             |               | | this software            |
-+=============================+====================+=============+===============+============================+
-| TCP/IP (UDP actually)       | 100 ms             |             | 0x0800 = IPv4 | Yes                        |
-+-----------------------------+--------------------+-------------+---------------+----------------------------+
-| RT (Real Time)              | 10 ms              |             | 0x8892        | Yes                        |
-+-----------------------------+--------------------+-------------+---------------+----------------------------+
-| IRT (Isochronous Real-Time) | 1 ms               |             | 0x8892?       | No                         |
-+-----------------------------+--------------------+-------------+---------------+----------------------------+
++-----------------------------+-------------+---------------+--------------------------+
+| Protocol                    | Typical     | Ethertype     | Supported by             |
+|                             | cycle time  |               | this software            |
++=============================+=============+===============+==========================+
+| TCP/IP (UDP actually)       | 100 ms      | 0x0800 = IPv4 | Yes                      |
++-----------------------------+-------------+---------------+--------------------------+
+| RT (Real Time)              | 10 ms       | 0x8892        | Yes                      |
++-----------------------------+-------------+---------------+--------------------------+
+| IRT (Isochronous Real-Time) | 1 ms        | 0x8892?       | No                       |
++-----------------------------+-------------+---------------+--------------------------+
 
 Profinet uses IPv4 only (not IPv6).
 
@@ -160,13 +158,13 @@ Overview of all protocols used in a Profinet Application
 --------------------------------------------------------
 
 A typical Profinet application needs to handle a multitude of protocols.
-The p-net stack implements some of them, while others are optional.
+The P-Net stack implements some of them, while others are optional.
 For example HTTP is used by some IO-devices for additional configuration via
 a web page, but should be implemented outside the Profinet stack itself.
 
 +-------+----------+-------------+-----------------+-----------------------+---------------------------------+
-| Layer | Protocol | Addressing  | | Content       | Protocol              | Notes                           |
-|       |          |             | | description   |                       |                                 |
+| Layer | Protocol | Addressing  |   Content       | Protocol              | Notes                           |
+|       |          |             |   description   |                       |                                 |
 +=======+==========+=============+=================+=======================+=================================+
 | 4     | TCP      | Port                          | SSH = 22              | Remote login on Linux           |
 |       |          |                               +-----------------------+---------------------------------+
@@ -276,7 +274,7 @@ This is Identification & Maintenance records, which are human-readable
 information about the model type, software version etc.
 Some fields are writable, for example where the device is located.
 
-Up to I&M15 is described in the standard. The p-net stack supports I&M0 - I&M4.
+Up to I&M15 is described in the standard. The P-Net stack supports I&M0 - I&M4.
 You must support writing to I&M1-3 for at least one of the DAP submodules.
 
 +-------------+-----------+-----------------------+--------------------------------------------------------------+
@@ -305,9 +303,12 @@ startup mode is now called "Legacy".
 Net load class
 --------------
 
+The net load class describes how much non-Profinet data the device is able to handle without problems.
+These are the available classes:
+
 * I
 * II
-* III
+* III (Can handle the highest amount of data on the network)
 
 
 Alarm types
