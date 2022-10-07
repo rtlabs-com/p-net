@@ -224,6 +224,7 @@ typedef struct pf_lldp_signal_delay
    bool is_valid;
 } pf_lldp_signal_delay_t;
 
+/** Not yet used */
 typedef struct pf_lldp_boundary
 {
    bool not_send_LLDP_Frames;
@@ -231,13 +232,14 @@ typedef struct pf_lldp_boundary
    bool send_PATH_Delay;
    bool reserved_bit4;
    uint8_t reserved_8;
-   uint16_t rserved_16;
+   uint16_t reserved_16;
 } pf_lldp_boundary_t;
 
+/** Not yet used */
 typedef struct pf_lldp_peer_to_peer_boundary
 {
    pf_lldp_boundary_t boundary;
-   uint16_t properites;
+   uint16_t properties;
 } pf_lldp_peer_to_peer_boundary_t;
 
 /**

@@ -4572,7 +4572,7 @@ static int pf_cmrpc_dce_packet (
 
             if (rpc_res.flags.fragment == true)
             {
-               /* Fragmented respones from us (with ack) are supposed to be
+               /* Fragmented responses from us (with ack) are supposed to be
                 * re-transmitted according to the spec. */
                p_sess->resend_counter = PF_CMRPC_NUMBER_OF_RESENDS;
                pf_cmrpc_send_with_timeout (

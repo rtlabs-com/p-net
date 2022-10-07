@@ -7,7 +7,7 @@
 #
 
 start() {
-    # Assume a valid partion on /dev/mmcblk0p2
+    # Assume a valid partition on /dev/mmcblk0p2
     mkdir /tmp/pn_data
     mount -o sync /dev/mmcblk0p2 /tmp/pn_data
 

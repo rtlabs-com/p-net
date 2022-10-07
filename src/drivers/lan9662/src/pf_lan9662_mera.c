@@ -268,7 +268,7 @@ pf_rte_object_t * get_rte_object (
  * Callback for mera library debug info
  * Prints debug information using vprintf()
  * @param fmt     In: Format string
- * @param ...     In: argumet list
+ * @param ...     In: argument list
  * @return Always returns 0
  */
 static int pf_mera_printf_cb (const char * fmt, ...)

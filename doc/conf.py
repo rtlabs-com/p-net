@@ -4,6 +4,9 @@
 # list see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
+import pathlib
+import re
+import sys
 import time
 
 # Workaround for issue https://github.com/sphinx-contrib/googleanalytics/issues/2
@@ -24,13 +27,21 @@ sphinx.application.ExtensionError = sphinx.errors.ExtensionError
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
 
+pathobj_docs_dir = pathlib.Path(__file__).parent.absolute()
+pathobj_rootdir = pathobj_docs_dir.parent.absolute()
 
 # -- Project information -----------------------------------------------------
 
-project = 'p-net'
-copyright = '2020, rt-labs'
-author = 'rt-labs'
+try:
+    cmakelists_contents = pathobj_rootdir.joinpath("CMakeLists.txt").read_text()
+    versiontext_match = re.search(r"PROFINET VERSION ([\d.]*)", cmakelists_contents)
+    version = versiontext_match.group(1)
+except:
+    version = "unknown version"
 
+project = 'p-net'
+copyright = '2023, rt-labs'
+author = 'rt-labs'
 
 # -- General configuration ---------------------------------------------------
 
@@ -39,7 +50,7 @@ author = 'rt-labs'
 # ones.
 extensions = [
     "breathe",
-    "recommonmark",
+    "myst_parser",
     "rst2pdf.pdfbuilder",
     "sphinx_rtd_theme",
     "sphinxcontrib.spelling",
@@ -59,8 +70,17 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 spelling_word_list_filename = "spelling_wordlist.txt"
 
 googleanalytics_id = "UA-4171737-2"
-
 googleanalytics_enabled = True
+
+# Breathe Configuration
+breathe_default_project = "pnet"
+
+
+source_suffix = {
+    '.rst': 'restructuredtext',
+    '.md': 'markdown',
+}
+
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -69,14 +89,18 @@ googleanalytics_enabled = True
 #
 html_theme = "sphinx_rtd_theme"
 
+html_theme_options = {
+    "logo_only": False,
+    "display_version": True,
+}
+
+
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['static']
 
 html_last_updated_fmt = '%Y-%m-%d %H:%M'
-breathe_projects = { project: "../build/xml/" }
-breathe_default_project = project
 
 html_css_files = [
     '../../css/custom_rtd.css',  # Requested by web developer

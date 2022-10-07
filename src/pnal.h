@@ -404,8 +404,8 @@ int pnal_udp_sendto (
  * returns 0 immediately if no data is available.
  *
  * @param id               In:    Socket ID
- * @param dst_addr         Out:   Source IP address
- * @param dst_port         Out:   Source UDP port
+ * @param src_addr         Out:   Source IP address
+ * @param src_port         Out:   Source UDP port
  * @param data             Out:   Received data
  * @param size             In:    Size of buffer for received data
  * @return  The number of bytes received, or -1 if an error occurred.
@@ -501,7 +501,7 @@ pnal_ipaddr_t pnal_get_gateway (const char * interface_name);
  * Read the MAC address.
  *
  * @param interface_name   In:    Name of network interface
- * @param mac_addr         Out:   MAC address
+ * @param p_mac            Out:   MAC address
  *
  * @return 0 on success and
  *         -1 if no such interface is available

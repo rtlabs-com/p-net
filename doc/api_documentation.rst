@@ -1,7 +1,9 @@
+.. _api-documentation:
+
 API documentation
 =================
 Here is a brief overview given for some of the most important functions,
-structs etc in the public API for the p-net Profinet stack.
+structs etc in the public API for the P-Net Profinet stack.
 
 For detailed documentation, read the ``include/pnet_api.h`` header file. It
 also contains error code definitions etc.

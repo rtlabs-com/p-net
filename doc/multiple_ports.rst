@@ -1,24 +1,14 @@
-Multiple ports
-==============
-This section describes how to configure the p-net stack, sample application
+.. _multiple-ports:
+
+Configuring the P-Net stack and sample application for multiple network interfaces or ports
+===========================================================================================
+This section describes how to configure the P-Net stack, sample application
 and system for multiple network interfaces or ports.
-So far, multiple port has only been tested using the Linux port.
-
-
-Terminology
------------
-
-Interface
-    Abstract group of ports. In Profinet context, interface typically doesn't mean a
-    specific network interface. This is a common cause of confusion.
-Port
-    Network interface. The physical connectors are referred to as "physical ports".
-    A "management port" is the network interface to which a controller / PLC connects.
+So far, multiple ports has only been tested using the Linux port.
 
 In the example described in this section, ``br0`` is the management port
 and ``eth0`` and ``eth1`` are the physical ports. The interface consists of
 ``br0``, ``eth0`` and ``eth1``.
-
 
 Configuration of bridge using Linux
 -----------------------------------
@@ -30,8 +20,7 @@ Tested with Raspberry PI 3B+ and USB Ethernet dongle USB3GIG.
             | eth0 | eth1 |
             +------+------+
 
-
-p-net supports multiple Ethernet ports. To use multiple ports, these
+P-Net supports multiple Ethernet ports. To use multiple ports, these
 shall be grouped into a bridge. In such a configuration the management port / main network interface
 is the bridge and the Ethernet interfaces are named physical ports.
 
@@ -161,9 +150,9 @@ And correspondingly ``disable_bridge.sh``::
    ip link delete br0 type bridge
 
 
-Configuration of p-net stack and sample application
----------------------------------------------------------
-To run p-net and the sample application with multiple ports a couple
+Configuring the P-Net stack and sample application
+----------------------------------------------------
+To run P-Net and the sample application with multiple ports a couple
 of things need to be done. Note that the settings described in the
 following sections are changed by running ``ccmake .`` in the build folder,
 and then ``options.h`` will be regenerated.
@@ -203,8 +192,8 @@ Example of initial log when starting the demo application with a multi port conf
     Current Gateway:      192.168.0.1
     Storage directory:    /home/pi/profinet/build
 
-Update GSDML file
------------------
+Updating the GSDML file
+--------------------------
 The sample app GSDML file contains a commented out block that defines
 a second physical port. In the sample application GSDML file, search for "IDS_P2"
 and enable commented out lines as described in the GSDML file.
@@ -269,4 +258,4 @@ Examples of useful Ethernet switch chips (not tested):
 * Microchip KSZ8873
 * Microchip KSZ8895
 
-The p-net stack does not implement support for tail tagging by default.
+The P-Net stack does not implement support for tail tagging by default.

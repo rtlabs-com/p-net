@@ -5,7 +5,7 @@ This software stack is written in C, version C99.
 
 For running the unit tests C++ (version C++11 or later) is required.
 
-The primary p-net use case is to run in embedded devices, why there in general
+The primary P-Net use case is to run in embedded devices, why there in general
 are no functions to shut down the stack.
 
 
@@ -966,7 +966,7 @@ Name functions and variables using "snake_case", for example
 ``pf_lldp_get_chassis_id ()`` and ``min_device_interval``.
 
 Avoid to start pointer names with ``p_``. It can be useful in some special situations
-but we will gradually remove those names from the p-net stack.
+but we will gradually remove those names from the P-Net stack.
 
 For error handling, the use of ``goto`` is acceptable.
 

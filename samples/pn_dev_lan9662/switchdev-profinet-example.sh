@@ -26,7 +26,7 @@
 
 echo "Starting switchdev-profinet-example"
 
-# Assume a valid partion on /dev/mmcblk0p2
+# Assume a valid partition on /dev/mmcblk0p2
 mkdir /tmp/pn_data
 mount -o sync /dev/mmcblk0p2 /tmp/pn_data
 
@@ -75,5 +75,3 @@ echo "RTE mode: $mode"
 #chmod a+w /tmp/pn_dev_log.txt
 #echo " Application log will be stored to /tmp/pn_dev_log.txt"
 #/usr/bin/pn_lan9662 -m "$mode" -vvvv -p /tmp/pn_data > /tmp/pn_dev_log.txt
-
-

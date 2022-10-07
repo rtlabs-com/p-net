@@ -235,27 +235,19 @@ if (CMAKE_PROJECT_NAME STREQUAL PROFINET AND BUILD_TESTING)
   add_gtest(pf_test)
 endif()
 
-# Doxygen configuration
-cmake_policy(SET CMP0057 NEW)
-find_package(Doxygen)
-if (CMAKE_PROJECT_NAME STREQUAL PROFINET AND DOXYGEN_FOUND)
-  set(DOXYGEN_OPTIMIZE_OUTPUT_FOR_C YES)
-  set(DOXYGEN_TYPEDEF_HIDES_STRUCT YES)
-  set(DOXYGEN_STRIP_CODE_COMMENTS NO)
-  set(DOXYGEN_MACRO_EXPANSION YES)
-  set(DOXYGEN_EXPAND_ONLY_PREDEF YES)
-  set(DOXYGEN_PREDEFINED PNET_EXPORT)
-  set(DOXYGEN_EXPAND_AS_DEFINED PNET_EXPORT)
-  set(DOXYGEN_COLLABORATION_GRAPH NO)
-  set(DOXYGEN_INCLUDE_GRAPH NO)
-  set(DOXYGEN_INCLUDED_BY_GRAPH NO)
-  set(DOXYGEN_RECURSIVE YES)
-  set(DOXYGEN_GENERATE_XML YES)
-  set(DOXYGEN_USE_MDFILE_AS_MAINPAGE README.md)
-  doxygen_add_docs(docs
-    README.md
-    include
-    src
+if (CMAKE_PROJECT_NAME STREQUAL PROFINET)
+  add_subdirectory(doc)
+
+  add_custom_target(codespell
+    COMMAND codespell
+        -I ${PROFINET_SOURCE_DIR}/doc/codespell_ignore.txt
+        -S "*.patch"
+        ${PROFINET_SOURCE_DIR}/doc/*.rst
+        ${PROFINET_SOURCE_DIR}/include/
+        ${PROFINET_SOURCE_DIR}/samples/
+        ${PROFINET_SOURCE_DIR}/src/
+        ${PROFINET_SOURCE_DIR}/test/
+    COMMENT "Running spell check on source code"
     )
 endif()
 

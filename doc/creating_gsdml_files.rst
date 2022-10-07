@@ -1,3 +1,5 @@
+.. _creating-gsdml-files:
+
 Creating GSD (GSDML) files
 ==========================
 A GSD (General Station Description) file is an XML file describing a
@@ -20,7 +22,7 @@ GSDML files given. It contains simplifications and does not describe special
 cases. For full details on GSDML file syntax, see the official GSDML
 specification.
 
-An example GSDML file is available in the samples/pn_dev directory of the p-net
+An example GSDML file is available in the samples/pn_dev directory of the P-Net
 repository: https://github.com/rtlabs-com/p-net/tree/master/samples/pn_dev
 
 A GSDML file is used to describe an IO-device. The corresponding file
@@ -28,9 +30,8 @@ for describing a controller is a CDML (Controller Description Markup Language)
 file (with file ending ``.xml``). The CDML is used during controller certification
 (not discussed here).
 
-
 XML editors
------------
+^^^^^^^^^^^
 It can be helpful to use an XML editor when working with GSD files. A few
 examples are given here.
 
@@ -43,7 +44,6 @@ http://camprocessor.sourceforge.net/wiki/ (Windows and Linux)
 
 **XML Notepad**:
 https://github.com/microsoft/xmlnotepad (Windows)
-
 
 Using "Profinet GSD Checker" tool on a Windows PC
 -------------------------------------------------
@@ -221,12 +221,12 @@ The ``<DeviceAccessPointItem>`` element has the attributes:
 * ``PNIO_Version="V2.4"`` Which version of Profinet specification it is
   certified against.
 * ``PhysicalSlots="0..4"`` Slot 0 is always used by the DAP (bus interface)
-  module. Relates to the ``PNET_MAX_SLOTS`` value in the p-net stack.
+  module. Relates to the ``PNET_MAX_SLOTS`` value in the P-Net stack.
 * ``ModuleIdentNumber="0x00000001"`` Unsigned32hex.
 * ``MinDeviceInterval="32"`` Minimum cyclic data update interval, in number
   of 31.25 us ticks. A value 32 corresponds to cyclic data sending and
   receiving every millisecond. Unsigned16. It should match the value
-  ``min_device_interval`` in the p-net configuration. (It must be possible to
+  ``min_device_interval`` in the P-Net configuration. (It must be possible to
   achieve this time using the values in the ``SendClock`` and ``ReductionRatio``
   attributes in another element).
 * ``DNS_CompatibleName="pno-example-dap"`` (Default station name)
@@ -235,7 +235,7 @@ The ``<DeviceAccessPointItem>`` element has the attributes:
 * ``DeviceAccessSupported="false"`` If a limited version of AR connection is allowed.
 * ``NumberOfDeviceAccessAR="1"`` Number of Device Access connections. Should only
   be given if ``DeviceAccessSupported`` is ``true``. Dependent on the ``PNET_MAX_AR``
-  value in the p-net stack.
+  value in the P-Net stack.
 * ``MultipleWriteSupported="true"`` Multiple writes in a single request.
   Mandatory ``true`` since V2.31.
 * ``SharedDeviceSupported="false"`` False if not given
@@ -247,7 +247,7 @@ The ``<DeviceAccessPointItem>`` element has the attributes:
 * ``NameOfStationNotTransferable="false"``
 * ``LLDP_NoD_Supported="true"`` Mandatory ``true`` since V2.31.
 * ``ResetToFactoryModes="1..2"`` Bits describing reset possibilities. At least
-  "2" should be present. Reset modes 1 and 2 are supported by p-net.
+  "2" should be present. Reset modes 1 and 2 are supported by P-Net.
 * ``ParameterizationSpeedupSupported="true"`` For fast startup.
 * ``PowerOnToCommReady="700"`` For fast startup, time to first data exchange
   in milliseconds. Unsigned32.
@@ -303,7 +303,7 @@ Each interface defines for example clock synchronization, and the ports (of that
 interface) define for example if they use radio or 100 Mbit/s copper cables.
 
 The subslot number for the first interface is 0x8000, and next interface (if
-any) has subslot number 0x8100. Note that p-net only supports one interface.
+any) has subslot number 0x8100. Note that P-Net only supports one interface.
 The first port of the first interface has subslot 0x8001,
 and next port of that interface has subslot number 0x8002.
 
@@ -333,7 +333,7 @@ list. The ``NumberOfAR`` attribute defaults to 1 if not given.
 There is typically one input-CR and one output-CR per AR, but in the GSDML file
 it is possible to set the attributes ``NumberOfAdditionalInputCR``,
 ``NumberOfAdditionalOutputCR``, ``NumberOfAdditionalMulticastProviderCR`` and
-``NumberOfMulticastConsumerCR``. Those attributes are not supported by p-net.
+``NumberOfMulticastConsumerCR``. Those attributes are not supported by P-Net.
 
 The ``<TimingProperties>`` element describes the sending of cyclic IO data.
 The ``SendClock`` attribute contains a list of all supported send cycle times,
@@ -439,7 +439,7 @@ submodule can be removed). If only virtual submodules are available, the
 For details on ``<VirtualSubmoduleItem>``, see ``<SubmoduleItem>`` below.
 
 The configuration value PNET_MAX_SUBSLOTS defines the maximum number of
-submodules (for each module) that the p-net stack can handle.
+submodules (for each module) that the P-Net stack can handle.
 
 
 Details on the submodule list
@@ -816,3 +816,4 @@ Within each ``<GraphicItem>`` element, the attributes ``ID`` and ``GraphicFile``
 are used to store the information.
 
 The ``GraphicFile`` is the filename without the BMP file extension.
+

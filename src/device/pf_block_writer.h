@@ -666,7 +666,7 @@ void pf_put_input_data (
  *    PF_DEV_FILTER_LEVEL_DEVICE:   No filtering on API id, slot_nbr or
  *                                  subslot_nbr (i.e. all diags)
  *
- * diag_filter is an ortogonal filter that selects only specific diag types:
+ * diag_filter is an orthogonal filter that selects only specific diag types:
  *    PF_DIAG_FILTER_FAULT_STD:  Only STD, severity FAULT.
  *    PF_DIAG_FILTER_FAULT_ALL:  Both USI and STD, severity FAULT.
  *    PF_DIAG_FILTER_ALL:        All types of diag, both USI and STD.

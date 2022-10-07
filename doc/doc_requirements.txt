@@ -1,5 +1,10 @@
+
+# Solve issue with missing bullet points
+# See https://stackoverflow.com/questions/67542699/readthedocs-sphinx-not-rendering-bullet-list-from-rst-file
+docutils==0.17.1
+
 sphinx
-recommonmark
+myst-parser
 sphinx-rtd-theme
 breathe
 sphinxcontrib-googleanalytics

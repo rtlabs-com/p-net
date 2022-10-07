@@ -40,11 +40,10 @@ SNMP versions:
 * v2c Supports 64-bit statistical counters
 * v3 Encrypted
 
-
-Monitor incoming LLDP frames on Linux
--------------------------------------
+Monitoring incoming LLDP frames on Linux
+----------------------------------------
 This is useful for experimenting with LLDP, but should not be running on the
-same device as p-net. This is because p-net implements LLDP transmission and
+same device as P-Net. This is because P-Net implements LLDP transmission and
 reception itself.
 
 Install the ``lldpd`` daemon::
@@ -191,8 +190,8 @@ configuration file in your home directory. For example::
     mibs +LLDP-MIB
 
 
-Read and write a single OID
----------------------------
+Reading and writing a single OID
+--------------------------------
 Read only the ``SNMPv2-MIB::sysLocation.0`` OID::
 
    $ snmpget -v1 -c public 192.168.0.99 1.3.6.1.2.1.1.6.0
@@ -488,14 +487,14 @@ to the OID of other objects), so the information must thus be available.
 
 See the Profinet standard for the corresponding numerical OID values.
 
-Enable SNMP when running p-net on Linux
----------------------------------------
-See the page "Additional Linux details" in this documentation.
-
-
-Verification of SNMP communication to p-net
+Enabling SNMP when running P-Net on Linux
 -------------------------------------------
-To verify the SNMP capabilities of the p-net stack, first use ``ping`` to
+See :ref:`additional-linux-details`.
+
+
+Verification of SNMP communication to P-Net
+-------------------------------------------
+To verify the SNMP capabilities of the P-Net stack, first use ``ping`` to
 make sure you have a connection to the device, and then use ``snmpwalk``::
 
    ping 192.168.0.50
@@ -503,8 +502,8 @@ make sure you have a connection to the device, and then use ``snmpwalk``::
    snmpget -v1 -c public 192.168.0.50 1.3.6.1.2.1.1.4.0
    snmpset -v1 -c private 192.168.0.50 1.3.6.1.2.1.1.4.0 s "My new sys contact"
 
-If you enable debug logging in the p-net stack, the two last commands will
-cause entries in the p-net log.
+If you enable debug logging in the P-Net stack, the two last commands will
+cause entries in the P-Net log.
 
 This will only be answered if the agent is Profinet-enabled::
 
@@ -516,7 +515,7 @@ agent is Profinet-enabled::
    snmpget -v1 -c public 192.168.0.50 1.3.6.1.2.1.1.2.0
 
 
-Verification of multiport SNMP functionality for p-net
+Verification of multiport SNMP functionality for P-Net
 ------------------------------------------------------
 Ask the device about its neighbours on the different ports by running::
 
