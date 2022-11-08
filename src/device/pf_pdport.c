@@ -910,8 +910,8 @@ static void pf_pdport_check_peer_port_name (pnet_t * net, int loc_port_num)
       if (
          strncmp (
             lldp_port_id.string,
-            (char *)p_wanted_peer->peer_port_name,
-            lldp_port_id.len) == 0)
+         (char *)p_wanted_peer->peer_port_name,
+         p_wanted_peer->length_peer_port_name) == 0)
       {
          peer_portname_is_correct = true;
       }
