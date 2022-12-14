@@ -32,6 +32,127 @@
 #define GET_HIGH_BYTE(id) ((id >> 8) & 0xFF)
 #define GET_LOW_BYTE(id)  (id & 0xFF)
 
+int app_ar_add_arep (app_api_t * api, uint32_t arep, app_ar_t ** ar)
+{
+   uint16_t i;
+
+   CC_ASSERT (api != NULL);
+   CC_ASSERT (ar != NULL);
+   for (i = 0; i < PNET_MAX_AR; ++i)
+   {
+      if (api->ar[i].arep == UINT32_MAX)
+      {
+         api->ar[i].arep = arep;
+         api->ar[i].events = 0;
+         *ar = api->ar + i;
+         return 1;
+      }
+   }
+   return 0;
+}
+
+uint32_t app_ar_arep (app_ar_t * ar)
+{
+   CC_ASSERT (ar != NULL);
+   return ar->arep;
+}
+
+void app_ar_event_set (app_ar_t * ar, uint32_t event)
+{
+   CC_ASSERT (ar != NULL);
+   ar->events |= event;
+}
+
+int app_ar_event_clr (app_ar_t * ar, uint32_t event)
+{
+   CC_ASSERT (ar != NULL);
+   if (ar->events & event)
+   {
+      ar->events &= ~event;
+      return 1;
+   }
+   return 0;
+}
+
+void app_ar_iterator_init (
+   app_ar_iterator_t * iterator,
+   app_api_t * api)
+{
+   CC_ASSERT (iterator != NULL);
+   CC_ASSERT (api != NULL);
+   iterator->ar = api->ar;
+   iterator->index = -1;
+   iterator->modified = false;
+}
+
+int app_ar_iterator_next (app_ar_iterator_t * iterator, app_ar_t ** ar)
+{
+#if PNET_MAX_AR > 1
+   uint16_t i;
+   uint16_t j;
+#endif
+
+   CC_ASSERT (iterator != NULL);
+   CC_ASSERT (ar != NULL);
+   ++iterator->index;
+   if (
+      (iterator->index < PNET_MAX_AR) &&
+      (iterator->ar[iterator->index].arep != UINT32_MAX))
+   {
+      *ar = iterator->ar + iterator->index;
+      return 1;
+   }
+#if PNET_MAX_AR > 1
+   else if (iterator->modified)
+   {
+      for (i = 0; i < PNET_MAX_AR; ++i)
+      {
+         if (iterator->ar[i].arep == UINT32_MAX)
+         {
+            for (j = i + 1; j < PNET_MAX_AR; ++j)
+            {
+               if (iterator->ar[j].arep != UINT32_MAX)
+               {
+                  iterator->ar[i] = iterator->ar[j];
+                  iterator->ar[j].arep = UINT32_MAX;
+                  break;
+               }
+            }
+            if (j >= PNET_MAX_AR - 1)
+            {
+               break;
+            }
+         }
+      }
+   }
+#endif
+   return 0;
+}
+
+int app_ar_iterator_done (app_ar_iterator_t * iterator)
+{
+   CC_ASSERT (iterator != NULL);
+   if (
+      (iterator->index < 0) ||
+      ((iterator->index < PNET_MAX_AR) &&
+       (iterator->ar[iterator->index].arep != UINT32_MAX)))
+   {
+      return 0;
+   }
+   return 1;
+}
+
+void app_ar_iterator_delete_current (app_ar_iterator_t * iterator)
+{
+   CC_ASSERT (iterator != NULL);
+   CC_ASSERT (iterator->index >= 0);
+   if (iterator->index < PNET_MAX_AR)
+   {
+      iterator->ar[iterator->index].arep = UINT32_MAX;
+      iterator->modified = true;
+   }
+}
+
 void app_utils_ip_to_string (pnal_ipaddr_t ip, char * outputstring)
 {
    snprintf (

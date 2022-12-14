@@ -31,6 +31,7 @@
 #define APP_EVENT_READY_FOR_DATA BIT (0)
 #define APP_EVENT_TIMER          BIT (1)
 #define APP_EVENT_ALARM          BIT (2)
+#define APP_EVENT_SM_RELEASED    BIT (3)
 #define APP_EVENT_ABORT          BIT (15)
 
 /* Defines used for alarm demo functionality */
@@ -87,8 +88,6 @@ typedef struct app_data_t
    app_demo_state_t alarm_demo_state;
    uint8_t alarm_payload[APP_GSDML_ALARM_PAYLOAD_SIZE];
 
-   uint32_t arep_for_appl_ready;
-
    bool button1_pressed;
    bool button2_pressed;
    bool button2_pressed_previous;
@@ -125,17 +124,24 @@ pnet_t * app_get_pnet_instance (app_data_t * app)
  */
 static bool app_is_connected_to_controller (app_data_t * app)
 {
-   return app->main_api.arep != UINT32_MAX;
+   return app->main_api.ar[0].arep != UINT32_MAX;
 }
 
 app_data_t * app_init (const pnet_cfg_t * pnet_cfg, const app_args_t * app_args)
 {
+   app_data_t * app;
+   uint16_t i;
+
    APP_LOG_INFO ("Init P-Net stack and sample application\n");
 
-   app_data_t * app = &app_state;
+   app = &app_state;
 
    app->alarm_allowed = true;
-   app->main_api.arep = UINT32_MAX;
+   for (i = 0; i < PNET_MAX_AR; ++i)
+   {
+      app->main_api.ar[i].arep = UINT32_MAX;
+      app->main_api.ar[i].events = 0;
+   }
    app->pnet_cfg = pnet_cfg;
 
    app->net = pnet_init (app->pnet_cfg);
@@ -214,6 +220,40 @@ static void app_set_outputs_default_value (void)
    app_data_set_default_outputs();
 }
 
+/**
+ * Set event flag(s) for one arep.
+ */
+static void app_event_set (
+   app_data_t * app,
+   uint32_t arep,
+   uint32_t event,
+   bool add_arep)
+{
+   app_ar_iterator_t iter;
+   app_ar_t * ar;
+
+   app_ar_iterator_init (&iter, &app->main_api);
+   while (app_ar_iterator_next (&iter, &ar))
+   {
+      if (app_ar_arep (ar) == arep)
+      {
+         app_ar_event_set (ar, event);
+         break;
+      }
+   }
+   if (add_arep)
+   {
+      if (app_ar_iterator_done (&iter))
+      {
+         if (app_ar_add_arep (&app->main_api, arep, &ar))
+         {
+            app_ar_event_set (ar, event);
+         }
+      }
+   }
+   os_event_set (app->main_events, event);
+}
+
 /*********************************** Callbacks ********************************/
 
 static int app_connect_ind (
@@ -257,6 +297,30 @@ static int app_dcontrol_ind (
       "AREP: %u  Command: %s\n",
       arep,
       app_utils_dcontrol_cmd_to_string (control_command));
+
+   return 0;
+}
+
+static int app_sm_released_ind (
+   pnet_t * net,
+   void * arg,
+   uint32_t arep,
+   uint32_t api,
+   uint16_t slot_number,
+   uint16_t subslot_number,
+   pnet_result_t * p_result)
+{
+   app_data_t * app = (app_data_t *)arg;
+
+   APP_LOG_DEBUG (
+      "SM released indication.\n"
+      "  AREP: %u API: %u Slot: 0x%x Subslot: 0x%x\n",
+      arep,
+      api,
+      slot_number,
+      subslot_number);
+
+   app_event_set (app, arep, APP_EVENT_SM_RELEASED, false);
 
    return 0;
 }
@@ -466,16 +530,10 @@ static int app_state_ind (
       /* Set output values */
       app_set_outputs_default_value();
 
-      /* Only abort AR with correct session key */
-      os_event_set (app->main_events, APP_EVENT_ABORT);
+      app_event_set (app, arep, APP_EVENT_ABORT, false);
    }
    else if (event == PNET_EVENT_PRMEND)
    {
-      if (app_is_connected_to_controller (app))
-      {
-         APP_LOG_WARNING ("Warning - AREP out of sync\n");
-      }
-      app->main_api.arep = arep;
       app_set_initial_data_and_ioxs (app);
 
       (void)pnet_set_provider_state (net, true);
@@ -483,8 +541,7 @@ static int app_state_ind (
       /* Send application ready at next tick
          Do not call pnet_application_ready() here as it will affect
          the internal stack states */
-      app->arep_for_appl_ready = arep;
-      os_event_set (app->main_events, APP_EVENT_READY_FOR_DATA);
+      app_event_set (app, arep, APP_EVENT_READY_FOR_DATA, true);
    }
    else if (event == PNET_EVENT_DATA)
    {
@@ -785,7 +842,8 @@ static int app_alarm_ind (
       data_usi);
 
    app->alarm_arg = *p_alarm_arg;
-   os_event_set (app->main_events, APP_EVENT_ALARM);
+
+   app_event_set (app, arep, APP_EVENT_ALARM, false);
 
    return 0;
 }
@@ -918,58 +976,6 @@ static void app_plug_dap (app_data_t * app, uint16_t number_of_ports)
    }
 
    APP_LOG_DEBUG ("Done plugging DAP\n\n");
-}
-
-/**
- * Send application ready to the PLC
- * @param net              InOut: p-net stack instance
- * @param arep             In:    Arep
- */
-static void app_handle_send_application_ready (pnet_t * net, uint32_t arep)
-{
-   int ret = -1;
-
-   APP_LOG_DEBUG (
-      "Application will signal that it is ready for data, for "
-      "AREP %u.\n",
-      arep);
-
-   ret = pnet_application_ready (net, arep);
-   if (ret != 0)
-   {
-      APP_LOG_ERROR (
-         "Error returned when application telling that it is ready for "
-         "data. Have you set IOCS or IOPS for all subslots?\n");
-   }
-
-   /* When the PLC sends a confirmation to this message, the
-      pnet_ccontrol_cnf() callback will be triggered.  */
-}
-
-/**
- * Send alarm ACK to the PLC
- *
- * @param net              InOut: p-net stack instance
- * @param arep             In:    Arep
- * @param p_alarm_arg      In:    Alarm argument (slot, subslot etc)
- */
-static void app_handle_send_alarm_ack (
-   pnet_t * net,
-   uint32_t arep,
-   const pnet_alarm_argument_t * p_alarm_arg)
-{
-   pnet_pnio_status_t pnio_status = {0, 0, 0, 0};
-   int ret;
-
-   ret = pnet_alarm_send_ack (net, arep, p_alarm_arg, &pnio_status);
-   if (ret != 0)
-   {
-      APP_LOG_DEBUG ("Error when sending alarm ACK. Error: %d\n", ret);
-   }
-   else
-   {
-      APP_LOG_DEBUG ("Alarm ACK sent\n");
-   }
 }
 
 /**
@@ -1295,7 +1301,7 @@ static void app_handle_demo_pnet_api (app_data_t * app)
             app->alarm_payload[0]);
          pnet_alarm_send_process_alarm (
             app->net,
-            app->main_api.arep,
+            app->main_api.ar[0].arep,
             APP_GSDML_API,
             slot,
             p_subslot->subslot_nbr,
@@ -1446,7 +1452,7 @@ static void app_handle_demo_pnet_api (app_data_t * app)
          pnio_status.error_code_2 = APP_GSDML_LOGBOOK_ERROR_CODE_2;
          pnet_create_log_book_entry (
             app->net,
-            app->main_api.arep,
+            app->main_api.ar[0].arep,
             &pnio_status,
             APP_GSDML_LOGBOOK_ENTRY_DETAIL);
       }
@@ -1463,8 +1469,8 @@ static void app_handle_demo_pnet_api (app_data_t * app)
          APP_LOG_INFO (
             "Sample app will disconnect and reconnect. Executing "
             "pnet_ar_abort()  AREP: %u\n",
-            app->main_api.arep);
-         (void)pnet_ar_abort (app->net, app->main_api.arep);
+            app->main_api.ar[0].arep);
+         (void)pnet_ar_abort (app->net, app->main_api.ar[0].arep);
       }
       else
       {
@@ -1533,6 +1539,7 @@ void app_pnet_cfg_init_default (pnet_cfg_t * pnet_cfg)
    pnet_cfg->alarm_ack_cnf_cb = app_alarm_ack_cnf;
    pnet_cfg->reset_cb = app_reset_ind;
    pnet_cfg->signal_led_cb = app_signal_led_ind;
+   pnet_cfg->sm_released_cb = app_sm_released_ind;
 
    pnet_cfg->cb_arg = (void *)&app_state;
 }
@@ -1555,14 +1562,163 @@ static void update_button_states (app_data_t * app)
    }
 }
 
+/* Event handlers for the main loop. */
+
+static void app_handle_event_timer (app_data_t * app)
+{
+   os_event_clr (app->main_events, APP_EVENT_TIMER);
+
+   update_button_states (app);
+   if (app_is_connected_to_controller (app))
+   {
+      app_handle_cyclic_data (app);
+   }
+
+   /* Run alarm demo function if button2 is pressed */
+   if ((app->button2_pressed == true) && (app->button2_pressed_previous == false))
+   {
+      app_handle_demo_pnet_api (app);
+   }
+   app->button2_pressed_previous = app->button2_pressed;
+
+   /* Run p-net stack */
+   pnet_handle_periodic (app->net);
+}
+
+/**
+ * Handle AR specific events.
+ *
+ * Calls the \a handler for each AR that has a pending \a event.
+ *
+ * @param app              InOut: Application handle
+ * @param event            In:    Event
+ * @param handler          In:    Event handling function
+ */
+static void app_handle_event_ar (
+   app_data_t * app,
+   uint32_t event,
+   app_ar_event_handler_t handler)
+{
+   app_ar_iterator_t iter;
+   app_ar_t * ar;
+
+   os_event_clr (app->main_events, event);
+   app_ar_iterator_init (&iter, &app->main_api);
+   while (app_ar_iterator_next (&iter, &ar))
+   {
+      if (app_ar_event_clr (ar, event))
+      {
+         if (handler (app, app_ar_arep (ar)))
+         {
+            app_ar_iterator_delete_current (&iter);
+         }
+      }
+   }
+}
+
+/* AR specific event handlers */
+
+/**
+ * Handle an AR connection PrmEnd.
+ *
+ * @param app              InOut: Application handle
+ * @param arep             In:    Arep
+ *
+ * @return 0 to indicate that the arep should not be removed.
+ */
+static int app_ar_ready_for_data_handler (app_data_t * app, uint32_t arep)
+{
+   int err;
+
+   APP_LOG_DEBUG (
+      "Application will signal that it is ready for data, for AREP %u.\n",
+      arep);
+   /* When the PLC sends a confirmation to this message, the
+      pnet_ccontrol_cnf() callback will be triggered.  */
+   err = pnet_application_ready (app->net, arep);
+   if (err)
+   {
+      APP_LOG_ERROR (
+         "Error returned when application telling that it is ready for "
+         "data. Have you set IOCS or IOPS for all subslots?\n");
+   }
+   return 0;
+}
+
+/**
+ * Handle an AR alarm.
+ *
+ * @param app              InOut: Application handle
+ * @param arep             In:    Arep
+ *
+ * @return 0 to indicate that the arep should not be removed.
+ */
+static int app_ar_alarm_handler (app_data_t * app, uint32_t arep)
+{
+   pnet_pnio_status_t pnio_status = {0, 0, 0, 0};
+   int err;
+
+   err = pnet_alarm_send_ack (app->net, arep, &app->alarm_arg, &pnio_status);
+   if (err)
+   {
+      APP_LOG_DEBUG ("Error when sending alarm ACK. Error: %d\n", err);
+   }
+   else
+   {
+      APP_LOG_DEBUG ("Alarm ACK sent\n");
+   }
+   return 0;
+}
+
+/**
+ * Handle a released submodule.
+ *
+ * @param app              InOut: Application handle
+ * @param arep             In:    Arep
+ *
+ * @return 0 to indicate that the arep should not be removed.
+ */
+static int app_ar_sm_released_handler (app_data_t * app, uint32_t arep)
+{
+   /* Ideally, we should only set data for the indicated submodule,
+      but setting everything works. */
+   app_set_initial_data_and_ioxs (app);
+   pnet_sm_released_cnf (app->net, arep);
+   return 0;
+}
+
+/**
+ * Handle an AR abort.
+ *
+ * @param app              InOut: Application handle
+ * @param arep             In:    Arep
+ *
+ * @return 1 to indicate that the arep should be removed.
+ */
+static int app_ar_abort_handler (app_data_t * app, uint32_t arep)
+{
+   APP_LOG_DEBUG ("Connection (AREP %u) closed\n", arep);
+   return 1;
+}
+
+/**
+ * Wait for events generated elsewhere in this program.
+ *
+ * @param app              InOut: Application handle
+ * @param mask             In:    Bitmask of events to wait for
+ * @param flags            Out:   Bitmask of pending events
+ */
+static void app_event_wait (app_data_t * app, uint32_t mask, uint32_t * flags)
+{
+   os_event_wait (app->main_events, mask, flags, OS_WAIT_FOREVER);
+}
+
 void app_loop_forever (void * arg)
 {
    app_data_t * app = (app_data_t *)arg;
    uint32_t mask = APP_EVENT_READY_FOR_DATA | APP_EVENT_TIMER |
-                   APP_EVENT_ALARM | APP_EVENT_ABORT;
+                   APP_EVENT_ALARM | APP_EVENT_SM_RELEASED | APP_EVENT_ABORT;
    uint32_t flags = 0;
-
-   app->main_api.arep = UINT32_MAX;
 
    app_set_led (APP_DATA_LED_ID, false);
    app_plug_dap (app, app->pnet_cfg->num_physical_ports);
@@ -1571,52 +1727,33 @@ void app_loop_forever (void * arg)
    /* Main event loop */
    for (;;)
    {
-      os_event_wait (app->main_events, mask, &flags, OS_WAIT_FOREVER);
+      app_event_wait (app, mask, &flags);
       if (flags & APP_EVENT_READY_FOR_DATA)
       {
-         os_event_clr (app->main_events, APP_EVENT_READY_FOR_DATA);
-
-         app_handle_send_application_ready (app->net, app->arep_for_appl_ready);
+         app_handle_event_ar (
+            app,
+            APP_EVENT_READY_FOR_DATA,
+            app_ar_ready_for_data_handler);
       }
-      else if (flags & APP_EVENT_ALARM)
+      if (flags & APP_EVENT_ALARM)
       {
-         os_event_clr (app->main_events, APP_EVENT_ALARM);
-
-         app_handle_send_alarm_ack (
-            app->net,
-            app->main_api.arep,
-            &app->alarm_arg);
+         app_handle_event_ar (app, APP_EVENT_ALARM, app_ar_alarm_handler);
       }
-      else if (flags & APP_EVENT_TIMER)
+      if (flags & APP_EVENT_TIMER)
       {
-         os_event_clr (app->main_events, APP_EVENT_TIMER);
-
-         update_button_states (app);
-         if (app_is_connected_to_controller (app))
-         {
-            app_handle_cyclic_data (app);
-         }
-
-         /* Run alarm demo function if button2 is pressed */
-         if (
-            (app->button2_pressed == true) &&
-            (app->button2_pressed_previous == false))
-         {
-            app_handle_demo_pnet_api (app);
-         }
-         app->button2_pressed_previous = app->button2_pressed;
-
-         /* Run p-net stack */
-         pnet_handle_periodic (app->net);
+         app_handle_event_timer (app);
       }
-      else if (flags & APP_EVENT_ABORT)
+      if (flags & APP_EVENT_SM_RELEASED)
       {
-         os_event_clr (app->main_events, APP_EVENT_ABORT);
-
-         app->main_api.arep = UINT32_MAX;
+         app_handle_event_ar (
+            app,
+            APP_EVENT_SM_RELEASED,
+            app_ar_sm_released_handler);
+      }
+      if (flags & APP_EVENT_ABORT)
+      {
+         app_handle_event_ar (app, APP_EVENT_ABORT, app_ar_abort_handler);
          app->alarm_allowed = true;
-         APP_LOG_DEBUG ("Connection closed\n");
-         APP_LOG_DEBUG ("Waiting for PLC connect request\n\n");
       }
    }
 }

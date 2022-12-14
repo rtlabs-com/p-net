@@ -636,6 +636,43 @@ typedef int (*pnet_dcontrol_ind) (
    pnet_result_t * p_result);
 
 /**
+ * Indication to the application that a submodule has been released, and is
+ * now owned by a new AR.
+ *
+ * After receiving this, the application is required to set new values for the
+ * following, as applicable for the subslot in question:
+ *
+ * - input data
+ * - input IOPS
+ * - output IOCS
+ *
+ * After setting the values, the application must call
+ * \a pnet_sm_released_cnf(), for the stack to function properly.
+ *
+ * This callback is mandatory to implement if p-net has been configured to
+ * accept more than one AR (PNET_MAX_AR > 1), in which case shared device is
+ * supported. If only one AR is allowed, this callback is never called.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param arg              InOut: User-defined data (not used by p-net)
+ * @param arep             In:    The AREP.
+ * @param api              In:    The API containing the submodule.
+ * @param slot_number      In:    The slot containing the submodule.
+ * @param subslot_number   In:    The subslot containing the submodule.
+ * @param p_result         Out:   Detailed error information if return != 0.
+ * @return  0  on success.
+ *          -1 if an error occurred.
+ */
+typedef int (*pnet_sm_released_ind) (
+   pnet_t * net,
+   void * arg,
+   uint32_t arep,
+   uint32_t api,
+   uint16_t slot_number,
+   uint16_t subslot_number,
+   pnet_result_t * p_result);
+
+/**
  * Indication to the application that a CControl confirmation was received from
  * the controller. Typically this means that the controller has received our
  * "Application ready" message.
@@ -1293,6 +1330,7 @@ typedef struct pnet_cfg
    pnet_alarm_ack_cnf alarm_ack_cnf_cb;
    pnet_reset_ind reset_cb;
    pnet_signal_led_ind signal_led_cb;
+   pnet_sm_released_ind sm_released_cb;
 
    /** Userdata passed to callbacks, not used by stack */
    void * cb_arg;
@@ -1408,6 +1446,19 @@ PNET_EXPORT void pnet_handle_periodic (pnet_t * net);
  *          -1 if an error occurred.
  */
 PNET_EXPORT int pnet_application_ready (pnet_t * net, uint32_t arep);
+
+/**
+ * Application signals that it is ready to exchange data for a submodule that
+ * has changed owner.
+ *
+ * This should only be called after the application has set subslot data
+ * following a \a pnet_sm_released_ind() callback. It must not be called in any
+ * other situation.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param arep             In:    The AREP
+ */
+PNET_EXPORT void pnet_sm_released_cnf (pnet_t * net, uint32_t arep);
 
 /**
  * Plug a module into a slot.

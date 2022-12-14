@@ -40,6 +40,7 @@ target_sources (profinet PRIVATE
   device/pf_cmwrr.c
   device/pf_pdport.c
   device/pf_port.c
+  device/pf_plugsm.c
   device/pf_block_reader.h
   device/pf_block_writer.h
   device/pf_fspm.h
@@ -59,6 +60,7 @@ target_sources (profinet PRIVATE
   device/pf_cmwrr.h
   device/pf_pdport.h
   device/pf_port.h
+  device/pf_plugsm.h
   common/pf_alarm.c
   common/pf_bg_worker.c
   common/pf_cpm.c

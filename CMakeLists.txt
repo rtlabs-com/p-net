@@ -69,8 +69,8 @@ option (PNET_OPTION_DRIVER_ENABLE "Enable drivers. Specific driver must be enabl
 # TODO: this should be handled in cc.h
 option (PNET_USE_ATOMICS "Enable use of atomic operations (stdatomic.h)" OFF)
 
-set(PNET_MAX_AR                 2
-  CACHE STRING "Number of connections. Must be > 0. 'Automated RT Tester' uses 2, but only 1 connection AR is supported.")
+set(PNET_MAX_AR                 1
+  CACHE STRING "Number of connections. Must be > 0. If > 1, support shared device")
 set(PNET_MAX_API                1
   CACHE STRING "Number of Application Processes. Must be > 0")
 set(PNET_MAX_CR                 2

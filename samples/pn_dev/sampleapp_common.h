@@ -72,6 +72,19 @@ typedef enum
 
 typedef struct app_data_t app_data_t;
 
+/**
+ * AR specific event handler type.
+ *
+ * Handles an AR specific event.
+ *
+ * @param app          InOut: Application handle
+ * @param arep         In:    Arep of the AR.
+ *
+ * @return 0 to indicate that the arep should be kept
+ *         1 to indicate that the arep should be forgotten
+ */
+typedef int (*app_ar_event_handler_t) (app_data_t * app, uint32_t arep);
+
 /** Partially initialise config values, and use proper callbacks
  *
  * @param pnet_cfg     Out:   Configuration to be updated

@@ -37,6 +37,7 @@ Plug and pull modules/submodules
 .. doxygenfunction:: pnet_plug_submodule
 .. doxygenfunction:: pnet_pull_module
 .. doxygenfunction:: pnet_pull_submodule
+.. doxygenfunction:: pnet_sm_released_cnf
 
 
 Periodic data
@@ -103,6 +104,7 @@ to perform specific functionality.
 .. doxygentypedef:: pnet_alarm_ind
 .. doxygentypedef:: pnet_alarm_cnf
 .. doxygentypedef:: pnet_alarm_ack_cnf
+.. doxygentypedef:: pnet_sm_released_ind
 
 
 Selected enums

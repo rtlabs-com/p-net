@@ -31,6 +31,7 @@ documentation.
 
    capturing_packets.rst
    multiple_ports.rst
+   shared_device.rst
    creating_gsdml_files.rst
    applications_and_porting.rst
    linuxtiming.rst
