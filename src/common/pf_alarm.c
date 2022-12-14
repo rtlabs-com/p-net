@@ -681,6 +681,37 @@ static int pf_alarm_alpmr_apmr_a_data_ind (
    return ret;
 }
 
+uint16_t pf_alarm_allocate_endpoint (pnet_t * net, pf_ar_t * ar)
+{
+   uint16_t i;
+
+   for (i = 0; i < PNET_MAX_AR; ++i)
+   {
+      if (net->alarm_endpoint[i].ar == NULL)
+      {
+         net->alarm_endpoint[i].active = false;
+         net->alarm_endpoint[i].ar = ar;
+         return (i + 1);
+      }
+   }
+   return 0;
+}
+
+void pf_alarm_free_endpoint (pnet_t * net, pf_ar_t * ar)
+{
+   uint16_t i;
+
+   for (i = 0; i < PNET_MAX_AR; ++i)
+   {
+      if (net->alarm_endpoint[i].ar == ar)
+      {
+         net->alarm_endpoint[i].active = false;
+         net->alarm_endpoint[i].ar = NULL;
+         return;
+      }
+   }
+}
+
 /*********************** Frame handler callback ******************************/
 
 /**
@@ -702,7 +733,7 @@ static int pf_alarm_alpmr_apmr_a_data_ind (
  * @param p_buf            In:    The Ethernet frame buffer.
  * @param frame_id_pos     In:    Position in the buffer of the frame id.
  *                                Depends on whether VLAN tagging is used.
- * @param p_arg            In:    The APMX instance. Should be pf_apmx_t
+ * @param p_arg            In:    Not used, should be NULL.
  * @return  0 if the frame was NOT handled by this function.
  *          1 if the frame was handled and the buffer was freed.
  */
@@ -713,23 +744,52 @@ static int pf_alarm_apmr_frame_handler (
    uint16_t frame_id_pos,
    void * p_arg)
 {
-   pf_apmx_t * p_apmx = (pf_apmx_t *)p_arg;
+   int priority;
    pf_apmr_msg_t tempmsg;
-   int ret = 0; /* Failed to handle frame. The frame handler needs to free
+   pf_get_info_t get_info;
+   pf_ar_t * ar;
+   uint16_t alarm_endpoint;
+   uint16_t pos;
+   int ret;
+
+   ret = 0; /* Failed to handle frame. The frame handler needs to free
                    the buffer. */
+   priority = (frame_id == PF_FRAME_ID_ALARM_HIGH) ? 1 : 0;
+   ar = NULL;
 
    if (p_buf != NULL)
    {
       tempmsg.p_buf = p_buf;
       tempmsg.frame_id_pos = frame_id_pos;
 
-      if (pf_alarm_receive_queue_post (&p_apmx->alarm_receive_q, &tempmsg) == 0)
+      /* Parse the destination endpoint of the alarm,
+         to know where it should be queued. */
+
+      get_info.result = PF_PARSE_OK;
+      get_info.is_big_endian = true;
+      get_info.p_buf = (uint8_t *)p_buf->payload;
+      get_info.len = p_buf->len;
+
+      pos = frame_id_pos + sizeof (uint16_t); /* Skip frame_id. */
+      alarm_endpoint = pf_get_uint16(&get_info, &pos);
+
+      if (
+         (alarm_endpoint > 0) && (alarm_endpoint <= PNET_MAX_AR) &&
+         net->alarm_endpoint[alarm_endpoint - 1].active)
+      {
+         ar = net->alarm_endpoint[alarm_endpoint - 1].ar;
+      }
+
+      if (
+         (ar != NULL) && (pf_alarm_receive_queue_post (
+                             &ar->apmx[priority].alarm_receive_q,
+                             &tempmsg) == 0))
       {
          LOG_INFO (
             PF_ALARM_LOG,
             "Alarm(%d): Received %s prio alarm frame %p. Put in queue. \n",
             __LINE__,
-            p_apmx->high_priority ? "high" : "low",
+            priority ? "high" : "low",
             p_buf);
 
          ret = 1; /* Means that calling function should not free buffer,
@@ -739,10 +799,11 @@ static int pf_alarm_apmr_frame_handler (
       {
          LOG_ERROR (
             PF_ALARM_LOG,
-            "Alarm(%d): Failed to put incoming %s prio alarm frame in queue. "
+            "Alarm(%d): Failed to put incoming %s prio alarm frame in "
+            "queue. "
             "Framehandler will free %p\n",
             __LINE__,
-            p_apmx->high_priority ? "high" : "low",
+            priority ? "high" : "low",
             p_buf);
       }
    }
@@ -754,7 +815,7 @@ static int pf_alarm_apmr_frame_handler (
          "Alarm(%d): Did not put incoming %s prio alarm frame in queue, "
          "as p_buf is NULL.\n",
          __LINE__,
-         p_apmx->high_priority ? "high" : "low");
+         priority ? "high" : "low");
       ret = 1;
    }
 
@@ -944,7 +1005,7 @@ static int pf_alarm_apmx_activate (pnet_t * net, pf_ar_t * p_ar)
             &p_ar->ar_param.cm_initiator_mac_add,
             sizeof (p_ar->apmx[ix].da));
 
-         p_ar->apmx[ix].src_ref = p_ar->alarm_cr_result.remote_alarm_reference;
+         p_ar->apmx[ix].src_ref = p_ar->alarm_cr_result.local_alarm_reference;
          p_ar->apmx[ix].dst_ref = p_ar->alarm_cr_request.local_alarm_reference;
 
          /* APMS counters */
@@ -995,16 +1056,33 @@ static int pf_alarm_apmx_activate (pnet_t * net, pf_ar_t * p_ar)
       }
    }
 
-   pf_eth_frame_id_map_add (
-      net,
-      p_ar->apmx[0].frame_id,
-      pf_alarm_apmr_frame_handler,
-      &p_ar->apmx[0]);
-   pf_eth_frame_id_map_add (
-      net,
-      p_ar->apmx[1].frame_id,
-      pf_alarm_apmr_frame_handler,
-      &p_ar->apmx[1]);
+   /* Add the frame handler, if no alarm endpoint is active at this point. */
+   for (ix = 0; (ix < PNET_MAX_AR) && (net->alarm_endpoint[ix].active == false);
+        ++ix)
+      ;
+   if (ix >= PNET_MAX_AR)
+   {
+      pf_eth_frame_id_map_add (
+            net,
+            PF_FRAME_ID_ALARM_LOW,
+            pf_alarm_apmr_frame_handler,
+            NULL);
+      pf_eth_frame_id_map_add (
+            net,
+            PF_FRAME_ID_ALARM_HIGH,
+            pf_alarm_apmr_frame_handler,
+            NULL);
+   }
+
+   /* Mark the alarm endpoint as active. */
+   for (ix = 0; ix < PNET_MAX_AR; ++ix)
+   {
+      if (net->alarm_endpoint[ix].ar == p_ar)
+      {
+         net->alarm_endpoint[ix].active = true;
+         break;
+      }
+   }
 
    return ret;
 }
@@ -1539,8 +1617,24 @@ static int pf_alarm_apmx_close (pnet_t * net, pf_ar_t * p_ar, uint8_t err_code)
       }
    }
 
-   pf_eth_frame_id_map_remove (net, PF_FRAME_ID_ALARM_HIGH);
-   pf_eth_frame_id_map_remove (net, PF_FRAME_ID_ALARM_LOW);
+   /* Mark the alarm endpoint as inactive. */
+   for (ix = 0; ix < PNET_MAX_AR; ++ix)
+   {
+      if (net->alarm_endpoint[ix].ar == p_ar)
+      {
+         net->alarm_endpoint[ix].active = false;
+         break;
+      }
+   }
+   /* Remove the frame handler if no alarm endpoint is active at this point. */
+   for (ix = 0; (ix < PNET_MAX_AR) && (net->alarm_endpoint[ix].active == false);
+        ++ix)
+      ;
+   if (ix >= PNET_MAX_AR)
+   {
+      pf_eth_frame_id_map_remove (net, PF_FRAME_ID_ALARM_HIGH);
+      pf_eth_frame_id_map_remove (net, PF_FRAME_ID_ALARM_LOW);
+   }
 
    for (ix = 0; ix < NELEMENTS (p_ar->apmx); ix++)
    {
@@ -2768,7 +2862,10 @@ void pf_alarm_add_diag_item_to_summary (
    uint32_t severity_qualifier = 0;
 
    /* Is the diagnosis on the same AR? */
-   if (p_subslot->p_ar == p_ar)
+   if (
+      ((p_subslot->ownsm_state == PF_OWNSM_STATE_IOC) ||
+       (p_subslot->ownsm_state == PF_OWNSM_STATE_IOS)) &&
+      (p_subslot->owner == p_ar))
    {
       is_same_ar = true;
    }
@@ -3470,6 +3567,40 @@ int pf_alarm_send_plug_wrong (
       net,
       p_ar,
       PF_ALARM_TYPE_PLUG_WRONG_MODULE,
+      false, /* Low prio */
+      api_id,
+      slot_nbr,
+      subslot_nbr,
+      NULL, /* No p_diag_item */
+      module_ident,
+      submodule_ident,
+      0,     /* No payload */
+      0,     /* No payload */
+      NULL); /* No payload */
+
+   return 0;
+}
+
+int pf_alarm_send_released (
+   pnet_t * net,
+   pf_ar_t * p_ar,
+   uint32_t api_id,
+   uint16_t slot_nbr,
+   uint16_t subslot_nbr,
+   uint32_t module_ident,
+   uint32_t submodule_ident)
+{
+   LOG_INFO (
+      PF_ALARM_LOG,
+      "Alarm(%d): Sending released alarm. Slot: %u  Subslot: 0x%04X\n",
+      __LINE__,
+      slot_nbr,
+      subslot_nbr);
+
+   (void)pf_alarm_send_alarm (
+      net,
+      p_ar,
+      PF_ALARM_TYPE_RELEASED,
       false, /* Low prio */
       api_id,
       slot_nbr,

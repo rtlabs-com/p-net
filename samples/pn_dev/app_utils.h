@@ -112,6 +112,25 @@ typedef struct app_slot
 } app_slot_t;
 
 /**
+ * Information relating to an application relation.
+ */
+typedef struct app_ar
+{
+   uint32_t arep;
+   uint32_t events;
+} app_ar_t;
+
+/**
+ * AR list iterator state.
+ */
+typedef struct app_ar_iterator
+{
+   app_ar_t *ar;
+   int16_t index;
+   bool modified;
+} app_ar_iterator_t;
+
+/**
  * Profinet API state for application
  *
  * Used to manage plugged modules into slots (and submodules into subslots).
@@ -119,11 +138,83 @@ typedef struct app_slot
 typedef struct app_api_t
 {
    uint32_t api_id;
-   uint32_t arep;
+
+   /**
+    * Active AR:s.
+    * A list which is terminated by an entry with arep == UINT32_MAX.
+    */
+   app_ar_t ar[PNET_MAX_AR];
 
    /** Slots. Use slot number as index */
    app_slot_t slots[PNET_MAX_SLOTS];
 } app_api_t;
+
+/**
+ * Add an arep to the AR list of an API.
+ * @param api              InOut: The \a app_api_t instance.
+ * @param arep             In:    The arep to add.
+ * @param ar               Out:   The AR entry, if successful.
+ *
+ * @return 0 if the arep could not be added.
+ *         1 if the arep was added.
+ */
+int app_ar_add_arep (app_api_t * api, uint32_t arep, app_ar_t ** ar);
+
+/**
+ * Get the arep of an AR.
+ * @param ar               In: The AR.
+ * @return the arep of the AR.
+ */
+uint32_t app_ar_arep (app_ar_t * ar);
+
+/**
+ * Clear an event from the events value of the AR.
+ * @param ar               InOut: The AR to modify.
+ * @param event            In:    The event(s) (bitmask) that should be cleared.
+ * @return 0 if none of the set bits in \a event were set for the AR.
+ *         1 if at least one of the set bits in \a event were set for the AR.
+ */
+int app_ar_event_clr (app_ar_t * ar, uint32_t event);
+
+/**
+ * Set an event from the events value of the AR.
+ * @param ar               InOut: The AR to modify.
+ * @param event            In:    The event(s) (bitmask) that should be set.
+ */
+void app_ar_event_set (app_ar_t * ar, uint32_t event);
+
+/**
+ * Initialize a list iterator for the AR list of an API.
+ * @param iterator         InOut: The iterator to be initialized.
+ * @param api              In:    The \a app_api_t instance.
+ */
+void app_ar_iterator_init (
+   app_ar_iterator_t * iterator,
+   app_api_t * api);
+
+/**
+ * Get the next AR from a list iterator.
+ * @param iterator         InOut: The iterator to use.
+ * @param ar               Out:   If the return value is 1, the next AR from
+ *                                the list.
+ * @return 0 if there were no more items in the list.
+ *         1 if there was another item in the list.
+ */
+int app_ar_iterator_next (app_ar_iterator_t * iterator, app_ar_t ** ar);
+
+/**
+ * Check whether the iterator has run to the end of entries.
+ * @param iterator         InOut: The iterator.
+ * @return 0 if the iterator is finished.
+ *         1 if the iterator is finished.
+ */
+int app_ar_iterator_done (app_ar_iterator_t * iterator);
+
+/**
+ * Delete the current AR entry of the list iterator.
+ * @param ar               InOut: The AR.
+ */
+void app_ar_iterator_delete_current (app_ar_iterator_t * iterator);
 
 /**
  * Convert IP address to string

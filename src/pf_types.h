@@ -787,6 +787,7 @@ typedef enum pf_control_command_bit_positions
 /** Used for both RPC control/release requests and responses */
 typedef struct pf_control_block
 {
+   uint16_t block_type;
    pf_uuid_t ar_uuid;
    uint16_t session_key;
    uint16_t control_command;
@@ -1294,6 +1295,48 @@ typedef enum pf_alarm_cr_type_values
    PF_ALARM_CR = 0x0001,
 } pf_alarm_cr_type_values_t;
 
+/* Expected Identification definitions */
+
+/* Module State (see Profinet 2.4 services, Table 214) */
+typedef enum pf_module_state
+{
+   PF_MODULE_STATE_NO_MODULE = 0, /* There is no module. */
+   PF_MODULE_STATE_WRONG_MODULE,  /* [This value should be avoided.] */
+   PF_MODULE_STATE_PROPER_MODULE, /* The module is the expected one. */
+   PF_MODULE_STATE_SUBSTITUTE     /* The module is compatible. */
+} pf_module_state_t;
+
+/* Additional submodule information
+ * (see Profinet 2.4 services, section 7.3.1.5.4) */
+typedef enum pf_add_info
+{
+   PF_ADD_INFO_NONE,
+   PF_ADD_INFO_TAKEOVER_NOT_ALLOWED
+} pf_add_info_t;
+
+/* AR Info (see Profinet 2.4 services, Table 215) */
+typedef enum pf_ar_info
+{
+   PF_AR_INFO_OWN,                       /* Submodule is owned by AR. */
+   PF_AR_INFO_APPLICATION_READY_PENDING, /* Submodule is owned by AR, but
+                                            parameter checking is pending. */
+   PF_AR_INFO_SUPERORDINATED_LOCKED,     /* Submodule is locked by
+                                            superordinated means. */
+   PF_AR_INFO_LOCKED_BY_IO_CONTROLLER,   /* Submodule is owned by another
+                                            IOC AR. */
+   PF_AR_INFO_LOCKED_BY_IO_SUPERVISOR    /* Submodule is owned by another
+                                            IOS AR.  */
+} pf_ar_info_t;
+
+/* Ident Info (see Profinet 2.4 services, Table 216) */
+typedef enum pf_ident_info
+{
+   PF_IDENT_INFO_OK = 0,     /* The real submodule is the expected one. */
+   PF_IDENT_INFO_SUBSTITUTE, /* The real submodule is compatible. */
+   PF_IDENT_INFO_WRONG,      /* The real submodule is not compatible. */
+   PF_IDENT_INFO_NO          /* There is no real submodule. */
+} pf_ident_info_t;
+
 /** According to the spec these are the states used by CMDEV/CMDEV_DA.
  *
  * The states for the AR is stored in cmdev_state, within the AR.
@@ -1441,23 +1484,38 @@ typedef struct pf_submodule_properties
    bool discard_ioxs;
 } pf_submodule_properties_t;
 
+typedef struct pf_submodule_state
+{
+   uint8_t add_info;          /** Bits 0..2: pf_add_info_t */
+   bool advice_avail;         /** Bit 3 */
+   bool maintenance_required; /** Bit 4 */
+   bool maintenance_demanded; /** Bit 5 */
+   bool fault;                /** Bit 6 */
+   uint8_t ar_info;           /** Bits 7..10: pf_ar_info_t */
+   uint8_t ident_info;        /** Bits 11..14: pf_ident_info_t */
+   bool format_indicator;     /** Bit 15: Always 1 (true) */
+} pf_submodule_state_t;
+
 typedef struct pf_exp_submodule
 {
    uint16_t subslot_number; /** Allowed: 0x0000..0x9FFF */
-   uint32_t submodule_ident_number;
-   pf_submodule_properties_t submodule_properties;
+   uint32_t ident_number;
+   pf_submodule_properties_t properties;
    uint16_t nbr_data_descriptors;
    pf_data_descriptor_t data_descriptor[2]; /** 2 used for PNET_DIR_IO */
+   pf_submodule_state_t state;
 } pf_exp_submodule_t;
 
 typedef struct pf_exp_module
 {
-   uint16_t slot_number; /** Allowed 0x0000.0x7FFF */
-   uint32_t module_ident_number;
-   uint16_t module_properties; /** Reserved - currently unused */
-
+   uint16_t slot_number; /* Allowed: 0x0000.0x7FFF */
+   uint32_t ident_number;
+   uint16_t properties; /* Reserved - currently unused */
+   uint16_t state;      /* pf_module_state_t */
    uint16_t nbr_submodules;
-   pf_exp_submodule_t submodules[PNET_MAX_SUBSLOTS];
+   pf_exp_submodule_t submodule[PNET_MAX_SUBSLOTS];
+   uint16_t nbr_diff_submodules;
+   uint16_t diff_submodule[PNET_MAX_SUBSLOTS];
 } pf_exp_module_t;
 
 typedef struct pf_exp_api
@@ -1465,43 +1523,18 @@ typedef struct pf_exp_api
    bool valid;
    uint32_t api;
    uint16_t nbr_modules;
-   pf_exp_module_t modules[PNET_MAX_SLOTS];
+   pf_exp_module_t module[PNET_MAX_SLOTS];
+   uint16_t nbr_diff_modules;
+   uint16_t diff_module[PNET_MAX_SLOTS];
 } pf_exp_api_t;
 
-typedef struct pf_submodule_state
+typedef struct pf_exp_ident
 {
-   uint8_t add_info;          /** Bits 0..2: pf_submod_add_info_t */
-   bool advice_avail;         /** Bit 3 */
-   bool maintenance_required; /** Bit 4 */
-   bool maintenance_demanded; /** Bit 5 */
-   bool fault;                /** Bit 6 */
-   uint8_t ar_info;           /** Bits 7..10: pf_submod_ar_info_t */
-   uint8_t ident_info;        /** Bits 11..14: pf_submod_plug_state_t */
-   bool format_indicator;     /** Bit 15: Always 1 (true) */
-} pf_submodule_state_t;
-
-typedef struct pf_submodule_diff
-{
-   uint16_t subslot_number;
-   uint32_t submodule_ident_number;
-   pf_submodule_state_t submodule_state;
-} pf_submodule_diff_t;
-
-typedef struct pf_module_diff
-{
-   uint16_t slot_number;
-   uint32_t module_ident_number;
-   uint16_t module_state; /** pf_module_state_values_t */
-   uint16_t nbr_submodule_diffs;
-   pf_submodule_diff_t submodule_diffs[PNET_MAX_SUBSLOTS];
-} pf_module_diff_t;
-
-typedef struct pf_api_diff
-{
-   uint32_t api;
-   uint16_t nbr_module_diffs;
-   pf_module_diff_t module_diffs[PNET_MAX_SLOTS];
-} pf_api_diff_t;
+   uint16_t nbr_apis;
+   pf_exp_api_t api[PNET_MAX_API];
+   uint16_t nbr_diff_apis;
+   uint16_t diff_api[PNET_MAX_API];
+} pf_exp_ident_t;
 
 typedef struct pf_parameter_server_properties
 {
@@ -1652,7 +1685,7 @@ typedef struct pf_alarm_cr_request
 typedef struct pf_alarm_cr_result
 {
    uint16_t alarm_cr_type;          /** pf_alarm_cr_type_values_t (0x0001) */
-   uint16_t remote_alarm_reference; /** Our reference */
+   uint16_t local_alarm_reference;  /** Our reference */
    uint16_t max_alarm_data_length;  /** Range: 200..1432 */
 } pf_alarm_cr_result_t;
 
@@ -2030,6 +2063,31 @@ typedef struct pf_session_info
    uint32_t resend_counter;
 } pf_session_info_t;
 
+#define PF_AR_PLUG_MAX_QUEUE (PNET_MAX_API * PNET_MAX_SLOTS * PNET_MAX_SUBSLOTS)
+
+typedef enum pf_plugsm_state
+{
+   PF_PLUGSM_STATE_IDLE,
+   PF_PLUGSM_STATE_WFPRMIND,
+   PF_PLUGSM_STATE_WFDATAUPDATE,
+   PF_PLUGSM_STATE_WFAPLRDYCNF
+} pf_plugsm_state_t;
+
+typedef struct pf_ar_plug
+{
+   uint16_t state;
+   uint16_t current;
+   uint16_t count;
+   struct
+   {
+      uint32_t api;
+      uint16_t slot_number;
+      uint16_t subslot_number;
+      uint32_t module_ident;
+      uint32_t submodule_ident;
+   } queue[PF_AR_PLUG_MAX_QUEUE];
+} pf_ar_plug_t;
+
 typedef struct pf_ar
 {
    bool in_use;
@@ -2072,11 +2130,7 @@ typedef struct pf_ar
    uint16_t nbr_iocrs;           /* From connect.req, typically 2*/
    pf_iocr_t iocrs[PNET_MAX_CR]; /* Each has a CPM and a PPM */
 
-   uint16_t nbr_exp_apis;
-   pf_exp_api_t exp_apis[PNET_MAX_API]; /* From connect.req */
-
-   uint16_t nbr_api_diffs; /* From connect.ind */
-   pf_api_diff_t api_diffs[PNET_MAX_API];
+   pf_exp_ident_t exp_ident;
 
    uint16_t nbr_prm_server;
    uint16_t nbr_rpc_server;
@@ -2112,6 +2166,8 @@ typedef struct pf_ar
    pf_cmpbe_state_values_t cmpbe_state;
    uint16_t cmpbe_stored_command;
 
+   pf_ar_plug_t plug_info;
+
    /* Optional data */
 #if PNET_OPTION_MC_CR
    uint16_t nbr_mcr;
@@ -2146,65 +2202,19 @@ typedef struct pf_ar
 #endif
 } pf_ar_t;
 
+/* Real Identification definitions */
+
+typedef enum pf_ownsm_state_values
+{
+   PF_OWNSM_STATE_FREE, /* Submodule has no owner. */
+   PF_OWNSM_STATE_SOL,  /* Submodule is superordinate locked. */
+   PF_OWNSM_STATE_IOS,  /* Submodule is owned by an IO supervisor. */
+   PF_OWNSM_STATE_IOC   /* Submodule is owned by an IO controller. */
+} pf_ownsm_state_values_t;
+
 /*
  * ============= Pluggable typedefs ==================
  */
-
-typedef enum pf_submod_plug_state
-{
-   PF_SUBMOD_PLUG_OK,
-   PF_SUBMOD_PLUG_SUBSTITUTE, /** module_state == SUBSTITUTE */
-   PF_SUBMOD_PLUG_WRONG,      /** module_state == WRONG_MODULE */
-   PF_SUBMOD_PLUG_NO          /** module_state == WRONG_MODULE */
-} pf_submod_plug_state_t;
-
-typedef enum pf_submod_owner
-{
-   PF_SUBMOD_OWNER_FREE,
-   PF_SUBMOD_OWNER_SOL, /* Superordinator locked */
-   PF_SUBMOD_OWNER_IOS, /* Owned by IO supervisor */
-   PF_SUBMOD_OWNER_IOC, /* Owned by IO controller */
-} pf_submod_owner;
-
-typedef enum pf_mod_plug_state
-{
-   PF_MOD_PLUG_NO_MODULE,     /** No module plugged into slot. */
-   PF_MOD_PLUG_WRONG_MODULE,  /** Module/submodule ident number(s) do not match
-                                 cfg. */
-   PF_MOD_PLUG_PROPER_MODULE, /** All OK. Submodule may have diff. */
-   PF_MOD_PLUG_SUBSTITUTE /** There is another module plugged into the slot. */
-} pf_mod_plug_state_t;
-
-typedef enum pf_submod_add_info
-{
-   PF_SUBMOD_ADD_INFO_NONE,
-   PF_SUBMOD_ADD_INFO_TAKEOVER_NOT_ALLOWED
-} pf_submod_add_info_t;
-
-typedef enum pf_submod_ar_info
-{
-   PF_SUBMOD_AR_INFO_OWN,                       /** The AR is owner */
-   PF_SUBMOD_AR_INFO_APPLICATION_READY_PENDING, /** Parameterization in progress
-                                                 */
-   PF_SUBMOD_AR_INFO_SUPERORDINATED_LOCKED, /** Locked by application (ToDo: API
-                                               for that) */
-   PF_SUBMOD_AR_INFO_LOCKED_BY_IO_CONTROLLER, /** Locked by other IO controller
-                                               */
-   PF_SUBMOD_AR_INFO_LOCKED_BY_IO_SUPERVISOR  /** Locked by other IO Supervisor
-                                               */
-} pf_submod_ar_info_t;
-
-typedef struct pf_submod_state
-{
-   pf_submod_add_info_t add_info;     /** Bits 0..2 */
-   bool advice_avail;                 /** Bit 3 */
-   bool maintenance_required;         /** Bit 4 */
-   bool maintenance_demanded;         /** Bit 5 */
-   bool fault;                        /** Bit 6 */
-   pf_submod_ar_info_t ar_info;       /** Bits 7..10 */
-   pf_submod_plug_state_t ident_info; /** Bits 11..14 */
-   bool format_indicator;             /** Bit 15: Always 1 (true) */
-} pf_submod_state_t;
 
 typedef enum pf_usi_values
 {
@@ -2244,21 +2254,30 @@ typedef enum pf_diag_filter_level
    PF_DIAG_FILTER_M_DEM      /* Manufacturer specific or maintenance demanded */
 } pf_diag_filter_level_t;
 
+/* Real submodule diagnosis summary. */
+typedef struct pf_submod_diag_summary
+{
+   bool maintenance_required;
+   bool maintenance_demanded;
+   bool fault;
+} pf_submod_diag_summary_t;
+
+/* Real identification, subslot level. */
 typedef struct pf_subslot
 {
    bool in_use;
-   uint16_t subslot_nbr;
+   uint16_t subslot_number;
+   uint32_t ident_number;
+   pf_ar_t * owner;
+   pf_ownsm_state_values_t ownsm_state;
 
    /* Submodule plug information */
-   uint32_t exp_submodule_ident_number;
-   uint32_t submodule_ident_number;
    uint16_t length_input;
    uint16_t length_output;
    pnet_submodule_dir_t direction;
 
    /* Run-time information */
-   pf_ar_t * p_ar;
-   pf_submod_state_t submodule_state;
+   pf_submod_diag_summary_t diag_summary;
 
    /* The following members shall be protected by the device.diag_mutex. */
    /*
@@ -2270,29 +2289,28 @@ typedef struct pf_subslot
    uint16_t diag_list;
 } pf_subslot_t;
 
+/* Real identification, slot level. */
 typedef struct pf_slot
 {
    bool in_use;
-   /* Module plug information */
-   uint32_t exp_module_ident_number;
-   uint32_t module_ident_number;
-   pf_mod_plug_state_t plug_state;
+   uint16_t slot_number;
+   uint32_t ident_number;
    pf_subslot_t subslots[PNET_MAX_SUBSLOTS];
-
-   /* Run-time information */
-   pf_ar_t * p_ar;
-   uint16_t slot_nbr;
 } pf_slot_t;
 
+/* Real identification, API level. */
 typedef struct pf_api
 {
    bool in_use;
    uint32_t api_id;
-
    pf_slot_t slots[PNET_MAX_SLOTS];
-
-   pf_ar_t * p_ar;
 } pf_api_t;
+
+/* Real identification. */
+typedef struct pf_real_ident
+{
+   pf_api_t api[PNET_MAX_API];
+} pf_real_ident_t;
 
 /*
  * The device struct contains information about the configured API's.
@@ -2301,10 +2319,7 @@ typedef struct pf_api
  */
 typedef struct pf_device
 {
-   /*
-    * Record things that are needed for the read/write record data service.
-    */
-   pf_api_t apis[PNET_MAX_API];
+   pf_real_ident_t real_ident;
 
    /*
     * This is the pool of diag items.
@@ -2391,6 +2406,15 @@ typedef struct pf_iod_write_result
    pnet_pnio_status_t pnio_status;
    uint8_t rw_padding[16];
 } pf_iod_write_result_t;
+
+typedef enum pf_record_data_scope
+{
+   PF_RECORD_DATA_SCOPE_DEVICE,
+   PF_RECORD_DATA_SCOPE_API,
+   PF_RECORD_DATA_SCOPE_SLOT,
+   PF_RECORD_DATA_SCOPE_SUBSLOT,
+   PF_RECORD_DATA_SCOPE_AR
+} pf_record_data_scope_t;
 
 /* ============= LogBook typedefs ================== */
 /* block_version_low == 1 */
@@ -2940,7 +2964,9 @@ struct pnet
    uint32_t cmrpc_session_number;
 
    /** ARs */
-   pf_ar_t cmrpc_ar[PNET_MAX_AR];
+   uint16_t cmrpc_nbr_ars;
+   uint16_t cmrpc_ar_order[PNET_MAX_AR];
+   pf_ar_t cmrpc_ar[PNET_MAX_AR + 1];
 
    /** Sessions */
    pf_session_info_t cmrpc_session_info[PF_MAX_SESSION];
@@ -2950,6 +2976,14 @@ struct pnet
 
    uint8_t cmrpc_dcerpc_input_frame[PF_FRAME_BUFFER_SIZE];
    uint8_t cmrpc_dcerpc_output_frame[PF_FRAME_BUFFER_SIZE];
+
+   /********** ALARM *********/
+
+   struct
+   {
+      bool active;
+      pf_ar_t * ar;
+   } alarm_endpoint[PNET_MAX_AR];
 
    /********** FSPM **********/
 

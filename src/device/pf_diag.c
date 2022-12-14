@@ -120,11 +120,11 @@ static void pf_diag_update_submodule_state (
    pf_device_t * p_dev = NULL;
    uint16_t ix;
    pf_diag_item_t * p_item;
-   pf_submod_state_t submodule_state;
+   pf_submod_diag_summary_t diag_summary;
    pnet_alarm_spec_t alarm_spec = {0};
    uint32_t maint_status = 0;
 
-   memset (&submodule_state, 0, sizeof (submodule_state));
+   memset (&diag_summary, 0, sizeof (diag_summary));
 
    if (pf_cmdev_get_device (net, &p_dev) == 0)
    {
@@ -143,29 +143,24 @@ static void pf_diag_update_submodule_state (
 
             if (alarm_spec.submodule_diagnosis == true)
             {
-               submodule_state.fault = true;
+               diag_summary.fault = true;
             }
 
             if (maint_status & PF_DIAG_BIT_MAINTENANCE_REQUIRED)
             {
-               submodule_state.maintenance_required = true;
+               diag_summary.maintenance_required = true;
             }
 
             if (maint_status & PF_DIAG_BIT_MAINTENANCE_DEMANDED)
             {
-               submodule_state.maintenance_demanded = true;
+               diag_summary.maintenance_demanded = true;
             }
          }
 
          ix = p_item->next;
          pf_cmdev_get_diag_item (net, ix, &p_item);
       }
-
-      p_subslot->submodule_state.fault = submodule_state.fault;
-      p_subslot->submodule_state.maintenance_required =
-         submodule_state.maintenance_required;
-      p_subslot->submodule_state.maintenance_demanded =
-         submodule_state.maintenance_demanded;
+      p_subslot->diag_summary = diag_summary;
    }
 }
 
@@ -219,57 +214,30 @@ static void pf_diag_find_entry (
          p_diag_source->subslot,
          pp_subslot) == 0)
    {
-      /* Only search valid sub-modules */
-      if (
-         (((*pp_subslot)->submodule_state.ident_info == PF_SUBMOD_PLUG_OK) ||
-          ((*pp_subslot)->submodule_state.ident_info ==
-           PF_SUBMOD_PLUG_SUBSTITUTE)) &&
-         (((*pp_subslot)->submodule_state.ar_info == PF_SUBMOD_AR_INFO_OWN) ||
-          ((*pp_subslot)->submodule_state.ar_info ==
-           PF_SUBMOD_AR_INFO_APPLICATION_READY_PENDING)))
+      prev_ix = PF_DIAG_IX_NULL;
+      item_ix = (*pp_subslot)->diag_list;
+      pf_cmdev_get_diag_item (net, item_ix, &p_item);
+      while ((p_item != NULL) && (*p_diag_ix == PF_DIAG_IX_NULL))
       {
-         prev_ix = PF_DIAG_IX_NULL;
-         item_ix = (*pp_subslot)->diag_list;
-         pf_cmdev_get_diag_item (net, item_ix, &p_item);
-         while ((p_item != NULL) && (*p_diag_ix == PF_DIAG_IX_NULL))
+         /* Found a match if all of:
+          *    format is STD.
+          *    channel number matches.
+          *    individual channel or channel group
+          *    direction matches.
+          *    ch_error_type matches.
+          *    ext_ch_error_type matches.
+          * ToDo: How do we find manuf_data diag entries??
+          */
+         if (p_item->usi >= PF_USI_CHANNEL_DIAGNOSIS)
          {
-            /* Found a match if all of:
-             *    format is STD.
-             *    channel number matches.
-             *    individual channel or channel group
-             *    direction matches.
-             *    ch_error_type matches.
-             *    ext_ch_error_type matches.
-             * ToDo: How do we find manuf_data diag entries??
-             */
-            if (p_item->usi >= PF_USI_CHANNEL_DIAGNOSIS)
-            {
-               if (
-                  (p_item->fmt.std.ch_nbr == p_diag_source->ch) &&
-                  (p_item->fmt.std.ch_error_type == ch_error_type) &&
-                  (p_item->fmt.std.ext_ch_error_type == ext_ch_error_type) &&
-                  (PF_DIAG_CH_PROP_ACC_GET (p_item->fmt.std.ch_properties) ==
-                   p_diag_source->ch_grouping) &&
-                  (PF_DIAG_CH_PROP_DIR_GET (p_item->fmt.std.ch_properties) ==
-                   p_diag_source->ch_direction))
-               {
-                  *p_diag_ix = item_ix;
-
-                  /* Unlink it from the list so it can be updated. */
-                  if (prev_ix != PF_DIAG_IX_NULL)
-                  {
-                     /* Not first in list */
-                     pf_cmdev_get_diag_item (net, prev_ix, &p_prev);
-                     p_prev->next = p_item->next;
-                  }
-                  else
-                  {
-                     /* Unlink the first item in the list */
-                     (*pp_subslot)->diag_list = p_item->next;
-                  }
-               }
-            }
-            else if (p_item->usi == usi)
+            if (
+               (p_item->fmt.std.ch_nbr == p_diag_source->ch) &&
+               (p_item->fmt.std.ch_error_type == ch_error_type) &&
+               (p_item->fmt.std.ext_ch_error_type == ext_ch_error_type) &&
+               (PF_DIAG_CH_PROP_ACC_GET (p_item->fmt.std.ch_properties) ==
+                p_diag_source->ch_grouping) &&
+               (PF_DIAG_CH_PROP_DIR_GET (p_item->fmt.std.ch_properties) ==
+                p_diag_source->ch_direction))
             {
                *p_diag_ix = item_ix;
 
@@ -286,44 +254,30 @@ static void pf_diag_find_entry (
                   (*pp_subslot)->diag_list = p_item->next;
                }
             }
-
-            prev_ix = item_ix;
-            item_ix = p_item->next;
-            pf_cmdev_get_diag_item (net, item_ix, &p_item);
          }
-      }
-      else
-      {
-         /* Signal not found! */
-         *pp_subslot = NULL;
-      }
-   }
-}
+         else if (p_item->usi == usi)
+         {
+            *p_diag_ix = item_ix;
 
-/**
- * @internal
- * Find first used ar.
- *
- * @param net              InOut: The p-net stack instance.
- * @param pp_ar            Out:   Resulting ar
- * @return 0 on success, -1 on error.
- */
-static int pf_diag_find_first_ar (pnet_t * net, pf_ar_t ** pp_ar)
-{
-   int ret = -1;
-   uint16_t ix;
+            /* Unlink it from the list so it can be updated. */
+            if (prev_ix != PF_DIAG_IX_NULL)
+            {
+               /* Not first in list */
+               pf_cmdev_get_diag_item (net, prev_ix, &p_prev);
+               p_prev->next = p_item->next;
+            }
+            else
+            {
+               /* Unlink the first item in the list */
+               (*pp_subslot)->diag_list = p_item->next;
+            }
+         }
 
-   for (ix = 0; ix < NELEMENTS (net->cmrpc_ar); ix++)
-   {
-      if (net->cmrpc_ar[ix].in_use == true)
-      {
-         *pp_ar = &net->cmrpc_ar[ix];
-         ret = 0;
-         break;
+         prev_ix = item_ix;
+         item_ix = p_item->next;
+         pf_cmdev_get_diag_item (net, item_ix, &p_item);
       }
    }
-
-   return ret;
 }
 
 int pf_diag_add (
@@ -549,9 +503,12 @@ int pf_diag_add (
 
             pf_diag_update_submodule_state (net, p_ar, p_subslot);
 
-            /* TODO Use better strategy to find AR */
-            if (pf_diag_find_first_ar (net, &p_ar) == 0)
+            if (
+               (p_subslot->ownsm_state == PF_OWNSM_STATE_IOC) ||
+               (p_subslot->ownsm_state == PF_OWNSM_STATE_IOS))
             {
+               p_ar = p_subslot->owner;
+
                ret = pf_alarm_send_diagnosis (
                   net,
                   p_ar,
@@ -751,9 +708,12 @@ int pf_diag_update (
 
             pf_diag_update_submodule_state (net, p_ar, p_subslot);
 
-            /* TODO Use better strategy to find AR */
-            if (pf_diag_find_first_ar (net, &p_ar) == 0)
+            if (
+               (p_subslot->ownsm_state == PF_OWNSM_STATE_IOC) ||
+               (p_subslot->ownsm_state == PF_OWNSM_STATE_IOS))
             {
+               p_ar = p_subslot->owner;
+
                ret = pf_alarm_send_diagnosis (
                   net,
                   p_ar,
@@ -873,9 +833,12 @@ int pf_diag_remove (
       {
          if (pf_cmdev_get_diag_item (net, item_ix, &p_item) == 0)
          {
-            /* TODO Use better strategy to find AR */
-            if (pf_diag_find_first_ar (net, &p_ar) == 0)
+            if (
+               (p_subslot->ownsm_state == PF_OWNSM_STATE_IOC) ||
+               (p_subslot->ownsm_state == PF_OWNSM_STATE_IOS))
             {
+               p_ar = p_subslot->owner;
+
                if (p_subslot->diag_list != PF_DIAG_IX_NULL)
                {
                   /*

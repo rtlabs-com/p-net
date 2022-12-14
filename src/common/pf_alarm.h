@@ -28,6 +28,22 @@ extern "C" {
 void pf_alarm_init (pnet_t * net);
 
 /**
+ * Allocate an alarm endpoint for an AR.
+ *
+ * @param net              InOut: The p-net stack instance.
+ * @param ar               In:    The AR.
+ */
+uint16_t pf_alarm_allocate_endpoint (pnet_t * net, pf_ar_t * ar);
+
+/**
+ * Free the alarm endpoint that has been allocated to an AR.
+ *
+ * @param net              InOut: The p-net stack instance.
+ * @param ar               In:    The AR.
+ */
+void pf_alarm_free_endpoint (pnet_t * net, pf_ar_t * ar);
+
+/**
  * Create and activate an alarm instance for the specified AR.
  *
  * @param net              InOut: The p-net stack instance
@@ -156,6 +172,32 @@ int pf_alarm_send_plug (
  *                                  later).
  */
 int pf_alarm_send_plug_wrong (
+   pnet_t * net,
+   pf_ar_t * p_ar,
+   uint32_t api_id,
+   uint16_t slot_nbr,
+   uint16_t subslot_nbr,
+   uint32_t module_ident,
+   uint32_t submodule_ident);
+
+/**
+ * Send a RELEASED alarm.
+ *
+ * Uses no alarm payload (not attached to diagnosis ASE.
+ * Related to whole submodule, not related to channels).
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param p_ar             InOut: The AR instance.
+ * @param api_id           In:    The API identifier.
+ * @param slot_nbr         In:    The slot number.
+ * @param subslot_nbr      In:    The sub-slot number.
+ * @param module_ident     In:    The module ident number.
+ * @param submodule_ident  In:    The sub-module ident number.
+ * @return  0  if operation succeeded.
+ *          -1 if an error occurred (or waiting for ACK from controller: re-try
+ *                                  later).
+ */
+int pf_alarm_send_released (
    pnet_t * net,
    pf_ar_t * p_ar,
    uint32_t api_id,

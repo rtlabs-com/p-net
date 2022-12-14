@@ -282,7 +282,7 @@ int pf_cmpbe_cm_ccontrol_req (pnet_t * net, pf_ar_t * p_ar)
       /* Control block is always APPLRDY here */
       if (pf_alarm_pending (p_ar) == false)
       {
-         ret = pf_cmrpc_rm_ccontrol_req (net, p_ar);
+         ret = pf_cmrpc_rm_ccontrol_req (net, p_ar, PF_BT_APPRDY_REQ);
          pf_cmpbe_set_state (p_ar, PF_CMPBE_STATE_WFCNF);
       }
    }
