@@ -184,11 +184,6 @@ static void pf_dcp_responder (pnet_t * net, void * arg, uint32_t current_time)
       return;
    }
 
-   if (net->dcp_delayed_response_waiting == false)
-   {
-      return;
-   }
-
    if (pf_eth_send_on_management_port (net, p_buf) > 0)
    {
       LOG_DEBUG (PNET_LOG, "DCP(%d): Sent a DCP identify response.\n", __LINE__);
@@ -1516,6 +1511,17 @@ static int pf_dcp_identify_req (
       goto out1;
    }
 
+   /* Only one pending response is supported */
+   if (net->dcp_delayed_response_waiting == true)
+   {
+      LOG_DEBUG (
+         PF_DCP_LOG,
+         "DCP(%d): DCP request ignored (response pending in scheduler)\n",
+         __LINE__);
+
+      goto out1;
+   }
+
    p_rsp = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE); /* Get a transmit buffer
                                                    for the response */
    if (p_rsp == NULL)
@@ -1921,10 +1927,22 @@ static int pf_dcp_identify_req (
       p_dst_dcphdr->data_length = htons (dst_pos - dst_start);
       p_rsp->len = dst_pos;
 
-      net->dcp_delayed_response_waiting = true;
       response_delay = pf_dcp_calculate_response_delay (
          mac_address,
          ntohs (p_src_dcphdr->response_delay_factor));
+
+      if (
+         pf_scheduler_add (
+            net,
+            response_delay,
+            pf_dcp_responder,
+            p_rsp,
+            &net->dcp_identresp_timeout) == 0)
+      {
+         /* Note: Do not free p_rsp, it is used in pf_dcp_responder() */
+
+         net->dcp_delayed_response_waiting = true;
+
 #if LOG_INFO_ENABLED(PF_DCP_LOG)
       LOG_INFO (
          PF_DCP_LOG,
@@ -1940,15 +1958,16 @@ static int pf_dcp_identify_req (
          response_delay,
          ntohl (p_src_dcphdr->xid));
 #endif
+      }
+      else
+      {
+         LOG_ERROR (
+            PF_DCP_LOG,
+            "DCP(%d): Failed to schedule response to DCP identity request\n",
+            __LINE__);
 
-      (void)pf_scheduler_add (
-         net,
-         response_delay,
-         pf_dcp_responder,
-         p_rsp,
-         &net->dcp_identresp_timeout);
-
-      /* Note: Do not free p_rsp, it is used in pf_dcp_responder() */
+         pnal_buf_free (p_rsp);
+      }
    }
    else
    {
