@@ -3579,6 +3579,10 @@ static int pf_cmrpc_rpc_request (
          res_size,
          p_res,
          p_res_pos);
+      if (p_sess->p_ar == NULL)
+      {
+         p_sess->kill_session = true;
+      }
       break;
    case PF_RPC_DEV_OPNUM_WRITE:
       LOG_INFO (
