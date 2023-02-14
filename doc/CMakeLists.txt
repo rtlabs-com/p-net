@@ -22,7 +22,7 @@ if (DOXYGEN_FOUND)
 
   # Doxygen configuration
   set(DOXYGEN_OPTIMIZE_OUTPUT_FOR_C YES)
-  set(DOXYGEN_TYPEDEF_HIDES_STRUCT NO)
+  set(DOXYGEN_TYPEDEF_HIDES_STRUCT YES)
   set(DOXYGEN_EXTRACT_ALL YES)
   set(DOXYGEN_EXTRACT_STATIC YES)
   set(DOXYGEN_STRIP_CODE_COMMENTS NO)
@@ -47,6 +47,7 @@ if (DOXYGEN_FOUND)
     README.md
     include/pnet_api.h
     src/pnal.h
+    src/drivers/lan9662/include/pnet_lan9662_api.h
     )
 endif()
 

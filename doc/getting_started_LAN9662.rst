@@ -40,8 +40,8 @@ When hardware offload is enabled all process data by default is mapped to SRAM
 by P-Net and the application uses the P-Net API the same way as usual.
 
 To map the process data to a QSPI interface the application uses the P-Net API functions
-:c:func:`pnet_mera_input_set_rte_config` for input data and
-:c:func:`pnet_mera_output_set_rte_config` for output data.
+:cpp:func:`pnet_mera_input_set_rte_config` for input data and
+:cpp:func:`pnet_mera_output_set_rte_config` for output data.
 When a QSPI data source or sink is configured the process data
 is handled by the configured HW device and not by the application.
 The P-Net stack still keeps a copy of the process data in SRAM
@@ -52,23 +52,21 @@ Detailed information about the LAN9662 and the RTE can be found in the reference
 
 Table below shows how the the P-Net API for handling the process data is affected when RTE is enabled.
 
-+---------------------------------+-----------+------------------------------------------------------+
-| API Function                    | RTE-SRAM  | RTE-QSPI                                             |
-+=================================+===========+======================================================+
-| pnet_input_set_data_and_iops    | Supported | Not supported. Input IO data from QSPI.              |
-+---------------------------------+-----------+------------------------------------------------------+
-| pnet_input_get_data_and_iops    | Supported | Supported                                            |
-+---------------------------------+-----------+------------------------------------------------------+
-| net_input_get_iocs              | Supported | Supported                                            |
-+---------------------------------+-----------+------------------------------------------------------+
-| pnet_output_get_data_and_iops   | Supported | Supported for reading output IO data mapped to QSPI. |
-+---------------------------------+-----------+------------------------------------------------------+
-| pnet_output_set_iocs            | Supported | Supported                                            |
-+---------------------------------+-----------+------------------------------------------------------+
-| pnet_mera_output_set_rte_config | Not used  | Used for configuration                               |
-+---------------------------------+-----------+------------------------------------------------------+
-| pnet_mera_input_set_rte_config  | Not used  | Used for configuration                               |
-+---------------------------------+-----------+------------------------------------------------------+
++---------------------------------------------+-----------+------------------------------------------------------+
+| API Function                                | RTE-SRAM  | RTE-QSPI                                             |
++=============================================+===========+======================================================+
+| :cpp:func:`pnet_input_set_data_and_iops`    | Supported | Not supported. Input IO data from QSPI.              |
++---------------------------------------------+-----------+------------------------------------------------------+
+| :cpp:func:`pnet_input_get_iocs`             | Supported | Supported                                            |
++---------------------------------------------+-----------+------------------------------------------------------+
+| :cpp:func:`pnet_output_get_data_and_iops`   | Supported | Supported for reading output IO data mapped to QSPI. |
++---------------------------------------------+-----------+------------------------------------------------------+
+| :cpp:func:`pnet_output_set_iocs`            | Supported | Supported                                            |
++---------------------------------------------+-----------+------------------------------------------------------+
+| :cpp:func:`pnet_mera_output_set_rte_config` | Not used  | Used for configuration                               |
++---------------------------------------------+-----------+------------------------------------------------------+
+| :cpp:func:`pnet_mera_input_set_rte_config`  | Not used  | Used for configuration                               |
++---------------------------------------------+-----------+------------------------------------------------------+
 
 
 Build-time configuration
@@ -104,8 +102,8 @@ The driver_config parameter contains base IDs for various resources in the LAN96
 In a system where P-Net is the only feature using the RTE these don't need to be considered.
 If not, the IDs must be set not to conflict with other parts of the system.
 
-Input data is mapped to QSPI using the operation :c:func:`pnet_input_set_rte_config`.
-Output data is mapped to QSPI using the operation :c:func:`pnet_output_set_rte_config`.
+Input data is mapped to QSPI using the operation :cpp:func:`pnet_mera_input_set_rte_config`.
+Output data is mapped to QSPI using the operation :cpp:func:`pnet_mera_output_set_rte_config`.
 
 
 EVB-LAN9662
@@ -357,7 +355,7 @@ when that information is available.
 
 P-Net on LAN9662 Application Summary
 ------------------------------------
-- To map process data to QSPI the application must use the operations :c:func:`pnet_output_set_rte_config` and :c:func:`pnet_input_set_rte_config`.
+- To map process data to QSPI the application must use the operations :cpp:func:`pnet_mera_output_set_rte_config` and :cpp:func:`pnet_mera_input_set_rte_config`.
 - If process data is handled by the application and not mapped to QSPI the hardware offload can be enabled and used without any change in the application. API usage is identical except that the hardware offload is enabled during stack initialization.
 - :file:`p-net/samples/pn_dev_lan9662/switchdev-profinet-example.sh` shows the required systems configurations for a 2 port Profinet device application.
 
@@ -380,3 +378,16 @@ Documentation and data sheets:
 
 - http://mscc-ent-open-source.s3-eu-west-1.amazonaws.com/public_root/bsp/mscc-brsdk-doc-2021.09.html
 - Add more documents when LAN9662 documentation is available.
+
+
+MERA RTE API for p-net
+----------------------
+
+.. doxygenfunction:: pnet_mera_input_set_rte_config
+.. doxygenfunction:: pnet_mera_output_set_rte_config
+
+.. doxygenenum:: pnet_mera_rte_data_type_t
+
+.. doxygenstruct:: pnet_mera_rte_data_cfg_t
+   :members:
+   :undoc-members:
