@@ -109,17 +109,17 @@ to perform specific functionality.
 
 Selected enums
 --------------
-.. doxygenenum:: pnet_event_values
-.. doxygenenum:: pnet_ioxs_values
-.. doxygenenum:: pnet_submodule_dir
-.. doxygenenum:: pnet_control_command
-.. doxygenenum:: pnet_data_status_bits
-.. doxygenenum:: pnet_diag_ch_prop_type_values
-.. doxygenenum:: pnet_diag_ch_prop_dir_values
-.. doxygenenum:: pnet_diag_ch_prop_maint_values
-.. doxygenenum:: pnet_diag_ch_group_values
-.. doxygenenum:: pnet_im_supported_values
-.. doxygenenum:: pnal_eth_mau
+.. doxygenenum:: pnet_event_values_t
+.. doxygenenum:: pnet_ioxs_values_t
+.. doxygenenum:: pnet_submodule_dir_t
+.. doxygenenum:: pnet_control_command_t
+.. doxygenenum:: pnet_data_status_bits_t
+.. doxygenenum:: pnet_diag_ch_prop_type_values_t
+.. doxygenenum:: pnet_diag_ch_prop_dir_values_t
+.. doxygenenum:: pnet_diag_ch_prop_maint_values_t
+.. doxygenenum:: pnet_diag_ch_group_values_t
+.. doxygenenum:: pnet_im_supported_values_t
+.. doxygenenum:: pnal_eth_mau_t
 
 
 Selected structs
@@ -133,54 +133,66 @@ Along with the configuration the initial (default) values of the
 I&M data records are conveyed as well as the values used for
 sending LLDP frames.
 
-.. doxygenstruct:: pnet_im_0
+.. doxygenstruct:: pnet_im_0_t
    :members:
    :undoc-members:
 
-.. doxygenstruct:: pnet_im_1
+.. doxygenstruct:: pnet_im_1_t
    :members:
    :undoc-members:
 
-.. doxygenstruct:: pnet_im_2
+.. doxygenstruct:: pnet_im_2_t
    :members:
    :undoc-members:
 
-.. doxygenstruct:: pnet_im_3
+.. doxygenstruct:: pnet_im_3_t
    :members:
    :undoc-members:
 
-.. doxygenstruct:: pnet_im_4
+.. doxygenstruct:: pnet_im_4_t
    :members:
    :undoc-members:
 
-.. doxygenstruct:: pnet_cfg_device_id
+.. doxygenstruct:: pnet_cfg_device_id_t
    :members:
    :undoc-members:
 
-.. doxygenstruct:: pnet_if_cfg
+.. doxygenstruct:: pnet_if_cfg_t
    :members:
    :undoc-members:
 
-.. doxygenstruct:: pnet_port_cfg
+.. doxygenstruct:: pnet_port_cfg_t
    :members:
    :undoc-members:
 
-.. doxygenstruct:: pnet_ip_cfg
+.. doxygenstruct:: pnet_ip_cfg_t
    :members:
    :undoc-members:
 
-.. doxygenstruct:: pnet_cfg
+.. doxygenstruct:: pnet_cfg_t
    :members:
    :undoc-members:
 
-.. doxygenstruct:: pnet_alarm_spec
+.. doxygenstruct:: pnet_alarm_spec_t
    :members:
    :undoc-members:
 
-.. doxygenstruct:: pnet_alarm_argument
+.. doxygenstruct:: pnet_alarm_argument_t
    :members:
    :undoc-members:
 
-.. doxygenstruct:: pnet_diag_source
+.. doxygenstruct:: pnet_diag_source_t
+   :members:
+   :undoc-members:
+
+.. doxygenstruct:: pnet_result_t
+   :members:
+   :undoc-members:
+
+.. doxygenstruct:: pnet_data_cfg_t
+   :members:
+   :undoc-members:
+
+.. doxygenstruct:: pnet_pnio_status_t
    :members:
    :undoc-members:

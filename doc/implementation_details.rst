@@ -53,7 +53,7 @@ Incoming frame PDU types
 
 Stack development helper functions
 ----------------------------------
-Use  :c:func:`pf_memory_contents_show` to show the contents of a buffer/memory area.
+Use :cpp:func:`pf_memory_contents_show` to show the contents of a buffer/memory area.
 
 
 State machines
@@ -229,38 +229,38 @@ messages:
 * parameter read (Uses CMRDR)
 * parameter write
 
-Incoming UDP packets are parsed by :c:func:`pf_cmrpc_dce_packet`, which also
+Incoming UDP packets are parsed by :cpp:func:`pf_cmrpc_dce_packet`, which also
 prepares the return UDP packet. This is done by putting together incoming
-fragments and then calling  :c:func:`pf_cmrpc_rpc_request`.
+fragments and then calling  :cpp:func:`pf_cmrpc_rpc_request`.
 
-On DCE RPC connect requests the function :c:func:`pf_cmrpc_rm_connect_ind` is
+On DCE RPC connect requests the function :cpp:func:`pf_cmrpc_rm_connect_ind` is
 called, and it will create a DCE RPC connect response. It will also trigger
 these user callbacks:
 
- * :c:func:`pnet_exp_module_ind`
- * :c:func:`pnet_exp_submodule_ind`
- * :c:func:`pnet_connect_ind`
- * :c:func:`pnet_state_ind` with PNET_EVENT_STARTUP
+ * :cpp:type:`pnet_exp_module_ind`
+ * :cpp:type:`pnet_exp_submodule_ind`
+ * :cpp:type:`pnet_connect_ind`
+ * :cpp:type:`pnet_state_ind` with PNET_EVENT_STARTUP
 
-The function :c:func:`pf_cmrpc_rm_write_ind` is called for incoming (parameter)
-write request messages, and it will trigger the :c:func:`pnet_write_ind` user
+The function :cpp:type:`pf_cmrpc_rm_write_ind` is called for incoming (parameter)
+write request messages, and it will trigger the :cpp:type:`pnet_write_ind` user
 callback for certain parameters.
 Other parameters are handled by the stack itself.
 
 Incoming control (DControl) requests are handled by
-:c:func:`pf_cmrpc_rm_dcontrol_ind` which typically triggers these user callbacks:
+:cpp:func:`pf_cmrpc_rm_dcontrol_ind` which typically triggers these user callbacks:
 
-* :c:func:`pnet_dcontrol_ind` with PNET_CONTROL_COMMAND_PRM_END
-* :c:func:`pnet_state_ind` with PNET_EVENT_PRMEND
+* :cpp:type:`pnet_dcontrol_ind` with PNET_CONTROL_COMMAND_PRM_END
+* :cpp:type:`pnet_state_ind` with PNET_EVENT_PRMEND
 
 When the IO-device is sending a request to an IO-Controller (and expects a
 response) a new separate session is started.
 
-Incoming CControl responses are handled by :c:func:`pf_cmrpc_rm_ccontrol_cnf`,
+Incoming CControl responses are handled by :cpp:func:`pf_cmrpc_rm_ccontrol_cnf`,
 which will trigger these user callbacks:
 
-* :c:func:`pnet_state_ind` with PNET_EVENT_DATA.
-* :c:func:`pnet_ccontrol_cnf`
+* :cpp:type:`pnet_state_ind` with PNET_EVENT_DATA.
+* :cpp:type:`pnet_ccontrol_cnf`
 
 Show current details on the CMRPC state machine::
 
@@ -312,10 +312,10 @@ Helps handling DCP Set and DCP Get requests.
 
 CMRDR - Context Management Read record Responder protocol machine
 -----------------------------------------------------------------
-Contains a single function :c:func:`pf_cmrdr_rm_read_ind`, that handles
+Contains a single function :cpp:func:`pf_cmrdr_rm_read_ind`, that handles
 RPC parameter read requests.
 
-Triggers the :c:func:`pnet_read_ind` user callback for some values.
+Triggers the :cpp:type:`pnet_read_ind` user callback for some values.
 Other values, for example the Identification & Maintenance (I&M)
 values, are handled internally by the stack.
 
@@ -325,7 +325,7 @@ This state machine is used by CMRPC.
 CMWRR - Context Management Write Record Responder protocol machine
 ------------------------------------------------------------------
 Handles RPC parameter write requests.
-Triggers the :c:func:`pnet_write_ind` user callback for some values.
+Triggers the :cpp:type:`pnet_write_ind` user callback for some values.
 
 
 CMDEV - Context Management protocol machine Device
@@ -352,12 +352,12 @@ States:
 
 Implements these user functions (via :file:`pnet_api.c`):
 
-* :c:func:`pnet_plug_module`
-* :c:func:`pnet_plug_submodule`
-* :c:func:`pnet_pull_module`
-* :c:func:`pnet_pull_submodule`
-* :c:func:`pnet_application_ready` Triggers the :c:func:`pnet_state_ind` user callback with PNET_EVENT_APPLRDY.
-* :c:func:`pnet_ar_abort`
+* :cpp:func:`pnet_plug_module`
+* :cpp:func:`pnet_plug_submodule`
+* :cpp:func:`pnet_pull_module`
+* :cpp:func:`pnet_pull_submodule`
+* :cpp:func:`pnet_application_ready` Triggers the :cpp:type:`pnet_state_ind` user callback with PNET_EVENT_APPLRDY.
+* :cpp:func:`pnet_ar_abort`
 
 Show the plugged modules and sub-modules, and number of bytes sent and received
 for subslots::
@@ -411,10 +411,10 @@ W_START.
 
 Implements these user functions (via :file:`pnet_api.c`):
 
-* :c:func:`pnet_output_get_data_and_iops`
-* :c:func:`pnet_input_get_iocs`
+* :cpp:func:`pnet_output_get_data_and_iops`
+* :cpp:func:`pnet_input_get_iocs`
 
-Triggers the :c:func:`pnet_new_data_status_ind` user callback on data status
+Triggers the :cpp:type:`pnet_new_data_status_ind` user callback on data status
 changes (not on changes in the data itself).
 
 
@@ -427,13 +427,13 @@ States:
 * W_START
 * RUN
 
-Implements these user functions (via :c:func:`pnet_api.c`):
+Implements these user functions (via :file:`pnet_api.c`):
 
-* :c:func:`pnet_input_set_data_and_iops`
-* :c:func:`pnet_output_set_iocs`
-* :c:func:`pnet_set_primary_state`
-* :c:func:`pnet_set_redundancy_state`
-* :c:func:`pnet_set_provider_state`
+* :cpp:func:`pnet_input_set_data_and_iops`
+* :cpp:func:`pnet_output_set_iocs`
+* :cpp:func:`pnet_set_primary_state`
+* :cpp:func:`pnet_set_redundancy_state`
+* :cpp:func:`pnet_set_provider_state`
 
 Relevant sections in 61158-6-10 (protocol):
 
