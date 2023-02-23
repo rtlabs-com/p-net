@@ -1,3 +1,6 @@
+cmake-build-*/
+.idea/
+
 build*/
 *~
 *#

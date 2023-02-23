@@ -228,6 +228,7 @@ install (FILES
 
 add_subdirectory (src)
 add_subdirectory (samples/pn_dev)
+add_subdirectory (samples/pn_dev_counter)
 
 if (CMAKE_PROJECT_NAME STREQUAL PROFINET AND BUILD_TESTING)
   add_subdirectory (test)

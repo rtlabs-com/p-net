@@ -1,0 +1,187 @@
+<?xml version="1.0"?>
+<ISO15745Profile xmlns="http://www.profibus.com/GSDML/2003/11/DeviceProfile" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.profibus.com/GSDML/2003/11/DeviceProfile ..\xsd\GSDML-DeviceProfile-V2.33.xsd">
+	<!--***** GSDML was created by TwinCAT *****
+ Original GSDML: GSDML-V2.33-beckhoff-TCPNDevice-20200116.xml
+ TwinCAT Version: v3.1 (Build 4024.35)
+ Writer Version: 2
+ ***************************************************-->
+	<ProfileHeader>
+		<ProfileIdentification>PROFINET Device Profile</ProfileIdentification>
+		<ProfileRevision>1.00</ProfileRevision>
+		<ProfileName>Device Profile for PROFINET Devices</ProfileName>
+		<ProfileSource>PROFIBUS Nutzerorganisation e. V. (PNO)</ProfileSource>
+		<ProfileClassID>Device</ProfileClassID>
+		<ISO15745Reference>
+			<ISO15745Part>4</ISO15745Part>
+			<ISO15745Edition>1</ISO15745Edition>
+			<ProfileTechnology>GSDML</ProfileTechnology>
+		</ISO15745Reference>
+	</ProfileHeader>
+	<ProfileBody>
+		<DeviceIdentity VendorID="0x0120" DeviceID="0x0021">
+			<InfoText TextId="IDT_FamilyDescription"/>
+			<VendorName Value="Beckhoff Automation"/>
+		</DeviceIdentity>
+		<DeviceFunction>
+			<Family MainFamily="I/O" ProductFamily="TwinCAT Profinet I/O"/>
+		</DeviceFunction>
+		<ApplicationProcess>
+			<DeviceAccessPointList>
+				<DeviceAccessPointItem ID="DAP 2" PNIO_Version="V2.3" PhysicalSlots="0..2" ModuleIdentNumber="0x00000002" MinDeviceInterval="32" ImplementationType="Software Schema V2.3" DNS_CompatibleName="tcpniodevice" FixedInSlots="0" ObjectUUID_LocalIndex="0" RequiredSchemaVersion="V2.1" MultipleWriteSupported="true" AddressAssignment="DCP;LOCAL" SharedInputSupported="true" SharedDeviceSupported="true" DeviceAccessSupported="true" NumberOfDeviceAccessAR="1" CheckDeviceID_Allowed="true" NameOfStationNotTransferable="false">
+					<ModuleInfo>
+						<Name TextId="IDT_MODULE_NAME_DAP2"/>
+						<InfoText TextId="IDT_INFO_DAP2"/>
+						<VendorName Value="Beckhoff Automation"/>
+						<OrderNumber Value="TwinCAT PN Device"/>
+						<HardwareRelease Value="1"/>
+						<SoftwareRelease Value="V1.00"/>
+					</ModuleInfo>
+					<CertificationInfo ConformanceClass="B" ApplicationClass="" NetloadClass="I"/>
+					<SubslotList>
+						<SubslotItem SubslotNumber="32768" TextId="IDT_Interface_SM"/>
+						<SubslotItem SubslotNumber="32769" TextId="IDT_Port1_SM"/>
+					</SubslotList>
+					<IOConfigData MaxInputLength="1440" MaxOutputLength="1440" MaxDataLength="2880"/>
+					<UseableModules>
+						<ModuleItemRef ModuleItemTarget="BIT_I8" AllowedInSlots="2" FixedInSlots="2"/>
+						<ModuleItemRef ModuleItemTarget="WORD_O" AllowedInSlots="1" FixedInSlots="1"/>
+					</UseableModules>
+					<VirtualSubmoduleList>
+						<VirtualSubmoduleItem ID="DAP 2" SubmoduleIdentNumber="0x00000001" Writeable_IM_Records="1 2 3 4" MayIssueProcessAlarm="true">
+							<IOData/>
+							<RecordDataList>
+								<ParameterRecordDataItem Index="4096" Length="4" TransferSequence="0">
+									<Name TextId="Device parameters"/>
+									<Const Data="0x00,0x01,0x00,0x00" ByteOffset="0"/>
+									<Ref ValueItemTarget="Disabled_Enabled" DataType="Bit" ByteOffset="3" BitOffset="0" DefaultValue="0" AllowedValues="0..1" Changeable="true" Visible="true" TextId="Dummy_TextID"/>
+								</ParameterRecordDataItem>
+							</RecordDataList>
+							<ModuleInfo>
+								<Name TextId="IDT_MODULE_NAME_DAP2"/>
+								<InfoText TextId="IDT_INFO_DAP2"/>
+							</ModuleInfo>
+						</VirtualSubmoduleItem>
+					</VirtualSubmoduleList>
+					<SystemDefinedSubmoduleList>
+						<InterfaceSubmoduleItem ID="IDS_2I" SupportedRT_Classes="RT_CLASS_1" SupportedProtocols="SNMP;LLDP" NetworkComponentDiagnosisSupported="false" SubslotNumber="32768" TextId="IDT_MODULE_NAME_DAP2" SubmoduleIdentNumber="0x00008000" IsochroneModeSupported="false">
+							<ApplicationRelations NumberOfAR="2">
+								<TimingProperties SendClock="32 64 128"/>
+							</ApplicationRelations>
+						</InterfaceSubmoduleItem>
+						<PortSubmoduleItem ID="IDS_2P" SubslotNumber="32769" LinkStateDiagnosisCapability="Up+Down" PortDeactivationSupported="false" TextId="IDT_Port1" SubmoduleIdentNumber="0x00008001" MAUType="100BASETXFD">
+							<MAUTypeList>
+								<MAUTypeItem Value="16"/>
+							</MAUTypeList>
+						</PortSubmoduleItem>
+					</SystemDefinedSubmoduleList>
+					<Graphics>
+						<GraphicItemRef Type="DeviceSymbol" GraphicItemTarget="1"/>
+					</Graphics>
+				</DeviceAccessPointItem>
+			</DeviceAccessPointList>
+			<ModuleList>
+				<ModuleItem ID="BIT_I8" ModuleIdentNumber="0x00000100">
+					<ModuleInfo CategoryRef="Byte Module">
+						<Name TextId="ID_1 8 DI"/>
+						<InfoText TextId="IDT_INFO_Module1"/>
+					</ModuleInfo>
+					<VirtualSubmoduleList>
+						<VirtualSubmoduleItem ID="BIT_I8" SubmoduleIdentNumber="0x00000101" MayIssueProcessAlarm="true">
+							<IOData>
+								<Input>
+									<DataItem DataType="Unsigned8" UseAsBits="true" TextId="1ByteIn"/>
+								</Input>
+							</IOData>
+							<RecordDataList/>
+							<ModuleInfo>
+								<Name TextId="ID_1 8 DI"/>
+								<InfoText TextId="IDT_INFO_Module1"/>
+							</ModuleInfo>
+						</VirtualSubmoduleItem>
+					</VirtualSubmoduleList>
+				</ModuleItem>
+				<ModuleItem ID="WORD_O" ModuleIdentNumber="0x00004100">
+					<ModuleInfo CategoryRef="Word Module">
+						<Name TextId="ID_41 1Word Out"/>
+						<InfoText TextId="IDT_INFO_Module41"/>
+					</ModuleInfo>
+					<VirtualSubmoduleList>
+						<VirtualSubmoduleItem ID="41" SubmoduleIdentNumber="0x00004101" MayIssueProcessAlarm="true">
+							<IOData>
+								<Output>
+									<DataItem DataType="Unsigned16" UseAsBits="false" TextId="1WordOut"/>
+								</Output>
+							</IOData>
+							<RecordDataList/>
+							<ModuleInfo>
+								<Name TextId="ID_41 1Word Out"/>
+								<InfoText TextId="IDT_INFO_Module41"/>
+							</ModuleInfo>
+						</VirtualSubmoduleItem>
+					</VirtualSubmoduleList>
+				</ModuleItem>
+			</ModuleList>
+			<ValueList>
+				<ValueItem ID="Disabled_Enabled">
+					<Help TextId="Help_OnOff"/>
+					<Assignments>
+						<Assign TextId="disabled" Content="0"/>
+						<Assign TextId="enabled" Content="1"/>
+					</Assignments>
+				</ValueItem>
+			</ValueList>
+			<GraphicsList>
+				<GraphicItem ID="1" GraphicFile="GSDML-0120-0021-TCPNDevice"/>
+				<GraphicItem ID="2" GraphicFile="GSDML-0120-0021-TCPNDevice"/>
+			</GraphicsList>
+			<CategoryList>
+				<CategoryItem ID="Byte Module" TextId="Byte Module"/>
+				<CategoryItem ID="Word Module" TextId="Word Module"/>
+			</CategoryList>
+			<ExternalTextList>
+				<PrimaryLanguage>
+					<Text TextId="IDT_FamilyDescription" Value="TwinCAT products"/>
+					<Text TextId="IDT_MODULE_NAME_DAP2" Value="TwinCAT Device V2.3, 1 Port"/>
+					<Text TextId="IDT_Interface_SM" Value="X1"/>
+					<Text TextId="IDT_Port1_SM" Value="X1 P1"/>
+					<Text TextId="IDT_Port1" Value="Port 1"/>
+					<Text TextId="IDT_INFO_DAP2" Value="TwinCAT PLC PROFINET I/O Device with I/Os, V2.3, 1 port diagnostic supported"/>
+					<Text TextId="Help_OnOff" Value="disable or enable"/>
+					<Text TextId="Device parameters" Value="Device parameters"/>
+					<Text TextId="enabled" Value="enabled"/>
+					<Text TextId="disabled" Value="disabled"/>
+					<Text TextId="Dummy_TextID" Value="Dummy for certification"/>
+					<Text TextId="Byte Module" Value="Byte modules"/>
+					<Text TextId="Word Module" Value="Word modules"/>
+					<Text TextId="ID_1 8 DI" Value="1 Byte Input"/>
+					<Text TextId="IDT_INFO_Module1" Value="1 Byte Input"/>
+					<Text TextId="ID_41 1Word Out" Value="1 Word Output"/>
+					<Text TextId="IDT_INFO_Module41" Value="1 Word Output"/>
+					<Text TextId="1ByteIn" Value="1 Byte Input"/>
+					<Text TextId="1WordOut" Value="1 Word Output"/>
+				</PrimaryLanguage>
+				<Language xml:lang="de">
+					<Text TextId="IDT_FamilyDescription" Value="TwinCAT Produkte"/>
+					<Text TextId="IDT_MODULE_NAME_DAP2" Value="TwinCAT Device V2.3, 1 Port"/>
+					<Text TextId="IDT_Interface_SM" Value="X1"/>
+					<Text TextId="IDT_Port1_SM" Value="X1 P1"/>
+					<Text TextId="IDT_Port1" Value="Port 1"/>
+					<Text TextId="IDT_INFO_DAP2" Value="TwinCAT PLC PROFINET I/O Gerät mit  I/Os, V2.3, 1 Port Diagnose wird unterstützt "/>
+					<Text TextId="Help_OnOff" Value="zu- oder abschalten"/>
+					<Text TextId="Device parameters" Value="Gerätespezifische Parameter"/>
+					<Text TextId="enabled" Value="freigegeben"/>
+					<Text TextId="disabled" Value="gesperrt"/>
+					<Text TextId="Dummy_TextID" Value="Dummy für Zertifizierung"/>
+					<Text TextId="Byte Module" Value="Byte Modul"/>
+					<Text TextId="Word Module" Value="Word Modul"/>
+					<Text TextId="ID_1 8 DI" Value="1 Byte Eingang"/>
+					<Text TextId="IDT_INFO_Module1" Value="1 Byte Eingang"/>
+					<Text TextId="ID_41 1Word Out" Value="1 Word Ausgang"/>
+					<Text TextId="IDT_INFO_Module41" Value="1 Word Ausgang"/>
+					<Text TextId="1ByteIn" Value="1 Byte Eingang"/>
+					<Text TextId="1WordOut" Value="1 Word Ausgang"/>
+				</Language>
+			</ExternalTextList>
+		</ApplicationProcess>
+	</ProfileBody>
+</ISO15745Profile>
