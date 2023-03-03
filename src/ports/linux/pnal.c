@@ -28,8 +28,10 @@
 #include <linux/if_link.h>
 #include <linux/sockios.h>
 #include <net/if.h>
+#include <netinet/in.h>
 #include <pthread.h>
 #include <sys/ioctl.h>
+#include <sys/socket.h>
 #include <sys/syscall.h>
 #include <sys/sysinfo.h>
 
@@ -44,6 +46,19 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+
+#ifndef IN_LINKLOCAL
+#define IN_LINKLOCALNETNUM 0xa9fe0000
+#define IN_LINKLOCAL(addr) ((addr & IN_CLASSB_NET) == IN_LINKLOCALNETNUM)
+#endif
+
+#ifndef IN_LOOPBACK
+#define IN_LOOPBACK(addr) ((addr & IN_CLASSA_NET) == 0x7f000000)
+#endif
+
+#ifndef IN_ZERONET
+#define IN_ZERONET(addr) ((addr & IN_CLASSA_NET) == 0)
+#endif
 
 /********************************* Files *************************************/
 
@@ -558,6 +573,84 @@ pnal_ipaddr_t pnal_get_netmask (const char * interface_name)
    return netmask;
 }
 
+static int sincmp(struct sockaddr_in *cand, struct sockaddr_in *next)
+{
+   in_addr_t cand_in, next_in;
+
+   cand_in = ntohl(cand->sin_addr.s_addr);
+   next_in = ntohl(next->sin_addr.s_addr);
+
+   if (IN_ZERONET(next_in))
+      return 0;
+
+   if (IN_LOOPBACK(next_in))
+   {
+      if (IN_ZERONET(cand_in))
+         return 1;
+
+      return 0;
+   }
+
+   if (IN_LINKLOCAL(next_in))
+   {
+      if (!IN_ZERONET(cand_in) && !IN_LOOPBACK(cand_in) && !IN_LINKLOCAL(cand_in))
+         return 0;
+
+      return 1;
+   }
+
+   return 1;
+}
+
+int pnal_get_ipmask(const char *interface_name, pnal_ipaddr_t *p_ip, pnal_ipaddr_t *p_netmask)
+{
+   struct sockaddr_in *addr, *mask;
+   struct ifaddrs *cand = NULL;
+   struct ifaddrs *ifap, *ifa;
+
+   if (getifaddrs(&ifap) < 0)
+      return -1;
+
+   for (ifa = ifap; ifa; ifa = ifa->ifa_next)
+   {
+      if (!ifa->ifa_addr)
+         continue;
+
+      if (strcmp(interface_name, ifa->ifa_name))
+         continue;
+
+      if (ifa->ifa_addr->sa_family != AF_INET)
+         continue;
+
+      if (!ifa->ifa_addr || !ifa->ifa_netmask)
+         continue;
+
+      if (!cand)
+         cand = ifa;
+
+      if (sincmp((struct sockaddr_in *)cand->ifa_addr, (struct sockaddr_in *)ifa->ifa_addr))
+         cand = ifa;
+
+      addr = (struct sockaddr_in *)cand->ifa_addr;
+      printf("Best cand: %s\n", inet_ntoa(addr->sin_addr));
+   }
+
+   if (!cand)
+   {
+      freeifaddrs(ifap);
+      errno = ENONET;           /* Machine is not on the network */
+      return -1;
+   }
+
+   addr = (struct sockaddr_in *)cand->ifa_addr;
+   mask = (struct sockaddr_in *)cand->ifa_netmask;
+   *p_ip = ntohl(addr->sin_addr.s_addr);
+   *p_netmask = ntohl(mask->sin_addr.s_addr);
+   freeifaddrs(ifap);
+
+   return 0;
+}
+
 pnal_ipaddr_t pnal_get_gateway (const char * interface_name)
 {
    int rc, flags, cnt, use, metric, mtu, win, irtt;
@@ -630,8 +723,11 @@ int pnal_get_ip_suite (
 {
    int ret = -1;
 
-   *p_ipaddr = pnal_get_ip_address (interface_name);
-   *p_netmask = pnal_get_netmask (interface_name);
+   if (pnal_get_ipmask(interface_name, p_ipaddr, p_netmask))
+   {
+      p_ipaddr = PNAL_IPADDR_INVALID;
+      p_netmask = PNAL_IPADDR_INVALID;
+   }
    *p_gw = pnal_get_gateway (interface_name);
    ret = pnal_get_hostname (hostname);
 

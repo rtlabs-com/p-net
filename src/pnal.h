@@ -488,6 +488,21 @@ pnal_ipaddr_t pnal_get_ip_address (const char * interface_name);
 pnal_ipaddr_t pnal_get_netmask (const char * interface_name);
 
 /**
+ * Read interface IP address and netmask. For IPv4.
+ *
+ * Replacement for pnal_get_ip_address() and pnal_get_netmask(), uses
+ * getifaddrs() instead of ioctl() to find the best IP address on the
+ * given interface.
+ *
+ * @param interface_name   In:    Name of network interface
+ * @param p_ip             Out:   IP address
+ * @param p_netmask        out:   IP netmask
+ * @return 0 on success and
+ *         -1 if an error occurred.
+ */
+int pnal_get_ipmask(const char *interface_name, pnal_ipaddr_t *p_ip, pnal_ipaddr_t *p_netmask);
+
+/**
  * Read the default gateway address as an integer. For IPv4.
  *
  * Assumes the default gateway is found on .1 on same subnet as the IP address.
