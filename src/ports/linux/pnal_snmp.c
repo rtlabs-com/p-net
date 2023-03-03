@@ -44,6 +44,12 @@ static void pnal_snmp_thread (void * arg)
    /* make us an agentx client. */
    netsnmp_enable_subagent();
 
+   if (pnet->snmp_agentx_socket)
+   {
+      netsnmp_ds_set_string(NETSNMP_DS_APPLICATION_ID, NETSNMP_DS_AGENT_X_SOCKET,
+			    pnet->snmp_agentx_socket);
+   }
+
    /* initialize the agent library */
    init_agent ("lldpMIB");
 
@@ -78,4 +84,12 @@ int pnal_snmp_init (struct pnet * pnet, const pnal_cfg_t * pnal_cfg)
       pnal_snmp_thread,
       pnet);
    return 0;
+}
+
+void pnal_snmp_set_agentx_socket(struct pnet * net, const char * path)
+{
+   if (!net || !path)
+      return;
+
+   net->snmp_agentx_socket = (char *)path;
 }

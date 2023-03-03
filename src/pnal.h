@@ -439,6 +439,14 @@ void pnal_udp_close (uint32_t id);
 int pnal_snmp_init (pnet_t * net, const pnal_cfg_t * pnal_cfg);
 
 /**
+ * Configure custom SNMP AgentX socket path.  For Net-SNMP.
+ *
+ * @param net    InOut: The p-net stack instance
+ * @param path   In:    Path to AgentX socket
+ */
+void pnal_snmp_set_agentx_socket(struct pnet * net, const char * path);
+
+/**
  * Get network parameters (IP address, netmask etc)
  *
  * For example:
