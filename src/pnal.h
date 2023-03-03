@@ -491,9 +491,11 @@ pnal_ipaddr_t pnal_get_netmask (const char * interface_name);
  * Read the default gateway address as an integer. For IPv4.
  *
  * Assumes the default gateway is found on .1 on same subnet as the IP address.
+ * On Linux systems /proc/net/route is parsed instead, meaning this function
+ * may fail and return ::PNAL_IPADDR_INVALID.
  *
  * @param interface_name   In:    Name of network interface
- * @return netmask
+ * @return Gateway IP address.
  */
 pnal_ipaddr_t pnal_get_gateway (const char * interface_name);
 

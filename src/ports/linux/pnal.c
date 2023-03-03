@@ -560,20 +560,55 @@ pnal_ipaddr_t pnal_get_netmask (const char * interface_name)
 
 pnal_ipaddr_t pnal_get_gateway (const char * interface_name)
 {
-   /* TODO Read the actual default gateway (somewhat complicated) */
+   int rc, flags, cnt, use, metric, mtu, win, irtt;
+   uint32_t dest, gw, addr, mask;
+   int best = 100000, found = 0;
+   char buf[256], iface[17];
+   char *ptr;
+   FILE *fp;
 
-   pnal_ipaddr_t ip;
-   pnal_ipaddr_t gateway;
-
-   ip = pnal_get_ip_address (interface_name);
-   if (ip == PNAL_IPADDR_INVALID)
+   fp = fopen("/proc/net/route", "r");
+   if (!fp)
    {
+     notfound:
+      errno = ENOENT;
       return PNAL_IPADDR_INVALID;
    }
 
-   gateway = (ip & 0xFFFFFF00) | 0x00000001;
+   /* Skip heading */
+   ptr = fgets(buf, sizeof(buf), fp);
+   if (!ptr)
+      goto end;
 
-   return gateway;
+   while (fgets(buf, sizeof(buf), fp) != NULL)
+   {
+      rc = sscanf(buf, "%16s %X %X %X %d %d %d %X %d %d %d\n",
+                  iface, &dest, &addr, &flags, &cnt, &use, &metric,
+                  &mask, &mtu, &win, &irtt);
+
+      if (rc < 10 || !(flags & 1)) /* IFF_UP */
+         continue;
+
+      if (dest != 0 || mask != 0)
+         continue;
+
+      if (interface_name && strcmp(interface_name, iface))
+         continue;
+
+      if (metric >= best)
+         continue;
+
+      best = metric;
+      gw = addr;
+      found = 1;
+   }
+
+  end:
+   fclose(fp);
+   if (!found)
+      goto notfound;
+
+   return ntohl(gw);
 }
 
 int pnal_get_hostname (char * hostname)
