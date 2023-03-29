@@ -224,7 +224,7 @@ void app_utils_get_error_code_strings (
    const char ** err_cls_str,
    const char ** err_code_str)
 {
-   if (err_cls_str == NULL || err_cls_str == NULL)
+   if (err_cls_str == NULL || err_code_str == NULL)
    {
       return;
    }
