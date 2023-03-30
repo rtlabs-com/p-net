@@ -67,6 +67,7 @@ extern "C" {
 #include "pf_fspm.h"
 #include "pf_pdport.h"
 #include "pf_port.h"
+#include "pf_plugsm.h"
 
 #ifdef __cplusplus
 }

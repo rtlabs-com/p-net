@@ -636,6 +636,43 @@ typedef int (*pnet_dcontrol_ind) (
    pnet_result_t * p_result);
 
 /**
+ * Indication to the application that a submodule has been released, and is
+ * now owned by a new AR.
+ *
+ * After receiving this, the application is required to set new values for the
+ * following, as applicable for the subslot in question:
+ *
+ * - input data
+ * - input IOPS
+ * - output IOCS
+ *
+ * After setting the values, the application must call
+ * \a pnet_sm_released_cnf(), for the stack to function properly.
+ *
+ * This callback is mandatory to implement if p-net has been configured to
+ * accept more than one AR (PNET_MAX_AR > 1), in which case shared device is
+ * supported. If only one AR is allowed, this callback is never called.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param arg              InOut: User-defined data (not used by p-net)
+ * @param arep             In:    The AREP.
+ * @param api              In:    The API containing the submodule.
+ * @param slot_number      In:    The slot containing the submodule.
+ * @param subslot_number   In:    The subslot containing the submodule.
+ * @param p_result         Out:   Detailed error information if return != 0.
+ * @return  0  on success.
+ *          -1 if an error occurred.
+ */
+typedef int (*pnet_sm_released_ind) (
+   pnet_t * net,
+   void * arg,
+   uint32_t arep,
+   uint32_t api,
+   uint16_t slot_number,
+   uint16_t subslot_number,
+   pnet_result_t * p_result);
+
+/**
  * Indication to the application that a CControl confirmation was received from
  * the controller. Typically this means that the controller has received our
  * "Application ready" message.
@@ -712,6 +749,10 @@ typedef int (*pnet_state_ind) (
  *
  * In case of error the application should provide error information in \a
  * p_result.
+ *
+ * Note that the read request from the PLC does not contain any information on
+ * the number of bytes it expects to receive, just the maximum number of
+ * bytes it is able to handle.
  *
  * @param net              InOut: The p-net stack instance
  * @param arg              InOut: User-defined data (not used by p-net)
@@ -1293,8 +1334,9 @@ typedef struct pnet_cfg
    pnet_alarm_ack_cnf alarm_ack_cnf_cb;
    pnet_reset_ind reset_cb;
    pnet_signal_led_ind signal_led_cb;
+   pnet_sm_released_ind sm_released_cb;
 
-   /** Userdata passed to callbacks, not used by stack */
+   /** User data passed to callbacks, not used by stack */
    void * cb_arg;
 
    pnet_im_0_t im_0_data;
@@ -1410,6 +1452,19 @@ PNET_EXPORT void pnet_handle_periodic (pnet_t * net);
 PNET_EXPORT int pnet_application_ready (pnet_t * net, uint32_t arep);
 
 /**
+ * Application signals that it is ready to exchange data for a submodule that
+ * has changed owner.
+ *
+ * This should only be called after the application has set subslot data
+ * following a \a pnet_sm_released_ind() callback. It must not be called in any
+ * other situation.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param arep             In:    The AREP
+ */
+PNET_EXPORT void pnet_sm_released_cnf (pnet_t * net, uint32_t arep);
+
+/**
  * Plug a module into a slot.
  *
  * This function is used to plug a specific module into a specific slot.
@@ -1422,7 +1477,7 @@ PNET_EXPORT int pnet_application_ready (pnet_t * net, uint32_t arep);
  * @param slot             In:    The slot number.
  * @param module_ident     In:    The module ident number.
  * @return  0  if a module could be plugged into the slot.
- *          -1 if an error occurred.
+ *          -1 if an error occurred (for example module already plugged)
  */
 PNET_EXPORT int pnet_plug_module (
    pnet_t * net,
@@ -1451,7 +1506,7 @@ PNET_EXPORT int pnet_plug_module (
  * @param length_input     In:    The size in bytes of the input data.
  * @param length_output    In:    The size in bytes of the output data.
  * @return  0  if the sub-module could be plugged into the sub-slot.
- *          -1 if an error occurred.
+ *          -1 if an error occurred (for example submodule already plugged)
  */
 PNET_EXPORT int pnet_plug_submodule (
    pnet_t * net,
@@ -1476,7 +1531,7 @@ PNET_EXPORT int pnet_plug_submodule (
  * @param api              In:    The API identifier.
  * @param slot             In:    The slot number.
  * @return  0  if a module could be pulled from the slot.
- *          -1 if an error occurred.
+ *          -1 if an error occurred (for example module not plugged)
  */
 PNET_EXPORT int pnet_pull_module (pnet_t * net, uint32_t api, uint16_t slot);
 
@@ -1490,7 +1545,7 @@ PNET_EXPORT int pnet_pull_module (pnet_t * net, uint32_t api, uint16_t slot);
  * @param slot             In:    The slot number.
  * @param subslot          In:    The sub-slot number.
  * @return  0  if the sub-module could be pulled from the sub-slot.
- *          -1 if an error occurred.
+ *          -1 if an error occurred (for example submodule not plugged)
  */
 PNET_EXPORT int pnet_pull_submodule (
    pnet_t * net,
@@ -1503,6 +1558,10 @@ PNET_EXPORT int pnet_pull_submodule (
  *
  * This function may be called to set new data and IOPS values of a sub-slot to
  * send to the controller.
+ *
+ * You need to call this function on all subslots having input data to the PLC,
+ * before calling \a pnet_application_ready(). This includes all subslots in the
+ * DAP slot (slot 0).
  *
  * @param net              InOut: The p-net stack instance
  * @param api              In:    The API.
@@ -1604,6 +1663,9 @@ PNET_EXPORT int pnet_output_get_data_and_iops (
  * This function is used to set the device consumer status (IOCS)
  * of a specific sub-slot. It is used for output sub-slots (data from the
  * controller) to send consumer status back to the controller.
+ *
+ * You need to call this function on all subslots having output data
+ * to the PLC, before calling \a pnet_application_ready().
  *
  * @param net              InOut: The p-net stack instance
  * @param api              In:    The API.

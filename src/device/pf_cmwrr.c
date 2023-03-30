@@ -179,6 +179,7 @@ static int pf_cmwrr_write (
    uint16_t * p_req_pos,
    pnet_result_t * p_result)
 {
+   pf_subslot_t * subslot = NULL;
    int ret = -1;
 
    if (
@@ -213,7 +214,23 @@ static int pf_cmwrr_write (
          p_ar->arep);
    }
 
-   if (p_write_request->index <= PF_IDX_USER_MAX)
+   if (
+      (pf_cmdev_get_subslot_full (
+          net,
+          p_write_request->api,
+          p_write_request->slot_number,
+          p_write_request->subslot_number,
+          &subslot) == 0) &&
+      (((subslot->ownsm_state != PF_OWNSM_STATE_IOC) &&
+        (subslot->ownsm_state != PF_OWNSM_STATE_IOS)) ||
+       (subslot->owner != p_ar)))
+   {
+      p_result->pnio_status.error_code = PNET_ERROR_CODE_WRITE;
+      p_result->pnio_status.error_decode = PNET_ERROR_DECODE_PNIORW;
+      p_result->pnio_status.error_code_1 = PNET_ERROR_CODE_1_ACC_ACCESS_DENIED;
+      p_result->pnio_status.error_code_2 = 0;
+   }
+   else if (p_write_request->index <= PF_IDX_USER_MAX)
    {
       /* User defined indexes */
       ret = pf_fspm_cm_write_ind (

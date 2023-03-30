@@ -472,6 +472,21 @@ int pnet_application_ready (pnet_t * net, uint32_t arep)
    return ret;
 }
 
+void pnet_sm_released_cnf (pnet_t * net, uint32_t arep)
+{
+   pf_ar_t * ar = NULL;
+
+   LOG_DEBUG (
+      PNET_LOG,
+      "API(%d): Application confirms released submodule for AREP %" PRIu32 "\n",
+      __LINE__,
+      arep);
+   if (pf_ar_find_by_arep (net, arep, &ar) == 0)
+   {
+      pf_plugsm_application_ready_req (net, ar);
+   }
+}
+
 int pnet_ar_abort (pnet_t * net, uint32_t arep)
 {
    int ret = -1;

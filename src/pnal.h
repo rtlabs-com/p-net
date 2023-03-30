@@ -511,6 +511,8 @@ int pnal_get_macaddress (const char * interface_name, pnal_ethaddr_t * p_mac);
 /**
  * Read the current host name
  *
+ * The resulting string is null terminated.
+ *
  * @param hostname         Out:   Host name, for example my_laptop_4. Existing
  *                                buffer should have size
  *                                PNAL_HOSTNAME_MAX_SIZE.
