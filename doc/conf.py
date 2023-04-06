@@ -4,6 +4,8 @@
 # list see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
+
+import os
 import pathlib
 import re
 import sys
@@ -14,10 +16,6 @@ import time
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-#
-# import os
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
 
 pathobj_docs_dir = pathlib.Path(__file__).parent.absolute()
 pathobj_rootdir = pathobj_docs_dir.parent.absolute()
@@ -42,16 +40,20 @@ author = 'RT-Labs'
 # ones.
 extensions = [
     "breathe",
-    "myst_parser",
-    "rst2pdf.pdfbuilder",
-    "sphinx_rtd_theme",
+    "recommonmark",
+    "sphinx_copybutton",
+    "sphinx_jinja",
+    "sphinx.ext.autosectionlabel",
+    "sphinx.ext.graphviz",
+    "sphinxcontrib.kroki",
+    "sphinxcontrib.programoutput",
     "sphinxcontrib.spelling",
 ]
 
 needs_sphinx = "1.8"
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ["_templates"]
+templates_path = ["../../_templates"]
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -65,19 +67,17 @@ source_suffix = {
     '.md': 'markdown',
 }
 
+breathe_projects = {project: "../build/doc/xml/"}
+breathe_default_project = project
+
 
 # -- Options for HTML output -------------------------------------------------
 
-# The theme to use for HTML and HTML Help pages.  See the documentation for
-# a list of builtin themes.
-#
-html_theme = "sphinx_rtd_theme"
+html_context = {
+   "default_mode": "light"
+}
 
-# Add any paths that contain custom static files (such as style sheets) here,
-# relative to this directory. They are copied after the builtin static files,
-# so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ["static"]
-
+html_theme = "sphinx_book_theme"
 html_theme_options = {
     "show_nav_level": 3,
     "home_page_in_toc": True,
@@ -89,14 +89,15 @@ html_theme_options = {
 }
 
 html_last_updated_fmt = "%Y-%m-%d %H:%M"
-breathe_projects = {project: "../build/doc/xml/"}
-breathe_default_project = project
+html_static_path = ["static"]
+html_logo = "static/i/p-net.svg"
+html_show_sourcelink = False
 
-html_css_files = [
-    "../../css/custom_rtd.css",  # Requested by web developer
-    "css/fix_table_width.css",
-    "css/change_header_size.css",
-]
+if os.getenv("USE_EXTERNAL_CSS") is not None:
+    html_css_files = [
+        "https://rt-labs.com/content/themes/rtlabs2020/assets/css/style.css",
+        "https://rt-labs.com/content/themes/rtlabs2020/assets/css/rt_custom_sphinx.css",
+    ]
 
 
 # -- Options for PDF output -------------------------------------------------
