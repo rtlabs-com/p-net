@@ -468,6 +468,26 @@ typedef struct pf_rpc_lookup_req
    uint16_t udpPort;
 } pf_rpc_lookup_req_t;
 
+typedef enum
+{
+   PF_RPC_NCA_RPC_VERSION_MISMATCH = 0x1C000008,
+   PF_RPC_NCA_UNSPEC_REJECT = 0x1C000009,
+   PF_RPC_NCA_S_BAD_ACTID = 0x1C00000A,
+   PF_RPC_NCA_WHO_ARE_YOU_FAILED = 0x1C00000B,
+   PF_RPC_NCA_MANAGER_NOT_ENTERED = 0x1C00000C,
+   PF_RPC_NCA_UNSUPPORTED_AUTHN_LEVEL = 0x1C00001D,
+   PF_RPC_NCA_INVALID_CHECKSUM = 0x1C00001F,
+   PF_RPC_NCA_INVALID_CRC = 0x1C000020,
+   PF_RPC_NCA_OP_RNG_ERROR = 0x1C010002,
+   PF_RPC_NCA_UNK_IF = 0x1C010003,
+   PF_RPC_NCA_WRONG_BOOT_TIME = 0x1C010006,
+   PF_RPC_NCA_S_YOU_CRASHED = 0x1C010009,
+   PF_RPC_NCA_PROTO_ERROR = 0x1C01000B,
+   PF_RPC_NCA_OUT_ARGS_TOO_BIG = 0x1C010013,
+   PF_RPC_NCA_SERVER_TOO_BUSY = 0x1C010014,
+   PF_RPC_NCA_UNSUPPORTED_TYPE = 0x1C010017
+} pf_rpc_nca_reject_status_t;
+
 /************************** Block header *************************************/
 
 typedef enum pf_block_type_values
