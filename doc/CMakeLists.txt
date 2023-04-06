@@ -87,6 +87,17 @@ if (SPHINX_FOUND AND DOXYGEN_FOUND)
   add_sphinx_builder(sphinx-spelling spelling)
   add_sphinx_builder(sphinx-linkcheck linkcheck)
   add_sphinx_builder(sphinx-pdf latexpdf)
+  add_dependencies(sphinx-html remove_badge_svg_images)
   add_dependencies(sphinx-pdf remove_badge_svg_images)
+
+    # Zip the documentation
+  message("p-net revision: ${PROFINET_GIT_REVISION}")
+  add_custom_command(
+    TARGET sphinx-html POST_BUILD
+    COMMAND zip -FS -r pnet_docs_${PROFINET_GIT_REVISION}.zip sphinx/html/ > /dev/null
+    COMMAND echo "The Sphinx HTML and ZIP files are located in ${CMAKE_CURRENT_BINARY_DIR}"
+    BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/pnet_docs_${PROFINET_GIT_REVISION}.zip
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    COMMENT "Zipping HTML documentation")
 
 endif()
