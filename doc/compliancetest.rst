@@ -915,8 +915,8 @@ Modify this line in the :file:`/root/Netload/Scripts/Netload-Tester.sh` script::
     Delay="30s"
 
 
-Troubleshooting
----------------
+Compliance test troubleshooting
+-------------------------------
 For the :guilabel:`Get MAC Address` button in ART tester to work, you need to
 have the "Device b" connected.
 

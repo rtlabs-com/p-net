@@ -13,8 +13,8 @@ https://www.infineon.com/cms/en/product/evaluation-boards/kit_xmc48_relax_ecat_v
 You can use other evaluation boards supported by rt-kernel, but you need to
 adapt paths etc accordingly.
 
-Preparations
-------------
+Prepare your laptop
+-------------------
 Install the following tools on a Linux laptop:
 
 * Workbench (Version 2020.1 or later)
@@ -46,8 +46,8 @@ Copying the rt-kernel sources
     make clean
     make -j
 
-Downloading and compiling P-Net
--------------------------------
+Downloading and compiling the Profinet stack
+--------------------------------------------
 #. Clone the source::
 
     git clone --recurse-submodules https://github.com/rtlabs-com/p-net.git

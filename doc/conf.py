@@ -79,9 +79,13 @@ html_theme = "sphinx_rtd_theme"
 html_static_path = ["static"]
 
 html_theme_options = {
-    "analytics_id": "G-378E9EVTG5",
-    "display_version": True,
-    "navigation_depth": 2,
+    "show_nav_level": 3,
+    "home_page_in_toc": True,
+    "use_repository_button": True,
+    "use_fullscreen_button": False,
+    "navbar_end": ["navbar-icon-links"],
+    "use_download_button": False,
+    "repository_url": "https://github.com/rtlabs-com/p-net",
 }
 
 html_last_updated_fmt = "%Y-%m-%d %H:%M"

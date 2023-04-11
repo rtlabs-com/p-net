@@ -182,8 +182,8 @@ Transferring the controller application to a (controller) Raspberry Pi
    two hours, if using the trial version.
 
 
-Troubleshooting
----------------
+Codesys Troubleshooting
+---------------- -------
 If you receive errors claiming there are missing libraries, click on
 :menuselection:`PLC logic --> Application --> Library Manage` in the left hand panel.
 Codesys should automatically detect if there are any missing libraries.
