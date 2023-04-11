@@ -145,8 +145,8 @@ Sections in 61158-6-10 (protocol) describing alarms:
 +---------------+-------------------------------------------------------------+
 
 
-Diagnosis
----------
+Diagnosis implementation details
+--------------------------------
 Sections in 61784-2 (profiles) describing LLDP:
 
 +---------------+-------------------------------------------------------------+
@@ -201,8 +201,8 @@ subslot uses a linked list of diagnosis items, and stores the index to the
 head of its list.
 
 
-Logbook
--------
+Logbook details
+---------------
 For details, see:
 
 * Profinet 2.4 Services, section 7.3.6

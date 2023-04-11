@@ -17,8 +17,8 @@ After this the sample application will wait for incoming connects.
 An additional hour is required to get another Raspberry Pi up and running
 as an IO-controller (PLC), and to study the sample application data.
 
-Preparations
-------------
+Hardware and software
+---------------------
 Necessary hardware to complete the tutorial:
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * 1 Raspberry Pi as IO-device
@@ -148,8 +148,8 @@ In order to compile P-Net on Raspberry Pi, you need a recent version of
     sudo apt install git
 
 
-Downloading and compiling P-Net
---------------------------------
+Downloading and compiling the P-Net stack
+-----------------------------------------
 #. Create a directory::
 
     mkdir /home/pi/profinet/
@@ -180,8 +180,8 @@ Downloading and compiling P-Net
     mv build/set_profinet_leds.raspberrypi build/set_profinet_leds
 
 
-Notes to advanced users
-^^^^^^^^^^^^^^^^^^^^^^^
+Notes to advanced users: git and cmake details
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 If you already cloned the repository without the ``--recurse-submodules``
 flag then run this in the :file:`p-net` folder::
 
@@ -194,9 +194,9 @@ Alternate cmake command to also adjust some settings::
 You can choose any name for the build folder, for instance if you want
 to build different configurations.
 
-You can use the ``-j`` flag to :command:`make` if you like to enable parallel build.
+You can use the ``-j`` flag to :command:`cmake` if you like to enable parallel build.
 
-Depending on how you installed :command:`make`, you might need to run ``snap run cmake``
+Depending on how you installed :command:`cmake`, you might need to run ``snap run cmake``
 instead of ``cmake``.
 
 It is possible to specify the location of the submodule repositories.
@@ -489,8 +489,8 @@ behavior to the PLC configuration tool.
 A separate page is available with a few ideas on how to write you application.
 Remember to run the "ART tester" now and then to verify that you stay compliant.
 
-Troubleshooting
----------------
+Sample app troubleshooting
+--------------------------
 Timing issues
 ^^^^^^^^^^^^^
 If running on a Linux machine without realtime patches, you might face timeout

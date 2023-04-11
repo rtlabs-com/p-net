@@ -433,8 +433,8 @@ There is at most one diagnosis
 entry stored for each ChannelErrortype, extChannelErrorType combination.
 
 
-LLDP
-----
+LLDP details
+------------
 A protocol for neighbourhood detection. LLDP frames are not forwarded by managed
 switches, so the frames are useful to detect which neighbour the device is
 connected to.
@@ -506,8 +506,8 @@ MAU types:
 * 0x008D Copper 10Base-T1L (single pair Ethernet) Uses MAUTypeExtension 0x200
 
 
-Address resolution protocol (ARP)
----------------------------------
+Address resolution protocol (ARP) details
+-----------------------------------------
 The ARP protocol is used to find the MAC address when the IP address is known.
 Profinet uses it primarily to detect IP address collisions.
 

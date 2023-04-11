@@ -457,8 +457,8 @@ The IOPS status for all subslots will be set to BAD when the PLC is in STOP mode
 cyclic data). However the provider status in the frame from the PLC will be set to STOPPED.
 
 
-Using the Echo module
----------------------
+Using the Echo module from Simatic
+----------------------------------
 The echo module will receive an integer and a float from the PLC, and multiply them with a constant
 value before sending them back to the PLC. The multiplier is module parameter, and can be adjusted
 at startup. The integer is an unsigned 32 bit integer, and the float is a single precision float
