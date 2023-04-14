@@ -1255,16 +1255,47 @@ static int pf_cmrpc_rm_connect_interpret_ind (
             }
             break;
          case PF_BT_IOCR_BLOCK_REQ:
-            if (p_ar->nbr_iocrs < PNET_MAX_CR)
+            if (!(p_ar->nbr_iocrs < PNET_MAX_CR))
             {
-               /* Before it is incremented at the end of this block, the
-               p_ar->nbr_iocrs value is the same as CREP */
+               LOG_ERROR (
+                  PF_RPC_LOG,
+                  "CMRPC(%d): Too many CR given. Max %u CR per AR supported\n",
+                  __LINE__,
+                  PNET_MAX_CR);
+               pf_set_error (
+                  &p_sess->rpc_result,
+                  PNET_ERROR_CODE_CONNECT,
+                  PNET_ERROR_DECODE_PNIO,
+                  PNET_ERROR_CODE_1_CMRPC,
+                  PNET_ERROR_CODE_2_CMRPC_WRONG_BLOCK_COUNT);
+               ret = -1;
+            }
+            else if (
                pf_get_iocr_param (
                   &p_sess->get_info,
                   p_pos,
                   p_ar->nbr_iocrs,
-                  p_ar);
-
+                  p_ar) != 0)
+            {
+               LOG_ERROR (
+                  PF_RPC_LOG,
+                  "CMRPC(%d): Too many CR resources requested."
+                  " Check that the controller (PLC) does not request more"
+                  " modules or submodules than P-Net has been configured"
+                  " to support.\n",
+                  __LINE__);
+               pf_set_error (
+                  &p_sess->rpc_result,
+                  PNET_ERROR_CODE_CONNECT,
+                  PNET_ERROR_DECODE_PNIO,
+                  PNET_ERROR_CODE_1_CMRPC,
+                  PNET_ERROR_CODE_2_CMRPC_OUT_OF_PCA_RESOURCES);
+               ret = -1;
+            }
+            else
+            {
+               /* Before it is incremented at the end of this block, the
+               p_ar->nbr_iocrs value is the same as CREP */
                LOG_DEBUG (
                   PF_RPC_LOG,
                   "CMRPC(%d): Requested send cycle time: %u (in 1/32 of "
@@ -1328,21 +1359,6 @@ static int pf_cmrpc_rm_connect_interpret_ind (
                      p_ar->nbr_iocrs++;
                   }
                }
-            }
-            else
-            {
-               LOG_ERROR (
-                  PF_RPC_LOG,
-                  "CMRPC(%d): Too many CR given. Max %u CR per AR supported\n",
-                  __LINE__,
-                  PNET_MAX_CR);
-               pf_set_error (
-                  &p_sess->rpc_result,
-                  PNET_ERROR_CODE_CONNECT,
-                  PNET_ERROR_DECODE_PNIO,
-                  PNET_ERROR_CODE_1_CMRPC,
-                  PNET_ERROR_CODE_2_CMRPC_WRONG_BLOCK_COUNT);
-               ret = -1;
             }
             break;
          case PF_BT_EXPECTED_SUBMODULE_BLOCK:
