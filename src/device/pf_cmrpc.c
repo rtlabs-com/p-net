@@ -4740,6 +4740,13 @@ static int pf_cmrpc_dce_packet (
 
             /* Update how much the controller has received (ack'ed) */
             p_sess->out_buf_sent_pos += p_sess->out_buf_send_len;
+            if (p_sess->out_fragment_nbr > 0)
+            {
+               /* For all but the first fragment, we have accounted for
+                * the header size an additional time. Correct that here.
+                */
+               p_sess->out_buf_sent_pos -= PF_CMRPC_PDU_HEADER_SIZE;
+            }
             p_sess->out_fragment_nbr++;
 
             /* The fragment acknowledgment is valid (expected) */
