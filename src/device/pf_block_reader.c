@@ -244,8 +244,9 @@ static void pf_get_frame_descriptor (
  * @param p_info           InOut: The parser state.
  * @param p_pos            InOut: Position in the buffer.
  * @param p_ae             Out:   Destination buffer.
+ * @return 0 on success, -1 if out of resources.
  */
-static void pf_get_iocr_api_entry (
+static int pf_get_iocr_api_entry (
    pf_get_info_t * p_info,
    uint16_t * p_pos,
    pf_api_entry_t * p_ae)
@@ -255,16 +256,25 @@ static void pf_get_iocr_api_entry (
    p_ae->api = pf_get_uint32 (p_info, p_pos);
 
    p_ae->nbr_io_data = pf_get_uint16 (p_info, p_pos);
+   if (p_ae->nbr_io_data > NELEMENTS (p_ae->io_data))
+   {
+      return -1;
+   }
    for (ix = 0; ix < p_ae->nbr_io_data; ix++)
    {
       pf_get_frame_descriptor (p_info, p_pos, &p_ae->io_data[ix]);
    }
 
    p_ae->nbr_iocs = pf_get_uint16 (p_info, p_pos);
+   if (p_ae->nbr_iocs > NELEMENTS (p_ae->iocs))
+   {
+      return -1;
+   }
    for (ix = 0; ix < p_ae->nbr_iocs; ix++)
    {
       pf_get_frame_descriptor (p_info, p_pos, &p_ae->iocs[ix]);
    }
+   return 0;
 }
 
 /**
@@ -383,7 +393,7 @@ void pf_get_ar_param (pf_get_info_t * p_info, uint16_t * p_pos, pf_ar_t * p_ar)
    p_ar->ar_param.cm_initiator_station_name[str_len] = '\0';
 }
 
-void pf_get_iocr_param (
+int pf_get_iocr_param (
    pf_get_info_t * p_info,
    uint16_t * p_pos,
    uint16_t ix,
@@ -430,10 +440,22 @@ void pf_get_iocr_param (
       &p_ar->iocrs[ix].param.iocr_multicast_mac_add);
 
    p_ar->iocrs[ix].param.nbr_apis = pf_get_uint16 (p_info, p_pos);
+   if (p_ar->iocrs[ix].param.nbr_apis > PNET_MAX_API)
+   {
+      return -1;
+   }
    for (iy = 0; iy < p_ar->iocrs[ix].param.nbr_apis; iy++)
    {
-      pf_get_iocr_api_entry (p_info, p_pos, &p_ar->iocrs[ix].param.apis[iy]);
+      if (
+         pf_get_iocr_api_entry (
+            p_info,
+            p_pos,
+            &p_ar->iocrs[ix].param.apis[iy]) != 0)
+      {
+         return -1;
+      }
    }
+   return 0;
 }
 
 void pf_get_exp_api_module (

@@ -109,8 +109,9 @@ void pf_get_ar_param (pf_get_info_t * p_info, uint16_t * p_pos, pf_ar_t * p_ar);
  * @param p_pos            InOut: Position in the buffer.
  * @param ix               In:    The current index into p_ar->iocr[].
  * @param p_ar             Out:   Contains the destination structure.
+ * @return 0 on success, -1 if out of resources
  */
-void pf_get_iocr_param (
+int pf_get_iocr_param (
    pf_get_info_t * p_info,
    uint16_t * p_pos,
    uint16_t ix,
