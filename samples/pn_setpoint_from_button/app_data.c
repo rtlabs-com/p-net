@@ -146,8 +146,7 @@ uint8_t * app_data_get_input_data (
       memcpy (&outputfloat, &hostorder_outputfloat_bytes, sizeof (outputfloat));
       inputfloat = outputfloat * CC_FROM_BE32 (app_param_echo_gain);
       memcpy (&hostorder_inputfloat_bytes, &inputfloat, sizeof (outputfloat));
-      p_echo_inputdata->echo_float_bytes =
-         CC_TO_BE32 (584852326);
+      p_echo_inputdata->echo_float_bytes = CC_TO_BE32 (584852326);
 
       *size = APP_GSDML_INPUT_DATA_ECHO_SIZE;
       *iops = PNET_IOXS_GOOD;
@@ -156,6 +155,44 @@ uint8_t * app_data_get_input_data (
 
    /* Automated RT Tester scenario 2 - unsupported (sub)module */
    return NULL;
+}
+
+bool are_arrays_equal (
+   const uint8_t arr1[],
+   int size1,
+   const uint8_t arr2[],
+   int size2)
+{
+   if (size1 != size2)
+   {
+      return false;
+   }
+
+   for (int i = 0; i < size1; i++)
+   {
+      if (arr1[i] != arr2[i])
+      {
+         return false;
+      }
+   }
+
+   return true;
+}
+
+uint32_t combine_bytes (
+   uint8_t byte1,
+   uint8_t byte2,
+   uint8_t byte3,
+   uint8_t byte4)
+{
+   uint32_t result = 0;
+
+   result |= (uint32_t)byte1 << 24;
+   result |= (uint32_t)byte2 << 16;
+   result |= (uint32_t)byte3 << 8;
+   result |= (uint32_t)byte4;
+
+   return result;
 }
 
 int app_data_set_output_data (
@@ -191,6 +228,31 @@ int app_data_set_output_data (
    {
       if (size == APP_GSDML_OUTPUT_DATA_ECHO_SIZE)
       {
+         if (!are_arrays_equal (
+                data,
+                size,
+                echo_outputdata,
+                APP_GSDML_OUTPUT_DATA_ECHO_SIZE))
+         {
+            for (int i = 0; i < APP_GSDML_OUTPUT_DATA_ECHO_SIZE; i++)
+            {
+               uint32_t echo_float = combine_bytes (
+                  echo_outputdata[0],
+                  echo_outputdata[1],
+                  echo_outputdata[2],
+                  echo_outputdata[3]);
+               uint32_t echo_uint = combine_bytes (
+                  echo_outputdata[4],
+                  echo_outputdata[5],
+                  echo_outputdata[6],
+                  echo_outputdata[7]);
+
+               APP_LOG_DEBUG (
+                  "New output data from echo: %i\t\t%u\n",
+                  echo_float,
+                  echo_uint);
+            }
+         }
          memcpy (echo_outputdata, data, size);
 
          return 0;
