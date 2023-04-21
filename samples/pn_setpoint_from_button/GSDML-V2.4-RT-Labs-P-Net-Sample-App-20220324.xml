@@ -1,0 +1,301 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<ISO15745Profile xmlns="http://www.profibus.com/GSDML/2003/11/DeviceProfile" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.profibus.com/GSDML/2003/11/DeviceProfile ..\xsd\GSDML-DeviceProfile-V2.4.xsd">
+   <!-- ProfileHeader definition as defined in ISO 15745-1. Please do not change the content. -->
+   <ProfileHeader>
+      <ProfileIdentification>PROFINET Device Profile</ProfileIdentification>
+      <ProfileRevision>1.00</ProfileRevision>
+      <ProfileName>Device Profile for PROFINET Devices</ProfileName>
+      <ProfileSource>PROFIBUS Nutzerorganisation e. V. (PNO)</ProfileSource>
+      <ProfileClassID>Device</ProfileClassID>
+      <ISO15745Reference>
+         <ISO15745Part>4</ISO15745Part>
+         <ISO15745Edition>1</ISO15745Edition>
+         <ProfileTechnology>GSDML</ProfileTechnology>
+      </ISO15745Reference>
+   </ProfileHeader>
+   <ProfileBody>
+      <DeviceIdentity VendorID="0x0493" DeviceID="0x0002">
+         <InfoText TextId="IDT_INFO_Device"/>
+         <VendorName Value="RT-Labs"/>
+      </DeviceIdentity>
+      <DeviceFunction>
+         <Family MainFamily="I/O" ProductFamily="P-Net Samples"/>
+      </DeviceFunction>
+      <ApplicationProcess>
+         <DeviceAccessPointList>
+            <DeviceAccessPointItem ID="IDD_1" PNIO_Version="V2.4" PhysicalSlots="0..4" ModuleIdentNumber="0x00000001" MinDeviceInterval="32" DNS_CompatibleName="rt-labs-dev" FixedInSlots="0" ObjectUUID_LocalIndex="1" DeviceAccessSupported="false" MultipleWriteSupported="true" CheckDeviceID_Allowed="true" NameOfStationNotTransferable="false" LLDP_NoD_Supported="true" ResetToFactoryModes="1..2">
+               <ModuleInfo>
+                  <Name TextId="IDT_MODULE_NAME_DAP1"/>
+                  <InfoText TextId="IDT_INFO_DAP1"/>
+                  <VendorName Value="RT-Labs"/>
+                  <OrderNumber Value="123456 Abcdefghijkl"/>
+                  <HardwareRelease Value="A1.0"/>
+                  <SoftwareRelease Value="V0.1.0"/>
+               </ModuleInfo>
+               <CertificationInfo ConformanceClass="B" ApplicationClass="" NetloadClass="I"/>
+               <IOConfigData MaxInputLength="244" MaxOutputLength="244"/>
+               <UseableModules>
+                  <ModuleItemRef ModuleItemTarget="IDM_30" AllowedInSlots="1..4"/>
+                  <ModuleItemRef ModuleItemTarget="IDM_31" AllowedInSlots="1..4"/>
+                  <ModuleItemRef ModuleItemTarget="IDM_32" AllowedInSlots="1..4"/>
+                  <ModuleItemRef ModuleItemTarget="IDM_40" AllowedInSlots="1..4"/>
+               </UseableModules>
+               <VirtualSubmoduleList>
+                  <VirtualSubmoduleItem ID="IDS_1" SubmoduleIdentNumber="0x00000001" Writeable_IM_Records="1 2 3" MayIssueProcessAlarm="false">
+                     <IOData/>
+                     <ModuleInfo>
+                        <Name TextId="IDT_MODULE_NAME_DAP1"/>
+                        <InfoText TextId="IDT_INFO_DAP1"/>
+                     </ModuleInfo>
+                  </VirtualSubmoduleItem>
+               </VirtualSubmoduleList>
+               <SystemDefinedSubmoduleList>
+                  <InterfaceSubmoduleItem ID="IDS_I" SubmoduleIdentNumber="0x00008000" SubslotNumber="32768" TextId="IDT_NAME_IS" SupportedRT_Classes="RT_CLASS_1" SupportedProtocols="SNMP;LLDP" NetworkComponentDiagnosisSupported="false" PTP_BoundarySupported="true" DCP_BoundarySupported="true">
+                     <ApplicationRelations StartupMode="Advanced">
+                        <TimingProperties SendClock="32" ReductionRatio="1 2 4 8 16 32 64 128 256 512"/>
+                     </ApplicationRelations>
+                  </InterfaceSubmoduleItem>
+                  <PortSubmoduleItem ID="IDS_P1" SubmoduleIdentNumber="0x00008001" SubslotNumber="32769" TextId="IDT_NAME_PS1" MaxPortRxDelay="350" MaxPortTxDelay="160">
+                     <MAUTypeList>
+                        <!--
+MAUTypeItems shall match the actual network interfaces of the device.
+Current list works for Raspberry Pi, Linksys usb/ethernet dongle and xmc sample targets
+-->
+                        <MAUTypeItem Value="30"/>
+                        <MAUTypeItem Value="16"/>
+                        <MAUTypeItem Value="5"/>
+                     </MAUTypeList>
+                  </PortSubmoduleItem>
+                  <!--
+Enable to support additional port. (PNET_MAX_PHYSICAL_PORTS == 2)
+Add additional PortSubmoduleItems to support additional ports
+-->
+                  <!--
+                  <PortSubmoduleItem ID="IDS_P2" SubmoduleIdentNumber="0x00008002" SubslotNumber="32770" TextId="IDT_NAME_PS2" MaxPortRxDelay="350" MaxPortTxDelay="160">
+                     <MAUTypeList>
+                        <MAUTypeItem Value="30"/>
+                        <MAUTypeItem Value="16"/>
+                        <MAUTypeItem Value="5"/>
+                     </MAUTypeList>
+                  </PortSubmoduleItem>
+-->
+               </SystemDefinedSubmoduleList>
+               <Graphics>
+                  <GraphicItemRef Type="DeviceSymbol" GraphicItemTarget="RT-LabsStackImage"/>
+               </Graphics>
+            </DeviceAccessPointItem>
+         </DeviceAccessPointList>
+         <ModuleList>
+            <ModuleItem ID="IDM_30" ModuleIdentNumber="0x00000030">
+               <ModuleInfo>
+                  <Name TextId="TOK_Name_Module_I8"/>
+                  <InfoText TextId="TOK_InfoText_Module_I8"/>
+                  <HardwareRelease Value="1.0"/>
+                  <SoftwareRelease Value="1.0"/>
+               </ModuleInfo>
+               <VirtualSubmoduleList>
+                  <VirtualSubmoduleItem ID="IDSM_130" SubmoduleIdentNumber="0x0130" MayIssueProcessAlarm="true">
+                     <IOData>
+                        <Input Consistency="All items consistency">
+                           <DataItem DataType="Unsigned8" TextId="TOK_Input_DataItem_8" UseAsBits="true">
+                              <BitDataItem BitOffset="0" TextId="TOK_Input_DataItem_Bit0"/>
+                              <BitDataItem BitOffset="1" TextId="TOK_Input_DataItem_Bit1"/>
+                              <BitDataItem BitOffset="2" TextId="TOK_Input_DataItem_Bit2"/>
+                              <BitDataItem BitOffset="3" TextId="TOK_Input_DataItem_Bit3"/>
+                              <BitDataItem BitOffset="4" TextId="TOK_Input_DataItem_Bit4"/>
+                              <BitDataItem BitOffset="5" TextId="TOK_Input_DataItem_Bit5"/>
+                              <BitDataItem BitOffset="6" TextId="TOK_Input_DataItem_Bit6"/>
+                              <BitDataItem BitOffset="7" TextId="TOK_Input_DataItem_Bit7"/>
+                           </DataItem>
+                        </Input>
+                     </IOData>
+                     <ModuleInfo>
+                        <Name TextId="TOK_Name_Module_I8"/>
+                        <InfoText TextId="TOK_InfoText_Module_I8"/>
+                     </ModuleInfo>
+                  </VirtualSubmoduleItem>
+               </VirtualSubmoduleList>
+            </ModuleItem>
+            <ModuleItem ID="IDM_31" ModuleIdentNumber="0x00000031">
+               <ModuleInfo>
+                  <Name TextId="TOK_Name_Module_O8"/>
+                  <InfoText TextId="TOK_InfoText_Module_O8"/>
+                  <HardwareRelease Value="1.0"/>
+                  <SoftwareRelease Value="1.0"/>
+               </ModuleInfo>
+               <VirtualSubmoduleList>
+                  <VirtualSubmoduleItem ID="IDSM_131" SubmoduleIdentNumber="0x0131" MayIssueProcessAlarm="true">
+                     <IOData>
+                        <Output Consistency="All items consistency">
+                           <DataItem DataType="Unsigned8" TextId="TOK_Output_DataItem_8" UseAsBits="true">
+                              <BitDataItem BitOffset="0" TextId="TOK_Output_DataItem_Bit0"/>
+                              <BitDataItem BitOffset="1" TextId="TOK_Output_DataItem_Bit1"/>
+                              <BitDataItem BitOffset="2" TextId="TOK_Output_DataItem_Bit2"/>
+                              <BitDataItem BitOffset="3" TextId="TOK_Output_DataItem_Bit3"/>
+                              <BitDataItem BitOffset="4" TextId="TOK_Output_DataItem_Bit4"/>
+                              <BitDataItem BitOffset="5" TextId="TOK_Output_DataItem_Bit5"/>
+                              <BitDataItem BitOffset="6" TextId="TOK_Output_DataItem_Bit6"/>
+                              <BitDataItem BitOffset="7" TextId="TOK_Output_DataItem_Bit7"/>
+                           </DataItem>
+                        </Output>
+                     </IOData>
+                     <ModuleInfo>
+                        <Name TextId="TOK_Name_Module_O8"/>
+                        <InfoText TextId="TOK_InfoText_Module_O8"/>
+                     </ModuleInfo>
+                  </VirtualSubmoduleItem>
+               </VirtualSubmoduleList>
+            </ModuleItem>
+            <ModuleItem ID="IDM_32" ModuleIdentNumber="0x00000032">
+               <ModuleInfo>
+                  <Name TextId="TOK_Name_Module_I8O8"/>
+                  <InfoText TextId="TOK_InfoText_Module_I8O8"/>
+                  <HardwareRelease Value="1.0"/>
+                  <SoftwareRelease Value="1.0"/>
+               </ModuleInfo>
+               <VirtualSubmoduleList>
+                  <VirtualSubmoduleItem ID="IDSM_132" SubmoduleIdentNumber="0x0132" MayIssueProcessAlarm="true">
+                     <IOData>
+                        <Input>
+                           <DataItem DataType="Unsigned8" UseAsBits="true" TextId="TOK_Input_DataItem_8">
+                              <BitDataItem BitOffset="0" TextId="TOK_Input_DataItem_Bit0"/>
+                              <BitDataItem BitOffset="1" TextId="TOK_Input_DataItem_Bit1"/>
+                              <BitDataItem BitOffset="2" TextId="TOK_Input_DataItem_Bit2"/>
+                              <BitDataItem BitOffset="3" TextId="TOK_Input_DataItem_Bit3"/>
+                              <BitDataItem BitOffset="4" TextId="TOK_Input_DataItem_Bit4"/>
+                              <BitDataItem BitOffset="5" TextId="TOK_Input_DataItem_Bit5"/>
+                              <BitDataItem BitOffset="6" TextId="TOK_Input_DataItem_Bit6"/>
+                              <BitDataItem BitOffset="7" TextId="TOK_Input_DataItem_Bit7"/>
+                           </DataItem>
+                        </Input>
+                        <Output Consistency="All items consistency">
+                           <DataItem DataType="Unsigned8" TextId="TOK_Output_DataItem_8" UseAsBits="true">
+                              <BitDataItem BitOffset="0" TextId="TOK_Output_DataItem_Bit0"/>
+                              <BitDataItem BitOffset="1" TextId="TOK_Output_DataItem_Bit1"/>
+                              <BitDataItem BitOffset="2" TextId="TOK_Output_DataItem_Bit2"/>
+                              <BitDataItem BitOffset="3" TextId="TOK_Output_DataItem_Bit3"/>
+                              <BitDataItem BitOffset="4" TextId="TOK_Output_DataItem_Bit4"/>
+                              <BitDataItem BitOffset="5" TextId="TOK_Output_DataItem_Bit5"/>
+                              <BitDataItem BitOffset="6" TextId="TOK_Output_DataItem_Bit6"/>
+                              <BitDataItem BitOffset="7" TextId="TOK_Output_DataItem_Bit7"/>
+                           </DataItem>
+                        </Output>
+                     </IOData>
+                     <RecordDataList>
+                        <ParameterRecordDataItem Index="123" Length="4">
+                           <Name TextId="TOK_sample_parameter_1"/>
+                           <Ref DataType="Unsigned32" ByteOffset="0" DefaultValue="1" AllowedValues="0..99" Changeable="true" Visible="true" TextId="TOK_Demo_1"/>
+                        </ParameterRecordDataItem>
+                        <ParameterRecordDataItem Index="124" Length="4">
+                           <Name TextId="TOK_sample_parameter_2"/>
+                           <Ref DataType="Unsigned32" ByteOffset="0" DefaultValue="2" AllowedValues="0..999" Changeable="true" Visible="true" TextId="TOK_Demo_2"/>
+                        </ParameterRecordDataItem>
+                     </RecordDataList>
+                     <ModuleInfo>
+                        <Name TextId="TOK_Name_Module_I8O8"/>
+                        <InfoText TextId="TOK_InfoText_Module_I8O8"/>
+                     </ModuleInfo>
+                  </VirtualSubmoduleItem>
+               </VirtualSubmoduleList>
+            </ModuleItem>
+            <ModuleItem ID="IDM_40" ModuleIdentNumber="0x00000040">
+               <ModuleInfo>
+                  <Name TextId="TOK_Name_Module_Echo"/>
+                  <InfoText TextId="TOK_InfoText_Module_Echo"/>
+                  <HardwareRelease Value="1.0"/>
+                  <SoftwareRelease Value="1.0"/>
+               </ModuleInfo>
+               <VirtualSubmoduleList>
+                  <VirtualSubmoduleItem ID="IDSM_140" SubmoduleIdentNumber="0x0140" MayIssueProcessAlarm="true">
+                     <IOData>
+                        <Input Consistency="All items consistency">
+                           <DataItem DataType="Float32" TextId="TOK_Input_DataItem_Echo_Float32"/>
+                           <DataItem DataType="Unsigned32" TextId="TOK_Input_DataItem_Echo_Unsigned32"/>
+                        </Input>
+                        <Output Consistency="All items consistency">
+                           <DataItem DataType="Float32" TextId="TOK_Output_DataItem_Echo_Float32"/>
+                           <DataItem DataType="Unsigned32" TextId="TOK_Output_DataItem_Echo_Unsigned32"/>
+                        </Output>
+                     </IOData>
+                     <RecordDataList>
+                        <ParameterRecordDataItem Index="125" Length="4">
+                           <Name TextId="TOK_sample_parameter_Echo"/>
+                           <Ref DataType="Unsigned32" ByteOffset="0" DefaultValue="2" AllowedValues="1..4" Changeable="true" Visible="true" TextId="TOK_Echo_Gain"/>
+                        </ParameterRecordDataItem>
+                     </RecordDataList>
+                     <ModuleInfo>
+                        <Name TextId="TOK_Name_Module_Echo"/>
+                        <InfoText TextId="TOK_InfoText_Module_Echo"/>
+                     </ModuleInfo>
+                  </VirtualSubmoduleItem>
+               </VirtualSubmoduleList>
+            </ModuleItem>
+         </ModuleList>
+         <LogBookEntryList>
+            <LogBookEntryItem Status="2130510">
+               <!--Custom log book entry for sample application-->
+               <!--Error code 0x20  Error decode 0x82  Error code 1 0x4E-->
+               <ErrorCode2Value>
+                  <Name TextId="IDT_CUSTOM_LOGBOOK_1"/>
+               </ErrorCode2Value>
+            </LogBookEntryItem>
+         </LogBookEntryList>
+         <GraphicsList>
+            <GraphicItem ID="RT-LabsStackImage" GraphicFile="GSDML-RT-LABS-STACK"/>
+         </GraphicsList>
+         <ExternalTextList>
+            <PrimaryLanguage>
+               <Text TextId="IDT_INFO_Device" Value="https://github.com/rtlabs-com/p-net"/>
+               <Text TextId="IDT_MODULE_NAME_DAP1" Value="P-Net multi-module sample app"/>
+               <Text TextId="IDT_INFO_DAP1" Value="Profinet device sample app https://github.com/rtlabs-com/p-net"/>
+               <Text TextId="IDT_CUSTOM_DIAG_1" Value="Custom diagnosis in USI format"/>
+               <Text TextId="IDT_CUSTOM_DIAG_1_VALUE" Value="Custom diagnosis value"/>
+               <Text TextId="IDT_CUSTOM_LOGBOOK_1" Value="Custom Logbook entry"/>
+               <Text TextId="IDT_NAME_IS" Value="X1"/>
+               <Text TextId="IDT_NAME_PS1" Value="X1 P1"/>
+               <Text TextId="IDT_NAME_PS2" Value="X1 P2"/>
+               <!--module name-->
+               <Text TextId="TOK_Name_Module_I8" Value="DI 8xLogicLevel"/>
+               <Text TextId="TOK_Name_Module_O8" Value="DO 8xLogicLevel"/>
+               <Text TextId="TOK_Name_Module_I8O8" Value="DIO 8xLogicLevel"/>
+               <Text TextId="TOK_Name_Module_Echo" Value="Echo Module"/>
+               <!--module info -->
+               <Text TextId="TOK_InfoText_Module_I8" Value="Digital In 8xLogicLevel"/>
+               <Text TextId="TOK_InfoText_Module_O8" Value="Digital Out 8xLogicLevel"/>
+               <Text TextId="TOK_InfoText_Module_I8O8" Value="Digital In+Out 8xLogicLevel"/>
+               <Text TextId="TOK_InfoText_Module_Echo" Value="Echo with adjustable gain"/>
+               <!--dataitem name-->
+               <Text TextId="TOK_Input_DataItem_8" Value="Input 8 bits"/>
+               <Text TextId="TOK_Output_DataItem_8" Value="Output 8 bits"/>
+               <Text TextId="TOK_Input_DataItem_Bit0" Value="Input Bit 0"/>
+               <Text TextId="TOK_Input_DataItem_Bit1" Value="Input Bit 1"/>
+               <Text TextId="TOK_Input_DataItem_Bit2" Value="Input Bit 2"/>
+               <Text TextId="TOK_Input_DataItem_Bit3" Value="Input Bit 3"/>
+               <Text TextId="TOK_Input_DataItem_Bit4" Value="Input Bit 4"/>
+               <Text TextId="TOK_Input_DataItem_Bit5" Value="Input Bit 5"/>
+               <Text TextId="TOK_Input_DataItem_Bit6" Value="Input Bit 6"/>
+               <Text TextId="TOK_Input_DataItem_Bit7" Value="Input Bit 7"/>
+               <Text TextId="TOK_Output_DataItem_Bit0" Value="Output Bit 0"/>
+               <Text TextId="TOK_Output_DataItem_Bit1" Value="Output Bit 1"/>
+               <Text TextId="TOK_Output_DataItem_Bit2" Value="Output Bit 2"/>
+               <Text TextId="TOK_Output_DataItem_Bit3" Value="Output Bit 3"/>
+               <Text TextId="TOK_Output_DataItem_Bit4" Value="Output Bit 4"/>
+               <Text TextId="TOK_Output_DataItem_Bit5" Value="Output Bit 5"/>
+               <Text TextId="TOK_Output_DataItem_Bit6" Value="Output Bit 6"/>
+               <Text TextId="TOK_Output_DataItem_Bit7" Value="Output Bit 7"/>
+               <Text TextId="TOK_Input_DataItem_Echo_Float32" Value="Input float to controller (output from controller multiplied by gain)"/>
+               <Text TextId="TOK_Input_DataItem_Echo_Unsigned32" Value="Input int to controller (output from controller multiplied by gain)"/>
+               <Text TextId="TOK_Output_DataItem_Echo_Float32" Value="Output float from controller"/>
+               <Text TextId="TOK_Output_DataItem_Echo_Unsigned32" Value="Output int from controller"/>
+               <!--ParameterRecordDataItem name-->
+               <Text TextId="TOK_sample_parameter_1" Value="Parameter 1"/>
+               <Text TextId="TOK_sample_parameter_2" Value="Parameter 2"/>
+               <Text TextId="TOK_sample_parameter_Echo" Value="Gain for echo module"/>
+               <Text TextId="TOK_Demo_1" Value="Demo 1"/>
+               <Text TextId="TOK_Demo_2" Value="Demo 2"/>
+               <Text TextId="TOK_Echo_Gain" Value="Gain"/>
+            </PrimaryLanguage>
+         </ExternalTextList>
+      </ApplicationProcess>
+   </ProfileBody>
+</ISO15745Profile>
