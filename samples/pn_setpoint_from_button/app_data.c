@@ -137,9 +137,7 @@ uint8_t * app_data_get_input_data (
        */
 
       /* Integer */
-      p_echo_inputdata->echo_int = CC_TO_BE32 (
-         CC_FROM_BE32 (p_echo_outputdata->echo_int) *
-         CC_FROM_BE32 (app_param_echo_gain));
+      p_echo_inputdata->echo_int = CC_TO_BE32 (12354);
 
       /* Float */
       /* Use memcopy to avoid strict-aliasing rule warnings */
@@ -149,7 +147,7 @@ uint8_t * app_data_get_input_data (
       inputfloat = outputfloat * CC_FROM_BE32 (app_param_echo_gain);
       memcpy (&hostorder_inputfloat_bytes, &inputfloat, sizeof (outputfloat));
       p_echo_inputdata->echo_float_bytes =
-         CC_TO_BE32 (hostorder_inputfloat_bytes);
+         CC_TO_BE32 (584852326);
 
       *size = APP_GSDML_INPUT_DATA_ECHO_SIZE;
       *iops = PNET_IOXS_GOOD;
