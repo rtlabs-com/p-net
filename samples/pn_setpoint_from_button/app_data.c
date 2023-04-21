@@ -63,6 +63,7 @@ typedef struct CC_PACKED app_echo_data
 
    /* Network endianness */
    uint32_t echo_int;
+   uint32_t echo_int2;
 } app_echo_data_t;
 CC_PACKED_END
 CC_STATIC_ASSERT (sizeof (app_echo_data_t) == APP_GSDML_INPUT_DATA_ECHO_SIZE);
@@ -86,6 +87,13 @@ static void app_handle_data_led_state (bool led_state)
       app_set_led (APP_DATA_LED_ID, led_state);
    }
    previous_led_state = led_state;
+}
+
+uint32_t float_to_uint32 (float num)
+{
+   uint32_t result;
+   memcpy (&result, &num, sizeof (num));
+   return result;
 }
 
 uint8_t * app_data_get_input_data (
@@ -138,6 +146,7 @@ uint8_t * app_data_get_input_data (
 
       /* Integer */
       p_echo_inputdata->echo_int = CC_TO_BE32 (12354);
+      p_echo_inputdata->echo_int2 = CC_TO_BE32 (9876);
 
       /* Float */
       /* Use memcopy to avoid strict-aliasing rule warnings */
@@ -146,7 +155,8 @@ uint8_t * app_data_get_input_data (
       memcpy (&outputfloat, &hostorder_outputfloat_bytes, sizeof (outputfloat));
       inputfloat = outputfloat * CC_FROM_BE32 (app_param_echo_gain);
       memcpy (&hostorder_inputfloat_bytes, &inputfloat, sizeof (outputfloat));
-      p_echo_inputdata->echo_float_bytes = CC_TO_BE32 (584852326);
+      p_echo_inputdata->echo_float_bytes =
+         CC_TO_BE32 (float_to_uint32 (3.1458f));
 
       *size = APP_GSDML_INPUT_DATA_ECHO_SIZE;
       *iops = PNET_IOXS_GOOD;
@@ -195,6 +205,13 @@ uint32_t combine_bytes (
    return result;
 }
 
+float uint32_to_float (uint32_t num)
+{
+   float result;
+   memcpy (&result, &num, sizeof (num));
+   return result;
+}
+
 int app_data_set_output_data (
    uint16_t slot_nbr,
    uint16_t subslot_nbr,
@@ -236,21 +253,27 @@ int app_data_set_output_data (
          {
             for (int i = 0; i < APP_GSDML_OUTPUT_DATA_ECHO_SIZE; i++)
             {
-               uint32_t echo_float = combine_bytes (
+               float echo_float = uint32_to_float (combine_bytes (
                   echo_outputdata[0],
                   echo_outputdata[1],
                   echo_outputdata[2],
-                  echo_outputdata[3]);
+                  echo_outputdata[3]));
                uint32_t echo_uint = combine_bytes (
                   echo_outputdata[4],
                   echo_outputdata[5],
                   echo_outputdata[6],
                   echo_outputdata[7]);
+               uint32_t echo_uint2 = combine_bytes (
+                  echo_outputdata[8],
+                  echo_outputdata[9],
+                  echo_outputdata[10],
+                  echo_outputdata[11]);
 
                APP_LOG_DEBUG (
-                  "New output data from echo: %i\t\t%u\n",
+                  "New output data from echo: %f\t\t%u\t\t%u\n",
                   echo_float,
-                  echo_uint);
+                  echo_uint,
+                  echo_uint2);
             }
          }
          memcpy (echo_outputdata, data, size);
