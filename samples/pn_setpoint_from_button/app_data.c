@@ -236,7 +236,7 @@ int app_data_set_output_data (
                   echo_outputdata[11]);
 
                APP_LOG_DEBUG (
-                  "New output data from echo: %u\t\t%u\n",
+                  "New actual position 1: %u\tactual position 2: %u\n",
                   echo_uint,
                   echo_uint2);
             }
