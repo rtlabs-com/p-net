@@ -50,8 +50,6 @@ typedef enum
 /** Command line arguments for sample application */
 typedef struct app_args
 {
-   char path_button1[PNET_MAX_FILE_FULLPATH_SIZE]; /** Terminated string */
-   char path_button2[PNET_MAX_FILE_FULLPATH_SIZE]; /** Terminated string */
    char path_storage_directory[PNET_MAX_DIRECTORYPATH_SIZE]; /** Terminated */
    char station_name[PNET_STATION_NAME_MAX_SIZE]; /** Terminated string */
    char eth_interfaces

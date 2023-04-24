@@ -32,7 +32,7 @@ target_sources(pn_setpoint_from_button
         app_utils.c
         sampleapp_common.c
         utils.c
-        ${PROFINET_SOURCE_DIR}/src/ports/linux/sampleapp_main.c
+        sampleapp_main.c
         )
 
 target_compile_options(pn_setpoint_from_button
