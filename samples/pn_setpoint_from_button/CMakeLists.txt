@@ -11,7 +11,7 @@
 #*******************************************************************/
 
 add_executable(pn_setpoint_from_button "")
-set_target_properties (profinet pn_setpoint_from_button
+set_target_properties(profinet pn_setpoint_from_button
         PROPERTIES
         C_STANDARD 99
         )
@@ -31,6 +31,7 @@ target_sources(pn_setpoint_from_button
         app_log.c
         app_utils.c
         sampleapp_common.c
+        utils.c
         ${PROFINET_SOURCE_DIR}/src/ports/linux/sampleapp_main.c
         )
 
@@ -57,6 +58,6 @@ file(TOUCH ${CMAKE_CURRENT_BINARY_DIR}/pnet_led_2.txt)
 file(COPY ${PROFINET_SOURCE_DIR}/src/ports/linux/set_network_parameters DESTINATION ${CMAKE_CURRENT_BINARY_DIR} FILE_PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ)
 file(COPY ${PROFINET_SOURCE_DIR}/src/ports/linux/set_profinet_leds DESTINATION ${CMAKE_CURRENT_BINARY_DIR} FILE_PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ)
 
-target_link_libraries (pn_setpoint_from_button PUBLIC profinet)
+target_link_libraries(pn_setpoint_from_button PUBLIC profinet)
 
-install (TARGETS pn_setpoint_from_button DESTINATION bin)
+install(TARGETS pn_setpoint_from_button DESTINATION bin)
