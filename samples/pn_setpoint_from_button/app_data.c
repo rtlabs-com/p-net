@@ -51,11 +51,6 @@ static uint8_t echo_outputdata[APP_GSDML_OUTPUT_DATA_ECHO_SIZE] = {0};
 CC_PACKED_BEGIN
 typedef struct CC_PACKED app_echo_data
 {
-   /* Network endianness.
-      Used as a float, but we model it as a 4-byte integer to easily
-      do endianness conversion */
-   uint32_t echo_float_bytes;
-
    /* Network endianness */
    uint32_t echo_int;
    uint32_t echo_int2;
@@ -122,15 +117,15 @@ int app_data_set_output_data (
             for (int i = 0; i < APP_GSDML_OUTPUT_DATA_ECHO_SIZE; i++)
             {
                uint32_t echo_uint = combine_bytes (
+                  echo_outputdata[0],
+                  echo_outputdata[1],
+                  echo_outputdata[2],
+                  echo_outputdata[3]);
+               uint32_t echo_uint2 = combine_bytes (
                   echo_outputdata[4],
                   echo_outputdata[5],
                   echo_outputdata[6],
                   echo_outputdata[7]);
-               uint32_t echo_uint2 = combine_bytes (
-                  echo_outputdata[8],
-                  echo_outputdata[9],
-                  echo_outputdata[10],
-                  echo_outputdata[11]);
 
                APP_LOG_DEBUG (
                   "New actual position 1: %u\tactual position 2: %u\n",
