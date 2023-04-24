@@ -17,13 +17,15 @@ Converting examples for your own usage
 -------------------------------------
 Convert p-net to use it with your own datatypes and GSDML file.
 
-1. Configure a profinet device file in TwinCAT and export the GSDML file. 
-2. Manually adjust the GSDML file if needed, for example,
-   - the company name
-   - or `float32` -> `float64` conversion, since the latter type seem not to be available in TwinCAT.
-   - also make sure all submodules have a unique ID.
-1. Duplicate the `samples/pn_dev_counter` folder and content and rename the `pn_dev_counter` folder, for example to `pn_my_app`
-2. Then open the `CMakeLists.txt` in your `pn_my_app` folder and rename all `pn_dev_counter` to `pn_my_app`
+1. Copy the GSML file that is found in the `p-net/samples/pn_dev/GSDML-V2.4-RT-Labs-P-Net-Sample-App-20220324.xml`
+    Note: I tried to create my own profinet device with TwinCAT or with CODESYS and export a GSDML file.
+    But I never got this to work and I don´t know why.
+2. Manually adjust the GSDML file as needed, for example:
+   - the company name, name of the device etc.
+   - size of IO, datatypes of IO and number of modules
+   - also make sure all submodules have a unique ID (not sure if needed).
+1. Duplicate the `samples/pn_simple_example` folder and content and rename the `pn_simple_example` folder, for example to `pn_my_app`
+2. Then open the `CMakeLists.txt` in your `pn_my_app` folder and rename all `pn_simple_example` to `pn_my_app`
 3. Open `app_gsdml.h` and add the sizes and (sub)module IDs of the modules you added
 4. In `app_gsdml.c`:
    1. Add `static const app_gsdml_module_t`  for each module. Check that all members (`.id`, `.name`, etc.) are correct
@@ -32,7 +34,6 @@ Convert p-net to use it with your own datatypes and GSDML file.
 5. Open `app_data.c`:
    1. add a static struct where in/output data can be stored into.
       - `static uint8_t inputdata[APP_GSDML_INPUT_DATA_DIGITAL_SIZE] = {0};`
-      - Note that if a module has both in and output, the size of `inputdata` is the size of input + output data. Not sure why?
       - Floats are saved as unsigned integers, because of endian conversion. Profinet data has [network endianess](https://en.wikipedia.org/wiki/Endianness#Networking) (Big endian), whereas C uses little endian ?
   1. add a `typedef struct` to store I/O data
 
