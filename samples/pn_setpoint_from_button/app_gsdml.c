@@ -38,22 +38,6 @@ static const app_gsdml_module_t dap_1 = {
       PNET_SUBMOD_DAP_INTERFACE_1_PORT_4_IDENT,
       0}};
 
-static const app_gsdml_module_t module_digital_in = {
-   .id = APP_GSDML_MOD_ID_8_0_DIGITAL_IN,
-   .name = "DI 8xLogicLevel",
-   .submodules = {APP_GSDML_SUBMOD_ID_DIGITAL_IN, 0},
-};
-
-static const app_gsdml_module_t module_digital_out = {
-   .id = APP_GSDML_MOD_ID_0_8_DIGITAL_OUT,
-   .name = "DO 8xLogicLevel",
-   .submodules = {APP_GSDML_SUBMOD_ID_DIGITAL_OUT, 0}};
-
-static const app_gsdml_module_t module_digital_in_out = {
-   .id = APP_GSDML_MOD_ID_8_8_DIGITAL_IN_OUT,
-   .name = "DIO 8xLogicLevel",
-   .submodules = {APP_GSDML_SUBMOD_ID_DIGITAL_IN_OUT, 0}};
-
 static const app_gsdml_module_t module_echo = {
    .id = APP_GSDML_MOD_ID_ECHO,
    .name = "Echo module",
@@ -115,33 +99,6 @@ static const app_gsdml_submodule_t dap_port_4 = {
    .outsize = 0,
    .parameters = {0}};
 
-static const app_gsdml_submodule_t submod_digital_in = {
-   .id = APP_GSDML_SUBMOD_ID_DIGITAL_IN,
-   .name = "Digital Input",
-   .api = APP_GSDML_API,
-   .data_dir = PNET_DIR_INPUT,
-   .insize = APP_GSDML_INPUT_DATA_DIGITAL_SIZE,
-   .outsize = 0,
-   .parameters = {0}};
-
-static const app_gsdml_submodule_t submod_digital_out = {
-   .id = APP_GSDML_SUBMOD_ID_DIGITAL_OUT,
-   .name = "Digital Output",
-   .api = APP_GSDML_API,
-   .data_dir = PNET_DIR_OUTPUT,
-   .insize = 0,
-   .outsize = APP_GSDML_OUTPUT_DATA_DIGITAL_SIZE,
-   .parameters = {0}};
-
-static const app_gsdml_submodule_t submod_digital_inout = {
-   .id = APP_GSDML_SUBMOD_ID_DIGITAL_IN_OUT,
-   .name = "Digital Input/Output",
-   .api = APP_GSDML_API,
-   .data_dir = PNET_DIR_IO,
-   .insize = APP_GSDML_INPUT_DATA_DIGITAL_SIZE,
-   .outsize = APP_GSDML_OUTPUT_DATA_DIGITAL_SIZE,
-   .parameters = {APP_GSDML_PARAMETER_1_IDX, APP_GSDML_PARAMETER_2_IDX, 0}};
-
 static const app_gsdml_submodule_t submod_echo = {
    .id = APP_GSDML_SUBMOD_ID_ECHO,
    .name = "Echo submodule",
@@ -152,12 +109,7 @@ static const app_gsdml_submodule_t submod_echo = {
    .parameters = {APP_GSDML_PARAMETER_ECHO_IDX, 0}};
 
 /** List of supported modules */
-static const app_gsdml_module_t * app_gsdml_modules[] = {
-   &dap_1,
-   &module_digital_in,
-   &module_digital_out,
-   &module_digital_in_out,
-   &module_echo};
+static const app_gsdml_module_t * app_gsdml_modules[] = {&dap_1, &module_echo};
 
 /** List of supported submodules */
 static const app_gsdml_submodule_t * app_gsdml_submodules[] = {
@@ -167,10 +119,6 @@ static const app_gsdml_submodule_t * app_gsdml_submodules[] = {
    &dap_port_2,
    &dap_port_3,
    &dap_port_4,
-
-   &submod_digital_in,
-   &submod_digital_out,
-   &submod_digital_inout,
 
    &submod_echo,
 };

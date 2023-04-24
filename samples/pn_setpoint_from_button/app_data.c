@@ -43,12 +43,6 @@ static uint32_t app_param_2 = 0; /* Network endianness */
  */
 static uint32_t app_param_echo_gain = 1; /* Network endianness */
 
-/* Digital submodule process data
- * The stored value is shared between all digital submodules in this example. */
-static uint8_t inputdata[APP_GSDML_INPUT_DATA_DIGITAL_SIZE] = {0};
-static uint8_t outputdata[APP_GSDML_OUTPUT_DATA_DIGITAL_SIZE] = {0};
-static uint8_t counter = 0;
-
 /* Network endianness */
 static uint8_t echo_inputdata[APP_GSDML_INPUT_DATA_ECHO_SIZE] = {0};
 static uint8_t echo_outputdata[APP_GSDML_OUTPUT_DATA_ECHO_SIZE] = {0};
@@ -102,28 +96,6 @@ uint8_t * app_data_get_input_data (
    if (size == NULL || iops == NULL)
    {
       return NULL;
-   }
-
-   if (
-      submodule_id == APP_GSDML_SUBMOD_ID_DIGITAL_IN ||
-      submodule_id == APP_GSDML_SUBMOD_ID_DIGITAL_IN_OUT)
-   {
-      /* Prepare digital input data
-       * Lowest 7 bits: Counter    Most significant bit: Button
-       */
-      inputdata[0] = counter++;
-      if (button_pressed)
-      {
-         inputdata[0] |= 0x80;
-      }
-      else
-      {
-         inputdata[0] &= 0x7F;
-      }
-
-      *size = APP_GSDML_INPUT_DATA_DIGITAL_SIZE;
-      *iops = PNET_IOXS_GOOD;
-      return inputdata;
    }
 
    if (submodule_id == APP_GSDML_SUBMOD_ID_ECHO)
@@ -190,29 +162,12 @@ int app_data_set_output_data (
    uint8_t * data,
    uint16_t size)
 {
-   bool led_state;
-
    if (data == NULL)
    {
       return -1;
    }
 
-   if (
-      submodule_id == APP_GSDML_SUBMOD_ID_DIGITAL_OUT ||
-      submodule_id == APP_GSDML_SUBMOD_ID_DIGITAL_IN_OUT)
-   {
-      if (size == APP_GSDML_OUTPUT_DATA_DIGITAL_SIZE)
-      {
-         memcpy (outputdata, data, size);
-
-         /* Most significant bit: LED */
-         led_state = (outputdata[0] & 0x80) > 0;
-         app_handle_data_led_state (led_state);
-
-         return 0;
-      }
-   }
-   else if (submodule_id == APP_GSDML_SUBMOD_ID_ECHO)
+   if (submodule_id == APP_GSDML_SUBMOD_ID_ECHO)
    {
       if (size == APP_GSDML_OUTPUT_DATA_ECHO_SIZE)
       {
@@ -252,7 +207,6 @@ int app_data_set_output_data (
 
 int app_data_set_default_outputs (void)
 {
-   outputdata[0] = APP_DATA_DEFAULT_OUTPUT_DATA;
    app_handle_data_led_state (false);
    return 0;
 }
