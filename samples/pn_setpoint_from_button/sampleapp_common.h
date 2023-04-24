@@ -129,16 +129,6 @@ void app_loop_forever (void * arg);
 pnet_t * app_get_pnet_instance (app_data_t * app);
 
 /**
- * Set LED state
- * Hardware specific. Implemented in sample app main file for
- * each supported platform.
- *
- * @param id               In:    LED number, starting from 0.
- * @param led_state        In:    LED state. Use true for on and false for off.
- */
-void app_set_led (uint16_t id, bool led_state);
-
-/**
  * Read button state
  *
  * Hardware specific. Implemented in sample app main file for

@@ -205,15 +205,6 @@ int app_start (app_data_t * app, app_run_in_separate_task_t task_config)
    return 0;
 }
 
-/**
- * Set outputs to default value
- */
-static void app_set_outputs_default_value (void)
-{
-   APP_LOG_DEBUG ("Setting outputs to default values.\n");
-   app_data_set_default_outputs();
-}
-
 /*********************************** Callbacks ********************************/
 
 static int app_connect_ind (
@@ -239,8 +230,6 @@ static int app_release_ind (
    pnet_result_t * p_result)
 {
    APP_LOG_DEBUG ("PLC release (disconnect) indication. AREP: %u\n", arep);
-
-   app_set_outputs_default_value();
 
    return 0;
 }
@@ -463,8 +452,6 @@ static int app_state_ind (
       {
          APP_LOG_DEBUG ("    No error status available\n");
       }
-      /* Set output values */
-      app_set_outputs_default_value();
 
       /* Only abort AR with correct session key */
       os_event_set (app->main_events, APP_EVENT_ABORT);
@@ -505,14 +492,6 @@ static int app_reset_ind (
       should_reset_application,
       reset_mode);
 
-   return 0;
-}
-
-static int app_signal_led_ind (pnet_t * net, void * arg, bool led_state)
-{
-   APP_LOG_INFO ("Profinet signal LED indication. New state: %u\n", led_state);
-
-   app_set_led (APP_PROFINET_SIGNAL_LED_ID, led_state);
    return 0;
 }
 
@@ -752,11 +731,6 @@ static int app_new_data_status_ind (
       (data_status & BIT (PNET_DATA_STATUS_BIT_IGNORE))
          ? "Ignore data status"
          : "Evaluate data status");
-
-   if (is_running == false || is_valid == false)
-   {
-      app_set_outputs_default_value();
-   }
 
    return 0;
 }
@@ -1025,7 +999,6 @@ static void app_cyclic_data_callback (app_subslot_t * subslot, void * tag)
       if (outdata_length != subslot->data_cfg.outsize)
       {
          APP_LOG_ERROR ("Wrong outputdata length: %u\n", outdata_length);
-         app_set_outputs_default_value();
       }
       else if (outdata_iops == PNET_IOXS_GOOD)
       {
@@ -1037,10 +1010,6 @@ static void app_cyclic_data_callback (app_subslot_t * subslot, void * tag)
             subslot->submodule_id,
             outdata_buf,
             outdata_length);
-      }
-      else
-      {
-         app_set_outputs_default_value();
       }
    }
 
@@ -1232,7 +1201,6 @@ void app_pnet_cfg_init_default (pnet_cfg_t * pnet_cfg)
    pnet_cfg->alarm_cnf_cb = app_alarm_cnf;
    pnet_cfg->alarm_ack_cnf_cb = app_alarm_ack_cnf;
    pnet_cfg->reset_cb = app_reset_ind;
-   pnet_cfg->signal_led_cb = app_signal_led_ind;
 
    pnet_cfg->cb_arg = (void *)&app_state;
 }
@@ -1264,7 +1232,6 @@ void app_loop_forever (void * arg)
 
    app->main_api.arep = UINT32_MAX;
 
-   app_set_led (APP_DATA_LED_ID, false);
    app_plug_dap (app, app->pnet_cfg->num_physical_ports);
    APP_LOG_INFO ("Waiting for PLC connect request\n\n");
 

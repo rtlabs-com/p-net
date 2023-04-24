@@ -63,26 +63,6 @@ CC_PACKED_END
 CC_STATIC_ASSERT (sizeof (app_echo_data_t) == APP_GSDML_INPUT_DATA_ECHO_SIZE);
 CC_STATIC_ASSERT (sizeof (app_echo_data_t) == APP_GSDML_OUTPUT_DATA_ECHO_SIZE);
 
-/**
- * Set LED state.
- *
- * Compares new state with previous state, to minimize system calls.
- *
- * Uses the hardware specific app_set_led() function.
- *
- * @param led_state        In:    New LED state
- */
-static void app_handle_data_led_state (bool led_state)
-{
-   static bool previous_led_state = false;
-
-   if (led_state != previous_led_state)
-   {
-      app_set_led (APP_DATA_LED_ID, led_state);
-   }
-   previous_led_state = led_state;
-}
-
 uint8_t * app_data_get_input_data (
    uint16_t slot_nbr,
    uint16_t subslot_nbr,
@@ -203,12 +183,6 @@ int app_data_set_output_data (
    }
 
    return -1;
-}
-
-int app_data_set_default_outputs (void)
-{
-   app_handle_data_led_state (false);
-   return 0;
 }
 
 int app_data_write_parameter (
