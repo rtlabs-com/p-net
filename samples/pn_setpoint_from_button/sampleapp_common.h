@@ -128,17 +128,6 @@ void app_loop_forever (void * arg);
  */
 pnet_t * app_get_pnet_instance (app_data_t * app);
 
-/**
- * Read button state
- *
- * Hardware specific. Implemented in sample app main file for
- * each supported platform.
- *
- * @param id               In:    Button number, starting from 0.
- * @return  true if button is pressed, false if not
- */
-bool app_get_button (uint16_t id);
-
 #ifdef __cplusplus
 }
 #endif

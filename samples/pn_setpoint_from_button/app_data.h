@@ -47,7 +47,6 @@ extern "C" {
  * @param slot_nbr      In:  Slot number
  * @param subslot_nbr   In:  Subslot number
  * @param submodule_id  In:  Submodule id
- * @param button_state  In:  State of button 1
  * @param size          Out: Size of pnio data.
  *                           Not modified on error.
  * @param iops          Out: Provider status. If for example
@@ -61,7 +60,6 @@ uint8_t * app_data_get_input_data (
    uint16_t slot_nbr,
    uint16_t subslot_nbr,
    uint32_t submodule_id,
-   bool button_state,
    uint16_t * size,
    uint8_t * iops);
 

@@ -67,7 +67,6 @@ uint8_t * app_data_get_input_data (
    uint16_t slot_nbr,
    uint16_t subslot_nbr,
    uint32_t submodule_id,
-   bool button_pressed,
    uint16_t * size,
    uint8_t * iops)
 {

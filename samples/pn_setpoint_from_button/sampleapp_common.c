@@ -1023,7 +1023,6 @@ static void app_cyclic_data_callback (app_subslot_t * subslot, void * tag)
          subslot->slot_nbr,
          subslot->subslot_nbr,
          subslot->submodule_id,
-         app->button1_pressed,
          &indata_size,
          &indata_iops);
 
@@ -1098,7 +1097,6 @@ static int app_set_initial_data_and_ioxs (app_data_t * app)
                      p_subslot->slot_nbr,
                      p_subslot->subslot_nbr,
                      p_subslot->submodule_id,
-                     app->button1_pressed,
                      &indata_size,
                      &indata_iops);
                }
@@ -1205,24 +1203,6 @@ void app_pnet_cfg_init_default (pnet_cfg_t * pnet_cfg)
    pnet_cfg->cb_arg = (void *)&app_state;
 }
 
-/**
- * Read button states from operating system
- *
- * Actual reading is done every APP_TICKS_READ_BUTTONS invocation
- *
- * @param app             InOut:    Application handle
- */
-static void update_button_states (app_data_t * app)
-{
-   app->buttons_tick_counter++;
-   if (app->buttons_tick_counter > APP_TICKS_READ_BUTTONS)
-   {
-      app->button1_pressed = app_get_button (0);
-      app->button2_pressed = app_get_button (1);
-      app->buttons_tick_counter = 0;
-   }
-}
-
 void app_loop_forever (void * arg)
 {
    app_data_t * app = (app_data_t *)arg;
@@ -1258,7 +1238,6 @@ void app_loop_forever (void * arg)
       {
          os_event_clr (app->main_events, APP_EVENT_TIMER);
 
-         update_button_states (app);
          if (app_is_connected_to_controller (app))
          {
             app_handle_cyclic_data (app);
