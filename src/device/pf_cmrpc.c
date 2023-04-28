@@ -4422,7 +4422,8 @@ static int pf_cmrpc_dce_packet (
          {
             LOG_ERROR (
                PF_RPC_LOG,
-               "CMRPC(%d): Incoming fragments exceed max buffer\n",
+               "CMRPC(%d): Incoming RPC message exceeds buffer size."
+               " If possible, increase PNET_MAX_SESSION_BUFFER_SIZE.\n",
                __LINE__);
             pf_set_error (
                &p_sess->rpc_result,
