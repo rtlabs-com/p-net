@@ -24,9 +24,14 @@
 #include <lwip/netif.h>
 #include <lwip/apps/snmp_core.h>
 #include <lwip/lwip_hooks.h>
+#include <lwip/tcpip.h>
 #include <drivers/dev.h>
 
 #define MAX_NUMBER_OF_IF 1
+
+#if !LWIP_TCPIP_CORE_LOCKING
+#error LWIP_TCPIP_CORE_LOCKING must be enabled
+#endif
 
 struct pnal_eth_handle
 {
@@ -165,7 +170,9 @@ int pnal_eth_send (pnal_eth_handle_t * handle, pnal_buf_t * buf)
       /* TODO: remove tot_len from os_buff */
       buf->tot_len = buf->len;
 
+      LOCK_TCPIP_CORE();
       handle->netif->linkoutput (handle->netif, buf);
+      UNLOCK_TCPIP_CORE();
       ret = buf->len;
    }
    return ret;
