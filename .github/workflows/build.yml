@@ -17,7 +17,7 @@ jobs:
         run: sudo apt-get install doxygen libsnmp-dev python3-pip texlive-latex-recommended texlive-fonts-recommended tex-gyre texlive-latex-extra latexmk
 
       - name: Install Python dependencies
-        run: pip3 install -r ${{github.workspace}}/doc/doc_requirements.txt
+        run: pip3 install -r ${{github.workspace}}/doc/requirements.txt
 
       - name: Show Python dependencies
         run: pip3 freeze

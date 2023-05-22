@@ -61,6 +61,16 @@
 #error "PNET_MAX_SESSION_BUFFER_SIZE must be less than or equal to 65535"
 #endif
 
+/* Unless negotiated between server and client, a CL-PDU (header (80 bytes) +
+ * body) should not be larger than MustRecvFragSize (1464 bytes). This means
+ * that a CL-PDU body should not be larger than 1384 bytes.
+ * (See DCE 1.1: RPC, p. 578)
+ */
+#define PF_CMRPC_MUST_RECV_FRAG_SIZE (1464)
+#define PF_CMRPC_PDU_HEADER_SIZE     (80)
+#define PF_CMRPC_MAX_PDU_BODY_SIZE                                             \
+   (PF_CMRPC_MUST_RECV_FRAG_SIZE - PF_CMRPC_PDU_HEADER_SIZE)
+
 static const pf_uuid_t implicit_ar = {0, 0, 0, {0, 0, 0, 0, 0, 0, 0, 0}};
 
 static const pf_uuid_t uuid_epmap_interface = {
@@ -4326,7 +4336,16 @@ static int pf_cmrpc_dce_packet (
       p_sess->get_info = get_info;
       memset (&p_sess->rpc_result, 0, sizeof (p_sess->rpc_result));
 
-      if (rpc_req.flags.fragment == false)
+      if (rpc_req.length_of_body > PF_CMRPC_MAX_PDU_BODY_SIZE)
+      {
+         LOG_ERROR (
+            PF_RPC_LOG,
+            "CMRPC(%d): RPC fragment too large (%hu bytes)."
+            " Check the conformance of the controller (PLC).\n",
+            __LINE__,
+            rpc_req.length_of_body);
+      }
+      else if (rpc_req.flags.fragment == false)
       {
          /* Incoming message is a request or response contained entirely in one
           * frame */
@@ -4438,7 +4457,45 @@ static int pf_cmrpc_dce_packet (
       /* Decide what to do with incoming message */
       /* Enter here _even_if_ an error is already detected because we may need
        * to generate an error response. */
-      if (
+      if (rpc_req.length_of_body > PF_CMRPC_MAX_PDU_BODY_SIZE)
+      {
+         /* The specifications do not clearly state what the response should
+          * be in this case. The current best guess is to send a Reject PDU.
+          */
+
+         /* Prepare the response */
+         rpc_res = rpc_req;
+         rpc_res.packet_type = PF_RPC_PT_REJECT;
+         rpc_res.flags.last_fragment = false;
+         rpc_res.flags.fragment = false;
+         rpc_res.flags.no_fack = true;
+         rpc_res.flags.maybe = false;
+         rpc_res.flags.idempotent = true;
+         rpc_res.flags.broadcast = false;
+         rpc_res.flags2.cancel_pending = false;
+         rpc_res.length_of_body = sizeof (uint32_t);
+         rpc_res.fragment_nmb = 0;
+         rpc_res.is_big_endian = p_sess->is_big_endian;
+
+         pf_put_dce_rpc_header (
+            &rpc_res,
+            *p_res_len,
+            p_res,
+            &res_pos,
+            &length_of_body_pos);
+
+         pf_put_uint32 (
+            rpc_res.is_big_endian,
+            PF_RPC_NCA_PROTO_ERROR,
+            *p_res_len,
+            p_res,
+            &res_pos);
+
+         pf_cmrpc_send_once_from_buffer (net, p_sess, p_res, res_pos, "REJECT");
+
+         p_sess->kill_session = is_new_session;
+      }
+      else if (
          (rpc_req.flags.fragment == false) ||
          (rpc_req.flags.last_fragment == true))
       {
