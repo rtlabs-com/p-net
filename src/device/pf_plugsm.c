@@ -23,6 +23,7 @@
  */
 
 #include "pf_includes.h"
+#include <inttypes.h>
 
 void pf_plugsm_released_alarm_req (
    pnet_t * net,
@@ -62,7 +63,8 @@ void pf_plugsm_released_alarm_req (
       LOG_DEBUG (
          PNET_LOG,
          "PLUGSM(%d): Queued released alarm.\n"
-         "  AREP: %u, API: %u, Slot: 0x%x, Subslot: 0x%x\n",
+         "  AREP: %" PRIu16 ", API: %" PRIu32 ", Slot: 0x%" PRIx16
+         ", Subslot: 0x%" PRIx16 "\n",
          __LINE__,
          ar->arep,
          api,
@@ -76,7 +78,8 @@ void pf_plugsm_released_alarm_req (
       LOG_DEBUG (
          PNET_LOG,
          "PLUGSM(%d): Sending released alarm to controller.\n"
-         "  AREP: %u, API: %u, Slot: 0x%x, Subslot: 0x%x\n",
+         "  AREP: %" PRIu16 ", API: %" PRIu32 ", Slot: 0x%" PRIx16
+         ", Subslot: 0x%" PRIx16 "\n",
          __LINE__,
          ar->arep,
          plug->queue[plug->current].api,
@@ -154,7 +157,8 @@ void pf_plugsm_application_ready_req (pnet_t * net, pf_ar_t * ar)
       LOG_DEBUG (
          PNET_LOG,
          "PLUGSM(%d): Sending application ready to controller.\n"
-         "  AREP: %u, API: %u, Slot: 0x%x, Subslot: 0x%x\n",
+         "  AREP: %" PRIu16 ", API: %" PRIu32 ", Slot: 0x%" PRIx16
+         ", Subslot: 0x%" PRIx16 "\n",
          __LINE__,
          ar->arep,
          plug->queue[plug->current].api,
@@ -182,7 +186,8 @@ int pf_plugsm_application_ready_cnf (pnet_t * net, pf_ar_t * ar)
       LOG_DEBUG (
          PNET_LOG,
          "PLUGSM(%d): Application ready confirmed by controller.\n"
-         "  AREP: %u, API: %u, Slot: 0x%x, Subslot: 0x%x\n",
+         "  AREP: %" PRIu16 ", API: %" PRIu32 ", Slot: 0x%" PRIx16
+         ", Subslot: 0x%" PRIx16 "\n",
          __LINE__,
          ar->arep,
          plug->queue[plug->current].api,
@@ -202,7 +207,8 @@ int pf_plugsm_application_ready_cnf (pnet_t * net, pf_ar_t * ar)
          LOG_DEBUG (
             PNET_LOG,
             "PLUGSM(%d): Sending released alarm to controller.\n"
-            "  AREP: %u, API: %u, Slot: 0x%x, Subslot: 0x%x\n",
+            "  AREP: %" PRIu16 ", API: %" PRIu32 ", Slot: 0x%" PRIx16
+            ", Subslot: 0x%" PRIx16 "\n",
             __LINE__,
             ar->arep,
             plug->queue[plug->current].api,
