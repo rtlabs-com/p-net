@@ -520,9 +520,11 @@ static int pf_session_allocate (pnet_t * net, pf_session_info_t ** pp_sess)
       p_sess->in_use = true;
       p_sess->p_ar = NULL;
       p_sess->sequence_nmb_send = 0;
+      p_sess->epm_sequence_nmb = 0;
       p_sess->dcontrol_sequence_nmb = UINT32_MAX;
       p_sess->ix = ix;
       pf_scheduler_init_handle (&p_sess->resend_timeout, "rpc");
+      pf_scheduler_init_handle (&p_sess->epm_timeout, "rpc-lookup");
 
       /* Set activity UUID. Will be overwritten for incoming requests. */
       pf_generate_uuid (
@@ -570,6 +572,7 @@ static void pf_session_release (pnet_t * net, pf_session_info_t * p_sess)
          }
 
          pf_scheduler_remove_if_running (net, &p_sess->resend_timeout);
+         pf_scheduler_remove_if_running (net, &p_sess->epm_timeout);
 
          LOG_DEBUG (
             PF_RPC_LOG,
@@ -590,6 +593,22 @@ static void pf_session_release (pnet_t * net, pf_session_info_t * p_sess)
    {
       LOG_ERROR (PF_RPC_LOG, "CMRPC(%d): Session is NULL\n", __LINE__);
    }
+}
+
+/**
+ * @internal
+ *
+ * An EPM timeout has occurred.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param arg              InOut: The session instance.
+ * @param current_time     In: Time when the EPM timeout function was scheduled
+ */
+static void pf_session_epm_timeout(pnet_t * net, void * arg, uint32_t current_time)
+{
+  struct pf_session_info * p_session = (struct pf_session_info *)arg;
+
+  pf_session_release(net, p_session);
 }
 
 /**
@@ -3109,6 +3128,7 @@ static int pf_cmrpc_lookup_ind (
       lookup_request.udpPort = p_sess->port;
       ret = pf_cmrpc_lookup_request (
          net,
+         p_sess,
          p_rpc_req,
          &lookup_request,
          &p_sess->rpc_result,
@@ -4639,6 +4659,10 @@ static int pf_cmrpc_dce_packet (
                   &uuid_epmap_interface,
                   sizeof (rpc_req.object_uuid)) == 0)
             {
+               /* Incoming EPM request will cancel timeout */
+               pf_scheduler_remove_if_running(net, &p_sess->emp_timeout);
+               pf_scheduler_reset_handle(&p_sess->epm_timeout);
+
                rpc_res.fragment_nmb = 0;
                rpc_res.flags.idempotent = false;
 
@@ -4653,10 +4677,16 @@ static int pf_cmrpc_dce_packet (
                   &p_sess->out_buf_len);
                *p_close_socket = p_sess->from_me;
 
-               /* Close session after each EPM request
-                  If future more advanced EPM usage is required, implement a
-                  timeout for closing the session */
-               p_sess->kill_session = true;
+               // If the pf_cmrpc_lookup_ind didn't request
+               // the session to be killed, increment the sequence
+               // number and start a timeout that will kill the
+               // session if a request is not received soon enough
+               if(!p_sess->kill_session)
+               {
+                 p_sess->epm_sequence_nmb++;
+                 pf_scheduler_add(net, 5000000, pf_session_epm_timeout, (void*) p_sess, &p_sess->epm_timeout);
+               }
+
             }
             else
             {

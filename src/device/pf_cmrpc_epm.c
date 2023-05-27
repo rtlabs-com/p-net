@@ -261,6 +261,7 @@ static int pf_cmrdr_add_pnio_entry (
  */
 static int pf_cmrdr_inquiry_read_all_reg_ind (
    pnet_t * net,
+   pf_session_info_t * p_sess,
    const pf_rpc_header_t * p_rpc_req,
    const pf_rpc_lookup_req_t * p_lookup_req,
    pf_rpc_lookup_rsp_t * p_lookup_rsp,
@@ -268,7 +269,7 @@ static int pf_cmrdr_inquiry_read_all_reg_ind (
 {
    int ret = -1;
 
-   switch (p_rpc_req->sequence_nmb)
+   switch (p_rpc_req->epm_sequence_nmb)
    {
    case 0:
    {
@@ -315,6 +316,7 @@ static int pf_cmrdr_inquiry_read_all_reg_ind (
       }
       break;
    default:
+      p_sess->kill_session = true;
       break;
    }
    return ret;
@@ -335,6 +337,7 @@ static int pf_cmrdr_inquiry_read_all_reg_ind (
  */
 int pf_cmrpc_lookup_request (
    pnet_t * net,
+   pf_session_info_t * p_sess,
    const pf_rpc_header_t * p_rpc_req,
    const pf_rpc_lookup_req_t * p_lookup_req,
    pnet_result_t * p_read_status,
@@ -361,6 +364,7 @@ int pf_cmrpc_lookup_request (
       case PF_RPC_INQUIRY_READ_ALL_REGISTERED_INTERFACES:
          pf_cmrdr_inquiry_read_all_reg_ind (
             net,
+            p_sess,
             p_rpc_req,
             p_lookup_req,
             &lookup_rsp,
