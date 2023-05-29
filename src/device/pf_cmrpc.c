@@ -4660,7 +4660,7 @@ static int pf_cmrpc_dce_packet (
                   sizeof (rpc_req.object_uuid)) == 0)
             {
                /* Incoming EPM request will cancel timeout */
-               pf_scheduler_remove_if_running(net, &p_sess->emp_timeout);
+               pf_scheduler_remove_if_running(net, &p_sess->epm_timeout);
                pf_scheduler_reset_handle(&p_sess->epm_timeout);
 
                rpc_res.fragment_nmb = 0;
