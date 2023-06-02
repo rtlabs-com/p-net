@@ -269,7 +269,7 @@ static int pf_cmrdr_inquiry_read_all_reg_ind (
 {
    int ret = -1;
 
-   switch (p_rpc_req->epm_sequence_nmb)
+   switch (p_sess->epm_sequence_nmb)
    {
    case 0:
    {
