@@ -230,7 +230,7 @@ the ``[Unit]`` part of your ``.service`` file::
 You might also need to add this to the ``[Service]`` part of your
 ``.service`` file::
 
-   ExecStartPre=/usr/bin/sleep 0.3
+   ExecStartPre=/usr/bin/sleep 1.0
 
 If the P-Net application fails to connect to snmpd, a message "Warning: Failed
 to connect to the agentx master agent" will be written to the P-Net sample
