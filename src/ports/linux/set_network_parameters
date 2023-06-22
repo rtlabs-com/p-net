@@ -37,13 +37,17 @@ SET_VALUES_PERMANENTLY=$6
 # name as station name internally.
 SKIP_SETTING_HOSTNAME=true
 
+# The default gateway is typically used for non-Profinet traffic
+SKIP_SETTING_DEFAULT_GATEWAY=true
+
 echo "Network script for ${INTERFACE}: " \
    "Set IP ${IP_ADDRESS}  " \
    "Netmask ${NETMASK}  " \
    "Gateway ${DEFAULT_GATEWAY}  " \
    "Permanent: ${SET_VALUES_PERMANENTLY}  " \
    "Hostname: ${HOSTNAME}  " \
-   "Skip setting hostname: ${SKIP_SETTING_HOSTNAME}"
+   "Skip setting hostname: ${SKIP_SETTING_HOSTNAME}  " \
+   "Skip setting default gateway: ${SKIP_SETTING_DEFAULT_GATEWAY}"
 
 # There is no need to set the changes permanently,
 # as the p-net stack will set the IP parameters on each start.
@@ -64,13 +68,15 @@ if ! ip link set dev $INTERFACE up; then
    exit 1
 fi
 
-if [ "${DEFAULT_GATEWAY}" != "0.0.0.0" ]; then
-   if ! ip route add default via $DEFAULT_GATEWAY; then
-      echo "Failed to set default gateway"
-      exit 1
+if [ "$SKIP_SETTING_DEFAULT_GATEWAY" = false ]; then
+   if [ "${DEFAULT_GATEWAY}" != "0.0.0.0" ]; then
+      if ! ip route add default via $DEFAULT_GATEWAY; then
+         echo "Failed to set default gateway"
+         exit 1
+      fi
+   else
+      echo "No valid default gateway given. Skipping setting default gateway."
    fi
-else
-   echo "No valid default gateway given. Skipping setting default gateway."
 fi
 
 if [ "$SKIP_SETTING_HOSTNAME" = false ]; then
