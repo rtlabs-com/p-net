@@ -560,20 +560,26 @@ pnal_ipaddr_t pnal_get_netmask (const char * interface_name)
 
 pnal_ipaddr_t pnal_get_gateway (const char * interface_name)
 {
-   /* TODO Read the actual default gateway (somewhat complicated) */
-
-   pnal_ipaddr_t ip;
-   pnal_ipaddr_t gateway;
-
-   ip = pnal_get_ip_address (interface_name);
-   if (ip == PNAL_IPADDR_INVALID)
+   int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+   if (sockfd < 0) 
    {
       return PNAL_IPADDR_INVALID;
    }
 
-   gateway = (ip & 0xFFFFFF00) | 0x00000001;
+   struct ifreq ifr;
+   memset(&ifr, 0, sizeof(ifr));
+   strncpy(ifr.ifr_name, interface_name, IFNAMSIZ - 1);
 
-   return gateway;
+   if (ioctl(sockfd, SIOCGIFDSTADDR, &ifr) < 0)
+   {
+      close(sockfd);
+      return PNAL_IPADDR_INVALID;
+   }
+
+   close(sockfd);
+
+   struct sockaddr_in *gateway = (struct sockaddr_in *)&ifr.ifr_dstaddr;
+   return gateway->sin_addr.s_addr;
 }
 
 int pnal_get_hostname (char * hostname)
