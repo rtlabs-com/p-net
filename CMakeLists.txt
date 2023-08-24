@@ -69,13 +69,13 @@ option (PNET_OPTION_DRIVER_ENABLE "Enable drivers. Specific driver must be enabl
 # TODO: this should be handled in cc.h
 option (PNET_USE_ATOMICS "Enable use of atomic operations (stdatomic.h)" OFF)
 
-set(PNET_MAX_AR                 1
+set(PNET_MAX_AR                 2
   CACHE STRING "Number of connections. Must be > 0. If > 1, support shared device")
 set(PNET_MAX_API                1
   CACHE STRING "Number of Application Processes. Must be > 0")
 set(PNET_MAX_CR                 2
   CACHE STRING "Per AR. At least 2 (1 input and 1 output). If unsure, use 2.")
-set(PNET_MAX_SLOTS            5
+set(PNET_MAX_SLOTS            13
   CACHE STRING "Per API. Should be > 1 to allow at least one I/O module")
 set(PNET_MAX_SUBSLOTS         3
   CACHE STRING "Per slot (DAP requires 2 + PNET_MAX_PHYSICAL_PORTS)")
@@ -113,7 +113,7 @@ set(PNET_MAX_PORT_DESCRIPTION_SIZE 60
 set(LOG_STATE_VALUES "ON;OFF")
 set(LOG_LEVEL_VALUES "DEBUG;INFO;WARNING;ERROR;FATAL")
 
-set(LOG_LEVEL FATAL CACHE STRING "default log level")
+set(LOG_LEVEL INFO CACHE STRING "default log level")
 set_property(CACHE LOG_LEVEL PROPERTY STRINGS ${LOG_LEVEL_VALUES})
 
 set(PF_ETH_LOG ON CACHE STRING "pf_eth log")
