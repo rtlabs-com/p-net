@@ -579,7 +579,7 @@ pnal_ipaddr_t pnal_get_gateway (const char * interface_name)
    close(sockfd);
 
    struct sockaddr_in *gateway = (struct sockaddr_in *)&ifr.ifr_dstaddr;
-   return gateway->sin_addr.s_addr;
+   return ntohl(gateway->sin_addr.s_addr);
 }
 
 int pnal_get_hostname (char * hostname)
