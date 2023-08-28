@@ -560,26 +560,41 @@ pnal_ipaddr_t pnal_get_netmask (const char * interface_name)
 
 pnal_ipaddr_t pnal_get_gateway (const char * interface_name)
 {
-   int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-   if (sockfd < 0) 
+   char line[1024];
+
+   // Open the route file
+   FILE* fp = fopen("/proc/net/route", "r");
+   if (fp == NULL) 
    {
-      return PNAL_IPADDR_INVALID;
+      return 0;
    }
 
-   struct ifreq ifr;
-   memset(&ifr, 0, sizeof(ifr));
-   strncpy(ifr.ifr_name, interface_name, IFNAMSIZ - 1);
-
-   if (ioctl(sockfd, SIOCGIFDSTADDR, &ifr) < 0)
+   // Skip the first line (header)
+   if(fgets(line, sizeof(line), fp) == NULL) 
    {
-      close(sockfd);
-      return PNAL_IPADDR_INVALID;
+      return 0;
    }
 
-   close(sockfd);
+   // Read the route entries
+   while (fgets(line, sizeof(line), fp)) 
+   {
+      char iface[1024], dest[1024];
+      uint32_t flags, refcnt, use, metric, mask, mtu, window, irtt, gateway;
 
-   struct sockaddr_in *gateway = (struct sockaddr_in *)&ifr.ifr_dstaddr;
-   return gateway->sin_addr.s_addr;
+      int ret = sscanf(line, "%s %s %x %x %d %d %d %x %d %d %d\n",
+                       iface, dest, &gateway, &flags, &refcnt, &use,
+                       &metric, &mask, &mtu, &window, &irtt);
+      
+      if (ret == 11) 
+      {
+         if (!strcmp(iface, interface_name) && gateway != 0)
+         {
+            return htonl(gateway);
+         }
+      }
+   }
+   fclose(fp);
+   return 0;
 }
 
 int pnal_get_hostname (char * hostname)
