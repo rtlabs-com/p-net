@@ -566,13 +566,14 @@ pnal_ipaddr_t pnal_get_gateway (const char * interface_name)
    FILE* fp = fopen("/proc/net/route", "r");
    if (fp == NULL) 
    {
-      return 0;
+      return PNAL_IPADDR_INVALID;
    }
 
    // Skip the first line (header)
    if(fgets(line, sizeof(line), fp) == NULL) 
    {
-      return 0;
+      fclose(fp);
+      return PNAL_IPADDR_INVALID;
    }
 
    // Read the route entries
@@ -589,12 +590,13 @@ pnal_ipaddr_t pnal_get_gateway (const char * interface_name)
       {
          if (!strcmp(iface, interface_name) && gateway != 0)
          {
+            fclose(fp);
             return htonl(gateway);
          }
       }
    }
    fclose(fp);
-   return 0;
+   return PNAL_IPADDR_INVALID;
 }
 
 int pnal_get_hostname (char * hostname)
