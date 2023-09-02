@@ -40,25 +40,11 @@
  */
 static const char * pf_pdport_get_filename (int loc_port_num)
 {
-   const char * filename = NULL;
-   switch (loc_port_num)
-   {
-   case PNET_PORT_1:
-      filename = PF_FILENAME_PDPORT_1;
-      break;
-   case PNET_PORT_2:
-      filename = PF_FILENAME_PDPORT_2;
-      break;
-   case PNET_PORT_3:
-      filename = PF_FILENAME_PDPORT_3;
-      break;
-   case PNET_PORT_4:
-      filename = PF_FILENAME_PDPORT_4;
-      break;
-   default:
-      CC_ASSERT (false);
-   }
-   return filename;
+   static char buf[26];
+
+   snprintf(buf, sizeof(buf), "pnet_data_pdport_%d.bin", loc_port_num);
+
+   return (const char *)buf;
 }
 
 /**
