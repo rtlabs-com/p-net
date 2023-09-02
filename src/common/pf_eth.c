@@ -171,8 +171,8 @@ int pf_eth_send_on_physical_port (
    {
       LOG_ERROR (
          PF_ETH_LOG,
-         "ETH(%d): Error from pnal_eth_send_on_physical_port()\n",
-         __LINE__);
+         "ETH(%d): Error from pnal_eth_send_on_physical_port(%d)\n",
+         __LINE__, loc_port_num);
    }
 
    return sent_len;
