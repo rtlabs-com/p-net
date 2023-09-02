@@ -29,6 +29,7 @@
 #include <netpacket/packet.h>
 #include <sys/ioctl.h>
 
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -188,5 +189,19 @@ pnal_eth_handle_t * pnal_eth_init (
 int pnal_eth_send (pnal_eth_handle_t * handle, pnal_buf_t * buf)
 {
    int ret = send (handle->socket, buf->payload, buf->len, 0);
+
+   if (ret == -1)
+   {
+      switch (errno)
+      {
+	 case ENETDOWN:		/* Ignore link down, common condition */
+	    ret = buf->len;
+	    break;
+	 default:
+	    LOG_WARNING (PF_PNAL_LOG, "failed sending frame, errno %d\n", errno);
+	    break;
+      }
+   }
+
    return ret;
 }
