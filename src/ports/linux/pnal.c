@@ -632,7 +632,7 @@ int pnal_get_ipmask(const char *interface_name, pnal_ipaddr_t *p_ip, pnal_ipaddr
          cand = ifa;
 
       addr = (struct sockaddr_in *)cand->ifa_addr;
-      printf("Best cand: %s\n", inet_ntoa(addr->sin_addr));
+//      printf("Best cand: %s\n", inet_ntoa(addr->sin_addr));
    }
 
    if (!cand)
