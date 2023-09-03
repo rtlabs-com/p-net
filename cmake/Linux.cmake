@@ -18,6 +18,10 @@ if (PNET_OPTION_SNMP)
   find_package(NetSNMPAgent REQUIRED)
 endif()
 
+option (USE_SYSLOG
+  "Use syslog instead of logging to stdout"
+  OFF)
+
 target_include_directories(profinet
   PRIVATE
   src/ports/linux
@@ -51,6 +55,7 @@ target_compile_options(profinet
   -Wno-unused-parameter
   -ffunction-sections
   -fdata-sections
+  $<$<BOOL:${USE_SYSLOG}>:-DUSE_SYSLOG>
   INTERFACE
   $<$<CONFIG:Coverage>:--coverage>
   )
