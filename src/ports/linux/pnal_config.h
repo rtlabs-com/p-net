@@ -43,6 +43,7 @@ typedef struct pnal_thread_cfg
 typedef struct pnal_cfg
 {
    pnal_thread_cfg_t snmp_thread;
+   const char       *snmp_agentx_socket;
    pnal_thread_cfg_t eth_recv_thread;
    pnal_thread_cfg_t bg_worker_thread;
 } pnal_cfg_t;

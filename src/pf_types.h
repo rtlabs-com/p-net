@@ -3051,7 +3051,7 @@ struct pnet
 
 #if PNET_OPTION_SNMP
    pf_snmp_data_t snmp_data;
-   char *snmp_agentx_socket;
+   const char *snmp_agentx_socket;
 #endif
 };
 

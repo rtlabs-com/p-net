@@ -41,8 +41,6 @@ static void pnal_snmp_thread (void * arg)
 
 #ifndef USE_SYSLOG
    snmp_disable_log();
-#else
-   snmp_enable_syslog();
 #endif
 
    /* make us an agentx client. */
@@ -81,6 +79,7 @@ static void pnal_snmp_thread (void * arg)
 
 int pnal_snmp_init (struct pnet * pnet, const pnal_cfg_t * pnal_cfg)
 {
+   pnet->snmp_agentx_socket = pnal_cfg->snmp_agentx_socket;
    os_thread_create (
       "pn_snmp",
       pnal_cfg->snmp_thread.prio,
@@ -88,12 +87,4 @@ int pnal_snmp_init (struct pnet * pnet, const pnal_cfg_t * pnal_cfg)
       pnal_snmp_thread,
       pnet);
    return 0;
-}
-
-void pnal_snmp_set_agentx_socket(struct pnet * net, const char * path)
-{
-   if (!net || !path)
-      return;
-
-   net->snmp_agentx_socket = (char *)path;
 }
