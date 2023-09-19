@@ -414,6 +414,26 @@ static uint16_t calculate_capabilities (uint32_t advertised)
    return out;
 }
 
+static int ethcmd(int sd, const char *ifname, int cmd, void *ptr)
+{
+   struct ethcmd { __u32 cmd; } *ecmd = (struct ethcmd *)ptr;
+   struct ifreq ifr;
+
+   memset(&ifr, 0, sizeof(ifr));
+   snprintf(ifr.ifr_name, IFNAMSIZ, "%s", ifname);
+   ifr.ifr_data = ptr;
+   ecmd->cmd = cmd;
+
+   if (ioctl(sd, SIOCETHTOOL, &ifr) == -1)
+   {
+      LOG_ERROR (PF_PNAL_LOG, "PNAL(%d): failed SIOCETHTOOL cmd %d: %s\n",
+		 __LINE__, cmd, strerror(errno));
+      return 1;
+   }
+
+   return 0;
+}
+
 int pnal_eth_get_status (const char * interface_name, pnal_eth_status_t * status)
 {
    /* TODO: Possibly use the new ETHTOOL_GLINKSETTINGS instead of ETHTOOL_GSET
@@ -423,7 +443,8 @@ int pnal_eth_get_status (const char * interface_name, pnal_eth_status_t * status
    int ret = -1;
    int control_socket;
    struct ifreq ifr;
-   struct ethtool_cmd eth_status_linux;
+   struct ethtool_cmd ecmd = { 0 };
+   struct ethtool_drvinfo edrv = { 0 };
    uint32_t speed = 0;          /* Mbit/s */
    uint8_t port_type = PORT_TP; /* Linux PORT_xxx */
 
@@ -433,22 +454,33 @@ int pnal_eth_get_status (const char * interface_name, pnal_eth_status_t * status
       return ret;
    }
 
-   snprintf (ifr.ifr_name, sizeof (ifr.ifr_name), "%s", interface_name);
-   ifr.ifr_data = (char *)&eth_status_linux;
-   eth_status_linux.cmd = ETHTOOL_GSET;
-
-   if (ioctl (control_socket, SIOCETHTOOL, &ifr) >= 0)
+   if (!ethcmd (control_socket, interface_name, ETHTOOL_GSET, &ecmd))
    {
-      speed = ethtool_cmd_speed (&eth_status_linux);
-      port_type = eth_status_linux.port;
-      status->is_autonegotiation_enabled =
-         (eth_status_linux.autoneg == AUTONEG_ENABLE);
-      status->is_autonegotiation_supported = eth_status_linux.advertising &
-                                             ADVERTISED_Autoneg;
-      status->operational_mau_type =
-         calculate_mau_type (port_type, speed, eth_status_linux.duplex);
-      status->autonegotiation_advertised_capabilities =
-         calculate_capabilities (eth_status_linux.advertising);
+      speed = ethtool_cmd_speed (&ecmd);
+      port_type = ecmd.port;
+
+      if (port_type == PORT_OTHER)
+      {
+	 if (!ethcmd (control_socket, interface_name, ETHTOOL_GDRVINFO, &edrv))
+	 {
+	    LOG_DEBUG (PF_PNAL_LOG, "PNAL(%d): port %s driver %s\n", __LINE__, interface_name, edrv.driver);
+	    if (!strcmp (edrv.driver, "virtio_net"))
+	    {
+	       /* Fake type/speed/duplex/aneg in Qemu */
+	       port_type = PORT_MII;
+	       speed = SPEED_1000;
+	       ecmd.duplex = DUPLEX_FULL;
+	       ecmd.autoneg = AUTONEG_ENABLE;
+	       ecmd.advertising = ADVERTISED_10baseT_Full | ADVERTISED_100baseT_Full
+		  | ADVERTISED_1000baseT_Full | ADVERTISED_Autoneg;
+	    }
+	 }
+      }
+
+      status->is_autonegotiation_enabled   = (ecmd.autoneg == AUTONEG_ENABLE);
+      status->is_autonegotiation_supported = ecmd.advertising & ADVERTISED_Autoneg;
+      status->operational_mau_type         = calculate_mau_type (port_type, speed, ecmd.duplex);
+      status->autonegotiation_advertised_capabilities = calculate_capabilities (ecmd.advertising);
 
       ret = 0;
    }
