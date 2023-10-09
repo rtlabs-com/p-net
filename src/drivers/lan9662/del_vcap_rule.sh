@@ -9,7 +9,7 @@
 PRIORITY=10
 VCAM_HANDLE=$1
 
-COMMAND="vcap del is1 $PRIORITY $VCAM_HANDLE"
+COMMAND="vcap del $VCAM_HANDLE"
 
 echo "$COMMAND"
 if ! $COMMAND; then
