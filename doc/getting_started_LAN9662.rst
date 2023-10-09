@@ -304,7 +304,7 @@ log::
     ANA_RT_VLAN_PCP[1].PCP_MASK                                                                                       = 0x00000000 -> 0x000000ff
     ANA_RT_VLAN_PCP[1].VLAN_ID                                                                                        = 0x00000000 -> 0x00000000
     ANA_RT_VLAN_PCP[1].VLAN_PCP_ENA                                                                                   = 0x00000000 -> 0x00000001
-    vcap add is1 10 3 s1_rt first 0 rt_vlan_idx 1 0x7 l2_mac 12:A9:2D:16:93:83 ff:ff:ff:ff:ff:ff rt_type 1 0x3 rt_frmid 32769 0xffff s1_rt rtp_id 5 fwd_ena 1 fwd_mas0
+    vcap add 10000 is1 10 0 VCAP_KFS_RT RT_VLAN_IDX 1 0x7 L2_MAC 12:A9:2D:16:93:83 ff:ff:ff:ff:ff:ff RT_TYPE 1 0x3 RT_FRMID 32769 0xffff VCAP_AFS_S1_RT RTP_ID 5 FWD_ENA 1 FWD_MASK 0
     key field first: value: 0
     key field rt_vlan_idx: value: 01 mask: 07
     key field l2_mac: value: 8393162da912 mask: ffffffffffff
@@ -324,7 +324,7 @@ log::
     [0,32770,"DAP Port 2"]                   Set input data and IOPS. Size: 0 IOPS: GOOD
     [11,1,"Digital Input Port A"]            Set input data and IOPS. Size: 4 IOPS: GOOD
     [12,1,"Digital Output Port A"]           Set output IOCS: GOOD
-    vcap add is1 10 2 s1_rt first 0 l2_mac 12:A9:2D:16:93:83 ff:ff:ff:ff:ff:ff rt_vlan_idx 0 0x7 rt_frmid 32768 0xffff s1_rt rtp_id 4 rtp_subid 0 rte_inb_upd 1 fwd_e0
+    vcap add 10001 is1 10 0 VCAP_KFS_RT L2_MAC 12:A9:2D:16:93:83 ff:ff:ff:ff:ff:ff RT_VLAN_IDX 0 0x7 RT_FRMID 32768 0xffff VCAP_AFS_S1_RT RTP_ID 4 RTP_SUBID 0 RTE_INB_UPD 1 FWD_ENA 1 FWD_MASK 0x10
     key field first: value: 0
     key field l2_mac: value: 8393162da912 mask: ffffffffffff
     key field rt_vlan_idx: value: 00 mask: 07

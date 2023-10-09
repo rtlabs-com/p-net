@@ -29,14 +29,14 @@ symreg ana_rt_vlan_pcp[$RT_VLAN_IDX].pcp_mask 0xff     # Wildcard on pcp value
 symreg ana_rt_vlan_pcp[$RT_VLAN_IDX].vlan_id $VLAN_ID  # Actual vid
 symreg ana_rt_vlan_pcp[$RT_VLAN_IDX].vlan_pcp_ena 1    # Enable entry
 
-COMMAND="vcap add is1 $PRIORITY $VCAM_HANDLE \
-s1_rt first 0 \
-rt_vlan_idx $RT_VLAN_IDX 0x7 \
-l2_mac $DMAC ff:ff:ff:ff:ff:ff \
-rt_type 1 0x3 \
-rt_frmid $RT_FRMID 0xffff \
-s1_rt rtp_id $RTP_ID \
-fwd_ena 1 fwd_mask 0x10"
+COMMAND="vcap add $VCAM_HANDLE is1 $PRIORITY 0 \
+VCAP_KFS_RT \
+RT_VLAN_IDX $RT_VLAN_IDX 0x7 \
+L2_MAC $DMAC ff:ff:ff:ff:ff:ff \
+RT_TYPE 1 0x3 \
+RT_FRMID $RT_FRMID 0xffff \
+VCAP_AFS_S1_RT RTP_ID $RTP_ID \
+FWD_ENA 1 FWD_MASK 0x10"
 
 echo "$COMMAND"
 if ! $COMMAND; then
