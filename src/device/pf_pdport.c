@@ -373,6 +373,8 @@ int pf_pdport_reset_all (pnet_t * net)
    pf_port_iterator_t port_iterator;
    pf_port_t * p_port_data = NULL;
 
+   LOG_INFO (PNET_LOG, "PDPORT(%d): Reset all ports.\n", __LINE__);
+
    pf_port_init_iterator_over_ports (net, &port_iterator);
    port = pf_port_get_next (&port_iterator);
    while (port != 0)
