@@ -162,14 +162,16 @@ static int pf_pdport_save (pnet_t * net, int loc_port_num)
    pf_pdport_t temporary_buffer;
    const char * p_file_directory = pf_cmina_get_file_directory (net);
    pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
+   const char *p_filename;
 
    os_mutex_lock (net->pf_interface.port_mutex);
    memcpy (&pdport_config, &p_port_data->pdport, sizeof (pdport_config));
    os_mutex_unlock (net->pf_interface.port_mutex);
 
+   p_filename = pf_pdport_get_filename (loc_port_num);
    save_result = pf_file_save_if_modified (
       p_file_directory,
-      pf_pdport_get_filename (loc_port_num),
+      p_filename,
       &pdport_config,
       &temporary_buffer,
       sizeof (pf_pdport_t));
@@ -179,28 +181,28 @@ static int pf_pdport_save (pnet_t * net, int loc_port_num)
    case 2:
       LOG_INFO (
          PNET_LOG,
-         "PDPORT(%d): First nvm saving of port settings.\n",
-         __LINE__);
+         "PDPORT(%d): First nvm saving of port settings, %s.\n",
+         __LINE__, p_filename);
       break;
    case 1:
       LOG_INFO (
          PNET_LOG,
-         "PDPORT(%d): Updating nvm stored port settings.\n",
-         __LINE__);
+         "PDPORT(%d): Updating nvm stored port settings, %s.\n",
+         __LINE__, p_filename);
       break;
    case 0:
       LOG_DEBUG (
          PNET_LOG,
-         "PDPORT(%d): No storing of nvm port settings (no changes).\n",
-         __LINE__);
+         "PDPORT(%d): No storing of nvm port settings (no changes), %s.\n",
+         __LINE__, p_filename);
       break;
    default:
    case -1:
       ret = -1;
       LOG_ERROR (
          PNET_LOG,
-         "PDPORT(%d): Failed to store nvm port settings.\n",
-         __LINE__);
+         "PDPORT(%d): Failed to store nvm port settings, %s.\n",
+         __LINE__, p_filename);
       break;
    }
    return ret;
