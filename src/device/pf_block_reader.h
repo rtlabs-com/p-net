@@ -361,6 +361,17 @@ void pf_get_port_data_adjust (
    pf_port_data_adjust_t * p_port_data_check);
 
 /**
+ * Extract a AdjustLinkState data block from a buffer.
+ * @param p_info           InOut: The parser information.
+ * @param p_pos            InOut: The current parsing position.
+ * @param link_state       Out:   Destination structure.
+ */
+void pf_get_port_data_adjust_link_state (
+   pf_get_info_t * p_info,
+   uint16_t * p_pos,
+   pf_adjust_link_state_t * link_state);
+
+/**
  * Extract a AdjustPeerToPeerBoundary data block from a buffer.
  * @param p_info           InOut: The parser information.
  * @param p_pos            InOut: The current parsing position.

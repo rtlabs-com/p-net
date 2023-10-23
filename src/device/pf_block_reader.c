@@ -1015,6 +1015,22 @@ void pf_get_port_data_adjust (
    pf_get_block_header (p_info, p_pos, &p_port_data_adjust->block_header);
 }
 
+void pf_get_port_data_adjust_link_state (
+   pf_get_info_t * p_info,
+   uint16_t * p_pos,
+   pf_adjust_link_state_t * p_link_state)
+{
+   uint8_t dummy[4];
+   uint16_t temp;
+
+   pf_get_mem (p_info, p_pos, 2, dummy); /* Padding */
+
+   temp = pf_get_uint16 (p_info, p_pos);
+   p_link_state->link = temp & 0xff;
+   p_link_state->port = (temp >> 8) & 0xff;
+   p_link_state->adjust_properties = pf_get_uint16 (p_info, p_pos);
+}
+
 void pf_get_port_data_adjust_peer_to_peer_boundary (
    pf_get_info_t * p_info,
    uint16_t * p_pos,

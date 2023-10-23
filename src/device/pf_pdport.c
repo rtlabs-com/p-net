@@ -47,6 +47,40 @@ static const char * pf_pdport_get_filename (int loc_port_num)
    return (const char *)buf;
 }
 
+/* XXX: FIXME refactor to a proper pnal_eth_pdport_deactivate() function */
+#include <stdlib.h>
+/**
+ * Disable or enable a port based on PDPortAdjust:AdjustLinkState.
+ *
+ * According to the GSDML spec., regarding PortDeactivationSupported,
+ * pp. 146 (May 21); "The engineering tool shall ensure that not all
+ * ports are deactivated; at least one port must remain active", so
+ * we don't have to worry about disabling all ports.
+ */
+static int pf_pdport_enadis(pnet_t *net, int loc_port_num, pf_link_state_link_t link)
+{
+   pf_port_t *p_port_data = pf_port_get_state (net, loc_port_num);
+   char cmd[256];
+   char *updown;
+
+   LOG_INFO(PNET_LOG, "PDPORT(%d): enable/disable link %s => %d\n",
+	     __LINE__, p_port_data->netif.name, link);
+   if (link == PF_PD_LINK_STATE_LINK_UP)
+      updown = "up";
+   else if (link == PF_PD_LINK_STATE_LINK_DOWN)
+      updown = "down";
+   else {
+      LOG_ERROR(PNET_LOG, "PDPORT(%d): unsupported link state %d\n", __LINE__, link);
+      return -1;		/* Not supported */
+   }
+
+   snprintf(cmd, sizeof(cmd), "ifconfig %s %s", p_port_data->netif.name, updown);
+   if (system (cmd))
+      LOG_ERROR(PNET_LOG, "PDPORT(%d): failed command: '%s'\n", __LINE__, cmd);
+
+   return 0;
+}
+
 /**
  * Load PDPort data for one port from nvm
  *
@@ -111,7 +145,16 @@ static int pf_pdport_load (pnet_t * net, int loc_port_num)
             loc_port_num);
       }
 
-      if (p_port_data->pdport.adjust.active == true)
+      if (p_port_data->pdport.adjust.mask & PF_PDPORT_ADJUST_LINK_MASK)
+      {
+	 pf_pdport_enadis (net, loc_port_num, p_port_data->pdport.adjust.link_state.link);
+      }
+      else
+      {
+         pf_pdport_enadis (net, loc_port_num, PF_PD_LINK_STATE_LINK_UP);
+      }
+
+      if (p_port_data->pdport.adjust.mask & PF_PDPORT_ADJUST_P2PB_MASK)
       {
          if (
             p_port_data->pdport.adjust.peer_to_peer_boundary
@@ -139,6 +182,7 @@ static int pf_pdport_load (pnet_t * net, int loc_port_num)
          "peer on port %u.\n",
          __LINE__,
          loc_port_num);
+      pf_pdport_enadis (net, loc_port_num, PF_PD_LINK_STATE_LINK_UP);
       pf_lldp_send_enable (net, loc_port_num);
    }
 
@@ -415,7 +459,24 @@ void pf_pdport_ar_connect_ind (pnet_t * net, const pf_ar_t * p_ar)
    while (port != 0)
    {
       p_port_data = pf_port_get_state (net, port);
-      if (p_port_data->pdport.adjust.active == true)
+      if (p_port_data->pdport.adjust.mask & PF_PDPORT_ADJUST_LINK_MASK)
+      {
+	 pf_pdport_enadis(net, port, p_port_data->pdport.adjust.link_state.link);
+      }
+      else
+      {
+	 /*
+	  * We may be (only and always?) called from the function
+	  * pf_cmdev_rm_connect_ind(), when all port info has been
+	  * reset, in which case the adjust.mask is unset, but the
+	  * default should be to enable the port.
+	  *
+	  * XXX: this should apply also to peer_to_peer_boundary, below,
+	  *      but I've not verified this theory yet. --Jocke
+	  */
+	 pf_pdport_enadis(net, port, PF_PD_LINK_STATE_LINK_UP);
+      }
+      if (p_port_data->pdport.adjust.mask & PF_PDPORT_ADJUST_P2PB_MASK)
       {
          if (
             p_port_data->pdport.adjust.peer_to_peer_boundary
@@ -445,7 +506,7 @@ void pf_pdport_lldp_restart_transmission (pnet_t * net)
    {
       p_port_data = pf_port_get_state (net, port);
 
-      if (p_port_data->pdport.adjust.active == true)
+      if (p_port_data->pdport.adjust.mask & PF_PDPORT_ADJUST_P2PB_MASK)
       {
          if (
             p_port_data->pdport.adjust.peer_to_peer_boundary
@@ -531,7 +592,7 @@ int pf_pdport_read_ind (
       {
          loc_port_num = pf_port_dap_subslot_to_local_port (net, subslot);
          p_port_data = pf_port_get_state (net, loc_port_num);
-         if (p_port_data->pdport.adjust.active)
+         if (p_port_data->pdport.adjust.mask & PF_PDPORT_ADJUST_P2PB_MASK)
          {
             pf_put_pdport_data_adj (
                true,
@@ -1258,6 +1319,7 @@ static int pf_pdport_write_data_adj (
    uint16_t pos = 0;
    pf_get_info_t get_info;
    pf_port_data_adjust_t port_data_adjust = {0};
+   pf_adjust_link_state_t link_state;
    pf_adjust_peer_to_peer_boundary_t boundary;
    pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
@@ -1270,11 +1332,23 @@ static int pf_pdport_write_data_adj (
 
    switch (port_data_adjust.block_header.block_type)
    {
+   case PF_BT_ADJUST_LINK_STATE:
+      pf_get_port_data_adjust_link_state (&get_info, &pos, &link_state);
+      if (get_info.result == PF_PARSE_OK)
+      {
+         p_port_data->pdport.adjust.mask |= PF_PDPORT_ADJUST_LINK_MASK;
+         p_port_data->pdport.adjust.link_state = link_state;
+
+	 LOG_INFO(PNET_LOG, "PDPORT(%d): Set link state, link 0x%02x port 0x%02x\n",
+		   __LINE__, link_state.link, link_state.port);
+	 ret = pf_pdport_enadis(net, loc_port_num, link_state.link);
+      }
+      break;
    case PF_BT_PEER_TO_PEER_BOUNDARY:
       pf_get_port_data_adjust_peer_to_peer_boundary (&get_info, &pos, &boundary);
       if (get_info.result == PF_PARSE_OK)
       {
-         p_port_data->pdport.adjust.active = true;
+         p_port_data->pdport.adjust.mask |= PF_PDPORT_ADJUST_P2PB_MASK;
          p_port_data->pdport.adjust.peer_to_peer_boundary = boundary;
 
          LOG_INFO (

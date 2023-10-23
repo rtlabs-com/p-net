@@ -280,8 +280,11 @@ void pf_port_show (pnet_t * net)
          " Peer check port name    : \"%s\"\n",
          p_port_data->pdport.check.peer.peer_port_name);
       printf (
-         " Adjust active           : %u\n",
-         p_port_data->pdport.adjust.active);
+         " Adjust active (mask)    : 0x%02x\n",
+         p_port_data->pdport.adjust.mask);
+      printf (
+         " Link state              : 0x%02x\n",
+         p_port_data->pdport.adjust.link_state.link);
       printf (
          " Do not send LLDP        : %u\n",
          p_port_data->pdport.adjust.peer_to_peer_boundary.peer_to_peer_boundary
