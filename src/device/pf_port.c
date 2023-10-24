@@ -283,7 +283,10 @@ void pf_port_show (pnet_t * net)
          " Adjust active (mask)    : 0x%02x\n",
          p_port_data->pdport.adjust.mask);
       printf (
-         " Link state              : 0x%02x\n",
+         " Link adjust speed       : 0x%02x\n",
+         p_port_data->pdport.adjust.speed);
+      printf (
+         " Link adjust state       : 0x%02x\n",
          p_port_data->pdport.adjust.link_state.link);
       printf (
          " Do not send LLDP        : %u\n",

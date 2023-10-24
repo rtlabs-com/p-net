@@ -361,6 +361,17 @@ void pf_get_port_data_adjust (
    pf_port_data_adjust_t * p_port_data_check);
 
 /**
+ * Extract a AdjustMAUType data block from a buffer.
+ * @param p_info           InOut: The parser information.
+ * @param p_pos            InOut: The current parsing position.
+ * @param speed            Out:   Destination uint16_t MAU type.
+ */
+void pf_get_port_data_adjust_mau_type (
+   pf_get_info_t * p_info,
+   uint16_t * p_pos,
+   uint16_t * speed);
+
+/**
  * Extract a AdjustLinkState data block from a buffer.
  * @param p_info           InOut: The parser information.
  * @param p_pos            InOut: The current parsing position.

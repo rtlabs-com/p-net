@@ -81,6 +81,58 @@ static int pf_pdport_enadis(pnet_t *net, int loc_port_num, pf_link_state_link_t 
    return 0;
 }
 
+/* XXX: FIXME refactor to a proper pnal_eth_pdport_speed() function */
+static int pf_pdport_speed(pnet_t *net, int loc_port_num, uint16_t mau_type)
+{
+   pf_port_t *p_port_data = pf_port_get_state (net, loc_port_num);
+   const char *speed, *duplex;
+   char cmd[256];
+
+   switch (mau_type)
+   {
+      case PNAL_ETH_MAU_UNKNOWN:
+	 speed = "auto"; duplex = "full";
+	 break;
+      case PNAL_ETH_MAU_COPPER_10BaseT: /* duplex "unknown" */
+	 speed = "10"; duplex = "full";
+	 break;
+      case PNAL_ETH_MAU_COPPER_10BaseTX_HALF_DUPLEX:
+	 speed = "10"; duplex = "half";
+	 break;
+      case PNAL_ETH_MAU_COPPER_10BaseTX_FULL_DUPLEX:
+	 speed = "10"; duplex = "full";
+	 break;
+      case PNAL_ETH_MAU_COPPER_100BaseTX_HALF_DUPLEX:
+	 speed = "100"; duplex = "half";
+	 break;
+      case PNAL_ETH_MAU_COPPER_100BaseTX_FULL_DUPLEX:
+	 speed = "100"; duplex = "full";
+	 break;
+      case PNAL_ETH_MAU_COPPER_1000BaseT_HALF_DUPLEX:
+	 speed = "1000"; duplex = "half";
+	 break;
+      case PNAL_ETH_MAU_COPPER_1000BaseT_FULL_DUPLEX:
+	 speed = "1000"; duplex = "full";
+	 break;
+      default:
+	 LOG_ERROR(PNET_LOG, "PDPORT(%d): unsupported MAU type %u\n", __LINE__, mau_type);
+	 return -1;
+   }
+
+   LOG_INFO(PNET_LOG, "PDPORT(%d): %s speed %s duplex %s\n", __LINE__,
+	    p_port_data->netif.name, speed, duplex);
+   if (strcmp(speed, "auto"))
+      snprintf(cmd, sizeof(cmd), "ethtool -s %s autoneg off speed %s duplex %s",
+	       p_port_data->netif.name, speed, duplex);
+   else
+      snprintf(cmd, sizeof(cmd), "ethtool -s %s autoneg on", p_port_data->netif.name);
+
+   if (system (cmd))
+      LOG_ERROR(PNET_LOG, "PDPORT(%d): failed command: '%s'\n", __LINE__, cmd);
+
+   return 0;
+}
+
 /**
  * Load PDPort data for one port from nvm
  *
@@ -145,6 +197,15 @@ static int pf_pdport_load (pnet_t * net, int loc_port_num)
             loc_port_num);
       }
 
+      if (p_port_data->pdport.adjust.mask & PF_PDPORT_ADJUST_MAUT_MASK)
+      {
+	 pf_pdport_speed (net, loc_port_num, p_port_data->pdport.adjust.speed);
+      }
+      else
+      {
+         pf_pdport_speed (net, loc_port_num, 0);
+      }
+
       if (p_port_data->pdport.adjust.mask & PF_PDPORT_ADJUST_LINK_MASK)
       {
 	 pf_pdport_enadis (net, loc_port_num, p_port_data->pdport.adjust.link_state.link);
@@ -182,6 +243,7 @@ static int pf_pdport_load (pnet_t * net, int loc_port_num)
          "peer on port %u.\n",
          __LINE__,
          loc_port_num);
+      pf_pdport_speed (net, loc_port_num, 0);
       pf_pdport_enadis (net, loc_port_num, PF_PD_LINK_STATE_LINK_UP);
       pf_lldp_send_enable (net, loc_port_num);
    }
@@ -459,6 +521,14 @@ void pf_pdport_ar_connect_ind (pnet_t * net, const pf_ar_t * p_ar)
    while (port != 0)
    {
       p_port_data = pf_port_get_state (net, port);
+      if (p_port_data->pdport.adjust.mask & PF_PDPORT_ADJUST_MAUT_MASK)
+      {
+	 pf_pdport_speed (net, port, p_port_data->pdport.adjust.speed);
+      }
+      else
+      {
+	 pf_pdport_speed (net, port, 0);
+      }
       if (p_port_data->pdport.adjust.mask & PF_PDPORT_ADJUST_LINK_MASK)
       {
 	 pf_pdport_enadis(net, port, p_port_data->pdport.adjust.link_state.link);
@@ -1317,6 +1387,7 @@ static int pf_pdport_write_data_adj (
 {
    int ret = -1;
    uint16_t pos = 0;
+   uint16_t speed;
    pf_get_info_t get_info;
    pf_port_data_adjust_t port_data_adjust = {0};
    pf_adjust_link_state_t link_state;
@@ -1332,6 +1403,16 @@ static int pf_pdport_write_data_adj (
 
    switch (port_data_adjust.block_header.block_type)
    {
+   case PF_BT_ADJUST_MAU_TYPE:
+      pf_get_port_data_adjust_mau_type (&get_info, &pos, &speed);
+      if (get_info.result == PF_PARSE_OK)
+      {
+         p_port_data->pdport.adjust.mask |= PF_PDPORT_ADJUST_MAUT_MASK;
+         p_port_data->pdport.adjust.speed = speed;
+	 ret = pf_pdport_speed (net, loc_port_num, p_port_data->pdport.adjust.speed);
+      }
+      break;
+
    case PF_BT_ADJUST_LINK_STATE:
       pf_get_port_data_adjust_link_state (&get_info, &pos, &link_state);
       if (get_info.result == PF_PARSE_OK)

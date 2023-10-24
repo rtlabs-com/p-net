@@ -1015,6 +1015,18 @@ void pf_get_port_data_adjust (
    pf_get_block_header (p_info, p_pos, &p_port_data_adjust->block_header);
 }
 
+void pf_get_port_data_adjust_mau_type (
+   pf_get_info_t * p_info,
+   uint16_t * p_pos,
+   uint16_t * speed)
+{
+   uint8_t dummy[4];
+
+   pf_get_mem (p_info, p_pos, 2, dummy); /* Padding */
+   *speed = pf_get_uint16 (p_info, p_pos);
+   pf_get_mem (p_info, p_pos, 2, dummy); /* adjust props */
+}
+
 void pf_get_port_data_adjust_link_state (
    pf_get_info_t * p_info,
    uint16_t * p_pos,

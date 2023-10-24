@@ -543,6 +543,7 @@ typedef enum pf_block_type_values
    PF_BT_CHECKPEERS = 0x020a,
    PF_BT_PDPORTDATAREAL = 0x020f,
    PF_BT_BOUNDARY_ADJUST = 0x0202,
+   PF_BT_ADJUST_MAU_TYPE = 0x020E,
    PF_BT_ADJUST_LINK_STATE = 0x021B,
    PF_BT_PEER_TO_PEER_BOUNDARY = 0x0224,
    PF_BT_INTERFACE_REAL_DATA = 0x0240,
@@ -2829,8 +2830,9 @@ typedef struct pf_port_data_adjust_peer_to_peer_boundary
                                   Ch.5.2.13.14 */
 } pf_adjust_peer_to_peer_boundary_t;
 
-#define PF_PDPORT_ADJUST_LINK_MASK  0x01
-#define PF_PDPORT_ADJUST_P2PB_MASK  0x02
+#define PF_PDPORT_ADJUST_MAUT_MASK  0x01
+#define PF_PDPORT_ADJUST_LINK_MASK  0x02
+#define PF_PDPORT_ADJUST_P2PB_MASK  0x04
 
 typedef struct pf_pdport
 {
@@ -2844,6 +2846,7 @@ typedef struct pf_pdport
    struct
    {
       uint8_t mask;
+      pnal_eth_mau_t speed;
       pf_adjust_link_state_t link_state;
       pf_adjust_peer_to_peer_boundary_t peer_to_peer_boundary;
    } adjust;
