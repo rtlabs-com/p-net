@@ -375,6 +375,13 @@ void pf_cmina_dcp_set_commit (pnet_t * net)
 
    if (net->cmina_commit_ip_suite == false)
    {
+      /*
+       * Skip warning, if LED FLASH timer is running, we probably just
+       * got PF_DCP_SUB_CONTROL_SIGNAL in pf_dcp_set_req()
+       */
+      if (pf_scheduler_is_running (&net->dcp_led_timeout))
+	 return;
+
       LOG_INFO (
          PF_DCP_LOG,
          "CMINA(%d): Did not set IP address. Is there a connection to the PLC, "
