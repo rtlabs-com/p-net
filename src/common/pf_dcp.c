@@ -66,12 +66,19 @@
 #define PF_DCP_ID_REQ_FRAME_ID  0xfefe
 #define PF_DCP_ID_RES_FRAME_ID  0xfeff
 
-#define PF_DCP_SIGNAL_LED_HALF_INTERVAL     500000 /* 0.5 seconds */
+#define PF_DCP_SIGNAL_LED_INTERVAL          1000000 /* 1.0 seconds */
+#define PF_DCP_SIGNAL_LED_HALF_INTERVAL     500000  /* 0.5 seconds */
 #define PF_DCP_SIGNAL_LED_NUMBER_OF_FLASHES 3
 
 /* Client hold time, 3 seconds.
    See Profinet 2.4 Services, section 6.3.11.2.2 */
 #define PF_DCP_SAM_TIMEOUT 3000000 /* microseconds */
+
+/*
+ * Proneta continously sends "continue flash", so we
+ * need to share this with our background thread.
+ */
+static uint32_t flash_led;
 
 CC_PACKED_BEGIN
 typedef struct CC_PACKED pf_ethhdr
@@ -569,6 +576,50 @@ static int pf_dcp_get_req (
 
 /**
  * @internal
+ * Blink Profinet hw flash LED.
+ *
+ * This function asks the hw offloaded LED to start blinking, it then
+ * waits for three seconds before asking the hw to stop blinking.
+ *
+ * This is a callback for the scheduler. Arguments should fulfill
+ * pf_scheduler_timeout_ftn_t
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param arg              In:    The current state (remaining seconds)
+ * @param current_time     In:    The current system time, in microseconds,
+ *                                when the scheduler is started to execute
+ *                                stored tasks.
+ *                                Not used here.
+ */
+static void pf_dcp_control_flash_led (pnet_t *net, void *arg, uint32_t current_time)
+{
+   if (flash_led > 0)
+   {
+      flash_led--;
+
+      /* Start or continue flashing ... */
+      if (pf_fspm_flash_led_ind (net, true) != 0)
+      {
+         LOG_ERROR (PF_DCP_LOG, "DCP(%d): Could not turn flash LED on\n", __LINE__);
+      }
+
+      /* Schedule another round */
+      pf_scheduler_add (net, PF_DCP_SIGNAL_LED_INTERVAL, pf_dcp_control_flash_led, NULL, &net->dcp_led_timeout);
+   }
+   else
+   {
+      /* Turn LED off */
+      if (pf_fspm_flash_led_ind (net, false) != 0)
+      {
+         LOG_ERROR (PF_DCP_LOG, "DCP(%d): Could not turn flash LED off\n", __LINE__);
+      }
+
+      pf_scheduler_reset_handle (&net->dcp_led_timeout);
+   }
+}
+
+/**
+ * @internal
  * Blink Profinet signal LED.
  *
  * This functions blinks the Profinet signal LED 3 times at 1 Hz.
@@ -647,24 +698,21 @@ int pf_dcp_trigger_signal_led (pnet_t * net)
 {
    if (pf_scheduler_is_running (&net->dcp_led_timeout) == false)
    {
-      LOG_INFO (
-         PF_DCP_LOG,
-         "DCP(%d): Received request to flash LED\n",
-         __LINE__);
-      (void)pf_scheduler_add (
-         net,
-         PF_DCP_SIGNAL_LED_HALF_INTERVAL,
-         pf_dcp_control_signal_led,
-         (void *)(2 * PF_DCP_SIGNAL_LED_NUMBER_OF_FLASHES - 1),
-         &net->dcp_led_timeout);
+      LOG_INFO (PF_DCP_LOG, "DCP(%d): Received request to flash LED\n", __LINE__);
+      flash_led = PF_DCP_SIGNAL_LED_NUMBER_OF_FLASHES;
+
+      if (pf_fspm_has_flashw_led(net))
+	 pf_scheduler_add (net, PF_DCP_SIGNAL_LED_INTERVAL, pf_dcp_control_flash_led, NULL, &net->dcp_led_timeout);
+      else
+	 pf_scheduler_add (net, PF_DCP_SIGNAL_LED_HALF_INTERVAL, pf_dcp_control_signal_led,
+			   (void *)(2 * PF_DCP_SIGNAL_LED_NUMBER_OF_FLASHES - 1), &net->dcp_led_timeout);
    }
    else
    {
-      LOG_INFO (
-         PF_DCP_LOG,
-         "DCP(%d): Received request to flash LED, but it is already "
-         "flashing.\n",
-         __LINE__);
+      if (pf_fspm_has_flashw_led(net))
+	 flash_led += 2; /* some margin, proneta refreshes every 2 seconds */
+      else
+	 LOG_INFO (PF_DCP_LOG, "DCP(%d): Received request to flash LED, but it is already flashing.\n", __LINE__);
    }
 
    return 0;

@@ -1401,6 +1401,38 @@ void pf_fspm_reset_ind (
    }
 }
 
+bool pf_fspm_has_flashw_led (pnet_t * net)
+{
+   if (net->fspm_cfg.flash_led_cb != NULL)
+      return true;
+
+   return false;
+}
+
+int pf_fspm_flash_led_ind (pnet_t * net, bool led_state)
+{
+   int ret = 0;
+   if (net->fspm_cfg.flash_led_cb != NULL)
+   {
+      LOG_DEBUG (
+         PNET_LOG,
+         "FSPM(%d): Triggering flash LED callback with state %u.\n",
+         __LINE__,
+         led_state);
+
+      ret = net->fspm_cfg.flash_led_cb (net, net->fspm_cfg.cb_arg, led_state);
+   }
+   else
+   {
+      LOG_DEBUG (
+         PNET_LOG,
+         "FSPM(%d): No user callback for flash LED implemented.\n",
+         __LINE__);
+   }
+
+   return ret;
+}
+
 int pf_fspm_signal_led_ind (pnet_t * net, bool led_state)
 {
    int ret = 0;

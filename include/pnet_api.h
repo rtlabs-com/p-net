@@ -1334,6 +1334,7 @@ typedef struct pnet_cfg
    pnet_alarm_ack_cnf alarm_ack_cnf_cb;
    pnet_reset_ind reset_cb;
    pnet_signal_led_ind signal_led_cb;
+   pnet_signal_led_ind flash_led_cb;
    pnet_sm_released_ind sm_released_cb;
 
    /** User data passed to callbacks, not used by stack */

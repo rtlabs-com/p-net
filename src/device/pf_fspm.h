@@ -325,6 +325,24 @@ void pf_fspm_reset_ind (
 int pf_fspm_signal_led_ind (pnet_t * net, bool led_state);
 
 /**
+ * Call user call-back when the Profinet signal LED should change state.
+ *
+ * This uses the \a pnet_signal_led_ind() callback.
+ *
+ * @param net                       InOut: The p-net stack instance
+ * @param led_state                 In:    True if the signal LED should be on.
+ * @return  0  if operation succeeded.
+ *          -1 if an error occurred. Will trigger a log message.
+ */
+int pf_fspm_flash_led_ind (pnet_t * net, bool led_state);
+
+/**
+ * Check if hw has flash offloading
+ * @return true if hw can signal/flash/blink by itself, else false.
+ */
+bool pf_fspm_has_flashw_led (pnet_t * net);
+
+/**
  * Retrieve a pointer to the current configuration data.
  * @param net              InOut: The p-net stack instance
  * @param pp_cfg           Out: The current configuration (or NULL).
