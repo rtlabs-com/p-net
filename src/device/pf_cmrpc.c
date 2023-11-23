@@ -2001,10 +2001,12 @@ static int pf_cmrpc_rm_connect_ind (
       {
          if (pf_ar_find_by_uuid (net, &p_ar->ar_param.ar_uuid, &p_ar_2) == 0)
          {
-            if (p_ar_2->p_sess != p_sess)
+            p_sess->kill_session = true;
+            if (p_ar_2->p_sess == p_sess)
             {
-               p_sess->kill_session = true;
+               p_sess->release_in_progress = true;
             }
+
             pf_ar_release (net, p_ar);
             p_ar = p_ar_2;
 
