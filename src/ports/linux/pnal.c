@@ -307,11 +307,17 @@ static pnal_eth_mau_t calculate_mau_type (
          switch (speed)
          {
          case SPEED_10:
-            return PNAL_ETH_MAU_COPPER_10BaseT;
+            return PNAL_ETH_MAU_COPPER_10BaseTX_FULL_DUPLEX;
          case SPEED_100:
             return PNAL_ETH_MAU_COPPER_100BaseTX_FULL_DUPLEX;
          case SPEED_1000:
             return PNAL_ETH_MAU_COPPER_1000BaseT_FULL_DUPLEX;
+         case SPEED_2500:
+            return PNAL_ETH_MAU_COPPER_2500BaseT;
+         case SPEED_5000:
+            return PNAL_ETH_MAU_COPPER_5000BaseT;
+         case SPEED_10000:
+            return PNAL_ETH_MAU_COPPER_10000BaseT;
          default:
             break;
          }
@@ -321,7 +327,7 @@ static pnal_eth_mau_t calculate_mau_type (
          switch (speed)
          {
          case SPEED_10:
-            return PNAL_ETH_MAU_COPPER_10BaseT;
+            return PNAL_ETH_MAU_COPPER_10BaseTX_HALF_DUPLEX;
          case SPEED_100:
             return PNAL_ETH_MAU_COPPER_100BaseTX_HALF_DUPLEX;
          case SPEED_1000:
@@ -343,6 +349,12 @@ static pnal_eth_mau_t calculate_mau_type (
             return PNAL_ETH_MAU_FIBER_100BaseFX_FULL_DUPLEX;
          case SPEED_1000:
             return PNAL_ETH_MAU_FIBER_1000BaseX_FULL_DUPLEX;
+         case SPEED_2500:
+            return PNAL_ETH_MAU_FIBER_2500BaseX;
+         case SPEED_5000:
+            return PNAL_ETH_MAU_FIBER_5000BaseR;
+         case SPEED_10000:
+            return PNAL_ETH_MAU_FIBER_10000BaseR;
          default:
             break;
          }
