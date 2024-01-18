@@ -601,79 +601,70 @@ int pf_pdport_read_ind (
 
    case PF_IDX_DEV_PDREAL_DATA:
       /* Combined interface and port info and statistics */
+      pf_cmina_get_station_name (net, station_name);
       if (
-         (slot == PNET_SLOT_DAP_IDENT) &&
-         ((subslot == PNET_SUBSLOT_DAP_WHOLE_MODULE) ||
-          (subslot == PNET_SUBSLOT_DAP_IDENT)))
+         pnal_get_port_statistics (
+            net->pf_interface.main_port.name,
+            &port_statistics) != 0)
       {
-         pf_cmina_get_station_name (net, station_name);
+         memset (&port_statistics, 0, sizeof (port_statistics));
+      }
+
+      pf_put_pd_multiblock_interface_and_statistics (
+         true,
+         p_read_res->api,
+         pf_cmina_get_device_macaddr (net),
+         pf_cmina_get_ipaddr (net),
+         pf_cmina_get_netmask (net),
+         pf_cmina_get_gateway (net),
+         station_name,
+         &port_statistics,
+         res_size,
+         p_res,
+         p_pos);
+
+      pf_port_init_iterator_over_ports (net, &port_iterator);
+      loc_port_num = pf_port_get_next (&port_iterator);
+      while (loc_port_num != 0)
+      {
+         subslot_for_port =
+            pf_port_loc_port_num_to_dap_subslot (net, loc_port_num);
+         p_port_data = pf_port_get_state (net, loc_port_num);
+
+         eth_status = pf_pdport_get_eth_status_filtered_mau (net, loc_port_num);
          if (
             pnal_get_port_statistics (
-               net->pf_interface.main_port.name,
+               p_port_data->netif.name,
                &port_statistics) != 0)
          {
             memset (&port_statistics, 0, sizeof (port_statistics));
          }
 
-         pf_put_pd_multiblock_interface_and_statistics (
+         /* Look up peer info. Subfields .len indicates whether peer is found
+          */
+         (void)pf_lldp_get_peer_station_name (
+            net,
+            loc_port_num,
+            &peer_station_name);
+         (void)pf_lldp_get_peer_port_name (net, loc_port_num, &peer_port_name);
+
+         pf_put_pd_multiblock_port_and_statistics (
             true,
             p_read_res->api,
-            pf_cmina_get_device_macaddr (net),
-            pf_cmina_get_ipaddr (net),
-            pf_cmina_get_netmask (net),
-            pf_cmina_get_gateway (net),
-            station_name,
+            subslot_for_port,
+            &peer_station_name,
+            &peer_port_name,
+            p_port_data,
+            pf_port_get_media_type (eth_status.operational_mau_type),
+            &eth_status,
             &port_statistics,
             res_size,
             p_res,
             p_pos);
 
-         pf_port_init_iterator_over_ports (net, &port_iterator);
          loc_port_num = pf_port_get_next (&port_iterator);
-         while (loc_port_num != 0)
-         {
-            subslot_for_port =
-               pf_port_loc_port_num_to_dap_subslot (net, loc_port_num);
-            p_port_data = pf_port_get_state (net, loc_port_num);
-
-            eth_status =
-               pf_pdport_get_eth_status_filtered_mau (net, loc_port_num);
-            if (
-               pnal_get_port_statistics (
-                  p_port_data->netif.name,
-                  &port_statistics) != 0)
-            {
-               memset (&port_statistics, 0, sizeof (port_statistics));
-            }
-
-            /* Look up peer info. Subfields .len indicates whether peer is found
-             */
-            (void)pf_lldp_get_peer_station_name (
-               net,
-               loc_port_num,
-               &peer_station_name);
-            (void)
-               pf_lldp_get_peer_port_name (net, loc_port_num, &peer_port_name);
-
-            pf_put_pd_multiblock_port_and_statistics (
-               true,
-               p_read_res->api,
-               subslot_for_port,
-               &peer_station_name,
-               &peer_port_name,
-               p_port_data,
-               pf_port_get_media_type (eth_status.operational_mau_type),
-               &eth_status,
-               &port_statistics,
-               res_size,
-               p_res,
-               p_pos);
-
-            loc_port_num = pf_port_get_next (&port_iterator);
-         }
-
-         ret = 0;
       }
+      ret = 0;
       break;
 
    case PF_IDX_DEV_PDEXP_DATA:
