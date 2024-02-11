@@ -2078,6 +2078,9 @@ typedef struct pf_session_info
    uint32_t dcontrol_sequence_nmb; /* From dcontrol request */
    pnet_result_t dcontrol_result;
 
+   uint32_t epm_sequence_nmb; /* Counts the sequence number for an EPM request. 0 is the 1st request, 1 is 2nd, etc. */
+   pf_scheduler_handle_t epm_timeout; /* Timeout EPM requests if they don't receive a response within a certain time limit */
+
    /* This timer is used to handle ccontrol and fragment re-transmissions */
    pf_scheduler_handle_t resend_timeout;
    uint32_t resend_counter;
