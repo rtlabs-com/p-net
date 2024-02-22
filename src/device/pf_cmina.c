@@ -318,6 +318,15 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
             0,
             sizeof (net->cmina_nonvolatile_dcp_ase.station_name));
 
+         /* Reset network interface */
+         pnal_set_ip_suite (
+            net->pf_interface.main_port.name,
+            &net->cmina_nonvolatile_dcp_ase.full_ip_suite.ip_suite.ip_addr,
+            &net->cmina_nonvolatile_dcp_ase.full_ip_suite.ip_suite.ip_mask,
+            &net->cmina_nonvolatile_dcp_ase.full_ip_suite.ip_suite.ip_gateway,
+            net->cmina_nonvolatile_dcp_ase.station_name,
+            true);
+
          pf_file_clear (p_file_directory, PF_FILENAME_IP);
          pf_file_clear (p_file_directory, PF_FILENAME_DIAGNOSTICS);
 #if PNET_OPTION_SNMP
