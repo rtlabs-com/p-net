@@ -22,6 +22,7 @@ documentation.
    using_codesys.rst
    getting_started_rtkernel.rst
    getting_started_freertos.rst
+   getting_started_imx8mm.rst
    use_with_siematic.rst
    prepare_raspberrypi.rst
 
