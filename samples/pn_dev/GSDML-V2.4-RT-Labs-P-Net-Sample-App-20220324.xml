@@ -34,7 +34,7 @@ Replace the tag above with the one below to support shared device.
                   <Name TextId="IDT_MODULE_NAME_DAP1"/>
                   <InfoText TextId="IDT_INFO_DAP1"/>
                   <VendorName Value="RT-Labs"/>
-                  <OrderNumber Value="123456 Abcdefghijkl"/>
+                  <OrderNumber Value="12345 Abcdefghijk"/>
                   <HardwareRelease Value="A1.0"/>
                   <SoftwareRelease Value="V0.1.0"/>
                </ModuleInfo>
