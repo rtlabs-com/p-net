@@ -228,7 +228,7 @@ TEST_F (DcpTest, DcpRunTest)
    EXPECT_EQ (
       mock_os_data.eth_send_count,
       9 + (PNET_MAX_PHYSICAL_PORTS - 1) * 4);
-   EXPECT_EQ (mock_os_data.set_ip_suite_count, 2);
+   EXPECT_EQ (mock_os_data.set_ip_suite_count, 3);
 
    EXPECT_EQ (appdata.call_counters.led_on_calls, 3);
    EXPECT_EQ (appdata.call_counters.led_off_calls, 4);
