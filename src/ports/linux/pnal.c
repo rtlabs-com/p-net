@@ -560,20 +560,43 @@ pnal_ipaddr_t pnal_get_netmask (const char * interface_name)
 
 pnal_ipaddr_t pnal_get_gateway (const char * interface_name)
 {
-   /* TODO Read the actual default gateway (somewhat complicated) */
+   char line[1024];
 
-   pnal_ipaddr_t ip;
-   pnal_ipaddr_t gateway;
-
-   ip = pnal_get_ip_address (interface_name);
-   if (ip == PNAL_IPADDR_INVALID)
+   // Open the route file
+   FILE* fp = fopen("/proc/net/route", "r");
+   if (fp == NULL) 
    {
       return PNAL_IPADDR_INVALID;
    }
 
-   gateway = (ip & 0xFFFFFF00) | 0x00000001;
+   // Skip the first line (header)
+   if(fgets(line, sizeof(line), fp) == NULL) 
+   {
+      fclose(fp);
+      return PNAL_IPADDR_INVALID;
+   }
 
-   return gateway;
+   // Read the route entries
+   while (fgets(line, sizeof(line), fp)) 
+   {
+      char iface[1024], dest[1024];
+      uint32_t flags, refcnt, use, metric, mask, mtu, window, irtt, gateway;
+
+      int ret = sscanf(line, "%s %s %x %x %d %d %d %x %d %d %d\n",
+                       iface, dest, &gateway, &flags, &refcnt, &use,
+                       &metric, &mask, &mtu, &window, &irtt);
+      
+      if (ret == 11) 
+      {
+         if (!strcmp(iface, interface_name) && gateway != 0)
+         {
+            fclose(fp);
+            return htonl(gateway);
+         }
+      }
+   }
+   fclose(fp);
+   return PNAL_IPADDR_INVALID;
 }
 
 int pnal_get_hostname (char * hostname)
