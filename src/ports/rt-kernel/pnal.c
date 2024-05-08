@@ -368,8 +368,10 @@ pnal_buf_t * pnal_buf_alloc (uint16_t length)
 }
 
 void pnal_buf_free (pnal_buf_t * p)
-{
-   ASSERT (pbuf_free (p) == 1);
+{ 
+   int ret = pbuf_free (p);
+   (void)ret;
+   ASSERT (ret == 1);
 }
 
 uint8_t pnal_buf_header (pnal_buf_t * p, int16_t header_size_increment)
