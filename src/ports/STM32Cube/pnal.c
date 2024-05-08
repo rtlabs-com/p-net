@@ -299,7 +299,7 @@ pnal_buf_t * pnal_buf_alloc (uint16_t length)
 
 void pnal_buf_free (pnal_buf_t * p)
 {
-   int ret = pbuf_free (p);
+   u8_t ret = pbuf_free (p);
    CC_UNUSED (ret);
    CC_ASSERT (ret == 1);
 }
