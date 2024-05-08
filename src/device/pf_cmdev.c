@@ -3111,7 +3111,10 @@ static int pf_cmdev_check_iocr_param (
       else if (
          ((p_iocr->iocr_properties.rt_class == PF_RT_CLASS_UDP) &&
           ((p_iocr->c_sdu_length < 12) || (p_iocr->c_sdu_length > 1440))) ||
-         ((p_iocr->iocr_properties.rt_class == PF_RT_CLASS_1) &&
+         (((p_iocr->iocr_properties.rt_class == PF_RT_CLASS_1) ||
+           (p_iocr->iocr_properties.rt_class == PF_RT_CLASS_2) ||
+           (p_iocr->iocr_properties.rt_class == PF_RT_CLASS_3) ||
+           (p_iocr->iocr_properties.rt_class == PF_RT_CLASS_STREAM)) &&
           ((p_iocr->c_sdu_length < 40) || (p_iocr->c_sdu_length > 1440))))
       {
          pf_set_error (
