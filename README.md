@@ -46,7 +46,7 @@ buy a license. See LICENSE.md for more details.
 
 ## Getting started
 
-See the tutorial in the documentation: [https://rt-labs.com/docs/p-net/tutorial.html](https://rt-labs.com/docs/p-net/tutorial.html)
+See the tutorial in the documentation: [https://docs.rt-labs.com/p-net/running_sample_app.html](https://docs.rt-labs.com/p-net/running_sample_app.html)
 
 Note that you need to include submodules when cloning:
 

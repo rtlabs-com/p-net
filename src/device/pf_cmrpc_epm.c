@@ -20,11 +20,9 @@
  */
 
 #include <string.h>
+#include <inttypes.h>
 #include "pf_includes.h"
 #include "pf_block_writer.h"
-
-static const pf_rpc_uuid_type_t null_rpc_handle =
-   {0, 0, 0, 0, 0, {0, 0, 0, 0, 0, 0}};
 
 static const pf_rpc_uuid_type_t uuid_object = {
    0x00000000,
@@ -97,11 +95,13 @@ static void pf_generate_epm_handle (
  * @param p_tower    Out: Protocol tower configuration
  * @param epm_type   In: End point type, EPM or PNIO
  * @param udp_port   In: UDP protocol port
+ * @param ip_address In: IP Address
  */
 static void pf_init_rpc_tower_entry (
    pf_rpc_tower_t * p_tower,
    pf_rpc_epm_type_t epm_type,
-   uint16_t udp_port)
+   uint16_t udp_port,
+   uint32_t ip_address)
 {
    /* Floor 1 EPMv4 */
    p_tower->floor_1.protocol_id = PF_RPC_PROTOCOL_UUID;
@@ -139,7 +139,7 @@ static void pf_init_rpc_tower_entry (
 
    /* Floor 5 IP Address */
    p_tower->floor_5.protocol_id = PF_RPC_PROTOCOL_DOD_IP;
-   p_tower->floor_5.ip_address = 0;
+   p_tower->floor_5.ip_address = htonl (ip_address);
 }
 
 /**
@@ -177,7 +177,8 @@ static int pf_cmrdr_add_epmv4_entry (
    pf_init_rpc_tower_entry (
       &p_lookup_rsp->rpc_entry.tower_entry,
       PF_EPM_TYPE_EPMV4,
-      PF_RPC_SERVER_PORT);
+      PF_RPC_SERVER_PORT,
+      pf_cmina_get_ipaddr (net));
 
    p_lookup_rsp->return_code = PF_RPC_OK;
    return 0;
@@ -237,7 +238,8 @@ static int pf_cmrdr_add_pnio_entry (
    pf_init_rpc_tower_entry (
       &p_lookup_rsp->rpc_entry.tower_entry,
       PF_EPM_TYPE_PNIO,
-      p_lookup_req->udpPort);
+      PF_RPC_PNIO_PORT,
+      pf_cmina_get_ipaddr (net));
 
    p_lookup_rsp->return_code = PF_RPC_OK;
    return 0;
@@ -261,6 +263,7 @@ static int pf_cmrdr_add_pnio_entry (
  */
 static int pf_cmrdr_inquiry_read_all_reg_ind (
    pnet_t * net,
+   pf_session_info_t * p_sess,
    const pf_rpc_header_t * p_rpc_req,
    const pf_rpc_lookup_req_t * p_lookup_req,
    pf_rpc_lookup_rsp_t * p_lookup_rsp,
@@ -268,53 +271,48 @@ static int pf_cmrdr_inquiry_read_all_reg_ind (
 {
    int ret = -1;
 
-   switch (p_rpc_req->sequence_nmb)
+   LOG_INFO (
+      PF_RPC_LOG,
+      "EPM(%d): EPM Lookup Request seq_num=%" PRIu32 "\n",
+      __LINE__,
+      p_sess->epm_sequence_nmb);
+
+   switch (p_sess->epm_sequence_nmb)
    {
    case 0:
    {
-      /* Check if handle is all NULL */
-      if (
-         memcmp (
-            &p_lookup_req->rpc_handle,
-            &null_rpc_handle,
-            sizeof (null_rpc_handle)) == 0)
-      {
-         /* Send the EPM interface information */
-         LOG_INFO (
-            PF_RPC_LOG,
-            "EPM(%d): PLC is requesting EPM interface information.\n",
-            __LINE__);
-         ret = pf_cmrdr_add_epmv4_entry (
-            net,
-            p_rpc_req,
-            p_lookup_req,
-            p_lookup_rsp,
-            p_read_status);
-      }
+      /* Send the EPM interface information */
+      LOG_INFO (
+         PF_RPC_LOG,
+         "EPM(%d): Send EPM interface information.\n",
+         __LINE__);
+      ret = pf_cmrdr_add_epmv4_entry (
+         net,
+         p_rpc_req,
+         p_lookup_req,
+         p_lookup_rsp,
+         p_read_status);
    }
    break;
    case 1:
-      /* Check if handle is NOT NULL */
-      if (
-         memcmp (
-            &p_lookup_req->rpc_handle,
-            &null_rpc_handle,
-            sizeof (null_rpc_handle)) != 0)
-      {
-         /* Send the PNIO interface information */
-         LOG_INFO (
-            PF_RPC_LOG,
-            "EPM(%d): PLC is requesting PNIO interface information via EPM.\n",
-            __LINE__);
-         ret = pf_cmrdr_add_pnio_entry (
-            net,
-            p_rpc_req,
-            p_lookup_req,
-            p_lookup_rsp,
-            p_read_status);
-      }
+      /* Send the PNIO interface information */
+      LOG_INFO (
+         PF_RPC_LOG,
+         "EPM(%d): Send PNIO interface information\n",
+         __LINE__);
+      ret = pf_cmrdr_add_pnio_entry (
+         net,
+         p_rpc_req,
+         p_lookup_req,
+         p_lookup_rsp,
+         p_read_status);
       break;
    default:
+      LOG_INFO (
+         PF_RPC_LOG,
+         "EPM(%d): No more endpoints. Kill session\n",
+         __LINE__);
+      p_sess->kill_session = true;
       break;
    }
    return ret;
@@ -335,6 +333,7 @@ static int pf_cmrdr_inquiry_read_all_reg_ind (
  */
 int pf_cmrpc_lookup_request (
    pnet_t * net,
+   pf_session_info_t * p_sess,
    const pf_rpc_header_t * p_rpc_req,
    const pf_rpc_lookup_req_t * p_lookup_req,
    pnet_result_t * p_read_status,
@@ -361,6 +360,7 @@ int pf_cmrpc_lookup_request (
       case PF_RPC_INQUIRY_READ_ALL_REGISTERED_INTERFACES:
          pf_cmrdr_inquiry_read_all_reg_ind (
             net,
+            p_sess,
             p_rpc_req,
             p_lookup_req,
             &lookup_rsp,

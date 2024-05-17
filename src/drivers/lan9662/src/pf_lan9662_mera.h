@@ -238,7 +238,7 @@ int pf_mera_cpm_read_data_and_iops (
  * @param frame            InOut: Mera frame
  * @param slot_nbr         In:    The slot.
  * @param subslot_nbr      In:    The sub-slot.
- * @param p_iocs           Out:   The controller consumer status.
+ * @param p_iocs           Out:   The controller consumer status (GOOD or BAD).
  *                                See pnet_ioxs_values_t
  * @param iocs_len         In:    The IOCS length
  * @return  0  if a sub-module IOCS was set.

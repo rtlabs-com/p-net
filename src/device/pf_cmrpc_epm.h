@@ -23,6 +23,7 @@ extern "C" {
 /**
  * Handle rpc lookup request
  * @param net              InOut: The p-net stack instance
+ * @param p_sess           InOut: Rpc session handle
  * @param p_rpc_req        In:    Rpc header.
  * @param p_lookup_req     In:    Lookup request.
  * @param p_read_status    Out:   Read pnio status
@@ -34,6 +35,7 @@ extern "C" {
  */
 int pf_cmrpc_lookup_request (
    pnet_t * net,
+   pf_session_info_t * p_sess,
    const pf_rpc_header_t * p_rpc_req,
    const pf_rpc_lookup_req_t * p_lookup_req,
    pnet_result_t * p_read_status,

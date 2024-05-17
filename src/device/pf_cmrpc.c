@@ -70,6 +70,7 @@
 #define PF_CMRPC_PDU_HEADER_SIZE     (80)
 #define PF_CMRPC_MAX_PDU_BODY_SIZE                                             \
    (PF_CMRPC_MUST_RECV_FRAG_SIZE - PF_CMRPC_PDU_HEADER_SIZE)
+#define PF_CMRPC_EPM_SESSION_TMO_IN_US (5000000)
 
 static const pf_uuid_t implicit_ar = {0, 0, 0, {0, 0, 0, 0, 0, 0, 0, 0}};
 
@@ -520,9 +521,11 @@ static int pf_session_allocate (pnet_t * net, pf_session_info_t ** pp_sess)
       p_sess->in_use = true;
       p_sess->p_ar = NULL;
       p_sess->sequence_nmb_send = 0;
+      p_sess->epm_sequence_nmb = 0;
       p_sess->dcontrol_sequence_nmb = UINT32_MAX;
       p_sess->ix = ix;
       pf_scheduler_init_handle (&p_sess->resend_timeout, "rpc");
+      pf_scheduler_init_handle (&p_sess->epm_timeout, "rpc-lookup");
 
       /* Set activity UUID. Will be overwritten for incoming requests. */
       pf_generate_uuid (
@@ -570,6 +573,7 @@ static void pf_session_release (pnet_t * net, pf_session_info_t * p_sess)
          }
 
          pf_scheduler_remove_if_running (net, &p_sess->resend_timeout);
+         pf_scheduler_remove_if_running (net, &p_sess->epm_timeout);
 
          LOG_DEBUG (
             PF_RPC_LOG,
@@ -590,6 +594,25 @@ static void pf_session_release (pnet_t * net, pf_session_info_t * p_sess)
    {
       LOG_ERROR (PF_RPC_LOG, "CMRPC(%d): Session is NULL\n", __LINE__);
    }
+}
+
+/**
+ * @internal
+ *
+ * An EPM timeout has occurred.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param arg              InOut: The session instance.
+ * @param current_time     In: Time when the EPM timeout function was scheduled
+ */
+static void pf_session_epm_timeout (
+   pnet_t * net,
+   void * arg,
+   uint32_t current_time)
+{
+   struct pf_session_info * p_session = (struct pf_session_info *)arg;
+
+   pf_session_release (net, p_session);
 }
 
 /**
@@ -1978,10 +2001,12 @@ static int pf_cmrpc_rm_connect_ind (
       {
          if (pf_ar_find_by_uuid (net, &p_ar->ar_param.ar_uuid, &p_ar_2) == 0)
          {
-            if (p_ar_2->p_sess != p_sess)
+            p_sess->kill_session = true;
+            if (p_ar_2->p_sess == p_sess)
             {
-               p_sess->kill_session = true;
+               p_sess->release_in_progress = true;
             }
+
             pf_ar_release (net, p_ar);
             p_ar = p_ar_2;
 
@@ -3109,6 +3134,7 @@ static int pf_cmrpc_lookup_ind (
       lookup_request.udpPort = p_sess->port;
       ret = pf_cmrpc_lookup_request (
          net,
+         p_sess,
          p_rpc_req,
          &lookup_request,
          &p_sess->rpc_result,
@@ -4319,7 +4345,7 @@ static int pf_cmrpc_dce_packet (
 
          p_sess->ip_addr = ip_addr;
          p_sess->port = port; /* Source port on incoming message */
-         p_sess->socket = net->cmrpc_rpcreq_socket;
+         p_sess->socket = net->cmrpc_pnioreq_socket;
       }
    }
 
@@ -4640,8 +4666,14 @@ static int pf_cmrpc_dce_packet (
                   &uuid_epmap_interface,
                   sizeof (rpc_req.object_uuid)) == 0)
             {
+               /* Incoming EPM request will cancel timeout */
+               pf_scheduler_remove_if_running (net, &p_sess->epm_timeout);
+               pf_scheduler_reset_handle (&p_sess->epm_timeout);
+
                rpc_res.fragment_nmb = 0;
                rpc_res.flags.idempotent = false;
+
+               p_sess->socket = net->cmrpc_rpcreq_socket;
 
                /* Handle Endpoint Map request */
                ret = pf_cmrpc_lookup_ind (
@@ -4654,10 +4686,21 @@ static int pf_cmrpc_dce_packet (
                   &p_sess->out_buf_len);
                *p_close_socket = p_sess->from_me;
 
-               /* Close session after each EPM request
-                  If future more advanced EPM usage is required, implement a
-                  timeout for closing the session */
-               p_sess->kill_session = true;
+               /* If the pf_cmrpc_lookup_ind didn't request
+                * the session to be killed, increment the sequence
+                * number and start a timeout that will kill the
+                * session if a request is not received soon enough.
+                */
+               if (!p_sess->kill_session)
+               {
+                  p_sess->epm_sequence_nmb++;
+                  pf_scheduler_add (
+                     net,
+                     PF_CMRPC_EPM_SESSION_TMO_IN_US,
+                     pf_session_epm_timeout,
+                     (void *)p_sess,
+                     &p_sess->epm_timeout);
+               }
             }
             else
             {
@@ -5048,81 +5091,23 @@ static int pf_cmrpc_dce_packet (
    return ret;
 }
 
-void pf_cmrpc_periodic (pnet_t * net)
+bool poll_rpc_socket (pnet_t * net, int socket)
 {
+   bool close_socket = false;
    uint32_t dcerpc_addr;
    uint16_t dcerpc_port;
    int dcerpc_input_len;
-   uint16_t dcerpc_resp_len = 0;
-   uint16_t ix;
-   bool close_socket = false;
+   uint16_t dcerpc_resp_len;
    char ip_string[PNAL_INET_ADDRSTR_SIZE] = {0}; /** Terminated string */
 
-   /* TODO Use a common function to avoid code duplication, remove some
-    * arguments for pf_cmrpc_dce_packet() */
-
-   /* Poll for RPC session confirmations */
-   for (ix = 0; ix < NELEMENTS (net->cmrpc_session_info); ix++)
-   {
-      if (
-         (net->cmrpc_session_info[ix].in_use == true) &&
-         (net->cmrpc_session_info[ix].from_me == true))
-      {
-         /* We are waiting for a response from the IO-controller */
-         dcerpc_input_len = pf_udp_recvfrom (
-            net,
-            net->cmrpc_session_info[ix].socket,
-            &dcerpc_addr,
-            &dcerpc_port,
-            net->cmrpc_dcerpc_input_frame,
-            sizeof (net->cmrpc_dcerpc_input_frame));
-         if (dcerpc_input_len > 0)
-         {
-            pf_cmina_ip_to_string (dcerpc_addr, ip_string);
-            dcerpc_resp_len = PF_MAX_UDP_PAYLOAD_SIZE;
-            LOG_INFO (
-               PF_RPC_LOG,
-               "CMRPC(%d): Received %u bytes UDP payload from remote %s:%u, on "
-               "socket %d used in session with index %u\n",
-               __LINE__,
-               dcerpc_input_len,
-               ip_string,
-               dcerpc_port,
-               net->cmrpc_session_info[ix].socket,
-               ix);
-            close_socket = false;
-            (void)pf_cmrpc_dce_packet (
-               net,
-               dcerpc_addr,
-               dcerpc_port,
-               net->cmrpc_dcerpc_input_frame,
-               dcerpc_input_len,
-               net->cmrpc_dcerpc_output_frame,
-               &dcerpc_resp_len,
-               &close_socket);
-
-            if (close_socket)
-            {
-               LOG_DEBUG (
-                  PF_RPC_LOG,
-                  "CMRPC(%d): Closing socket used in session with index %u\n",
-                  __LINE__,
-                  ix);
-               pf_udp_close (net, net->cmrpc_session_info[ix].socket);
-               net->cmrpc_session_info[ix].socket = -1;
-            }
-         }
-      }
-   }
-
-   /* Poll RPC requests */
    dcerpc_input_len = pf_udp_recvfrom (
       net,
-      net->cmrpc_rpcreq_socket,
+      socket,
       &dcerpc_addr,
       &dcerpc_port,
       net->cmrpc_dcerpc_input_frame,
       sizeof (net->cmrpc_dcerpc_input_frame));
+
    if (dcerpc_input_len > 0)
    {
       pf_cmina_ip_to_string (dcerpc_addr, ip_string);
@@ -5135,8 +5120,8 @@ void pf_cmrpc_periodic (pnet_t * net)
          dcerpc_input_len,
          ip_string,
          dcerpc_port,
-         net->cmrpc_rpcreq_socket);
-      close_socket = false;
+         socket);
+
       (void)pf_cmrpc_dce_packet (
          net,
          dcerpc_addr,
@@ -5146,13 +5131,52 @@ void pf_cmrpc_periodic (pnet_t * net)
          net->cmrpc_dcerpc_output_frame,
          &dcerpc_resp_len,
          &close_socket);
+   }
+
+   return close_socket;
+}
+
+void pf_cmrpc_periodic (pnet_t * net)
+{
+   bool close_socket;
+   int rpc_sockets[2] = {net->cmrpc_rpcreq_socket, net->cmrpc_pnioreq_socket};
+   uint16_t ix;
+
+   /* Poll for RPC session confirmations */
+   for (ix = 0; ix < NELEMENTS (net->cmrpc_session_info); ix++)
+   {
+      if (
+         (net->cmrpc_session_info[ix].in_use == true) &&
+         (net->cmrpc_session_info[ix].from_me == true))
+      {
+         /* We are waiting for a response from the IO-controller */
+         close_socket =
+            poll_rpc_socket (net, net->cmrpc_session_info[ix].socket);
+
+         if (close_socket)
+         {
+            LOG_DEBUG (
+               PF_RPC_LOG,
+               "CMRPC(%d): Closing socket used in session with index %u\n",
+               __LINE__,
+               ix);
+            pf_udp_close (net, net->cmrpc_session_info[ix].socket);
+            net->cmrpc_session_info[ix].socket = -1;
+         }
+      }
+   }
+
+   /* Poll always open RPC sockets */
+   for (ix = 0; ix < NELEMENTS (rpc_sockets); ix++)
+   {
+      close_socket = poll_rpc_socket (net, rpc_sockets[ix]);
 
       if (close_socket)
       {
          LOG_ERROR (
             PF_RPC_LOG,
-            "CMRPC(%d): pf_cmrpc_dce_packet() wants to close the main RPC UDP "
-            "socket, but that is not valid.\n",
+            "CMRPC(%d): Closing RPC UDP socket is not allowed. Socket will not "
+            "be closed.\n",
             __LINE__);
       }
    }
@@ -5175,6 +5199,7 @@ void pf_cmrpc_init (pnet_t * net)
       }
 
       net->cmrpc_rpcreq_socket = pf_udp_open (net, PF_RPC_SERVER_PORT);
+      net->cmrpc_pnioreq_socket = pf_udp_open (net, PF_RPC_PNIO_PORT);
    }
 
    /* Save for later (put it into each session */

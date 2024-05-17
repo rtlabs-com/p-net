@@ -1563,14 +1563,20 @@ PNET_EXPORT int pnet_pull_submodule (
  * before calling \a pnet_application_ready(). This includes all subslots in the
  * DAP slot (slot 0).
  *
+ * This function will copy the user data to the frame buffer, for sending to the PLC.
+ *
+ * Note that setting the IOPS to BAD will trigger an
+ * "Error: User data failure of hardware component" in the PLC, and it
+ * typically needs to be cleared manually.
+ *
  * @param net              InOut: The p-net stack instance
  * @param api              In:    The API.
  * @param slot             In:    The slot.
  * @param subslot          In:    The sub-slot.
- * @param p_data           In:    Data buffer. If NULL the data will not
- *                                be updated.
+ * @param p_data           In:    User buffer with data to be sent. If NULL the data
+ *                                will not be updated.
  * @param data_len         In:    Bytes in data buffer.
- * @param iops             In:    The device provider status.
+ * @param iops             In:    The device provider status (GOOD or BAD).
  *                                See pnet_ioxs_values_t
  * @return  0  if a sub-module data and IOPS was set.
  *          -1 if an error occurred.
@@ -1598,7 +1604,7 @@ PNET_EXPORT int pnet_input_set_data_and_iops (
  * @param api              In:    The API.
  * @param slot             In:    The slot.
  * @param subslot          In:    The sub-slot.
- * @param p_iocs           Out:   The controller consumer status.
+ * @param p_iocs           Out:   The controller consumer status (GOOD or BAD).
  *                                See pnet_ioxs_values_t
  * @return  0  if a sub-module IOCS was set.
  *          -1 if an error occurred.
@@ -1622,6 +1628,9 @@ PNET_EXPORT int pnet_input_get_iocs (
  * back data that has been set by \a pnet_input_set_data_and_iops() using this
  * function.
  *
+ * This function will copy the data from the frame buffer (which has data from the PLC)
+ * to the user buffer.
+ *
  * If a valid new data (and IOPS) frame has arrived from the IO-controller since
  * your last call to this function (regardless of the slot/subslot arguments)
  * then the flag \a p_new_flag is set to true, else it is set to false.
@@ -1639,7 +1648,7 @@ PNET_EXPORT int pnet_input_get_iocs (
  * @param slot             In:    The slot.
  * @param subslot          In:    The sub-slot.
  * @param p_new_flag       Out:   true if new data.
- * @param p_data           Out:   The received data.
+ * @param p_data           Out:   User buffer for the received data.
  * @param p_data_len       In:    Size of receive buffer.
  *                         Out:   Received number of data bytes.
  * @param p_iops           Out:   The controller provider status (IOPS).
@@ -1671,7 +1680,7 @@ PNET_EXPORT int pnet_output_get_data_and_iops (
  * @param api              In:    The API.
  * @param slot             In:    The slot.
  * @param subslot          In:    The sub-slot.
- * @param iocs             In:    The device consumer status.
+ * @param iocs             In:    The device consumer status (GOOD or BAD).
  *                                See pnet_ioxs_values_t
  * @return  0  if a sub-module IOCS was set.
  *          -1 if an error occurred.

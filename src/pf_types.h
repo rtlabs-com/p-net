@@ -62,6 +62,7 @@ static inline uint32_t atomic_fetch_sub (atomic_int * p, uint32_t v)
 #define PF_RPC_SERVER_PORT             0x8894 /* PROFInet Context Manager */
 #define PF_UDP_UNICAST_PORT            0x8892
 #define PF_RPC_CCONTROL_EPHEMERAL_PORT 0xc001
+#define PF_RPC_PNIO_PORT               0xc003
 
 #define PF_ALARM_NUMBER_OF_PRIORITY_LEVELS 2 /* High and low */
 
@@ -2078,6 +2079,12 @@ typedef struct pf_session_info
    uint32_t dcontrol_sequence_nmb; /* From dcontrol request */
    pnet_result_t dcontrol_result;
 
+   uint32_t epm_sequence_nmb; /* Counts the sequence number for an EPM request.
+                                 0 is the 1st request, 1 is 2nd, etc. */
+   pf_scheduler_handle_t epm_timeout; /* Timeout EPM requests if they don't
+                                         receive a response within a certain
+                                         time limit */
+
    /* This timer is used to handle ccontrol and fragment re-transmissions */
    pf_scheduler_handle_t resend_timeout;
    uint32_t resend_counter;
@@ -2991,8 +2998,9 @@ struct pnet
    /** Sessions */
    pf_session_info_t cmrpc_session_info[PF_MAX_SESSION];
 
-   /** Main socket for incoming requests */
+   /** Sockets for incoming RPC requests */
    int cmrpc_rpcreq_socket;
+   int cmrpc_pnioreq_socket;
 
    uint8_t cmrpc_dcerpc_input_frame[PF_FRAME_BUFFER_SIZE];
    uint8_t cmrpc_dcerpc_output_frame[PF_FRAME_BUFFER_SIZE];
