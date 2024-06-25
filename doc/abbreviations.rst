@@ -1,4 +1,3 @@
-
 Terminology and abbreviations
 =============================
 
@@ -10,15 +9,20 @@ Commissioning
     Device initialization (Configuration is downloaded to IO-controller).
 Engineering tool
     A desktop program for configuring PLC. For example Siemens TIA portal.
+Interface
+    Abstract group of ports. In Profinet context, interface typically doesn't mean a
+    specific network interface. This is a common cause of confusion.
 Parameterization
     Write parameter values to all submodules. Parameterization is done via
     the Write and Control commands.
+Port
+    Network interface. The physical connectors are referred to as "physical ports".
+    A "management port" is the network interface to which a controller / PLC connects.
 Record data
    Data that can be accessed with acyclic Profinet Read and Write. Addressed by
    slot, subslot and index.
 Transfer syntax
     Coding of the different fields in a message. See also "Abstract syntax".
-
 
 Abbreviations
 -------------
@@ -42,7 +46,7 @@ APDU
 API
     Application Process Identifier (uint32). Used to differentiate between for example user profiles. Sometimes named "Profile ID".
 API
-    Application Programming Interface. Application implementers use the API of the p-net Profinet stack.
+    Application Programming Interface. Application implementers use the API of the P-Net Profinet stack.
 APMR
     Acyclic Protocol Machine Receiver. Receives incoming alarm frames.
 APMS

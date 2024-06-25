@@ -82,7 +82,13 @@ pnal_ipaddr_t pnal_get_gateway (const char * interface_name)
 
 int pnal_get_hostname (char * hostname)
 {
-   strcpy (hostname, netif_default->hostname);
+   if (netif_default->hostname == NULL)
+   {
+      return -1;
+   }
+
+   strncpy (hostname, netif_default->hostname, PNAL_HOSTNAME_MAX_SIZE);
+   hostname[PNAL_HOSTNAME_MAX_SIZE - 1] = '\0';
    return 0;
 }
 
@@ -363,7 +369,9 @@ pnal_buf_t * pnal_buf_alloc (uint16_t length)
 
 void pnal_buf_free (pnal_buf_t * p)
 {
-   ASSERT (pbuf_free (p) == 1);
+   uint8_t deallocated = pbuf_free (p);
+   (void)deallocated;
+   ASSERT (deallocated == 1);
 }
 
 uint8_t pnal_buf_header (pnal_buf_t * p, int16_t header_size_increment)

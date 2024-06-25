@@ -1,4 +1,4 @@
-From 6c80d905968601ea397d63809690b3c9754f3146 Mon Sep 17 00:00:00 2001
+From b93d2a7b06d7733bfc2a8071c4cf3b6398f2b892 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Fredrik=20M=C3=B6ller?= <fredrik.moller@rt-labs.com>
 Date: Tue, 15 Sep 2020 18:22:53 +0200
 Subject: [PATCH] rtkernel for Profinet
@@ -21,13 +21,9 @@ stack:
 - drivers/eth/dwmac1000:
   - Use zero copy for Rx.
   - Add ioctl for getting link status.
-  - Lock mutex for Tx, as p-net stack may send
-    frames outside of lwip context.
   - Report accurate ifSpeed to SNMP.
 - drivers/eth/dwgmac:
   - Add ioctl for getting link status.
-  - Lock mutex for Tx, as p-net stack may send
-    frames outside of lwip context.
   - Report accurate ifSpeed to SNMP.
 - drivers/eth/phy:
   - Add function for retrieving link capabilities.
@@ -51,8 +47,8 @@ Change-Id: Ie335fd029b503db842d3ca16331629444db70b9a
  bsp/xmc48relax/include/config.h           |  10 +-
  bsp/xmc48relax/src/lwip.c                 |   4 +-
  bsp/xmc48relax/xmc48relax.ld              |  24 +-
- drivers/eth/dwgmac.c                      |  89 ++++++-
- drivers/eth/dwmac1000.c                   | 162 ++++++++---
+ drivers/eth/dwgmac.c                      |  83 +++++-
+ drivers/eth/dwmac1000.c                   | 156 ++++++++---
  drivers/eth/phy/mii.c                     |  13 +-
  include/drivers/eth/phy/mii.h             |   1 +
  include/drivers/eth/phy/phy.h             |   9 +
@@ -68,14 +64,14 @@ Change-Id: Ie335fd029b503db842d3ca16331629444db70b9a
  lwip/src/include/lwip/apps/snmp_mib2.h    |  24 +-
  lwip/src/include/lwip/lwip_hooks.h        |  41 +++
  lwip/src/include/lwip/lwipopts.h          |  39 ++-
- 22 files changed, 511 insertions(+), 348 deletions(-)
+ 22 files changed, 499 insertions(+), 348 deletions(-)
  create mode 100644 lwip/src/apps/Makefile
  create mode 100644 lwip/src/apps/snmp/Makefile
  create mode 100644 lwip/src/core/lwip_hooks.c
  create mode 100644 lwip/src/include/lwip/lwip_hooks.h
 
 diff --git a/bsp/h750dk/include/config.h b/bsp/h750dk/include/config.h
-index 05ed51b8b..4963aad37 100644
+index 0ad3b457..fabd06dc 100644
 --- a/bsp/h750dk/include/config.h
 +++ b/bsp/h750dk/include/config.h
 @@ -107,7 +107,7 @@
@@ -88,7 +84,7 @@ index 05ed51b8b..4963aad37 100644
  /* Configure the priority of the main task. */
  #define CFG_MAIN_PRIORITY       10
 diff --git a/bsp/h750dk/src/lwip.c b/bsp/h750dk/src/lwip.c
-index e22b17f33..9a7281005 100644
+index e22b17f3..9a728100 100644
 --- a/bsp/h750dk/src/lwip.c
 +++ b/bsp/h750dk/src/lwip.c
 @@ -26,8 +26,8 @@
@@ -114,7 +110,7 @@ index e22b17f33..9a7281005 100644
     };
  
 diff --git a/bsp/xmc48relax/include/config.h b/bsp/xmc48relax/include/config.h
-index 91549e483..54cb9d39f 100644
+index 850ce674..07d80b1e 100644
 --- a/bsp/xmc48relax/include/config.h
 +++ b/bsp/xmc48relax/include/config.h
 @@ -53,14 +53,14 @@
@@ -136,7 +132,7 @@ index 91549e483..54cb9d39f 100644
  #endif
  
  /* Enable SD Card if defined */
-@@ -132,7 +132,7 @@
+@@ -115,7 +115,7 @@
   * implemented in the user application and is the task that will be
   * started immediately after the kernel has finished initialising.
   */
@@ -146,7 +142,7 @@ index 91549e483..54cb9d39f 100644
  /* Configure the priority of the main task. */
  #define CFG_MAIN_PRIORITY       10
 diff --git a/bsp/xmc48relax/src/lwip.c b/bsp/xmc48relax/src/lwip.c
-index f8b7d94af..858a794bc 100644
+index f8b7d94a..858a794b 100644
 --- a/bsp/xmc48relax/src/lwip.c
 +++ b/bsp/xmc48relax/src/lwip.c
 @@ -94,8 +94,8 @@ err_t bsp_eth_init (struct netif * netif)
@@ -161,7 +157,7 @@ index f8b7d94af..858a794bc 100644
     };
  #ifdef CFG_RTC_INIT
 diff --git a/bsp/xmc48relax/xmc48relax.ld b/bsp/xmc48relax/xmc48relax.ld
-index 9deadfd32..3e1ac030a 100644
+index 9deadfd3..3e1ac030 100644
 --- a/bsp/xmc48relax/xmc48relax.ld
 +++ b/bsp/xmc48relax/xmc48relax.ld
 @@ -18,6 +18,7 @@ EXTERN(vectors)
@@ -229,18 +225,10 @@ index 9deadfd32..3e1ac030a 100644
     heap_size = heap_end - heap_start;
  }
 diff --git a/drivers/eth/dwgmac.c b/drivers/eth/dwgmac.c
-index 91518e412..e54bc5443 100644
+index 91518e41..9d75b4b8 100644
 --- a/drivers/eth/dwgmac.c
 +++ b/drivers/eth/dwgmac.c
-@@ -274,6 +274,7 @@ typedef struct dwgmac
-    drv_t drv;
- 
-    irq_t irq;
-+   mtx_t * mtx_tx;
-    task_t * tRcv;
-    phy_t * phy;
-    volatile eth_mac_t * mac;
-@@ -291,6 +292,19 @@ typedef struct dwgmac
+@@ -291,6 +291,19 @@ typedef struct dwgmac
  
     /* MIIAR CR divider */
     uint32_t cr;
@@ -260,7 +248,7 @@ index 91518e412..e54bc5443 100644
  } dwgmac_t;
  
  #ifdef DEBUG_DATA
-@@ -325,6 +339,24 @@ static void dwgmac_pbuf_dump (struct pbuf *p)
+@@ -325,6 +338,24 @@ static void dwgmac_pbuf_dump (struct pbuf *p)
  }
  #endif  /* DEBUG_DATA */
  
@@ -285,25 +273,7 @@ index 91518e412..e54bc5443 100644
  static uint16_t dwgmac_read_phy (void * arg, uint8_t address, uint8_t reg)
  {
     dwgmac_t *dwgmac = arg;
-@@ -490,6 +522,9 @@ static err_t dwgmac_hw_transmit_frame (struct netif *netif, struct pbuf *p)
-       return ERR_OK;
-    }
- 
-+   /* Lock TX handling */
-+   mtx_lock (dwgmac->mtx_tx);
-+
- #if ETH_PAD_SIZE
-    pbuf_header (p, -ETH_PAD_SIZE);  /* drop the padding word */
- #endif
-@@ -548,6 +583,7 @@ static err_t dwgmac_hw_transmit_frame (struct netif *netif, struct pbuf *p)
-    pbuf_header (p, ETH_PAD_SIZE);   /* reclaim the padding word */
- #endif
- 
-+   mtx_unlock (dwgmac->mtx_tx);
-    return ERR_OK;
- }
- 
-@@ -763,16 +799,64 @@ static dev_state_t dwgmac_probe (drv_t * drv)
+@@ -763,16 +794,64 @@ static dev_state_t dwgmac_probe (drv_t * drv)
  
     link_state = dwgmac->phy->ops->get_link_state (dwgmac->phy);
  
@@ -369,15 +339,7 @@ index 91518e412..e54bc5443 100644
     .hotplug = dwgmac_hotplug,
  };
  
-@@ -802,6 +886,7 @@ drv_t * dwgmac_init (const char * name, const dwgmac_cfg_t * cfg,
-    /* Initialise driver state */
-    dwgmac->phy = phy;
-    dwgmac->irq = cfg->irq;
-+   dwgmac->mtx_tx = mtx_create();
-    dwgmac->mac = (eth_mac_t *)cfg->base;
-    dwgmac->mtl = (eth_mtl_t *)(cfg->base + 0xC00);
-    dwgmac->dma = (eth_dma_t *)(cfg->base + 0x1000);
-@@ -813,6 +898,8 @@ drv_t * dwgmac_init (const char * name, const dwgmac_cfg_t * cfg,
+@@ -813,6 +892,8 @@ drv_t * dwgmac_init (const char * name, const dwgmac_cfg_t * cfg,
     dwgmac->tx.num_buffers = cfg->tx.num_buffers;
     dwgmac->rx.ix = 0;
     dwgmac->tx.ix = 0;
@@ -387,7 +349,7 @@ index 91518e412..e54bc5443 100644
     /* Create receive task */
     dwgmac->tRcv = task_spawn ("EthRcv",
 diff --git a/drivers/eth/dwmac1000.c b/drivers/eth/dwmac1000.c
-index ece017a59..456986211 100644
+index ece017a5..f79a92d1 100644
 --- a/drivers/eth/dwmac1000.c
 +++ b/drivers/eth/dwmac1000.c
 @@ -26,7 +26,13 @@
@@ -413,15 +375,7 @@ index ece017a59..456986211 100644
  } dma_descriptor_t;
  
  #define xDES0_OWN BIT(31)        /* Owned by DMA engine */
-@@ -215,6 +222,7 @@ typedef struct dwmac1000
-    drv_t drv;
- 
-    irq_t irq;
-+   mtx_t * mtx_tx;
-    task_t * tRcv;
-    phy_t * phy;
-    volatile eth_mac_t * mac;
-@@ -229,6 +237,19 @@ typedef struct dwmac1000
+@@ -229,6 +236,19 @@ typedef struct dwmac1000
  
     /* MIIAR CR divider */
     uint32_t cr;
@@ -441,7 +395,7 @@ index ece017a59..456986211 100644
  } dwmac1000_t;
  
  #ifdef DEBUG_DATA
-@@ -263,6 +284,24 @@ static void dwmac1000_pbuf_dump (struct pbuf *p)
+@@ -263,6 +283,24 @@ static void dwmac1000_pbuf_dump (struct pbuf *p)
  }
  #endif  /* DEBUG_DATA */
  
@@ -466,7 +420,7 @@ index ece017a59..456986211 100644
  static uint16_t dwmac1000_read_phy (void * arg, uint8_t address, uint8_t reg)
  {
     dwmac1000_t *dwmac1000 = arg;
-@@ -326,6 +365,13 @@ static void dwmac1000_hw_init (struct netif *netif, const dwmac1000_cfg_t * cfg)
+@@ -326,6 +364,13 @@ static void dwmac1000_hw_init (struct netif *netif, const dwmac1000_cfg_t * cfg)
     DEBUG_ASSERT (dwmac1000->phy->ops->start != NULL);
     dwmac1000->phy->ops->start (dwmac1000->phy);
  
@@ -480,7 +434,7 @@ index ece017a59..456986211 100644
     /* Enable receiver, transmitter */
     mac->cr = CR_RE | CR_TE;
  
-@@ -352,13 +398,18 @@ static void dwmac1000_hw_init (struct netif *netif, const dwmac1000_cfg_t * cfg)
+@@ -352,13 +397,18 @@ static void dwmac1000_hw_init (struct netif *netif, const dwmac1000_cfg_t * cfg)
     /* Setup Rx descriptors using chained mode */
     for (ix = 0; ix < cfg->rx_buffers; ix++)
     {
@@ -501,7 +455,7 @@ index ece017a59..456986211 100644
     }
     dwmac1000->rx[ix - 1].next = &dwmac1000->rx[0]; /* Point to first */
     dwmac1000->pRx = &dwmac1000->rx[0];             /* Driver index */
-@@ -373,6 +424,7 @@ static void dwmac1000_hw_init (struct netif *netif, const dwmac1000_cfg_t * cfg)
+@@ -373,6 +423,7 @@ static void dwmac1000_hw_init (struct netif *netif, const dwmac1000_cfg_t * cfg)
        dwmac1000->tx[ix].des0 = TDES0_TCH;
        dwmac1000->tx[ix].buff = p;
        dwmac1000->tx[ix].next = &dwmac1000->tx[ix + 1];
@@ -509,25 +463,7 @@ index ece017a59..456986211 100644
     }
     dwmac1000->tx[ix - 1].next = &dwmac1000->tx[0]; /* Point to first */
     dwmac1000->pTx = &dwmac1000->tx[0];             /* Driver index */
-@@ -420,6 +472,9 @@ static err_t dwmac1000_hw_transmit_frame (struct netif *netif, struct pbuf *p)
-       return ERR_OK;
-    }
- 
-+   /* Lock TX handling */
-+   mtx_lock (dwmac1000->mtx_tx);
-+
- #if ETH_PAD_SIZE
-    pbuf_header (p, -ETH_PAD_SIZE);  /* drop the padding word */
- #endif
-@@ -478,6 +533,7 @@ static err_t dwmac1000_hw_transmit_frame (struct netif *netif, struct pbuf *p)
-    pbuf_header (p, ETH_PAD_SIZE);   /* reclaim the padding word */
- #endif
- 
-+   mtx_unlock (dwmac1000->mtx_tx);
-    return ERR_OK;
- }
- 
-@@ -513,7 +569,7 @@ static struct pbuf *dwmac1000_hw_get_received_frame (struct netif * netif)
+@@ -513,7 +564,7 @@ static struct pbuf *dwmac1000_hw_get_received_frame (struct netif * netif)
     struct pbuf *p = NULL;
     uint16_t length;
     volatile dma_descriptor_t * pRx;
@@ -536,7 +472,7 @@ index ece017a59..456986211 100644
     uint32_t des0;
  
     pRx = dwmac1000->pRx;
-@@ -527,39 +583,33 @@ static struct pbuf *dwmac1000_hw_get_received_frame (struct netif * netif)
+@@ -527,39 +578,33 @@ static struct pbuf *dwmac1000_hw_get_received_frame (struct netif * netif)
     if ((des0 & (RDES0_FS | RDES0_LS)) != (RDES0_FS | RDES0_LS))
        goto done;
  
@@ -595,7 +531,7 @@ index ece017a59..456986211 100644
  
        MIB2_STATS_NETIF_ADD (netif, ifinoctets, p->tot_len);
        if (IS_UNICAST (p))
-@@ -575,6 +625,7 @@ static struct pbuf *dwmac1000_hw_get_received_frame (struct netif * netif)
+@@ -575,6 +620,7 @@ static struct pbuf *dwmac1000_hw_get_received_frame (struct netif * netif)
     }
     else
     {
@@ -603,7 +539,7 @@ index ece017a59..456986211 100644
        LINK_STATS_INC (link.memerr);
        LINK_STATS_INC (link.drop);
        MIB2_STATS_NETIF_INC (netif, ifindiscards);
-@@ -694,16 +745,63 @@ static dev_state_t dwmac1000_probe (drv_t * drv)
+@@ -694,16 +740,63 @@ static dev_state_t dwmac1000_probe (drv_t * drv)
  
     link_state = dwmac1000->phy->ops->get_link_state (dwmac1000->phy);
  
@@ -668,7 +604,7 @@ index ece017a59..456986211 100644
     .hotplug = dwmac1000_hotplug,
  };
  
-@@ -714,6 +812,7 @@ drv_t * dwmac1000_init (const char * name, const dwmac1000_cfg_t * cfg,
+@@ -714,6 +807,7 @@ drv_t * dwmac1000_init (const char * name, const dwmac1000_cfg_t * cfg,
  
     UASSERT (cfg->hclk >= 20 * 1000 * 1000, EARG);
     UASSERT (cfg->rx_buffers <= RX_MAX_BUFFERS, EARG);
@@ -676,11 +612,7 @@ index ece017a59..456986211 100644
     UASSERT (cfg->tx_buffers <= TX_MAX_BUFFERS, EARG);
  
     dwmac1000 = malloc (sizeof (dwmac1000_t));
-@@ -735,9 +834,12 @@ drv_t * dwmac1000_init (const char * name, const dwmac1000_cfg_t * cfg,
-    /* Initialise driver state */
-    dwmac1000->phy = phy;
-    dwmac1000->irq = cfg->irq;
-+   dwmac1000->mtx_tx = mtx_create();
+@@ -738,6 +832,8 @@ drv_t * dwmac1000_init (const char * name, const dwmac1000_cfg_t * cfg,
     dwmac1000->mac = (eth_mac_t *)cfg->base;
     dwmac1000->mmc = (eth_mmc_t *)(cfg->base + 0x100);
     dwmac1000->dma = (eth_dma_t *)(cfg->base + 0x1000);
@@ -690,7 +622,7 @@ index ece017a59..456986211 100644
     /* Create receive task */
     dwmac1000->tRcv = task_spawn ("EthRcv",
 diff --git a/drivers/eth/phy/mii.c b/drivers/eth/phy/mii.c
-index 2cbaef613..7eb31315b 100644
+index 2cbaef61..7eb31315 100644
 --- a/drivers/eth/phy/mii.c
 +++ b/drivers/eth/phy/mii.c
 @@ -305,11 +305,18 @@ uint8_t mii_get_link_state (phy_t * phy)
@@ -716,7 +648,7 @@ index 2cbaef613..7eb31315b 100644
  
  phy_t * mii_init (const phy_cfg_t * cfg)
 diff --git a/include/drivers/eth/phy/mii.h b/include/drivers/eth/phy/mii.h
-index 57364bdc6..dd69ceaee 100644
+index 57364bdc..dd69ceae 100644
 --- a/include/drivers/eth/phy/mii.h
 +++ b/include/drivers/eth/phy/mii.h
 @@ -19,6 +19,7 @@ phy_t * mii_init (const phy_cfg_t * cfg);
@@ -728,7 +660,7 @@ index 57364bdc6..dd69ceaee 100644
  /** \internal Exposed for testing purposes only
   *
 diff --git a/include/drivers/eth/phy/phy.h b/include/drivers/eth/phy/phy.h
-index 22aea4ccf..a34a0a616 100644
+index 22aea4cc..a34a0a61 100644
 --- a/include/drivers/eth/phy/phy.h
 +++ b/include/drivers/eth/phy/phy.h
 @@ -19,6 +19,14 @@
@@ -755,7 +687,7 @@ index 22aea4ccf..a34a0a616 100644
  
  typedef struct phy
 diff --git a/include/drivers/ioctl.h b/include/drivers/ioctl.h
-index 4471b4ae6..d7be0d261 100644
+index 4471b4ae..d7be0d26 100644
 --- a/include/drivers/ioctl.h
 +++ b/include/drivers/ioctl.h
 @@ -142,6 +142,57 @@ typedef struct ioctl_i2c_access
@@ -817,7 +749,7 @@ index 4471b4ae6..d7be0d261 100644
  int ioctl (int fd, int request, ...);
  
 diff --git a/kern/arch/xmc4/hal.h b/kern/arch/xmc4/hal.h
-index 20694b6bb..58fd606d9 100644
+index 8508b3cf..8cda1255 100644
 --- a/kern/arch/xmc4/hal.h
 +++ b/kern/arch/xmc4/hal.h
 @@ -18,7 +18,7 @@
@@ -830,7 +762,7 @@ index 20694b6bb..58fd606d9 100644
  /* This macro enables interrupts globally. */
  #define HAL_INTERRUPT_UNLOCK()                  \
 diff --git a/lwip/CMakeLists.txt b/lwip/CMakeLists.txt
-index 1e5a3d2bd..122fde5fb 100644
+index 1e5a3d2b..122fde5f 100644
 --- a/lwip/CMakeLists.txt
 +++ b/lwip/CMakeLists.txt
 @@ -16,6 +16,7 @@ file(GLOB SOURCES CONFIGURE_DEPENDS
@@ -843,7 +775,7 @@ index 1e5a3d2bd..122fde5fb 100644
  
 diff --git a/lwip/src/apps/Makefile b/lwip/src/apps/Makefile
 new file mode 100644
-index 000000000..e92bb4eed
+index 00000000..e92bb4ee
 --- /dev/null
 +++ b/lwip/src/apps/Makefile
 @@ -0,0 +1,12 @@
@@ -861,7 +793,7 @@ index 000000000..e92bb4eed
 +include $(PRJ_ROOT)/make/subdir.mk
 diff --git a/lwip/src/apps/snmp/Makefile b/lwip/src/apps/snmp/Makefile
 new file mode 100644
-index 000000000..e1383bfe1
+index 00000000..e1383bfe
 --- /dev/null
 +++ b/lwip/src/apps/snmp/Makefile
 @@ -0,0 +1,16 @@
@@ -882,7 +814,7 @@ index 000000000..e1383bfe1
 +
 +include $(PRJ_ROOT)/make/subdir.mk
 diff --git a/lwip/src/apps/snmp/snmp_mib2_interfaces.c b/lwip/src/apps/snmp/snmp_mib2_interfaces.c
-index 5f12dd552..85e80f9b0 100644
+index 5f12dd55..85e80f9b 100644
 --- a/lwip/src/apps/snmp/snmp_mib2_interfaces.c
 +++ b/lwip/src/apps/snmp/snmp_mib2_interfaces.c
 @@ -159,6 +159,7 @@ interfaces_Table_get_value(struct snmp_node_instance *instance, void *value)
@@ -906,7 +838,7 @@ index 5f12dd552..85e80f9b0 100644
      case 3: /* ifType */
        *value_s32 = netif->link_type;
 diff --git a/lwip/src/apps/snmp/snmp_mib2_system.c b/lwip/src/apps/snmp/snmp_mib2_system.c
-index 71c1c29c0..9331b6080 100644
+index 71c1c29c..9331b608 100644
 --- a/lwip/src/apps/snmp/snmp_mib2_system.c
 +++ b/lwip/src/apps/snmp/snmp_mib2_system.c
 @@ -56,309 +56,57 @@
@@ -1250,7 +1182,7 @@ index 71c1c29c0..9331b6080 100644
  static const struct snmp_scalar_array_node_def system_nodes[] = {
 diff --git a/lwip/src/core/lwip_hooks.c b/lwip/src/core/lwip_hooks.c
 new file mode 100644
-index 000000000..ad6229f82
+index 00000000..ad6229f8
 --- /dev/null
 +++ b/lwip/src/core/lwip_hooks.c
 @@ -0,0 +1,23 @@
@@ -1278,7 +1210,7 @@ index 000000000..ad6229f82
 +}
 +#endif /* LWIP_HOOK_UNKNOWN_ETH_PROTOCOL */
 diff --git a/lwip/src/core/udp.c b/lwip/src/core/udp.c
-index 0b609d333..05166989c 100644
+index 0b609d33..05166989 100644
 --- a/lwip/src/core/udp.c
 +++ b/lwip/src/core/udp.c
 @@ -372,6 +372,18 @@ udp_input(struct pbuf *p, struct netif *inp)
@@ -1301,7 +1233,7 @@ index 0b609d333..05166989c 100644
        MIB2_STATS_INC(mib2.udpindatagrams);
  #if SO_REUSE && SO_REUSE_RXTOALL
 diff --git a/lwip/src/include/lwip/apps/snmp_mib2.h b/lwip/src/include/lwip/apps/snmp_mib2.h
-index 2f4a68935..1df6bb0dc 100644
+index 2f4a6893..1df6bb0d 100644
 --- a/lwip/src/include/lwip/apps/snmp_mib2.h
 +++ b/lwip/src/include/lwip/apps/snmp_mib2.h
 @@ -60,13 +60,23 @@ extern struct snmp_threadsync_instance snmp_mib2_lwip_locks;
@@ -1337,7 +1269,7 @@ index 2f4a68935..1df6bb0dc 100644
  #endif /* LWIP_SNMP */
 diff --git a/lwip/src/include/lwip/lwip_hooks.h b/lwip/src/include/lwip/lwip_hooks.h
 new file mode 100644
-index 000000000..c48f1c57b
+index 00000000..c48f1c57
 --- /dev/null
 +++ b/lwip/src/include/lwip/lwip_hooks.h
 @@ -0,0 +1,41 @@
@@ -1383,10 +1315,10 @@ index 000000000..c48f1c57b
 +
 +#endif /* LWIP_HOOKS_H */
 diff --git a/lwip/src/include/lwip/lwipopts.h b/lwip/src/include/lwip/lwipopts.h
-index 34d44ecc0..480045bc3 100644
+index 31a9b4e7..406ab94a 100644
 --- a/lwip/src/include/lwip/lwipopts.h
 +++ b/lwip/src/include/lwip/lwipopts.h
-@@ -44,12 +44,33 @@
+@@ -46,12 +46,33 @@
  #define LWIP_NETIF_LINK_CALLBACK    1
  #define LWIP_NETIF_STATUS_CALLBACK  1
  #define LWIP_NETIF_LOOPBACK         1
@@ -1420,7 +1352,7 @@ index 34d44ecc0..480045bc3 100644
  
  /**
   * LWIP_DHCP_AUTOIP_COOP_TRIES: Set to the number of DHCP DISCOVER probes
-@@ -60,20 +81,33 @@
+@@ -62,20 +83,33 @@
   */
  #define LWIP_DHCP_AUTOIP_COOP_TRIES 2
  
@@ -1455,7 +1387,7 @@ index 34d44ecc0..480045bc3 100644
  /* Mailbox sizes */
  #define TCPIP_MBOX_SIZE             128
  #define DEFAULT_RAW_RECVMBOX_SIZE   5
-@@ -106,6 +140,7 @@
+@@ -108,6 +142,7 @@
   *    LWIP_DBG_OFF
   *    LWIP_DBG_ON
   */
@@ -1463,7 +1395,7 @@ index 34d44ecc0..480045bc3 100644
  #define IP_DEBUG                    LWIP_DBG_OFF
  #define IGMP_DEBUG                  LWIP_DBG_OFF
  #define TCPIP_DEBUG                 LWIP_DBG_OFF
-@@ -120,5 +155,7 @@
+@@ -122,5 +157,7 @@
  #define TCP_FR_DEBUG                LWIP_DBG_OFF
  #define TCP_QLEN_DEBUG              LWIP_DBG_OFF
  #define TCP_RST_DEBUG               LWIP_DBG_OFF
@@ -1472,5 +1404,5 @@ index 34d44ecc0..480045bc3 100644
  
  #endif  /* __LWIPOPTS_H__ */
 -- 
-2.25.1
+2.33.0.windows.2
 

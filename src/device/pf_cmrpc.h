@@ -132,10 +132,15 @@ int pf_cmrpc_cmdev_state_ind (
  *
  * @param net              InOut: The p-net stack instance
  * @param p_ar             InOut: The AR instance.
+ * @param block_type       In:    The block type, depending on
+ *                                the parameterisation sequence.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_cmrpc_rm_ccontrol_req (pnet_t * net, pf_ar_t * p_ar);
+int pf_cmrpc_rm_ccontrol_req (
+   pnet_t * net,
+   pf_ar_t * p_ar,
+   pf_block_type_values_t block_type);
 
 /**
  * Show AR and session information.

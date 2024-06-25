@@ -285,7 +285,7 @@ int app_data_read_parameter (
    {
       APP_LOG_WARNING (
          "PLC read request unsupported length. "
-         "Index: %u Length: %u Expected length: %u\n",
+         "Index: %u Max length: %u Data length for our parameter: %u\n",
          (unsigned)index,
          (unsigned)*length,
          par_cfg->length);

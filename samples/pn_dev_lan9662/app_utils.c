@@ -87,10 +87,10 @@ const char * app_utils_ioxs_to_string (pnet_ioxs_values_t ioxs)
    switch (ioxs)
    {
    case PNET_IOXS_BAD:
-      s = "BAD";
+      s = "IOXS_BAD";
       break;
    case PNET_IOXS_GOOD:
-      s = "GOOD";
+      s = "IOXS_GOOD";
       break;
    }
 
@@ -116,7 +116,7 @@ void app_utils_get_error_code_strings (
    const char ** err_cls_str,
    const char ** err_code_str)
 {
-   if (err_cls_str == NULL || err_cls_str == NULL)
+   if (err_cls_str == NULL || err_code_str == NULL)
    {
       return;
    }
@@ -162,6 +162,7 @@ void app_utils_get_error_code_strings (
       break;
    }
 }
+
 void app_utils_copy_ip_to_struct (
    pnet_cfg_ip_addr_t * destination_struct,
    pnal_ipaddr_t ip)
@@ -236,37 +237,69 @@ int app_utils_pnet_cfg_init_default (pnet_cfg_t * cfg)
    cfg->im_0_data.im_vendor_id_hi = GET_HIGH_BYTE (APP_GSDML_VENDOR_ID);
    cfg->im_0_data.im_vendor_id_lo = GET_LOW_BYTE (APP_GSDML_VENDOR_ID);
 
-   cfg->im_0_data.im_hardware_revision = 1;
+   cfg->im_0_data.im_hardware_revision = APP_GSDML_IM_HARDWARE_REVISION;
    cfg->im_0_data.im_sw_revision_prefix = APP_GSDML_SW_REV_PREFIX;
    cfg->im_0_data.im_sw_revision_functional_enhancement = PNET_VERSION_MAJOR;
    cfg->im_0_data.im_sw_revision_bug_fix = PNET_VERSION_MINOR;
    cfg->im_0_data.im_sw_revision_internal_change = PNET_VERSION_PATCH;
-   cfg->im_0_data.im_revision_counter = 0; /* Only 0 allowed according
-                                                       to standard */
+   cfg->im_0_data.im_revision_counter = APP_GSDML_IM_REVISION_COUNTER;
    cfg->im_0_data.im_profile_id = APP_GSDML_PROFILE_ID;
    cfg->im_0_data.im_profile_specific_type = APP_GSDML_PROFILE_SPEC_TYPE;
-   cfg->im_0_data.im_version_major = 1;
-   cfg->im_0_data.im_version_minor = 1;
+   cfg->im_0_data.im_version_major = 1; /** Always 1 */
+   cfg->im_0_data.im_version_minor = 1; /** Always 1 */
    cfg->im_0_data.im_supported = APP_GSDML_IM_SUPPORTED;
-   strcpy (cfg->im_0_data.im_order_id, APP_GSDML_ORDER_ID);
-   strcpy (cfg->im_0_data.im_serial_number, "00001");
-   strcpy (cfg->im_1_data.im_tag_function, "my function");
-   strcpy (cfg->im_1_data.im_tag_location, "my location");
-   strcpy (cfg->im_2_data.im_date, "2020-09-03 13:53");
-   strcpy (cfg->im_3_data.im_descriptor, "my descriptor");
-   strcpy (cfg->im_4_data.im_signature, ""); /* Functional safety */
+
+   snprintf (
+      cfg->im_0_data.im_order_id,
+      sizeof (cfg->im_0_data.im_order_id),
+      "%s",
+      APP_GSDML_ORDER_ID);
+   snprintf (
+      cfg->im_0_data.im_serial_number,
+      sizeof (cfg->im_0_data.im_serial_number),
+      "%s",
+      APP_GSDML_EXAMPLE_SERIAL_NUMBER);
+   snprintf (
+      cfg->im_1_data.im_tag_function,
+      sizeof (cfg->im_1_data.im_tag_function),
+      "%s",
+      APP_GSDML_TAG_FUNCTION);
+   snprintf (
+      cfg->im_1_data.im_tag_location,
+      sizeof (cfg->im_1_data.im_tag_location),
+      "%s",
+      APP_GSDML_TAG_LOCATION);
+   snprintf (
+      cfg->im_2_data.im_date,
+      sizeof (cfg->im_2_data.im_date),
+      "%s",
+      APP_GSDML_IM_DATE);
+   snprintf (
+      cfg->im_3_data.im_descriptor,
+      sizeof (cfg->im_3_data.im_descriptor),
+      "%s",
+      APP_GSDML_DESCRIPTOR);
+   snprintf (
+      cfg->im_4_data.im_signature,
+      sizeof (cfg->im_4_data.im_signature),
+      "%s",
+      APP_GSDML_SIGNATURE);
 
    /* Device configuration */
    cfg->device_id.vendor_id_hi = GET_HIGH_BYTE (APP_GSDML_VENDOR_ID);
    cfg->device_id.vendor_id_lo = GET_LOW_BYTE (APP_GSDML_VENDOR_ID);
    cfg->device_id.device_id_hi = GET_HIGH_BYTE (APP_GSDML_DEVICE_ID);
    cfg->device_id.device_id_lo = GET_LOW_BYTE (APP_GSDML_DEVICE_ID);
+   cfg->oem_device_id.vendor_id_hi = GET_HIGH_BYTE (APP_GSDML_OEM_VENDOR_ID);
+   cfg->oem_device_id.vendor_id_lo = GET_LOW_BYTE (APP_GSDML_OEM_VENDOR_ID);
+   cfg->oem_device_id.device_id_hi = GET_HIGH_BYTE (APP_GSDML_OEM_DEVICE_ID);
+   cfg->oem_device_id.device_id_lo = GET_LOW_BYTE (APP_GSDML_OEM_DEVICE_ID);
 
-   cfg->oem_device_id.vendor_id_hi = 0xc0;
-   cfg->oem_device_id.vendor_id_lo = 0xff;
-   cfg->oem_device_id.device_id_hi = 0xee;
-   cfg->oem_device_id.device_id_lo = 0x01;
-   strcpy (cfg->product_name, APP_GSDML_PRODUCT_NAME);
+   snprintf (
+      cfg->product_name,
+      sizeof (cfg->product_name),
+      "%s",
+      APP_GSDML_PRODUCT_NAME);
 
    cfg->send_hello = true;
 
@@ -279,10 +312,11 @@ int app_utils_pnet_cfg_init_default (pnet_cfg_t * cfg)
    snprintf (
       cfg->station_name,
       sizeof (cfg->station_name),
+      "%s",
       APP_GSDML_DEFAULT_STATION_NAME);
 
    /* Diagnosis mechanism */
-   /* Use "Extended channel diagnosis" instead of
+   /* We prefer using "Extended channel diagnosis" instead of
     * "Qualified channel diagnosis" format on the wire,
     * as this is better supported by Wireshark.
     */
@@ -422,6 +456,8 @@ int app_utils_pnet_cfg_init_netifs (
    for (i = 1; i <= *number_of_ports; i++)
    {
       if_cfg->physical_ports[i - 1].netif_name = if_list->netif[i].name;
+      if_cfg->physical_ports[i - 1].default_mau_type =
+         APP_GSDML_DEFAULT_MAUTYPE;
    }
 
    /* Read IP, netmask, gateway from operating system */
@@ -502,28 +538,28 @@ void app_utils_print_network_config (
 }
 
 void app_utils_print_ioxs_change (
-   app_subslot_t * subslot,
+   const app_subslot_t * subslot,
    const char * ioxs_str,
-   uint8_t ioxs_current,
-   uint8_t ioxs_new)
+   uint8_t iocs_current,
+   uint8_t iocs_new)
 {
-   if (ioxs_current != ioxs_new)
+   if (iocs_current != iocs_new)
    {
-      if (ioxs_new == PNET_IOXS_BAD || ioxs_new == PNET_IOXS_GOOD)
+      if (iocs_new == PNET_IOXS_BAD || iocs_new == PNET_IOXS_GOOD)
       {
          APP_LOG_DEBUG (
             "  %-40s PLC reports %s %s \n",
             app_utils_get_subslot_string (subslot),
             ioxs_str,
-            app_utils_ioxs_to_string (ioxs_new));
+            app_utils_ioxs_to_string (iocs_new));
       }
-      else if (ioxs_new != PNET_IOXS_GOOD)
+      else if (iocs_new != PNET_IOXS_GOOD)
       {
          APP_LOG_WARNING (
             "  %-40s PLC reports %s 0x%x Is it in STOP mode?\n",
             app_utils_get_subslot_string (subslot),
             ioxs_str,
-            ioxs_new);
+            iocs_new);
       }
    }
 }
@@ -575,6 +611,7 @@ app_subslot_t * app_utils_plug_submodule (
       return NULL;
    }
 
+   /** Find a free subslot */
    for (subslot_ix = 0; subslot_ix < PNET_MAX_SUBSLOTS; subslot_ix++)
    {
       if (p_api->slots[slot_nbr].subslots[subslot_ix].used == false)
@@ -591,7 +628,8 @@ app_subslot_t * app_utils_plug_submodule (
          p_subslot->data_cfg = *p_data_cfg;
          p_subslot->cyclic_callback = cyclic_callback;
          p_subslot->tag = tag;
-         p_subslot->iocs = 0;
+         p_subslot->indata_iocs = PNET_IOXS_BAD;
+         p_subslot->outdata_iops = PNET_IOXS_BAD;
          return p_subslot;
       }
    }
@@ -612,24 +650,17 @@ int app_utils_pull_submodule (
    }
 
    p_subslot = app_utils_subslot_get (p_api, slot_nbr, subslot_nbr);
-   if (p_subslot != NULL)
+   if (p_subslot == NULL)
    {
-      memset (p_subslot, 0, sizeof (app_subslot_t));
-      p_subslot->used = false;
-      return 0;
+      return -1;
    }
 
-   return -1;
+   memset (p_subslot, 0, sizeof (app_subslot_t));
+   p_subslot->used = false;
+
+   return 0;
 }
 
-/**
- * Get subslot application information.
- * @param p_appdata        InOut: Application state.
- * @param slot_nbr         In:    Slot number.
- * @param subslot_nbr      In:    Subslot number. Range 0 - 0x9FFF.
- * @return Reference to application subslot,
- *         NULL if subslot is not found/plugged.
- */
 app_subslot_t * app_utils_subslot_get (
    app_api_t * p_api,
    uint16_t slot_nbr,
@@ -655,9 +686,14 @@ app_subslot_t * app_utils_subslot_get (
 
 bool app_utils_subslot_is_input (const app_subslot_t * p_subslot)
 {
+   if (p_subslot == NULL || p_subslot->used == false)
+   {
+      return false;
+   }
+
    if (
-      p_subslot != NULL && (p_subslot->data_cfg.data_dir == PNET_DIR_INPUT ||
-                            p_subslot->data_cfg.data_dir == PNET_DIR_IO))
+      p_subslot->data_cfg.data_dir == PNET_DIR_INPUT ||
+      p_subslot->data_cfg.data_dir == PNET_DIR_IO)
    {
       return true;
    }
@@ -665,36 +701,26 @@ bool app_utils_subslot_is_input (const app_subslot_t * p_subslot)
    return false;
 }
 
-/**
- * Return true if subslot is neither input or output.
- *
- * This is applies for DAP submodules/slots
- * @param p_subslot     In: Reference to subslot.
- * @return true if subslot is input or input/output.
- *         false if not.
- */
 bool app_utils_subslot_is_no_io (const app_subslot_t * p_subslot)
 {
-   if (p_subslot != NULL && p_subslot->data_cfg.data_dir == PNET_DIR_NO_IO)
+   if (p_subslot == NULL || p_subslot->used == false)
    {
-      return true;
+      return false;
    }
 
-   return false;
+   return p_subslot->data_cfg.data_dir == PNET_DIR_NO_IO;
 }
 
-/**
- * Return true if subslot is output.
- *
- * @param p_subslot     In: Reference to subslot.
- * @return true if subslot is output or input/output,
- *         false if not.
- */
 bool app_utils_subslot_is_output (const app_subslot_t * p_subslot)
 {
+   if (p_subslot == NULL || p_subslot->used == false)
+   {
+      return false;
+   }
+
    if (
-      p_subslot != NULL && (p_subslot->data_cfg.data_dir == PNET_DIR_OUTPUT ||
-                            p_subslot->data_cfg.data_dir == PNET_DIR_IO))
+      p_subslot->data_cfg.data_dir == PNET_DIR_OUTPUT ||
+      p_subslot->data_cfg.data_dir == PNET_DIR_IO)
    {
       return true;
    }
@@ -704,15 +730,16 @@ bool app_utils_subslot_is_output (const app_subslot_t * p_subslot)
 
 void app_utils_cyclic_data_poll (app_api_t * p_api)
 {
-   uint16_t slot;
-   uint16_t subslot;
+   uint16_t slot_nbr;
+   uint16_t subslot_index;
    app_subslot_t * p_subslot;
 
-   for (slot = 0; slot < PNET_MAX_SLOTS; slot++)
+   for (slot_nbr = 0; slot_nbr < PNET_MAX_SLOTS; slot_nbr++)
    {
-      for (subslot = 0; subslot < PNET_MAX_SUBSLOTS; subslot++)
+      for (subslot_index = 0; subslot_index < PNET_MAX_SUBSLOTS;
+           subslot_index++)
       {
-         p_subslot = &p_api->slots[slot].subslots[subslot];
+         p_subslot = &p_api->slots[slot_nbr].subslots[subslot_index];
          if (p_subslot->plugged && p_subslot->cyclic_callback != NULL)
          {
             p_subslot->cyclic_callback (p_subslot, p_subslot->tag);

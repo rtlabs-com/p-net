@@ -1,24 +1,14 @@
-Multiple ports
-==============
-This section describes how to configure the p-net stack, sample application
+.. _multiple-ports:
+
+Configuring the P-Net stack and sample application for multiple network interfaces or ports
+===========================================================================================
+This section describes how to configure the P-Net stack, sample application
 and system for multiple network interfaces or ports.
-So far, multiple port has only been tested using the Linux port.
-
-
-Terminology
------------
-
-Interface
-    Abstract group of ports. In Profinet context, interface typically doesn't mean a
-    specific network interface. This is a common cause of confusion.
-Port
-    Network interface. The physical connectors are referred to as "physical ports".
-    A "management port" is the network interface to which a controller / PLC connects.
+So far, multiple ports has only been tested using the Linux port.
 
 In the example described in this section, ``br0`` is the management port
 and ``eth0`` and ``eth1`` are the physical ports. The interface consists of
 ``br0``, ``eth0`` and ``eth1``.
-
 
 Configuration of bridge using Linux
 -----------------------------------
@@ -30,8 +20,7 @@ Tested with Raspberry PI 3B+ and USB Ethernet dongle USB3GIG.
             | eth0 | eth1 |
             +------+------+
 
-
-p-net supports multiple Ethernet ports. To use multiple ports, these
+P-Net supports multiple Ethernet ports. To use multiple ports, these
 shall be grouped into a bridge. In such a configuration the management port / main network interface
 is the bridge and the Ethernet interfaces are named physical ports.
 
@@ -144,7 +133,7 @@ To disable the creation of the bridge at reboot::
 
    sudo systemctl disable systemd-networkd
 
-If you do not use systemd, then a script ``enable_bridge.sh`` might be handy::
+If you do not use systemd, then a script :file:`enable_bridge.sh` might be handy::
 
    ip link add name br0 type bridge
    ip link set br0 up
@@ -153,7 +142,7 @@ If you do not use systemd, then a script ``enable_bridge.sh`` might be handy::
    ip link set eth0 master br0
    ip link set eth1 master br0
 
-And correspondingly ``disable_bridge.sh``::
+And correspondingly :file:`disable_bridge.sh`::
 
    ip link set eth0 nomaster
    ip link set eth1 nomaster
@@ -161,12 +150,12 @@ And correspondingly ``disable_bridge.sh``::
    ip link delete br0 type bridge
 
 
-Configuration of p-net stack and sample application
----------------------------------------------------------
-To run p-net and the sample application with multiple ports a couple
+Configuring the P-Net stack and sample application
+----------------------------------------------------
+To run P-Net and the sample application with multiple ports a couple
 of things need to be done. Note that the settings described in the
 following sections are changed by running ``ccmake .`` in the build folder,
-and then ``options.h`` will be regenerated.
+and then :file:`options.h` will be regenerated.
 
 Reconfigure setting ``PNET_MAX_PHYSICAL_PORTS`` to the actual number of physical
 ports available in the system. For this example the value shall be set to 2.
@@ -203,8 +192,8 @@ Example of initial log when starting the demo application with a multi port conf
     Current Gateway:      192.168.0.1
     Storage directory:    /home/pi/profinet/build
 
-Update GSDML file
------------------
+Updating the GSDML file
+--------------------------
 The sample app GSDML file contains a commented out block that defines
 a second physical port. In the sample application GSDML file, search for "IDS_P2"
 and enable commented out lines as described in the GSDML file.
@@ -220,7 +209,7 @@ Use the MAC-address of ``br0`` when running ART tester.
 
 Routing traffic with multiple ports on Linux
 ---------------------------------------------
-To see the MAC addresses and IP addresses of the neighbours, use the ``arp``
+To see the MAC addresses and IP addresses of the neighbours, use the :command:`arp`
 Linux command::
 
    pi@pndevice-pi:~$ arp
@@ -230,7 +219,7 @@ Linux command::
    192.168.0.98             ether   ac:4a:56:f4:02:89   C                     br0
    192.168.0.30             ether   54:ee:75:ff:95:a6   C                     br0
 
-To see the IP routing table, use the ``route`` Linux command::
+To see the IP routing table, use the :command:`route` Linux command::
 
    pi@pndevice-pi:~$ route
    Kernel IP routing table
@@ -238,6 +227,8 @@ To see the IP routing table, use the ``route`` Linux command::
    default         192.168.42.1    0.0.0.0         UG    305    0        0 wlan0
    192.168.0.0     0.0.0.0         255.255.255.0   U     0      0        0 br0
    192.168.42.0    0.0.0.0         255.255.255.0   U     305    0        0 wlan0
+
+To send a ARP request, use the command :command:`arping`.
 
 
 Adding multiple Ethernet ports on a microcontroller
@@ -269,4 +260,4 @@ Examples of useful Ethernet switch chips (not tested):
 * Microchip KSZ8873
 * Microchip KSZ8895
 
-The p-net stack does not implement support for tail tagging by default.
+The P-Net stack does not implement support for tail tagging by default.

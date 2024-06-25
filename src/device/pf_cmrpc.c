@@ -61,6 +61,16 @@
 #error "PNET_MAX_SESSION_BUFFER_SIZE must be less than or equal to 65535"
 #endif
 
+/* Unless negotiated between server and client, a CL-PDU (header (80 bytes) +
+ * body) should not be larger than MustRecvFragSize (1464 bytes). This means
+ * that a CL-PDU body should not be larger than 1384 bytes.
+ * (See DCE 1.1: RPC, p. 578)
+ */
+#define PF_CMRPC_MUST_RECV_FRAG_SIZE (1464)
+#define PF_CMRPC_PDU_HEADER_SIZE     (80)
+#define PF_CMRPC_MAX_PDU_BODY_SIZE                                             \
+   (PF_CMRPC_MUST_RECV_FRAG_SIZE - PF_CMRPC_PDU_HEADER_SIZE)
+
 static const pf_uuid_t implicit_ar = {0, 0, 0, {0, 0, 0, 0, 0, 0, 0, 0}};
 
 static const pf_uuid_t uuid_epmap_interface = {
@@ -658,6 +668,11 @@ static int pf_session_locate_by_ar (
 /**
  * @internal
  * Allocate and clear a new AR.
+ * Only PNET_MAX_AR AR:s are supported, but since the AR data structure is
+ * needed for unpacking request data, an additional instance can be allocated
+ * in order to generate the correct error response in certain cases. This
+ * additional AR data structure will have arep set to 0, and it should not be
+ * used for anything, except request error checking.
  * @param net              InOut: The p-net stack instance
  * @param pp_ar            Out:  The new AR instance.
  * @return  0  if operation succeeded.
@@ -665,25 +680,35 @@ static int pf_session_locate_by_ar (
  */
 static int pf_ar_allocate (pnet_t * net, pf_ar_t ** pp_ar)
 {
-   int ret = -1;
-   uint16_t ix = 0;
+   int ret;
+   uint16_t ix;
+   pf_ar_t * ar;
+
+   ret = -1;
+
    os_mutex_lock (net->p_cmrpc_rpc_mutex);
+   ix = 0;
    while ((ix < NELEMENTS (net->cmrpc_ar)) &&
           (net->cmrpc_ar[ix].in_use == true))
    {
       ix++;
    }
-
    if (ix < NELEMENTS (net->cmrpc_ar))
    {
-      memset (&net->cmrpc_ar[ix], 0, sizeof (net->cmrpc_ar[ix]));
-      net->cmrpc_ar[ix].in_use = true;
-      pf_cmsu_init (net, &net->cmrpc_ar[ix]);
-      pf_cmwrr_init (net, &net->cmrpc_ar[ix]);
-      pf_scheduler_init_handle (&net->cmrpc_ar[ix].cmio_timeout, "cmio");
-      net->cmrpc_ar[ix].cmio_timer_should_reschedule = false;
+      ar = &net->cmrpc_ar[ix];
 
-      *pp_ar = &net->cmrpc_ar[ix];
+      memset (ar, 0, sizeof (*ar));
+      ar->in_use = true;
+      if (ix < PNET_MAX_AR)
+      {
+         ar->arep = ix + 1; /* Avoid AREP == 0 */
+         pf_cmsu_init (net, ar);
+         pf_cmwrr_init (net, ar);
+         pf_scheduler_init_handle (&ar->cmio_timeout, "cmio");
+         ar->cmio_timer_should_reschedule = false;
+         net->cmrpc_ar_order[net->cmrpc_nbr_ars++] = ix;
+      }
+      *pp_ar = ar;
 
       ret = 0;
    }
@@ -691,7 +716,6 @@ static int pf_ar_allocate (pnet_t * net, pf_ar_t ** pp_ar)
 
    if (ix < PNET_MAX_AR)
    {
-      net->cmrpc_ar[ix].arep = ix + 1; /* Avoid AREP == 0 */
       LOG_DEBUG (
          PF_RPC_LOG,
          "CMRPC(%d): Allocate AR %u (AREP %u)\n",
@@ -708,19 +732,40 @@ static int pf_ar_allocate (pnet_t * net, pf_ar_t ** pp_ar)
  * Free the AR.
  * @param p_ar             InOut: The AR instance.
  */
-static void pf_ar_release (pf_ar_t * p_ar)
+static void pf_ar_release (pnet_t * net, pf_ar_t * p_ar)
 {
+   uint16_t i;
+
    if (p_ar != NULL)
    {
       if (p_ar->in_use == true)
       {
-         LOG_DEBUG (
-            PF_RPC_LOG,
-            "CMRPC(%d): Free AR %u (AREP %u)\n",
-            __LINE__,
-            p_ar->arep - 1,
-            p_ar->arep);
+         if (p_ar->arep > 0)
+         {
+            /* Search for the arep in the ordered vector. */
+            for (i = 0; i < net->cmrpc_nbr_ars; ++i)
+            {
+               if (net->cmrpc_ar_order[i] == (p_ar->arep - 1))
+               {
+                  /* When found, decrement the length of the vector. */
+                  --(net->cmrpc_nbr_ars);
+                  break;
+               }
+            }
+            /* Move all the following areps one step up in the order. */
+            for (; i < net->cmrpc_nbr_ars; ++i)
+            {
+               *(net->cmrpc_ar_order + i) = *(net->cmrpc_ar_order + i + 1);
+            }
+            LOG_DEBUG (
+               PF_RPC_LOG,
+               "CMRPC(%d): Free AR %u (AREP %u)\n",
+               __LINE__,
+               p_ar->arep - 1,
+               p_ar->arep);
+         }
          memset (p_ar, 0, sizeof (*p_ar));
+         p_ar->in_use = false;
       }
       else
       {
@@ -1220,16 +1265,47 @@ static int pf_cmrpc_rm_connect_interpret_ind (
             }
             break;
          case PF_BT_IOCR_BLOCK_REQ:
-            if (p_ar->nbr_iocrs < PNET_MAX_CR)
+            if (!(p_ar->nbr_iocrs < PNET_MAX_CR))
             {
-               /* Before it is incremented at the end of this block, the
-               p_ar->nbr_iocrs value is the same as CREP */
+               LOG_ERROR (
+                  PF_RPC_LOG,
+                  "CMRPC(%d): Too many CR given. Max %u CR per AR supported\n",
+                  __LINE__,
+                  PNET_MAX_CR);
+               pf_set_error (
+                  &p_sess->rpc_result,
+                  PNET_ERROR_CODE_CONNECT,
+                  PNET_ERROR_DECODE_PNIO,
+                  PNET_ERROR_CODE_1_CMRPC,
+                  PNET_ERROR_CODE_2_CMRPC_WRONG_BLOCK_COUNT);
+               ret = -1;
+            }
+            else if (
                pf_get_iocr_param (
                   &p_sess->get_info,
                   p_pos,
                   p_ar->nbr_iocrs,
-                  p_ar);
-
+                  p_ar) != 0)
+            {
+               LOG_ERROR (
+                  PF_RPC_LOG,
+                  "CMRPC(%d): Too many CR resources requested."
+                  " Check that the controller (PLC) does not request more"
+                  " modules or submodules than P-Net has been configured"
+                  " to support.\n",
+                  __LINE__);
+               pf_set_error (
+                  &p_sess->rpc_result,
+                  PNET_ERROR_CODE_CONNECT,
+                  PNET_ERROR_DECODE_PNIO,
+                  PNET_ERROR_CODE_1_CMRPC,
+                  PNET_ERROR_CODE_2_CMRPC_OUT_OF_PCA_RESOURCES);
+               ret = -1;
+            }
+            else
+            {
+               /* Before it is incremented at the end of this block, the
+               p_ar->nbr_iocrs value is the same as CREP */
                LOG_DEBUG (
                   PF_RPC_LOG,
                   "CMRPC(%d): Requested send cycle time: %u (in 1/32 of "
@@ -1293,21 +1369,6 @@ static int pf_cmrpc_rm_connect_interpret_ind (
                      p_ar->nbr_iocrs++;
                   }
                }
-            }
-            else
-            {
-               LOG_ERROR (
-                  PF_RPC_LOG,
-                  "CMRPC(%d): Too many CR given. Max %u CR per AR supported\n",
-                  __LINE__,
-                  PNET_MAX_CR);
-               pf_set_error (
-                  &p_sess->rpc_result,
-                  PNET_ERROR_CODE_CONNECT,
-                  PNET_ERROR_DECODE_PNIO,
-                  PNET_ERROR_CODE_1_CMRPC,
-                  PNET_ERROR_CODE_2_CMRPC_WRONG_BLOCK_COUNT);
-               ret = -1;
             }
             break;
          case PF_BT_EXPECTED_SUBMODULE_BLOCK:
@@ -1774,7 +1835,7 @@ static void pf_cmrpc_rm_connect_rsp (
          p_res,
          p_res_pos);
 
-      if (p_ar->nbr_api_diffs > 0)
+      if (p_ar->exp_ident.nbr_diff_apis > 0)
       {
          pf_put_ar_diff (
             p_sess->get_info.is_big_endian,
@@ -1912,47 +1973,19 @@ static int pf_cmrpc_rm_connect_ind (
    /* CheckResource */
    else if (pf_ar_allocate (net, &p_ar) == 0)
    {
-      /* Cross-reference */
-      p_ar->p_sess = p_sess;
-      p_sess->p_ar = p_ar;
-
       /* Parse the Connect request - No support for ArSet (yet) */
       if (pf_cmrpc_rm_connect_interpret_ind (p_sess, &req_pos, p_ar) == 0)
       {
-         if (pf_ar_find_by_uuid (net, &p_ar->ar_param.ar_uuid, &p_ar_2) != 0)
+         if (pf_ar_find_by_uuid (net, &p_ar->ar_param.ar_uuid, &p_ar_2) == 0)
          {
-            /* Valid, unknown AR, NoArSet */
-            if (p_ar->arep > 1)
+            if (p_ar_2->p_sess != p_sess)
             {
-               /* We only support one AR.
-                  However in order to respond with the correct error code, we
-                  need to know whether a new AR has the same ARUUID as the
-                  previous AR. Thus we need to parse the incoming connect
-                  message, and for that to be possible PNET_MAX_AR must be at
-                  least 2. This is checked by ART Tester. */
-               LOG_ERROR (
-                  PF_RPC_LOG,
-                  "CMRPC(%d): Only one connection (AR) supported! AREP %u\n",
-                  __LINE__,
-                  p_ar->arep);
-               pf_set_error (
-                  &p_sess->rpc_result,
-                  PNET_ERROR_CODE_CONNECT,
-                  PNET_ERROR_DECODE_PNIO,
-                  PNET_ERROR_CODE_1_CMRPC,
-                  PNET_ERROR_CODE_2_CMRPC_NO_AR_RESOURCES);
+               p_sess->kill_session = true;
             }
-            else
-            {
-               p_ar->ar_state = PF_AR_STATE_PRIMARY;
-               p_ar->sync_state = PF_SYNC_STATE_NOT_AVAILABLE;
+            pf_ar_release (net, p_ar);
+            p_ar = p_ar_2;
 
-               ret = pf_cmdev_rm_connect_ind (net, p_ar, &p_sess->rpc_result);
-            }
-         }
-         else
-         {
-            /* Valid, explicit AR - This could be a re-connect */
+            /* The ARUUID is already in use by an established AR. */
             LOG_ERROR (
                PF_RPC_LOG,
                "CMRPC(%d): Duplicate Connect request received\n",
@@ -1963,7 +1996,37 @@ static int pf_cmrpc_rm_connect_ind (
                PNET_ERROR_DECODE_PNIO,
                PNET_ERROR_CODE_1_CMDEV,
                PNET_ERROR_CODE_2_CMDEV_STATE_CONFLICT);
-            (void)pf_cmdev_cm_abort (net, p_ar_2);
+         }
+         else
+         {
+            if (p_ar->arep == 0)
+            {
+               /* An AREP of zero indicates that we already have PNET_MAX_AR
+                  application relations in use. We allow it up to this point,
+                  to be able to catch a duplicate ARUUID above, but here it
+                  becomes an error. */
+               LOG_ERROR (
+                  PF_RPC_LOG,
+                  "CMRPC(%d): Out of AR resources\n",
+                  __LINE__);
+               pf_set_error (
+                  &p_sess->rpc_result,
+                  PNET_ERROR_CODE_CONNECT,
+                  PNET_ERROR_DECODE_PNIO,
+                  PNET_ERROR_CODE_1_CMRPC,
+                  PNET_ERROR_CODE_2_CMRPC_NO_AR_RESOURCES);
+            }
+            else
+            {
+               /* Cross-reference */
+               p_ar->p_sess = p_sess;
+               p_sess->p_ar = p_ar;
+
+               p_ar->ar_state = PF_AR_STATE_PRIMARY;
+               p_ar->sync_state = PF_SYNC_STATE_NOT_AVAILABLE;
+
+               ret = pf_cmdev_rm_connect_ind (net, p_ar, &p_sess->rpc_result);
+            }
          }
       }
       else
@@ -1978,7 +2041,7 @@ static int pf_cmrpc_rm_connect_ind (
    else
    {
       /* unavailable */
-      LOG_ERROR (PF_RPC_LOG, "CMRPC(%d): Out of AR resources (AR)\n", __LINE__);
+      LOG_ERROR (PF_RPC_LOG, "CMRPC(%d): Out of AR resources\n", __LINE__);
       pf_set_error (
          &p_sess->rpc_result,
          PNET_ERROR_CODE_CONNECT,
@@ -2000,13 +2063,17 @@ static int pf_cmrpc_rm_connect_ind (
       p_sess->rpc_result.pnio_status.error_code_2);
    pf_cmrpc_rm_connect_rsp (p_sess, ret, p_ar, res_size, p_res, p_res_pos);
 
-   if (
+   if (p_ar_2 != NULL)
+   {
+      (void)pf_cmdev_cm_abort (net, p_ar_2);
+   }
+   else if (
       (ret != 0) ||
       (p_sess->rpc_result.pnio_status.error_code != PNET_ERROR_CODE_NOERROR))
    {
       /* Connect failed: Cleanup and signal to terminate the session. */
       LOG_INFO (PF_RPC_LOG, "CMRPC(%d): Connect failed - Free AR!\n", __LINE__);
-      pf_ar_release (p_ar);
+      pf_ar_release (net, p_ar);
       p_sess->p_ar = NULL;
       p_sess->kill_session = true;
    }
@@ -2392,6 +2459,8 @@ static int pf_cmrpc_rm_dcontrol_interpret_req (
          {
          case PF_BT_PRMBEGIN_REQ:
          case PF_BT_PRMEND_REQ:
+         case PF_BT_PRMEND_PLUG_ALARM_REQ:
+            p_control_io->block_type = block_header.block_type;
             pf_get_control (&p_sess->get_info, &req_pos, p_control_io);
             break;
          default:
@@ -2543,7 +2612,9 @@ static void pf_cmrpc_rm_dcontrol_rsp (
       p_control_io->control_command = BIT (PF_CONTROL_COMMAND_BIT_DONE);
       pf_put_control (
          p_sess->get_info.is_big_endian,
-         PF_BT_PRMEND_RES,
+         (p_control_io->block_type == PF_BT_PRMEND_PLUG_ALARM_REQ)
+            ? PF_BT_PRMEND_PLUG_ALARM_RES
+            : PF_BT_PRMEND_RES,
          p_control_io,
          res_size,
          p_res,
@@ -2626,19 +2697,21 @@ static int pf_cmrpc_rm_dcontrol_ind (
       {
          if (pf_ar_find_by_uuid (net, &control_io.ar_uuid, &p_ar) == 0)
          {
-            if (
-               pf_cmdev_rm_dcontrol_ind (
+            if (control_io.block_type == PF_BT_PRMEND_PLUG_ALARM_REQ)
+            {
+               ret = pf_plugsm_prmend_ind (
+                     net,
+                     p_ar,
+                     &p_sess->rpc_result);
+            }
+            else
+            {
+               ret = pf_cmdev_rm_dcontrol_ind (
                   net,
                   p_ar,
                   &control_io,
                   &p_sess->rpc_result,
-                  p_set_state_prmend) == 0)
-            {
-               ret = pf_cmpbe_rm_dcontrol_ind (
-                  net,
-                  p_ar,
-                  &control_io,
-                  &p_sess->rpc_result);
+                  p_set_state_prmend);
             }
          }
          else
@@ -2877,7 +2950,7 @@ static int pf_cmrpc_rm_read_ind (
       else
       {
          /* Note that for "read implicit" we have no AR */
-         if ((p_ar == NULL) && (opnum != PF_RPC_DEV_OPNUM_READ_IMPLICIT))
+         if ((p_ar == NULL) && (opnum == PF_RPC_DEV_OPNUM_READ_IMPLICIT))
          {
             /* In case an AR is needed try to get the target AR */
             pf_ar_find_by_uuid (net, &read_request.target_ar_uuid, &p_ar);
@@ -3579,6 +3652,10 @@ static int pf_cmrpc_rpc_request (
          res_size,
          p_res,
          p_res_pos);
+      if (p_sess->p_ar == NULL)
+      {
+         p_sess->kill_session = true;
+      }
       break;
    case PF_RPC_DEV_OPNUM_WRITE:
       LOG_INFO (
@@ -3635,7 +3712,10 @@ static int pf_cmrpc_rpc_request (
    return ret;
 }
 
-int pf_cmrpc_rm_ccontrol_req (pnet_t * net, pf_ar_t * p_ar)
+int pf_cmrpc_rm_ccontrol_req (
+   pnet_t * net,
+   pf_ar_t * p_ar,
+   pf_block_type_values_t block_type)
 {
    int ret = -1;
    pf_rpc_header_t rpc_req;
@@ -3709,7 +3789,14 @@ int pf_cmrpc_rm_ccontrol_req (pnet_t * net, pf_ar_t * p_ar)
       control_io.ar_uuid = p_ar->ar_param.ar_uuid;
       control_io.session_key = p_ar->ar_param.session_key;
       control_io.control_command = BIT (PF_CONTROL_COMMAND_BIT_APP_RDY);
-      control_io.alarm_sequence_number = 0; /* Reserved */
+      if (block_type == PF_BT_APPRDY_PLUG_ALARM_REQ)
+      {
+         control_io.alarm_sequence_number = p_ar->alpmx[0].prev_sequence_number;
+      }
+      else
+      {
+         control_io.alarm_sequence_number = 0; /* Reserved */
+      }
       control_io.control_block_properties = 0;
 
       memset (p_sess->out_buffer, 0, sizeof (p_sess->out_buffer));
@@ -3767,7 +3854,7 @@ int pf_cmrpc_rm_ccontrol_req (pnet_t * net, pf_ar_t * p_ar)
       control_pos = p_sess->out_buf_len;
       pf_put_control (
          true,
-         PF_BT_APPRDY_REQ,
+         block_type,
          &control_io,
          sizeof (p_sess->out_buffer),
          p_sess->out_buffer,
@@ -3918,6 +4005,8 @@ static int pf_cmrpc_rm_ccontrol_interpret_cnf (
          switch (block_header.block_type)
          {
          case PF_BT_APPRDY_RES:
+         case PF_BT_APPRDY_PLUG_ALARM_RES:
+            p_control_io->block_type = block_header.block_type;
             pf_get_control (&p_sess->get_info, &req_pos, p_control_io);
             break;
          default:
@@ -4051,8 +4140,12 @@ static int pf_cmrpc_rm_ccontrol_cnf (
        */
       if (ccontrol_io.control_command == BIT (PF_CONTROL_COMMAND_BIT_DONE))
       {
-         /* Send the result to CMDEV */
-         if (
+         if (ccontrol_io.block_type == PF_BT_APPRDY_PLUG_ALARM_RES)
+         {
+            ret = pf_plugsm_application_ready_cnf (net, p_ar);
+            p_sess->kill_session = true;
+         }
+         else /* Send the result to CMDEV */ if (
             pf_cmdev_rm_ccontrol_cnf (
                net,
                p_ar,
@@ -4243,7 +4336,16 @@ static int pf_cmrpc_dce_packet (
       p_sess->get_info = get_info;
       memset (&p_sess->rpc_result, 0, sizeof (p_sess->rpc_result));
 
-      if (rpc_req.flags.fragment == false)
+      if (rpc_req.length_of_body > PF_CMRPC_MAX_PDU_BODY_SIZE)
+      {
+         LOG_ERROR (
+            PF_RPC_LOG,
+            "CMRPC(%d): RPC fragment too large (%hu bytes)."
+            " Check the conformance of the controller (PLC).\n",
+            __LINE__,
+            rpc_req.length_of_body);
+      }
+      else if (rpc_req.flags.fragment == false)
       {
          /* Incoming message is a request or response contained entirely in one
           * frame */
@@ -4320,7 +4422,8 @@ static int pf_cmrpc_dce_packet (
          {
             LOG_ERROR (
                PF_RPC_LOG,
-               "CMRPC(%d): Incoming fragments exceed max buffer\n",
+               "CMRPC(%d): Incoming RPC message exceeds buffer size."
+               " If possible, increase PNET_MAX_SESSION_BUFFER_SIZE.\n",
                __LINE__);
             pf_set_error (
                &p_sess->rpc_result,
@@ -4355,7 +4458,45 @@ static int pf_cmrpc_dce_packet (
       /* Decide what to do with incoming message */
       /* Enter here _even_if_ an error is already detected because we may need
        * to generate an error response. */
-      if (
+      if (rpc_req.length_of_body > PF_CMRPC_MAX_PDU_BODY_SIZE)
+      {
+         /* The specifications do not clearly state what the response should
+          * be in this case. The current best guess is to send a Reject PDU.
+          */
+
+         /* Prepare the response */
+         rpc_res = rpc_req;
+         rpc_res.packet_type = PF_RPC_PT_REJECT;
+         rpc_res.flags.last_fragment = false;
+         rpc_res.flags.fragment = false;
+         rpc_res.flags.no_fack = true;
+         rpc_res.flags.maybe = false;
+         rpc_res.flags.idempotent = true;
+         rpc_res.flags.broadcast = false;
+         rpc_res.flags2.cancel_pending = false;
+         rpc_res.length_of_body = sizeof (uint32_t);
+         rpc_res.fragment_nmb = 0;
+         rpc_res.is_big_endian = p_sess->is_big_endian;
+
+         pf_put_dce_rpc_header (
+            &rpc_res,
+            *p_res_len,
+            p_res,
+            &res_pos,
+            &length_of_body_pos);
+
+         pf_put_uint32 (
+            rpc_res.is_big_endian,
+            PF_RPC_NCA_PROTO_ERROR,
+            *p_res_len,
+            p_res,
+            &res_pos);
+
+         pf_cmrpc_send_once_from_buffer (net, p_sess, p_res, res_pos, "REJECT");
+
+         p_sess->kill_session = is_new_session;
+      }
+      else if (
          (rpc_req.flags.fragment == false) ||
          (rpc_req.flags.last_fragment == true))
       {
@@ -4572,7 +4713,7 @@ static int pf_cmrpc_dce_packet (
 
             if (rpc_res.flags.fragment == true)
             {
-               /* Fragmented respones from us (with ack) are supposed to be
+               /* Fragmented responses from us (with ack) are supposed to be
                 * re-transmitted according to the spec. */
                p_sess->resend_counter = PF_CMRPC_NUMBER_OF_RESENDS;
                pf_cmrpc_send_with_timeout (
@@ -4600,6 +4741,13 @@ static int pf_cmrpc_dce_packet (
 
             /* Update how much the controller has received (ack'ed) */
             p_sess->out_buf_sent_pos += p_sess->out_buf_send_len;
+            if (p_sess->out_fragment_nbr > 0)
+            {
+               /* For all but the first fragment, we have accounted for
+                * the header size an additional time. Correct that here.
+                */
+               p_sess->out_buf_sent_pos -= PF_CMRPC_PDU_HEADER_SIZE;
+            }
             p_sess->out_fragment_nbr++;
 
             /* The fragment acknowledgment is valid (expected) */
@@ -5092,7 +5240,7 @@ int pf_cmrpc_cmdev_state_ind (
          }
 
          /* Finally free the AR */
-         pf_ar_release (p_ar);
+         pf_ar_release (net, p_ar);
       }
       break;
    default:

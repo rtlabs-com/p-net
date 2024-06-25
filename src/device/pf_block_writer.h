@@ -387,56 +387,64 @@ void pf_put_im_3 (
    uint16_t * p_pos);
 
 /**
- * Insert filtered real or expected ident data into a buffer.
- *
- * filter_level specifies what is being filtered:
- *   If p_ar is != NULL then only select items that belong to this AR.
- *
- *   PF_DEV_FILTER_LEVEL_SUBSLOT means "Only include sub-slot"
- *      specified by api_id, slot_nbr and subslot_nbr.
- *   PF_DEV_FILTER_LEVEL_SLOT means "Include all sub-slots of slot"
- *      specified by api_id and slot_nbr.
- *   PF_DEV_FILTER_LEVEL_API means "Include all slots and sub-slots of API id"
- *      specified by api_id.
- *   PF_DEV_FILTER_LEVEL_DEVICE essentially means "No filtering" on API id,
- *      slot_nbr or subslot_nbr.
- *
- * stop_level specifies how much data is being included:
- *    PF_DEV_FILTER_LEVEL_SUBSLOT means "Include all levels".
- *    PF_DEV_FILTER_LEVEL_SLOT means "Do not include sub-slots".
- *    PF_DEV_FILTER_LEVEL_API means "Do not include slots or sub-slots".
- *    PF_DEV_FILTER_LEVEL_DEVICE means "Only include API count".
+ * Insert real identification data into a buffer.
  *
  * @param net               InOut: The p-net stack instance
- * @param is_big_endian     In:    Endianness of the destination buffer.
+ * @param big_endian        In:    Endianness of the destination buffer.
  * @param block_version_low In:    The minor version number of the block to
  *                                   insert.
- * @param block_type        In:    Specifies REAL or EXP ident number to insert.
- * @param filter_level      In:    The filter level.
- * @param stop_level        In:    The amount of detail to include
- *                                 (ending level).
- * @param p_ar              In:    If != NULL then filter by AR.
- * @param api_id            In:    API id to filter by.
- * @param slot_nbr          In:    Slot number to filter by.
- * @param subslot_nbr       In:    Sub-slot number to filter by.
+ * @param scope             In:    The scope (see Profinet 2.4 services,
+ *                                   sections 7.3.2.2.5.4-8)
+ * @param ar                In:    AR (used for AR scope).
+ * @param api               In:    API (used for device, API, slot or subslot
+ *                                   scope).
+ * @param slot_number       In:    Slot (used for slot or subslot scope).
+ * @param subslot_number    In:    Subslot (used for subslot scope).
  * @param res_len           In:    Size of destination buffer.
- * @param p_bytes           Out:   Destination buffer.
- * @param p_pos             InOut: Position in destination buffer.
+ * @param bytes             Out:   Destination buffer.
+ * @param pos               InOut: Position in destination buffer.
  */
-void pf_put_ident_data (
+void pf_put_real_ident_data (
    pnet_t * net,
-   bool is_big_endian,
+   bool big_endian,
    uint8_t block_version_low,
-   pf_block_type_values_t block_type,
-   pf_dev_filter_level_t filter_level,
-   pf_dev_filter_level_t stop_level,
-   const pf_ar_t * p_ar,
-   uint32_t api_id,
-   uint16_t slot_nbr,
-   uint16_t subslot_nbr,
+   pf_record_data_scope_t scope,
+   pf_ar_t const * ar,
+   uint32_t api,
+   uint16_t slot_number,
+   uint16_t subslot_number,
    uint16_t res_len,
-   uint8_t * p_bytes,
-   uint16_t * p_pos);
+   uint8_t * bytes,
+   uint16_t * pos);
+
+/**
+ * Insert expected identification data into a buffer.
+ *
+ * @param ar                In:    The AR containing the expected
+ *                                   identification.
+ * @param big_endian        In:    Endianness of the destination buffer.
+ * @param block_version_low In:    The minor version number of the block to
+ *                                   insert.
+ * @param scope             In:    The scope (see Profinet 2.4 services,
+ *                                   section 7.3.1.5.5)
+ * @param api               In:    API (used for slot or subslot scope).
+ * @param slot_number       In:    Slot (used for slot or subslot scope).
+ * @param subslot_number    In:    Subslot (used for subslot scope).
+ * @param res_len           In:    Size of destination buffer.
+ * @param bytes             Out:   Destination buffer.
+ * @param pos               InOut: Position in destination buffer.
+ */
+void pf_put_exp_ident_data (
+   pf_ar_t const * ar,
+   bool big_endian,
+   uint8_t block_version_low,
+   pf_record_data_scope_t scope,
+   uint32_t api,
+   uint16_t slot_number,
+   uint16_t subslot_number,
+   uint16_t res_len,
+   uint8_t * bytes,
+   uint16_t * pos);
 
 /**
  * Insert a pnet status into a buffer
@@ -650,61 +658,159 @@ void pf_put_input_data (
    uint16_t * p_pos);
 
 /**
- * Insert a DiagnosisData block into a buffer.
+ * Insert a DiagnosisData block for a subslot into a buffer.
  *
  * Insert filtered Diagnosis, Maintenance, Qualifiers and Status for one
- * sub-slot/slot/ar/api.
+ * subslot.
  *
- * filter_level specifies what is being filtered:
- *    If p_ar is != NULL then only select items that belong to this AR.
- *    PF_DEV_FILTER_LEVEL_SUBSLOT:  Only include sub-slot specified by api_id,
- *                                  slot_nbr and subslot_nbr.
- *    PF_DEV_FILTER_LEVEL_SLOT:     Include all sub-slots of slot specified by
- *                                  api_id and slot_nbr.
- *    PF_DEV_FILTER_LEVEL_API:      Include all slots and sub-slots of API id
- *                                  specified by api_id.
- *    PF_DEV_FILTER_LEVEL_DEVICE:   No filtering on API id, slot_nbr or
- *                                  subslot_nbr (i.e. all diags)
- *
- * diag_filter is an ortogonal filter that selects only specific diag types:
+ * diag_filter is a filter that selects only specific diag types:
  *    PF_DIAG_FILTER_FAULT_STD:  Only STD, severity FAULT.
  *    PF_DIAG_FILTER_FAULT_ALL:  Both USI and STD, severity FAULT.
  *    PF_DIAG_FILTER_ALL:        All types of diag, both USI and STD.
  *    PF_DIAG_FILTER_M_REQ:      Only Maintenance required.
  *    PF_DIAG_FILTER_M_DEM:      Only Maintenance demanded.
  *
- * Implemented using:
- *    pf_put_diag_device()
- *       pf_put_diag_api()              for all APIs
- *          pf_put_diag_slot()          for all slots
- *             pf_put_diag_subslot()    for all subslots
- *               pf_put_diag_list()     Header insertion for a USI value
- *                  pf_put_diag_item()  Insertion of diag item
- *
  * @param net              InOut: The p-net stack instance
- * @param is_big_endian    In:    Endianness of the destination buffer.
- * @param filter_level     In:    The filter level.
+ * @param big_endian       In:    Endianness of the destination buffer.
  * @param diag_filter      In:    The diag type filter.
- * @param p_ar             In:    If != NULL then filter by AR.
- * @param api_id           In:    The API id to filter by.
- * @param slot_nbr         In:    The slot number to filter by.
- * @param subslot_nbr      In:    The sub-slot number to filter by.
+ * @param ar               In:    The AR. If NULL, use real identification.
+ * @param api              In:    The API.
+ * @param slot_number      In:    The slot.
+ * @param subslot_number   In:    The subslot.
  * @param res_len          In:    Size of destination buffer.
  * @param p_bytes          Out:   Destination buffer.
  * @param p_pos            InOut: Position in destination buffer.
  */
-void pf_put_diag_data (
+void pf_put_diagnosis_subslot (
    pnet_t * net,
-   bool is_big_endian,
-   pf_dev_filter_level_t filter_level,
+   bool big_endian,
    pf_diag_filter_level_t diag_filter,
-   const pf_ar_t * p_ar, /* If != NULL only include those belonging to p_ar */
-   uint32_t api_id,
-   uint16_t slot_nbr,
-   uint16_t subslot_nbr,
+   pf_ar_t * ar,
+   uint32_t api,
+   uint16_t slot_number,
+   uint16_t subslot_number,
    uint16_t res_len,
-   uint8_t * p_bytes,
-   uint16_t * p_pos);
+   uint8_t * bytes,
+   uint16_t * pos);
+
+/**
+ * Insert a DiagnosisData block for a slot into a buffer.
+ *
+ * Insert filtered Diagnosis, Maintenance, Qualifiers and Status for one slot.
+ *
+ * diag_filter is a filter that selects only specific diag types:
+ *    PF_DIAG_FILTER_FAULT_STD:  Only STD, severity FAULT.
+ *    PF_DIAG_FILTER_FAULT_ALL:  Both USI and STD, severity FAULT.
+ *    PF_DIAG_FILTER_ALL:        All types of diag, both USI and STD.
+ *    PF_DIAG_FILTER_M_REQ:      Only Maintenance required.
+ *    PF_DIAG_FILTER_M_DEM:      Only Maintenance demanded.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param big_endian       In:    Endianness of the destination buffer.
+ * @param diag_filter      In:    The diag type filter.
+ * @param ar               In:    The AR. If NULL, use real identification.
+ * @param api              In:    The API.
+ * @param slot_number      In:    The slot.
+ * @param res_len          In:    Size of destination buffer.
+ * @param p_bytes          Out:   Destination buffer.
+ * @param p_pos            InOut: Position in destination buffer.
+ */
+void pf_put_diagnosis_slot (
+   pnet_t * net,
+   bool big_endian,
+   pf_diag_filter_level_t diag_filter,
+   pf_ar_t * ar,
+   uint32_t api,
+   uint16_t slot_number,
+   uint16_t res_len,
+   uint8_t * bytes,
+   uint16_t * pos);
+
+/**
+ * Insert a DiagnosisData block for an AR into a buffer.
+ *
+ * Insert filtered Diagnosis, Maintenance, Qualifiers and Status for one AR.
+ *
+ * diag_filter is a filter that selects only specific diag types:
+ *    PF_DIAG_FILTER_FAULT_STD:  Only STD, severity FAULT.
+ *    PF_DIAG_FILTER_FAULT_ALL:  Both USI and STD, severity FAULT.
+ *    PF_DIAG_FILTER_ALL:        All types of diag, both USI and STD.
+ *    PF_DIAG_FILTER_M_REQ:      Only Maintenance required.
+ *    PF_DIAG_FILTER_M_DEM:      Only Maintenance demanded.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param big_endian       In:    Endianness of the destination buffer.
+ * @param diag_filter      In:    The diag type filter.
+ * @param ar               In:    The AR.
+ * @param res_len          In:    Size of destination buffer.
+ * @param p_bytes          Out:   Destination buffer.
+ * @param p_pos            InOut: Position in destination buffer.
+ */
+void pf_put_diagnosis_ar (
+   pnet_t * net,
+   bool big_endian,
+   pf_diag_filter_level_t diag_filter,
+   pf_ar_t * ar,
+   uint16_t res_len,
+   uint8_t * bytes,
+   uint16_t * pos);
+
+/**
+ * Insert a DiagnosisData block for an API into a buffer.
+ *
+ * Insert filtered Diagnosis, Maintenance, Qualifiers and Status for one API.
+ *
+ * diag_filter is a filter that selects only specific diag types:
+ *    PF_DIAG_FILTER_FAULT_STD:  Only STD, severity FAULT.
+ *    PF_DIAG_FILTER_FAULT_ALL:  Both USI and STD, severity FAULT.
+ *    PF_DIAG_FILTER_ALL:        All types of diag, both USI and STD.
+ *    PF_DIAG_FILTER_M_REQ:      Only Maintenance required.
+ *    PF_DIAG_FILTER_M_DEM:      Only Maintenance demanded.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param big_endian       In:    Endianness of the destination buffer.
+ * @param diag_filter      In:    The diag type filter.
+ * @param api              In:    The API.
+ * @param res_len          In:    Size of destination buffer.
+ * @param p_bytes          Out:   Destination buffer.
+ * @param p_pos            InOut: Position in destination buffer.
+ */
+void pf_put_diagnosis_api (
+   pnet_t * net,
+   bool big_endian,
+   pf_diag_filter_level_t diag_filter,
+   uint32_t api,
+   uint16_t res_len,
+   uint8_t * bytes,
+   uint16_t * pos);
+
+/**
+ * Insert a DiagnosisData block for a device into a buffer.
+ *
+ * Insert filtered Diagnosis, Maintenance, Qualifiers and Status for one
+ * device.
+ *
+ * diag_filter is a filter that selects only specific diag types:
+ *    PF_DIAG_FILTER_FAULT_STD:  Only STD, severity FAULT.
+ *    PF_DIAG_FILTER_FAULT_ALL:  Both USI and STD, severity FAULT.
+ *    PF_DIAG_FILTER_ALL:        All types of diag, both USI and STD.
+ *    PF_DIAG_FILTER_M_REQ:      Only Maintenance required.
+ *    PF_DIAG_FILTER_M_DEM:      Only Maintenance demanded.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param big_endian       In:    Endianness of the destination buffer.
+ * @param diag_filter      In:    The diag type filter.
+ * @param res_len          In:    Size of destination buffer.
+ * @param p_bytes          Out:   Destination buffer.
+ * @param p_pos            InOut: Position in destination buffer.
+ */
+void pf_put_diagnosis_device (
+   pnet_t * net,
+   bool big_endian,
+   pf_diag_filter_level_t diag_filter,
+   uint16_t res_len,
+   uint8_t * bytes,
+   uint16_t * pos);
 
 /**
  * Insert PDport data check block into a buffer.

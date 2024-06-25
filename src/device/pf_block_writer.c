@@ -459,7 +459,7 @@ void pf_put_alarm_cr_result (
       p_pos);
    pf_put_uint16 (
       is_big_endian,
-      p_ar->alarm_cr_result.remote_alarm_reference,
+      p_ar->alarm_cr_result.local_alarm_reference,
       res_len,
       p_bytes,
       p_pos);
@@ -507,7 +507,7 @@ static void pf_put_bits (
  */
 static void pf_put_submodule_diff (
    bool is_big_endian,
-   const pf_submodule_diff_t * p_diff,
+   pf_exp_submodule_t const * submodule,
    uint16_t res_len,
    uint8_t * p_bytes,
    uint16_t * p_pos)
@@ -517,12 +517,12 @@ static void pf_put_submodule_diff (
 
    pf_put_uint16 (
       is_big_endian,
-      p_diff->subslot_number,
+      submodule->subslot_number,
       res_len,
       p_bytes,
       p_pos);
 
-   if (p_diff->submodule_state.ident_info == PF_SUBMOD_PLUG_NO)
+   if (submodule->state.ident_info == PF_IDENT_INFO_NO)
    {
       pf_put_uint32 (is_big_endian, 0, res_len, p_bytes, p_pos);
    }
@@ -530,20 +530,20 @@ static void pf_put_submodule_diff (
    {
       pf_put_uint32 (
          is_big_endian,
-         p_diff->submodule_ident_number,
+         submodule->ident_number,
          res_len,
          p_bytes,
          p_pos);
    }
    /* submodule_state */
-   pf_put_bits (p_diff->submodule_state.add_info, 3, 0, &temp_u32);
-   pf_put_bits (p_diff->submodule_state.advice_avail, 1, 3, &temp_u32);
-   pf_put_bits (p_diff->submodule_state.maintenance_required, 1, 4, &temp_u32);
-   pf_put_bits (p_diff->submodule_state.maintenance_demanded, 1, 5, &temp_u32);
-   pf_put_bits (p_diff->submodule_state.fault, 1, 6, &temp_u32);
-   pf_put_bits (p_diff->submodule_state.ar_info, 4, 7, &temp_u32);
-   pf_put_bits (p_diff->submodule_state.ident_info, 4, 11, &temp_u32);
-   pf_put_bits (p_diff->submodule_state.format_indicator, 1, 15, &temp_u32);
+   pf_put_bits (submodule->state.add_info, 3, 0, &temp_u32);
+   pf_put_bits (submodule->state.advice_avail, 1, 3, &temp_u32);
+   pf_put_bits (submodule->state.maintenance_required, 1, 4, &temp_u32);
+   pf_put_bits (submodule->state.maintenance_demanded, 1, 5, &temp_u32);
+   pf_put_bits (submodule->state.fault, 1, 6, &temp_u32);
+   pf_put_bits (submodule->state.ar_info, 4, 7, &temp_u32);
+   pf_put_bits (submodule->state.ident_info, 4, 11, &temp_u32);
+   pf_put_bits (submodule->state.format_indicator, 1, 15, &temp_u32);
    temp_u16 = (uint16_t)temp_u32;
    pf_put_uint16 (is_big_endian, temp_u16, res_len, p_bytes, p_pos);
 }
@@ -552,22 +552,22 @@ static void pf_put_submodule_diff (
  * @internal
  * Insert a module diff into a buffer.
  * @param is_big_endian    In:    Endianness of the destination buffer.
- * @param p_diff           In:    The module diff information.
+ * @param module           In:    The expected module containing differences.
  * @param res_len          In:    Size of destination buffer.
  * @param p_bytes          Out:   Destination buffer.
  * @param p_pos            InOut: Position in destination buffer.
  */
 static void pf_put_module_diff (
    bool is_big_endian,
-   const pf_module_diff_t * p_diff,
+   pf_exp_module_t const * module,
    uint16_t res_len,
    uint8_t * p_bytes,
    uint16_t * p_pos)
 {
    uint16_t ix;
 
-   pf_put_uint16 (is_big_endian, p_diff->slot_number, res_len, p_bytes, p_pos);
-   if (p_diff->module_state == PF_MOD_PLUG_NO_MODULE)
+   pf_put_uint16 (is_big_endian, module->slot_number, res_len, p_bytes, p_pos);
+   if (module->state == PF_MODULE_STATE_NO_MODULE)
    {
       pf_put_uint32 (is_big_endian, 0, res_len, p_bytes, p_pos);
    }
@@ -575,13 +575,13 @@ static void pf_put_module_diff (
    {
       pf_put_uint32 (
          is_big_endian,
-         p_diff->module_ident_number,
+         module->ident_number,
          res_len,
          p_bytes,
          p_pos);
    }
-   pf_put_uint16 (is_big_endian, p_diff->module_state, res_len, p_bytes, p_pos);
-   if (p_diff->module_state == PF_MOD_PLUG_NO_MODULE)
+   pf_put_uint16 (is_big_endian, module->state, res_len, p_bytes, p_pos);
+   if (module->state == PF_MODULE_STATE_NO_MODULE)
    {
       pf_put_uint32 (is_big_endian, 0, res_len, p_bytes, p_pos);
    }
@@ -589,15 +589,15 @@ static void pf_put_module_diff (
    {
       pf_put_uint16 (
          is_big_endian,
-         p_diff->nbr_submodule_diffs,
+         module->nbr_diff_submodules,
          res_len,
          p_bytes,
          p_pos);
-      for (ix = 0; ix < p_diff->nbr_submodule_diffs; ix++)
+      for (ix = 0; ix < module->nbr_diff_submodules; ix++)
       {
          pf_put_submodule_diff (
             is_big_endian,
-            &p_diff->submodule_diffs[ix],
+            &module->submodule[module->diff_submodule[ix]],
             res_len,
             p_bytes,
             p_pos);
@@ -607,42 +607,30 @@ static void pf_put_module_diff (
 
 /**
  * @internal
- * Insert AR diff blocks into a buffer.
+ * Insert an API diff into a buffer.
  * @param is_big_endian    In:    Endianness of the destination buffer.
- * @param p_ar             In:    Contains the AR diff to insert.
- * @param api_ix           In:    The specific AR diff to add.
+ * @param api              In:    The expected api containing differences.
  * @param res_len          In:    Size of destination buffer.
  * @param p_bytes          Out:   Destination buffer.
  * @param p_pos            InOut: Position in destination buffer.
  */
 static void pf_put_api_diff (
    bool is_big_endian,
-   const pf_ar_t * p_ar,
-   uint16_t api_ix,
+   pf_exp_api_t const * api,
    uint16_t res_len,
    uint8_t * p_bytes,
    uint16_t * p_pos)
 {
    uint16_t mod_ix;
 
-   pf_put_uint32 (
-      is_big_endian,
-      p_ar->api_diffs[api_ix].api,
-      res_len,
-      p_bytes,
-      p_pos);
+   pf_put_uint32 (is_big_endian, api->api, res_len, p_bytes, p_pos);
 
-   pf_put_uint16 (
-      is_big_endian,
-      p_ar->api_diffs[api_ix].nbr_module_diffs,
-      res_len,
-      p_bytes,
-      p_pos);
-   for (mod_ix = 0; mod_ix < p_ar->api_diffs[api_ix].nbr_module_diffs; mod_ix++)
+   pf_put_uint16 (is_big_endian, api->nbr_diff_modules, res_len, p_bytes, p_pos);
+   for (mod_ix = 0; mod_ix < api->nbr_diff_modules; mod_ix++)
    {
       pf_put_module_diff (
          is_big_endian,
-         &p_ar->api_diffs[api_ix].module_diffs[mod_ix],
+         &api->module[api->diff_module[mod_ix]],
          res_len,
          p_bytes,
          p_pos);
@@ -656,40 +644,51 @@ void pf_put_ar_diff (
    uint8_t * p_bytes,
    uint16_t * p_pos)
 {
-   uint16_t block_pos = *p_pos;
-   uint16_t block_len = 0;
-   uint16_t api_ix;
+   uint16_t block_pos;
+   uint16_t block_len;
+   uint16_t i;
 
-   if ((p_ar != NULL) && (p_ar->nbr_api_diffs > 0))
+   if (p_ar != NULL)
    {
-      pf_put_block_header (
-         is_big_endian,
-         PF_BT_MODULE_DIFF_BLOCK,
-         0, /* Dont know block_len yet */
-         PNET_BLOCK_VERSION_HIGH,
-         PNET_BLOCK_VERSION_LOW,
-         res_len,
-         p_bytes,
-         p_pos);
+      pf_exp_ident_t const * ident = &p_ar->exp_ident;
 
-      pf_put_uint16 (
-         is_big_endian,
-         p_ar->nbr_api_diffs,
-         res_len,
-         p_bytes,
-         p_pos);
-
-      for (api_ix = 0; api_ix < p_ar->nbr_api_diffs; api_ix++)
+      if (ident->nbr_diff_apis > 0)
       {
-         pf_put_api_diff (is_big_endian, p_ar, api_ix, res_len, p_bytes, p_pos);
-      }
+         block_pos = *p_pos;
+         block_len = 0; /* Dont know block_len yet */
 
-      /* Finally insert the block length into the block header */
-      block_len = *p_pos - (block_pos + 4);
-      block_pos += offsetof (pf_block_header_t, block_length); /* Point to
-                                                                  correct place
-                                                                */
-      pf_put_uint16 (is_big_endian, block_len, res_len, p_bytes, &block_pos);
+         pf_put_block_header (
+            is_big_endian,
+            PF_BT_MODULE_DIFF_BLOCK,
+            block_len,
+            PNET_BLOCK_VERSION_HIGH,
+            PNET_BLOCK_VERSION_LOW,
+            res_len,
+            p_bytes,
+            p_pos);
+
+         pf_put_uint16 (
+            is_big_endian,
+            ident->nbr_diff_apis,
+            res_len,
+            p_bytes,
+            p_pos);
+
+         for (i = 0; i < ident->nbr_diff_apis; ++i)
+         {
+            pf_put_api_diff (
+               is_big_endian,
+               &ident->api[ident->diff_api[i]],
+               res_len,
+               p_bytes,
+               p_pos);
+         }
+
+         /* Finally insert the block length into the block header */
+         block_len = *p_pos - (block_pos + 4);
+         block_pos += offsetof (pf_block_header_t, block_length);
+         pf_put_uint16 (is_big_endian, block_len, res_len, p_bytes, &block_pos);
+      }
    }
 }
 
@@ -1076,7 +1075,7 @@ static void pf_put_one_ar (
       p_pos);
    pf_put_uint16 (
       is_big_endian,
-      p_ar->alarm_cr_result.remote_alarm_reference,
+      p_ar->alarm_cr_result.local_alarm_reference,
       res_len,
       p_bytes,
       p_pos);
@@ -1141,18 +1140,23 @@ static void pf_put_one_ar (
       pf_put_iocr (is_big_endian, p_ar, ix, res_len, p_bytes, p_pos);
    }
 
-   pf_put_uint16 (is_big_endian, p_ar->nbr_exp_apis, res_len, p_bytes, p_pos);
+   pf_put_uint16 (
+      is_big_endian,
+      p_ar->exp_ident.nbr_apis,
+      res_len,
+      p_bytes,
+      p_pos);
    while (((*p_pos) % sizeof (uint32_t)) != 0)
    {
       pf_put_byte (0, res_len, p_bytes, p_pos);
    }
-   for (ix = 0; ix < p_ar->nbr_exp_apis; ix++)
+   for (ix = 0; ix < p_ar->exp_ident.nbr_apis; ix++)
    {
-      if ((api_filter == false) || (p_ar->exp_apis[ix].api == api_id))
+      if ((api_filter == false) || (p_ar->exp_ident.api[ix].api == api_id))
       {
          pf_put_uint32 (
             is_big_endian,
-            p_ar->exp_apis[ix].api,
+            p_ar->exp_ident.api[ix].api,
             res_len,
             p_bytes,
             p_pos);
@@ -1289,9 +1293,9 @@ void pf_put_ar_data (
       else
       {
          /* Count the number of ARs using this API */
-         for (ix = 0; ix < p_ar->nbr_exp_apis; ix++)
+         for (ix = 0; ix < p_ar->exp_ident.nbr_apis; ix++)
          {
-            if (p_ar->exp_apis[ix].api == api_id)
+            if (p_ar->exp_ident.api[ix].api == api_id)
             {
                cnt++;
             }
@@ -1328,9 +1332,9 @@ void pf_put_ar_data (
       else
       {
          /* Insert the ARs using this API */
-         for (ix = 0; ix < p_ar->nbr_exp_apis; ix++)
+         for (ix = 0; ix < p_ar->exp_ident.nbr_apis; ix++)
          {
-            if (p_ar->exp_apis[ix].api == api_id)
+            if (p_ar->exp_ident.api[ix].api == api_id)
             {
                pf_put_one_ar (
                   is_big_endian,
@@ -1627,475 +1631,612 @@ void pf_put_read_result (
 
 /**
  * @internal
- * Insert the sub-slot information into a buffer.
+ * Insert subslot information into a buffer.
  *
  * Inserts subslot number and submodule ID.
  *
- * @param is_big_endian    In:    Endianness of the destination buffer.
- * @param block_type       In:    Specifies REAL or EXP ident number to insert.
- * @param p_subslot        In:    The sub-slot instance.
+ * @param big_endian       In:    Endianness of the destination buffer.
+ * @param subslot          In:    The subslot.
  * @param res_len          In:    Size of destination buffer.
- * @param p_bytes          Out:   Destination buffer.
- * @param p_pos            InOut: Position in destination buffer.
+ * @param bytes            Out:   Destination buffer.
+ * @param pos              InOut: Position in destination buffer.
  */
-static void pf_put_ident_subslot (
-   bool is_big_endian,
-   pf_block_type_values_t block_type,
-   const pf_subslot_t * p_subslot,
+static void pf_put_subslot_data (
+   bool big_endian,
+   pf_subslot_t const * subslot,
    uint16_t res_len,
-   uint8_t * p_bytes,
-   uint16_t * p_pos)
+   uint8_t * bytes,
+   uint16_t * pos)
 {
-   pf_put_uint16 (
-      is_big_endian,
-      p_subslot->subslot_nbr,
-      res_len,
-      p_bytes,
-      p_pos);
-   if (block_type == PF_BT_EXPECTED_IDENTIFICATION_DATA)
+   pf_put_uint16 (big_endian, subslot->subslot_number, res_len, bytes, pos);
+   pf_put_uint32 (big_endian, subslot->ident_number, res_len, bytes, pos);
+}
+
+/**
+ * @internal
+ * Insert slot information into a buffer.
+ *
+ * Inserts slot number and module ID.
+ *
+ * @param big_endian       In:    Endianness of the destination buffer.
+ * @param slot             In:    The slot.
+ * @param subslot          In:    The subslot. If NULL, insert all.
+ * @param exp_module       In:    The expected module (if scope is AR).
+ * @param res_len          In:    Size of destination buffer.
+ * @param bytes            Out:   Destination buffer.
+ * @param pos              InOut: Position in destination buffer.
+ */
+static void pf_put_slot_data (
+   bool big_endian,
+   pf_slot_t const * slot,
+   pf_subslot_t const * subslot,
+   pf_exp_module_t const * exp_module,
+   uint16_t res_len,
+   uint8_t * bytes,
+   uint16_t * pos)
+{
+   uint16_t count;
+   uint16_t count_pos;
+   uint16_t i;
+
+   pf_put_uint16 (big_endian, slot->slot_number, res_len, bytes, pos);
+   pf_put_uint32 (big_endian, slot->ident_number, res_len, bytes, pos);
+   if (exp_module != NULL)
    {
-      pf_put_uint32 (
-         is_big_endian,
-         p_subslot->exp_submodule_ident_number,
-         res_len,
-         p_bytes,
-         p_pos);
+      count = 0;
+      count_pos = *pos;
+      pf_put_uint16 (big_endian, count, res_len, bytes, pos);
+      for (i = 0; i < exp_module->nbr_submodules; ++i)
+      {
+         if (
+            pf_cmdev_get_subslot (
+               slot,
+               exp_module->submodule[i].subslot_number,
+               (pf_subslot_t **)&subslot) == 0)
+         {
+            ++count;
+            pf_put_subslot_data (big_endian, subslot, res_len, bytes, pos);
+         }
+      }
+      pf_put_uint16 (big_endian, count, res_len, bytes, &count_pos);
    }
    else
    {
-      pf_put_uint32 (
-         is_big_endian,
-         p_subslot->submodule_ident_number,
-         res_len,
-         p_bytes,
-         p_pos);
+      if (subslot != NULL)
+      {
+         pf_put_uint16 (big_endian, 1, res_len, bytes, pos);
+         pf_put_subslot_data (big_endian, subslot, res_len, bytes, pos);
+      }
+      else
+      {
+         count = 0;
+         count_pos = *pos;
+         pf_put_uint16 (big_endian, count, res_len, bytes, pos);
+         for (i = 0; i < PNET_MAX_SUBSLOTS; ++i)
+         {
+            if (slot->subslots[i].in_use)
+            {
+               ++count;
+               pf_put_subslot_data (
+                  big_endian,
+                  &slot->subslots[i],
+                  res_len,
+                  bytes,
+                  pos);
+            }
+         }
+         pf_put_uint16 (big_endian, count, res_len, bytes, &count_pos);
+      }
    }
 }
 
 /**
  * @internal
- * Insert the slot information into a buffer, with filter.
+ * Insert API information into a buffer.
  *
- * Inserts slot number, module ID, number of subslots and then uses
- * \a pf_put_ident_subslot() to insert more info.
+ * Inserts API, and module information.
  *
- * @param is_big_endian    In:    Endianness of the destination buffer.
- * @param block_type       In:    Specifies REAL or EXP ident number to insert.
- * @param filter_level     In:    The filter starting level.
- * @param stop_level       In:    The amount of detail to include (ending
- *                                level).
- * @param p_ar             In:    If != NULL then filter by AR.
- * @param p_slot           In:    The slot instance.
- * @param subslot_nbr      In:    Sub-slot number to filter by.
+ * @param big_endian       In:    Endianness of the destination buffer.
+ * @param api              In:    The API.
+ * @param scope            In:    The scope.
+ * @param slot             In:    The slot. If NULL, insert all.
+ * @param subslot          In:    The subslot. If NULL, insert all.
+ * @param exp_api          In:    The expected API (if scope is AR).
  * @param res_len          In:    Size of destination buffer.
- * @param p_bytes          Out:   Destination buffer.
- * @param p_pos            InOut: Position in destination buffer.
+ * @param bytes            Out:   Destination buffer.
+ * @param pos              InOut: Position in destination buffer.
  */
-static void pf_put_ident_slot (
-   bool is_big_endian,
-   pf_block_type_values_t block_type,
-   pf_dev_filter_level_t filter_level, /* API_ID, SLOT or SUBSLOT */
-   pf_dev_filter_level_t stop_level, /* DEVICE, API_ID, API, SLOT or SUBSLOT */
-   const pf_ar_t * p_ar,
-   const pf_slot_t * p_slot,
-   uint16_t subslot_nbr,
+static void pf_put_api_data (
+   bool big_endian,
+   pf_api_t const * api,
+   pf_slot_t const * slot,
+   pf_subslot_t const * subslot,
+   pf_exp_api_t const * exp_api,
    uint16_t res_len,
-   uint8_t * p_bytes,
-   uint16_t * p_pos)
+   uint8_t * bytes,
+   uint16_t * pos)
 {
-   uint16_t cnt;
-   uint16_t ix;
-   const pf_subslot_t * p_subslot;
+   uint16_t count;
+   uint16_t count_pos;
+   uint16_t i;
 
-   pf_put_uint16 (is_big_endian, p_slot->slot_nbr, res_len, p_bytes, p_pos);
-   if (block_type == PF_BT_EXPECTED_IDENTIFICATION_DATA)
+   pf_put_uint32 (big_endian, api->api_id, res_len, bytes, pos);
+   if (exp_api != NULL)
    {
-      pf_put_uint32 (
-         is_big_endian,
-         p_slot->exp_module_ident_number,
-         res_len,
-         p_bytes,
-         p_pos);
+      count = 0;
+      count_pos = *pos;
+      pf_put_uint16 (big_endian, count, res_len, bytes, pos);
+      for (i = 0; i < exp_api->nbr_modules; ++i)
+      {
+         if (
+            pf_cmdev_get_slot (
+               api,
+               exp_api->module[i].slot_number,
+               (pf_slot_t **)&slot) == 0)
+         {
+            ++count;
+            pf_put_slot_data (
+               big_endian,
+               slot,
+               NULL,
+               &exp_api->module[i],
+               res_len,
+               bytes,
+               pos);
+         }
+      }
+      pf_put_uint16 (big_endian, count, res_len, bytes, &count_pos);
    }
    else
    {
-      pf_put_uint32 (
-         is_big_endian,
-         p_slot->module_ident_number,
-         res_len,
-         p_bytes,
-         p_pos);
-   }
-
-   /* Count the number of active sub-slots */
-   cnt = 0;
-   for (ix = 0; ix < NELEMENTS (p_slot->subslots); ix++)
-   {
-      p_subslot = &p_slot->subslots[ix];
-      if (p_subslot->in_use == true)
+      if (slot != NULL)
       {
-         if ((p_ar == NULL) || (p_ar == p_subslot->p_ar))
-         {
-            if (filter_level >= PF_DEV_FILTER_LEVEL_SUBSLOT)
-            {
-               if (p_subslot->subslot_nbr == subslot_nbr)
-               {
-                  cnt++;
-               }
-            }
-            else
-            {
-               cnt++;
-            }
-         }
+         pf_put_uint16 (big_endian, 1, res_len, bytes, pos);
+         pf_put_slot_data (big_endian, slot, subslot, NULL, res_len, bytes, pos);
       }
-   }
-
-   /* Insert number of subslots in use, even if there are none */
-   pf_put_uint16 (is_big_endian, cnt, res_len, p_bytes, p_pos);
-
-   /* Now add the actual subslot info - if requested */
-   if (stop_level > PF_DEV_FILTER_LEVEL_SLOT)
-   {
-      for (ix = 0; ix < NELEMENTS (p_slot->subslots); ix++)
+      else
       {
-         p_subslot = &p_slot->subslots[ix];
-         if (p_subslot->in_use == true)
+         count = 0;
+         count_pos = *pos;
+         pf_put_uint16 (big_endian, count, res_len, bytes, pos);
+         for (i = 0; i < PNET_MAX_SLOTS; ++i)
          {
-            if ((p_ar == NULL) || (p_ar == p_subslot->p_ar))
+            if (api->slots[i].in_use)
             {
-               if (filter_level >= PF_DEV_FILTER_LEVEL_SUBSLOT)
-               {
-                  if (p_subslot->subslot_nbr == subslot_nbr)
-                  {
-                     /* Call only for the matching subslot_nbr */
-                     pf_put_ident_subslot (
-                        is_big_endian,
-                        block_type,
-                        p_subslot,
-                        res_len,
-                        p_bytes,
-                        p_pos);
-                  }
-               }
-               else
-               {
-                  /* No filter: Call for all sub-slots that are in use */
-                  pf_put_ident_subslot (
-                     is_big_endian,
-                     block_type,
-                     p_subslot,
-                     res_len,
-                     p_bytes,
-                     p_pos);
-               }
+               ++count;
+               pf_put_slot_data (
+                  big_endian,
+                  &api->slots[i],
+                  NULL,
+                  NULL,
+                  res_len,
+                  bytes,
+                  pos);
             }
          }
+         pf_put_uint16 (big_endian, count, res_len, bytes, &count_pos);
       }
    }
 }
 
-/**
- * @internal
- * Insert the API information into a buffer, with filter.
- *
- * Inserts API ID, number of slots and then uses \a pf_put_ident_slot() to
- * insert more info.
- *
- * @param is_big_endian    In:    Endianness of the destination buffer.
- * @param block_type       In:    Specifies REAL or EXP ident number to insert.
- * @param filter_level     In:    The filter starting level.
- * @param stop_level       In:    The amount of detail to include (ending
- *                                level).
- * @param p_ar             In:    If != NULL then filter by AR.
- * @param p_api            In:    The api instance.
- * @param slot_nbr         In:    Slot number to filter by.
- * @param subslot_nbr      In:    Sub-slot number to filter by.
- * @param res_len          In:    Size of destination buffer.
- * @param p_bytes          Out:   Destination buffer.
- * @param p_pos            InOut: Position in destination buffer.
- */
-static void pf_put_ident_api (
-   bool is_big_endian,
-   pf_block_type_values_t block_type,
-   pf_dev_filter_level_t filter_level, /* API_ID, SLOT or SUBSLOT */
-   pf_dev_filter_level_t stop_level, /* DEVICE, API_ID, API, SLOT or SUBSLOT */
-   const pf_ar_t * p_ar,
-   const pf_api_t * p_api,
-   uint16_t slot_nbr,
-   uint16_t subslot_nbr,
-   uint16_t res_len,
-   uint8_t * p_bytes,
-   uint16_t * p_pos)
-{
-   uint16_t cnt;
-   uint16_t ix;
-   const pf_slot_t * p_slot;
-
-   pf_put_uint32 (is_big_endian, p_api->api_id, res_len, p_bytes, p_pos);
-
-   if (stop_level > PF_DEV_FILTER_LEVEL_API_ID)
-   {
-      /* Count the number of active slots */
-      cnt = 0;
-      for (ix = 0; ix < NELEMENTS (p_api->slots); ix++)
-      {
-         p_slot = &p_api->slots[ix];
-         if (p_slot->in_use == true)
-         {
-            if ((p_ar == NULL) || (p_ar == p_slot->p_ar))
-            {
-               if (filter_level >= PF_DEV_FILTER_LEVEL_SLOT)
-               {
-                  if (p_slot->slot_nbr == slot_nbr)
-                  {
-                     cnt++;
-                  }
-               }
-               else
-               {
-                  cnt++;
-               }
-            }
-         }
-      }
-      /* Insert number of slots in use, even if there are none */
-      pf_put_uint16 (is_big_endian, cnt, res_len, p_bytes, p_pos);
-
-      if (stop_level > PF_DEV_FILTER_LEVEL_API)
-      {
-         /* Include slot (module) information */
-         for (ix = 0; ix < NELEMENTS (p_api->slots); ix++)
-         {
-            p_slot = &p_api->slots[ix];
-            if (p_slot->in_use == true)
-            {
-               if ((p_ar == NULL) || (p_ar == p_slot->p_ar))
-               {
-                  if (filter_level >= PF_DEV_FILTER_LEVEL_SLOT)
-                  {
-                     if (p_slot->slot_nbr == slot_nbr)
-                     {
-                        /* No filter: Call for all slots that are in use */
-                        pf_put_ident_slot (
-                           is_big_endian,
-                           block_type,
-                           filter_level,
-                           stop_level,
-                           p_ar,
-                           p_slot,
-                           subslot_nbr,
-                           res_len,
-                           p_bytes,
-                           p_pos);
-                     }
-                  }
-                  else
-                  {
-                     /* No filter: Call for all slots that are in use */
-                     pf_put_ident_slot (
-                        is_big_endian,
-                        block_type,
-                        filter_level,
-                        stop_level,
-                        p_ar,
-                        p_slot,
-                        subslot_nbr,
-                        res_len,
-                        p_bytes,
-                        p_pos);
-                  }
-               }
-            }
-         }
-      }
-   }
-}
-
-/**
- * @internal
- * Put requested ident information into a buffer, with filter.
- *
- * Inserts number of APIs, and then uses \a pf_put_ident_api() to insert
- * more info.
- *
- * @param is_big_endian    In:    Endianness of the destination buffer.
- * @param block_type       In:    Specifies REAL or EXP ident number to insert.
- * @param filter_level     In:    The filter starting level.
- * @param stop_level       In:    The amount of detail to include (ending
- *                                level).
- * @param p_ar             In:    If != NULL then filter by AR.
- * @param p_device         In:    The device instance.
- * @param api_id           In:    API id to filter by.
- * @param slot_nbr         In:    Slot number to filter by.
- * @param subslot_nbr      In:    Sub-slot number to filter by.
- * @param res_len          In:    Size of destination buffer.
- * @param p_bytes          Out:   Destination buffer.
- * @param p_pos            InOut: Position in destination buffer.
- */
-static void pf_put_ident_device (
-   bool is_big_endian,
-   pf_block_type_values_t block_type,
-   pf_dev_filter_level_t filter_level, /* API_ID, SLOT or SUBSLOT */
-   pf_dev_filter_level_t stop_level, /* DEVICE, API_ID, API, SLOT or SUBSLOT */
-   const pf_ar_t * p_ar,
-   const pf_device_t * p_device,
-   uint32_t api_id,
-   uint16_t slot_nbr,
-   uint16_t subslot_nbr,
-   uint16_t res_len,
-   uint8_t * p_bytes,
-   uint16_t * p_pos)
-{
-   uint16_t ix;
-   uint16_t cnt;
-   const pf_api_t * p_api = NULL;
-
-   /* Count the number of active APIs */
-   cnt = 0;
-   for (ix = 0; ix < NELEMENTS (p_device->apis); ix++)
-   {
-      p_api = &p_device->apis[ix];
-      if (p_api->in_use == true)
-      {
-         if ((p_ar == NULL) || (p_ar == p_api->p_ar))
-         {
-            if (filter_level >= PF_DEV_FILTER_LEVEL_API)
-            {
-               if (p_api->api_id == api_id)
-               {
-                  cnt++;
-               }
-            }
-            else
-            {
-               cnt++;
-            }
-         }
-      }
-   }
-
-   /* Insert number of APIs in use, even if there are none */
-   pf_put_uint16 (is_big_endian, cnt, res_len, p_bytes, p_pos);
-
-   if (stop_level > PF_DEV_FILTER_LEVEL_DEVICE)
-   {
-      /* Include at least API ID information */
-      for (ix = 0; ix < NELEMENTS (p_device->apis); ix++)
-      {
-         p_api = &p_device->apis[ix];
-         if (p_api->in_use == true)
-         {
-            if ((p_ar == NULL) || (p_ar == p_api->p_ar))
-            {
-               if (filter_level >= PF_DEV_FILTER_LEVEL_API)
-               {
-                  if (p_api->api_id == api_id)
-                  {
-                     /* Call only for the matching API_id */
-                     pf_put_ident_api (
-                        is_big_endian,
-                        block_type,
-                        filter_level,
-                        stop_level,
-                        p_ar,
-                        p_api,
-                        slot_nbr,
-                        subslot_nbr,
-                        res_len,
-                        p_bytes,
-                        p_pos);
-                  }
-               }
-               else
-               {
-                  /* No filter: Call for all APIs that are in use */
-                  pf_put_ident_api (
-                     is_big_endian,
-                     block_type,
-                     filter_level,
-                     stop_level,
-                     p_ar,
-                     p_api,
-                     slot_nbr,
-                     subslot_nbr,
-                     res_len,
-                     p_bytes,
-                     p_pos);
-               }
-            }
-         }
-      }
-   }
-}
-
-void pf_put_ident_data (
+static void pf_put_real_device_data (
    pnet_t * net,
-   bool is_big_endian,
-   uint8_t block_version_low,
-   pf_block_type_values_t block_type,
-   pf_dev_filter_level_t filter_level, /* DEVICE (no filter), API_ID, SLOT or
-                                          SUBSLOT */
-   pf_dev_filter_level_t stop_level, /* DEVICE, API_ID, API, SLOT or SUBSLOT */
-   const pf_ar_t * p_ar,
-   uint32_t api_id,
-   uint16_t slot_nbr,
-   uint16_t subslot_nbr,
+   pf_device_t const * device,
+   bool big_endian,
+   pf_record_data_scope_t scope,
+   pf_exp_ident_t const * exp_ident,
+   uint32_t api,
+   uint16_t slot_number,
+   uint16_t subslot_number,
    uint16_t res_len,
-   uint8_t * p_bytes,
-   uint16_t * p_pos)
+   uint8_t * bytes,
+   uint16_t * pos)
+{
+   uint16_t count;
+   uint16_t count_pos;
+   pf_api_t * this_api;
+   pf_slot_t * this_slot;
+   pf_subslot_t * this_subslot;
+   uint16_t i;
+
+   if (scope == PF_RECORD_DATA_SCOPE_AR)
+   {
+      if (exp_ident != NULL)
+      {
+         count = 0;
+         count_pos = *pos;
+         pf_put_uint16 (big_endian, count, res_len, bytes, pos);
+         for (i = 0; i < exp_ident->nbr_apis; ++i)
+         {
+            if (pf_cmdev_get_api (net, exp_ident->api[i].api, &this_api) == 0)
+            {
+               ++count;
+               pf_put_api_data (
+                  big_endian,
+                  this_api,
+                  NULL,
+                  NULL,
+                  &exp_ident->api[i],
+                  res_len,
+                  bytes,
+                  pos);
+            }
+         }
+         pf_put_uint16 (big_endian, count, res_len, bytes, &count_pos);
+      }
+   }
+   else if (scope == PF_RECORD_DATA_SCOPE_DEVICE)
+   {
+      count = 0;
+      count_pos = *pos;
+      pf_put_uint16 (big_endian, count, res_len, bytes, pos);
+      for (i = 0; i < PNET_MAX_API; ++i)
+      {
+         if (device->real_ident.api[i].in_use)
+         {
+            ++count;
+            pf_put_uint32 (
+               big_endian,
+               device->real_ident.api[i].api_id,
+               res_len,
+               bytes,
+               pos);
+         }
+      }
+      pf_put_uint16 (big_endian, count, res_len, bytes, &count_pos);
+   }
+   else
+   {
+      this_api = NULL;
+      this_slot = NULL;
+      this_subslot = NULL;
+      if (pf_cmdev_get_api (net, api, &this_api) == 0)
+      {
+         if (scope != PF_RECORD_DATA_SCOPE_API)
+         {
+            if (pf_cmdev_get_slot (this_api, slot_number, &this_slot) == 0)
+            {
+               if (scope == PF_RECORD_DATA_SCOPE_SUBSLOT)
+               {
+                  (void)pf_cmdev_get_subslot (
+                     this_slot,
+                     subslot_number,
+                     &this_subslot);
+               }
+            }
+         }
+      }
+
+      if (
+         ((scope == PF_RECORD_DATA_SCOPE_API) && (this_api != NULL)) ||
+         ((scope == PF_RECORD_DATA_SCOPE_SLOT) && (this_slot != NULL)) ||
+         ((scope == PF_RECORD_DATA_SCOPE_SUBSLOT) && (this_subslot != NULL)))
+      {
+         pf_put_uint16 (big_endian, 1, res_len, bytes, pos);
+         pf_put_api_data (
+            big_endian,
+            this_api,
+            this_slot,
+            this_subslot,
+            NULL,
+            res_len,
+            bytes,
+            pos);
+      }
+   }
+}
+
+void pf_put_real_ident_data (
+   pnet_t * net,
+   bool big_endian,
+   uint8_t block_version_low,
+   pf_record_data_scope_t scope,
+   pf_ar_t const * ar,
+   uint32_t api,
+   uint16_t slot_number,
+   uint16_t subslot_number,
+   uint16_t res_len,
+   uint8_t * bytes,
+   uint16_t * pos)
 {
    uint16_t block_pos;
-   uint16_t block_len = 0;
+   uint16_t block_len;
    uint16_t data_pos;
-   pf_device_t * p_device = NULL;
+   pf_device_t * device;
 
-   block_pos = *p_pos;
+   block_len = 0; /* Dont know block_len yet */
+   block_pos = *pos;
    pf_put_block_header (
-      is_big_endian,
-      block_type,
-      0, /* Dont know block_len yet */
+      big_endian,
+      (scope == PF_RECORD_DATA_SCOPE_DEVICE) ? PF_BT_API_DATA
+                                             : PF_BT_REAL_IDENTIFICATION_DATA,
+      block_len,
       PNET_BLOCK_VERSION_HIGH,
       block_version_low,
       res_len,
-      p_bytes,
-      p_pos);
+      bytes,
+      pos);
 
-   data_pos = *p_pos;
-   if (pf_cmdev_get_device (net, &p_device) == 0)
+   data_pos = *pos;
+   device = NULL;
+   if (pf_cmdev_get_device (net, &device) == 0)
    {
-      if (!p_ar || (p_ar->ar_param.ar_type != PF_ART_IOSAR))
+      if (scope == PF_RECORD_DATA_SCOPE_AR)
       {
-         pf_put_ident_device (
-            is_big_endian,
-            block_type,
-            filter_level,
-            stop_level,
-            p_ar,
-            p_device,
-            api_id,
-            slot_nbr,
-            subslot_nbr,
+         if ((ar != NULL) && (ar->ar_param.ar_type != PF_ART_IOSAR))
+         {
+            pf_put_real_device_data (
+               net,
+               device,
+               big_endian,
+               scope,
+               &ar->exp_ident,
+               api,
+               slot_number,
+               subslot_number,
+               res_len,
+               bytes,
+               pos);
+         }
+      }
+      else
+      {
+         pf_put_real_device_data (
+            net,
+            device,
+            big_endian,
+            scope,
+            NULL,
+            api,
+            slot_number,
+            subslot_number,
             res_len,
-            p_bytes,
-            p_pos);
+            bytes,
+            pos);
       }
    }
 
-   if (data_pos < *p_pos)
+   if (data_pos < *pos)
    {
       /* Finally insert the block length into the block header */
-      block_len = *p_pos - (block_pos + 4);
+      block_len = *pos - (block_pos + 4);
       block_pos += offsetof (pf_block_header_t, block_length); /* Point to
                                                                   correct place
                                                                 */
-      pf_put_uint16 (is_big_endian, block_len, res_len, p_bytes, &block_pos);
+      pf_put_uint16 (big_endian, block_len, res_len, bytes, &block_pos);
    }
    else
    {
       /* Nothing was inserted!! Report a NULL record */
-      *p_pos = block_pos;
+      *pos = block_pos;
    }
+}
+
+/**
+ * @internal
+ * Insert the expected submodule information into a buffer.
+ *
+ * Inserts subslot number and submodule ID.
+ *
+ * @param big_endian       In:    Endianness of the destination buffer.
+ * @param submodule        In:    The expected submodule.
+ * @param res_len          In:    Size of destination buffer.
+ * @param bytes            Out:   Destination buffer.
+ * @param pos              InOut: Position in destination buffer.
+ */
+static void pf_put_exp_submodule_data (
+   bool big_endian,
+   pf_exp_submodule_t const * submodule,
+   uint16_t res_len,
+   uint8_t * bytes,
+   uint16_t * pos)
+{
+   pf_put_uint16 (big_endian, submodule->subslot_number, res_len, bytes, pos);
+   pf_put_uint32 (big_endian, submodule->ident_number, res_len, bytes, pos);
+}
+
+/**
+ * @internal
+ * Insert the expected module information into a buffer.
+ *
+ * Inserts slot number, module ID, and information for one or all submodules.
+ *
+ * @param big_endian       In:    Endianness of the destination buffer.
+ * @param module           In:    The expected module.
+ * @param submodule        In:    Expected submodule. If NULL, insert all.
+ * @param res_len          In:    Size of destination buffer.
+ * @param bytes            Out:   Destination buffer.
+ * @param pos              InOut: Position in destination buffer.
+ */
+static void pf_put_exp_module_data (
+   bool big_endian,
+   pf_exp_module_t const * module,
+   pf_exp_submodule_t const * submodule,
+   uint16_t res_len,
+   uint8_t * bytes,
+   uint16_t * pos)
+{
+   uint16_t s;
+
+   pf_put_uint16 (big_endian, module->slot_number, res_len, bytes, pos);
+   pf_put_uint32 (big_endian, module->ident_number, res_len, bytes, pos);
+   if (submodule != NULL)
+   {
+      pf_put_uint16 (big_endian, 1, res_len, bytes, pos);
+      pf_put_exp_submodule_data (big_endian, submodule, res_len, bytes, pos);
+   }
+   else
+   {
+      pf_put_uint16 (big_endian, module->nbr_submodules, res_len, bytes, pos);
+      for (s = 0; s < module->nbr_submodules; ++s)
+      {
+         pf_put_exp_submodule_data (
+            big_endian,
+            &module->submodule[s],
+            res_len,
+            bytes,
+            pos);
+      }
+   }
+}
+
+/**
+ * @internal
+ * Insert the expected API information into a buffer.
+ *
+ * Inserts API and information for one or all modules.
+ *
+ * @param big_endian       In:    Endianness of the destination buffer.
+ * @param api              In:    The expected API.
+ * @param module           In:    Expected module. If NULL, insert all.
+ * @param submodule        In:    Expected submodule. If NULL, insert all.
+ * @param res_len          In:    Size of destination buffer.
+ * @param bytes            Out:   Destination buffer.
+ * @param pos              InOut: Position in destination buffer.
+ */
+static void pf_put_exp_api_data (
+   bool big_endian,
+   pf_exp_api_t const * api,
+   pf_exp_module_t const * module,
+   pf_exp_submodule_t const * submodule,
+   uint16_t res_len,
+   uint8_t * bytes,
+   uint16_t * pos)
+{
+   uint16_t m;
+
+   pf_put_uint32 (big_endian, api->api, res_len, bytes, pos);
+   if (module != NULL)
+   {
+      pf_put_uint16 (big_endian, 1, res_len, bytes, pos);
+      pf_put_exp_module_data (big_endian, module, submodule, res_len, bytes, pos);
+   }
+   else
+   {
+      pf_put_uint16 (big_endian, api->nbr_modules, res_len, bytes, pos);
+      for (m = 0; m < api->nbr_modules; ++m)
+      {
+         pf_put_exp_module_data (
+            big_endian,
+            &api->module[m],
+            NULL,
+            res_len,
+            bytes,
+            pos);
+      }
+   }
+}
+
+void pf_put_exp_ident_data (
+   pf_ar_t const * ar,
+   bool big_endian,
+   uint8_t block_version_low,
+   pf_record_data_scope_t scope,
+   uint32_t api,
+   uint16_t slot_number,
+   uint16_t subslot_number,
+   uint16_t res_len,
+   uint8_t * bytes,
+   uint16_t * pos)
+{
+   uint16_t block_pos;
+   uint16_t block_len;
+   pf_exp_ident_t const * exp_ident;
+   pf_exp_api_t const * exp_api;
+   pf_exp_module_t const * exp_module;
+   pf_exp_submodule_t const * exp_submodule;
+   uint16_t i;
+
+   block_len = 0; /* Dont know block_len yet */
+   block_pos = *pos;
+   pf_put_block_header (
+      big_endian,
+      PF_BT_EXPECTED_IDENTIFICATION_DATA,
+      block_len,
+      PNET_BLOCK_VERSION_HIGH,
+      block_version_low,
+      res_len,
+      bytes,
+      pos);
+
+   exp_ident = &ar->exp_ident;
+   if (scope == PF_RECORD_DATA_SCOPE_AR)
+   {
+      pf_put_uint16 (big_endian, exp_ident->nbr_apis, res_len, bytes, pos);
+      for (i = 0; i < exp_ident->nbr_apis; ++i)
+      {
+         pf_put_exp_api_data (
+            big_endian,
+            &exp_ident->api[i],
+            NULL,
+            NULL,
+            res_len,
+            bytes,
+            pos);
+      }
+   }
+   else
+   {
+      exp_api = NULL;
+      exp_module = NULL;
+      exp_submodule = NULL;
+      for (i = 0; i < exp_ident->nbr_apis; ++i)
+      {
+         if (exp_ident->api[i].api == api)
+         {
+            exp_api = &exp_ident->api[i];
+            break;
+         }
+      }
+
+      if (exp_api != NULL)
+      {
+         for (i = 0; i < exp_api->nbr_modules; ++i)
+         {
+            if (exp_api->module[i].slot_number == slot_number)
+            {
+               exp_module = &exp_api->module[i];
+               break;
+            }
+         }
+      }
+
+      if ((scope == PF_RECORD_DATA_SCOPE_SUBSLOT) && (exp_module != NULL))
+      {
+         for (i = 0; i < exp_module->nbr_submodules; ++i)
+         {
+            if (exp_module->submodule[i].subslot_number == subslot_number)
+            {
+               exp_submodule = &exp_module->submodule[i];
+               break;
+            }
+         }
+      }
+
+      if (
+         ((scope == PF_RECORD_DATA_SCOPE_SLOT) && (exp_module != NULL)) ||
+         ((scope == PF_RECORD_DATA_SCOPE_SUBSLOT) && (exp_submodule != NULL)))
+      {
+         pf_put_uint16 (big_endian, 1, res_len, bytes, pos);
+         pf_put_exp_api_data (
+            big_endian,
+            exp_api,
+            exp_module,
+            exp_submodule,
+            res_len,
+            bytes,
+            pos);
+      }
+      else
+      {
+         pf_put_uint16 (big_endian, 0, res_len, bytes, pos);
+      }
+   }
+
+   /* Finally insert the block length into the block header */
+   block_len = *pos - (block_pos + 4);
+   block_pos += offsetof (pf_block_header_t, block_length);
+   pf_put_uint16 (big_endian, block_len, res_len, bytes, &block_pos);
 }
 
 void pf_put_im_0_filter_data (
@@ -2126,13 +2267,12 @@ void pf_put_im_0_filter_data (
     * ToDo: Walk the device tree:
     * If we encounter a sub-slot that contains I&M data then add it here.
     */
-   pf_put_ident_device (
-      is_big_endian,
-      PF_BT_REAL_IDENTIFICATION_DATA,
-      PF_DEV_FILTER_LEVEL_SUBSLOT,
-      PF_DEV_FILTER_LEVEL_SUBSLOT,
-      NULL,
+   pf_put_real_device_data (
+      net,
       p_device,
+      is_big_endian,
+      PF_RECORD_DATA_SCOPE_SUBSLOT,
+      NULL,
       0,
       0,
       1,
@@ -2159,13 +2299,12 @@ void pf_put_im_0_filter_data (
       p_pos);
 
    /* ToDo: Find the DAP and then insert it. */
-   pf_put_ident_device (
-      is_big_endian,
-      PF_BT_REAL_IDENTIFICATION_DATA,
-      PF_DEV_FILTER_LEVEL_SUBSLOT,
-      PF_DEV_FILTER_LEVEL_SUBSLOT,
-      NULL,
+   pf_put_real_device_data (
+      net,
       p_device,
+      is_big_endian,
+      PF_RECORD_DATA_SCOPE_SUBSLOT,
+      NULL,
       0,
       0,
       1,
@@ -2707,7 +2846,7 @@ static void pf_put_diag_list (
    bool is_big_endian,
    pf_diag_filter_level_t diag_filter,
    uint16_t usi_filter,
-   uint16_t api_id,
+   uint32_t api_id,
    uint16_t slot_nbr,
    uint16_t subslot_nbr,
    uint16_t list_head,
@@ -2844,50 +2983,49 @@ static void pf_put_diag_list (
  * @internal
  * Insert diagnosis items of a subslot into a buffer.
  *
- * This is done by calling pf_put_diag_list() for USI values of found diagnoses.
- *
  * @param net              InOut: The p-net stack instance
- * @param is_big_endian    In:    true if buffer is big-endian.
+ * @param big_endian       In:    true if buffer is big-endian.
  * @param diag_filter      In:    Type of diag items to insert.
- * @param api_id           In:    The API number to write to buffer.
- * @param slot_nbr         In:    The slot number to write to buffer.
- * @param p_subslot        In:    The subslot instance.
+ * @param api              In:    The API number to write to buffer.
+ * @param slot_number      In:    The slot number to write to buffer.
+ * @param subslot          In:    The subslot instance.
  * @param res_len          In:    Size of destination buffer.
- * @param p_bytes          Out:   Destination buffer.
- * @param p_pos            InOut: Position in destination buffer.
+ * @param bytes            Out:   Destination buffer.
+ * @param pos              InOut: Position in destination buffer.
  */
 static void pf_put_diag_subslot (
    pnet_t * net,
-   bool is_big_endian,
+   bool big_endian,
    pf_diag_filter_level_t diag_filter,
-   uint16_t api_id,
-   uint16_t slot_nbr,
-   const pf_subslot_t * p_subslot,
+   uint32_t api,
+   uint16_t slot_number,
+   pf_subslot_t const * subslot,
    uint16_t res_len,
-   uint8_t * p_bytes,
-   uint16_t * p_pos)
+   uint8_t * bytes,
+   uint16_t * pos)
 {
-   uint16_t usi = 0;
-   int err =
-      pf_cmdev_get_next_diagnosis_usi (net, p_subslot->diag_list, 0, &usi);
+   uint16_t usi;
+   int err;
 
+   usi = 0;
+   err = pf_cmdev_get_next_diagnosis_usi (net, subslot->diag_list, 0, &usi);
    while (err == 0)
    {
       pf_put_diag_list (
          net,
-         is_big_endian,
+         big_endian,
          diag_filter,
          usi,
-         api_id,
-         slot_nbr,
-         p_subslot->subslot_nbr,
-         p_subslot->diag_list,
+         api,
+         slot_number,
+         subslot->subslot_number,
+         subslot->diag_list,
          res_len,
-         p_bytes,
-         p_pos);
+         bytes,
+         pos);
 
       err =
-         pf_cmdev_get_next_diagnosis_usi (net, p_subslot->diag_list, usi, &usi);
+         pf_cmdev_get_next_diagnosis_usi (net, subslot->diag_list, usi, &usi);
    }
 }
 
@@ -2895,75 +3033,94 @@ static void pf_put_diag_subslot (
  * @internal
  * Insert diagnosis items of a slot into a buffer.
  *
- * This is done by calling pf_put_diag_subslot() for relevant subslots.
- *
  * @param net              InOut: The p-net stack instance
- * @param is_big_endian    In:    true if buffer is big-endian.
- * @param filter_level     In:    The filter ending level.
- * @param diag_filter      In:    The types of diag to insert.
- * @param p_ar             In:    If != NULL then filter by AR.
- * @param api_id           In:    API to insert
- * @param p_slot           In:    The slot instance.
- * @param subslot_nbr      In:    The sub-slot number to filter by.
+ * @param big_endian       In:    true if buffer is big-endian.
+ * @param diag_filter      In:    Type of diag items to insert.
+ * @param api              In:    The API number to write to buffer.
+ * @param slot             In:    The slot instance.
  * @param res_len          In:    Size of destination buffer.
- * @param p_bytes          Out:   Destination buffer.
- * @param p_pos            InOut: Position in destination buffer.
+ * @param bytes            Out:   Destination buffer.
+ * @param pos              InOut: Position in destination buffer.
  */
 static void pf_put_diag_slot (
    pnet_t * net,
-   bool is_big_endian,
-   pf_dev_filter_level_t filter_level,
+   bool big_endian,
    pf_diag_filter_level_t diag_filter,
-   const pf_ar_t * p_ar,
-   uint32_t api_id,
-   const pf_slot_t * p_slot,
-   uint16_t subslot_nbr,
+   uint32_t api,
+   pf_slot_t const * slot,
    uint16_t res_len,
-   uint8_t * p_bytes,
-   uint16_t * p_pos)
+   uint8_t * bytes,
+   uint16_t * pos)
 {
-   uint16_t ix;
-   const pf_subslot_t * p_subslot;
+   uint16_t s;
 
-   for (ix = 0; ix < NELEMENTS (p_slot->subslots); ix++)
+   for (s = 0; s < PNET_MAX_SUBSLOTS; ++s)
    {
-      p_subslot = &p_slot->subslots[ix];
-      if (p_subslot->in_use == true)
+      pf_subslot_t const * subslot = &slot->subslots[s];
+
+      if (subslot->in_use)
       {
-         if ((p_ar == NULL) || (p_ar == p_subslot->p_ar))
-         {
-            if (filter_level >= PF_DEV_FILTER_LEVEL_SUBSLOT)
-            {
-               if (p_subslot->subslot_nbr == subslot_nbr)
-               {
-                  /* Call only for the matching subslot_nbr */
-                  pf_put_diag_subslot (
-                     net,
-                     is_big_endian,
-                     diag_filter,
-                     api_id,
-                     p_slot->slot_nbr,
-                     p_subslot,
-                     res_len,
-                     p_bytes,
-                     p_pos);
-               }
-            }
-            else
-            {
-               /* No filter: Call for all sub-slots that are in use */
-               pf_put_diag_subslot (
-                  net,
-                  is_big_endian,
-                  diag_filter,
-                  api_id,
-                  p_slot->slot_nbr,
-                  p_subslot,
-                  res_len,
-                  p_bytes,
-                  p_pos);
-            }
-         }
+         pf_put_diag_subslot (
+            net,
+            big_endian,
+            diag_filter,
+            api,
+            slot->slot_number,
+            subslot,
+            res_len,
+            bytes,
+            pos);
+      }
+   }
+}
+
+/**
+ * @internal
+ * Insert diagnosis items of a slot, with AR filtering, into a buffer.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param big_endian       In:    true if buffer is big-endian.
+ * @param diag_filter      In:    Type of diag items to insert.
+ * @param api              In:    The API number to write to buffer.
+ * @param slot             In:    The slot instance.
+ * @param module           In:    The expected module instance.
+ * @param res_len          In:    Size of destination buffer.
+ * @param bytes            Out:   Destination buffer.
+ * @param pos              InOut: Position in destination buffer.
+ */
+static void pf_put_diag_ar_slot (
+   pnet_t * net,
+   bool big_endian,
+   pf_diag_filter_level_t diag_filter,
+   uint32_t api,
+   pf_slot_t const * slot,
+   pf_exp_module_t const * module,
+   uint16_t res_len,
+   uint8_t * bytes,
+   uint16_t * pos)
+{
+   pf_exp_submodule_t const * submodule;
+   pf_subslot_t * subslot;
+   uint16_t s;
+
+   for (s = 0; s < module->nbr_submodules; ++s)
+   {
+      submodule = &module->submodule[s];
+      if (
+         (pf_cmdev_get_subslot (slot, submodule->subslot_number, &subslot) ==
+          0) &&
+         (subslot->ident_number == submodule->ident_number))
+      {
+         pf_put_diag_subslot (
+            net,
+            big_endian,
+            diag_filter,
+            api,
+            slot->slot_number,
+            subslot,
+            res_len,
+            bytes,
+            pos);
       }
    }
 }
@@ -2972,197 +3129,253 @@ static void pf_put_diag_slot (
  * @internal
  * Insert diagnosis items of an API into a buffer.
  *
- * This is done by calling pf_put_diag_slot() for relevant slots.
- *
  * @param net              InOut: The p-net stack instance
- * @param is_big_endian    In:    true if buffer is big-endian.
- * @param filter_level     In:    The filter ending level.
- * @param diag_filter      In:    The types of diag to insert.
- * @param p_ar             In:    If != NULL then filter by AR.
- * @param p_api            In:    The API instance.
- * @param slot_nbr         In:    The slot number to filter by.
- * @param subslot_nbr      In:    The sub-slot number to filter by.
+ * @param big_endian       In:    true if buffer is big-endian.
+ * @param diag_filter      In:    Type of diag items to insert.
+ * @param api              In:    The API number to write to buffer.
  * @param res_len          In:    Size of destination buffer.
- * @param p_bytes          Out:   Destination buffer.
- * @param p_pos            InOut: Position in destination buffer.
+ * @param bytes            Out:   Destination buffer.
+ * @param pos              InOut: Position in destination buffer.
  */
 static void pf_put_diag_api (
    pnet_t * net,
-   bool is_big_endian,
-   pf_dev_filter_level_t filter_level,
+   bool big_endian,
    pf_diag_filter_level_t diag_filter,
-   const pf_ar_t * p_ar,
-   const pf_api_t * p_api,
-   uint16_t slot_nbr,
-   uint16_t subslot_nbr,
+   pf_api_t const * api,
    uint16_t res_len,
-   uint8_t * p_bytes,
-   uint16_t * p_pos)
+   uint8_t * bytes,
+   uint16_t * pos)
 {
-   uint16_t ix;
-   const pf_slot_t * p_slot;
+   pf_slot_t const * slot;
+   uint16_t s;
 
-   for (ix = 0; ix < NELEMENTS (p_api->slots); ix++)
+   for (s = 0; s < PNET_MAX_SLOTS; ++s)
    {
-      p_slot = &p_api->slots[ix];
-      if (p_slot->in_use == true)
+      slot = &api->slots[s];
+      if (slot->in_use)
       {
-         if ((p_ar == NULL) || (p_ar == p_slot->p_ar))
-         {
-            if (filter_level >= PF_DEV_FILTER_LEVEL_SLOT)
-            {
-               if (p_slot->slot_nbr == slot_nbr)
-               {
-                  /* Call only for the matching slot_nbr */
-                  pf_put_diag_slot (
-                     net,
-                     is_big_endian,
-                     filter_level,
-                     diag_filter,
-                     p_ar,
-                     p_api->api_id,
-                     p_slot,
-                     subslot_nbr,
-                     res_len,
-                     p_bytes,
-                     p_pos);
-               }
-            }
-            else
-            {
-               /* No filter: Call for all slots that are in use */
-               pf_put_diag_slot (
-                  net,
-                  is_big_endian,
-                  filter_level,
-                  diag_filter,
-                  p_ar,
-                  p_api->api_id,
-                  p_slot,
-                  subslot_nbr,
-                  res_len,
-                  p_bytes,
-                  p_pos);
-            }
-         }
+         pf_put_diag_slot (
+            net,
+            big_endian,
+            diag_filter,
+            api->api_id,
+            slot,
+            res_len,
+            bytes,
+            pos);
       }
    }
 }
 
-/**
- * @internal
- * Insert diagnosis items of a device into a buffer.
- *
- * This is done by calling pf_put_diag_api() for all relevant APIs.
- *
- * @param net              InOut: The p-net stack instance
- * @param is_big_endian    In:    true if buffer is big-endian.
- * @param filter_level     In:    The filter ending level.
- * @param diag_filter      In:    The types of diag to insert.
- * @param p_ar             In:    If != NULL then filter by AR.
- * @param p_device         In:    The device instance.
- * @param api_id           In:    The API id to filter by.
- * @param slot_nbr         In:    The slot number to filter by.
- * @param subslot_nbr      In:    The sub-slot number to filter by.
- * @param res_len          In:    Size of destination buffer.
- * @param p_bytes          Out:   Destination buffer.
- * @param p_pos            InOut: Position in destination buffer.
- */
-static void pf_put_diag_device (
+void pf_put_diagnosis_subslot (
    pnet_t * net,
-   bool is_big_endian,
-   pf_dev_filter_level_t filter_level,
+   bool big_endian,
    pf_diag_filter_level_t diag_filter,
-   const pf_ar_t * p_ar, /* If != NULL only include those belonging to p_ar */
-   const pf_device_t * p_device,
-   uint32_t api_id,
-   uint16_t slot_nbr,
-   uint16_t subslot_nbr,
+   pf_ar_t * ar,
+   uint32_t api,
+   uint16_t slot_number,
+   uint16_t subslot_number,
    uint16_t res_len,
-   uint8_t * p_bytes,
-   uint16_t * p_pos)
+   uint8_t * bytes,
+   uint16_t * pos)
 {
-   uint16_t ix;
-   const pf_api_t * p_api;
+   pf_slot_t * slot;
+   pf_subslot_t * subslot;
+   pf_exp_module_t * module;
+   pf_exp_submodule_t * submodule;
 
-   for (ix = 0; ix < NELEMENTS (p_device->apis); ix++)
+   slot = NULL;
+   if (pf_cmdev_get_slot_full (net, api, slot_number, &slot) != 0)
    {
-      p_api = &p_device->apis[ix];
-      if (p_api->in_use == true)
+      return;
+   }
+   subslot = NULL;
+   if (pf_cmdev_get_subslot (slot, subslot_number, &subslot) != 0)
+   {
+      return;
+   }
+   if (ar != NULL)
+   {
+      module = NULL;
+      submodule = NULL;
+      if (
+         (pf_cmdev_get_exp_mod (ar, api, slot_number, &module) == 0) &&
+         (pf_cmdev_get_exp_sub (
+             ar,
+             api,
+             slot_number,
+             subslot_number,
+             &submodule) == 0))
       {
-         if ((p_ar == NULL) || (p_ar == p_api->p_ar))
+         if (
+            (module->ident_number != slot->ident_number) ||
+            (submodule->ident_number != subslot->ident_number))
          {
-            if (filter_level >= PF_DEV_FILTER_LEVEL_API)
-            {
-               if (p_api->api_id == api_id)
-               {
-                  /* Call only for the matching API_id */
-                  pf_put_diag_api (
-                     net,
-                     is_big_endian,
-                     filter_level,
-                     diag_filter,
-                     p_ar,
-                     p_api,
-                     slot_nbr,
-                     subslot_nbr,
-                     res_len,
-                     p_bytes,
-                     p_pos);
-               }
-            }
-            else
-            {
-               /* No filter: Call for all APIs that are in use */
-               pf_put_diag_api (
-                  net,
-                  is_big_endian,
-                  filter_level,
-                  diag_filter,
-                  p_ar,
-                  p_api,
-                  slot_nbr,
-                  subslot_nbr,
-                  res_len,
-                  p_bytes,
-                  p_pos);
-            }
+            return;
          }
       }
    }
+   pf_put_diag_subslot (
+      net,
+      big_endian,
+      diag_filter,
+      api,
+      slot_number,
+      subslot,
+      res_len,
+      bytes,
+      pos);
 }
 
-void pf_put_diag_data (
+void pf_put_diagnosis_slot (
    pnet_t * net,
-   bool is_big_endian,
-   pf_dev_filter_level_t filter_level,
+   bool big_endian,
    pf_diag_filter_level_t diag_filter,
-   const pf_ar_t * p_ar, /* If p_ar != NULL only include those belonging to p_ar
-                          */
-   uint32_t api_id,
-   uint16_t slot_nbr,
-   uint16_t subslot_nbr,
+   pf_ar_t * ar,
+   uint32_t api,
+   uint16_t slot_number,
    uint16_t res_len,
-   uint8_t * p_bytes,
-   uint16_t * p_pos)
+   uint8_t * bytes,
+   uint16_t * pos)
 {
-   pf_device_t * p_device = NULL;
+   pf_slot_t * slot;
+   pf_exp_module_t * module;
 
-   if (pf_cmdev_get_device (net, &p_device) == 0)
+   slot = NULL;
+   if (pf_cmdev_get_slot_full (net, api, slot_number, &slot) != 0)
    {
-      pf_put_diag_device (
+      return;
+   }
+   module = NULL;
+   if ((ar == NULL) || (pf_cmdev_get_exp_mod (ar, api, slot_number, &module) != 0))
+   {
+      pf_put_diag_slot (
          net,
-         is_big_endian,
-         filter_level,
+         big_endian,
          diag_filter,
-         p_ar,
-         p_device,
-         api_id,
-         slot_nbr,
-         subslot_nbr,
+         api,
+         slot,
          res_len,
-         p_bytes,
-         p_pos);
+         bytes,
+         pos);
+   }
+   else if (module->ident_number == slot->ident_number)
+   {
+      pf_put_diag_ar_slot (
+         net,
+         big_endian,
+         diag_filter,
+         api,
+         slot,
+         module,
+         res_len,
+         bytes,
+         pos);
+   }
+}
+
+void pf_put_diagnosis_ar (
+   pnet_t * net,
+   bool big_endian,
+   pf_diag_filter_level_t diag_filter,
+   pf_ar_t * ar,
+   uint16_t res_len,
+   uint8_t * bytes,
+   uint16_t * pos)
+{
+   pf_exp_api_t const * exp_api;
+   pf_exp_module_t const * module;
+   pf_api_t * real_api;
+   pf_slot_t * slot;
+   uint16_t a;
+   uint16_t m;
+
+   if (ar == NULL)
+   {
+      return;
+   }
+   for (a = 0; a < ar->exp_ident.nbr_apis; ++a)
+   {
+      exp_api = &ar->exp_ident.api[a];
+      if (pf_cmdev_get_api (net, exp_api->api, &real_api) != 0)
+      {
+         continue; /* to the next API */
+      }
+      for (m = 0; m < exp_api->nbr_modules; ++m)
+      {
+         module = &exp_api->module[m];
+         if (
+            (pf_cmdev_get_slot (real_api, module->slot_number, &slot) != 0) ||
+            (slot->ident_number != module->ident_number))
+         {
+            continue; /* to the next module */
+         }
+         pf_put_diag_ar_slot (
+            net,
+            big_endian,
+            diag_filter,
+            real_api->api_id,
+            slot,
+            module,
+            res_len,
+            bytes,
+            pos);
+      }
+   }
+}
+
+void pf_put_diagnosis_api (
+   pnet_t * net,
+   bool big_endian,
+   pf_diag_filter_level_t diag_filter,
+   uint32_t api,
+   uint16_t res_len,
+   uint8_t * bytes,
+   uint16_t * pos)
+{
+   pf_api_t * real_api;
+
+   if (pf_cmdev_get_api (net, api, &real_api) == 0)
+   {
+      pf_put_diag_api (
+         net,
+         big_endian,
+         diag_filter,
+         real_api,
+         res_len,
+         bytes,
+         pos);
+   }
+}
+
+void pf_put_diagnosis_device (
+   pnet_t * net,
+   bool big_endian,
+   pf_diag_filter_level_t diag_filter,
+   uint16_t res_len,
+   uint8_t * bytes,
+   uint16_t * pos)
+{
+   pf_device_t * device;
+   uint16_t i;
+
+   device = NULL;
+   if (pf_cmdev_get_device (net, &device) == 0)
+   {
+      for (i = 0; i < PNET_MAX_API; ++i)
+      {
+         if (device->real_ident.api[i].in_use)
+         {
+            pf_put_diag_api (
+               net,
+               big_endian,
+               diag_filter,
+               &device->real_ident.api[i],
+               res_len,
+               bytes,
+               pos);
+         }
+      }
    }
 }
 

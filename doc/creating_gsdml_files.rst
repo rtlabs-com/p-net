@@ -1,3 +1,5 @@
+.. _creating-gsdml-files:
+
 Creating GSD (GSDML) files
 ==========================
 A GSD (General Station Description) file is an XML file describing a
@@ -20,17 +22,16 @@ GSDML files given. It contains simplifications and does not describe special
 cases. For full details on GSDML file syntax, see the official GSDML
 specification.
 
-An example GSDML file is available in the samples/pn_dev directory of the p-net
+An example GSDML file is available in the samples/pn_dev directory of the P-Net
 repository: https://github.com/rtlabs-com/p-net/tree/master/samples/pn_dev
 
 A GSDML file is used to describe an IO-device. The corresponding file
 for describing a controller is a CDML (Controller Description Markup Language)
-file (with file ending ``.xml``). The CDML is used during controller certification
+file (with file ending :file:`.xml`). The CDML is used during controller certification
 (not discussed here).
 
-
 XML editors
------------
+^^^^^^^^^^^
 It can be helpful to use an XML editor when working with GSD files. A few
 examples are given here.
 
@@ -44,7 +45,6 @@ http://camprocessor.sourceforge.net/wiki/ (Windows and Linux)
 **XML Notepad**:
 https://github.com/microsoft/xmlnotepad (Windows)
 
-
 Using "Profinet GSD Checker" tool on a Windows PC
 -------------------------------------------------
 The tool is available for Profinet members.
@@ -53,15 +53,20 @@ The file is part of the conformance test tool download. Unzip the file
 PROFINET_GSD_Checker_2.34.zip, and double-click the "setup" file. After
 installation, enter ``profinet`` in the Windows search bar to start the program.
 
-Use the menu File > Open and select your GSD file. An overview of the file
+Use the menu :menuselection:`File --> Open` and select your GSD file. An overview of the file
 is shown. In the left menu different parts of the file can be selected.
 
-To verify the file, use the menu File > Check. Click the "GSDCheck" bar at
+To verify the file, use the menu :menuselection:`File --> Check`. Click the :guilabel:`GSDCheck` bar at
 the bottom of the screen to open a document check view in the right part of
 the screen. Use the Icons to show the details of any error messages.
 
-If you later need to uninstall the tool, do that via Windows settings > Apps &
-features.
+When using the GSD Checker, make sure to use the binary "PROFINET GSD Checker"
+found at the root level in the :file:`GSD_Checker_Vx.x` folder.
+Opening the binary titled with a specific version, i.e "PROFINET GSD Checker V2.42",
+found in the subfolders, will not load the libraries needed and will generate error dialogs.
+
+If you later need to uninstall the tool, do that via Windows :menuselection:`Settings --> Apps &
+features`.
 
 
 File name
@@ -69,8 +74,8 @@ File name
 The current GSD version (as of writing) is 2.4.
 
 The file name format is specified in section 5.1 of the GSD specification. For example
-``GSDML-V2.35-Vendor-Device-20171231.xml``. You can give it an optional timestamp
-in the filename: ``-20171231-235900.xml``.
+:file:`GSDML-V2.35-Vendor-Device-20171231.xml`. You can give it an optional timestamp
+in the filename: :file:`-20171231-235900.xml`.
 
 Note that version for example 2.3 is newer than version 2.25. From the GSDML
 specification: "V2.2 < V2.25 < V2.3 < V2.31"
@@ -132,12 +137,14 @@ The GSD files are structured like::
           +--GraphicsList
           +--ExternalTextList
 
-The encoding is given in the first line of the XML file. Use ``utf-8`` if using non-ASCII characters in any of the text fields.
+The encoding is given in the first line of the XML file. Use ``utf-8`` if using
+non-ASCII characters in any of the text fields.
 Do not change the ``<ProfileHeader>`` contents.
 
 In the ``<DeviceIdentity>`` adjust the attributes ``VendorID``, ``DeviceID``.
 Adjust the ``Value`` in ``<VendorName>``.
-In the ``<Family>`` adjust the attributes for ``MainFamily`` (typically "I/O", should be from the list of allowed values)
+In the ``<Family>`` adjust the attributes for ``MainFamily`` (typically "I/O", should
+be from the list of allowed values)
 and ``ProductFamily`` which is vendor specific.
 
 Those values are for example used by the engineering tool to display the device
@@ -221,12 +228,12 @@ The ``<DeviceAccessPointItem>`` element has the attributes:
 * ``PNIO_Version="V2.4"`` Which version of Profinet specification it is
   certified against.
 * ``PhysicalSlots="0..4"`` Slot 0 is always used by the DAP (bus interface)
-  module. Relates to the ``PNET_MAX_SLOTS`` value in the p-net stack.
+  module. Relates to the ``PNET_MAX_SLOTS`` value in the P-Net stack.
 * ``ModuleIdentNumber="0x00000001"`` Unsigned32hex.
 * ``MinDeviceInterval="32"`` Minimum cyclic data update interval, in number
   of 31.25 us ticks. A value 32 corresponds to cyclic data sending and
   receiving every millisecond. Unsigned16. It should match the value
-  ``min_device_interval`` in the p-net configuration. (It must be possible to
+  ``min_device_interval`` in the P-Net configuration. (It must be possible to
   achieve this time using the values in the ``SendClock`` and ``ReductionRatio``
   attributes in another element).
 * ``DNS_CompatibleName="pno-example-dap"`` (Default station name)
@@ -235,7 +242,7 @@ The ``<DeviceAccessPointItem>`` element has the attributes:
 * ``DeviceAccessSupported="false"`` If a limited version of AR connection is allowed.
 * ``NumberOfDeviceAccessAR="1"`` Number of Device Access connections. Should only
   be given if ``DeviceAccessSupported`` is ``true``. Dependent on the ``PNET_MAX_AR``
-  value in the p-net stack.
+  value in the P-Net stack.
 * ``MultipleWriteSupported="true"`` Multiple writes in a single request.
   Mandatory ``true`` since V2.31.
 * ``SharedDeviceSupported="false"`` False if not given
@@ -247,7 +254,7 @@ The ``<DeviceAccessPointItem>`` element has the attributes:
 * ``NameOfStationNotTransferable="false"``
 * ``LLDP_NoD_Supported="true"`` Mandatory ``true`` since V2.31.
 * ``ResetToFactoryModes="1..2"`` Bits describing reset possibilities. At least
-  "2" should be present. Reset modes 1 and 2 are supported by p-net.
+  "2" should be present. Reset modes 1 and 2 are supported by P-Net.
 * ``ParameterizationSpeedupSupported="true"`` For fast startup.
 * ``PowerOnToCommReady="700"`` For fast startup, time to first data exchange
   in milliseconds. Unsigned32.
@@ -303,7 +310,7 @@ Each interface defines for example clock synchronization, and the ports (of that
 interface) define for example if they use radio or 100 Mbit/s copper cables.
 
 The subslot number for the first interface is 0x8000, and next interface (if
-any) has subslot number 0x8100. Note that p-net only supports one interface.
+any) has subslot number 0x8100. Note that P-Net only supports one interface.
 The first port of the first interface has subslot 0x8001,
 and next port of that interface has subslot number 0x8002.
 
@@ -333,7 +340,7 @@ list. The ``NumberOfAR`` attribute defaults to 1 if not given.
 There is typically one input-CR and one output-CR per AR, but in the GSDML file
 it is possible to set the attributes ``NumberOfAdditionalInputCR``,
 ``NumberOfAdditionalOutputCR``, ``NumberOfAdditionalMulticastProviderCR`` and
-``NumberOfMulticastConsumerCR``. Those attributes are not supported by p-net.
+``NumberOfMulticastConsumerCR``. Those attributes are not supported by P-Net.
 
 The ``<TimingProperties>`` element describes the sending of cyclic IO data.
 The ``SendClock`` attribute contains a list of all supported send cycle times,
@@ -439,7 +446,7 @@ submodule can be removed). If only virtual submodules are available, the
 For details on ``<VirtualSubmoduleItem>``, see ``<SubmoduleItem>`` below.
 
 The configuration value PNET_MAX_SUBSLOTS defines the maximum number of
-submodules (for each module) that the p-net stack can handle.
+submodules (for each module) that the P-Net stack can handle.
 
 
 Details on the submodule list
@@ -498,7 +505,9 @@ the submodule).
 
 The ``<DataItem>`` elements have the attributes ``TextId`` and ``DataType``
 (which can be for example "Unsigned8", "Unsigned64", "Float32", "Integer8",
-"Date", "VisibleString", "Boolean" or "TimeStamp"). The optional
+"Date", "VisibleString", "Boolean" or "TimeStamp").
+It is not possible to set a range or default value for the ``<DataItem>`` elements.
+The optional
 attribute ``UseAsBits="true"`` is used when individual bits are to be displayed
 in the engineering tool (only for the unsigned ``DataType`` variants). It is
 recommended to use Unsigned8 when packing booleans.
@@ -510,14 +519,19 @@ The least significant bit has offset 0.
 A module parameter is typically adjustable from the IO-controller, and could
 be used to set for example an input delay time. To describe parameters use
 ``<ParameterRecordDataItem>`` elements.  They have the attributes
-``Index="123"`` and ``Length="4"`` (in bytes).
+``Index="123"``, ``Length="4"`` (in bytes), and ``TransferSequence``
+which controls the order the indexes are written.
 Use the ``<Name>`` subelement to give it a name.
-To initialize the content, use the ``<Const>`` element (if subelement
-``<Ref>`` not is given).
+To initialize the content, use the ``<Const>`` element. Any part of the content
+not covered by the ``<Const>`` data will be set to zero by the PLC. It is
+important to provide a ``<Const>`` element especially if the ``<Ref>`` subelements
+do not cover the entire content.
 The subelement ``<Ref>`` has these attributes:
 
 * ``DataType="Unsigned32"``
 * ``ByteOffset="0"``
+* ``BitOffset="0"`` Used for DataType "Bit" or "BitArea".
+* ``BitLength="2"`` Used for DataType "BitArea".
 * ``DefaultValue="0"``
 * ``AllowedValues="0..99"``
 * ``Changeable="true"`` Whether changes of this parameter is allowed.
@@ -815,4 +829,14 @@ GraphicsList element hierarchy::
 Within each ``<GraphicItem>`` element, the attributes ``ID`` and ``GraphicFile``
 are used to store the information.
 
+Typically bitmap files (.BMP) are used, and the width and height should be 70 and 40 bits respectively (16 colors).
 The ``GraphicFile`` is the filename without the BMP file extension.
+
+
+Upgrade GSDML file version
+--------------------------
+When upgrading the GSDML version (from for example 2.4 to 2.43), you need to modify:
+
+* The version part of the file name
+* The ``PNIO_Version`` attribute in the ``DeviceAccessPointItem`` element.
+* The schema name in the ``ISO15745Profile`` element.

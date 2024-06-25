@@ -1,3 +1,5 @@
+.. _profinet-details:
+
 Profinet details
 ================
 
@@ -194,7 +196,8 @@ UDP port numbers are described in Profinet 2.4 section 4.13.3.1.2.4
 
 NDR header in DCE/RPC payload
 -----------------------------
-The first part of the DCE/RPC payload is the NDR (Network Data Representation) header. For requests, it contains five uint32 values:
+The first part of the DCE/RPC payload is the NDR (Network Data Representation) header.
+For requests, it contains five uint32 values:
 
 * Args Maximum: Buffer size available for the response
 * Args Length: Number of bytes payload after the NDR header
@@ -302,7 +305,16 @@ Subslots in the DAP module:
 
 Read and write indexes
 ----------------------
-User defined indexes are in the range 0x?? to 0x??
+
++-----------------+------------------------------+
+| Index           | Description                  |
++=================+==============================+
+| 0x0000 - 0x7FFF | Manufacturer defined         |
++-----------------+------------------------------+
+| 0x8000 - 0xAFFF | Defined in Profinet protocol |
++-----------------+------------------------------+
+| 0xB000 - 0xBFFF | Profile defined              |
++-----------------+------------------------------+
 
 Examples of pre-defined indexes:
 
@@ -334,7 +346,8 @@ Examples of pre-defined indexes:
 +-----------------------------+--------------------------------------------------------+
 | LogBookData                 |                                                        |
 +-----------------------------+--------------------------------------------------------+
-| ModuleDiffBlock             |                                                        |
+| ModuleDiffBlock             | Differences between expected and plugged modules, and  |
+|                             | diagnosis. A 16-bit number for each submodule.         |
 +-----------------------------+--------------------------------------------------------+
 | PDExpectedData              |                                                        |
 +-----------------------------+--------------------------------------------------------+
@@ -353,7 +366,7 @@ Examples of pre-defined indexes:
 +-----------------------------+--------------------------------------------------------+
 | PDNCDataCheck               |                                                        |
 +-----------------------------+--------------------------------------------------------+
-| PDPortDataAdjust            | Turn on and off LLDP transmission.                     |
+| PDPortDataAdjust            | Turn on and off LLDP transmission, adjust MAUType etc. |
 +-----------------------------+--------------------------------------------------------+
 | PDPortDataCheck             | Wanted peer chassisID, port ID etc.                    |
 +-----------------------------+--------------------------------------------------------+
@@ -385,7 +398,7 @@ Examples of pre-defined indexes:
 
 Allowed station name
 --------------------
-The specification is found i Profinet 2.4 section 4.3.1.4.16
+The specification is found in Profinet 2.4 section 4.3.1.4.16
 
 
 Diagnosis details
@@ -420,8 +433,8 @@ There is at most one diagnosis
 entry stored for each ChannelErrortype, extChannelErrorType combination.
 
 
-LLDP
-----
+LLDP details
+------------
 A protocol for neighbourhood detection. LLDP frames are not forwarded by managed
 switches, so the frames are useful to detect which neighbour the device is
 connected to.
@@ -486,9 +499,39 @@ Speed:
 
 MAU types:
 
-* 0x00 Radio
-* 0x10 Copper 100BaseTX Full duplex
-* 0x1E Copper 1000BaseT Full duplex
+* 0x0000 Radio
+* 0x000B Copper 10BASETXFD
+* 0x0010 Copper 100BaseTX Full duplex
+* 0x001E Copper 1000BaseT Full duplex
+* 0x008D Copper 10Base-T1L (single pair Ethernet) Uses MAUTypeExtension 0x200
+
+
+Address resolution protocol (ARP) details
+-----------------------------------------
+The ARP protocol is used to find the MAC address when the IP address is known.
+Profinet uses it primarily to detect IP address collisions.
+
+It is a request-response protocol sent on Ethernet (not via TCP, UDP or IP).
+Each frame payload contains four fields, the IP address and MAC address of the sender
+and the target. The sender MAC address in the payload is always set to the actual MAC address
+of the sender.
+
+* Normal ARP requests are used to find the MAC address of a device having a specific IP address.
+  The request payload contains the IP address of the sender and the IP address being asked for
+  (target IP address). The target MAC address is unknown, so that field in the payload contains zeros.
+
+* In normal ARP responses is the sender address field set to the IP address that was asked for. The
+  sender MAC address is the MAC address of the responder. The target IP- and MAC addresses are
+  the values of the device sending the initial request.
+
+* A device that not yet has an IP address, but intends to use a specific IP address, can send
+  an "ARP probe" to check if there is some other device that uses that IP address. The target IP
+  address in the request is the IP address being probed, and the target MAC address is zeros.
+  As the sender not yet has an IP address, that part of the payload is zeros.
+
+* Once a device has obtained an IP address, it can broadcast it via an "ARP announcement".
+  The sender IP address and the target IP address are the same, and the target MAC address is
+  zeros.
 
 
 Standard and legacy LLDP name format
@@ -594,7 +637,7 @@ In summary, these are the available MRP roles:
 
 The nodes participating in the interconnection ring will also have a role in
 the normal ring. Thus a node can be for example bot a MRC and a MIM
-simultaneusly.
+simultaneously.
 
 Profinet defines alarms for different events in the MRP implementation, for
 example if multiple MRP managers exist in the same ring or if the neighbour

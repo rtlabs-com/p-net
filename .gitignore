@@ -10,6 +10,10 @@ doc/_copied
 .cproject
 .project
 
+
+# Python files
+*env*
+
 # Object files
 *.o
 *.ko

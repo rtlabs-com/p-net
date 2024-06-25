@@ -1,6 +1,8 @@
-Additional Linux Details
-========================
-The tutorial gives most information required for getting started on a Linux
+.. _additional-linux-details:
+
+Changing Linux settings
+=========================
+The :ref:`running-sample-app` tutorial gives most information required for getting started on a Linux
 machine. Some additional information is given here.
 
 
@@ -20,7 +22,7 @@ When using it, you might need to replace ``cmake`` with ``snap run cmake``.
 If uninstalling the default ``cmake``, the snap-installed version should be
 used by default after reboot.
 
-Optional dependencies (for development and documentation of the p-net stack)::
+Optional dependencies (for development and documentation of the P-Net stack)::
 
     sudo apt install -y \
         clang-tools \
@@ -29,8 +31,8 @@ Optional dependencies (for development and documentation of the p-net stack)::
         graphviz
 
 
-Run tests and generate documentation
-------------------------------------
+Running tests and generating documentation
+------------------------------------------
 Run tests (if you told cmake to configure it)::
 
     cmake --build build --target check
@@ -43,9 +45,9 @@ Create Doxygen documentation::
 
     cmake --build build --target docs
 
-The Doxygen documentation ends up in ``build/html/index.html``
+The Doxygen documentation ends up in :file:`build/html/index.html`.
 
-See the "Writing documentation" page if you would like to install
+See :ref:`writing-documentation` if you would like to install
 the toolchain to build the entire Sphinx documentation.
 
 The clang static analyzer can also be used if installed. Create a new
@@ -94,23 +96,23 @@ Resulting size::
    244481	     72	      8	 244561	  3bb51	pn_dev
 
 See https://linux.die.net/man/1/size for information on how to use the command.
-Also the rt-kernel page in this documentation has some description on how to
+Also :ref:`getting-started-rtkernel` has some description on how to
 interpret the output.
 
-The size of the p-net stack can be estimated from the size of libprofinet,
+The size of the P-Net stack can be estimated from the size of libprofinet,
 built with the options given above::
 
    p-net/build$ size libprofinet.so
       text	   data	    bss	    dec	    hex	filename
    230888	   3304	      8	 234200	  392d8	libprofinet.so
 
-An estimate of the p-net RAM usage can be made from the size of the ``pnet_t`` struct.
+An estimate of the P-Net RAM usage can be made from the size of the ``pnet_t`` struct.
 The sample application has a command line option to show this value, for the used
 compile time options (for example the maximum number of modules allowed).
 
 
-Debug intermittent segmentation faults during tests on Linux
-------------------------------------------------------------
+Debugging intermittent segmentation faults during tests on Linux
+----------------------------------------------------------------
 Enable core dumps::
 
     ulimit -c unlimited
@@ -133,7 +135,7 @@ P-Net for Linux implements a Net-SNMP subagent that handles the Profinet
 mandatory MIB:s. Also
 see :ref:`network-topology-detection` for information regarding SNMP.
 
-Enable SNMP by setting ``PNET_OPTION_SNMP`` to ``ON`` in the p-net compilation
+Enable SNMP by setting ``PNET_OPTION_SNMP`` to ``ON`` in the P-Net compilation
 options. Net-SNMP also needs to
 be installed. On Ubuntu you can install the required packages using::
 
@@ -144,9 +146,9 @@ To show the installed version of ``snmpd``, use::
    snmpd -v
 
 
-Change snmpd command line arguments
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-The p-net SNMP subagent will handle the system objects, so the default
+Changing snmpd command line arguments
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The P-Net SNMP subagent will handle the system objects, so the default
 SNMP "system" module should be disabled by adding the snmpd argument
 ``-I -system_mib``. Otherwise the subagent will complain about
 "registering pdu failed" at startup. If you use systemd init system (for
@@ -184,7 +186,7 @@ However snmpd must be started with permissions to open relevant sockets,
 typically root permissions.
 
 If you use "system V init" instead of systemd, then snmpd is typically started
-by a script file named ``/etc/init.d/snmpd``. Change the snmpd command line
+by a script file named :file:`/etc/init.d/snmpd`. Change the snmpd command line
 arguments in the file, typically via ``SNMPDOPTS``. Stop and start the
 service with::
 
@@ -194,10 +196,10 @@ service with::
 
 Configuration file for snmpd
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-The file ``snmpd.conf`` controls access to the snmp agent. It should be
+The file :file:`snmpd.conf` controls access to the snmp agent. It should be
 set to listen on all interfaces and allow read-write access to the
 Profinet MIB:s. On Ubuntu Linux you should change
-``/etc/snmp/snmpd.conf`` to read::
+:file:`/etc/snmp/snmpd.conf` to read::
 
    master  agentx
    agentaddress  udp:161
@@ -208,17 +210,17 @@ Profinet MIB:s. On Ubuntu Linux you should change
    rwcommunity  private default -V systemonly
 
 If your Linux distribution does give a long description for ``ifDesc`` you can
-override it by adding a line to the ``snmpd.conf`` file. Adapt the interface
+override it by adding a line to the :file:`snmpd.conf` file. Adapt the interface
 index (last digit in OID) and the interface name::
 
    override 1.3.6.1.2.1.2.2.1.2.3 octet_str "enp0s31f6"
 
 See :ref:`network-topology-detection` for more details on SNMP and how to
-verify the SNMP communication to the p-net stack.
+verify the SNMP communication to the P-Net stack.
 
 
-Start your application after snmpd
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Starting your application after snmpd
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 You probably would like your application to wait for the ``snmpd`` application to
 be up and running. If you use systemd as init system, modify this line in
 the ``[Unit]`` part of your ``.service`` file::
@@ -228,10 +230,10 @@ the ``[Unit]`` part of your ``.service`` file::
 You might also need to add this to the ``[Service]`` part of your
 ``.service`` file::
 
-   ExecStartPre=/usr/bin/sleep 0.3
+   ExecStartPre=/usr/bin/sleep 1.0
 
-If the p-net application fails to connect to snmpd, a message "Warning: Failed
-to connect to the agentx master agent" will be written to the p-net sample
+If the P-Net application fails to connect to snmpd, a message "Warning: Failed
+to connect to the agentx master agent" will be written to the P-Net sample
 app log file every 15 seconds.
 
 
@@ -242,7 +244,7 @@ standard out with log level "warning".
 To change to log level debug, use ``-LOd``. You should also use the ``-D`` flag
 to select which debug messages you are interested in. Use the ``-Dagentx``
 command line argument to debug the agentx communication between the snmpd and
-the subagent in the p-net stack. A log example when asked for a single OID::
+the subagent in the P-Net stack. A log example when asked for a single OID::
 
    Connection from UDP: [192.168.0.30]:43833->[192.168.0.50]:161
    agentx/master: agentx master handler starting, mode = 0xa0
@@ -285,13 +287,12 @@ Remove all contents of the journalctl logs::
    sudo journalctl --rotate
    sudo journalctl --vacuum-time=1s
 
-The configurations for journalctl are located in ``/etc/systemd/journald.conf``.
+The configurations for journalctl are located in :file:`/etc/systemd/journald.conf`.
 If you do experiments with frequent reboots, it might be useful to change some
 values::
 
    SyncIntervalSec=10s
    MaxRetentionSec=4h
-
 
 
 Boot time optimization
@@ -314,9 +315,9 @@ Other applications that you might disable for experimentation::
    sudo systemctl disable snapd snapd.socket wpa_supplicant systemd-timesyncd dhcpcd
 
 
-Debug the sample application on a Linux Laptop
-----------------------------------------------
-It can be convenient to be able to run the sample application and the p-net
+Debugging the sample application on a Linux Laptop
+--------------------------------------------------
+It can be convenient to be able to run the sample application and the P-Net
 stack in a debugger tool. It is easy using gdb and the Visual Studio Code
 editor.
 
@@ -329,25 +330,25 @@ in the terminal (within Visual Studio Code) and the corresponding file will
 be opened. Hold the CTRL key while clicking on the line.
 
 To use debug features while running (for example breakpoints) you need to adapt
-the settings file for Visual Studio Code. Click the "Run and Debug" icon
-in the left side tool bar. Then click "Create a launch.json file". In the
-"Select environment", use "C++ (GDB/LLDB)".
+the settings file for Visual Studio Code. Click the :guilabel:`Run and Debug"` icon
+in the left side tool bar. Then click :guilabel:`Create a launch.json file`. In the
+:guilabel:`Select environment`, use :guilabel:`C++ (GDB/LLDB)`.
 
-Modify the ``launch.json`` file to point at the correct executable, working
+Modify the :file:`launch.json` file to point at the correct executable, working
 directory and to use correct command line arguments.
 
 If you need to run the application with root permissions, you need to add a path in the
 ``"miDebuggerPath"`` field. It should point to a text file typically named
-``gdb``, with this content::
+:file:`gdb`, with this content::
 
    pkexec /usr/bin/gdb "$@"
 
-Put the ``gdb`` file for example in the ``.vscode`` subdirectory within
-the ``p-net`` directory. Set the executable flag::
+Put the :file:`gdb` file for example in the :file:`.vscode` subdirectory within
+the :file:`p-net` directory. Set the executable flag::
 
    chmod +x gdb
 
-An example of a ``launch.json`` file::
+An example of a :file:`launch.json` file::
 
    {
       "version": "0.2.0",

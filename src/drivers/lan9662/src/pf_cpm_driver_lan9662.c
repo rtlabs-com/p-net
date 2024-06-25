@@ -102,7 +102,7 @@ static void pf_cpm_drv_lan9662_ci_timeout (
             pf_mera_cpm_activate_rte_dht (p_iocr->cpm.frame);
          }
 
-         /* Always reset DHT while in the inital states. */
+         /* Always reset DHT while in the initial states. */
 
          reset_dht = true;
          break;
@@ -431,7 +431,7 @@ static int pf_cpm_drv_lan9662_get_iocs (
 /**
  * Read data_status for active CPM frame.
  * @param p_cpm            In: CPM instance
- * @param p_data_status    InOt: Ref to data_status value
+ * @param p_data_status    InOut: Ref to data_status value
  * @return 0 on success, -1 on error
  */
 

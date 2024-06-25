@@ -1,5 +1,7 @@
-Compliance testing of IO-devices
-================================
+.. _compliancetest:
+
+Pretesting before compliance testing of IO-devices
+==================================================
 All Profinet products need to be certified. That is done after testing by an
 accredited PROFIBUS & PROFINET International test lab (PITL).
 The full hardware, communication stack and application software is tested
@@ -17,8 +19,7 @@ for example uniqueness of MAC addresses. This is not tested by the test lab.
 A detailed description of the certification process can be downloaded from
 https://www.profibus.com/download/how-to-get-a-certificate-for-a-profinet-device/
 
-See also the general requirements on the page "Creating applications and
-porting to new hardware" in this documentation.
+See also the general requirements in :ref:`applications-and-porting`.
 
 Needed for certification:
 
@@ -37,7 +38,7 @@ Profinet devices must fulfill "Security Level 1" with regards to the net
 load. This is tested by a separate tool (not the "Automated RT tester").
 
 
-Installation of Automated RT tester on a Windows PC
+Installing Automated RT tester on a Windows PC
 ---------------------------------------------------
 Unzip the downloaded file, and double-click the
 "AutomatedRtTester_VERSION_Setup.exe" file.
@@ -45,11 +46,12 @@ Unzip the downloaded file, and double-click the
 Verify that you use the latest available version.
 
 
-Adjust the Ethernet network card on a Windows PC
-------------------------------------------------
+Adjusting the Ethernet network card on a Windows PC
+---------------------------------------------------
 To use the "Automated RT tester" tool you need to adjust the Ethernet interface
-settings of your PC. In the properties for the driver, go to the "Advanced"
-tab. For the "Packet priority & VLAN" select "Packet priority & VLAN Disable".
+settings of your PC. In the properties for the driver, go to the
+:guilabel:`Advanced` tab. For the :guilabel:`Packet priority & VLAN` select
+:guilabel:`Packet priority & VLAN Disable`.
 More details are given in the "Product Documentation" document for the tool.
 
 You also need to turn off LLDP protocol for the selected network interface
@@ -75,42 +77,42 @@ files. See the document "PN_Versions_for_certifications" included in the
 download.
 
 
-Create a project
-----------------
-Use the menu File > New > “Device Test Project”. Follow the wizard.
+Creating a project
+------------------
+Use the menu :menuselection:`File --> New --> “Device Test Project”`. Follow the wizard.
 Enter the MAC address of the IO-Device. If you use the Profinet switch
-(device "B") you can press the button "Get MAC Address", as the ART-tester
+(device "B") you can press the button :guilabel:`Get MAC Address`, as the ART-tester
 queries the network for the alias ``port-003.b``.
 
-On the “Profinet settings” page, select the GSDML file for the IO-Device.
+On the :guilabel:`Profinet settings` page, select the GSDML file for the IO-Device.
 
 Populate modules/submodules in slots/subslots by
-marking a module in the left column, and then click the -> arrow. To insert a
+marking a module in the left column, and then click the :guilabel:`->` arrow. To insert a
 submodule, mark the relevant submodule in the left column and mark the
 appropriate slot in the right column.
 
 To remove from a slot or subslot, mark it (in the right column) and press the
-<- arrow.
+:guilabel:`<-` arrow.
 
 
-Adjust settings
----------------
+Adjusting settings
+------------------
 You need to adjust the device MAC address. This is done via the menu
-Tools > Options > DUT. Enter the value and press OK.
+:menuselection:`Tools --> Options --> DUT`. Enter the value and press OK.
 
 If the device does not have support for remote change of values, you might
 need to adjust the device station name, IP address and subnet mask.
-This is done via the menu Tools > Options > Setting. You might need to
-click the "Show expert settings".
+This is done via the menu :menuselection:`Tools --> Options --> Setting`.
+You might need to click the :guilabel:`Show expert settings`.
 
 
-Run tests
----------
+Running tests
+-------------
 Select the tests (in the left side menu) to run. Failing tests are time
 consuming, so start with a single test to verify the communication. Disable all
-tests by the left side menu. Press the "Deselect all" icon. Then open "Automated
-test cases" > "Standard Setup" > DCP, and enable "DCP - DCP_IDN". Use the menu
-Project > Run.
+tests by the left side menu. Press the :guilabel:`Deselect all` icon.
+Then open "Automated test cases" > "Standard Setup" > DCP, and enable "DCP - DCP_IDN".
+Use the menu :menuselection:`Project --> Run`.
 
 When communication is verified, enable all relevant test cases.
 
@@ -128,6 +130,34 @@ Checklist before starting ART Tester tests. Use correct:
    * GSDML file
    * Plugged modules in ART Tester
    * Make sure no other device uses the IP address ``192.168.0.50``
+
+
+Unified test setup
+------------------
+As of test specification version 2.43 additional hardware is required for some test cases.
+The Embedded Test System (ETS) consists of a development board with multiple Ethernet ports.
+The use of the ETS system is called "Unified test setup".
+Table 5-30 in "Test Specification for PROFINET" (:file:`Testspec-PN_2572_V243_Feb22.pdf`) describes
+which test cases that should use the Unified test setup:
+
+* TSN (conformance class D)
+* APL (Single pair Ethernet)
+* Nodes with bridges (multiple Ethernet interfaces)
+* MRP (Media Redundancy Protocol)
+* Multicast pruning
+
+Note however, that according to the document :file:`TS-CRs_2022-08-17.pdf` also these test
+cases should use the Unified test setup.
+
+* Alarm
+* DCP
+* Diagnosis
+* DiffAccessWays
+* IP_UDP_RPC_I&M_EPM
+* Pdev_Check_onePort
+* Pdev_Records
+* RTC
+* VLAN
 
 
 Additional hardware
@@ -156,7 +186,7 @@ power outlet can be used to simplify the tests.
 
 
 Profinet-enabled switch
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^
 Some of the test cases for the Automated RT Tester requires an Profinet-enabled
 switch. It is called "Device B" in the test setup documentation.
 
@@ -165,8 +195,7 @@ Siemens Scalance X204IRT (article number 6GK5204-0BA00-2BA3).
 The ART Tester is rather strict regarding the model of Siemens Profinet switch.
 It should have IP address ``192.168.0.99``, netmask ``255.255.255.0`` and station name "b".
 Use for example Codesys to scan for the device, and to adjust the IP settings.
-Alternatively, use SinecPni to change the IP address (see the Simatic
-page in this documentation).
+Alternatively, use SinecPni to change the IP address (see :ref:`use-with-siematic`).
 
 The switch has a web interface, but it is not necessary to do any setting
 adjustments via the web interface.
@@ -182,15 +211,15 @@ Connection of the switch ports is described in the table below:
 +-------------+-----------------------------------------------+
 | P2          | IO-controller ("Device A" port X1 P1)         |
 +-------------+-----------------------------------------------+
-| P3          | Device under test (DUT) running p-net         |
+| P3          | Device under test (DUT) running P-Net         |
 +-------------+-----------------------------------------------+
 
 The Automated RT tester will detect "Device B" by itself. No configuration is
 required in the Automated RT tester menu.
 
-The setting "Use IEC V2.2 LLDP mode" available via the STEP7 Profinet setup
+The setting :guilabel:`Use IEC V2.2 LLDP mode` available via the STEP7 Profinet setup
 tool controls the format of the sent portID in LLDP frames.
-With the "Use IEC V2.2 LLDP mode" enabled the portID is sent as ``port-001``,
+With the :guilabel:`Use IEC V2.2 LLDP mode` enabled the portID is sent as ``port-001``,
 while it is sent as ``port-001.b`` if disabled. The latter format is used in
 Profinet 2.3 and newer. The ART tester requires the LLDP format to be in the
 2.2 format, otherwise it will complain about portID length.
@@ -211,9 +240,9 @@ built-in web server. Enter its IP address in your web browser to log in
 (username and password printed on the hardware).
 (You might need to temporary set your Ethernet interface to IP ``192.168.0.1``
 and subnet mask to ``255.255.255.0``)
-Modify the IP settings (on the "Einstellung" page) to use a static IP address
+Modify the IP settings (on the :guilabel:`Einstellung` page) to use a static IP address
 of ``192.168.1.244``.
-On the "Steuerung" page you can control the individual power outputs.
+On the :guilabel:`Steuerung` page you can control the individual power outputs.
 
 Connect power for your device under test to connector number 3 on the power outlet.
 
@@ -229,7 +258,7 @@ black cross when the outputs are off (or when the power outlet not is connected)
 +--------------+------------------------------------------------------------+
 | 2            | Profinet enabled switch "B"                                |
 +--------------+------------------------------------------------------------+
-| 3            | Device under test (DUT) running p-net                      |
+| 3            | Device under test (DUT) running P-Net                      |
 +--------------+------------------------------------------------------------+
 | 4            | Neighbour device "D", connected to DUT port 2              |
 +--------------+------------------------------------------------------------+
@@ -302,6 +331,9 @@ one bus adapter are isolated from the corresponding terminals on other bus adapt
 
 Connect +24 V to the red terminals of the interface module and the base units.
 Connect 0 V to the blue terminals of the interface module and the base units.
+Note that the input- and output modules will not work if not powered via their base units,
+it is not sufficient to power the interface module.
+Verify that the PWR LED is lit on all interface modules.
 
 Connect a button via wires to the digital input (DI) module. Connect it between
 DI.7 (pin 18) and and +24 V. The LED ".7" on the input module will be green
@@ -314,16 +346,15 @@ Use the Ethernet connector P1R.
 
 .. image:: illustrations/SimaticIoDevice.jpg
 
-See the page on setting up a Simatic PLC in this documentation for
-instructions on usage.
+See :ref:`use-with-siematic` for instructions on usage.
 
 Make sure that the LLDP frames are in the legacy LLDP format, where the PortId
 is "port-001" instead of "port-001.d". This is done via the setting
-"Use IEC V2.2 LLDP mode", available in the STEP7 Profinet setup tool for PLCs.
+:guilabel:`Use IEC V2.2 LLDP mode`, available in the STEP7 Profinet setup tool for PLCs.
 
 
-Set up Cisco SF352-08P switch
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Setting up Cisco SF352-08P switch
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 For multiport Profinet devices, also SNMP-communication to non-Profinet
 devices is verified. This Cisco switch can be used for that purpose.
 Replaces "Device D" in the test setup.
@@ -337,26 +368,27 @@ Set your laptop IP address to ``192.168.1.143`` and netmask to be ``255.255.255.
 Log in to ``192.168.1.254``. Default username is ``cisco`` and password is ``cisco``.
 Change password when prompted.
 
-Set the IP address via the left side menu "IP configuration" -> "IPv4 Management and Interfaces" -> "IPv4 Interface".
-Click "Add" and enter the static IP address ``192.168.0.98``. Use netmask ``255.255.255.0``.
+Set the IP address via the left side menu
+:menuselection:`IP configuration --> IPv4 Management and Interfaces --> IPv4 Interface`.
+Click :guilabel:`Add` and enter the static IP address ``192.168.0.98``. Use netmask ``255.255.255.0``.
 The switch will change IP address to a new subnet, so you might need to change your
 laptop network setting before connecting to the new IP address.
 
-Adjust LLDP settings via menu Administration -> "Discovery - LLDP" -> Properties.
-In the page top bar, set "Display mode" to Advanced. Set "Chassis ID Advertisement"
-to "MAC Address".
+Adjust LLDP settings via menu :menuselection:`Administration --> "Discovery - LLDP" --> Properties`.
+In the page top bar, set :guilabel:`Display mode` to :guilabel:`Advanced`.
+Set :guilabel:`Chassis ID Advertisement` to :guilabel:`MAC Address`.
 
-Via Administration -> "Discovery - LLDP" -> "Port settings" select port FE1 and
+Via :menuselection:`Administration --> "Discovery - LLDP" --> "Port settings` select port FE1 and
 click Edit. Enable SNMP notification. Select the optional TLVs that start with "802.3".
 
-Via the menu Security -> "TCP/UDP Services", enable "SNMP Service".
+Via the menu :menuselection:`Security --> "TCP/UDP Services"`, enable "SNMP Service".
 
-In the page top bar, set "Display mode" to Advanced.
-Add a SNMP community via the left side menu SNMP -> Communities and
-click Add. The community string should be "public". Set "SNMP Management
-Station" to "All". Click "Apply" and "Close".
+In the page top bar, set :guilabel:`Display mode` to :guilabel:`Advanced`.
+Add a SNMP community via the left side menu :menuselection:`SNMP --> Communities` and
+click :guilabel:`Add`. The community string should be ``public``.
+Set :guilabel:`SNMP Management Station` to :guilabel:`All`. Click :guilabel:`Apply` and :guilabel:`Close`.
 
-In the top of the page click the "Save" icon.
+In the top of the page click the :guilabel:`Save` icon.
 
 For the actual measurements, use the port 1 on the Cisco switch.
 
@@ -368,8 +400,8 @@ Verify the SNMP communication to the Cisco switch::
 Tips and ideas
 --------------
 If you end up with ``Pass with Hint "The device made a EPM Request from a
-not Profinet port"``, that means that wrong source port was used when sending
-UDP messages. See the page on Linux in this documentation on how to adjust the
+not Profinet port"``, it means that wrong source port was used when sending
+UDP messages. See :ref:`additional-linux-details` on how to adjust the
 ephemeral port range.
 
 If your software version indicates that it is a prototype version (letter "P")
@@ -377,22 +409,21 @@ the Automated RT Tester will mark this as pass with hint.
 
 The Automated RT Tester has a convenient feature for remotely setting the
 station name, IP address, netmask and gateway of the device under test (DUT).
-Use the menu Tools > "Set DUT name and IP".
+Use the menu :menuselection:`Tools --> "Set DUT name and IP"`.
 It will change the settings of the IO device via DCP communication. It is also
 possible to do a factory reset of the IO device.
 
 It can be useful to show the ART tester log messages in the target output.
-On your Linux target run (replace interface name if necessary)::
+On your Linux target, run (replace interface name if necessary)::
 
    tcpdump -i br0 udp port 514 -v -a
 
-
-Reduce timeout values to speed up testing
------------------------------------------
+Reducing timeout values to speed up testing
+-------------------------------------------
 It is possible to reduce the timeout values used by Automated RT Tester. This
 can be convenient during development, in order to speed up the tests.
-Use the menu Tools > Options, and enable "Show expert settings". The time
-settings are found on the "Expert Settings" tab.
+Use the menu :menuselection:`Tools --> Options`, and enable :guilabel:`Show expert settings`. The time
+settings are found on the :guilabel:`Expert Settings` tab.
 The times are given in milliseconds.
 Remember to use the default values when doing pre-certification testing.
 
@@ -558,7 +589,7 @@ attributes.
 * MRP_On2
 
 These are named "MRP_Pdev", and are described in
-"TCS_00004126_MRP_Pdev_ctrl_not_automated_V2.42.1.pdf".
+:file:`TCS_00004126_MRP_Pdev_ctrl_not_automated_V2.42.1.pdf`.
 
 The PLC (CPU 1516-3 PN/DP) and the neighbour device (Interface module IM
 155-6PN/2) used in the standard setup both have support for MRP.
@@ -572,8 +603,8 @@ Your GSDML file should pass the verification with the "GSDMLcheck" tool.
 Details on tests with PLC
 -------------------------
 
-Load PLC program
-^^^^^^^^^^^^^^^^
+Loading PLC program
+^^^^^^^^^^^^^^^^^^^
 Verify that the sample application PLC program is working properly with your
 IO-device. Button1 should be able to control the state of data LED (LED1).
 
@@ -582,6 +613,8 @@ Interoperability
 Run with PLC for 10 minutes without errors.
 If the device under test has more than one port, there should be 5 IO-devices
 connected to the non-PLC port.
+The list of devices to use is found in the test bundle, in the document
+:file:`TestCaseSpec/controller/not_automated/TCS_00004200_Devicelist_V2.41.1.pdf`.
 
 For the cyclic data, use one input module and one output module.
 The PLC should be programmed to continuously read out record data.
@@ -595,10 +628,12 @@ IO-device have the value GOOD after it has sent the "application ready"
 message.
 Also verify that there have been no alarms (sort the frames by protocol).
 
-* "Record data"?
-* ExpectedIdentification is equal to the RealIdentification?
-* How to create additional net load? (using DCP Identify all)
-* Implicit read?
+Note: We need to write more about the following:
+
+* "Record data"
+* ExpectedIdentification is equal to the RealIdentification
+* How to create additional net load (using DCP Identify all)
+* Implicit read
 
 Data Hold Timer
 ^^^^^^^^^^^^^^^
@@ -648,7 +683,9 @@ In the Wireshark file, make sure IOPS and IOCS in the cyclic data from the
 IO-device have the value GOOD after it has sent the "application ready"
 message.
 
-* Record data?
+Note: We need to write more about the following:
+
+* Record data
 
 
 Security Level 1 tester
@@ -669,7 +706,7 @@ shortest cycle time useful when there is no additional network load.
 PLC program
 ^^^^^^^^^^^
 Use the STEP7 project from the test bundle, and import it into the TIA portal.
-In Siemens TIA Portal, open the file "normal_d_V2.40.0_V15.1.zap15_1" as
+In Siemens TIA Portal, open the file :file:`normal_d_V2.40.0_V15.1.zap15_1` as
 an existing project. Give the path to a local directory that will be used
 for the project.
 
@@ -743,18 +780,18 @@ Tester software for additional network load
 Install the tester software on an Ubuntu machine, or in a virtual Ubuntu
 machine running on Windows. The IP address should be ``192.168.0.30``.
 See the PDF in the "Security Level 1"/"tester" folder in the downloaded
-test bundle. The program ends up in ``/root/Netload``. See the PDF
+test bundle. The program ends up in :file:`/root/Netload`. See the PDF
 how to start the program.
 
-The SL1-tester has a number of template ``.pcap`` files, and rewrites those
+The SL1-tester has a number of template :file:`.pcap` files, and rewrites those
 files with the MAC address of the SL1-tester laptop and the DUT.
-Rewriting is done using the Bittwist editor tool (``bittwiste``).
-The MAC of the DUT is found with the ``arping`` Linux command.
-Actual sending of frames is done with the ``packETHcli`` Linux command.
+Rewriting is done using the Bittwist editor tool (:command:`bittwiste`).
+The MAC of the DUT is found with the :command:`arping` Linux command.
+Actual sending of frames is done with the :command:`packETHcli` Linux command.
 
 
-Set up hardware
-^^^^^^^^^^^^^^^
+Setting up hardware
+^^^^^^^^^^^^^^^^^^^
 Set the station name of the DUT to ``dut`` and the IP address to ``192.168.0.50``.
 Use a temporary station name, to be able to detect device reboots.
 
@@ -772,8 +809,8 @@ Level 1 tester software. Connect neighbour device D to port 2 of the DUT.
 Synchronize clock of the PLC with the the clock of the laptop running the
 tester software, as we later read the diagnostic log of the PLC.
 
-Run the tests
-^^^^^^^^^^^^^
+Running the tests
+^^^^^^^^^^^^^^^^^
 For a class B device with two ports you need to run one "normal" mode test and
 one "faulty" mode test. After the "faulty" mode the communication should be
 good again after the additional network load has stopped.
@@ -872,15 +909,15 @@ and you can verify communication using the LEDs of the PLC.
 If the error LED (on the PLC) does not turn off after a specific test case, then
 you have found the test case that causes permanent communication breakdown.
 
-Modify this line in the ``/root/Netload/Scripts/Netload-Tester.sh`` script::
+Modify this line in the :file:`/root/Netload/Scripts/Netload-Tester.sh` script::
 
     # -> Delay between the individual frame sequences
     Delay="30s"
 
 
-Troubleshooting
----------------
-For the "Get MAC Address" button in ART tester to work, you need to
+Compliance test troubleshooting
+-------------------------------
+For the :guilabel:`Get MAC Address` button in ART tester to work, you need to
 have the "Device b" connected.
 
 If the test case "Different access ways port-to-port" fails,
@@ -904,8 +941,9 @@ If there are problems in test case Behavior scenario 10 regarding reading and
 writing via SNMP after power cycling, verify that there is proper connection to
 the SNMP daemon immediately at startup.
 
-If you get the error "Device did answer ping request although it shouldn't", the device is probably not powered
-off during the test as required. Make sure your device is not powered via some USB cable, for example.
+If you get the error "Device did answer ping request although it shouldn't",
+the device is probably not powered off during the test as required.
+Make sure your device is not powered via some USB cable, for example.
 
 If the Alarm test case fails with the message "No valid Transport ACK on the Alarm ACK was received",
-then the Ethernet receieve task might have too low priority.
+then the Ethernet receive task might have too low priority.

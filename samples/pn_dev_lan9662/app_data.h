@@ -24,7 +24,7 @@
  *
  * Functions for:
  * - Getting input data
- * - Setting ouput data
+ * - Setting output data
  * - Setting default output state
  *
  * In this LAN9662 sample application the submodule data

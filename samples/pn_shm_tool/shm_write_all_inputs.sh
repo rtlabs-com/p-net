@@ -26,4 +26,4 @@ do
 data="${data}$1"
 done
 echo -n -e "$data" | \
-pn_shm_tool -w pnet-in-6-1-digital_input_1x8000
+pn_shm_tool -w pnet-in-6-1-digital_input_1x800

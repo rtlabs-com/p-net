@@ -1,5 +1,7 @@
-Real-time properties of Linux
-=============================
+.. _linuxtiming:
+
+Improving Linux responsiveness
+==============================
 Regular Linux is not a real-time operating system. Profinet have rather strict
 timing constraints. For example a Simatic PLC (with default settings) will
 send an alarm if no incoming Profinet frame is received for 7-8 ms. So it is
@@ -9,49 +11,48 @@ There are a few methods that can be used to improve the Linux responsiveness.
 The most important is to use FIFO scheduling and to isolate the application on
 a separate CPU core.
 
+Using USE_SCHED_FIFO option
+---------------------------
+#. Select the FIFO Linux kernel scheduling option. This is done by passing
+   ``-DUSE_SCHED_FIFO=ON`` command line argument to cmake.
 
-Use USE_SCHED_FIFO option
--------------------------
-Select the FIFO Linux kernel scheduling option. This is done by passing
-``-DUSE_SCHED_FIFO=ON`` command line argument to cmake.
+#. Display real time properties of a process (should typically be ``SCHED_FIFO``
+   for best result)::
 
-Display real time properties of a process (should typically be ``SCHED_FIFO``
-for best result)::
+    pi@pndevice-pi:~$ chrt -p $(pidof pn_dev)
+    pid 438's current scheduling policy: SCHED_OTHER
+    pid 438's current scheduling priority: 0
 
-   pi@pndevice-pi:~$ chrt -p $(pidof pn_dev)
-   pid 438's current scheduling policy: SCHED_OTHER
-   pid 438's current scheduling priority: 0
+   To show all threads, with scheduling mechanism::
 
-To show all threads, with scheduling mechanism::
+    ps -efLc
 
-   ps -efLc
+   or for the sample application::
 
-or for the sample application::
+    ps -efLc | grep pn_dev
 
-   ps -efLc | grep pn_dev
+   The column "NLWP" shows number of threads, and the column "LWP" shows the thread ID.
+   In the column "CLS" is the thread scheduling policy shown. It can be for example
+   ``TS`` for time sharing, ``RR`` for round robin or ``FF`` for FIFO scheduling.
 
-The column "NLWP" shows number of threads, and the column "LWP" shows the thread ID.
-In the column "CLS" is the thread scheduling policy shown. It can be for example
-``TS`` for time sharing, ``RR`` for round robin or ``FF`` for FIFO scheduling.
+   To show the names of the threads, use custom output of the ``ps`` command::
 
-To show the names of the threads, use custom output of the ``ps`` command::
+    pi@raspberrypi:~$ ps H -o 'pid ppid nlwp tid lwp comm cls pri psr time' $(pidof pn_dev)
+    PID  PPID NLWP   TID   LWP COMMAND         CLS PRI PSR     TIME
+    1018     1    8  1018  1018 pn_dev           TS  19   2 00:00:00
+    1018     1    8  1020  1020 os_eth_task      FF  50   0 00:00:00
+    1018     1    8  1021  1021 os_eth_task      FF  50   0 00:00:00
+    1018     1    8  1022  1022 os_eth_task      FF  50   0 00:00:00
+    1018     1    8  1023  1023 p-net_bg_worker  FF  45   0 00:00:08
+    1018     1    8  1029  1029 pn_snmp          FF  41   1 00:00:00
+    1018     1    8  1030  1030 os_timer         FF  70   3 00:01:37
+    1018     1    8  1031  1031 pn_dev           FF  55   2 00:01:54
 
-   pi@raspberrypi:~$ ps H -o 'pid ppid nlwp tid lwp comm cls pri psr time' $(pidof pn_dev)
-   PID  PPID NLWP   TID   LWP COMMAND         CLS PRI PSR     TIME
-   1018     1    8  1018  1018 pn_dev           TS  19   2 00:00:00
-   1018     1    8  1020  1020 os_eth_task      FF  50   0 00:00:00
-   1018     1    8  1021  1021 os_eth_task      FF  50   0 00:00:00
-   1018     1    8  1022  1022 os_eth_task      FF  50   0 00:00:00
-   1018     1    8  1023  1023 p-net_bg_worker  FF  45   0 00:00:08
-   1018     1    8  1029  1029 pn_snmp          FF  41   1 00:00:00
-   1018     1    8  1030  1030 os_timer         FF  70   3 00:01:37
-   1018     1    8  1031  1031 pn_dev           FF  55   2 00:01:54
-
-The "PSR" column shows which processor (core) the thread is running on.
+   The "PSR" column shows which processor (core) the thread is running on.
 
 
-Run the application on a separate processor core
-------------------------------------------------
+Running the application on a separate processor core
+----------------------------------------------------
 It is possible to tell the Linux kernel not to put any processes on a specific
 processor core. This assumes that you have more than one core in your CPU.
 Check it using::
@@ -81,8 +82,8 @@ Display which CPU core a process is running on::
    pi@pndevice-pi:~$ taskset -c -p $(pidof pn_dev)
    pid 443's current affinity list: 2
 
-Real-time patches
------------------
+Applying real-time patches
+--------------------------
 By applying the real-time patches (PREEMPT_RT) the real-time properties can
 be improved.
 
@@ -91,20 +92,18 @@ For more details, see:
 * https://wiki.linuxfoundation.org/realtime/start
 * https://rt.wiki.kernel.org/index.php/Main_Page
 
-It is important to write you application so that it can use the benefits of
+It is important to write your application so that it can use the benefits of
 the real-time patches. This includes running in a separate thread and setting
 the priorities properly.
 
-For the real-time patches to have an effect on p-net, set the ``USE_SCHED_FIFO``
+For the real-time patches to have an effect on P-Net, set the ``USE_SCHED_FIFO``
 cmake option.
 
-
-Increase application cycle time
--------------------------------
+Increasing application cycle time
+---------------------------------
 For testing, you can increase the cycle time from the PLC in order to reduce
 the time-out problems. Also the allowed number of missed frames can be
 increased in the PLC settings.
-
 
 Network interface hardware
 --------------------------

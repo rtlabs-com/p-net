@@ -21,14 +21,14 @@
  * @brief Device properties defined by the GSDML device definition
  *
  * Functions for getting module, submodule and parameter
- * configurations using their IDs.
+ * configurations using their ids.
  *
  * Important:
  * Any change in this file may require an update of the GSDML file.
  * Note that when the GSDML file is updated it has to be reloaded
  * in your Profinet engineering tool. PLC applications may be affected.
  *
- * Design requires unique submodule IDs.
+ * Design requires unique submodule IDs and unique parameter indexes.
  */
 
 #ifdef __cplusplus
@@ -47,10 +47,30 @@ extern "C" {
 /* GSDML tag: DeviceID */
 #define APP_GSDML_DEVICE_ID 0x9662
 
+/* Used in DCP communication */
+#define APP_GSDML_OEM_VENDOR_ID 0xcafe
+#define APP_GSDML_OEM_DEVICE_ID 0xee02
+
+/* Used in I&M0 */
+#define APP_GSDML_IM_HARDWARE_REVISION 3
+#define APP_GSDML_IM_VERSION_MAJOR     1
+#define APP_GSDML_IM_VERSION_MINOR     2
+
 /* Allowed: 'V', 'R', 'P', 'U', 'T' */
-#define APP_GSDML_SW_REV_PREFIX     'V'
-#define APP_GSDML_PROFILE_ID        0x1234
-#define APP_GSDML_PROFILE_SPEC_TYPE 0x5678
+#define APP_GSDML_SW_REV_PREFIX       'V'
+#define APP_GSDML_PROFILE_ID          0x1234
+#define APP_GSDML_PROFILE_SPEC_TYPE   0x5678
+#define APP_GSDML_IM_REVISION_COUNTER 0 /* Typically 0 */
+
+/* Note: You need to read out the actual hardware serial number instead */
+#define APP_GSDML_EXAMPLE_SERIAL_NUMBER "007"
+
+/* Initial values. Can be overwritten by PLC */
+#define APP_GSDML_TAG_FUNCTION "my function"
+#define APP_GSDML_TAG_LOCATION "my location"
+#define APP_GSDML_IM_DATE      "2022-03-01 10:03"
+#define APP_GSDML_DESCRIPTOR   "my descriptor"
+#define APP_GSDML_SIGNATURE    ""
 
 /* GSDML tag: Writeable_IM_Records */
 #define APP_GSDML_IM_SUPPORTED                                                 \
@@ -74,6 +94,8 @@ extern "C" {
 #define APP_GSDML_LOGBOOK_ENTRY_DETAIL 0xFEE1DEAD /* Manufacturer specific */
 
 #define APP_GSDML_MAX_SUBMODULES 20
+
+#define APP_GSDML_DEFAULT_MAUTYPE 0x10 /* Copper 100 Mbit/s Full duplex */
 
 #define APP_GSDML_ALARM_PAYLOAD_SIZE 1 /* bytes */
 
