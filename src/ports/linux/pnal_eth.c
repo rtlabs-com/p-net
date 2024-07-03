@@ -31,6 +31,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 struct pnal_eth_handle
 {
@@ -59,6 +60,9 @@ static void os_eth_task (void * thread_arg)
    pnal_buf_t * p = pnal_buf_alloc (PNAL_BUF_MAX_SIZE);
    assert (p != NULL);
 
+   // Wait to init finish
+   sleep(1);
+   
    while (1)
    {
       readlen = recv (eth_handle->socket, p->payload, PNAL_BUF_MAX_SIZE, 0);
