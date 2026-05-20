@@ -35,7 +35,7 @@
 #define PF_MERA_INVALID_ID            0xFFFF
 #define PF_MERA_DATA_STATUS_MASK      0x35
 #define PF_MERA_SCRIPT_ARG_LEN        24
-#define PF_MERA_RTE_INFO_PERIOD_IN_US 30000000
+#define PF_MERA_RTE_INFO_PERIOD_IN_US 0 /* 30000000 for periodic messages*/
 #define PF_MERA_POLL_INTERVAL_IN_US   1000000
 #define PF_MERA_PPM_IODATA_OFFSET     6   /* frame ID + vlan ID */
 #define PF_MERA_CPM_IODATA_OFFSET     2   /* frame ID + vlan ID */
@@ -136,7 +136,7 @@ typedef struct pf_mera
 
    struct mera_inst * mera_lib; /* MERA library ref */
    pf_mera_frame_t frame[PNET_LAN9662_MAX_FRAMES];
-   pf_scheduler_handle_t sched_handle; /* Debug info timeout handle */
+   pf_scheduler_handle_t rte_show_tmo_handle; /* Debug info timeout handle */
    pf_scheduler_handle_t poll_handle;  /* Mera lib poll timeout handle */
 
    /* Submodule RTE configuration set by calls to
@@ -315,16 +315,19 @@ static void pf_mera_rte_show_periodic (
    void * arg,
    uint32_t current_time)
 {
-
    pf_mera_t * handle = (pf_mera_t *)arg;
    pf_mera_rte_show (handle->mera_lib);
 
+#if (PF_MERA_RTE_INFO_PERIOD_IN_US == 0)
+   pf_scheduler_reset_handle (&handle->rte_show_tmo_handle);
+#else
    pf_scheduler_add (
       net,
       PF_MERA_RTE_INFO_PERIOD_IN_US,
       pf_mera_rte_show_periodic,
       handle,
-      &handle->sched_handle);
+      &handle->rte_show_tmo_handle);
+#endif
 }
 #endif
 
@@ -1068,24 +1071,41 @@ static int pf_mera_ppm_start_rte (pf_mera_t * handle, pf_mera_frame_t * frame)
 
    /*
     * Add WAL used for internal write actions QSPI -> SRAM
-    * The names of the called functions is a bit misleading
+    * The names of the called functions are a bit misleading
     * since the WAL is for internal writes and has no data group (dg)
     * or rtp id associated with it and no relation to outbound data.
+    * The configuration is seen in the RTP debug output.
+    * Enable using RTP debug info using PNET_OPTION_LAN9662_SHOW_RTE_INFO
     */
-   mera_ob_wal_conf_get (handle->mera_lib, frame->internal_wal_id, &wal_conf);
-   wal_conf.time.offset = 100000;
-   wal_conf.time.interval = frame->interval;
 
    if (
-      mera_ob_wal_conf_set (
+      mera_ob_wal_conf_get (
          handle->mera_lib,
          frame->internal_wal_id,
-         &wal_conf) != 0)
+         &wal_conf) == 0)
+   {
+      wal_conf.time.offset = 100000;
+      wal_conf.time.interval = frame->interval;
+
+      if (
+         mera_ob_wal_conf_set (
+            handle->mera_lib,
+            frame->internal_wal_id,
+            &wal_conf) != 0)
+      {
+         LOG_ERROR (
+            PF_MERA_LOG,
+            "MERA(%d): Failed to set WAL for internal transfers\n",
+            __LINE__);
+      }
+   }
+   else
    {
       LOG_ERROR (
          PF_MERA_LOG,
-         "MERA(%d): Failed to set WAL for internal transfers\n",
+         "MERA(%d): Failed to get WAL conf for internal transfer\n",
          __LINE__);
+      return -1;
    }
 
    for (slot = 0; slot < PNET_MAX_SLOTS; slot++)
@@ -1439,14 +1459,14 @@ int pf_mera_ppm_start (pnet_t * net, pf_drv_frame_t * drv_frame)
    }
 
 #if PNET_OPTION_LAN9662_SHOW_RTE_INFO
-   pf_scheduler_init_handle (&handle->sched_handle, "mera_show");
+   pf_scheduler_init_handle (&handle->rte_show_tmo_handle, "mera_show");
    if (
       pf_scheduler_add (
          net,
-         2000000,
+         3000000,
          pf_mera_rte_show_periodic,
          handle,
-         &handle->sched_handle) != 0)
+         &handle->rte_show_tmo_handle) != 0)
    {
       LOG_FATAL (PF_MERA_LOG, "MERA(%d): Failed to add timer\n", __LINE__);
       exit (EXIT_FAILURE);
@@ -1743,7 +1763,14 @@ int pf_mera_ppm_stop (pnet_t * net, pf_drv_frame_t * drv_frame)
    LOG_DEBUG (PF_PPM_LOG, "MERA(%d): Stop PPM\n", __LINE__);
    if (frame->active)
    {
-      mera_ib_flush (handle->mera_lib);
+      if (mera_ib_flush (handle->mera_lib) != 0)
+      {
+         LOG_ERROR (
+            PF_MERA_LOG,
+            "MERA(%d): Failed to flush inbound RTP in ppm_stop\n",
+            __LINE__);
+      }
+
       pf_mera_delete_vcam_rule (frame->vcam_id);
 
       for (i = 0; i < PNET_MAX_SLOTS; i++)
@@ -2396,22 +2423,42 @@ int pf_mera_cpm_stop (pnet_t * net, pf_drv_frame_t * drv_frame)
 {
    pf_mera_frame_t * frame = (pf_mera_frame_t *)drv_frame;
    pf_mera_t * handle = (pf_mera_t *)net->hwo_drv;
+   mera_ob_rtp_state_t state;
 
    LOG_DEBUG (PF_PPM_LOG, "MERA(%d): Stop CPM\n", __LINE__);
 
    mera_ob_wal_rel (handle->mera_lib, frame->ob_wal_id);
 
+   // check if rtp is active and stop it
+   mera_ob_rtp_state_get (handle->mera_lib, frame->rtp_id, &state);
+   if (state.active)
+   {
+      LOG_WARNING (
+         PF_MERA_LOG,
+         "MERA(%d): Outbound RTP was active after stopped event!\n",
+         __LINE__);
+      state.active = false;
+      mera_ob_rtp_state_set (handle->mera_lib, frame->rtp_id, &state);
+   }
+
    if (mera_ob_flush (handle->mera_lib) != 0)
    {
-      LOG_ERROR (PF_CPM_LOG, "MERA(%d): Failed to flush rtp\n", __LINE__);
+      LOG_ERROR (
+         PF_CPM_LOG,
+         "MERA(%d): Failed to flush outbound RTP in cpm_stop\n",
+         __LINE__);
    }
+
    if (pf_mera_delete_vcam_rule (frame->vcam_id) != 0)
    {
       LOG_ERROR (PF_CPM_LOG, "MERA(%d): Failed to delete VCAM rule\n", __LINE__);
    }
 
    /* Stop periodic debug info */
-   pf_scheduler_remove_if_running (net, &handle->sched_handle);
+#if PNET_OPTION_LAN9662_SHOW_RTE_INFO && (PF_MERA_RTE_INFO_PERIOD_IN_US > 0)
+   pf_scheduler_remove_if_running (net, &handle->rte_show_tmo_handle);
+#endif
+
    return 0;
 }
 

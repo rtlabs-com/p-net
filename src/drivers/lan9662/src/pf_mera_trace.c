@@ -70,7 +70,7 @@ static void printf_trace_head (
    m = (tv.tv_sec / 60 % 60);
    s = (tv.tv_sec % 60);
    printf (
-      "%u:%02u:%02u:%05lu %s/%s/%s %s(%u) %s%s",
+      "%u:%02u:%02u:%06llu %s/%s/%s %s(%u) %s%s",
       h,
       m,
       s,

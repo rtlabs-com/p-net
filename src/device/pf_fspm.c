@@ -676,10 +676,10 @@ int pf_fspm_cm_read_ind (
       {
          LOG_DEBUG (
             PNET_LOG,
-            "FSPM(%d): Triggering read callback for AREP %u. Slot %u subslot "
-            "%u index %u\n",
+            "FSPM(%d): Triggering read callback for AREP %" PRIu32
+            ". Slot %u subslot %u index %u\n",
             __LINE__,
-            p_ar->arep,
+            ((p_ar == NULL) ? UINT32_MAX : p_ar->arep),
             slot,
             subslot,
             index);
@@ -687,7 +687,7 @@ int pf_fspm_cm_read_ind (
          ret = net->fspm_cfg.read_cb (
             net,
             net->fspm_cfg.cb_arg,
-            p_ar->arep,
+            ((p_ar == NULL) ? UINT32_MAX : p_ar->arep),
             p_read_request->api,
             slot,
             subslot,

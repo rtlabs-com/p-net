@@ -168,26 +168,21 @@ static void pf_cpm_drv_lan9662_ci_timeout (
          p_iocr->cpm.dht++;
       }
 
-      if (p_iocr->cpm.dht >= p_iocr->cpm.data_hold_factor)
+      /* Workaround for missing RTP stopped event */
+      if (!mera_event.stopped && p_iocr->cpm.dht > p_iocr->cpm.data_hold_factor)
       {
-         if (p_iocr->cpm.dht == p_iocr->cpm.data_hold_factor)
-         {
-            LOG_WARNING (
-               PF_CPM_LOG,
-               "CPM_DRV_MERA(%d): Data hold timer (DHT) expired\n",
-               __LINE__);
 
-            if (!mera_event.stopped)
-            {
-               /* Workaround for RTC testcase. */
-               LOG_INFO (
-                  PF_CPM_LOG,
-                  "CPM_DRV_MERA(%d): Generate rtp stopped event\n",
-                  __LINE__);
+         LOG_WARNING (
+            PF_CPM_LOG,
+            "CPM_DRV_MERA(%d): Data hold timer (DHT) expired (SW Detected)\n",
+            __LINE__);
 
-               mera_event.stopped = true;
-            }
-         }
+         LOG_DEBUG (
+            PF_CPM_LOG,
+            "CPM_DRV_MERA(%d): Generate rtp stopped event\n",
+            __LINE__);
+
+         mera_event.stopped = true;
       }
 
       if (mera_event.stopped)
@@ -195,6 +190,12 @@ static void pf_cpm_drv_lan9662_ci_timeout (
          p_iocr->p_ar->err_cls = PNET_ERROR_CODE_1_RTA_ERR_CLS_PROTOCOL;
          p_iocr->p_ar->err_code =
             PNET_ERROR_CODE_2_ABORT_AR_CONSUMER_DHT_EXPIRED;
+
+         LOG_DEBUG (
+            PF_CPM_LOG,
+            "CPM_DRV_MERA(%d): CPM stopped event, %d frames receivied\n",
+            __LINE__,
+            (int)p_iocr->cpm.recv_cnt);
 
          p_iocr->cpm.dht = 0;
          p_iocr->cpm.ci_running = false; /* Stop timer */

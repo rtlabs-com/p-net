@@ -96,7 +96,7 @@ int pf_fspm_cm_write_ind (
  * Triggers the \a pnet_read_ind() user callback for some values.
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             In:    The AR instance.
+ * @param p_ar             In:    The AR instance, or NULL for no related AR.
  * @param p_read_request   In:    The read request record.
  * @param pp_read_data     Out:   A pointer to the source data.
  * @param p_read_length    InOut: The maximum (in) and actual (out) length in
