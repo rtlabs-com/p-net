@@ -4438,6 +4438,14 @@ int pf_cmrpc_dce_packet (
                   PNET_ERROR_DECODE_PNIO,
                   PNET_ERROR_CODE_1_CMRPC,
                   PNET_ERROR_CODE_2_CMRPC_STATE_CONFLICT);
+
+               /* Release and kill session */
+               if (p_sess->p_ar != NULL)
+               {
+                  pf_ar_release (net, p_sess->p_ar);
+                  p_sess->p_ar = NULL;
+               }
+               p_sess->kill_session = true;
             }
          }
 
