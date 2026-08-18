@@ -1135,6 +1135,12 @@ static void pf_cmrpc_send_with_timeout (
                pf_udp_close (p_net, p_sess->socket);
                p_sess->socket = -1;
             }
+            /* Release the session, or it stays in_use forever. With
+             * PF_MAX_SESSION = 2*PNET_MAX_AR + 1 sessions in total, a few
+             * unanswered CControl requests otherwise exhaust the pool and
+             * the device permanently logs "Out of session resources" for
+             * every subsequent incoming frame. */
+            pf_session_release (p_net, p_sess);
          }
          else
          {
@@ -1148,6 +1154,8 @@ static void pf_cmrpc_send_with_timeout (
             p_sess->p_ar->err_code =
                PNET_ERROR_CODE_2_ABORT_AR_RPC_CONTROL_ERROR;
             (void)pf_cmdev_cm_abort (p_net, p_sess->p_ar);
+            /* Same leak as the CControl branch above: release the session. */
+            pf_session_release (p_net, p_sess);
          }
       }
    }
