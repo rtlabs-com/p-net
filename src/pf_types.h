@@ -692,6 +692,8 @@ typedef enum pf_index_values
    PF_IDX_SLOT_DIAG_MAINT_REQ_ALL = 0xc012,
    PF_IDX_SLOT_DIAG_MAINT_DEM_ALL = 0xc013,
 
+   PF_IDX_AR_MIN = 0xe000,
+
    PF_IDX_AR_EXP_ID_DATA = 0xe000,
    PF_IDX_AR_REAL_ID_DATA = 0xe001,
    PF_IDX_AR_MOD_DIFF = 0xe002,
@@ -715,6 +717,8 @@ typedef enum pf_index_values
 
    PF_IDX_AR_RS_GET_EVENT = 0xe060,
    PF_IDX_AR_RS_ACK_EVENT = 0xe061,
+
+   PF_IDX_AR_MAX = 0xefff,
 
    PF_IDX_API_REAL_ID_DATA = 0xf000,
 
@@ -764,6 +768,18 @@ typedef enum pf_index_values
 
    PF_IDX_DEV_CONN_MON_TRIGGER = 0xfbff,
 } pf_index_values_t;
+
+/**
+ * Check whether a record index is AR specific.
+ *
+ * @param index            In: The record index.
+ * @return  true if the index is AR specific,
+ *          false otherwise.
+ */
+static inline bool pf_index_is_ar_specific (uint16_t index)
+{
+   return ((PF_IDX_AR_MIN <= index) && (index <= PF_IDX_AR_MAX));
+}
 
 CC_PACKED_BEGIN
 typedef struct CC_PACKED pf_block_header
@@ -1685,10 +1701,45 @@ typedef struct pf_alarm_cr_tag_header
                                    USER_PRIORITY_HIGH (6) */
 } pf_alarm_cr_tag_header_t;
 
-/** The largest incoming alarmdata we can accept
- *  Allowed 200..1432
+/**
+ * The largest incoming alarmdata (AlarmNotification-PDU) we can accept
+ *
+ * Allowed range: 200..1432.
+ *
+ * See PN-AL-protocol "Coding of the field MaxAlarmDataLength".
  */
 #define PF_MAX_ALARM_DATA_LEN 200
+
+/**
+ * Size of AlarmNotification-PDU, excluding the AlarmPayload
+ *
+ * See PN-AL-protocol "APDU abstract syntax".
+ */
+#define PF_ALARM_NOTIFICATION_HEADER_SIZE ( \
+   6 + /* BlockHeader */ \
+   2 + /* AlarmType */ \
+   4 + /* API */ \
+   2 + /* SlotNumber */ \
+   2 + /* SubslotNumber */ \
+   4 + /* ModuleIdentNumber */ \
+   4 + /* SubmoduleIdentNumber */ \
+   2   /* AlarmSpecifier */ \
+)
+
+/** The largest incoming AlarmPayload we can accept */
+#define PF_MAX_ALARM_PAYLOAD_SIZE ( \
+   PF_MAX_ALARM_DATA_LEN - PF_ALARM_NOTIFICATION_HEADER_SIZE \
+)
+
+/**
+ * The largest incoming AlarmPayload we can accept, excluding the USI
+ *
+ * Note that the USI (UserStructureIdentifier) is the first element in
+ * the AlarmPayload.
+ */
+#define PF_MAX_ALARM_PAYLOAD_DATA_SIZE ( \
+   PF_MAX_ALARM_PAYLOAD_SIZE -  sizeof (uint16_t) \
+)
 
 typedef struct pf_alarm_cr_request
 {
@@ -2014,6 +2065,7 @@ typedef enum pf_get_result
    PF_PARSE_OK,
    PF_PARSE_NULL_POINTER, /* Input buffer is NULL */
    PF_PARSE_END_OF_INPUT, /* Unexpected */
+   PF_PARSE_END_OF_OUTPUT, /* Output buffer is not large enough */
    PF_PARSE_OUT_OF_API_RESOURCES,
    PF_PARSE_OUT_OF_EXP_SUBMODULE_RESOURCES,
    PF_PARSE_ERROR /* Other */
@@ -2758,6 +2810,11 @@ typedef struct pf_port_data_check
    pf_block_header_t block_header;
 } pf_port_data_check_t;
 
+#define PF_CHECK_PEER_PORT_NAME_SHORT_LENGTH (8)
+#define PF_CHECK_PEER_PORT_NAME_LONG_LENGTH (14)
+#define PF_CHECK_PEER_PORT_NAME_MAX_SIZE                                       \
+   (PF_CHECK_PEER_PORT_NAME_LONG_LENGTH + 1)
+
 /**
  * Substitution name : CheckPeers
  * BlockHeader, NumberOfPeers, (LengthPeerPortName, PeerPortName,
@@ -2768,7 +2825,7 @@ typedef struct pf_port_data_check
 typedef struct pf_check_peer
 {
    uint8_t length_peer_port_name;
-   uint8_t peer_port_name[PNET_LLDP_PORT_ID_MAX_SIZE]; /** Terminated */
+   uint8_t peer_port_name[PF_CHECK_PEER_PORT_NAME_MAX_SIZE]; /** Terminated */
    uint8_t length_peer_station_name;
    uint8_t peer_station_name[PNET_STATION_NAME_MAX_SIZE]; /** Terminated */
 } pf_check_peer_t;

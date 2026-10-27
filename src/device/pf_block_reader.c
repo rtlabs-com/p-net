@@ -66,6 +66,35 @@ void pf_get_mem (
    }
 }
 
+void pf_get_mem_s (
+   pf_get_info_t * p_info,
+   uint16_t * p_pos,
+   size_t size,
+   void * p_dest,
+   size_t dest_size)
+{
+   if (p_info->result != PF_PARSE_OK)
+   {
+      /* Preserve first error */
+      memset (p_dest, 0, dest_size);
+      return;
+   }
+
+   if (size > dest_size)
+   {
+      p_info->result = PF_PARSE_END_OF_OUTPUT;
+      memset (p_dest, 0, dest_size);
+      return;
+   }
+
+   pf_get_mem (p_info, p_pos, (uint16_t)size, p_dest);
+
+   if (p_info->result != PF_PARSE_OK)
+   {
+      memset (p_dest, 0, dest_size);
+   }
+}
+
 uint8_t pf_get_byte (pf_get_info_t * p_info, uint16_t * p_pos)
 {
    uint8_t res = 0;
@@ -793,26 +822,30 @@ void pf_get_ar_rpc_request (
 
 #if PNET_OPTION_AR_VENDOR_BLOCKS
 void pf_get_ar_vendor_request (
-   pf_get_info_t * p_info,
-   uint16_t * p_pos,
-   uint16_t ix,
-   pf_ar_t * p_ar)
+   pf_get_info_t * info,
+   uint16_t * pos,
+   uint16_t length,
+   pf_ar_vendor_request_t * ar_vendor_request)
 {
-   if (ix >= PNET_MAX_AR_VENDOR_BLOCKS)
-   {
-      return;
-   }
+   uint16_t start;
 
-   p_ar->ar_vendor_request[ix].ap_structure_identifier =
-      pf_get_uint32 (p_info, p_pos);
-   p_ar->ar_vendor_request[ix].api = pf_get_uint32 (p_info, p_pos);
-   p_ar->ar_vendor_request[ix].length_data_request =
-      pf_get_uint16 (p_info, p_pos);
-   pf_get_mem (
-      p_info,
-      p_pos,
-      p_ar->ar_vendor_request[ix].length_data_request,
-      p_ar->ar_vendor_request[ix].data_request);
+   start = *pos;
+   ar_vendor_request->ap_structure_identifier = pf_get_uint32 (info, pos);
+   ar_vendor_request->api = pf_get_uint32 (info, pos);
+   if (length > (*pos - start))
+   {
+      length -= (*pos - start);
+      if (length > PNET_MAX_AR_VENDOR_BLOCK_DATA_LENGTH)
+      {
+         ar_vendor_request->length_data_request = 0;
+      }
+      else
+      {
+         pf_get_mem (info, pos, length, ar_vendor_request->data_request);
+         ar_vendor_request->length_data_request =
+            ((info->result == PF_PARSE_OK) ? length : 0);
+      }
+   }
 }
 #endif
 
@@ -1120,26 +1153,47 @@ static void get_check_peer (
    uint16_t * p_pos,
    pf_check_peer_t * p_check_peer)
 {
-   /* TODO: Validate length_peer_port_name and length_peer_station_name */
-
    p_check_peer->length_peer_port_name = pf_get_byte (p_info, p_pos);
-
-   pf_get_mem (
-      p_info,
-      p_pos,
-      p_check_peer->length_peer_port_name,
-      p_check_peer->peer_port_name);
-   p_check_peer->peer_port_name[p_check_peer->length_peer_port_name] = '\0';
+   if (p_info->result == PF_PARSE_OK)
+   {
+      if (
+         (p_check_peer->length_peer_port_name ==
+          PF_CHECK_PEER_PORT_NAME_SHORT_LENGTH) ||
+         (p_check_peer->length_peer_port_name ==
+          PF_CHECK_PEER_PORT_NAME_LONG_LENGTH))
+      {
+         pf_get_mem (
+            p_info,
+            p_pos,
+            p_check_peer->length_peer_port_name,
+            p_check_peer->peer_port_name);
+         p_check_peer->peer_port_name[p_check_peer->length_peer_port_name] =
+            '\0';
+      }
+      else
+      {
+         p_info->result = PF_PARSE_ERROR;
+      }
+   }
 
    p_check_peer->length_peer_station_name = pf_get_byte (p_info, p_pos);
-
-   pf_get_mem (
-      p_info,
-      p_pos,
-      p_check_peer->length_peer_station_name,
-      p_check_peer->peer_station_name);
-   p_check_peer->peer_station_name[p_check_peer->length_peer_station_name] =
-      '\0';
+   if (p_info->result == PF_PARSE_OK)
+   {
+      if (p_check_peer->length_peer_station_name < PNET_STATION_NAME_MAX_SIZE)
+      {
+         pf_get_mem (
+            p_info,
+            p_pos,
+            p_check_peer->length_peer_station_name,
+            p_check_peer->peer_station_name);
+         p_check_peer
+            ->peer_station_name[p_check_peer->length_peer_station_name] = '\0';
+      }
+      else
+      {
+         p_info->result = PF_PARSE_ERROR;
+      }
+   }
 }
 
 void pf_get_port_data_check_check_peers (
@@ -1163,6 +1217,10 @@ void pf_get_port_data_check_check_peers (
    for (i = 0; i < p_check_peers->number_of_peers; i++)
    {
       get_check_peer (p_info, p_pos, &p_check_peers->peers[i]);
+   }
+   if (p_info->result != PF_PARSE_OK)
+   {
+      p_check_peers->number_of_peers = 0;
    }
 }
 

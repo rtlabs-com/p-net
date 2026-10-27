@@ -241,6 +241,123 @@ TEST_F (DcpTest, DcpRunTest)
    EXPECT_EQ (appdata.call_counters.write_calls, 0);
 }
 
+/**
+ * Let the stack receive a frame, in an exactly sized buffer. This makes tools
+ * like AddressSanitizer detect reads beyond the end of the received frame.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param frame            In:    The Ethernet frame
+ * @param frame_len        In:    Length of the frame
+ * @return  1 if the frame was handled by the stack (and the buffer freed)
+ */
+static int receive_frame (
+   pnet_t * net,
+   const uint8_t * frame,
+   uint16_t frame_len)
+{
+   pnal_buf_t * p_buf = pnal_buf_alloc (frame_len);
+
+   memcpy (p_buf->payload, frame, frame_len);
+   p_buf->len = frame_len;
+
+   return pf_eth_recv (mock_os_data.eth_if_handle, net, p_buf);
+}
+
+TEST_F (DcpTest, DcpSetLastBlockAtEndOfFrame)
+{
+   /* The only block ends at the very end of the frame. There is no room for
+    * a next block header, which must not be read. */
+   uint8_t req[] = {
+      0x12, 0x34, 0x00, 0x78, 0x90, 0xab, 0xc8, 0x5b, 0x76, 0xe6, 0x89, 0xdf,
+      0x88, 0x92, 0xfe, 0xfd, 0x04, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00,
+      0x00, 0x10, 0x02, 0x02, 0x00, 0x0c, 0x00, 0x00, 0x72, 0x74, 0x2d, 0x6c,
+      0x61, 0x62, 0x73, 0x2d, 0x64, 0x65};
+
+   mock_clear();
+   EXPECT_EQ (receive_frame (net, req, sizeof (req)), 1);
+   EXPECT_STREQ (net->cmina_current_dcp_ase.station_name, "rt-labs-de");
+}
+
+TEST_F (DcpTest, DcpSetTruncatedBlockHeader)
+{
+   /* DCP data length claims 1 byte after the first block, which is not
+    * enough for a block header. The first block is still handled. */
+   uint8_t req[] = {
+      0x12, 0x34, 0x00, 0x78, 0x90, 0xab, 0xc8, 0x5b, 0x76, 0xe6, 0x89, 0xdf,
+      0x88, 0x92, 0xfe, 0xfd, 0x04, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00,
+      0x00, 0x11, 0x02, 0x02, 0x00, 0x0c, 0x00, 0x00, 0x72, 0x74, 0x2d, 0x6c,
+      0x61, 0x62, 0x73, 0x2d, 0x64, 0x65, 0x00};
+
+   mock_clear();
+   EXPECT_EQ (receive_frame (net, req, sizeof (req)), 1);
+   EXPECT_STREQ (net->cmina_current_dcp_ase.station_name, "rt-labs-de");
+}
+
+TEST_F (DcpTest, DcpSetBlockShorterThanQualifier)
+{
+   /* Signal block with block length 1, which is too short to hold the block
+    * qualifier. It must be rejected, so the LED is not flashed. */
+   uint8_t req_len_1[] = {
+      0x12, 0x34, 0x00, 0x78, 0x90, 0xab, 0xc8, 0x5b, 0x76, 0xe6, 0x89, 0xdf,
+      0x88, 0x92, 0xfe, 0xfd, 0x04, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00,
+      0x00, 0x06, 0x05, 0x03, 0x00, 0x01, 0x00, 0x00};
+
+   mock_clear();
+   EXPECT_EQ (receive_frame (net, req_len_1, sizeof (req_len_1)), 1);
+   run_stack (2 * 1000 * 1000);
+   EXPECT_EQ (appdata.call_counters.led_on_calls, 0);
+}
+
+TEST_F (DcpTest, DcpSetTooShortFrames)
+{
+   /* Frames that end inside the DCP header or the first block header */
+   uint8_t req[30] = {
+      0x12, 0x34, 0x00, 0x78, 0x90, 0xab, 0xc8, 0x5b, 0x76, 0xe6, 0x89, 0xdf,
+      0x88, 0x92, 0xfe, 0xfd, 0x04, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+   uint16_t len;
+
+   for (len = 16; len < sizeof (req); len++)
+   {
+      mock_clear();
+      EXPECT_EQ (receive_frame (net, req, len), 1);
+   }
+}
+
+TEST_F (DcpTest, DcpIdentifyTooShortFrames)
+{
+   /* Frames that end inside the DCP header or the first block header */
+   uint8_t req[30] = {
+      0x01, 0x0e, 0xcf, 0x00, 0x00, 0x00, 0xc8, 0x5b, 0x76, 0xe6, 0x89, 0xdf,
+      0x88, 0x92, 0xfe, 0xfe, 0x05, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x01,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+   uint16_t len;
+
+   for (len = 16; len < sizeof (req); len++)
+   {
+      mock_clear();
+      EXPECT_EQ (receive_frame (net, req, len), 1);
+   }
+}
+
+TEST_F (DcpTest, DcpIdentifyLastBlockAtEndOfFrame)
+{
+   /* Name of station filter ends at the very end of the frame */
+   uint8_t req[] = {
+      0x01, 0x0e, 0xcf, 0x00, 0x00, 0x00, 0xc8, 0x5b, 0x76, 0xe6, 0x89, 0xdf,
+      0x88, 0x92, 0xfe, 0xfe, 0x05, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x01,
+      0x00, 0x10, 0x02, 0x02, 0x00, 0x0c, 0x72, 0x74, 0x2d, 0x6c, 0x61, 0x62,
+      0x73, 0x2d, 0x64, 0x65, 0x6d, 0x6f};
+
+   /* Set the name that the request is looking for */
+   EXPECT_EQ (receive_frame (net, set_name_req, sizeof (set_name_req)), 1);
+
+   mock_clear();
+   EXPECT_EQ (receive_frame (net, req, sizeof (req)), 1);
+   run_stack (1000 * 1000);
+   EXPECT_EQ (mock_os_data.eth_send_count, 1); /* Identify response */
+}
+
 TEST_F (DcpUnitTest, DcpCalculateDelay)
 {
    pnet_ethaddr_t mac_address = {0};

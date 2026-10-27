@@ -26,6 +26,7 @@
 #endif
 
 #include "pf_includes.h"
+#include "pf_block_reader.h"
 
 #include <inttypes.h>
 #include <string.h>
@@ -270,7 +271,12 @@ static int pf_cpm_c_data_ind (
    uint8_t transfer_status;
    uint8_t data_status;
    uint8_t changes;
-   uint8_t * p_ind_buf = (uint8_t *)p_buf->payload;
+   pf_get_info_t ind = {
+      .is_big_endian = true,
+      .p_buf = p_buf->payload,
+      .len = p_buf->len,
+      .result = PF_PARSE_OK,
+   };
    bool frame_structure;
    bool c_sdu_structure;
    bool dht_reload;
@@ -293,12 +299,30 @@ static int pf_cpm_c_data_ind (
    case PF_CPM_STATE_FRUN:
       /* FALL-THRU */
    case PF_CPM_STATE_RUN:
-      pos = p_buf->len - 4; /* cycle counter is at the end of the data */
-
-      /* Data from the APDU */
-      cycle = (uint16_t)p_ind_buf[pos] * 0x100 + p_ind_buf[pos + 1];
-      data_status = p_ind_buf[pos + sizeof (uint16_t)];
-      transfer_status = p_ind_buf[pos + sizeof (uint16_t) + 1];
+      len = (ind.len - frame_id_pos);
+      /* Check that the length covers at least a FrameID and an APDU_Status. */
+      if (len < ((2 * sizeof (uint16_t)) + 2))
+      {
+         ind.result = PF_PARSE_ERROR;
+      }
+      else
+      {
+         /* APDU_Status (at the end of the data) */
+         pos = (ind.len - (sizeof (uint16_t) + 2));
+         cycle = pf_get_uint16 (&ind, &pos);
+         data_status = pf_get_byte (&ind, &pos);
+         transfer_status = pf_get_byte (&ind, &pos);
+      }
+      if (ind.result != PF_PARSE_OK)
+      {
+         LOG_DEBUG (
+            PF_CPM_LOG,
+            "CPM_DRV_SW(%d): parse error at offset %u\n",
+            __LINE__,
+            pos);
+         ret = 1; /* Means "handled" */
+         break;
+      }
 
       /* ToDo: ReceivedInRED
        * ToDo: LocalDataTransferControl
@@ -308,7 +332,6 @@ static int pf_cpm_c_data_ind (
       primary = (data_status & 0x01) != 0;
 
       /* Compute length of p_buf without VLAN tags */
-      len = p_buf->len - frame_id_pos;
       len += 2 * sizeof (pnet_ethaddr_t) + sizeof (uint16_t);
 
       frame_structure =
@@ -545,3 +568,15 @@ void pf_cpm_driver_sw_init (pnet_t * net)
       "CPM_DRIVER_SW(%d): Default CPM driver installed\n",
       __LINE__);
 }
+
+#ifdef UNIT_TEST
+int pf_cpm_c_data_ind_test (
+   pnet_t * net,
+   uint16_t frame_id,
+   pnal_buf_t * buf,
+   uint16_t frame_id_pos,
+   void * arg)
+{
+   return pf_cpm_c_data_ind (net, frame_id, buf, frame_id_pos, arg);
+}
+#endif

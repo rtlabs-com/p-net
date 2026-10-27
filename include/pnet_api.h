@@ -362,6 +362,12 @@ extern "C" {
 
 /**
  * # List of error_code_2 values, for
+ * PNET_ERROR_CODE_1_CONN_FAULTY_FAULTY_RECORD (not exhaustive).
+ */
+#define PNET_ERROR_CODE_2_CONN_FAULTY_FAULTY_RECORD_BAD_TARGET_ARUUID 0x0C
+
+/**
+ * # List of error_code_2 values, for
  * PNET_ERROR_CODE_1_CONN_FAULTY_IR_INFO (not exhaustive).
  * PN-AL-Protocol (Mar24): 5.8.2.12 (Table 1322)
  */

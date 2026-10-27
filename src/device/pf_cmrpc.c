@@ -1601,13 +1601,7 @@ static int pf_cmrpc_rm_connect_interpret_ind (
             break;
 #if PNET_OPTION_AR_VENDOR_BLOCKS
          case PF_BT_AR_VENDOR_BLOCK_REQ:
-            pf_get_ar_vendor_request (
-               &p_sess->get_info,
-               p_pos,
-               p_ar->nbr_ar_vendor,
-               p_ar);
-
-            if (p_ar->ar_param.ar_properties.device_access == true)
+            if (p_ar->ar_param.ar_properties.device_access)
             {
                pf_set_error (
                   &p_sess->rpc_result,
@@ -1619,14 +1613,26 @@ static int pf_cmrpc_rm_connect_interpret_ind (
             }
             else
             {
+               if (p_ar->nbr_ar_vendor < PNET_MAX_AR_VENDOR_BLOCKS)
+               {
+                  pf_get_ar_vendor_request (
+                     &p_sess->get_info,
+                     p_pos,
+                     (block_header.block_length -
+                      (sizeof (block_header.block_version_high) +
+                       sizeof (block_header.block_version_low))),
+                     &p_ar->ar_vendor_request[p_ar->nbr_ar_vendor]);
+               }
                ret = pf_check_block_header (
-                  (*p_pos - data_pos) + 2,
+                  ((*p_pos - data_pos) +
+                   sizeof (block_header.block_version_high) +
+                   sizeof (block_header.block_version_low)),
                   &block_header,
                   PNET_ERROR_CODE_1_CONN_FAULTY_FAULTY_RECORD,
                   &p_sess->rpc_result);
-               if (ret == 0 && p_ar->nbr_ar_vendor < PNET_MAX_AR_VENDOR_BLOCKS)
+               if ((ret == 0) && (p_ar->nbr_ar_vendor < PNET_MAX_AR_VENDOR_BLOCKS))
                {
-                  p_ar->nbr_ar_vendor++;
+                  ++p_ar->nbr_ar_vendor;
                }
             }
             break;
@@ -3040,27 +3046,42 @@ static int pf_cmrpc_rm_read_ind (
 
          start_pos = *p_res_pos; /* Start of blocks - save for last */
 
-         /* Do actual reading */
          if (
-            pf_cmrdr_rm_read_ind (
-               net,
-               p_ar,
-               &read_request,
-               &p_sess->rpc_result,
-               res_size,
-               p_res,
-               p_res_pos) == 0)
+            (p_ar == NULL) && (pf_index_is_ar_specific (read_request.index) ||
+                               (read_request.index == PF_IDX_SUB_EXP_ID_DATA) ||
+                               (read_request.index == PF_IDX_SLOT_EXP_ID_DATA)))
          {
-            ret = pf_cmsm_rm_read_ind (net, p_ar, &read_request);
+            /* A target AR is required, but none was given. */
+            pf_set_error (
+               &p_sess->rpc_result,
+               PNET_ERROR_CODE_READ,
+               PNET_ERROR_DECODE_PNIO,
+               PNET_ERROR_CODE_1_CONN_FAULTY_FAULTY_RECORD,
+               PNET_ERROR_CODE_2_CONN_FAULTY_FAULTY_RECORD_BAD_TARGET_ARUUID);
          }
          else
          {
-            LOG_ERROR (
-               PF_RPC_LOG,
-               "CMRPC(%d): Error from pf_cmrdr_rm_read_ind\n",
-               __LINE__);
+            /* Do actual reading */
+            if (
+               pf_cmrdr_rm_read_ind (
+                  net,
+                  p_ar,
+                  &read_request,
+                  &p_sess->rpc_result,
+                  res_size,
+                  p_res,
+                  p_res_pos) == 0)
+            {
+               ret = pf_cmsm_rm_read_ind (net, p_ar, &read_request);
+            }
+            else
+            {
+               LOG_ERROR (
+                  PF_RPC_LOG,
+                  "CMRPC(%d): Error from pf_cmrdr_rm_read_ind\n",
+                  __LINE__);
+            }
          }
-
          /* Insert the actual operation result */
          pf_put_pnet_status (
             p_sess->get_info.is_big_endian,
@@ -4761,6 +4782,10 @@ int pf_cmrpc_dce_packet (
                   "CMRPC(%d): Unhandled Object or Interface UUID!\n",
                   __LINE__);
                /*ToDo: Report NULL endpoint with proper error code*/
+
+               /* Do not keep a new session for an unknown interface, as the
+                * sender could otherwise exhaust the session pool. */
+               p_sess->kill_session = is_new_session;
             }
 
             if (p_sess->out_buf_len < PF_MAX_UDP_PAYLOAD_SIZE)
@@ -5359,3 +5384,24 @@ int pf_cmrpc_cmdev_state_ind (
 
    return res;
 }
+
+#ifdef UNIT_TEST
+int pf_cmrpc_rm_read_ind_test (
+   pnet_t * net,
+   pf_session_info_t * si,
+   uint16_t opnum,
+   uint16_t req_pos,
+   uint16_t res_size,
+   uint8_t * res,
+   uint16_t * res_pos)
+{
+   return pf_cmrpc_rm_read_ind (
+      net,
+      si,
+      opnum,
+      req_pos,
+      res_size,
+      res,
+      res_pos);
+}
+#endif /* UNIT_TEST */

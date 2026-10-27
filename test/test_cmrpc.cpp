@@ -33,6 +33,17 @@
 
 #include <gtest/gtest.h>
 
+extern "C" {
+int pf_cmrpc_rm_read_ind_test (
+   pnet_t * net,
+   pf_session_info_t * si,
+   uint16_t opnum,
+   uint16_t req_pos,
+   uint16_t res_size,
+   uint8_t * res,
+   uint16_t * res_pos);
+}
+
 class CmrpcUnitTest : public PnetUnitTest
 {
 };
@@ -341,6 +352,63 @@ static uint8_t data_packet[] =
 };
 
 // clang-format on
+
+static struct
+{
+   uint8_t block_type[2];
+   uint8_t block_len[2];
+   uint8_t block_version_high[1];
+   uint8_t block_version_low[1];
+   uint8_t sequence_number[2];
+   uint8_t aruuid[16];
+   uint8_t api[4];
+   uint8_t slot_number[2];
+   uint8_t subslot_number[2];
+   uint8_t padding_1[2];
+   uint8_t index[2];
+   uint8_t record_data_length[4];
+   uint8_t target_aruuid[16];
+   uint8_t padding_2[8];
+} iod_read_req_implicit_invalid = {
+   .block_type = {0x00, 0x09},
+   .block_len = {0, 60},
+   .block_version_high = {1},
+   .block_version_low = {0},
+   .sequence_number = {0},
+   .aruuid = {0},
+   .api = {0},
+   .slot_number = {0},
+   .subslot_number = {0, 1},
+   .padding_1 = {0},
+   .index = {0x80, 0x00},
+   .record_data_length = {0x4, 0x0},
+   .target_aruuid = {0},
+   .padding_2 = {0}};
+
+TEST_F (CmrpcTest, CmrpcUnknownInterfaceDoesNotLeakSessions)
+{
+   uint8_t req[sizeof (connect_req)];
+   uint32_t ix;
+
+   /* Connect request with unknown interface UUID and unique activity UUID */
+   memcpy (req, connect_req, sizeof (req));
+   req[24] ^= 0xff; /* Interface UUID */
+
+   /* More requests than there are sessions */
+   for (ix = 0; ix < (2 * PF_MAX_SESSION); ix++)
+   {
+      req[40] = (uint8_t)(ix + 1); /* Activity UUID */
+      mock_set_pnal_udp_recvfrom_buffer (req, sizeof (req));
+      run_stack (TEST_UDP_DELAY);
+   }
+   EXPECT_EQ (mock_os_data.udp_sendto_count, 2 * PF_MAX_SESSION);
+
+   /* A valid connect request must still be accepted */
+   mock_set_pnal_udp_recvfrom_buffer (connect_req, sizeof (connect_req));
+   run_stack (TEST_UDP_DELAY);
+   EXPECT_EQ (appdata.call_counters.connect_calls, 1);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_STARTUP);
+}
 
 TEST_F (CmrpcTest, CmrpcConnectReleaseTest)
 {
@@ -670,6 +738,42 @@ TEST_F (CmrpcTest, CmrpcConnectReleaseIOSAR_DA)
    EXPECT_EQ (appdata.call_counters.state_calls, 0);
    EXPECT_EQ (appdata.call_counters.release_calls, 0);
    EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_ABORT);
+}
+
+TEST_F (CmrpcTest, CmrpcImplicitRmReadInd)
+{
+   static pf_session_info_t session_info;
+   uint16_t res_pos;
+
+   memset (&session_info, 0, sizeof (session_info));
+   session_info.ndr_data.args_length = sizeof (iod_read_req_implicit_invalid);
+   session_info.get_info.is_big_endian = true;
+   session_info.get_info.p_buf = (uint8_t *)&iod_read_req_implicit_invalid;
+   session_info.get_info.len = sizeof (iod_read_req_implicit_invalid);
+   res_pos = 0;
+   EXPECT_EQ (
+      -1,
+      pf_cmrpc_rm_read_ind_test (
+         net,
+         &session_info,
+         PF_RPC_DEV_OPNUM_READ_IMPLICIT,
+         0,
+         PNET_MAX_SESSION_BUFFER_SIZE,
+         session_info.out_buffer,
+         &res_pos));
+   EXPECT_EQ (PF_PARSE_OK, session_info.get_info.result);
+   EXPECT_EQ (
+      PNET_ERROR_CODE_READ,
+      session_info.rpc_result.pnio_status.error_code);
+   EXPECT_EQ (
+      PNET_ERROR_DECODE_PNIO,
+      session_info.rpc_result.pnio_status.error_decode);
+   EXPECT_EQ (
+      PNET_ERROR_CODE_1_CONN_FAULTY_FAULTY_RECORD,
+      session_info.rpc_result.pnio_status.error_code_1);
+   EXPECT_EQ (
+      PNET_ERROR_CODE_2_CONN_FAULTY_FAULTY_RECORD_BAD_TARGET_ARUUID,
+      session_info.rpc_result.pnio_status.error_code_2);
 }
 
 TEST_F (CmrpcUnitTest, CmrpcCheckGenerateUuid)

@@ -20,6 +20,15 @@
 
 #include <gtest/gtest.h>
 
+extern "C" {
+int pf_cpm_c_data_ind_test (
+   pnet_t * net,
+   uint16_t frame_id,
+   pnal_buf_t * buf,
+   uint16_t frame_id_pos,
+   void * arg);
+}
+
 class CpmUnitTest : public PnetUnitTest
 {
 };
@@ -103,4 +112,29 @@ TEST_F (CpmUnitTest, CpmCheckCycle)
    EXPECT_EQ (-1, pf_cpm_check_cycle (0x0010, 0x0010));
    EXPECT_EQ (0, pf_cpm_check_cycle (0x0010, 0x0011));
    EXPECT_EQ (0, pf_cpm_check_cycle (0x0010, 0x0012));
+}
+
+TEST_F (CpmUnitTest, CDataIndShortFrames)
+{
+   static pf_iocr_t iocr;
+   pnal_buf_t * frame;
+   uint8_t data[] = {0xfe, 0x01, 0xcc, 0xcc, 0xdd};
+
+   iocr.cpm.state = PF_CPM_STATE_RUN;
+   frame = pnal_buf_alloc (2);
+   memcpy (frame->payload, data, frame->len);
+   EXPECT_EQ (1, pf_cpm_c_data_ind_test (NULL, 0xfe01, frame, 0, &iocr));
+   EXPECT_EQ (PF_CPM_STATE_RUN, iocr.cpm.state);
+
+   iocr.cpm.state = PF_CPM_STATE_FRUN;
+   frame = pnal_buf_alloc (4);
+   memcpy (frame->payload, data, frame->len);
+   EXPECT_EQ (1, pf_cpm_c_data_ind_test (NULL, 0xfe01, frame, 0, &iocr));
+   EXPECT_EQ (PF_CPM_STATE_FRUN, iocr.cpm.state);
+
+   iocr.cpm.state = PF_CPM_STATE_RUN;
+   frame = pnal_buf_alloc (5);
+   memcpy (frame->payload, data, frame->len);
+   EXPECT_EQ (1, pf_cpm_c_data_ind_test (NULL, 0xfe01, frame, 0, &iocr));
+   EXPECT_EQ (PF_CPM_STATE_RUN, iocr.cpm.state);
 }

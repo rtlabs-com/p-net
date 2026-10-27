@@ -575,27 +575,6 @@ int pf_pdport_read_ind (
             }
             ret = 0;
          }
-         else if (subslot == PNET_SUBSLOT_DAP_WHOLE_MODULE)
-         {
-            pf_port_init_iterator_over_ports (net, &port_iterator);
-            loc_port_num = pf_port_get_next (&port_iterator);
-            while (loc_port_num != 0)
-            {
-               p_port_data = pf_port_get_state (net, loc_port_num);
-               if (p_port_data->pdport.check.active)
-               {
-                  pf_put_pdport_data_check (
-                     true,
-                     p_read_res->slot_number,
-                     p_read_res->subslot_number,
-                     &p_port_data->pdport.check.peer,
-                     res_size,
-                     p_res,
-                     p_pos);
-               }
-            }
-            ret = 0;
-         }
       }
       break;
 

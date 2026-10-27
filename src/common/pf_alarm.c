@@ -1794,7 +1794,6 @@ static int pf_alarm_apmr_a_data_ind (
    pf_alarm_data_t alarm_data;
    pnet_pnio_status_t pnio_status;
    uint16_t data_usi;
-   const uint8_t * p_data;
 
    switch (p_apmx->apmr_state)
    {
@@ -1868,16 +1867,18 @@ static int pf_alarm_apmr_a_data_ind (
                ret = pf_alarm_apmr_send_ack (net, p_apmx);
                if (ret == 0)
                {
+                  uint8_t data[PF_MAX_ALARM_PAYLOAD_DATA_SIZE];
+
                   p_apmx->apmr_state = PF_APMR_STATE_WCNF;
 
                   /* APMR: A_Data_cnf is triggered here*/
 
                   pf_get_alarm_data (p_get_info, &pos, &alarm_data);
                   data_usi = pf_get_uint16 (p_get_info, &pos);
+                  data_len -= (pos - start_pos);
+                  pf_get_mem_s (p_get_info, &pos, data_len, data, sizeof (data));
                   if (p_get_info->result == PF_PARSE_OK)
                   {
-                     data_len -= (pos - start_pos);
-                     p_data = &p_get_info->p_buf[pos];
                      ret = pf_alarm_alpmr_apmr_a_data_ind (
                         net,
                         p_apmx,
@@ -1885,7 +1886,7 @@ static int pf_alarm_apmr_a_data_ind (
                         &alarm_data,
                         data_len,
                         data_usi,
-                        p_data); /* APMR: APMR_A_Data.ind */
+                        data); /* APMR: APMR_A_Data.ind */
                   }
                   else
                   {

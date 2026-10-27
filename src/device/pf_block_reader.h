@@ -24,6 +24,26 @@ extern "C" {
 
 /**
  * @internal
+ * Extract a sequence of bytes from a buffer.
+ *
+ * Similar to pf_get_mem(), but attempts to write past the end of destination
+ * buffer are rejected. Destination buffer is filled with zeroes on error.
+ *
+ * @param p_info           InOut: The parser state.
+ * @param p_pos            InOut: Position in the buffer.
+ * @param size             In:    Number of bytes to copy.
+ * @param p_dest           Out:   Destination buffer.
+ * @param dest_size        In:    Size of destination buffer in bytes.
+ */
+void pf_get_mem_s (
+   pf_get_info_t * p_info,
+   uint16_t * p_pos,
+   size_t size,
+   void * p_dest,
+   size_t dest_size);
+
+/**
+ * @internal
  * Return a byte from a buffer.
  * @param p_info           InOut: The parser state.
  * @param p_pos            InOut: Position in the buffer.
@@ -171,16 +191,16 @@ void pf_get_ar_rpc_request (
 #if PNET_OPTION_AR_VENDOR_BLOCKS
 /**
  * Extract an AR vendor request block from a buffer.
- * @param p_info           InOut: The parser state.
- * @param p_pos            InOut: Position in the buffer.
- * @param ix               In:    The current index into p_ar->ar_vendor_xxx[].
- * @param p_ar             Out:   Contains the destination structure.
+ * @param info              InOut: The parser state.
+ * @param pos               InOut: Position in the buffer.
+ * @param length            In:    The length of the block without its header.
+ * @param ar_vendor_request Out:   The parsed AR vendor request.
  */
 void pf_get_ar_vendor_request (
-   pf_get_info_t * p_info,
-   uint16_t * p_pos,
-   uint16_t ix,
-   pf_ar_t * p_ar);
+   pf_get_info_t * info,
+   uint16_t * pos,
+   uint16_t length,
+   pf_ar_vendor_request_t * ar_vendor_request);
 #endif
 
 #if PNET_OPTION_PARAMETER_SERVER
