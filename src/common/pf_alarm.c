@@ -1812,42 +1812,60 @@ static int pf_alarm_apmr_a_data_ind (
          if (p_fixed->send_seq_num == p_apmx->exp_seq_count)
          {
             pf_get_block_header (p_get_info, &pos, &block_header);
-            if (block_header.block_type == p_apmx->block_type_alarm_ack)
+            if (
+               p_get_info->result == PF_PARSE_OK &&
+               block_header.block_type == p_apmx->block_type_alarm_ack)
             {
-               /* This message is an Alarm ACK PDU. Parse it and deliver to
-                * ALPMI. */
-               LOG_DEBUG (
-                  PF_ALARM_LOG,
-                  "Alarm(%d): The incoming Alarm DATA message is an ACK PDU. "
-                  "Send seq: %u Trigger a TACK response.\n",
-                  __LINE__,
-                  p_fixed->send_seq_num);
-
-               /* Tell APMS to handle ack_seq_num in message */
-               (void)pf_alarm_apms_a_data_ind (net, p_apmx, p_fixed);
-
-               p_apmx->exp_seq_count_o = p_apmx->exp_seq_count;
-               p_apmx->exp_seq_count = (p_apmx->exp_seq_count + 1) & 0x7fff;
-
-               ret = pf_alarm_apmr_send_ack (net, p_apmx);
-               if (ret == 0)
+               /* IEC 61158-6-10:2019, 5.1.2, Table 411: six header
+                * octets, twelve AlarmAck body octets, then PNIOStatus.
+                * Validate the complete block before any protocol side effect. */
+               if (
+                  block_header.block_length != 18 ||
+                  block_header.block_version_high != 1 ||
+                  block_header.block_version_low != 0 || data_len != 22 ||
+                  start_pos > p_get_info->len ||
+                  data_len > (uint16_t)(p_get_info->len - start_pos))
                {
-                  p_apmx->apmr_state = PF_APMR_STATE_WCNF;
-
-                  /* APMR: A_Data_cnf is triggered here*/
-
+                  p_get_info->result = PF_PARSE_ERROR;
+               }
+               else
+               {
+                  pf_get_alarm_ack (p_get_info, &pos, &alarm_data);
                   pf_get_pnio_status (p_get_info, &pos, &pnio_status);
-                  ret = pf_alarm_alpmi_apmr_a_data_ind (
-                     net,
-                     p_apmx,
-                     &pnio_status); /* APMR: APMR_A_Data.ind */
-                  if (ret == 0)
+                  if (
+                     p_get_info->result == PF_PARSE_OK &&
+                     (uint16_t)(pos - start_pos) == data_len)
                   {
-                     p_apmx->apmr_state = PF_APMR_STATE_OPEN;
+                     LOG_DEBUG (
+                        PF_ALARM_LOG,
+                        "Alarm(%d): The incoming Alarm DATA message is an ACK "
+                        "PDU. Send seq: %u Trigger a TACK response.\n",
+                        __LINE__,
+                        p_fixed->send_seq_num);
+
+                     (void)pf_alarm_apms_a_data_ind (net, p_apmx, p_fixed);
+                     p_apmx->exp_seq_count_o = p_apmx->exp_seq_count;
+                     p_apmx->exp_seq_count = (p_apmx->exp_seq_count + 1) &
+                                             0x7fff;
+                     ret = pf_alarm_apmr_send_ack (net, p_apmx);
+                     if (ret == 0)
+                     {
+                        p_apmx->apmr_state = PF_APMR_STATE_WCNF;
+                        ret = pf_alarm_alpmi_apmr_a_data_ind (
+                           net,
+                           p_apmx,
+                           &pnio_status); /* APMR: APMR_A_Data.ind */
+                        if (ret == 0)
+                        {
+                           p_apmx->apmr_state = PF_APMR_STATE_OPEN;
+                        }
+                     }
                   }
                }
             }
-            else if (block_header.block_type == p_apmx->block_type_alarm_notify)
+            else if (
+               p_get_info->result == PF_PARSE_OK &&
+               block_header.block_type == p_apmx->block_type_alarm_notify)
             {
                /* This message is an Alarm Notification PDU. Parse it and
                 * deliver to ALPMR. */
