@@ -749,6 +749,8 @@ static int pf_alarm_apmr_frame_handler (
    pf_get_info_t get_info;
    pf_ar_t * ar;
    uint16_t alarm_endpoint;
+   uint16_t source_endpoint;
+   pnet_ethaddr_t source_mac;
    uint16_t pos;
    int ret;
 
@@ -772,12 +774,37 @@ static int pf_alarm_apmr_frame_handler (
 
       pos = frame_id_pos + sizeof (uint16_t); /* Skip frame_id. */
       alarm_endpoint = pf_get_uint16(&get_info, &pos);
+      source_endpoint = pf_get_uint16 (&get_info, &pos);
 
       if (
          (alarm_endpoint > 0) && (alarm_endpoint <= PNET_MAX_AR) &&
          net->alarm_endpoint[alarm_endpoint - 1].active)
       {
          ar = net->alarm_endpoint[alarm_endpoint - 1].ar;
+      }
+
+      /* Only accept alarm frames from the alarm endpoint of the IO-controller
+         of the AR */
+      if (ar != NULL)
+      {
+         pos = sizeof (pnet_ethaddr_t); /* Skip destination address */
+         pf_get_mem (&get_info, &pos, sizeof (source_mac), &source_mac);
+         if (
+            (get_info.result != PF_PARSE_OK) ||
+            (memcmp (
+                &source_mac,
+                &ar->apmx[priority].da,
+                sizeof (source_mac)) != 0) ||
+            (source_endpoint != ar->apmx[priority].dst_ref))
+         {
+            LOG_WARNING (
+               PF_ALARM_LOG,
+               "Alarm(%d): Incoming %s prio alarm frame is not from the "
+               "alarm endpoint of the IO-controller of the AR.\n",
+               __LINE__,
+               priority ? "high" : "low");
+            ar = NULL;
+         }
       }
 
       if (
@@ -1812,10 +1839,32 @@ static int pf_alarm_apmr_a_data_ind (
          if (p_fixed->send_seq_num == p_apmx->exp_seq_count)
          {
             pf_get_block_header (p_get_info, &pos, &block_header);
+            if (p_get_info->result != PF_PARSE_OK)
+            {
+               LOG_ERROR (
+                  PF_ALARM_LOG,
+                  "Alarm(%d): Failed to parse block header\n",
+                  __LINE__);
+               ret = -1; /* Frame is dropped, no state is changed */
+               break;
+            }
+
             if (block_header.block_type == p_apmx->block_type_alarm_ack)
             {
                /* This message is an Alarm ACK PDU. Parse it and deliver to
                 * ALPMI. */
+               pf_get_alarm_ack (p_get_info, &pos, &alarm_data);
+               pf_get_pnio_status (p_get_info, &pos, &pnio_status);
+               if (p_get_info->result != PF_PARSE_OK)
+               {
+                  LOG_ERROR (
+                     PF_ALARM_LOG,
+                     "Alarm(%d): Error parsing Alarm ACK\n",
+                     __LINE__);
+                  ret = -1; /* Frame is dropped, no state is changed */
+                  break;
+               }
+
                LOG_DEBUG (
                   PF_ALARM_LOG,
                   "Alarm(%d): The incoming Alarm DATA message is an ACK PDU. "
@@ -1836,7 +1885,6 @@ static int pf_alarm_apmr_a_data_ind (
 
                   /* APMR: A_Data_cnf is triggered here*/
 
-                  pf_get_pnio_status (p_get_info, &pos, &pnio_status);
                   ret = pf_alarm_alpmi_apmr_a_data_ind (
                      net,
                      p_apmx,
@@ -1851,6 +1899,22 @@ static int pf_alarm_apmr_a_data_ind (
             {
                /* This message is an Alarm Notification PDU. Parse it and
                 * deliver to ALPMR. */
+               uint8_t data[PF_MAX_ALARM_PAYLOAD_DATA_SIZE];
+
+               pf_get_alarm_data (p_get_info, &pos, &alarm_data);
+               data_usi = pf_get_uint16 (p_get_info, &pos);
+               data_len -= (pos - start_pos);
+               pf_get_mem_s (p_get_info, &pos, data_len, data, sizeof (data));
+               if (p_get_info->result != PF_PARSE_OK)
+               {
+                  LOG_ERROR (
+                     PF_ALARM_LOG,
+                     "Alarm(%d): Error parsing Alarm notification\n",
+                     __LINE__);
+                  ret = -1; /* Frame is dropped, no state is changed */
+                  break;
+               }
+
                LOG_DEBUG (
                   PF_ALARM_LOG,
                   "Alarm(%d): The incoming Alarm DATA message is an alarm "
@@ -1867,35 +1931,18 @@ static int pf_alarm_apmr_a_data_ind (
                ret = pf_alarm_apmr_send_ack (net, p_apmx);
                if (ret == 0)
                {
-                  uint8_t data[PF_MAX_ALARM_PAYLOAD_DATA_SIZE];
-
                   p_apmx->apmr_state = PF_APMR_STATE_WCNF;
 
                   /* APMR: A_Data_cnf is triggered here*/
 
-                  pf_get_alarm_data (p_get_info, &pos, &alarm_data);
-                  data_usi = pf_get_uint16 (p_get_info, &pos);
-                  data_len -= (pos - start_pos);
-                  pf_get_mem_s (p_get_info, &pos, data_len, data, sizeof (data));
-                  if (p_get_info->result == PF_PARSE_OK)
-                  {
-                     ret = pf_alarm_alpmr_apmr_a_data_ind (
-                        net,
-                        p_apmx,
-                        p_fixed,
-                        &alarm_data,
-                        data_len,
-                        data_usi,
-                        data); /* APMR: APMR_A_Data.ind */
-                  }
-                  else
-                  {
-                     LOG_ERROR (
-                        PF_ALARM_LOG,
-                        "Alarm(%d): Error parsing Alarm notification\n",
-                        __LINE__);
-                     ret = -1;
-                  }
+                  ret = pf_alarm_alpmr_apmr_a_data_ind (
+                     net,
+                     p_apmx,
+                     p_fixed,
+                     &alarm_data,
+                     data_len,
+                     data_usi,
+                     data); /* APMR: APMR_A_Data.ind */
                   if (ret == 0)
                   {
                      p_apmx->apmr_state = PF_APMR_STATE_OPEN;

@@ -267,11 +267,27 @@ TEST_F (DcpTest, DcpSetLastBlockAtEndOfFrame)
 {
    /* The only block ends at the very end of the frame. There is no room for
     * a next block header, which must not be read. */
+   // clang-format off
    uint8_t req[] = {
-      0x12, 0x34, 0x00, 0x78, 0x90, 0xab, 0xc8, 0x5b, 0x76, 0xe6, 0x89, 0xdf,
-      0x88, 0x92, 0xfe, 0xfd, 0x04, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00,
-      0x00, 0x10, 0x02, 0x02, 0x00, 0x0c, 0x00, 0x00, 0x72, 0x74, 0x2d, 0x6c,
-      0x61, 0x62, 0x73, 0x2d, 0x64, 0x65};
+      // Ethernet header
+      0x12, 0x34, 0x00, 0x78, 0x90, 0xab, // [00-05] Destination MAC address
+      0xc8, 0x5b, 0x76, 0xe6, 0x89, 0xdf, // [06-11] Source MAC address
+      0x88, 0x92,                         // [12-13] EtherType: PROFINET
+      // DCP header
+      0xfe, 0xfd,                         // [14-15] Frame ID: DCP Get/Set
+      0x04,                               // [16]    Service ID: Set
+      0x00,                               // [17]    Service type: Request
+      0x00, 0x00, 0x00, 0x03,             // [18-21] Xid
+      0x00, 0x00,                         // [22-23] Response delay
+      0x00, 0x10,                         // [24-25] DCP data length: 16 bytes
+      // DCP block: Name of station
+      0x02, 0x02,                         // [26-27] Option: Device props, Name of station
+      0x00, 0x0c,                         // [28-29] Block length: 12 (qualifier, name)
+      0x00, 0x00,                         // [30-31] Block qualifier: Temporary
+      0x72, 0x74, 0x2d, 0x6c, 0x61,       // [32-36] Name: "rt-la"
+      0x62, 0x73, 0x2d, 0x64, 0x65        // [37-41] Name: "bs-de"
+   };
+   // clang-format on
 
    mock_clear();
    EXPECT_EQ (receive_frame (net, req, sizeof (req)), 1);
@@ -282,11 +298,28 @@ TEST_F (DcpTest, DcpSetTruncatedBlockHeader)
 {
    /* DCP data length claims 1 byte after the first block, which is not
     * enough for a block header. The first block is still handled. */
+   // clang-format off
    uint8_t req[] = {
-      0x12, 0x34, 0x00, 0x78, 0x90, 0xab, 0xc8, 0x5b, 0x76, 0xe6, 0x89, 0xdf,
-      0x88, 0x92, 0xfe, 0xfd, 0x04, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00,
-      0x00, 0x11, 0x02, 0x02, 0x00, 0x0c, 0x00, 0x00, 0x72, 0x74, 0x2d, 0x6c,
-      0x61, 0x62, 0x73, 0x2d, 0x64, 0x65, 0x00};
+      // Ethernet header
+      0x12, 0x34, 0x00, 0x78, 0x90, 0xab, // [00-05] Destination MAC address
+      0xc8, 0x5b, 0x76, 0xe6, 0x89, 0xdf, // [06-11] Source MAC address
+      0x88, 0x92,                         // [12-13] EtherType: PROFINET
+      // DCP header
+      0xfe, 0xfd,                         // [14-15] Frame ID: DCP Get/Set
+      0x04,                               // [16]    Service ID: Set
+      0x00,                               // [17]    Service type: Request
+      0x00, 0x00, 0x00, 0x03,             // [18-21] Xid
+      0x00, 0x00,                         // [22-23] Response delay
+      0x00, 0x11,                         // [24-25] DCP data length: 17 bytes
+      // DCP block: Name of station
+      0x02, 0x02,                         // [26-27] Option: Device props, Name of station
+      0x00, 0x0c,                         // [28-29] Block length: 12 (qualifier, name)
+      0x00, 0x00,                         // [30-31] Block qualifier: Temporary
+      0x72, 0x74, 0x2d, 0x6c, 0x61,       // [32-36] Name: "rt-la"
+      0x62, 0x73, 0x2d, 0x64, 0x65,       // [37-41] Name: "bs-de"
+      0x00                                // [42]    Extra byte, too short for block header
+   };
+   // clang-format on
 
    mock_clear();
    EXPECT_EQ (receive_frame (net, req, sizeof (req)), 1);
@@ -297,10 +330,26 @@ TEST_F (DcpTest, DcpSetBlockShorterThanQualifier)
 {
    /* Signal block with block length 1, which is too short to hold the block
     * qualifier. It must be rejected, so the LED is not flashed. */
+   // clang-format off
    uint8_t req_len_1[] = {
-      0x12, 0x34, 0x00, 0x78, 0x90, 0xab, 0xc8, 0x5b, 0x76, 0xe6, 0x89, 0xdf,
-      0x88, 0x92, 0xfe, 0xfd, 0x04, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00,
-      0x00, 0x06, 0x05, 0x03, 0x00, 0x01, 0x00, 0x00};
+      // Ethernet header
+      0x12, 0x34, 0x00, 0x78, 0x90, 0xab, // [00-05] Destination MAC address
+      0xc8, 0x5b, 0x76, 0xe6, 0x89, 0xdf, // [06-11] Source MAC address
+      0x88, 0x92,                         // [12-13] EtherType: PROFINET
+      // DCP header
+      0xfe, 0xfd,                         // [14-15] Frame ID: DCP Get/Set
+      0x04,                               // [16]    Service ID: Set
+      0x00,                               // [17]    Service type: Request
+      0x00, 0x00, 0x00, 0x04,             // [18-21] Xid
+      0x00, 0x00,                         // [22-23] Response delay
+      0x00, 0x06,                         // [24-25] DCP data length: 6 bytes
+      // DCP block: Signal
+      0x05, 0x03,                         // [26-27] Option: Control, suboption: Signal
+      0x00, 0x01,                         // [28-29] Block length: 1 (no room for qualifier)
+      0x00,                               // [30]    Block value
+      0x00                                // [31]    Padding
+   };
+   // clang-format on
 
    mock_clear();
    EXPECT_EQ (receive_frame (net, req_len_1, sizeof (req_len_1)), 1);
@@ -311,10 +360,22 @@ TEST_F (DcpTest, DcpSetBlockShorterThanQualifier)
 TEST_F (DcpTest, DcpSetTooShortFrames)
 {
    /* Frames that end inside the DCP header or the first block header */
+   // clang-format off
    uint8_t req[30] = {
-      0x12, 0x34, 0x00, 0x78, 0x90, 0xab, 0xc8, 0x5b, 0x76, 0xe6, 0x89, 0xdf,
-      0x88, 0x92, 0xfe, 0xfd, 0x04, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+      // Ethernet header
+      0x12, 0x34, 0x00, 0x78, 0x90, 0xab, // [00-05] Destination MAC address
+      0xc8, 0x5b, 0x76, 0xe6, 0x89, 0xdf, // [06-11] Source MAC address
+      0x88, 0x92,                         // [12-13] EtherType: PROFINET
+      // DCP header
+      0xfe, 0xfd,                         // [14-15] Frame ID: DCP Get/Set
+      0x04,                               // [16]    Service ID: Set
+      0x00,                               // [17]    Service type: Request
+      0x00, 0x00, 0x00, 0x03,             // [18-21] Xid
+      0x00, 0x00,                         // [22-23] Response delay
+      0x00, 0x00,                         // [24-25] DCP data length: 0 bytes
+      0x00, 0x00, 0x00, 0x00              // [26-29] First block header (frame is cut off)
+   };
+   // clang-format on
    uint16_t len;
 
    for (len = 16; len < sizeof (req); len++)
@@ -327,10 +388,22 @@ TEST_F (DcpTest, DcpSetTooShortFrames)
 TEST_F (DcpTest, DcpIdentifyTooShortFrames)
 {
    /* Frames that end inside the DCP header or the first block header */
+   // clang-format off
    uint8_t req[30] = {
-      0x01, 0x0e, 0xcf, 0x00, 0x00, 0x00, 0xc8, 0x5b, 0x76, 0xe6, 0x89, 0xdf,
-      0x88, 0x92, 0xfe, 0xfe, 0x05, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x01,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+      // Ethernet header
+      0x01, 0x0e, 0xcf, 0x00, 0x00, 0x00, // [00-05] Destination MAC: Identify multicast
+      0xc8, 0x5b, 0x76, 0xe6, 0x89, 0xdf, // [06-11] Source MAC address
+      0x88, 0x92,                         // [12-13] EtherType: PROFINET
+      // DCP header
+      0xfe, 0xfe,                         // [14-15] Frame ID: DCP Identify request
+      0x05,                               // [16]    Service ID: Identify
+      0x00,                               // [17]    Service type: Request
+      0x00, 0x00, 0x00, 0x02,             // [18-21] Xid
+      0x00, 0x01,                         // [22-23] Response delay factor
+      0x00, 0x00,                         // [24-25] DCP data length: 0 bytes
+      0x00, 0x00, 0x00, 0x00              // [26-29] First block header (frame is cut off)
+   };
+   // clang-format on
    uint16_t len;
 
    for (len = 16; len < sizeof (req); len++)
@@ -343,11 +416,26 @@ TEST_F (DcpTest, DcpIdentifyTooShortFrames)
 TEST_F (DcpTest, DcpIdentifyLastBlockAtEndOfFrame)
 {
    /* Name of station filter ends at the very end of the frame */
+   // clang-format off
    uint8_t req[] = {
-      0x01, 0x0e, 0xcf, 0x00, 0x00, 0x00, 0xc8, 0x5b, 0x76, 0xe6, 0x89, 0xdf,
-      0x88, 0x92, 0xfe, 0xfe, 0x05, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x01,
-      0x00, 0x10, 0x02, 0x02, 0x00, 0x0c, 0x72, 0x74, 0x2d, 0x6c, 0x61, 0x62,
-      0x73, 0x2d, 0x64, 0x65, 0x6d, 0x6f};
+      // Ethernet header
+      0x01, 0x0e, 0xcf, 0x00, 0x00, 0x00, // [00-05] Destination MAC: Identify multicast
+      0xc8, 0x5b, 0x76, 0xe6, 0x89, 0xdf, // [06-11] Source MAC address
+      0x88, 0x92,                         // [12-13] EtherType: PROFINET
+      // DCP header
+      0xfe, 0xfe,                         // [14-15] Frame ID: DCP Identify request
+      0x05,                               // [16]    Service ID: Identify
+      0x00,                               // [17]    Service type: Request
+      0x00, 0x00, 0x00, 0x02,             // [18-21] Xid
+      0x00, 0x01,                         // [22-23] Response delay factor
+      0x00, 0x10,                         // [24-25] DCP data length: 16 bytes
+      // DCP block: Name of station
+      0x02, 0x02,                         // [26-27] Option: Device props, Name of station
+      0x00, 0x0c,                         // [28-29] Block length: 12 (name)
+      0x72, 0x74, 0x2d, 0x6c, 0x61, 0x62, // [30-35] Name: "rt-lab"
+      0x73, 0x2d, 0x64, 0x65, 0x6d, 0x6f  // [36-41] Name: "s-demo"
+   };
+   // clang-format on
 
    /* Set the name that the request is looking for */
    EXPECT_EQ (receive_frame (net, set_name_req, sizeof (set_name_req)), 1);

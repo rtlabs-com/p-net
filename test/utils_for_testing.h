@@ -98,6 +98,7 @@ typedef struct call_counters_obj
    uint16_t ccontrol_calls;
    uint16_t read_calls;
    uint16_t write_calls;
+   uint16_t alarm_calls;
    uint16_t led_on_calls;
    uint16_t led_off_calls;
    uint16_t scheduler_callback_a_calls;

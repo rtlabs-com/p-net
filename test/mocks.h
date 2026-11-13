@@ -42,6 +42,7 @@ typedef struct mock_os_data_obj
 
    uint16_t udp_sendto_len;
    uint16_t udp_sendto_count;
+   uint8_t udp_sendto_buffer[PF_FRAME_BUFFER_SIZE];
 
    uint8_t udp_recvfrom_buffer[PF_FRAME_BUFFER_SIZE];
    uint16_t udp_recvfrom_length;
@@ -86,10 +87,16 @@ typedef struct mock_fspm_data
    char im_location[PNET_LOCATION_MAX_SIZE];
 } mock_fspm_data_t;
 
+typedef struct mock_bg_worker_data
+{
+   uint16_t save_ase_nvm_data_count; /* Number of started save jobs */
+} mock_bg_worker_data_t;
+
 extern mock_os_data_t mock_os_data;
 extern mock_lldp_data_t mock_lldp_data;
 extern mock_file_data_t mock_file_data;
 extern mock_fspm_data_t mock_fspm_data;
+extern mock_bg_worker_data_t mock_bg_worker_data;
 
 uint32_t mock_os_get_current_time_us (void);
 uint32_t mock_pnal_get_system_uptime_10ms (void);

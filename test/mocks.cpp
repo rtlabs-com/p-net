@@ -19,6 +19,8 @@
 
 #include "mocks.h"
 
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 struct pnal_eth_handle
@@ -35,6 +37,7 @@ mock_os_data_t mock_os_data;
 mock_lldp_data_t mock_lldp_data;
 mock_file_data_t mock_file_data;
 mock_fspm_data_t mock_fspm_data;
+mock_bg_worker_data_t mock_bg_worker_data;
 pnal_eth_handle_t mock_eth_handle;
 
 void mock_clear (void)
@@ -43,6 +46,7 @@ void mock_clear (void)
    memset (&mock_lldp_data, 0, sizeof (mock_lldp_data));
    memset (&mock_file_data, 0, sizeof (mock_file_data));
    memset (&mock_fspm_data, 0, sizeof (mock_fspm_data));
+   memset (&mock_bg_worker_data, 0, sizeof (mock_bg_worker_data));
    mock_os_data.eth_status[1].operational_mau_type =
       PNAL_ETH_MAU_COPPER_100BaseTX_FULL_DUPLEX;
    mock_os_data.eth_status[1].running = true;
@@ -169,6 +173,12 @@ int mock_pnal_udp_sendto (
    int size)
 {
    mock_os_data.udp_sendto_len = size;
+   if (size < 0 || size > (int)sizeof (mock_os_data.udp_sendto_buffer))
+   {
+      fprintf (stderr, "mock_pnal_udp_sendto: invalid size %d\n", size);
+      abort();
+   }
+   memcpy (mock_os_data.udp_sendto_buffer, data, size);
    mock_os_data.udp_sendto_count++;
 
    return size;
@@ -508,5 +518,10 @@ void mock_pf_bg_worker_init (pnet_t * net)
 
 int mock_pf_bg_worker_start_job (pnet_t * net, pf_bg_job_t job_id)
 {
+   if (job_id == PF_BGJOB_SAVE_ASE_NVM_DATA)
+   {
+      mock_bg_worker_data.save_ase_nvm_data_count++;
+   }
+
    return 0;
 }

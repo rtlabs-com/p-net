@@ -165,7 +165,10 @@ int my_alarm_ind (
    uint16_t data_usi,
    const uint8_t * p_data)
 {
+   app_data_for_testing_t * p_appdata = (app_data_for_testing_t *)arg;
+
    TEST_TRACE ("Callback on alarm\n");
+   p_appdata->call_counters.alarm_calls++;
    return 0;
 }
 

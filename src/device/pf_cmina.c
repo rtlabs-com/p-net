@@ -653,6 +653,12 @@ int pf_cmina_dcp_set_ind (
    bool temp = ((block_qualifier & 1) == 0);
    uint16_t reset_mode = 0;
 
+   /* To restore the IP suites if the request is refused */
+   pf_full_ip_suite_t current_ip_suite =
+      net->cmina_current_dcp_ase.full_ip_suite;
+   pf_full_ip_suite_t nonvolatile_ip_suite =
+      net->cmina_nonvolatile_dcp_ase.full_ip_suite;
+
    /* Stop sending Hello packets */
    pf_scheduler_remove_if_running (net, &net->cmina_hello_timeout);
 
@@ -916,9 +922,6 @@ int pf_cmina_dcp_set_ind (
    /* Use parsed DCP SET request, depending on actual CMINA state */
    if (ret == 0)
    {
-      /* Save to file */
-      (void)pf_bg_worker_start_job (net, PF_BGJOB_SAVE_ASE_NVM_DATA);
-
       /* Evaluate what we have and where to go */
       have_name = (strlen (net->cmina_current_dcp_ase.station_name) > 0);
       have_ip =
@@ -1079,6 +1082,18 @@ int pf_cmina_dcp_set_ind (
             ret = -1;
          }
          break;
+      }
+
+      if (ret == 0)
+      {
+         /* The request is accepted. Save to file */
+         (void)pf_bg_worker_start_job (net, PF_BGJOB_SAVE_ASE_NVM_DATA);
+      }
+      else
+      {
+         /* The request is refused, so it shall not change anything */
+         net->cmina_current_dcp_ase.full_ip_suite = current_ip_suite;
+         net->cmina_nonvolatile_dcp_ase.full_ip_suite = nonvolatile_ip_suite;
       }
    }
 

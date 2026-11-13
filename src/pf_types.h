@@ -2106,6 +2106,8 @@ typedef struct pf_session_info
    pnal_ipport_t port; /* Source port on incoming message, destination port on
                         outgoing message */
    uint32_t sequence_nmb_send; /* rm_ccontrol_req */
+   uint32_t sequence_nmb_recv; /* Sequence number of the last request that
+                                  was received */
 
    /*
     * Small devices should be able to cope with a single Ethernet frame.
@@ -2144,6 +2146,9 @@ typedef struct pf_session_info
    /* This timer is used to handle ccontrol and fragment re-transmissions */
    pf_scheduler_handle_t resend_timeout;
    uint32_t resend_counter;
+
+   /* Timeout for a partially received, fragmented message */
+   pf_scheduler_handle_t call_timeout;
 } pf_session_info_t;
 
 #define PF_AR_PLUG_MAX_QUEUE (PNET_MAX_API * PNET_MAX_SLOTS * PNET_MAX_SUBSLOTS)

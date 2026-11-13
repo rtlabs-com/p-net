@@ -1527,6 +1527,29 @@ void pf_put_dce_rpc_header (
    pf_put_byte (p_rpc->serial_low, res_len, p_bytes, p_pos);
 }
 
+void pf_put_dce_rpc_cancel_ack (
+   const pf_rpc_header_t * p_rpc_req,
+   uint16_t res_len,
+   uint8_t * p_bytes,
+   uint16_t * p_pos)
+{
+   pf_rpc_header_t rpc = *p_rpc_req;
+   uint16_t pos_body_len;
+
+   rpc.packet_type = PF_RPC_PT_CANCEL_ACK;
+   rpc.flags.last_fragment = false;
+   rpc.flags.fragment = false;
+   rpc.flags.no_fack = true;
+   rpc.flags.maybe = false;
+   rpc.flags.idempotent = true;
+   rpc.flags.broadcast = false;
+   rpc.flags2.cancel_pending = false;
+   rpc.length_of_body = 0;
+   rpc.fragment_nmb = 0;
+
+   pf_put_dce_rpc_header (&rpc, res_len, p_bytes, p_pos, &pos_body_len);
+}
+
 void pf_put_record_data_read (
    bool is_big_endian,
    pf_block_type_values_t block_type,

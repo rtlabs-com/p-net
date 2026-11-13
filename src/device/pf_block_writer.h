@@ -480,6 +480,25 @@ void pf_put_dce_rpc_header (
    uint16_t * p_pos_body_len);
 
 /**
+ * Insert a connectionless DCE RPC cancel_ack PDU into a buffer.
+ *
+ * The header is derived from the cancel PDU that is answered, so the activity,
+ * sequence number and endianness are the same. The PDU has no body, which
+ * acknowledges that the call is orphaned and not processed any further.
+ * See DCE 1.1: RPC, 12.5.3.2.
+ *
+ * @param p_rpc_req        In:   The DCE RPC header of the cancel PDU.
+ * @param res_len          In:   Size of destination buffer.
+ * @param p_bytes          Out:  Destination buffer.
+ * @param p_pos            InOut:Position in destination buffer.
+ */
+void pf_put_dce_rpc_cancel_ack (
+   const pf_rpc_header_t * p_rpc_req,
+   uint16_t res_len,
+   uint8_t * p_bytes,
+   uint16_t * p_pos);
+
+/**
  * Insert a write result into a buffer.
  * @param is_big_endian    In:   Endianness of the destination buffer.
  * @param p_res            In:   The write result to insert.

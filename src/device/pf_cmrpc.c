@@ -72,6 +72,22 @@
    (PF_CMRPC_MUST_RECV_FRAG_SIZE - PF_CMRPC_PDU_HEADER_SIZE)
 #define PF_CMRPC_EPM_SESSION_TMO_IN_US (5000000)
 
+/* Timeout for a partially received, fragmented request on a session of a
+   controller without an AR. It is restarted for every fragment that is
+   received, and the session is released when it expires.
+
+   The sender of a fragment repeats it up to three times, after 2 s each,
+   if it is not acknowledged (Timeout FRAG, PN-AL-protocol, 4.10.5.2). If no
+   fragment has been received within 4 * 2 s = 8 s, the sender has given up
+   the call. The CallTimer that detects a partial request for RSI uses the
+   same value (PN-AL-protocol, Table 304). DCE 1.1: RPC aborts a call that
+   is not completed within TIMEOUT_IDLE (CL_SERVER, 10.2), but that value is
+   not used for PROFINET (4.10.5.2).
+
+   A session with an AR is monitored by the AR instead, and the fragments of
+   a call that is given up are dropped when the next call starts. */
+#define PF_CMRPC_CALL_TMO_IN_US (4 * 2000000)
+
 static const pf_uuid_t implicit_ar = {0, 0, 0, {0, 0, 0, 0, 0, 0, 0, 0}};
 
 static const pf_uuid_t uuid_epmap_interface = {
@@ -526,6 +542,7 @@ static int pf_session_allocate (pnet_t * net, pf_session_info_t ** pp_sess)
       p_sess->ix = ix;
       pf_scheduler_init_handle (&p_sess->resend_timeout, "rpc");
       pf_scheduler_init_handle (&p_sess->epm_timeout, "rpc-lookup");
+      pf_scheduler_init_handle (&p_sess->call_timeout, "rpc-call");
 
       /* Set activity UUID. Will be overwritten for incoming requests. */
       pf_generate_uuid (
@@ -574,6 +591,7 @@ static void pf_session_release (pnet_t * net, pf_session_info_t * p_sess)
 
          pf_scheduler_remove_if_running (net, &p_sess->resend_timeout);
          pf_scheduler_remove_if_running (net, &p_sess->epm_timeout);
+         pf_scheduler_remove_if_running (net, &p_sess->call_timeout);
 
          LOG_DEBUG (
             PF_RPC_LOG,
@@ -613,6 +631,95 @@ static void pf_session_epm_timeout (
    struct pf_session_info * p_session = (struct pf_session_info *)arg;
 
    pf_session_release (net, p_session);
+}
+
+/**
+ * @internal
+ *
+ * The rest of a fragmented request was not received in time on a session of
+ * a controller without an AR. Release the session, as it is not used for
+ * anything else.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param arg              InOut: The session instance.
+ * @param current_time     In: Time when the timeout function was scheduled
+ */
+static void pf_session_call_timeout (
+   pnet_t * net,
+   void * arg,
+   uint32_t current_time)
+{
+   struct pf_session_info * p_session = (struct pf_session_info *)arg;
+
+   LOG_DEBUG (
+      PF_RPC_LOG,
+      "CMRPC(%d): Fragmented request not completed in time on session %u\n",
+      __LINE__,
+      (unsigned)p_session->ix);
+
+   pf_session_release (net, p_session);
+}
+
+/**
+ * @internal
+ * Check if something releases the session later.
+ *
+ * A session that the device has created is released by the device. A session
+ * of a controller is released when its AR is aborted, or by the timeout of an
+ * EPM lookup sequence, of a fragmented request or of the resends of a
+ * fragmented response.
+ *
+ * @param p_sess           In:    The session.
+ * @return  true  if something releases the session later.
+ */
+static bool pf_session_is_monitored (const pf_session_info_t * p_sess)
+{
+   return p_sess->from_me || (p_sess->p_ar != NULL) ||
+          pf_scheduler_is_running (&p_sess->epm_timeout) ||
+          pf_scheduler_is_running (&p_sess->call_timeout) ||
+          pf_scheduler_is_running (&p_sess->resend_timeout);
+}
+
+/**
+ * @internal
+ * Check if a PDU is the answer to the call that the device has sent last.
+ *
+ * A call is identified by the activity UUID and the sequence number
+ * (DCE 1.1: RPC, 9.5.3). The device sends one call at a time in a session that
+ * it has created, and the sequence number of the call that was sent last is
+ * one less than the next to send.
+ *
+ * @param p_sess           In:    The session found by the activity UUID.
+ * @param p_rpc            In:    The RPC header of the PDU.
+ * @return  true  if the PDU is the answer to the call that was sent last.
+ */
+static bool pf_cmrpc_is_answer_to_call (
+   const pf_session_info_t * p_sess,
+   const pf_rpc_header_t * p_rpc)
+{
+   return p_sess->from_me && (p_sess->p_ar != NULL) &&
+          (p_rpc->sequence_nmb == (p_sess->sequence_nmb_send - 1));
+}
+
+/**
+ * @internal
+ * Check if a PDU concerns the call that the device has received last.
+ *
+ * A call is identified by the activity UUID and the sequence number
+ * (DCE 1.1: RPC, 9.5.3). A session of a controller, where the device is the
+ * server, stores the sequence number of the last request that was received
+ * from it.
+ *
+ * @param p_sess           In:    The session found by the activity UUID.
+ * @param p_rpc            In:    The RPC header of the PDU.
+ * @return  true  if the PDU concerns the call that was received last.
+ */
+static bool pf_cmrpc_is_received_call (
+   const pf_session_info_t * p_sess,
+   const pf_rpc_header_t * p_rpc)
+{
+   return !p_sess->from_me &&
+          (p_rpc->sequence_nmb == p_sess->sequence_nmb_recv);
 }
 
 /**
@@ -1136,6 +1243,20 @@ static void pf_cmrpc_send_with_timeout (
                p_sess->socket = -1;
             }
          }
+         else if (p_sess->p_ar == NULL)
+         {
+            /* No reaction to sent fragment, on a session that is not linked
+               to an AR. Only a Connect links its session to the AR, also when
+               a later request on another activity is for the AR. There is no
+               AR to abort, and the session is not used for anything else. */
+            LOG_ERROR (
+               PF_RPC_LOG,
+               "CMRPC(%d): Fragment has been sent, but timing out due to lack "
+               "of incoming message. Releasing session %u.\n",
+               __LINE__,
+               (unsigned)p_sess->ix);
+            pf_session_release (p_net, p_sess);
+         }
          else
          {
             /* Error: No reaction to sent fragment */
@@ -1538,37 +1659,62 @@ static int pf_cmrpc_rm_connect_interpret_ind (
 #endif
 #if PNET_OPTION_MC_CR
          case PF_BT_MCR_REQ:
-            pf_get_mcr_request (&p_sess->get_info, p_pos, p_ar->nbr_mcr, p_ar);
-            if (p_sess->get_info.result != PF_PARSE_OK)
+            /* The number of MCR blocks that fit is a limit of the AR
+               (mcr_request[]), not something the parser can know about. */
+            if (!(p_ar->nbr_mcr < PNET_MAX_MC_CR))
             {
-               pf_set_error (
-                  &p_sess->rpc_result,
-                  PNET_ERROR_CODE_CONNECT,
-                  PNET_ERROR_DECODE_PNIO,
-                  PNET_ERROR_CODE_1_CONN_FAULTY_MCR_BLOCK_REQ,
-                  PNET_ERROR_CODE_2_FAULTY_MCR_BLOCK_REQ_WRONG_NAME_LENGTH);
-               ret = -1;
-            }
-            else if (p_ar->ar_param.ar_properties.device_access == true)
-            {
+               LOG_ERROR (
+                  PF_RPC_LOG,
+                  "CMRPC(%d): Too many MCR given. Max %u MCR per AR "
+                  "supported\n",
+                  __LINE__,
+                  PNET_MAX_MC_CR);
                pf_set_error (
                   &p_sess->rpc_result,
                   PNET_ERROR_CODE_CONNECT,
                   PNET_ERROR_DECODE_PNIO,
                   PNET_ERROR_CODE_1_CMRPC,
-                  PNET_ERROR_CODE_2_CMRPC_UNKNOWN_BLOCKS);
+                  PNET_ERROR_CODE_2_CMRPC_WRONG_BLOCK_COUNT);
                ret = -1;
             }
             else
             {
-               ret = pf_check_block_header (
-                  (*p_pos - data_pos) + 2,
-                  &block_header,
-                  PNET_ERROR_CODE_1_CONN_FAULTY_MCR_BLOCK_REQ,
-                  &p_sess->rpc_result);
-               if (ret == 0)
+               pf_get_mcr_request (
+                  &p_sess->get_info,
+                  p_pos,
+                  p_ar->nbr_mcr,
+                  p_ar);
+               if (p_sess->get_info.result != PF_PARSE_OK)
                {
-                  p_ar->nbr_mcr++;
+                  pf_set_error (
+                     &p_sess->rpc_result,
+                     PNET_ERROR_CODE_CONNECT,
+                     PNET_ERROR_DECODE_PNIO,
+                     PNET_ERROR_CODE_1_CONN_FAULTY_MCR_BLOCK_REQ,
+                     PNET_ERROR_CODE_2_FAULTY_MCR_BLOCK_REQ_WRONG_NAME_LENGTH);
+                  ret = -1;
+               }
+               else if (p_ar->ar_param.ar_properties.device_access == true)
+               {
+                  pf_set_error (
+                     &p_sess->rpc_result,
+                     PNET_ERROR_CODE_CONNECT,
+                     PNET_ERROR_DECODE_PNIO,
+                     PNET_ERROR_CODE_1_CMRPC,
+                     PNET_ERROR_CODE_2_CMRPC_UNKNOWN_BLOCKS);
+                  ret = -1;
+               }
+               else
+               {
+                  ret = pf_check_block_header (
+                     (*p_pos - data_pos) + 2,
+                     &block_header,
+                     PNET_ERROR_CODE_1_CONN_FAULTY_MCR_BLOCK_REQ,
+                     &p_sess->rpc_result);
+                  if (ret == 0)
+                  {
+                     p_ar->nbr_mcr++;
+                  }
                }
             }
             break;
@@ -3291,8 +3437,8 @@ static int pf_cmrpc_perform_one_write (
          1);
    }
    else if (
-      (*p_req_pos + p_write_request->record_data_length) <=
-      p_sess->get_info.len)
+      p_write_request->record_data_length <=
+      (uint32_t)(p_sess->get_info.len - *p_req_pos))
    {
       if (p_write_request->index <= PF_IDX_USER_MAX)
       {
@@ -3321,7 +3467,8 @@ static int pf_cmrpc_perform_one_write (
                2);
          }
       }
-      else
+      else if (
+         p_write_request->record_data_length >= sizeof (pf_block_header_t))
       {
          /*
           * Write requests are special: There are so many different block types
@@ -3355,15 +3502,26 @@ static int pf_cmrpc_perform_one_write (
                2);
          }
       }
+      else
+      {
+         /* The record data must contain the block header */
+         pf_set_error (
+            p_stat,
+            PNET_ERROR_CODE_WRITE,
+            PNET_ERROR_DECODE_PNIORW,
+            PNET_ERROR_CODE_1_ACC_WRITE_LENGTH_ERROR,
+            0);
+      }
    }
    else
    {
+      /* The record data does not fit in the request */
       pf_set_error (
          p_stat,
          PNET_ERROR_CODE_WRITE,
-         PNET_ERROR_DECODE_PNIORW,
-         PNET_ERROR_CODE_1_ACC_INVALID_AREA_API,
-         4);
+         PNET_ERROR_DECODE_PNIO,
+         PNET_ERROR_CODE_1_CMRPC,
+         PNET_ERROR_CODE_2_CMRPC_ARGSLENGTH_INVALID);
    }
 
    if (ret != 0)
@@ -3421,11 +3579,34 @@ static int pf_cmrpc_rm_write_ind (
     * It might be the only one, but that will be dealt with below.
     */
    req_start_pos = req_pos; /* Start of request blocks */
-   ret = pf_cmrpc_rm_write_interpret_ind (
-      &p_sess->get_info,
-      &write_request,
-      &req_pos,
-      &p_sess->rpc_result);
+
+   /* The arguments are the rest of the request, as in the other operations. */
+   if (
+      p_sess->ndr_data.args_length !=
+      (uint32_t)(p_sess->get_info.len - req_start_pos))
+   {
+      ret = -1;
+   }
+   else
+   {
+      ret = pf_cmrpc_rm_write_interpret_ind (
+         &p_sess->get_info,
+         &write_request,
+         &req_pos,
+         &p_sess->rpc_result);
+   }
+
+   if (ret != 0)
+   {
+      /* The arguments are not in the request, or the request header is not
+         within them. Keep an error from an unknown block. */
+      pf_set_error_if_not_already_set (
+         &p_sess->rpc_result,
+         PNET_ERROR_CODE_WRITE,
+         PNET_ERROR_DECODE_PNIO,
+         PNET_ERROR_CODE_1_CMRPC,
+         PNET_ERROR_CODE_2_CMRPC_ARGSLENGTH_INVALID);
+   }
 
    /*
     * Prepare the response buffer by writing dummy data and recording their
@@ -3548,14 +3729,34 @@ static int pf_cmrpc_rm_write_ind (
          }
          else /* single write */
          {
-            /* Do the write, and store the corresponding response block */
-            ret = pf_cmrpc_perform_one_write (
-               net,
-               p_sess,
-               &write_request,
-               &write_result,
-               &p_sess->rpc_result,
-               &req_pos);
+            if (
+               write_request.record_data_length !=
+               (uint32_t)(p_sess->get_info.len - req_pos))
+            {
+               /* The record shall be the rest of the arguments, as the
+                  ArgsLength is the length of the request header and the
+                  record data. This is checked before the header of the
+                  request is used. */
+               pf_set_error (
+                  &p_sess->rpc_result,
+                  PNET_ERROR_CODE_WRITE,
+                  PNET_ERROR_DECODE_PNIO,
+                  PNET_ERROR_CODE_1_CMRPC,
+                  PNET_ERROR_CODE_2_CMRPC_ARGSLENGTH_INVALID);
+               write_result.pnio_status = p_sess->rpc_result.pnio_status;
+               ret = -1;
+            }
+            else
+            {
+               /* Do the write, and store the corresponding response block */
+               ret = pf_cmrpc_perform_one_write (
+                  net,
+                  p_sess,
+                  &write_request,
+                  &write_result,
+                  &p_sess->rpc_result,
+                  &req_pos);
+            }
             pf_put_write_result (
                p_sess->get_info.is_big_endian,
                &write_result,
@@ -4349,6 +4550,7 @@ int pf_cmrpc_dce_packet (
    bool is_new_session = false;
    uint32_t fault_code = 0;
    uint32_t reject_code = 0;
+   bool reject_call = false;
    bool set_state_paramend = false;
 
    get_info.result = PF_PARSE_OK;
@@ -4372,8 +4574,63 @@ int pf_cmrpc_dce_packet (
       rpc_req.flags.last_fragment ? "Set" : "Not set",
       rpc_req.flags.no_fack ? "Set" : "Not set");
 
-   /* Find the session (by RPC activity UUID) or allocate a new session */
+   /* Find the session (by RPC activity UUID) */
    pf_session_locate_by_uuid (net, &rpc_req.activity_uuid, &p_sess);
+
+   /*
+    * Reject, fault and cancel PDUs are not requests. A reject and a fault are
+    * sent by a server to a client as the answer to a call, and a cancel by a
+    * client to a server. See DCE 1.1: RPC, 12.5.3.3, 12.5.3.5 and 12.5.3.8.
+    *
+    * A cancel concerns one call and not the activity. The server answers a
+    * cancel for the call that was received last in the session with a
+    * cancel_ack (12.5.3.2, and the CL_SERVER machine in 10.2). The device can
+    * not cancel the processing of a call, so the cancel_ack has no body, which
+    * acknowledges that the call is orphaned. A cancel for another call, or
+    * another activity, is silently dropped.
+    *
+    * A reject and a fault are handled by the client part, for the CControl
+    * call that the device has sent. They are otherwise silently dropped,
+    * without allocating or changing any session.
+    */
+   if (rpc_req.packet_type == PF_RPC_PT_CL_CANCEL)
+   {
+      if ((p_sess == NULL) || !pf_cmrpc_is_received_call (p_sess, &rpc_req))
+      {
+         LOG_DEBUG (
+            PF_RPC_LOG,
+            "CMRPC(%d): Dropping a cancel that is not for the call that was "
+            "received last\n",
+            __LINE__);
+         return 0;
+      }
+
+      LOG_DEBUG (PF_RPC_LOG, "CMRPC(%d): Cancel ack\n", __LINE__);
+      pf_put_dce_rpc_cancel_ack (&rpc_req, *p_res_len, p_res, &res_pos);
+
+      p_sess->ip_addr = ip_addr;
+      p_sess->port = port;
+      pf_cmrpc_send_once_from_buffer (net, p_sess, p_res, res_pos, "cancel ack");
+      return 0;
+   }
+
+   if (
+      (rpc_req.packet_type == PF_RPC_PT_REJECT) ||
+      (rpc_req.packet_type == PF_RPC_PT_FAULT))
+   {
+      if ((p_sess == NULL) || !pf_cmrpc_is_answer_to_call (p_sess, &rpc_req))
+      {
+         LOG_DEBUG (
+            PF_RPC_LOG,
+            "CMRPC(%d): Dropping a PDU of type %u that is not the answer to "
+            "a call of the device\n",
+            __LINE__,
+            (unsigned)rpc_req.packet_type);
+         return 0;
+      }
+   }
+
+   /* Use the session, or allocate a new session */
    if (p_sess == NULL)
    {
       (void)pf_session_allocate (net, &p_sess);
@@ -4400,6 +4657,10 @@ int pf_cmrpc_dce_packet (
    {
       p_sess->get_info = get_info;
       memset (&p_sess->rpc_result, 0, sizeof (p_sess->rpc_result));
+      if (rpc_req.packet_type == PF_RPC_PT_REQUEST)
+      {
+         p_sess->sequence_nmb_recv = rpc_req.sequence_nmb;
+      }
 
       if (rpc_req.length_of_body > PF_CMRPC_MAX_PDU_BODY_SIZE)
       {
@@ -4409,11 +4670,14 @@ int pf_cmrpc_dce_packet (
             " Check the conformance of the controller (PLC).\n",
             __LINE__,
             rpc_req.length_of_body);
+         reject_call = true;
       }
       else if (rpc_req.flags.fragment == false)
       {
          /* Incoming message is a request or response contained entirely in one
           * frame */
+         /* It ends a transfer of fragments that is in progress */
+         pf_scheduler_remove_if_running (net, &p_sess->call_timeout);
          p_sess->in_buf_len = 0;
          p_sess->ip_addr = ip_addr;
          p_sess->port = port;
@@ -4429,6 +4693,20 @@ int pf_cmrpc_dce_packet (
           * Collect all fragments into the session buffer and
           * proceed only when the last fragment has been received.
           */
+
+         if (!p_sess->from_me && (p_sess->p_ar == NULL))
+         {
+            /* Wait for the next fragment, also after a fragment that is not
+               accepted, so that no session without an AR waits forever. The
+               timer is stopped when the request is complete. */
+            (void)pf_scheduler_restart (
+               net,
+               PF_CMRPC_CALL_TMO_IN_US,
+               pf_session_call_timeout,
+               (void *)p_sess,
+               &p_sess->call_timeout);
+         }
+
          if (rpc_req.fragment_nmb == 0)
          {
             /* This is the first incoming fragment. */
@@ -4441,33 +4719,6 @@ int pf_cmrpc_dce_packet (
             p_sess->is_big_endian = p_sess->get_info.is_big_endian;
             p_sess->in_fragment_nbr = 0;
             p_sess->kill_session = false;
-         }
-         else
-         {
-            /* Intermediate or last incoming fragment. */
-            if (p_sess->is_big_endian != rpc_req.is_big_endian)
-            {
-               /* Endianness differs. All fragments must have same endianness in
-                * this implementation */
-               LOG_ERROR (
-                  PF_RPC_LOG,
-                  "CMRPC(%d): Endianness differs in incoming fragments\n",
-                  __LINE__);
-               pf_set_error (
-                  &p_sess->rpc_result,
-                  PNET_ERROR_CODE_CONNECT,
-                  PNET_ERROR_DECODE_PNIO,
-                  PNET_ERROR_CODE_1_CMRPC,
-                  PNET_ERROR_CODE_2_CMRPC_STATE_CONFLICT);
-
-               /* Release and kill session */
-               if (p_sess->p_ar != NULL)
-               {
-                  pf_ar_release (net, p_sess->p_ar);
-                  p_sess->p_ar = NULL;
-               }
-               p_sess->kill_session = true;
-            }
          }
 
          /* Fragment validation */
@@ -4488,6 +4739,19 @@ int pf_cmrpc_dce_packet (
                PNET_ERROR_DECODE_PNIO,
                PNET_ERROR_CODE_1_CMRPC,
                PNET_ERROR_CODE_2_CMRPC_STATE_CONFLICT);
+         }
+         else if (p_sess->is_big_endian != rpc_req.is_big_endian)
+         {
+            /* The data representation format label (DCE 1.1: RPC, 12.4.3)
+             * differs from the one of the first fragment of the call. This
+             * implementation can not combine fragments with different
+             * endianness, so the call is rejected. The fragment is not
+             * added. An AR of the session is not affected. */
+            LOG_ERROR (
+               PF_RPC_LOG,
+               "CMRPC(%d): Endianness differs in incoming fragments\n",
+               __LINE__);
+            reject_call = true;
          }
          else if (
             (p_sess->in_buf_len + rpc_req.length_of_body) >
@@ -4531,6 +4795,9 @@ int pf_cmrpc_dce_packet (
 
             if (rpc_req.flags.last_fragment == true)
             {
+               /* The request is complete */
+               pf_scheduler_remove_if_running (net, &p_sess->call_timeout);
+
                /* Re-route the parser to use the session buffer */
                req_pos = 0;
                p_sess->get_info.p_buf = p_sess->in_buffer;
@@ -4545,10 +4812,10 @@ int pf_cmrpc_dce_packet (
       /* Decide what to do with incoming message */
       /* Enter here _even_if_ an error is already detected because we may need
        * to generate an error response. */
-      if (rpc_req.length_of_body > PF_CMRPC_MAX_PDU_BODY_SIZE)
+      if (reject_call)
       {
          /* The specifications do not clearly state what the response should
-          * be in this case. The current best guess is to send a Reject PDU.
+          * be in these cases. The current best guess is to send a Reject PDU.
           */
 
          /* Prepare the response */
@@ -4628,7 +4895,8 @@ int pf_cmrpc_dce_packet (
                res_pos,
                "PING response");
 
-            p_sess->kill_session = is_new_session;
+            /* Release a session that nothing monitors after the response */
+            p_sess->kill_session = !pf_session_is_monitored (p_sess);
             break;
          case PF_RPC_PT_REQUEST:
             LOG_INFO (
@@ -4851,6 +5119,12 @@ int pf_cmrpc_dce_packet (
             {
                pf_cmdev_state_ind (net, p_sess->p_ar, PNET_EVENT_PRMEND);
             }
+
+            /* Release a session that nothing monitors after the response */
+            if (!pf_session_is_monitored (p_sess))
+            {
+               p_sess->kill_session = true;
+            }
             break;
          case PF_RPC_PT_FRAG_ACK:
             /* Handle fragment acknowledgment from the controller. */
@@ -5011,6 +5285,13 @@ int pf_cmrpc_dce_packet (
                p_sess->out_buf_send_len = 0;
                p_sess->out_fragment_nbr = 0;
                res_pos = 0; /* Nothing more to do */
+
+               /* Release a session that nothing monitors after the
+                  response */
+               if (!pf_session_is_monitored (p_sess))
+               {
+                  p_sess->kill_session = true;
+               }
             }
             break;
          case PF_RPC_PT_RESPONSE:
@@ -5073,25 +5354,12 @@ int pf_cmrpc_dce_packet (
                }
             }
             break;
-         case PF_RPC_PT_CL_CANCEL:
-            /*
-             * Cancel requests may be sent from the controller to the device.
-             * The ProfiNet spec say little about how to handle these packets.
-             * The DCE RPC spec says to cancel the connection.
-             */
-            LOG_INFO (PF_RPC_LOG, "CMRPC(%d): CANCEL received\n", __LINE__);
-
-            (void)pf_cmdev_cm_abort (net, p_sess->p_ar);
-
-            *p_close_socket = p_sess->from_me;
-            p_sess->kill_session = true;
-            res_pos = 0; /* Send nothing in response */
-            ret = 0;
-            break;
          case PF_RPC_PT_FAULT:
             /*
              * Faults occur for any number of reasons.
-             * They are detected by the controller and sent to the device.
+             * They are detected by the controller and sent to the device, as
+             * the answer to a call of the device. Other faults are dropped
+             * above.
              * The DCE RPC spec says to go to the fault state.
              * Lets just cancel the connection.
              */
@@ -5113,7 +5381,9 @@ int pf_cmrpc_dce_packet (
          case PF_RPC_PT_REJECT:
             /*
              * Rejects occur for any number of reasons.
-             * They are detected by the controller and sent to the device.
+             * They are detected by the controller and sent to the device, as
+             * the answer to a call of the device. Other rejects are dropped
+             * above.
              * The ProfiNet spec say little about how to handle these packets
              * but at least some controllers restart the entire connection.
              */
@@ -5139,6 +5409,9 @@ int pf_cmrpc_dce_packet (
                __LINE__,
                rpc_req.packet_type);
             res_pos = 0; /* Nothing more to do */
+
+            /* Release a session that nothing monitors */
+            p_sess->kill_session = !pf_session_is_monitored (p_sess);
             break;
          }
       }
