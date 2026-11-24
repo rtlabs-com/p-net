@@ -35,10 +35,10 @@ extern "C" {
 #include "pnet_export.h"
 #include "pnet_options.h"
 #include "pnet_version.h"
-#include "pnal_config.h"
 #if PNET_OPTION_DRIVER_ENABLE
 #include "driver_config.h" /* Configuration options for enabled driver */
 #endif
+#include "pnal.h"
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -56,8 +56,8 @@ extern "C" {
 #define PNET_MAX_FILE_FULLPATH_SIZE                                            \
    (PNET_MAX_DIRECTORYPATH_SIZE + PNET_MAX_FILENAME_SIZE)
 
-/** Including termination. Based on Linux IFNAMSIZ */
-#define PNET_INTERFACE_NAME_MAX_SIZE 16
+/** Including termination. Based on Linux IFNAMSIZ, and windows GUID */
+#define PNET_INTERFACE_NAME_MAX_SIZE 39
 
 /** Supported block version by this implementation */
 #define PNET_BLOCK_VERSION_HIGH 1
@@ -94,6 +94,8 @@ extern "C" {
 #define PNET_PORT_2 2
 #define PNET_PORT_3 3
 #define PNET_PORT_4 4
+
+#define PNET_MAX_AR (PNET_MAX_IO_AR + PNET_MAX_DA_AR)
 
 /**************************** Error codes ***********************************/
 
@@ -140,6 +142,12 @@ extern "C" {
 /** Reserved 0x83-0xFF */
 
 /**
+ * Error code 1 and 2 values for when there is no error.
+ */
+#define PNET_ERROR_CODE_1_NOERROR 0x00
+#define PNET_ERROR_CODE_2_NOERROR 0x00
+
+/**
  * # List of error_code_1 values, for PNET_ERROR_DECODE_PNIORW
  *
  * APP = application
@@ -184,13 +192,14 @@ extern "C" {
 #define PNET_ERROR_CODE_1_CONN_FAULTY_AR_FSU               0x0B
 #define PNET_ERROR_CODE_1_CONN_FAULTY_VENDOR               0x0C
 #define PNET_ERROR_CODE_1_CONN_FAULTY_RSINFO               0x0D
+#define PNET_ERROR_CODE_1_CONN_FAULTY_AR_ALGORITHM_INFO    0x0E
 /** Reserved 0x0E-0x13 */
 #define PNET_ERROR_CODE_1_DCTRL_FAULTY_CONNECT            0x14
 #define PNET_ERROR_CODE_1_DCTRL_FAULTY_CONNECT_PLUG       0x15
 #define PNET_ERROR_CODE_1_XCTRL_FAULTY_CONNECT            0x16
 #define PNET_ERROR_CODE_1_XCTRL_FAULTY_CONNECT_PLUG       0x17
 #define PNET_ERROR_CODE_1_DCTRL_FAULTY_CONNECT_PRMBEG     0x18
-#define PNET_ERROR_CODE_1_DCTRL_FAULTY_CONNECT_SUBMODLIST 0x19
+#define PNET_ERROR_CODE_1_DCTRL_FAULTY_SUBMODLIST         0x19
 /** Reserved 0x1A-0x27 */
 #define PNET_ERROR_CODE_1_RELS_FAULTY_BLOCK 0x28
 /** Reserved 0x29-0x31 */
@@ -233,6 +242,14 @@ extern "C" {
 /**
  * # List of error_code_2 values (not exhaustive)
  */
+
+/* There are no specific names for the error_code_2 values for PNIORW. */
+#define PNET_ERROR_CODE_2_PNIORW(n) (n)
+
+#define PNET_ERROR_CODE_2_ALARM_ACK_AL_TYPE_NOT_SUPPORTED 0x00
+#define PNET_ERROR_CODE_2_ALARM_ACK_WRONG_SUBMODULE_STATE 0x01
+#define PNET_ERROR_CODE_2_ALARM_ACK_IOCARSR_BACKUP        0x02
+
 #define PNET_ERROR_CODE_2_CMDEV_STATE_CONFLICT 0x00
 #define PNET_ERROR_CODE_2_CMDEV_RESOURCE       0x01
 
@@ -353,6 +370,7 @@ extern "C" {
 #define PNET_ERROR_CODE_2_ABORT_DCP_STATION_NAME_CHANGED   0x1f
 #define PNET_ERROR_CODE_2_ABORT_DCP_RESET_TO_FACTORY       0x20
 #define PNET_ERROR_CODE_2_ABORT_PDEV_CHECK_FAILED          0x24
+#define PNET_ERROR_CODE_2_ABORT_IOCARSR_RDHT_EXPIRED       0x26
 
 /**
  * # List of error_code_2 values, for
@@ -375,6 +393,13 @@ extern "C" {
 #define PNET_ERROR_CODE_2_FAULTY_IR_INFO_WRONG_NBR_IOCRS 0x07
 
 /**
+ * # List of error_code_2 value for
+ * PNET_ERROR_CODE_1_CONN_FAULTY_SR_INFO.
+ */
+#define PNET_ERROR_CODE_2_FAULTY_SR_INFO_WRONG_RDHF 0x04
+#define PNET_ERROR_CODE_2_FAULTY_SR_INFO_WRONG_MODE 0x05
+
+/**
  * # List of error_code_2 values, for
  * PNET_ERROR_CODE_1_CONN_FAULTY_MCR_BLOCK_REQ (not exhaustive).
  * PN-AL-Protocol (Mar24): 5.8.2.9 (Table 1320)
@@ -387,6 +412,16 @@ extern "C" {
  * PN-AL-Protocol (Mar24): 5.8.2.8 (Table 1319)
  */
 #define PNET_ERROR_CODE_2_FAULTY_PRM_SERVER_BLOCK_REQ_WRONG_NAME_LENGTH 0x07
+
+/**
+ * # List of error_code_2 values for
+ *
+ * PNET_ERROR_CODE_1_DCTRL_FAULTY_SUBMODLIST (not exhaustive).
+ */
+#define PNET_ERROR_CODE_2_DCTRL_FAULTY_SUBMODLIST_INV_NBR_ENTRIES 0x04
+#define PNET_ERROR_CODE_2_DCTRL_FAULTY_SUBMODLIST_INV_API         0x05
+#define PNET_ERROR_CODE_2_DCTRL_FAULTY_SUBMODLIST_INV_SLOT_NBR    0x06
+#define PNET_ERROR_CODE_2_DCTRL_FAULTY_SUBMODLIST_INV_SUBSLOT_NBR 0x07
 
 /******************************** Events ******************************/
 
@@ -423,6 +458,34 @@ typedef enum pnet_ioxs_values
 } pnet_ioxs_values_t;
 
 /**
+ * Macros for interpreting the IOxS byte
+ *
+ * In addition to the GOOD/BAD data state (bit 7) the IOxS byte
+ * contains additional information that can be extracted using
+ * the macros below.
+ * See section "Coding section related to IOxS" in PN-AL-Protocol
+ * for additional information.
+ */
+
+#define PNET_IOXS_DATA_STATE_MASK (0x80)
+#define PNET_IOXS_DATA_STATE_POS  (7)
+#define PNET_IOXS_DATA_STATE_GET(x)                                            \
+   (((x)&PNET_IOXS_DATA_STATE_MASK) >> PNET_IOXS_DATA_STATE_POS)
+
+#define PNET_IOXS_IS_GOOD(x) (PNET_IOXS_DATA_STATE_GET (x) != 0)
+#define PNET_IOXS_IS_BAD(x)  (PNET_IOXS_DATA_STATE_GET (x) == 0)
+
+#define PNET_IOXS_DATA_INSTANCE_MASK (0x60)
+#define PNET_IOXS_DATA_INSTANCE_POS  (5)
+#define PNET_IOXS_DATA_INSTANCE_GET(x)                                         \
+   (((x)&PNET_IOXS_DATA_INSTANCE_MASK) >> PNET_IOXS_DATA_INSTANCE_POS)
+
+#define PNET_IOXS_DATA_INSTANCE_DETECTED_BY_SUBSLOT       (0)
+#define PNET_IOXS_DATA_INSTANCE_DETECTED_BY_SLOT          (1)
+#define PNET_IOXS_DATA_INSTANCE_DETECTED_BY_IO_DEVICE     (2)
+#define PNET_IOXS_DATA_INSTANCE_DETECTED_BY_IO_CONTROLLER (3)
+
+/**
  * Values used when plugging a sub-module using \a pnet_plug_submodule().
  * The actual values are important, as they are sent on the wire.
  */
@@ -433,6 +496,15 @@ typedef enum pnet_submodule_dir
    PNET_DIR_OUTPUT = 0x02,
    PNET_DIR_IO = 0x03
 } pnet_submodule_dir_t;
+
+/**
+ * Submodule flags.
+ */
+#define PNET_SMF_IM_CARRIER    BIT (0) /** The submodule is an I&M carrier. */
+#define PNET_SMF_IM_MODULE_REP BIT (1) /** The submodule is an I&M
+                                           representative for the module. */
+#define PNET_SMF_IM_DEVICE_REP BIT (2) /** The submodule is an I&M
+                                           representative for the device. */
 
 /*
  * Data configuration for one submodule.
@@ -558,6 +630,160 @@ typedef struct pnet_result
    uint16_t add_data_2;
 } pnet_result_t;
 
+/******************* Identification and Maintenance **************************/
+
+/**
+ * Describe which I&M values are supported.
+ *
+ * This information is part of I&M0.
+ */
+typedef enum pnet_im_supported_values
+{
+   PNET_SUPPORTED_IM1 = 0x0002,
+   PNET_SUPPORTED_IM2 = 0x0004,
+   PNET_SUPPORTED_IM3 = 0x0008,
+
+   /** Should only be used together with functional safety */
+   PNET_SUPPORTED_IM4 = 0x0010,
+} pnet_im_supported_values_t;
+
+/**
+ * The I&M0 data record is read-only by the controller.
+ *
+ * This data record is mandatory for the device representative, which
+ * is also mandatory.
+ */
+typedef struct pnet_im_0
+{
+   uint8_t im_vendor_id_hi;
+   uint8_t im_vendor_id_lo;
+
+   /** Terminated string */
+   char im_order_id[PNET_ORDER_ID_MAX_LEN + 1];
+
+   /** Terminated string */
+   char im_serial_number[PNET_SERIAL_NUMBER_MAX_LEN + 1];
+
+   uint16_t im_hardware_revision;
+   char im_sw_revision_prefix;
+   uint8_t im_sw_revision_functional_enhancement;
+   uint8_t im_sw_revision_bug_fix;
+   uint8_t im_sw_revision_internal_change;
+   uint16_t im_revision_counter;
+   uint16_t im_profile_id;
+   uint16_t im_profile_specific_type;
+
+   /** Always 1 */
+   uint8_t im_version_major;
+
+   /** Always 1 */
+   uint8_t im_version_minor;
+
+   /** One bit for each supported I&M1..15. I&M0 is always supported.
+       Use pnet_im_supported_values_t. */
+   uint16_t im_supported;
+} pnet_im_0_t;
+
+/**
+ * The I&M1 data record is read-write by the controller.
+ *
+ * This data record is mandatory for the device representative, and optional
+ * for other submodules. If this data record is supported by the application
+ * then bit 1 in the im_supported member of the corresponding I&M0 shall be
+ * set.
+ */
+typedef struct pnet_im_1
+{
+   /** Terminated string */
+   char im_tag_function[32 + 1];
+
+   /** Terminated string */
+   char im_tag_location[PNET_LOCATION_MAX_SIZE];
+} pnet_im_1_t;
+
+/**
+ * The I&M2 data record is read-write by the controller.
+ *
+ * This data record is mandatory for the device representative, and optional
+ * for other submodules. If this data record is supported by the application
+ * then bit 2 in the im_supported member of the corresponding I&M0 shall be
+ * set.
+ */
+typedef struct pnet_im_2
+{
+   /** Terminated string in the format "YYYY-MM-DD HH:MM"  */
+   char im_date[16 + 1];
+} pnet_im_2_t;
+
+/**
+ * The I&M3 data record is read-write by the controller.
+ *
+ * This data record is mandatory for the device representative, and optional
+ * for other submodules. If this data record is supported by the application
+ * then bit 3 in the im_supported member of the corresponding I&M0 shall be
+ * set.
+ */
+typedef struct pnet_im_3
+{
+   /** Terminated string padded with spaces */
+   char im_descriptor[54 + 1];
+} pnet_im_3_t;
+
+/**
+ * The I&M4 data record is read-write by the controller.
+ *
+ * Used for functional safety.
+ *
+ * This data record is optional. If this data record is supported
+ * by the application then bit 4 in the im_supported member of the
+ * corresponding I&M0 shall be set.
+ */
+typedef struct pnet_im_4
+{
+   /** Non-terminated binary string, padded with zeroes */
+   char im_signature[54];
+} pnet_im_4_t;
+
+/**
+ * I&M file data.
+ * This contains the I&M data that needs persistence.
+ */
+typedef struct pnet_im_file_data
+{
+   pnet_im_1_t im_1; /** I&M1 data */
+   pnet_im_2_t im_2; /** I&M2 data */
+   pnet_im_3_t im_3; /** I&M3 data */
+   pnet_im_4_t im_4; /** I&M4 data */
+} pnet_im_file_data_t;
+
+/**
+ * Load I&M information from a file.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param filename         In:    The file name.
+ * @param data             Out:   The I&M file data.
+ * @return  0  on success.
+ *          -1 if an error occurred.
+ */
+int pnet_load_im (
+   pnet_t * net,
+   char const * filename,
+   pnet_im_file_data_t * data);
+
+/**
+ * Save I&M information to a file.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param filename         In:    The file name.
+ * @param data             In:    The I&M file data.
+ * @return  0  on success.
+ *          -1 if an error occurred.
+ */
+int pnet_save_im (
+   pnet_t * net,
+   char const * filename,
+   pnet_im_file_data_t * data);
+
 /******************************* Callbacks ************************************/
 
 /*
@@ -664,8 +890,7 @@ typedef int (*pnet_dcontrol_ind) (
    pnet_result_t * p_result);
 
 /**
- * Indication to the application that a submodule has been released, and is
- * now owned by a new AR.
+ * Indication to the application that a submodule is being activated in an AR.
  *
  * After receiving this, the application is required to set new values for the
  * following, as applicable for the subslot in question:
@@ -675,11 +900,14 @@ typedef int (*pnet_dcontrol_ind) (
  * - output IOCS
  *
  * After setting the values, the application must call
- * \a pnet_sm_released_cnf(), for the stack to function properly.
+ * \a pnet_sm_activated_cnf(), for the stack to function properly.
  *
- * This callback is mandatory to implement if p-net has been configured to
- * accept more than one AR (PNET_MAX_AR > 1), in which case shared device is
- * supported. If only one AR is allowed, this callback is never called.
+ * This callback is mandatory to implement if either of the following is true:
+ *
+ * - p-net has been configured to accept more than one AR (PNET_MAX_IO_AR > 1),
+ *   in which case shared device is supported.
+ * - the application supports plugging and pulling submodules during an
+ *   active AR.
  *
  * @param net              InOut: The p-net stack instance
  * @param arg              InOut: User-defined data (not used by p-net)
@@ -691,7 +919,7 @@ typedef int (*pnet_dcontrol_ind) (
  * @return  0  on success.
  *          -1 if an error occurred.
  */
-typedef int (*pnet_sm_released_ind) (
+typedef int (*pnet_sm_activated_ind) (
    pnet_t * net,
    void * arg,
    uint32_t arep,
@@ -726,6 +954,38 @@ typedef int (*pnet_ccontrol_cnf) (
    void * arg,
    uint32_t arep,
    pnet_result_t * p_result);
+
+/**
+ * Indication that a Device Access Application Relation (DA-AR) is attempting
+ * to write to a data record.
+ *
+ * Access may be denied by the application, but note that it may cause
+ * Automated RT-Tester to return "Inconclusive" for test case
+ * "AR-ASE - Scenario 1-4" if denied for I&M1.
+ *
+ * It is optional to implement this callback. The default behavior is as
+ * follows:
+ *
+ * Index == 0xAFF1 (I&M1): Allow
+ * otherwise:              Deny
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param arg              InOut: User-defined data (not used by p-net)
+ * @param arep             In:    The DA-AR AREP.
+ * @param api              In:    The API number.
+ * @param slot             In:    The slot.
+ * @param subslot          In:    The subslot.
+ * @param index            In:    The data record index.
+ * @return 0 if allowed. Other values are interpreted as "access denied".
+ */
+typedef int (*pnet_da_write_req) (
+   pnet_t * net,
+   void * arg,
+   uint32_t arep,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
+   uint16_t index);
 
 /**
  * Indication to the application that a state transition has occurred within the
@@ -810,6 +1070,51 @@ typedef int (*pnet_read_ind) (
    uint16_t * p_read_length,
    pnet_result_t * p_result);
 
+typedef int (*pnet_read_im_0_ind) (
+   pnet_t * net,
+   void * arg,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
+   pnet_im_0_t * data,
+   pnet_result_t * result);
+
+typedef int (*pnet_read_im_1_ind) (
+   pnet_t * net,
+   void * arg,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
+   pnet_im_1_t * data,
+   pnet_result_t * result);
+
+typedef int (*pnet_read_im_2_ind) (
+   pnet_t * net,
+   void * arg,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
+   pnet_im_2_t * data,
+   pnet_result_t * result);
+
+typedef int (*pnet_read_im_3_ind) (
+   pnet_t * net,
+   void * arg,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
+   pnet_im_3_t * data,
+   pnet_result_t * result);
+
+typedef int (*pnet_read_im_4_ind) (
+   pnet_t * net,
+   void * arg,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
+   pnet_im_4_t * data,
+   pnet_result_t * result);
+
 /**
  * Indication to the application that an IODWrite request was received from the
  * controller.
@@ -836,6 +1141,7 @@ typedef int (*pnet_read_ind) (
  * @param slot             In:    The slot number.
  * @param subslot          In:    The sub-slot number.
  * @param idx              In:    The data record index.
+ * @param prm_flag         In:    Indicates parameterization phase.
  * @param sequence_number  In:    The sequence number.
  * @param write_length     In:    The length in bytes of the binary value.
  * @param p_write_data     In:    A pointer to the binary value.
@@ -851,10 +1157,51 @@ typedef int (*pnet_write_ind) (
    uint16_t slot,
    uint16_t subslot,
    uint16_t idx,
+   bool prm_flag,
    uint16_t sequence_number,
    uint16_t write_length,
    const uint8_t * p_write_data,
    pnet_result_t * p_result);
+
+typedef int (*pnet_write_im_1_ind) (
+   pnet_t * net,
+   void * arg,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
+   bool prm_flag,
+   pnet_im_1_t const * data,
+   pnet_result_t * result);
+
+typedef int (*pnet_write_im_2_ind) (
+   pnet_t * net,
+   void * arg,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
+   bool prm_flag,
+   pnet_im_2_t const * data,
+   pnet_result_t * result);
+
+typedef int (*pnet_write_im_3_ind) (
+   pnet_t * net,
+   void * arg,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
+   bool prm_flag,
+   pnet_im_3_t const * data,
+   pnet_result_t * result);
+
+typedef int (*pnet_write_im_4_ind) (
+   pnet_t * net,
+   void * arg,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
+   bool prm_flag,
+   pnet_im_4_t const * data,
+   pnet_result_t * result);
 
 /**
  * Indication to the application that a module is requested by the controller in
@@ -977,8 +1324,8 @@ typedef int (*pnet_new_data_status_ind) (
  * @param p_alarm_argument In:    The alarm argument (with slot, subslot,
  *                                alarm_type etc)
  * @param data_len         In:    Data length
- * @param data_usi         In:    Alarm USI
- * @param p_data           In:    Alarm data
+ * @param data_usi         In:    Alarm USI (UserStructureIdentifier)
+ * @param p_data           In:    Alarm data. Points to AlarmPayload + 2 bytes
  * @return  0  on success.
  *          Other values are ignored.
  */
@@ -1104,6 +1451,107 @@ typedef int (*pnet_reset_ind) (
  */
 typedef int (*pnet_signal_led_ind) (pnet_t * net, void * arg, bool led_state);
 
+typedef enum pnet_ep_device_type
+{
+   /* 2-wire port in */
+   PNET_EP_DEVICE_TYPE_PO_DATA_LINE = 0x01,
+   /* 4-wire port in */
+   PNET_EP_DEVICE_TYPE_PO_EXTRA_POWER_IN = 0x02,
+} pnet_ep_device_type_t;
+
+typedef enum pnet_ep_port_type
+{
+   /* Power off, or no power supply connected */
+   PNET_EP_PORT_TYPE_POWER_OFF = 0x00,
+   /* Power supply for a connected device */
+   PNET_EP_PORT_TYPE_POWER_SOURCE = 0x01,
+   /* Power supply for this device */
+   PNET_EP_PORT_TYPE_POWER_LOAD = 0x02,
+} pnet_ep_port_type_t;
+
+
+/**
+ * Indication to the application that electric data for the device is requested.
+ *
+ * It is mandatory to implement this callback for APL devices.
+ * It is optional to implement this callback for other devices.
+ *
+ * @param net              InOut: The p-net stack instance.
+ * @param arg              InOut: User-defined data (not used by p-net).
+ * @param slot_number      In:    The slot.
+ * @param subslot_number   In:    The subslot.
+ * @param voltage          InOut: Voltage in mV (accuracy 5%).
+ * @param type             InOut: Power source (DataLine or dedicated Power-In).
+ * @return  0  on success.
+ *          -1 if an error occurred. Will trigger a log message.
+ */
+typedef int (*pnet_ep_device_ind) (
+   pnet_t * net,
+   void * arg,
+   uint16_t slot_number,
+   uint16_t subslot_number,
+   uint32_t * voltage,
+   pnet_ep_device_type_t * type);
+
+/**
+ * Indication to the application that electric data for the ports is requested.
+ *
+ * It is optional to implement this callback.
+ *
+ * @param net              InOut: The p-net stack instance.
+ * @param arg              InOut: User-defined data (not used by p-net).
+ * @param slot_number      In:    The slot.
+ * @param subslot_number   In:    The subslot.
+ * @param port_number      In:    The port for which electric data is
+ *                                requested.
+ * @param voltage          InOut: Voltage in mV (accuracy 5%).
+ * @param current          InOut: Current in mA (accuracy 5%).
+ * @param current_limit    InOut: Limit in mA, for power sources (accuracy 5%).
+ * @param type             InOut: Data context (see pnet_ep_port_type_t).
+ *
+ * @return  0  on success.
+ *          -1 if an error occurred. Will trigger a log message.
+ */
+typedef int (*pnet_ep_port_ind) (
+   pnet_t * net,
+   void * arg,
+   uint16_t slot_number,
+   uint16_t subslot_number,
+   uint16_t port_number,
+   uint32_t * voltage,
+   pnet_ep_port_type_t * type,
+   uint16_t * current,
+   uint16_t * current_limit);
+
+/**
+ * Request for the application to apply the default configuration of a
+ * submodule.
+ *
+ * @param net              InOut: The p-net stack instance.
+ * @param arg              InOut: User-defined data (not used by p-net).
+ * @param api              In:    The API.
+ * @param slot_number      In:    The slot.
+ * @param subslot_number   In:    The subslot.
+ *
+ * @return  0  on success.
+ *          -1 if an error occurred. Will trigger a log message.
+ */
+typedef int (*pnet_sm_set_default_params) (
+   pnet_t * net,
+   void * arg,
+   uint32_t api,
+   uint16_t slot_number,
+   uint16_t subslot_number);
+
+/**
+ * Do work in the context of the background worker thread.
+ *
+ * @param net              InOut: The p-net stack instance.
+ * @param arg              InOut: User-defined data (not used by p-net).
+ * @param flags            In:    Event flags (user defined).
+ */
+typedef void (* pnet_bg_job_func) (pnet_t * net, void * arg, uint32_t flags);
+
 /*
  * Network and device configuration.
  *
@@ -1116,115 +1564,6 @@ typedef int (*pnet_signal_led_ind) (pnet_t * net, void * arg, bool led_state);
  *
  * Configuration values are taken as is. No validation is performed.
  */
-
-/**
- * Describe which I&M values are supported.
- *
- * I&M0 is always supported.
- *
- */
-typedef enum pnet_im_supported_values
-{
-   PNET_SUPPORTED_IM1 = 0x0002,
-   PNET_SUPPORTED_IM2 = 0x0004,
-   PNET_SUPPORTED_IM3 = 0x0008,
-
-   /** Should only be used together with functional safety */
-   PNET_SUPPORTED_IM4 = 0x0010,
-} pnet_im_supported_values_t;
-
-/**
- * The I&M0 data record is read-only by the controller.
- *
- * This data record is mandatory.
- */
-typedef struct pnet_im_0
-{
-   uint8_t im_vendor_id_hi;
-   uint8_t im_vendor_id_lo;
-
-   /** Terminated string */
-   char im_order_id[PNET_ORDER_ID_MAX_LEN + 1];
-
-   /** Terminated string */
-   char im_serial_number[PNET_SERIAL_NUMBER_MAX_LEN + 1];
-
-   uint16_t im_hardware_revision;
-   char im_sw_revision_prefix;
-   uint8_t im_sw_revision_functional_enhancement;
-   uint8_t im_sw_revision_bug_fix;
-   uint8_t im_sw_revision_internal_change;
-   uint16_t im_revision_counter;
-   uint16_t im_profile_id;
-   uint16_t im_profile_specific_type;
-
-   /** Always 1 */
-   uint8_t im_version_major;
-
-   /** Always 1 */
-   uint8_t im_version_minor;
-
-   /** One bit for each supported I&M1..15. I&M0 is always supported.
-       Use pnet_im_supported_values_t. */
-   uint16_t im_supported;
-} pnet_im_0_t;
-
-/**
- * The I&M1 data record is read-write by the controller.
- *
- * This data record is optional. If this data record is supported
- * by the application then bit 1 in the im_supported member of I&M0 shall be
- * set.
- */
-typedef struct pnet_im_1
-{
-   /** Terminated string */
-   char im_tag_function[32 + 1];
-
-   /** Terminated string */
-   char im_tag_location[PNET_LOCATION_MAX_SIZE];
-} pnet_im_1_t;
-
-/**
- * The I&M2 data record is read-write by the controller.
- *
- * This data record is optional. If this data record is supported
- * by the application then bit 2 in the im_supported member of I&M0 shall be
- * set.
- */
-typedef struct pnet_im_2
-{
-   /** Terminated string in the format "YYYY-MM-DD HH:MM"  */
-   char im_date[16 + 1];
-} pnet_im_2_t;
-
-/**
- * The I&M3 data record is read-write by the controller.
- *
- * This data record is optional. If this data record is supported
- * by the application then bit 3 in the im_supported member of I&M0 shall be
- * set.
- */
-typedef struct pnet_im_3
-{
-   /** Terminated string padded with spaces */
-   char im_descriptor[54 + 1];
-} pnet_im_3_t;
-
-/**
- * The I&M4 data record is read-write by the controller.
- *
- * Used for functional safety.
- *
- * This data record is optional. If this data record is supported
- * by the application then bit 4 in the im_supported member of I&M0 shall be
- * set.
- */
-typedef struct pnet_im_4
-{
-   /** Non-terminated binary string, padded with zeroes */
-   char im_signature[54];
-} pnet_im_4_t;
 
 /**
  * The device-specific vendor and device identities.
@@ -1290,12 +1629,19 @@ typedef struct pnet_port_cfg
 {
    const char * netif_name;
 
-   /** Ethernet MAU type to use when it not can be read from hardware.
+   /** Ethernet MAU type to use when it can not be read from hardware.
     *  For example
     *     0x0010 = Copper 100 Mbit/s Full duplex.
     *     0x001E = Copper 1000 Mbit/s Full duplex.
     *  See \a pnal_eth_mau_t for more examples. */
    uint16_t default_mau_type;
+
+   /** Ethernet MAU type extension to use when it can not be read from hardware.
+    *  For example
+    *     0x0000 = No extension.
+    *     0x0200 = Advanced Physical Layer (APL).
+    *  See \a pnal_eth_mau_ext_t for more examples. */
+   uint16_t default_mau_type_extension;
 } pnet_port_cfg_t;
 
 /**
@@ -1310,6 +1656,58 @@ typedef struct pnet_ip_cfg
    pnet_cfg_ip_addr_t ip_mask;
    pnet_cfg_ip_addr_t ip_gateway;
 } pnet_ip_cfg_t;
+
+/**
+ * Current configuration of the device.
+ */
+typedef struct pnet_cfg_ind_data
+{
+   const pnet_ip_cfg_t * ip_cfg;
+   const char * station_name;
+} pnet_cfg_ind_data_t;
+
+/**
+ * Indication to the application that the device configuration is
+ * set or changed. Typically the indication is received during startup
+ * and when the IP address or station name is set by an engineering
+ * tool or PLC.
+ *
+ * It is optional to implement this callback.
+ *
+ * @param net              InOut: The p-net stack instance.
+ * @param arg              InOut: User-defined data (not used by p-net).
+ * @param p_cfg            In:    The current configuration.
+ */
+typedef void (
+   *pnet_cfg_ind) (pnet_t * net, void * arg, const pnet_cfg_ind_data_t * p_cfg);
+
+/**
+ * Query to the application whether a given submodule ident number is a
+ * substitute for the expected submodule.
+ *
+ * This application callback function is called by the Profinet stack when it
+ * compares a plugged submodule ident number with the expected submodule
+ * ident number and they do not match. This happens when an AR becomes owner
+ * of the submodule (at connect, when the submodule is plugged, and when a
+ * previous owner has released it), and whenever a ModuleDiffBlock is
+ * generated, for example when the controller reads the module diff record.
+ * The callback may therefore be called several times for the same submodule
+ * and should give consistent answers.
+ *
+ * It is optional to implement this callback (assumes false if not provided).
+ *
+ * @param net              InOut: The p-net stack instance.
+ * @param arg              InOut: User-defined data (not used by p-net).
+ * @param expected_ident   In:    The expected submodule ident number.
+ * @param submodule_ident  In:    The plugged submodule ident number.
+ * @return  true  if the submodule is a substitute.
+ *          false otherwise.
+ */
+typedef bool (*pnet_is_substitute_cb) (
+   pnet_t * net,
+   void * arg,
+   uint32_t expected_ident,
+   uint32_t submodule_ident);
 
 /**
  * Interface Configuration
@@ -1353,7 +1751,16 @@ typedef struct pnet_cfg
    pnet_dcontrol_ind dcontrol_cb;
    pnet_ccontrol_cnf ccontrol_cb;
    pnet_write_ind write_cb;
+   pnet_write_im_1_ind write_im_1_cb;
+   pnet_write_im_2_ind write_im_2_cb;
+   pnet_write_im_3_ind write_im_3_cb;
+   pnet_write_im_4_ind write_im_4_cb;
    pnet_read_ind read_cb;
+   pnet_read_im_0_ind read_im_0_cb;
+   pnet_read_im_1_ind read_im_1_cb;
+   pnet_read_im_2_ind read_im_2_cb;
+   pnet_read_im_3_ind read_im_3_cb;
+   pnet_read_im_4_ind read_im_4_cb;
    pnet_exp_module_ind exp_module_cb;
    pnet_exp_submodule_ind exp_submodule_cb;
    pnet_new_data_status_ind new_data_status_cb;
@@ -1362,16 +1769,17 @@ typedef struct pnet_cfg
    pnet_alarm_ack_cnf alarm_ack_cnf_cb;
    pnet_reset_ind reset_cb;
    pnet_signal_led_ind signal_led_cb;
-   pnet_sm_released_ind sm_released_cb;
+   pnet_sm_activated_ind sm_activated_cb;
+   pnet_ep_device_ind ep_device_cb;
+   pnet_ep_port_ind ep_port_cb;
+   pnet_da_write_req da_write_cb;
+   pnet_cfg_ind cfg_cb;
+   pnet_sm_set_default_params sm_set_default_params_cb;
+   pnet_is_substitute_cb is_substitute_cb;
+   pnet_bg_job_func bg_job_cb;
 
    /** User data passed to callbacks, not used by stack */
    void * cb_arg;
-
-   pnet_im_0_t im_0_data;
-   pnet_im_1_t im_1_data;
-   pnet_im_2_t im_2_data;
-   pnet_im_3_t im_3_data;
-   pnet_im_4_t im_4_data;
 
    pnet_cfg_device_id_t device_id;
    pnet_cfg_device_id_t oem_device_id;
@@ -1379,25 +1787,42 @@ typedef struct pnet_cfg
    /** Default station name. Terminated string */
    char station_name[PNET_STATION_NAME_MAX_SIZE];
 
-   /**
-    * Product name
-    *
-    * This is known as DeviceVendorValue and DeviceType in the Profinet
-    * specification. It constitutes the first part of SystemIdentification
-    * (sysDescr in SNMP). It may also be used to construct the Chassis ID.
-    * See IEC CDV 61158-6-10 ch. 4.10.3.3.1.
-    *
-    * Terminated string.
-    */
-   char product_name[PNET_PRODUCT_NAME_MAX_LEN + 1];
+   struct
+   {
+      /**
+       * Product name
+       *
+       * This is known as DeviceVendorValue and DeviceType in the Profinet
+       * specification. It constitutes the first part of SystemIdentification
+       * (sysDescr in SNMP). It may also be used to construct the Chassis ID.
+       * See IEC CDV 61158-6-10 ch. 4.10.3.3.1.
+       *
+       * Terminated string.
+       */
+      char name[PNET_PRODUCT_NAME_MAX_LEN + 1];
+
+      char order_id[PNET_ORDER_ID_MAX_LEN + 1];
+      char serial_number[PNET_SERIAL_NUMBER_MAX_LEN + 1];
+      uint16_t hw_revision;
+      struct
+      {
+         char prefix;
+         uint8_t functional_enhancement;
+         uint8_t bug_fix;
+         uint8_t internal_change;
+      } sw_revision;
+   } product_info;
 
    /** Smallest allowed data exchange interval, in units of 31.25 us.
     *  Used for triggering error messages to the PLC. Should match GSDML file.
     *  Typically 32, which corresponds to 1 ms. Max 0x1000 (128 ms) */
    uint16_t min_device_interval;
 
+   /** Background working configuration **/
+   pnal_thread_cfg_t bg_worker_thread;
+
    /** Operating system dependent settings */
-   pnal_cfg_t pnal_cfg;
+   pnal_cfg_t * pnal_cfg;
 
    /** Send DCP HELLO message on startup if true. */
    bool send_hello;
@@ -1481,16 +1906,45 @@ PNET_EXPORT int pnet_application_ready (pnet_t * net, uint32_t arep);
 
 /**
  * Application signals that it is ready to exchange data for a submodule that
- * has changed owner.
+ * is being activated in an AR. This happens when the submodule has just been
+ * plugged, or when it has changed owner.
  *
  * This should only be called after the application has set subslot data
- * following a \a pnet_sm_released_ind() callback. It must not be called in any
- * other situation.
+ * following a \a pnet_sm_activated_ind() callback. It must not be called in
+ * any other situation.
  *
  * @param net              InOut: The p-net stack instance
  * @param arep             In:    The AREP
  */
-PNET_EXPORT void pnet_sm_released_cnf (pnet_t * net, uint32_t arep);
+PNET_EXPORT void pnet_sm_activated_cnf (pnet_t * net, uint32_t arep);
+
+/**
+ * Set the state of the "application ready pending" (ARP) flag of a real
+ * submodule.
+ *
+ * The ARP flag should be set for a real submodule if parameterization is
+ * incomplete when the application signals it is ready for an Application
+ * Relation (AR). The input IOPS must also be set to "bad" in this state.
+ *
+ * This signals the controller that the device expects this submodule to
+ * become ready, but it is for example currently finishing internal
+ * configuration. When the submodule has finished its configuration and is in an
+ * operational state the ARP flag can be set to false and input IOPS to "good".
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param api              In:    The API containing the submodule.
+ * @param slot             In:    The slot containing the submodule.
+ * @param subslot          In:    The subslot containing the submodule.
+ * @param pending          In:    The value to which the ARP flag should be set.
+ * @return  0  on success.
+ *          -1 if an error occurred.
+ */
+PNET_EXPORT int pnet_sm_set_application_ready_pending (
+   pnet_t * net,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
+   bool pending);
 
 /**
  * Plug a module into a slot.
@@ -1514,9 +1968,9 @@ PNET_EXPORT int pnet_plug_module (
    uint32_t module_ident);
 
 /**
- * Plug a sub-module into a sub-slot.
+ * Plug a submodule into a subslot.
  *
- * This function is used to plug a specific sub-module into a specific sub-slot.
+ * This function is used to plug a specific submodule into a specific subslot.
  *
  * This function may be called from the \a pnet_exp_submodule_ind call-back
  * function of the application.
@@ -1527,13 +1981,14 @@ PNET_EXPORT int pnet_plug_module (
  * @param net              InOut: The p-net stack instance
  * @param api              In:    The API identifier.
  * @param slot             In:    The slot number.
- * @param subslot          In:    The sub-slot number.
+ * @param subslot          In:    The subslot number.
  * @param module_ident     In:    The module ident number.
- * @param submodule_ident  In:    The sub-module ident number.
+ * @param submodule_ident  In:    The submodule ident number.
  * @param direction        In:    The direction of data.
  * @param length_input     In:    The size in bytes of the input data.
  * @param length_output    In:    The size in bytes of the output data.
- * @return  0  if the sub-module could be plugged into the sub-slot.
+ * @param flags            In:    Submodule flags.
+ * @return  0  if the submodule could be plugged into the subslot.
  *          -1 if an error occurred (for example submodule already plugged)
  */
 PNET_EXPORT int pnet_plug_submodule (
@@ -1545,7 +2000,8 @@ PNET_EXPORT int pnet_plug_submodule (
    uint32_t submodule_ident,
    pnet_submodule_dir_t direction,
    uint16_t length_input,
-   uint16_t length_output);
+   uint16_t length_output,
+   uint8_t flags);
 
 /**
  * Pull a module from a slot.
@@ -1606,8 +2062,9 @@ PNET_EXPORT int pnet_pull_submodule (
  * @param data_len         In:    Bytes in data buffer.
  * @param iops             In:    The device provider status (GOOD or BAD).
  *                                See pnet_ioxs_values_t
- * @return  0  if a sub-module data and IOPS was set.
- *          -1 if an error occurred.
+ * @return  0  if no error occurred, also if no AR uses the sub-slot.
+ *          -1 if the data and IOPS could not be set for an AR that uses
+ *             the sub-slot.
  */
 PNET_EXPORT int pnet_input_set_data_and_iops (
    pnet_t * net,
@@ -1710,8 +2167,8 @@ PNET_EXPORT int pnet_output_get_data_and_iops (
  * @param subslot          In:    The sub-slot.
  * @param iocs             In:    The device consumer status (GOOD or BAD).
  *                                See pnet_ioxs_values_t
- * @return  0  if a sub-module IOCS was set.
- *          -1 if an error occurred.
+ * @return  0  if no error occurred, also if no AR uses the sub-slot.
+ *          -1 if the IOCS could not be set for an AR that uses the sub-slot.
  */
 PNET_EXPORT int pnet_output_set_iocs (
    pnet_t * net,
@@ -1907,6 +2364,18 @@ PNET_EXPORT int pnet_alarm_send_ack (
    uint32_t arep,
    const pnet_alarm_argument_t * p_alarm_argument,
    const pnet_pnio_status_t * p_pnio_status);
+
+/**
+ * Set event flags to be handled in the context of the background worker.
+ *
+ * This will lead to the \a pnet_bg_job_func() callback being called in the
+ * background context.
+ *
+ * @param net              InOut: The p-net stack instance.
+ * @param flags            In:    The event flags to set (user defined).
+ * @return  0 if successful, -1 otherwise.
+ */
+PNET_EXPORT int pnet_set_bg_job_events (pnet_t * net, uint32_t flags);
 
 /* ****************************** Diagnosis ****************************** */
 
@@ -2329,23 +2798,21 @@ PNET_EXPORT int pnet_diag_remove (
  *     0x1003              |     include IOCR and data_descriptors.
  *     0x2000              | Show config/CMINA information.
  *     0x4000              | Show scheduler information.
- *     0x8000              | Show I&M data.
  *
  *     Bit in the level parameter:
- *     15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0
- *      1                                     I&M
- *         1                                  Scheduler
- *            1                               CMINA
- *               1                            AR
- *                  1                         Sessions
- *                     1                      Logbook
- *                       1                    Diagnosis
- *                         1                  Ports
- *                           1                SNMP
- *                               1            CMDEV
- *                                 1          Options
- *                                       1    More IOCR info on AR
- *                                         1  More IOCR info on AR
+ *     14 13 12 11 10 9 8 7 6 5 4 3 2 1 0
+ *      1                                  Scheduler
+ *         1                               CMINA
+ *            1                            AR
+ *               1                         Sessions
+ *                  1                      Logbook
+ *                    1                    Diagnosis
+ *                      1                  Ports
+ *                        1                SNMP
+ *                            1            CMDEV
+ *                              1          Options
+ *                                    1    More IOCR info on AR
+ *                                      1  More IOCR info on AR
  */
 PNET_EXPORT void pnet_show (pnet_t * net, unsigned level);
 

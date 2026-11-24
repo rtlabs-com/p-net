@@ -24,7 +24,7 @@
 #include "pf_includes.h"
 #include "pf_block_writer.h"
 
-static const pf_rpc_uuid_type_t uuid_object = {
+static const pf_uuid_t uuid_object = {
    0x00000000,
    0x0000,
    0x0000,
@@ -32,7 +32,7 @@ static const pf_rpc_uuid_type_t uuid_object = {
    0x00,
    {0x00, 0x00, 0x00, 0x00, 0x00, 0x00}};
 
-static const pf_rpc_uuid_type_t uuid_epmap_interface = {
+static const pf_uuid_t uuid_epmap_interface = {
    0xE1AF8308,
    0x5D1F,
    0x11C9,
@@ -40,7 +40,7 @@ static const pf_rpc_uuid_type_t uuid_epmap_interface = {
    0xA4,
    {0x08, 0x00, 0x2B, 0x14, 0xA0, 0xFA}};
 
-static const pf_rpc_uuid_type_t uuid_io_device_interface = {
+static const pf_uuid_t uuid_io_device_interface = {
    0xDEA00001,
    0x6C97,
    0x11D1,
@@ -48,7 +48,7 @@ static const pf_rpc_uuid_type_t uuid_io_device_interface = {
    0x71,
    {0x00, 0xA0, 0x24, 0x42, 0xDF, 0x7D}};
 
-static const pf_rpc_uuid_type_t uuid_io_object_instance = {
+static const pf_uuid_t uuid_io_object_instance = {
    0xDEA00000,
    0x6C97,
    0x11D1,
@@ -56,7 +56,7 @@ static const pf_rpc_uuid_type_t uuid_io_object_instance = {
    0x71,
    {0x00, 0x00, 0x00, 0x00, 0x00, 0x00}};
 
-static const pf_rpc_uuid_type_t uuid_ndr = {
+static const pf_uuid_t uuid_ndr = {
    0x8A885D04,
    0x1CEB,
    0x11C9,
@@ -80,8 +80,8 @@ static void pf_generate_epm_handle (
    p_handle->handle_uuid.time_mid = (timestamp & 0x00FF0000);
    p_handle->handle_uuid.time_hi_and_version = (timestamp & 0xFF000000) |
                                                0x1000;
-   p_handle->handle_uuid.clock_hi_and_reserved = 0x80;
-   p_handle->handle_uuid.clock_low = /* 0x11 */ 0x0C;
+   p_handle->handle_uuid.clock_seq_hi_and_res = 0x80;
+   p_handle->handle_uuid.clock_seq_low = /* 0x11 */ 0x0C;
    p_handle->handle_uuid.node[0] = mac_address.addr[0];
    p_handle->handle_uuid.node[1] = mac_address.addr[1];
    p_handle->handle_uuid.node[2] = mac_address.addr[2];
@@ -135,11 +135,11 @@ static void pf_init_rpc_tower_entry (
 
    /* Floor 4 UDP Listening port*/
    p_tower->floor_4.protocol_id = PF_RPC_PROTOCOL_DOD_UDP;
-   p_tower->floor_4.port = htons (udp_port);
+   p_tower->floor_4.port = CC_TO_BE16 (udp_port);
 
    /* Floor 5 IP Address */
    p_tower->floor_5.protocol_id = PF_RPC_PROTOCOL_DOD_IP;
-   p_tower->floor_5.ip_address = htonl (ip_address);
+   p_tower->floor_5.ip_address = CC_TO_BE32 (ip_address);
 }
 
 /**
@@ -325,8 +325,7 @@ static int pf_cmrdr_inquiry_read_all_reg_ind (
  * @param p_rpc_req        In:    Rpc header.
  * @param p_lookup_req     In:    Lookup request.
  * @param p_read_status    Out:   Read pnio status
- * @param res_size         In:    The size of the output buffer.
- * @param p_res            Out:   The output buffer.
+ * @param p_res            InOut: The response buffer state.
  * @param p_pos            InOut: Position in the output buffer.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
@@ -337,8 +336,7 @@ int pf_cmrpc_lookup_request (
    const pf_rpc_header_t * p_rpc_req,
    const pf_rpc_lookup_req_t * p_lookup_req,
    pnet_result_t * p_read_status,
-   uint16_t res_size,
-   uint8_t * p_res,
+   pf_put_info_t * p_res,
    uint16_t * p_pos)
 {
    LOG_INFO (
@@ -378,6 +376,6 @@ int pf_cmrpc_lookup_request (
    }
 
    /* Write response buffer */
-   pf_put_lookup_response_data (net, false, &lookup_rsp, res_size, p_res, p_pos);
+   pf_put_lookup_response_data (net, false, &lookup_rsp, p_res, p_pos);
    return 0;
 }

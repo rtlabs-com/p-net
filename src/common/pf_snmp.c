@@ -30,16 +30,24 @@
 #define pf_lldp_get_peer_link_status mock_pf_lldp_get_peer_link_status
 #define pf_file_load                 mock_pf_file_load
 #define pf_file_save_if_modified     mock_pf_file_save_if_modified
-#define pf_fspm_get_im_location      mock_pf_fspm_get_im_location
-#define pf_fspm_save_im_location     mock_pf_fspm_save_im_location
 #define pnal_get_hostname            mock_pnal_get_hostname
+#define pf_bg_worker_start_job       mock_pf_bg_worker_start_job
+#define pnal_snmp_configure          mock_pnal_snmp_configure
 #endif
 
 #include "pf_includes.h"
+#include "pf_block_reader.h"
+#include "pf_block_writer.h"
 #include <string.h>
 
 #define STRINGIFY(s)   STRINGIFIED (s)
 #define STRINGIFIED(s) #s
+
+const pf_snmp_config_t snmp_config_default = {
+   .control_mode = PNAL_SNMP_CONTROL_MODE_READWRITE,
+   .ro_name = {.string = "public"},
+   .rw_name = {.string = "private"},
+   .snmp_adjust_active = false};
 
 /* The configurable constant PNET_MAX_FILENAME_SIZE should be at least
  * as large as the longest filename used, including termination.
@@ -290,8 +298,7 @@ void pf_snmp_data_init (pnet_t * net)
       sizeof (snmp->system_location));
    if (error)
    {
-      /* Use "IM_Tag_Location" from I&M1 */
-      pf_fspm_get_im_location (net, snmp->system_location.string);
+      snmp->system_location.string[0] = '\0';
    }
    snmp->system_location.string[sizeof (snmp->system_location.string) - 1] =
       '\0';
@@ -299,6 +306,18 @@ void pf_snmp_data_init (pnet_t * net)
       error,
       "sysLocation",
       snmp->system_location.string);
+
+#if PNET_OPTION_SECURITY_LEVEL_1
+   error = pf_file_load (
+      directory,
+      PF_FILENAME_SNMP_CONFIG,
+      &net->snmp_config,
+      sizeof (net->snmp_config));
+   if (error)
+   {
+      net->snmp_config = snmp_config_default;
+   }
+#endif /* PNET_OPTION_SECURITY_LEVEL_1 */
 }
 
 void pf_snmp_remove_data_files (const char * file_directory)
@@ -306,6 +325,9 @@ void pf_snmp_remove_data_files (const char * file_directory)
    pf_file_clear (file_directory, PF_FILENAME_SNMP_SYSCONTACT);
    pf_file_clear (file_directory, PF_FILENAME_SNMP_SYSNAME);
    pf_file_clear (file_directory, PF_FILENAME_SNMP_SYSLOCATION);
+#if PNET_OPTION_SECURITY_LEVEL_1
+   pf_file_clear (file_directory, PF_FILENAME_SNMP_CONFIG);
+#endif /* PNET_OPTION_SECURITY_LEVEL_1 */
 }
 
 void pf_snmp_data_clear (pnet_t * net)
@@ -331,7 +353,7 @@ void pf_snmp_data_clear (pnet_t * net)
    os_mutex_unlock (net->snmp_mutex);
 }
 
-void pf_snmp_data_reset (pnet_t * net, bool update_fspm)
+void pf_snmp_data_reset (pnet_t * net)
 {
    pf_snmp_system_contact_t syscontact = {0};
    pf_snmp_system_name_t sysname = {0};
@@ -340,33 +362,7 @@ void pf_snmp_data_reset (pnet_t * net, bool update_fspm)
    LOG_DEBUG (PF_SNMP_LOG, "SNMP(%d): Resetting SNMP data.\n", __LINE__);
    pf_snmp_set_system_contact (net, &syscontact);
    pf_snmp_set_system_name (net, &sysname);
-   pf_snmp_set_system_location (net, &syslocation, update_fspm);
-}
-
-void pf_snmp_fspm_im_location_ind (pnet_t * net)
-{
-   pf_snmp_data_t * snmp = &net->snmp_data;
-   pf_snmp_system_location_t system_location;
-
-   /* Location data is stored in two different files: the file with
-    * I&M data and a file used by SNMP containing a larger version
-    * of the device's location. The larger version has precedence
-    * over the I&M version, so we need to delete the larger one */
-   pf_bg_worker_start_job (net, PF_BGJOB_CLEAR_SNMP_SYSTEM_LOCATION_NVM_DATA);
-
-   /* Use "IM_Tag_Location" from I&M1 */
-   pf_fspm_get_im_location (net, system_location.string);
-   system_location.string[sizeof (system_location.string) - 1] = '\0';
-
-   os_mutex_lock (net->snmp_mutex);
-   snmp->system_location = system_location;
-   os_mutex_unlock (net->snmp_mutex);
-
-   LOG_DEBUG (
-      PF_SNMP_LOG,
-      "SNMP(%d): I&M1 location has been updated, set SNMP SysLocation to %s.\n",
-      __LINE__,
-      snmp->system_location.string);
+   pf_snmp_set_system_location (net, &syslocation);
 }
 
 void pf_snmp_get_system_name (pnet_t * net, pf_snmp_system_name_t * name)
@@ -498,8 +494,7 @@ void pf_snmp_get_system_location (
 
 int pf_snmp_set_system_location (
    pnet_t * net,
-   const pf_snmp_system_location_t * location,
-   bool update_im)
+   const pf_snmp_system_location_t * location)
 {
    pf_snmp_data_t * snmp = &net->snmp_data;
 
@@ -512,12 +507,6 @@ int pf_snmp_set_system_location (
    os_mutex_unlock (net->snmp_mutex);
 
    pf_bg_worker_start_job (net, PF_BGJOB_SAVE_SNMP_SYSTEM_LOCATION_NVM_DATA);
-
-   /* Update 22 byte "IM_Tag_Location" in I&M1 */
-   if (update_im)
-   {
-      pf_fspm_save_im_location (net, location->string);
-   }
 
    return 0;
 }
@@ -761,6 +750,449 @@ int pf_snmp_get_peer_link_status (
    return error;
 }
 
+/* TODO: Move this code to some other file.
+ * See file header above for description of what belongs in this file.
+ */
+#if PNET_OPTION_SECURITY_LEVEL_1
+void pf_snmp_save_config (pnet_t * net)
+{
+   int res;
+   pf_snmp_config_t temporary_buffer;
+   pf_snmp_config_t snmp_config;
+   const char * directory = pf_cmina_get_file_directory (net);
+
+   os_mutex_lock (net->snmp_mutex);
+   snmp_config = net->snmp_config;
+   os_mutex_unlock (net->snmp_mutex);
+
+   res = pf_file_save_if_modified (
+      directory,
+      PF_FILENAME_SNMP_CONFIG,
+      &snmp_config,
+      &temporary_buffer,
+      sizeof (snmp_config));
+
+   pf_snmp_log_saved_variable (res, "SNMP Config", "N/A");
+}
+
+int pf_snmp_save_snmp_config_bg (pnet_t * net)
+{
+   LOG_DEBUG (
+      PF_SNMP_LOG,
+      "SNMP(%d): Requesting background job to save SNMP configuration.\n",
+      __LINE__);
+   pf_bg_worker_start_job (net, PF_BGJOB_SAVE_SNMP_CONFIG);
+   return 0;
+}
+
+int pf_snmp_activate_snmp_config (pnet_t * net)
+{
+   return pnal_snmp_configure (
+      net->snmp_config.control_mode,
+      net->snmp_config.ro_name.string,
+      net->snmp_config.rw_name.string);
+}
+
+int pf_snmp_activate_snmp_config_bg (pnet_t * net)
+{
+   LOG_DEBUG (
+      PF_SNMP_LOG,
+      "SNMP(%d): Requesting background job to apply SNMP configuration.\n",
+      __LINE__);
+
+   pf_bg_worker_start_job (net, PF_BGJOB_ACTIVATE_SNMP_CONFIG);
+   return 0;
+}
+
+int pf_snmp_set_snmp_config (
+   pnet_t * net,
+   const pf_snmp_config_t * p_snmp_config,
+   bool * configuration_changed)
+{
+   *configuration_changed = false;
+
+   LOG_INFO (
+      PF_SNMP_LOG,
+      "SNMP(%d): Setting new SNMP config. mode: %d, ro: \"%s\" "
+      "rw: \"%s\" adjust_active: %d\n",
+      __LINE__,
+      p_snmp_config->control_mode,
+      p_snmp_config->ro_name.string,
+      p_snmp_config->rw_name.string,
+      p_snmp_config->snmp_adjust_active);
+
+   os_mutex_lock (net->snmp_mutex);
+
+   if (net->snmp_config.control_mode != p_snmp_config->control_mode)
+   {
+      net->snmp_config.control_mode = p_snmp_config->control_mode;
+      *configuration_changed = true;
+   }
+
+   if (
+      strnlen (
+         p_snmp_config->ro_name.string,
+         sizeof (p_snmp_config->ro_name.string)) != 0 ||
+      strncmp (
+         net->snmp_config.ro_name.string,
+         p_snmp_config->ro_name.string,
+         sizeof (net->snmp_config.ro_name.string)) != 0)
+   {
+      snprintf (
+         net->snmp_config.ro_name.string,
+         sizeof (net->snmp_config.ro_name.string),
+         "%s",
+         p_snmp_config->ro_name.string);
+      *configuration_changed = true;
+   }
+   else
+   {
+      /* Keep existing ro community name*/
+   }
+
+   if (
+      strnlen (
+         p_snmp_config->rw_name.string,
+         sizeof (p_snmp_config->rw_name.string)) != 0 ||
+      strncmp (
+         net->snmp_config.rw_name.string,
+         p_snmp_config->rw_name.string,
+         sizeof (net->snmp_config.rw_name.string)) != 0)
+   {
+      snprintf (
+         net->snmp_config.rw_name.string,
+         sizeof (net->snmp_config.rw_name.string),
+         "%s",
+         p_snmp_config->rw_name.string);
+
+      *configuration_changed = true;
+   }
+   else
+   {
+      /* Keep existing rw community name*/
+   }
+
+   if (p_snmp_config->snmp_adjust_active != net->snmp_config.snmp_adjust_active)
+   {
+      net->snmp_config.snmp_adjust_active = p_snmp_config->snmp_adjust_active;
+      *configuration_changed = true;
+   }
+
+   os_mutex_unlock (net->snmp_mutex);
+
+   return 0;
+}
+
+/**
+ * Validate community name. Rules:
+ * Total length is 0 to 240 octets
+ * CommunityName consist of [a-zA-Z0-9.-]
+ * CommunityName do not start with [.-]
+ * CommunityName do not end with [.-]
+ *
+ * @param p_name          In:    The community name to validate
+ * @return  0 if valid, -1 if invalid
+ */
+int pf_snmp_validate_community_name (const char * p_name)
+{
+   size_t len;
+
+   if (p_name == NULL)
+   {
+      return -1; /* Null pointer is invalid */
+   }
+
+   len = strnlen (p_name, sizeof (pf_snmp_community_name_t));
+
+   if (len == 0)
+   {
+      return 0; /* Zero length is allowed (means keep existing name) */
+   }
+
+   if (len > 240)
+   {
+      return -1; /* Invalid length */
+   }
+
+   /* Check first character */
+   if (p_name[0] == '.' || p_name[0] == '-')
+   {
+      return -1;
+   }
+
+   /* Check last character */
+   if (p_name[len - 1] == '.' || p_name[len - 1] == '-')
+   {
+      return -1;
+   }
+
+   /* Check allowed characters */
+   for (size_t i = 0; i < len; i++)
+   {
+      char c = p_name[i];
+      if (!((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+            (c >= '0' && c <= '9') || c == '.' || c == '-'))
+      {
+         return -1; /* Invalid character */
+      }
+   }
+
+   return 0;
+}
+
+/**
+ * Validate SNMP configuration
+ *
+ * @param p_snmp_config  In:    The SNMP configuration to validate
+ * @return  0 if valid, -1 if invalid
+ */
+int pf_snmp_validate_config(const pf_snmp_config_t * p_snmp_config)
+{
+   int status = 0;
+
+   /* Check rules for community names */
+   switch (p_snmp_config->control_mode)
+   {
+   case PNAL_SNMP_CONTROL_MODE_DISABLED:
+      /* For PNAL_SNMP_CONTROL_MODE_DISABLED, the community name lengths shall
+       * be set to 0 */
+      if (
+         strnlen (
+            p_snmp_config->ro_name.string,
+            sizeof (p_snmp_config->ro_name.string)) != 0 ||
+         strnlen (
+            p_snmp_config->rw_name.string,
+            sizeof (p_snmp_config->rw_name.string)) != 0)
+      {
+         status = -1;
+      }
+      break;
+   case PNAL_SNMP_CONTROL_MODE_READONLY:
+      /* For PNAL_SNMP_CONTROL_MODE_READONLY, the rw community name shall not be
+       * set
+       */
+      if (
+         strnlen (
+            p_snmp_config->rw_name.string,
+            sizeof (p_snmp_config->rw_name.string)) != 0 ||
+         pf_snmp_validate_community_name (p_snmp_config->ro_name.string) != 0)
+      {
+         status = -1;
+      }
+      break;
+   case PNAL_SNMP_CONTROL_MODE_READWRITE:
+      if (
+         pf_snmp_validate_community_name (p_snmp_config->ro_name.string) != 0 ||
+         pf_snmp_validate_community_name (p_snmp_config->rw_name.string) != 0)
+      {
+         status = -1;
+      }
+      break;
+   default:
+      status = -1;
+      break;
+   }
+
+   return status;
+}
+
+/**
+ * Handle a write request to CIM SNMP Adjust.
+ * Get configuration from request, validate it, and then
+ * configure SNMP accordingly.
+ *
+ * @param net            InOut: The p-net stack instance
+ * @param p_write_req    In:    The write request details
+ * @param p_bytes        In:    The write request data
+ * @param data_length    In:    The length of the write request data
+ * @param p_result       Out:   The result to return to the caller
+ * @return  0 on success, -1 on error
+ */
+int pf_cim_snmp_adjust (
+   pnet_t * net,
+   const pf_iod_write_request_t * p_write_req,
+   const uint8_t * p_bytes,
+   uint16_t data_length,
+   pnet_result_t * p_result)
+{
+   int status = 0;
+   uint16_t pos = 0;
+   pf_snmp_config_t snmp_config = {0};
+   bool snmp_configuration_changed = false;
+
+   pf_get_info_t get_info =
+   {
+      .result = PF_PARSE_OK,
+      .p_frame = NULL,
+      .p_array = p_bytes,
+      .is_big_endian = true,
+      .len = data_length,
+   };
+
+   /* block header already consumed at this point */
+
+   pf_get_cim_snmp_adjust (&get_info, &pos, &snmp_config);
+
+   if (get_info.result != PF_PARSE_OK)
+   {
+      LOG_WARNING (
+         PF_SNMP_LOG,
+         "SNMP(%d): Failed to parse CIM SNMP Adjust\n",
+         __LINE__);
+      return -1;
+   }
+
+   status = pf_snmp_validate_config(&snmp_config);
+
+   if (status == 0)
+   {
+      LOG_INFO (
+         PF_SNMP_LOG,
+         "SNMP(%d): Write request CIM SNMP Adjust "
+         "mode = %d, ro = \"%s\", rw = \"%s\"\n",
+         __LINE__,
+         snmp_config.control_mode,
+         snmp_config.ro_name.string,
+         snmp_config.rw_name.string);
+
+      snmp_config.snmp_adjust_active = true;
+
+      status = pf_snmp_set_snmp_config (
+         net,
+         &snmp_config,
+         &snmp_configuration_changed);
+
+      if (status == 0 && snmp_configuration_changed)
+      {
+         status = pf_snmp_activate_snmp_config (net);
+      }
+   }
+
+   if (status == 0)
+   {
+      pf_snmp_save_snmp_config_bg (net);
+   }
+   else
+   {
+      LOG_WARNING (
+         PF_SNMP_LOG,
+         "SNMP(%d): Write request CIM SNMP Adjust rejected\n",
+         __LINE__);
+   }
+
+   return status;
+}
+
+void pf_snmp_config_reset (pnet_t * net)
+{
+   bool snmp_configuration_changed;
+
+   LOG_DEBUG (PF_SNMP_LOG, "SNMP(%d): Resetting SNMP config.\n", __LINE__);
+
+   pf_snmp_set_snmp_config (
+      net,
+      &snmp_config_default,
+      &snmp_configuration_changed);
+   if (snmp_configuration_changed)
+   {
+      pf_snmp_save_snmp_config_bg (net);
+      pf_snmp_activate_snmp_config_bg (net);
+   }
+}
+
+const pf_snmp_config_t * pf_snmp_get_config (pnet_t * net)
+{
+   return &net->snmp_config;
+}
+#endif /* PNET_OPTION_SECURITY_LEVEL_1 */
+
+#if PNET_OPTION_MRP
+void pf_snmp_get_mrp_domain_uuid(pnet_t * net, mrp_domain_uuid_t *domain)
+{
+   memcpy (
+      domain->data,
+      net->mrp_data.config.domain.data,
+      sizeof (mrp_domain_uuid_t));
+}
+
+void pf_snmp_get_mrp_domain_name(pnet_t * net, mrp_domain_name_t *domain_name)
+{
+   domain_name->len = net->mrp_data.config.domain_name.len;
+   memcpy(domain_name->name, net->mrp_data.config.domain_name.name, domain_name->len);
+}
+
+void pf_snmp_get_mrp_domain_role(pnet_t * net, int *role)
+{
+   *role = (int)net->mrp_data.config.role;
+}
+
+int pf_snmp_set_mrp_domain_role(pnet_t * net, int role)
+{
+   if (role == MEDIA_REDUNDANCY_DISABLED)
+   {
+      pf_mrp_disable(net);
+      return 0;
+   }
+   if (role == MEDIA_REDUNDANCY_CLIENT)
+   {
+      pf_mrp_enable(net);
+      return 0;
+   }
+   return -1;
+}
+
+int pf_snmp_mrp_get_port_info(pnet_t *pnet, int ring_id, int *port_idx, int *ring_port_state)
+{
+   int port;
+   pf_port_iterator_t port_iterator;
+   int i = ring_id;
+
+   /* only allow queries for ring port 1 and 2 */
+   if ((ring_id < 1) || (ring_id > 2))
+      return -1;
+
+   pf_port_init_iterator_over_ports (pnet, &port_iterator);
+
+   while (i--)
+   {
+      port = pf_port_get_next (&port_iterator);
+   }
+
+   if (port > 0)
+   {
+      if (port_idx)
+      {
+         *port_idx = port;
+      }
+      if (ring_port_state)
+      {
+         pf_port_t * p_port_data = pf_port_get_state (pnet, port);
+         mrp_ring_port_state_t state;
+         pnal_mrp_get_ring_port_status(p_port_data->netif.name, port, &state);
+         *ring_port_state = state;
+      }
+   }
+
+   return port;
+}
+
+int pf_snmp_mrp_get_vlan_id(pnet_t *pnet, int *vlan_id)
+{
+   /* return vlan id for first port */
+   int port;
+   pf_port_iterator_t port_iterator;
+   pf_port_init_iterator_over_ports (pnet, &port_iterator);
+   port = pf_port_get_next (&port_iterator);
+   if (port > 0)
+   {
+      pf_port_t * p_port_data = pf_port_get_state (pnet, port);
+      return pnal_mrp_get_vlan_id(p_port_data->netif.name, port, vlan_id);
+   }
+   *vlan_id = 0;
+   return -1;
+}
+#endif
+
 void pf_snmp_show (pnet_t * net)
 {
    pf_snmp_data_t * snmp = &net->snmp_data;
@@ -769,4 +1201,9 @@ void pf_snmp_show (pnet_t * net)
    printf (" SysName     : \"%s\"\n", snmp->system_name.string);
    printf (" SysLocation : \"%s\"\n", snmp->system_location.string);
    printf (" SysContact  : \"%s\"\n", snmp->system_contact.string);
+#if PNET_OPTION_SECURITY_LEVEL_1
+   printf (" ControlMode : %d\n", net->snmp_config.control_mode);
+   printf (" RO Name     : \"%s\"\n", net->snmp_config.ro_name.string);
+   printf (" RW Name     : \"%s\"\n", net->snmp_config.rw_name.string);
+#endif /* PNET_OPTION_SECURITY_LEVEL_1 */
 }

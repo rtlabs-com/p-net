@@ -20,844 +20,847 @@
 #include "pf_includes.h"
 #include "pf_block_writer.h"
 
-/**
- * @file
- * @brief Implements the Context Management Read Record Responder protocol
- * machine device (CMRDR)
- *
- * Contains mainly one function \a pf_cmrdr_rm_read_ind(),
- * that handles a RPC parameter read request (and read implicit request).
- *
- * Triggers the \a pnet_read_ind() user callback for some values.
- *
- * This implementation of CMRDR has no internal state.
- * Every call to \a pf_cmrdr_rm_read_ind() finishes by returning the result.
- * Since there are no internal static variables there is also no need
- * for a POWER-ON state.
- */
-
-int pf_cmrdr_rm_read_ind (
-   pnet_t * net,
-   pf_ar_t * p_ar,
-   const pf_iod_read_request_t * p_read_request,
-   pnet_result_t * p_read_status,
-   uint16_t res_size,
-   uint8_t * p_res,
-   uint16_t * p_pos)
+static inline void pf_cmrdr_init_read_result (
+   pf_iod_read_result_t * result,
+   pf_iod_read_request_t const * request)
 {
-   int ret = -1;
+   result->sequence_number = request->sequence_number;
+   result->ar_uuid = request->ar_uuid;
+   result->api = request->api;
+   result->slot_number = request->slot_number;
+   result->subslot_number = request->subslot_number;
+   result->index = request->index;
+   result->record_data_length = 0;
+   result->add_data_1 = 0;
+   result->add_data_2 = 0;
+}
+
+static void pf_cmrdr_read_user_index (
+   pnet_t * net,
+   pf_ar_t * ar,
+   pf_iod_read_request_t const * request,
+   pf_put_info_t * info,
+   uint16_t * pos,
+   pnet_result_t * result)
+{
    pf_iod_read_result_t read_result;
-   uint8_t * p_data = NULL;
-   uint16_t data_length_pos = 0;
-   uint16_t start_pos = 0;
-   uint8_t iocs[255];                          /* Max possible array size */
-   uint8_t iops[255];                          /* Max possible array size */
-   uint8_t subslot_data[PF_FRAME_BUFFER_SIZE]; /* Max possible array size */
-   uint8_t iocs_len = 0;
-   uint8_t iops_len = 0;
-   uint16_t data_len = 0;
-   bool new_flag = false;
-   char station_name[PNET_STATION_NAME_MAX_SIZE]; /* Terminated*/
+   uint8_t * data;
+   uint16_t size;
+   uint16_t data_offset;
+   uint16_t length_offset;
+   int r;
 
-   if (
-      (p_read_request->slot_number == PNET_SLOT_DAP_IDENT) &&
-      (pf_port_subslot_is_dap_port_id (net, p_read_request->subslot_number)))
+   size = (info->len - *pos);
+   if (request->record_data_length < size)
    {
-      LOG_INFO (
-         PNET_LOG,
-         "CMRDR(%d): PLC is reading slot %u subslot 0x%04X index 0x%04X "
-         "(local port %d) \"%s\"\n",
-         __LINE__,
-         p_read_request->slot_number,
-         p_read_request->subslot_number,
-         p_read_request->index,
-         pf_port_dap_subslot_to_local_port (net, p_read_request->subslot_number),
-         pf_index_to_logstring (p_read_request->index));
+      size = request->record_data_length;
    }
-   else
+   r = pf_fspm_cm_read_ind (net, ar, request, &data, &size, result);
+
+   /* Encode read result, with length set to 0, for now. */
+   pf_cmrdr_init_read_result (&read_result, request);
+   read_result.add_data_1 = result->add_data_1;
+   read_result.add_data_2 = result->add_data_2;
+   pf_put_read_result (true, &read_result, info, pos, &length_offset);
+
+   /* If data was provided, copy data and update length. */
+   if ((r == 0) && (size > 0) && (data != NULL))
    {
-      LOG_INFO (
-         PNET_LOG,
-         "CMRDR(%d): PLC is reading slot %u subslot 0x%04X index 0x%04X "
-         "\"%s\"\n",
-         __LINE__,
-         p_read_request->slot_number,
-         p_read_request->subslot_number,
-         p_read_request->index,
-         pf_index_to_logstring (p_read_request->index));
-   }
-
-   read_result.sequence_number = p_read_request->sequence_number;
-   read_result.ar_uuid = p_read_request->ar_uuid;
-   read_result.api = p_read_request->api;
-   read_result.slot_number = p_read_request->slot_number;
-   read_result.subslot_number = p_read_request->subslot_number;
-   read_result.index = p_read_request->index;
-
-   /* Get the data from FSPM or the application, if possible. */
-   data_len = res_size - *p_pos;
-   if (
-      pf_fspm_cm_read_ind (
-         net,
-         p_ar,
-         p_read_request,
-         &p_data,
-         &data_len,
-         p_read_status) != 0)
-   {
-      data_len = 0; /* Handled: No data available. */
-   }
-
-   /*
-    * Just insert a dummy value for now.
-    * It will be properly computed after the answer has been written to the
-    * buffer.
-    */
-   read_result.record_data_length = 0;
-
-   /*
-    * The only result that can fail is from FSPM or the application.
-    * All well-known indices are handled without error.
-    * It is therefore OK to write the result already now.
-    * This is needed in order to get the correct position for the actual answer.
-    */
-   read_result.add_data_1 = p_read_status->add_data_1;
-   read_result.add_data_2 = p_read_status->add_data_2;
-
-   /* Also: Retrieve a position to write the total record length to. */
-   pf_put_read_result (
-      true,
-      &read_result,
-      res_size,
-      p_res,
-      p_pos,
-      &data_length_pos);
-
-   /*
-    * Even if the application or FSPM provided an answer.
-    * If there is another answer then use that!!
-    */
-   start_pos = *p_pos;
-   if (p_read_request->index <= PF_IDX_USER_MAX)
-   {
-      if (*p_pos + data_len <= res_size)
+      data_offset = *pos;
+      pf_put_mem (data, size, info, pos);
+      if (info->result == PF_PUT_OK)
       {
-
-         if (data_len > 0 && p_data != NULL)
-         {
-            /* Provided by application - accept whatever it says. */
-            memcpy (&p_res[*p_pos], p_data, data_len);
-            *p_pos += data_len;
-         }
-
-         /* Handled, even if no bytes were actually copied */
-         ret = 0;
+         /* Insert actual length. */
+         pf_put_uint32 (true, (*pos - data_offset), info, &length_offset);
       }
    }
-   else
-   {
-      switch (p_read_request->index)
-      {
-      case PF_IDX_DEV_IM_0_FILTER_DATA:
-         /* Block-writer knows where to fetch and how to build the answer. */
-         pf_put_im_0_filter_data (net, true, res_size, p_res, p_pos);
-         ret = 0;
-         break;
+}
 
-      /* I&M data has been provided by FSPM. Accept whatever it says.
-       * Put it into the response after verifying the data length. */
+static void pf_cmrdr_read_im_index (
+   pnet_t * net,
+   pf_iod_read_request_t const * request,
+   pf_put_info_t * info,
+   uint16_t * pos,
+   pnet_result_t * result)
+{
+   pf_iod_read_result_t read_result;
+   uint16_t data_offset;
+   uint16_t length_offset;
+   int r;
+   union
+   {
+      pnet_im_0_t im0;
+      pnet_im_1_t im1;
+      pnet_im_2_t im2;
+      pnet_im_3_t im3;
+      pnet_im_4_t im4;
+   } data;
+
+   switch (request->index)
+   {
+   case PF_IDX_SUB_IM_0:
+      r = pf_fspm_read_im_0 (net, request, &data.im0, result);
+      break;
+   case PF_IDX_SUB_IM_1:
+      r = pf_fspm_read_im_1 (net, request, &data.im1, result);
+      break;
+   case PF_IDX_SUB_IM_2:
+      r = pf_fspm_read_im_2 (net, request, &data.im2, result);
+      break;
+   case PF_IDX_SUB_IM_3:
+      r = pf_fspm_read_im_3 (net, request, &data.im3, result);
+      break;
+   case PF_IDX_SUB_IM_4:
+      r = pf_fspm_read_im_4 (net, request, &data.im4, result);
+      break;
+   default:
+      pf_set_error (
+         result,
+         PNET_ERROR_CODE_READ,
+         PNET_ERROR_DECODE_PNIORW,
+         PNET_ERROR_CODE_1_ACC_INVALID_INDEX,
+         PNET_ERROR_CODE_2_PNIORW (10));
+      r = -1;
+      break;
+   }
+
+   /* Encode read result, with length set to 0, for now. */
+   pf_cmrdr_init_read_result (&read_result, request);
+   read_result.add_data_1 = result->add_data_1;
+   read_result.add_data_2 = result->add_data_2;
+   pf_put_read_result (true, &read_result, info, pos, &length_offset);
+
+   /* If data was provided, copy data and update length. */
+   if (r == 0)
+   {
+      data_offset = *pos;
+      switch (request->index)
+      {
       case PF_IDX_SUB_IM_0:
-         if ((data_len == sizeof (pnet_im_0_t)) && (*p_pos + data_len < res_size))
-         {
-            pf_put_im_0 (true, (pnet_im_0_t *)p_data, res_size, p_res, p_pos);
-            ret = 0;
-         }
+         pf_put_im_0 (true, &data.im0, info, pos);
          break;
       case PF_IDX_SUB_IM_1:
-         if ((data_len == sizeof (pnet_im_1_t)) && (*p_pos + data_len < res_size))
+         if (
+            (strlen (data.im1.im_tag_function) > 0) &&
+            (strlen (data.im1.im_tag_location) > 0))
          {
-            os_mutex_lock (net->fspm_im_mutex);
-            pf_put_im_1 (true, (pnet_im_1_t *)p_data, res_size, p_res, p_pos);
-            os_mutex_unlock (net->fspm_im_mutex);
-            ret = 0;
+            pf_put_im_1 (true, &data.im1, info, pos);
          }
          break;
       case PF_IDX_SUB_IM_2:
-         if ((data_len == sizeof (pnet_im_2_t)) && (*p_pos + data_len < res_size))
+         if (strlen (data.im2.im_date) > 0)
          {
-            os_mutex_lock (net->fspm_im_mutex);
-            pf_put_im_2 (true, (pnet_im_2_t *)p_data, res_size, p_res, p_pos);
-            os_mutex_unlock (net->fspm_im_mutex);
-            ret = 0;
+            pf_put_im_2 (true, &data.im2, info, pos);
          }
          break;
       case PF_IDX_SUB_IM_3:
-         if ((data_len == sizeof (pnet_im_3_t)) && (*p_pos + data_len < res_size))
+         if (strlen (data.im3.im_descriptor) > 0)
          {
-            os_mutex_lock (net->fspm_im_mutex);
-            pf_put_im_3 (true, (pnet_im_3_t *)p_data, res_size, p_res, p_pos);
-            os_mutex_unlock (net->fspm_im_mutex);
-            ret = 0;
+            pf_put_im_3 (true, &data.im3, info, pos);
          }
          break;
       case PF_IDX_SUB_IM_4:
-         if ((data_len == sizeof (pnet_im_4_t)) && (*p_pos + data_len < res_size))
-         {
-            os_mutex_lock (net->fspm_im_mutex);
-            pf_put_record_data_read (
-               true,
-               PF_BT_IM_4,
-               data_len,
-               p_data,
-               res_size,
-               p_res,
-               p_pos);
-            os_mutex_unlock (net->fspm_im_mutex);
-            ret = 0;
-         }
-         break;
-
-      /* Logbook data has been provided by FSPM. Accept whatever it says.
-       * Put it into the response after verifying the data length. */
-      case PF_IDX_DEV_LOGBOOK_DATA:
-         pf_put_log_book_data (
-            true,
-            (pf_log_book_t *)p_data,
-            res_size,
-            p_res,
-            p_pos);
-         ret = 0;
-         break;
-
-      /* Block-writer knows where to fetch and how to build the answer to ID
-       * data requests. */
-      case PF_IDX_SUB_EXP_ID_DATA:
-         pf_put_exp_ident_data (
-            p_ar,
-            true,
-            PNET_BLOCK_VERSION_LOW_1,
-            PF_RECORD_DATA_SCOPE_SUBSLOT,
-            p_read_request->api,
-            p_read_request->slot_number,
-            p_read_request->subslot_number,
-            res_size,
-            p_res,
-            p_pos);
-         ret = 0;
-         break;
-      case PF_IDX_SUB_REAL_ID_DATA:
-         pf_put_real_ident_data(
-            net,
-            true,
-            PNET_BLOCK_VERSION_LOW_1,
-            PF_RECORD_DATA_SCOPE_SUBSLOT,
-            NULL,
-            p_read_request->api,
-            p_read_request->slot_number,
-            p_read_request->subslot_number,
-            res_size,
-            p_res,
-            p_pos);
-         ret = 0;
-         break;
-      case PF_IDX_SLOT_EXP_ID_DATA:
-         pf_put_exp_ident_data (
-            p_ar,
-            true,
-            PNET_BLOCK_VERSION_LOW_1,
-            PF_RECORD_DATA_SCOPE_SLOT,
-            p_read_request->api,
-            p_read_request->slot_number,
-            0,
-            res_size,
-            p_res,
-            p_pos);
-         ret = 0;
-         break;
-      case PF_IDX_SLOT_REAL_ID_DATA:
-         pf_put_real_ident_data(
-            net,
-            true,
-            PNET_BLOCK_VERSION_LOW_1,
-            PF_RECORD_DATA_SCOPE_SLOT,
-            NULL,
-            p_read_request->api,
-            p_read_request->slot_number,
-            0,
-            res_size,
-            p_res,
-            p_pos);
-         ret = 0;
-         break;
-      case PF_IDX_AR_EXP_ID_DATA:
-         pf_put_exp_ident_data (
-            p_ar,
-            true,
-            PNET_BLOCK_VERSION_LOW_1,
-            PF_RECORD_DATA_SCOPE_AR,
-            0,
-            0,
-            0,
-            res_size,
-            p_res,
-            p_pos);
-         ret = 0;
-         break;
-      case PF_IDX_AR_REAL_ID_DATA:
-         pf_put_real_ident_data(
-            net,
-            true,
-            PNET_BLOCK_VERSION_LOW_1,
-            PF_RECORD_DATA_SCOPE_AR,
-            p_ar,
-            0,
-            0,
-            0,
-            res_size,
-            p_res,
-            p_pos);
-         ret = 0;
-         break;
-      case PF_IDX_API_REAL_ID_DATA:
-         pf_put_real_ident_data(
-            net,
-            true,
-            PNET_BLOCK_VERSION_LOW_1,
-            PF_RECORD_DATA_SCOPE_API,
-            NULL,
-            p_read_request->api,
-            0,
-            0,
-            res_size,
-            p_res,
-            p_pos);
-         ret = 0;
-         break;
-
-      case PF_IDX_DEV_API_DATA:
-         pf_put_real_ident_data(
-            net,
-            true,
-            PNET_BLOCK_VERSION_LOW,
-            PF_RECORD_DATA_SCOPE_DEVICE,
-            NULL,
-            0,
-            0,
-            0,
-            res_size,
-            p_res,
-            p_pos);
-         ret = 0;
-         break;
-
-      case PF_IDX_SUB_INPUT_DATA:
-         /* Sub-module data to the controller */
-         data_len = sizeof (subslot_data);
-         iops_len = sizeof (iops);
-         iocs_len = sizeof (iocs);
-         if (
-            pf_ppm_get_data_and_iops (
-               net,
-               p_read_request->api,
-               p_read_request->slot_number,
-               p_read_request->subslot_number,
-               subslot_data,
-               &data_len,
-               iops,
-               &iops_len) != 0)
-         {
-            LOG_DEBUG (
-               PNET_LOG,
-               "CMRDR(%d): Could not get PPM data and IOPS\n",
-               __LINE__);
-            data_len = 0;
-            iops_len = 0;
-         }
-         if (
-            pf_cpm_get_iocs (
-               net,
-               p_read_request->api,
-               p_read_request->slot_number,
-               p_read_request->subslot_number,
-               iocs,
-               &iocs_len) != 0)
-         {
-            LOG_DEBUG (
-               PNET_LOG,
-               "CMRDR(%d): Could not get CPM IOCS\n",
-               __LINE__);
-            iocs_len = 0;
-         }
-         if ((data_len + iops_len + iocs_len) > 0)
-         {
-            /* Have all data */
-            pf_put_input_data (
-               true,
-               iocs_len,
-               iocs,
-               iops_len,
-               iops,
-               data_len,
-               subslot_data,
-               res_size,
-               p_res,
-               p_pos);
-            ret = 0;
-         }
-         break;
-      case PF_IDX_SUB_OUTPUT_DATA:
-         /* Sub-module data from the controller. */
-         data_len = sizeof (subslot_data);
-         iops_len = sizeof (iops);
-         iocs_len = sizeof (iocs);
-         if (
-            pf_cpm_get_data_and_iops (
-               net,
-               p_read_request->api,
-               p_read_request->slot_number,
-               p_read_request->subslot_number,
-               &new_flag,
-               subslot_data,
-               &data_len,
-               iops,
-               &iops_len) != 0)
-         {
-            LOG_DEBUG (
-               PNET_LOG,
-               "CMRDR(%d): Could not get CPM data and IOPS\n",
-               __LINE__);
-            data_len = 0;
-            iops_len = 0;
-         }
-         if (
-            pf_ppm_get_iocs (
-               net,
-               p_read_request->api,
-               p_read_request->slot_number,
-               p_read_request->subslot_number,
-               iocs,
-               &iocs_len) != 0)
-         {
-            LOG_DEBUG (
-               PNET_LOG,
-               "CMRDR(%d): Could not get PPM IOCS\n",
-               __LINE__);
-            iocs_len = 0;
-         }
-         if ((data_len + iops_len + iocs_len) > 0)
-         {
-            /* Have all data */
-            /* ToDo: Support substitution values, mode and active flag */
-            pf_put_output_data (
-               true,
-               false,
-               iocs_len,
-               iocs,
-               iops_len,
-               iops,
-               data_len,
-               subslot_data,
-               0,
-               subslot_data,
-               res_size,
-               p_res,
-               p_pos);
-            ret = 0;
-         }
-         break;
-
-      /* Block-writer knows where to fetch and how to build the answer to diag
-       * data requests. */
-      case PF_IDX_SUB_DIAGNOSIS_CH:
-         pf_put_diagnosis_subslot(
-            net,
-            true,
-            PF_DIAG_FILTER_FAULT_STD,
-            p_ar,
-            p_read_request->api,
-            p_read_request->slot_number,
-            p_read_request->subslot_number,
-            res_size,
-            p_res,
-            p_pos);
-         ret = 0;
-         break;
-      case PF_IDX_SUB_DIAGNOSIS_ALL:
-         pf_put_diagnosis_subslot(
-            net,
-            true,
-            PF_DIAG_FILTER_FAULT_ALL,
-            p_ar,
-            p_read_request->api,
-            p_read_request->slot_number,
-            p_read_request->subslot_number,
-            res_size,
-            p_res,
-            p_pos);
-         ret = 0;
-         break;
-      case PF_IDX_SUB_DIAGNOSIS_DMQS:
-         pf_put_diagnosis_subslot(
-            net,
-            true,
-            PF_DIAG_FILTER_ALL,
-            p_ar,
-            p_read_request->api,
-            p_read_request->slot_number,
-            p_read_request->subslot_number,
-            res_size,
-            p_res,
-            p_pos);
-         ret = 0;
-         break;
-      case PF_IDX_SUB_DIAG_MAINT_REQ_CH:
-      case PF_IDX_SUB_DIAG_MAINT_REQ_ALL:
-         pf_put_diagnosis_subslot(
-            net,
-            true,
-            PF_DIAG_FILTER_M_REQ,
-            p_ar,
-            p_read_request->api,
-            p_read_request->slot_number,
-            p_read_request->subslot_number,
-            res_size,
-            p_res,
-            p_pos);
-         ret = 0;
-         break;
-      case PF_IDX_SUB_DIAG_MAINT_DEM_CH:
-      case PF_IDX_SUB_DIAG_MAINT_DEM_ALL:
-         pf_put_diagnosis_subslot(
-            net,
-            true,
-            PF_DIAG_FILTER_M_DEM,
-            p_ar,
-            p_read_request->api,
-            p_read_request->slot_number,
-            p_read_request->subslot_number,
-            res_size,
-            p_res,
-            p_pos);
-         ret = 0;
-         break;
-
-      case PF_IDX_SLOT_DIAGNOSIS_CH:
-         pf_put_diagnosis_slot(
-            net,
-            true,
-            PF_DIAG_FILTER_FAULT_STD,
-            p_ar,
-            p_read_request->api,
-            p_read_request->slot_number,
-            res_size,
-            p_res,
-            p_pos);
-         ret = 0;
-         break;
-      case PF_IDX_SLOT_DIAGNOSIS_ALL:
-         pf_put_diagnosis_slot(
-            net,
-            true,
-            PF_DIAG_FILTER_FAULT_ALL,
-            p_ar,
-            p_read_request->api,
-            p_read_request->slot_number,
-            res_size,
-            p_res,
-            p_pos);
-         ret = 0;
-         break;
-      case PF_IDX_SLOT_DIAGNOSIS_DMQS:
-         pf_put_diagnosis_slot(
-            net,
-            true,
-            PF_DIAG_FILTER_ALL,
-            p_ar,
-            p_read_request->api,
-            p_read_request->slot_number,
-            res_size,
-            p_res,
-            p_pos);
-         ret = 0;
-         break;
-      case PF_IDX_SLOT_DIAG_MAINT_REQ_CH:
-      case PF_IDX_SLOT_DIAG_MAINT_REQ_ALL:
-         pf_put_diagnosis_slot(
-            net,
-            true,
-            PF_DIAG_FILTER_M_REQ,
-            p_ar,
-            p_read_request->api,
-            p_read_request->slot_number,
-            res_size,
-            p_res,
-            p_pos);
-         ret = 0;
-         break;
-      case PF_IDX_SLOT_DIAG_MAINT_DEM_CH:
-      case PF_IDX_SLOT_DIAG_MAINT_DEM_ALL:
-         pf_put_diagnosis_slot(
-            net,
-            true,
-            PF_DIAG_FILTER_M_DEM,
-            p_ar,
-            p_read_request->api,
-            p_read_request->slot_number,
-            res_size,
-            p_res,
-            p_pos);
-         ret = 0;
-         break;
-
-      case PF_IDX_API_DIAGNOSIS_CH:
-         pf_put_diagnosis_api (
-            net,
-            true,
-            PF_DIAG_FILTER_FAULT_STD,
-            p_read_request->api,
-            res_size,
-            p_res,
-            p_pos);
-         ret = 0;
-         break;
-      case PF_IDX_API_DIAGNOSIS_ALL:
-         pf_put_diagnosis_api (
-            net,
-            true,
-            PF_DIAG_FILTER_FAULT_ALL,
-            p_read_request->api,
-            res_size,
-            p_res,
-            p_pos);
-         ret = 0;
-         break;
-      case PF_IDX_API_DIAGNOSIS_DMQS:
-         pf_put_diagnosis_api (
-            net,
-            true,
-            PF_DIAG_FILTER_ALL,
-            p_read_request->api,
-            res_size,
-            p_res,
-            p_pos);
-         ret = 0;
-         break;
-      case PF_IDX_API_DIAG_MAINT_REQ_CH:
-      case PF_IDX_API_DIAG_MAINT_REQ_ALL:
-         pf_put_diagnosis_api (
-            net,
-            true,
-            PF_DIAG_FILTER_M_REQ,
-            p_read_request->api,
-            res_size,
-            p_res,
-            p_pos);
-         ret = 0;
-         break;
-      case PF_IDX_API_DIAG_MAINT_DEM_CH:
-      case PF_IDX_API_DIAG_MAINT_DEM_ALL:
-         pf_put_diagnosis_api (
-            net,
-            true,
-            PF_DIAG_FILTER_M_DEM,
-            p_read_request->api,
-            res_size,
-            p_res,
-            p_pos);
-         ret = 0;
-         break;
-
-      case PF_IDX_AR_DIAGNOSIS_CH:
-         pf_put_diagnosis_ar (
-            net,
-            true,
-            PF_DIAG_FILTER_FAULT_STD,
-            p_ar,
-            res_size,
-            p_res,
-            p_pos);
-         ret = 0;
-         break;
-      case PF_IDX_AR_DIAGNOSIS_ALL:
-         pf_put_diagnosis_ar (
-            net,
-            true,
-            PF_DIAG_FILTER_FAULT_ALL,
-            p_ar,
-            res_size,
-            p_res,
-            p_pos);
-         ret = 0;
-         break;
-      case PF_IDX_AR_DIAGNOSIS_DMQS:
-         pf_put_diagnosis_ar (
-            net,
-            true,
-            PF_DIAG_FILTER_ALL,
-            p_ar,
-            res_size,
-            p_res,
-            p_pos);
-         ret = 0;
-         break;
-      case PF_IDX_AR_DIAG_MAINT_REQ_CH:
-      case PF_IDX_AR_DIAG_MAINT_REQ_ALL:
-         pf_put_diagnosis_ar (
-            net,
-            true,
-            PF_DIAG_FILTER_M_REQ,
-            p_ar,
-            res_size,
-            p_res,
-            p_pos);
-         ret = 0;
-         break;
-      case PF_IDX_AR_DIAG_MAINT_DEM_CH:
-      case PF_IDX_AR_DIAG_MAINT_DEM_ALL:
-         pf_put_diagnosis_ar (
-            net,
-            true,
-            PF_DIAG_FILTER_M_DEM,
-            p_ar,
-            res_size,
-            p_res,
-            p_pos);
-         ret = 0;
-         break;
-
-      case PF_IDX_DEV_DIAGNOSIS_DMQS:
-         pf_put_diagnosis_device (
-            net,
-            true,
-            PF_DIAG_FILTER_ALL,
-            res_size,
-            p_res,
-            p_pos);
-         ret = 0;
-         break;
-
-      case PF_IDX_DEV_CONN_MON_TRIGGER:
-         /* Restart timeout period. See pf_cmsm_rm_read_ind() */
-         ret = 0;
-         break;
-
-      case PF_IDX_API_AR_DATA:
-         pf_put_ar_data (
-            net,
-            true,
-            p_ar,
-            p_read_request->api,
-            res_size,
-            p_res,
-            p_pos);
-         ret = 0;
-         break;
-      case PF_IDX_DEV_AR_DATA:
-         pf_put_ar_data (net, true, NULL, 0, res_size, p_res, p_pos);
-         ret = 0;
-         break;
-      case PF_IDX_AR_MOD_DIFF:
-         /* On implicit with p_ar == NULL pf_cmdev_generate_module_diff
-          * will return -1
-          * In this case pf_put_ar_diff will not give an empty response
-          */
-         (void)pf_cmdev_generate_module_diff (net, p_ar);
-         pf_put_ar_diff (true, p_ar, res_size, p_res, p_pos);
-         ret = 0;
-         break;
-
-      case PF_IDX_SUB_PDPORT_DATA_REAL:
-      case PF_IDX_SUB_PDPORT_DATA_ADJ:
-      case PF_IDX_SUB_PDPORT_DATA_CHECK:
-      case PF_IDX_DEV_PDREAL_DATA:
-      case PF_IDX_DEV_PDEXP_DATA:
-      case PF_IDX_SUB_PDPORT_STATISTIC:
-      case PF_IDX_SUB_PDINTF_ADJUST:
-         ret = pf_pdport_read_ind (
-            net,
-            p_ar,
-            p_read_request,
-            &read_result,
-            res_size,
-            p_res,
-            p_pos);
-         break;
-
-      case PF_IDX_SUB_PDINTF_REAL:
-         /* Only check if this is the port subslot */
-         if (
-            (p_read_request->slot_number == PNET_SLOT_DAP_IDENT) &&
-            (p_read_request->subslot_number ==
-             PNET_SUBSLOT_DAP_INTERFACE_1_IDENT))
-         {
-            pf_cmina_get_station_name (net, station_name);
-
-            pf_put_pdinterface_data_real (
-               true,
-               pf_cmina_get_device_macaddr (net),
-               pf_cmina_get_ipaddr (net),
-               pf_cmina_get_netmask (net),
-               pf_cmina_get_gateway (net),
-               station_name,
-               res_size,
-               p_res,
-               p_pos);
-            ret = 0;
-         }
-         else
-         {
-            ret = -1;
-         }
+         pf_put_im_4 (true, &data.im4, info, pos);
          break;
       default:
-         LOG_INFO (
-            PNET_LOG,
-            "CMRDR(%d): Index 0x%04X is not supported.\n",
-            __LINE__,
-            p_read_request->index);
-         ret = -1;
          break;
       }
+      if (info->result == PF_PUT_OK)
+      {
+         /* Insert actual length. */
+         pf_put_uint32 (true, (*pos - data_offset), info, &length_offset);
+      }
+      else
+      {
+         *pos = data_offset;
+      }
    }
+}
 
-   if (ret != 0)
+static void pf_cmrdr_special_read (
+   pnet_t * net,
+   pf_ar_t * ar,
+   pf_iod_read_request_t const * request,
+   pf_put_info_t * info,
+   uint16_t * pos,
+   pnet_result_t * result)
+{
+   pf_iod_read_result_t read_result;
+   uint16_t data_offset;
+   uint16_t length_offset;
+
+   /* Encode read result, with length set to 0, for now. */
+   pf_cmrdr_init_read_result (&read_result, request);
+   read_result.add_data_1 = result->add_data_1;
+   read_result.add_data_2 = result->add_data_2;
+   pf_put_read_result (true, &read_result, info, pos, &length_offset);
+   data_offset = *pos;
+
+   switch (request->index)
    {
+   case PF_IDX_DEV_IM_0_FILTER_DATA:
+      /* Block-writer knows where to fetch and how to build the answer. */
+      pf_put_im_0_filter_data (net, true, info, pos);
+      break;
+#if PNET_OPTION_SNMP && PNET_OPTION_SECURITY_LEVEL_1
+   case PF_IDX_CIM_SNMP_REAL:
+      pf_put_snmp_cim_snmp_real (
+         net,
+         true,
+         net->snmp_config.control_mode,
+         info,
+         pos);
+      break;
+   case PF_IDX_CIM_SNMP_ADJUST:
+      if (net->snmp_config.snmp_adjust_active)
+      {
+         pf_put_snmp_cim_snmp_adjust (
+            net,
+            true,
+            net->snmp_config.control_mode,
+            info,
+            pos);
+      }
+      break;
+#endif /* PNET_OPTION_SNMP && PNET_OPTION_SECURITY_LEVEL_1 */
+
+   case PF_IDX_DEV_LOGBOOK_DATA:
+      pf_put_log_book_data (true, &net->fspm_log_book, info, pos);
+      break;
+
+   /* Block-writer knows where to fetch and how to build the answer to ID
+    * data requests. */
+   case PF_IDX_SUB_EXP_ID_DATA:
+      pf_put_exp_ident_data (
+         ar,
+         true,
+         PNET_BLOCK_VERSION_LOW_1,
+         PF_RECORD_DATA_SCOPE_SUBSLOT,
+         request->api,
+         request->slot_number,
+         request->subslot_number,
+         info,
+         pos);
+      break;
+   case PF_IDX_SUB_REAL_ID_DATA:
+      pf_put_real_ident_data (
+         net,
+         true,
+         PNET_BLOCK_VERSION_LOW_1,
+         PF_RECORD_DATA_SCOPE_SUBSLOT,
+         NULL,
+         request->api,
+         request->slot_number,
+         request->subslot_number,
+         info,
+         pos);
+      break;
+   case PF_IDX_SLOT_EXP_ID_DATA:
+      pf_put_exp_ident_data (
+         ar,
+         true,
+         PNET_BLOCK_VERSION_LOW_1,
+         PF_RECORD_DATA_SCOPE_SLOT,
+         request->api,
+         request->slot_number,
+         0,
+         info,
+         pos);
+      break;
+   case PF_IDX_SLOT_REAL_ID_DATA:
+      pf_put_real_ident_data (
+         net,
+         true,
+         PNET_BLOCK_VERSION_LOW_1,
+         PF_RECORD_DATA_SCOPE_SLOT,
+         NULL,
+         request->api,
+         request->slot_number,
+         0,
+         info,
+         pos);
+      break;
+   case PF_IDX_AR_EXP_ID_DATA:
+      pf_put_exp_ident_data (
+         ar,
+         true,
+         PNET_BLOCK_VERSION_LOW_1,
+         PF_RECORD_DATA_SCOPE_AR,
+         0,
+         0,
+         0,
+         info,
+         pos);
+      break;
+   case PF_IDX_AR_REAL_ID_DATA:
+      pf_put_real_ident_data (
+         net,
+         true,
+         PNET_BLOCK_VERSION_LOW_1,
+         PF_RECORD_DATA_SCOPE_AR,
+         ar,
+         0,
+         0,
+         0,
+         info,
+         pos);
+      break;
+   case PF_IDX_API_REAL_ID_DATA:
+      pf_put_real_ident_data (
+         net,
+         true,
+         PNET_BLOCK_VERSION_LOW_1,
+         PF_RECORD_DATA_SCOPE_API,
+         NULL,
+         request->api,
+         0,
+         0,
+         info,
+         pos);
+      break;
+
+   case PF_IDX_DEV_API_DATA:
+      pf_put_real_ident_data (
+         net,
+         true,
+         PNET_BLOCK_VERSION_LOW,
+         PF_RECORD_DATA_SCOPE_DEVICE,
+         NULL,
+         0,
+         0,
+         0,
+         info,
+         pos);
+      break;
+
+   case PF_IDX_SUB_INPUT_DATA:
+   {
+      uint8_t subslot_data[PF_FRAME_BUFFER_SIZE]; /* Max possible array size */
+      uint8_t iocs[255];                          /* Max possible array size */
+      uint8_t iops[255];                          /* Max possible array size */
+      uint8_t iocs_len = 0;
+      uint8_t iops_len = 0;
+      uint16_t data_len = 0;
+
+      /* Sub-module data to the controller */
+      data_len = sizeof (subslot_data);
+      iops_len = sizeof (iops);
+      iocs_len = sizeof (iocs);
+      if (
+         pf_ppm_get_data_and_iops (
+            net,
+            request->api,
+            request->slot_number,
+            request->subslot_number,
+            subslot_data,
+            &data_len,
+            iops,
+            &iops_len) != 0)
+      {
+         LOG_DEBUG (
+            PNET_LOG,
+            "CMRDR(%d): Could not get PPM data and IOPS\n",
+            __LINE__);
+         data_len = 0;
+         iops_len = 0;
+      }
+      if (
+         pf_cpm_get_iocs (
+            net,
+            request->api,
+            request->slot_number,
+            request->subslot_number,
+            iocs,
+            &iocs_len) != 0)
+      {
+         LOG_DEBUG (PNET_LOG, "CMRDR(%d): Could not get CPM IOCS\n", __LINE__);
+         iocs_len = 0;
+      }
+      if ((data_len + iops_len + iocs_len) > 0)
+      {
+         /* Have all data */
+         pf_put_input_data (
+            true,
+            iocs_len,
+            iocs,
+            iops_len,
+            iops,
+            data_len,
+            subslot_data,
+            info,
+            pos);
+      }
+      else
+      {
+         pf_set_error (
+            result,
+            PNET_ERROR_CODE_READ,
+            PNET_ERROR_DECODE_PNIORW,
+            PNET_ERROR_CODE_1_ACC_INVALID_INDEX,
+            PNET_ERROR_CODE_2_PNIORW (10));
+      }
+      break;
+   }
+   case PF_IDX_SUB_OUTPUT_DATA:
+   {
+      uint8_t subslot_data[PF_FRAME_BUFFER_SIZE]; /* Max possible array size */
+      uint8_t iocs[255];                          /* Max possible array size */
+      uint8_t iops[255];                          /* Max possible array size */
+      uint8_t iocs_len = 0;
+      uint8_t iops_len = 0;
+      uint16_t data_len = 0;
+      bool new_flag = false;
+
+      /* Sub-module data from the controller. */
+      data_len = sizeof (subslot_data);
+      iops_len = sizeof (iops);
+      iocs_len = sizeof (iocs);
+      if (
+         pf_cpm_get_data_and_iops (
+            net,
+            request->api,
+            request->slot_number,
+            request->subslot_number,
+            &new_flag,
+            subslot_data,
+            &data_len,
+            iops,
+            &iops_len) != 0)
+      {
+         LOG_DEBUG (
+            PNET_LOG,
+            "CMRDR(%d): Could not get CPM data and IOPS\n",
+            __LINE__);
+         data_len = 0;
+         iops_len = 0;
+      }
+      if (
+         pf_ppm_get_iocs (
+            net,
+            request->api,
+            request->slot_number,
+            request->subslot_number,
+            iocs,
+            &iocs_len) != 0)
+      {
+         LOG_DEBUG (PNET_LOG, "CMRDR(%d): Could not get PPM IOCS\n", __LINE__);
+         iocs_len = 0;
+      }
+      if ((data_len + iops_len + iocs_len) > 0)
+      {
+         bool substitute_active = false;
+         int n = iops_len;
+
+         while (!substitute_active && (n > 0))
+         {
+            --n;
+            substitute_active = (iops[n] != PNET_IOXS_GOOD);
+         }
+
+         /* Have all data */
+         /* ToDo: Support substitution values and mode */
+         pf_put_output_data (
+            true,
+            substitute_active,
+            iocs_len,
+            iocs,
+            iops_len,
+            iops,
+            data_len,
+            subslot_data,
+            0,
+            subslot_data,
+            info,
+            pos);
+      }
+      else
+      {
+         pf_set_error (
+            result,
+            PNET_ERROR_CODE_READ,
+            PNET_ERROR_DECODE_PNIORW,
+            PNET_ERROR_CODE_1_ACC_INVALID_INDEX,
+            PNET_ERROR_CODE_2_PNIORW (10));
+      }
+      break;
+   }
+   case PF_IDX_SUB_DIAGNOSIS_CH:
+      pf_put_diagnosis_subslot (
+         net,
+         true,
+         PF_DIAG_FILTER_FAULT_STD,
+         ar,
+         request->api,
+         request->slot_number,
+         request->subslot_number,
+         info,
+         pos);
+      break;
+   case PF_IDX_SUB_DIAGNOSIS_ALL:
+      pf_put_diagnosis_subslot (
+         net,
+         true,
+         PF_DIAG_FILTER_FAULT_ALL,
+         ar,
+         request->api,
+         request->slot_number,
+         request->subslot_number,
+         info,
+         pos);
+      break;
+   case PF_IDX_SUB_DIAGNOSIS_DMQS:
+      pf_put_diagnosis_subslot (
+         net,
+         true,
+         PF_DIAG_FILTER_ALL,
+         ar,
+         request->api,
+         request->slot_number,
+         request->subslot_number,
+         info,
+         pos);
+      break;
+   case PF_IDX_SUB_DIAG_MAINT_REQ_CH:
+   case PF_IDX_SUB_DIAG_MAINT_REQ_ALL:
+      pf_put_diagnosis_subslot (
+         net,
+         true,
+         PF_DIAG_FILTER_M_REQ,
+         ar,
+         request->api,
+         request->slot_number,
+         request->subslot_number,
+         info,
+         pos);
+      break;
+   case PF_IDX_SUB_DIAG_MAINT_DEM_CH:
+   case PF_IDX_SUB_DIAG_MAINT_DEM_ALL:
+      pf_put_diagnosis_subslot (
+         net,
+         true,
+         PF_DIAG_FILTER_M_DEM,
+         ar,
+         request->api,
+         request->slot_number,
+         request->subslot_number,
+         info,
+         pos);
+      break;
+
+   case PF_IDX_SLOT_DIAGNOSIS_CH:
+      pf_put_diagnosis_slot (
+         net,
+         true,
+         PF_DIAG_FILTER_FAULT_STD,
+         ar,
+         request->api,
+         request->slot_number,
+         info,
+         pos);
+      break;
+   case PF_IDX_SLOT_DIAGNOSIS_ALL:
+      pf_put_diagnosis_slot (
+         net,
+         true,
+         PF_DIAG_FILTER_FAULT_ALL,
+         ar,
+         request->api,
+         request->slot_number,
+         info,
+         pos);
+      break;
+   case PF_IDX_SLOT_DIAGNOSIS_DMQS:
+      pf_put_diagnosis_slot (
+         net,
+         true,
+         PF_DIAG_FILTER_ALL,
+         ar,
+         request->api,
+         request->slot_number,
+         info,
+         pos);
+      break;
+   case PF_IDX_SLOT_DIAG_MAINT_REQ_CH:
+   case PF_IDX_SLOT_DIAG_MAINT_REQ_ALL:
+      pf_put_diagnosis_slot (
+         net,
+         true,
+         PF_DIAG_FILTER_M_REQ,
+         ar,
+         request->api,
+         request->slot_number,
+         info,
+         pos);
+      break;
+   case PF_IDX_SLOT_DIAG_MAINT_DEM_CH:
+   case PF_IDX_SLOT_DIAG_MAINT_DEM_ALL:
+      pf_put_diagnosis_slot (
+         net,
+         true,
+         PF_DIAG_FILTER_M_DEM,
+         ar,
+         request->api,
+         request->slot_number,
+         info,
+         pos);
+      break;
+
+   case PF_IDX_API_DIAGNOSIS_CH:
+      pf_put_diagnosis_api (
+         net,
+         true,
+         PF_DIAG_FILTER_FAULT_STD,
+         request->api,
+         info,
+         pos);
+      break;
+   case PF_IDX_API_DIAGNOSIS_ALL:
+      pf_put_diagnosis_api (
+         net,
+         true,
+         PF_DIAG_FILTER_FAULT_ALL,
+         request->api,
+         info,
+         pos);
+      break;
+   case PF_IDX_API_DIAGNOSIS_DMQS:
+      pf_put_diagnosis_api (
+         net,
+         true,
+         PF_DIAG_FILTER_ALL,
+         request->api,
+         info,
+         pos);
+      break;
+   case PF_IDX_API_DIAG_MAINT_REQ_CH:
+   case PF_IDX_API_DIAG_MAINT_REQ_ALL:
+      pf_put_diagnosis_api (
+         net,
+         true,
+         PF_DIAG_FILTER_M_REQ,
+         request->api,
+         info,
+         pos);
+      break;
+   case PF_IDX_API_DIAG_MAINT_DEM_CH:
+   case PF_IDX_API_DIAG_MAINT_DEM_ALL:
+      pf_put_diagnosis_api (
+         net,
+         true,
+         PF_DIAG_FILTER_M_DEM,
+         request->api,
+         info,
+         pos);
+      break;
+
+   case PF_IDX_AR_DIAGNOSIS_CH:
+      pf_put_diagnosis_ar (
+         net,
+         true,
+         PF_DIAG_FILTER_FAULT_STD,
+         ar,
+         info,
+         pos);
+      break;
+   case PF_IDX_AR_DIAGNOSIS_ALL:
+      pf_put_diagnosis_ar (
+         net,
+         true,
+         PF_DIAG_FILTER_FAULT_ALL,
+         ar,
+         info,
+         pos);
+      break;
+   case PF_IDX_AR_DIAGNOSIS_DMQS:
+      pf_put_diagnosis_ar (net, true, PF_DIAG_FILTER_ALL, ar, info, pos);
+      break;
+   case PF_IDX_AR_DIAG_MAINT_REQ_CH:
+   case PF_IDX_AR_DIAG_MAINT_REQ_ALL:
+      pf_put_diagnosis_ar (net, true, PF_DIAG_FILTER_M_REQ, ar, info, pos);
+      break;
+   case PF_IDX_AR_DIAG_MAINT_DEM_CH:
+   case PF_IDX_AR_DIAG_MAINT_DEM_ALL:
+      pf_put_diagnosis_ar (net, true, PF_DIAG_FILTER_M_DEM, ar, info, pos);
+      break;
+
+   case PF_IDX_DEV_DIAGNOSIS_DMQS:
+      pf_put_diagnosis_device (net, true, PF_DIAG_FILTER_ALL, info, pos);
+      break;
+
+   case PF_IDX_DEV_CONN_MON_TRIGGER:
+      /* Restart timeout period. See pf_cmsm_rm_read_ind() */
+      break;
+
+   case PF_IDX_API_AR_DATA:
+      pf_put_ar_data (net, true, true, request->api, info, pos);
+      break;
+   case PF_IDX_DEV_AR_DATA:
+      pf_put_ar_data (net, true, false, 0, info, pos);
+      break;
+   case PF_IDX_AR_MOD_DIFF:
+      if (ar && ar->io_ar)
+      {
+         (void)pf_cmdev_generate_module_diff (net, ar);
+         pf_put_ar_diff (true, ar, info, pos);
+      }
+      break;
+
+   case PF_IDX_SUB_PDPORT_DATA_REAL:
+   case PF_IDX_SUB_PDPORTDATAREALEXT:
+   case PF_IDX_SUB_PDPORT_DATA_ADJ:
+   case PF_IDX_SUB_PDPORT_DATA_CHECK:
+   case PF_IDX_DEV_PDREAL_DATA:
+   case PF_IDX_DEV_PDEXP_DATA:
+   case PF_IDX_SUB_PDPORT_STATISTIC:
+   case PF_IDX_SUB_PDINTF_ADJUST:
+      if (pf_pdport_read_ind (net, ar, request, info, pos) != 0)
+      {
+         pf_set_error (
+            result,
+            PNET_ERROR_CODE_READ,
+            PNET_ERROR_DECODE_PNIORW,
+            PNET_ERROR_CODE_1_ACC_INVALID_INDEX,
+            PNET_ERROR_CODE_2_PNIORW (10));
+      }
+      break;
+#if PNET_OPTION_MRP
+   case PF_IDX_SUB_PDINTF_MRP_REAL:
+   case PF_IDX_SUB_PDINTF_MRP_CHECK:
+   case PF_IDX_SUB_PDINTF_MRP_ADJUST:
+   case PF_IDX_SUB_PDPORT_MRP_ADJUST:
+   case PF_IDX_SUB_PDPORT_MRP_REAL:
+      if (pf_pdport_mrp_read_ind (net, ar, request, info, pos) != 0)
+      {
+         pf_set_error (
+            result,
+            PNET_ERROR_CODE_READ,
+            PNET_ERROR_DECODE_PNIORW,
+            PNET_ERROR_CODE_1_ACC_INVALID_INDEX,
+            PNET_ERROR_CODE_2_PNIORW (10));
+      }
+      break;
+#endif
+   case PF_IDX_SUB_PDINTF_REAL:
+      /* Only implemented for the interface subslot. */
+      if (
+         (request->slot_number == PNET_SLOT_DAP_IDENT) &&
+         (request->subslot_number == PNET_SUBSLOT_DAP_INTERFACE_1_IDENT))
+      {
+         char station_name[PNET_STATION_NAME_MAX_SIZE]; /* Terminated */
+
+         pf_cmina_get_station_name (net, station_name);
+         pf_put_pdinterface_data_real (
+            true,
+            pf_cmina_get_device_macaddr (net),
+            pf_cmina_get_ipaddr (net),
+            pf_cmina_get_netmask (net),
+            pf_cmina_get_gateway (net),
+            station_name,
+            info,
+            pos);
+      }
+      else
+      {
+         pf_set_error (
+            result,
+            PNET_ERROR_CODE_READ,
+            PNET_ERROR_DECODE_PNIORW,
+            PNET_ERROR_CODE_1_ACC_INVALID_INDEX,
+            PNET_ERROR_CODE_2_PNIORW (10));
+      }
+      break;
+
+   case PF_IDX_DEV_CIM_ELECTRIC_POWER_REAL:
+   {
+      pf_electric_power_device_data_t ep_device = {0};
+      pf_electric_power_port_data_t ep_ports[PNET_MAX_PHYSICAL_PORTS] = {0};
+
+      pf_cim_get_device_data (
+         net,
+         request->slot_number,
+         request->subslot_number,
+         &ep_device);
+      pf_cim_get_port_data (
+         net,
+         PNET_MAX_PHYSICAL_PORTS,
+         request->slot_number,
+         request->subslot_number,
+         ep_ports);
+      pf_put_cim_electric_power_real (
+         true,
+         &ep_device,
+         PNET_MAX_PHYSICAL_PORTS,
+         ep_ports,
+         request->slot_number,
+         request->subslot_number,
+         info,
+         pos);
+      break;
+   }
+   default:
       LOG_INFO (
          PNET_LOG,
-         "CMRDR(%d): Could not read index 0x%04X for slot %u subslot 0x%04X.\n",
+         "CMRDR(%d): Index 0x%04X is not supported.\n",
          __LINE__,
-         p_read_request->index,
-         p_read_request->slot_number,
-         p_read_request->subslot_number);
-
-      p_read_status->pnio_status.error_code = PNET_ERROR_CODE_READ;
-      p_read_status->pnio_status.error_decode = PNET_ERROR_DECODE_PNIORW;
-      p_read_status->pnio_status.error_code_1 =
-         PNET_ERROR_CODE_1_ACC_INVALID_INDEX;
-      p_read_status->pnio_status.error_code_2 = 10;
-      ret = 0;
+         request->index);
+      pf_set_error (
+         result,
+         PNET_ERROR_CODE_READ,
+         PNET_ERROR_DECODE_PNIORW,
+         PNET_ERROR_CODE_1_ACC_INVALID_INDEX,
+         PNET_ERROR_CODE_2_PNIORW (10));
+      break;
    }
-
-   read_result.record_data_length = *p_pos - start_pos;
-   pf_put_uint32 (
-      true,
-      read_result.record_data_length,
-      res_size,
-      p_res,
-      &data_length_pos); /* Insert actual data length */
-
-   /* Restart timer */
-   if (pf_cmsm_cm_read_ind (net, p_ar, p_read_request) != 0)
+   if (info->result == PF_PUT_OK)
    {
-      ret = -1;
+      /* Insert actual length. */
+      pf_put_uint32 (true, (*pos - data_offset), info, &length_offset);
+   }
+   else
+   {
+      *pos = data_offset;
+   }
+}
+
+int pf_cmrdr_rm_read_ind (
+   pnet_t * net,
+   pf_ar_t * ar,
+   pf_iod_read_request_t const * request,
+   pnet_result_t * result,
+   uint16_t output_size,
+   uint8_t * output,
+   uint16_t * pos)
+{
+   pf_put_info_t info = {
+      .p_frame = NULL,
+      .p_array = output,
+      .len = output_size,
+      .result = PF_PUT_OK,
+   };
+
+   if (pf_index_is_user_specific (request->index))
+   {
+      pf_cmrdr_read_user_index (net, ar, request, &info, pos, result);
+   }
+   else if (
+      (PF_IDX_SUB_IM_0 <= request->index) &&
+      (request->index <= PF_IDX_SUB_IM_15))
+   {
+      pf_cmrdr_read_im_index (net, request, &info, pos, result);
+   }
+   else
+   {
+      pf_cmrdr_special_read (net, ar, request, &info, pos, result);
    }
 
-   return ret;
+   (void)pf_cmsm_cm_read_ind (net, ar, request);
+
+   return ((info.result == PF_PUT_OK) ? 0 : -1);
 }
 
 const char * pf_index_to_logstring (uint16_t index)
 {
-   if (index <= PF_IDX_USER_MAX)
+   if (pf_index_is_user_specific (index))
    {
       return "user defined";
    }
@@ -958,8 +961,10 @@ const char * pf_index_to_logstring (uint16_t index)
       return "TSNExpectedNetworkAttributes";
    case PF_IDX_TSN_NETWORK_CONTROL_DATA_ADJUST:
       return "TSNNetworkControlDataAdjust";
-   case PF_IDX_SUB_PDINTF_SECURITY_ADJUST:
-      return "PDInterfaceSecurityAdjust for one subslot";
+   case PF_IDX_CIM_SNMP_ADJUST:
+      return "CIMSNMPAdjust";
+   case PF_IDX_CIM_SNMP_REAL:
+      return "CIMSNMPReal";
    case PF_IDX_SUB_IM_0:
       return "I&M0";
    case PF_IDX_SUB_IM_1:
@@ -1114,6 +1119,8 @@ const char * pf_index_to_logstring (uint16_t index)
       return "TSN stream remove";
    case PF_IDX_TSN_STREAM_RENEW:
       return "TSN stream renew";
+   case PF_IDX_DEV_CIM_ELECTRIC_POWER_REAL:
+      return "CIM Electric PowerReal";
    case PF_IDX_DEV_CONN_MON_TRIGGER:
       return "nothing, but is restarting the timeout period";
    default:

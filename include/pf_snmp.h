@@ -113,6 +113,7 @@ extern "C" {
 #define PF_FILENAME_SNMP_SYSCONTACT  "pnet_data_syscontact.bin"
 #define PF_FILENAME_SNMP_SYSNAME     "pnet_data_sysname.bin"
 #define PF_FILENAME_SNMP_SYSLOCATION "pnet_data_syslocation.bin"
+#define PF_FILENAME_SNMP_CONFIG      "pnet_data_snmp_config.bin"
 
 /**
  * System name (sysName).
@@ -214,6 +215,21 @@ typedef struct pf_snmp_system_location
    char string[255 + 1]; /* Terminated string */
 } pf_snmp_system_location_t;
 
+/** SNMP community name type. */
+typedef struct pf_snmp_community_name
+{
+   char string[240 + 1]; /* Terminated string */
+} pf_snmp_community_name_t;
+
+/** SNMP configuration type. */
+typedef struct pf_snmp_config
+{
+   pnal_snmp_control_mode_t control_mode; /** SNMPControl */
+   pf_snmp_community_name_t ro_name;      /** SNMPReadOnlyCommunityName */
+   pf_snmp_community_name_t rw_name;      /** SNMPReadWriteCommunityName */
+   bool snmp_adjust_active;               /** True if adjustments are active */
+} pf_snmp_config_t;
+
 /**
  * Encoded management address.
  *
@@ -295,14 +311,29 @@ void pf_snmp_data_clear (pnet_t * net);
  *
  * Zeroes in-memory data without removing files.
  *
- * Optionally also zeroes the "IM_Tag_Location" from I&M1
- * (which typically is the same as SNMP SysLocation).
+ * @param net              InOut: The p-net stack instance.
+ */
+void pf_snmp_data_reset (pnet_t * net);
+
+/**
+ * Resets SNMP configuration to default.
  *
  * @param net              InOut: The p-net stack instance.
- * @param update_im        In: Whether to update I&M1.
  */
-void pf_snmp_data_reset (pnet_t * net, bool update_im);
+#if PNET_OPTION_SECURITY_LEVEL_1
+void pf_snmp_config_reset (pnet_t * net);
 
+/**
+ * Get the SNMP configuration.
+ *
+ * The configuration is part of the stack instance, so the community strings
+ * stay valid as long as the stack instance.
+ *
+ * @param net              In:    The p-net stack instance.
+ * @return  The SNMP configuration.
+ */
+const pf_snmp_config_t * pf_snmp_get_config (pnet_t * net);
+#endif
 /**
  * Removes SNMP related data files.
  *
@@ -311,16 +342,6 @@ void pf_snmp_data_reset (pnet_t * net, bool update_im);
  * @param net              InOut: The p-net stack instance.
  */
 void pf_snmp_remove_data_files (const char * file_directory);
-
-/**
- * Update SNMP SysLocation with the present I&M1 location value.
- *
- * Does remove the corresponding file. Upon next startup will we use the
- * I&M location value.
- *
- * @param net              InOut: The p-net stack instance.
- */
-void pf_snmp_fspm_im_location_ind (pnet_t * net);
 
 /**
  * Get system description.
@@ -442,22 +463,18 @@ void pf_snmp_get_system_location (
  * Set system location.
  *
  * The value will be stored to file.
- * The device location in I&M1 will also be replaced with the first
- * 22 characters of system location if update_im is set.
  *
  * See IETF RFC 3418 (SNMP MIB-II) ch. 2 "Definitions". Relevant fields:
  * - SysLocation.
  *
  * @param net              InOut: The p-net stack instance.
  * @param p_location       In:    System location.
- * @param update_im        In:    Whether to update I&M1.
  * @return  0  if the operation succeeded.
  *         -1 if an error occurred (could not store to file).
  */
 int pf_snmp_set_system_location (
    pnet_t * net,
-   const pf_snmp_system_location_t * p_location,
-   bool update_im);
+   const pf_snmp_system_location_t * p_location);
 
 /**
  * Write system location to file.
@@ -467,6 +484,17 @@ int pf_snmp_set_system_location (
  * @param net              InOut: The p-net stack instance.
  */
 void pf_snmp_save_system_location (pnet_t * net);
+
+/**
+ * Save SNMP configuration to file.
+ *
+ * Intended for use by background worker thread.
+ *
+ * @param net              InOut: The p-net stack instance.
+ */
+#if PNET_OPTION_SECURITY_LEVEL_1
+void pf_snmp_save_config (pnet_t * net);
+#endif
 
 /**
  * Get list of local ports.
@@ -915,12 +943,24 @@ int pf_snmp_get_peer_link_status (
    int loc_port_num,
    pf_snmp_link_status_t * p_link_status);
 
+
+void pf_snmp_get_mrp_domain_uuid(pnet_t * net, mrp_domain_uuid_t *domain);
+void pf_snmp_get_mrp_domain_name(pnet_t * net, mrp_domain_name_t *domain_name);
+void pf_snmp_get_mrp_domain_role(pnet_t * net, int *role);
+int pf_snmp_set_mrp_domain_role(pnet_t * net, int role);
+int pf_snmp_mrp_get_port_info(pnet_t *pnet, int rp_idx, int *port_idx, int *ring_port_state);
+int pf_snmp_mrp_get_vlan_id(pnet_t *pnet, int *vlan_id);
+
 /**
  * Show SNMP details
  *
  * @param net              InOut: The p-net stack instance
  */
 void pf_snmp_show (pnet_t * net);
+
+/************ Internal functions, made available for unit testing ************/
+int pf_snmp_validate_community_name (const char * p_name);
+int pf_snmp_validate_config (const pf_snmp_config_t * p_snmp_config);
 
 #ifdef __cplusplus
 }

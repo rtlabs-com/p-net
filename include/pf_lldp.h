@@ -26,7 +26,10 @@
 extern "C" {
 #endif
 
+#include "pnet_api.h"
 #include "pnal.h"
+#include "pf_mrp.h"
+
 
 #define PF_LLDP_SUBTYPE_MAC              4 /** Valid for ChassisID */
 #define PF_LLDP_SUBTYPE_LOCALLY_ASSIGNED 7
@@ -243,6 +246,25 @@ typedef struct pf_lldp_peer_to_peer_boundary
 } pf_lldp_peer_to_peer_boundary_t;
 
 /**
+ * MRP Port Status
+ *
+ * See IEEE 802.1AB-2005 (LLDPv1) ch. ?
+ */
+typedef enum
+{
+   MRRT_STATUS_OFF = 0,
+   MRRT_STATUS_CONFIGURED = 1,
+   MRRT_STATUS_UP = 2,
+} pf_lldp_mrrt_status;
+
+typedef struct pf_lldp_mrp_port_status
+{
+   mrp_domain_uuid_t domain;
+   uint16_t mrrt_status;
+   bool active;
+} pf_lldp_mrp_port_status_t;
+
+/**
  * LLDP Peer information used by the Profinet stack.
  */
 typedef struct pf_lldp_peer_info
@@ -259,6 +281,8 @@ typedef struct pf_lldp_peer_info
    pnet_ethaddr_t mac_address;
    uint32_t line_delay;
    pf_lldp_link_status_t phy_config;
+   uint16_t mau_type_extension;
+   pf_lldp_mrp_port_status_t mrp_port_status;
 } pf_lldp_peer_info_t;
 
 /**
@@ -551,6 +575,23 @@ int pf_lldp_get_peer_link_status (
    pf_lldp_link_status_t * p_link_status);
 
 /**
+ * Get MAU type extension of local port.
+ *
+ * See IEC CDV 61158-6-10 (PN-AL-Protocol) Annex U.3 "LLDP EXT PNO MIB",
+ * lldpXPnoLocEntry 26 "lldpXPnoLocPortOperMauTypeExtension".
+ *
+ * @param net                     In:    The p-net stack instance.
+ * @param loc_port_num            In:    Local port number.
+ *                                       Valid range: 1 .. num_physical_ports
+ *                                       See pf_port_get_list_of_ports().
+ * @param p_mau_type_extension    Out:   MAU type extension of local port.
+ */
+void pf_lldp_get_mau_type_extension (
+   pnet_t * net,
+   int loc_port_num,
+   uint16_t * p_mau_type_extension);
+
+/**
  * Get formatted system description
  *
  * Encode as per Profinet specification:
@@ -570,6 +611,26 @@ size_t pf_lldp_get_system_description (
    const pnet_t * net,
    char * system_description,
    size_t system_description_max_len);
+
+/**
+ * Get MRP port status link status of remote port.
+ *
+ * See IEEE 802.1AB-2005 (LLDPv1) ".
+ *
+ * @param net              In:    The p-net stack instance.
+ * @param loc_port_num     In:    Local port number for port directly
+ *                                connected to the remote device.
+ *                                Valid range: 1 .. num_physical_ports
+ *                                See pf_port_get_list_of_ports().
+ * @param mrp_port_status  Out:   MRP port status of remote port.
+ * @return  0 if the operation succeeded.
+ *         -1 if an error occurred (no info from remote device received).
+ */
+
+void pf_lldp_get_mrp_port_status (
+   pnet_t * net,
+   int loc_port_num,
+   pf_lldp_mrp_port_status_t * mrp_port_status);
 
 /**
  * Generate a string from a byte array representing
@@ -599,7 +660,7 @@ void pf_lldp_init (pnet_t * net);
  * @param net              InOut: The p-net stack instance
  * @param loc_port_num     In:    Local port number.
  *                                Valid range: 1 .. num_physical_ports
- * @param timeout_in_secs  In:    TTL of the peer, typically 20 seconds.
+ * @param timeout_in_secs  In:    TTL of the peer, typically 21 seconds.
  */
 void pf_lldp_restart_peer_timeout (
    pnet_t * net,
@@ -686,11 +747,14 @@ int pf_lldp_generate_alias_name (
    char * alias,
    uint16_t len);
 
-size_t pf_lldp_construct_frame (pnet_t * net, int loc_port_num, uint8_t buf[]);
+int pf_lldp_construct_frame (
+   pnet_t * net,
+   int loc_port_num,
+   pnal_buf_t * frame);
 
 int pf_lldp_parse_packet (
-   const uint8_t buf[],
-   uint16_t len,
+   const pnal_buf_t * buf,
+   uint16_t offset,
    pf_lldp_peer_info_t * peer_info);
 
 void pf_lldp_store_peer_info (

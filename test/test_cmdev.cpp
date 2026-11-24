@@ -391,9 +391,9 @@ TEST_F (CmdevUnitTest, CmdevCheckArType)
 
    for (uint16_t ar_type = 0; ar_type < 0xFF; ar_type++)
    {
-      ret = pf_cmdev_check_ar_type (ar_type);
+      ret = pf_cmdev_check_ar_type (ar_type, false);
 
-      if (ar_type == PF_ART_IOCAR_SINGLE)
+      if ((ar_type == PF_ART_IOCAR_SINGLE) || (ar_type == PF_ART_IOCAR_SR))
       {
          EXPECT_EQ (0, ret);
       }
@@ -403,6 +403,107 @@ TEST_F (CmdevUnitTest, CmdevCheckArType)
       }
    }
 
-   ret = pf_cmdev_check_ar_type (0xFFFF);
+   ret = pf_cmdev_check_ar_type (PF_ART_IOSAR, true);
+   EXPECT_EQ (PNET_MAX_DA_AR > 0 ? 0 : -1, ret);
+
+   ret = pf_cmdev_check_ar_type (0xFFFF, false);
    EXPECT_EQ (-1, ret);
+}
+
+#define TEST_COMPAT_EXPECTED_IDENT   0x00000042
+#define TEST_COMPAT_SUBSTITUTE_IDENT 0x00000043
+
+typedef struct substitute_cb_data
+{
+   uint16_t calls;
+   pnet_t * net;
+   uint32_t expected_ident;
+   uint32_t submodule_ident;
+   bool accept;
+} substitute_cb_data_t;
+
+static bool my_is_substitute_req (
+   pnet_t * net,
+   void * arg,
+   uint32_t expected_ident,
+   uint32_t submodule_ident)
+{
+   substitute_cb_data_t * data = (substitute_cb_data_t *)arg;
+
+   data->calls++;
+   data->net = net;
+   data->expected_ident = expected_ident;
+   data->submodule_ident = submodule_ident;
+
+   return data->accept;
+}
+
+class CmdevSubmoduleCompatibleTest : public PnetUnitTest
+{
+ protected:
+   pnet_t net = {};
+   substitute_cb_data_t cb_data = {};
+
+   void SetUp() override
+   {
+      net.fspm_cfg.is_substitute_cb = my_is_substitute_req;
+      net.fspm_cfg.cb_arg = &cb_data;
+   }
+};
+
+TEST_F (CmdevSubmoduleCompatibleTest, CmdevCompatibleForEqualIdents)
+{
+   EXPECT_TRUE (pf_cmdev_submodule_is_compatible (
+      &net,
+      TEST_COMPAT_EXPECTED_IDENT,
+      TEST_COMPAT_EXPECTED_IDENT));
+
+   /* The application should not be asked when the ident numbers are equal */
+   EXPECT_EQ (0, cb_data.calls);
+}
+
+TEST_F (CmdevSubmoduleCompatibleTest, CmdevCompatibleForAcceptedSubstitute)
+{
+   cb_data.accept = true;
+
+   EXPECT_TRUE (pf_cmdev_submodule_is_compatible (
+      &net,
+      TEST_COMPAT_EXPECTED_IDENT,
+      TEST_COMPAT_SUBSTITUTE_IDENT));
+
+   EXPECT_EQ (1, cb_data.calls);
+   EXPECT_EQ (&net, cb_data.net);
+   EXPECT_EQ (TEST_COMPAT_EXPECTED_IDENT, cb_data.expected_ident);
+   EXPECT_EQ (TEST_COMPAT_SUBSTITUTE_IDENT, cb_data.submodule_ident);
+}
+
+TEST_F (CmdevSubmoduleCompatibleTest, CmdevNotCompatibleForRejectedSubstitute)
+{
+   cb_data.accept = false;
+
+   EXPECT_FALSE (pf_cmdev_submodule_is_compatible (
+      &net,
+      TEST_COMPAT_EXPECTED_IDENT,
+      TEST_COMPAT_SUBSTITUTE_IDENT));
+
+   EXPECT_EQ (1, cb_data.calls);
+   EXPECT_EQ (TEST_COMPAT_EXPECTED_IDENT, cb_data.expected_ident);
+   EXPECT_EQ (TEST_COMPAT_SUBSTITUTE_IDENT, cb_data.submodule_ident);
+}
+
+TEST_F (CmdevSubmoduleCompatibleTest, CmdevNotCompatibleWithoutCallback)
+{
+   net.fspm_cfg.is_substitute_cb = NULL;
+
+   EXPECT_TRUE (pf_cmdev_submodule_is_compatible (
+      &net,
+      TEST_COMPAT_EXPECTED_IDENT,
+      TEST_COMPAT_EXPECTED_IDENT));
+
+   EXPECT_FALSE (pf_cmdev_submodule_is_compatible (
+      &net,
+      TEST_COMPAT_EXPECTED_IDENT,
+      TEST_COMPAT_SUBSTITUTE_IDENT));
+
+   EXPECT_EQ (0, cb_data.calls);
 }

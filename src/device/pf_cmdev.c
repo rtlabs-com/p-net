@@ -50,17 +50,14 @@ int pf_cmdev_cfg_traverse (
    pf_ftn_device_t p_ftn_dev,
    pf_ftn_api_t p_ftn_api,
    pf_ftn_slot_t p_ftn_slot,
-   pf_ftn_subslot_t p_ftn_sub)
+   pf_ftn_submodule_t p_ftn_sub)
 {
    int ret;
-   pf_api_t * this_api;
-   pf_slot_t * this_slot;
-   pf_subslot_t * this_subslot;
-   uint16_t api_ix;
-   uint16_t slot_ix;
-   uint16_t subslot_ix;
+   pf_api_t * api;
+   pf_slot_t * slot;
+   pf_submodule_t * submodule;
 
-   ret = -1;
+   ret = 0;
    if (p_ftn_dev != NULL)
    {
       if (p_ftn_dev (&net->cmdev_device) != 0)
@@ -69,40 +66,29 @@ int pf_cmdev_cfg_traverse (
       }
       else if (p_ftn_api != NULL)
       {
-         for (api_ix = 0; api_ix < PNET_MAX_API; api_ix++)
+         for (api = net->cmdev_device.real_ident.api_list; api != NULL;
+              api = api->next)
          {
-            this_api = &net->cmdev_device.real_ident.api[api_ix];
-            if (this_api->in_use == true)
+            if (p_ftn_api (api) != 0)
             {
-               if (p_ftn_api (this_api) != 0)
+               ret = -1;
+            }
+            else if (p_ftn_slot != NULL)
+            {
+               for (slot = api->slot_list; slot != NULL; slot = slot->next)
                {
-                  ret = -1;
-               }
-               else if (p_ftn_slot != NULL)
-               {
-                  for (slot_ix = 0; slot_ix < PNET_MAX_SLOTS; ++slot_ix)
+                  if (p_ftn_slot (slot) != 0)
                   {
-                     this_slot = &this_api->slots[slot_ix];
-                     if (this_slot->in_use == true)
+                     ret = -1;
+                  }
+                  else if (p_ftn_sub != NULL)
+                  {
+                     for (submodule = slot->submodule_list; submodule != NULL;
+                          submodule = submodule->next)
                      {
-                        if (p_ftn_slot (this_slot) != 0)
+                        if (p_ftn_sub (submodule) != 0)
                         {
                            ret = -1;
-                        }
-                        else if (p_ftn_sub != NULL)
-                        {
-                           for (subslot_ix = 0; subslot_ix < PNET_MAX_SUBSLOTS;
-                                ++subslot_ix)
-                           {
-                              this_subslot = &this_slot->subslots[subslot_ix];
-                              if (this_subslot->in_use == true)
-                              {
-                                 if (p_ftn_sub (this_subslot) != 0)
-                                 {
-                                    ret = -1;
-                                 }
-                              }
-                           }
                         }
                      }
                   }
@@ -115,162 +101,132 @@ int pf_cmdev_cfg_traverse (
    return ret;
 }
 
+int pf_cmdev_for_each_submodule (
+   pnet_t * net,
+   int (*func) (pnet_t *, pf_submodule_t *, void * user_data),
+   void * user_data)
+{
+   pf_api_t * api;
+   pf_slot_t * slot;
+   pf_submodule_t * submodule;
+   int ret;
+
+   if (func != NULL)
+   {
+      for (api = net->cmdev_device.real_ident.api_list; api != NULL;
+           api = api->next)
+      {
+         for (slot = api->slot_list; slot != NULL; slot = slot->next)
+         {
+            for (submodule = slot->submodule_list; submodule != NULL;
+                 submodule = submodule->next)
+            {
+               ret = func (net, submodule, user_data);
+               if (ret != 0)
+               {
+                  return ret;
+               }
+            }
+         }
+      }
+   }
+   return 0;
+}
+
 /**************************** Getters *************************************/
 
-int pf_cmdev_get_device (pnet_t * net, pf_device_t ** pp_device)
+int pf_cmdev_get_device (pnet_t * net, pf_device_t ** device_out)
 {
-   *pp_device = &net->cmdev_device;
+   *device_out = &net->cmdev_device;
 
    return 0;
 }
 
-int pf_cmdev_get_api (pnet_t * net, uint32_t api_id, pf_api_t ** pp_api)
+int pf_cmdev_get_api (pnet_t * net, uint32_t api_id, pf_api_t ** api_out)
 {
-   pf_api_t * this_api;
-   uint16_t a;
+   pf_api_t * api = net->cmdev_device.real_ident.api_list;
 
-   if (pp_api == NULL)
+   while ((api != NULL) && (api->api_id != api_id))
    {
-      LOG_ERROR (PNET_LOG, "CMDEV(%d): NULL pointer\n", __LINE__);
-      return -1;
+      api = ((api->api_id < api_id) ? api->next : NULL);
    }
-   else
+   if (api_out != NULL)
    {
-      for (a = 0; a < PNET_MAX_API; ++a)
-      {
-         this_api = &net->cmdev_device.real_ident.api[a];
-         if ((this_api->in_use == true) && (this_api->api_id == api_id))
-         {
-            *pp_api = this_api;
-            return 0;
-         }
-      }
+      *api_out = api;
    }
-   *pp_api = NULL;
-   return -1;
+   return ((api == NULL) ? -1 : 0);
 }
 
-/**
- * @internal
- * Get an slot instance of an API.
- * @param p_api            InOut: The API instance.
- * @param slot_nbr         In:    The slot number (must be in_use)
- * @param pp_slot          Out:   The slot instance.
- * @return  0  if operation succeeded.
- *          -1 if an error occurred.
- */
 int pf_cmdev_get_slot (
-   pf_api_t const * p_api,
+   pf_api_t const * api,
    uint16_t slot_nbr,
-   pf_slot_t ** pp_slot)
+   pf_slot_t ** slot_out)
 {
-   pf_slot_t * this_slot;
-   uint16_t s;
+   pf_slot_t * slot = api->slot_list;
 
-   if ((p_api == NULL) || (pp_slot == NULL))
+   while ((slot != NULL) && (slot->module->slot_number != slot_nbr))
    {
-      LOG_ERROR (PNET_LOG, "CMDEV(%d): NULL pointer(s)\n", __LINE__);
-      return -1;
+      slot = ((slot->module->slot_number < slot_nbr) ? slot->next : NULL);
    }
-   else
+   if (slot_out != NULL)
    {
-      for (s = 0; s < PNET_MAX_SLOTS; ++s)
-      {
-         this_slot = (pf_slot_t *)&p_api->slots[s];
-         if ((this_slot->in_use == true) &&
-             (this_slot->slot_number == slot_nbr))
-         {
-            *pp_slot = this_slot;
-            return 0;
-         }
-      }
+      *slot_out = slot;
    }
-   *pp_slot = NULL;
-   return -1;
+   return ((slot == NULL) ? -1 : 0);
 }
 
-/**
- * @internal
- * Get an sub-slot instance of a slot instance.
- * @param p_slot           InOut: The slot instance.
- * @param subslot_nbr      In:    The sub-slot number (must be in_use).
- * @param pp_subslot       Out:   The sub-slot instance.
- * @return  0  if operation succeeded.
- *          -1 if an error occurred.
- */
-int pf_cmdev_get_subslot (
-   pf_slot_t const * p_slot,
+int pf_cmdev_get_submodule (
+   pf_slot_t const * slot,
    uint16_t subslot_nbr,
-   pf_subslot_t ** pp_subslot)
+   pf_submodule_t ** submodule_out)
 {
-   pf_subslot_t * this_subslot;
-   uint16_t s;
+   pf_submodule_t * submodule = slot->submodule_list;
 
-   if ((p_slot == NULL) || (pp_subslot == NULL))
+   while ((submodule != NULL) && (submodule->subslot_number != subslot_nbr))
    {
-      LOG_ERROR (PNET_LOG, "CMDEV(%d): NULL pointer(s)\n", __LINE__);
-      return -1;
+      submodule =
+         ((submodule->subslot_number < subslot_nbr) ? submodule->next : NULL);
    }
-   else
+   if (submodule_out != NULL)
    {
-      for (s = 0; s < PNET_MAX_SUBSLOTS; ++s)
-      {
-         this_subslot = (pf_subslot_t *)&p_slot->subslots[s];
-         if (this_subslot->in_use &&
-             (this_subslot->subslot_number == subslot_nbr))
-         {
-            *pp_subslot = this_subslot;
-            return 0;
-         }
-      }
+      *submodule_out = submodule;
    }
-   *pp_subslot = NULL;
-   return -1;
+   return ((submodule == NULL) ? -1 : 0);
 }
 
-int pf_cmdev_get_subslot_full (
+int pf_cmdev_get_submodule_full (
    pnet_t * net,
    uint32_t api_id,
    uint16_t slot_nbr,
    uint16_t subslot_nbr,
-   pf_subslot_t ** pp_subslot)
+   pf_submodule_t ** submodule_out)
 {
-   int ret = -1;
-   pf_api_t * p_api = NULL;
-   pf_slot_t * p_slot = NULL;
+   pf_api_t * api = NULL;
+   pf_slot_t * slot = NULL;
 
-   if (pf_cmdev_get_api (net, api_id, &p_api) == 0)
+   if (pf_cmdev_get_api (net, api_id, &api) == 0)
    {
-      if (pf_cmdev_get_slot (p_api, slot_nbr, &p_slot) == 0)
+      if (pf_cmdev_get_slot (api, slot_nbr, &slot) == 0)
       {
-         if (pf_cmdev_get_subslot (p_slot, subslot_nbr, pp_subslot) == 0)
-         {
-            ret = 0;
-         }
+         return pf_cmdev_get_submodule (slot, subslot_nbr, submodule_out);
       }
    }
-
-   return ret;
+   return -1;
 }
 
 int pf_cmdev_get_slot_full (
    pnet_t * net,
    uint32_t api_id,
    uint16_t slot_nbr,
-   pf_slot_t ** pp_slot)
+   pf_slot_t ** slot_out)
 {
-   int ret = -1;
-   pf_api_t * p_api = NULL;
+   pf_api_t * api = NULL;
 
-   if (pf_cmdev_get_api (net, api_id, &p_api) == 0)
+   if (pf_cmdev_get_api (net, api_id, &api) == 0)
    {
-      if (pf_cmdev_get_slot (p_api, slot_nbr, pp_slot) == 0)
-      {
-         ret = 0;
-      }
+      return pf_cmdev_get_slot (api, slot_nbr, slot_out);
    }
-
-   return ret;
+   return -1;
 }
 
 int pf_cmdev_get_module_ident (
@@ -280,9 +236,10 @@ int pf_cmdev_get_module_ident (
    uint32_t * p_module_ident)
 {
    pf_slot_t * p_slot = NULL;
+
    if (pf_cmdev_get_slot_full (net, api_id, slot_nbr, &p_slot) == 0)
    {
-      *p_module_ident = p_slot->ident_number;
+      *p_module_ident = p_slot->module->ident_number;
       return 0;
    }
    return -1;
@@ -295,12 +252,17 @@ int pf_cmdev_get_submodule_ident (
    uint16_t subslot_nbr,
    uint32_t * p_submodule_ident)
 {
-   pf_subslot_t * p_subslot = NULL;
+   pf_submodule_t * submodule = NULL;
+
    if (
-      pf_cmdev_get_subslot_full (net, api_id, slot_nbr, subslot_nbr, &p_subslot) ==
-      0)
+      pf_cmdev_get_submodule_full (
+         net,
+         api_id,
+         slot_nbr,
+         subslot_nbr,
+         &submodule) == 0)
    {
-      *p_submodule_ident = p_subslot->ident_number;
+      *p_submodule_ident = submodule->ident_number;
       return 0;
    }
    return -1;
@@ -407,281 +369,334 @@ int pf_cmdev_get_next_diagnosis_usi (
  * If the API identifier already exists the the operation fails.
  * @param net              InOut: The p-net stack instance
  * @param api_id           In:    The API identifier.
- * @param pp_api           Out:   The new API instance.
+ * @param api_out          Out:   The new API instance.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
-static int pf_cmdev_new_api (pnet_t * net, uint32_t api_id, pf_api_t ** pp_api)
+static int pf_cmdev_new_api (pnet_t * net, uint32_t api_id, pf_api_t ** api_out)
 {
-   int ret = -1;
-   pf_api_t * p_api = NULL;
-   uint16_t ix;
+   uint16_t a;
+   pf_api_t * api;
+   pf_api_t ** lapi;
 
-   if (pp_api == NULL)
+   /* Find an API resource. */
+   for (api = NULL, a = 0; a < PNET_MAX_API; ++a)
    {
-      LOG_ERROR (PNET_LOG, "CMDEV(%d): NULL pointer(s)\n", __LINE__);
+      if (net->api_pool[a].in_use)
+      {
+         if (net->api_pool[a].api_id == api_id)
+         {
+            LOG_ERROR (
+               PNET_LOG,
+               "CMDEV(%d): API %u already exists\n",
+               __LINE__,
+               (unsigned)api_id);
+            return -1;
+         }
+      }
+      else
+      {
+         api = &net->api_pool[a];
+      }
    }
-   else if (pf_cmdev_get_api (net, api_id, &p_api) == 0)
+   if (api == NULL)
    {
       LOG_ERROR (
          PNET_LOG,
-         "CMDEV(%d): API %u already exists\n",
+         "CMDEV(%d): Out of API resources (%s).\n",
          __LINE__,
-         (unsigned)api_id);
+         __FUNCTION__);
+      return -1;
    }
-   else
+
+   /* Initialize the instance. */
+   memset (api, 0, sizeof (*api));
+   api->in_use = true;
+   api->api_id = api_id;
+
+   /* Add the API to the real identification. */
+   lapi = &net->cmdev_device.real_ident.api_list;
+   while (*lapi != api)
    {
-      ix = 0;
-      while ((ix < PNET_MAX_API) &&
-             (net->cmdev_device.real_ident.api[ix].in_use == true))
+      if ((*lapi == NULL) || (api_id < (**lapi).api_id))
       {
-         ix++;
+         api->next = *lapi;
+         *lapi = api;
       }
-
-      if (ix < PNET_MAX_API)
+      else
       {
-         p_api = &net->cmdev_device.real_ident.api[ix];
-
-         memset (p_api, 0, sizeof (*p_api));
-         p_api->api_id = api_id;
-         p_api->in_use = true;
-
-         ret = 0;
+         lapi = &(**lapi).next;
       }
+   }
+   ++net->cmdev_device.real_ident.nbr_apis;
 
-      *pp_api = p_api;
+   /* Return successfully. */
+   if (api_out != NULL)
+   {
+      *api_out = api;
+   }
+   return 0;
+}
+
+/**
+ * @internal
+ * Remove an API from a real identification.
+ * @param net              InOut: The p-net stack instance
+ * @param api              In:    The API instance.
+ */
+static void pf_cmdev_remove_api (pnet_t * net, pf_api_t * api)
+{
+   pf_api_t ** lapi;
+   pf_real_ident_t * ri = &net->cmdev_device.real_ident;
+
+   /* Locate the API in the list. */
+   for (lapi = &ri->api_list; *lapi != api; lapi = &(**lapi).next)
+   {
+      if (*lapi == NULL)
+      {
+         return; /* End of list. */
+      }
    }
 
-   return ret;
+   /* Unlink API. */
+   *lapi = api->next;
+   --ri->nbr_apis;
+
+   /* Free API resource. */
+   api->in_use = false;
 }
 
 /******************* Slots, subslots, modules and submodules *****************/
 
-/**
- * @internal
- * Instantiate a new slot structure.
- * If the slot number already exists the the operation fails.
- * @param p_api            InOut: The API instance.
- * @param slot_nbr         In:    The slot number.
- * @param pp_slot          Out:   The new slot instance.
- * @return  0  if operation succeeded.
- *          -1 if an error occurred.
- */
-static int pf_cmdev_new_slot (
-   pf_api_t * p_api,
+static int pf_cmdev_get_module (
+   pnet_t * net,
    uint16_t slot_nbr,
-   pf_slot_t ** pp_slot)
+   uint32_t ident_nbr,
+   pf_module_t ** module_out)
 {
-   int ret = -1;
-   pf_slot_t * p_slot = NULL;
-   uint16_t ix;
+   pf_module_t * module;
+   uint16_t m;
 
-   if ((p_api == NULL) || (pp_slot == NULL))
+   /* Find a module resource. */
+   for (module = NULL, m = 0; m < PNET_MAX_SLOTS; ++m)
    {
-      LOG_ERROR (PNET_LOG, "CMDEV(%d): NULL pointer(s)\n", __LINE__);
+      if (net->module_pool[m].plug_count > 0)
+      {
+         if (net->module_pool[m].slot_number == slot_nbr)
+         {
+            module = &net->module_pool[m];
+            if (module->ident_number == ident_nbr)
+            {
+               /* Use existing module. */
+               goto success;
+            }
+            /* The slot contains another module. */
+            LOG_ERROR (
+               PNET_LOG,
+               "CMDEV(%d): Cannot plug module 0x%x in slot 0x%x, "
+               "slot already contains module 0x%x\n",
+               __LINE__,
+               (unsigned)ident_nbr,
+               (unsigned)slot_nbr,
+               (unsigned)module->ident_number);
+            return -1;
+         }
+      }
+      else
+      {
+         module = &net->module_pool[m];
+      }
    }
-   else if (pf_cmdev_get_slot (p_api, slot_nbr, &p_slot) == 0)
+   if (module == NULL)
    {
-      /* Slot already exists */
       LOG_ERROR (
          PNET_LOG,
-         "CMDEV(%d): Slot %u already exists\n",
+         "CMDEV(%d): Out of module resources (%s).\n",
          __LINE__,
-         (unsigned)slot_nbr);
+         __FUNCTION__);
+      return -1;
    }
-   else
+
+   /* Initialize the new module instance. */
+   memset (module, 0, sizeof (*module));
+   module->slot_number = slot_nbr;
+   module->ident_number = ident_nbr;
+
+success:
+   if (module_out != NULL)
    {
-      ix = 0;
-      while ((ix < PNET_MAX_SLOTS) && (p_api->slots[ix].in_use == true))
-      {
-         ix++;
-      }
-
-      if (ix < PNET_MAX_SLOTS)
-      {
-         p_slot = &p_api->slots[ix];
-
-         memset (p_slot, 0, sizeof (*p_slot));
-         p_slot->slot_number = slot_nbr;
-         p_slot->in_use = true;
-
-         ret = 0;
-      }
-
-      *pp_slot = p_slot;
+      *module_out = module;
    }
-
-   return ret;
-}
-
-/**
- * @internal
- * Instantiate a new sub-slot structure.
- * If the sub-slot number already exists the the operation fails.
- * @param p_slot           InOut: The slot instance.
- * @param subslot_nbr      In:    The sub-slot number.
- * @param pp_subslot       Out:   The new sub-slot instance.
- * @return  0  if operation succeeded.
- *          -1 if an error occurred.
- */
-static int pf_cmdev_new_subslot (
-   pf_slot_t * p_slot,
-   uint16_t subslot_nbr,
-   pf_subslot_t ** pp_subslot)
-{
-   int ret = -1;
-   pf_subslot_t * p_subslot = NULL;
-   uint16_t ix;
-
-   if ((p_slot == NULL) || (pp_subslot == NULL))
-   {
-      LOG_ERROR (PNET_LOG, "CMDEV(%d): NULL pointer(s)\n", __LINE__);
-   }
-   else if (pf_cmdev_get_subslot (p_slot, subslot_nbr, &p_subslot) == 0)
-   {
-      /* Subslot already exists */
-      LOG_ERROR (
-         PNET_LOG,
-         "CMDEV(%d): Subslot %u already exists\n",
-         __LINE__,
-         (unsigned)subslot_nbr);
-   }
-   else
-   {
-      ix = 0;
-      while ((ix < PNET_MAX_SUBSLOTS) && (p_slot->subslots[ix].in_use == true))
-      {
-         ix++;
-      }
-
-      if (ix < PNET_MAX_SUBSLOTS)
-      {
-         p_subslot = &p_slot->subslots[ix];
-
-         memset (p_subslot, 0, sizeof (*p_subslot));
-         p_subslot->subslot_number = subslot_nbr;
-         p_subslot->diag_list = PF_DIAG_IX_NULL;
-         p_subslot->in_use = true;
-
-         ret = 0;
-      }
-
-      *pp_subslot = p_subslot;
-   }
-
-   return ret;
+   return 0;
 }
 
 int pf_cmdev_plug_module (
    pnet_t * net,
    uint32_t api_id,
    uint16_t slot_nbr,
-   uint32_t module_ident_nbr)
+   uint32_t ident_nbr,
+   pf_slot_t ** slot_out)
 {
-   int ret = -1;
-   pf_api_t * p_api = NULL;
-   pf_slot_t * p_slot = NULL;
+   pf_api_t * api;
+   pf_module_t * module;
+   uint16_t s;
+   pf_slot_t * slot;
+   pf_slot_t ** lslot;
 
-   if (pf_cmdev_get_api (net, api_id, &p_api) != 0)
+   if (
+      (pf_cmdev_get_api (net, api_id, &api) != 0) &&
+      (pf_cmdev_new_api (net, api_id, &api) != 0))
    {
-      LOG_ERROR (
-         PNET_LOG,
-         "CMDEV(%d): API %u does not exist\n",
-         __LINE__,
-         (unsigned)api_id);
+      return -1;
    }
-   else if (pf_cmdev_get_slot (p_api, slot_nbr, &p_slot) == 0)
+   else if (pf_cmdev_get_slot (api, slot_nbr, &slot) == 0)
    {
-      /* Slot already has a plugged module. Check ident numbers */
-      if (p_slot->ident_number == module_ident_nbr)
+      if (slot->module->ident_number == ident_nbr)
       {
-         ret = 0;
+         /* The slot contains the correct module. */
+         goto success;
       }
       else
       {
-         LOG_DEBUG (
+         /* The slot contains another module. */
+         LOG_ERROR (
             PNET_LOG,
-            "CMDEV(%d): Wrong plugged module ident %u in api %u slot %u\n",
+            "CMDEV(%d): Cannot plug module 0x%x in slot 0x%x, slot already "
+            "contains module 0x%x\n",
             __LINE__,
-            (unsigned)module_ident_nbr,
-            (unsigned)api_id,
-            (unsigned)slot_nbr);
+            (unsigned)ident_nbr,
+            (unsigned)slot_nbr,
+            (unsigned)slot->module->ident_number);
+         return -1;
       }
    }
-   else if (pf_cmdev_new_slot (p_api, slot_nbr, &p_slot) != 0)
+   else if (pf_cmdev_get_module (net, slot_nbr, ident_nbr, &module) != 0)
    {
-      /* Out of slot resources */
+      return -1;
+   }
+   /* Find a free slot resource. */
+   for (slot = NULL, s = 0; ((slot == NULL) && (s < PNET_MAX_SLOTS)); ++s)
+   {
+      if (api->slot_pool[s].module == NULL)
+      {
+         slot = &api->slot_pool[s];
+      }
+   }
+   if (slot == NULL)
+   {
       LOG_ERROR (
          PNET_LOG,
-         "CMDEV(%d): Out of slot resources for api %u slot %u\n",
+         "CMDEV(%d): Out of slot resources (%s).\n",
          __LINE__,
-         (unsigned)api_id,
-         (unsigned)slot_nbr);
-   }
-   else
-   {
-      /* Slot allocated */
-      p_slot->ident_number = module_ident_nbr;
-      ret = 0;
+         __FUNCTION__);
+      return -1;
    }
 
-   return ret;
+   /* Initialize slot instance. */
+   memset (slot, 0, sizeof (*slot));
+   slot->module = module;
+
+   /* Add the slot to the real identification. */
+   lslot = &api->slot_list;
+   while (*lslot != slot)
+   {
+      if ((*lslot == NULL) || (slot_nbr < (**lslot).module->slot_number))
+      {
+         slot->next = *lslot;
+         *lslot = slot;
+      }
+      else
+      {
+         lslot = &(**lslot).next;
+      }
+   }
+   ++module->plug_count;
+   ++api->nbr_modules;
+
+success:
+   /* Return successfully. */
+   if (slot_out != NULL)
+   {
+      *slot_out = slot;
+   }
+   return 0;
 }
 
 int pf_cmdev_pull_submodule (
    pnet_t * net,
    uint32_t api_id,
    uint16_t slot_nbr,
-   uint16_t subslot_nbr)
+   uint16_t subslot_nbr,
+   bool pull_empty_module)
 {
-   int ret = -1;
-   pf_api_t * p_api = NULL;
-   pf_slot_t * p_slot = NULL;
-   pf_subslot_t * p_subslot = NULL;
+   pf_slot_t * slot;
+   pf_submodule_t * submodule;
+   pf_submodule_t ** lsubmodule;
 
-   if (pf_cmdev_get_api (net, api_id, &p_api) != 0)
+   if (pf_cmdev_get_slot_full (net, api_id, slot_nbr, &slot) != 0)
    {
       LOG_ERROR (
          PNET_LOG,
-         "CMDEV(%d): API %u does not exist\n",
+         "CMDEV(%d): No module in API 0x%x, slot 0x%x\n",
          __LINE__,
-         (unsigned)api_id);
-   }
-   else if (pf_cmdev_get_slot (p_api, slot_nbr, &p_slot) != 0)
-   {
-      LOG_DEBUG (
-         PNET_LOG,
-         "CMDEV(%d): No module in slot %u\n",
-         __LINE__,
+         (unsigned)api_id,
          (unsigned)slot_nbr);
+      return -1;
    }
-   else if (pf_cmdev_get_subslot (p_slot, subslot_nbr, &p_subslot) != 0)
+
+   /* Get subslot. */
+   for (lsubmodule = &slot->submodule_list;
+        ((*lsubmodule != NULL) &&
+         ((**lsubmodule).subslot_number != subslot_nbr));
+        lsubmodule = &(**lsubmodule).next)
+      ;
+   submodule = *lsubmodule;
+   if (submodule == NULL)
    {
-      LOG_DEBUG (
+      LOG_ERROR (
          PNET_LOG,
-         "CMDEV(%d): No submodule in api_id %u slot %u subslot %u\n",
+         "CMDEV(%d): No submodule in API 0x%x, slot 0x%x, subslot 0x%x\n",
          __LINE__,
          (unsigned)api_id,
          (unsigned)slot_nbr,
          (unsigned)subslot_nbr);
+      return -1;
    }
-   else
-   {
-      p_subslot->in_use = false;
 
-      if ((p_subslot->ownsm_state == PF_OWNSM_STATE_IOC) ||
-          (p_subslot->ownsm_state == PF_OWNSM_STATE_IOS))
+   /* Send pull alarm, if applicable. */
+   if (
+      (submodule->ownsm_state == PF_OWNSM_STATE_IOC) ||
+      (submodule->ownsm_state == PF_OWNSM_STATE_IOS))
+   {
+      (void)pf_alarm_send_pull (
+         net,
+         submodule->owner,
+         api_id,
+         slot_nbr,
+         subslot_nbr);
+   }
+
+   /* Unlink the subslot. */
+   *lsubmodule = submodule->next;
+   submodule->in_use = 0;
+
+   if (--slot->nbr_submodules == 0)
+   {
+      if (pull_empty_module)
       {
-         ret = pf_alarm_send_pull (
-            net,
-            p_subslot->owner,
-            api_id,
-            slot_nbr,
-            subslot_nbr);
+         (void)pf_cmdev_pull_module (net, api_id, slot_nbr);
       }
    }
+   return 0;
+}
 
-   return ret;
+bool pf_cmdev_submodule_is_compatible (
+   pnet_t * net,
+   uint32_t expected_ident,
+   uint32_t submodule_ident)
+{
+   return (expected_ident == submodule_ident) ||
+          pf_fspm_is_substitute_req (net, expected_ident, submodule_ident);
 }
 
 int pf_cmdev_plug_submodule (
@@ -694,234 +709,238 @@ int pf_cmdev_plug_submodule (
    pnet_submodule_dir_t direction,
    uint16_t length_input,
    uint16_t length_output,
-   bool update)
+   uint8_t flags)
 {
-   int ret;
-   bool already_plugged;
-   pf_api_t * p_api;
-   pf_slot_t * p_slot;
-   pf_subslot_t * p_subslot;
    pf_ar_t * ar;
    pf_exp_submodule_t * exp_submodule;
    uint16_t i;
 
-   ret = -1;
-   p_api = NULL;
-   p_slot = NULL;
-   p_subslot = NULL;
-   already_plugged = false;
+   pf_slot_t * slot;
+   uint16_t s;
+   pf_submodule_t * submodule;
+   pf_submodule_t * pool;
+   pf_submodule_t ** lsubmodule;
 
-   if (pf_cmdev_get_api (net, api_id, &p_api) != 0)
+   if (pf_cmdev_plug_module (net, api_id, slot_nbr, module_ident_nbr, &slot) != 0)
    {
-      LOG_ERROR (
-         PNET_LOG,
-         "CMDEV(%d): API %u does not exist\n",
-         __LINE__,
-         (unsigned)api_id);
+      return -1;
    }
-   else if (pf_cmdev_get_slot (p_api, slot_nbr, &p_slot) != 0)
+   else if (pf_cmdev_get_submodule (slot, subslot_nbr, &submodule) == 0)
    {
-      /* Auto-plug the module */
-      if (pf_cmdev_plug_module (net, api_id, slot_nbr, module_ident_nbr) != 0)
+      if (submodule->ident_number == submod_ident_nbr)
       {
-         LOG_ERROR (
+         LOG_INFO (
             PNET_LOG,
-            "CMDEV(%d): Out of slot resources for api %u\n",
-            __LINE__,
-            (unsigned)api_id);
-      }
-   }
-   else if (pf_cmdev_get_subslot (p_slot, subslot_nbr, &p_subslot) == 0)
-   {
-      if (update == true)
-      {
-         if (pf_cmdev_pull_submodule (net, api_id, slot_nbr, subslot_nbr) != 0)
-         {
-            LOG_ERROR (
-               PNET_LOG,
-               "CMDEV(%d): Could not pull submodule in api %u slot %u subslot "
-               "%u\n",
-               __LINE__,
-               (unsigned)api_id,
-               (unsigned)slot_nbr,
-               (unsigned)subslot_nbr);
-         }
-      }
-      else if (p_subslot->ident_number == submod_ident_nbr)
-      {
-         already_plugged = true;
-      }
-      else
-      {
-         LOG_DEBUG (
-            PNET_LOG,
-            "CMDEV(%d): Substitute submodule ident 0x%08x number in api %u "
-            "slot %u subslot %u\n",
+            "CMDEV(%d): Submodule 0x%x already plugged in "
+            "api 0x%x slot 0x%x subslot 0x%x\n",
             __LINE__,
             (unsigned)submod_ident_nbr,
             (unsigned)api_id,
             (unsigned)slot_nbr,
             (unsigned)subslot_nbr);
-      }
-   }
-
-   if (already_plugged == true)
-   {
-      LOG_INFO (
-         PNET_LOG,
-         "CMDEV(%d): Submodule ident 0x%08x number already plugged in api %u "
-         "slot %u subslot %u\n",
-         __LINE__,
-         (unsigned)submod_ident_nbr,
-         (unsigned)api_id,
-         (unsigned)slot_nbr,
-         (unsigned)subslot_nbr);
-      ret = 0;
-   }
-   else if (pf_cmdev_get_slot (p_api, slot_nbr, &p_slot) != 0)
-   {
-      LOG_ERROR (
-         PNET_LOG,
-         "CMDEV(%d): No module in slot %u\n",
-         __LINE__,
-         (unsigned)slot_nbr);
-   }
-   else if (pf_cmdev_new_subslot (p_slot, subslot_nbr, &p_subslot) == 0)
-   {
-      /* Sub-slot created */
-      p_subslot->ident_number = submod_ident_nbr;
-      p_subslot->direction = direction;
-      p_subslot->length_input = length_input;
-      p_subslot->length_output = length_output;
-      p_subslot->ownsm_state = PF_OWNSM_STATE_FREE;
-      p_subslot->owner = NULL;
-
-      ret = 0;
-      exp_submodule = NULL;
-
-      for (i = 0; i < net->cmrpc_nbr_ars; ++i)
-      {
-         ar = &net->cmrpc_ar[net->cmrpc_ar_order[i]];
-         if (
-            pf_cmdev_get_exp_sub (
-               ar,
-               api_id,
-               slot_nbr,
-               subslot_nbr,
-               &exp_submodule) == 0)
-         {
-            p_subslot->ownsm_state = PF_OWNSM_STATE_IOC;
-            p_subslot->owner = ar;
-
-            if (exp_submodule->ident_number == submod_ident_nbr)
-            {
-               ret = pf_alarm_send_plug (
-                  net,
-                  ar,
-                  api_id,
-                  slot_nbr,
-                  subslot_nbr,
-                  module_ident_nbr,
-                  submod_ident_nbr);
-            }
-            else
-            {
-               ret = pf_alarm_send_plug_wrong (
-                  net,
-                  ar,
-                  api_id,
-                  slot_nbr,
-                  subslot_nbr,
-                  module_ident_nbr,
-                  submod_ident_nbr);
-            }
-            break;
-         }
-      }
-
-      LOG_DEBUG (
-         PNET_LOG,
-         "CMDEV(%d): Plugged submodule ident 0x%08x number in api %u "
-         "slot %u subslot %u\n",
-         __LINE__,
-         (unsigned)submod_ident_nbr,
-         (unsigned)api_id,
-         (unsigned)slot_nbr,
-         (unsigned)subslot_nbr);
-   }
-   else
-   {
-      /* Out of resources */
-      LOG_ERROR (
-         PNET_LOG,
-         "CMDEV(%d): Out of subslot resources for api %u slot %u\n",
-         __LINE__,
-         (unsigned)api_id,
-         (unsigned)slot_nbr);
-   }
-
-   return ret;
-}
-
-int pf_cmdev_pull_module (pnet_t * net, uint32_t api_id, uint16_t slot_nbr)
-{
-   int ret = -1;
-   pf_api_t * p_api = NULL;
-   pf_slot_t * p_slot = NULL;
-   uint16_t ix;
-
-   /* Pull all submodules. Then pull the module */
-   if (pf_cmdev_get_api (net, api_id, &p_api) != 0)
-   {
-      LOG_ERROR (
-         PNET_LOG,
-         "CMDEV(%d): API %u does not exist\n",
-         __LINE__,
-         (unsigned)api_id);
-   }
-   else if (pf_cmdev_get_slot (p_api, slot_nbr, &p_slot) != 0)
-   {
-      LOG_DEBUG (
-         PNET_LOG,
-         "CMDEV(%d): No module in slot %u\n",
-         __LINE__,
-         (unsigned)slot_nbr);
-   }
-   else
-   {
-      ret = 0; /* Assume all OK */
-      ix = 0;
-      while ((ix < PNET_MAX_SUBSLOTS) && (ret == 0))
-      {
-         if (
-            (p_slot->subslots[ix].in_use == true) &&
-            (pf_cmdev_pull_submodule (
-                net,
-                api_id,
-                slot_nbr,
-                p_slot->subslots[ix].subslot_number) != 0))
-         {
-            ret = -1;
-         }
-         ix++;
-      }
-
-      if (ret == 0)
-      {
-         p_slot->in_use = false;
+         return 0;
       }
       else
       {
          LOG_ERROR (
             PNET_LOG,
-            "CMDEV(%d): Could not pull all submodules for api %u slot %u\n",
+            "CMDEV(%d): Another submodule (0x%x) already plugged in "
+            "api 0x%x slot 0x%x subslot 0x%x\n",
             __LINE__,
+            (unsigned)submodule->ident_number,
             (unsigned)api_id,
-            (unsigned)slot_nbr);
+            (unsigned)slot_nbr,
+            (unsigned)subslot_nbr);
+         return -1;
+      }
+   }
+   pool = slot->module->submodule_pool;
+   for (submodule = NULL, s = 0; s < PNET_MAX_SUBSLOTS; ++s)
+   {
+      if (pool[s].in_use)
+      {
+         if (pool[s].subslot_number == subslot_nbr)
+         {
+            LOG_ERROR (
+               PNET_LOG,
+               "CMDEV(%d): API 0x%x cannot use subslot 0x%x/0x%x, "
+               "already used by API 0x%x\n",
+               __LINE__,
+               (unsigned)api_id,
+               (unsigned)slot_nbr,
+               (unsigned)subslot_nbr,
+               (unsigned)pool[s].api_id);
+            return -1;
+         }
+      }
+      else
+      {
+         submodule = &pool[s];
+      }
+   }
+   if (submodule == NULL)
+   {
+      LOG_ERROR (
+         PNET_LOG,
+         "CMDEV(%d): Out of subslot resources (%s).\n",
+         __LINE__,
+         __FUNCTION__);
+      return -1;
+   }
+
+   /* Initialize subslot instance. */
+   memset (submodule, 0, sizeof (*submodule));
+   submodule->api_id = api_id;
+   submodule->subslot_number = subslot_nbr;
+   submodule->ident_number = submod_ident_nbr;
+   submodule->ownsm_state = PF_OWNSM_STATE_FREE;
+   submodule->length_input = length_input;
+   submodule->length_output = length_output;
+   submodule->direction = direction;
+   submodule->diag_list = PF_DIAG_IX_NULL;
+   submodule->flags = flags;
+
+   /* Add the subslot to the real identification. */
+   lsubmodule = &slot->submodule_list;
+   while (*lsubmodule != submodule)
+   {
+      if ((*lsubmodule == NULL) || (subslot_nbr < (**lsubmodule).subslot_number))
+      {
+         submodule->next = *lsubmodule;
+         *lsubmodule = submodule;
+      }
+      else
+      {
+         lsubmodule = &(**lsubmodule).next;
+      }
+   }
+   submodule->in_use = true;
+   ++slot->nbr_submodules;
+
+   /* Send plug alarm, if applicable. */
+   exp_submodule = NULL;
+   for (i = 0; i < net->ar_order.length; ++i)
+   {
+      ar = net->ar_order.ar[i];
+
+      if (
+         pf_cmdev_get_exp_sub (
+            ar,
+            api_id,
+            slot_nbr,
+            subslot_nbr,
+            &exp_submodule) == 0)
+      {
+         submodule->ownsm_state = PF_OWNSM_STATE_IOC;
+         submodule->owner = ar;
+
+         if (!ar->io_ar->alarm_enable)
+         {
+            LOG_WARNING (
+               PNET_LOG,
+               "CMDEV(%d): Alarms disabled, no plug alarm for "
+               "api 0x%x slot 0x%x subslot 0x%x\n",
+               __LINE__,
+               (unsigned)api_id,
+               (unsigned)slot_nbr,
+               (unsigned)subslot_nbr);
+         }
+         else if (pf_cmdev_submodule_is_compatible (
+                     net,
+                     exp_submodule->ident_number,
+                     submod_ident_nbr))
+         {
+            pf_plugsm_plug_alarm_req (
+               net,
+               ar,
+               api_id,
+               slot_nbr,
+               subslot_nbr,
+               module_ident_nbr,
+               submod_ident_nbr);
+         }
+         else
+         {
+            pf_alarm_send_plug_wrong (
+               net,
+               ar,
+               api_id,
+               slot_nbr,
+               subslot_nbr,
+               module_ident_nbr,
+               submod_ident_nbr);
+         }
+         break;
       }
    }
 
-   return ret;
+   /* Return successfully. */
+   return 0;
+}
+
+int pf_cmdev_pull_module (pnet_t * net, uint32_t api_id, uint16_t slot_nbr)
+{
+   pf_api_t * api;
+   pf_slot_t * slot;
+   pf_slot_t ** lslot;
+   pf_submodule_t * submodule;
+
+   if (pf_cmdev_get_api (net, api_id, &api) != 0)
+   {
+      LOG_DEBUG (
+         PNET_LOG,
+         "CMDEV(%d): API 0x%x does not exist\n",
+         __LINE__,
+         (unsigned)api_id);
+      return -1;
+   }
+
+   /* Get slot. */
+   for (lslot = &api->slot_list;
+        ((*lslot != NULL) && ((**lslot).module->slot_number != slot_nbr));
+        lslot = &(**lslot).next)
+      ;
+   slot = *lslot;
+   if (slot == NULL)
+   {
+      LOG_DEBUG (
+         PNET_LOG,
+         "CMDEV(%d): No module in API 0x%x, slot 0x%x\n",
+         __LINE__,
+         (unsigned)api_id,
+         (unsigned)slot_nbr);
+      return -1;
+   }
+
+   /* Unplug submodules. */
+   for (submodule = slot->submodule_list; submodule != NULL;
+        submodule = submodule->next)
+   {
+      /* Send pull alarm, if applicable. */
+      if (
+         (submodule->ownsm_state == PF_OWNSM_STATE_IOC) ||
+         (submodule->ownsm_state == PF_OWNSM_STATE_IOS))
+      {
+         (void)pf_alarm_send_pull (
+            net,
+            submodule->owner,
+            api_id,
+            slot_nbr,
+            submodule->subslot_number);
+      }
+      submodule->in_use = false;
+   }
+
+   /* Unplug module. */
+   *lslot = slot->next;
+   --slot->module->plug_count;
+   slot->module = NULL;
+   if (--api->nbr_modules == 0)
+   {
+      pf_cmdev_remove_api (net, api);
+   }
+
+   return 0;
 }
 
 /**
@@ -932,68 +951,68 @@ int pf_cmdev_pull_module (pnet_t * net, uint32_t api_id, uint16_t slot_nbr)
  */
 static void pf_device_clear (pnet_t * net, pf_ar_t * p_ar)
 {
-   pf_api_t * this_api;
-   pf_slot_t * this_slot;
-   pf_subslot_t * this_subslot;
-   pf_ar_t * this_ar;
-   pf_exp_module_t * this_module;
-   pf_exp_submodule_t * this_submodule;
-   uint16_t api_ix;
-   uint16_t slot_ix;
-   uint16_t sub_ix;
+   pf_api_t * api;
+   pf_slot_t * slot;
+   pf_submodule_t * submodule;
+   pf_ar_t * lar;
+   pf_exp_module_t * exp_module;
+   pf_exp_submodule_t * exp_submodule;
    uint16_t i;
 
-   for (api_ix = 0; api_ix < PNET_MAX_API; ++api_ix)
+   for (api = net->cmdev_device.real_ident.api_list; api != NULL;
+        api = api->next)
    {
-      this_api = &net->cmdev_device.real_ident.api[api_ix];
-      for (slot_ix = 0; slot_ix < PNET_MAX_SLOTS; ++slot_ix)
+      for (slot = api->slot_list; slot != NULL; slot = slot->next)
       {
-         this_slot = &this_api->slots[slot_ix];
-         for (sub_ix = 0; sub_ix < PNET_MAX_SUBSLOTS; ++sub_ix)
+         for (submodule = slot->submodule_list; submodule != NULL;
+              submodule = submodule->next)
          {
-            this_subslot = &this_slot->subslots[sub_ix];
             if (
-               ((this_subslot->ownsm_state == PF_OWNSM_STATE_IOC) ||
-                (this_subslot->ownsm_state == PF_OWNSM_STATE_IOS)) &&
-               (this_subslot->owner == p_ar))
+               ((submodule->ownsm_state == PF_OWNSM_STATE_IOC) ||
+                (submodule->ownsm_state == PF_OWNSM_STATE_IOS)) &&
+               (submodule->owner == p_ar))
             {
-               this_subslot->ownsm_state = PF_OWNSM_STATE_FREE;
-               this_subslot->owner = NULL;
-               for (i = 0; i < net->cmrpc_nbr_ars; ++i)
+               submodule->ownsm_state = PF_OWNSM_STATE_FREE;
+               submodule->owner = NULL;
+               for (i = 0; i < net->ar_order.length; ++i)
                {
-                  this_ar = &net->cmrpc_ar[net->cmrpc_ar_order[i]];
-                  this_module = NULL;
-                  this_submodule = NULL;
+                  lar = net->ar_order.ar[i];
+                  exp_module = NULL;
+                  exp_submodule = NULL;
 
                   (void)pf_cmdev_get_exp_mod (
-                     this_ar,
-                     this_api->api_id,
-                     this_slot->slot_number,
-                     &this_module);
+                     lar,
+                     api->api_id,
+                     slot->module->slot_number,
+                     &exp_module);
                   (void)pf_cmdev_get_exp_sub (
-                     this_ar,
-                     this_api->api_id,
-                     this_slot->slot_number,
-                     this_subslot->subslot_number,
-                     &this_submodule);
-                  if ((this_module != NULL) && (this_submodule != NULL))
+                     lar,
+                     api->api_id,
+                     slot->module->slot_number,
+                     submodule->subslot_number,
+                     &exp_submodule);
+                  if ((exp_module != NULL) && (exp_submodule != NULL))
                   {
-                     this_subslot->ownsm_state = PF_OWNSM_STATE_IOC;
-                     this_subslot->owner = this_ar;
+                     submodule->ownsm_state = PF_OWNSM_STATE_IOC;
+                     submodule->owner = lar;
+
                      if (
-                        (this_module->ident_number ==
-                         this_slot->ident_number) &&
-                        (this_submodule->ident_number ==
-                         this_subslot->ident_number))
+                        !pf_cmrpc_ar_set_equal (lar, p_ar) &&
+                        (exp_module->ident_number ==
+                         slot->module->ident_number) &&
+                        pf_cmdev_submodule_is_compatible (
+                           net,
+                           exp_submodule->ident_number,
+                           submodule->ident_number))
                      {
                         pf_plugsm_released_alarm_req (
                            net,
-                           this_ar,
-                           this_api->api_id,
-                           this_slot->slot_number,
-                           this_subslot->subslot_number,
-                           this_slot->ident_number,
-                           this_subslot->ident_number);
+                           lar,
+                           api->api_id,
+                           slot->module->slot_number,
+                           submodule->subslot_number,
+                           slot->module->ident_number,
+                           submodule->ident_number);
                      }
                      break;
                   }
@@ -1184,47 +1203,52 @@ static int pf_cmdev_cfg_api_show (pf_api_t * p_api)
 static int pf_cmdev_cfg_slot_show (pf_slot_t * p_slot)
 {
    printf ("   >>>SLOT<<<\n");
-   printf ("   slot_nbr           = %u\n", (unsigned)p_slot->slot_number);
-   printf ("   in_use             = %u\n", (unsigned)p_slot->in_use);
-   printf ("   module_ident       = %u\n", (unsigned)p_slot->ident_number);
+   printf (
+      "   slot_nbr           = %u\n",
+      (unsigned)p_slot->module->slot_number);
+   printf (
+      "   module_ident       = %u\n",
+      (unsigned)p_slot->module->ident_number);
 
    return 0;
 }
 
 /**
  * @internal
- * Show everything about the subslot instance.
- * @param p_subslot        In:    The subslot instance.
+ * Show everything about the submodule instance.
+ * @param p_submodule      In:    The submodule instance.
  * @return  0  Always
  */
-static int pf_cmdev_cfg_subslot_show (pf_subslot_t * p_subslot)
+static int pf_cmdev_cfg_submodule_show (pf_submodule_t * submodule)
 {
    printf ("      >>>SUBSLOT<<<\n");
-   printf ("      subslot_nbr     = 0x%04X\n",
-      (unsigned)p_subslot->subslot_number);
-   printf ("      in_use          = %u\n", (unsigned)p_subslot->in_use);
-   if ((p_subslot->ownsm_state == PF_OWNSM_STATE_IOC) ||
-       (p_subslot->ownsm_state == PF_OWNSM_STATE_IOS))
+   printf (
+      "      subslot_nbr     = 0x%04X\n",
+      (unsigned)submodule->subslot_number);
+   printf ("      in_use          = %u\n", (unsigned)submodule->in_use);
+   if (
+      (submodule->ownsm_state == PF_OWNSM_STATE_IOC) ||
+      (submodule->ownsm_state == PF_OWNSM_STATE_IOS))
    {
-      printf ("      Owning AR       = %p\n", p_subslot->owner);
-      printf ("        AREP          = %u\n", p_subslot->owner->arep);
+      printf ("      Owning AR       = %p\n", submodule->owner);
+      printf ("        AREP          = %u\n", submodule->owner->arep);
    }
    printf (
       "      submod_ident    = 0x%08X\n",
-      (unsigned)p_subslot->ident_number);
+      (unsigned)submodule->ident_number);
    printf (
       "      direction       = %s\n",
-      pf_cmdev_direction_to_string (p_subslot->direction));
-   printf ("      length_input    = %u\n", (unsigned)p_subslot->length_input);
-   printf ("      length_output   = %u\n", (unsigned)p_subslot->length_output);
+      pf_cmdev_direction_to_string (submodule->direction));
+   printf ("      length_input    = %u\n", (unsigned)submodule->length_input);
+   printf ("      length_output   = %u\n", (unsigned)submodule->length_output);
    printf ("      diag list start = ");
-   if (p_subslot->diag_list == PF_DIAG_IX_NULL)
+   if (submodule->diag_list == PF_DIAG_IX_NULL)
    {
       printf ("PF_DIAG_IX_NULL (no diagnosis items)\n");
    }
    else
    {
-      printf ("%u\n", (unsigned)p_subslot->diag_list);
+      printf ("%u\n", (unsigned)submodule->diag_list);
    }
 
    return 0;
@@ -1238,7 +1262,7 @@ void pf_cmdev_device_show (pnet_t * net)
       pf_cmdev_cfg_dev_show,
       pf_cmdev_cfg_api_show,
       pf_cmdev_cfg_slot_show,
-      pf_cmdev_cfg_subslot_show);
+      pf_cmdev_cfg_submodule_show);
 }
 
 void pf_cmdev_diag_show (const pnet_t * net)
@@ -1312,7 +1336,6 @@ void pf_cmdev_exit (pnet_t * net)
 void pf_cmdev_init (pnet_t * net)
 {
    uint16_t ix;
-   pf_api_t * p_api = NULL;
 
    if (net->cmdev_initialized == false)
    {
@@ -1333,7 +1356,7 @@ void pf_cmdev_init (pnet_t * net)
       (void)pf_diag_init();
 
       /* Create the default API */
-      pf_cmdev_new_api (net, 0, &p_api);
+      (void)pf_cmdev_new_api (net, 0, NULL);
    }
 }
 
@@ -1348,6 +1371,35 @@ int pf_cmdev_get_state (const pf_ar_t * p_ar, pf_cmdev_state_values_t * p_state)
    }
 
    return ret;
+}
+
+bool pf_cmdev_prm_flag (
+   pf_ar_t const * ar,
+   uint32_t api_id,
+   uint16_t slot_nbr,
+   uint16_t subslot_nbr)
+{
+   if ((ar != NULL) && (ar->io_ar != NULL))
+   {
+      if (ar->cmdev_state == PF_CMDEV_STATE_W_PEIND)
+      {
+         pf_exp_submodule_t * exp_submodule[1];
+         return (
+            pf_cmdev_get_exp_sub (
+               ar,
+               api_id,
+               slot_nbr,
+               subslot_nbr,
+               exp_submodule) == 0);
+      }
+      else if (ar->cmdev_state == PF_CMDEV_STATE_DATA)
+      {
+         return (
+            pf_cmpbe_prm_flag (ar, api_id, slot_nbr, subslot_nbr) ||
+            pf_plugsm_prm_flag (ar, api_id, slot_nbr, subslot_nbr));
+      }
+   }
+   return false;
 }
 
 /**
@@ -1412,11 +1464,23 @@ int pf_cmdev_state_ind (pnet_t * net, pf_ar_t * p_ar, pnet_event_values_t event)
          pf_cmdev_state_to_string (p_ar->cmdev_state));
 
       pf_fspm_state_ind (net, p_ar, event);
-      pf_cmsu_cmdev_state_ind (net, p_ar, event);
-      pf_cmio_cmdev_state_ind (net, p_ar, event);
+      if (p_ar->ar_param.ar_properties.device_access == false)
+      {
+         pf_cmsu_cmdev_state_ind (net, p_ar, event);
+         pf_cmio_cmdev_state_ind (net, p_ar, event);
+      }
       pf_cmwrr_cmdev_state_ind (net, p_ar, event);
       pf_cmsm_cmdev_state_ind (net, p_ar, event);
-      pf_cmpbe_cmdev_state_ind (p_ar, event);
+      if (p_ar->ar_param.ar_properties.device_access == false)
+      {
+         pf_cmpbe_cmdev_state_ind (p_ar, event);
+#if PNET_OPTION_SR
+         if (p_ar->ar_set != NULL)
+         {
+            pf_cmsrl_cmdev_state_ind (net, p_ar, event);
+         }
+#endif
+      }
       pf_cmrpc_cmdev_state_ind (net, p_ar, event);
       if (event == PNET_EVENT_ABORT)
       {
@@ -1436,7 +1500,7 @@ int pf_cmdev_state_ind (pnet_t * net, pf_ar_t * p_ar, pnet_event_values_t event)
 
 int pf_cmdev_cmio_info_ind (pnet_t * net, pf_ar_t * p_ar, bool data_possible)
 {
-   if (data_possible != p_ar->ready_4_data)
+   if (data_possible != p_ar->io_ar->ready_4_data)
    {
       LOG_DEBUG (
          PNET_LOG,
@@ -1448,10 +1512,10 @@ int pf_cmdev_cmio_info_ind (pnet_t * net, pf_ar_t * p_ar, bool data_possible)
    {
    case PF_CMDEV_STATE_W_ARDY:
    case PF_CMDEV_STATE_W_ARDYCNF:
-      p_ar->ready_4_data = data_possible;
+      p_ar->io_ar->ready_4_data = data_possible;
       break;
    case PF_CMDEV_STATE_WDATA:
-      p_ar->ready_4_data = data_possible;
+      p_ar->io_ar->ready_4_data = data_possible;
       if (data_possible == true)
       {
          pf_cmdev_state_ind (net, p_ar, PNET_EVENT_DATA);
@@ -1591,31 +1655,6 @@ static int pf_cmdev_check_pdev (pnet_t * net)
 
 /**
  * @internal
- * Check if the UUID is the CM originator UUID.
- *
- * ToDo: Move to pf_types and create a struct to compare against instead
- * of hardcoding here.
- * @param p_uuid           In: The UUID to check.
- * @return  0  if the UUID is correct.
- *          -1 if the UUID is not correct.
- */
-static int pf_cmdev_check_cm_initiator_object_uuid (const pf_uuid_t * p_uuid)
-{
-   int ret = -1;
-
-   if (
-      (p_uuid->data1 == 0xDEA00000) && (p_uuid->data2 == 0x6c97) &&
-      (p_uuid->data3 == 0x11D1) && (p_uuid->data4[0] == 0x82) &&
-      (p_uuid->data4[1] == 0x71))
-   {
-      ret = 0;
-   }
-
-   return ret;
-}
-
-/**
- * @internal
  * Check if the string contains only visible characters.
  *
  * A visible character has its ASCII value 0x20 <= x <= 0x7E.
@@ -1630,7 +1669,7 @@ int pf_cmdev_check_visible_string (const char * s)
 
    if (*s != 0)
    {
-      while ((*s != 0) && (isprint ((int)(*s)) != 0))
+      while ((*s != 0) && (isprint ((uint8_t)(*s)) != 0))
       {
          s++;
       }
@@ -1648,199 +1687,53 @@ int pf_cmdev_check_visible_string (const char * s)
  * Check if the Specified AR type is supported.
  *
  * @param ar_type          In:    The AR type to check.
+ * @param device_access    In:    Whether the AR is a DA-AR.
  * @return  0  if the AR type is supported.
  *          -1 if the AR type is not supported.
  */
-int pf_cmdev_check_ar_type (uint16_t ar_type)
+int pf_cmdev_check_ar_type (uint16_t ar_type, bool device_access)
 {
    int ret = -1;
 
-   if (ar_type == PF_ART_IOCAR_SINGLE)
+   switch (ar_type)
    {
+   case PF_ART_IOCAR_SR:
+      /* fall through */
+   case (PF_ART_IOCAR_SINGLE):
       ret = 0;
+      break;
+   case (PF_ART_IOSAR):
+      /* p-net currently only supports Device Access ARs. */
+      ret = (device_access && PNET_MAX_DA_AR > 0) ? 0 : -1;
+      break;
    }
 
    return ret;
 }
 
-/**
- * @internal
- * Check the AR param for errors.
- * @param p_ar             InOut: The AR instance.
- * @param p_stat           Out:   Detailed error information if return != 0.
- * @return  0  if no error was detected.
- *          -1 if an error was detected.
- */
-static int pf_cmdev_check_ar_param (pf_ar_t * p_ar, pnet_result_t * p_stat)
-{
-   int ret = 0; /* OK until error found. */
-
-   if (pf_cmdev_check_ar_type (p_ar->ar_param.ar_type) != 0)
-   {
-      LOG_INFO (PNET_LOG, "CMDEV(%d): Wrong incoming AR type\n", __LINE__);
-      pf_set_error (
-         p_stat,
-         PNET_ERROR_CODE_CONNECT,
-         PNET_ERROR_DECODE_PNIO,
-         PNET_ERROR_CODE_1_CONN_FAULTY_AR_BLOCK_REQ,
-         4);
-      ret = -1;
-   }
-   else if (
-      pf_cmdev_check_zero (
-         (uint8_t *)&p_ar->ar_param.ar_uuid,
-         sizeof (p_ar->ar_param.ar_uuid)) == 0)
-   {
-      pf_set_error (
-         p_stat,
-         PNET_ERROR_CODE_CONNECT,
-         PNET_ERROR_DECODE_PNIO,
-         PNET_ERROR_CODE_1_CONN_FAULTY_AR_BLOCK_REQ,
-         5);
-      ret = -1;
-   }
-   /* cm_initiator_mac_add also checked iocr_check */
-   else if ((p_ar->ar_param.cm_initiator_mac_add.addr[0] & 0x01) != 0)
-   {
-      /* Is multicast MAC address */
-      pf_set_error (
-         p_stat,
-         PNET_ERROR_CODE_CONNECT,
-         PNET_ERROR_DECODE_PNIO,
-         PNET_ERROR_CODE_1_CONN_FAULTY_AR_BLOCK_REQ,
-         7);
-      ret = -1;
-   }
-   else if (
-      pf_cmdev_check_cm_initiator_object_uuid (
-         &p_ar->ar_param.cm_initiator_object_uuid) != 0)
-   {
-      pf_set_error (
-         p_stat,
-         PNET_ERROR_CODE_CONNECT,
-         PNET_ERROR_DECODE_PNIO,
-         PNET_ERROR_CODE_1_CONN_FAULTY_AR_BLOCK_REQ,
-         8);
-      ret = -1;
-   }
-   else if (p_ar->ar_param.ar_properties.state != 0x1) /* Must be ACTIVE (1) */
-   {
-      pf_set_error (
-         p_stat,
-         PNET_ERROR_CODE_CONNECT,
-         PNET_ERROR_DECODE_PNIO,
-         PNET_ERROR_CODE_1_CONN_FAULTY_AR_BLOCK_REQ,
-         9);
-      ret = -1;
-   }
-   else if (
-      p_ar->ar_param.ar_properties.parameterization_server ==
-      PF_PS_EXTERNAL_PARAMETER_SERVER)
-   {
-      pf_set_error (
-         p_stat,
-         PNET_ERROR_CODE_CONNECT,
-         PNET_ERROR_DECODE_PNIO,
-         PNET_ERROR_CODE_1_CONN_FAULTY_AR_BLOCK_REQ,
-         9);
-      ret = -1;
-   }
-   else if (
-      (p_ar->ar_param.ar_properties.device_access == true) &&
-      (p_ar->ar_param.ar_type != PF_ART_IOSAR))
-   {
-      pf_set_error (
-         p_stat,
-         PNET_ERROR_CODE_CONNECT,
-         PNET_ERROR_DECODE_PNIO,
-         PNET_ERROR_CODE_1_CONN_FAULTY_AR_BLOCK_REQ,
-         9);
-      ret = -1;
-   }
-   else if (p_ar->ar_param.ar_properties.companion_ar == 3)
-   {
-      pf_set_error (
-         p_stat,
-         PNET_ERROR_CODE_CONNECT,
-         PNET_ERROR_DECODE_PNIO,
-         PNET_ERROR_CODE_1_CONN_FAULTY_AR_BLOCK_REQ,
-         9);
-      ret = -1;
-   }
-   else if (
-      (p_ar->ar_param.cm_initiator_activity_timeout_factor < 1) ||
-      (p_ar->ar_param.cm_initiator_activity_timeout_factor > 1000))
-   {
-      pf_set_error (
-         p_stat,
-         PNET_ERROR_CODE_CONNECT,
-         PNET_ERROR_DECODE_PNIO,
-         PNET_ERROR_CODE_1_CONN_FAULTY_AR_BLOCK_REQ,
-         10);
-      ret = -1;
-   }
-   /* cm_initiator_udp_rt_port is checked in iocr check */
-   else if (
-      (p_ar->ar_param.cm_initiator_station_name_len == 0) ||
-      (p_ar->ar_param.cm_initiator_station_name_len >
-       sizeof (p_ar->ar_param.cm_initiator_station_name) - 1))
-   {
-      pf_set_error (
-         p_stat,
-         PNET_ERROR_CODE_CONNECT,
-         PNET_ERROR_DECODE_PNIO,
-         PNET_ERROR_CODE_1_CONN_FAULTY_AR_BLOCK_REQ,
-         12);
-      ret = -1;
-   }
-   else if (
-      pf_cmdev_check_visible_string (
-         p_ar->ar_param.cm_initiator_station_name) != 0)
-   {
-      pf_set_error (
-         p_stat,
-         PNET_ERROR_CODE_CONNECT,
-         PNET_ERROR_DECODE_PNIO,
-         PNET_ERROR_CODE_1_CONN_FAULTY_AR_BLOCK_REQ,
-         13);
-      ret = -1;
-   }
-   else
-   {
-      p_ar->ar_param.valid = true;
-   }
-
-   return ret;
-}
-
-/**
- * Find a specific expected API instance in the AR.
- * @param ar               In:    The AR instance.
- * @param api              In:    The API to find.
- * @param exp_api          Out:   The expected API instance.
- * @return  0  if an API instance was found.
- *          -1 if the API instance was not found.
- */
-static int pf_cmdev_get_exp_api (
-   pf_ar_t * ar,
+int pf_cmdev_get_exp_api (
+   pf_ar_t const * ar,
    uint32_t api,
    pf_exp_api_t ** exp_api)
 {
    uint16_t a;
 
-   for (a = 0; a < ar->exp_ident.nbr_apis; ++a)
+   if (ar->io_ar)
    {
-      if (ar->exp_ident.api[a].api == api)
+      for (a = 0; a < ar->io_ar->exp_ident.nbr_apis; ++a)
       {
-         *exp_api = &ar->exp_ident.api[a];
-         return 0;
+         if (ar->io_ar->exp_ident.api[a].api == api)
+         {
+            *exp_api = &ar->io_ar->exp_ident.api[a];
+            return 0;
+         }
       }
    }
    return -1;
 }
 
 int pf_cmdev_get_exp_mod (
-   pf_ar_t * ar,
+   pf_ar_t const * ar,
    uint32_t api,
    uint16_t slot_number,
    pf_exp_module_t ** exp_module)
@@ -1865,7 +1758,7 @@ int pf_cmdev_get_exp_mod (
 }
 
 int pf_cmdev_get_exp_sub (
-   pf_ar_t * ar,
+   pf_ar_t const * ar,
    uint32_t api,
    uint16_t slot_number,
    uint16_t subslot_number,
@@ -2300,11 +2193,11 @@ static int pf_cmdev_iocr_setup_data_iops (
 
             if (
                ((dir == PF_DIRECTION_INPUT) &&
-                (p_exp_sub->properties
-                    .reduce_input_submodule_data_length == true)) ||
+                (p_exp_sub->properties.reduce_input_submodule_data_length ==
+                 true)) ||
                ((dir == PF_DIRECTION_OUTPUT) &&
-                (p_exp_sub->properties
-                    .reduce_output_submodule_data_length == true)))
+                (p_exp_sub->properties.reduce_output_submodule_data_length ==
+                 true)))
             {
                p_iodata->data_length = 0;
                p_iodata->data_offset = 0;
@@ -2373,7 +2266,7 @@ static int pf_cmdev_iocr_setup_desc (
    pf_iocr_param_t * p_iocr_param;
    pf_iocr_t * p_iocr;
 
-   p_iocr = &p_ar->iocrs[crep];
+   p_iocr = &p_ar->io_ar->iocrs[crep];
    p_iocr->p_ar = p_ar;
    p_iocr->crep = crep;
 
@@ -2630,7 +2523,7 @@ static int pf_cmdev_check_iocr_overlap (
 static int pf_cmdev_check_iocr_apis (pf_ar_t * p_ar, pnet_result_t * p_stat)
 {
    int ret = 0;
-   pf_iocr_param_t * p_iocr_param;
+   pf_iocr_t * p_iocr;
    uint16_t api_ix = 0;
    pf_api_entry_t * p_iocr_api = NULL;
    uint16_t io_ix = 0;  /* io_data/iocs index */
@@ -2645,12 +2538,12 @@ static int pf_cmdev_check_iocr_apis (pf_ar_t * p_ar, pnet_result_t * p_stat)
    uint16_t subslot_nbr;
    uint16_t combo_cnt = 0;
 
-   for (ix = 0; ix < p_ar->nbr_iocrs; ix++)
+   for (ix = 0; ix < p_ar->io_ar->nbr_iocrs; ix++)
    {
-      p_iocr_param = &p_ar->iocrs[ix].param;
-      for (api_ix = 0; api_ix < p_iocr_param->nbr_apis; api_ix++)
+      p_iocr = &p_ar->io_ar->iocrs[ix];
+      for (api_ix = 0; api_ix < p_iocr->param.nbr_apis; api_ix++)
       {
-         p_iocr_api = &p_iocr_param->apis[api_ix];
+         p_iocr_api = &p_iocr->param.apis[api_ix];
          /* The IOCR API must be present in the expected API */
          p_exp_api = NULL;
          if (pf_cmdev_get_exp_api (p_ar, p_iocr_api->api, &p_exp_api) != 0)
@@ -2765,8 +2658,8 @@ static int pf_cmdev_check_iocr_apis (pf_ar_t * p_ar, pnet_result_t * p_stat)
                   if (
                      ((p_exp_sub->properties.type == PNET_DIR_NO_IO) ||
                       (p_exp_sub->properties.type == PNET_DIR_INPUT)) &&
-                     ((p_iocr_param->iocr_type == PF_IOCR_TYPE_OUTPUT) ||
-                      (p_iocr_param->iocr_type == PF_IOCR_TYPE_MC_CONSUMER)))
+                     ((p_iocr->param.iocr_type == PF_IOCR_TYPE_OUTPUT) ||
+                      (p_iocr->param.iocr_type == PF_IOCR_TYPE_MC_CONSUMER)))
                   {
                      pf_set_error (
                         p_stat,
@@ -2778,8 +2671,8 @@ static int pf_cmdev_check_iocr_apis (pf_ar_t * p_ar, pnet_result_t * p_stat)
                   }
                   else if (
                      (p_exp_sub->properties.type == PNET_DIR_OUTPUT) &&
-                     ((p_iocr_param->iocr_type == PF_IOCR_TYPE_INPUT) ||
-                      (p_iocr_param->iocr_type == PF_IOCR_TYPE_MC_PROVIDER)))
+                     ((p_iocr->param.iocr_type == PF_IOCR_TYPE_INPUT) ||
+                      (p_iocr->param.iocr_type == PF_IOCR_TYPE_MC_PROVIDER)))
                   {
                      pf_set_error (
                         p_stat,
@@ -2880,7 +2773,7 @@ static int pf_cmdev_check_iocr_apis (pf_ar_t * p_ar, pnet_result_t * p_stat)
                      if (
                         ((p_exp_sub->properties.type == PNET_DIR_NO_IO) ||
                          (p_exp_sub->properties.type == PNET_DIR_INPUT)) &&
-                        (p_iocr_param->iocr_type == PF_IOCR_TYPE_INPUT))
+                        (p_iocr->param.iocr_type == PF_IOCR_TYPE_INPUT))
                      {
                         pf_set_error (
                            p_stat,
@@ -2892,7 +2785,7 @@ static int pf_cmdev_check_iocr_apis (pf_ar_t * p_ar, pnet_result_t * p_stat)
                      }
                      else if (
                         (p_exp_sub->properties.type == PNET_DIR_OUTPUT) &&
-                        (p_iocr_param->iocr_type == PF_IOCR_TYPE_OUTPUT))
+                        (p_iocr->param.iocr_type == PF_IOCR_TYPE_OUTPUT))
                      {
                         pf_set_error (
                            p_stat,
@@ -2903,9 +2796,7 @@ static int pf_cmdev_check_iocr_apis (pf_ar_t * p_ar, pnet_result_t * p_stat)
                         ret = -1;
                      }
 
-                     if (
-                        (ret == 0) &&
-                        (p_exp_sub->properties.type == PNET_DIR_IO))
+                     if ((ret == 0) && (p_exp_sub->properties.type == PNET_DIR_IO))
                      {
                         /* Must have 2 data descriptors */
                         if (p_exp_sub->nbr_data_descriptors != 2)
@@ -2925,14 +2816,14 @@ static int pf_cmdev_check_iocr_apis (pf_ar_t * p_ar, pnet_result_t * p_stat)
          }
       }
 
-      for (io_ix = 0; io_ix < p_ar->iocrs[ix].nbr_data_desc; io_ix++)
+      for (io_ix = 0; io_ix < p_iocr->nbr_data_desc; io_ix++)
       {
          if (ret == 0)
          {
             if (
-               (p_ar->iocrs[ix].data_desc[io_ix].data_offset +
-                p_ar->iocrs[ix].data_desc[io_ix].data_length) >
-               p_iocr_param->c_sdu_length)
+               (p_iocr->data_desc[io_ix].data_offset +
+                p_iocr->data_desc[io_ix].data_length) >
+               p_iocr->param.c_sdu_length)
             {
                pf_set_error (
                   p_stat,
@@ -2943,9 +2834,9 @@ static int pf_cmdev_check_iocr_apis (pf_ar_t * p_ar, pnet_result_t * p_stat)
                ret = -1;
             }
             else if (
-               (p_ar->iocrs[ix].data_desc[io_ix].iops_offset +
-                p_ar->iocrs[ix].data_desc[io_ix].iops_length) >
-               p_iocr_param->c_sdu_length)
+               (p_iocr->data_desc[io_ix].iops_offset +
+                p_iocr->data_desc[io_ix].iops_length) >
+               p_iocr->param.c_sdu_length)
             {
                pf_set_error (
                   p_stat,
@@ -2956,9 +2847,9 @@ static int pf_cmdev_check_iocr_apis (pf_ar_t * p_ar, pnet_result_t * p_stat)
                ret = -1;
             }
             else if (
-               (p_ar->iocrs[ix].data_desc[io_ix].iocs_offset +
-                p_ar->iocrs[ix].data_desc[io_ix].iocs_length) >
-               p_iocr_param->c_sdu_length)
+               (p_iocr->data_desc[io_ix].iocs_offset +
+                p_iocr->data_desc[io_ix].iocs_length) >
+               p_iocr->param.c_sdu_length)
             {
                pf_set_error (
                   p_stat,
@@ -2968,9 +2859,7 @@ static int pf_cmdev_check_iocr_apis (pf_ar_t * p_ar, pnet_result_t * p_stat)
                   28);
                ret = -1;
             }
-            else if (
-               pf_cmdev_check_iocr_overlap (&p_ar->iocrs[ix], io_ix, p_stat) !=
-               0)
+            else if (pf_cmdev_check_iocr_overlap (p_iocr, io_ix, p_stat) != 0)
             {
                ret = -1;
             }
@@ -2979,24 +2868,22 @@ static int pf_cmdev_check_iocr_apis (pf_ar_t * p_ar, pnet_result_t * p_stat)
 
       if (ret != 0)
       {
-         p_iocr_param->valid = false;
+         p_iocr->param.valid = false;
       }
    }
 
    return ret;
 }
 
-int pf_cmdev_check_iocr_param (
-   pf_ar_t * p_ar,
-   pnet_result_t * p_stat)
+int pf_cmdev_check_iocr_param (pf_ar_t * p_ar, pnet_result_t * p_stat)
 {
    int ret = 0; /* OK until error found */
    uint16_t ix;
    pf_iocr_param_t * p_iocr;
 
-   for (ix = 0; ix < p_ar->nbr_iocrs; ix++)
+   for (ix = 0; ix < p_ar->io_ar->nbr_iocrs; ix++)
    {
-      p_iocr = &p_ar->iocrs[ix].param;
+      p_iocr = &p_ar->io_ar->iocrs[ix].param;
 
       if (p_ar->ar_param.ar_properties.device_access == true)
       {
@@ -3361,18 +3248,19 @@ static int pf_cmdev_check_iocr_param_full (
    ret = pf_cmdev_check_iocr_param (p_ar, p_stat);
    if (ret == 0)
    {
-      for (ix = 0; ix < p_ar->nbr_iocrs; ix++)
+      for (ix = 0; ix < p_ar->io_ar->nbr_iocrs; ix++)
       {
-         p_iocr = &p_ar->iocrs[ix].param;
-         if (pf_fspm_get_min_device_interval (net) >
-               p_iocr->send_clock_factor * p_iocr->reduction_ratio)
+         p_iocr = &p_ar->io_ar->iocrs[ix].param;
+         if (
+            pf_fspm_get_min_device_interval (net) >
+            p_iocr->send_clock_factor * p_iocr->reduction_ratio)
          {
             pf_set_error (
-                  p_stat,
-                  PNET_ERROR_CODE_CONNECT,
-                  PNET_ERROR_DECODE_PNIO,
-                  PNET_ERROR_CODE_1_CONN_FAULTY_IOCR_BLOCK_REQ,
-                  11);
+               p_stat,
+               PNET_ERROR_CODE_CONNECT,
+               PNET_ERROR_DECODE_PNIO,
+               PNET_ERROR_CODE_1_CONN_FAULTY_IOCR_BLOCK_REQ,
+               11);
             ret = -1;
          }
       }
@@ -3413,7 +3301,7 @@ static int pf_cmdev_exp_submodule_configure (
    uint16_t sub_ix;
    uint16_t subslot_nbr;
    const pf_exp_submodule_t * p_exp_sub = NULL;
-   pf_subslot_t * p_cfg_sub = NULL;
+   pf_submodule_t * p_cfg_sub = NULL;
    uint16_t api_ix;
    uint16_t ix;
    uint16_t data_ix;
@@ -3428,7 +3316,7 @@ static int pf_cmdev_exp_submodule_configure (
    {
       p_exp_sub = &p_exp_mod->submodule[sub_ix];
       if (
-         pf_cmdev_get_subslot (
+         pf_cmdev_get_submodule (
             p_cfg_slot,
             p_exp_sub->subslot_number,
             &p_cfg_sub) != 0)
@@ -3506,9 +3394,9 @@ static int pf_cmdev_exp_submodule_configure (
       {
          /* Each exp sub-slot must be used in at least one IOCR. */
          cnt = 0;
-         for (ix = 0; ix < p_ar->nbr_iocrs; ix++)
+         for (ix = 0; ix < p_ar->io_ar->nbr_iocrs; ix++)
          {
-            p_iocr_param = &p_ar->iocrs[ix].param;
+            p_iocr_param = &p_ar->io_ar->iocrs[ix].param;
             for (api_ix = 0; api_ix < p_iocr_param->nbr_apis; api_ix++)
             {
                if (p_iocr_param->apis[api_ix].api == p_exp_api->api)
@@ -3567,7 +3455,7 @@ static int pf_cmdev_exp_submodule_configure (
             ret = -1;
          }
          else if (
-            pf_cmdev_get_subslot (
+            pf_cmdev_get_submodule (
                p_cfg_slot,
                p_exp_sub->subslot_number,
                &p_cfg_sub) != 0)
@@ -3637,8 +3525,8 @@ static int pf_cmdev_exp_submodule_configure (
             ret = -1;
          }
          else if (
-            (p_exp_sub->properties
-                .reduce_input_submodule_data_length == true) &&
+            (p_exp_sub->properties.reduce_input_submodule_data_length ==
+             true) &&
             ((p_exp_sub->properties.type == PNET_DIR_INPUT) ||
              (p_exp_sub->properties.type == PNET_DIR_IO)))
          {
@@ -3651,8 +3539,8 @@ static int pf_cmdev_exp_submodule_configure (
             ret = -1;
          }
          else if (
-            (p_exp_sub->properties
-                .reduce_output_submodule_data_length == true) &&
+            (p_exp_sub->properties.reduce_output_submodule_data_length ==
+             true) &&
             ((p_exp_sub->properties.type == PNET_DIR_OUTPUT) ||
              (p_exp_sub->properties.type == PNET_DIR_IO)))
          {
@@ -3764,7 +3652,7 @@ static int pf_cmdev_exp_submodule_configure (
       }
 
       if (
-         pf_cmdev_get_subslot (
+         pf_cmdev_get_submodule (
             p_cfg_slot,
             p_exp_sub->subslot_number,
             &p_cfg_sub) == 0)
@@ -3953,7 +3841,7 @@ static int pf_cmdev_exp_apis_configure (
    /* Error discovery for the whole block */
    if (
       (p_ar->ar_param.ar_properties.device_access == false) &&
-      (p_ar->exp_ident.nbr_apis == 0))
+      (p_ar->io_ar->exp_ident.nbr_apis == 0))
    {
       pf_set_error (
          p_stat,
@@ -3965,11 +3853,11 @@ static int pf_cmdev_exp_apis_configure (
    else
    {
       ret = 0; /* Assume all goes well */
-      for (api_ix = 0; api_ix < p_ar->exp_ident.nbr_apis; api_ix++)
+      for (api_ix = 0; api_ix < p_ar->io_ar->exp_ident.nbr_apis; api_ix++)
       {
          if (ret == 0)
          {
-            p_exp_api = &p_ar->exp_ident.api[api_ix];
+            p_exp_api = &p_ar->io_ar->exp_ident.api[api_ix];
             /* If it does not exist then create it */
             if (
                (pf_cmdev_get_api (net, p_exp_api->api, &p_cfg_api) == 0) ||
@@ -4001,6 +3889,7 @@ static int pf_cmdev_exp_apis_configure (
 static int pf_cmdev_check_alarm_cr (pf_ar_t * p_ar, pnet_result_t * p_stat)
 {
    int ret = 0;
+   pf_alarm_cr_request_t * p_alarm_cr_request = &p_ar->io_ar->alarm_cr_request;
 
    if (p_ar->ar_param.ar_properties.device_access == true)
    {
@@ -4012,7 +3901,7 @@ static int pf_cmdev_check_alarm_cr (pf_ar_t * p_ar, pnet_result_t * p_stat)
          PNET_ERROR_CODE_2_CMRPC_UNKNOWN_BLOCKS);
       ret = -1;
    }
-   else if (p_ar->alarm_cr_request.alarm_cr_type != PF_ALARM_CR)
+   else if (p_alarm_cr_request->alarm_cr_type != PF_ALARM_CR)
    {
       pf_set_error (
          p_stat,
@@ -4023,10 +3912,10 @@ static int pf_cmdev_check_alarm_cr (pf_ar_t * p_ar, pnet_result_t * p_stat)
       ret = -1;
    }
    else if (
-      ((p_ar->alarm_cr_request.alarm_cr_properties.transport_udp == false) &&
-       (p_ar->alarm_cr_request.lt_field != PNAL_ETHTYPE_PROFINET)) ||
-      ((p_ar->alarm_cr_request.alarm_cr_properties.transport_udp == true) &&
-       (p_ar->alarm_cr_request.lt_field != PNAL_ETHTYPE_IP)))
+      ((p_alarm_cr_request->alarm_cr_properties.transport_udp == false) &&
+       (p_alarm_cr_request->lt_field != PNAL_ETHTYPE_PROFINET)) ||
+      ((p_alarm_cr_request->alarm_cr_properties.transport_udp == true) &&
+       (p_alarm_cr_request->lt_field != PNAL_ETHTYPE_IP)))
    {
       pf_set_error (
          p_stat,
@@ -4038,8 +3927,8 @@ static int pf_cmdev_check_alarm_cr (pf_ar_t * p_ar, pnet_result_t * p_stat)
    }
    /* alarm_cr_properties.reserved not checked */
    else if (
-      (p_ar->alarm_cr_request.rta_timeout_factor < 1) ||
-      (p_ar->alarm_cr_request.rta_timeout_factor > 0x0064))
+      (p_alarm_cr_request->rta_timeout_factor < 1) ||
+      (p_alarm_cr_request->rta_timeout_factor > 0x0064))
    {
       pf_set_error (
          p_stat,
@@ -4050,8 +3939,8 @@ static int pf_cmdev_check_alarm_cr (pf_ar_t * p_ar, pnet_result_t * p_stat)
       ret = -1;
    }
    else if (
-      (p_ar->alarm_cr_request.rta_retries < 3) ||
-      (p_ar->alarm_cr_request.rta_retries > 15))
+      (p_alarm_cr_request->rta_retries < 3) ||
+      (p_alarm_cr_request->rta_retries > 15))
    {
       pf_set_error (
          p_stat,
@@ -4062,8 +3951,8 @@ static int pf_cmdev_check_alarm_cr (pf_ar_t * p_ar, pnet_result_t * p_stat)
       ret = -1;
    }
    else if (
-      (p_ar->alarm_cr_request.max_alarm_data_length < 200) ||
-      (p_ar->alarm_cr_request.max_alarm_data_length > 1432))
+      (p_alarm_cr_request->max_alarm_data_length < 200) ||
+      (p_alarm_cr_request->max_alarm_data_length > 1432))
    {
       pf_set_error (
          p_stat,
@@ -4073,10 +3962,9 @@ static int pf_cmdev_check_alarm_cr (pf_ar_t * p_ar, pnet_result_t * p_stat)
          10);
       ret = -1;
    }
-   else if (p_ar->alarm_cr_request.alarm_cr_tag_header_high.vlan_id != 0) /* No
-                                                                             VLAN
-                                                                           */
+   else if (p_alarm_cr_request->alarm_cr_tag_header_high.vlan_id != 0)
    {
+      /* No VLAN */
       pf_set_error (
          p_stat,
          PNET_ERROR_CODE_CONNECT,
@@ -4085,10 +3973,9 @@ static int pf_cmdev_check_alarm_cr (pf_ar_t * p_ar, pnet_result_t * p_stat)
          11);
       ret = -1;
    }
-   else if (
-      p_ar->alarm_cr_request.alarm_cr_tag_header_high.alarm_user_priority !=
-      6) /* Alarm CR priority high */
+   else if (p_alarm_cr_request->alarm_cr_tag_header_high.alarm_user_priority != 6)
    {
+      /* Alarm CR priority high */
       pf_set_error (
          p_stat,
          PNET_ERROR_CODE_CONNECT,
@@ -4097,10 +3984,9 @@ static int pf_cmdev_check_alarm_cr (pf_ar_t * p_ar, pnet_result_t * p_stat)
          11);
       ret = -1;
    }
-   else if (p_ar->alarm_cr_request.alarm_cr_tag_header_low.vlan_id != 0) /* No
-                                                                            VLAN
-                                                                          */
+   else if (p_alarm_cr_request->alarm_cr_tag_header_low.vlan_id != 0)
    {
+      /* No VLAN */
       pf_set_error (
          p_stat,
          PNET_ERROR_CODE_CONNECT,
@@ -4109,10 +3995,9 @@ static int pf_cmdev_check_alarm_cr (pf_ar_t * p_ar, pnet_result_t * p_stat)
          12);
       ret = -1;
    }
-   else if (
-      p_ar->alarm_cr_request.alarm_cr_tag_header_low.alarm_user_priority !=
-      5) /* Alarm CR priority low */
+   else if (p_alarm_cr_request->alarm_cr_tag_header_low.alarm_user_priority != 5)
    {
+      /* Alarm CR priority low */
       pf_set_error (
          p_stat,
          PNET_ERROR_CODE_CONNECT,
@@ -4123,7 +4008,7 @@ static int pf_cmdev_check_alarm_cr (pf_ar_t * p_ar, pnet_result_t * p_stat)
    }
    else
    {
-      p_ar->alarm_cr_request.valid = true;
+      p_alarm_cr_request->valid = true;
    }
 
    return ret;
@@ -4145,7 +4030,7 @@ static int pf_cmdev_check_ar_rpc (pf_ar_t * p_ar, pnet_result_t * p_stat)
    int ret = 0; /* OK until we discover an error. */
 
    /* Error discovery */
-   if (p_ar->ar_rpc_request.initiator_rpc_server_port < 0x0400)
+   if (p_ar->io_ar->ar_rpc_request.initiator_rpc_server_port < 0x0400)
    {
       pf_set_error (
          p_stat,
@@ -4157,7 +4042,7 @@ static int pf_cmdev_check_ar_rpc (pf_ar_t * p_ar, pnet_result_t * p_stat)
    }
    else
    {
-      p_ar->ar_rpc_request.valid = true;
+      p_ar->io_ar->ar_rpc_request.valid = true;
    }
 
    return ret;
@@ -4185,114 +4070,182 @@ static int pf_cmdev_check_apdu (
 {
    int ret = -1;
    uint16_t ix;
+   pf_io_ar_t * io_ar;
 
-   if (p_ar != NULL)
+   if (p_ar != NULL && p_stat->pnio_status.error_code == PNET_ERROR_CODE_NOERROR)
    {
-      if (p_ar->nbr_ar_param > 0)
-      {
-         ret = pf_cmdev_check_ar_param (p_ar, p_stat);
-      }
+      /* ar_param was validated before the AR was allocated */
+      ret = 0;
 
-      if (ret == 0)
+      io_ar = p_ar->io_ar;
+      if (io_ar)
       {
-         ret = pf_cmdev_check_iocr_param_full (net, p_ar, p_stat);
-      }
-
-      if (ret == 0)
-      {
-         /* Let the application plug expected configuration */
-         ret = pf_cmdev_exp_apis_configure (net, p_ar, p_stat);
-      }
-
-      if (ret == 0)
-      {
-         /* Build internal data structure for each IOCR */
-         for (ix = 0; ix < p_ar->nbr_iocrs; ix++)
+         if (ret == 0)
          {
-            if ((ret == 0) && (pf_cmdev_iocr_setup_desc (p_ar, ix, p_stat) != 0))
+            ret = pf_cmdev_check_iocr_param_full (net, p_ar, p_stat);
+         }
+
+         if (ret == 0)
+         {
+            /* Let the application plug expected configuration */
+            ret = pf_cmdev_exp_apis_configure (net, p_ar, p_stat);
+         }
+
+         if (ret == 0)
+         {
+            /* Build internal data structure for each IOCR */
+            for (ix = 0; ix < io_ar->nbr_iocrs; ix++)
             {
+               if ((ret == 0) && (pf_cmdev_iocr_setup_desc (p_ar, ix, p_stat) != 0))
+               {
+                  ret = -1;
+               }
+            }
+         }
+
+         if (ret == 0)
+         {
+            /* Perform the final checks of the IOCRs */
+            ret = pf_cmdev_check_iocr_apis (p_ar, p_stat);
+         }
+
+         if (ret == 0)
+         {
+            if ((io_ar->input_cr_cnt == 0) || (io_ar->output_cr_cnt == 0))
+            {
+               pf_set_error (
+                  p_stat,
+                  PNET_ERROR_CODE_CONNECT,
+                  PNET_ERROR_DECODE_PNIO,
+                  PNET_ERROR_CODE_1_CMRPC,
+                  PNET_ERROR_CODE_2_CMRPC_IOCR_MISSING);
+               ret = -1;
+            }
+            else if (io_ar->nbr_alarm_cr != 1)
+            {
+               pf_set_error (
+                  p_stat,
+                  PNET_ERROR_CODE_CONNECT,
+                  PNET_ERROR_DECODE_PNIO,
+                  PNET_ERROR_CODE_1_CMRPC,
+                  PNET_ERROR_CODE_2_CMRPC_WRONG_BLOCK_COUNT);
+               ret = -1;
+            }
+#if PNET_OPTION_MC_CR
+            else if ((io_ar->nbr_mcr == 0) && (io_ar->mcr_cons_cnt > 0))
+            {
+               /* ToDo: Which error_code_2? */
+               pf_set_error (
+                  p_stat,
+                  PNET_ERROR_CODE_CONNECT,
+                  PNET_ERROR_DECODE_PNIO,
+                  PNET_ERROR_CODE_1_CMRPC,
+                  PNET_ERROR_CODE_2_CMRPC_WRONG_BLOCK_COUNT);
+               ret = -1;
+            }
+#endif
+#if PNET_OPTION_IR
+            else if (
+               (io_ar->ir_info.valid == false) && (io_ar->rtc3_present == true))
+#else
+            else if (io_ar->rtc3_present == true)
+#endif
+            {
+               /* ToDo: Which error_code_2? */
+               pf_set_error (
+                  p_stat,
+                  PNET_ERROR_CODE_CONNECT,
+                  PNET_ERROR_DECODE_PNIO,
+                  PNET_ERROR_CODE_1_CMRPC,
+                  PNET_ERROR_CODE_2_CMRPC_WRONG_BLOCK_COUNT);
                ret = -1;
             }
          }
-      }
 
-      if (ret == 0)
-      {
-         /* Perform the final checks of the IOCRs */
-         ret = pf_cmdev_check_iocr_apis (p_ar, p_stat);
-      }
+         if ((ret == 0) && (io_ar->nbr_alarm_cr > 0))
+         {
+            ret = pf_cmdev_check_alarm_cr (p_ar, p_stat);
+         }
 
-      if (ret == 0)
-      {
-         if (
-            (p_ar->ar_param.ar_properties.device_access == false) &&
-            ((p_ar->input_cr_cnt == 0) || (p_ar->output_cr_cnt == 0)))
+         if ((ret == 0) && (io_ar->nbr_rpc_server > 0))
          {
-            pf_set_error (
-               p_stat,
-               PNET_ERROR_CODE_CONNECT,
-               PNET_ERROR_DECODE_PNIO,
-               PNET_ERROR_CODE_1_CMRPC,
-               PNET_ERROR_CODE_2_CMRPC_IOCR_MISSING);
-            ret = -1;
+            ret = pf_cmdev_check_ar_rpc (p_ar, p_stat);
          }
-         else if (
-            (p_ar->ar_param.ar_properties.device_access == false) &&
-            (p_ar->nbr_alarm_cr != 1))
-         {
-            pf_set_error (
-               p_stat,
-               PNET_ERROR_CODE_CONNECT,
-               PNET_ERROR_DECODE_PNIO,
-               PNET_ERROR_CODE_1_CMRPC,
-               PNET_ERROR_CODE_2_CMRPC_WRONG_BLOCK_COUNT);
-            ret = -1;
-         }
-#if PNET_OPTION_MC_CR
-         else if ((p_ar->nbr_mcr == 0) && (p_ar->mcr_cons_cnt > 0))
-         {
-            /* ToDo: Which error_code_2? */
-            pf_set_error (
-               p_stat,
-               PNET_ERROR_CODE_CONNECT,
-               PNET_ERROR_DECODE_PNIO,
-               PNET_ERROR_CODE_1_CMRPC,
-               PNET_ERROR_CODE_2_CMRPC_WRONG_BLOCK_COUNT);
-            ret = -1;
-         }
-#endif
-         else if ((p_ar->ir_info.valid == false) && (p_ar->rtc3_present == true))
-         {
-            /* ToDo: Which error_code_2? */
-            pf_set_error (
-               p_stat,
-               PNET_ERROR_CODE_CONNECT,
-               PNET_ERROR_DECODE_PNIO,
-               PNET_ERROR_CODE_1_CMRPC,
-               PNET_ERROR_CODE_2_CMRPC_WRONG_BLOCK_COUNT);
-            ret = -1;
-         }
-      }
-
-      if ((ret == 0) && (p_ar->nbr_alarm_cr > 0))
-      {
-         ret = pf_cmdev_check_alarm_cr (p_ar, p_stat);
-      }
-
-      if ((ret == 0) && (p_ar->nbr_rpc_server > 0))
-      {
-         ret = pf_cmdev_check_ar_rpc (p_ar, p_stat);
       }
    }
 
    return ret;
 }
 
+#if PNET_OPTION_DR
+static bool pf_cmdev_dr_submodule_added (
+   pf_ar_t * ar,
+   uint32_t api,
+   uint16_t slot_number,
+   uint16_t subslot_number,
+   uint32_t submodule_ident)
+{
+   pf_ar_t * primary_ar;
+   pf_exp_ident_t * exp_ident;
+   pf_exp_api_t * exp_api;
+   pf_exp_module_t * exp_module;
+   pf_exp_submodule_t * exp_submodule;
+   uint16_t a;
+   uint16_t m;
+   uint16_t s;
+
+   if ((ar->ar_set == NULL) || (ar->ar_state != PF_AR_STATE_BACKUP))
+   {
+      return false;
+   }
+
+   primary_ar = ar->ar_set->primary_ar;
+   if (primary_ar == NULL)
+   {
+      return false;
+   }
+
+   if (pf_cmrpc_ar_uuid_config_id_equal (
+          &ar->ar_param.ar_uuid,
+          &primary_ar->ar_param.ar_uuid))
+   {
+      return false;
+   }
+
+   exp_ident = &(primary_ar->io_ar->exp_ident);
+   for (a = 0; a < exp_ident->nbr_apis; ++a)
+   {
+      exp_api = &exp_ident->api[a];
+      if (exp_api->api == api)
+      {
+         for (m = 0; m < exp_api->nbr_modules; ++m)
+         {
+            exp_module = &exp_api->module[m];
+            if (exp_module->slot_number == slot_number)
+            {
+               for (s = 0; s < exp_module->nbr_submodules; ++s)
+               {
+                  exp_submodule = &exp_module->submodule[s];
+                  if (exp_submodule->subslot_number == subslot_number)
+                  {
+                     return (exp_submodule->ident_number != submodule_ident);
+                  }
+               }
+               return true; /* New subslot */
+            }
+         }
+         return true; /* New slot */
+      }
+   }
+   return true; /* New API */
+}
+#endif
+
 int pf_cmdev_generate_module_diff (pnet_t * net, pf_ar_t * ar)
 {
    pf_api_t * real_api;
-   pf_slot_t * real_module;
-   pf_subslot_t * real_submodule;
+   pf_slot_t * real_slot;
+   pf_submodule_t * real_submodule;
    pf_exp_ident_t * exp_ident;
    pf_exp_api_t * exp_api;
    pf_exp_module_t * exp_module;
@@ -4301,13 +4254,20 @@ int pf_cmdev_generate_module_diff (pnet_t * net, pf_ar_t * ar)
    uint16_t a;
    uint16_t m;
    uint16_t s;
+   bool diff_this;
 
    if (ar == NULL)
    {
       return -1;
    }
 
-   exp_ident = &ar->exp_ident;
+   if (ar->io_ar == NULL)
+   {
+      /* The module diff block is empty */
+      return 0;
+   }
+
+   exp_ident = &ar->io_ar->exp_ident;
    exp_ident->nbr_diff_apis = 0;
 
    for (a = 0; a < exp_ident->nbr_apis; ++a)
@@ -4335,10 +4295,9 @@ int pf_cmdev_generate_module_diff (pnet_t * net, pf_ar_t * ar)
       {
          exp_module = &exp_api->module[m];
          exp_module->nbr_diff_submodules = 0;
-         real_module = NULL;
-         (void)
-            pf_cmdev_get_slot (real_api, exp_module->slot_number, &real_module);
-         if (real_module == NULL)
+         real_slot = NULL;
+         (void)pf_cmdev_get_slot (real_api, exp_module->slot_number, &real_slot);
+         if (real_slot == NULL)
          {
             /* The module is not part of the real identification. */
             exp_module->state = PF_MODULE_STATE_NO_MODULE;
@@ -4346,7 +4305,7 @@ int pf_cmdev_generate_module_diff (pnet_t * net, pf_ar_t * ar)
             continue; /* to the next expected module */
          }
 
-         if (exp_module->ident_number != real_module->ident_number)
+         if (exp_module->ident_number != real_slot->module->ident_number)
          {
             /* The wrong module is in the slot, but PF_MODULE_STATE_WRONG
              * should be avoided (see Profinet 2.4 services, Table 214).
@@ -4369,16 +4328,28 @@ int pf_cmdev_generate_module_diff (pnet_t * net, pf_ar_t * ar)
 
          for (s = 0; s < exp_module->nbr_submodules; ++s)
          {
+            diff_this = false;
+
             exp_submodule = &exp_module->submodule[s];
             state = &exp_submodule->state;
             memset (state, 0, sizeof (*state));
             state->format_indicator = true;
             real_submodule = NULL;
-            (void)pf_cmdev_get_subslot (
-               real_module,
+            (void)pf_cmdev_get_submodule (
+               real_slot,
                exp_submodule->subslot_number,
                &real_submodule);
+#if PNET_OPTION_DR
+            if (
+               (real_submodule == NULL) || pf_cmdev_dr_submodule_added (
+                                              ar,
+                                              exp_api->api,
+                                              exp_module->slot_number,
+                                              exp_submodule->subslot_number,
+                                              exp_submodule->ident_number))
+#else
             if (real_submodule == NULL)
+#endif
             {
                /* The submodule is not part of the real identification. */
                state->ident_info = PF_IDENT_INFO_NO;
@@ -4390,18 +4361,32 @@ int pf_cmdev_generate_module_diff (pnet_t * net, pf_ar_t * ar)
             if (exp_submodule->ident_number != real_submodule->ident_number)
             {
                state->ar_info = PF_AR_INFO_OWN;
-               state->ident_info = PF_IDENT_INFO_WRONG;
-               exp_module->diff_submodule[exp_module->nbr_diff_submodules++] =
-                  s;
-               continue; /* to the next expected submodule */
-            }
 
-            state->ident_info = PF_IDENT_INFO_OK;
+               if (pf_fspm_is_substitute_req (
+                      net,
+                      exp_submodule->ident_number,
+                      real_submodule->ident_number))
+               {
+                  state->ident_info = PF_IDENT_INFO_SUBSTITUTE;
+                  diff_this = true;
+               }
+               else
+               {
+                  state->ident_info = PF_IDENT_INFO_WRONG;
+                  exp_module->diff_submodule[exp_module->nbr_diff_submodules++] =
+                     s;
+                  continue; /* to the next expected submodule */
+               }
+            }
+            else
+            {
+               state->ident_info = PF_IDENT_INFO_OK;
+            }
 
             if (
                ((real_submodule->ownsm_state == PF_OWNSM_STATE_IOC) ||
                 (real_submodule->ownsm_state == PF_OWNSM_STATE_IOS)) &&
-               (real_submodule->owner != ar))
+               !pf_cmrpc_ar_set_equal (real_submodule->owner, ar))
             {
                state->ar_info = PF_AR_INFO_LOCKED_BY_IO_CONTROLLER;
                exp_module->diff_submodule[exp_module->nbr_diff_submodules++] =
@@ -4409,7 +4394,15 @@ int pf_cmdev_generate_module_diff (pnet_t * net, pf_ar_t * ar)
                continue; /* to the next expected submodule */
             }
 
-            state->ar_info = PF_AR_INFO_OWN;
+            if (real_submodule->application_ready_pending)
+            {
+               state->ar_info = PF_AR_INFO_APPLICATION_READY_PENDING;
+               diff_this = true;
+            }
+            else
+            {
+               state->ar_info = PF_AR_INFO_OWN;
+            }
 
             if (
                real_submodule->diag_summary.fault ||
@@ -4421,6 +4414,11 @@ int pf_cmdev_generate_module_diff (pnet_t * net, pf_ar_t * ar)
                   real_submodule->diag_summary.maintenance_demanded;
                state->maintenance_required =
                   real_submodule->diag_summary.maintenance_required;
+               diff_this = true;
+            }
+
+            if (diff_this)
+            {
                exp_module->diff_submodule[exp_module->nbr_diff_submodules++] =
                   s;
             }
@@ -4446,8 +4444,8 @@ int pf_cmdev_generate_submodule_diff (
    uint16_t subslot_number)
 {
    pf_api_t * real_api;
-   pf_slot_t * real_module;
-   pf_subslot_t * real_submodule;
+   pf_slot_t * real_slot;
+   pf_submodule_t * real_submodule;
    pf_exp_ident_t * exp_ident;
    pf_exp_api_t * exp_api;
    pf_exp_module_t * exp_module;
@@ -4456,13 +4454,14 @@ int pf_cmdev_generate_submodule_diff (
    uint16_t a;
    uint16_t m;
    uint16_t s;
+   bool diff_this;
 
    if (ar == NULL)
    {
       return -1;
    }
 
-   exp_ident = &ar->exp_ident;
+   exp_ident = &ar->io_ar->exp_ident;
    exp_ident->nbr_diff_apis = 0;
 
    for (a = 0; a < exp_ident->nbr_apis; ++a)
@@ -4502,17 +4501,16 @@ int pf_cmdev_generate_submodule_diff (
          {
             continue; /* to the next expected module */
          }
-         real_module = NULL;
-         (void)
-            pf_cmdev_get_slot (real_api, exp_module->slot_number, &real_module);
-         if (real_module == NULL)
+         real_slot = NULL;
+         (void)pf_cmdev_get_slot (real_api, exp_module->slot_number, &real_slot);
+         if (real_slot == NULL)
          {
             /* The module is not part of the real identification. */
             exp_module->state = PF_MODULE_STATE_NO_MODULE;
             exp_api->diff_module[exp_api->nbr_diff_modules++] = m;
             continue; /* to the next expected module */
          }
-         if (exp_module->ident_number != real_module->ident_number)
+         if (exp_module->ident_number != real_slot->module->ident_number)
          {
             /* The wrong module is in the slot, but PF_MODULE_STATE_WRONG
              * should be avoided (see Profinet 2.4 services, Table 214).
@@ -4520,7 +4518,7 @@ int pf_cmdev_generate_submodule_diff (
             exp_module->state = PF_MODULE_STATE_SUBSTITUTE;
             for (s = 0; s < exp_module->nbr_submodules; ++s)
             {
-               if (exp_module->submodule[m].subslot_number == subslot_number)
+               if (exp_module->submodule[s].subslot_number == subslot_number)
                {
                   state = &exp_module->submodule[s].state;
                   memset (state, 0, sizeof (*state));
@@ -4539,6 +4537,8 @@ int pf_cmdev_generate_submodule_diff (
 
          for (s = 0; s < exp_module->nbr_submodules; ++s)
          {
+            diff_this = false;
+
             exp_submodule = &exp_module->submodule[s];
             if (exp_submodule->subslot_number != subslot_number)
             {
@@ -4548,12 +4548,21 @@ int pf_cmdev_generate_submodule_diff (
             memset (state, 0, sizeof (*state));
             state->format_indicator = true;
             real_submodule = NULL;
-            (void)pf_cmdev_get_subslot (
-               real_module,
+            (void)pf_cmdev_get_submodule (
+               real_slot,
                exp_submodule->subslot_number,
                &real_submodule);
-
+#if PNET_OPTION_DR
+            if (
+               (real_submodule == NULL) || pf_cmdev_dr_submodule_added (
+                                            ar,
+                                            exp_api->api,
+                                            exp_module->slot_number,
+                                            exp_submodule->subslot_number,
+                                            exp_submodule->ident_number))
+#else
             if (real_submodule == NULL)
+#endif
             {
                /* The submodule is not part of the real identification. */
                state->ident_info = PF_IDENT_INFO_NO;
@@ -4565,18 +4574,32 @@ int pf_cmdev_generate_submodule_diff (
             if (exp_submodule->ident_number != real_submodule->ident_number)
             {
                state->ar_info = PF_AR_INFO_OWN;
-               state->ident_info = PF_IDENT_INFO_WRONG;
-               exp_module->diff_submodule[exp_module->nbr_diff_submodules++] =
-                  s;
-               continue; /* to the next expected submodule */
-            }
 
-            state->ident_info = PF_IDENT_INFO_OK;
+               if (pf_fspm_is_substitute_req (
+                      net,
+                      exp_submodule->ident_number,
+                      real_submodule->ident_number))
+               {
+                  state->ident_info = PF_IDENT_INFO_SUBSTITUTE;
+                  diff_this = true;
+               }
+               else
+               {
+                  state->ident_info = PF_IDENT_INFO_WRONG;
+                  exp_module->diff_submodule[exp_module->nbr_diff_submodules++] =
+                     s;
+                  continue; /* to the next expected submodule */
+               }
+            }
+            else
+            {
+               state->ident_info = PF_IDENT_INFO_OK;
+            }
 
             if (
                ((real_submodule->ownsm_state == PF_OWNSM_STATE_IOC) ||
                 (real_submodule->ownsm_state == PF_OWNSM_STATE_IOS)) &&
-               (real_submodule->owner != ar))
+               !pf_cmrpc_ar_set_equal (real_submodule->owner, ar))
             {
                state->ar_info = PF_AR_INFO_LOCKED_BY_IO_CONTROLLER;
                exp_module->diff_submodule[exp_module->nbr_diff_submodules++] =
@@ -4584,7 +4607,15 @@ int pf_cmdev_generate_submodule_diff (
                continue; /* to the next expected submodule */
             }
 
-            state->ar_info = PF_AR_INFO_OWN;
+            if (real_submodule->application_ready_pending)
+            {
+               state->ar_info = PF_AR_INFO_APPLICATION_READY_PENDING;
+               diff_this = true;
+            }
+            else
+            {
+               state->ar_info = PF_AR_INFO_OWN;
+            }
 
             if (
                real_submodule->diag_summary.fault ||
@@ -4596,6 +4627,11 @@ int pf_cmdev_generate_submodule_diff (
                   real_submodule->diag_summary.maintenance_demanded;
                state->maintenance_required =
                   real_submodule->diag_summary.maintenance_required;
+               diff_this = true;
+            }
+
+            if (diff_this)
+            {
                exp_module->diff_submodule[exp_module->nbr_diff_submodules++] =
                   s;
             }
@@ -4633,12 +4669,12 @@ static bool pf_cmdev_verify_free_frame_id (pnet_t * net, uint16_t frame_id)
 
    for (ix = 0; ix < PNET_MAX_AR; ix++)
    {
-      p_ar = pf_ar_find_by_index (net, ix);
+      p_ar = pf_io_ar_find_by_index (net, ix);
       if ((p_ar != NULL) && (p_ar->in_use == true))
       {
-         for (iy = 0; iy < p_ar->nbr_iocrs; iy++)
+         for (iy = 0; iy < p_ar->io_ar->nbr_iocrs; iy++)
          {
-            if (p_ar->iocrs[iy].param.frame_id == frame_id)
+            if (p_ar->io_ar->iocrs[iy].param.frame_id == frame_id)
             {
                return false;
             }
@@ -4665,9 +4701,9 @@ static void pf_cmdev_fix_frame_id (pnet_t * net, pf_ar_t * p_ar)
    uint16_t stop;
    uint16_t frame_id;
 
-   for (ix = 0; ix < p_ar->nbr_iocrs; ix++)
+   for (ix = 0; ix < p_ar->io_ar->nbr_iocrs; ix++)
    {
-      p_iocr_param = &p_ar->iocrs[ix].param;
+      p_iocr_param = &p_ar->io_ar->iocrs[ix].param;
       if (
          (p_iocr_param->iocr_type == PF_IOCR_TYPE_OUTPUT) &&
          (p_iocr_param->frame_id == 0xFFFF))
@@ -4714,7 +4750,7 @@ static void pf_cmdev_fix_frame_id (pnet_t * net, pf_ar_t * p_ar)
                __LINE__,
                frame_id,
                p_ar->arep,
-               p_ar->iocrs[ix].crep);
+               p_ar->io_ar->iocrs[ix].crep);
          }
          else
          {
@@ -4825,23 +4861,6 @@ static int pf_cmdev_cm_connect_rsp_pos (
    return ret;
 }
 
-/**
- * @internal
- * Reset observers / configurable checks
- * - Disable configurable checks / observers
- * - Observers should remove active diagnostics
- *   from diagnostics ASE
- *
- * Todo: Only observers for submodules used within a
- * certain AR should be reset.
- *
- * @param net              InOut: The p-net stack instance
- */
-static void pf_cmdev_reset_observers (pnet_t * net)
-{
-   pf_pdport_reset_all (net);
-}
-
 /* ================================================
  *       Remote primitives
  */
@@ -4859,10 +4878,9 @@ int pf_cmdev_rm_connect_ind (
    /* RM_Connect.ind */
    if (pf_cmdev_check_apdu (net, p_ar, p_connect_result) == 0)
    {
-      pf_cmdev_reset_observers (net);
       pf_pdport_ar_connect_ind (net, p_ar);
 
-      if (pf_cmdev_generate_module_diff (net, p_ar) == 0)
+      if (p_ar != NULL)
       {
          /* Start building the response to the connect request. */
          memcpy (
@@ -4871,32 +4889,40 @@ int pf_cmdev_rm_connect_ind (
             sizeof (pnet_ethaddr_t));
          p_ar->ar_result.responder_udp_rt_port = PF_UDP_UNICAST_PORT;
 
-         pf_cmdev_fix_frame_id (net, p_ar);
-
-         for (ix = 0; ix < p_ar->nbr_iocrs; ix++)
+         if (p_ar->io_ar)
          {
-            p_ar->iocrs[ix].result.iocr_type = p_ar->iocrs[ix].param.iocr_type;
-            p_ar->iocrs[ix].result.iocr_reference =
-               p_ar->iocrs[ix].param.iocr_reference;
-            p_ar->iocrs[ix].result.frame_id = p_ar->iocrs[ix].param.frame_id;
+            pf_cmdev_fix_frame_id (net, p_ar);
+
+            for (ix = 0; ix < p_ar->io_ar->nbr_iocrs; ix++)
+            {
+               p_ar->io_ar->iocrs[ix].result.iocr_type =
+                  p_ar->io_ar->iocrs[ix].param.iocr_type;
+               p_ar->io_ar->iocrs[ix].result.iocr_reference =
+                  p_ar->io_ar->iocrs[ix].param.iocr_reference;
+               p_ar->io_ar->iocrs[ix].result.frame_id =
+                  p_ar->io_ar->iocrs[ix].param.frame_id;
+            }
+            p_ar->io_ar->alarm_cr_result.alarm_cr_type =
+               p_ar->io_ar->alarm_cr_request.alarm_cr_type;
+            p_ar->io_ar->alarm_cr_result.local_alarm_reference =
+               pf_alarm_allocate_endpoint (net, p_ar);
+            p_ar->io_ar->alarm_cr_result.max_alarm_data_length =
+               PF_MAX_ALARM_DATA_LEN;
+
+            p_ar->io_ar->ready_4_data = false;
+
+            pf_cmina_get_station_name (net, station_name);
+
+            strncpy (
+               p_ar->io_ar->ar_server.cm_responder_station_name,
+               station_name,
+               sizeof (p_ar->io_ar->ar_server.cm_responder_station_name));
+            p_ar->io_ar->ar_server.cm_responder_station_name
+               [sizeof (p_ar->io_ar->ar_server.cm_responder_station_name) - 1] =
+               '\0';
+            p_ar->io_ar->ar_server.length_cm_responder_station_name =
+               (uint16_t)strlen (station_name);
          }
-         p_ar->alarm_cr_result.alarm_cr_type =
-            p_ar->alarm_cr_request.alarm_cr_type;
-         p_ar->alarm_cr_result.local_alarm_reference =
-            pf_alarm_allocate_endpoint (net, p_ar);
-         p_ar->alarm_cr_result.max_alarm_data_length = PF_MAX_ALARM_DATA_LEN;
-
-         pf_cmina_get_station_name (net, station_name);
-         strncpy (
-            p_ar->ar_server.cm_responder_station_name,
-            station_name,
-            sizeof (p_ar->ar_server.cm_responder_station_name));
-         p_ar->ar_server.cm_responder_station_name
-            [sizeof (p_ar->ar_server.cm_responder_station_name) - 1] = '\0';
-         p_ar->ar_server.length_cm_responder_station_name =
-            (uint16_t)strlen (station_name);
-
-         p_ar->ready_4_data = false;
 
          ret = pf_fspm_cm_connect_ind (net, p_ar, p_connect_result);
       }
@@ -4969,6 +4995,7 @@ int pf_cmdev_rm_dcontrol_ind (
    pnet_t * net,
    pf_ar_t * p_ar,
    pf_control_block_t * p_control_io,
+   pf_submodule_list_block_t * p_sm_list,
    pnet_result_t * p_dcontrol_result,
    bool * p_set_state_prmend)
 {
@@ -5020,10 +5047,12 @@ int pf_cmdev_rm_dcontrol_ind (
          break;
       case PF_CMDEV_STATE_DATA:
          ret = pf_cmpbe_rm_dcontrol_ind (
-               net,
-               p_ar,
-               p_control_io,
-               p_dcontrol_result);
+            net,
+            p_ar,
+            p_control_io,
+            p_sm_list,
+            p_dcontrol_result,
+            p_set_state_prmend);
          break;
       default:
          /* Ignore and stay in all other states. */
@@ -5056,8 +5085,10 @@ int pf_cmdev_rm_ccontrol_cnf (
           PNET_ERROR_CODE_NOERROR) &&
          (p_ccontrol_result->pnio_status.error_decode ==
           PNET_ERROR_DECODE_NOERROR) &&
-         (p_ccontrol_result->pnio_status.error_code_1 == 0) &&
-         (p_ccontrol_result->pnio_status.error_code_2 == 0))
+         (p_ccontrol_result->pnio_status.error_code_1 ==
+          PNET_ERROR_CODE_1_NOERROR) &&
+         (p_ccontrol_result->pnio_status.error_code_2 ==
+          PNET_ERROR_CODE_2_NOERROR))
       {
          /*
           * The command_control in the control_block only has the "Done" bit
@@ -5072,7 +5103,7 @@ int pf_cmdev_rm_ccontrol_cnf (
              */
             pf_alarm_enable (p_ar);
 
-            if (p_ar->ready_4_data == true)
+            if (p_ar->io_ar->ready_4_data == true)
             {
                (void)pf_cmdev_state_ind (net, p_ar, PNET_EVENT_DATA);
                ret = pf_cmdev_set_state (net, p_ar, PF_CMDEV_STATE_DATA);
@@ -5102,6 +5133,10 @@ int pf_cmdev_rm_ccontrol_cnf (
          (void)pf_cmdev_set_state (net, p_ar, PF_CMDEV_STATE_ABORT);
       }
    }
+   else if (p_ar->cmdev_state == PF_CMDEV_STATE_DATA)
+   {
+      return pf_cmpbe_rm_ccontrol_cnf (p_ar, p_control_io, p_ccontrol_result);
+   }
    else
    {
       LOG_ERROR (
@@ -5121,84 +5156,36 @@ int pf_cmdev_cm_ccontrol_req (pnet_t * net, pf_ar_t * p_ar)
    uint16_t iy;
    bool data_avail = true; /* Assume all OK */
    pf_iodata_object_t * p_iodata = NULL;
-   pf_ar_t * p_owning_ar = NULL;
-   pf_iocr_t * p_owning_iocr = NULL;
-   pf_iodata_object_t * p_owning_iodata = NULL;
-   uint32_t crep;
+   pf_io_ar_t * io_ar = p_ar->io_ar;
 
    if (p_ar->ar_param.ar_properties.device_access == false)
    {
       switch (p_ar->cmdev_state)
       {
       case PF_CMDEV_STATE_W_ARDY:
+         /* Generate the modulediffblock */
+         if (io_ar)
+         {
+            (void)pf_cmdev_for_each_submodule (
+               net,
+               pf_diag_update_submodule,
+               p_ar);
+            pf_cmdev_generate_module_diff (net, p_ar);
+         }
+
          /* Verify that appl has created input data for all PPM */
-         for (ix = 0; ix < p_ar->nbr_iocrs; ix++)
+         for (ix = 0; ix < io_ar->nbr_iocrs; ix++)
          {
             if (
-               (p_ar->iocrs[ix].param.iocr_type == PF_IOCR_TYPE_INPUT) ||
-               (p_ar->iocrs[ix].param.iocr_type == PF_IOCR_TYPE_MC_PROVIDER))
+               (io_ar->iocrs[ix].param.iocr_type == PF_IOCR_TYPE_INPUT) ||
+               (io_ar->iocrs[ix].param.iocr_type == PF_IOCR_TYPE_MC_PROVIDER))
             {
-               for (iy = 0; iy < p_ar->iocrs[ix].nbr_data_desc; iy++)
+               for (iy = 0; iy < io_ar->iocrs[ix].nbr_data_desc; iy++)
                {
-                  p_iodata = &p_ar->iocrs[ix].data_desc[iy];
+                  p_iodata = &io_ar->iocrs[ix].data_desc[iy];
 
-                  /* The application is limited to setting data for a specific
-                     subslot. Check that it has tried to set the data.
-                     If some other AR owns the subslot, check that data is
-                     set for that AR.
-
-                     In the future we might implement reading inputdata from
-                     one subslot to several connections (different PLCs).
-
-                     Find owning AR, CR and descriptor */
-                  if (
-                     pf_ppm_get_ar_iocr_desc (
-                        net,
-                        p_iodata->api_id,
-                        p_iodata->slot_nbr,
-                        p_iodata->subslot_nbr,
-                        &p_owning_ar,
-                        &p_owning_iocr,
-                        &p_owning_iodata,
-                        &crep) == 0)
+                  if ((p_iodata->iops_length > 0) && !p_iodata->data_avail)
                   {
-                     if (
-                        p_owning_ar != p_ar ||
-                        p_owning_iocr != &p_ar->iocrs[ix] ||
-                        p_owning_iodata != p_iodata)
-                     {
-                        LOG_DEBUG (
-                           PNET_LOG,
-                           "CMDEV(%d): Slot %u subslot 0x%04x is owned by "
-                           "AREP %u CREP %" PRIu32 " but AREP %u CREP %" PRIu32
-                           " is asking to use it.\n",
-                           __LINE__,
-                           p_iodata->slot_nbr,
-                           p_iodata->subslot_nbr,
-                           p_owning_ar->arep,
-                           p_owning_iocr->crep,
-                           p_ar->arep,
-                           p_ar->iocrs[ix].crep);
-                     }
-
-                     /* Member data_avail is set directly by the PPM. The value
-                        is true also if only the IOPS is set. */
-                     if (
-                        p_owning_iodata->iops_length > 0 &&
-                        p_owning_iodata->data_avail == false)
-                     {
-                        data_avail = false;
-                     }
-                  }
-                  else
-                  {
-                     LOG_DEBUG (
-                        PNET_LOG,
-                        "CMDEV(%d): Could not find owning AR for slot %u "
-                        "subslot 0x%04x\n",
-                        __LINE__,
-                        p_iodata->slot_nbr,
-                        p_iodata->subslot_nbr);
                      data_avail = false;
                   }
                }
@@ -5207,13 +5194,31 @@ int pf_cmdev_cm_ccontrol_req (pnet_t * net, pf_ar_t * p_ar)
 
          if (data_avail == true)
          {
+            LOG_INFO (
+               PNET_LOG,
+               "CMDEV(%d): All input data available, sending application ready "
+               "for AREP %u\n",
+               __LINE__,
+               p_ar->arep);
             pf_cmdev_state_ind (net, p_ar, PNET_EVENT_APPLRDY);
             if (pf_cmrpc_rm_ccontrol_req (net, p_ar, PF_BT_APPRDY_REQ) == 0)
             {
                ret = pf_cmdev_set_state (net, p_ar, PF_CMDEV_STATE_W_ARDYCNF);
             }
          }
+         else
+         {
+            LOG_ERROR (
+               PNET_LOG,
+               "CMDEV(%d): Not all input data available for AREP %u, cannot "
+               "send application ready\n",
+               __LINE__,
+               p_ar->arep);
+         }
 
+         break;
+      case PF_CMDEV_STATE_DATA:
+         ret = pf_cmpbe_cm_ccontrol_req (net, p_ar);
          break;
       default:
          /* Ignore and stay in all other states. */

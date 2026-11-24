@@ -118,7 +118,7 @@ int pf_eth_init (pnet_t * net, const pnet_cfg_t * p_cfg)
          net,
          p_cfg->if_cfg.main_netif_name,
          main_port_receive_type,
-         &p_cfg->pnal_cfg,
+         p_cfg->pnal_cfg,
          &net->pf_interface.main_port) != 0)
    {
       return -1;
@@ -139,8 +139,12 @@ int pf_eth_init (pnet_t * net, const pnet_cfg_t * p_cfg)
             pf_eth_init_netif (
                net,
                p_port_cfg->netif_name,
+#if PNET_OPTION_MRP
+               PNAL_ETHTYPE_ALL,
+#else
                PNAL_ETHTYPE_LLDP,
-               &p_cfg->pnal_cfg,
+#endif
+               p_cfg->pnal_cfg,
                &p_port_data->netif) != 0)
          {
             return -1;
@@ -197,65 +201,90 @@ int pf_eth_send_on_management_port (pnet_t * net, pnal_buf_t * buf)
 
 int pf_eth_recv (pnal_eth_handle_t * eth_handle, void * arg, pnal_buf_t * p_buf)
 {
+   int ret = 0; /* Means: "Not handled" */
    uint16_t eth_type;
-   uint16_t frame_id;
-   uint16_t pos;
-   uint16_t i;
-   pf_eth_frame_id_map_t * map;
+   uint16_t frame_pos;
+   uint16_t ix = 0;
+   int loc_port_num = 0;
    pnet_t * net = (pnet_t *)arg;
    pf_get_info_t frame_info =
    {
       .is_big_endian = true,
-      .p_buf = p_buf->payload,
-      .len = p_buf->len,
+      .p_frame = p_buf,
+      .p_array = NULL,
+      .len = pnal_buf_get_size (p_buf),
       .result = PF_PARSE_OK,
    };
 
    /* Skip ALL VLAN tags */
-   pos = 2 * sizeof (pnet_ethaddr_t);
-   eth_type = pf_get_uint16 (&frame_info, &pos);
+   frame_pos = 2 * sizeof (pnet_ethaddr_t);
+   eth_type = pf_get_uint16 (&frame_info, &frame_pos);
    while ((frame_info.result == PF_PARSE_OK) && (eth_type == PNAL_ETHTYPE_VLAN))
    {
-      (void)pf_get_uint16 (&frame_info, &pos); /* Skip VLAN TCI */
-      eth_type = pf_get_uint16 (&frame_info, &pos);
+      (void)pf_get_uint16 (&frame_info, &frame_pos); /* Skip VLAN TCI */
+      eth_type = pf_get_uint16 (&frame_info, &frame_pos);
    }
    if (frame_info.result != PF_PARSE_OK)
    {
       LOG_DEBUG (PF_ETH_LOG, "ETH(%d): No EtherType found\n", __LINE__);
       return 0;
    }
+
    switch (eth_type)
    {
-   case PNAL_ETHTYPE_PROFINET:
-      frame_id = pf_get_uint16 (&frame_info, &pos);
+   case PNAL_ETHTYPE_PROFINET:;
+      const uint16_t frame_id_pos = frame_pos;
+      const uint16_t frame_id = pf_get_uint16 (&frame_info, &frame_pos);
       if (frame_info.result != PF_PARSE_OK)
       {
-         LOG_DEBUG (PF_ETH_LOG, "ETH(%d): No FrameID found\n", __LINE__);
+         LOG_DEBUG (PF_ETH_LOG, "ETH(%d): No FrameId found\n", __LINE__);
          return 0;
       }
-      pos -= sizeof (uint16_t); /* A handler expects the FrameID at pos. */
-      for (i = 0; i < NELEMENTS (net->eth_id_map); ++i)
+
+      /* Find the associated frame handler */
+      ix = 0;
+      while ((ix < NELEMENTS (net->eth_id_map)) &&
+             ((net->eth_id_map[ix].in_use == false) ||
+              (net->eth_id_map[ix].frame_id != frame_id)))
       {
-         map = &net->eth_id_map[i];
-         if (map->in_use && (map->frame_id == frame_id))
-         {
-            return map->frame_handler (net, frame_id, p_buf, pos, map->p_arg);
-         }
+         ix++;
+      }
+      if (ix < NELEMENTS (net->eth_id_map))
+      {
+         /* Call the frame handler */
+         ret = net->eth_id_map[ix].frame_handler (
+            net,
+            frame_id,
+            p_buf, /* This cannot be NULL, as seen above */
+            frame_id_pos,
+            net->eth_id_map[ix].p_arg);
       }
       break;
    case PNAL_ETHTYPE_LLDP:
-      /* Any payload is passed on. */
-      return pf_lldp_recv (
-         net,
-         pf_port_get_port_number (net, eth_handle),
-         p_buf,
-         pos);
+      loc_port_num = pf_port_get_port_number (net, eth_handle);
+      ret = pf_lldp_recv (net, loc_port_num, p_buf, frame_pos);
       break;
+   case PNAL_ETHTYPE_IP:
+      /* IP-packets (UDP) are also received via the UDP sockets. Do not count
+       * statistics here. */
+      ret = 0;
+      break;
+
+#if PNET_OPTION_MRP
+   case PNAL_ETHTYPE_MRP:
+      loc_port_num = pf_port_get_port_number (net, eth_handle);
+      ret = pf_mrp_recv (net, loc_port_num, p_buf, frame_pos);
+      break;
+#endif
+
    default:
-      /* Any other EtherType (including IP) is not handled here. */
+      /* Unknown packet. */
+
+      ret = 0;
       break;
    }
-   return 0;
+
+   return ret;
 }
 
 void pf_eth_frame_id_map_add (

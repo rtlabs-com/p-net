@@ -24,26 +24,6 @@ extern "C" {
 
 /**
  * @internal
- * Extract a sequence of bytes from a buffer.
- *
- * Similar to pf_get_mem(), but attempts to write past the end of destination
- * buffer are rejected. Destination buffer is filled with zeroes on error.
- *
- * @param p_info           InOut: The parser state.
- * @param p_pos            InOut: Position in the buffer.
- * @param size             In:    Number of bytes to copy.
- * @param p_dest           Out:   Destination buffer.
- * @param dest_size        In:    Size of destination buffer in bytes.
- */
-void pf_get_mem_s (
-   pf_get_info_t * p_info,
-   uint16_t * p_pos,
-   size_t size,
-   void * p_dest,
-   size_t dest_size);
-
-/**
- * @internal
  * Return a byte from a buffer.
  * @param p_info           InOut: The parser state.
  * @param p_pos            InOut: Position in the buffer.
@@ -81,6 +61,85 @@ void pf_get_mem (
    uint16_t * p_pos,
    uint16_t dest_size,
    void * p_dest);
+
+/**
+ * Extract a sequence of bytes from a buffer.
+ *
+ * Similar to pf_get_mem(), but attempts to write past the end of destination
+ * buffer are rejected. Destination buffer is filled with zeroes on error.
+ *
+ * @param p_info           InOut: The parser state.
+ * @param p_pos            InOut: Position in the buffer.
+ * @param size             In:    Number of bytes to copy.
+ * @param p_dest           Out:   Destination buffer.
+ * @param dest_size        In:    Size of destination buffer in bytes.
+ */
+void pf_get_mem_s (
+   pf_get_info_t * p_info,
+   uint16_t * p_pos,
+   size_t size,
+   void * p_dest,
+   size_t dest_size);
+
+/**
+ * Compare a sequence of bytes from a buffer to a given sequence.
+ *
+ * @param p_info           InOut: The parser state.
+ * @param p_pos            InOut: Position in the buffer.
+ * @param size             In:    Number of bytes to compare.
+ * @param p_data           In:    Data to compare with.
+ * @return 0 if equal, non-zero if different or if an error occurred.
+ */
+int pf_get_memcmp (
+   pf_get_info_t * p_info,
+   uint16_t * p_pos,
+   size_t size,
+   const void * p_data);
+
+/**
+ * Return a MAC address from a buffer.
+ *
+ * @param p_info           InOut: The parser state.
+ * @param p_pos            InOut: Position in the buffer.
+ * @return The MAC address from the buffer.
+ */
+pnet_ethaddr_t pf_get_mac_address (pf_get_info_t * p_info, uint16_t * p_pos);
+
+/**
+ * Extract an Ethernet header from a buffer.
+ *
+ * @param p_info           InOut: The parser state.
+ * @param p_pos            InOut: Position in the buffer.
+ * @param p_hdr            Out:   Destination buffer.
+ */
+void pf_get_ethernet_header (
+   pf_get_info_t * p_info,
+   uint16_t * p_pos,
+   pf_ethernet_header_t * p_hdr);
+
+/**
+ * Extract an IP suite from a buffer.
+ *
+ * @param p_info           InOut: The parser state.
+ * @param p_pos            InOut: Position in the buffer.
+ * @param p_suite          Out:   Destination buffer.
+ */
+void pf_get_ip_suite (
+   pf_get_info_t * p_info,
+   uint16_t * p_pos,
+   pf_ip_suite_t * p_suite);
+
+/**
+ * Extract a full IP suite from a buffer.
+ *
+ * @param p_info           InOut: The parser state.
+ * @param p_pos            InOut: Position in the buffer.
+ * @param p_suite          Out:   Destination buffer.
+ */
+void pf_get_full_ip_suite (
+   pf_get_info_t * p_info,
+   uint16_t * p_pos,
+   pf_full_ip_suite_t * p_suite);
 
 /**
  * Extract a NDR header from a request buffer.
@@ -132,14 +191,17 @@ void pf_get_block_header (
  * Extract an AR param block from a buffer.
  * @param p_info           InOut: The parser state.
  * @param p_pos            InOut: Position in the buffer.
- * @param p_ar             Out:   Contains the destination structure.
+ * @param p_ar_param       Out:   Contains the destination structure.
  */
-void pf_get_ar_param (pf_get_info_t * p_info, uint16_t * p_pos, pf_ar_t * p_ar);
+void pf_get_ar_param (
+   pf_get_info_t * p_info,
+   uint16_t * p_pos,
+   pf_ar_param_t * p_ar_param);
 
 /**
  * Extract an IOCR param block from a buffer.
  *
- * Updates p_ar->iocrs[ix].param
+ * Updates p_ar->io_ar->iocrs[ix].param
  *
  * @param p_info           InOut: The parser state.
  * @param p_pos            InOut: Position in the buffer.
@@ -221,7 +283,7 @@ void pf_get_ar_prm_server_request (
  * Extract an MCR request block from a buffer.
  * @param p_info           InOut: The parser state.
  * @param p_pos            InOut: Position in the buffer.
- * @param ix               In:    The current index into p_ar->ar_vendor_xxx[].
+ * @param ix               In:    The current index into p_ar->io_ar->ar_vendor_xxx[].
  * @param p_ar             Out:   Contains the destination structure.
  */
 void pf_get_mcr_request (
@@ -240,6 +302,20 @@ void pf_get_mcr_request (
  * @return 0 on success, ErrorCode2 on failure.
  */
 uint8_t pf_get_ir_info_request (
+   pf_get_info_t * p_info,
+   uint16_t * p_pos,
+   pf_ar_t * p_ar);
+#endif
+
+#if PNET_OPTION_SR
+/**
+ * Extract an SR info request block from a buffer.
+ * @param p_info           InOut: The parser state.
+ * @param p_pos            InOut: Position in the buffer.
+ * @param p_ar             Out:   Contains the destination structure.
+ * @return 0 on success, ErrorCode2 on failure.
+ */
+uint8_t pf_get_sr_info_request (
    pf_get_info_t * p_info,
    uint16_t * p_pos,
    pf_ar_t * p_ar);
@@ -267,6 +343,17 @@ void pf_get_control (
    pf_get_info_t * p_info,
    uint16_t * p_pos,
    pf_control_block_t * p_req);
+
+/**
+ * Extract a submodule list request block from a buffer.
+ * @param info             InOut: The parser information.
+ * @param pos              InOut: The current parsing position.
+ * @param sm_list          Out:   Destination structure.
+ */
+void pf_get_submodule_list (
+   pf_get_info_t * info,
+   uint16_t * pos,
+   pf_submodule_list_block_t * sm_list);
 
 /**
  * Extract a read request block from a buffer.
@@ -302,15 +389,36 @@ void pf_get_write_request (
    pf_iod_write_request_t * p_req);
 
 /**
- * Extract a I&M1 data block from a buffer.
- * @param p_info           InOut: The parser information.
- * @param p_pos            InOut: The current parsing position.
- * @param p_im_1           Out:   Destination structure.
+ * Extract an I&M1 data block from a buffer.
+ * @param info             InOut: The parser information.
+ * @param pos              InOut: The current parsing position.
+ * @param im1              Out:   Destination structure.
  */
-void pf_get_im_1 (
-   pf_get_info_t * p_info,
-   uint16_t * p_pos,
-   pnet_im_1_t * p_im_1);
+void pf_get_im_1 (pf_get_info_t * info, uint16_t * pos, pnet_im_1_t * im1);
+
+/**
+ * Extract an I&M2 data block from a buffer.
+ * @param info             InOut: The parser information.
+ * @param pos              InOut: The current parsing position.
+ * @param im2              Out:   Destination structure.
+ */
+void pf_get_im_2 (pf_get_info_t * info, uint16_t * pos, pnet_im_2_t * im2);
+
+/**
+ * Extract an I&M3 data block from a buffer.
+ * @param info             InOut: The parser information.
+ * @param pos              InOut: The current parsing position.
+ * @param im3              Out:   Destination structure.
+ */
+void pf_get_im_3 (pf_get_info_t * info, uint16_t * pos, pnet_im_3_t * im3);
+
+/**
+ * Extract an I&M4 data block from a buffer.
+ * @param info             InOut: The parser information.
+ * @param pos              InOut: The current parsing position.
+ * @param im4              Out:   Destination structure.
+ */
+void pf_get_im_4 (pf_get_info_t * info, uint16_t * pos, pnet_im_4_t * im4);
 
 /**
  * Extract the fixed part of an alarm frame from a buffer.
@@ -422,6 +530,32 @@ void pf_get_interface_adjust (
    pf_get_info_t * p_info,
    uint16_t * p_pos,
    pf_lldp_name_of_device_mode_t * name_of_device_mode);
+
+#if PNET_OPTION_SNMP && PNET_OPTION_SECURITY_LEVEL_1
+/**
+ * Extract a CIM SNMP Adjust block from a buffer.
+ *
+ * @param p_info           InOut: The parser information.
+ * @param p_pos            InOut: The current parsing position.
+ * @param snmp_adjust      Out:   Destination structure.
+ */
+void pf_get_cim_snmp_adjust (
+   pf_get_info_t * p_info,
+   uint16_t * p_pos,
+   pf_snmp_config_t * snmp_adjust);
+#endif /* PNET_OPTION_SNMP && PNET_OPTION_SECURITY_LEVEL_1 */
+
+void pf_get_interface_mrp_data_check (
+   pf_get_info_t * p_info,
+   uint16_t * p_pos,
+   uint8_t max_instances,
+   pf_mrp_data_check_t * p_mrp_check);
+
+void pf_get_interface_mrp_data_adjust (
+   pf_get_info_t * p_info,
+   uint16_t * p_pos,
+   uint8_t max_instances,
+   pf_intf_mrp_data_adjust_t * p_mrp_adjust);
 
 /************ Internal functions, made available for unit testing ************/
 

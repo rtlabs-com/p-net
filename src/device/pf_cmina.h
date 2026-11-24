@@ -133,7 +133,7 @@ int pf_cmina_dcp_set_ind (
    uint16_t block_qualifier,
    uint16_t value_length,
    const uint8_t * p_value,
-   uint8_t * p_block_error);
+   pf_dcp_block_error_values_t * p_block_error);
 
 /**
  * Reset the configuration to default values.

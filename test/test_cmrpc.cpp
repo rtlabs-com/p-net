@@ -39,8 +39,7 @@ int pf_cmrpc_rm_read_ind_test (
    pf_session_info_t * si,
    uint16_t opnum,
    uint16_t req_pos,
-   uint16_t res_size,
-   uint8_t * res,
+   pf_put_info_t * res,
    uint16_t * res_pos);
 }
 
@@ -160,6 +159,61 @@ static uint8_t read_im0_req[] =
  0x7e, 0xe2, 0x8a, 0x1a, 0x02, 0xcb, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00,
  0xaf, 0xf0, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+};
+
+static uint8_t read_im1_req[] =
+{
+                                                             0x04, 0x00, 0x28, 0x00, 0x00, 0x00,
+ 0x00, 0x00, 0xde, 0xa0, 0x00, 0x00, 0x6c, 0x97, 0x11, 0xd1, 0x82, 0x71, 0x00, 0x01, 0xbe, 0xef,
+ 0xfe, 0xed, 0xde, 0xa0, 0x00, 0x01, 0x6c, 0x97, 0x11, 0xd1, 0x82, 0x71, 0x00, 0xa0, 0x24, 0x42,
+ 0xdf, 0x7d, 0xbb, 0xac, 0x97, 0xe2, 0x76, 0x54, 0x9f, 0x47, 0xa5, 0xbd, 0xa5, 0xe3, 0x7d, 0x98,
+ 0xe5, 0xda, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x04, 0x00, 0x02,
+ 0xff, 0xff, 0xff, 0xff, 0x00, 0x54, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x40, 0x00, 0x00,
+ 0x00, 0x40, 0x00, 0x00, 0x10, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x40, 0x00, 0x09,
+ 0x00, 0x3c, 0x01, 0x00, 0x00, 0x02, 0x30, 0xab, 0xa9, 0xa3, 0xf7, 0x64, 0xb7, 0x44, 0xb3, 0xb6,
+ 0x7e, 0xe2, 0x8a, 0x1a, 0x02, 0xcb, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00,
+ 0xaf, 0xf1, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+};
+
+static uint8_t write_im1_req[] =
+{
+                                                             0x04, 0x00, 0x28, 0x00, 0x00, 0x00,
+ 0x00, 0x00, 0xde, 0xa0, 0x00, 0x00, 0x6c, 0x97, 0x11, 0xd1, 0x82, 0x71, 0x00, 0x01, 0xbe, 0xef,
+ 0xfe, 0xed, 0xde, 0xa0, 0x00, 0x01, 0x6c, 0x97, 0x11, 0xd1, 0x82, 0x71, 0x00, 0xa0, 0x24, 0x42,
+ 0xdf, 0x7d, 0x0b, 0x1c, 0xb4, 0xfa, 0x94, 0x9f, 0x11, 0xf0, 0xa5, 0xf2, 0xa8, 0xbb, 0xcc, 0x00,
+ 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09, 0x00, 0x03,
+ 0xff, 0xff, 0xff, 0xff, 0x00, 0x90, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x03, 0x6c, 0x00, 0x00,
+ 0x00, 0x7c, 0x00, 0x01, 0x03, 0x6c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x7c, 0x00, 0x08,
+ 0x00, 0x3c, 0x01, 0x00, 0x00, 0x08, 0x30, 0xab, 0xa9, 0xa3, 0xf7, 0x64, 0xb7, 0x44, 0xb3, 0xb6,
+ 0x7e, 0xe2, 0x8a, 0x1a, 0x02, 0xcb, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00,
+ 0xaf, 0xf1, 0x00, 0x00, 0x00, 0x3c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x21,
+ 0x00, 0x38, 0x01, 0x00,
+ /* IM_Tag_Function */
+ 0x49, 0x4d, 0x5f, 0x54, 0x61, 0x67, 0x5f, 0x46, 0x75, 0x6e, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x20,
+ 0x69, 0x73, 0x20, 0x33, 0x32, 0x20, 0x62, 0x79, 0x74, 0x65, 0x73, 0x20, 0x6c, 0x6f, 0x6e, 0x67,
+ /* IM_Tag_Location */
+ 0x49, 0x4d, 0x5f, 0x54, 0x61, 0x67, 0x5f, 0x4c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x20,
+ 0x69, 0x73, 0x20, 0x32, 0x32, 0x2e
+};
+
+static uint8_t write_im2_req[] =
+{
+                                                             0x04, 0x00, 0x28, 0x00, 0x00, 0x00,
+ 0x00, 0x00, 0xde, 0xa0, 0x00, 0x00, 0x6c, 0x97, 0x11, 0xd1, 0x82, 0x71, 0x00, 0x01, 0xbe, 0xef,
+ 0xfe, 0xed, 0xde, 0xa0, 0x00, 0x01, 0x6c, 0x97, 0x11, 0xd1, 0x82, 0x71, 0x00, 0xa0, 0x24, 0x42,
+ 0xdf, 0x7d, 0x0b, 0x1c, 0xb4, 0xfa, 0x94, 0x9f, 0x11, 0xf0, 0xa5, 0xf2, 0xa8, 0xbb, 0xcc, 0x00,
+ 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09, 0x00, 0x03,
+ 0xff, 0xff, 0xff, 0xff, 0x00, 0x90, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x03, 0x6c, 0x00, 0x00,
+ 0x00, 0x7c, 0x00, 0x01, 0x03, 0x6c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x52, 0x00, 0x08,
+ 0x00, 0x3c, 0x01, 0x00, 0x00, 0x08, 0x06, 0x94, 0xc3, 0x21, 0x75, 0x2d, 0x4d, 0x49, 0xbb, 0x3a,
+ 0x6f, 0xf1, 0xd8, 0x52, 0x09, 0xea, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00,
+ 0xaf, 0xf1, 0x00, 0x00, 0x00, 0x16, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x22,
+ 0x00, 0x12, 0x01, 0x00,
+ /* IM_Date */
+ 0x31, 0x39, 0x37, 0x38, 0x2d, 0x30, 0x39, 0x2d, 0x32, 0x31, 0x20, 0x32, 0x31, 0x3a, 0x30, 0x39
 };
 
 /*
@@ -359,7 +413,7 @@ static uint8_t data_packet[] =
  * alarm reference is the local alarm reference of its AlarmCRBlockReq.
  */
 // clang-format off
-static uint8_t alarm_notification_frame[] =
+static uint8_t alarm_notification_frame_for_ar[] =
 {
    // Ethernet header
    0x02, 0x67, 0x00, 0x00, 0x00, 0x01, // [00-05] Destination MAC address
@@ -396,7 +450,7 @@ static uint8_t alarm_notification_frame[] =
  * reference is the local alarm reference of its AlarmCRBlockReq.
  */
 // clang-format off
-static uint8_t alarm_error_frame[] =
+static uint8_t alarm_error_frame_for_ar[] =
 {
    // Ethernet header
    0x02, 0x67, 0x00, 0x00, 0x00, 0x01, // [00-05] Destination MAC address
@@ -443,8 +497,8 @@ static void receive_alarm_frame (
    pnal_buf_t * p_buf = pnal_buf_alloc (len);
 
    ASSERT_NE (p_buf, nullptr);
-   memcpy (p_buf->payload, frame, len);
-   p_buf->len = len;
+   pnal_buf_write (p_buf, 0, frame, len);
+   pnal_buf_set_size (p_buf, len);
 
    /* The buffer is owned by the alarm queue if the frame was handled */
    if (pf_eth_recv (NULL, net, p_buf) == 0)
@@ -567,7 +621,7 @@ TEST_F (CmrpcTest, CmrpcConnectReleaseTest)
    EXPECT_EQ (appdata.call_counters.state_calls, 3);
    EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_APPLRDY);
    EXPECT_EQ (mock_os_data.udp_sendto_count, 5);
-   EXPECT_EQ (mock_os_data.udp_sendto_len, 224);
+   EXPECT_EQ (mock_os_data.udp_sendto_len, 164);
 
    TEST_TRACE ("\nGenerating cyclic data\n");
    for (ix = 0; ix < 100; ix++)
@@ -588,6 +642,209 @@ TEST_F (CmrpcTest, CmrpcConnectReleaseTest)
    EXPECT_EQ (mock_os_data.udp_sendto_count, 6);
    EXPECT_EQ (mock_os_data.udp_sendto_len, 132);
 }
+
+#if PNET_OPTION_SHARED_DEVICE && (PNET_MAX_IO_AR > 1)
+/**
+ * Count the IOPS and IOCS in the input IOCRs of an AR that are not
+ * PNET_IOXS_BAD.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param arep             In:    The AREP of the AR.
+ * @param p_nbr_ioxs       Out:   The number of IOPS and IOCS.
+ * @return  The number of IOPS and IOCS that are not bad.
+ */
+static uint16_t count_input_ioxs_not_bad (
+   pnet_t * net,
+   uint32_t arep,
+   uint16_t * p_nbr_ioxs)
+{
+   pf_ar_t * p_ar = NULL;
+   pf_iocr_t * p_iocr;
+   pf_iodata_object_t * p_iodata;
+   uint16_t nbr_not_bad = 0;
+   uint16_t ix;
+   uint16_t iy;
+
+   *p_nbr_ioxs = 0;
+   EXPECT_EQ (pf_ar_find_by_arep (net, arep, &p_ar), 0);
+   if (p_ar == NULL)
+   {
+      return 0;
+   }
+
+   for (ix = 0; ix < p_ar->io_ar->nbr_iocrs; ix++)
+   {
+      p_iocr = &p_ar->io_ar->iocrs[ix];
+      if (p_iocr->param.iocr_type != PF_IOCR_TYPE_INPUT)
+      {
+         continue;
+      }
+      for (iy = 0; iy < p_iocr->nbr_data_desc; iy++)
+      {
+         p_iodata = &p_iocr->data_desc[iy];
+         if (p_iodata->iops_length > 0)
+         {
+            (*p_nbr_ioxs)++;
+            if (p_iocr->ppm.buffer_data[p_iodata->iops_offset] != PNET_IOXS_BAD)
+            {
+               nbr_not_bad++;
+            }
+         }
+         if (p_iodata->iocs_length > 0)
+         {
+            (*p_nbr_ioxs)++;
+            if (p_iocr->ppm.buffer_data[p_iodata->iocs_offset] != PNET_IOXS_BAD)
+            {
+               nbr_not_bad++;
+            }
+         }
+      }
+   }
+
+   return nbr_not_bad;
+}
+
+/**
+ * Count the input data octets in the input IOCRs of an AR that are not zero.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param arep             In:    The AREP of the AR.
+ * @param p_nbr_data       Out:   The number of input data octets.
+ * @return  The number of input data octets that are not zero.
+ */
+static uint16_t count_input_data_not_zero (
+   pnet_t * net,
+   uint32_t arep,
+   uint16_t * p_nbr_data)
+{
+   pf_ar_t * p_ar = NULL;
+   pf_iocr_t * p_iocr;
+   pf_iodata_object_t * p_iodata;
+   uint16_t nbr_not_zero = 0;
+   uint16_t ix;
+   uint16_t iy;
+   uint16_t iz;
+
+   *p_nbr_data = 0;
+   EXPECT_EQ (pf_ar_find_by_arep (net, arep, &p_ar), 0);
+   if (p_ar == NULL)
+   {
+      return 0;
+   }
+
+   for (ix = 0; ix < p_ar->io_ar->nbr_iocrs; ix++)
+   {
+      p_iocr = &p_ar->io_ar->iocrs[ix];
+      if (p_iocr->param.iocr_type != PF_IOCR_TYPE_INPUT)
+      {
+         continue;
+      }
+      for (iy = 0; iy < p_iocr->nbr_data_desc; iy++)
+      {
+         p_iodata = &p_iocr->data_desc[iy];
+         for (iz = 0; iz < p_iodata->data_length; iz++)
+         {
+            (*p_nbr_data)++;
+            if (p_iocr->ppm.buffer_data[p_iodata->data_offset + iz] != 0)
+            {
+               nbr_not_zero++;
+            }
+         }
+      }
+   }
+
+   return nbr_not_zero;
+}
+
+/**
+ * A second IO-AR (shared device) that expects the same submodules as the
+ * first, so that it owns none of them. The device sends application ready
+ * also for the second AR, with the submodules locked by the first AR. The IOPS
+ * and IOCS of the second AR are bad, and it does not get the input data, as it
+ * does not own the submodules.
+ *
+ * Without the fix, application ready was not sent, as the application can
+ * not set input data for submodules owned by another AR, and the second AR
+ * was aborted by the CMI timeout.
+ *
+ * The requests for the second AR are those for the first, with another
+ * activity UUID, AR UUID, CMInitiatorMacAdd and output frame ID:
+ *
+ *   [40-55]    Activity UUID (last byte at [55])
+ *   [108-123]  AR UUID (last byte at [123])
+ *   [126-131]  CMInitiatorMacAdd (connect request only)
+ *   [272-273]  Frame ID of the output IOCR (connect request only)
+ */
+TEST_F (CmrpcTest, CmrpcSharedDeviceSecondArOwnsNoSubmodules)
+{
+   uint8_t connect_req_2[sizeof (connect_req)];
+   uint8_t prm_end_req_2[sizeof (prm_end_req)];
+   uint32_t arep_1;
+   uint32_t arep_2;
+   uint32_t sendto_count;
+   uint16_t nbr_ioxs;
+   uint16_t nbr_data;
+   int ret;
+
+   memcpy (connect_req_2, connect_req, sizeof (connect_req));
+   connect_req_2[55] ^= 0xff;
+   connect_req_2[123] ^= 0xff;
+   connect_req_2[131] ^= 0xff;
+   connect_req_2[272] = 0x80;
+   connect_req_2[273] = 0x02;
+   memcpy (prm_end_req_2, prm_end_req, sizeof (prm_end_req));
+   prm_end_req_2[55] ^= 0xff;
+   prm_end_req_2[123] ^= 0xff;
+
+   /* First AR */
+   mock_set_pnal_udp_recvfrom_buffer (connect_req, sizeof (connect_req));
+   run_stack (TEST_UDP_DELAY);
+   EXPECT_EQ (appdata.call_counters.connect_calls, 1);
+   arep_1 = appdata.main_arep;
+   mock_set_pnal_udp_recvfrom_buffer (prm_end_req, sizeof (prm_end_req));
+   run_stack (TEST_UDP_DELAY);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_PRMEND);
+   ret = pnet_application_ready (net, arep_1);
+   EXPECT_EQ (ret, 0);
+   mock_set_pnal_udp_recvfrom_buffer (appl_rdy_rsp, sizeof (appl_rdy_rsp));
+   run_stack (TEST_UDP_DELAY);
+
+   /* Second AR */
+   mock_set_pnal_udp_recvfrom_buffer (connect_req_2, sizeof (connect_req_2));
+   run_stack (TEST_UDP_DELAY);
+   EXPECT_EQ (appdata.call_counters.connect_calls, 2);
+   EXPECT_EQ (mock_os_data.udp_sendto_buffer[80], 0); /* PNIO status OK */
+   arep_2 = appdata.main_arep;
+   EXPECT_NE (arep_2, arep_1);
+
+   mock_set_pnal_udp_recvfrom_buffer (prm_end_req_2, sizeof (prm_end_req_2));
+   run_stack (TEST_UDP_DELAY);
+   EXPECT_EQ (appdata.main_arep, arep_2);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_PRMEND);
+   EXPECT_EQ (mock_os_data.udp_sendto_buffer[80], 0); /* PNIO status OK */
+
+   sendto_count = mock_os_data.udp_sendto_count;
+   ret = pnet_application_ready (net, arep_2);
+   EXPECT_EQ (ret, 0);
+   EXPECT_EQ (appdata.main_arep, arep_2);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_APPLRDY);
+   EXPECT_EQ (mock_os_data.udp_sendto_count, sendto_count + 1);
+
+   /* The application has set the IOPS and IOCS of the first AR */
+   EXPECT_GT (count_input_ioxs_not_bad (net, arep_1, &nbr_ioxs), 0);
+   EXPECT_GT (nbr_ioxs, 0);
+
+   /* Those of the second AR are bad */
+   EXPECT_EQ (count_input_ioxs_not_bad (net, arep_2, &nbr_ioxs), 0);
+   EXPECT_GT (nbr_ioxs, 0);
+
+   /* The first AR has input data, the second does not */
+   EXPECT_GT (count_input_data_not_zero (net, arep_1, &nbr_data), 0);
+   EXPECT_GT (nbr_data, 0);
+   EXPECT_EQ (count_input_data_not_zero (net, arep_2, &nbr_data), 0);
+   EXPECT_GT (nbr_data, 0);
+}
+#endif
 
 TEST_F (CmrpcTest, CmrpcConnectionTimeoutTest)
 {
@@ -819,25 +1076,104 @@ TEST_F (CmrpcTest, CmrpcConnectFragmentTest)
 
 TEST_F (CmrpcTest, CmrpcConnectReleaseIOSAR_DA)
 {
-   // Device-access AR is not yet supported
+   pnet_im_1_t im_1;
+   pnet_im_2_t im_2;
+   int ret;
+
+   TEST_TRACE ("\nPlugging required submodule\n");
+   ret = pnet_plug_submodule (
+      net,
+      0,
+      0,
+      1,
+      PNET_MOD_DAP_IDENT,
+      PNET_SUBMOD_DAP_IDENT,
+      PNET_DIR_IO,
+      0,
+      0,
+      (PNET_SMF_IM_CARRIER | PNET_SMF_IM_DEVICE_REP));
+   EXPECT_EQ (ret, 0);
+
+   TEST_TRACE ("\nPrepare buffers\n");
+   memcpy (
+      im_1.im_tag_function,
+      write_im1_req + 170,
+      sizeof (im_1.im_tag_function) - 1);
+   im_1.im_tag_function[sizeof (im_1.im_tag_function) - 1] = '\0';
+   memcpy (
+      im_1.im_tag_location,
+      write_im1_req + 202,
+      sizeof (im_1.im_tag_location) - 1);
+   im_1.im_tag_location[sizeof (im_1.im_tag_location) - 1] = '\0';
+   im_2 = appdata.im_2;
+
    TEST_TRACE ("\nGenerating mock connection request IOSAR_DA\n");
    mock_set_pnal_udp_recvfrom_buffer (
       connect_req_iosar_da,
       sizeof (connect_req_iosar_da));
    run_stack (TEST_UDP_DELAY);
+#if PNET_MAX_DA_AR > 0
+   TEST_TRACE ("\nPNET_MAX_DA_AR > 0: AR should be established\n");
+   EXPECT_EQ (appdata.call_counters.state_calls, 1);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_STARTUP);
+   EXPECT_EQ (appdata.call_counters.connect_calls, 1);
+
+   TEST_TRACE ("\nRead I&M1\n");
+   mock_set_pnal_udp_recvfrom_buffer (read_im1_req, sizeof (read_im1_req));
+   run_stack (TEST_UDP_DELAY);
+   EXPECT_EQ (appdata.call_counters.state_calls, 1);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_STARTUP);
+   EXPECT_STRNE (appdata.im_1.im_tag_function, im_1.im_tag_function);
+   EXPECT_STRNE (appdata.im_1.im_tag_location, im_1.im_tag_location);
+
+   TEST_TRACE ("\nnApplication access control: Write I&M1\n");
+   mock_set_pnal_udp_recvfrom_buffer (write_im1_req, sizeof (write_im1_req));
+   run_stack (TEST_UDP_DELAY);
+   EXPECT_EQ (appdata.call_counters.state_calls, 1);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_STARTUP);
+
+   TEST_TRACE ("\nVerify that I&M1 changed\n");
+   memcpy (
+      im_1.im_tag_function,
+      write_im1_req + 170,
+      sizeof (im_1.im_tag_function) - 1);
+   memcpy (
+      im_1.im_tag_location,
+      write_im1_req + 202,
+      sizeof (im_1.im_tag_location) - 1);
+   EXPECT_STREQ (appdata.im_1.im_tag_function, im_1.im_tag_function);
+   EXPECT_STREQ (appdata.im_1.im_tag_location, im_1.im_tag_location);
+
+   TEST_TRACE ("\nApplication access control: Write I&M2\n");
+   mock_set_pnal_udp_recvfrom_buffer (write_im2_req, sizeof (write_im2_req));
+   run_stack (TEST_UDP_DELAY);
+   EXPECT_EQ (appdata.call_counters.state_calls, 1);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_STARTUP);
+
+   TEST_TRACE ("\nVerify that I&M2 did NOT change\n");
+   EXPECT_STREQ (appdata.im_2.im_date, im_2.im_date);
+#else
+   TEST_TRACE ("\nPNET_MAX_DA_AR is zero: request should be rejected\n");
+   (void)read_im1_req;
+   (void)write_im2_req;
    EXPECT_EQ (appdata.call_counters.state_calls, 0);
    EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_ABORT);
    EXPECT_EQ (appdata.call_counters.connect_calls, 0);
-   EXPECT_EQ (mock_os_data.eth_send_count, 0);
+#endif
 
    TEST_TRACE ("\nGenerating mock release request IOSAR_DA\n");
    mock_set_pnal_udp_recvfrom_buffer (
       release_req_iosar_da,
       sizeof (release_req_iosar_da));
    run_stack (TEST_UDP_DELAY);
+#if PNET_MAX_DA_AR > 0
+   EXPECT_EQ (appdata.call_counters.state_calls, 2);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_ABORT);
+#else
    EXPECT_EQ (appdata.call_counters.state_calls, 0);
    EXPECT_EQ (appdata.call_counters.release_calls, 0);
    EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_ABORT);
+#endif
 }
 
 /**
@@ -847,7 +1183,7 @@ TEST_F (CmrpcTest, CmrpcConnectReleaseIOSAR_DA)
 static void set_station_name (pnet_t * net)
 {
    const char name[] = "rt-labs-dev";
-   uint8_t block_error = 0;
+   pf_dcp_block_error_values_t block_error = PF_DCP_BLOCK_ERROR_NO_ERROR;
 
    ASSERT_EQ (
       0,
@@ -872,7 +1208,7 @@ TEST_F (CmrpcTest, CmrpcDcpSetIpRefusedWithActiveAr)
    pf_ip_suite_t ip_suite;
    pf_full_ip_suite_t current_ip_suite;
    pf_full_ip_suite_t nonvolatile_ip_suite;
-   uint8_t block_error = 0;
+   pf_dcp_block_error_values_t block_error = PF_DCP_BLOCK_ERROR_NO_ERROR;
 
    set_station_name (net);
    mock_set_pnal_udp_recvfrom_buffer (connect_req, sizeof (connect_req));
@@ -923,7 +1259,7 @@ TEST_F (CmrpcTest, CmrpcDcpSetIpRefusedWithActiveAr)
 TEST_F (CmrpcTest, CmrpcDcpSetIpAcceptedWithoutAr)
 {
    pf_ip_suite_t ip_suite;
-   uint8_t block_error = 0;
+   pf_dcp_block_error_values_t block_error = PF_DCP_BLOCK_ERROR_NO_ERROR;
 
    set_station_name (net);
 
@@ -967,8 +1303,8 @@ TEST_F (CmrpcTest, CmrpcDcpSetIpAcceptedWithoutAr)
  */
 TEST_F (CmrpcTest, CmrpcAlarmFromOtherSourceIsIgnored)
 {
-   uint8_t error_frame[sizeof (alarm_error_frame)];
-   uint8_t frame[sizeof (alarm_notification_frame)];
+   uint8_t error_frame[sizeof (alarm_error_frame_for_ar)];
+   uint8_t frame[sizeof (alarm_notification_frame_for_ar)];
 
    mock_set_pnal_udp_recvfrom_buffer (connect_req, sizeof (connect_req));
    run_stack (TEST_UDP_DELAY);
@@ -976,14 +1312,14 @@ TEST_F (CmrpcTest, CmrpcAlarmFromOtherSourceIsIgnored)
    EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_STARTUP);
 
    /* An alarm ERROR frame from another MAC address must not abort the AR */
-   memcpy (error_frame, alarm_error_frame, sizeof (error_frame));
+   memcpy (error_frame, alarm_error_frame_for_ar, sizeof (error_frame));
    error_frame[ALARM_FRAME_SRC_MAC_POS] ^= 0xff;
    receive_alarm_frame (net, error_frame, sizeof (error_frame));
    run_stack (TEST_UDP_DELAY);
    EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_STARTUP);
 
    /* Neither must one from another source alarm reference */
-   memcpy (error_frame, alarm_error_frame, sizeof (error_frame));
+   memcpy (error_frame, alarm_error_frame_for_ar, sizeof (error_frame));
    error_frame[ALARM_FRAME_SRC_REF_POS + 1] ^= 0xff;
    receive_alarm_frame (net, error_frame, sizeof (error_frame));
    run_stack (TEST_UDP_DELAY);
@@ -991,14 +1327,14 @@ TEST_F (CmrpcTest, CmrpcAlarmFromOtherSourceIsIgnored)
 
    /* An alarm notification from another MAC address must not reach the
       application */
-   memcpy (frame, alarm_notification_frame, sizeof (frame));
+   memcpy (frame, alarm_notification_frame_for_ar, sizeof (frame));
    frame[ALARM_FRAME_SRC_MAC_POS] ^= 0xff;
    receive_alarm_frame (net, frame, sizeof (frame));
    run_stack (TEST_UDP_DELAY);
    EXPECT_EQ (appdata.call_counters.alarm_calls, 0);
 
    /* Neither must one from another source alarm reference */
-   memcpy (frame, alarm_notification_frame, sizeof (frame));
+   memcpy (frame, alarm_notification_frame_for_ar, sizeof (frame));
    frame[ALARM_FRAME_SRC_REF_POS + 1] ^= 0xff;
    receive_alarm_frame (net, frame, sizeof (frame));
    run_stack (TEST_UDP_DELAY);
@@ -1007,8 +1343,8 @@ TEST_F (CmrpcTest, CmrpcAlarmFromOtherSourceIsIgnored)
    /* The same alarm notification from the IO-controller is accepted */
    receive_alarm_frame (
       net,
-      alarm_notification_frame,
-      sizeof (alarm_notification_frame));
+      alarm_notification_frame_for_ar,
+      sizeof (alarm_notification_frame_for_ar));
    run_stack (TEST_UDP_DELAY);
    EXPECT_EQ (appdata.call_counters.alarm_calls, 1);
 }
@@ -1057,8 +1393,7 @@ static uint16_t create_write_req (
 /**
  * The record data length is consistent with the ArgsLength, but the record
  * data is too short to contain the block header of the record. This is
- * reported as an access error with the error code "write length error".
- * See PN-AL-protocol (IEC 61158-6-10) 5.2.6.4.2, table 714.
+ * reported as an "access/write length error".
  */
 TEST_F (CmrpcTest, CmrpcIodWriteRecordShorterThanBlockHeader)
 {
@@ -1129,6 +1464,117 @@ TEST_F (CmrpcTest, CmrpcIodWriteRecordLongerThanRequest)
 }
 
 /**
+ * A write to the CombinedObjectContainer of the interface submodule, where the
+ * block length of the contained write is too short to include the fields
+ * before its record data. The record data length of the contained write would
+ * wrap around. This is reported as an "access/write length error".
+ *
+ * Without the check, the wrapped length was passed on to the write of the
+ * contained record. The trailing bytes make the request long enough for that
+ * write to be parsed.
+ *
+ * The record data of the request is the contained write:
+ *
+ *   [164-169]  Block header, with the block length at [166-167]
+ *   [170-171]  Padding
+ *   [172-175]  API
+ *   [176-177]  Slot number
+ *   [178-179]  Subslot number: port 1 of the interface submodule
+ *   [180-181]  Padding
+ *   [182-183]  Index: PDPortDataCheck
+ *   [184-191]  Trailing bytes, zero
+ */
+TEST_F (CmrpcTest, CmrpcIodWriteCombinedObjectContainerBlockTooShort)
+{
+   uint8_t req[164 + 20 + 8];
+   const uint16_t block_lengths[] = {0, 16 - 1};
+   uint16_t len;
+   uint32_t ix;
+
+   mock_set_pnal_udp_recvfrom_buffer (connect_req, sizeof (connect_req));
+   run_stack (TEST_UDP_DELAY);
+   EXPECT_EQ (appdata.call_counters.connect_calls, 1);
+   EXPECT_EQ (mock_os_data.udp_sendto_count, 1);
+
+   for (ix = 0; ix < sizeof (block_lengths) / sizeof (block_lengths[0]); ix++)
+   {
+      len = create_write_req (req, 20 + 8, 20 + 8);
+      req[129] = 0x00; /* Slot 0 */
+      req[130] = 0x80; /* Interface submodule 0x8000 */
+      req[131] = 0x00;
+      req[134] = 0x80; /* CombinedObjectContainer 0x80b0 */
+      req[135] = 0xb0;
+      req[165] = 0x08;
+      req[166] = (uint8_t)(block_lengths[ix] >> 8);
+      req[167] = (uint8_t)block_lengths[ix];
+      req[168] = 0x01;
+      req[178] = 0x80; /* Port 1 of the interface submodule */
+      req[179] = 0x01;
+      req[182] = 0x80; /* PDPortDataCheck */
+      req[183] = 0x2b;
+      mock_set_pnal_udp_recvfrom_buffer (req, len);
+      run_stack (TEST_UDP_DELAY);
+      EXPECT_EQ (mock_os_data.udp_sendto_count, 2 + ix);
+
+      EXPECT_EQ (mock_os_data.udp_sendto_buffer[80], PNET_ERROR_CODE_WRITE);
+      EXPECT_EQ (mock_os_data.udp_sendto_buffer[81], PNET_ERROR_DECODE_PNIORW);
+      EXPECT_EQ (
+         mock_os_data.udp_sendto_buffer[82],
+         PNET_ERROR_CODE_1_ACC_WRITE_LENGTH_ERROR);
+      EXPECT_EQ (mock_os_data.udp_sendto_buffer[83], 0);
+   }
+}
+
+/**
+ * A write to the CombinedObjectContainer of the interface submodule, where the
+ * request ends within the index of the contained write. This is reported as an
+ * "access/write length error", without a write to the application.
+ *
+ * Without the check, the contained write was done with the fields that were
+ * not in the request as zero, so as a write to the user specific index 0.
+ *
+ * The record data of the request is the start of the contained write, see
+ * CmrpcIodWriteCombinedObjectContainerBlockTooShort:
+ *
+ *   [164-169]  Block header, with block length 16 (no record data)
+ *   [170-181]  Padding, API, slot number, subslot number and padding
+ *   [182]      First byte of the index
+ */
+TEST_F (CmrpcTest, CmrpcIodWriteCombinedObjectContainerTruncated)
+{
+   uint8_t req[164 + 19];
+   uint16_t len;
+
+   mock_set_pnal_udp_recvfrom_buffer (connect_req, sizeof (connect_req));
+   run_stack (TEST_UDP_DELAY);
+   EXPECT_EQ (appdata.call_counters.connect_calls, 1);
+   EXPECT_EQ (mock_os_data.udp_sendto_count, 1);
+
+   len = create_write_req (req, 19, 19);
+   req[129] = 0x00; /* Slot 0 */
+   req[130] = 0x80; /* Interface submodule 0x8000 */
+   req[131] = 0x00;
+   req[134] = 0x80; /* CombinedObjectContainer 0x80b0 */
+   req[135] = 0xb0;
+   req[165] = 0x08;
+   req[167] = 16;
+   req[168] = 0x01;
+   req[178] = 0x80; /* Port 1 of the interface submodule */
+   req[179] = 0x01;
+   mock_set_pnal_udp_recvfrom_buffer (req, len);
+   run_stack (TEST_UDP_DELAY);
+   EXPECT_EQ (mock_os_data.udp_sendto_count, 2);
+   EXPECT_EQ (appdata.call_counters.write_calls, 0);
+
+   EXPECT_EQ (mock_os_data.udp_sendto_buffer[80], PNET_ERROR_CODE_WRITE);
+   EXPECT_EQ (mock_os_data.udp_sendto_buffer[81], PNET_ERROR_DECODE_PNIORW);
+   EXPECT_EQ (
+      mock_os_data.udp_sendto_buffer[82],
+      PNET_ERROR_CODE_1_ACC_WRITE_LENGTH_ERROR);
+   EXPECT_EQ (mock_os_data.udp_sendto_buffer[83], 0);
+}
+
+/**
  * Create a multiple write request with one write to PDPortDataCheck (not a user
  * specific index) from write_req, with 4 bytes of record data.
  *
@@ -1194,6 +1640,39 @@ TEST_F (CmrpcTest, CmrpcIodWriteMultipleRecordShorterThanBlockHeader)
    EXPECT_EQ (mock_os_data.udp_sendto_count, 1);
 
    create_write_multiple_req (req, 4);
+   mock_set_pnal_udp_recvfrom_buffer (req, sizeof (req));
+   run_stack (TEST_UDP_DELAY);
+   EXPECT_EQ (mock_os_data.udp_sendto_count, 2);
+
+   EXPECT_EQ (mock_os_data.udp_sendto_buffer[208], PNET_ERROR_CODE_WRITE);
+   EXPECT_EQ (mock_os_data.udp_sendto_buffer[209], PNET_ERROR_DECODE_PNIORW);
+   EXPECT_EQ (
+      mock_os_data.udp_sendto_buffer[210],
+      PNET_ERROR_CODE_1_ACC_WRITE_LENGTH_ERROR);
+   EXPECT_EQ (mock_os_data.udp_sendto_buffer[211], 0);
+}
+
+/**
+ * As CmrpcIodWriteMultipleRecordShorterThanBlockHeader, but followed by another
+ * write, so that the block header can be read from the request.
+ */
+TEST_F (CmrpcTest, CmrpcIodWriteMultipleRecordShorterThanBlockHeaderNotLast)
+{
+   uint8_t req[300];
+
+   mock_set_pnal_udp_recvfrom_buffer (connect_req, sizeof (connect_req));
+   run_stack (TEST_UDP_DELAY);
+   EXPECT_EQ (appdata.call_counters.connect_calls, 1);
+
+   memset (req, 0, sizeof (req));
+   create_write_multiple_req (req, 4);
+   memcpy (&req[232], &write_req[100], 68); /* Second write */
+   req[74] = 20 + 3 * 64 + 2 * 4;           /* RPC body length */
+   req[81] = 0x04;            /* NDR args maximum, room for the response */
+   req[84] = 3 * 64 + 2 * 4;  /* NDR args length */
+   req[89] = 0x04;            /* NDR maximum count, same as the args maximum */
+   req[96] = 3 * 64 + 2 * 4;  /* NDR actual count */
+   req[139] = 2 * 64 + 2 * 4; /* Record data length of the multiple write */
    mock_set_pnal_udp_recvfrom_buffer (req, sizeof (req));
    run_stack (TEST_UDP_DELAY);
    EXPECT_EQ (mock_os_data.udp_sendto_count, 2);
@@ -1462,7 +1941,7 @@ TEST_F (CmrpcTest, CmrpcAlarmAfterMalformedAlarm)
    EXPECT_EQ (appdata.call_counters.connect_calls, 1);
 
    /* An alarm notification that is cut off in the variable part is dropped */
-   receive_alarm_frame (net, alarm_notification_frame, 50);
+   receive_alarm_frame (net, alarm_notification_frame_for_ar, 50);
    run_stack (TEST_UDP_DELAY);
    EXPECT_EQ (appdata.call_counters.alarm_calls, 0);
 
@@ -1470,8 +1949,8 @@ TEST_F (CmrpcTest, CmrpcAlarmAfterMalformedAlarm)
       when retransmitted, must still be accepted */
    receive_alarm_frame (
       net,
-      alarm_notification_frame,
-      sizeof (alarm_notification_frame));
+      alarm_notification_frame_for_ar,
+      sizeof (alarm_notification_frame_for_ar));
    run_stack (TEST_UDP_DELAY);
    EXPECT_EQ (appdata.call_counters.alarm_calls, 1);
 }
@@ -2295,13 +2774,19 @@ TEST_F (CmrpcTest, CmrpcSessionWithArNotTimedOut)
 TEST_F (CmrpcTest, CmrpcImplicitRmReadInd)
 {
    static pf_session_info_t session_info;
+   pf_put_info_t put_info;
    uint16_t res_pos;
 
    memset (&session_info, 0, sizeof (session_info));
    session_info.ndr_data.args_length = sizeof (iod_read_req_implicit_invalid);
    session_info.get_info.is_big_endian = true;
-   session_info.get_info.p_buf = (uint8_t *)&iod_read_req_implicit_invalid;
+   session_info.get_info.p_frame = NULL;
+   session_info.get_info.p_array = (uint8_t *)&iod_read_req_implicit_invalid;
    session_info.get_info.len = sizeof (iod_read_req_implicit_invalid);
+   memset (&put_info, 0, sizeof (put_info));
+   put_info.p_frame = NULL;
+   put_info.p_array = session_info.out_buffer;
+   put_info.len = PNET_MAX_SESSION_BUFFER_SIZE;
    res_pos = 0;
    EXPECT_EQ (
       -1,
@@ -2310,8 +2795,7 @@ TEST_F (CmrpcTest, CmrpcImplicitRmReadInd)
          &session_info,
          PF_RPC_DEV_OPNUM_READ_IMPLICIT,
          0,
-         PNET_MAX_SESSION_BUFFER_SIZE,
-         session_info.out_buffer,
+         &put_info,
          &res_pos));
    EXPECT_EQ (PF_PARSE_OK, session_info.get_info.result);
    EXPECT_EQ (
@@ -2346,15 +2830,265 @@ TEST_F (CmrpcUnitTest, CmrpcCheckGenerateUuid)
 
    pf_generate_uuid (timestamp, session_number, mac_address, &uuid);
 
-   EXPECT_EQ (uuid.data1, timestamp);
-   EXPECT_EQ (uuid.data2, 0xB1B2);
-   EXPECT_EQ (uuid.data3, 0x10B3);
-   EXPECT_EQ (uuid.data4[0], 0x80);
-   EXPECT_EQ (uuid.data4[1], 0xB4);
-   EXPECT_EQ (uuid.data4[2], 0xA1);
-   EXPECT_EQ (uuid.data4[3], 0xA2);
-   EXPECT_EQ (uuid.data4[4], 0xA3);
-   EXPECT_EQ (uuid.data4[5], 0xA4);
-   EXPECT_EQ (uuid.data4[6], 0xA5);
-   EXPECT_EQ (uuid.data4[7], 0xA6);
+   EXPECT_EQ (uuid.time_low, timestamp);
+   EXPECT_EQ (uuid.time_mid, 0xB1B2);
+   EXPECT_EQ (uuid.time_hi_and_version, 0x10B3);
+   EXPECT_EQ (uuid.clock_seq_hi_and_res, 0x80);
+   EXPECT_EQ (uuid.clock_seq_low, 0xB4);
+   EXPECT_EQ (uuid.node[0], 0xA1);
+   EXPECT_EQ (uuid.node[1], 0xA2);
+   EXPECT_EQ (uuid.node[2], 0xA3);
+   EXPECT_EQ (uuid.node[3], 0xA4);
+   EXPECT_EQ (uuid.node[4], 0xA5);
+   EXPECT_EQ (uuid.node[5], 0xA6);
+}
+
+/**
+ * Tests of how received alarm frames are handled.
+ *
+ * The stack is brought up to the point where the alarm transmitter is
+ * enabled (after APPL_RDY CNF), and then alarm frames are injected.
+ */
+class CmrpcAlarmTest : public CmrpcTest
+{
+ protected:
+   void connect_and_enable_alarm()
+   {
+      mock_set_pnal_udp_recvfrom_buffer (connect_req, sizeof (connect_req));
+      run_stack (TEST_UDP_DELAY);
+      mock_set_pnal_udp_recvfrom_buffer (write_req, sizeof (write_req));
+      run_stack (TEST_UDP_DELAY);
+      mock_set_pnal_udp_recvfrom_buffer (prm_end_req, sizeof (prm_end_req));
+      run_stack (TEST_UDP_DELAY);
+      ASSERT_EQ (pnet_application_ready (net, appdata.main_arep), 0);
+      mock_set_pnal_udp_recvfrom_buffer (appl_rdy_rsp, sizeof (appl_rdy_rsp));
+      run_stack (TEST_UDP_DELAY);
+      ASSERT_EQ (appdata.cmdev_state, PNET_EVENT_APPLRDY);
+   }
+
+   void inject_frame (const uint8_t * frame, size_t size)
+   {
+      pnal_buf_t * p_buf = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE);
+
+      EXPECT_NE (p_buf, nullptr);
+      pnal_buf_write (p_buf, 0, frame, size);
+      pnal_buf_set_size (p_buf, size);
+      if (pf_eth_recv (mock_os_data.eth_if_handle, net, p_buf) == 0)
+      {
+         pnal_buf_free (p_buf);
+      }
+      run_stack (TEST_UDP_DELAY);
+   }
+
+   pf_apmx_t * get_apmx_low()
+   {
+      pf_ar_t * p_ar = NULL;
+
+      EXPECT_EQ (pf_ar_find_by_arep (net, appdata.main_arep, &p_ar), 0);
+      return &p_ar->io_ar->apmx[0];
+   }
+
+   /** Check that the frame was ignored without any change of state */
+   void expect_ignored (const uint8_t * frame, size_t size)
+   {
+      pf_apmx_t * p_apmx = get_apmx_low();
+      uint16_t exp_seq_count = p_apmx->exp_seq_count;
+      uint16_t exp_seq_count_o = p_apmx->exp_seq_count_o;
+      pf_apmr_state_values_t apmr_state = p_apmx->apmr_state;
+      uint32_t state_calls = appdata.call_counters.state_calls;
+      pnet_event_values_t cmdev_state = appdata.cmdev_state;
+
+      inject_frame (frame, size);
+
+      EXPECT_EQ (p_apmx->apmr_state, apmr_state);
+      EXPECT_EQ (p_apmx->exp_seq_count, exp_seq_count);
+      EXPECT_EQ (p_apmx->exp_seq_count_o, exp_seq_count_o);
+      EXPECT_EQ (appdata.call_counters.state_calls, state_calls);
+      EXPECT_EQ (appdata.cmdev_state, cmdev_state);
+   }
+};
+
+/* Complete alarm frames. The truncated tests cut these at different places. */
+static const uint8_t alarm_ack_frame[] = {
+      0x1e, 0x30, 0x6c, 0xa2, 0x45, 0x5e, /* Destination MAC */
+      0xc8, 0x5b, 0x76, 0xe6, 0x89, 0xdf, /* Source MAC */
+      0x88, 0x92,                         /* Ethertype */
+      0xfe, 0x01,                         /* Frame id (alarm low) */
+      0x00, 0x01,                         /* Destination endpoint */
+      0x00, 0x02,                         /* Source endpoint (IO-controller) */
+      0x11,                               /* PDU type */
+      0x10,                               /* Flags (TACK) */
+      0xff, 0xff,                         /* Send sequence number */
+      0xff, 0xff,                         /* Ack sequence number */
+      0x00, 0x16,                         /* Var part length */
+      0x80, 0x02, 0x00, 0x12, 0x01, 0x00, /* Alarm ACK block header */
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, /* Alarm data */
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, /* Alarm data */
+      0x00, 0x00, 0x00, 0x00,             /* PNIOStatus */
+};
+
+static const uint8_t alarm_notification_frame[] = {
+      0x1e, 0x30, 0x6c, 0xa2, 0x45, 0x5e, /* Destination MAC */
+      0xc8, 0x5b, 0x76, 0xe6, 0x89, 0xdf, /* Source MAC */
+      0x88, 0x92,                         /* Ethertype */
+      0xfe, 0x01,                         /* Frame id (alarm low) */
+      0x00, 0x01,                         /* Destination endpoint */
+      0x00, 0x02,                         /* Source endpoint (IO-controller) */
+      0x11,                               /* PDU type */
+      0x10,                               /* Flags (TACK) */
+      0xff, 0xff,                         /* Send sequence number */
+      0xff, 0xff,                         /* Ack sequence number */
+      0x00, 0x1c,                         /* Var part length */
+      0x00, 0x02, 0x00, 0x18, 0x01, 0x00, /* Alarm notification block header */
+      0x00, 0x01,                         /* Alarm type */
+      0x00, 0x00, 0x00, 0x00,             /* API */
+      0x00, 0x01,                         /* Slot number */
+      0x00, 0x01,                         /* Subslot number */
+      0x00, 0x00, 0x00, 0x00,             /* Module ident number */
+      0x00, 0x00, 0x00, 0x00,             /* Submodule ident number */
+      0x00, 0x00,                         /* Alarm specifier */
+      0x00, 0x00,                         /* User structure identifier */
+};
+
+static const uint8_t alarm_error_frame[] = {
+      0x1e, 0x30, 0x6c, 0xa2, 0x45, 0x5e, /* Destination MAC */
+      0xc8, 0x5b, 0x76, 0xe6, 0x89, 0xdf, /* Source MAC */
+      0x88, 0x92,                         /* Ethertype */
+      0xfe, 0x01,                         /* Frame id (alarm low) */
+      0x00, 0x01,                         /* Destination endpoint */
+      0x00, 0x02,                         /* Source endpoint (IO-controller) */
+      0x14,                               /* PDU type */
+      0x10,                               /* Flags (TACK) */
+      0xff, 0xff,                         /* Send sequence number */
+      0xff, 0xff,                         /* Ack sequence number */
+      0x00, 0x04,                         /* Var part length */
+      0xcf, 0x81, 0x00, 0x00,             /* PNIOStatus */
+};
+
+TEST_F (CmrpcAlarmTest, ValidAckIsAccepted)
+{
+   connect_and_enable_alarm();
+
+   inject_frame (alarm_ack_frame, sizeof (alarm_ack_frame));
+   EXPECT_EQ (get_apmx_low()->exp_seq_count, 0);
+   EXPECT_EQ (get_apmx_low()->apmr_state, PF_APMR_STATE_OPEN);
+}
+
+TEST_F (CmrpcAlarmTest, TruncatedFixedHeaderIsIgnored)
+{
+   connect_and_enable_alarm();
+
+   /* Cut inside the var part length, the last field of the fixed part (28) */
+   expect_ignored (alarm_ack_frame, 27);
+}
+
+TEST_F (CmrpcAlarmTest, TruncatedBlockHeaderIsIgnored)
+{
+   connect_and_enable_alarm();
+
+   /* Cut inside the block header, which starts at offset 28 */
+   expect_ignored (alarm_ack_frame, 31);
+}
+
+TEST_F (CmrpcAlarmTest, TruncatedAckIsIgnored)
+{
+   connect_and_enable_alarm();
+
+   /* Cut inside the PNIOStatus */
+   expect_ignored (alarm_ack_frame, sizeof (alarm_ack_frame) - 1);
+}
+
+TEST_F (CmrpcAlarmTest, ValidNotificationIsAccepted)
+{
+   connect_and_enable_alarm();
+
+   inject_frame (alarm_notification_frame, sizeof (alarm_notification_frame));
+   EXPECT_EQ (get_apmx_low()->exp_seq_count, 0);
+   EXPECT_EQ (get_apmx_low()->apmr_state, PF_APMR_STATE_OPEN);
+}
+
+/**
+ * An Alarm ACK PDU is delivered to ALPMI also if its TACK can not be sent,
+ * as for a TACK that is lost on the way. The repeated PDU is acknowledged,
+ * but not delivered again.
+ */
+TEST_F (CmrpcAlarmTest, AckDeliveredWhenTackCanNotBeSent)
+{
+   pf_apmx_t * p_apmx;
+   uint16_t sent;
+
+   connect_and_enable_alarm();
+   p_apmx = get_apmx_low();
+   p_apmx->p_alpmx->alpmi_state = PF_ALPMI_STATE_W_ACK;
+
+   mock_os_data.is_eth_send_failing = true;
+   inject_frame (alarm_ack_frame, sizeof (alarm_ack_frame));
+   mock_os_data.is_eth_send_failing = false;
+   EXPECT_EQ (p_apmx->p_alpmx->alpmi_state, PF_ALPMI_STATE_W_ALARM);
+   EXPECT_EQ (p_apmx->apmr_state, PF_APMR_STATE_OPEN);
+   EXPECT_EQ (p_apmx->exp_seq_count, 0);
+
+   /* The repeated PDU */
+   p_apmx->p_alpmx->alpmi_state = PF_ALPMI_STATE_W_ACK;
+   sent = mock_os_data.eth_send_count;
+   inject_frame (alarm_ack_frame, sizeof (alarm_ack_frame));
+   EXPECT_EQ (mock_os_data.eth_send_count, sent + 1);
+   EXPECT_EQ (p_apmx->p_alpmx->alpmi_state, PF_ALPMI_STATE_W_ACK);
+   EXPECT_EQ (p_apmx->exp_seq_count, 0);
+}
+
+/**
+ * An Alarm Notification PDU is delivered to the application also if its TACK
+ * can not be sent. The repeated PDU is acknowledged, but not delivered again.
+ */
+TEST_F (CmrpcAlarmTest, NotificationDeliveredWhenTackCanNotBeSent)
+{
+   uint16_t sent;
+
+   connect_and_enable_alarm();
+
+   mock_os_data.is_eth_send_failing = true;
+   inject_frame (alarm_notification_frame, sizeof (alarm_notification_frame));
+   mock_os_data.is_eth_send_failing = false;
+   EXPECT_EQ (appdata.call_counters.alarm_calls, 1);
+   EXPECT_EQ (get_apmx_low()->exp_seq_count, 0);
+
+   /* The repeated PDU */
+   sent = mock_os_data.eth_send_count;
+   inject_frame (alarm_notification_frame, sizeof (alarm_notification_frame));
+   EXPECT_EQ (mock_os_data.eth_send_count, sent + 1);
+   EXPECT_EQ (appdata.call_counters.alarm_calls, 1);
+}
+
+TEST_F (CmrpcAlarmTest, TruncatedNotificationAlarmDataIsIgnored)
+{
+   connect_and_enable_alarm();
+
+   /* Cut inside the alarm data, which starts at offset 34 */
+   expect_ignored (alarm_notification_frame, 44);
+}
+
+TEST_F (CmrpcAlarmTest, TruncatedNotificationIsIgnored)
+{
+   connect_and_enable_alarm();
+
+   /* Cut inside the user structure identifier */
+   expect_ignored (
+      alarm_notification_frame,
+      sizeof (alarm_notification_frame) - 1);
+}
+
+TEST_F (CmrpcAlarmTest, ValidErrorIsAccepted)
+{
+   connect_and_enable_alarm();
+
+   inject_frame (alarm_error_frame, sizeof (alarm_error_frame));
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_ABORT);
+}
+
+TEST_F (CmrpcAlarmTest, TruncatedErrorIsIgnored)
+{
+   connect_and_enable_alarm();
+
+   expect_ignored (alarm_error_frame, sizeof (alarm_error_frame) - 1);
 }

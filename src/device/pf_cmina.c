@@ -170,6 +170,9 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
    uint32_t netmask = 0;
    uint32_t gateway = 0;
    const char * p_file_directory = pf_cmina_get_file_directory (net);
+#if PNET_OPTION_MC_PRUNING
+   uint16_t station_name_size;
+#endif
 
    LOG_DEBUG (
       PF_DCP_LOG,
@@ -286,21 +289,23 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
             "CMINA(%d): Reset application parameters.\n",
             __LINE__);
 
-         /* Reset I&M data */
-         (void)pf_fspm_clear_im_data (net);
-
 #if PNET_OPTION_SNMP
          /* According to section 8.4 "Behavior to ResetToFactory" in
           * "Test case specification: Behavior" the MIB data should be reset
           * in all supported reset modes. This seems to contradict
           * PN-AL-Services ch. 6.3.11.3.2.
           */
-         pf_snmp_data_reset (net, true);
+         pf_snmp_data_reset (net);
+#endif
+#if PNET_OPTION_MRP
+         pf_mrp_data_clear (net);
 #endif
       }
 
       if (reset_mode == 2 || reset_mode >= 3)
       {
+         net->cmina_commit_ip_suite = true;
+
          /* Reset communication parameters */
          LOG_DEBUG (
             PF_DCP_LOG,
@@ -327,11 +332,19 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
             net->cmina_nonvolatile_dcp_ase.station_name,
             true);
 
+         pf_fspm_cfg_ind (net);
+
          pf_bg_worker_start_job (net, PF_BGJOB_CLEAR_IP_SETTINGS_FILE);
          pf_bg_worker_start_job (net, PF_BGJOB_CLEAR_DIAGNOSTICS_FILE);
 
 #if PNET_OPTION_SNMP
-         pf_snmp_data_reset (net, false);
+         pf_snmp_data_reset (net);
+#if PNET_OPTION_SECURITY_LEVEL_1
+         pf_snmp_config_reset (net);
+#endif
+#endif
+#if PNET_OPTION_MRP
+         pf_mrp_data_clear (net);
 #endif
          pf_pdport_reset_all (net);
       }
@@ -350,7 +363,7 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
 
       strncpy (
          net->cmina_nonvolatile_dcp_ase.product_name,
-         p_cfg->product_name,
+         p_cfg->product_info.name,
          sizeof (net->cmina_nonvolatile_dcp_ase.product_name));
       net->cmina_nonvolatile_dcp_ase
          .product_name[sizeof (net->cmina_nonvolatile_dcp_ase.product_name) - 1] =
@@ -372,6 +385,22 @@ int pf_cmina_set_default_cfg (pnet_t * net, uint16_t reset_mode)
       ret = 0;
    }
 
+#if PNET_OPTION_MC_PRUNING
+   station_name_size = sizeof (net->cmina_current_dcp_ase.station_name) - 1;
+   for (ix = 0; ix < sizeof (net->cmina_current_dcp_ase.station_name); ++ix)
+   {
+      if (net->cmina_current_dcp_ase.station_name[ix] == '\0')
+      {
+         station_name_size = ix;
+         break;
+      }
+   }
+   pnal_get_md5_digest (
+      (uint8_t *)net->cmina_current_dcp_ase.station_name,
+      station_name_size,
+      net->md5_out);
+#endif
+
    return ret;
 }
 
@@ -382,6 +411,10 @@ void pf_cmina_dcp_set_commit (pnet_t * net)
    char netmask_string[PNAL_INET_ADDRSTR_SIZE] = {0}; /** Terminated string */
    char gateway_string[PNAL_INET_ADDRSTR_SIZE] = {0}; /** Terminated string */
    bool permanent = true;
+#if PNET_OPTION_MC_PRUNING
+   uint16_t station_name_size;
+   uint16_t ix;
+#endif
 
    if (net->cmina_commit_ip_suite == false)
    {
@@ -439,6 +472,24 @@ void pf_cmina_dcp_set_commit (pnet_t * net)
       &net->cmina_current_dcp_ase.full_ip_suite.ip_suite.ip_gateway,
       net->cmina_current_dcp_ase.station_name,
       permanent);
+
+#if PNET_OPTION_MC_PRUNING
+   station_name_size = sizeof (net->cmina_current_dcp_ase.station_name) - 1;
+   for (ix = 0; ix < sizeof (net->cmina_current_dcp_ase.station_name); ++ix)
+   {
+      if (net->cmina_current_dcp_ase.station_name[ix] == '\0')
+      {
+         station_name_size = ix;
+         break;
+      }
+   }
+   pnal_get_md5_digest (
+      (uint8_t *)net->cmina_current_dcp_ase.station_name,
+      station_name_size,
+      net->md5_out);
+#endif
+
+   pf_fspm_cfg_ind (net);
 
    if (res != 0)
    {
@@ -633,7 +684,7 @@ int pf_cmina_dcp_set_ind (
    uint16_t block_qualifier,
    uint16_t value_length,
    const uint8_t * p_value,
-   uint8_t * p_block_error)
+   pf_dcp_block_error_values_t * p_block_error)
 {
    int ret = -1;
    bool have_ip = false; /* cmina_current_dcp_ase has IP address after this call
@@ -739,10 +790,7 @@ int pf_cmina_dcp_set_ind (
          }
          break;
       case PF_DCP_SUB_IP_SUITE:
-         if (
-            value_length <
-            sizeof (net->cmina_current_dcp_ase.full_ip_suite)) /* Why less than?
-                                                                */
+         if (value_length == sizeof (net->cmina_current_dcp_ase.full_ip_suite))
          {
             if (pf_cmina_is_full_ipsuite_valid ((pf_full_ip_suite_t *)p_value))
             {
@@ -843,6 +891,13 @@ int pf_cmina_dcp_set_ind (
                   __LINE__,
                   net->cmina_current_dcp_ase.station_name,
                   temp);
+
+#if PNET_OPTION_MC_PRUNING
+               pnal_get_md5_digest (
+                  (uint8_t *)net->cmina_current_dcp_ase.station_name,
+                  value_length,
+                  net->md5_out);
+#endif
 
                if (temp == true)
                {
@@ -1304,6 +1359,9 @@ int pf_cmina_remove_all_data_files (const char * file_directory)
 #if PNET_OPTION_SNMP
    pf_snmp_remove_data_files (file_directory);
 #endif
+#if PNET_OPTION_MRP
+   pf_mrp_remove_data_files (file_directory);
+#endif
    pf_pdport_remove_data_files (file_directory);
 
    return 0;
@@ -1452,7 +1510,9 @@ void pf_cmina_show (pnet_t * net)
       net->cmina_current_dcp_ase.station_name);
    printf ("\n");
 
-   printf ("Default product_name           : \"%s\"\n", p_cfg->product_name);
+   printf (
+      "Default product_name           : \"%s\"\n",
+      p_cfg->product_info.name);
    printf (
       "Perm product_name              : \"%s\"\n",
       net->cmina_nonvolatile_dcp_ase.product_name);

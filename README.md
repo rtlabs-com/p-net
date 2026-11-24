@@ -14,7 +14,7 @@ Profinet device stack for embedded systems
 
 ## Key features
 
-- Profinet v2.43
+- Profinet v2.46
     - Conformance Class A and B
     - Real Time Class 1
     - Multiple Ethernet ports
@@ -44,6 +44,15 @@ This software is dual-licensed, with GPL version 3 and a commercial license.
 If you intend to use this stack in a commercial product, you likely need to
 buy a license. See LICENSE.md for more details.
 
+## Silicon partners
+
+RT-Labs works with silicon vendors to make P-Net available on their platforms:
+
+- Microchip: [PROFINET Quick Start Guide for Linux](https://developerhelp.microchip.com/xwiki/bin/view/applications/industrial-communications/profinet-quick-start-guide-linux/)
+- Renesas: [RT-Labs partner page](https://www.renesas.com/en/design-resources/partners/rt-labs)
+- Infineon: [RT-Labs design partner page](https://www.infineon.com/partners/design-partner/rt-labs)
+- STMicroelectronics: [RT-Labs partner page](https://www.st.com/content/st_com/en/partner/partner-program/partnerpage/rt-labs.html)
+
 ## Getting started
 
 See the tutorial in the documentation: [https://docs.rt-labs.com/p-net/running_sample_app.html](https://docs.rt-labs.com/p-net/running_sample_app.html)
@@ -68,22 +77,23 @@ git clone --recurse-submodules https://github.com/rtlabs-com/p-net.git
 - Configurable number of modules and sub-modules
 - Bare-metal or OS
 - Porting layer provided
-- Supports I&M0 - I&M4. The I&M data is supported for the device, but not for
-  individual modules.
+- Supports I&M0 - I&M4.
 - Shared device (connection to multiple controllers)
+- S2 system redundancy (allowing for controller failure, with two controllers)
+- Dynamic reconfiguration
+- Media redundancy support (for Linux only, so far)
 
 ## Limitations
 
 - This is a device stack, which means that the IO-controller/master/PLC side is
   not supported.
-- No media redundancy (No MRP support)
 - Legacy startup mode is not fully implemented
 - No support for RT_CLASS_UDP
 - No support for DHCP
 - No fast start-up
 - No MC multicast device-to-device
 - No support for shared inputs
-- Supports only full connections, not the limited "DeviceAccess" connection type.
+- No support for Supervisor ARs (Device Access ARs are supported)
 - No iPar (parameter server) support
 - No support for time synchronization
 - No UDP frames at alarm (just the default alarm mechanism is implemented)
@@ -95,7 +105,7 @@ The platform must be able to send and receive raw Ethernet Layer 2 frames,
 and the Ethernet driver must be able to handle full size frames. It
 should also avoid copying data, for performance reasons.
 
-- cmake 3.14 or later
+- cmake 3.28 or later
 
 For Linux:
 

@@ -24,7 +24,7 @@
  *
  * The bookkeeping of diag items is done by CMDEV via:
  *  - pf_cmdev_get_device()
- *  - pf_cmdev_get_subslot_full()
+ *  - pf_cmdev_get_submodule_full()
  *  - pf_cmdev_new_diag()
  *  - pf_cmdev_get_diag_item()
  *  - pf_cmdev_free_diag()
@@ -61,47 +61,86 @@ int pf_diag_exit (void)
    return 0;
 }
 
-/**
- * @internal
- * Update the problem indicator in the PPM data status
- * by looking at all diagnosis items of a sub-slot.
- *
- * @param net              InOut: The p-net stack instance.
- * @param p_ar             InOut: The AR instance.
- * @param p_subslot        In:    The sub-slot instance.
- */
-static void pf_diag_update_station_problem_indicator (
+static int pf_diag_ar_submodule_has_problem (
    pnet_t * net,
-   pf_ar_t * p_ar,
-   const pf_subslot_t * p_subslot)
+   pf_submodule_t * submodule,
+   void * user_data)
 {
-   bool is_problem = false;
-   pf_device_t * p_dev = NULL;
-   uint16_t ix;
-   pf_diag_item_t * p_item;
+   pf_ar_t * ar = user_data;
+   pf_diag_item_t * di;
 
-   if (pf_cmdev_get_device (net, &p_dev) == 0)
+   if (pf_cmrpc_ar_set_equal (ar, submodule->owner))
    {
       /* A problem is indicated if at least one FAULT diagnosis exists. */
-      ix = p_subslot->diag_list;
-      pf_cmdev_get_diag_item (net, ix, &p_item);
-      while (p_item != NULL)
+      pf_cmdev_get_diag_item (net, submodule->diag_list, &di);
+      while (di != NULL)
       {
          if (
-            (p_item->in_use == true) &&
-            ((p_item->usi < PF_USI_CHANNEL_DIAGNOSIS) ||
-             (PF_DIAG_CH_PROP_MAINT_GET (p_item->fmt.std.ch_properties) ==
+            (di->in_use == true) &&
+            ((di->usi < PF_USI_CHANNEL_DIAGNOSIS) ||
+             (PF_DIAG_CH_PROP_MAINT_GET (di->fmt.std.ch_properties) ==
               PNET_DIAG_CH_PROP_MAINT_FAULT)))
          {
-            is_problem = true;
+            return 1;
          }
-
-         ix = p_item->next;
-         pf_cmdev_get_diag_item (net, ix, &p_item);
+         pf_cmdev_get_diag_item (net, di->next, &di);
       }
    }
+   return 0;
+}
 
-   pf_ppm_set_problem_indicator (net, p_ar, is_problem);
+void pf_diag_periodic (pnet_t * net)
+{
+   int i;
+   pf_ar_t * ar;
+   bool has_problem;
+
+   for (i = 0; i < PNET_MAX_AR; ++i)
+   {
+      ar = &net->cmrpc_ar[i];
+      if (!ar->in_use || (ar->io_ar == NULL))
+      {
+         continue;
+      }
+#if PNET_OPTION_SR
+      if (ar->ar_set != NULL)
+      {
+         continue;
+      }
+#endif
+      has_problem =
+         (pf_cmdev_for_each_submodule (
+             net,
+             pf_diag_ar_submodule_has_problem,
+             ar) == 1);
+
+      pf_ppm_set_problem_indicator (net, ar, has_problem);
+   }
+#if PNET_OPTION_SR
+   for (i = 0; i < PNET_MAX_AR_SET; ++i)
+   {
+      pf_ar_set_t * ar_set = &net->cmrpc_ar_set[i];
+
+      if (ar_set->in_use && (ar_set->size > 0))
+      {
+         int n;
+
+         has_problem =
+            (pf_cmdev_for_each_submodule (
+                net,
+                pf_diag_ar_submodule_has_problem,
+                ar_set->ar[0]) == 1);
+
+         for (n = 0; n < ar_set->size; ++n)
+         {
+            if (ar_set->contains_ar[n])
+            {
+               pf_ppm_set_problem_indicator (net, ar_set->ar[n], has_problem);
+            }
+         }
+      }
+   }
+#endif
 }
 
 /**
@@ -110,12 +149,12 @@ static void pf_diag_update_station_problem_indicator (
  *
  * @param net              InOut: The p-net stack instance.
  * @param p_ar             InOut: The AR instance.
- * @param p_subslot        In:    The sub-slot instance.
+ * @param submodule        In:    The submodule instance.
  */
 static void pf_diag_update_submodule_state (
    pnet_t * net,
    pf_ar_t * p_ar,
-   pf_subslot_t * p_subslot)
+   pf_submodule_t * submodule)
 {
    pf_device_t * p_dev = NULL;
    uint16_t ix;
@@ -128,7 +167,7 @@ static void pf_diag_update_submodule_state (
 
    if (pf_cmdev_get_device (net, &p_dev) == 0)
    {
-      ix = p_subslot->diag_list;
+      ix = submodule->diag_list;
       pf_cmdev_get_diag_item (net, ix, &p_item);
       while (p_item != NULL)
       {
@@ -136,7 +175,7 @@ static void pf_diag_update_submodule_state (
          {
             pf_alarm_add_diag_item_to_summary (
                p_ar,
-               p_subslot,
+               submodule,
                p_item,
                &alarm_spec,
                &maint_status);
@@ -160,13 +199,24 @@ static void pf_diag_update_submodule_state (
          ix = p_item->next;
          pf_cmdev_get_diag_item (net, ix, &p_item);
       }
-      p_subslot->diag_summary = diag_summary;
+      submodule->diag_summary = diag_summary;
    }
+}
+
+int pf_diag_update_submodule (
+   pnet_t * net,
+   pf_submodule_t * submodule,
+   void * data)
+{
+   pf_ar_t * ar = data;
+
+   pf_diag_update_submodule_state (net, ar, submodule);
+   return 0;
 }
 
 /**
  * @internal
- * Find and unlink a diag item in the specified sub-slot.
+ * Find and unlink a diag item in the specified submodule.
  *
  * If the USI of the item is in the manufacturer-specified range then
  * the USI is used to identify the item.
@@ -187,7 +237,7 @@ static void pf_diag_update_submodule_state (
  * @param ch_error_type     In:    The channel error type.
  * @param ext_ch_error_type In:    The extended channel error type, or 0.
  * @param usi               In:    The USI.
- * @param pp_subslot        Out:   The sub-slot instance, or NULL if not found.
+ * @param submodule         Out:   The submodule instance, or NULL if not found.
  * @param p_diag_ix         Out:   The diag item index.
  */
 static void pf_diag_find_entry (
@@ -196,7 +246,7 @@ static void pf_diag_find_entry (
    uint16_t ch_error_type,
    uint16_t ext_ch_error_type,
    uint16_t usi,
-   pf_subslot_t ** pp_subslot,
+   pf_submodule_t ** submodule,
    uint16_t * p_diag_ix)
 {
    pf_diag_item_t * p_item = NULL;
@@ -205,17 +255,17 @@ static void pf_diag_find_entry (
    uint16_t item_ix;
 
    *p_diag_ix = PF_DIAG_IX_NULL;
-   *pp_subslot = NULL;
+   *submodule = NULL;
    if (
-      pf_cmdev_get_subslot_full (
+      pf_cmdev_get_submodule_full (
          net,
          p_diag_source->api,
          p_diag_source->slot,
          p_diag_source->subslot,
-         pp_subslot) == 0)
+         submodule) == 0)
    {
       prev_ix = PF_DIAG_IX_NULL;
-      item_ix = (*pp_subslot)->diag_list;
+      item_ix = (*submodule)->diag_list;
       pf_cmdev_get_diag_item (net, item_ix, &p_item);
       while ((p_item != NULL) && (*p_diag_ix == PF_DIAG_IX_NULL))
       {
@@ -251,7 +301,7 @@ static void pf_diag_find_entry (
                else
                {
                   /* Unlink the first item in the list */
-                  (*pp_subslot)->diag_list = p_item->next;
+                  (*submodule)->diag_list = p_item->next;
                }
             }
          }
@@ -269,7 +319,7 @@ static void pf_diag_find_entry (
             else
             {
                /* Unlink the first item in the list */
-               (*pp_subslot)->diag_list = p_item->next;
+               (*submodule)->diag_list = p_item->next;
             }
          }
 
@@ -278,6 +328,41 @@ static void pf_diag_find_entry (
          pf_cmdev_get_diag_item (net, item_ix, &p_item);
       }
    }
+}
+
+static bool pf_diag_unchanged (
+   pf_diag_item_t * item,
+   pnet_diag_ch_prop_maint_values_t severity,
+   uint32_t qual_ch_qualifier,
+   uint32_t ext_ch_add_value,
+   uint16_t manuf_data_len,
+   uint8_t const * manuf_data)
+{
+   if (item->usi == PF_USI_CHANNEL_DIAGNOSIS)
+   {
+      return (
+         PF_DIAG_CH_PROP_MAINT_GET (item->fmt.std.ch_properties) == severity);
+   }
+   else if (item->usi == PF_USI_EXTENDED_CHANNEL_DIAGNOSIS)
+   {
+      return (
+         (PF_DIAG_CH_PROP_MAINT_GET (item->fmt.std.ch_properties) ==
+          severity) &&
+         (item->fmt.std.ext_ch_add_value == ext_ch_add_value));
+   }
+   else if (item->usi == PF_USI_QUALIFIED_CHANNEL_DIAGNOSIS)
+   {
+      return (
+         (item->fmt.std.qual_ch_qualifier == qual_ch_qualifier) &&
+         (item->fmt.std.ext_ch_add_value == ext_ch_add_value));
+   }
+   else if (item->usi < PF_USI_CHANNEL_DIAGNOSIS)
+   {
+      return (
+         (item->fmt.usi.len == manuf_data_len) &&
+         (memcmp (item->fmt.usi.manuf_data, manuf_data, manuf_data_len) == 0));
+   }
+   return true;
 }
 
 int pf_diag_add (
@@ -295,7 +380,7 @@ int pf_diag_add (
 {
    int ret = -1;
    pf_device_t * p_dev = NULL;
-   pf_subslot_t * p_subslot = NULL;
+   pf_submodule_t * submodule = NULL;
    uint16_t item_ix = PF_DIAG_IX_NULL;
    pf_diag_item_t * p_item = NULL;
    bool overwrite = false;
@@ -391,11 +476,11 @@ int pf_diag_add (
    {
       LOG_ERROR (
          PF_ALARM_LOG,
-         "DIAG(%d): Too long manufacturer specific data given: %u Max: %zu "
+         "DIAG(%d): Too long manufacturer specific data given: %u Max: %u "
          "Increase PNET_MAX_DIAG_MANUF_DATA_SIZE\n",
          __LINE__,
          manuf_data_len,
-         sizeof (p_item->fmt.usi.manuf_data));
+         (unsigned int)sizeof (p_item->fmt.usi.manuf_data));
    }
    else if (pf_cmdev_get_device (net, &p_dev) == 0)
    {
@@ -407,10 +492,10 @@ int pf_diag_add (
          ch_error_type,
          ext_ch_error_type,
          usi,
-         &p_subslot,
+         &submodule,
          &item_ix);
 
-      if (p_subslot != NULL)
+      if (submodule != NULL)
       {
          if (item_ix == PF_DIAG_IX_NULL)
          {
@@ -430,6 +515,21 @@ int pf_diag_add (
          {
             /* Reuse the old entry */
             (void)pf_cmdev_get_diag_item (net, item_ix, &p_item);
+            if (pf_diag_unchanged (
+                   p_item,
+                   severity,
+                   qual_ch_qualifier,
+                   ext_ch_add_value,
+                   manuf_data_len,
+                   p_manuf_data))
+            {
+               /* Put the item back */
+               p_item->next = submodule->diag_list;
+               submodule->diag_list = item_ix;
+
+               ret = 0;
+               goto no_change;
+            }
             overwrite = true;
          }
 
@@ -497,17 +597,17 @@ int pf_diag_add (
                p_item->fmt.std.qual_ch_qualifier = qual_ch_qualifier;
             }
 
-            /* Link it into the sub-slot reported list */
-            p_item->next = p_subslot->diag_list;
-            p_subslot->diag_list = item_ix;
-
-            pf_diag_update_submodule_state (net, p_ar, p_subslot);
+            /* Link it into the submodule reported list */
+            p_item->next = submodule->diag_list;
+            submodule->diag_list = item_ix;
 
             if (
-               (p_subslot->ownsm_state == PF_OWNSM_STATE_IOC) ||
-               (p_subslot->ownsm_state == PF_OWNSM_STATE_IOS))
+               (submodule->ownsm_state == PF_OWNSM_STATE_IOC) ||
+               (submodule->ownsm_state == PF_OWNSM_STATE_IOS))
             {
-               p_ar = p_subslot->owner;
+               p_ar = submodule->owner;
+
+               pf_diag_update_submodule_state (net, p_ar, submodule);
 
                ret = pf_alarm_send_diagnosis (
                   net,
@@ -517,9 +617,7 @@ int pf_diag_add (
                   p_diag_source->subslot,
                   p_item);
 
-               pf_diag_update_station_problem_indicator (net, p_ar, p_subslot);
-
-               if (overwrite == true)
+               if (overwrite)
                {
                   /* Time to remove the previous entry */
                   /* Remove the old diag by sending a disappear alarm */
@@ -569,6 +667,7 @@ int pf_diag_add (
             p_diag_source->subslot);
       }
 
+   no_change:
       os_mutex_unlock (p_dev->diag_mutex);
    }
    else
@@ -594,7 +693,7 @@ int pf_diag_update (
 {
    int ret = -1;
    pf_device_t * p_dev = NULL;
-   pf_subslot_t * p_subslot = NULL;
+   pf_submodule_t * submodule = NULL;
    pf_diag_item_t * p_item = NULL;
    pf_diag_item_t old_item;
    uint16_t item_ix = PF_DIAG_IX_NULL;
@@ -672,9 +771,9 @@ int pf_diag_update (
          ch_error_type,
          ext_ch_error_type,
          usi,
-         &p_subslot,
+         &submodule,
          &item_ix);
-      if (p_subslot != NULL)
+      if (submodule != NULL)
       {
          if (pf_cmdev_get_diag_item (net, item_ix, &p_item) == 0)
          {
@@ -703,16 +802,16 @@ int pf_diag_update (
             }
 
             /* Link it into the sub-slot diag list */
-            p_item->next = p_subslot->diag_list;
-            p_subslot->diag_list = item_ix;
+            p_item->next = submodule->diag_list;
+            submodule->diag_list = item_ix;
 
-            pf_diag_update_submodule_state (net, p_ar, p_subslot);
+            pf_diag_update_submodule_state (net, p_ar, submodule);
 
             if (
-               (p_subslot->ownsm_state == PF_OWNSM_STATE_IOC) ||
-               (p_subslot->ownsm_state == PF_OWNSM_STATE_IOS))
+               (submodule->ownsm_state == PF_OWNSM_STATE_IOC) ||
+               (submodule->ownsm_state == PF_OWNSM_STATE_IOS))
             {
-               p_ar = p_subslot->owner;
+               p_ar = submodule->owner;
 
                ret = pf_alarm_send_diagnosis (
                   net,
@@ -721,8 +820,6 @@ int pf_diag_update (
                   p_diag_source->slot,
                   p_diag_source->subslot,
                   p_item);
-
-               pf_diag_update_station_problem_indicator (net, p_ar, p_subslot);
 
                /* Remove the old diag by sending a disappear alarm.
                   The old item should be removed after the new is added */
@@ -781,7 +878,7 @@ int pf_diag_remove (
 {
    int ret = -1;
    pf_device_t * p_dev = NULL;
-   pf_subslot_t * p_subslot = NULL;
+   pf_submodule_t * submodule = NULL;
    uint16_t item_ix = PF_DIAG_IX_NULL;
    pf_diag_item_t * p_item = NULL;
    pf_ar_t * p_ar = NULL;
@@ -824,22 +921,22 @@ int pf_diag_remove (
          ch_error_type,
          ext_ch_error_type,
          usi,
-         &p_subslot,
+         &submodule,
          &item_ix);
 
       os_mutex_unlock (p_dev->diag_mutex);
 
-      if ((p_subslot != NULL) && (item_ix != PF_DIAG_IX_NULL))
+      if ((submodule != NULL) && (item_ix != PF_DIAG_IX_NULL))
       {
          if (pf_cmdev_get_diag_item (net, item_ix, &p_item) == 0)
          {
             if (
-               (p_subslot->ownsm_state == PF_OWNSM_STATE_IOC) ||
-               (p_subslot->ownsm_state == PF_OWNSM_STATE_IOS))
+               (submodule->ownsm_state == PF_OWNSM_STATE_IOC) ||
+               (submodule->ownsm_state == PF_OWNSM_STATE_IOS))
             {
-               p_ar = p_subslot->owner;
+               p_ar = submodule->owner;
 
-               if (p_subslot->diag_list != PF_DIAG_IX_NULL)
+               if (submodule->diag_list != PF_DIAG_IX_NULL)
                {
                   /*
                    * If diagnosis information is removed a diagnosis alarm with
@@ -902,16 +999,11 @@ int pf_diag_remove (
                   "DIAG(%d): No active connection, so no alarm is sent.\n",
                   __LINE__);
             }
-            pf_diag_update_submodule_state (net, p_ar, p_subslot);
+            pf_diag_update_submodule_state (net, p_ar, submodule);
          }
 
          /* Free diag entry */
          pf_cmdev_free_diag (net, item_ix);
-
-         if (p_ar != NULL)
-         {
-            pf_diag_update_station_problem_indicator (net, p_ar, p_subslot);
-         }
       }
       else
       {

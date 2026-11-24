@@ -43,6 +43,7 @@
 
 #include <string.h>
 #include <inttypes.h>
+#include "pf_block_writer.h"
 
 void pf_ppm_init (pnet_t * net)
 {
@@ -130,59 +131,63 @@ void pf_ppm_set_state (pf_ppm_t * p_ppm, pf_ppm_state_values_t state)
  * @param p_buf            InOut:The buffer to be initialized.
  * @param frame_id         In:   The frame_id.
  * @param p_header         In:   The VLAN tag header IOCR parameter.
+ * @return  0  on success.
+ *          -1 if an error occurred.
  */
-static void pf_ppm_init_buf (
+static int pf_ppm_init_buf (
    pf_ppm_t * p_ppm,
    pnal_buf_t * p_buf,
    uint16_t frame_id,
    pf_iocr_tag_header_t * p_header)
 {
-   uint16_t pos;
-   uint8_t * p_payload = (uint8_t *)p_buf->payload;
-   uint16_t u16 = 0;
+   uint16_t pos = 0;
+   pf_put_info_t buf =
+   {
+      .p_frame = p_buf,
+      .p_array = NULL,
+      .len = pnal_buf_get_size (p_buf),
+      .result = PF_PUT_OK,
+   };
+   uint16_t u16;
 
-   p_buf->len = p_ppm->buffer_length;
-   memset (p_payload, 0, p_buf->len);
+   pnal_buf_set_size (p_buf, p_ppm->buffer_length);
+   pf_put_padding (p_ppm->buffer_length, &buf, &pos);
    pos = 0;
 
    /* Insert destination MAC address */
-   memcpy (&p_payload[pos], &p_ppm->da, sizeof (p_ppm->da));
-   pos += sizeof (p_ppm->da);
+   pf_put_mem (&p_ppm->da, sizeof (p_ppm->da), &buf, &pos);
 
    /* Insert source MAC address */
-   memcpy (&p_payload[pos], &p_ppm->sa, sizeof (p_ppm->sa));
-   pos += sizeof (p_ppm->sa);
+   pf_put_mem (&p_ppm->sa, sizeof (p_ppm->sa), &buf, &pos);
 
    /* Insert VLAN Tag protocol identifier (TPID) */
-   u16 = PNAL_ETHTYPE_VLAN;
-   u16 = htons (u16);
-   memcpy (&p_payload[pos], &u16, sizeof (u16));
-   pos += sizeof (u16);
+   pf_put_uint16 (true, PNAL_ETHTYPE_VLAN, &buf, &pos);
 
    /* Insert VLAN ID (VID) and priority (Priority Code Point = PCP) */
    u16 = p_header->vlan_id & 0x0FFF;
    u16 |= (p_header->iocr_user_priority & 0x0007) << 13; /* Three leftmost bits
                                                           */
-   u16 = htons (u16);
-   memcpy (&p_payload[pos], &u16, sizeof (u16));
-   pos += sizeof (u16);
+   pf_put_uint16 (true, u16, &buf, &pos);
 
    /* Insert EtherType */
-   u16 = PNAL_ETHTYPE_PROFINET;
-   u16 = htons (u16);
-   memcpy (&p_payload[pos], &u16, sizeof (u16));
-   pos += sizeof (u16);
+   pf_put_uint16 (true, PNAL_ETHTYPE_PROFINET, &buf, &pos);
 
    /* Insert Profinet frame ID (first part of Ethernet frame payload) */
-   u16 = htons (frame_id);
-   memcpy (&p_payload[pos], &u16, sizeof (u16));
-   /* No further pos advancement, to suppress clang warning */
+   pf_put_uint16 (true, frame_id, &buf, &pos);
+
+   return buf.result == PF_PUT_OK ? 0 : -1;
 }
 
-void pf_ppm_finish_buffer (pnet_t * net, pf_ppm_t * p_ppm, uint16_t data_length)
+int pf_ppm_finish_buffer (pnet_t * net, pf_ppm_t * p_ppm, uint16_t data_length)
 {
-   uint8_t * p_payload = ((pnal_buf_t *)p_ppm->p_send_buffer)->payload;
-   uint16_t u16;
+   uint16_t pos;
+   pf_put_info_t buf =
+   {
+      .p_frame = p_ppm->p_send_buffer,
+      .p_array = NULL,
+      .len = pnal_buf_get_size (p_ppm->p_send_buffer),
+      .result = PF_PUT_OK,
+   };
 
    p_ppm->cycle = pf_ppm_calculate_next_cyclecounter (
       p_ppm->cycle,
@@ -191,24 +196,29 @@ void pf_ppm_finish_buffer (pnet_t * net, pf_ppm_t * p_ppm, uint16_t data_length)
 
    /* Insert data */
    os_mutex_lock (net->ppm_buf_lock);
-   memcpy (&p_payload[p_ppm->buffer_pos], p_ppm->buffer_data, data_length);
+   pos = p_ppm->buffer_pos;
+   pf_put_mem (p_ppm->buffer_data, data_length, &buf, &pos);
    os_mutex_unlock (net->ppm_buf_lock);
 
    /* Insert cycle counter */
-   u16 = htons (p_ppm->cycle);
-   memcpy (&p_payload[p_ppm->cycle_counter_offset], &u16, sizeof (u16));
+   pos = p_ppm->cycle_counter_offset;
+   pf_put_uint16 (true, p_ppm->cycle, &buf, &pos);
 
    /* Insert data status */
-   memcpy (
-      &p_payload[p_ppm->data_status_offset],
-      &p_ppm->data_status,
-      sizeof (p_ppm->data_status));
+   pos = p_ppm->data_status_offset;
+   pf_put_byte (
+      p_ppm->data_status,
+      &buf,
+      &pos);
 
    /* Insert transfer status */
-   memcpy (
-      &p_payload[p_ppm->transfer_status_offset],
-      &p_ppm->transfer_status,
-      sizeof (p_ppm->transfer_status));
+   pos = p_ppm->transfer_status_offset;
+   pf_put_byte (
+      p_ppm->transfer_status,
+      &buf,
+      &pos);
+
+   return buf.result == PF_PUT_OK ? 0 : -1;
 }
 
 /**
@@ -229,7 +239,7 @@ void pf_ppm_finish_buffer (pnet_t * net, pf_ppm_t * p_ppm, uint16_t data_length)
 static int pf_ppm_init_cr_config (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
 {
    const uint16_t vlan_size = 4;
-   pf_iocr_t * p_iocr = &p_ar->iocrs[crep];
+   pf_iocr_t * p_iocr = &p_ar->io_ar->iocrs[crep];
    pf_ppm_t * p_ppm = &p_iocr->ppm;
 
    p_ppm->first_transmit = false;
@@ -271,9 +281,12 @@ static int pf_ppm_init_cr_config (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
                           1;                           /* transfer status */
 
    p_ppm->data_status =
-      BIT (PNET_DATA_STATUS_BIT_STATE) | /* PRIMARY */
       BIT (PNET_DATA_STATUS_BIT_DATA_VALID) |
       BIT (PNET_DATA_STATUS_BIT_STATION_PROBLEM_INDICATOR); /* Normal */
+   if (p_ar->ar_state == PF_AR_STATE_PRIMARY)
+   {
+      p_ppm->data_status |= BIT (PNET_DATA_STATUS_BIT_STATE);
+   }
 
    p_ppm->control_interval = ((uint32_t)p_iocr->param.send_clock_factor *
                               (uint32_t)p_iocr->param.reduction_ratio * 1000U) /
@@ -287,9 +300,10 @@ static int pf_ppm_init_cr_config (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
 
 int pf_ppm_create (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
 {
-   pf_iocr_t * p_iocr = &p_ar->iocrs[crep];
+   pf_iocr_t * p_iocr = &p_ar->io_ar->iocrs[crep];
    pf_ppm_t * p_ppm;
    uint32_t cnt;
+   int error;
 
    CC_ASSERT (net && net->ppm_drv && net->ppm_drv->activate_req && p_ar);
 
@@ -337,11 +351,20 @@ int pf_ppm_create (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
    /* Default_values: Set buffer to zero and IOxS to BAD (=0) */
    /* Default_status: Set cycle_counter to invalid, transfer_status = 0,
     * data_status = 0 */
-   pf_ppm_init_buf (
+   error = pf_ppm_init_buf (
       p_ppm,
       p_ppm->p_send_buffer,
       p_iocr->param.frame_id,
       &p_iocr->param.iocr_tag_header);
+
+   if (error)
+   {
+      pnal_buf_free (p_ppm->p_send_buffer);
+      p_ppm->p_send_buffer = NULL;
+      p_ar->err_cls = PNET_ERROR_CODE_1_PPM;
+      p_ar->err_code = PNET_ERROR_CODE_2_PPM_INVALID_STATE;
+      return -1;
+   }
 
    return net->ppm_drv->create (net, p_ar, crep);
 }
@@ -349,7 +372,7 @@ int pf_ppm_create (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
 int pf_ppm_activate_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
 {
    int ret = -1;
-   pf_iocr_t * p_iocr = &p_ar->iocrs[crep];
+   pf_iocr_t * p_iocr = &p_ar->io_ar->iocrs[crep];
    pf_ppm_t * p_ppm;
 
    p_ppm = &p_iocr->ppm;
@@ -379,7 +402,17 @@ int pf_ppm_activate_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
    p_ppm->ci_running = true;
 
    /* Initialize input data and iops */
-   pf_ppm_finish_buffer (net, p_ppm, p_iocr->in_length);
+   ret = pf_ppm_finish_buffer (net, p_ppm, p_iocr->in_length);
+
+   if (ret != 0)
+   {
+      LOG_ERROR (
+         PF_PPM_LOG,
+         "PPM(%d): Failed to build PPM buffer for AREP %u CREP %" PRIu32 "\n",
+         __LINE__,
+         p_ar->arep,
+         crep);
+   }
 
    ret = net->ppm_drv->activate_req (net, p_ar, crep);
 
@@ -394,7 +427,7 @@ int pf_ppm_activate_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
 int pf_ppm_close_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
 {
 
-   pf_ppm_t * p_ppm = &p_ar->iocrs[crep].ppm;
+   pf_ppm_t * p_ppm = &p_ar->io_ar->iocrs[crep].ppm;
    uint32_t cnt;
 
    LOG_DEBUG (
@@ -424,80 +457,72 @@ int pf_ppm_close_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
    return 0;
 }
 
-int pf_ppm_get_ar_iocr_desc (
+static pf_ar_t * pf_ppm_get_submodule_owner (
    pnet_t * net,
+   uint32_t api_id,
+   uint16_t slot_number,
+   uint16_t subslot_number)
+{
+   pf_submodule_t * submodule;
+
+   if (
+      pf_cmdev_get_submodule_full (
+         net,
+         api_id,
+         slot_number,
+         subslot_number,
+         &submodule) == 0)
+   {
+      if (
+         (submodule->ownsm_state == PF_OWNSM_STATE_IOC) ||
+         (submodule->ownsm_state == PF_OWNSM_STATE_IOS))
+      {
+         return submodule->owner;
+      }
+   }
+   return NULL;
+}
+
+static int pf_ppm_get_ar_iocr_desc (
+   pf_ar_t * ar,
    uint32_t api_id,
    uint16_t slot_nbr,
    uint16_t subslot_nbr,
-   pf_ar_t ** pp_ar,
-   pf_iocr_t ** pp_iocr,
-   pf_iodata_object_t ** pp_iodata,
-   uint32_t * p_crep)
+   pf_iocr_t ** iocr,
+   pf_iodata_object_t ** iodata,
+   uint32_t * crep)
 {
-   int ret = -1;
-   uint32_t crep;
-   uint16_t iodata_ix;
-   pf_subslot_t * p_subslot = NULL;
-   pf_ar_t * p_ar = NULL;
-   pf_iocr_t * p_iocr = NULL;
-   bool found = false;
+   struct
+   {
+      uint32_t crep;
+      pf_iocr_t * iocr;
+      uint16_t index;
+   } l;
 
-   if (
-      pf_cmdev_get_subslot_full (net, api_id, slot_nbr, subslot_nbr, &p_subslot) ==
-      0)
+   for (l.crep = 0; l.crep < ar->io_ar->nbr_iocrs; l.crep++)
    {
       if (
-         (p_subslot->ownsm_state == PF_OWNSM_STATE_IOC) ||
-         (p_subslot->ownsm_state == PF_OWNSM_STATE_IOS))
+         (ar->io_ar->iocrs[l.crep].param.iocr_type == PF_IOCR_TYPE_INPUT) ||
+         (ar->io_ar->iocrs[l.crep].param.iocr_type == PF_IOCR_TYPE_MC_PROVIDER))
       {
-         p_ar = p_subslot->owner;
-      }
-   }
-
-   if (p_ar == NULL)
-   {
-      LOG_DEBUG (PF_PPM_LOG, "PPM(%d): No AR set in sub-slot\n", __LINE__);
-   }
-   else
-   {
-      /*
-       * Search the AR for an INPUT CR or an MC provider CR containing the
-       * sub-slot.
-       */
-      for (crep = 0; ((found == false) && (crep < p_ar->nbr_iocrs)); crep++)
-      {
-         if (
-            (p_ar->iocrs[crep].param.iocr_type == PF_IOCR_TYPE_INPUT) ||
-            (p_ar->iocrs[crep].param.iocr_type == PF_IOCR_TYPE_MC_PROVIDER))
+         l.iocr = &ar->io_ar->iocrs[l.crep];
+         for (l.index = 0; l.index < l.iocr->nbr_data_desc; l.index++)
          {
-            p_iocr = &p_ar->iocrs[crep];
-            for (iodata_ix = 0;
-                 ((found == false) && (iodata_ix < p_iocr->nbr_data_desc));
-                 iodata_ix++)
+            if (
+               l.iocr->data_desc[l.index].in_use &&
+               (l.iocr->data_desc[l.index].api_id == api_id) &&
+               (l.iocr->data_desc[l.index].slot_nbr == slot_nbr) &&
+               (l.iocr->data_desc[l.index].subslot_nbr == subslot_nbr))
             {
-               if (
-                  (p_iocr->data_desc[iodata_ix].in_use == true) &&
-                  (p_iocr->data_desc[iodata_ix].api_id == api_id) &&
-                  (p_iocr->data_desc[iodata_ix].slot_nbr == slot_nbr) &&
-                  (p_iocr->data_desc[iodata_ix].subslot_nbr == subslot_nbr))
-               {
-                  *pp_iodata = &p_iocr->data_desc[iodata_ix];
-                  *pp_iocr = p_iocr;
-                  *pp_ar = p_ar;
-                  *p_crep = crep;
-                  found = true;
-               }
+               *iodata = &l.iocr->data_desc[l.index];
+               *iocr = l.iocr;
+               *crep = l.crep;
+               return 0;
             }
          }
       }
    }
-
-   if (found == true)
-   {
-      ret = 0;
-   }
-
-   return ret;
+   return -1;
 }
 
 int pf_ppm_set_data_and_iops (
@@ -507,73 +532,131 @@ int pf_ppm_set_data_and_iops (
    uint16_t subslot_nbr,
    const uint8_t * p_data,
    uint16_t data_len,
-   const uint8_t * p_iops,
-   uint8_t iops_len)
+   uint8_t iops)
 {
-   int ret = -1;
+   int ret = 0;
    pf_iocr_t * p_iocr = NULL;
    pf_iodata_object_t * p_iodata = NULL;
-   pf_ar_t * p_ar = NULL;
+   pf_ar_t * owner;
+   pf_ar_t * p_ar;
    uint32_t crep;
+   uint16_t ix;
+   const uint8_t * ar_data;
+   uint16_t ar_data_len;
+   uint8_t ar_iops;
 
-   if (
-      pf_ppm_get_ar_iocr_desc (
-         net,
-         api_id,
-         slot_nbr,
-         subslot_nbr,
-         &p_ar,
-         &p_iocr,
-         &p_iodata,
-         &crep) == 0)
+   owner = pf_ppm_get_submodule_owner (net, api_id, slot_nbr, subslot_nbr);
+
+   for (ix = 0; ix < net->ar_order.length; ix++)
    {
+      p_ar = net->ar_order.ar[ix];
+      if (!pf_cmrpc_ar_in_use (p_ar))
+      {
+         continue;
+      }
+
+      if (
+         pf_ppm_get_ar_iocr_desc (
+            p_ar,
+            api_id,
+            slot_nbr,
+            subslot_nbr,
+            &p_iocr,
+            &p_iodata,
+            &crep) != 0)
+      {
+         continue;
+      }
+
+      if (pf_cmrpc_ar_set_equal (owner, p_ar))
+      {
+         ar_data = p_data;
+         ar_data_len = data_len;
+         ar_iops = iops;
+      }
+      else
+      {
+         /* Only the owner may read the input data */
+         ar_data = NULL;
+         ar_data_len = 0;
+         ar_iops = PNET_IOXS_BAD;
+      }
+
       switch (p_iocr->ppm.state)
       {
       case PF_PPM_STATE_W_START:
       case PF_PPM_STATE_RUN:
          if (
-            (p_iodata->data_offset + data_len) >= sizeof (p_iocr->ppm.buffer_data) ||
-            (p_iodata->iops_offset + iops_len) >= sizeof (p_iocr->ppm.buffer_data))
+            (p_iodata->data_offset + data_len) >=
+               sizeof (p_iocr->ppm.buffer_data) ||
+            (p_iodata->iops_offset + sizeof (iops)) >=
+               sizeof (p_iocr->ppm.buffer_data))
          {
             LOG_ERROR (
                PF_PPM_LOG,
-               "PPM(%d): Buffer of size %zu cannot contain data of size %u "
-               "starting at index %u and/or IOPS of size %u starting at %u\n",
+               "PPM(%d): Buffer of size %u cannot contain data of size %u "
+               "starting at index %u and/or IOPS of size %u starting at "
+               "%u\n",
                __LINE__,
-               sizeof (p_iocr->ppm.buffer_data),
+               (unsigned int)sizeof (p_iocr->ppm.buffer_data),
                data_len,
                p_iodata->data_offset,
-               iops_len,
+               (unsigned int)sizeof (iops),
                p_iodata->iops_offset);
+            ret = -1;
          }
          else if (
             (data_len == p_iodata->data_length) &&
-            (iops_len == p_iodata->iops_length))
+            (sizeof (iops) == p_iodata->iops_length))
          {
-            ret = net->ppm_drv->write_data_and_iops (
-               net,
-               p_iocr,
-               p_iodata,
-               p_data,
-               data_len,
-               p_iops,
-               iops_len);
+            if (
+               net->ppm_drv->write_data_and_iops (
+                  net,
+                  p_iocr,
+                  p_iodata,
+                  ar_data,
+                  ar_data_len,
+                  &ar_iops,
+                  sizeof (ar_iops)) != 0)
+            {
+               ret = -1;
+            }
+
+            p_iodata->data_avail = true;
+         }
+         else if (sizeof (iops) == p_iodata->iops_length)
+         {
+            CC_ASSERT (net->ppm_buf_lock != NULL);
+            os_mutex_lock (net->ppm_buf_lock);
+
+            memset (
+               &p_iocr->ppm.buffer_data[p_iodata->data_offset],
+               0,
+               p_iodata->data_length);
+
+            memcpy (
+               &p_iocr->ppm.buffer_data[p_iodata->iops_offset],
+               &ar_iops,
+               sizeof (ar_iops));
+            os_mutex_unlock (net->ppm_buf_lock);
 
             p_iodata->data_avail = true;
          }
          else
          {
-            LOG_ERROR (
+            LOG_WARNING (
                PF_PPM_LOG,
                "PPM(%d): Given data size %u and IOPS size %u, "
-               "but PLC expects sizes %u and %u for slot %u subslot 0x%04x\n",
+               "but PLC expects sizes %u and %u for slot %u subslot "
+               "0x%04x\n",
                __LINE__,
                data_len,
-               iops_len,
+               (unsigned int)sizeof (iops),
                p_iodata->data_length,
                p_iodata->iops_length,
                slot_nbr,
                subslot_nbr);
+            ret = -1;
          }
          break;
       default:
@@ -583,16 +666,9 @@ int pf_ppm_set_data_and_iops (
             __LINE__,
             p_iocr->ppm.state,
             p_ar->arep);
+         ret = -1;
          break;
       }
-   }
-   else
-   {
-      /* May happen after an ABORT */
-      LOG_DEBUG (
-         PF_PPM_LOG,
-         "PPM(%d): No data descriptor found for set data\n",
-         __LINE__);
    }
 
    return ret;
@@ -603,40 +679,70 @@ int pf_ppm_set_iocs (
    uint32_t api_id,
    uint16_t slot_nbr,
    uint16_t subslot_nbr,
-   const uint8_t * p_iocs,
-   uint8_t iocs_len)
+   uint8_t iocs)
 {
-   int ret = -1;
+   int ret = 0;
    pf_iocr_t * p_iocr = NULL;
    pf_iodata_object_t * p_iodata = NULL;
+   pf_ar_t * owner;
    pf_ar_t * p_ar = NULL;
    uint32_t crep;
+   uint16_t ix;
+   uint8_t ar_iocs;
 
-   if (
-      pf_ppm_get_ar_iocr_desc (
-         net,
-         api_id,
-         slot_nbr,
-         subslot_nbr,
-         &p_ar,
-         &p_iocr,
-         &p_iodata,
-         &crep) == 0)
+   owner = pf_ppm_get_submodule_owner (net, api_id, slot_nbr, subslot_nbr);
+
+   for (ix = 0; ix < net->ar_order.length; ix++)
    {
+      p_ar = net->ar_order.ar[ix];
+      if (!pf_cmrpc_ar_in_use (p_ar))
+      {
+         continue;
+      }
+
+      if (
+         pf_ppm_get_ar_iocr_desc (
+            p_ar,
+            api_id,
+            slot_nbr,
+            subslot_nbr,
+            &p_iocr,
+            &p_iodata,
+            &crep) != 0)
+      {
+         continue;
+      }
+
+      if (pf_cmrpc_ar_set_equal (owner, p_ar))
+      {
+         ar_iocs = iocs;
+      }
+      else
+      {
+         ar_iocs = PNET_IOXS_BAD;
+      }
+
       switch (p_iocr->ppm.state)
       {
       case PF_PPM_STATE_W_START:
       case PF_PPM_STATE_RUN:
-         if (iocs_len == p_iodata->iocs_length)
+         if (sizeof (iocs) == p_iodata->iocs_length)
          {
-            ret = net->ppm_drv
-                     ->write_iocs (net, p_iocr, p_iodata, p_iocs, iocs_len);
+            if (
+               net->ppm_drv->write_iocs (
+                  net,
+                  p_iocr,
+                  p_iodata,
+                  &ar_iocs,
+                  sizeof (ar_iocs)) != 0)
+            {
+               ret = -1;
+            }
          }
          else if (p_iodata->iocs_length == 0)
          {
             /* ToDo: What does the spec say about this case? */
             LOG_DEBUG (PF_PPM_LOG, "PPM(%d): iocs_len is zero\n", __LINE__);
-            ret = 0;
          }
          else
          {
@@ -645,10 +751,11 @@ int pf_ppm_set_iocs (
                "PPM(%d): Given IOCS size %u, but PLC expects size %u "
                "for slot %u subslot 0x%04x\n",
                __LINE__,
-               iocs_len,
+               (unsigned)sizeof (iocs),
                (unsigned)p_iodata->iocs_length,
                slot_nbr,
                subslot_nbr);
+            ret = -1;
          }
          break;
       default:
@@ -658,16 +765,9 @@ int pf_ppm_set_iocs (
             __LINE__,
             (unsigned)p_iocr->ppm.state,
             p_ar->arep);
+         ret = -1;
          break;
       }
-   }
-   else
-   {
-      /* May happen after an ABORT */
-      LOG_ERROR (
-         PF_PPM_LOG,
-         "PPM(%d): No data descriptor found for set iocs\n",
-         __LINE__);
    }
 
    return ret;
@@ -689,92 +789,116 @@ int pf_ppm_get_data_and_iops (
    pf_ar_t * p_ar = NULL;
    uint32_t crep;
 
-   if (
-      pf_ppm_get_ar_iocr_desc (
-         net,
-         api_id,
-         slot_nbr,
-         subslot_nbr,
-         &p_ar,
-         &p_iocr,
-         &p_iodata,
-         &crep) == 0)
+   p_ar = pf_ppm_get_submodule_owner (net, api_id, slot_nbr, subslot_nbr);
+
+#if PNET_OPTION_SR
+   if ((p_ar != NULL) && (p_ar->ar_set != NULL))
    {
-      switch (p_iocr->ppm.state)
+      if (p_ar->ar_set->primary_ar != NULL)
       {
-      case PF_PPM_STATE_W_START:
-         p_ar->err_cls = PNET_ERROR_CODE_1_PPM;
-         p_ar->err_code = PNET_ERROR_CODE_2_PPM_INVALID_STATE;
-         LOG_DEBUG (
-            PF_PPM_LOG,
-            "PPM(%d): Get data in wrong state: %u for AREP %u\n",
-            __LINE__,
-            p_iocr->ppm.state,
-            p_ar->arep);
-         break;
-      case PF_PPM_STATE_RUN:
-         if (
-            (p_iodata->data_offset + p_iodata->data_length) >= sizeof (p_iocr->ppm.buffer_data) ||
-            (p_iodata->iops_offset + p_iodata->iops_length) >= sizeof (p_iocr->ppm.buffer_data))
+         p_ar = p_ar->ar_set->primary_ar;
+      }
+   }
+#endif
+
+   if (p_ar != NULL)
+   {
+      if (
+         pf_ppm_get_ar_iocr_desc (
+            p_ar,
+            api_id,
+            slot_nbr,
+            subslot_nbr,
+            &p_iocr,
+            &p_iodata,
+            &crep) == 0)
+      {
+         switch (p_iocr->ppm.state)
          {
+         case PF_PPM_STATE_W_START:
+            p_ar->err_cls = PNET_ERROR_CODE_1_PPM;
+            p_ar->err_code = PNET_ERROR_CODE_2_PPM_INVALID_STATE;
+            LOG_DEBUG (
+               PF_PPM_LOG,
+               "PPM(%d): Get data in wrong state: %u for AREP %u\n",
+               __LINE__,
+               p_iocr->ppm.state,
+               p_ar->arep);
+            break;
+         case PF_PPM_STATE_RUN:
+            if (
+               (p_iodata->data_offset + p_iodata->data_length) >=
+                  sizeof (p_iocr->ppm.buffer_data) ||
+               (p_iodata->iops_offset + p_iodata->iops_length) >=
+                  sizeof (p_iocr->ppm.buffer_data))
+            {
+               LOG_ERROR (
+                  PF_PPM_LOG,
+                  "PPM(%d): Cannot read data of size %u starting at index %u "
+                  "and/or IOPS of size %u starting at %u from buffer of size "
+                  "%u\n",
+                  __LINE__,
+                  p_iodata->data_length,
+                  p_iodata->data_offset,
+                  p_iodata->iops_length,
+                  p_iodata->iops_offset,
+                  (unsigned int)sizeof (p_iocr->ppm.buffer_data));
+            }
+            else if (
+               (*p_data_len >= p_iodata->data_length) &&
+               (*p_iops_len >= p_iodata->iops_length))
+            {
+               *p_data_len = p_iodata->data_length;
+               *p_iops_len = p_iodata->iops_length;
+               ret = net->ppm_drv->read_data_and_iops (
+                  net,
+                  p_iocr,
+                  p_iodata,
+                  p_data,
+                  *p_data_len,
+                  p_iops,
+                  *p_iops_len);
+            }
+            else
+            {
+               LOG_ERROR (
+                  PF_PPM_LOG,
+                  "PPM(%d): Given data buffer size %u and IOPS buffer size "
+                  "%u, but minimum sizes are %u and %u for slot %u subslot "
+                  "0x%04x\n",
+                  __LINE__,
+                  (unsigned)*p_data_len,
+                  (unsigned)*p_iops_len,
+                  (unsigned)p_iodata->data_length,
+                  (unsigned)p_iodata->iops_length,
+                  slot_nbr,
+                  subslot_nbr);
+            }
+            break;
+         default:
             LOG_ERROR (
                PF_PPM_LOG,
-               "PPM(%d): Cannot read data of size %u starting at index %u "
-               "and/or IOPS of size %u starting at %u from buffer of size %zu\n",
+               "PPM(%d): Get data in wrong state: %u for AREP %u\n",
                __LINE__,
-               p_iodata->data_length,
-               p_iodata->data_offset,
-               p_iodata->iops_length,
-               p_iodata->iops_offset,
-               sizeof (p_iocr->ppm.buffer_data));
+               (unsigned)p_iocr->ppm.state,
+               p_ar->arep);
+            break;
          }
-         else if (
-            (*p_data_len >= p_iodata->data_length) &&
-            (*p_iops_len >= p_iodata->iops_length))
-         {
-            *p_data_len = p_iodata->data_length;
-            *p_iops_len = p_iodata->iops_length;
-            ret = net->ppm_drv->read_data_and_iops (
-               net,
-               p_iocr,
-               p_iodata,
-               p_data,
-               *p_data_len,
-               p_iops,
-               *p_iops_len);
-         }
-         else
-         {
-            LOG_ERROR (
-               PF_PPM_LOG,
-               "PPM(%d): Given data buffer size %u and IOPS buffer size "
-               "%u, but minimum sizes are %u and %u for slot %u subslot "
-               "0x%04x\n",
-               __LINE__,
-               (unsigned)*p_data_len,
-               (unsigned)*p_iops_len,
-               (unsigned)p_iodata->data_length,
-               (unsigned)p_iodata->iops_length,
-               slot_nbr,
-               subslot_nbr);
-         }
-         break;
-      default:
+      }
+      else
+      {
+         /* May happen after an ABORT */
          LOG_ERROR (
             PF_PPM_LOG,
-            "PPM(%d): Get data in wrong state: %u for AREP %u\n",
-            __LINE__,
-            (unsigned)p_iocr->ppm.state,
-            p_ar->arep);
-         break;
+            "PPM(%d): No data descriptor found for get data\n",
+            __LINE__);
       }
    }
    else
    {
-      /* May happen after an ABORT */
       LOG_ERROR (
          PF_PPM_LOG,
-         "PPM(%d): No data descriptor found for get data\n",
+         "PPM(%d): No owner of submodule\n",
          __LINE__);
    }
 
@@ -795,66 +919,81 @@ int pf_ppm_get_iocs (
    pf_ar_t * p_ar = NULL;
    uint32_t crep;
 
-   if (
-      pf_ppm_get_ar_iocr_desc (
-         net,
-         api_id,
-         slot_nbr,
-         subslot_nbr,
-         &p_ar,
-         &p_iocr,
-         &p_iodata,
-         &crep) == 0)
+   p_ar = pf_ppm_get_submodule_owner (net, api_id, slot_nbr, subslot_nbr);
+
+#if PNET_OPTION_SR
+   if ((p_ar != NULL) && (p_ar->ar_set != NULL))
    {
-      switch (p_iocr->ppm.state)
+      if (p_ar->ar_set->primary_ar != NULL)
       {
-      case PF_PPM_STATE_W_START:
-         p_ar->err_cls = PNET_ERROR_CODE_1_PPM;
-         p_ar->err_code = PNET_ERROR_CODE_2_PPM_INVALID_STATE;
-         LOG_DEBUG (
-            PF_PPM_LOG,
-            "PPM(%d): Get iocs in wrong state: %u for AREP %u\n",
-            __LINE__,
-            p_iocr->ppm.state,
-            p_ar->arep);
-         break;
-      case PF_PPM_STATE_RUN:
-         if (*p_iocs_len >= p_iodata->iocs_length)
-         {
-            *p_iocs_len = p_iodata->iocs_length;
-            ret = net->ppm_drv
-                     ->read_iocs (net, p_iocr, p_iodata, p_iocs, *p_iocs_len);
-         }
-         else
-         {
-            LOG_ERROR (
-               PF_PPM_LOG,
-               "PPM(%d): Given IOCS buffer size %u, but minimum size is %u "
-               "for slot %u subslot 0x%04x\n",
-               __LINE__,
-               (unsigned)*p_iocs_len,
-               (unsigned)p_iodata->iocs_length,
-               slot_nbr,
-               subslot_nbr);
-         }
-         break;
-      default:
-         LOG_ERROR (
-            PF_PPM_LOG,
-            "PPM(%d): Get iocs in wrong state: %u for AREP %u\n",
-            __LINE__,
-            (unsigned)p_iocr->ppm.state,
-            p_ar->arep);
-         break;
+         p_ar = p_ar->ar_set->primary_ar;
       }
    }
-   else
+#endif
+
+   if (p_ar != NULL)
    {
-      /* May happen after an ABORT */
-      LOG_ERROR (
-         PF_PPM_LOG,
-         "PPM(%d): No data descriptor found for get iocs\n",
-         __LINE__);
+      if (
+         pf_ppm_get_ar_iocr_desc (
+            p_ar,
+            api_id,
+            slot_nbr,
+            subslot_nbr,
+            &p_iocr,
+            &p_iodata,
+            &crep) == 0)
+      {
+         switch (p_iocr->ppm.state)
+         {
+         case PF_PPM_STATE_W_START:
+            p_ar->err_cls = PNET_ERROR_CODE_1_PPM;
+            p_ar->err_code = PNET_ERROR_CODE_2_PPM_INVALID_STATE;
+            LOG_DEBUG (
+               PF_PPM_LOG,
+               "PPM(%d): Get iocs in wrong state: %u for AREP %u\n",
+               __LINE__,
+               p_iocr->ppm.state,
+               p_ar->arep);
+            break;
+         case PF_PPM_STATE_RUN:
+            if (*p_iocs_len >= p_iodata->iocs_length)
+            {
+               *p_iocs_len = p_iodata->iocs_length;
+               ret =
+                  net->ppm_drv
+                     ->read_iocs (net, p_iocr, p_iodata, p_iocs, *p_iocs_len);
+            }
+            else
+            {
+               LOG_ERROR (
+                  PF_PPM_LOG,
+                  "PPM(%d): Given IOCS buffer size %u, but minimum size is %u "
+                  "for slot %u subslot 0x%04x\n",
+                  __LINE__,
+                  (unsigned)*p_iocs_len,
+                  (unsigned)p_iodata->iocs_length,
+                  slot_nbr,
+                  subslot_nbr);
+            }
+            break;
+         default:
+            LOG_ERROR (
+               PF_PPM_LOG,
+               "PPM(%d): Get iocs in wrong state: %u for AREP %u\n",
+               __LINE__,
+               (unsigned)p_iocr->ppm.state,
+               p_ar->arep);
+            break;
+         }
+      }
+      else
+      {
+         /* May happen after an ABORT */
+         LOG_ERROR (
+            PF_PPM_LOG,
+            "PPM(%d): No data descriptor found for get iocs\n",
+            __LINE__);
+      }
    }
 
    return ret;
@@ -868,7 +1007,7 @@ int pf_ppm_set_data_status_state (
 {
    pf_ppm_t * p_ppm;
 
-   p_ppm = &p_ar->iocrs[crep].ppm;
+   p_ppm = &p_ar->io_ar->iocrs[crep].ppm;
 
    if (primary == true)
    {
@@ -881,7 +1020,7 @@ int pf_ppm_set_data_status_state (
 
    return net->ppm_drv->write_data_status (
       net,
-      &p_ar->iocrs[crep],
+      &p_ar->io_ar->iocrs[crep],
       p_ppm->data_status);
 }
 
@@ -893,7 +1032,7 @@ int pf_ppm_set_data_status_redundancy (
 {
    pf_ppm_t * p_ppm;
 
-   p_ppm = &p_ar->iocrs[crep].ppm;
+   p_ppm = &p_ar->io_ar->iocrs[crep].ppm;
 
    if (redundant == true)
    {
@@ -906,7 +1045,7 @@ int pf_ppm_set_data_status_redundancy (
 
    return net->ppm_drv->write_data_status (
       net,
-      &p_ar->iocrs[crep],
+      &p_ar->io_ar->iocrs[crep],
       p_ppm->data_status);
 }
 
@@ -918,7 +1057,7 @@ int pf_ppm_set_data_status_provider (
 {
    pf_ppm_t * p_ppm;
 
-   p_ppm = &p_ar->iocrs[crep].ppm;
+   p_ppm = &p_ar->io_ar->iocrs[crep].ppm;
 
    if (run == true)
    {
@@ -931,7 +1070,7 @@ int pf_ppm_set_data_status_provider (
 
    return net->ppm_drv->write_data_status (
       net,
-      &p_ar->iocrs[crep],
+      &p_ar->io_ar->iocrs[crep],
       p_ppm->data_status);
 }
 
@@ -948,27 +1087,27 @@ void pf_ppm_set_problem_indicator (
 {
    uint16_t ix;
 
-   for (ix = 0; ix < NELEMENTS (p_ar->iocrs); ix++)
+   for (ix = 0; ix < NELEMENTS (p_ar->io_ar->iocrs); ix++)
    {
       if (
-         (p_ar->iocrs[ix].param.iocr_type == PF_IOCR_TYPE_INPUT) ||
-         (p_ar->iocrs[ix].param.iocr_type == PF_IOCR_TYPE_MC_PROVIDER))
+         (p_ar->io_ar->iocrs[ix].param.iocr_type == PF_IOCR_TYPE_INPUT) ||
+         (p_ar->io_ar->iocrs[ix].param.iocr_type == PF_IOCR_TYPE_MC_PROVIDER))
       {
          if (problem_indicator == true)
          {
-            p_ar->iocrs[ix].ppm.data_status &=
+            p_ar->io_ar->iocrs[ix].ppm.data_status &=
                ~BIT (PNET_DATA_STATUS_BIT_STATION_PROBLEM_INDICATOR);
          }
          else
          {
-            p_ar->iocrs[ix].ppm.data_status |=
+            p_ar->io_ar->iocrs[ix].ppm.data_status |=
                BIT (PNET_DATA_STATUS_BIT_STATION_PROBLEM_INDICATOR);
          }
 
          net->ppm_drv->write_data_status (
             net,
-            &p_ar->iocrs[ix],
-            p_ar->iocrs[ix].ppm.data_status);
+            &p_ar->io_ar->iocrs[ix],
+            p_ar->io_ar->iocrs[ix].ppm.data_status);
       }
    }
 }
@@ -1093,8 +1232,9 @@ void pf_ppm_show (const pf_ppm_t * p_ppm)
    printf ("   trx_cnt                      = %u\n", (unsigned)p_ppm->trx_cnt);
    printf ("   p_send_buffer                = %p\n", p_ppm->p_send_buffer);
    printf (
-      "   p_send_buffer->len           = %u\n",
-      p_ppm->p_send_buffer ? ((pnal_buf_t *)(p_ppm->p_send_buffer))->len : 0);
+      "   p_send_buffer size           = %u\n",
+      p_ppm->p_send_buffer ? (unsigned)pnal_buf_get_size (p_ppm->p_send_buffer)
+                           : 0);
    printf ("   new_buf                      = %u\n", (unsigned)p_ppm->new_buf);
    printf (
       "   control_interval             = %u\n",

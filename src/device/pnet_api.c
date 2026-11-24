@@ -15,7 +15,9 @@
 
 #ifdef UNIT_TEST
 #define pnal_snmp_init    mock_pnal_snmp_init
+#define pnal_mrp_init     mock_pnal_mrp_init
 #define pf_bg_worker_init mock_pf_bg_worker_init
+#define pf_bg_worker_start_job   mock_pf_bg_worker_start_job
 #endif
 
 #include <inttypes.h>
@@ -25,8 +27,8 @@
 #include "pf_includes.h"
 #include "pf_block_reader.h"
 
-#if PNET_MAX_AR < 1
-#error "PNET_MAX_AR needs to be at least 1"
+#if PNET_MAX_IO_AR < 1
+#error "PNET_MAX_IO_AR needs to be at least 1"
 #endif
 
 #if PNET_MAX_API < 1
@@ -61,6 +63,9 @@ int pnet_init_only (pnet_t * net, const pnet_cfg_t * p_cfg)
    pf_ppm_init (net);
    pf_alarm_init (net);
 
+   pf_bg_worker_init (net);
+   pf_lldp_init (net);
+
    if (pf_eth_init (net, p_cfg) != 0)
    {
       LOG_ERROR (
@@ -70,24 +75,35 @@ int pnet_init_only (pnet_t * net, const pnet_cfg_t * p_cfg)
       return -1;
    }
 
-   pf_bg_worker_init (net);
    pf_cmina_init (net); /* Read from permanent pool */
-
    pf_dcp_exit (net); /* Prepare for re-init. */
    pf_dcp_init (net); /* Start DCP */
    pf_port_init (net);
    pf_port_main_interface_init (net);
-   pf_lldp_init (net);
    pf_pdport_init (net);
 
    /* Configure SNMP server if enabled */
 #if PNET_OPTION_SNMP
    pf_snmp_data_init (net);
-   if (pnal_snmp_init (net, &p_cfg->pnal_cfg) != 0)
+   if (pnal_snmp_init (net, p_cfg->pnal_cfg) != 0)
    {
       LOG_ERROR (PNET_LOG, "API(%d): Failed to configure SNMP\n", __LINE__);
       return -1;
    }
+#endif
+
+   /* Configure MRP client if enabled */
+#if PNET_OPTION_MRP
+   pf_mrp_init (net);
+   if (pnal_mrp_init (net, p_cfg->pnal_cfg) != 0)
+   {
+      LOG_ERROR (
+         PNET_LOG,
+         "API(%d): Failed to configure MRP client\n",
+         __LINE__);
+      return -1;
+   }
+   pf_mrp_data_init (net, false);
 #endif
 
    pf_cmdev_exit (net); /* Prepare for re-init */
@@ -111,9 +127,9 @@ pnet_t * pnet_init (const pnet_cfg_t * p_cfg)
    {
       LOG_ERROR (
          PNET_LOG,
-         "API(%d): Failed to allocate memory for pnet_t (%zu bytes)\n",
+         "API(%d): Failed to allocate memory for pnet_t (%u bytes)\n",
          __LINE__,
-         sizeof (*net));
+         (unsigned int)sizeof (*net));
       return NULL;
    }
 
@@ -124,6 +140,67 @@ pnet_t * pnet_init (const pnet_cfg_t * p_cfg)
    }
 
    return net;
+}
+
+int pnet_load_im (pnet_t * net, char const * filename, pnet_im_file_data_t * data)
+{
+   int ret;
+   char const * directory = pf_cmina_get_file_directory (net);
+
+   ret = pf_file_load (directory, filename, data, sizeof (*data));
+   LOG_DEBUG (
+      PNET_LOG,
+      ((ret == 0) ? "API(%d): Read I&M data from file %s.\n"
+                  : "API(%d): Failed to read I&M data from file %s.\n"),
+      __LINE__,
+      filename);
+   return ret;
+}
+
+int pnet_save_im (pnet_t * net, char const * filename, pnet_im_file_data_t * data)
+{
+   pnet_im_file_data_t old_data;
+   char const * directory = pf_cmina_get_file_directory (net);
+   int ret = 0;
+
+   switch (pf_file_save_if_modified (
+      directory,
+      filename,
+      data,
+      &old_data,
+      sizeof (*data)))
+   {
+   case 2:
+      LOG_DEBUG (
+         PNET_LOG,
+         "API(%d): Saved I&M to new file (%s).\n",
+         __LINE__,
+         filename);
+      break;
+   case 1:
+      LOG_DEBUG (
+         PNET_LOG,
+         "API(%d): Saved I&M to file (%s).\n",
+         __LINE__,
+         filename);
+      break;
+   case 0:
+      LOG_DEBUG (
+         PNET_LOG,
+         "API(%d): I&M file unchanged (%s).\n",
+         __LINE__,
+         filename);
+      break;
+   default:
+      LOG_ERROR (
+         PNET_LOG,
+         "API(%d): Failed to save I&M to file (%s).\n",
+         __LINE__,
+         filename);
+      ret = -1;
+      break;
+   }
+   return ret;
 }
 
 void pnet_handle_periodic (pnet_t * net)
@@ -154,6 +231,7 @@ void pnet_handle_periodic (pnet_t * net)
    pf_scheduler_tick (net);
 
    pf_pdport_periodic (net);
+   pf_diag_periodic (net);
 
 #if LOG_DEBUG_ENABLED(PNET_LOG)
    end_time_us = os_get_current_time_us();
@@ -210,11 +288,6 @@ void pnet_show (pnet_t * net, unsigned level)
          printf ("\n\n");
          pf_scheduler_show (net);
       }
-      if (level & 0x8000)
-      {
-         printf ("\n\n");
-         pf_fspm_im_show (net);
-      }
       if (level & 0x0100)
       {
          pf_port_show (net);
@@ -252,8 +325,6 @@ int pnet_input_set_data_and_iops (
    uint16_t data_len,
    uint8_t iops)
 {
-   uint8_t iops_len = 1;
-
    return pf_ppm_set_data_and_iops (
       net,
       api,
@@ -261,8 +332,7 @@ int pnet_input_set_data_and_iops (
       subslot,
       p_data,
       data_len,
-      &iops,
-      iops_len);
+      iops);
 }
 
 int pnet_input_get_iocs (
@@ -308,9 +378,7 @@ int pnet_output_set_iocs (
    uint16_t subslot,
    uint8_t iocs)
 {
-   uint8_t iocs_len = 1;
-
-   return pf_ppm_set_iocs (net, api, slot, subslot, &iocs, iocs_len);
+   return pf_ppm_set_iocs (net, api, slot, subslot, iocs);
 }
 
 int pnet_plug_module (
@@ -319,7 +387,7 @@ int pnet_plug_module (
    uint16_t slot,
    uint32_t module_ident)
 {
-   return pf_cmdev_plug_module (net, api, slot, module_ident);
+   return pf_cmdev_plug_module (net, api, slot, module_ident, NULL);
 }
 
 int pnet_plug_submodule (
@@ -331,7 +399,8 @@ int pnet_plug_submodule (
    uint32_t submodule_ident,
    pnet_submodule_dir_t direction,
    uint16_t length_input,
-   uint16_t length_output)
+   uint16_t length_output,
+   uint8_t flags)
 {
    return pf_cmdev_plug_submodule (
       net,
@@ -343,7 +412,7 @@ int pnet_plug_submodule (
       direction,
       length_input,
       length_output,
-      false);
+      flags);
 }
 
 int pnet_pull_module (pnet_t * net, uint32_t api, uint16_t slot)
@@ -357,7 +426,16 @@ int pnet_pull_submodule (
    uint16_t slot,
    uint16_t subslot)
 {
-   return pf_cmdev_pull_submodule (net, api, slot, subslot);
+   /*
+      Ideally, the last argument in the call below should be true, indicating
+      that if this is the last submodule currently plugged in the module, then
+      the module should also be pulled. However, the current sample application
+      keeps its own state of which modules are plugged, so that would not work.
+      The real solution would be to get rid of the practice (which P-Net has
+      invented) of having the application be responsible for plugging and
+      pulling modules.
+   */
+   return pf_cmdev_pull_submodule (net, api, slot, subslot, false);
 }
 
 int pnet_set_primary_state (pnet_t * net, bool primary)
@@ -375,10 +453,10 @@ int pnet_set_primary_state (pnet_t * net, bool primary)
 
    for (ar_ix = 0; ar_ix < PNET_MAX_AR; ar_ix++)
    {
-      p_ar = pf_ar_find_by_index (net, ar_ix);
+      p_ar = pf_io_ar_find_by_index (net, ar_ix);
       if ((p_ar != NULL) && (p_ar->in_use == true))
       {
-         for (cr_ix = 0; cr_ix < p_ar->nbr_iocrs; cr_ix++)
+         for (cr_ix = 0; cr_ix < p_ar->io_ar->nbr_iocrs; cr_ix++)
          {
             if (pf_ppm_set_data_status_state (net, p_ar, cr_ix, primary) != 0)
             {
@@ -406,10 +484,10 @@ int pnet_set_redundancy_state (pnet_t * net, bool redundant)
 
    for (ar_ix = 0; ar_ix < PNET_MAX_AR; ar_ix++)
    {
-      p_ar = pf_ar_find_by_index (net, ar_ix);
+      p_ar = pf_io_ar_find_by_index (net, ar_ix);
       if ((p_ar != NULL) && (p_ar->in_use == true))
       {
-         for (cr_ix = 0; cr_ix < p_ar->nbr_iocrs; cr_ix++)
+         for (cr_ix = 0; cr_ix < p_ar->io_ar->nbr_iocrs; cr_ix++)
          {
             if (pf_ppm_set_data_status_redundancy (net, p_ar, cr_ix, redundant) != 0)
             {
@@ -437,10 +515,10 @@ int pnet_set_provider_state (pnet_t * net, bool run)
 
    for (ar_ix = 0; ar_ix < PNET_MAX_AR; ar_ix++)
    {
-      p_ar = pf_ar_find_by_index (net, ar_ix);
+      p_ar = pf_io_ar_find_by_index (net, ar_ix);
       if ((p_ar != NULL) && (p_ar->in_use == true))
       {
-         for (cr_ix = 0; cr_ix < p_ar->nbr_iocrs; cr_ix++)
+         for (cr_ix = 0; cr_ix < p_ar->io_ar->nbr_iocrs; cr_ix++)
          {
             if (pf_ppm_set_data_status_provider (net, p_ar, cr_ix, run) != 0)
             {
@@ -472,13 +550,34 @@ int pnet_application_ready (pnet_t * net, uint32_t arep)
    return ret;
 }
 
-void pnet_sm_released_cnf (pnet_t * net, uint32_t arep)
+int pnet_sm_set_application_ready_pending (
+   pnet_t * net,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
+   bool pending)
+{
+   pf_submodule_t * real_sm;
+
+   if (pf_cmdev_get_submodule_full (net, api, slot, subslot, &real_sm) == 0)
+   {
+      real_sm->application_ready_pending = pending;
+      return 0;
+   }
+   else
+   {
+      return -1;
+   }
+}
+
+void pnet_sm_activated_cnf (pnet_t * net, uint32_t arep)
 {
    pf_ar_t * ar = NULL;
 
    LOG_DEBUG (
       PNET_LOG,
-      "API(%d): Application confirms released submodule for AREP %" PRIu32 "\n",
+      "API(%d): Application confirms activated submodule for AREP %" PRIu32
+      "\n",
       __LINE__,
       arep);
    if (pf_ar_find_by_arep (net, arep, &ar) == 0)
@@ -612,6 +711,20 @@ int pnet_alarm_send_ack (
    }
 
    return ret;
+}
+
+int pnet_set_bg_job_events (pnet_t * net, uint32_t flags)
+{
+   if (net == NULL)
+   {
+      return -1;
+   }
+   if (flags == 0)
+   {
+      return 0;
+   }
+   pf_bg_worker_set_user_events (net, flags);
+   return pf_bg_worker_start_job (net, PF_BGJOB_USER_CALLBACK);
 }
 
 /************************** Low-level diagnosis functions ******************/

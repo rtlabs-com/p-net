@@ -244,65 +244,65 @@ void pf_alarm_show (const pf_ar_t * p_ar)
    printf ("Alarms   (low prio)\n");
    printf (
       "  alpmi_state                 = %s\n",
-      pf_alarm_alpmi_state_to_string (p_ar->alpmx[0].alpmi_state));
+      pf_alarm_alpmi_state_to_string (p_ar->io_ar->alpmx[0].alpmi_state));
    printf (
       "  alpmr_state                 = %s\n",
-      pf_alarm_alpmr_state_to_string (p_ar->alpmx[0].alpmr_state));
+      pf_alarm_alpmr_state_to_string (p_ar->io_ar->alpmx[0].alpmr_state));
    printf (
       "  apms_state                  = %s\n",
-      pf_alarm_apms_state_to_string (p_ar->apmx[0].apms_state));
+      pf_alarm_apms_state_to_string (p_ar->io_ar->apmx[0].apms_state));
    printf (
       "  apmr_state                  = %s\n",
-      pf_alarm_apmr_state_to_string (p_ar->apmx[0].apmr_state));
+      pf_alarm_apmr_state_to_string (p_ar->io_ar->apmx[0].apmr_state));
    printf (
       "  exp_seq_count               = 0x%x\n",
-      (unsigned)p_ar->apmx[0].exp_seq_count);
+      (unsigned)p_ar->io_ar->apmx[0].exp_seq_count);
    printf (
       "  exp_seq_count_o             = 0x%x\n",
-      (unsigned)p_ar->apmx[0].exp_seq_count_o);
+      (unsigned)p_ar->io_ar->apmx[0].exp_seq_count_o);
    printf (
       "  send_seq_count              = 0x%x\n",
-      (unsigned)p_ar->apmx[0].send_seq_count);
+      (unsigned)p_ar->io_ar->apmx[0].send_seq_count);
    printf (
       "  send_seq_count_o            = 0x%x\n",
-      (unsigned)p_ar->apmx[0].send_seq_count_o);
+      (unsigned)p_ar->io_ar->apmx[0].send_seq_count_o);
    printf (
       "  sequence_number             = %u\n",
-      (unsigned)p_ar->alpmx[0].sequence_number);
+      (unsigned)p_ar->io_ar->alpmx[0].sequence_number);
    printf (
       "  Number of frames in incoming queue = %u\n",
-      p_ar->apmx[0].alarm_receive_q.accountant.count);
+      p_ar->io_ar->apmx[0].alarm_receive_q.accountant.count);
    printf ("Alarms   (high prio)\n");
    printf (
       "  alpmi_state                 = %s\n",
-      pf_alarm_alpmi_state_to_string (p_ar->alpmx[1].alpmi_state));
+      pf_alarm_alpmi_state_to_string (p_ar->io_ar->alpmx[1].alpmi_state));
    printf (
       "  alpmr_state                 = %s\n",
-      pf_alarm_alpmr_state_to_string (p_ar->alpmx[1].alpmr_state));
+      pf_alarm_alpmr_state_to_string (p_ar->io_ar->alpmx[1].alpmr_state));
    printf (
       "  apms_state                  = %s\n",
-      pf_alarm_apms_state_to_string (p_ar->apmx[1].apms_state));
+      pf_alarm_apms_state_to_string (p_ar->io_ar->apmx[1].apms_state));
    printf (
       "  apmr_state                  = %s\n",
-      pf_alarm_apmr_state_to_string (p_ar->apmx[1].apmr_state));
+      pf_alarm_apmr_state_to_string (p_ar->io_ar->apmx[1].apmr_state));
    printf (
       "  exp_seq_count               = 0x%x\n",
-      (unsigned)p_ar->apmx[1].exp_seq_count);
+      (unsigned)p_ar->io_ar->apmx[1].exp_seq_count);
    printf (
       "  exp_seq_count_o             = 0x%x\n",
-      (unsigned)p_ar->apmx[1].exp_seq_count_o);
+      (unsigned)p_ar->io_ar->apmx[1].exp_seq_count_o);
    printf (
       "  send_seq_count              = 0x%x\n",
-      (unsigned)p_ar->apmx[1].send_seq_count);
+      (unsigned)p_ar->io_ar->apmx[1].send_seq_count);
    printf (
       "  send_seq_count_o            = 0x%x\n",
-      (unsigned)p_ar->apmx[1].send_seq_count_o);
+      (unsigned)p_ar->io_ar->apmx[1].send_seq_count_o);
    printf (
       "  sequence_number             = %u\n",
-      (unsigned)p_ar->alpmx[1].sequence_number);
+      (unsigned)p_ar->io_ar->alpmx[1].sequence_number);
    printf (
       "  Number of frames in incoming queue = %u\n",
-      p_ar->apmx[1].alarm_receive_q.accountant.count);
+      p_ar->io_ar->apmx[1].alarm_receive_q.accountant.count);
 }
 
 /*****************************************************************************/
@@ -368,25 +368,25 @@ static int pf_alarm_alpmx_activate (pf_ar_t * p_ar)
    int ret = 0; /* Assume all goes well */
    uint16_t ix;
 
-   for (ix = 0; ix < NELEMENTS (p_ar->alpmx); ix++)
+   for (ix = 0; ix < NELEMENTS (p_ar->io_ar->alpmx); ix++)
    {
       if (
-         p_ar->alpmx[ix].alpmi_state == PF_ALPMI_STATE_W_START &&
-         p_ar->alpmx[ix].alpmr_state == PF_ALPMR_STATE_W_START)
+         p_ar->io_ar->alpmx[ix].alpmi_state == PF_ALPMI_STATE_W_START &&
+         p_ar->io_ar->alpmx[ix].alpmr_state == PF_ALPMR_STATE_W_START)
       {
          /* Save the remote side MAC address for easy retrieval. */
          memcpy (
-            &p_ar->alpmx[ix].da,
+            &p_ar->io_ar->alpmx[ix].da,
             &p_ar->ar_param.cm_initiator_mac_add,
-            sizeof (p_ar->alpmx[ix].da));
+            sizeof (p_ar->io_ar->alpmx[ix].da));
 
-         p_ar->alpmx[ix].prev_sequence_number = 0xffff;
-         p_ar->alpmx[ix].sequence_number = 0;
+         p_ar->io_ar->alpmx[ix].prev_sequence_number = 0xffff;
+         p_ar->io_ar->alpmx[ix].sequence_number = 0;
 
-         p_ar->alpmx[ix].alpmr_state = PF_ALPMR_STATE_W_NOTIFY;
-         p_ar->alpmx[ix].alpmi_state = PF_ALPMI_STATE_W_ALARM;
+         p_ar->io_ar->alpmx[ix].alpmr_state = PF_ALPMR_STATE_W_NOTIFY;
+         p_ar->io_ar->alpmx[ix].alpmi_state = PF_ALPMI_STATE_W_ALARM;
       }
-      else if (p_ar->alpmx[ix].alpmi_state != PF_ALPMI_STATE_W_START)
+      else if (p_ar->io_ar->alpmx[ix].alpmi_state != PF_ALPMI_STATE_W_START)
       {
          /* This is ALPMI_Activate_cnf(-) */
          p_ar->err_cls = PNET_ERROR_CODE_1_ALPMI;
@@ -426,15 +426,15 @@ static int pf_alarm_alpmx_close (pf_ar_t * p_ar)
    uint16_t ix;
 
    /* This is ALPMI_Close_req */
-   for (ix = 0; ix < NELEMENTS (p_ar->alpmx); ix++)
+   for (ix = 0; ix < NELEMENTS (p_ar->io_ar->alpmx); ix++)
    {
-      p_ar->alpmx[ix].alpmi_state = PF_ALPMI_STATE_W_START;
+      p_ar->io_ar->alpmx[ix].alpmi_state = PF_ALPMI_STATE_W_START;
    }
 
    /* This is ALPMR_Close_req */
-   for (ix = 0; ix < NELEMENTS (p_ar->alpmx); ix++)
+   for (ix = 0; ix < NELEMENTS (p_ar->io_ar->alpmx); ix++)
    {
-      switch (p_ar->alpmx[ix].alpmr_state)
+      switch (p_ar->io_ar->alpmx[ix].alpmr_state)
       {
       case PF_ALPMR_STATE_W_START:
          /* Nothing special */
@@ -452,8 +452,8 @@ static int pf_alarm_alpmx_close (pf_ar_t * p_ar)
           * call CMSU with an error indicating that we are closing??
           */
 
-         p_ar->alpmx[ix].alpmr_state = PF_ALPMR_STATE_W_START;
-         /* pf_alarm_error_ind(net, &p_ar->apmx[ix], p_ar->err_cls,
+         p_ar->io_ar->alpmx[ix].alpmr_state = PF_ALPMR_STATE_W_START;
+         /* pf_alarm_error_ind(net, &p_ar->io_ar->apmx[ix], p_ar->err_cls,
           * PNET_ERROR_CODE_2_CMSU_AR_ALARM_IND); */
          break;
       }
@@ -527,6 +527,15 @@ static int pf_alarm_alpmi_apmr_a_data_ind (
       break;
    case PF_ALPMI_STATE_W_ACK:
       /* This function is only called for DATA = ACK */
+#if PNET_OPTION_SR
+      if (p_apmx->p_ar->ar_set != NULL)
+      {
+         pf_cmsrl_al_forward_alarm_cnf (
+            p_apmx->p_ar->ar_set,
+            p_apmx->high_priority,
+            p_pnio_status);
+      }
+#endif
       p_apmx->p_alpmx->alpmi_state = PF_ALPMI_STATE_W_ALARM;
       pf_fspm_alpmi_alarm_cnf (net, p_apmx->p_ar, p_pnio_status);
       ret = 0;
@@ -619,7 +628,7 @@ static void pf_alarm_alpmr_apms_a_data_cnf (
  *                                etc)
  * @param data_len         In:    VarDataLen from the RTA-PDU.
  * @param data_usi         In:    The USI from the RTA-PDU.
- * @param p_data           In:    The variable part of the RTA-PDU.
+ * @param p_data           In:    Pointer to AlarmPayload + 2 bytes.
  * @return
  */
 static int pf_alarm_alpmr_apmr_a_data_ind (
@@ -685,7 +694,7 @@ uint16_t pf_alarm_allocate_endpoint (pnet_t * net, pf_ar_t * ar)
 {
    uint16_t i;
 
-   for (i = 0; i < PNET_MAX_AR; ++i)
+   for (i = 0; i < PNET_MAX_IO_AR; ++i)
    {
       if (net->alarm_endpoint[i].ar == NULL)
       {
@@ -701,7 +710,7 @@ void pf_alarm_free_endpoint (pnet_t * net, pf_ar_t * ar)
 {
    uint16_t i;
 
-   for (i = 0; i < PNET_MAX_AR; ++i)
+   for (i = 0; i < PNET_MAX_IO_AR; ++i)
    {
       if (net->alarm_endpoint[i].ar == ar)
       {
@@ -746,7 +755,6 @@ static int pf_alarm_apmr_frame_handler (
 {
    int priority;
    pf_apmr_msg_t tempmsg;
-   pf_get_info_t get_info;
    pf_ar_t * ar;
    uint16_t alarm_endpoint;
    uint16_t source_endpoint;
@@ -767,17 +775,22 @@ static int pf_alarm_apmr_frame_handler (
       /* Parse the destination endpoint of the alarm,
          to know where it should be queued. */
 
-      get_info.result = PF_PARSE_OK;
-      get_info.is_big_endian = true;
-      get_info.p_buf = (uint8_t *)p_buf->payload;
-      get_info.len = p_buf->len;
+      pf_get_info_t get_info =
+      {
+         .result = PF_PARSE_OK,
+         .is_big_endian = true,
+         .p_frame = p_buf,
+         .p_array = NULL,
+         .len = pnal_buf_get_size (p_buf),
+      };
 
       pos = frame_id_pos + sizeof (uint16_t); /* Skip frame_id. */
-      alarm_endpoint = pf_get_uint16(&get_info, &pos);
+      alarm_endpoint = pf_get_uint16 (&get_info, &pos);
       source_endpoint = pf_get_uint16 (&get_info, &pos);
 
       if (
-         (alarm_endpoint > 0) && (alarm_endpoint <= PNET_MAX_AR) &&
+         (get_info.result == PF_PARSE_OK) &&
+         (alarm_endpoint > 0) && (alarm_endpoint <= PNET_MAX_IO_AR) &&
          net->alarm_endpoint[alarm_endpoint - 1].active)
       {
          ar = net->alarm_endpoint[alarm_endpoint - 1].ar;
@@ -793,9 +806,9 @@ static int pf_alarm_apmr_frame_handler (
             (get_info.result != PF_PARSE_OK) ||
             (memcmp (
                 &source_mac,
-                &ar->apmx[priority].da,
+                &ar->io_ar->apmx[priority].da,
                 sizeof (source_mac)) != 0) ||
-            (source_endpoint != ar->apmx[priority].dst_ref))
+            (source_endpoint != ar->io_ar->apmx[priority].dst_ref))
          {
             LOG_WARNING (
                PF_ALARM_LOG,
@@ -809,7 +822,7 @@ static int pf_alarm_apmr_frame_handler (
 
       if (
          (ar != NULL) && (pf_alarm_receive_queue_post (
-                             &ar->apmx[priority].alarm_receive_q,
+                             &ar->io_ar->apmx[priority].alarm_receive_q,
                              &tempmsg) == 0))
       {
          LOG_INFO (
@@ -880,6 +893,7 @@ static void pf_alarm_apms_timeout (
 {
    pf_apmx_t * p_apmx = (pf_apmx_t *)arg;
    pnal_buf_t * p_rta;
+   pf_alarm_cr_request_t * p_al_cr_req;
 
    pf_scheduler_reset_handle (&p_apmx->resend_timeout);
 
@@ -897,7 +911,8 @@ static void pf_alarm_apms_timeout (
          p_apmx->resend_counter--;
 
          /* Retransmit */
-         if (p_apmx->p_ar->alarm_cr_request.alarm_cr_properties.transport_udp == true)
+         p_al_cr_req = &p_apmx->p_ar->io_ar->alarm_cr_request;
+         if (p_al_cr_req->alarm_cr_properties.transport_udp == true)
          {
             /* ToDo: Send as UDP frame */
          }
@@ -1002,6 +1017,8 @@ static int pf_alarm_apmx_activate (pnet_t * net, pf_ar_t * p_ar)
 {
    int ret = 0; /* Assume all goes well */
    uint16_t ix;
+   pf_apmx_t * p_apmx;
+   pf_alarm_cr_request_t * p_al_cr_req;
 
    LOG_DEBUG (
       PF_ALARM_LOG,
@@ -1009,16 +1026,18 @@ static int pf_alarm_apmx_activate (pnet_t * net, pf_ar_t * p_ar)
       __LINE__,
       p_ar->arep);
 
-   for (ix = 0; ix < NELEMENTS (p_ar->apmx); ix++)
+   for (ix = 0; ix < NELEMENTS (p_ar->io_ar->apmx); ix++)
    {
-      if (p_ar->apmx[ix].apms_state != PF_APMS_STATE_CLOSED)
+      p_apmx = p_ar->io_ar->apmx + ix;
+      p_al_cr_req = &p_ar->io_ar->alarm_cr_request;
+      if (p_apmx->apms_state != PF_APMS_STATE_CLOSED)
       {
          p_ar->err_cls = PNET_ERROR_CODE_1_APMS;
          p_ar->err_code = PNET_ERROR_CODE_2_APMS_INVALID_STATE;
 
          ret = -1;
       }
-      else if (p_ar->apmx[ix].apmr_state != PF_APMR_STATE_CLOSED)
+      else if (p_apmx->apmr_state != PF_APMR_STATE_CLOSED)
       {
          p_ar->err_cls = PNET_ERROR_CODE_1_APMR;
          p_ar->err_code = PNET_ERROR_CODE_2_APMR_INVALID_STATE;
@@ -1028,66 +1047,64 @@ static int pf_alarm_apmx_activate (pnet_t * net, pf_ar_t * p_ar)
       else
       {
          memcpy (
-            &p_ar->apmx[ix].da,
+            &p_apmx->da,
             &p_ar->ar_param.cm_initiator_mac_add,
-            sizeof (p_ar->apmx[ix].da));
+            sizeof (p_apmx->da));
 
-         p_ar->apmx[ix].src_ref = p_ar->alarm_cr_result.local_alarm_reference;
-         p_ar->apmx[ix].dst_ref = p_ar->alarm_cr_request.local_alarm_reference;
+         p_apmx->src_ref = p_ar->io_ar->alarm_cr_result.local_alarm_reference;
+         p_apmx->dst_ref = p_al_cr_req->local_alarm_reference;
 
          /* APMS counters */
-         p_ar->apmx[ix].send_seq_count = 0xffff;
-         p_ar->apmx[ix].send_seq_count_o = 0xfffe;
+         p_apmx->send_seq_count = 0xffff;
+         p_apmx->send_seq_count_o = 0xfffe;
 
          /* APMR counters */
-         p_ar->apmx[ix].exp_seq_count = 0xffff;
-         p_ar->apmx[ix].exp_seq_count_o = 0xfffe;
+         p_apmx->exp_seq_count = 0xffff;
+         p_apmx->exp_seq_count_o = 0xfffe;
 
          if (ix == 0)
          {
-            p_ar->apmx[ix].high_priority = false;
-            p_ar->apmx[ix].vlan_prio = ALARM_VLAN_PRIO_LOW;
-            p_ar->apmx[ix].block_type_alarm_notify =
+            p_apmx->high_priority = false;
+            p_apmx->vlan_prio = ALARM_VLAN_PRIO_LOW;
+            p_apmx->block_type_alarm_notify =
                PF_BT_ALARM_NOTIFICATION_LOW;
-            p_ar->apmx[ix].block_type_alarm_ack = PF_BT_ALARM_ACK_LOW;
-            p_ar->apmx[ix].frame_id = PF_FRAME_ID_ALARM_LOW;
+            p_apmx->block_type_alarm_ack = PF_BT_ALARM_ACK_LOW;
+            p_apmx->frame_id = PF_FRAME_ID_ALARM_LOW;
          }
          else
          {
-            p_ar->apmx[ix].high_priority = true;
-            p_ar->apmx[ix].vlan_prio = ALARM_VLAN_PRIO_HIGH;
-            p_ar->apmx[ix].block_type_alarm_notify =
+            p_apmx->high_priority = true;
+            p_apmx->vlan_prio = ALARM_VLAN_PRIO_HIGH;
+            p_apmx->block_type_alarm_notify =
                PF_BT_ALARM_NOTIFICATION_HIGH;
-            p_ar->apmx[ix].block_type_alarm_ack = PF_BT_ALARM_ACK_HIGH;
-            p_ar->apmx[ix].frame_id = PF_FRAME_ID_ALARM_HIGH;
+            p_apmx->block_type_alarm_ack = PF_BT_ALARM_ACK_HIGH;
+            p_apmx->frame_id = PF_FRAME_ID_ALARM_HIGH;
          }
 
          /* Input alarm frame queue */
-         pf_alarm_queue_mutex_create (
-            &p_ar->apmx[ix].alarm_receive_q.accountant);
-         pf_alarm_receive_queue_reset (&p_ar->apmx[ix].alarm_receive_q);
+         pf_alarm_queue_mutex_create (&p_apmx->alarm_receive_q.accountant);
+         pf_alarm_receive_queue_reset (&p_apmx->alarm_receive_q);
 
-         p_ar->apmx[ix].timeout_us =
-            100 * 1000 * p_ar->alarm_cr_request.rta_timeout_factor;
-         p_ar->apmx[ix].resend_counter = 0; /* Updated in
-                                             * pf_alarm_apms_apms_a_data_req()
-                                             */
+         p_apmx->timeout_us = 100 * 1000 * p_al_cr_req->rta_timeout_factor;
+         p_apmx->resend_counter = 0; /* Updated in
+                                      * pf_alarm_apms_apms_a_data_req()
+                                      */
 
-         p_ar->apmx[ix].p_ar = p_ar;
-         p_ar->apmx[ix].p_alpmx = &p_ar->alpmx[ix];
+         p_apmx->p_ar = p_ar;
+         p_apmx->p_alpmx = &p_ar->io_ar->alpmx[ix];
 
-         pf_scheduler_init_handle (&p_ar->apmx[ix].resend_timeout, "apmx");
+         pf_scheduler_init_handle (&p_apmx->resend_timeout, "apmx");
 
-         p_ar->apmx[ix].apms_state = PF_APMS_STATE_OPEN;
-         p_ar->apmx[ix].apmr_state = PF_APMR_STATE_OPEN;
+         p_apmx->apms_state = PF_APMS_STATE_OPEN;
+         p_apmx->apmr_state = PF_APMR_STATE_OPEN;
       }
    }
 
    /* Add the frame handler, if no alarm endpoint is active at this point. */
-   for (ix = 0; (ix < PNET_MAX_AR) && (net->alarm_endpoint[ix].active == false);
+   for (ix = 0; (ix < PNET_MAX_IO_AR) && (net->alarm_endpoint[ix].active == false);
         ++ix)
       ;
-   if (ix >= PNET_MAX_AR)
+   if (ix >= PNET_MAX_IO_AR)
    {
       pf_eth_frame_id_map_add (
             net,
@@ -1102,7 +1119,7 @@ static int pf_alarm_apmx_activate (pnet_t * net, pf_ar_t * p_ar)
    }
 
    /* Mark the alarm endpoint as active. */
-   for (ix = 0; ix < PNET_MAX_AR; ++ix)
+   for (ix = 0; ix < PNET_MAX_IO_AR; ++ix)
    {
       if (net->alarm_endpoint[ix].ar == p_ar)
       {
@@ -1271,12 +1288,12 @@ static int pf_alarm_apms_a_data_req (
    uint16_t var_part_len_pos;
    uint16_t var_part_len;
    pnal_buf_t * p_rta;
-   uint8_t * p_buf = NULL;
    uint16_t pos = 0;
    const pnet_ethaddr_t * mac_address = pf_cmina_get_device_macaddr (net);
    uint16_t u16 = 0;
+   pf_alarm_cr_request_t * p_al_cr_req = &p_apmx->p_ar->io_ar->alarm_cr_request;
 
-   if (p_apmx->p_ar->alarm_cr_request.alarm_cr_properties.transport_udp == true)
+   if (p_al_cr_req->alarm_cr_properties.transport_udp == true)
    {
       /* ToDo: Create UDP frames */
    }
@@ -1292,17 +1309,15 @@ static int pf_alarm_apms_a_data_req (
       }
       else
       {
-         p_buf = p_rta->payload;
-         if (p_buf == NULL)
          {
-            LOG_ERROR (
-               PF_ALARM_LOG,
-               "Alarm(%d): Failed to allocate payload output buffer for "
-               "alarm.\n",
-               __LINE__);
-         }
-         else
-         {
+            pf_put_info_t buf =
+            {
+               .p_frame = p_rta,
+               .p_array = NULL,
+               .len = pnal_buf_get_size (p_rta),
+               .result = PF_PUT_OK,
+            };
+
             LOG_DEBUG (
                PF_AL_BUF_LOG,
                "Alarm(%d): Allocated alarm output buffer for %s %p\n",
@@ -1314,32 +1329,32 @@ static int pf_alarm_apms_a_data_req (
             pf_put_mem (
                &p_apmx->da,
                sizeof (p_apmx->da),
-               PF_FRAME_BUFFER_SIZE,
-               p_buf,
+               &buf,
                &pos);
 
             /* Insert source MAC address (our interface MAC address) */
-            memcpy (&p_buf[pos], mac_address->addr, sizeof (pnet_ethaddr_t));
-            pos += sizeof (pnet_ethaddr_t);
+            pf_put_mem (
+               mac_address,
+               sizeof (*mac_address),
+               &buf,
+               &pos);
 
             /* Insert VLAN Tag protocol identifier (TPID) */
             pf_put_uint16 (
                true,
                PNAL_ETHTYPE_VLAN,
-               PF_FRAME_BUFFER_SIZE,
-               p_buf,
+               &buf,
                &pos);
 
             /* Insert VLAN prio (and VLAN ID=0) */
             u16 = (p_apmx->vlan_prio & 0x0007) << 13; /* Three leftmost bits */
-            pf_put_uint16 (true, u16, PF_FRAME_BUFFER_SIZE, p_buf, &pos);
+            pf_put_uint16 (true, u16, &buf, &pos);
 
             /* Insert EtherType */
             pf_put_uint16 (
                true,
                PNAL_ETHTYPE_PROFINET,
-               PF_FRAME_BUFFER_SIZE,
-               p_buf,
+               &buf,
                &pos);
 
             /* Insert Profinet frame ID (first part of Ethernet frame payload)
@@ -1347,21 +1362,19 @@ static int pf_alarm_apms_a_data_req (
             pf_put_uint16 (
                true,
                p_apmx->frame_id,
-               PF_FRAME_BUFFER_SIZE,
-               p_buf,
+               &buf,
                &pos);
 
             /* Insert alarm specific data */
             pf_put_alarm_fixed (
                true,
                p_fixed,
-               PF_FRAME_BUFFER_SIZE,
-               p_buf,
+               &buf,
                &pos);
 
             var_part_len_pos = pos;
             /* var_part_len is not yet known */
-            pf_put_uint16 (true, 0, PF_FRAME_BUFFER_SIZE, p_buf, &pos);
+            pf_put_uint16 (true, 0, &buf, &pos);
 
             /* Insert variable part of alarm payload for DATA and ERR */
             if (p_fixed->pdu_type.type == PF_RTA_PDU_TYPE_DATA)
@@ -1378,8 +1391,7 @@ static int pf_alarm_apms_a_data_req (
                      0,    /* No payload */
                      NULL, /* No payload */
                      p_pnio_status,
-                     PF_FRAME_BUFFER_SIZE,
-                     p_buf,
+                     &buf,
                      &pos);
                }
                else
@@ -1394,8 +1406,7 @@ static int pf_alarm_apms_a_data_req (
                      payload_len,
                      p_payload,
                      NULL, /* No PNIO status */
-                     PF_FRAME_BUFFER_SIZE,
-                     p_buf,
+                     &buf,
                      &pos);
                }
             }
@@ -1405,8 +1416,7 @@ static int pf_alarm_apms_a_data_req (
                pf_put_pnet_status (
                   true,
                   p_pnio_status,
-                  PF_FRAME_BUFFER_SIZE,
-                  p_buf,
+                  &buf,
                   &pos);
             }
             else
@@ -1419,11 +1429,20 @@ static int pf_alarm_apms_a_data_req (
             pf_put_uint16 (
                true,
                var_part_len,
-               PF_FRAME_BUFFER_SIZE,
-               p_buf,
+               &buf,
                &var_part_len_pos);
 
-            p_rta->len = pos;
+            pnal_buf_set_size (p_rta, pos);
+
+            if (buf.result != PF_PUT_OK)
+            {
+               LOG_ERROR (
+                  PF_ALARM_LOG,
+                  "Alarm(%d): Error building alarm frame\n",
+                  __LINE__);
+               pnal_buf_free (p_rta);
+               return -1;
+            }
 
             LOG_INFO (
                PF_ALARM_LOG,
@@ -1524,6 +1543,7 @@ static int pf_alarm_apms_apms_a_data_req (
 {
    int ret = -1;
    pf_alarm_fixed_t fixed;
+   pf_io_ar_t * io_ar = p_apmx->p_ar->io_ar;
 
    if (p_apmx->apms_state != PF_APMS_STATE_OPEN)
    {
@@ -1545,7 +1565,7 @@ static int pf_alarm_apms_apms_a_data_req (
       fixed.send_seq_num = p_apmx->send_seq_count;
       fixed.ack_seq_nbr = p_apmx->exp_seq_count_o;
 
-      p_apmx->resend_counter = p_apmx->p_ar->alarm_cr_request.rta_retries;
+      p_apmx->resend_counter = io_ar->alarm_cr_request.rta_retries;
 
       ret = pf_alarm_apms_a_data_req (
          net,
@@ -1606,9 +1626,10 @@ static int pf_alarm_apmx_close (pnet_t * net, pf_ar_t * p_ar, uint8_t err_code)
    pnet_pnio_status_t pnio_status;
    pnal_buf_t * p_rta;
    pf_alarm_fixed_t fixed;
+   pf_apmx_t * p_apmx;
 
-   /* Send CLOSE alarm first, with low prio by using p_ar->apmx[0] */
-   if (p_ar->apmx[0].apms_state != PF_APMS_STATE_CLOSED)
+   /* Send CLOSE alarm first, with low prio by using p_ar->io_ar->apmx[0] */
+   if (p_ar->io_ar->apmx[0].apms_state != PF_APMS_STATE_CLOSED)
    {
       pnio_status.error_code = PNET_ERROR_CODE_RTA_ERROR;
       pnio_status.error_decode = PNET_ERROR_DECODE_PNIO;
@@ -1616,19 +1637,19 @@ static int pf_alarm_apmx_close (pnet_t * net, pf_ar_t * p_ar, uint8_t err_code)
       pnio_status.error_code_2 = err_code;
 
       memset (&fixed, 0, sizeof (fixed));
-      fixed.src_ref = p_ar->apmx[0].src_ref;
-      fixed.dst_ref = p_ar->apmx[0].dst_ref;
+      fixed.src_ref = p_ar->io_ar->apmx[0].src_ref;
+      fixed.dst_ref = p_ar->io_ar->apmx[0].dst_ref;
       fixed.pdu_type.type = PF_RTA_PDU_TYPE_ERR;
       fixed.pdu_type.version = PF_ALARM_PDU_TYPE_VERSION_1;
       fixed.add_flags.window_size = 1;
       fixed.add_flags.tack = false;
-      fixed.send_seq_num = p_ar->apmx[0].send_seq_count;
-      fixed.ack_seq_nbr = p_ar->apmx[0].exp_seq_count_o;
+      fixed.send_seq_num = p_ar->io_ar->apmx[0].send_seq_count;
+      fixed.ack_seq_nbr = p_ar->io_ar->apmx[0].exp_seq_count_o;
 
       if (
          pf_alarm_apms_a_data_req (
             net,
-            &p_ar->apmx[0],
+            &p_ar->io_ar->apmx[0],
             &fixed,
             NULL, /* No alarm_data */
             0,
@@ -1645,7 +1666,7 @@ static int pf_alarm_apmx_close (pnet_t * net, pf_ar_t * p_ar, uint8_t err_code)
    }
 
    /* Mark the alarm endpoint as inactive. */
-   for (ix = 0; ix < PNET_MAX_AR; ++ix)
+   for (ix = 0; ix < PNET_MAX_IO_AR; ++ix)
    {
       if (net->alarm_endpoint[ix].ar == p_ar)
       {
@@ -1654,26 +1675,27 @@ static int pf_alarm_apmx_close (pnet_t * net, pf_ar_t * p_ar, uint8_t err_code)
       }
    }
    /* Remove the frame handler if no alarm endpoint is active at this point. */
-   for (ix = 0; (ix < PNET_MAX_AR) && (net->alarm_endpoint[ix].active == false);
+   for (ix = 0; (ix < PNET_MAX_IO_AR) && (net->alarm_endpoint[ix].active == false);
         ++ix)
       ;
-   if (ix >= PNET_MAX_AR)
+   if (ix >= PNET_MAX_IO_AR)
    {
       pf_eth_frame_id_map_remove (net, PF_FRAME_ID_ALARM_HIGH);
       pf_eth_frame_id_map_remove (net, PF_FRAME_ID_ALARM_LOW);
    }
 
-   for (ix = 0; ix < NELEMENTS (p_ar->apmx); ix++)
+   for (ix = 0; ix < NELEMENTS (p_ar->io_ar->apmx); ix++)
    {
       /* Close APMS */
-      if (p_ar->apmx[ix].apms_state != PF_APMS_STATE_CLOSED)
+      p_apmx = p_ar->io_ar->apmx + ix;
+      if (p_apmx->apms_state != PF_APMS_STATE_CLOSED)
       {
          /* Free resources */
          /* StopTimer */
-         pf_scheduler_remove_if_running (net, &p_ar->apmx[ix].resend_timeout);
+         pf_scheduler_remove_if_running (net, &p_apmx->resend_timeout);
 
-         p_ar->apmx[ix].p_ar = NULL;
-         p_ar->apmx[ix].apms_state = PF_APMS_STATE_CLOSED;
+         p_apmx->p_ar = NULL;
+         p_apmx->apms_state = PF_APMS_STATE_CLOSED;
       }
 
       LOG_DEBUG (
@@ -1681,24 +1703,23 @@ static int pf_alarm_apmx_close (pnet_t * net, pf_ar_t * p_ar, uint8_t err_code)
          "Alarm(%d): Free saved %s prio alarm output buffer %p for AREP %u if "
          "necessary\n",
          __LINE__,
-         p_ar->apmx[ix].high_priority ? "high" : "low",
-         p_ar->apmx[ix].p_rta,
+         p_apmx->high_priority ? "high" : "low",
+         p_apmx->p_rta,
          p_ar->arep);
-      if (p_ar->apmx[ix].p_rta != NULL)
+      if (p_apmx->p_rta != NULL)
       {
-         p_rta = p_ar->apmx[ix].p_rta;
-         p_ar->apmx[ix].p_rta = NULL;
+         p_rta = p_apmx->p_rta;
+         p_apmx->p_rta = NULL;
          pnal_buf_free (p_rta);
       }
 
       /* Close APMR */
-      if (p_ar->apmx[ix].apmr_state != PF_APMR_STATE_CLOSED)
+      if (p_apmx->apmr_state != PF_APMR_STATE_CLOSED)
       {
-         p_ar->apmx[ix].apmr_state = PF_APMR_STATE_CLOSED;
+         p_apmx->apmr_state = PF_APMR_STATE_CLOSED;
 
-         pf_alarm_receive_queue_reset (&p_ar->apmx[ix].alarm_receive_q);
-         pf_alarm_queue_mutex_destroy (
-            &p_ar->apmx[ix].alarm_receive_q.accountant);
+         pf_alarm_receive_queue_reset (&p_apmx->alarm_receive_q);
+         pf_alarm_queue_mutex_destroy (&p_apmx->alarm_receive_q.accountant);
       }
    }
 
@@ -1802,8 +1823,8 @@ static int pf_alarm_apmr_send_nack (pnet_t * net, pf_apmx_t * p_apmx)
  * @param p_apmx           InOut: The APMX instance.
  * @param p_fixed          In:    The fixed part of the RTA-DPU.
  * @param data_len         In:    Length of the variable part of the RTA-PDU.
- * @param p_get_info       InOut: ?
- * @param pos              In:    Position of ?
+ * @param p_get_info       InOut: Parser state for the incoming message.
+ * @param pos              In:    Position of the RTA-SDU in incoming message.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -1878,22 +1899,16 @@ static int pf_alarm_apmr_a_data_ind (
                p_apmx->exp_seq_count_o = p_apmx->exp_seq_count;
                p_apmx->exp_seq_count = (p_apmx->exp_seq_count + 1) & 0x7fff;
 
-               ret = pf_alarm_apmr_send_ack (net, p_apmx);
-               if (ret == 0)
-               {
-                  p_apmx->apmr_state = PF_APMR_STATE_WCNF;
+               /* The PDU is accepted even if the TACK can not be sent */
+               (void)pf_alarm_apmr_send_ack (net, p_apmx);
 
-                  /* APMR: A_Data_cnf is triggered here*/
+               /* APMR: A_Data_cnf is triggered here*/
 
-                  ret = pf_alarm_alpmi_apmr_a_data_ind (
-                     net,
-                     p_apmx,
-                     &pnio_status); /* APMR: APMR_A_Data.ind */
-                  if (ret == 0)
-                  {
-                     p_apmx->apmr_state = PF_APMR_STATE_OPEN;
-                  }
-               }
+               ret = pf_alarm_alpmi_apmr_a_data_ind (
+                  net,
+                  p_apmx,
+                  &pnio_status); /* APMR: APMR_A_Data.ind */
+               p_apmx->apmr_state = PF_APMR_STATE_OPEN;
             }
             else if (block_header.block_type == p_apmx->block_type_alarm_notify)
             {
@@ -1928,26 +1943,20 @@ static int pf_alarm_apmr_a_data_ind (
                p_apmx->exp_seq_count_o = p_apmx->exp_seq_count;
                p_apmx->exp_seq_count = (p_apmx->exp_seq_count + 1) & 0x7fff;
 
-               ret = pf_alarm_apmr_send_ack (net, p_apmx);
-               if (ret == 0)
-               {
-                  p_apmx->apmr_state = PF_APMR_STATE_WCNF;
+               /* The PDU is accepted even if the TACK can not be sent */
+               (void)pf_alarm_apmr_send_ack (net, p_apmx);
 
-                  /* APMR: A_Data_cnf is triggered here*/
+               /* APMR: A_Data_cnf is triggered here*/
 
-                  ret = pf_alarm_alpmr_apmr_a_data_ind (
-                     net,
-                     p_apmx,
-                     p_fixed,
-                     &alarm_data,
-                     data_len,
-                     data_usi,
-                     data); /* APMR: APMR_A_Data.ind */
-                  if (ret == 0)
-                  {
-                     p_apmx->apmr_state = PF_APMR_STATE_OPEN;
-                  }
-               }
+               ret = pf_alarm_alpmr_apmr_a_data_ind (
+                  net,
+                  p_apmx,
+                  p_fixed,
+                  &alarm_data,
+                  data_len,
+                  data_usi,
+                  data); /* APMR: APMR_A_Data.ind */
+               p_apmx->apmr_state = PF_APMR_STATE_OPEN;
             }
             else
             {
@@ -2047,7 +2056,7 @@ static int pf_alarm_get_diag_summary (
    uint32_t * p_maint_status)
 {
    pf_device_t * p_dev = NULL;
-   pf_subslot_t * p_subslot = NULL;
+   pf_submodule_t * submodule = NULL;
    uint16_t item_ix;
    pf_diag_item_t * p_item = NULL;
 
@@ -2058,12 +2067,12 @@ static int pf_alarm_get_diag_summary (
 
       /* Consider only alarms on this sub-slot. */
       if (
-         pf_cmdev_get_subslot_full (
+         pf_cmdev_get_submodule_full (
             net,
             api_id,
             slot_nbr,
             subslot_nbr,
-            &p_subslot) == 0)
+            &submodule) == 0)
       {
          /* Collect all diags into maintenanceStatus*/
 
@@ -2072,21 +2081,21 @@ static int pf_alarm_get_diag_summary (
          {
             pf_alarm_add_diag_item_to_summary (
                p_ar,
-               p_subslot,
+               submodule,
                p_diag_item,
                p_alarm_spec,
                p_maint_status);
          }
 
          /* Now handle all the already reported diag items. */
-         item_ix = p_subslot->diag_list;
+         item_ix = submodule->diag_list;
          pf_cmdev_get_diag_item (net, item_ix, &p_item);
          while (p_item != NULL)
          {
             /* Collect all diags into maintenanceStatus*/
             pf_alarm_add_diag_item_to_summary (
                p_ar,
-               p_subslot,
+               submodule,
                p_item,
                p_alarm_spec,
                p_maint_status);
@@ -2127,7 +2136,6 @@ static int pf_alarm_apmr_periodic (pnet_t * net, pf_ar_t * p_ar)
    pf_alarm_fixed_t fixed;
    uint16_t var_part_len;
    pnet_pnio_status_t pnio_status;
-   pf_get_info_t get_info;
    uint16_t pos;
    pf_apmr_msg_t inputmsg;
 
@@ -2137,9 +2145,11 @@ static int pf_alarm_apmr_periodic (pnet_t * net, pf_ar_t * p_ar)
     * then we need to stop handling this APMR!
     * Otherwise there will be lots of NULL pointers.
     */
-   for (ix = 0; ((ret == 0) && (ix < NELEMENTS (p_ar->apmx))); ix++)
+   for (ix = 0;
+        ((ret == 0) && (p_ar->io_ar) && (ix < NELEMENTS (p_ar->io_ar->apmx)));
+        ix++)
    {
-      p_apmx = &p_ar->apmx[ix];
+      p_apmx = &p_ar->io_ar->apmx[ix];
       p_buf = NULL;
       while (
          (ret == 0) && (p_apmx->apmr_state != PF_APMR_STATE_CLOSED) &&
@@ -2152,15 +2162,31 @@ static int pf_alarm_apmr_periodic (pnet_t * net, pf_ar_t * p_ar)
          /* Skip frame_id */
          pos = inputmsg.frame_id_pos + sizeof (uint16_t);
 
-         get_info.result = PF_PARSE_OK;
-         get_info.is_big_endian = true;
-         get_info.p_buf = (uint8_t *)p_buf->payload;
-         get_info.len = p_buf->len;
+         pf_get_info_t get_info =
+         {
+            .result = PF_PARSE_OK,
+            .is_big_endian = true,
+            .p_frame = p_buf,
+            .p_array = NULL,
+            .len = pnal_buf_get_size (p_buf),
+         };
 
          /* Parse fixed part of incoming alarm frame */
          memset (&fixed, 0, sizeof (fixed));
          pf_get_alarm_fixed (&get_info, &pos, &fixed);
          var_part_len = pf_get_uint16 (&get_info, &pos);
+
+         if (get_info.result != PF_PARSE_OK)
+         {
+            LOG_ERROR (
+               PF_ALARM_LOG,
+               "Alarm(%d): Error parsing incoming alarm frame %p\n",
+               __LINE__,
+               p_buf);
+            pnal_buf_free (p_buf);
+            p_buf = NULL;
+            continue; /* Ignore */
+         }
 
          if (fixed.pdu_type.version == 1)
          {
@@ -2222,7 +2248,7 @@ static int pf_alarm_apmr_periodic (pnet_t * net, pf_ar_t * p_ar)
                   __LINE__,
                   p_apmx->high_priority ? "high" : "low",
                   p_buf,
-                  p_buf->len,
+                  (int)pnal_buf_get_size (p_buf),
                   var_part_len);
                ret = pf_alarm_apmr_a_data_ind (
                   net,
@@ -2241,37 +2267,49 @@ static int pf_alarm_apmr_periodic (pnet_t * net, pf_ar_t * p_ar)
 
                   /* Should we also be able to receive ERR frames to APMS?
                    * Should its state have an effect of the result? */
-                  switch (p_apmx->apmr_state)
+                  if (get_info.result == PF_PARSE_OK)
                   {
-                  case PF_APMR_STATE_OPEN:
-                     LOG_DEBUG (
-                        PF_ALARM_LOG,
-                        "Alarm(%d): Got incoming alarm ERROR frame from "
-                        "queue. %p. Error code 1 (ERRCLS): %0x02x  "
-                        "Error code 2 (ERRCODE): %0x02x\n",
-                        __LINE__,
-                        p_buf,
-                        pnio_status.error_code_1,
-                        pnio_status.error_code_2);
-                     pf_alarm_error_ind (
-                        net,
-                        p_apmx,
-                        pnio_status.error_code_1,
-                        pnio_status.error_code_2);
-                     break;
-                  default:
+                     switch (p_apmx->apmr_state)
+                     {
+                     case PF_APMR_STATE_OPEN:
+                        LOG_DEBUG (
+                           PF_ALARM_LOG,
+                           "Alarm(%d): Got incoming alarm ERROR frame from "
+                           "queue. %p. Error code 1 (ERRCLS): %0x02x  "
+                           "Error code 2 (ERRCODE): %0x02x\n",
+                           __LINE__,
+                           p_buf,
+                           pnio_status.error_code_1,
+                           pnio_status.error_code_2);
+                        pf_alarm_error_ind (
+                           net,
+                           p_apmx,
+                           pnio_status.error_code_1,
+                           pnio_status.error_code_2);
+                        break;
+                     default:
+                        LOG_ERROR (
+                           PF_ALARM_LOG,
+                           "Alarm(%d): Alarm received from IO-controller, but "
+                           "the APMR state is %s\n",
+                           __LINE__,
+                           pf_alarm_apmr_state_to_string (p_apmx->apmr_state));
+                        pf_alarm_error_ind (
+                           net,
+                           p_apmx,
+                           PNET_ERROR_CODE_1_APMR,
+                           PNET_ERROR_CODE_2_APMR_INVALID_STATE);
+                        break;
+                     }
+                  }
+                  else
+                  {
                      LOG_ERROR (
                         PF_ALARM_LOG,
-                        "Alarm(%d): Alarm received from IO-controller, but "
-                        "the APMR state is %s\n",
+                        "Alarm(%d): Error parsing incoming alarm ERROR "
+                        "frame %p\n",
                         __LINE__,
-                        pf_alarm_apmr_state_to_string (p_apmx->apmr_state));
-                     pf_alarm_error_ind (
-                        net,
-                        p_apmx,
-                        PNET_ERROR_CODE_1_APMR,
-                        PNET_ERROR_CODE_2_APMR_INVALID_STATE);
-                     break;
+                        p_buf);
                   }
 
                   ret = 0;
@@ -2349,7 +2387,7 @@ static int pf_alarm_send_internal (
    uint32_t maint_status = 0;
 
    CC_ASSERT (net->global_alarm_enable == true);
-   CC_ASSERT (p_ar->alarm_enable == true);
+   CC_ASSERT (p_ar->io_ar->alarm_enable == true);
    CC_ASSERT (p_apmx->p_alpmx->alpmi_state == PF_ALPMI_STATE_W_ALARM);
 
    (void)pf_alarm_get_diag_summary (
@@ -2757,16 +2795,14 @@ int pf_alarm_send_queue_fetch (
  * @internal
  * Handle outgoing alarm messages for one AR instance.
  *
- * When called this function checks the ALMPI state for high and
+ * When called this function checks the ALPMI state for high and
  * low priority alarms. If state is PF_ALPMI_STATE_W_ALARM and a alarm
  * is found in the send queue this alarm is sent.
  *
  * @param net              InOut: The p-net stack instance
  * @param p_ar             InOut: The AR instance.
- * @return  0  if operation succeeded.
- *          -1 if an error occurred.
  */
-static void pf_alarm_almpi_periodic (pnet_t * net, pf_ar_t * p_ar)
+static void pf_alarm_alpmi_periodic (pnet_t * net, pf_ar_t * p_ar)
 {
    int res = 0;
    int16_t prio;
@@ -2774,12 +2810,12 @@ static void pf_alarm_almpi_periodic (pnet_t * net, pf_ar_t * p_ar)
    pf_alarm_send_queue_t * q;
    pf_alarm_data_t alarm_data;
 
-   if (p_ar->alarm_enable == true)
+   if (p_ar->io_ar && p_ar->io_ar->alarm_enable == true)
    {
       for (prio = 1; prio >= 0; prio--)
       {
-         p_apmx = &p_ar->apmx[prio];
-         q = &p_ar->alarm_send_q[prio];
+         p_apmx = &p_ar->io_ar->apmx[prio];
+         q = &p_ar->io_ar->alarm_send_queue_set->send_queue[prio];
          if (p_apmx->p_alpmx->alpmi_state == PF_ALPMI_STATE_W_ALARM)
          {
             res = pf_alarm_send_queue_fetch (q, &alarm_data);
@@ -2797,16 +2833,87 @@ static void pf_alarm_almpi_periodic (pnet_t * net, pf_ar_t * p_ar)
    }
 }
 
+#if PNET_OPTION_SR
+static void pf_alarm_ar_set_periodic (pnet_t * net, pf_ar_set_t * ar_set)
+{
+   int16_t prio;
+   pf_alarm_send_queue_t * q;
+   pf_alarm_data_t alarm_data;
+
+   for (prio = 1; prio >= 0; --prio)
+   {
+      bool done = false;
+      q = &ar_set->alarm_send_queue_set->send_queue[prio];
+
+      if (!ar_set->cmsrl_al[prio].alarm.stored)
+      {
+         while (!done)
+         {
+            if (pf_alarm_send_queue_fetch (q, &alarm_data) == 0)
+            {
+               /* Calculate sequence numbers */
+               ++(ar_set->cmsrl_al[prio].alarm.sequence_number);
+               ar_set->cmsrl_al[prio].alarm.sequence_number &= 0x07FF;
+               alarm_data.sequence_number =
+                  ar_set->cmsrl_al[prio].alarm.sequence_number;
+
+               done =
+                  pf_cmsrl_al_issue_alarm_req (net, ar_set, prio, &alarm_data);
+            }
+            else
+            {
+               done = true;
+            }
+         }
+      }
+   }
+}
+#endif
+
+void pf_alarm_forward_alarm_req (
+   pnet_t * net,
+   pf_apmx_t * p_apmx,
+   pf_alarm_data_t * alarm_data)
+{
+   int ret = -1;
+   uint32_t maint_status = 0;
+
+   CC_ASSERT (p_apmx->p_alpmx->alpmi_state == PF_ALPMI_STATE_W_ALARM);
+
+   (void)pf_alarm_get_diag_summary (
+      net,
+      p_apmx->p_ar,
+      alarm_data->api_id,
+      alarm_data->slot_nbr,
+      alarm_data->subslot_nbr,
+      NULL,
+      &alarm_data->alarm_specifier,
+      &maint_status);
+
+   /* Create and send a DATA RTA-PDU */
+   ret = pf_alarm_apms_apms_a_data_req (
+      net,
+      p_apmx,
+      alarm_data,
+      maint_status,
+      NULL);
+
+   if (ret == 0)
+   {
+      p_apmx->p_alpmx->alpmi_state = PF_ALPMI_STATE_W_ACK;
+   }
+}
+
 /************************ Common alarm functions *****************************/
 
 void pf_alarm_enable (pf_ar_t * p_ar)
 {
-   p_ar->alarm_enable = true;
+   p_ar->io_ar->alarm_enable = true;
 }
 
 void pf_alarm_disable (pf_ar_t * p_ar)
 {
-   p_ar->alarm_enable = false;
+   p_ar->io_ar->alarm_enable = false;
 }
 
 bool pf_alarm_pending (const pf_ar_t * p_ar)
@@ -2823,8 +2930,7 @@ int pf_alarm_activate (pnet_t * net, pf_ar_t * p_ar)
 
    for (i = 0; i < PF_ALARM_NUMBER_OF_PRIORITY_LEVELS; i++)
    {
-      q = &p_ar->alarm_send_q[i];
-      pf_alarm_queue_mutex_create (&q->accountant);
+      q = &p_ar->io_ar->alarm_send_queue_set->send_queue[i];
       pf_alarm_send_queue_reset (q);
    }
 
@@ -2849,9 +2955,8 @@ int pf_alarm_close (pnet_t * net, pf_ar_t * p_ar)
 
    for (i = 0; i < PF_ALARM_NUMBER_OF_PRIORITY_LEVELS; i++)
    {
-      q = &p_ar->alarm_send_q[i];
+      q = &p_ar->io_ar->alarm_send_queue_set->send_queue[i];
       pf_alarm_send_queue_reset (q);
-      pf_alarm_queue_mutex_destroy (&q->accountant);
    }
 
    LOG_DEBUG (
@@ -2888,7 +2993,7 @@ int pf_alarm_close (pnet_t * net, pf_ar_t * p_ar)
  *   p_diag_item->fmt.std.qual_ch_qualifier
  *
  * @param p_ar             In:    The AR instance.
- * @param p_subslot        In:    The subslot instance.
+ * @param p_submodule      In:    The submodule instance.
  * @param p_diag_item      In:    The diag item.
  * @param p_alarm_spec     InOut: The updated alarm specifier.
  *                                Describes diagnosis alarms.
@@ -2897,7 +3002,7 @@ int pf_alarm_close (pnet_t * net, pf_ar_t * p_ar)
  */
 void pf_alarm_add_diag_item_to_summary (
    const pf_ar_t * p_ar,
-   const pf_subslot_t * p_subslot,
+   const pf_submodule_t * p_submodule,
    const pf_diag_item_t * p_diag_item,
    pnet_alarm_spec_t * p_alarm_spec,
    uint32_t * p_maint_status)
@@ -2911,9 +3016,9 @@ void pf_alarm_add_diag_item_to_summary (
 
    /* Is the diagnosis on the same AR? */
    if (
-      ((p_subslot->ownsm_state == PF_OWNSM_STATE_IOC) ||
-       (p_subslot->ownsm_state == PF_OWNSM_STATE_IOS)) &&
-      (p_subslot->owner == p_ar))
+      ((p_submodule->ownsm_state == PF_OWNSM_STATE_IOC) ||
+       (p_submodule->ownsm_state == PF_OWNSM_STATE_IOS)) &&
+      pf_cmrpc_ar_set_equal (p_submodule->owner, p_ar))
    {
       is_same_ar = true;
    }
@@ -3000,27 +3105,24 @@ void pf_alarm_add_diag_item_to_summary (
       *p_maint_status |= severity_qualifier;
 
       /* MaintenanceRequired and MaintenanceDemanded bits */
-      if (is_maintenance_required == true)
+      if (is_maintenance_required)
       {
          *p_maint_status |= PF_DIAG_BIT_MAINTENANCE_REQUIRED;
       }
-      if (is_maintenance_demanded == true)
+      if (is_maintenance_demanded)
       {
          *p_maint_status |= PF_DIAG_BIT_MAINTENANCE_DEMANDED;
       }
 
       /* Alarm specifiers for diagnosis in standard format */
-      if (is_appears == true)
+      if (is_appears && is_fault)
       {
          p_alarm_spec->channel_diagnosis = true;
-      }
-      if (is_appears == true && is_fault == true)
-      {
          p_alarm_spec->submodule_diagnosis = true;
-      }
-      if (is_appears == true && is_fault == true && is_same_ar == true)
-      {
-         p_alarm_spec->ar_diagnosis = true;
+         if (is_same_ar)
+         {
+            p_alarm_spec->ar_diagnosis = true;
+         }
       }
    }
 }
@@ -3029,21 +3131,41 @@ int pf_alarm_periodic (pnet_t * net)
 {
    uint16_t ix;
    pf_ar_t * p_ar;
+#if PNET_OPTION_SR
+   pf_ar_set_t * ar_set;
+#endif
 
    if (net->global_alarm_enable == true)
    {
       for (ix = 0; ix < PNET_MAX_AR; ix++)
       {
-         p_ar = pf_ar_find_by_index (net, ix);
+         p_ar = pf_io_ar_find_by_index (net, ix);
          if ((p_ar != NULL) && (p_ar->in_use == true))
          {
             /* Handle incoming alarm frames */
             (void)pf_alarm_apmr_periodic (net, p_ar);
 
+#if PNET_OPTION_SR
+            if (p_ar->ar_set != NULL)
+            {
+               continue;
+            }
+#endif
             /* Handle outgoing alarm messages */
-            (void)pf_alarm_almpi_periodic (net, p_ar);
+            pf_alarm_alpmi_periodic (net, p_ar);
          }
       }
+#if PNET_OPTION_SR
+      /* Handle AR sets separately */
+      for (ix = 0; ix < PNET_MAX_AR_SET; ++ix)
+      {
+         ar_set = &net->cmrpc_ar_set[ix];
+         if (ar_set->in_use)
+         {
+            pf_alarm_ar_set_periodic (net, ar_set);
+         }
+      }
+#endif
    }
 
    return 0;
@@ -3057,8 +3179,8 @@ int pf_alarm_alpmr_alarm_ack (
 {
    int ret = -1;
    pf_alarm_data_t alarm_data;
-   pf_apmx_t * p_apmx = &p_ar->apmx[1]; /* Always use high prio. */
-   pf_alpmx_t * p_alpmx = &p_ar->alpmx[1];
+   pf_apmx_t * p_apmx = &p_ar->io_ar->apmx[1]; /* Always use high prio. */
+   pf_alpmx_t * p_alpmx = &p_ar->io_ar->alpmx[1];
 
    CC_ASSERT (p_alarm_argument != NULL); /* From user code */
    CC_ASSERT (p_pnio_status != NULL);
@@ -3167,8 +3289,9 @@ static int pf_alarm_send_alarm (
    const uint8_t * p_payload)
 {
    pf_alarm_data_t alarm_data;
+   pf_submodule_t * submodule;
 
-   if (net->global_alarm_enable == false || p_ar->alarm_enable == false)
+   if (net->global_alarm_enable == false || p_ar->io_ar->alarm_enable == false)
    {
       LOG_INFO (
          PF_ALARM_LOG,
@@ -3176,7 +3299,7 @@ static int pf_alarm_send_alarm (
          "%u.\n",
          __LINE__,
          net->global_alarm_enable,
-         p_ar->alarm_enable);
+         p_ar->io_ar->alarm_enable);
 
       return -1;
    }
@@ -3186,15 +3309,15 @@ static int pf_alarm_send_alarm (
       LOG_ERROR (
          PF_ALARM_LOG,
          "Alarm(%d): You provided too long alarm payload (%u bytes) but max "
-         "is %zu. Increase PNET_MAX_ALARM_PAYLOAD_DATA_SIZE.\n",
+         "is %u. Increase PNET_MAX_ALARM_PAYLOAD_DATA_SIZE.\n",
          __LINE__,
          payload_len,
-         sizeof (alarm_data.payload.data));
+         (unsigned int)sizeof (alarm_data.payload.data));
 
       return -1;
    }
 
-   if (payload_len > p_ar->alarm_cr_request.max_alarm_data_length)
+   if (payload_len > p_ar->io_ar->alarm_cr_request.max_alarm_data_length)
    {
       LOG_ERROR (
          PF_ALARM_LOG,
@@ -3202,7 +3325,7 @@ static int pf_alarm_send_alarm (
          "said max %u bytes.\n",
          __LINE__,
          payload_len,
-         p_ar->alarm_cr_request.max_alarm_data_length);
+         p_ar->io_ar->alarm_cr_request.max_alarm_data_length);
 
       return -1;
    }
@@ -3216,6 +3339,31 @@ static int pf_alarm_send_alarm (
          payload_len);
 
       return -1;
+   }
+
+   if (
+      pf_cmdev_get_submodule_full (
+         net,
+         api_id,
+         slot_nbr,
+         subslot_nbr,
+         &submodule) < 0)
+   {
+      LOG_ERROR (
+         PF_ALARM_LOG,
+         "Alarm(%d): no submodule found in subslot.\n",
+         __LINE__);
+      return -1;
+   }
+
+   if (!pf_cmrpc_ar_set_equal (submodule->owner, p_ar))
+   {
+      LOG_DEBUG (
+         PF_ALARM_LOG,
+         "Alarm(%d): destination AR obsolete.\n",
+         __LINE__);
+      /* Not an error. */
+      return 0;
    }
 
    /* Prepare data */
@@ -3245,7 +3393,7 @@ static int pf_alarm_send_alarm (
       payload_len);
 
    return pf_alarm_send_queue_post (
-      &p_ar->alarm_send_q[high_prio ? 1 : 0],
+      &p_ar->io_ar->alarm_send_queue_set->send_queue[high_prio ? 1 : 0],
       &alarm_data);
 }
 
@@ -3649,6 +3797,41 @@ int pf_alarm_send_released (
       net,
       p_ar,
       PF_ALARM_TYPE_RELEASED,
+      false, /* Low prio */
+      api_id,
+      slot_nbr,
+      subslot_nbr,
+      NULL, /* No p_diag_item */
+      module_ident,
+      submodule_ident,
+      0,     /* No payload */
+      0,     /* No payload */
+      NULL); /* No payload */
+
+   return 0;
+}
+
+int pf_alarm_send_return_of_submodule (
+   pnet_t * net,
+   pf_ar_t * p_ar,
+   uint32_t api_id,
+   uint16_t slot_nbr,
+   uint16_t subslot_nbr,
+   uint32_t module_ident,
+   uint32_t submodule_ident)
+{
+   LOG_INFO (
+      PF_ALARM_LOG,
+      "Alarm(%d): Sending return of submodule alarm. Slot: %u  Subslot: "
+      "0x%04X\n",
+      __LINE__,
+      slot_nbr,
+      subslot_nbr);
+
+   (void)pf_alarm_send_alarm (
+      net,
+      p_ar,
+      PF_ALARM_TYPE_RETURN_OF_SUBMODULE,
       false, /* Low prio */
       api_id,
       slot_nbr,

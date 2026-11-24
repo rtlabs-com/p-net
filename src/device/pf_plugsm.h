@@ -32,6 +32,30 @@ extern "C" {
 #endif
 
 /**
+ * Request a Plug alarm to be sent for a submodule to a controller through
+ * a specific AR.
+ *
+ * The request is queued up for the AR in question. If the queue is empty at
+ * the time of calling this function, the request is acted upon immediately.
+ *
+ * @param net              InOut: The p-net stack instance.
+ * @param ar               InOut: The AR instance.
+ * @param api              In:    The API containing the submodule.
+ * @param slot_number      In:    The slot containing the submodule.
+ * @param subslot_number   In:    The subslot containing the submodule.
+ * @param module_ident     In:    The identification of the module.
+ * @param submodule_ident  In:    The identification of the submodule.
+ */
+void pf_plugsm_plug_alarm_req (
+   pnet_t * net,
+   pf_ar_t * ar,
+   uint32_t api,
+   uint16_t slot_number,
+   uint16_t subslot_number,
+   uint32_t module_ident,
+   uint32_t submodule_ident);
+
+/**
  * Request a Released alarm to be sent for a submodule to a controller through
  * a specific AR.
  *
@@ -57,12 +81,12 @@ void pf_plugsm_released_alarm_req (
 
 /**
  * Handle the PrmEnd request sent by a controller as a result of a submodule
- * being released.
+ * being activated.
  *
- * This will call the \a pnet_sm_released_ind() callback registered by the
+ * This will call the \a pnet_sm_activated_ind() callback registered by the
  * application, and act according to its return value: either record that the
- * application is expected to call \a pnet_sm_released_cnf(), or activate the
- * next request for a Released alarm from the same AR.
+ * application is expected to call \a pnet_sm_activated_cnf(), or activate the
+ * next request for a Plug/Released alarm from the same AR.
  *
  * @param net              InOut: The p-net stack instance.
  * @param ar               InOut: The AR instance.
@@ -77,10 +101,11 @@ int pf_plugsm_prmend_ind (
 
 /**
  * Send an Application Ready request to the controller, after an AR to it has
- * become the new owner of a released submodule.
+ * become the new owner of a activated submodule.
  *
  * This will be called indirectly by the application, when it calls \a
- * pnet_sm_released_cnf() to confirm that it has handled a released submodule.
+ * pnet_sm_activated_cnf() to confirm that it has handled the activation of the
+ * submodule.
  *
  * @param net              InOut: The p-net stack instance.
  * @param ar               InOut: The AR instance.
@@ -89,10 +114,10 @@ void pf_plugsm_application_ready_req (pnet_t * net, pf_ar_t * ar);
 
 /**
  * Handle the Application Ready confirmation sent by a controller, after an AR
- * to it has become the new owner of a released submodule.
+ * to it has become the new owner of an activated submodule.
  *
- * This will check the queue of Released alarm requests, and act on the first
- * request in the queue, if there is one.
+ * This will check the queue of Plug/Released alarm requests, and act on the
+ * first request in the queue, if there is one.
  *
  * @param net              InOut: The p-net stack instance.
  * @param ar               InOut: The AR instance.
@@ -100,6 +125,22 @@ void pf_plugsm_application_ready_req (pnet_t * net, pf_ar_t * ar);
  *         -1 on failure.
  */
 int pf_plugsm_application_ready_cnf (pnet_t * net, pf_ar_t * ar);
+
+/**
+ * Check whether a submodule is part of an ongoing PLUGSM parameterization.
+ *
+ * @param ar               In: The AR instance.
+ * @param api_id           In: The API.
+ * @param slot_nbr         In: The slot number.
+ * @param subslot_nbr      In: The subslot number.
+ * @return true if the submodule is being parameterized,
+ *         false if not.
+ */
+bool pf_plugsm_prm_flag (
+   pf_ar_t const * ar,
+   uint32_t api_id,
+   uint16_t slot_nbr,
+   uint16_t subslot_nbr);
 
 #ifdef __cplusplus
 }

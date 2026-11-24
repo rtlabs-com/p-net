@@ -22,35 +22,35 @@ extern "C" {
 
 /**
  * Do work on a device instance.
- * @param p_dev            In:    The device instance.
+ * @param dev              In:    The device instance.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
-typedef int (*pf_ftn_device_t) (pf_device_t * p_dev);
+typedef int (*pf_ftn_device_t) (pf_device_t * dev);
 
 /**
  * Do work on an API instance.
- * @param p_api            In:    The API instance.
+ * @param api              In:    The API instance.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
-typedef int (*pf_ftn_api_t) (pf_api_t * p_api);
+typedef int (*pf_ftn_api_t) (pf_api_t * api);
 
 /**
  * Do work on a slot instance.
- * @param p_slot           In:    The slot instance.
+ * @param slot             In:    The slot instance.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
-typedef int (*pf_ftn_slot_t) (pf_slot_t * p_slot);
+typedef int (*pf_ftn_slot_t) (pf_slot_t * slot);
 
 /**
- * Do work on a sub-slot instance.
- * @param p_subslot        In:    The sub-slot instance.
+ * Do work on a submodule instance.
+ * @param submodule        In:    The submodule instance.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
-typedef int (*pf_ftn_subslot_t) (pf_subslot_t * p_subslot);
+typedef int (*pf_ftn_submodule_t) (pf_submodule_t * submodule);
 
 /**
  * Initialize the cmdev component.
@@ -71,7 +71,7 @@ void pf_cmdev_exit (pnet_t * net);
  * @param p_ftn_dev        In:    Call this function for the device.
  * @param p_ftn_api        In:    Call this function for each api.
  * @param p_ftn_slot       In:    Call this function for each slot.
- * @param p_ftn_sub        In:    Call this function for each sub-slots.
+ * @param p_ftn_sub        In:    Call this function for each submodule.
  * @return  0  If all provided functions return 0.
  *          -1 If any function called returns an error (!= 0)..
  */
@@ -80,7 +80,21 @@ int pf_cmdev_cfg_traverse (
    pf_ftn_device_t p_ftn_dev,
    pf_ftn_api_t p_ftn_api,
    pf_ftn_slot_t p_ftn_slot,
-   pf_ftn_subslot_t p_ftn_sub);
+   pf_ftn_submodule_t p_ftn_sub);
+
+/**
+ * Call a function for each submodule of a p-net instance.
+ * @param net              InOut: The p-net stack instance
+ * @param func             In: The callback function
+ * @param user_data        In: User data passed to the callback function.
+ * @returns 0 if the function returns 0 for all submodules,
+ *          otherwise the first nonzero return value of \a func,
+ *          in which case the iteration is broken.
+ */
+int pf_cmdev_for_each_submodule (
+   pnet_t * net,
+   int (*func) (pnet_t *, pf_submodule_t *, void * user_data),
+   void * user_data);
 
 /**
  * Plug a module into a slot.
@@ -88,6 +102,7 @@ int pf_cmdev_cfg_traverse (
  * @param api_id           In:    The API identifier.
  * @param slot_nbr         In:    The slot number.
  * @param module_ident_nbr In:    The module ident number.
+ * @param slot_out         Out:   If not NULL, used to return the slot.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -95,7 +110,28 @@ int pf_cmdev_plug_module (
    pnet_t * net,
    uint32_t api_id,
    uint16_t slot_nbr,
-   uint32_t module_ident_nbr);
+   uint32_t module_ident_nbr,
+   pf_slot_t ** slot_out);
+
+/**
+ * Check whether a plugged submodule is compatible with the expected
+ * submodule.
+ *
+ * The submodule is compatible if the ident numbers are equal, or if the
+ * application accepts it as a substitute via the \a pnet_is_substitute_cb()
+ * user callback.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param expected_ident   In:    The expected submodule ident number.
+ * @param submodule_ident  In:    The plugged submodule ident number.
+ * @return  true  if the submodule ident numbers are equal or the
+ *                submodule is a substitute.
+ *          false otherwise.
+ */
+bool pf_cmdev_submodule_is_compatible (
+   pnet_t * net,
+   uint32_t expected_ident,
+   uint32_t submodule_ident);
 
 /**
  * Plug a sub-module into a sub-slot.
@@ -109,7 +145,7 @@ int pf_cmdev_plug_module (
  * @param direction        In:    Data direction(s).
  * @param length_input     In:    Number of input bytes.
  * @param length_output    In:    Number of output bytes.
- * @param update           In:    true for update of sub-module.
+ * @param flags            In:    Submodule flags.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -123,15 +159,17 @@ int pf_cmdev_plug_submodule (
    pnet_submodule_dir_t direction,
    uint16_t length_input,
    uint16_t length_output,
-   bool update);
+   uint8_t flags);
 
 /**
  * Pull a sub-module from a sub-slot.
- * Sends an alarm.
- * @param net              InOut: The p-net stack instance
- * @param api_id           In:    The API identifier.
- * @param slot_nbr         In:    The slot number.
- * @param subslot_nbr      In:    The sub-slot number.
+ * Sends an alarm to the current owner, if there is one.
+ * @param net                InOut: The p-net stack instance
+ * @param api_id             In:    The API identifier.
+ * @param slot_nbr           In:    The slot number.
+ * @param subslot_nbr        In:    The subslot number.
+ * @param pull_empty_module  In:    Whether to pull the module if it becomes
+ *                                  empty.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -139,7 +177,8 @@ int pf_cmdev_pull_submodule (
    pnet_t * net,
    uint32_t api_id,
    uint16_t slot_nbr,
-   uint16_t subslot_nbr);
+   uint16_t subslot_nbr,
+   bool pull_empty_module);
 
 /**
  * Pull a module from a slot.
@@ -164,64 +203,64 @@ int pf_cmdev_cm_abort (pnet_t * net, pf_ar_t * p_ar);
 /**
  * Get a pointer to the device configuration.
  * @param net              InOut: The p-net stack instance
- * @param pp_device        Out:   The device configuration.
+ * @param device_out       Out:   The device configuration.
  * @return  0  Always.
  */
-int pf_cmdev_get_device (pnet_t * net, pf_device_t ** pp_device);
+int pf_cmdev_get_device (pnet_t * net, pf_device_t ** device_out);
 
 /**
  * Get an API instance by its API id.
  * @param net              InOut: The p-net stack instance
  * @param api_id           In:    The API id.
- * @param pp_api           Out:   The API instance.
+ * @param api_out          Out:   The API instance.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_cmdev_get_api (pnet_t * net, uint32_t api_id, pf_api_t ** pp_api);
+int pf_cmdev_get_api (pnet_t * net, uint32_t api_id, pf_api_t ** api_out);
 
 /**
  * Get a slot instance of an API instance by slot number.
- * @param p_api            In:  The API instance.
+ * @param api              In:  The API instance.
  * @param slot_nbr         In:  The slot number.
- * @param pp_slot          Out: The slot instance.
+ * @param slot_out         Out: The slot instance.
  * @return  0 if operation succeeded.
  *         -1 if an error occurred.
  */
 int pf_cmdev_get_slot (
-   pf_api_t const * p_api,
+   pf_api_t const * api,
    uint16_t slot_nbr,
-   pf_slot_t ** pp_slot);
+   pf_slot_t ** slot_out);
 
 /**
- * Get a subslot instance of a slot instance by subslot number.
- * @param p_slot           In:  The slot instance.
+ * Get a submodule instance of a slot instance by subslot number.
+ * @param slot             In:  The slot instance.
  * @param subslot_nbr      In:  The subslot number.
- * @param pp_subslot       Out: The subslot instance.
+ * @param submodule_out    Out: The submodule instance.
  * @return  0 if operation succeeded.
  *         -1 if an error occurred.
  */
-int pf_cmdev_get_subslot (
-   pf_slot_t const * p_slot,
+int pf_cmdev_get_submodule (
+   pf_slot_t const * slot,
    uint16_t subslot_nbr,
-   pf_subslot_t ** pp_subslot);
+   pf_submodule_t ** submodule_out);
 
 /**
- * Get a sub-slot instance from the api ID, the slot number and the sub-slot
+ * Get a submodule instance from the api ID, the slot number and the subslot
  * number.
  * @param net              InOut: The p-net stack instance
  * @param api_id           In:    The API identifier.
  * @param slot_nbr         In:    The slot number.
- * @param subslot_nbr      In:    The sub-slot number.
- * @param pp_subslot       Out:   The sub-slot instance.
+ * @param subslot_nbr      In:    The subslot number.
+ * @param submodule_out    Out:   The submodule instance.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
-int pf_cmdev_get_subslot_full (
+int pf_cmdev_get_submodule_full (
    pnet_t * net,
    uint32_t api_id,
    uint16_t slot_nbr,
    uint16_t subslot_nbr,
-   pf_subslot_t ** pp_subslot);
+   pf_submodule_t ** submodule_out);
 
 /* Not used */
 /**
@@ -229,7 +268,7 @@ int pf_cmdev_get_subslot_full (
  * @param net              InOut: The p-net stack instance
  * @param api_id           In:    The API identifier.
  * @param slot_nbr         In:    The slot number.
- * @param pp_slot          Out:   The slot instance.
+ * @param slot_out         Out:   The slot instance.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -237,7 +276,7 @@ int pf_cmdev_get_slot_full (
    pnet_t * net,
    uint32_t api_id,
    uint16_t slot_nbr,
-   pf_slot_t ** pp_slot);
+   pf_slot_t ** slot_out);
 
 /**
  * Get identity for plugged module from the api ID and slot number.
@@ -322,6 +361,19 @@ int pf_cmdev_get_next_diagnosis_usi (
    uint16_t * p_next_usi);
 
 /**
+ * Find a specific expected API instance in the AR.
+ * @param ar               In:    The AR instance.
+ * @param api              In:    The API to find.
+ * @param exp_api          Out:   The expected API instance.
+ * @return  0  if an API instance was found.
+ *          -1 if the API instance was not found.
+ */
+int pf_cmdev_get_exp_api (
+   pf_ar_t const * ar,
+   uint32_t api,
+   pf_exp_api_t ** exp_api);
+
+/**
  * Find the expected module of an AR, addressed by the API and the
  * slot number.
  * @param ar               In:    The AR instance.
@@ -332,7 +384,7 @@ int pf_cmdev_get_next_diagnosis_usi (
  *          -1 if the module instance was not found.
  */
 int pf_cmdev_get_exp_mod (
-   pf_ar_t * ar,
+   pf_ar_t const * ar,
    uint32_t api,
    uint16_t slot_number,
    pf_exp_module_t ** exp_module);
@@ -349,7 +401,7 @@ int pf_cmdev_get_exp_mod (
  *          -1 if the submodule instance was not found.
  */
 int pf_cmdev_get_exp_sub (
-   pf_ar_t * ar,
+   pf_ar_t const * ar,
    uint32_t api,
    uint16_t slot_number,
    uint16_t subslot_number,
@@ -357,6 +409,7 @@ int pf_cmdev_get_exp_sub (
 
 /**
  * Generate module diff, when needed, for the specified AR.
+ * The AR should have a defined IO-AR.
  * @param net              InOut: The p-net stack instance
  * @param ar               InOut: The AR instance.
  * @return  0  if operation succeeded.
@@ -389,9 +442,7 @@ int pf_cmdev_generate_submodule_diff (
  * @return  0  if no error was found.
  *          -1 if an error was found.
  */
-int pf_cmdev_check_iocr_param (
-   pf_ar_t * p_ar,
-   pnet_result_t * p_stat);
+int pf_cmdev_check_iocr_param (pf_ar_t * p_ar, pnet_result_t * p_stat);
 
 /**
  * Return a string representation of the specified CMDEV state.
@@ -469,6 +520,22 @@ int pf_cmdev_get_state (const pf_ar_t * p_ar, pf_cmdev_state_values_t * p_state)
  */
 int pf_cmdev_cmio_info_ind (pnet_t * net, pf_ar_t * p_ar, bool data_possible);
 
+/**
+ * Get the prm_flag of a submodule with respect to a given AR.
+ *
+ * @param ar               In: The AR instance.
+ * @param api_id           In: The API.
+ * @param slot_nbr         In: The slot number.
+ * @param subslot_nbr      In: The subslot number.
+ * @return true if the submodule is being parameterized through the AR,
+ *         false if not.
+ */
+bool pf_cmdev_prm_flag (
+   pf_ar_t const * ar,
+   uint32_t api_id,
+   uint16_t slot_nbr,
+   uint16_t subslot_nbr);
+
 /* ======================================================================
  *       Remote primitives
  */
@@ -512,6 +579,7 @@ int pf_cmdev_rm_release_ind (
  * @param net                  InOut: The p-net stack instance
  * @param p_ar                 InOut: The AR instance.
  * @param p_control_io         In:    The control block.
+ * @param p_sm_list            InOut: The SubmoduleList block.
  * @param p_release_result     Out:   Detailed result of the connect operation.
  * @param p_set_state_prmend   Out:   Trigger PNET_EVENT_PRMEND after the
  *                                    response have been sent.
@@ -522,6 +590,7 @@ int pf_cmdev_rm_dcontrol_ind (
    pnet_t * net,
    pf_ar_t * p_ar,
    pf_control_block_t * p_control_io,
+   pf_submodule_list_block_t * p_sm_list,
    pnet_result_t * p_release_result,
    bool * p_set_state_prmend);
 
@@ -579,7 +648,7 @@ int pf_cmdev_check_no_straddle (
    uint16_t start_2,
    uint16_t length_2);
 
-int pf_cmdev_check_ar_type (uint16_t ar_type);
+int pf_cmdev_check_ar_type (uint16_t ar_type, bool device_access);
 
 #ifdef __cplusplus
 }

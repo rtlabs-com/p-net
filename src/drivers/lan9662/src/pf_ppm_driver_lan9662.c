@@ -39,7 +39,7 @@ int pf_ppm_drv_lan9662_create (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
       p_ar->arep,
       crep);
 
-   mera_ppm_cfg.p_iocr = &p_ar->iocrs[crep];
+   mera_ppm_cfg.p_iocr = &p_ar->io_ar->iocrs[crep];
 
    pf_mera_get_port_from_remote_mac (
       &p_ar->ar_param.cm_initiator_mac_add,
@@ -50,9 +50,9 @@ int pf_ppm_drv_lan9662_create (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
       &net->pf_interface.main_port.mac_address,
       sizeof (pnet_ethaddr_t));
 
-   p_ar->iocrs[crep].ppm.frame = pf_mera_ppm_alloc (net, &mera_ppm_cfg);
+   p_ar->io_ar->iocrs[crep].ppm.frame = pf_mera_ppm_alloc (net, &mera_ppm_cfg);
 
-   if (p_ar->iocrs[crep].ppm.frame == NULL)
+   if (p_ar->io_ar->iocrs[crep].ppm.frame == NULL)
    {
       LOG_ERROR (
          PF_PPM_LOG,
@@ -74,7 +74,7 @@ int pf_ppm_drv_lan9662_activate_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep
       p_ar->arep,
       crep);
 
-   if (p_ar->iocrs[crep].ppm.frame == NULL)
+   if (p_ar->io_ar->iocrs[crep].ppm.frame == NULL)
    {
       LOG_ERROR (
          PF_PPM_LOG,
@@ -83,7 +83,7 @@ int pf_ppm_drv_lan9662_activate_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep
       return -1;
    }
 
-   return pf_mera_ppm_start (net, p_ar->iocrs[crep].ppm.frame);
+   return pf_mera_ppm_start (net, p_ar->io_ar->iocrs[crep].ppm.frame);
 }
 
 /**
@@ -115,17 +115,19 @@ int pf_ppm_drv_lan9662_close_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
       p_ar->arep,
       crep);
 
+   pf_iocr_t * p_iocr = &p_ar->io_ar->iocrs[crep];
+
    /* Delay close of pf_mera resources
     * Workaround for delayed alarm transmission.
     * Close RTE resources after alarm is sent.
     */
-   pf_scheduler_init_handle (&p_ar->iocrs[crep].ppm.ci_timeout, "ppm_close");
+   pf_scheduler_init_handle (&p_iocr->ppm.ci_timeout, "ppm_close");
    pf_scheduler_add (
       net,
       2,
       pf_ppm_drv_lan9662_delayed_close,
-      p_ar->iocrs[crep].ppm.frame,
-      &p_ar->iocrs[crep].ppm.ci_timeout);
+      p_iocr->ppm.frame,
+      &p_iocr->ppm.ci_timeout);
 
    return 0;
 }

@@ -71,6 +71,7 @@ void pf_pdport_lldp_restart_transmission (pnet_t * net);
  * Parse request and write response to output buffer.
  * The following indexes are supported:
  *   - PF_IDX_SUB_PDPORT_DATA_REAL
+ *   - PF_IDX_SUB_PDPORTDATAREALEXT
  *   - PF_IDX_SUB_PDPORT_DATA_ADJ
  *   - PF_IDX_SUB_PDPORT_DATA_CHECK
  *   - PF_IDX_DEV_PDREAL_DATA
@@ -80,9 +81,7 @@ void pf_pdport_lldp_restart_transmission (pnet_t * net);
  * @param net              InOut: The p-net stack instance
  * @param p_ar             InOut: The AR instance.
  * @param p_read_req       In:    The read request.
- * @param p_read_res       In:    The result information.
- * @param res_size         In:    The size of the output buffer.
- * @param p_res            Out:   The output buffer.
+ * @param p_res            InOut: The output buffer state.
  * @param p_pos            InOut: Position in the output buffer.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
@@ -91,9 +90,33 @@ int pf_pdport_read_ind (
    pnet_t * net,
    pf_ar_t * p_ar,
    const pf_iod_read_request_t * p_read_req,
-   const pf_iod_read_result_t * p_read_res,
-   uint16_t res_size,
-   uint8_t * p_res,
+   pf_put_info_t * p_res,
+   uint16_t * p_pos);
+
+/**
+ * Read a PDPort MRP data record/index
+ * Record to read defined by index in request
+ * Parse request and write response to output buffer.
+ * The following indexes are supported:
+ *   - PF_IDX_SUB_PDINTF_MRP_REAL
+ *   - PF_IDX_SUB_PDINTF_MRP_CHECK
+ *   - PF_IDX_SUB_PDINTF_MRP_ADJUST
+ *   - PF_IDX_SUB_PDPORT_MRP_ADJUST
+ *   - PF_IDX_SUB_PDPORT_MRP_REAL
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param p_ar             InOut: The AR instance.
+ * @param p_read_req       In:    The read request.
+ * @param p_res            InOut: The output buffer state.
+ * @param p_pos            InOut: Position in the output buffer.
+ * @return  0  if operation succeeded.
+ *          -1 if an error occurred.
+ */
+int pf_pdport_mrp_read_ind (
+   pnet_t * net,
+   pf_ar_t * p_ar,
+   const pf_iod_read_request_t * p_read_req,
+   pf_put_info_t * p_res,
    uint16_t * p_pos);
 
 /**
@@ -121,6 +144,34 @@ int pf_pdport_write_req (
    const pf_ar_t * p_ar,
    const pf_iod_write_request_t * p_write_req,
    const uint8_t * p_req_buf,
+   uint16_t data_length,
+   pnet_result_t * p_result);
+
+/**
+ * Write a MRP data record/index
+ * Record to write defined by index in request
+ * The following indexes are supported:
+ *   - PF_IDX_SUB_PDPORT_MRP_ADJUST
+ *   - PF_IDX_SUB_PDINTF_MRP_CHECK
+ *   - PF_IDX_SUB_PDINTF_MRP_ADJUST
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param p_ar             In:    The AR instance.
+ * @param p_write_req      In:    The IODWrite request.
+ * @param p_req_buf        In:    The request buffer.
+ * @param pos              In:    The start position in the request buffer.
+ * @param data_length      In:    Size of the data to write.
+ * @param p_result         Out:   Detailed error information.
+ * @return  0  if operation succeeded.
+ *          -1 if an error occurred.
+ */
+
+int pf_pdport_write_mrp_req (
+   pnet_t * net,
+   const pf_ar_t * p_ar,
+   const pf_iod_write_request_t * p_write_req,
+   const uint8_t * p_req_buf,
+   uint16_t pos,
    uint16_t data_length,
    pnet_result_t * p_result);
 
@@ -207,7 +258,7 @@ pnal_eth_status_t pf_pdport_get_eth_status (pnet_t * net, int loc_port_num);
  *
  * The MAU type value in the resulting \a pnal_eth_status_t struct
  * will be replaced by the default MAU type from the configuration
- * when the link is down (and the actual MAU type not can be read from
+ * when the link is down (and the actual MAU type can not be read from
  * hardware).
  *
  * @param net              InOut: The p-net stack instance

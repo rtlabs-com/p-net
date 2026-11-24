@@ -27,11 +27,17 @@ extern "C" {
 #include "pf_includes.h"
 #include "osal.h"
 
+typedef struct mock_frame
+{
+   uint8_t data[PF_FRAME_BUFFER_SIZE];
+   uint16_t len;
+} mock_frame_t;
+
 typedef struct mock_os_data_obj
 {
-   uint8_t eth_send_copy[PF_FRAME_BUFFER_SIZE];
-   uint16_t eth_send_len;
+   mock_frame_t eth_send_copy[3];
    uint16_t eth_send_count;
+   bool is_eth_send_failing; /* Used for injecting error */
 
    /* Per port Ethernet link status.
     * Note that port numbers start at 1. To simplify test cases, we add a
@@ -96,6 +102,7 @@ extern mock_os_data_t mock_os_data;
 extern mock_lldp_data_t mock_lldp_data;
 extern mock_file_data_t mock_file_data;
 extern mock_fspm_data_t mock_fspm_data;
+extern pf_snmp_config_t mock_snmp_config;
 extern mock_bg_worker_data_t mock_bg_worker_data;
 
 uint32_t mock_os_get_current_time_us (void);
@@ -122,20 +129,20 @@ int mock_pnal_get_port_statistics (
    pnal_port_stats_t * port_stats);
 int mock_pnal_get_hostname (char * hostname);
 void mock_os_cpy_mac_addr (uint8_t * mac_addr);
-int mock_pnal_udp_open (pnal_ipaddr_t addr, pnal_ipport_t port);
+pnal_socket_t mock_pnal_udp_open (pnal_ipaddr_t addr, pnal_ipport_t port);
 int mock_pnal_udp_sendto (
-   uint32_t id,
+   pnal_socket_t id,
    pnal_ipaddr_t dst_addr,
    pnal_ipport_t dst_port,
    const uint8_t * data,
    int size);
 int mock_pnal_udp_recvfrom (
-   uint32_t id,
+   pnal_socket_t id,
    pnal_ipaddr_t * dst_addr,
    pnal_ipport_t * dst_port,
    uint8_t * data,
    int size);
-void mock_pnal_udp_close (uint32_t id);
+void mock_pnal_udp_close (pnal_socket_t id);
 int mock_pnal_set_ip_suite (
    const char * interface_name,
    const pnal_ipaddr_t * p_ipaddr,
@@ -195,6 +202,12 @@ int mock_pf_lldp_get_peer_link_status (
 
 int mock_pnal_snmp_init (pnet_t * pnet, const pnal_cfg_t * pnal_cfg);
 
+int mock_pnal_mrp_init (pnet_t * pnet, const pnal_cfg_t * pnal_cfg);
+
+int mock_pnal_mrp_config (bool enable, pnal_mrp_cfg_t * cfg);
+
+int mock_pnal_mrp_status (void);
+
 int mock_pf_file_save_if_modified (
    const char * directory,
    const char * filename,
@@ -223,6 +236,11 @@ void mock_pf_fspm_save_im_location (pnet_t * net, const char * location);
 void mock_pf_bg_worker_init (pnet_t * net);
 
 int mock_pf_bg_worker_start_job (pnet_t * net, pf_bg_job_t job_id);
+
+int mock_pnal_snmp_configure (
+   pnal_snmp_control_mode_t mode,
+   const char * rocommunity,
+   const char * rwcommunity);
 
 #ifdef __cplusplus
 }

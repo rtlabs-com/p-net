@@ -1,8 +1,9 @@
-FROM dockcross/linux-arm64-lts
-ENV DEFAULT_DOCKCROSS_IMAGE p-net-rbpi
-RUN apt-get install -y python3-venv
+FROM dockcross/windows-static-x64
+ENV DEFAULT_DOCKCROSS_IMAGE=p-net-windows-x64
 
-RUN pip install --break-system-packages uv
+# Preinstall uv in our image
+COPY --from=ghcr.io/astral-sh/uv:0.5.9 /uv /uvx /usr/local/bin/
+ENV UV_LINK_MODE=copy
 
 ARG BUILDER_UID=1001
 ARG BUILDER_GID=1001

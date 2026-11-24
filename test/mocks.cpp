@@ -39,6 +39,7 @@ mock_file_data_t mock_file_data;
 mock_fspm_data_t mock_fspm_data;
 mock_bg_worker_data_t mock_bg_worker_data;
 pnal_eth_handle_t mock_eth_handle;
+pf_snmp_config_t mock_snmp_config;
 
 void mock_clear (void)
 {
@@ -46,6 +47,7 @@ void mock_clear (void)
    memset (&mock_lldp_data, 0, sizeof (mock_lldp_data));
    memset (&mock_file_data, 0, sizeof (mock_file_data));
    memset (&mock_fspm_data, 0, sizeof (mock_fspm_data));
+   memset (&mock_snmp_config, 0, sizeof (mock_snmp_config));
    memset (&mock_bg_worker_data, 0, sizeof (mock_bg_worker_data));
    mock_os_data.eth_status[1].operational_mau_type =
       PNAL_ETH_MAU_COPPER_100BaseTX_FULL_DUPLEX;
@@ -139,11 +141,22 @@ int mock_pnal_set_ip_suite (
 
 int mock_pnal_eth_send (pnal_eth_handle_t * handle, pnal_buf_t * p_buf)
 {
-   memcpy (mock_os_data.eth_send_copy, p_buf->payload, p_buf->len);
-   mock_os_data.eth_send_len = p_buf->len;
+   uint16_t previous_calls = mock_os_data.eth_send_count;
+   mock_frame_t * copy = &mock_os_data.eth_send_copy[previous_calls];
+   size_t size = pnal_buf_get_size (p_buf);
+
+   if (mock_os_data.is_eth_send_failing)
+   {
+      return 0;
+   }
+   if (previous_calls < NELEMENTS (mock_os_data.eth_send_copy))
+   {
+      pnal_buf_read (p_buf, 0, copy->data, size);
+      copy->len = size;
+   }
    mock_os_data.eth_send_count++;
 
-   return p_buf->len;
+   return (int) size;
 }
 
 int mock_pnal_get_macaddress (
@@ -159,14 +172,13 @@ int mock_pnal_get_macaddress (
    return 0;
 }
 
-int mock_pnal_udp_open (pnal_ipaddr_t addr, pnal_ipport_t port)
+pnal_socket_t mock_pnal_udp_open (pnal_ipaddr_t addr, pnal_ipport_t port)
 {
-   int ret = 2;
-   return ret;
+   return (pnal_socket_t)2;
 }
 
 int mock_pnal_udp_sendto (
-   uint32_t id,
+   pnal_socket_t id,
    pnal_ipaddr_t dst_addr,
    pnal_ipport_t dst_port,
    const uint8_t * data,
@@ -196,7 +208,7 @@ void mock_set_pnal_udp_recvfrom_buffer (uint8_t * p_src, uint16_t len)
 }
 
 int mock_pnal_udp_recvfrom (
-   uint32_t id,
+   pnal_socket_t id,
    pnal_ipaddr_t * p_dst_addr,
    pnal_ipport_t * p_dst_port,
    uint8_t * data,
@@ -218,7 +230,7 @@ int mock_pnal_udp_recvfrom (
    return len;
 }
 
-void mock_pnal_udp_close (uint32_t id)
+void mock_pnal_udp_close (pnal_socket_t id)
 {
 }
 
@@ -318,17 +330,17 @@ void mock_pf_generate_uuid (
    pnet_ethaddr_t mac_address,
    pf_uuid_t * p_uuid)
 {
-   p_uuid->data1 = session_number;
-   p_uuid->data2 = 0x1234;
-   p_uuid->data3 = 0x5678;
-   p_uuid->data4[0] = 0x01;
-   p_uuid->data4[1] = 0x02;
-   p_uuid->data4[2] = 0x03;
-   p_uuid->data4[3] = 0x04;
-   p_uuid->data4[4] = 0x05;
-   p_uuid->data4[5] = 0x06;
-   p_uuid->data4[6] = 0x07;
-   p_uuid->data4[7] = 0x08;
+   p_uuid->time_low = session_number;
+   p_uuid->time_mid = 0x1234;
+   p_uuid->time_hi_and_version = 0x5678;
+   p_uuid->clock_seq_hi_and_res = 0x01;
+   p_uuid->clock_seq_low = 0x02;
+   p_uuid->node[0] = 0x03;
+   p_uuid->node[1] = 0x04;
+   p_uuid->node[2] = 0x05;
+   p_uuid->node[3] = 0x06;
+   p_uuid->node[4] = 0x07;
+   p_uuid->node[5] = 0x08;
 }
 
 void mock_pf_lldp_get_management_address (
@@ -365,6 +377,21 @@ int mock_pf_lldp_get_peer_link_status (
 }
 
 int mock_pnal_snmp_init (pnet_t * pnet, const pnal_cfg_t * pnal_cfg)
+{
+   return 0;
+}
+
+int mock_pnal_mrp_init (pnet_t * pnet, const pnal_cfg_t * pnal_cfg)
+{
+   return 0;
+}
+
+int mock_pnal_mrp_config (bool enable, pnal_mrp_cfg_t * cfg)
+{
+   return 0;
+}
+
+int mock_pnal_mrp_status (void)
 {
    return 0;
 }
@@ -523,5 +550,47 @@ int mock_pf_bg_worker_start_job (pnet_t * net, pf_bg_job_t job_id)
       mock_bg_worker_data.save_ase_nvm_data_count++;
    }
 
+   switch (job_id)
+   {
+#if PNET_OPTION_SNMP
+   case (PF_BGJOB_CLEAR_SNMP_SYSTEM_LOCATION_NVM_DATA):
+      mock_pf_file_clear (
+         pf_cmina_get_file_directory (net),
+         PF_FILENAME_SNMP_SYSLOCATION);
+      break;
+   case (PF_BGJOB_SAVE_SNMP_SYSTEM_CONTACT_NVM_DATA):
+      pf_snmp_save_system_contact (net);
+      break;
+   case (PF_BGJOB_SAVE_SNMP_SYSTEM_LOCATION_NVM_DATA):
+      pf_snmp_save_system_location (net);
+      break;
+   case (PF_BGJOB_SAVE_SNMP_SYSTEM_NAME_NVM_DATA):
+      pf_snmp_save_system_name (net);
+      break;
+#endif
+   default:
+      break;
+   }
+   return 0;
+}
+
+int mock_pnal_snmp_configure (
+   pnal_snmp_control_mode_t mode,
+   const char * rocommunity,
+   const char * rwcommunity)
+{
+   mock_snmp_config.control_mode = mode;
+   strncpy (
+      mock_snmp_config.ro_name.string,
+      rocommunity,
+      sizeof (mock_snmp_config.ro_name.string) - 1);
+   mock_snmp_config.ro_name
+      .string[sizeof (mock_snmp_config.ro_name.string) - 1] = '\0';
+   strncpy (
+      mock_snmp_config.rw_name.string,
+      rwcommunity,
+      sizeof (mock_snmp_config.rw_name.string) - 1);
+   mock_snmp_config.rw_name
+      .string[sizeof (mock_snmp_config.rw_name.string) - 1] = '\0';
    return 0;
 }

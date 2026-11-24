@@ -33,7 +33,7 @@
 
 void pf_cmsu_init (pnet_t * net, pf_ar_t * p_ar)
 {
-   p_ar->cmsu_state = PF_CMSU_STATE_IDLE;
+   p_ar->io_ar->cmsu_state = PF_CMSU_STATE_IDLE;
 }
 
 /**
@@ -84,9 +84,9 @@ static int pf_cmsu_set_state (
       __LINE__,
       pf_cmsu_state_to_string (state),
       p_ar->arep,
-      pf_cmsu_state_to_string (p_ar->cmsu_state));
+      pf_cmsu_state_to_string (p_ar->io_ar->cmsu_state));
 
-   p_ar->cmsu_state = state;
+   p_ar->io_ar->cmsu_state = state;
 
    return 0;
 }
@@ -103,19 +103,19 @@ int pf_cmsu_cmdev_state_ind (
       "CMSU(%d): Received event %s from CMDEV. Initial state %s for AREP %u.\n",
       __LINE__,
       pf_cmdev_event_to_string (event),
-      pf_cmsu_state_to_string (p_ar->cmsu_state),
+      pf_cmsu_state_to_string (p_ar->io_ar->cmsu_state),
       p_ar->arep);
 
-   switch (p_ar->cmsu_state)
+   switch (p_ar->io_ar->cmsu_state)
    {
    case PF_CMSU_STATE_IDLE:
       break;
    case PF_CMSU_STATE_STARTUP:
       if (event == PNET_EVENT_PRMEND)
       {
-         for (crep = 0; crep < p_ar->nbr_iocrs; crep++)
+         for (crep = 0; crep < p_ar->io_ar->nbr_iocrs; crep++)
          {
-            if (p_ar->iocrs[crep].param.iocr_type == PF_IOCR_TYPE_INPUT)
+            if (p_ar->io_ar->iocrs[crep].param.iocr_type == PF_IOCR_TYPE_INPUT)
             {
                if (pf_ppm_activate_req (net, p_ar, crep) != 0)
                {
@@ -140,13 +140,13 @@ int pf_cmsu_cmdev_state_ind (
             __LINE__,
             p_ar->arep,
             p_ar->err_code);
-         for (crep = 0; crep < p_ar->nbr_iocrs; crep++)
+         for (crep = 0; crep < p_ar->io_ar->nbr_iocrs; crep++)
          {
-            if (p_ar->iocrs[crep].param.iocr_type == PF_IOCR_TYPE_INPUT)
+            if (p_ar->io_ar->iocrs[crep].param.iocr_type == PF_IOCR_TYPE_INPUT)
             {
                pf_ppm_close_req (net, p_ar, crep);
             }
-            if (p_ar->iocrs[crep].param.iocr_type == PF_IOCR_TYPE_OUTPUT)
+            if (p_ar->io_ar->iocrs[crep].param.iocr_type == PF_IOCR_TYPE_OUTPUT)
             {
                pf_cpm_close_req (net, p_ar, crep);
             }
@@ -170,7 +170,7 @@ int pf_cmsu_cmdev_state_ind (
          PNET_LOG,
          "CMSU(%d): Illegal state in cmsu %d\n",
          __LINE__,
-         p_ar->cmsu_state);
+         p_ar->io_ar->cmsu_state);
       break;
    }
    return 0;
@@ -180,40 +180,45 @@ int pf_cmsu_start_req (pnet_t * net, pf_ar_t * p_ar, pnet_result_t * p_stat)
 {
    int ret = -1;
    uint32_t crep;
+   pf_iocr_t * p_iocr;
 
-   switch (p_ar->cmsu_state)
+   switch (p_ar->io_ar->cmsu_state)
    {
    case PF_CMSU_STATE_IDLE:
       ret = 0; /* Assume all goes well */
-      for (crep = 0; crep < p_ar->nbr_iocrs; crep++)
+      if (p_ar->io_ar)
       {
-         if (ret == 0)
+         for (crep = 0; crep < p_ar->io_ar->nbr_iocrs; crep++)
          {
-            if (p_ar->iocrs[crep].param.iocr_type == PF_IOCR_TYPE_OUTPUT)
+            p_iocr = &p_ar->io_ar->iocrs[crep];
+            if (ret == 0)
             {
-               if (pf_cpm_create (net, p_ar, crep) != 0)
+               if (p_iocr->param.iocr_type == PF_IOCR_TYPE_OUTPUT)
                {
-                  p_stat->pnio_status.error_code_2 =
-                     PNET_ERROR_CODE_2_CMSU_AR_ADD_PROV_CONS_FAILED;
-                  ret = -1;
-               }
-               else if (pf_cpm_activate_req (net, p_ar, crep) != 0)
-               {
-                  p_stat->pnio_status.error_code_2 =
-                     PNET_ERROR_CODE_2_CMSU_AR_ADD_PROV_CONS_FAILED;
-                  ret = -1;
+                  if (pf_cpm_create (net, p_ar, crep) != 0)
+                  {
+                     p_stat->pnio_status.error_code_2 =
+                        PNET_ERROR_CODE_2_CMSU_AR_ADD_PROV_CONS_FAILED;
+                     ret = -1;
+                  }
+                  else if (pf_cpm_activate_req (net, p_ar, crep) != 0)
+                  {
+                     p_stat->pnio_status.error_code_2 =
+                        PNET_ERROR_CODE_2_CMSU_AR_ADD_PROV_CONS_FAILED;
+                     ret = -1;
+                  }
                }
             }
-         }
-         if (ret == 0)
-         {
-            if (p_ar->iocrs[crep].param.iocr_type == PF_IOCR_TYPE_INPUT)
+            if (ret == 0)
             {
-               if (pf_ppm_create (net, p_ar, crep) != 0)
+               if (p_iocr->param.iocr_type == PF_IOCR_TYPE_INPUT)
                {
-                  p_stat->pnio_status.error_code_2 =
-                     PNET_ERROR_CODE_2_CMSU_AR_ADD_PROV_CONS_FAILED;
-                  ret = -1;
+                  if (pf_ppm_create (net, p_ar, crep) != 0)
+                  {
+                     p_stat->pnio_status.error_code_2 =
+                        PNET_ERROR_CODE_2_CMSU_AR_ADD_PROV_CONS_FAILED;
+                     ret = -1;
+                  }
                }
             }
          }
@@ -228,12 +233,6 @@ int pf_cmsu_start_req (pnet_t * net, pf_ar_t * p_ar, pnet_result_t * p_stat)
       {
          p_stat->pnio_status.error_code_2 =
             PNET_ERROR_CODE_2_CMDEV_STATE_CONFLICT;
-         ret = -1;
-      }
-      if ((ret == 0) && (pf_cmsm_activate (p_ar) != 0))
-      {
-         p_stat->pnio_status.error_code_2 =
-            PNET_ERROR_CODE_2_CMSM_SIGNALED_ERROR;
          ret = -1;
       }
 
@@ -266,7 +265,7 @@ int pf_cmsu_start_req (pnet_t * net, pf_ar_t * p_ar, pnet_result_t * p_stat)
          PNET_LOG,
          "CMSU(%d): Illegal state in cmsu %d\n",
          __LINE__,
-         p_ar->cmsu_state);
+         p_ar->io_ar->cmsu_state);
       break;
    }
 

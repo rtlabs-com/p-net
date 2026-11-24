@@ -65,12 +65,14 @@
 #define LLDP_MAX_TLV     512
 
 #define LLDP_PEER_MAX_TTL_IN_SECS                                              \
-   60 /* Profinet peers should have TTL = 20 seconds. Use some margin. */
+   60 /* Profinet peers should have TTL = 21 seconds. Use some margin. */
 
-#define LLDP_PNIO_SUBTYPE_MEAS_DELAY_VALUES_TLV_LEN 24
-#define LLDP_PNIO_SUBTYPE_PORT_STATUS_TLV_LEN       8
-#define LLDP_PNIO_SUBTYPE_CHASSIS_MAC_TLV_LEN       10
-#define LLDP_IEEE_SUBTYPE_MAC_PHY_TLV_LEN           9
+#define LLDP_PNIO_SUBTYPE_MEAS_DELAY_VALUES_TLV_LEN    24
+#define LLDP_PNIO_SUBTYPE_PORT_STATUS_TLV_LEN          8
+#define LLDP_PNIO_SUBTYPE_CHASSIS_MAC_TLV_LEN          10
+#define LLDP_PNIO_SUBTYPE_MAUTYPE_EXT_TLV_LEN          6
+#define LLDP_IEEE_SUBTYPE_MAC_PHY_TLV_LEN              9
+#define LLDP_PNIO_SUBTYPE_MRP_RING_PORT_STATUS_TLV_LEN 22
 
 /* Autonegotiation status */
 #define LLDP_AUTONEG_SUPPORTED BIT (0)
@@ -80,7 +82,7 @@ typedef struct lldp_tlv
 {
    uint8_t type;
    uint16_t len;
-   const uint8_t * p_data;
+   uint16_t data_pos;
 } lldp_tlv_t;
 
 /** Header for Organizationally Specific TLV */
@@ -126,19 +128,19 @@ static const pnet_ethaddr_t lldp_dst_addr = {
  *
  * This is for the type and the payload length.
  *
- * @param p_buf            InOut: The buffer.
+ * @param p_buf            InOut: Buffer builder state.
  * @param p_pos            InOut: The buffer position.
  * @param typ              In:    The TLV header type.
  * @param len              In:    The TLV payload length.
  */
 static inline void pf_lldp_add_tlv_header (
-   uint8_t * p_buf,
+   pf_put_info_t * p_buf,
    uint16_t * p_pos,
    uint8_t typ,
    uint8_t len)
 {
    uint16_t tlv_header = ((typ) << LLDP_TYPE_SHIFT) + ((len)&LLDP_LENGTH_MASK);
-   pf_put_uint16 (true, tlv_header, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
+   pf_put_uint16 (true, tlv_header, p_buf, p_pos);
 }
 
 /**
@@ -163,13 +165,13 @@ lldp_tlv_t pf_lldp_get_tlv_from_packet (pf_get_info_t * p_info, uint16_t * p_pos
    {
       tlv.type = (tlv_head & LLDP_TYPE_MASK) >> LLDP_TYPE_SHIFT;
       tlv.len = (tlv_head & LLDP_LENGTH_MASK);
-      tlv.p_data = &p_info->p_buf[*p_pos];
+      tlv.data_pos = *p_pos;
    }
    else
    {
       tlv.type = LLDP_TYPE_END;
       tlv.len = 0;
-      tlv.p_data = NULL;
+      tlv.data_pos = 0;
    }
 
    return tlv;
@@ -178,13 +180,13 @@ lldp_tlv_t pf_lldp_get_tlv_from_packet (pf_get_info_t * p_info, uint16_t * p_pos
 /**
  * Insert Ethernet header into a buffer.
  *
- * @param p_buf            InOut: The buffer.
+ * @param p_buf            InOut: The buffer builder state.
  * @param p_pos            InOut: The buffer position.
  * @param dst_addr         In:    Destination MAC address.
  * @param src_addr         In:    Source MAC address.
  */
 static void pf_lldp_add_ethernet_header (
-   uint8_t * p_buf,
+   pf_put_info_t * p_buf,
    uint16_t * p_pos,
    pnet_ethaddr_t dst_addr,
    pnet_ethaddr_t src_addr)
@@ -192,18 +194,16 @@ static void pf_lldp_add_ethernet_header (
    pf_put_mem (
       dst_addr.addr,
       sizeof (dst_addr.addr),
-      PF_FRAME_BUFFER_SIZE,
       p_buf,
       p_pos);
 
    pf_put_mem (
       src_addr.addr,
       sizeof (src_addr.addr),
-      PF_FRAME_BUFFER_SIZE,
       p_buf,
       p_pos);
 
-   pf_put_uint16 (true, PNAL_ETHTYPE_LLDP, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
+   pf_put_uint16 (true, PNAL_ETHTYPE_LLDP, p_buf, p_pos);
 }
 
 /**
@@ -213,20 +213,20 @@ static void pf_lldp_add_ethernet_header (
  * This inserts a TLV header with type="organisation-specific", and
  * the Profinet organisation identifier as the first part of the TLV payload.
  *
- * @param p_buf            InOut: The buffer.
+ * @param p_buf            InOut: The buffer builder state.
  * @param p_pos            InOut: The buffer position.
  * @param len              In:    The TLV payload length (for the part after the
  *                                organisation identifier)
  */
 static inline void pf_lldp_add_pnio_header (
-   uint8_t * p_buf,
+   pf_put_info_t * p_buf,
    uint16_t * p_pos,
    uint8_t len)
 {
    pf_lldp_add_tlv_header (p_buf, p_pos, LLDP_TYPE_ORG_SPEC, (len) + 3);
-   pf_put_byte (0x00, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
-   pf_put_byte (0x0e, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
-   pf_put_byte (0xcf, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
+   pf_put_byte (0x00, p_buf, p_pos);
+   pf_put_byte (0x0e, p_buf, p_pos);
+   pf_put_byte (0xcf, p_buf, p_pos);
 }
 
 /**
@@ -236,20 +236,20 @@ static inline void pf_lldp_add_pnio_header (
  * This inserts a TLV header with type="organisation-specific", and
  * the IEEE 802.3 organisation identifier as the first part of the TLV payload.
  *
- * @param p_buf            InOut: The buffer.
+ * @param p_buf            InOut: The buffer builder state.
  * @param p_pos            InOut: The buffer position.
  * @param len              In:    The TLV payload length (for the part after the
  *                                organisation identifier)
  */
 static inline void pf_lldp_add_ieee_header (
-   uint8_t * p_buf,
+   pf_put_info_t * p_buf,
    uint16_t * p_pos,
    uint8_t len)
 {
    pf_lldp_add_tlv_header (p_buf, p_pos, LLDP_TYPE_ORG_SPEC, (len) + 3);
-   pf_put_byte (0x00, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
-   pf_put_byte (0x12, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
-   pf_put_byte (0x0f, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
+   pf_put_byte (0x00, p_buf, p_pos);
+   pf_put_byte (0x12, p_buf, p_pos);
+   pf_put_byte (0x0f, p_buf, p_pos);
 }
 
 /**
@@ -257,12 +257,12 @@ static inline void pf_lldp_add_ieee_header (
  * Insert the mandatory chassis_id TLV into a buffer.
  *
  * @param p_chassis_id     In:    The Chassis ID.
- * @param p_buf            InOut: The buffer.
+ * @param p_buf            InOut: The buffer builder state.
  * @param p_pos            InOut: The position in the buffer.
  */
 static void pf_lldp_add_chassis_id_tlv (
    const pf_lldp_chassis_id_t * p_chassis_id,
-   uint8_t * p_buf,
+   pf_put_info_t * p_buf,
    uint16_t * p_pos)
 {
    pf_lldp_add_tlv_header (
@@ -270,11 +270,10 @@ static void pf_lldp_add_chassis_id_tlv (
       p_pos,
       LLDP_TYPE_CHASSIS_ID,
       1 + p_chassis_id->len);
-   pf_put_byte (p_chassis_id->subtype, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
+   pf_put_byte (p_chassis_id->subtype, p_buf, p_pos);
    pf_put_mem (
       p_chassis_id->string,
       p_chassis_id->len,
-      PF_FRAME_BUFFER_SIZE,
       p_buf,
       p_pos);
 }
@@ -283,20 +282,19 @@ static void pf_lldp_add_chassis_id_tlv (
  * @internal
  * Insert the mandatory port_id TLV into a buffer.
  * @param p_port_id        In:    Port Id
- * @param p_buf            InOut: The buffer.
+ * @param p_buf            InOut: The buffer builder state.
  * @param p_pos            InOut: The position in the buffer.
  */
 static void pf_lldp_add_port_id_tlv (
    const pf_lldp_port_id_t * p_port_id,
-   uint8_t * p_buf,
+   pf_put_info_t * p_buf,
    uint16_t * p_pos)
 {
    pf_lldp_add_tlv_header (p_buf, p_pos, LLDP_TYPE_PORT_ID, 1 + p_port_id->len);
-   pf_put_byte (p_port_id->subtype, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
+   pf_put_byte (p_port_id->subtype, p_buf, p_pos);
    pf_put_mem (
       p_port_id->string,
       p_port_id->len,
-      PF_FRAME_BUFFER_SIZE,
       p_buf,
       p_pos);
 }
@@ -304,65 +302,89 @@ static void pf_lldp_add_port_id_tlv (
 /**
  * @internal
  * Insert the mandatory time-to-live (TTL) TLV into a buffer.
- * @param p_buf            InOut: The buffer.
+ * @param p_buf            InOut: The buffer builder state.
  * @param p_pos            InOut: The position in the buffer.
  */
-static void pf_lldp_add_ttl_tlv (uint8_t * p_buf, uint16_t * p_pos)
+static void pf_lldp_add_ttl_tlv (pf_put_info_t * p_buf, uint16_t * p_pos)
 {
    pf_lldp_add_tlv_header (p_buf, p_pos, LLDP_TYPE_TTL, 2);
-   pf_put_uint16 (true, PF_LLDP_TTL, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
+   pf_put_uint16 (true, PF_LLDP_TTL, p_buf, p_pos);
 }
 
 /**
  * @internal
  * Insert the optional Profinet port status TLV into a buffer.
  *
- * The port status TLV is mandatory for ProfiNet.
+ * The port status TLV is mandatory for Profinet.
  * @param rtclass_2_status  In:    Use 0. Not supported.
  * @param rtclass_3_status  In:    Use 0. Not supported.
- * @param p_buf             InOut: The buffer.
+ * @param p_buf             InOut: The buffer builder state.
  * @param p_pos             InOut: The position in the buffer.
  */
 static void pf_lldp_add_port_status (
    uint16_t rtclass_2_status,
    uint16_t rtclass_3_status,
-   uint8_t * p_buf,
+   pf_put_info_t * p_buf,
    uint16_t * p_pos)
 {
    pf_lldp_add_pnio_header (p_buf, p_pos, 5);
 
    pf_put_byte (
       LLDP_PNIO_SUBTYPE_PORT_STATUS,
-      PF_FRAME_BUFFER_SIZE,
       p_buf,
       p_pos);
-   pf_put_uint16 (true, rtclass_2_status, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
-   pf_put_uint16 (true, rtclass_3_status, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
+   pf_put_uint16 (true, rtclass_2_status, p_buf, p_pos);
+   pf_put_uint16 (true, rtclass_3_status, p_buf, p_pos);
 }
 
 /**
  * @internal
  * Insert the optional Profinet chassis MAC TLV into a buffer.
  *
- * The chassis MAC TLV is mandatory for ProfiNet.
+ * The chassis MAC TLV is mandatory for Profinet.
  * @param mac_address      In:    Device MAC address.
- * @param p_buf            InOut: The buffer.
+ * @param p_buf            InOut: The buffer builder state.
  * @param p_pos            InOut: The position in the buffer.
  */
 static void pf_lldp_add_chassis_mac (
    const pnet_ethaddr_t * mac_address,
-   uint8_t * p_buf,
+   pf_put_info_t * p_buf,
    uint16_t * p_pos)
 {
    pf_lldp_add_pnio_header (p_buf, p_pos, 1 + sizeof (pnet_ethaddr_t));
 
    pf_put_byte (
       LLDP_PNIO_SUBTYPE_CHASSIS_MAC,
-      PF_FRAME_BUFFER_SIZE,
       p_buf,
       p_pos);
-   memcpy (&p_buf[*p_pos], mac_address->addr, sizeof (pnet_ethaddr_t));
-   (*p_pos) += sizeof (pnet_ethaddr_t);
+   pf_put_mac_address (mac_address, p_buf, p_pos);
+}
+
+/**
+ * @internal
+ * Insert the optional Profinet MAU Type Extension TLV into a buffer.
+ *
+ * The MAU type extension TLV is currently only non-zero for POF and APL.
+ * @param p_mau_type_extension  In:    MAU type extension for this port.
+ * @param p_buf                 InOut: The buffer builder state.
+ * @param p_pos                 InOut: The position in the buffer.
+ */
+static void pf_lldp_add_mau_type_extension (
+   const uint16_t * p_mau_type_extension,
+   pf_put_info_t * p_buf,
+   uint16_t * p_pos)
+{
+   pf_lldp_add_pnio_header (p_buf, p_pos, 3);
+
+   pf_put_byte (
+      LLDP_PNIO_SUBTYPE_MAU_TYPE_EXTENSION,
+      p_buf,
+      p_pos);
+   pf_put_uint16 (
+      true,
+      *p_mau_type_extension,
+      p_buf,
+      p_pos);
 }
 
 /**
@@ -372,14 +394,14 @@ static void pf_lldp_add_chassis_mac (
  * This is the autonegotiation capabilities and available speeds, and cable MAU
  * type.
  *
- * The IEEE 802.3 MAC TLV is mandatory for ProfiNet on 803.2 interfaces.
+ * The IEEE 802.3 MAC TLV is mandatory for Profinet on 803.2 interfaces.
  * @param p_status         In:    Link status for this port.
- * @param p_buf            InOut: The buffer.
+ * @param p_buf            InOut: The buffer builder state.
  * @param p_pos            InOut: The position in the buffer.
  */
 static void pf_lldp_add_ieee_mac_phy (
    const pf_lldp_link_status_t * p_status,
-   uint8_t * p_buf,
+   pf_put_info_t * p_buf,
    uint16_t * p_pos)
 {
    uint8_t autoneg_status;
@@ -396,66 +418,106 @@ static void pf_lldp_add_ieee_mac_phy (
 
    pf_lldp_add_ieee_header (p_buf, p_pos, 6);
 
-   pf_put_byte (LLDP_IEEE_SUBTYPE_MAC_PHY, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
-   pf_put_byte (autoneg_status, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
+   pf_put_byte (LLDP_IEEE_SUBTYPE_MAC_PHY, p_buf, p_pos);
+   pf_put_byte (autoneg_status, p_buf, p_pos);
    pf_put_uint16 (
       true,
       p_status->autonegotiation_advertised_capabilities,
-      PF_FRAME_BUFFER_SIZE,
       p_buf,
       p_pos);
    pf_put_uint16 (
       true,
       p_status->operational_mau_type,
-      PF_FRAME_BUFFER_SIZE,
       p_buf,
       p_pos);
 }
 
 /**
  * Insert the optional management data TLV into a buffer.
- * It is mandatory for ProfiNet.
+ * It is mandatory for Profinet.
  *
  * Contains the IP address as well as information about the
  * management interface.
  *
  * @param p_man_address    In:    Management address
- * @param p_buf            InOut: The buffer.
+ * @param p_buf            InOut: The buffer builder state.
  * @param p_pos            InOut: The position in the buffer.
  */
 static void pf_lldp_add_management (
    const pf_lldp_management_address_t * p_man_address,
-   uint8_t * p_buf,
+   pf_put_info_t * p_buf,
    uint16_t * p_pos)
 {
    pf_lldp_add_tlv_header (p_buf, p_pos, LLDP_TYPE_MANAGEMENT_ADDRESS, 12);
 
    /* Management address length, type and value */
-   pf_put_byte (1 + p_man_address->len, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
-   pf_put_byte (p_man_address->subtype, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
+   pf_put_byte (1 + p_man_address->len, p_buf, p_pos);
+   pf_put_byte (p_man_address->subtype, p_buf, p_pos);
    pf_put_mem (
       p_man_address->value,
       p_man_address->len,
-      PF_FRAME_BUFFER_SIZE,
       p_buf,
       p_pos);
 
    /* Interface number for management interface */
    pf_put_byte (
       p_man_address->interface_number.subtype,
-      PF_FRAME_BUFFER_SIZE,
       p_buf,
       p_pos);
    pf_put_uint32 (
       true,
       p_man_address->interface_number.value,
-      PF_FRAME_BUFFER_SIZE,
       p_buf,
       p_pos);
 
    /* Management OID. Not supported */
-   pf_put_byte (0, PF_FRAME_BUFFER_SIZE, p_buf, p_pos);
+   pf_put_byte (0, p_buf, p_pos);
 }
+
+#if PNET_OPTION_MRP
+/**
+ * Insert the optional mrp port status data TLV into a buffer.
+ * It is mandatory for Profinet.
+ *
+ * Contains mrp domain and current port status
+ *
+ * @param p_mrp_port_status In:    Management address
+ * @param p_buf             InOut: The buffer builder state.
+ * @param p_pos             InOut: The position in the buffer.
+ */
+static void pf_lldp_add_mrp_port_status (
+   const pf_lldp_mrp_port_status_t * p_mrp_port_status,
+   pf_put_info_t * p_buf,
+   uint16_t * p_pos)
+{
+   /* send mrp port status when MRP is enabled or at least one time when just
+    * being disabled */
+   if (p_mrp_port_status->active)
+   {
+      pf_lldp_add_pnio_header (
+         p_buf,
+         p_pos,
+         LLDP_PNIO_SUBTYPE_MRP_RING_PORT_STATUS_TLV_LEN - 3);
+
+      pf_put_byte (
+         LLDP_PNIO_SUBTYPE_MRP_RING_PORT_STATUS,
+         p_buf,
+         p_pos);
+
+      pf_put_mem (
+         p_mrp_port_status->domain.data,
+         sizeof (p_mrp_port_status->domain.data),
+         p_buf,
+         p_pos);
+
+      pf_put_uint16 (
+         true,
+         p_mrp_port_status->mrrt_status,
+         p_buf,
+         p_pos);
+   }
+}
+#endif
 
 void pf_lldp_invalidate_peer_info (pnet_t * net, int loc_port_num)
 {
@@ -515,14 +577,14 @@ void pf_lldp_restart_peer_timeout (
    pf_scheduler_remove_if_running (net, &p_port_data->lldp.rx_timeout);
 
    /*
-    *  Profinet states that the time to live shall be 20 seconds,
-    *  See IEC61158-6-10 6.3.13.2.2
+    *  Profinet test spec states that the time to live shall be 21 seconds,
+    *  See 8.4.3.1 "Device check" in TCS_00002048_TEDcheck_V2.45.3.docx.
     *
-    *  To handle situations where ttl is longer than 20s and timeout gets
+    *  To handle situations where ttl is longer than 21s and timeout gets
     *  longer than scheduler can handle, only start receive timeout if
     *  ttl is within configured max ttl.
     *  Timeout will always be started if a profinet enabled switch
-    *  with 20s LLDP peer ttl is used.
+    *  with 21s LLDP peer ttl is used.
     */
    if (timeout_in_secs > LLDP_PEER_MAX_TTL_IN_SECS)
    {
@@ -908,6 +970,17 @@ void pf_lldp_get_link_status (
    p_link_status->is_valid = true;
 }
 
+void pf_lldp_get_mau_type_extension (
+   pnet_t * net,
+   int loc_port_num,
+   uint16_t * p_mau_type_extension)
+{
+   pnal_eth_status_t status =
+      pf_pdport_get_eth_status_filtered_mau (net, loc_port_num);
+
+   *p_mau_type_extension = status.mau_type_extension;
+}
+
 int pf_lldp_get_peer_link_status (
    pnet_t * net,
    int loc_port_num,
@@ -937,15 +1010,42 @@ size_t pf_lldp_get_system_description (
       "%5u "
       "%c%3u%3u%3u",
       /* clang-format on */
-      net->fspm_cfg.product_name,
-      net->fspm_cfg.im_0_data.im_order_id,
-      net->fspm_cfg.im_0_data.im_serial_number,
-      net->fspm_cfg.im_0_data.im_hardware_revision,
-      net->fspm_cfg.im_0_data.im_sw_revision_prefix,
-      net->fspm_cfg.im_0_data.im_sw_revision_functional_enhancement,
-      net->fspm_cfg.im_0_data.im_sw_revision_bug_fix,
-      net->fspm_cfg.im_0_data.im_sw_revision_internal_change);
+      net->fspm_cfg.product_info.name,
+      net->fspm_cfg.product_info.order_id,
+      net->fspm_cfg.product_info.serial_number,
+      net->fspm_cfg.product_info.hw_revision,
+      net->fspm_cfg.product_info.sw_revision.prefix,
+      net->fspm_cfg.product_info.sw_revision.functional_enhancement,
+      net->fspm_cfg.product_info.sw_revision.bug_fix,
+      net->fspm_cfg.product_info.sw_revision.internal_change);
 }
+
+
+#if PNET_OPTION_MRP
+
+void pf_lldp_get_mrp_port_status (
+   pnet_t * net,
+   int loc_port_num,
+   pf_lldp_mrp_port_status_t * lldp_mrp_port_status)
+{
+   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
+
+   memcpy (
+      lldp_mrp_port_status->domain.data,
+      p_port_data->mrp.domain.data,
+      sizeof (lldp_mrp_port_status->domain.data));
+
+   /* as per profinet protocol spec this is always disabled */
+   lldp_mrp_port_status->mrrt_status = MRRT_STATUS_OFF;
+
+   /* include always when mrp enabled, if disabled only send out once */
+   lldp_mrp_port_status->active =
+      net->mrp_data.config.role_updated ||
+      (net->mrp_data.config.role == MEDIA_REDUNDANCY_CLIENT);
+
+   net->mrp_data.config.role_updated = false;
+}
+#endif
 
 void pf_lldp_mac_address_to_string (
    const uint8_t * mac,
@@ -970,20 +1070,26 @@ void pf_lldp_mac_address_to_string (
  * @param net              In:    The p-net stack instance.
  * @param loc_port_num     In:    Local port number.
  *                                Valid range: 1 .. num_physical_ports
- * @param buf              Out:   Ethernet frame buffer of size
- *                                PF_FRAME_BUFFER_SIZE bytes.
- *
- * @return Size of constructed frame, in bytes.
+ * @param frame            InOut: Ethernet frame buffer.
+ * @return 0 on success, -1 on failure.
  */
-size_t pf_lldp_construct_frame (pnet_t * net, int loc_port_num, uint8_t buf[])
+int pf_lldp_construct_frame (
+   pnet_t * net,
+   int loc_port_num,
+   pnal_buf_t * frame)
 {
    uint16_t pos;
    const pnet_ethaddr_t * device_mac_address =
       pf_cmina_get_device_macaddr (net);
    pf_lldp_link_status_t link_status;
+   uint16_t mau_type_extension;
    pf_lldp_chassis_id_t chassis_id;
    pf_lldp_port_id_t port_id;
    pf_lldp_management_address_t man_address;
+#if PNET_OPTION_MRP
+   pf_lldp_mrp_port_status_t mrp_port_status;
+#endif
+
    const pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
 #if LOG_DEBUG_ENABLED(PF_LLDP_LOG)
@@ -995,7 +1101,11 @@ size_t pf_lldp_construct_frame (pnet_t * net, int loc_port_num, uint8_t buf[])
    pf_lldp_get_chassis_id (net, &chassis_id);
    pf_lldp_get_port_id (net, loc_port_num, &port_id);
    pf_lldp_get_link_status (net, loc_port_num, &link_status);
+   pf_lldp_get_mau_type_extension (net, loc_port_num, &mau_type_extension);
    pf_lldp_get_management_address (net, &man_address);
+#if PNET_OPTION_MRP
+   pf_lldp_get_mrp_port_status (net, loc_port_num, &mrp_port_status);
+#endif
 #if LOG_DEBUG_ENABLED(PF_LLDP_LOG)
    pf_cmina_ip_to_string (ipaddr, ip_string);
    if (chassis_id.subtype == PF_LLDP_SUBTYPE_LOCALLY_ASSIGNED)
@@ -1020,29 +1130,43 @@ size_t pf_lldp_construct_frame (pnet_t * net, int loc_port_num, uint8_t buf[])
       port_id.string);
 #endif
 
+   pf_put_info_t buf =
+   {
+      .p_frame = frame,
+      .p_array = NULL,
+      .len = pnal_buf_get_size (frame),
+      .result = PF_PUT_OK,
+   };
    pos = 0;
 
    pf_lldp_add_ethernet_header (
-      buf,
+      &buf,
       &pos,
       lldp_dst_addr,
       p_port_data->netif.mac_address);
 
    /* Add mandatory parts */
-   pf_lldp_add_chassis_id_tlv (&chassis_id, buf, &pos);
-   pf_lldp_add_port_id_tlv (&port_id, buf, &pos);
-   pf_lldp_add_ttl_tlv (buf, &pos);
+   pf_lldp_add_chassis_id_tlv (&chassis_id, &buf, &pos);
+   pf_lldp_add_port_id_tlv (&port_id, &buf, &pos);
+   pf_lldp_add_ttl_tlv (&buf, &pos);
 
    /* Add optional parts */
-   pf_lldp_add_port_status (0, 0, buf, &pos);
-   pf_lldp_add_chassis_mac (device_mac_address, buf, &pos);
-   pf_lldp_add_ieee_mac_phy (&link_status, buf, &pos);
-   pf_lldp_add_management (&man_address, buf, &pos);
+   pf_lldp_add_port_status (0, 0, &buf, &pos);
+   pf_lldp_add_chassis_mac (device_mac_address, &buf, &pos);
+   pf_lldp_add_ieee_mac_phy (&link_status, &buf, &pos);
+   pf_lldp_add_mau_type_extension (&mau_type_extension, &buf, &pos);
+   pf_lldp_add_management (&man_address, &buf, &pos);
+#if PNET_OPTION_MRP
+   pf_lldp_add_mrp_port_status (&mrp_port_status, &buf, &pos);
+#endif
 
    /* Add end of LLDP-PDU marker */
-   pf_lldp_add_tlv_header (buf, &pos, LLDP_TYPE_END, 0);
+   pf_lldp_add_tlv_header (&buf, &pos, LLDP_TYPE_END, 0);
 
-   return pos;
+   /* Reduce size of frame buffer */
+   pnal_buf_set_size (frame, pos);
+
+   return buf.result == PF_PUT_OK ? 0 : -1;
 }
 
 /**
@@ -1056,17 +1180,25 @@ static void pf_lldp_send (pnet_t * net, int loc_port_num)
 {
    /* FIXME: Buffer size should include Ethernet header (14 bytes) */
    pnal_buf_t * p_buffer = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE);
+   int error;
 
    if (p_buffer == NULL)
    {
       return;
    }
 
-   if (p_buffer->payload != NULL)
+   error = pf_lldp_construct_frame (net, loc_port_num, p_buffer);
+   if (error == 0)
    {
-      p_buffer->len =
-         pf_lldp_construct_frame (net, loc_port_num, p_buffer->payload);
       (void)pf_eth_send_on_physical_port (net, loc_port_num, p_buffer);
+   }
+   else
+   {
+      LOG_ERROR (
+         PF_LLDP_LOG,
+         "LLDP(%d): Failed to construct LLDP frame for port %d\n",
+         __LINE__,
+         loc_port_num);
    }
 
    pnal_buf_free (p_buffer);
@@ -1552,6 +1684,84 @@ static void pf_lldp_get_chassis_mac_from_packet (
 }
 
 /**
+ * Get MAUType extension from received packet
+ *
+ * Layout of MAUTypeExtension TLV:
+ * 2     TLV header (already processed)
+ * 3     LLDP_PNIO_Header (already processed)
+ * 1     LLDP_PNIO_SubType (already processed)
+ * 2     MAUType Extension
+ *
+ * @param parse_info          InOut: Parsing information.
+ * @param offset              InOut: Byte offset in buffer.
+ * @param tlv_len             In:    Length of TLV in bytes.
+ * @param mau_type_extension  Out:   Parsed MAUType extension.
+ */
+static void pf_lldp_get_mau_type_extension_from_packet (
+   pf_get_info_t * parse_info,
+   uint16_t * const offset,
+   const size_t tlv_len,
+   uint16_t * mau_type_extension)
+{
+   *mau_type_extension = 0;
+
+   if (tlv_len != LLDP_PNIO_SUBTYPE_MAUTYPE_EXT_TLV_LEN)
+   {
+      parse_info->result = PF_PARSE_ERROR;
+
+      return;
+   }
+
+   pf_get_mem (
+      parse_info,
+      offset,
+      sizeof (*mau_type_extension),
+      mau_type_extension);
+}
+
+#if PNET_OPTION_MRP
+/**
+ * Get MRP ring port status from received packet
+ *
+ * Layout of LLDP_PNIO_SUBTYPE_MRP_RING_PORT_STATUS TLV:
+ * 2     TLV header (already processed)
+ * 3     LLDP_PNIO_Header (already processed)
+ * 1     LLDP_PNIO_SubType (already processed)
+ * 16    Domain UUID
+ * 2     MRRT Port status
+ *
+ *
+ * @param parse_info       InOut: Parsing information.
+ * @param offset           InOut: Byte offset in buffer.
+ * @param tlv_len          In:    Length of TLV in bytes.
+ * @param domain_uuid      Out:   Parsed domain uuid.
+ * @param mrp_port_status  Out:   MRP port status. *
+ */
+static void pf_lldp_get_mrp_port_status_from_packet (
+   pf_get_info_t * parse_info,
+   uint16_t * const offset,
+   const size_t tlv_len,
+   mrp_domain_uuid_t * domain_uuid,
+   uint16_t * mrp_port_status)
+{
+   if (tlv_len != LLDP_PNIO_SUBTYPE_MRP_RING_PORT_STATUS_TLV_LEN)
+   {
+      parse_info->result = PF_PARSE_ERROR;
+
+      return;
+   }
+
+   pf_get_mem (
+      parse_info,
+      offset,
+      sizeof (mrp_domain_uuid_t),
+      domain_uuid->data);
+
+   *mrp_port_status = pf_get_uint16 (parse_info, offset);
+}
+#endif
+
+/**
  * Get link status from received packet
  *
  * Layout of MAC/PHY Configuration/Status TLV:
@@ -1603,29 +1813,31 @@ static void pf_lldp_get_link_status_from_packet (
  * @internal
  * Parse LLDP frame buffer
  *
- * @param buf              In:    LLDP data.
- * @param len              In:    Length of LLDP data.
+ * @param buf              In:    LLDP frame
+ * @param offset           In:    Byte offset to LLDP data
  * @param lldp_peer_info   Out:   Record holding parsed LLDP information.
  *                                Nulled initially (also on failure).
  * @return 0 if parsing is successful, -1 on error.
  */
 int pf_lldp_parse_packet (
-   const uint8_t buf[],
-   uint16_t len,
+   const pnal_buf_t * buf,
+   uint16_t offset,
    pf_lldp_peer_info_t * lldp_peer_info)
 {
    lldp_tlv_t tlv;
    pf_lldp_org_header_t org;
-   pf_get_info_t parse_info;
    pf_lldp_management_address_t management_address;
-   uint16_t offset = 0;
 
    memset (lldp_peer_info, 0, sizeof (*lldp_peer_info));
 
-   parse_info.result = PF_PARSE_OK;
-   parse_info.is_big_endian = true;
-   parse_info.len = len;
-   parse_info.p_buf = buf;
+   pf_get_info_t parse_info =
+   {
+      .result = PF_PARSE_OK,
+      .is_big_endian = true,
+      .len = pnal_buf_get_size (buf),
+      .p_frame = buf,
+      .p_array = NULL,
+   };
 
    tlv = pf_lldp_get_tlv_from_packet (&parse_info, &offset);
 
@@ -1700,6 +1912,23 @@ int pf_lldp_parse_packet (
                   tlv.len,
                   &lldp_peer_info->mac_address);
                break;
+            case LLDP_PNIO_SUBTYPE_MAU_TYPE_EXTENSION:
+               pf_lldp_get_mau_type_extension_from_packet (
+                  &parse_info,
+                  &offset,
+                  tlv.len,
+                  &lldp_peer_info->mau_type_extension);
+               break;
+#if PNET_OPTION_MRP
+            case LLDP_PNIO_SUBTYPE_MRP_RING_PORT_STATUS:
+               pf_lldp_get_mrp_port_status_from_packet (
+                  &parse_info,
+                  &offset,
+                  tlv.len,
+                  &lldp_peer_info->mrp_port_status.domain,
+                  &lldp_peer_info->mrp_port_status.mrrt_status);
+               break;
+#endif
             default:
                offset += (tlv.len - 4);
                break;
@@ -1867,6 +2096,24 @@ void pf_lldp_store_peer_info (
    os_mutex_unlock (net->lldp_mutex);
 }
 
+static void dump_mrp_status (const pf_lldp_peer_info_t * lldp_peer_info)
+{
+#if PNET_OPTION_MRP
+   char uuid_str[MRP_UUID_STRING_SIZE];
+
+   pf_mrp_domain_uuid_str (&lldp_peer_info->mrp_port_status.domain, uuid_str);
+
+   LOG_INFO (
+      PF_LLDP_LOG,
+      "LLDP(%d): MRP port status - "
+      "Domain %s "
+      "Status 0x%x\n",
+      __LINE__,
+      uuid_str,
+      lldp_peer_info->mrp_port_status.mrrt_status);
+#endif
+}
+
 /**
  * Apply updated peer information
  *
@@ -1920,6 +2167,8 @@ void pf_lldp_update_peer (
             p_port_data->lldp.peer_info.mac_address.addr[5],
             p_port_data->lldp.peer_info.chassis_id.string,
             p_port_data->lldp.peer_info.port_id.string);
+
+         dump_mrp_status (&p_port_data->lldp.peer_info);
       }
       else
       {
@@ -1950,6 +2199,8 @@ void pf_lldp_update_peer (
          lldp_peer_info->mac_address.addr[5],
          lldp_peer_info->chassis_id.string,
          lldp_peer_info->port_id.string);
+
+      dump_mrp_status (lldp_peer_info);
    }
 
    pf_lldp_store_peer_info (net, loc_port_num, lldp_peer_info);
@@ -1962,12 +2213,10 @@ int pf_lldp_recv (
    pnal_buf_t * p_frame_buf,
    uint16_t offset)
 {
-   uint8_t * buf = p_frame_buf->payload + offset;
-   uint16_t buf_len = p_frame_buf->len - offset;
    pf_lldp_peer_info_t peer_data;
    int err = 0;
 
-   err = pf_lldp_parse_packet (buf, buf_len, &peer_data);
+   err = pf_lldp_parse_packet (p_frame_buf, offset, &peer_data);
 
    if (!err)
    {
@@ -1988,7 +2237,7 @@ int pf_lldp_recv (
             peer_data.mac_address.addr[3],
             peer_data.mac_address.addr[4],
             peer_data.mac_address.addr[5],
-            p_frame_buf->len,
+            (int)pnal_buf_get_size (p_frame_buf),
             peer_data.chassis_id.string,
             peer_data.port_id.string);
       }
@@ -2000,7 +2249,7 @@ int pf_lldp_recv (
             "ID: %s\n",
             __LINE__,
             loc_port_num,
-            p_frame_buf->len,
+            (int)pnal_buf_get_size (p_frame_buf),
             peer_data.port_id.string);
       }
       else
@@ -2012,7 +2261,7 @@ int pf_lldp_recv (
             "%d\n",
             __LINE__,
             loc_port_num,
-            p_frame_buf->len);
+            (int)pnal_buf_get_size (p_frame_buf));
       }
 
       if (pf_port_is_valid (net, loc_port_num))

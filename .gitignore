@@ -3,6 +3,7 @@ build*/
 *#
 CMakeFiles/
 CMakeCache.txt
+CMakeUserPresets.json
 install
 docs/_build
 docs/_copied

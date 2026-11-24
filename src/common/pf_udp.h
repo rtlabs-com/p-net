@@ -25,10 +25,10 @@ extern "C" {
  *
  * @param net              InOut: The p-net stack instance
  * @param port             In:    UDP port to listen to.
- * @return Socket ID, or -1 if an error occurred. Note that socket ID 0
+ * @return Socket ID, or PNAL_INVALID_SOCKET if an error occurred. Note that socket ID 0
  *         is valid.
  */
-int pf_udp_open (pnet_t * net, pnal_ipport_t port);
+pnal_socket_t pf_udp_open (pnet_t * net, pnal_ipport_t port);
 
 /**
  * Send UDP data
@@ -43,7 +43,7 @@ int pf_udp_open (pnet_t * net, pnal_ipport_t port);
  */
 int pf_udp_sendto (
    pnet_t * net,
-   uint32_t id,
+   pnal_socket_t id,
    pnal_ipaddr_t dst_addr,
    pnal_ipport_t dst_port,
    const uint8_t * data,
@@ -65,7 +65,7 @@ int pf_udp_sendto (
  */
 int pf_udp_recvfrom (
    pnet_t * net,
-   uint32_t id,
+   pnal_socket_t id,
    pnal_ipaddr_t * src_addr,
    pnal_ipport_t * src_port,
    uint8_t * data,
@@ -77,7 +77,7 @@ int pf_udp_recvfrom (
  * @param net              InOut: The p-net stack instance
  * @param id               In:    Socket ID
  */
-void pf_udp_close (pnet_t * net, uint32_t id);
+void pf_udp_close (pnet_t * net, pnal_socket_t id);
 
 #ifdef __cplusplus
 }

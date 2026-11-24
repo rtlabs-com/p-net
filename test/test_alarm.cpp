@@ -33,14 +33,14 @@ TEST_F (AlarmUnitTest, AlarmCheckAddDiagItemToSummary)
    pnet_alarm_spec_t alarm_specifier;
    uint32_t maint_status = 0;
    pf_diag_item_t diag_item;
-   pf_subslot_t subslot;
+   pf_submodule_t submodule;
    pf_ar_t ar;
 
    /* Prepare default input data */
    memset (&ar, 0, sizeof (ar));
-   memset (&subslot, 0, sizeof (subslot));
-   subslot.ownsm_state = PF_OWNSM_STATE_IOC;
-   subslot.owner = &ar;
+   memset (&submodule, 0, sizeof (submodule));
+   submodule.ownsm_state = PF_OWNSM_STATE_IOC;
+   submodule.owner = &ar;
 
    memset (&diag_item, 0, sizeof (diag_item));
    diag_item.usi = PF_USI_EXTENDED_CHANNEL_DIAGNOSIS;
@@ -56,7 +56,7 @@ TEST_F (AlarmUnitTest, AlarmCheckAddDiagItemToSummary)
    maint_status = 0;
    pf_alarm_add_diag_item_to_summary (
       &ar,
-      &subslot,
+      &submodule,
       &diag_item,
       &alarm_specifier,
       &maint_status);
@@ -67,13 +67,13 @@ TEST_F (AlarmUnitTest, AlarmCheckAddDiagItemToSummary)
    EXPECT_EQ (maint_status, 0UL);
 
    /* Other AR */
-   subslot.owner = NULL;
+   submodule.owner = NULL;
 
    memset (&alarm_specifier, 0, sizeof (alarm_specifier));
    maint_status = 0;
    pf_alarm_add_diag_item_to_summary (
       &ar,
-      &subslot,
+      &submodule,
       &diag_item,
       &alarm_specifier,
       &maint_status);
@@ -82,7 +82,7 @@ TEST_F (AlarmUnitTest, AlarmCheckAddDiagItemToSummary)
    EXPECT_TRUE ((bool)alarm_specifier.submodule_diagnosis);
    EXPECT_FALSE ((bool)alarm_specifier.ar_diagnosis);
    EXPECT_EQ (maint_status, 0UL);
-   subslot.owner = &ar;
+   submodule.owner = &ar;
 
    /* Manufacturer specific (in USI format) */
    diag_item.usi = TEST_DIAG_USI_CUSTOM;
@@ -91,7 +91,7 @@ TEST_F (AlarmUnitTest, AlarmCheckAddDiagItemToSummary)
    maint_status = 0;
    pf_alarm_add_diag_item_to_summary (
       &ar,
-      &subslot,
+      &submodule,
       &diag_item,
       &alarm_specifier,
       &maint_status);
@@ -111,7 +111,7 @@ TEST_F (AlarmUnitTest, AlarmCheckAddDiagItemToSummary)
    maint_status = 0;
    pf_alarm_add_diag_item_to_summary (
       &ar,
-      &subslot,
+      &submodule,
       &diag_item,
       &alarm_specifier,
       &maint_status);
@@ -133,11 +133,11 @@ TEST_F (AlarmUnitTest, AlarmCheckAddDiagItemToSummary)
    maint_status = 0;
    pf_alarm_add_diag_item_to_summary (
       &ar,
-      &subslot,
+      &submodule,
       &diag_item,
       &alarm_specifier,
       &maint_status);
-   EXPECT_TRUE ((bool)alarm_specifier.channel_diagnosis);
+   EXPECT_FALSE ((bool)alarm_specifier.channel_diagnosis);
    EXPECT_FALSE ((bool)alarm_specifier.manufacturer_diagnosis);
    EXPECT_FALSE ((bool)alarm_specifier.submodule_diagnosis);
    EXPECT_FALSE ((bool)alarm_specifier.ar_diagnosis);
@@ -157,11 +157,11 @@ TEST_F (AlarmUnitTest, AlarmCheckAddDiagItemToSummary)
    maint_status = 0;
    pf_alarm_add_diag_item_to_summary (
       &ar,
-      &subslot,
+      &submodule,
       &diag_item,
       &alarm_specifier,
       &maint_status);
-   EXPECT_TRUE ((bool)alarm_specifier.channel_diagnosis);
+   EXPECT_FALSE ((bool)alarm_specifier.channel_diagnosis);
    EXPECT_FALSE ((bool)alarm_specifier.manufacturer_diagnosis);
    EXPECT_FALSE ((bool)alarm_specifier.submodule_diagnosis);
    EXPECT_FALSE ((bool)alarm_specifier.ar_diagnosis);
@@ -173,11 +173,11 @@ TEST_F (AlarmUnitTest, AlarmCheckAddDiagItemToSummary)
    maint_status = 0;
    pf_alarm_add_diag_item_to_summary (
       &ar,
-      &subslot,
+      &submodule,
       &diag_item,
       &alarm_specifier,
       &maint_status);
-   EXPECT_TRUE ((bool)alarm_specifier.channel_diagnosis);
+   EXPECT_FALSE ((bool)alarm_specifier.channel_diagnosis);
    EXPECT_FALSE ((bool)alarm_specifier.manufacturer_diagnosis);
    EXPECT_FALSE ((bool)alarm_specifier.submodule_diagnosis);
    EXPECT_FALSE ((bool)alarm_specifier.ar_diagnosis);
@@ -197,11 +197,11 @@ TEST_F (AlarmUnitTest, AlarmCheckAddDiagItemToSummary)
    maint_status = 0;
    pf_alarm_add_diag_item_to_summary (
       &ar,
-      &subslot,
+      &submodule,
       &diag_item,
       &alarm_specifier,
       &maint_status);
-   EXPECT_TRUE ((bool)alarm_specifier.channel_diagnosis);
+   EXPECT_FALSE ((bool)alarm_specifier.channel_diagnosis);
    EXPECT_FALSE ((bool)alarm_specifier.manufacturer_diagnosis);
    EXPECT_FALSE ((bool)alarm_specifier.submodule_diagnosis);
    EXPECT_FALSE ((bool)alarm_specifier.ar_diagnosis);
@@ -221,11 +221,11 @@ TEST_F (AlarmUnitTest, AlarmCheckAddDiagItemToSummary)
    maint_status = 0;
    pf_alarm_add_diag_item_to_summary (
       &ar,
-      &subslot,
+      &submodule,
       &diag_item,
       &alarm_specifier,
       &maint_status);
-   EXPECT_TRUE ((bool)alarm_specifier.channel_diagnosis);
+   EXPECT_FALSE ((bool)alarm_specifier.channel_diagnosis);
    EXPECT_FALSE ((bool)alarm_specifier.manufacturer_diagnosis);
    EXPECT_FALSE ((bool)alarm_specifier.submodule_diagnosis);
    EXPECT_FALSE ((bool)alarm_specifier.ar_diagnosis);
@@ -237,11 +237,11 @@ TEST_F (AlarmUnitTest, AlarmCheckAddDiagItemToSummary)
    maint_status = 0;
    pf_alarm_add_diag_item_to_summary (
       &ar,
-      &subslot,
+      &submodule,
       &diag_item,
       &alarm_specifier,
       &maint_status);
-   EXPECT_TRUE ((bool)alarm_specifier.channel_diagnosis);
+   EXPECT_FALSE ((bool)alarm_specifier.channel_diagnosis);
    EXPECT_FALSE ((bool)alarm_specifier.manufacturer_diagnosis);
    EXPECT_FALSE ((bool)alarm_specifier.submodule_diagnosis);
    EXPECT_FALSE ((bool)alarm_specifier.ar_diagnosis);
@@ -263,7 +263,7 @@ TEST_F (AlarmUnitTest, AlarmCheckAddDiagItemToSummary)
    maint_status = 0;
    pf_alarm_add_diag_item_to_summary (
       &ar,
-      &subslot,
+      &submodule,
       &diag_item,
       &alarm_specifier,
       &maint_status);
@@ -279,7 +279,7 @@ TEST_F (AlarmUnitTest, AlarmCheckAddDiagItemToSummary)
    maint_status = 0;
    pf_alarm_add_diag_item_to_summary (
       &ar,
-      &subslot,
+      &submodule,
       &diag_item,
       &alarm_specifier,
       &maint_status);
@@ -422,7 +422,7 @@ TEST_F (AlarmUnitTest, AlarmCheckReceiveQueueHandling)
 
    /* Add to full queue */
    post_frame.frame_id_pos += 1;
-   post_frame.p_buf -= 1;
+   post_frame.p_buf = (pnal_buf_t *)(POINTER_START_NUMBER + 42);
    err = pf_alarm_receive_queue_post (&queue, &post_frame);
    EXPECT_EQ (err, -1);
    EXPECT_EQ (queue.accountant.count, PNET_MAX_ALARMS);
@@ -445,7 +445,7 @@ TEST_F (AlarmUnitTest, AlarmCheckReceiveQueueHandling)
 
    /* Reset the queue (will free allocated buffers) */
    post_frame.frame_id_pos = 42;
-   post_frame.p_buf = pnal_buf_alloc (PNAL_BUF_MAX_SIZE);
+   post_frame.p_buf = pnal_buf_alloc (pnal_buf_max_size);
    err = pf_alarm_receive_queue_post (&queue, &post_frame);
    EXPECT_EQ (err, 0);
    EXPECT_EQ (queue.accountant.count, 1);

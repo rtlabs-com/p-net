@@ -122,19 +122,19 @@ TEST_F (CpmUnitTest, CDataIndShortFrames)
 
    iocr.cpm.state = PF_CPM_STATE_RUN;
    frame = pnal_buf_alloc (2);
-   memcpy (frame->payload, data, frame->len);
+   pnal_buf_write (frame, 0, data, pnal_buf_get_size (frame));
    EXPECT_EQ (1, pf_cpm_c_data_ind_test (NULL, 0xfe01, frame, 0, &iocr));
    EXPECT_EQ (PF_CPM_STATE_RUN, iocr.cpm.state);
 
    iocr.cpm.state = PF_CPM_STATE_FRUN;
    frame = pnal_buf_alloc (4);
-   memcpy (frame->payload, data, frame->len);
+   pnal_buf_write (frame, 0, data, pnal_buf_get_size (frame));
    EXPECT_EQ (1, pf_cpm_c_data_ind_test (NULL, 0xfe01, frame, 0, &iocr));
    EXPECT_EQ (PF_CPM_STATE_FRUN, iocr.cpm.state);
 
    iocr.cpm.state = PF_CPM_STATE_RUN;
    frame = pnal_buf_alloc (5);
-   memcpy (frame->payload, data, frame->len);
+   pnal_buf_write (frame, 0, data, pnal_buf_get_size (frame));
    EXPECT_EQ (1, pf_cpm_c_data_ind_test (NULL, 0xfe01, frame, 0, &iocr));
    EXPECT_EQ (PF_CPM_STATE_RUN, iocr.cpm.state);
 }

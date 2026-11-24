@@ -199,65 +199,257 @@ TEST_F (SnmpTest, SnmpGetLocationGivenSmallString)
    EXPECT_STREQ (actual.string, expected);
 }
 
-/* Note that the 22 bytes device location in I&M1 will be used if loading of
- * sysLocation file fails (e.g. if does not exit).
- */
 TEST_F (SnmpTest, SnmpGetLocationGivenError)
 {
-   const char expected[] = "IM_Tag_Location in I&M";
    pf_snmp_system_location_t actual;
 
    mock_file_data.is_load_failing = true;
    memset (&actual, 0xff, sizeof (actual));
-   mock_pf_fspm_save_im_location (net, expected);
    pf_snmp_data_init (net);
 
    pf_snmp_get_system_location (net, &actual);
 
-   EXPECT_STREQ (actual.string, expected);
-   EXPECT_EQ (strlen (actual.string), 22u);
+   EXPECT_STREQ (actual.string, "");
+   EXPECT_EQ (strlen (actual.string), 0u);
 }
 
-/* Note that the first 22 bytes is also written to device location in I&M1 */
 TEST_F (SnmpTest, SnmpSetLocationGivenLargeString)
 {
    const pf_snmp_system_location_t written = {"1234567890123456789012345"};
    int error;
 
-   error = pf_snmp_set_system_location (net, &written, true);
+   error = pf_snmp_set_system_location (net, &written);
 
    EXPECT_EQ (error, 0);
    EXPECT_STREQ (mock_file_data.filename, PF_FILENAME_SNMP_SYSLOCATION);
    EXPECT_EQ (mock_file_data.size, sizeof (written));
-   EXPECT_EQ (memcmp (mock_file_data.object, &written, sizeof (written)), 0);
-   EXPECT_STREQ (mock_fspm_data.im_location, "1234567890123456789012");
+   EXPECT_STREQ ((char *)mock_file_data.object, written.string);
 }
 
-/* Note that the first 22 bytes is also written to device location in I&M1 */
 TEST_F (SnmpTest, SnmpSetLocationGivenSmallString)
 {
    const pf_snmp_system_location_t written = {"small"};
    int error;
 
-   error = pf_snmp_set_system_location (net, &written, true);
+   error = pf_snmp_set_system_location (net, &written);
 
    EXPECT_EQ (error, 0);
    EXPECT_STREQ (mock_file_data.filename, PF_FILENAME_SNMP_SYSLOCATION);
    EXPECT_EQ (mock_file_data.size, sizeof (written));
-   EXPECT_EQ (memcmp (mock_file_data.object, &written, sizeof (written)), 0);
-   EXPECT_STREQ (mock_fspm_data.im_location, "small                 ");
+
+   EXPECT_STREQ ((char *)mock_file_data.object, written.string);
 }
 
-/* Note that the first 22 bytes is also written to device location in I&M1 */
 TEST_F (SnmpTest, SnmpSetLocationGivenError)
 {
    const pf_snmp_system_location_t written = {"1234567890123456789012345"};
-   int error;
+   uint8_t file_data[sizeof (mock_file_data.object)];
+   memcpy (file_data, mock_file_data.object, sizeof (mock_file_data.object));
 
    mock_file_data.is_save_failing = true;
 
-   error = pf_snmp_set_system_location (net, &written, true);
-
-   EXPECT_EQ (error, -1);
-   EXPECT_STREQ (mock_fspm_data.im_location, "1234567890123456789012");
+   pf_snmp_set_system_location (net, &written);
+   EXPECT_EQ (
+      memcmp (
+         mock_file_data.object,
+         file_data,
+         sizeof (mock_file_data.object)), 0);
 }
+
+#if PNET_OPTION_SECURITY_LEVEL_1
+
+TEST_F (SnmpTest, SnmpAdjustValidateCommunityString)
+{
+   int error;
+
+   error = pf_snmp_validate_community_name ("private");
+   EXPECT_EQ (error, 0);
+
+   error = pf_snmp_validate_community_name ("public");
+   EXPECT_EQ (error, 0);
+
+   /* Empty string is valid */
+   error = pf_snmp_validate_community_name ("");
+   EXPECT_EQ (error, 0);
+
+   /* NULL is is invalid */
+   error = pf_snmp_validate_community_name (NULL);
+   EXPECT_EQ (error, -1);
+
+   /* 240 characters is valid */
+   error = pf_snmp_validate_community_name (
+      "123456789012345678901234567890123456789012345678901234567890123456789012"
+      "345678901234567890123456789012345678901234567890123456789012345678901234"
+      "567890123456789012345678901234567890123456789012345678901234567890123456"
+      "789012345678901234567890");
+   EXPECT_EQ (error, 0);
+
+   /* 241 characters is invalid */
+   error = pf_snmp_validate_community_name (
+      "123456789012345678901234567890123456789012345678901234567890123456789012"
+      "345678901234567890123456789012345678901234567890123456789012345678901234"
+      "567890123456789012345678901234567890123456789012345678901234567890123456"
+      "7890123456789012345678901");
+   EXPECT_EQ (error, -1);
+
+   error = pf_snmp_validate_community_name ("test*test");
+   EXPECT_EQ (error, -1);
+
+   error = pf_snmp_validate_community_name (".public");
+   EXPECT_EQ (error, -1);
+
+   error = pf_snmp_validate_community_name ("public.");
+   EXPECT_EQ (error, -1);
+
+   error = pf_snmp_validate_community_name ("pub.lic");
+   EXPECT_EQ (error, 0);
+
+   error = pf_snmp_validate_community_name ("-public");
+   EXPECT_EQ (error, -1);
+
+   error = pf_snmp_validate_community_name ("public-");
+   EXPECT_EQ (error, -1);
+
+   error = pf_snmp_validate_community_name ("pub-lic");
+   EXPECT_EQ (error, 0);
+}
+
+TEST_F (SnmpTest, SnmpAdjustValidateConfig)
+{
+   int error;
+   const pf_snmp_config_t disable = {
+      .control_mode = PNAL_SNMP_CONTROL_MODE_DISABLED,
+      .ro_name = {""},
+      .rw_name = {""},
+      .snmp_adjust_active = true};
+
+   error = pf_snmp_validate_config (&disable);
+   EXPECT_EQ (error, 0);
+
+   const pf_snmp_config_t readonly = {
+      .control_mode = PNAL_SNMP_CONTROL_MODE_READONLY,
+      .ro_name = {"readonly"},
+      .rw_name = {""},
+      .snmp_adjust_active = true};
+
+   error = pf_snmp_validate_config (&readonly);
+   EXPECT_EQ (error, 0);
+
+   const pf_snmp_config_t readwrite = {
+      .control_mode = PNAL_SNMP_CONTROL_MODE_READWRITE,
+      .ro_name = {"read"},
+      .rw_name = {"write"},
+      .snmp_adjust_active = true};
+
+   error = pf_snmp_validate_config (&readwrite);
+   EXPECT_EQ (error, 0);
+
+   /* Empty community string shall be used when setting disabled */
+   const pf_snmp_config_t disable_invalid = {
+      .control_mode = PNAL_SNMP_CONTROL_MODE_DISABLED,
+      .ro_name = {"public"},
+      .rw_name = {"private"},
+      .snmp_adjust_active = true};
+
+   error = pf_snmp_validate_config (&disable_invalid);
+   EXPECT_EQ (error, -1);
+
+   /* Empty write community string shall be used when setting readonly */
+   const pf_snmp_config_t readonly_invalid = {
+      .control_mode = PNAL_SNMP_CONTROL_MODE_READONLY,
+      .ro_name = {"public"},
+      .rw_name = {"private"},
+      .snmp_adjust_active = true};
+
+   error = pf_snmp_validate_config (&readonly_invalid);
+   EXPECT_EQ (error, -1);
+
+   /* Invalid mode */
+   const pf_snmp_config_t mode_invalid = {
+      .control_mode = (pnal_snmp_control_mode_t)3,
+      .ro_name = {"public"},
+      .rw_name = {"private"},
+      .snmp_adjust_active = true};
+
+   error = pf_snmp_validate_config (&mode_invalid);
+   EXPECT_EQ (error, -1);
+}
+
+TEST_F (SnmpTest, SnmpAdjust)
+{
+   int status;
+   pnet_result_t res = {{0, 0, 0, 0}, 0, 0};
+   pf_iod_write_request_t write_req = {
+      .sequence_number = 1,
+      .ar_uuid = {0, 0, 0, 0, 0, {0}},
+      .api = 0,
+      .slot_number = 0,
+      .subslot_number = 0x8000,
+      .padding = {0},
+      .index = 0x8200,
+      .record_data_length = 32,
+      .rw_padding = {0}};
+
+   /* Valid configuration */
+   /* mode = readwrite, ro = "readonly1", rw = "readwrite1" */
+   uint8_t snmp_adjust_1[] = {0x03, 0x00, 0x00, 0x1c, 0x01, 0x00, 0x00, 0x02,
+                              0x09, 0x72, 0x65, 0x61, 0x64, 0x6f, 0x6e, 0x6c,
+                              0x79, 0x31, 0x0a, 0x72, 0x65, 0x61, 0x64, 0x77,
+                              0x72, 0x69, 0x74, 0x65, 0x31, 0x00, 0x00, 0x00};
+
+   /* P-Net frame parser will consume block header before calling handler.
+    * This gives offset 6 in code below
+    */
+   status = pf_cim_snmp_adjust (
+      net,
+      &write_req,
+      &snmp_adjust_1[6],
+      sizeof (snmp_adjust_1) - 6,
+      &res);
+
+   EXPECT_EQ (status, 0);
+   EXPECT_STREQ (mock_snmp_config.ro_name.string, "readonly1");
+   EXPECT_STREQ (mock_snmp_config.rw_name.string, "readwrite1");
+   EXPECT_EQ (mock_snmp_config.control_mode, PNAL_SNMP_CONTROL_MODE_READWRITE);
+
+   /* Invalid frame - wrong control mode byte [7] 0x02 => 0x03 */
+   /* Additionally modify strings so they are different from the valid case */
+   uint8_t snmp_adjust_2[] = {0x03, 0x00, 0x00, 0x1c, 0x01, 0x00, 0x00, 0x03,
+                              0x09, 'R',  0x65, 0x61, 0x64, 0x6f, 0x6e, 0x6c,
+                              0x79, 0x31, 0x0a, 'T',  0x65, 0x61, 0x64, 0x77,
+                              0x72, 0x69, 0x74, 0x65, 0x31, 0x00, 0x00, 0x00};
+
+   status = pf_cim_snmp_adjust (
+      net,
+      &write_req,
+      &snmp_adjust_2[6],
+      sizeof (snmp_adjust_2) - 6,
+      &res);
+
+   EXPECT_EQ (status, -1);
+   /*Check that the configuration has not been modified*/
+   EXPECT_STREQ (mock_snmp_config.ro_name.string, "readonly1");
+   EXPECT_STREQ (mock_snmp_config.rw_name.string, "readwrite1");
+   EXPECT_EQ (mock_snmp_config.control_mode, PNAL_SNMP_CONTROL_MODE_READWRITE);
+
+   /* Invalid frame - community string length = 0xFF */
+   uint8_t snmp_adjust_3[] = {0x03, 0x00, 0x00, 0x1c, 0x01, 0x00, 0x00, 0x02,
+                              0xFF, 0x72, 0x65, 0x61, 0x64, 0x6f, 0x6e, 0x6c,
+                              0x79, 0x31, 0x0a, 0x72, 0x65, 0x61, 0x64, 0x77,
+                              0x72, 0x69, 0x74, 0x65, 0x31, 0x00, 0x00, 0x00};
+
+   status = pf_cim_snmp_adjust (
+      net,
+      &write_req,
+      &snmp_adjust_3[6],
+      sizeof (snmp_adjust_3) - 6,
+      &res);
+
+   EXPECT_EQ (status, -1);
+   /*Check that the configuration has not been modified*/
+   EXPECT_STREQ (mock_snmp_config.ro_name.string, "readonly1");
+   EXPECT_STREQ (mock_snmp_config.rw_name.string, "readwrite1");
+   EXPECT_EQ (mock_snmp_config.control_mode, PNAL_SNMP_CONTROL_MODE_READWRITE);
+}
+
+#endif /* PNET_OPTION_SECURITY_LEVEL_1 */

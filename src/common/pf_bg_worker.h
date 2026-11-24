@@ -31,9 +31,6 @@ typedef enum pf_bg_job
    /** Save non volatile ASE data to file */
    PF_BGJOB_SAVE_ASE_NVM_DATA,
 
-   /** Save non volatile IM data to file */
-   PF_BGJOB_SAVE_IM_NVM_DATA,
-
    /** Save non volatile PDPort data to file */
    PF_BGJOB_SAVE_PDPORT_NVM_DATA,
 
@@ -43,11 +40,20 @@ typedef enum pf_bg_job
    PF_BGJOB_SAVE_SNMP_SYSTEM_LOCATION_NVM_DATA,
    PF_BGJOB_CLEAR_SNMP_SYSTEM_LOCATION_NVM_DATA,
 
+   PF_BGJOB_SAVE_SNMP_CONFIG,
+   PF_BGJOB_ACTIVATE_SNMP_CONFIG,
+
    /** Clear ip setting file  */
    PF_BGJOB_CLEAR_IP_SETTINGS_FILE,
 
    /** Clear diagnostics file  */
    PF_BGJOB_CLEAR_DIAGNOSTICS_FILE,
+
+   /** Save non volatile MRP data to file */
+   PF_BGJOB_SAVE_MRP_DATA,
+
+   /** User callback */
+   PF_BGJOB_USER_CALLBACK,
 
 } pf_bg_job_t;
 
@@ -68,6 +74,14 @@ void pf_bg_worker_init (pnet_t * net);
  *          -1 if an error occurred.
  */
 int pf_bg_worker_start_job (pnet_t * net, pf_bg_job_t job_id);
+
+/**
+ * Set background worker user event flags.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param flags            In:    The event flags to set
+ */
+void pf_bg_worker_set_user_events (pnet_t * net, uint32_t flags);
 
 #ifdef __cplusplus
 }

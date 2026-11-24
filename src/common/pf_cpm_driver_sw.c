@@ -26,10 +26,10 @@
 #endif
 
 #include "pf_includes.h"
-#include "pf_block_reader.h"
 
 #include <inttypes.h>
 #include <string.h>
+#include "pf_block_reader.h"
 
 /**
  * @internal
@@ -152,7 +152,7 @@ static int pf_cpm_driver_sw_close_req (
    pf_ar_t * p_ar,
    uint32_t crep)
 {
-   pf_cpm_t * p_cpm = &p_ar->iocrs[crep].cpm;
+   pf_cpm_t * p_cpm = &p_ar->io_ar->iocrs[crep].cpm;
 
    p_cpm->ci_running = false; /* StopTimer */
    pf_scheduler_remove_if_running (net, &p_cpm->ci_timeout);
@@ -184,7 +184,7 @@ static int pf_cpm_driver_sw_close_req (
  */
 static void pf_cpm_put_buf (pnet_t * net, pf_cpm_t * p_cpm, pnal_buf_t ** pp_buf)
 {
-   void * p;
+   pnal_buf_t * p;
 
    os_mutex_lock (net->cpm_buf_lock);
    p = p_cpm->p_buffer_cpm;
@@ -200,16 +200,16 @@ static void pf_cpm_put_buf (pnet_t * net, pf_cpm_t * p_cpm, pnal_buf_t ** pp_buf
  * @param net              InOut: The p-net stack instance
  * @param p_cpm            InOut: The CPM instance.
  * @param p_new_flag       Out:   true if a new valid data frame has been
- *                         received.
- * @param pp_buffer        Out: A pointer to the latest received data (or NULL).
+ *                                received.
+ * @param pp_buffer        Out:   A pointer to the latest received frame (or NULL).
  */
 static void pf_cpm_get_buf (
    pnet_t * net,
    pf_cpm_t * p_cpm,
    bool * p_new_flag,
-   uint8_t ** pp_buffer)
+   const pnal_buf_t ** pp_buffer)
 {
-   void * p;
+   pnal_buf_t * p;
 
    os_mutex_lock (net->cpm_buf_lock);
    if (p_cpm->new_buf == true)
@@ -228,8 +228,7 @@ static void pf_cpm_get_buf (
 
    if (p_cpm->p_buffer_app != NULL)
    {
-      *pp_buffer = &((uint8_t *)((pnal_buf_t *)p_cpm->p_buffer_app)
-                        ->payload)[p_cpm->buffer_pos];
+      *pp_buffer = p_cpm->p_buffer_app;
    }
    else
    {
@@ -271,10 +270,12 @@ static int pf_cpm_c_data_ind (
    uint8_t transfer_status;
    uint8_t data_status;
    uint8_t changes;
-   pf_get_info_t ind = {
+   pf_get_info_t ind =
+   {
       .is_big_endian = true,
-      .p_buf = p_buf->payload,
-      .len = p_buf->len,
+      .p_frame = p_buf,
+      .p_array = NULL,
+      .len = pnal_buf_get_size (p_buf),
       .result = PF_PARSE_OK,
    };
    bool frame_structure;
@@ -303,16 +304,21 @@ static int pf_cpm_c_data_ind (
       /* Check that the length covers at least a FrameID and an APDU_Status. */
       if (len < ((2 * sizeof (uint16_t)) + 2))
       {
-         ind.result = PF_PARSE_ERROR;
+         LOG_DEBUG (
+            PF_CPM_LOG,
+            "CPM_DRV_SW(%d): incorrect len %u\n",
+            __LINE__,
+            len);
+         ret = 1; /* Means "handled" */
+         break;
       }
-      else
-      {
-         /* APDU_Status (at the end of the data) */
-         pos = (ind.len - (sizeof (uint16_t) + 2));
-         cycle = pf_get_uint16 (&ind, &pos);
-         data_status = pf_get_byte (&ind, &pos);
-         transfer_status = pf_get_byte (&ind, &pos);
-      }
+
+      /* APDU_Status (at the end of the data) */
+      pos = (ind.len - (sizeof (uint16_t) + 2));
+      cycle = pf_get_uint16 (&ind, &pos);
+      data_status = pf_get_byte (&ind, &pos);
+      transfer_status = pf_get_byte (&ind, &pos);
+
       if (ind.result != PF_PARSE_OK)
       {
          LOG_DEBUG (
@@ -370,6 +376,9 @@ static int pf_cpm_c_data_ind (
             pf_cpm_put_buf (net, p_cpm, &p_buf);
             p_cpm->frame_id_pos = frame_id_pos; /* Save for consumer */
             p_cpm->buffer_pos = p_cpm->frame_id_pos + sizeof (uint16_t);
+#if PNET_OPTION_SR
+            pf_cmsrl_cpm_new_data_ind (net, p_iocr->p_ar, p_iocr->crep, primary);
+#endif
             (void)pf_cmio_cpm_new_data_ind (p_iocr->p_ar, p_iocr->crep, true);
          }
          else
@@ -431,7 +440,7 @@ static int pf_cpm_driver_sw_activate_req (
    pf_cpm_t * p_cpm;
    pf_iocr_t * p_iocr;
 
-   p_iocr = &p_ar->iocrs[crep];
+   p_iocr = &p_ar->io_ar->iocrs[crep];
    p_cpm = &p_iocr->cpm;
 
    pf_eth_frame_id_map_add (net, p_cpm->frame_id[0], pf_cpm_c_data_ind, p_iocr);
@@ -476,30 +485,54 @@ static int pf_cpm_driver_sw_get_data_and_iops (
 {
    int ret = -1;
 
-   uint8_t * p_buffer = NULL;
+   const pnal_buf_t * p_buffer = NULL;
 
    /* Get the latest frame buffer */
    pf_cpm_get_buf (net, &p_iocr->cpm, p_new_flag, &p_buffer);
 
    if (p_buffer != NULL)
    {
+      pf_get_info_t info =
+      {
+         .is_big_endian = true,
+         .p_frame = p_buffer,
+         .p_array = NULL,
+         .len = pnal_buf_get_size (p_buffer),
+         .result = PF_PARSE_OK,
+      };
+
       os_mutex_lock (net->cpm_buf_lock);
       if (p_iodata->data_length > 0)
       {
-         memcpy (
-            p_data,
-            &p_buffer[p_iodata->data_offset],
-            p_iodata->data_length);
+         uint16_t pos = p_iocr->cpm.buffer_pos + p_iodata->data_offset;
+         pf_get_mem (
+            &info,
+            &pos,
+            p_iodata->data_length,
+            p_data);
       }
       if (p_iodata->iops_length > 0)
       {
-         memcpy (
-            p_iops,
-            &p_buffer[p_iodata->iops_offset],
-            p_iodata->iops_length);
+         uint16_t pos = p_iocr->cpm.buffer_pos + p_iodata->iops_offset;
+         pf_get_mem (
+            &info,
+            &pos,
+            p_iodata->iops_length,
+            p_iops);
       }
       os_mutex_unlock (net->cpm_buf_lock);
-      ret = 0;
+
+      if (info.result == PF_PARSE_OK)
+      {
+         ret = 0;
+      }
+      else
+      {
+         LOG_DEBUG (
+            PF_CPM_LOG,
+            "CPM_DRV_SW(%d): Could not parse received data\n",
+            __LINE__);
+      }
    }
    else
    {
@@ -521,17 +554,39 @@ static int pf_cpm_driver_sw_get_iocs (
    uint8_t iocs_len)
 {
    int ret = -1;
-   uint8_t * p_buffer = NULL;
+   const pnal_buf_t * p_buffer = NULL;
    bool new_flag;
 
    pf_cpm_get_buf (net, &p_iocr->cpm, &new_flag, &p_buffer);
 
    if (p_buffer != NULL)
    {
+      pf_get_info_t info =
+      {
+         .is_big_endian = true,
+         .p_frame = p_buffer,
+         .p_array = NULL,
+         .len = pnal_buf_get_size (p_buffer),
+         .result = PF_PARSE_OK,
+      };
+      uint16_t pos;
+
       os_mutex_lock (net->cpm_buf_lock);
-      memcpy (p_iocs, &p_buffer[p_iodata->iocs_offset], p_iodata->iocs_length);
+      pos = p_iocr->cpm.buffer_pos + p_iodata->iocs_offset;
+      pf_get_mem (&info, &pos, p_iodata->iocs_length, p_iocs);
       os_mutex_unlock (net->cpm_buf_lock);
-      ret = 0;
+
+      if (info.result == PF_PARSE_OK)
+      {
+         ret = 0;
+      }
+      else
+      {
+         LOG_DEBUG (
+            PF_CPM_LOG,
+            "CPM_DRV_SW(%d): Could not parse received IOCs\n",
+            __LINE__);
+      }
    }
 
    return ret;

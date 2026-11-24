@@ -225,6 +225,7 @@ pf_mediatype_values_t pf_port_get_media_type (pnal_eth_mau_t mau_type)
    case PNAL_ETH_MAU_RADIO:
       return PF_PD_MEDIATYPE_RADIO;
    case PNAL_ETH_MAU_COPPER_10BaseT:
+   case PNAL_ETH_MAU_COPPER_10BaseT1L:
    case PNAL_ETH_MAU_COPPER_100BaseTX_HALF_DUPLEX:
    case PNAL_ETH_MAU_COPPER_100BaseTX_FULL_DUPLEX:
    case PNAL_ETH_MAU_COPPER_1000BaseT_HALF_DUPLEX:
@@ -305,6 +306,14 @@ void pf_port_show (pnet_t * net)
          " Peer MAU type           : Valid %u %u\n",
          p_port_data->lldp.peer_info.phy_config.is_valid,
          p_port_data->lldp.peer_info.phy_config.operational_mau_type);
+
+#if PNET_OPTION_MRP
+      char uuid_str[MRP_UUID_STRING_SIZE];
+      pf_mrp_domain_uuid_str (
+         &p_port_data->lldp.peer_info.mrp_port_status.domain,
+         uuid_str);
+      printf (" Peer MRP domain uuid    : %s\n", uuid_str);
+#endif
 
       port = pf_port_get_next (&port_iterator);
    }

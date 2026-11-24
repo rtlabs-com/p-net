@@ -87,6 +87,39 @@ static int my_signal_led_ind (pnet_t * net, void * arg, bool led_state)
    return 0;
 }
 
+static int my_ep_device_cb (
+   pnet_t * net,
+   void * arg,
+   uint16_t slot_number,
+   uint16_t subslot_number,
+   uint32_t * voltage,
+   pnet_ep_device_type_t * type)
+{
+   *type = PNET_EP_DEVICE_TYPE_PO_DATA_LINE;
+   *voltage = TEST_POWER_DEVICE_VOLTAGE;
+
+   return 0;
+}
+
+static int my_ep_port_cb (
+   pnet_t * net,
+   void * arg,
+   uint16_t slot_number,
+   uint16_t subslot_number,
+   uint16_t port_number,
+   uint32_t * voltage,
+   pnet_ep_port_type_t * type,
+   uint16_t * current,
+   uint16_t * current_limit)
+{
+   *type = PNET_EP_PORT_TYPE_POWER_LOAD;
+   *voltage = TEST_POWER_PORT_VOLTAGE_BASE + port_number;
+   *current = TEST_POWER_PORT_CURRENT_BASE + port_number;
+   *current_limit = TEST_POWER_PORT_CURRENT_LIMIT_BASE + port_number;
+
+   return 0;
+}
+
 int my_read_ind (
    pnet_t * net,
    void * arg,
@@ -115,6 +148,94 @@ int my_read_ind (
    return 0;
 }
 
+int my_read_im_1_ind (
+   pnet_t * net,
+   void * arg,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
+   pnet_im_1_t * im_1,
+   pnet_result_t * result) /* Error status if returning != 0 */
+{
+   app_data_for_testing_t * appdata = (app_data_for_testing_t *)arg;
+
+   TEST_TRACE ("Callback on read I&M1\n");
+   TEST_TRACE (
+      "  API: %" PRIu32 " Slot: %" PRIu16 " Subslot: %" PRIu16 "\n",
+      api,
+      slot,
+      subslot);
+   *im_1 = appdata->im_1;
+   appdata->call_counters.read_calls++;
+   return 0;
+}
+
+int my_read_im_2_ind (
+   pnet_t * net,
+   void * arg,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
+   pnet_im_2_t * im_2,
+   pnet_result_t * result) /* Error status if returning != 0 */
+{
+   app_data_for_testing_t * appdata = (app_data_for_testing_t *)arg;
+
+   TEST_TRACE ("Callback on read I&M2\n");
+   TEST_TRACE (
+      "  API: %" PRIu32 " Slot: %" PRIu16 " Subslot: %" PRIu16 "\n",
+      api,
+      slot,
+      subslot);
+   *im_2 = appdata->im_2;
+   appdata->call_counters.read_calls++;
+   return 0;
+}
+
+int my_read_im_3_ind (
+   pnet_t * net,
+   void * arg,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
+   pnet_im_3_t * im_3,
+   pnet_result_t * result) /* Error status if returning != 0 */
+{
+   app_data_for_testing_t * appdata = (app_data_for_testing_t *)arg;
+
+   TEST_TRACE ("Callback on read I&M3\n");
+   TEST_TRACE (
+      "  API: %" PRIu32 " Slot: %" PRIu16 " Subslot: %" PRIu16 "\n",
+      api,
+      slot,
+      subslot);
+   *im_3 = appdata->im_3;
+   appdata->call_counters.read_calls++;
+   return 0;
+}
+
+int my_read_im_4_ind (
+   pnet_t * net,
+   void * arg,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
+   pnet_im_4_t * im_4,
+   pnet_result_t * result) /* Error status if returning != 0 */
+{
+   app_data_for_testing_t * appdata = (app_data_for_testing_t *)arg;
+
+   TEST_TRACE ("Callback on read I&M4\n");
+   TEST_TRACE (
+      "  API: %" PRIu32 " Slot: %" PRIu16 " Subslot: %" PRIu16 "\n",
+      api,
+      slot,
+      subslot);
+   *im_4 = appdata->im_4;
+   appdata->call_counters.read_calls++;
+   return 0;
+}
+
 int my_write_ind (
    pnet_t * net,
    void * arg,
@@ -123,6 +244,7 @@ int my_write_ind (
    uint16_t slot,
    uint16_t subslot,
    uint16_t idx,
+   bool prm_flag,
    uint16_t sequence_number,
    uint16_t write_length,
    const uint8_t * p_write_data,
@@ -133,14 +255,116 @@ int my_write_ind (
    TEST_TRACE ("Callback on write\n");
    TEST_TRACE (
       "  API: %" PRIu32 " Slot: %" PRIu16 " Subslot: %" PRIu16
-      " Index: %" PRIu16 " Sequence: %" PRIu16 " Len: %" PRIu16 "\n",
+      " PRM flag: %s Index: %" PRIu16 " Sequence: %" PRIu16
+      " Len: %" PRIu16 "\n",
       api,
       slot,
       subslot,
       idx,
+      (prm_flag ? "true" : "false"),
       sequence_number,
       write_length);
    p_appdata->call_counters.write_calls++;
+   return 0;
+}
+
+int my_write_im_1_ind (
+   pnet_t * net,
+   void * arg,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
+   bool prm_flag,
+   pnet_im_1_t const * data,
+   pnet_result_t * result)
+{
+   app_data_for_testing_t * appdata = (app_data_for_testing_t *)arg;
+
+   TEST_TRACE ("Callback on write I&M1\n");
+   TEST_TRACE (
+      "  API: %" PRIu32 " Slot: %" PRIu16 " Subslot: %" PRIu16
+      " PRM flag: %s\n",
+      api,
+      slot,
+      subslot,
+      (prm_flag ? "true" : "false"));
+   appdata->im_1 = *data;
+   appdata->call_counters.write_calls++;
+   return 0;
+}
+
+int my_write_im_2_ind (
+   pnet_t * net,
+   void * arg,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
+   bool prm_flag,
+   pnet_im_2_t const * data,
+   pnet_result_t * result)
+{
+   app_data_for_testing_t * appdata = (app_data_for_testing_t *)arg;
+
+   TEST_TRACE ("Callback on write I&M2\n");
+   TEST_TRACE (
+      "  API: %" PRIu32 " Slot: %" PRIu16 " Subslot: %" PRIu16
+      " PRM flag: %s\n",
+      api,
+      slot,
+      subslot,
+      (prm_flag ? "true" : "false"));
+   appdata->im_2 = *data;
+   appdata->call_counters.write_calls++;
+   return 0;
+}
+
+int my_write_im_3_ind (
+   pnet_t * net,
+   void * arg,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
+   bool prm_flag,
+   pnet_im_3_t const * data,
+   pnet_result_t * result)
+{
+   app_data_for_testing_t * appdata = (app_data_for_testing_t *)arg;
+
+   TEST_TRACE ("Callback on write I&M3\n");
+   TEST_TRACE (
+      "  API: %" PRIu32 " Slot: %" PRIu16 " Subslot: %" PRIu16
+      " PRM flag: %s\n",
+      api,
+      slot,
+      subslot,
+      (prm_flag ? "true" : "false"));
+   appdata->im_3 = *data;
+   appdata->call_counters.write_calls++;
+   return 0;
+}
+
+int my_write_im_4_ind (
+   pnet_t * net,
+   void * arg,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot,
+   bool prm_flag,
+   pnet_im_4_t const * data,
+   pnet_result_t * result)
+{
+   app_data_for_testing_t * appdata = (app_data_for_testing_t *)arg;
+
+   TEST_TRACE ("Callback on write I&M4\n");
+   TEST_TRACE (
+      "  API: %" PRIu32 " Slot: %" PRIu16 " Subslot: %" PRIu16
+      " PRM flag: %s\n",
+      api,
+      slot,
+      subslot,
+      (prm_flag ? "true" : "false"))
+   appdata->im_4 = *data;
+   appdata->call_counters.write_calls++;
    return 0;
 }
 
@@ -391,7 +615,8 @@ int my_exp_submodule_ind (
          submodule_ident,
          p_appdata->available_submodule_types[ix].direction,
          p_appdata->available_submodule_types[ix].input_length,
-         p_appdata->available_submodule_types[ix].output_length);
+         p_appdata->available_submodule_types[ix].output_length,
+         p_appdata->available_submodule_types[ix].flags);
       EXPECT_EQ (ret, 0);
    }
    else
@@ -430,6 +655,8 @@ void PnetIntegrationTestBase::available_modules_and_submodules_init()
    appdata.available_submodule_types[0].direction = PNET_DIR_NO_IO;
    appdata.available_submodule_types[0].input_length = 0;
    appdata.available_submodule_types[0].output_length = 0;
+   appdata.available_submodule_types[1].flags =
+      (PNET_SMF_IM_CARRIER | PNET_SMF_IM_DEVICE_REP);
 
    appdata.available_submodule_types[1].module_ident_number =
       PNET_MOD_DAP_IDENT;
@@ -438,6 +665,7 @@ void PnetIntegrationTestBase::available_modules_and_submodules_init()
    appdata.available_submodule_types[1].direction = PNET_DIR_NO_IO;
    appdata.available_submodule_types[1].input_length = 0;
    appdata.available_submodule_types[1].output_length = 0;
+   appdata.available_submodule_types[1].flags = 0;
 
    appdata.available_submodule_types[2].module_ident_number =
       PNET_MOD_DAP_IDENT;
@@ -446,6 +674,7 @@ void PnetIntegrationTestBase::available_modules_and_submodules_init()
    appdata.available_submodule_types[2].direction = PNET_DIR_NO_IO;
    appdata.available_submodule_types[2].input_length = 0;
    appdata.available_submodule_types[2].output_length = 0;
+   appdata.available_submodule_types[1].flags = 0;
 
    appdata.available_submodule_types[3].module_ident_number =
       TEST_MOD_8_8_IDENT;
@@ -454,6 +683,7 @@ void PnetIntegrationTestBase::available_modules_and_submodules_init()
    appdata.available_submodule_types[3].direction = PNET_DIR_IO;
    appdata.available_submodule_types[3].input_length = TEST_DATASIZE_INPUT;
    appdata.available_submodule_types[3].output_length = TEST_DATASIZE_OUTPUT;
+   appdata.available_submodule_types[1].flags = 0;
 
    appdata.available_submodule_types[4].module_ident_number =
       TEST_MOD_8_0_IDENT;
@@ -462,6 +692,7 @@ void PnetIntegrationTestBase::available_modules_and_submodules_init()
    appdata.available_submodule_types[4].direction = PNET_DIR_OUTPUT;
    appdata.available_submodule_types[4].input_length = 0;
    appdata.available_submodule_types[4].output_length = TEST_DATASIZE_OUTPUT;
+   appdata.available_submodule_types[1].flags = 0;
 }
 
 void PnetIntegrationTestBase::cfg_init()
@@ -473,13 +704,23 @@ void PnetIntegrationTestBase::cfg_init()
    pnet_default_cfg.dcontrol_cb = my_dcontrol_ind;
    pnet_default_cfg.ccontrol_cb = my_ccontrol_cnf;
    pnet_default_cfg.read_cb = my_read_ind;
+   pnet_default_cfg.read_im_1_cb = my_read_im_1_ind;
+   pnet_default_cfg.read_im_2_cb = my_read_im_2_ind;
+   pnet_default_cfg.read_im_3_cb = my_read_im_3_ind;
+   pnet_default_cfg.read_im_4_cb = my_read_im_4_ind;
    pnet_default_cfg.write_cb = my_write_ind;
+   pnet_default_cfg.write_im_1_cb = my_write_im_1_ind;
+   pnet_default_cfg.write_im_2_cb = my_write_im_2_ind;
+   pnet_default_cfg.write_im_3_cb = my_write_im_3_ind;
+   pnet_default_cfg.write_im_4_cb = my_write_im_4_ind;
    pnet_default_cfg.exp_module_cb = my_exp_module_ind;
    pnet_default_cfg.exp_submodule_cb = my_exp_submodule_ind;
    pnet_default_cfg.new_data_status_cb = my_new_data_status_ind;
    pnet_default_cfg.alarm_ind_cb = my_alarm_ind;
    pnet_default_cfg.alarm_cnf_cb = my_alarm_cnf;
    pnet_default_cfg.signal_led_cb = my_signal_led_ind;
+   pnet_default_cfg.ep_device_cb = my_ep_device_cb;
+   pnet_default_cfg.ep_port_cb = my_ep_port_cb;
    pnet_default_cfg.reset_cb = NULL;
    pnet_default_cfg.cb_arg = &appdata;
 
@@ -494,9 +735,14 @@ void PnetIntegrationTestBase::cfg_init()
    pnet_default_cfg.oem_device_id.device_id_lo = 0xef;
 
    strcpy (pnet_default_cfg.station_name, "");
-   strcpy (pnet_default_cfg.product_name, "PNET unit tests");
+   strcpy (pnet_default_cfg.product_info.name, "PNET unit tests");
 
-   pnet_default_cfg.if_cfg.physical_ports[0].netif_name = TEST_INTERFACE_NAME;
+   for (int i = 0; i < PNET_MAX_PHYSICAL_PORTS; i++)
+   {
+      pnet_default_cfg.if_cfg.physical_ports[i].netif_name =
+         TEST_PHYSICAL_PORT_NAME;
+      pnet_default_cfg.if_cfg.physical_ports[i].default_mau_type = 0x0010;
+   }
 
    /* Timing */
    pnet_default_cfg.min_device_interval = 32; /* Corresponds to 1 ms */
@@ -518,29 +764,14 @@ void PnetIntegrationTestBase::cfg_init()
    pnet_default_cfg.if_cfg.ip_cfg.ip_gateway.c = 1;
    pnet_default_cfg.if_cfg.ip_cfg.ip_gateway.d = 1;
 
-   pnet_default_cfg.im_0_data.im_vendor_id_hi = 0x00;
-   pnet_default_cfg.im_0_data.im_vendor_id_lo = 0x01;
-   strcpy (pnet_default_cfg.im_0_data.im_order_id, "<orderid>           ");
-   strcpy (pnet_default_cfg.im_0_data.im_serial_number, "<serial nbr>    ");
-   pnet_default_cfg.im_0_data.im_hardware_revision = 1;
-   pnet_default_cfg.im_0_data.im_sw_revision_prefix = 'P'; /* 'V', 'R', 'P',
+   strcpy (pnet_default_cfg.product_info.order_id, "<orderid>           ");
+   strcpy (pnet_default_cfg.product_info.serial_number, "<serial nbr>    ");
+   pnet_default_cfg.product_info.hw_revision = 1;
+   pnet_default_cfg.product_info.sw_revision.prefix = 'P'; /* 'V', 'R', 'P',
                                                               'U', or 'T' */
-   pnet_default_cfg.im_0_data.im_sw_revision_functional_enhancement = 0;
-   pnet_default_cfg.im_0_data.im_sw_revision_bug_fix = 0;
-   pnet_default_cfg.im_0_data.im_sw_revision_internal_change = 0;
-   pnet_default_cfg.im_0_data.im_revision_counter = 0;
-   pnet_default_cfg.im_0_data.im_profile_id = 0x1234;
-   pnet_default_cfg.im_0_data.im_profile_specific_type = 0x5678;
-   pnet_default_cfg.im_0_data.im_version_major = 0;
-   pnet_default_cfg.im_0_data.im_version_minor = 1;
-   pnet_default_cfg.im_0_data.im_supported =
-      PNET_SUPPORTED_IM1 | PNET_SUPPORTED_IM2 | PNET_SUPPORTED_IM3 |
-      PNET_SUPPORTED_IM4;
-   strcpy (pnet_default_cfg.im_1_data.im_tag_function, "");
-   strcpy (pnet_default_cfg.im_1_data.im_tag_location, "");
-   strcpy (pnet_default_cfg.im_2_data.im_date, "");
-   strcpy (pnet_default_cfg.im_3_data.im_descriptor, "");
-   strcpy (pnet_default_cfg.im_4_data.im_signature, "");
+   pnet_default_cfg.product_info.sw_revision.functional_enhancement = 0;
+   pnet_default_cfg.product_info.sw_revision.bug_fix = 0;
+   pnet_default_cfg.product_info.sw_revision.internal_change = 0;
 
    /* Storage */
    strcpy (pnet_default_cfg.file_directory, "/disk1");
@@ -559,7 +790,7 @@ void PnetIntegrationTestBase::run_stack (int us)
    {
       /* Set new output data every 10 ticks */
       appdata.tick_ctr++;
-      if ((appdata.main_arep != 0) && (appdata.tick_ctr > 10))
+      if (appdata.tick_ctr > 10)
       {
          appdata.tick_ctr = 0;
          appdata.inputdata[0] = appdata.counter_data++;
@@ -591,7 +822,6 @@ void PnetIntegrationTestBase::send_data (uint8_t * data_packet, uint16_t len)
 {
    int ret;
    pnal_buf_t * p_buf;
-   uint8_t * p_ctr;
 
    p_buf = pnal_buf_alloc (PF_FRAME_BUFFER_SIZE);
    if (p_buf == NULL)
@@ -600,15 +830,18 @@ void PnetIntegrationTestBase::send_data (uint8_t * data_packet, uint16_t len)
    }
    else
    {
-      memcpy (p_buf->payload, data_packet, len);
+      pnal_buf_write (p_buf, 0, data_packet, len);
 
       /* Insert frame time, store in big-endian */
       appdata.data_cycle_ctr++;
-      p_ctr = &((uint8_t *)(p_buf->payload))[len - 4];
-      *(p_ctr + 0) = (appdata.data_cycle_ctr >> 8) & 0xff;
-      *(p_ctr + 1) = appdata.data_cycle_ctr & 0xff;
+      const uint8_t ctr[2] =
+      {
+         (uint8_t)(appdata.data_cycle_ctr >> 8),
+         (uint8_t)(appdata.data_cycle_ctr >> 0),
+      };
+      pnal_buf_write (p_buf, len - 4, ctr, sizeof (ctr));
 
-      p_buf->len = len;
+      pnal_buf_set_size (p_buf, len);
       ret = pf_eth_recv (mock_os_data.eth_if_handle, net, p_buf);
       EXPECT_EQ (ret, 1);
       if (ret == 0)

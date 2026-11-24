@@ -57,30 +57,6 @@ int pf_ppm_activate_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep);
 int pf_ppm_close_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep);
 
 /**
- * Find the AR, input IOCR and IODATA object instances for the specified
- * sub-slot.
- * @param net              InOut: The p-net stack instance
- * @param api_id           In:    The API id.
- * @param slot_nbr         In:    The slot number.
- * @param subslot_nbr      In:    The sub-slot number.
- * @param pp_ar            Out:   The AR instance.
- * @param pp_iocr          Out:   The IOCR instance.
- * @param pp_iodata        Out:   The IODATA object instance.
- * @param p_crep           Out:   The CREP index
- * @return  0  If the information has been found.
- *          -1 If the information was not found.
- */
-int pf_ppm_get_ar_iocr_desc (
-   pnet_t * net,
-   uint32_t api_id,
-   uint16_t slot_nbr,
-   uint16_t subslot_nbr,
-   pf_ar_t ** pp_ar,
-   pf_iocr_t ** pp_iocr,
-   pf_iodata_object_t ** pp_iodata,
-   uint32_t * p_crep);
-
-/**
  * Set the data and IOPS for a sub-module.
  * @param net              InOut: The p-net stack instance
  * @param api_id           In:   The API id.
@@ -90,10 +66,10 @@ int pf_ppm_get_ar_iocr_desc (
  *                               If NULL is passed, frame data is
  *                               not updated.
  * @param data_len         In:   The length of the application data.
- * @param p_iops           In:   The IOPS of the application data.
- * @param iops_len         In:   The length of the IOPS.
- * @return  0  if the input data and IOPS was set.
- *          -1 if an error occurred.
+ * @param iops             In:   The IOPS of the application data.
+ * @return  0  if no error occurred, also if no AR uses the sub-module.
+ *          -1 if the data and IOPS could not be set for an AR that uses
+ *             the sub-module.
  */
 int pf_ppm_set_data_and_iops (
    pnet_t * net,
@@ -102,8 +78,7 @@ int pf_ppm_set_data_and_iops (
    uint16_t subslot_nbr,
    const uint8_t * p_data,
    uint16_t data_len,
-   const uint8_t * p_iops,
-   uint8_t iops_len);
+   uint8_t iops);
 
 /**
  * Set IOCS for a sub-module.
@@ -111,18 +86,17 @@ int pf_ppm_set_data_and_iops (
  * @param api_id           In:   The API id.
  * @param slot_nbr         In:   The slot number.
  * @param subslot_nbr      In:   The sub-slot number.
- * @param p_iocs           In:   The IOCS of the application data.
- * @param iocs_len         In:   The length of the IOCS data.
- * @return  0  if the IOCS was set.
- *          -1 if an error occurred.
+ * @param iocs             In:   The IOCS of the application data.
+ * @return  0  if no error occurred, also if no AR uses the sub-module.
+ *          -1 if the IOCS could not be set for an AR that uses the
+ *             sub-module.
  */
 int pf_ppm_set_iocs (
    pnet_t * net,
    uint32_t api_id,
    uint16_t slot_nbr,
    uint16_t subslot_nbr,
-   const uint8_t * p_iocs,
-   uint8_t iocs_len);
+   uint8_t iocs);
 
 /**
  * Retrieve the data and IOPS for a sub-module.
@@ -276,8 +250,10 @@ void pf_ppm_show (const pf_ppm_t * p_ppm);
  * @param net              InOut: The p-net stack instance
  * @param p_ppm            In:   The PPM instance.
  * @param data_length      In:   The length of the message.
+ * @return  0  if the message was successfully finalized.
+ *          -1 if an error occurred.
  */
-void pf_ppm_finish_buffer (pnet_t * net, pf_ppm_t * p_ppm, uint16_t data_length);
+int pf_ppm_finish_buffer (pnet_t * net, pf_ppm_t * p_ppm, uint16_t data_length);
 
 /**
  * Send error indications to other components.

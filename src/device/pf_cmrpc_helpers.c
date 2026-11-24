@@ -42,16 +42,16 @@ void pf_generate_uuid (
 {
    /* TODO Maybe we should take pointer to mac address instead, to avoid
            copying? */
-   p_uuid->data1 = timestamp;
-   p_uuid->data2 = session_number >> 16;
-   p_uuid->data3 = (session_number >> 8) & 0x00ff;
-   p_uuid->data3 |= 1 << 12; /* UUID version 1 */
-   p_uuid->data4[0] = 0x80;  /* UUID variant 1 */
-   p_uuid->data4[1] = session_number & 0xff;
-   p_uuid->data4[2] = mac_address.addr[0];
-   p_uuid->data4[3] = mac_address.addr[1];
-   p_uuid->data4[4] = mac_address.addr[2];
-   p_uuid->data4[5] = mac_address.addr[3];
-   p_uuid->data4[6] = mac_address.addr[4];
-   p_uuid->data4[7] = mac_address.addr[5];
+   p_uuid->time_low = timestamp;
+   p_uuid->time_mid = session_number >> 16;
+   p_uuid->time_hi_and_version = (session_number >> 8) & 0x00ff;
+   p_uuid->time_hi_and_version |= 1 << 12; /* UUID version 1 */
+   p_uuid->clock_seq_hi_and_res = 0x80;    /* UUID variant 1 */
+   p_uuid->clock_seq_low = session_number & 0xff;
+   p_uuid->node[0] = mac_address.addr[0];
+   p_uuid->node[1] = mac_address.addr[1];
+   p_uuid->node[2] = mac_address.addr[2];
+   p_uuid->node[3] = mac_address.addr[3];
+   p_uuid->node[4] = mac_address.addr[4];
+   p_uuid->node[5] = mac_address.addr[5];
 }

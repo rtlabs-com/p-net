@@ -312,13 +312,11 @@ int pf_scheduler_add (
       pf_scheduler_sanitize_delay (delay, net->scheduler_tick_interval, true);
 
    os_mutex_lock (net->scheduler_timeout_mutex);
-   /* Unlink from the free list */
-   ix_free = net->scheduler_timeout_free;
-   pf_scheduler_unlink (net, &net->scheduler_timeout_free, ix_free);
-   os_mutex_unlock (net->scheduler_timeout_mutex);
 
+   ix_free = net->scheduler_timeout_free;
    if (ix_free >= PF_MAX_TIMEOUTS)
    {
+      os_mutex_unlock (net->scheduler_timeout_mutex);
       LOG_ERROR (
          PNET_LOG,
          "SCHEDULER(%d): Out of timeout resources!!\n",
@@ -327,13 +325,15 @@ int pf_scheduler_add (
       return -1;
    }
 
+   /* Unlink from the free list */
+   pf_scheduler_unlink (net, &net->scheduler_timeout_free, ix_free);
+
    net->scheduler_timeouts[ix_free].in_use = true;
    net->scheduler_timeouts[ix_free].name = handle->name;
    net->scheduler_timeouts[ix_free].cb = cb;
    net->scheduler_timeouts[ix_free].arg = arg;
    net->scheduler_timeouts[ix_free].when = now + delay;
 
-   os_mutex_lock (net->scheduler_timeout_mutex);
    if (net->scheduler_timeout_first >= PF_MAX_TIMEOUTS)
    {
       /* Put into empty q */

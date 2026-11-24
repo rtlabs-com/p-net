@@ -211,7 +211,7 @@ static pf_lldp_signal_delay_t fake_port_delay (void)
    return port_delay;
 }
 
-static pf_lldp_peer_info_t fake_peer_info (void)
+pf_lldp_peer_info_t fake_peer_info (void)
 {
    pf_lldp_peer_info_t peer;
 
@@ -515,15 +515,18 @@ TEST_F (LldpTest, LldpGenerateAliasName)
 TEST_F (LldpTest, LldpParsePacket)
 {
    uint8_t packet[MAX_ETH_PAYLOAD_SIZE];
+   pnal_buf_t * p;
    int error;
    size_t size;
    pf_lldp_peer_info_t actual;
    const pf_lldp_peer_info_t expected = fake_peer_info();
 
    size = construct_packet (packet, &expected);
+   p = pnal_buf_alloc (size);
+   pnal_buf_write (p, 0, packet, size);
    memset (&actual, 0xff, sizeof (actual));
 
-   error = pf_lldp_parse_packet (packet, size, &actual);
+   error = pf_lldp_parse_packet (p, 0, &actual);
 
    EXPECT_EQ (error, 0);
 
@@ -607,11 +610,14 @@ TEST_F (LldpTest, LldpParsePacket)
     * it easier to find out exactly what went wrong.
     */
    EXPECT_EQ (memcmp (&actual, &expected, sizeof (expected)), 0);
+
+   pnal_buf_free (p);
 }
 
 TEST_F (LldpTest, LldpParsePacketWithTooBigChassisId)
 {
    uint8_t packet[MAX_ETH_PAYLOAD_SIZE];
+   pnal_buf_t * p;
    int error;
    size_t size;
    pf_lldp_peer_info_t actual;
@@ -620,17 +626,22 @@ TEST_F (LldpTest, LldpParsePacketWithTooBigChassisId)
 
    peer.chassis_id.len = max_len + 1;
    size = construct_packet (packet, &peer);
+   p = pnal_buf_alloc (size);
+   pnal_buf_write (p, 0, packet, size);
    memset (&actual, 0xff, sizeof (actual));
 
-   error = pf_lldp_parse_packet (packet, size, &actual);
+   error = pf_lldp_parse_packet (p, 0, &actual);
 
    EXPECT_EQ (error, 0);
    EXPECT_EQ (actual.chassis_id.is_valid, false);
+
+   pnal_buf_free (p);
 }
 
 TEST_F (LldpTest, LldpParsePacketWithTooBigPortId)
 {
    uint8_t packet[MAX_ETH_PAYLOAD_SIZE];
+   pnal_buf_t * p;
    int error;
    size_t size;
    pf_lldp_peer_info_t actual;
@@ -639,17 +650,22 @@ TEST_F (LldpTest, LldpParsePacketWithTooBigPortId)
 
    peer.port_id.len = max_len + 1;
    size = construct_packet (packet, &peer);
+   p = pnal_buf_alloc (size);
+   pnal_buf_write (p, 0, packet, size);
    memset (&actual, 0xff, sizeof (actual));
 
-   error = pf_lldp_parse_packet (packet, size, &actual);
+   error = pf_lldp_parse_packet (p, 0, &actual);
 
    EXPECT_EQ (error, 0);
    EXPECT_EQ (actual.port_id.is_valid, false);
+
+   pnal_buf_free (p);
 }
 
 TEST_F (LldpTest, LldpParsePacketWithTooBigPortDescription)
 {
    uint8_t packet[MAX_ETH_PAYLOAD_SIZE];
+   pnal_buf_t * p;
    int error;
    size_t size;
    pf_lldp_peer_info_t actual;
@@ -658,17 +674,22 @@ TEST_F (LldpTest, LldpParsePacketWithTooBigPortDescription)
 
    peer.port_description.len = max_len + 1;
    size = construct_packet (packet, &peer);
+   p = pnal_buf_alloc (size);
+   pnal_buf_write (p, 0, packet, size);
    memset (&actual, 0xff, sizeof (actual));
 
-   error = pf_lldp_parse_packet (packet, size, &actual);
+   error = pf_lldp_parse_packet (p, 0, &actual);
 
    EXPECT_EQ (error, 0);
    EXPECT_EQ (actual.port_description.is_valid, false);
+
+   pnal_buf_free (p);
 }
 
 TEST_F (LldpTest, LldpParsePacketWithTooBigManagementAddress)
 {
    uint8_t packet[MAX_ETH_PAYLOAD_SIZE];
+   pnal_buf_t * p;
    int error;
    size_t size;
    pf_lldp_peer_info_t actual;
@@ -677,17 +698,22 @@ TEST_F (LldpTest, LldpParsePacketWithTooBigManagementAddress)
 
    peer.management_address.len = max_len + 1;
    size = construct_packet (packet, &peer);
+   p = pnal_buf_alloc (size);
+   pnal_buf_write (p, 0, packet, size);
    memset (&actual, 0xff, sizeof (actual));
 
-   error = pf_lldp_parse_packet (packet, size, &actual);
+   error = pf_lldp_parse_packet (p, 0, &actual);
 
    EXPECT_EQ (error, 0);
    EXPECT_EQ (actual.management_address.is_valid, false);
+
+   pnal_buf_free (p);
 }
 
 TEST_F (LldpTest, LldpParsePacketWithMultipleManagementAddresses)
 {
    uint8_t packet[MAX_ETH_PAYLOAD_SIZE];
+   pnal_buf_t * p;
    int error;
    size_t size;
    pf_lldp_peer_info_t actual;
@@ -706,10 +732,12 @@ TEST_F (LldpTest, LldpParsePacketWithMultipleManagementAddresses)
    size += construct_packet_management_address (&packet[size], &ipv4);
    size += construct_packet_management_address (&packet[size], &ipv6);
    size += construct_packet_end_marker (&packet[size]);
+   p = pnal_buf_alloc (size);
+   pnal_buf_write (p, 0, packet, size);
 
    memset (&actual, 0xff, sizeof (actual));
 
-   error = pf_lldp_parse_packet (packet, size, &actual);
+   error = pf_lldp_parse_packet (p, 0, &actual);
 
    /* Note that only the IPv4 address should be saved, as IPv6 addresses are
     * of no use for the p-net stack.
@@ -718,11 +746,14 @@ TEST_F (LldpTest, LldpParsePacketWithMultipleManagementAddresses)
    EXPECT_EQ (actual.management_address.is_valid, true);
    EXPECT_EQ (actual.management_address.subtype, ipv4.subtype);
    EXPECT_EQ (actual.management_address.len, 4u);
+
+   pnal_buf_free (p);
 }
 
 TEST_F (LldpTest, LldpParsePacketWithInvalidManagementAddresses)
 {
    uint8_t packet[MAX_ETH_PAYLOAD_SIZE];
+   pnal_buf_t * p;
    int error;
    size_t size;
    pf_lldp_peer_info_t actual;
@@ -742,13 +773,17 @@ TEST_F (LldpTest, LldpParsePacketWithInvalidManagementAddresses)
    size += construct_packet_ttl (&packet[size], ttl);
    size += construct_packet_management_address (&packet[size], &address);
    size += construct_packet_end_marker (&packet[size]);
+   p = pnal_buf_alloc (size);
+   pnal_buf_write (p, 0, packet, size);
 
    memset (&actual, 0xff, sizeof (actual));
 
-   error = pf_lldp_parse_packet (packet, size, &actual);
+   error = pf_lldp_parse_packet (p, 0, &actual);
 
    EXPECT_EQ (error, 0);
    EXPECT_EQ (actual.management_address.is_valid, false);
+
+   pnal_buf_free (p);
 }
 
 TEST_F (LldpTest, LldpGetChassisId)
@@ -799,8 +834,8 @@ TEST_F (LldpTest, LldpGetPortDescription)
    memset (&port_desc, 0xff, sizeof (port_desc));
 
    pf_lldp_get_port_description (net, LOCAL_PORT, &port_desc);
-   EXPECT_STREQ (port_desc.string, TEST_INTERFACE_NAME);
-   EXPECT_EQ (port_desc.len, strlen (TEST_INTERFACE_NAME));
+   EXPECT_STREQ (port_desc.string, TEST_PHYSICAL_PORT_NAME);
+   EXPECT_EQ (port_desc.len, strlen (TEST_PHYSICAL_PORT_NAME));
 }
 
 TEST_F (LldpTest, LldpGetManagementAddress)
@@ -1034,15 +1069,21 @@ TEST_F (LldpTest, LldpGetPeerLinkStatus)
 TEST_F (LldpTest, LldpConstructFrame)
 {
    uint8_t frame[MAX_ETH_FRAME_SIZE];
+   pnal_buf_t * f = pnal_buf_alloc (sizeof (frame));
    const uint8_t * p;
    const uint8_t * tlv;
    size_t returned_size;
    size_t size;
+   int error;
 
    mock_os_data.interface_index = 3;
 
-   returned_size = pf_lldp_construct_frame (net, LOCAL_PORT, frame);
+   error = pf_lldp_construct_frame (net, LOCAL_PORT, f);
 
+   returned_size = pnal_buf_get_size (f);
+   pnal_buf_read (f, 0, frame, returned_size);
+
+   EXPECT_EQ (error, 0);
    EXPECT_GT (returned_size, 14u);
    EXPECT_LE (returned_size, MAX_ETH_FRAME_SIZE);
 
@@ -1094,7 +1135,7 @@ TEST_F (LldpTest, LldpConstructFrame)
    EXPECT_EQ (TLV_TYPE (tlv), LLDP_TYPE_TTL);
    EXPECT_EQ (TLV_LEN (tlv), 2u);
    EXPECT_EQ (tlv[2], 0u);  /* MSB of TTL */
-   EXPECT_EQ (tlv[3], 20u); /* LSB of TTL */
+   EXPECT_EQ (tlv[3], 21u); /* LSB of TTL */
    size += 2 + TLV_LEN (tlv);
 
    /* Note that the order in which TLVs below are placed in the packet
@@ -1137,6 +1178,16 @@ TEST_F (LldpTest, LldpConstructFrame)
    EXPECT_EQ (tlv[5], 0x01); /* Subtype */
    size += 2 + TLV_LEN (tlv);
 
+   /* Check Profinet MAUType Extension TLV */
+   tlv = &frame[size];
+   EXPECT_EQ (TLV_TYPE (tlv), LLDP_TYPE_ORG_SPEC);
+   EXPECT_EQ (TLV_LEN (tlv), 3 + 1 + 2u);
+   EXPECT_EQ (tlv[2], 0x00);  /* Profinet OUI */
+   EXPECT_EQ (tlv[3], 0x0E);  /* Profinet OUI */
+   EXPECT_EQ (tlv[4], 0xCF);  /* Profinet OUI */
+   EXPECT_EQ (tlv[5], 0x07);  /* Subtype */
+   size += 2 + TLV_LEN (tlv);
+
    /* Check Management Address TLV */
    tlv = &frame[size];
    EXPECT_EQ (TLV_TYPE (tlv), LLDP_TYPE_MANAGEMENT_ADDRESS);
@@ -1155,6 +1206,18 @@ TEST_F (LldpTest, LldpConstructFrame)
    EXPECT_EQ (tlv[13], 0u); /* Size of OID */
    size += 2 + TLV_LEN (tlv);
 
+#if PNET_OPTION_MRP
+   tlv = &frame[size];
+   EXPECT_EQ (TLV_TYPE (tlv), LLDP_TYPE_ORG_SPEC);
+   EXPECT_EQ (TLV_LEN (tlv), 22u);
+   EXPECT_EQ (tlv[2], 0x00); /* Profinet OUI */
+   EXPECT_EQ (tlv[3], 0x0E); /* Profinet OUI */
+   EXPECT_EQ (tlv[4], 0xCF); /* Profinet OUI */
+   EXPECT_EQ (tlv[5], 0x04);   /* LLDP_PNIO_SUBTYPE_MRP_RING_PORT_STATUS */
+   /* The rest may vary */
+   size += 2 + TLV_LEN (tlv);
+#endif
+
    /* Check End Of LLDPPDU TLV */
    tlv = &frame[size];
    EXPECT_EQ (TLV_TYPE (tlv), LLDP_TYPE_END);
@@ -1162,4 +1225,6 @@ TEST_F (LldpTest, LldpConstructFrame)
    size += 2 + TLV_LEN (tlv);
 
    EXPECT_EQ (size, returned_size);
+
+   pnal_buf_free (f);
 }

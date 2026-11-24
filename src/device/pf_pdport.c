@@ -347,6 +347,12 @@ static void pf_pdport_remove_all_diag (pnet_t * net, int loc_port_num)
       &diag_source,
       PF_WRT_ERROR_REMOTE_MISMATCH,
       PF_WRT_ERROR_NO_PEER_DETECTED);
+
+   (void)pf_diag_std_remove (
+      net,
+      &diag_source,
+      PF_WRT_ERROR_REMOTE_MISMATCH,
+      PF_WRT_ERROR_PEER_MRP_DOMAIN_MISMATCH);
 }
 
 /**
@@ -412,12 +418,63 @@ void pf_pdport_remove_data_files (const char * file_directory)
    }
 }
 
+static void pf_pdport_reset_ar (pnet_t * net, pf_ar_t const * p_ar)
+{
+   int port;
+   pf_port_t * p_port_data = NULL;
+   pf_exp_ident_t * exp_ident;
+   pf_exp_api_t * exp_api;
+   pf_exp_module_t * exp_mod;
+   pf_exp_submodule_t * exp_submod;
+   int a, m, s;
+
+   exp_ident = &p_ar->io_ar->exp_ident;
+   for (a = 0; a < exp_ident->nbr_apis; ++a)
+   {
+      exp_api = &exp_ident->api[a];
+      if (exp_api->api == PNET_API_NO_APPLICATION_PROFILE)
+      {
+         for (m = 0; m < exp_api->nbr_modules; ++m)
+         {
+            exp_mod = &exp_api->module[m];
+
+            if (exp_mod->ident_number == PNET_MOD_DAP_IDENT)
+            {
+               for (s = 0; s < exp_mod->nbr_submodules; ++s)
+               {
+                  exp_submod = &exp_mod->submodule[s];
+
+                  port = pf_port_dap_subslot_to_local_port (
+                     net,
+                     exp_submod->subslot_number);
+                  if (port != 0)
+                  {
+                     p_port_data = pf_port_get_state (net, port);
+                     memset (
+                        &p_port_data->pdport,
+                        0,
+                        sizeof (p_port_data->pdport));
+                     pf_pdport_remove_all_diag (net, port);
+                  }
+               }
+            }
+         }
+      }
+   }
+   (void)pf_bg_worker_start_job (net, PF_BGJOB_SAVE_PDPORT_NVM_DATA);
+}
+
 void pf_pdport_ar_connect_ind (pnet_t * net, const pf_ar_t * p_ar)
 {
    (void)p_ar;
    int port;
    pf_port_iterator_t port_iterator;
    pf_port_t * p_port_data = NULL;
+
+   if ((p_ar->io_ar != NULL) && (p_ar->ar_state != PF_AR_STATE_BACKUP))
+   {
+      pf_pdport_reset_ar (net, p_ar);
+   }
 
    pf_port_init_iterator_over_ports (net, &port_iterator);
    port = pf_port_get_next (&port_iterator);
@@ -481,9 +538,7 @@ int pf_pdport_read_ind (
    pnet_t * net,
    pf_ar_t * p_ar,
    const pf_iod_read_request_t * p_read_req,
-   const pf_iod_read_result_t * p_read_res,
-   uint16_t res_size,
-   uint8_t * p_res,
+   pf_put_info_t * p_res,
    uint16_t * p_pos)
 {
    int ret = -1;
@@ -527,7 +582,6 @@ int pf_pdport_read_ind (
             p_port_data,
             pf_port_get_media_type (eth_status.operational_mau_type),
             &eth_status,
-            res_size,
             p_res,
             p_pos);
          ret = 0;
@@ -547,7 +601,6 @@ int pf_pdport_read_ind (
                true,
                subslot,
                &p_port_data->pdport.adjust.peer_to_peer_boundary,
-               res_size,
                p_res,
                p_pos);
          }
@@ -566,10 +619,9 @@ int pf_pdport_read_ind (
             {
                pf_put_pdport_data_check (
                   true,
-                  p_read_res->slot_number,
-                  p_read_res->subslot_number,
+                  slot,
+                  subslot,
                   &p_port_data->pdport.check.peer,
-                  res_size,
                   p_res,
                   p_pos);
             }
@@ -591,14 +643,18 @@ int pf_pdport_read_ind (
 
       pf_put_pd_multiblock_interface_and_statistics (
          true,
-         p_read_res->api,
+         p_read_req->api,
          pf_cmina_get_device_macaddr (net),
          pf_cmina_get_ipaddr (net),
          pf_cmina_get_netmask (net),
          pf_cmina_get_gateway (net),
          station_name,
          &port_statistics,
-         res_size,
+#if PNET_OPTION_MRP
+         &net->mrp_data.config,
+#else
+         NULL,
+#endif
          p_res,
          p_pos);
 
@@ -609,7 +665,9 @@ int pf_pdport_read_ind (
          subslot_for_port =
             pf_port_loc_port_num_to_dap_subslot (net, loc_port_num);
          p_port_data = pf_port_get_state (net, loc_port_num);
-
+#if PNET_OPTION_MRP
+         pf_mrp_port_t * p_port_mrp = &p_port_data->mrp;
+#endif
          eth_status = pf_pdport_get_eth_status_filtered_mau (net, loc_port_num);
          if (
             pnal_get_port_statistics (
@@ -629,7 +687,7 @@ int pf_pdport_read_ind (
 
          pf_put_pd_multiblock_port_and_statistics (
             true,
-            p_read_res->api,
+            p_read_req->api,
             subslot_for_port,
             &peer_station_name,
             &peer_port_name,
@@ -637,7 +695,11 @@ int pf_pdport_read_ind (
             pf_port_get_media_type (eth_status.operational_mau_type),
             &eth_status,
             &port_statistics,
-            res_size,
+#if PNET_OPTION_MRP
+            p_port_mrp,
+#else
+            NULL,
+#endif
             p_res,
             p_pos);
 
@@ -690,7 +752,6 @@ int pf_pdport_read_ind (
             pf_put_pdport_statistics (
                true,
                &port_statistics,
-               res_size,
                p_res,
                p_pos);
             ret = 0;
@@ -709,7 +770,6 @@ int pf_pdport_read_ind (
                true,
                PNET_SUBSLOT_DAP_INTERFACE_1_IDENT,
                net->pf_interface.name_of_device_mode.mode,
-               res_size,
                p_res,
                p_pos);
          }
@@ -717,8 +777,37 @@ int pf_pdport_read_ind (
       }
       break;
 
+   case PF_IDX_SUB_PDPORTDATAREALEXT:
+      if (
+         (slot == PNET_SLOT_DAP_IDENT) &&
+         (pf_port_subslot_is_dap_port_id (net, subslot)))
+      {
+         loc_port_num = pf_port_dap_subslot_to_local_port (net, subslot);
+
+         p_port_data = pf_port_get_state (net, loc_port_num);
+         eth_status = pf_pdport_get_eth_status_filtered_mau (net, loc_port_num);
+         /* Look up peer info. Subfields .len indicates whether peer is found */
+         (void)pf_lldp_get_peer_station_name (
+            net,
+            loc_port_num,
+            &peer_station_name);
+         (void)pf_lldp_get_peer_port_name (net, loc_port_num, &peer_port_name);
+
+         pf_put_pdport_data_real_extended (
+            true,
+            subslot,
+            &peer_station_name,
+            &peer_port_name,
+            p_port_data,
+            pf_port_get_media_type (eth_status.operational_mau_type),
+            &eth_status,
+            p_res,
+            p_pos);
+         ret = 0;
+      }
+      break;
+
    default:
-      ret = -1;
       break;
    }
    return ret;
@@ -926,6 +1015,89 @@ static void pf_pdport_check_peer_port_name (pnet_t * net, int loc_port_num)
    }
 }
 
+
+#if PNET_OPTION_MRP
+
+/* check for domain mismatch on this port compared to what was configured in
+ * mrp interface adjust  */
+void pf_pdport_check_mrp_domain_mismatch (pnet_t * net, int loc_port_num)
+{
+   pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
+   pf_mrp_port_t * p_mrp = &p_port_data->mrp;
+
+   /* if lldp domain mismatch check is enabled compare desired domain with
+    * that of current port neighbor */
+
+   /* only one instance supported currently */
+   if (net->mrp_data.check.instance[p_mrp->instance].flags.lldp_domain)
+   {
+      pnet_diag_source_t diag_source;
+
+      pf_pdport_init_diag_source (net, &diag_source, loc_port_num);
+
+      if (memcmp (
+             p_mrp->domain.data,
+             p_port_data->lldp.peer_info.mrp_port_status.domain.data,
+             sizeof (mrp_domain_uuid_t)))
+      {
+         char peer_uuid[MRP_UUID_STRING_SIZE];
+         char port_uuid[MRP_UUID_STRING_SIZE];
+
+         pf_mrp_domain_uuid_str (
+            &p_port_data->lldp.peer_info.mrp_port_status.domain,
+            peer_uuid);
+         pf_mrp_domain_uuid_str (&p_mrp->domain, port_uuid);
+
+         LOG_DEBUG (
+            PF_MRP_LOG,
+            "PDPORT(%d): Domain mismatch detected on port %d\n",
+            __LINE__,
+            loc_port_num);
+
+         LOG_DEBUG (
+            PF_MRP_LOG,
+            "PDPORT(%d): Peer UUID : %s\n",
+            __LINE__,
+            peer_uuid);
+
+         LOG_DEBUG (
+            PF_MRP_LOG,
+            "PDPORT(%d): Port UUID : %s\n",
+            __LINE__,
+            port_uuid);
+
+         /* set diagnosis alarm */
+         (void)pf_diag_std_add (
+            net,
+            &diag_source,
+            PNET_DIAG_CH_PROP_TYPE_UNSPECIFIED,
+            PNET_DIAG_CH_PROP_MAINT_FAULT,
+            PF_WRT_ERROR_REMOTE_MISMATCH,
+            PF_WRT_ERROR_PEER_MRP_DOMAIN_MISMATCH,
+            0,
+            0);
+      }
+      else
+      {
+         /* clear diagnosis error */
+         (void)pf_diag_std_remove (
+            net,
+            &diag_source,
+            PF_WRT_ERROR_REMOTE_MISMATCH,
+            PF_WRT_ERROR_PEER_MRP_DOMAIN_MISMATCH);
+      }
+   }
+   else
+   {
+      LOG_DEBUG (
+         PNET_LOG,
+         "PDPORT(%d): We do not check mrp domain.\n",
+         __LINE__);
+   }
+}
+
+#endif
+
 /**
  * @internal
  * Run peer check if active
@@ -958,6 +1130,13 @@ static void pf_pdport_run_peer_check (pnet_t * net, int loc_port_num)
          "diagnosis is triggered.\n",
          __LINE__);
    }
+
+#if PNET_OPTION_MRP
+   if (net->mrp_data.check_active)
+   {
+      pf_pdport_check_mrp_domain_mismatch (net, loc_port_num);
+   }
+#endif
 }
 
 /**
@@ -1136,15 +1315,18 @@ static int pf_pdport_write_data_check (
 {
    int ret = -1;
    uint16_t pos = 0;
-   pf_get_info_t get_info;
    pf_port_data_check_t port_data_check = {0};
    pf_check_peers_t check_peers = {0};
    pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
-   get_info.result = PF_PARSE_OK;
-   get_info.p_buf = p_bytes;
-   get_info.is_big_endian = true;
-   get_info.len = p_datalength;
+   pf_get_info_t get_info =
+   {
+      .result = PF_PARSE_OK,
+      .p_frame = NULL,
+      .p_array = p_bytes,
+      .is_big_endian = true,
+      .len = p_datalength,
+   };
 
    pf_get_port_data_check (&get_info, &pos, &port_data_check);
 
@@ -1236,15 +1418,18 @@ static int pf_pdport_write_data_adj (
 {
    int ret = -1;
    uint16_t pos = 0;
-   pf_get_info_t get_info;
    pf_port_data_adjust_t port_data_adjust = {0};
    pf_adjust_peer_to_peer_boundary_t boundary;
    pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
 
-   get_info.result = PF_PARSE_OK;
-   get_info.p_buf = p_bytes;
-   get_info.is_big_endian = true;
-   get_info.len = p_datalength;
+   pf_get_info_t get_info =
+   {
+      .result = PF_PARSE_OK,
+      .p_frame = NULL,
+      .p_array = p_bytes,
+      .is_big_endian = true,
+      .len = p_datalength,
+   };
 
    pf_get_port_data_adjust (&get_info, &pos, &port_data_adjust);
 
@@ -1317,12 +1502,14 @@ static int pf_pdport_write_interface_adj (
    pnet_result_t * p_result)
 {
    uint16_t pos = 0;
-   pf_get_info_t get_info;
-
-   get_info.result = PF_PARSE_OK;
-   get_info.p_buf = p_bytes;
-   get_info.is_big_endian = true;
-   get_info.len = p_datalength;
+   pf_get_info_t get_info =
+   {
+      .result = PF_PARSE_OK,
+      .p_frame = NULL,
+      .p_array = p_bytes,
+      .is_big_endian = true,
+      .len = p_datalength,
+   };
 
    pf_get_interface_adjust (
       &get_info,
@@ -1343,6 +1530,580 @@ static int pf_pdport_write_interface_adj (
 
    return 0;
 }
+
+int pf_pdport_check_all (pnet_t * net)
+{
+   int port;
+   pf_port_iterator_t port_iterator;
+
+   pf_port_init_iterator_over_ports (net, &port_iterator);
+   port = pf_port_get_next (&port_iterator);
+   while (port != 0)
+   {
+      pf_pdport_peer_indication (net, port);
+      port = pf_port_get_next (&port_iterator);
+   }
+   return 0;
+}
+
+#if PNET_OPTION_MRP
+
+/* PF_IDX_SUB_PDINTF_MRP_CHECK */
+
+static int pf_pdport_write_intf_mrp_data_check (
+   pnet_t * net,
+   const pf_ar_t * p_ar,
+   const pf_iod_write_request_t * p_write_req,
+   int loc_port_num,
+   const uint8_t * p_bytes,
+   uint16_t pos,
+   uint16_t p_datalength,
+   pnet_result_t * p_result)
+{
+   pf_get_info_t get_info;
+   pf_mrp_data_check_t mrp_check = {0};
+
+   get_info.result = PF_PARSE_OK;
+   get_info.p_frame = NULL;
+   get_info.p_array = p_bytes;
+   get_info.is_big_endian = true;
+   get_info.len = p_datalength;
+
+   /* this block header mrp_data_check is already processed higher up in
+    * call-chain */
+
+   pf_get_interface_mrp_data_check (
+      &get_info,
+      &pos,
+      PF_MRP_NBR_INSTANCES,
+      &mrp_check);
+
+   if (get_info.result == PF_PARSE_OK)
+   {
+      int i;
+
+      LOG_INFO (
+         PF_MRP_LOG,
+         "PDPORT(%d): mrp data check (%d instances)\n",
+         __LINE__,
+         mrp_check.nbr_instances);
+
+      /* log changes */
+      for (i = 0; i < mrp_check.nbr_instances; i++)
+      {
+         char domain_str[MRP_UUID_STRING_SIZE];
+
+         pf_mrp_domain_uuid_str (&mrp_check.instance[i].domain, domain_str);
+         LOG_INFO (
+            PF_MRP_LOG,
+            "PDPORT(%d) : [%d] domain_uuid [%s] diag_check:0x%d lldp_check:%d\n",
+            __LINE__,
+            mrp_check.instance[i].instance,
+            domain_str,
+            mrp_check.instance[i].flags.redundance_mgr_diag,
+            mrp_check.instance[i].flags.lldp_domain);
+
+         if (
+            net->mrp_data.check.instance[i].flags.lldp_domain !=
+            mrp_check.instance[i].flags.lldp_domain)
+         {
+            LOG_INFO (
+               PF_MRP_LOG,
+               "PDPORT(%d) lldp mrp domain check is now set to %d\n",
+               __LINE__,
+               mrp_check.instance[i].flags.lldp_domain);
+         }
+
+         /* store mrp check info and activate checking via periodic check */
+         net->mrp_data.check = mrp_check;
+         net->mrp_data.check_active = true;
+
+         /* if domain mismatch check is enabled, run peer check now */
+         if (mrp_check.instance[i].flags.lldp_domain)
+            pf_pdport_check_all (net);
+      }
+   }
+   else
+   {
+      LOG_ERROR (
+         PF_MRP_LOG,
+         "PDPORT(%d): Failed to parse incoming interface mrp data check.\n",
+         __LINE__);
+      return -1;
+   }
+
+   return 0;
+}
+
+/* PF_IDX_SUB_PDINTF_MRP_ADJUST */
+
+static int pf_pdport_write_intf_mrp_data_adjust (
+   pnet_t * net,
+   const pf_ar_t * p_ar,
+   const pf_iod_write_request_t * p_write_req,
+   int loc_port_num,
+   const uint8_t * p_bytes,
+   uint16_t pos,
+   uint16_t p_datalength,
+   pnet_result_t * p_result)
+{
+   pf_get_info_t get_info;
+   pf_intf_mrp_data_adjust_t mrp_adjust = {0};
+
+   get_info.result = PF_PARSE_OK;
+   get_info.p_frame = NULL;
+   get_info.p_array = p_bytes;
+   get_info.is_big_endian = true;
+   get_info.len = p_datalength;
+
+   pf_get_interface_mrp_data_adjust (
+      &get_info,
+      &pos,
+      PF_MRP_NBR_INSTANCES,
+      &mrp_adjust);
+
+   if (get_info.result == PF_PARSE_OK)
+   {
+      int i;
+
+      /* only one instance supported (checked in
+       * pf_get_interface_mrp_data_adjust) */
+
+      LOG_INFO (
+         PF_MRP_LOG,
+         "PDPORT(%d): mrp data adjust (%d instances)\n",
+         __LINE__,
+         mrp_adjust.nbr_instances);
+
+      for (i = 0; i < mrp_adjust.nbr_instances; i++)
+      {
+         char domain_str[MRP_UUID_STRING_SIZE];
+
+         net->mrp_data.config.domain_name.len =
+            mrp_adjust.instance[i].domain_len;
+         memcpy (
+            net->mrp_data.config.domain_name.name,
+            mrp_adjust.instance[i].domain_name,
+            mrp_adjust.instance[i].domain_len);
+
+         /* null terminate for convenience */
+         net->mrp_data.config.domain_name
+            .name[mrp_adjust.instance[i].domain_len] = 0;
+
+         pf_mrp_domain_uuid_str (&mrp_adjust.instance[i].domain, domain_str);
+
+         LOG_INFO (
+            PF_MRP_LOG,
+            "PDPORT(%d) : [%d] domain_uuid [%s]\n",
+            __LINE__,
+            mrp_adjust.instance[i].instance,
+            domain_str);
+         LOG_INFO (
+            PF_MRP_LOG,
+            "PDPORT(%d) : [%d] domain_name %s\n",
+            __LINE__,
+            mrp_adjust.instance[i].instance,
+            mrp_adjust.instance[i].domain_name);
+
+         /* Send one update with port status off and then remove mrp port status
+          * tlv from lldp frames */
+
+         if (net->mrp_data.config.role != mrp_adjust.instance[i].role)
+            net->mrp_data.config.role_updated = true;
+
+         net->mrp_data.config.role = mrp_adjust.instance[i].role;
+
+         if (mrp_adjust.instance[i].role == MEDIA_REDUNDANCY_DISABLED)
+         {
+            pf_mrp_disable (net);
+
+            LOG_INFO (
+               PF_MRP_LOG,
+               "PDPORT(%d) : media redundancy disabled.\n",
+               __LINE__);
+         }
+         else if (mrp_adjust.instance[i].role == MEDIA_REDUNDANCY_CLIENT)
+         {
+            memcpy (
+               net->mrp_data.config.domain.data,
+               mrp_adjust.instance[i].domain.data,
+               sizeof (mrp_domain_uuid_t));
+            net->mrp_data.config.client_params =
+               mrp_adjust.instance[i].client_params;
+            pf_mrp_enable (net);
+
+            LOG_INFO (
+               PF_MRP_LOG,
+               "PDPORT(%d) : media redundancy client enabled.\n",
+               __LINE__);
+            LOG_INFO (
+               PF_MRP_LOG,
+               "PDPORT(%d) : [%d] client redundancy params\n",
+               __LINE__,
+               mrp_adjust.instance[i].instance);
+            LOG_INFO (
+               PF_MRP_LOG,
+               "PDPORT(%d) : [%d] link_up_T %d ms link_down_T %d ms max_T:%d "
+               "ms\n",
+               __LINE__,
+               mrp_adjust.instance[i].instance,
+               mrp_adjust.instance[i].client_params.link_down_T,
+               mrp_adjust.instance[i].client_params.link_up_T,
+               mrp_adjust.instance[i].client_params.link_nr_max);
+         }
+         else
+         {
+            LOG_INFO (
+               PF_MRP_LOG,
+               "PDPORT(%d): mrp role %d not supported\n",
+               __LINE__,
+               net->mrp_data.config.role);
+            return -1;
+         }
+      }
+   }
+   else
+   {
+      LOG_ERROR (
+         PF_MRP_LOG,
+         "PDPORT(%d): Failed to parse incoming interface mrp data adjust.\n",
+         __LINE__);
+      return -1;
+   }
+
+   return 0;
+}
+
+/* PF_IDX_SUB_PDPORT_MRP_ADJUST */
+
+static int pf_pdport_write_port_mrp_adjust (
+   pnet_t * net,
+   const pf_ar_t * p_ar,
+   const pf_iod_write_request_t * p_write_req,
+   int loc_port_num,
+   const uint8_t * p_bytes,
+   uint16_t pos,
+   uint16_t p_datalength,
+   pnet_result_t * p_result)
+{
+   pf_get_info_t get_info;
+   uint8_t instance;
+   mrp_domain_uuid_t domain;
+
+   get_info.result = PF_PARSE_OK;
+   get_info.p_frame = NULL;
+   get_info.p_array = p_bytes;
+   get_info.is_big_endian = true;
+   get_info.len = p_datalength;
+
+   /* this block header is already processed higher up in call-chain */
+
+   pos += 1; /* 1 byte padding */
+
+   instance = pf_get_byte (&get_info, &pos);
+   pf_get_mem (&get_info, &pos, 16, domain.data);
+
+   if (get_info.result == PF_PARSE_OK)
+   {
+      char domain_str[MRP_UUID_STRING_SIZE];
+      pf_port_t * p_port_data = pf_port_get_state (net, loc_port_num);
+      pf_mrp_port_t * p_port_mrp = &p_port_data->mrp;
+
+      pf_mrp_domain_uuid_str (&domain, domain_str);
+
+      LOG_INFO (
+         PF_MRP_LOG,
+         "PDPORT(%d): mrp port data adjust instance %d domain_uuid [%s]\n",
+         __LINE__,
+         instance,
+         domain_str);
+
+      memcpy (p_port_mrp->domain.data, domain.data, sizeof (mrp_domain_uuid_t));
+      p_port_mrp->instance = instance;
+   }
+   else
+   {
+      LOG_ERROR (
+         PF_MRP_LOG,
+         "PDPORT(%d): Failed to parse incoming port mrp data adjust.\n",
+         __LINE__);
+      return -1;
+   }
+
+   return 0;
+}
+
+/* main handler for all mrp read attributes to both ports
+   and interface  */
+int pf_pdport_mrp_read_ind (
+   pnet_t * net,
+   pf_ar_t * p_ar,
+   const pf_iod_read_request_t * p_read_req,
+   pf_put_info_t * p_res,
+   uint16_t * p_pos)
+{
+   int ret = -1;
+   int loc_port_num;
+
+   pf_port_t * p_port_data;
+   uint16_t slot = p_read_req->slot_number;
+   uint16_t subslot = p_read_req->subslot_number;
+
+   uint16_t index = p_read_req->index;
+
+   switch (index)
+   {
+   case PF_IDX_SUB_PDINTF_MRP_REAL:
+      /* interface specific read */
+      if (
+         (slot == PNET_SLOT_DAP_IDENT) &&
+         (subslot == PNET_SUBSLOT_DAP_INTERFACE_1_IDENT))
+      {
+         pf_mrp_config_t * mrp = &net->mrp_data.config;
+
+         pf_put_pdinterface_mrp_data_real (
+            true,
+            &mrp->domain,
+            mrp->role,
+            mrp->version,
+            &mrp->domain_name,
+            &mrp->client_params,
+            p_res,
+            p_pos);
+         ret = 0;
+      }
+      break;
+
+   case PF_IDX_SUB_PDINTF_MRP_ADJUST:
+
+      if (
+         (slot == PNET_SLOT_DAP_IDENT) &&
+         (subslot == PNET_SUBSLOT_DAP_INTERFACE_1_IDENT))
+      {
+         /* send back current config if data check is active */
+         if (net->mrp_data.check_active)
+         {
+            pf_put_intf_mrp_data_adjust (
+               true,
+               subslot,
+               &net->mrp_data.config,
+               p_res,
+               p_pos);
+         }
+         ret = 0;
+      }
+      break;
+
+   case PF_IDX_SUB_PDINTF_MRP_CHECK:
+   {
+      if (
+         (slot == PNET_SLOT_DAP_IDENT) &&
+         (subslot == PNET_SUBSLOT_DAP_INTERFACE_1_IDENT))
+      {
+         /* only send back config if check is active and mrp enabled */
+         if (
+            net->mrp_data.check_active &&
+            (net->mrp_data.config.role == MEDIA_REDUNDANCY_CLIENT))
+         {
+            pf_put_intf_mrp_data_check (
+               true,
+               subslot,
+               &net->mrp_data.check,
+               p_res,
+               p_pos);
+         }
+         ret = 0;
+      }
+   }
+   break;
+
+   case PF_IDX_SUB_PDPORT_MRP_ADJUST:
+
+      if (
+         (slot == PNET_SLOT_DAP_IDENT) &&
+         (pf_port_subslot_is_dap_port_id (net, subslot)))
+      {
+         loc_port_num = pf_port_dap_subslot_to_local_port (net, subslot);
+         p_port_data = pf_port_get_state (net, loc_port_num);
+         pf_mrp_port_t * p_port_mrp = &p_port_data->mrp;
+
+         if (
+            net->mrp_data.check_active &&
+            (net->mrp_data.config.role == MEDIA_REDUNDANCY_CLIENT))
+         {
+            pf_put_pdport_mrp_data_adjust (
+               true,
+               subslot,
+               p_port_mrp->instance,
+               &p_port_mrp->domain,
+               p_res,
+               p_pos);
+         }
+         ret = 0;
+      }
+
+      break;
+
+   case PF_IDX_SUB_PDPORT_MRP_REAL:
+
+      if (
+         (slot == PNET_SLOT_DAP_IDENT) &&
+         (pf_port_subslot_is_dap_port_id (net, subslot)))
+      {
+         loc_port_num = pf_port_dap_subslot_to_local_port (net, subslot);
+         p_port_data = pf_port_get_state (net, loc_port_num);
+         pf_mrp_port_t * p_port_mrp = &p_port_data->mrp;
+
+         pf_put_pdport_mrp_data_real (
+            true,
+            subslot,
+            p_port_mrp->instance,
+            &p_port_mrp->domain,
+            p_res,
+            p_pos);
+         ret = 0;
+      }
+
+      break;
+
+   default:
+      break;
+   }
+
+   return ret;
+}
+
+/* main handler for all mrp write attributes to both ports
+   and interface  */
+
+int pf_pdport_write_mrp_req (
+   pnet_t * net,
+   const pf_ar_t * p_ar,
+   const pf_iod_write_request_t * p_write_req,
+   const uint8_t * p_bytes,
+   uint16_t pos,
+   uint16_t data_length,
+   pnet_result_t * p_result)
+{
+   int ret = -1;
+   int loc_port_num =
+      pf_port_dap_subslot_to_local_port (net, p_write_req->subslot_number);
+
+   LOG_INFO (
+      PF_MRP_LOG,
+      "PDPORT(%d): write index 0x%x subslot: 0x%x (lport %d)\n",
+      __LINE__,
+      p_write_req->index,
+      p_write_req->subslot_number,
+      loc_port_num);
+
+   if (loc_port_num > 0)
+   {
+      /* port specific writes */
+      switch (p_write_req->index)
+      {
+      case PF_IDX_SUB_PDPORT_MRP_ADJUST:
+         ret = pf_pdport_write_port_mrp_adjust (
+            net,
+            p_ar,
+            p_write_req,
+            loc_port_num,
+            p_bytes,
+            pos,
+            data_length,
+            p_result);
+         break;
+
+      default:
+         LOG_WARNING (
+            PNET_LOG,
+            "attribute 0x%x write error for slot %d subslot %d",
+            p_write_req->index,
+            p_write_req->slot_number,
+            p_write_req->subslot_number);
+         break;
+      }
+      if (ret == 0)
+      {
+         (void)pf_bg_worker_start_job (net, PF_BGJOB_SAVE_MRP_DATA);
+      }
+   }
+   else
+   {
+      /* interface specific writes (subslot 0x8000) */
+      switch (p_write_req->index)
+      {
+      /* parameters that should be checked for consistency */
+      case PF_IDX_SUB_PDINTF_MRP_CHECK:
+         if (
+            (p_write_req->slot_number == PNET_SLOT_DAP_IDENT) &&
+            (p_write_req->subslot_number == PNET_SUBMOD_DAP_INTERFACE_1_IDENT))
+         {
+            ret = pf_pdport_write_intf_mrp_data_check (
+               net,
+               p_ar,
+               p_write_req,
+               loc_port_num,
+               p_bytes,
+               pos,
+               data_length,
+               p_result);
+         }
+         break;
+
+      case PF_IDX_SUB_PDINTF_MRP_ADJUST:
+
+         if (
+            (p_write_req->slot_number == PNET_SLOT_DAP_IDENT) &&
+            (p_write_req->subslot_number == PNET_SUBMOD_DAP_INTERFACE_1_IDENT))
+         {
+            ret = pf_pdport_write_intf_mrp_data_adjust (
+               net,
+               p_ar,
+               p_write_req,
+               loc_port_num,
+               p_bytes,
+               pos,
+               data_length,
+               p_result);
+         }
+         break;
+
+      case PF_IDX_SUB_PDINTF_MRP_REAL:
+         LOG_WARNING (
+            PNET_LOG,
+            "attribute 0x%x not writeable, resetting MRP\n",
+            p_write_req->index);
+         /* tbd -- bad parametrization should reset configuration back to
+          * defaults as per GSDML) and For now only reset mrp but need to have a
+          * discussion on whether this behavior also applies
+          * to other parameters */
+         pf_mrp_data_init (net, true);
+         break;
+
+      default:
+         LOG_WARNING (
+            PNET_LOG,
+            "attribute 0x%x write error\n",
+            p_write_req->index);
+         break;
+      }
+   }
+
+   if (ret == -1)
+   {
+      pf_set_error (
+         p_result,
+         PNET_ERROR_CODE_WRITE,
+         PNET_ERROR_DECODE_PNIORW,
+         PNET_ERROR_CODE_1_ACC_ACCESS_DENIED,
+         PNET_ERROR_CODE_2_PNIORW (0));
+   }
+
+   return ret;
+}
+
+#endif // #if PNET_OPTION_MRP
 
 int pf_pdport_write_req (
    pnet_t * net,
@@ -1476,6 +2237,31 @@ static pnal_eth_mau_t pf_pdport_filter_mau_type (
    return mau_type;
 }
 
+/**
+ * Replace the Ethernet MAU type extension with the default value, if
+ * the actual value is unknown.
+ *
+ * @param mau_type                   In: MAU type read from hardware
+ * @param running                    In: True if link is up
+ * @param default_mau_type_extension In: Default MAU type extension
+ *                                       from config
+ * @return  Filtered MAU type extension
+ */
+static pnal_eth_mau_ext_t pf_pdport_filter_mau_type_extension (
+   pnal_eth_mau_ext_t mau_type_extension,
+   bool running,
+   pnal_eth_mau_ext_t default_mau_type_extension)
+{
+   /** The MAU type extension 0 represents "unknown" when the link is down.
+    *  When the link is up a MAU type extension 0 represents "No extension". */
+   if (mau_type_extension == PNAL_ETH_MAU_EXTENSION_NONE && !running)
+   {
+      return default_mau_type_extension;
+   }
+
+   return mau_type_extension;
+}
+
 pnal_eth_status_t pf_pdport_get_eth_status (pnet_t * net, int loc_port_num)
 {
    pnal_eth_status_t eth_status;
@@ -1500,6 +2286,11 @@ pnal_eth_status_t pf_pdport_get_eth_status_filtered_mau (
       eth_status.operational_mau_type,
       eth_status.running,
       p_port_config->default_mau_type);
+
+   eth_status.mau_type_extension = pf_pdport_filter_mau_type_extension (
+      eth_status.mau_type_extension,
+      eth_status.running,
+      p_port_config->default_mau_type_extension);
 
    return eth_status;
 }

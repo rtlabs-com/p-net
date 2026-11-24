@@ -92,6 +92,82 @@ int pf_fspm_cm_write_ind (
    pnet_result_t * p_result);
 
 /**
+ * Process I&M1 write request from the controller.
+ * Triggers the \a pnet_write_im_1_ind() user callback.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param request          In:    The write request record.
+ * @param prm_flag         In:    The prm_flag of the write request.
+ * @param im_1             InOut: The I&M1 data.
+ * @param result           Out:   The result information.
+ * @return  0  if operation succeeded.
+ *          -1 if not handled or an error occurred.
+ */
+int pf_fspm_write_im_1 (
+   pnet_t * net,
+   pf_iod_write_request_t const * request,
+   bool prm_flag,
+   pnet_im_1_t const * im_1,
+   pnet_result_t * result);
+
+/**
+ * Process I&M2 write request from the controller.
+ * Triggers the \a pnet_write_im_2_ind() user callback.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param request          In:    The write request record.
+ * @param prm_flag         In:    The prm_flag of the write request.
+ * @param im_2             InOut: The I&M2 data.
+ * @param result           Out:   The result information.
+ * @return  0  if operation succeeded.
+ *          -1 if not handled or an error occurred.
+ */
+int pf_fspm_write_im_2 (
+   pnet_t * net,
+   pf_iod_write_request_t const * request,
+   bool prm_flag,
+   pnet_im_2_t const * im_2,
+   pnet_result_t * result);
+
+/**
+ * Process I&M3 write request from the controller.
+ * Triggers the \a pnet_write_im_3_ind() user callback.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param request          In:    The write request record.
+ * @param prm_flag         In:    The prm_flag of the write request.
+ * @param im_3             InOut: The I&M3 data.
+ * @param result           Out:   The result information.
+ * @return  0  if operation succeeded.
+ *          -1 if not handled or an error occurred.
+ */
+int pf_fspm_write_im_3 (
+   pnet_t * net,
+   pf_iod_write_request_t const * request,
+   bool prm_flag,
+   pnet_im_3_t const * im_3,
+   pnet_result_t * result);
+
+/**
+ * Process I&M4 write request from the controller.
+ * Triggers the \a pnet_write_im_4_ind() user callback.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param request          In:    The write request record.
+ * @param prm_flag         In:    The prm_flag of the write request.
+ * @param im_4             InOut: The I&M4 data.
+ * @param result           Out:   The result information.
+ * @return  0  if operation succeeded.
+ *          -1 if not handled or an error occurred.
+ */
+int pf_fspm_write_im_4 (
+   pnet_t * net,
+   pf_iod_write_request_t const * request,
+   bool prm_flag,
+   pnet_im_4_t const * im_4,
+   pnet_result_t * result);
+
+/**
  * Process read record requests from the controller.
  * Triggers the \a pnet_read_ind() user callback for some values.
  *
@@ -112,6 +188,91 @@ int pf_fspm_cm_read_ind (
    uint8_t ** pp_read_data,
    uint16_t * p_read_length,
    pnet_result_t * p_result);
+
+/**
+ * Process I&M0 read request from the controller.
+ * Triggers the \a pnet_read_im_0_ind() user callback.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param request          In:    The read request record.
+ * @param im0              InOut: The I&M0 data.
+ * @param result           Out:   The result information.
+ * @return  0  if operation succeeded.
+ *          -1 if not handled or an error occurred.
+ */
+int pf_fspm_read_im_0 (
+   pnet_t * net,
+   pf_iod_read_request_t const * request,
+   pnet_im_0_t * im0,
+   pnet_result_t * result);
+
+/**
+ * Process I&M1 read request from the controller.
+ * Triggers the \a pnet_read_im_1_ind() user callback.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param request          In:    The read request record.
+ * @param im1              InOut: The I&M1 data.
+ * @param result           Out:   The result information.
+ * @return  0  if operation succeeded.
+ *          -1 if not handled or an error occurred.
+ */
+int pf_fspm_read_im_1 (
+   pnet_t * net,
+   pf_iod_read_request_t const * request,
+   pnet_im_1_t * im1,
+   pnet_result_t * result);
+
+/**
+ * Process I&M2 read request from the controller.
+ * Triggers the \a pnet_read_im_2_ind() user callback.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param request          In:    The read request record.
+ * @param im2              InOut: The I&M2 data.
+ * @param result           Out:   The result information.
+ * @return  0  if operation succeeded.
+ *          -1 if not handled or an error occurred.
+ */
+int pf_fspm_read_im_2 (
+   pnet_t * net,
+   pf_iod_read_request_t const * request,
+   pnet_im_2_t * im2,
+   pnet_result_t * result);
+
+/**
+ * Process I&M3 read request from the controller.
+ * Triggers the \a pnet_read_im_3_ind() user callback.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param request          In:    The read request record.
+ * @param im3              InOut: The I&M3 data.
+ * @param result           Out:   The result information.
+ * @return  0  if operation succeeded.
+ *          -1 if not handled or an error occurred.
+ */
+int pf_fspm_read_im_3 (
+   pnet_t * net,
+   pf_iod_read_request_t const * request,
+   pnet_im_3_t * im3,
+   pnet_result_t * result);
+
+/**
+ * Process I&M4 read request from the controller.
+ * Triggers the \a pnet_read_im_4_ind() user callback.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param request          In:    The read request record.
+ * @param im4              InOut: The I&M4 data.
+ * @param result           Out:   The result information.
+ * @return  0  if operation succeeded.
+ *          -1 if not handled or an error occurred.
+ */
+int pf_fspm_read_im_4 (
+   pnet_t * net,
+   pf_iod_read_request_t const * request,
+   pnet_im_4_t * im4,
+   pnet_result_t * result);
 
 /**
  * Response from controller to appl_rdy request.
@@ -200,7 +361,7 @@ void pf_fspm_state_ind (
  *                                alarm_type etc)
  * @param data_len         In:    Data length
  * @param data_usi         In:    USI for the alarm
- * @param p_data           InOut: Alarm data
+ * @param p_data           In:    Pointer to AlarmPayload + 2 bytes.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
  */
@@ -281,6 +442,24 @@ int pf_fspm_exp_submodule_ind (
    const pnet_data_cfg_t * exp_data);
 
 /**
+ * Ask the application whether a plugged submodule is a valid substitute
+ * for the expected submodule, via the \a pnet_is_substitute_cb() user
+ * callback.
+ *
+ * Returns false if the application has not provided the callback.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param expected_ident   In:    The expected submodule ident number.
+ * @param submodule_ident  In:    The plugged submodule ident number.
+ * @return  true  if the submodule is a substitute.
+ *          false otherwise.
+ */
+bool pf_fspm_is_substitute_req (
+   pnet_t * net,
+   uint32_t expected_ident,
+   uint32_t submodule_ident);
+
+/**
  * Notify application that the received data status has changed,
  * via the \a pnet_new_data_status_ind() user callback.
  *
@@ -325,6 +504,31 @@ void pf_fspm_reset_ind (
 int pf_fspm_signal_led_ind (pnet_t * net, bool led_state);
 
 /**
+ * Call user call-back when DCP configuration changes.
+ *
+ * This uses the \a pnet_dcp_ind() callback.
+ *
+ * @param net              InOut: The p-net stack instance
+ */
+void pf_fspm_cfg_ind (pnet_t * net);
+
+/**
+ * Invoke user callback for applying the default configuration of a submodule.
+ *
+ * This uses the \a pnet_sm_set_default_params() callback.
+ *
+ * @param net                       InOut: The p-net stack instance.
+ * @param api                       In: The API.
+ * @param slot                      In: The slot number.
+ * @param subslot                   In: The subslot number.
+ */
+void pf_fspm_sm_set_default_params (
+   pnet_t * net,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot);
+
+/**
  * Retrieve a pointer to the current configuration data.
  * @param net              InOut: The p-net stack instance
  * @param pp_cfg           Out: The current configuration (or NULL).
@@ -337,61 +541,6 @@ void pf_fspm_get_cfg (pnet_t * net, pnet_cfg_t ** pp_cfg);
  * @param pp_cfg           Out: The default configuration (or NULL).
  */
 void pf_fspm_get_default_cfg (pnet_t * net, const pnet_cfg_t ** pp_cfg);
-
-/**
- * Get device location from I&M data record 1.
- *
- * Device location is always 22 bytes long, possibly padded with
- * space characters (' ') to the right. It is always null terminated.
- *
- * Note that the SNMP thread may call this at any time.
- *
- * @param net              InOut: The p-net stack instance
- * @param location         Out:   Current device location.
- *                                Buffer must at least be of size
- *                                PNET_LOCATION_MAX_SIZE.
- */
-void pf_fspm_get_im_location (pnet_t * net, char * location);
-
-/**
- * Set device location in I&M data record 1 and save it to persistent memory.
- *
- * Only the first 22 bytes will be saved.
- * If \a location is less than 22 bytes, it will be padded with spaces
- * until it is 22 bytes long. Null termination will also be added.
- *
- * Note that the SNMP thread may call this at any time.
- *
- * @param net              InOut: The p-net stack instance
- * @param location         In:    New device location.
- */
-void pf_fspm_save_im_location (pnet_t * net, const char * location);
-
-/**
- * Clear the I&M data records 1-4.
- * @param net              InOut: The p-net stack instance
- * @return  0  if operation succeeded.
- *          -1 if an error occurred.
- */
-int pf_fspm_clear_im_data (pnet_t * net);
-
-/**
- * Save the I&M settings to nonvolatile memory, if necessary.
- * Blocking call, intended to be called from the background worker.
- *
- * Compares with the content of already stored settings (in order not to
- * wear out the flash chip)
- *
- * @param net              InOut: The p-net stack instance
- */
-void pf_fspm_save_im (pnet_t * net);
-
-/**
- * Show identification & maintenance settings.
- *
- * @param net              InOut: The p-net stack instance
- */
-void pf_fspm_im_show (const pnet_t * net);
 
 /**
  * Show compile time options, and memory usage.

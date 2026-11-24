@@ -107,9 +107,9 @@ int pf_file_join_directory_filename (
       {
          LOG_ERROR (
             PNET_LOG,
-            "FILE(%d): Too long directory and filename! Max total length %zu\n",
+            "FILE(%d): Too long directory and filename! Max total length %u\n",
             __LINE__,
-            size);
+            (unsigned int)size);
          return -1;
       }
 
@@ -126,9 +126,9 @@ int pf_file_join_directory_filename (
       {
          LOG_ERROR (
             PNET_LOG,
-            "FILE(%d): Too long filename! Max total length %zu\n",
+            "FILE(%d): Too long filename! Max total length %u\n",
             __LINE__,
-            size);
+            (unsigned int)size);
          return -1;
       }
       strcpy (fullpath, filename);
@@ -144,17 +144,20 @@ int pf_file_load (
    size_t size)
 {
    uint8_t versioning_buffer[8] = {0}; /* Two uint32_t */
-   pf_get_info_t bufferinfo;
    uint32_t version = 0;
    uint32_t magic = 0;
    uint16_t pos = 0;
    char path[PNET_MAX_FILE_FULLPATH_SIZE];
    uint32_t start_time_us = 0;
 
-   bufferinfo.p_buf = versioning_buffer;
-   bufferinfo.len = sizeof (versioning_buffer);
-   bufferinfo.is_big_endian = true;
-   bufferinfo.result = PF_PARSE_OK;
+   pf_get_info_t bufferinfo =
+   {
+      .p_frame = NULL,
+      .p_array = versioning_buffer,
+      .len = sizeof (versioning_buffer),
+      .is_big_endian = true,
+      .result = PF_PARSE_OK,
+   };
 
    if (
       pf_file_join_directory_filename (
@@ -224,6 +227,12 @@ int pf_file_save (
 {
    char path[PNET_MAX_FILE_FULLPATH_SIZE]; /**< Terminated string */
    uint8_t versioning_buffer[8] = {0};     /**< Two uint32_t */
+   pf_put_info_t versioning =
+   {
+      .p_array = versioning_buffer,
+      .len = sizeof (versioning_buffer),
+      .result = PF_PUT_OK,
+   };
    uint16_t pos = 0;
    int ret = 0;
    uint32_t start_time_us = 0;
@@ -241,14 +250,12 @@ int pf_file_save (
    pf_put_uint32 (
       true,
       PF_FILE_MAGIC,
-      sizeof (versioning_buffer),
-      versioning_buffer,
+      &versioning,
       &pos); /* Big endian */
    pf_put_uint32 (
       true,
       PF_FILE_VERSION,
-      sizeof (versioning_buffer),
-      versioning_buffer,
+      &versioning,
       &pos); /* Big endian */
 
    start_time_us = os_get_current_time_us();
@@ -319,5 +326,5 @@ void pf_file_clear (const char * directory, const char * filename)
       return;
    }
 
-   return pnal_clear_file (path);
+   pnal_clear_file (path);
 }

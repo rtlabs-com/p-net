@@ -102,6 +102,18 @@ bool pf_alarm_pending (const pf_ar_t * p_ar);
 int pf_alarm_periodic (pnet_t * net);
 
 /**
+ * Implementation of ForwardAlarm_req, used by the CMSRL_AL state machine.
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param p_apmx           In: The APMX instance
+ * @param alarm_data       In: The alarm data to forward.
+ */
+void pf_alarm_forward_alarm_req (
+   pnet_t * net,
+   pf_apmx_t * p_apmx,
+   pf_alarm_data_t * alarm_data);
+
+/**
  * Send a PULL alarm.
  *
  * This functions sends a PULL alarm.
@@ -198,6 +210,32 @@ int pf_alarm_send_plug_wrong (
  *                                  later).
  */
 int pf_alarm_send_released (
+   pnet_t * net,
+   pf_ar_t * p_ar,
+   uint32_t api_id,
+   uint16_t slot_nbr,
+   uint16_t subslot_nbr,
+   uint32_t module_ident,
+   uint32_t submodule_ident);
+
+/**
+ * Send a RETURN OF SUBMODULE alarm.
+ *
+ * Uses no alarm payload (not attached to diagnosis ASE.
+ * Related to whole submodule, not related to channels).
+ *
+ * @param net              InOut: The p-net stack instance
+ * @param p_ar             InOut: The AR instance.
+ * @param api_id           In:    The API identifier.
+ * @param slot_nbr         In:    The slot number.
+ * @param subslot_nbr      In:    The sub-slot number.
+ * @param module_ident     In:    The module ident number.
+ * @param submodule_ident  In:    The sub-module ident number.
+ * @return  0  if operation succeeded.
+ *          -1 if an error occurred (or waiting for ACK from controller: re-try
+ *                                  later).
+ */
+int pf_alarm_send_return_of_submodule (
    pnet_t * net,
    pf_ar_t * p_ar,
    uint32_t api_id,
@@ -336,7 +374,7 @@ bool pf_alarm_queue_is_available (pf_queue_accountant_t * p_accountant);
 
 void pf_alarm_add_diag_item_to_summary (
    const pf_ar_t * p_ar,
-   const pf_subslot_t * p_subslot,
+   const pf_submodule_t * p_submodule,
    const pf_diag_item_t * p_diag_item,
    pnet_alarm_spec_t * p_alarm_spec,
    uint32_t * p_maint_status);

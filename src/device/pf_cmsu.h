@@ -23,7 +23,7 @@ extern "C" {
 /**
  * Initialize the CMSU component.
  * @param net              InOut: The p-net stack instance
- * @param p_ar             InOut: The AR instance.
+ * @param p_ar             InOut: The AR instance, with a defined pf_io_ar_t.
  */
 void pf_cmsu_init (pnet_t * net, pf_ar_t * p_ar);
 
@@ -34,7 +34,7 @@ void pf_cmsu_init (pnet_t * net, pf_ar_t * p_ar);
  * alarm.
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             InOut: The AR instance.
+ * @param p_ar             InOut: The AR instance, with a defined pf_io_ar_t.
  * @param event            In:    The new CMDEV state. Use PNET_EVENT_xxx, not
  *                                PF_CMDEV_STATE_xxx
  * @return  0  if the operation succeeded.
@@ -46,9 +46,9 @@ int pf_cmsu_cmdev_state_ind (
    pnet_event_values_t event);
 
 /**
- * Start all state machines for a specific AR.
+ * Start all state machines for a specific IO-AR.
  * @param net              InOut: The p-net stack instance
- * @param p_ar             InOut: The AR instance.
+ * @param p_ar             InOut: The AR instance, with a defined pf_io_ar_t.
  * @param p_stat           Out:   Detailed error info if returning != 0
  *                                Note that only the fields error_code_1 and
  *                                error_code_2 are set.
@@ -58,12 +58,12 @@ int pf_cmsu_cmdev_state_ind (
 int pf_cmsu_start_req (pnet_t * net, pf_ar_t * p_ar, pnet_result_t * p_stat);
 
 /**
- * Handle CPM error indications for a specific AR.
+ * Handle CPM error indications for a specific IO-AR.
  *
  * Closes the AR with PNET_EVENT_ABORT
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             InOut: The AR instance.
+ * @param p_ar             InOut: The AR instance, with a defined pf_io_ar_t.
  * @param err_cls          In:    ERR_CLS. ErrorCode1.
  * @param err_code         In:    ERR_CODE. ErrorCode2.
  * @return  0  if the operation succeeded.
@@ -76,12 +76,12 @@ int pf_cmsu_cpm_error_ind (
    uint8_t err_code);
 
 /**
- * Handle PPM error indications for a specific AR.
+ * Handle PPM error indications for a specific IO-AR.
  *
  * Closes the AR with PNET_EVENT_ABORT
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             InOut: The AR instance.
+ * @param p_ar             InOut: The AR instance, with a defined pf_io_ar_t.
  * @param err_cls          In:    ERR_CLS. ErrorCode1.
  * @param err_code         In:    ERR_CODE. ErrorCode2.
  * @return  0  if the operation succeeded.
@@ -94,12 +94,12 @@ int pf_cmsu_ppm_error_ind (
    uint8_t err_code);
 
 /**
- * Handle alarm error indications for a specific AR.
+ * Handle alarm error indications for a specific IO-AR.
  *
  * Closes the AR with PNET_EVENT_ABORT
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             InOut: The AR instance.
+ * @param p_ar             InOut: The AR instance, with a defined pf_io_ar_t.
  * @param err_cls          In:    ERR_CLS. ErrorCode1.
  * @param err_code         In:    ERR_CODE. ErrorCode2.
  * @return  0  if the operation succeeded.
@@ -113,12 +113,12 @@ int pf_cmsu_alarm_error_ind (
 
 /* Not used */
 /**
- * Handle DMC error indications for a specific AR.
+ * Handle DMC error indications for a specific IO-AR.
  *
  * Closes the AR with PNET_EVENT_ABORT
  *
  * @param net              InOut: The p-net stack instance
- * @param p_ar             InOut: The AR instance.
+ * @param p_ar             InOut: The AR instance, with a defined pf_io_ar_t.
  * @param err_cls          In:    ERR_CLS. ErrorCode1.
  * @param err_code         In:    ERR_CODE. ErrorCode2.
  * @return  0  if the operation succeeded.

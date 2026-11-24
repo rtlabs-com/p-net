@@ -66,6 +66,22 @@ int pf_ar_find_by_arep (pnet_t * net, uint32_t arep, pf_ar_t ** pp_ar);
 pf_ar_t * pf_ar_find_by_index (pnet_t * net, uint16_t ix);
 
 /**
+ * Return pointer to specific IO-AR.
+ * @param net              InOut: The p-net stack instance
+ * @param ix               In:   The AR array index.
+ * @return                 The AR instance.
+ */
+pf_ar_t * pf_io_ar_find_by_index (pnet_t * net, uint16_t ix);
+
+/**
+ * Return pointer to specific DA-AR.
+ * @param net              InOut: The p-net stack instance
+ * @param ix               In:   The AR array index.
+ * @return                 The AR instance.
+ */
+pf_ar_t * pf_da_ar_find_by_index (pnet_t * net, uint16_t ix);
+
+/**
  * Insert detailed error information into the result structure (of a session).
  *
  * If you need to set error information after some function has returned an
@@ -151,6 +167,40 @@ int pf_cmrpc_rm_ccontrol_req (
  * @param level            In: Level of detail.
  */
 void pf_cmrpc_show (pnet_t * net, unsigned level);
+
+/**
+ * Determine whether an AR resource is in actual use by a connection to a
+ * controller.
+ * @param ar               In:   The AR resource.
+ * @return true if the AR resource is used by a connection,
+ *         false if not.
+ */
+bool pf_cmrpc_ar_in_use (const pf_ar_t * ar);
+
+/**
+ * Determine if two ARs are the same or belong to the same AR set.
+ *
+ * @param ar1              In: AR 1
+ * @param ar2              In: AR 2
+ *
+ * @return true if the two ARs are the same or belong to the same AR set.
+ *         false otherwise.
+ */
+bool pf_cmrpc_ar_set_equal (pf_ar_t const * ar1, pf_ar_t const * ar2);
+
+#if PNET_OPTION_DR
+/**
+ * Determine if two SR-AR UUIDs contain the same ConfigID.
+ * @param uuid1            In: SR-AR UUID 1
+ * @param uuid2            In: SR-AR UUID 2
+ *
+ * @return true if the two SR-AR UUIDs contain the same ConfigID,
+ *         false otherwise.
+ */
+bool pf_cmrpc_ar_uuid_config_id_equal (
+   pf_uuid_t const * uuid1,
+   pf_uuid_t const * uuid2);
+#endif
 
 /************************* Utilities ******************************************/
 

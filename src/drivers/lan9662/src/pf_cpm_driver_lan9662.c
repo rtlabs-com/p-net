@@ -242,7 +242,7 @@ static int pf_cpm_drv_lan9662_create (
    pf_ar_t * p_ar,
    uint32_t crep)
 {
-   pf_cpm_t * p_cpm = &p_ar->iocrs[crep].cpm;
+   pf_cpm_t * p_cpm = &p_ar->io_ar->iocrs[crep].cpm;
 
    pf_mera_frame_cfg_t mera_cpm_cfg = {0};
 
@@ -256,7 +256,7 @@ static int pf_cpm_drv_lan9662_create (
       p_ar->arep,
       crep);
 
-   mera_cpm_cfg.p_iocr = &p_ar->iocrs[crep];
+   mera_cpm_cfg.p_iocr = &p_ar->io_ar->iocrs[crep];
    mera_cpm_cfg.port = 0;
 
    pf_mera_get_port_from_remote_mac (
@@ -302,7 +302,7 @@ static int pf_cpm_drv_lan9662_close_req (
    pf_ar_t * p_ar,
    uint32_t crep)
 {
-   pf_cpm_t * p_cpm = &p_ar->iocrs[crep].cpm;
+   pf_cpm_t * p_cpm = &p_ar->io_ar->iocrs[crep].cpm;
 
    p_cpm->ci_running = false;
    pf_scheduler_reset_handle (&p_cpm->ci_timeout);
@@ -331,7 +331,7 @@ static int pf_cpm_drv_lan9662_activate_req (
    pf_cpm_t * p_cpm;
    pf_iocr_t * p_iocr;
 
-   p_iocr = &p_ar->iocrs[crep];
+   p_iocr = &p_ar->io_ar->iocrs[crep];
    p_cpm = &p_iocr->cpm;
 
    LOG_DEBUG (

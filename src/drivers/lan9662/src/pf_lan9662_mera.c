@@ -988,12 +988,13 @@ static int pf_mera_ib_rtp_config (pf_mera_t * handle, pf_mera_frame_t * frame)
    ib_rtp_config.time.offset = MERA_TIME_OFFSET_NONE;
    ib_rtp_config.time.interval = frame->interval;
    ib_rtp_config.port = frame->port;
-   ib_rtp_config.length = ((pnal_buf_t *)p_ppm->p_send_buffer)->len;
+   ib_rtp_config.length = pnal_buf_get_size (p_ppm->p_send_buffer);
 
-   memcpy (
+   pnal_buf_read (
+      p_ppm->p_send_buffer,
+      0,
       ib_rtp_config.data,
-      ((pnal_buf_t *)p_ppm->p_send_buffer)->payload,
-      ((pnal_buf_t *)p_ppm->p_send_buffer)->len);
+      pnal_buf_get_size (p_ppm->p_send_buffer));
 
    LOG_DEBUG (
       PF_PPM_LOG,

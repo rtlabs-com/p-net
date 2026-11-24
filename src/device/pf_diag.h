@@ -44,6 +44,13 @@ int pf_diag_init (void);
  */
 int pf_diag_exit (void);
 
+/**
+ * Periodic diagnosis work function.
+ *
+ * @param net                 InOut: The p-net stack instance.
+ */
+void pf_diag_periodic (pnet_t * net);
+
 /************************** General diagnosis functions **********************/
 
 /**
@@ -328,6 +335,20 @@ int pf_diag_usi_remove (
    uint16_t slot_nbr,
    uint16_t subslot_nbr,
    uint16_t usi);
+
+/**
+ * Helper function to update the diagnosis state of a submodule.
+ * (Suitable for use by pf_cmdev_for_each_submodule.)
+ *
+ * @param net              InOut: The p-net stack instance.
+ * @param submodule        In:    The submodule instance.
+ * @param data             InOut: An AR instance.
+ * @returns 0
+ */
+int pf_diag_update_submodule (
+   pnet_t * net,
+   pf_submodule_t * submodule,
+   void * data);
 
 /* Not used yet */
 int pf_diag_get_maintenance_status (

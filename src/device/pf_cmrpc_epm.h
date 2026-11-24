@@ -27,8 +27,7 @@ extern "C" {
  * @param p_rpc_req        In:    Rpc header.
  * @param p_lookup_req     In:    Lookup request.
  * @param p_read_status    Out:   Read pnio status
- * @param res_size         In:    The size of the output buffer.
- * @param p_res            Out:   The output buffer.
+ * @param p_res            InOut: The response buffer state.
  * @param p_pos            InOut: Position in the output buffer.
  * @return  0  if operation succeeded.
  *          -1 if an error occurred.
@@ -39,8 +38,7 @@ int pf_cmrpc_lookup_request (
    const pf_rpc_header_t * p_rpc_req,
    const pf_rpc_lookup_req_t * p_lookup_req,
    pnet_result_t * p_read_status,
-   uint16_t res_size,
-   uint8_t * p_res,
+   pf_put_info_t * p_res,
    uint16_t * p_pos);
 
 #ifdef __cplusplus

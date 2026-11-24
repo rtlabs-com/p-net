@@ -39,17 +39,6 @@
 
 #include "pf_includes.h"
 
-int pf_cmsm_activate (pf_ar_t * p_ar)
-{
-   if (p_ar == NULL)
-   {
-      return -1;
-   }
-
-   pf_scheduler_init_handle (&p_ar->cmsm_timeout, "cmsm");
-   return 0;
-}
-
 /**
  * @internal
  * Return a string representation of the CMSM state.
@@ -187,7 +176,7 @@ int pf_cmsm_cmdev_state_ind (
             "x 100 ms\n",
             __LINE__,
             (unsigned)p_ar->ar_param.cm_initiator_activity_timeout_factor);
-         (void)pf_scheduler_restart (
+         (void)pf_scheduler_add (
             net,
             p_ar->ar_param.cm_initiator_activity_timeout_factor * 100 *
                1000, /* time in us */

@@ -24,6 +24,7 @@
 
 #endif
 
+#include <string.h>
 #include "pf_includes.h"
 
 /*************** Diagnostic strings *****************************************/
@@ -67,10 +68,10 @@ static const char * pf_cmpbe_state_to_string (pf_cmpbe_state_values_t state)
 
 void pf_cmpbe_show (const pf_ar_t * p_ar)
 {
-   const char * s = pf_cmpbe_state_to_string (p_ar->cmpbe_state);
+   const char * s = pf_cmpbe_state_to_string (p_ar->io_ar->cmpbe.state);
 
    printf ("CMPBE state           = %s\n", s);
-   printf ("      stored command  = %#x\n", p_ar->cmpbe_stored_command);
+   printf ("      stored command  = %#x\n", p_ar->io_ar->cmpbe.stored.command);
 }
 
 /****************************************************************************/
@@ -83,7 +84,7 @@ void pf_cmpbe_show (const pf_ar_t * p_ar)
  */
 static void pf_cmpbe_set_state (pf_ar_t * p_ar, pf_cmpbe_state_values_t state)
 {
-   if (state != p_ar->cmpbe_state)
+   if (state != p_ar->io_ar->cmpbe.state)
    {
       LOG_DEBUG (
          PNET_LOG,
@@ -91,9 +92,9 @@ static void pf_cmpbe_set_state (pf_ar_t * p_ar, pf_cmpbe_state_values_t state)
          __LINE__,
          pf_cmpbe_state_to_string (state),
          p_ar->arep,
-         pf_cmpbe_state_to_string (p_ar->cmpbe_state));
+         pf_cmpbe_state_to_string (p_ar->io_ar->cmpbe.state));
    }
-   p_ar->cmpbe_state = state;
+   p_ar->io_ar->cmpbe.state = state;
 }
 
 int pf_cmpbe_cmdev_state_ind (pf_ar_t * p_ar, pnet_event_values_t event)
@@ -104,9 +105,9 @@ int pf_cmpbe_cmdev_state_ind (pf_ar_t * p_ar, pnet_event_values_t event)
       "%u.\n",
       __LINE__,
       pf_cmdev_event_to_string (event),
-      pf_cmpbe_state_to_string (p_ar->cmpbe_state),
+      pf_cmpbe_state_to_string (p_ar->io_ar->cmpbe.state),
       p_ar->arep);
-   switch (p_ar->cmpbe_state)
+   switch (p_ar->io_ar->cmpbe.state)
    {
    case PF_CMPBE_STATE_IDLE:
       if (event == PNET_EVENT_DATA)
@@ -134,11 +135,63 @@ int pf_cmpbe_cmdev_state_ind (pf_ar_t * p_ar, pnet_event_values_t event)
    return 0;
 }
 
+void pf_cmpbe_cm_write_ind (
+   pf_ar_t * p_ar,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot)
+{
+   pf_submodule_list_block_t * sm_list;
+   bool * sm_parameterized;
+   int n;
+
+   if (
+      (p_ar != NULL) && (p_ar->io_ar != NULL) &&
+      (p_ar->io_ar->cmpbe.state == PF_CMPBE_STATE_WFPEI))
+   {
+      sm_list = &p_ar->io_ar->cmpbe.current_sm_list;
+      sm_parameterized = p_ar->io_ar->cmpbe.sm_parameterized;
+      for (n = 0; n < sm_list->number_of_entries; ++n)
+      {
+         if (
+            (sm_list->entry[n].api == api) &&
+            (sm_list->entry[n].slot == slot) &&
+            (sm_list->entry[n].subslot == subslot))
+         {
+            sm_parameterized[n] = true;
+         }
+      }
+   }
+}
+
+static void pf_cmpbe_set_default_params (pnet_t * net, pf_ar_t * p_ar)
+{
+   pf_submodule_list_block_t * sm_list;
+   bool * sm_parameterized;
+   int n;
+
+   sm_list = &p_ar->io_ar->cmpbe.current_sm_list;
+   sm_parameterized = p_ar->io_ar->cmpbe.sm_parameterized;
+   for (n = 0; n < sm_list->number_of_entries; ++n)
+   {
+      if (!sm_parameterized[n])
+      {
+         pf_fspm_sm_set_default_params (
+            net,
+            sm_list->entry[n].api,
+            sm_list->entry[n].slot,
+            sm_list->entry[n].subslot);
+      }
+   }
+}
+
 int pf_cmpbe_rm_dcontrol_ind (
    pnet_t * net,
    pf_ar_t * p_ar,
    pf_control_block_t * p_control_io,
-   pnet_result_t * p_result)
+   pf_submodule_list_block_t * p_sm_list,
+   pnet_result_t * p_result,
+   bool * p_set_state_prmend)
 {
    int ret = -1;
    uint16_t temp_control_command;
@@ -150,8 +203,8 @@ int pf_cmpbe_rm_dcontrol_ind (
       __LINE__,
       p_control_io->control_command,
       p_ar->arep,
-      pf_cmpbe_state_to_string (p_ar->cmpbe_state));
-   switch (p_ar->cmpbe_state)
+      pf_cmpbe_state_to_string (p_ar->io_ar->cmpbe.state));
+   switch (p_ar->io_ar->cmpbe.state)
    {
    case PF_CMPBE_STATE_IDLE:
       ret = 0; /* Ignore */
@@ -160,14 +213,20 @@ int pf_cmpbe_rm_dcontrol_ind (
       /* Is virtual state - see below! */
       break;
    case PF_CMPBE_STATE_WFIND:
-      if (p_ar->cmpbe_stored_command != 0)
+      if (p_ar->io_ar->cmpbe.stored.command != 0)
       {
          /* Save */
          temp_control_command = p_control_io->control_command;
 
          /* Issue stored control command */
-         p_control_io->control_command = p_ar->cmpbe_stored_command;
-         p_ar->cmpbe_stored_command = 0;
+         p_control_io->control_command = p_ar->io_ar->cmpbe.stored.command;
+         p_ar->io_ar->cmpbe.current_sm_list = p_ar->io_ar->cmpbe.stored.sm_list;
+         memset (
+            p_ar->io_ar->cmpbe.sm_parameterized,
+            0,
+            sizeof (p_ar->io_ar->cmpbe.sm_parameterized));
+         p_ar->io_ar->cmpbe.stored.command = 0;
+         p_ar->io_ar->cmpbe.stored.sm_list.number_of_entries = 0;
 
          /* Only stored command is PNET_CONTROL_COMMAND_PRM_BEGIN */
          if (
@@ -190,17 +249,23 @@ int pf_cmpbe_rm_dcontrol_ind (
          BIT (PF_CONTROL_COMMAND_BIT_PRM_BEGIN))
       {
          pf_alarm_disable (p_ar);
+         p_ar->io_ar->cmpbe.current_sm_list = *p_sm_list;
+         memset (
+            p_ar->io_ar->cmpbe.sm_parameterized,
+            0,
+            sizeof (p_ar->io_ar->cmpbe.sm_parameterized));
          ret = pf_fspm_cm_dcontrol_ind (
             net,
             p_ar,
             PNET_CONTROL_COMMAND_PRM_BEGIN,
             p_result);
-         pf_cmpbe_set_state (p_ar, PF_CMPBE_STATE_WFRSP);
+         pf_cmpbe_set_state (p_ar, PF_CMPBE_STATE_WFPEI);
       }
       break;
    case PF_CMPBE_STATE_WFPEI:
       if (p_control_io->control_command == BIT (PF_CONTROL_COMMAND_BIT_PRM_END))
       {
+         pf_cmpbe_set_default_params (net, p_ar);
          pf_fspm_cm_dcontrol_ind (
             net,
             p_ar,
@@ -210,12 +275,14 @@ int pf_cmpbe_rm_dcontrol_ind (
          /* cm_dcontrol_rsp() */
          ret = 0;
          pf_cmpbe_set_state (p_ar, PF_CMPBE_STATE_WFREQ);
+         *p_set_state_prmend = true;
       }
       break;
    case PF_CMPBE_STATE_WFPER:
       if (p_control_io->control_command == BIT (PF_CONTROL_COMMAND_BIT_PRM_END))
       {
          pf_cmpbe_set_state (p_ar, PF_CMPBE_STATE_WFREQ);
+         *p_set_state_prmend = true;
          ret = 0;
       }
       break;
@@ -223,14 +290,15 @@ int pf_cmpbe_rm_dcontrol_ind (
       if (p_control_io->control_command == BIT (PF_CONTROL_COMMAND_BIT_PRM_BEGIN))
       {
          /* Note: PrmEnd is handled by CMRPC as re-run. */
-         (void)pf_cmdev_state_ind (net, p_ar, PNET_EVENT_ABORT);
          pf_cmpbe_set_state (p_ar, PF_CMPBE_STATE_IDLE);
+         (void)pf_cmdev_state_ind (net, p_ar, PNET_EVENT_ABORT);
       }
       break;
    case PF_CMPBE_STATE_WFCNF:
       if (p_control_io->control_command == BIT (PF_CONTROL_COMMAND_BIT_PRM_BEGIN))
       {
-         p_ar->cmpbe_stored_command = p_control_io->control_command;
+         p_ar->io_ar->cmpbe.stored.command = p_control_io->control_command;
+         p_ar->io_ar->cmpbe.stored.sm_list = *p_sm_list;
       }
       break;
    }
@@ -245,7 +313,7 @@ int pf_cmpbe_rm_ccontrol_cnf (
 {
    int ret = -1;
 
-   if (p_ar->cmpbe_state == PF_CMPBE_STATE_WFCNF)
+   if (p_ar->io_ar->cmpbe.state == PF_CMPBE_STATE_WFCNF)
    {
       /*
        * The only expected bit is the DONE bit.
@@ -269,17 +337,21 @@ int pf_cmpbe_rm_ccontrol_cnf (
 /* Not used */
 int pf_cmpbe_cm_ccontrol_req (pnet_t * net, pf_ar_t * p_ar)
 {
-   int ret = -1;
+   int ret = 0;
 
    LOG_DEBUG (
       PNET_LOG,
       "CMPBE(%d): ccontrol_req in state: %s\n",
       __LINE__,
-      pf_cmpbe_state_to_string (p_ar->cmpbe_state));
+      pf_cmpbe_state_to_string (p_ar->io_ar->cmpbe.state));
 
-   if (p_ar->cmpbe_state == PF_CMPBE_STATE_WFREQ)
+   if (p_ar->io_ar->cmpbe.state == PF_CMPBE_STATE_WFREQ)
    {
       /* Control block is always APPLRDY here */
+      if (pf_alarm_pending (p_ar))
+      {
+         ret = -1;
+      }
       if (pf_alarm_pending (p_ar) == false)
       {
          ret = pf_cmrpc_rm_ccontrol_req (net, p_ar, PF_BT_APPRDY_REQ);
@@ -288,4 +360,32 @@ int pf_cmpbe_cm_ccontrol_req (pnet_t * net, pf_ar_t * p_ar)
    }
 
    return ret;
+}
+
+bool pf_cmpbe_prm_flag (
+   pf_ar_t const * ar,
+   uint32_t api_id,
+   uint16_t slot_nbr,
+   uint16_t subslot_nbr)
+{
+   pf_submodule_list_block_t * sm_list;
+   uint16_t n;
+
+   if (
+      (ar != NULL) && (ar->io_ar != NULL) &&
+      (ar->io_ar->cmpbe.state == PF_CMPBE_STATE_WFPEI))
+   {
+      sm_list = &ar->io_ar->cmpbe.current_sm_list;
+      for (n = 0; n < sm_list->number_of_entries; ++n)
+      {
+         if (
+            (sm_list->entry[n].api == api_id) &&
+            (sm_list->entry[n].slot == slot_nbr) &&
+            (sm_list->entry[n].subslot == subslot_nbr))
+         {
+            return true;
+         }
+      }
+   }
+   return false;
 }

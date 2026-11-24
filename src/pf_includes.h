@@ -26,9 +26,9 @@ extern "C" {
 #endif
 
 #include "pnet_options.h"
+#include "pnal.h"
 #include "osal.h"
 #include "osal_log.h"
-#include "pnal.h"
 
 #include "pnet_api.h"
 #include "pf_driver.h"
@@ -43,6 +43,7 @@ extern "C" {
 #include "pf_eth.h"
 #include "pf_file.h"
 #include "pf_lldp.h"
+#include "pf_mrp.h"
 #include "pf_ppm.h"
 #include "pf_ppm_driver_sw.h"
 #include "pf_ptcp.h"
@@ -51,6 +52,7 @@ extern "C" {
 #include "pf_udp.h"
 
 /* device */
+#include "pf_cim.h"
 #include "pf_cmdev.h"
 #include "pf_cmdmc.h"
 #include "pf_cmina.h"
@@ -61,6 +63,7 @@ extern "C" {
 #include "pf_cmrpc_helpers.h"
 #include "pf_cmrs.h"
 #include "pf_cmsm.h"
+#include "pf_cmsrl.h"
 #include "pf_cmsu.h"
 #include "pf_cmwrr.h"
 #include "pf_diag.h"

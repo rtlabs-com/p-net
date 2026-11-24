@@ -34,14 +34,25 @@
 
 #define BG_JOB_EVENT_UPDATE_PORTS_STATUS                    BIT (0)
 #define BG_JOB_EVENT_SAVE_ASE_NVM_DATA                      BIT (1)
-#define BG_JOB_EVENT_SAVE_IM_NVM_DATA                       BIT (2)
-#define BG_JOB_EVENT_SAVE_PDPORT_NVM_DATA                   BIT (3)
-#define BG_JOB_EVENT_SAVE_SNMP_SYSCONTACT_NVM_DATA          BIT (4)
-#define BG_JOB_EVENT_SAVE_SNMP_SYSNAME_NVM_DATA             BIT (5)
-#define BG_JOB_EVENT_SAVE_SNMP_SYSLOCATION_NVM_DATA         BIT (6)
-#define BG_JOB_EVENT_CLEAR_SNMP_SYSTEM_LOCATION_NVM_DATA    BIT (7)
-#define BG_JOB_EVENT_CLEAR_IP_SETTING_NWM_DATA              BIT (8)
-#define BG_JOB_EVENT_CLEAR_DIAGNOSTICS_NWM_DATA             BIT (9)
+#define BG_JOB_EVENT_SAVE_PDPORT_NVM_DATA                   BIT (2)
+#define BG_JOB_EVENT_SAVE_SNMP_SYSCONTACT_NVM_DATA          BIT (3)
+#define BG_JOB_EVENT_SAVE_SNMP_SYSNAME_NVM_DATA             BIT (4)
+#define BG_JOB_EVENT_SAVE_SNMP_SYSLOCATION_NVM_DATA         BIT (5)
+#define BG_JOB_EVENT_CLEAR_SNMP_SYSTEM_LOCATION_NVM_DATA    BIT (6)
+#define BG_JOB_EVENT_CLEAR_IP_SETTING_NWM_DATA              BIT (7)
+#define BG_JOB_EVENT_CLEAR_DIAGNOSTICS_NWM_DATA             BIT (8)
+#define BG_JOB_EVENT_SAVE_SNMP_CONFIG                       BIT (9)
+#define BG_JOB_EVENT_ACTIVATE_SNMP_CONFIG                   BIT (10)
+#define BG_JOB_EVENT_SAVE_MRP_NVM_DATA                      BIT (11)
+#define BG_JOB_EVENT_USER_CALLBACK                          BIT (12)
+
+/* TODO: Move this to a header file.
+ *
+ * Note that pf_snmp.h(.c) is not the right place for this function.
+ */
+#if PNET_OPTION_SNMP && PNET_OPTION_SECURITY_LEVEL_1
+extern int pf_snmp_activate_snmp_config (pnet_t * net);
+#endif
 
 static void bg_worker_task (void * arg);
 
@@ -50,10 +61,13 @@ void pf_bg_worker_init (pnet_t * net)
    net->pf_bg_worker.events = os_event_create();
    CC_ASSERT (net->pf_bg_worker.events != NULL);
 
+   net->pf_bg_worker.user.events = os_event_create();
+   CC_ASSERT (net->pf_bg_worker.user.events != NULL);
+
    os_thread_create (
       "p-net_bg_worker",
-      net->fspm_cfg.pnal_cfg.bg_worker_thread.prio,
-      net->fspm_cfg.pnal_cfg.bg_worker_thread.stack_size,
+      net->fspm_cfg.bg_worker_thread.prio,
+      net->fspm_cfg.bg_worker_thread.stack_size,
       bg_worker_task,
       (void *)net);
 }
@@ -72,9 +86,6 @@ int pf_bg_worker_start_job (pnet_t * net, pf_bg_job_t job_id)
       break;
    case PF_BGJOB_SAVE_ASE_NVM_DATA:
       os_event_set (net->pf_bg_worker.events, BG_JOB_EVENT_SAVE_ASE_NVM_DATA);
-      break;
-   case PF_BGJOB_SAVE_IM_NVM_DATA:
-      os_event_set (net->pf_bg_worker.events, BG_JOB_EVENT_SAVE_IM_NVM_DATA);
       break;
    case PF_BGJOB_SAVE_PDPORT_NVM_DATA:
       os_event_set (net->pf_bg_worker.events, BG_JOB_EVENT_SAVE_PDPORT_NVM_DATA);
@@ -109,6 +120,18 @@ int pf_bg_worker_start_job (pnet_t * net, pf_bg_job_t job_id)
          net->pf_bg_worker.events,
          BG_JOB_EVENT_CLEAR_DIAGNOSTICS_NWM_DATA);
       break;
+   case PF_BGJOB_SAVE_SNMP_CONFIG:
+      os_event_set (net->pf_bg_worker.events, BG_JOB_EVENT_SAVE_SNMP_CONFIG);
+      break;
+   case PF_BGJOB_ACTIVATE_SNMP_CONFIG:
+      os_event_set (net->pf_bg_worker.events, BG_JOB_EVENT_ACTIVATE_SNMP_CONFIG);
+      break;
+   case PF_BGJOB_SAVE_MRP_DATA:
+      os_event_set (net->pf_bg_worker.events, BG_JOB_EVENT_SAVE_MRP_NVM_DATA);
+      break;
+   case PF_BGJOB_USER_CALLBACK:
+      os_event_set (net->pf_bg_worker.events, BG_JOB_EVENT_USER_CALLBACK);
+      break;
    default:
       LOG_ERROR (
          PNET_LOG,
@@ -119,6 +142,11 @@ int pf_bg_worker_start_job (pnet_t * net, pf_bg_job_t job_id)
    }
 
    return 0;
+}
+
+void pf_bg_worker_set_user_events (pnet_t * net, uint32_t flags)
+{
+   os_event_set (net->pf_bg_worker.user.events, flags);
 }
 
 static void pf_bg_worker_clear_file (pnet_t * net, char * filename)
@@ -136,11 +164,13 @@ static void bg_worker_task (void * arg)
    pnet_t * net = (pnet_t *)arg;
    uint32_t mask =
       BG_JOB_EVENT_UPDATE_PORTS_STATUS | BG_JOB_EVENT_SAVE_ASE_NVM_DATA |
-      BG_JOB_EVENT_SAVE_IM_NVM_DATA | BG_JOB_EVENT_SAVE_PDPORT_NVM_DATA |
+      BG_JOB_EVENT_SAVE_PDPORT_NVM_DATA | BG_JOB_EVENT_SAVE_MRP_NVM_DATA |
       BG_JOB_EVENT_SAVE_SNMP_SYSCONTACT_NVM_DATA |
       BG_JOB_EVENT_SAVE_SNMP_SYSNAME_NVM_DATA |
-      BG_JOB_EVENT_SAVE_SNMP_SYSLOCATION_NVM_DATA | BG_JOB_EVENT_CLEAR_IP_SETTING_NWM_DATA |
-      BG_JOB_EVENT_CLEAR_DIAGNOSTICS_NWM_DATA;
+      BG_JOB_EVENT_SAVE_SNMP_SYSLOCATION_NVM_DATA |
+      BG_JOB_EVENT_CLEAR_IP_SETTING_NWM_DATA |
+      BG_JOB_EVENT_CLEAR_DIAGNOSTICS_NWM_DATA | BG_JOB_EVENT_SAVE_SNMP_CONFIG |
+      BG_JOB_EVENT_ACTIVATE_SNMP_CONFIG | BG_JOB_EVENT_USER_CALLBACK;
    uint32_t flags = 0;
 
 #ifdef BG_WORKER_LOG_JOBS
@@ -212,12 +242,6 @@ static void bg_worker_task (void * arg)
 
          pf_cmina_save_ase (net, &net->cmina_nonvolatile_dcp_ase);
       }
-      if (flags & BG_JOB_EVENT_SAVE_IM_NVM_DATA)
-      {
-         os_event_clr (net->pf_bg_worker.events, BG_JOB_EVENT_SAVE_IM_NVM_DATA);
-
-         pf_fspm_save_im (net);
-      }
       if (flags & BG_JOB_EVENT_SAVE_PDPORT_NVM_DATA)
       {
          os_event_clr (
@@ -263,6 +287,48 @@ static void bg_worker_task (void * arg)
 #if PNET_OPTION_SNMP
          pf_snmp_save_system_location (net);
 #endif
+      }
+      if (flags & BG_JOB_EVENT_SAVE_SNMP_CONFIG)
+      {
+         os_event_clr (net->pf_bg_worker.events, BG_JOB_EVENT_SAVE_SNMP_CONFIG);
+#if PNET_OPTION_SNMP && PNET_OPTION_SECURITY_LEVEL_1
+         pf_snmp_save_config (net);
+#endif
+      }
+      if (flags & BG_JOB_EVENT_ACTIVATE_SNMP_CONFIG)
+      {
+         os_event_clr (
+            net->pf_bg_worker.events,
+            BG_JOB_EVENT_ACTIVATE_SNMP_CONFIG);
+#if PNET_OPTION_SNMP && PNET_OPTION_SECURITY_LEVEL_1
+         pf_snmp_activate_snmp_config (net);
+#endif
+      }
+      if (flags & BG_JOB_EVENT_SAVE_MRP_NVM_DATA)
+      {
+         os_event_clr (net->pf_bg_worker.events, BG_JOB_EVENT_SAVE_MRP_NVM_DATA);
+#if PNET_OPTION_MRP
+         pf_mrp_save_config (net);
+#endif
+      }
+      if (flags & BG_JOB_EVENT_USER_CALLBACK)
+      {
+         uint32_t user_flags = 0;
+
+         os_event_clr (net->pf_bg_worker.events, BG_JOB_EVENT_USER_CALLBACK);
+         os_event_wait (
+            net->pf_bg_worker.user.events,
+            UINT32_MAX,
+            &user_flags,
+            0);
+         if (user_flags != 0)
+         {
+            os_event_clr (net->pf_bg_worker.user.events, user_flags);
+            if (net->fspm_cfg.bg_job_cb != NULL)
+            {
+               net->fspm_cfg.bg_job_cb (net, net->fspm_cfg.cb_arg, user_flags);
+            }
+         }
       }
    }
 }

@@ -24,15 +24,13 @@ extern "C" {
  * Insert a sequence of bytes into a buffer.
  * @param p_src            In:   The start of the byte sequence to insert.
  * @param src_size         In:   Number of bytes to insert.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer. Silently ignored if NULL.
+ * @param p_info           InOut:Destination buffer state.
  * @param p_pos            InOut:Position in destination buffer.
  */
 void pf_put_mem (
    const void * p_src,
    uint16_t src_size,
-   uint16_t res_len,
-   uint8_t * p_bytes,
+   pf_put_info_t * p_info,
    uint16_t * p_pos);
 
 /**
@@ -43,71 +41,74 @@ void pf_put_mem (
  *
  * @param p_src            In:   The start of the byte sequence to insert.
  * @param src_size         In:   Number of bytes to insert.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
+ * @param p_info           InOut:Destination buffer state.
  * @param p_pos            InOut:Position in destination buffer.
  */
 void pf_put_mem_overlapping (
    const void * p_src,
    uint16_t src_size,
-   uint16_t res_len,
-   uint8_t * p_bytes,
+   pf_put_info_t * p_info,
    uint16_t * p_pos);
 
 /**
  * Insert a byte into a buffer.
  * @param val              In:   The byte to insert.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
+ * @param p_info           InOut:Destination buffer state.
  * @param p_pos            InOut:Position in destination buffer.
  */
 void pf_put_byte (
    uint8_t val,
-   uint16_t res_len,
-   uint8_t * p_bytes,
+   pf_put_info_t * p_info,
    uint16_t * p_pos);
 
 /**
  * Insert a 16-bit entity into a buffer
  * @param is_big_endian    In:   Endianness of the destination buffer.
  * @param val              In:   The value to insert.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
+ * @param p_info           InOut:Destination buffer state.
  * @param p_pos            InOut:Position in destination buffer.
  */
 void pf_put_uint16 (
    bool is_big_endian,
    uint16_t val,
-   uint16_t res_len,
-   uint8_t * p_bytes,
+   pf_put_info_t * p_info,
    uint16_t * p_pos);
 
 /**
  * Insert a 32-bit entity into a buffer
  * @param is_big_endian    In:   Endianness of the destination buffer.
  * @param val              In:   The value to insert.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
+ * @param p_info           InOut:Destination buffer state.
  * @param p_pos            InOut:Position in destination buffer.
  */
 void pf_put_uint32 (
    bool is_big_endian,
    uint32_t val,
-   uint16_t res_len,
-   uint8_t * p_bytes,
+   pf_put_info_t * p_info,
+   uint16_t * p_pos);
+
+/**
+ * Insert fixed length padding bytes into a buffer.
+ * @param value            In:   The byte value to insert.
+ * @param n_bytes          In:   The number of bytes byte to insert.
+ * @param p_info           InOut:Destination buffer state.
+ * @param p_pos            InOut:Position in destination buffer.
+ */
+void pf_put_padding_bytes (
+   uint8_t value,
+   uint16_t n_bytes,
+   pf_put_info_t * p_info,
    uint16_t * p_pos);
 
 /**
  * Insert fixed length zero padding into a buffer.
  * @param n_bytes          In:   The number of bytes byte to insert.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
+ * @param p_info           InOut:Destination buffer state.
  * @param p_pos            InOut:Position in destination buffer.
  */
 void pf_put_padding (
    uint16_t n_bytes,
-   uint16_t res_len,
-   uint8_t * p_bytes,
+   pf_put_info_t * p_info,
    uint16_t * p_pos);
 
 /**
@@ -116,30 +117,53 @@ void pf_put_padding (
  * @param start_position   In:   Start of block to align.
  * @param align            In:   Alignment. 2 for 16 bit alignment,
  *                               4 for 32bit alignment
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
+ * @param p_info           InOut:Destination buffer state.
  * @param p_pos            InOut:Position in destination buffer.
  */
 void pf_put_padding_align (
    uint16_t start_postion,
    uint16_t align,
-   uint16_t res_len,
-   uint8_t * p_bytes,
+   pf_put_info_t * p_info,
+   uint16_t * p_pos);
+
+/**
+ * Insert a MAC address into a buffer.
+ *
+ * @param p_address        In:   The MAC address to insert.
+ * @param p_info           InOut:Destination buffer state.
+ * @param p_pos            InOut:Position in destination buffer.
+ */
+void pf_put_mac_address (
+   const pnet_ethaddr_t * p_address,
+   pf_put_info_t * p_info,
+   uint16_t * p_pos);
+
+/**
+ * Insert an Ethernet header into a buffer.
+ *
+ * The header will be first converted to big-endian format and then
+ * written to destination buffer.
+ *
+ * @param p_header         In:   The Ethernet header to insert.
+ * @param p_info           InOut:Destination buffer state.
+ * @param p_pos            InOut:Position in destination buffer.
+ */
+void pf_put_ethernet_header (
+   const pf_ethernet_header_t * p_header,
+   pf_put_info_t * p_info,
    uint16_t * p_pos);
 
 /**
  * Insert an AR result block into a buffer.
  * @param is_big_endian    In:   Endianness of the destination buffer.
  * @param p_ar             In:   Contains the AR result to insert.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
+ * @param p_info           InOut:Destination buffer state.
  * @param p_pos            InOut:Position in destination buffer.
  */
 void pf_put_ar_result (
    bool is_big_endian,
    const pf_ar_t * p_ar,
-   uint16_t res_len,
-   uint8_t * p_bytes,
+   pf_put_info_t * p_info,
    uint16_t * p_pos);
 
 /**
@@ -147,76 +171,66 @@ void pf_put_ar_result (
  * @param is_big_endian    In:   Endianness of the destination buffer.
  * @param p_ar             In:   Contains the AR result to insert.
  * @param ix               In:   The index into p_ar->iocr[].result to insert.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
+ * @param p_info           InOut:Destination buffer state.
  * @param p_pos            InOut:Position in destination buffer.
  */
 void pf_put_iocr_result (
    bool is_big_endian,
    const pf_ar_t * p_ar,
    uint16_t ix,
-   uint16_t res_len,
-   uint8_t * p_bytes,
+   pf_put_info_t * p_info,
    uint16_t * p_pos);
 
 /**
  * Insert an alarm CR block into a buffer.
  * @param is_big_endian    In:   Endianness of the destination buffer.
  * @param p_ar             In:   Contains the alarm CR to insert.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
+ * @param p_info           InOut:Destination buffer state.
  * @param p_pos            InOut:Position in destination buffer.
  */
 void pf_put_alarm_cr_result (
    bool is_big_endian,
    const pf_ar_t * p_ar,
-   uint16_t res_len,
-   uint8_t * p_bytes,
+   pf_put_info_t * p_info,
    uint16_t * p_pos);
 
 /**
  * Insert AR diff blocks into a buffer.
  * @param is_big_endian    In:   Endianness of the destination buffer.
  * @param p_ar             In:   Contains the AR diff to insert.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
+ * @param p_info           InOut:Destination buffer state.
  * @param p_pos            InOut:Position in destination buffer.
  */
 void pf_put_ar_diff (
    bool is_big_endian,
    const pf_ar_t * p_ar,
-   uint16_t res_len,
-   uint8_t * p_bytes,
+   pf_put_info_t * p_info,
    uint16_t * p_pos);
 
 /**
  * Insert an AR RPC result block into a buffer.
  * @param is_big_endian    In:   Endianness of the destination buffer.
  * @param p_ar             In:   Contains the AR RPC result to insert.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
+ * @param p_info           InOut:Destination buffer state.
  * @param p_pos            InOut:Position in destination buffer.
  */
 void pf_put_ar_rpc_result (
    bool is_big_endian,
    const pf_ar_t * p_ar,
-   uint16_t res_len,
-   uint8_t * p_bytes,
+   pf_put_info_t * p_info,
    uint16_t * p_pos);
 
 /**
  * Insert an AR server result block into a buffer.
  * @param is_big_endian    In:   Endianness of the destination buffer.
  * @param p_ar             In:   Contains the AR server result to insert.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
+ * @param p_info           InOut:Destination buffer state.
  * @param p_pos            InOut:Position in destination buffer.
  */
 void pf_put_ar_server_result (
    bool is_big_endian,
    const pf_ar_t * p_ar,
-   uint16_t res_len,
-   uint8_t * p_bytes,
+   pf_put_info_t * p_info,
    uint16_t * p_pos);
 
 /**
@@ -224,35 +238,31 @@ void pf_put_ar_server_result (
  * @param is_big_endian    In:   Endianness of the destination buffer.
  * @param p_ar             In:   Contains the AR vendor result to insert.
  * @param ix               In:   The index into p_ar_ar_vendor_result[].
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
+ * @param p_info           InOut:Destination buffer state.
  * @param p_pos            InOut:Position in destination buffer.
  */
 void pf_put_ar_vendor_result (
    bool is_big_endian,
    const pf_ar_t * p_ar,
    uint16_t ix,
-   uint16_t res_len,
-   uint8_t * p_bytes,
+   pf_put_info_t * p_info,
    uint16_t * p_pos);
 
 /**
  * Insert an AR Data block into a buffer.
  * @param net              InOut: The p-net stack instance
  * @param is_big_endian    In:   Endianness of the destination buffer.
- * @param p_ar             In:   Contains the AR to insert (NULL for "All ARs").
- * @param api_id           In:   Specific API to insert if p_ar != NULL.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
+ * @param filter_by_api    In:   Filter by the supplied API value.
+ * @param api_id           In:   API by which to filter (if filter_by_api true).
+ * @param p_info           InOut:Destination buffer state.
  * @param p_pos            InOut:Position in destination buffer.
  */
 void pf_put_ar_data (
    pnet_t * net,
    bool is_big_endian,
-   const pf_ar_t * p_ar,
+   bool filter_by_api,
    uint32_t api_id,
-   uint16_t res_len,
-   uint8_t * p_bytes,
+   pf_put_info_t * p_info,
    uint16_t * p_pos);
 
 /**
@@ -260,16 +270,14 @@ void pf_put_ar_data (
  * @param is_big_endian    In:   Endianness of the destination buffer.
  * @param block_type       In:   The control block type.
  * @param p_res            In:   The control block to insert.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
+ * @param p_info           InOut:Destination buffer state.
  * @param p_pos            InOut:Position in destination buffer.
  */
 void pf_put_control (
    bool is_big_endian,
    pf_block_type_values_t block_type,
    const pf_control_block_t * p_res,
-   uint16_t res_len,
-   uint8_t * p_bytes,
+   pf_put_info_t * p_info,
    uint16_t * p_pos);
 
 /**
@@ -278,16 +286,14 @@ void pf_put_control (
  * be modified later.
  * @param is_big_endian       In:   Endianness of the destination buffer.
  * @param p_res               In:   The read result to insert.
- * @param res_len             In:   Size of destination buffer.
- * @param p_bytes             Out:  Destination buffer.
+ * @param p_info              InOut:Destination buffer state.
  * @param p_pos               InOut:Position in destination buffer.
  * @param p_data_length_pos   Out:  Position of the data length field
  */
 void pf_put_read_result (
    bool is_big_endian,
    const pf_iod_read_result_t * p_res,
-   uint16_t res_len,
-   uint8_t * p_bytes,
+   pf_put_info_t * p_info,
    uint16_t * p_pos,
    uint16_t * p_data_length_pos);
 
@@ -298,8 +304,7 @@ void pf_put_read_result (
  * @param block_type       In:   The block type to use for the data.
  * @param raw_length       In:   The length in bytes of the user data.
  * @param p_raw_data       In:   The data to insert.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
+ * @param p_info           InOut:Destination buffer state.
  * @param p_pos            InOut:Position in destination buffer.
  */
 void pf_put_record_data_read (
@@ -307,84 +312,86 @@ void pf_put_record_data_read (
    pf_block_type_values_t block_type,
    uint16_t raw_length,
    const uint8_t * p_raw_data,
-   uint16_t res_len,
-   uint8_t * p_bytes,
+   pf_put_info_t * p_info,
    uint16_t * p_pos);
 
 /**
  * Insert I&M0 filter data into a buffer.
  * @param net              InOut: The p-net stack instance
  * @param is_big_endian    In:   Endianness of the destination buffer.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
+ * @param p_info           InOut:Destination buffer state.
  * @param p_pos            InOut:Position in destination buffer.
  */
 void pf_put_im_0_filter_data (
    pnet_t * net,
    bool is_big_endian,
-   uint16_t res_len,
-   uint8_t * p_bytes,
+   pf_put_info_t * p_info,
    uint16_t * p_pos);
 
 /**
  * Insert I&M0 data into a buffer.
  * @param is_big_endian    In:   Endianness of the destination buffer.
  * @param p_im_0           In:   The I&M0 data to insert.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
+ * @param p_info           InOut:Destination buffer state.
  * @param p_pos            InOut:Position in destination buffer.
  */
 void pf_put_im_0 (
    bool is_big_endian,
    const pnet_im_0_t * p_im_0,
-   uint16_t res_len,
-   uint8_t * p_bytes,
+   pf_put_info_t * p_info,
    uint16_t * p_pos);
 
 /**
  * Insert I&M1 data into a buffer.
  * @param is_big_endian    In:   Endianness of the destination buffer.
  * @param p_im_1           In:   The I&M1 data to insert.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
+ * @param p_info           InOut:Destination buffer state.
  * @param p_pos            InOut:Position in destination buffer.
  */
 void pf_put_im_1 (
    bool is_big_endian,
    const pnet_im_1_t * p_im_1,
-   uint16_t res_len,
-   uint8_t * p_bytes,
+   pf_put_info_t * p_info,
    uint16_t * p_pos);
 
 /**
  * Insert I&M2 data into a buffer.
  * @param is_big_endian    In:   Endianness of the destination buffer.
  * @param p_im_2           In:   The I&M2 data to insert.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
+ * @param p_info           InOut:Destination buffer state.
  * @param p_pos            InOut:Position in destination buffer.
  */
 void pf_put_im_2 (
    bool is_big_endian,
    const pnet_im_2_t * p_im_2,
-   uint16_t res_len,
-   uint8_t * p_bytes,
+   pf_put_info_t * p_info,
    uint16_t * p_pos);
 
 /**
  * Insert I&M3 data into a buffer.
  * @param is_big_endian    In:   Endianness of the destination buffer.
  * @param p_im_3           In:   The I&M3 data to insert.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
+ * @param p_info           InOut:Destination buffer state.
  * @param p_pos            InOut:Position in destination buffer.
  */
 void pf_put_im_3 (
    bool is_big_endian,
    const pnet_im_3_t * p_im_3,
-   uint16_t res_len,
-   uint8_t * p_bytes,
+   pf_put_info_t * p_info,
    uint16_t * p_pos);
+
+/**
+ * Insert I&M4 data into a buffer.
+ * @param is_big_endian    In:   Endianness of the destination buffer.
+ * @param im4              In:   The I&M4 data to insert.
+ * @param info             InOut:Destination buffer state.
+ * @param pos              InOut:Position in destination buffer.
+ */
+void pf_put_im_4 (
+   bool is_big_endian,
+   const pnet_im_4_t * im4,
+   pf_put_info_t * info,
+   uint16_t * pos);
 
 /**
  * Insert real identification data into a buffer.
@@ -400,8 +407,7 @@ void pf_put_im_3 (
  *                                   scope).
  * @param slot_number       In:    Slot (used for slot or subslot scope).
  * @param subslot_number    In:    Subslot (used for subslot scope).
- * @param res_len           In:    Size of destination buffer.
- * @param bytes             Out:   Destination buffer.
+ * @param p_info            InOut: Destination buffer state.
  * @param pos               InOut: Position in destination buffer.
  */
 void pf_put_real_ident_data (
@@ -413,8 +419,7 @@ void pf_put_real_ident_data (
    uint32_t api,
    uint16_t slot_number,
    uint16_t subslot_number,
-   uint16_t res_len,
-   uint8_t * bytes,
+   pf_put_info_t * p_info,
    uint16_t * pos);
 
 /**
@@ -430,8 +435,7 @@ void pf_put_real_ident_data (
  * @param api               In:    API (used for slot or subslot scope).
  * @param slot_number       In:    Slot (used for slot or subslot scope).
  * @param subslot_number    In:    Subslot (used for subslot scope).
- * @param res_len           In:    Size of destination buffer.
- * @param bytes             Out:   Destination buffer.
+ * @param p_info            InOut: Destination buffer state.
  * @param pos               InOut: Position in destination buffer.
  */
 void pf_put_exp_ident_data (
@@ -442,23 +446,20 @@ void pf_put_exp_ident_data (
    uint32_t api,
    uint16_t slot_number,
    uint16_t subslot_number,
-   uint16_t res_len,
-   uint8_t * bytes,
+   pf_put_info_t * p_info,
    uint16_t * pos);
 
 /**
  * Insert a pnet status into a buffer
  * @param is_big_endian    In:   Endianness of the destination buffer.
  * @param p_status         In:   The pnet status to insert.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
+ * @param p_info           InOut:Destination buffer state.
  * @param p_pos            InOut:Position in destination buffer.
  */
 void pf_put_pnet_status (
    bool is_big_endian,
    const pnet_pnio_status_t * p_status,
-   uint16_t res_len,
-   uint8_t * p_bytes,
+   pf_put_info_t * p_info,
    uint16_t * p_pos);
 
 /**
@@ -467,15 +468,13 @@ void pf_put_pnet_status (
  * Return the position of the length_of_body member of the read result as it
  * must be modified later.
  * @param p_rpc            In:   The DCE RPC header to insert.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
+ * @param p_info           InOut:Destination buffer state.
  * @param p_pos            InOut:Position in destination buffer.
  * @param p_pos_body_len   Out:  Position of the length_of_body member.
  */
 void pf_put_dce_rpc_header (
    pf_rpc_header_t * p_rpc,
-   uint16_t res_len,
-   uint8_t * p_bytes,
+   pf_put_info_t * p_info,
    uint16_t * p_pos,
    uint16_t * p_pos_body_len);
 
@@ -488,59 +487,51 @@ void pf_put_dce_rpc_header (
  * See DCE 1.1: RPC, 12.5.3.2.
  *
  * @param p_rpc_req        In:   The DCE RPC header of the cancel PDU.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
+ * @param p_info           InOut:Destination buffer state.
  * @param p_pos            InOut:Position in destination buffer.
  */
 void pf_put_dce_rpc_cancel_ack (
    const pf_rpc_header_t * p_rpc_req,
-   uint16_t res_len,
-   uint8_t * p_bytes,
+   pf_put_info_t * p_info,
    uint16_t * p_pos);
 
 /**
  * Insert a write result into a buffer.
  * @param is_big_endian    In:   Endianness of the destination buffer.
  * @param p_res            In:   The write result to insert.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
+ * @param p_info           InOut:Destination buffer state.
  * @param p_pos            InOut:Position in destination buffer.
  */
 void pf_put_write_result (
    bool is_big_endian,
    const pf_iod_write_result_t * p_res,
-   uint16_t res_len,
-   uint8_t * p_bytes,
+   pf_put_info_t * p_info,
    uint16_t * p_pos);
 
 /**
  * Insert a Log Book entry block into a buffer.
  * @param is_big_endian    In:   Endianness of the destination buffer.
  * @param p_log_book       In:   The log book entry to insert.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
+ * @param p_info           InOut:Destination buffer state.
  * @param p_pos            InOut:Position in destination buffer.
  */
 void pf_put_log_book_data (
    bool is_big_endian,
    const pf_log_book_t * p_log_book,
-   uint16_t res_len,
-   uint8_t * p_bytes,
+   pf_put_info_t * p_info,
    uint16_t * p_pos);
 
 /**
  * Insert the fixed part of the RTA-PDU into a buffer.
  * @param is_big_endian    In:   Endianness of the destination buffer.
  * @param pf_alarm_fixed_t In:   The fixed alarm part to insert.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
+ * @param p_info           InOut:Destination buffer state.
  * @param p_pos            InOut:Position in destination buffer.
  */
 void pf_put_alarm_fixed (
    bool is_big_endian,
    const pf_alarm_fixed_t * p_alarm_fixed,
-   uint16_t res_len,
-   uint8_t * p_bytes,
+   pf_put_info_t * p_info,
    uint16_t * p_pos);
 
 /**
@@ -566,8 +557,7 @@ void pf_put_alarm_fixed (
  *                                values that expect a pf_diag_item_t
  * @param p_status         In:    PNIO status. Only used for block type = alarm
  *                                ack.
- * @param res_len          In:    Size of destination buffer.
- * @param p_bytes          Out:   Destination buffer.
+ * @param p_info           InOut: Destination buffer state.
  * @param p_pos            InOut: Position in destination buffer.
  */
 void pf_put_alarm_block (
@@ -579,8 +569,7 @@ void pf_put_alarm_block (
    uint16_t payload_len,
    const uint8_t * p_payload,
    const pnet_pnio_status_t * p_status,
-   uint16_t res_len,
-   uint8_t * p_bytes,
+   pf_put_info_t * p_info,
    uint16_t * p_pos);
 
 /**
@@ -593,8 +582,7 @@ void pf_put_alarm_block (
  * @param p_iops           In:   IOPS data.
  * @param data_len         In:   Length of output data.
  * @param p_data           In:   Substitution data.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
+ * @param p_info           InOut:Destination buffer state.
  * @param p_pos            InOut:Position in destination buffer.
  */
 void pf_put_substitute_data (
@@ -606,8 +594,7 @@ void pf_put_substitute_data (
    const uint8_t * p_iops,
    uint16_t data_len,
    const uint8_t * p_data,
-   uint16_t res_len,
-   uint8_t * p_bytes,
+   pf_put_info_t * p_info,
    uint16_t * p_pos);
 
 /**
@@ -628,8 +615,7 @@ void pf_put_substitute_data (
  * @param p_data           In:   Output data.
  * @param sub_mode         In:   The substitution mode.
  * @param p_sub_data       In:   The substitution data.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
+ * @param p_info           InOut:Destination buffer state.
  * @param p_pos            InOut:Position in destination buffer.
  */
 void pf_put_output_data (
@@ -643,8 +629,7 @@ void pf_put_output_data (
    const uint8_t * p_data,
    uint16_t sub_mode,
    const uint8_t * p_sub_data,
-   uint16_t res_len,
-   uint8_t * p_bytes,
+   pf_put_info_t * p_info,
    uint16_t * p_pos);
 
 /**
@@ -660,8 +645,7 @@ void pf_put_output_data (
  * @param p_iops           In:   IOPS data.
  * @param data_len         In:   Length of output data.
  * @param p_data           In:   Output data.
- * @param res_len          In:   Size of destination buffer.
- * @param p_bytes          Out:  Destination buffer.
+ * @param p_info           InOut:Destination buffer state.
  * @param p_pos            InOut:Position in destination buffer.
  */
 void pf_put_input_data (
@@ -672,8 +656,7 @@ void pf_put_input_data (
    const uint8_t * p_iops,
    uint16_t data_len,
    const uint8_t * p_data,
-   uint16_t res_len,
-   uint8_t * p_bytes,
+   pf_put_info_t * p_info,
    uint16_t * p_pos);
 
 /**
@@ -696,8 +679,7 @@ void pf_put_input_data (
  * @param api              In:    The API.
  * @param slot_number      In:    The slot.
  * @param subslot_number   In:    The subslot.
- * @param res_len          In:    Size of destination buffer.
- * @param p_bytes          Out:   Destination buffer.
+ * @param p_info           InOut: Destination buffer state.
  * @param p_pos            InOut: Position in destination buffer.
  */
 void pf_put_diagnosis_subslot (
@@ -708,8 +690,7 @@ void pf_put_diagnosis_subslot (
    uint32_t api,
    uint16_t slot_number,
    uint16_t subslot_number,
-   uint16_t res_len,
-   uint8_t * bytes,
+   pf_put_info_t * p_info,
    uint16_t * pos);
 
 /**
@@ -730,8 +711,7 @@ void pf_put_diagnosis_subslot (
  * @param ar               In:    The AR. If NULL, use real identification.
  * @param api              In:    The API.
  * @param slot_number      In:    The slot.
- * @param res_len          In:    Size of destination buffer.
- * @param p_bytes          Out:   Destination buffer.
+ * @param p_info           InOut: Destination buffer state.
  * @param p_pos            InOut: Position in destination buffer.
  */
 void pf_put_diagnosis_slot (
@@ -741,8 +721,7 @@ void pf_put_diagnosis_slot (
    pf_ar_t * ar,
    uint32_t api,
    uint16_t slot_number,
-   uint16_t res_len,
-   uint8_t * bytes,
+   pf_put_info_t * p_info,
    uint16_t * pos);
 
 /**
@@ -761,8 +740,7 @@ void pf_put_diagnosis_slot (
  * @param big_endian       In:    Endianness of the destination buffer.
  * @param diag_filter      In:    The diag type filter.
  * @param ar               In:    The AR.
- * @param res_len          In:    Size of destination buffer.
- * @param p_bytes          Out:   Destination buffer.
+ * @param p_info           InOut: Destination buffer state.
  * @param p_pos            InOut: Position in destination buffer.
  */
 void pf_put_diagnosis_ar (
@@ -770,8 +748,7 @@ void pf_put_diagnosis_ar (
    bool big_endian,
    pf_diag_filter_level_t diag_filter,
    pf_ar_t * ar,
-   uint16_t res_len,
-   uint8_t * bytes,
+   pf_put_info_t * p_info,
    uint16_t * pos);
 
 /**
@@ -790,8 +767,7 @@ void pf_put_diagnosis_ar (
  * @param big_endian       In:    Endianness of the destination buffer.
  * @param diag_filter      In:    The diag type filter.
  * @param api              In:    The API.
- * @param res_len          In:    Size of destination buffer.
- * @param p_bytes          Out:   Destination buffer.
+ * @param p_info           InOut: Destination buffer state.
  * @param p_pos            InOut: Position in destination buffer.
  */
 void pf_put_diagnosis_api (
@@ -799,8 +775,7 @@ void pf_put_diagnosis_api (
    bool big_endian,
    pf_diag_filter_level_t diag_filter,
    uint32_t api,
-   uint16_t res_len,
-   uint8_t * bytes,
+   pf_put_info_t * p_info,
    uint16_t * pos);
 
 /**
@@ -819,16 +794,14 @@ void pf_put_diagnosis_api (
  * @param net              InOut: The p-net stack instance
  * @param big_endian       In:    Endianness of the destination buffer.
  * @param diag_filter      In:    The diag type filter.
- * @param res_len          In:    Size of destination buffer.
- * @param p_bytes          Out:   Destination buffer.
+ * @param p_info           InOut: Destination buffer state.
  * @param p_pos            InOut: Position in destination buffer.
  */
 void pf_put_diagnosis_device (
    pnet_t * net,
    bool big_endian,
    pf_diag_filter_level_t diag_filter,
-   uint16_t res_len,
-   uint8_t * bytes,
+   pf_put_info_t * p_info,
    uint16_t * pos);
 
 /**
@@ -838,8 +811,7 @@ void pf_put_diagnosis_device (
  * @param subslot          In:    Subslot number
  * @param check_peer       In:    check_peer data. ToDo - add support for misc
  *                                port data checks
- * @param res_len          In:    Size of destination buffer.
- * @param p_bytes          Out:   Destination buffer.
+ * @param p_info           InOut: Destination buffer state.
  * @param p_pos            InOut: Position in destination buffer.
  */
 void pf_put_pdport_data_check (
@@ -847,8 +819,7 @@ void pf_put_pdport_data_check (
    uint16_t slot,
    uint16_t subslot,
    const pf_check_peer_t * check_peer,
-   uint16_t res_len,
-   uint8_t * p_bytes,
+   pf_put_info_t * p_info,
    uint16_t * p_pos);
 
 /**
@@ -859,16 +830,14 @@ void pf_put_pdport_data_check (
  * @param is_big_endian             In:    Endianness of the destination buffer.
  * @param subslot                   In:    DAP subslot identifying the port.
  * @param p_peer_to_peer_boundary   In:    Peer to peer boundary
- * @param res_len                   In:    Size of destination buffer.
- * @param p_bytes                   Out:   Destination buffer.
+ * @param p_info                    InOut: Destination buffer state.
  * @param p_pos                     InOut: Position in destination buffer.
  */
 void pf_put_pdport_data_adj (
    bool is_big_endian,
    uint16_t subslot,
    const pf_adjust_peer_to_peer_boundary_t * p_peer_to_peer_boundary,
-   uint16_t res_len,
-   uint8_t * p_bytes,
+   pf_put_info_t * p_info,
    uint16_t * p_pos);
 
 /**
@@ -878,16 +847,36 @@ void pf_put_pdport_data_adj (
  * @param subslot          In:    DAP subslot identifying the interface
  * @param mode             In:    Multiple interface mode.
  *                                (name of device mode)
- * @param res_len          In:    Size of destination buffer.
- * @param p_bytes          Out:   Destination buffer.
+ * @param p_info           InOut: Destination buffer state.
  * @param p_pos            InOut: Position in destination buffer.
  */
 void pf_put_pd_interface_adj (
    bool is_big_endian,
    uint16_t subslot,
    pf_lldp_name_of_device_mode_t name_of_device_mode,
-   uint16_t res_len,
-   uint8_t * p_bytes,
+   pf_put_info_t * p_info,
+   uint16_t * p_pos);
+
+void pf_put_intf_mrp_data_check (
+   bool is_big_endian,
+   uint16_t subslot,
+   const pf_mrp_data_check_t * check,
+   pf_put_info_t * p_info,
+   uint16_t * p_pos);
+
+void pf_put_intf_mrp_data_adjust (
+   bool is_big_endian,
+   uint16_t subslot,
+   const pf_mrp_config_t * admin,
+   pf_put_info_t * p_info,
+   uint16_t * p_pos);
+
+void pf_put_pdport_mrp_data_adjust (
+   bool is_big_endian,
+   uint16_t subslot,
+   uint8_t mrp_instance,
+   const mrp_domain_uuid_t * domain,
+   pf_put_info_t * p_info,
    uint16_t * p_pos);
 
 /**
@@ -902,8 +891,7 @@ void pf_put_pd_interface_adj (
  * @param p_port_data         In:    Port data
  * @param media_type          In:    Media type
  * @param p_eth_status        In:    Ethernet status
- * @param res_len             In:    Size of destination buffer.
- * @param p_bytes             Out:   Destination buffer.
+ * @param p_info              InOut: Destination buffer state.
  * @param p_pos               InOut: Position in destination buffer.
  */
 void pf_put_pdport_data_real (
@@ -914,8 +902,56 @@ void pf_put_pdport_data_real (
    const pf_port_t * p_port_data,
    pf_mediatype_values_t media_type,
    const pnal_eth_status_t * p_eth_status,
-   uint16_t res_len,
-   uint8_t * p_bytes,
+   pf_put_info_t * p_info,
+   uint16_t * p_pos);
+
+/**
+ * Insert PDport real data extended block into a buffer.
+ *
+ * Includes peer chassis ID, peer MAC address and peer MAU type.
+ *
+ * Required for devices that support MAUTypeExtension.
+ *
+ * @param is_big_endian       In:    Endianness of the destination buffer.
+ * @param subslot             In:    Subslot
+ * @param p_peer_station_name In:    Peer station name
+ * @param p_peer_port_name    In:    Peer port name
+ * @param p_port_data         In:    Port data
+ * @param media_type          In:    Media type
+ * @param p_eth_status        In:    Ethernet status
+ * @param p_info              InOut: Destination buffer state.
+ * @param p_pos               InOut: Position in destination buffer.
+ */
+void pf_put_pdport_data_real_extended (
+   bool is_big_endian,
+   uint16_t subslot,
+   const pf_lldp_station_name_t * p_peer_station_name,
+   const pf_lldp_port_name_t * p_peer_port_name,
+   const pf_port_t * p_port_data,
+   pf_mediatype_values_t media_type,
+   const pnal_eth_status_t * p_eth_status,
+   pf_put_info_t * p_info,
+   uint16_t * p_pos);
+
+/**
+ * Insert PDport MRP real data block into a buffer.
+ *
+ * Includes mrp instance and domain UUID.
+ *
+ * @param is_big_endian       In:    Endianness of the destination buffer.
+ * @param subslot             In:    Subslot
+ * @param mrp_instance        In:    MRP instance
+ * @param domain              In:    MRP Domain
+ * @param p_info              InOut: Destination buffer state.
+ * @param p_pos               InOut: Position in destination buffer.
+ */
+
+void pf_put_pdport_mrp_data_real (
+   bool is_big_endian,
+   uint16_t subslot,
+   const uint8_t mrp_instance,
+   const mrp_domain_uuid_t * domain,
+   pf_put_info_t * p_info,
    uint16_t * p_pos);
 
 /**
@@ -923,15 +959,13 @@ void pf_put_pdport_data_real (
  *
  * @param is_big_endian    In:    Endianness of the destination buffer.
  * @param p_port_stats     In:    Port statistics
- * @param res_len          In:    Size of destination buffer.
- * @param p_bytes          Out:   Destination buffer.
+ * @param p_info           InOut: Destination buffer state.
  * @param p_pos            InOut: Position in destination buffer.
  */
 void pf_put_pdport_statistics (
    bool is_big_endian,
    const pnal_port_stats_t * p_port_stats,
-   uint16_t res_len,
-   uint8_t * p_bytes,
+   pf_put_info_t * p_info,
    uint16_t * p_pos);
 
 /**
@@ -946,8 +980,7 @@ void pf_put_pdport_statistics (
  * @param gateway          In:    Gateway address
  * @param station_name     In:    Station name, terminated string, buffer
  *                                size PNET_STATION_NAME_MAX_SIZE
- * @param res_len          In:    Size of destination buffer.
- * @param p_bytes          Out:   Destination buffer.
+ * @param p_info           InOut: Destination buffer state.
  * @param p_pos            InOut: Position in destination buffer.
  */
 void pf_put_pdinterface_data_real (
@@ -957,8 +990,33 @@ void pf_put_pdinterface_data_real (
    pnal_ipaddr_t netmask,
    pnal_ipaddr_t gateway,
    const char * station_name,
-   uint16_t res_len,
-   uint8_t * p_bytes,
+   pf_put_info_t * p_info,
+   uint16_t * p_pos);
+
+/**
+ * Insert PD interface mrp real data block into a buffer.
+ *
+ * This includes mrp domain, role, version, domain name
+ * and optional client parameters (if mrp client enabled)
+ *
+ * @param is_big_endian    In:    Endianness of the destination buffer.
+ * param mrp_domain        In:    MRP domain UUID
+ * @param mrp_role         In:    MRP role
+ * @param version          In:    MRP domain name
+ * @param domain_name      In:    MRP domain name
+ * @param client params    In:    MRP client parameters (only when enabled)
+ * @param p_info           InOut: Destination buffer state.
+ * @param p_pos            InOut: Position in destination buffer.
+ */
+
+void pf_put_pdinterface_mrp_data_real (
+   bool is_big_endian,
+   const mrp_domain_uuid_t * domain,
+   mrp_role_t role,
+   mrp_version_t version,
+   const mrp_domain_name_t * domain_name,
+   const pf_mrp_client_params_t * client_params,
+   pf_put_info_t * p_info,
    uint16_t * p_pos);
 
 /**
@@ -973,8 +1031,7 @@ void pf_put_pdinterface_data_real (
  * @param media_type          In:    Media type
  * @param p_eth_status        In:    Ethernet status
  * @param p_port_statistics   In:    Port statistics
- * @param res_len             In:    Size of destination buffer.
- * @param p_bytes             Out:   Destination buffer.
+ * @param p_info              InOut: Destination buffer state.
  * @param p_pos               InOut: Position in destination buffer.
  */
 void pf_put_pd_multiblock_port_and_statistics (
@@ -987,8 +1044,8 @@ void pf_put_pd_multiblock_port_and_statistics (
    pf_mediatype_values_t media_type,
    const pnal_eth_status_t * p_eth_status,
    const pnal_port_stats_t * p_port_statistics,
-   uint16_t res_len,
-   uint8_t * p_bytes,
+   const pf_mrp_port_t * p_mrp_port,
+   pf_put_info_t * p_info,
    uint16_t * p_pos);
 
 /**
@@ -1003,8 +1060,7 @@ void pf_put_pd_multiblock_port_and_statistics (
  * @param station_name      In:    Station name, terminated string, buffer
  *                                 size PNET_STATION_NAME_MAX_SIZE
  * @param p_port_statistics In:    Port statistics
- * @param res_len           In:    Size of destination buffer.
- * @param p_bytes           Out:   Destination buffer.
+ * @param p_info            InOut: Destination buffer state.
  * @param p_pos             InOut: Position in destination buffer.
  */
 void pf_put_pd_multiblock_interface_and_statistics (
@@ -1016,8 +1072,8 @@ void pf_put_pd_multiblock_interface_and_statistics (
    pnal_ipaddr_t gateway,
    const char * station_name,
    const pnal_port_stats_t * p_port_statistics,
-   uint16_t res_len,
-   uint8_t * p_bytes,
+   const pf_mrp_config_t * p_real,
+   pf_put_info_t * p_info,
    uint16_t * p_pos);
 
 /**
@@ -1026,16 +1082,75 @@ void pf_put_pd_multiblock_interface_and_statistics (
  * @param is_big_endian    In:    Endianness of the destination buffer.
  * @param p_lookup_rsp     In:    Epm lookup response including entry and
  *                                protocol tower configuration.
- * @param res_len          In:    Size of destination buffer.
- * @param p_bytes          Out:   Destination buffer.
+ * @param p_info           InOut: Destination buffer state.
  * @param p_pos            InOut: Position in destination buffer.
  */
 void pf_put_lookup_response_data (
    pnet_t * net,
    bool is_big_endian,
    const pf_rpc_lookup_rsp_t * p_lookup_rsp,
-   uint16_t res_len,
-   uint8_t * p_bytes,
+   pf_put_info_t * p_info,
+   uint16_t * p_pos);
+
+#if PNET_OPTION_SNMP && PNET_OPTION_SECURITY_LEVEL_1
+/**
+ * Insert CIMSNMPReal block into a buffer.
+ *
+ * @param net               InOut: The p-net stack instance
+ * @param is_big_endian     In:    Endianness of the destination buffer.
+ * @param snmp_control_mode In:    The current SNMP control mode
+ * @param p_info            InOut: Destination buffer state.
+ * @param p_pos             InOut: Position in destination buffer.
+ */
+void pf_put_snmp_cim_snmp_real (
+   pnet_t * net,
+   bool is_big_endian,
+   pnal_snmp_control_mode_t snmp_control_mode,
+   pf_put_info_t * p_info,
+   uint16_t * p_pos);
+
+/**
+ * Insert CIMSNMPAdjust block into a buffer.
+ *
+ * @param net               InOut: The p-net stack instance
+ * @param is_big_endian     In:    Endianness of the destination buffer.
+ * @param snmp_control_mode In:    The current SNMP control mode
+ * @param p_info            InOut: Destination buffer state.
+ * @param p_pos             InOut: Position in destination buffer.
+ */
+void pf_put_snmp_cim_snmp_adjust (
+   pnet_t * net,
+   bool is_big_endian,
+   pnal_snmp_control_mode_t snmp_control_mode,
+   pf_put_info_t * p_info,
+   uint16_t * p_pos);
+
+#endif /* PNET_OPTION_SNMP && PNET_OPTION_SECURITY_LEVEL_1 */
+
+/**
+ * Put CIM Electric Power Real into a buffer.
+ *
+ * Device data may be NULL, but should be defined for APL devices.
+ * port_entries should be defined, but its elements may be declared
+ * empty by setting the voltage type to 0.
+ *
+ * @param is_big_endian      In:    Endianness of the destination buffer.
+ * @param device_data        In:    Device electric data.
+ * @param num_ports          In:    Size of port array.
+ * @param port_entries       In:    Array of port electric data.
+ * @param slot_number        In:    The slot.
+ * @param subslot_number     In:    The subslot.
+ * @param p_info             InOut: Destination buffer state.
+ * @param p_pos              InOut: Position in destination buffer.
+ */
+void pf_put_cim_electric_power_real (
+   bool is_big_endian,
+   const pf_electric_power_device_data_t * device_data,
+   uint16_t num_ports,
+   const pf_electric_power_port_data_t * port_entries,
+   uint16_t slot_number,
+   uint16_t subslot_number,
+   pf_put_info_t * p_info,
    uint16_t * p_pos);
 
 #ifdef __cplusplus

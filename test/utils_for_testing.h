@@ -64,8 +64,13 @@ extern "C" {
 #define TEST_DIAG_QUALIFIER                       0x00010000
 #define TEST_DIAG_QUALIFIER_NOTSET                0x00000000
 #define TEST_INTERFACE_NAME                       "en1"
+#define TEST_PHYSICAL_PORT_NAME                   "en1"
 #define TEST_MAX_NUMBER_AVAILABLE_MODULE_TYPES    20
 #define TEST_MAX_NUMBER_AVAILABLE_SUBMODULE_TYPES 20
+#define TEST_POWER_DEVICE_VOLTAGE                 0x6d56 /* mV */
+#define TEST_POWER_PORT_VOLTAGE_BASE              0x7630 /* v0 */
+#define TEST_POWER_PORT_CURRENT_BASE              0x6130 /* a0 */
+#define TEST_POWER_PORT_CURRENT_LIMIT_BASE        0xABAC
 
 /*
  * I/O Modules. These modules and their sub-modules must be plugged by the
@@ -87,6 +92,7 @@ typedef struct cfg_submodules
    pnet_submodule_dir_t direction;
    uint16_t input_length;
    uint16_t output_length;
+   uint8_t flags;
 } cfg_submodules_t;
 
 typedef struct call_counters_obj
@@ -118,8 +124,8 @@ typedef struct app_data_for_testing_obj
    uint32_t app_param_1;
    uint32_t app_param_2;
    uint8_t inputdata[TEST_DATASIZE_INPUT];
-   uint8_t custom_input_slots[PNET_MAX_SLOTS];
-   uint8_t custom_output_slots[PNET_MAX_SLOTS];
+   bool custom_input_slots[PNET_MAX_SLOTS];
+   bool custom_output_slots[PNET_MAX_SLOTS];
    uint32_t available_module_types[TEST_MAX_NUMBER_AVAILABLE_MODULE_TYPES];
    cfg_submodules_t
       available_submodule_types[TEST_MAX_NUMBER_AVAILABLE_SUBMODULE_TYPES];
@@ -128,6 +134,10 @@ typedef struct app_data_for_testing_obj
    call_counters_t call_counters;
    pf_scheduler_handle_t scheduler_handle_a;
    pf_scheduler_handle_t scheduler_handle_b;
+   pnet_im_1_t im_1;
+   pnet_im_2_t im_2;
+   pnet_im_3_t im_3;
+   pnet_im_4_t im_4;
 } app_data_for_testing_t;
 
 /******************** Callbacks defined by p-net *****************************/
@@ -243,7 +253,7 @@ class PnetUnitTest : public ::testing::Test
 class PnetIntegrationTestBase : public ::testing::Test
 {
  protected:
-   pnet_cfg_t pnet_default_cfg;
+   pnet_cfg_t pnet_default_cfg = {};
    app_data_for_testing_t appdata;
    pnet_t the_net;
    pnet_t * net = &the_net;

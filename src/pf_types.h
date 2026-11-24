@@ -26,6 +26,7 @@ extern "C" {
 #endif
 
 #include "pf_lldp.h"
+#include "pf_mrp.h"
 #include "pf_snmp.h"
 
 #if PNET_USE_ATOMICS
@@ -178,6 +179,23 @@ typedef enum pf_diag_ch_prop_spec_values
       (x) |= (v) << PF_DIAG_CH_PROP_DIR_POS;                                   \
    } while (0)
 
+/************************* Ethernet *******************************************/
+
+/**
+ * Ethernet header
+ *
+ * Ethernet uses network (big-endian) byte order.
+ * VLAN tag is not included here.
+ */
+CC_PACKED_BEGIN
+typedef struct CC_PACKED pf_ethernet_header
+{
+   pnet_ethaddr_t dest; /**< Destination MAC address */
+   pnet_ethaddr_t src;  /**< Source MAC address */
+   uint16_t type;       /**< Ethertype (e.g. 0x8892 for Profinet) */
+} pf_ethernet_header_t;
+CC_PACKED_END
+
 /*********************** RPC header ******************************************/
 
 typedef enum pf_rpc_packet_type_values
@@ -286,10 +304,12 @@ typedef struct pf_rpc_flags2_t
 
 typedef struct pf_uuid
 {
-   uint32_t data1;
-   uint16_t data2;
-   uint16_t data3;
-   uint8_t data4[8];
+   uint32_t time_low;
+   uint16_t time_mid;
+   uint16_t time_hi_and_version;
+   uint8_t clock_seq_hi_and_res;
+   uint8_t clock_seq_low;
+   uint8_t node[6];
 } pf_uuid_t;
 
 typedef struct pf_rpc_header
@@ -327,6 +347,7 @@ typedef enum pf_write_req_ext_error_type_values
 {
    PF_WRT_ERROR_PEER_STATIONNAME_MISMATCH = 0x8000,
    PF_WRT_ERROR_PEER_PORTNAME_MISMATCH = 0x8001,
+   PF_WRT_ERROR_PEER_MRP_DOMAIN_MISMATCH = 0x8004,
    PF_WRT_ERROR_NO_PEER_DETECTED = 0x8005
 } pf_write_req_ext_error_type_t;
 
@@ -378,22 +399,11 @@ typedef enum
    PF_EPM_TYPE_PNIO
 } pf_rpc_epm_type_t;
 
-/* Described in DCP 1.1 Appendix A */
-typedef struct pf_rpc_uuid_type
-{
-   uint32_t time_low;
-   uint16_t time_mid;
-   uint16_t time_hi_and_version;
-   uint8_t clock_hi_and_reserved;
-   uint8_t clock_low;
-   uint8_t node[6];
-} pf_rpc_uuid_type_t;
-
 /* Used for definition of epm protocol tower floors 1 and 2. */
 typedef struct pf_floor_uuid_t
 {
    uint8_t protocol_id;
-   pf_rpc_uuid_type_t uuid;
+   pf_uuid_t uuid;
    uint16_t version_major;
    uint16_t version_minor;
 } pf_floor_uuid_t;
@@ -432,14 +442,14 @@ typedef struct pf_rpc_entry
    uint32_t max_count;
    uint32_t offset;
    uint32_t actual_count;
-   pf_rpc_uuid_type_t object_uuid;
+   pf_uuid_t object_uuid;
    pf_rpc_tower_t tower_entry;
 } pf_rpc_entry_t;
 
 typedef struct pf_rpc_handle
 {
    uint32_t rpc_entry_handle;
-   pf_rpc_uuid_type_t handle_uuid;
+   pf_uuid_t handle_uuid;
 } pf_rpc_handle_t;
 
 /*
@@ -548,7 +558,8 @@ typedef enum pf_block_type_values
    PF_BT_SR_INFO_BLOCK_REQ = 0x010A,
    PF_BT_AR_FSU_BLOCK_REQ = 0x010B,
    PF_BT_RS_INFO_BLOCK_REQ = 0x010C,
-   /* Reserved 0x010D-0x0x010F */
+   PF_BT_AR_ALGORITHM_INFO_BLOCK_REQ = 0x010D,
+   /* Reserved 0x010E-0x0x010F */
    PF_BT_PRMEND_REQ = 0x0110,
    PF_BT_PRMEND_PLUG_ALARM_REQ = 0x0111,
    PF_BT_APPRDY_REQ = 0x0112,
@@ -561,15 +572,37 @@ typedef enum pf_block_type_values
    PF_BT_SUBMODULE_PRMBEGIN_REQ = 0x0119,
 
    PF_BT_PDPORTCHECK = 0x0200,
+   PF_BT_BOUNDARY_ADJUST = 0x0202,
    PF_BT_CHECKPEERS = 0x020a,
    PF_BT_PDPORTDATAREAL = 0x020f,
-   PF_BT_BOUNDARY_ADJUST = 0x0202,
+   PF_BT_INTERFACE_MRP_DATA_ADJUST = 0x0211,
+   PF_BT_INTERFACE_MRP_DATA_REAL = 0x0212,
+   PF_BT_INTERFACE_MRP_DATA_CHECK = 0x0213,
+   PF_BT_PDPORT_MRP_DATA_ADJUST = 0x0214,
+   PF_BT_PDPORT_MRP_DATA_REAL = 0x0215,
+   PF_BT_MRP_CLIENT_PARAMS = 0x0217,
+   PF_BT_MRP_RING_STATE_DATA = 0x0219,
    PF_BT_PEER_TO_PEER_BOUNDARY = 0x0224,
+   PF_BT_PDPORTDATAREALEXT = 0x022C,
+   PF_BT_MRP_INSTANCE_DATA_ADJUST = 0x0231, /* sub block of
+                                               PF_BT_INTERFACE_MRP_DATA_ADJUST
+                                             */
+   PF_BT_MRP_INSTANCE_DATA_REAL = 0x0232,
+   PF_BT_MRP_INSTANCE_DATA_CHECK = 0x233, /* sub block of
+                                             PF_BT_INTERFACE_MRP_DATA_CHECK */
    PF_BT_INTERFACE_REAL_DATA = 0x0240,
    PF_BT_INTERFACE_ADJUST = 0x0250,
    PF_BT_PORT_STATISTICS = 0x0251,
+   PF_BT_PDPORTOWNPORT = 0x0260,
+   PF_BT_PDPORTNEIGHBOURS = 0x0261,
+
+   PF_BT_CIM_ELECTRIC_POWER_REAL = 0x0301,
+
+   PF_BT_CIM_SNMP_ADJUST = 0x0300, /* CIMSNMPAdjust */
+   PF_BT_CIM_SNMP_REAL = 0x0302,   /* CIMSNMPReal */
 
    PF_BT_MULTIPLEBLOCK_HEADER = 0x0400,
+   PF_BT_COCONTAINER_CONTENT = 0x0401,
 
    PF_BT_MAINTENANCE_ITEM = 0x0f00,
 
@@ -594,11 +627,13 @@ typedef enum pf_block_type_values
    PF_BT_APPRDY_RES = 0x8112,
    PF_BT_APPRDY_PLUG_ALARM_RES = 0x8113,
    PF_BT_RELEASE_BLOCK_RES = 0x8114,
+   PF_BT_PRMBEGIN_RES = 0x8118,
 } pf_block_type_values_t;
 
 typedef enum pf_index_values
 {
    PF_IDX_USER_MAX = 0x7fff,
+   PF_IDX_SUBSLOT_MIN = 0x8000,
 
    PF_IDX_SUB_EXP_ID_DATA = 0x8000,
    PF_IDX_SUB_REAL_ID_DATA = 0x8001,
@@ -627,11 +662,11 @@ typedef enum pf_index_values
    PF_IDX_SUB_ISOCHRONUOUS_DATA = 0x8030,
    PF_IDX_SUB_PDTIME = 0x8031,
 
-   PF_IDX_SUB_PDINTF_MRP_REAL = 0x8050,
+   PF_IDX_SUB_PDINTF_MRP_REAL = 0x8050, /* read only */
    PF_IDX_SUB_PDINTF_MRP_CHECK = 0x8051,
    PF_IDX_SUB_PDINTF_MRP_ADJUST = 0x8052,
    PF_IDX_SUB_PDPORT_MRP_ADJUST = 0x8053,
-   PF_IDX_SUB_PDPORT_MRP_REAL = 0x8054,
+   PF_IDX_SUB_PDPORT_MRP_REAL = 0x8054, /* read only */
    PF_IDX_SUB_PDPORT_MRPIC_REAL = 0x8055,
    PF_IDX_SUB_PDPORT_MRPIC_CHECK = 0x8056,
    PF_IDX_SUB_PDPORT_MRPIC_ADJUST = 0x8057,
@@ -661,7 +696,8 @@ typedef enum pf_index_values
    PF_IDX_TSN_EXPECTED_NETWORK_ATTRIBUTES = 0x80f4,
    PF_IDX_TSN_NETWORK_CONTROL_DATA_ADJUST = 0x80f5,
 
-   PF_IDX_SUB_PDINTF_SECURITY_ADJUST = 0x8200,
+   PF_IDX_CIM_SNMP_ADJUST = 0x8200,
+   PF_IDX_CIM_SNMP_REAL = 0x8201,
 
    PF_IDX_SUB_IM_0 = 0xaff0,
    PF_IDX_SUB_IM_1 = 0xaff1,
@@ -680,6 +716,9 @@ typedef enum pf_index_values
    PF_IDX_SUB_IM_14 = 0xaffe,
    PF_IDX_SUB_IM_15 = 0xafff,
 
+   PF_IDX_SUBSLOT_MAX = 0xbfff,
+   PF_IDX_SLOT_MIN = 0xc000,
+
    PF_IDX_SLOT_EXP_ID_DATA = 0xc000,
    PF_IDX_SLOT_REAL_ID_DATA = 0xc001,
 
@@ -692,6 +731,7 @@ typedef enum pf_index_values
    PF_IDX_SLOT_DIAG_MAINT_REQ_ALL = 0xc012,
    PF_IDX_SLOT_DIAG_MAINT_DEM_ALL = 0xc013,
 
+   PF_IDX_SLOT_MAX = 0xdfff,
    PF_IDX_AR_MIN = 0xe000,
 
    PF_IDX_AR_EXP_ID_DATA = 0xe000,
@@ -719,6 +759,7 @@ typedef enum pf_index_values
    PF_IDX_AR_RS_ACK_EVENT = 0xe061,
 
    PF_IDX_AR_MAX = 0xefff,
+   PF_IDX_API_MIN = 0xf000,
 
    PF_IDX_API_REAL_ID_DATA = 0xf000,
 
@@ -732,6 +773,9 @@ typedef enum pf_index_values
    PF_IDX_API_DIAG_MAINT_DEM_ALL = 0xf013,
 
    PF_IDX_API_AR_DATA = 0xf020,
+
+   PF_IDX_API_MAX = 0xf7ff,
+   PF_IDX_DEVICE_MIN = 0xf800,
 
    PF_IDX_DEV_DIAGNOSIS_DMQS = 0xf80c,
 
@@ -766,8 +810,60 @@ typedef enum pf_index_values
    PF_IDX_TSN_STREAM_REMOVE = 0xf8f2,
    PF_IDX_TSN_STREAM_RENEW = 0xf8f3,
 
+   PF_IDX_DEV_CIM_ELECTRIC_POWER_REAL = 0xf920,
+
    PF_IDX_DEV_CONN_MON_TRIGGER = 0xfbff,
 } pf_index_values_t;
+
+/* Index specificity/scope predicates. */
+
+/**
+ * Check whether a record index is user specific.
+ *
+ * @param index            In: The record index.
+ * @return  true if the index is user specific,
+ *          false otherwise.
+ */
+static inline bool pf_index_is_user_specific (uint16_t index)
+{
+   return (index <= PF_IDX_USER_MAX);
+}
+
+/**
+ * Check whether a record index is subslot specific.
+ *
+ * @param index            In: The record index.
+ * @return  true if the index is subslot specific,
+ *          false otherwise.
+ */
+static inline bool pf_index_is_subslot_specific (uint16_t index)
+{
+   return ((PF_IDX_SUBSLOT_MIN <= index) && (index <= PF_IDX_SUBSLOT_MAX));
+}
+
+/**
+ * Check whether a record index is slot specific.
+ *
+ * @param index            In: The record index.
+ * @return  true if the index is slot specific,
+ *          false otherwise.
+ */
+static inline bool pf_index_is_slot_specific (uint16_t index)
+{
+   return ((PF_IDX_SLOT_MIN <= index) && (index <= PF_IDX_SLOT_MAX));
+}
+
+/**
+ * Check whether a record index is slot or subslot specific.
+ *
+ * @param index            In: The record index.
+ * @return  true if the index is slot or subslot specific,
+ *          false otherwise.
+ */
+static inline bool pf_index_is_slot_or_subslot_specific (uint16_t index)
+{
+   return ((PF_IDX_SUBSLOT_MIN <= index) && (index <= PF_IDX_SLOT_MAX));
+}
 
 /**
  * Check whether a record index is AR specific.
@@ -779,6 +875,30 @@ typedef enum pf_index_values
 static inline bool pf_index_is_ar_specific (uint16_t index)
 {
    return ((PF_IDX_AR_MIN <= index) && (index <= PF_IDX_AR_MAX));
+}
+
+/**
+ * Check whether a record index is API specific.
+ *
+ * @param index            In: The record index.
+ * @return  true if the index is API specific,
+ *          false otherwise.
+ */
+static inline bool pf_index_is_api_specific (uint16_t index)
+{
+   return ((PF_IDX_API_MIN <= index) && (index <= PF_IDX_API_MAX));
+}
+
+/**
+ * Check whether a record index is device specific.
+ *
+ * @param index            In: The record index.
+ * @return  true if the index is device specific,
+ *          false otherwise.
+ */
+static inline bool pf_index_is_device_specific (uint16_t index)
+{
+   return (PF_IDX_DEVICE_MIN <= index);
 }
 
 CC_PACKED_BEGIN
@@ -793,6 +913,12 @@ CC_PACKED_END
 /* The following line guarantees that offsetof works as expected on received
  * data. */
 CC_STATIC_ASSERT (sizeof (pf_block_header_t) == (2 + 2 + 1 + 1));
+#define PF_BLOCK_TYPE_EQ(bh, type) ((bh).block_type == PF_BT_##type)
+#define PF_BLOCK_DATA_LENGTH(bh)                                               \
+   ((bh).block_length - (sizeof (pf_block_header_t) -                          \
+                         offsetof (pf_block_header_t, block_version_high)))
+#define PF_BLOCK_VERSION_EQ(bh, h, l)                                          \
+   (((bh).block_version_high == (h)) && ((bh).block_version_low == (l)))
 
 /* <============================ Block header */
 
@@ -835,6 +961,16 @@ typedef struct pf_control_block
    uint16_t control_block_properties;
    uint16_t alarm_sequence_number;
 } pf_control_block_t;
+
+typedef struct pf_submodule_list_block
+{
+   uint16_t number_of_entries;
+   struct {
+      uint32_t api;
+      uint16_t slot;
+      uint16_t subslot;
+   } entry[PNET_MAX_API * PNET_MAX_SLOTS * PNET_MAX_SUBSLOTS];
+} pf_submodule_list_block_t;
 
 typedef struct pf_ip_suite
 {
@@ -1026,7 +1162,7 @@ typedef struct pf_alarm_data
    uint16_t slot_nbr;
    uint16_t subslot_nbr;
    uint32_t module_ident;
-   uint16_t submodule_ident;
+   uint32_t submodule_ident;
 
    pnet_alarm_spec_t alarm_specifier; /* Booleans for diagnosis alarms. */
    uint16_t sequence_number;
@@ -1053,6 +1189,14 @@ typedef struct pf_alarm_send_queue
    pf_alarm_data_t items[PNET_MAX_ALARMS];
 } pf_alarm_send_queue_t;
 
+typedef struct pf_alarm_send_queue_set
+{
+   bool in_use;
+   /* Alarm queues for outgoing alarms: one for LOW (0) prio and one for HIGH
+    * (1) prio. */
+   pf_alarm_send_queue_t send_queue[PF_ALARM_NUMBER_OF_PRIORITY_LEVELS];
+} pf_alarm_send_queue_set_t;
+
 typedef struct pf_alarm_receive_queue
 {
    pf_queue_accountant_t accountant;
@@ -1070,7 +1214,7 @@ typedef struct pf_alarm_receive_queue
  * Add space for alarms:  0xfc01, 0xfe01.
  */
 #define PF_ETH_MAX_MAP                                                         \
-   ((PNET_MAX_API) * (PNET_MAX_AR) * (PNET_MAX_CR)*2 + 4 + 2)
+   ((PNET_MAX_API) * (PNET_MAX_IO_AR) * (PNET_MAX_CR)*2 + 4 + 2)
 
 /**
  * The scheduler is used by both the CPM and PPM machines.
@@ -1078,13 +1222,13 @@ typedef struct pf_alarm_receive_queue
  * pf_cmsm uses it to supervise the startup sequence.
  */
 #define PF_MAX_TIMEOUTS                                                        \
-   (2 * (PNET_MAX_AR) * (PNET_MAX_CR) + 2 * (PNET_MAX_PHYSICAL_PORTS) + 9)
+   (2 * (PNET_MAX_IO_AR) * (PNET_MAX_CR) + 2 * (PNET_MAX_PHYSICAL_PORTS) + 9)
 
 #define PF_CMINA_FS_HELLO_RETRY 3
 #define PF_CMINA_FS_HELLO_INTERVAL                                             \
    (3 * 1000)                            /* milliseconds. Default is 30 ms */
 #define PF_LLDP_SEND_INTERVAL (5 * 1000) /* milliseconds */
-#define PF_LLDP_TTL           20         /* seconds */
+#define PF_LLDP_TTL           21         /* seconds */
 
 typedef enum pf_cmina_state_values
 {
@@ -1239,7 +1383,7 @@ typedef enum pf_parameter_server_values
 typedef enum pf_ar_type_values
 {
    PF_ART_IOCAR_SINGLE = 0x0001,
-   PF_ART_IOSAR = 0x0006, /** Supervisor AR */
+   PF_ART_IOSAR = 0x0006, /** Supervisor or DeviceAccess AR */
    PF_ART_IOCAR_SINGLE_RTC_3 = 0x0010,
    PF_ART_IOCAR_SR = 0x0020, /** Set of AR */
 } pf_ar_type_values_t;
@@ -1414,6 +1558,7 @@ typedef struct pf_ar_properties
    bool device_access;              /** See IEC61158-6-10 */
    uint16_t companion_ar;           /** pf_companion_ar_values_t */
    bool acknowledge_companion_ar;   /** whether companion_ar is needed */
+   bool reject_dcp_set_requests;    /** RejectDCPsetRequests */
    bool combined_object_container;  /** See IEC61158-6-10 */
    bool startup_mode;               /** false: legacy, true: advanced */
    bool pull_module_alarm_allowed;  /** false: mandatory, true: optional */
@@ -1660,28 +1805,6 @@ typedef struct pf_sr_info
    } sr_properties;
 } pf_sr_info_t;
 
-typedef struct pf_rs_info
-{
-   bool valid;
-   uint8_t rs_alarm_transport_mode; /** Range 0 (read by record), 1 (using alarm
-                                       reporting) */
-} pf_rs_info_t;
-
-typedef struct pf_ar_fsu
-{
-   bool valid;
-   struct
-   {
-      uint32_t fs_parameter_mode; /** Range 0..1 (ON, OFF) */
-      pf_uuid_t fs_parameter_uuid;
-   } fs_parameter_block;
-#if PNET_MAX_MAN_SPECIFIC_FAST_STARTUP_DATA_LENGTH
-   uint16_t length_manufacturer_specific_fast_startup_data;
-   uint8_t manufacturer_specific_fast_startup_data
-      [PNET_MAX_MAN_SPECIFIC_FAST_STARTUP_DATA_LENGTH];
-#endif
-} pf_ar_fsu_t;
-
 typedef struct pf_ar_server
 {
    uint16_t length_cm_responder_station_name;
@@ -1814,8 +1937,8 @@ typedef struct pf_ppm
 
    bool first_transmit; /* True if first transmission has been done */
 
-   void * p_send_buffer; /* Output buffer with Ethernet header etc */
-   bool new_buf;         /* Not yet used */
+   pnal_buf_t * p_send_buffer; /* Output buffer with Ethernet header etc */
+   bool new_buf;               /* Not yet used */
 
    uint16_t cycle; /* Cycle counter, in tics each 31.25 us (thus 16 tics per
                       ms). */
@@ -1862,8 +1985,8 @@ typedef struct pf_cpm
    uint16_t frame_id[2];  /* 2 needed for some instances of RT_CLASS_3 */
    uint16_t data_hold_factor;
 
-   void * p_buffer_app;   /* Owned by app */
-   void * p_buffer_cpm;   /* owned by cpm */
+   pnal_buf_t * p_buffer_app; /* Owned by app */
+   pnal_buf_t * p_buffer_cpm; /* owned by cpm */
    bool new_buf;          /* New data to be received */
    uint16_t frame_id_pos; /* Handles VLAN in ETH header */
 
@@ -2071,13 +2194,42 @@ typedef enum pf_get_result
    PF_PARSE_ERROR /* Other */
 } pf_get_result_t;
 
+/* Information about a parsed buffer
+ *
+ * A buffer can be either an array or a frame buffer, but not both.
+ * Array buffers are directly accessible, while frame buffers need to be
+ * accessed via pnal_buf_* functions.
+ */
 typedef struct pf_get_info
 {
-   pf_get_result_t result;
-   bool is_big_endian;
-   const uint8_t * p_buf;
-   uint16_t len;
+   pf_get_result_t result;       /* Result of parsing buffer */
+   bool is_big_endian;           /* Buffer is big endian encoded? */
+   const pnal_buf_t * p_frame;   /* Frame buffer. NULL if not used */
+   const uint8_t * p_array;      /* Array buffer. NULL if not used */
+   uint16_t len;                 /* Total size of buffer in bytes */
 } pf_get_info_t;
+
+/* Result codes for building a buffer */
+typedef enum pf_put_result
+{
+   PF_PUT_OK,              /* No error detected */
+   PF_PUT_TOO_LONG_STRING, /* Input string is too long */
+   PF_PUT_END_OF_OUTPUT,   /* End of output buffer reached prematurely */
+} pf_put_result_t;
+
+/* Information about a built buffer
+ *
+ * A buffer can be either an array or a frame buffer, but not both.
+ * Array buffers are directly accessible, while frame buffers need to be
+ * accessed via pnal_buf_* functions.
+ */
+typedef struct pf_put_info
+{
+   pf_put_result_t result; /* Result of building buffer */
+   pnal_buf_t * p_frame;   /* Frame buffer. NULL if not used */
+   uint8_t * p_array;      /* Array buffer. NULL if not used */
+   uint16_t len;           /* Total size of buffer in bytes */
+} pf_put_info_t;
 
 /*
  * A session stores information used for supervision of connection activity.
@@ -2096,7 +2248,7 @@ typedef struct pf_session_info
                               */
    bool kill_session; /* On error or when done. This will kill the session at
                          the end of handling the incoming RPC frame. */
-   int socket; /* Socket for CControl messaging, or reference to the main CMRPC
+   pnal_socket_t socket; /* Socket for CControl messaging, or reference to the main CMRPC
                   socket. Close it only if from_me==true */
    struct pf_ar * p_ar; /* Parent AR */
    bool from_me;        /* True if the session originates from the device (i.e.
@@ -2168,6 +2320,7 @@ typedef struct pf_ar_plug
    uint16_t count;
    struct
    {
+      pf_alarm_type_values_t type;
       uint32_t api;
       uint16_t slot_number;
       uint16_t subslot_number;
@@ -2176,21 +2329,60 @@ typedef struct pf_ar_plug
    } queue[PF_AR_PLUG_MAX_QUEUE];
 } pf_ar_plug_t;
 
-typedef struct pf_ar
+typedef enum pf_ar_set_state
+{
+   PF_AR_SET_STATE_IDLE,
+   PF_AR_SET_STATE_PRIMARY_EXIST,
+   PF_AR_SET_STATE_PRIMARY_LOST
+} pf_ar_set_state_t;
+
+typedef enum pf_cmsrl_al_state
+{
+   PF_CMSRL_AL_STATE_IDLE,
+   PF_CMSRL_AL_STATE_STARTUP,
+   PF_CMSRL_AL_STATE_TRANSMIT,
+   PF_CMSRL_AL_STATE_STORE
+} pf_cmsrl_al_state_t;
+
+typedef struct pf_ar_set
 {
    bool in_use;
-   uint16_t arep;
 
-   pf_session_info_t * p_sess; /* Incoming session, not the outgoing CControl
-                                  session. Use pf_session_locate_by_ar() to find
-                                  the CControl session. */
+   os_mutex_t * lock;
 
-   pf_cmdev_state_values_t cmdev_state; /* pf_cmdev_state_values_t */
-   pnet_ethaddr_t src_addr;             /* Connect client MAC address */
+   /* Member ARs. */
+   int size;
+   bool contains_ar[PNET_MAX_AR_SET_SIZE];
+   struct pf_ar * ar[PNET_MAX_AR_SET_SIZE];
+   struct pf_ar * primary_ar;
 
-   uint16_t nbr_ar_param;
-   pf_ar_param_t ar_param;   /* From connect.req */
-   pf_ar_result_t ar_result; /* From connect.ind */
+   /* AR set specific state. */
+   pf_uuid_t ar_uuid;
+   pf_ar_set_state_t state;
+   pf_scheduler_handle_t rdht[1];
+   struct {
+      pf_cmsrl_al_state_t state;
+      struct {
+         bool stored;
+         pf_alarm_data_t data[1];
+         uint16_t sequence_number;
+      } alarm;
+   } cmsrl_al[PF_ALARM_NUMBER_OF_PRIORITY_LEVELS];
+   pf_alarm_send_queue_set_t * alarm_send_queue_set;
+} pf_ar_set_t;
+
+typedef enum pf_cmsrl_state
+{
+   PF_CMSRL_STATE_IDLE,
+   PF_CMSRL_STATE_BACKUP,
+   PF_CMSRL_STATE_PRIMARY,
+   PF_CMSRL_STATE_DBACKUP,
+   PF_CMSRL_STATE_WBACKUP
+} pf_cmsrl_state_t;
+
+typedef struct pf_io_ar
+{
+   bool in_use;
 
    uint16_t nbr_ar_server;
    pf_ar_server_t ar_server; /* From connect.ind */
@@ -2207,9 +2399,7 @@ typedef struct pf_ar
     * (1) prio. */
    pf_apmx_t apmx[PF_ALARM_NUMBER_OF_PRIORITY_LEVELS];
 
-   /* Alarm queues for outgoing alarms: one for LOW (0) prio and one for HIGH
-    * (1) prio. */
-   pf_alarm_send_queue_t alarm_send_q[PF_ALARM_NUMBER_OF_PRIORITY_LEVELS];
+   pf_alarm_send_queue_set_t * alarm_send_queue_set;
 
    uint16_t nbr_ar_rpc;
    pf_ar_rpc_request_t ar_rpc_request; /* From connect.req */
@@ -2232,27 +2422,25 @@ typedef struct pf_ar
 
    /* Internal state */
    uint16_t remote_application_ready_timeout; /** res: 1s, allowed: 300 */
-   uint16_t ar_state;                         /** pf_ar_state_values_t */
    uint16_t sync_state;                       /** pf_sync_state_values_t */
    bool ready_4_data;
 
-   /* Global error codes */
-   uint8_t err_cls;  /* Error code 1 */
-   uint8_t err_code; /* Error code 2 */
-
-   pf_cmwrr_state_values_t cmwrr_state;
-
    pf_cmsu_state_values_t cmsu_state;
-
-   pf_cmsm_state_values_t cmsm_state;
-   pf_scheduler_handle_t cmsm_timeout;
-
    pf_cmio_state_values_t cmio_state;
    pf_scheduler_handle_t cmio_timeout;
    bool cmio_timer_should_reschedule;
 
-   pf_cmpbe_state_values_t cmpbe_state;
-   uint16_t cmpbe_stored_command;
+   struct
+   {
+      pf_cmpbe_state_values_t state;
+      struct
+      {
+         uint16_t command;
+         pf_submodule_list_block_t sm_list;
+      } stored;
+      pf_submodule_list_block_t current_sm_list;
+      bool sm_parameterized[PNET_MAX_API * PNET_MAX_SLOTS * PNET_MAX_SUBSLOTS];
+   } cmpbe;
 
    pf_ar_plug_t plug_info;
 
@@ -2267,9 +2455,6 @@ typedef struct pf_ar
 #if PNET_OPTION_IR
    pf_ir_info_t ir_info;
 #endif
-#if PNET_OPTION_SR
-   pf_sr_info_t sr_info;
-#endif
 #if PNET_OPTION_REDUNDANCY
    struct
    {
@@ -2282,11 +2467,45 @@ typedef struct pf_ar
    pf_ar_vendor_request_t ar_vendor_request[PNET_MAX_AR_VENDOR_BLOCKS];
    pf_ar_vendor_result_t ar_vendor_result[PNET_MAX_AR_VENDOR_BLOCKS];
 #endif
-#if PNET_OPTION_RS
-   pf_rs_info_t rs_info;
-#endif
-#if PNET_OPTION_FAST_STARTUP
-   pf_ar_fsu_t fast_startup_data;
+} pf_io_ar_t;
+
+typedef struct pf_ar
+{
+   bool in_use;
+   uint16_t arep;
+
+   pf_session_info_t * p_sess; /* Incoming session, not the outgoing CControl
+                                  session. Use pf_session_locate_by_ar() to find
+                                  the CControl session. */
+
+   pf_cmdev_state_values_t cmdev_state; /* pf_cmdev_state_values_t */
+   pnet_ethaddr_t src_addr;             /* Connect client MAC address */
+
+   uint16_t nbr_ar_param;
+   pf_ar_param_t ar_param;   /* From connect.req */
+   pf_ar_result_t ar_result; /* From connect.ind */
+
+   /* Global error codes */
+   uint8_t err_cls;  /* Error code 1 */
+   uint8_t err_code; /* Error code 2 */
+
+   pf_cmwrr_state_values_t cmwrr_state;
+   pf_cmsm_state_values_t cmsm_state;
+   pf_scheduler_handle_t cmsm_timeout;
+
+   /* Internal state */
+   uint16_t ar_state;   /** pf_ar_state_values_t */
+
+   /* Additional data not included in Device Access ARs */
+   pf_io_ar_t * io_ar;
+#if PNET_OPTION_SR
+   pf_ar_set_t * ar_set;
+   struct {
+      pf_sr_info_t info;
+   } sr;
+   struct {
+      uint8_t state; /** pf_cmsrl_state_t */
+   } cmsrl;
 #endif
 } pf_ar_t;
 
@@ -2350,14 +2569,18 @@ typedef struct pf_submod_diag_summary
    bool fault;
 } pf_submod_diag_summary_t;
 
-/* Real identification, subslot level. */
-typedef struct pf_subslot
+/* Real submodule. */
+typedef struct pf_submodule
 {
    bool in_use;
+   uint32_t api_id;
    uint16_t subslot_number;
    uint32_t ident_number;
+   struct pf_submodule * next; /* by API in same slot */
    pf_ar_t * owner;
    pf_ownsm_state_values_t ownsm_state;
+   bool application_ready_pending;
+   uint8_t flags;
 
    /* Submodule plug information */
    uint16_t length_input;
@@ -2370,20 +2593,34 @@ typedef struct pf_subslot
    /* The following members shall be protected by the device.diag_mutex. */
    /*
     * This is an index into device.diag_items[].
-    * It points to the list of reported diag alarms for this specific sub-slot.
+    * It points to the list of reported diag alarms for this specific submodule.
     *
-    * Each subslot has its own list of diagnosis items.
+    * Each submodule has its own list of diagnosis items.
     */
    uint16_t diag_list;
-} pf_subslot_t;
+} pf_submodule_t;
+
+/* Slots contain modules, which can contain submodules for several different
+ * APIs. Thus, the module resources are shared between different APIs,
+ * each with its own related view of what is part of the real identification.
+ */
+
+/* Real module. */
+typedef struct pf_module
+{
+   int plug_count;
+   uint16_t slot_number;
+   uint32_t ident_number;
+   pf_submodule_t submodule_pool[PNET_MAX_SUBSLOTS];
+} pf_module_t;
 
 /* Real identification, slot level. */
 typedef struct pf_slot
 {
-   bool in_use;
-   uint16_t slot_number;
-   uint32_t ident_number;
-   pf_subslot_t subslots[PNET_MAX_SUBSLOTS];
+   pf_module_t * module;
+   struct pf_slot * next; /* in same API */
+   uint16_t nbr_submodules;
+   pf_submodule_t * submodule_list;
 } pf_slot_t;
 
 /* Real identification, API level. */
@@ -2391,13 +2628,17 @@ typedef struct pf_api
 {
    bool in_use;
    uint32_t api_id;
-   pf_slot_t slots[PNET_MAX_SLOTS];
+   struct pf_api * next;
+   uint16_t nbr_modules;
+   pf_slot_t * slot_list;
+   pf_slot_t slot_pool[PNET_MAX_SLOTS];
 } pf_api_t;
 
 /* Real identification. */
 typedef struct pf_real_ident
 {
-   pf_api_t api[PNET_MAX_API];
+   uint16_t nbr_apis;
+   pf_api_t * api_list;
 } pf_real_ident_t;
 
 /*
@@ -2855,6 +3096,35 @@ typedef struct pf_port_data_adjust
    pf_block_header_t block_header;
 } pf_port_data_adjust_t;
 
+typedef struct pf_electric_power_device_voltage
+{
+   uint32_t voltage; /* mV */
+   pnet_ep_device_type_t type;
+} pf_electric_power_device_voltage_t;
+
+typedef struct pf_electric_power_port_voltage
+{
+   uint32_t voltage; /* mV */
+   pnet_ep_port_type_t type;
+} pf_electric_power_port_voltage_t;
+
+typedef struct pf_electric_power_port_current
+{
+   uint16_t current;
+   uint16_t current_limit;
+} pf_electric_power_port_current_t;
+
+typedef struct pf_electric_power_device_data
+{
+   pf_electric_power_device_voltage_t device_voltage;
+} pf_electric_power_device_data_t;
+
+typedef struct pf_electric_power_port_data
+{
+   pf_electric_power_port_voltage_t port_voltage;
+   pf_electric_power_port_current_t port_current;
+} pf_electric_power_port_data_t;
+
 /*
  * 0x00 The field LLDPChassis contains the NameOfStation and
  *      the field PortID of LLDP contains the name of the port.
@@ -2905,6 +3175,7 @@ typedef struct pf_port_data_adjust_peer_to_peer_boundary
                                   Ch.5.2.13.14 */
 } pf_adjust_peer_to_peer_boundary_t;
 
+/* info stored in config file */
 typedef struct pf_pdport
 {
    bool lldp_peer_info_updated;
@@ -2980,6 +3251,9 @@ typedef struct pf_port
    pf_pdport_t pdport;
    pf_lldp_port_t lldp;
    pnal_eth_status_t eth_status; /* Updated by background task */
+#if PNET_OPTION_MRP
+   pf_mrp_port_t mrp; /* Protected by the MRP mutex. */
+#endif
 } pf_port_t;
 
 typedef struct pf_snmp_data
@@ -3018,12 +3292,16 @@ struct pnet
    pf_scheduler_handle_t dcp_sam_timeout;
    pf_scheduler_handle_t dcp_identresp_timeout;
 
+#if PNET_OPTION_MC_PRUNING
+   uint8_t md5_out[PNAL_MD5_DIGEST_SIZE];
+#endif
+
    /********** Profinet frame ID mapping **********/
 
    pf_eth_frame_id_map_t eth_id_map[PF_ETH_MAX_MAP];
-   volatile pf_scheduler_timeouts_t scheduler_timeouts[PF_MAX_TIMEOUTS];
-   volatile uint32_t scheduler_timeout_first;
-   volatile uint32_t scheduler_timeout_free;
+   pf_scheduler_timeouts_t scheduler_timeouts[PF_MAX_TIMEOUTS];
+   uint32_t scheduler_timeout_first;
+   uint32_t scheduler_timeout_free;
    os_mutex_t * scheduler_timeout_mutex;
    uint32_t scheduler_tick_interval; /* microseconds */
 
@@ -3033,6 +3311,9 @@ struct pnet
 
    /** APIs and diag items */
    pf_device_t cmdev_device;
+
+   pf_api_t api_pool[PNET_MAX_API];
+   pf_module_t module_pool[PNET_MAX_SLOTS];
 
    /********** CMINA **********/
 
@@ -3057,16 +3338,30 @@ struct pnet
    uint32_t cmrpc_session_number;
 
    /** ARs */
-   uint16_t cmrpc_nbr_ars;
-   uint16_t cmrpc_ar_order[PNET_MAX_AR];
-   pf_ar_t cmrpc_ar[PNET_MAX_AR + 1];
+   uint16_t cmrpc_nbr_da_ars;
+   pf_ar_t cmrpc_ar[PNET_MAX_AR];
+   pf_io_ar_t cmrpc_io_ar[PNET_MAX_IO_AR];
+
+   /**
+    * Order used for ownership handling.
+    * The order queue contains IO-ARs and SR-ARs.
+    */
+   struct {
+      uint16_t length;
+      pf_ar_t * ar[PNET_MAX_IO_AR];
+   } ar_order;
+
+#if PNET_OPTION_SR
+   /** AR sets */
+   pf_ar_set_t cmrpc_ar_set[PNET_MAX_AR_SET];
+#endif
 
    /** Sessions */
    pf_session_info_t cmrpc_session_info[PF_MAX_SESSION];
 
    /** Sockets for incoming RPC requests */
-   int cmrpc_rpcreq_socket;
-   int cmrpc_pnioreq_socket;
+   pnal_socket_t cmrpc_rpcreq_socket;
+   pnal_socket_t cmrpc_pnioreq_socket;
 
    uint8_t cmrpc_dcerpc_input_frame[PF_FRAME_BUFFER_SIZE];
    uint8_t cmrpc_dcerpc_output_frame[PF_FRAME_BUFFER_SIZE];
@@ -3077,7 +3372,9 @@ struct pnet
    {
       bool active;
       pf_ar_t * ar;
-   } alarm_endpoint[PNET_MAX_AR];
+   } alarm_endpoint[PNET_MAX_IO_AR];
+
+   pf_alarm_send_queue_set_t alarm_send_queue_set[PNET_MAX_IO_AR];
 
    /********** FSPM **********/
 
@@ -3093,13 +3390,6 @@ struct pnet
    /** Last \a time pnet_handle_periodic() was invoked */
    uint32_t timestamp_handle_periodic_us;
 
-   /* Mutex for protecting access to writable I&M data.
-    *
-    * Note I&M may be both read and written by SNMP, which executes from
-    * its own thread context.
-    */
-   os_mutex_t * fspm_im_mutex;
-
    /********** LLDP **********/
 
    /* LLDP mutex
@@ -3107,6 +3397,12 @@ struct pnet
     * This mutex protects information about the peer device.
     */
    os_mutex_t * lldp_mutex;
+
+   /* MRP mutex
+    *
+    * This mutex protects MRP port data.
+    */
+   os_mutex_t * mrp_mutex;
 
    /* Interface data
     *
@@ -3135,6 +3431,10 @@ struct pnet
    struct
    {
       os_event_t * events;
+      struct
+      {
+         os_event_t * events;
+      } user;
    } pf_bg_worker;
 
    const pf_ppm_driver_t * ppm_drv;
@@ -3147,6 +3447,13 @@ struct pnet
    /** Mutex for snmp_data */
    os_mutex_t * snmp_mutex;
    pf_snmp_data_t snmp_data;
+#if PNET_OPTION_SECURITY_LEVEL_1
+   pf_snmp_config_t snmp_config;
+#endif
+#endif
+#if PNET_OPTION_MRP
+   pf_mrp_intf_data_t mrp_data; /* instance mrp data (only one instance
+                                   supported) */
 #endif
 };
 

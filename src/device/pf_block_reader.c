@@ -35,6 +35,42 @@
 #include "pf_includes.h"
 #include "pf_block_reader.h"
 
+int pf_get_memcmp (
+   pf_get_info_t * p_info,
+   uint16_t * p_pos,
+   size_t size,
+   const void * p_data)
+{
+   int ret;
+
+   if (p_info->result != PF_PARSE_OK)
+   {
+      /* Preserve first error */
+      return -1;
+   }
+
+   if (((*p_pos) + size) > p_info->len)
+   {
+      LOG_DEBUG (PNET_LOG, "BR(%d): Unexpected end of input data\n", __LINE__);
+      p_info->result = PF_PARSE_END_OF_INPUT;
+      return -1;
+   }
+
+   if (p_info->p_array != NULL)
+   {
+      CC_ASSERT (p_info->p_frame == NULL);
+
+      ret = memcmp (&p_info->p_array[*p_pos], p_data, size);
+   }
+   else
+   {
+      ret = pnal_buf_compare (p_info->p_frame, *p_pos, p_data, size);
+   }
+   (*p_pos) += size;
+
+   return ret;
+}
+
 void pf_get_mem (
    pf_get_info_t * p_info,
    uint16_t * p_pos,
@@ -44,26 +80,27 @@ void pf_get_mem (
    if (p_info->result != PF_PARSE_OK)
    {
       /* Preserve first error */
+      return;
    }
-   else if (((*p_pos) + dest_size) > p_info->len)
+
+   if (((*p_pos) + dest_size) > p_info->len)
    {
-      /*
-       * Reached end of buffer
-       * If this is a chain of pbuff then goto the next pbuff,
-       * else this should never happen.
-       */
       LOG_DEBUG (PNET_LOG, "BR(%d): Unexpected end of input data\n", __LINE__);
       p_info->result = PF_PARSE_END_OF_INPUT;
+      return;
    }
-   else if (p_info->p_buf == NULL)
+
+   if (p_info->p_array != NULL)
    {
-      p_info->result = PF_PARSE_NULL_POINTER;
+      CC_ASSERT (p_info->p_frame == NULL);
+
+      memcpy (p_dest, &p_info->p_array[*p_pos], dest_size);
    }
    else
    {
-      memcpy (p_dest, &p_info->p_buf[*p_pos], dest_size);
-      (*p_pos) += dest_size;
+      pnal_buf_read (p_info->p_frame, *p_pos, p_dest, dest_size);
    }
+   (*p_pos) += dest_size;
 }
 
 void pf_get_mem_s (
@@ -87,7 +124,7 @@ void pf_get_mem_s (
       return;
    }
 
-   pf_get_mem (p_info, p_pos, (uint16_t)size, p_dest);
+   pf_get_mem (p_info, p_pos, size, p_dest);
 
    if (p_info->result != PF_PARSE_OK)
    {
@@ -99,28 +136,7 @@ uint8_t pf_get_byte (pf_get_info_t * p_info, uint16_t * p_pos)
 {
    uint8_t res = 0;
 
-   if (p_info->result != PF_PARSE_OK)
-   {
-      /* Preserve first error */
-   }
-   else if (*p_pos >= p_info->len)
-   {
-      /* Reached end of buffer */
-      LOG_DEBUG (
-         PNET_LOG,
-         "BR(%d): End of buffer reached when looking for a byte\n",
-         __LINE__);
-      p_info->result = PF_PARSE_END_OF_INPUT;
-   }
-   else if (p_info->p_buf == NULL)
-   {
-      p_info->result = PF_PARSE_NULL_POINTER;
-   }
-   else
-   {
-      res = p_info->p_buf[*p_pos];
-      (*p_pos)++;
-   }
+   pf_get_mem (p_info, p_pos, sizeof (res), &res);
 
    return res;
 }
@@ -129,21 +145,16 @@ uint16_t pf_get_uint16 (pf_get_info_t * p_info, uint16_t * p_pos)
 {
    uint16_t res = 0;
 
-   if (p_info->result != PF_PARSE_OK)
+   pf_get_mem (p_info, p_pos, sizeof (res), &res);
+
+   if (p_info->is_big_endian)
    {
-      /* Keep first error */
-   }
-   else if (p_info->is_big_endian)
-   {
-      res = ((uint16_t)pf_get_byte (p_info, p_pos) << 8) +
-            (uint16_t)pf_get_byte (p_info, p_pos);
+      res = CC_FROM_BE16 (res);
    }
    else
    {
-      res = (uint16_t)pf_get_byte (p_info, p_pos) +
-            ((uint16_t)pf_get_byte (p_info, p_pos) << 8);
+      res = CC_FROM_LE16 (res);
    }
-
    return res;
 }
 
@@ -151,22 +162,36 @@ uint32_t pf_get_uint32 (pf_get_info_t * p_info, uint16_t * p_pos)
 {
    uint32_t res = 0;
 
+   pf_get_mem (p_info, p_pos, sizeof (res), &res);
    if (p_info->is_big_endian)
    {
-      res = ((uint32_t)pf_get_byte (p_info, p_pos) << 24) +
-            ((uint32_t)pf_get_byte (p_info, p_pos) << 16) +
-            ((uint32_t)pf_get_byte (p_info, p_pos) << 8) +
-            (uint32_t)pf_get_byte (p_info, p_pos);
+      res = CC_FROM_BE32 (res);
    }
    else
    {
-      res = (uint32_t)pf_get_byte (p_info, p_pos) +
-            ((uint32_t)pf_get_byte (p_info, p_pos) << 8) +
-            ((uint32_t)pf_get_byte (p_info, p_pos) << 16) +
-            ((uint32_t)pf_get_byte (p_info, p_pos) << 24);
+      res = CC_FROM_LE32 (res);
    }
-
    return res;
+}
+
+pnet_ethaddr_t pf_get_mac_address (
+   pf_get_info_t * p_info,
+   uint16_t * p_pos)
+{
+   pnet_ethaddr_t addr = {0};
+
+   pf_get_mem (p_info, p_pos, sizeof (addr), &addr);
+   return addr;
+}
+
+void pf_get_ethernet_header (
+   pf_get_info_t * p_info,
+   uint16_t * p_pos,
+   pf_ethernet_header_t * p_hdr)
+{
+   p_hdr->dest = pf_get_mac_address (p_info, p_pos);
+   p_hdr->src = pf_get_mac_address (p_info, p_pos);
+   p_hdr->type = pf_get_uint16 (p_info, p_pos);
 }
 
 /**
@@ -181,10 +206,12 @@ static void pf_get_uuid (
    uint16_t * p_pos,
    pf_uuid_t * p_dest)
 {
-   p_dest->data1 = pf_get_uint32 (p_info, p_pos);
-   p_dest->data2 = pf_get_uint16 (p_info, p_pos);
-   p_dest->data3 = pf_get_uint16 (p_info, p_pos);
-   pf_get_mem (p_info, p_pos, sizeof (p_dest->data4), p_dest->data4);
+   p_dest->time_low = pf_get_uint32 (p_info, p_pos);
+   p_dest->time_mid = pf_get_uint16 (p_info, p_pos);
+   p_dest->time_hi_and_version = pf_get_uint16 (p_info, p_pos);
+   p_dest->clock_seq_hi_and_res = pf_get_byte (p_info, p_pos);
+   p_dest->clock_seq_low = pf_get_byte (p_info, p_pos);
+   pf_get_mem (p_info, p_pos, sizeof (p_dest->node), p_dest->node);
 }
 
 /**
@@ -200,16 +227,7 @@ static void pf_get_handle (
    pf_rpc_handle_t * p_handle)
 {
    p_handle->rpc_entry_handle = pf_get_uint32 (p_info, p_pos);
-   p_handle->handle_uuid.time_low = pf_get_uint32 (p_info, p_pos);
-   p_handle->handle_uuid.time_mid = pf_get_uint16 (p_info, p_pos);
-   p_handle->handle_uuid.time_hi_and_version = pf_get_uint16 (p_info, p_pos);
-   p_handle->handle_uuid.clock_hi_and_reserved = pf_get_byte (p_info, p_pos);
-   p_handle->handle_uuid.clock_low = pf_get_byte (p_info, p_pos);
-   pf_get_mem (
-      p_info,
-      p_pos,
-      sizeof (p_handle->handle_uuid.node),
-      p_handle->handle_uuid.node);
+   pf_get_uuid (p_info, p_pos, &p_handle->handle_uuid);
 }
 
 /**
@@ -363,6 +381,29 @@ static void pf_get_exp_submodule (
 
 /* ======================== Public functions ======================== */
 
+void pf_get_ip_suite (
+   pf_get_info_t * p_info,
+   uint16_t * p_pos,
+   pf_ip_suite_t * p_suite)
+{
+   p_suite->ip_addr = pf_get_uint32 (p_info, p_pos);
+   p_suite->ip_mask = pf_get_uint32 (p_info, p_pos);
+   p_suite->ip_gateway = pf_get_uint32 (p_info, p_pos);
+}
+
+void pf_get_full_ip_suite (
+   pf_get_info_t * p_info,
+   uint16_t * p_pos,
+   pf_full_ip_suite_t * p_suite)
+{
+   pf_get_ip_suite (p_info, p_pos, &p_suite->ip_suite);
+
+   for (size_t i = 0; i < NELEMENTS (p_suite->dns_addr); i++)
+   {
+      p_suite->dns_addr[i] = pf_get_uint32 (p_info, p_pos);
+   }
+}
+
 void pf_get_block_header (
    pf_get_info_t * p_info,
    uint16_t * p_pos,
@@ -374,52 +415,57 @@ void pf_get_block_header (
    p_hdr->block_version_low = pf_get_byte (p_info, p_pos);
 }
 
-void pf_get_ar_param (pf_get_info_t * p_info, uint16_t * p_pos, pf_ar_t * p_ar)
+void pf_get_ar_param (
+   pf_get_info_t * p_info,
+   uint16_t * p_pos,
+   pf_ar_param_t * p_ar_param)
 {
    uint32_t temp_u32;
    uint16_t str_len;
 
-   p_ar->ar_param.ar_type = pf_get_uint16 (p_info, p_pos);
-   pf_get_uuid (p_info, p_pos, &p_ar->ar_param.ar_uuid);
-   p_ar->ar_param.session_key = pf_get_uint16 (p_info, p_pos);
+   p_ar_param->ar_type = pf_get_uint16 (p_info, p_pos);
+   pf_get_uuid (p_info, p_pos, &p_ar_param->ar_uuid);
+   p_ar_param->session_key = pf_get_uint16 (p_info, p_pos);
    pf_get_mem (
       p_info,
       p_pos,
-      sizeof (p_ar->ar_param.cm_initiator_mac_add),
-      &p_ar->ar_param.cm_initiator_mac_add);
-   pf_get_uuid (p_info, p_pos, &p_ar->ar_param.cm_initiator_object_uuid);
+      sizeof (p_ar_param->cm_initiator_mac_add),
+      &p_ar_param->cm_initiator_mac_add);
+   pf_get_uuid (p_info, p_pos, &p_ar_param->cm_initiator_object_uuid);
    /* ar_properties */
    temp_u32 = pf_get_uint32 (p_info, p_pos);
-   p_ar->ar_param.ar_properties.state = pf_get_bits (temp_u32, 0, 3);
-   p_ar->ar_param.ar_properties.supervisor_takeover_allowed =
+   p_ar_param->ar_properties.state = pf_get_bits (temp_u32, 0, 3);
+   p_ar_param->ar_properties.supervisor_takeover_allowed =
       (pf_get_bits (temp_u32, 3, 1) != 0);
-   p_ar->ar_param.ar_properties.parameterization_server =
+   p_ar_param->ar_properties.parameterization_server =
       pf_get_bits (temp_u32, 4, 1);
-   p_ar->ar_param.ar_properties.device_access =
+   p_ar_param->ar_properties.device_access =
       (pf_get_bits (temp_u32, 8, 1) != 0);
-   p_ar->ar_param.ar_properties.companion_ar =
+   p_ar_param->ar_properties.companion_ar =
       (uint16_t)pf_get_bits (temp_u32, 9, 2);
-   p_ar->ar_param.ar_properties.acknowledge_companion_ar =
+   p_ar_param->ar_properties.acknowledge_companion_ar =
       (pf_get_bits (temp_u32, 11, 1) != 0);
-   p_ar->ar_param.ar_properties.combined_object_container =
+   p_ar_param->ar_properties.reject_dcp_set_requests =
+      (pf_get_bits (temp_u32, 27, 1) != 0);
+   p_ar_param->ar_properties.combined_object_container =
       (pf_get_bits (temp_u32, 29, 1) != 0);
-   p_ar->ar_param.ar_properties.startup_mode =
+   p_ar_param->ar_properties.startup_mode =
       (pf_get_bits (temp_u32, 30, 1) != 0);
-   p_ar->ar_param.ar_properties.pull_module_alarm_allowed =
+   p_ar_param->ar_properties.pull_module_alarm_allowed =
       (pf_get_bits (temp_u32, 31, 1) != 0);
 
-   p_ar->ar_param.cm_initiator_activity_timeout_factor =
+   p_ar_param->cm_initiator_activity_timeout_factor =
       pf_get_uint16 (p_info, p_pos);
-   p_ar->ar_param.cm_initiator_udp_rt_port = pf_get_uint16 (p_info, p_pos);
+   p_ar_param->cm_initiator_udp_rt_port = pf_get_uint16 (p_info, p_pos);
 
    str_len = pf_get_uint16 (p_info, p_pos);
-   p_ar->ar_param.cm_initiator_station_name_len = str_len;
-   if (str_len > sizeof (p_ar->ar_param.cm_initiator_station_name) - 1)
+   p_ar_param->cm_initiator_station_name_len = str_len;
+   if (str_len > sizeof (p_ar_param->cm_initiator_station_name) - 1)
    {
-      str_len = sizeof (p_ar->ar_param.cm_initiator_station_name) - 1;
+      str_len = sizeof (p_ar_param->cm_initiator_station_name) - 1;
    }
-   pf_get_mem (p_info, p_pos, str_len, p_ar->ar_param.cm_initiator_station_name);
-   p_ar->ar_param.cm_initiator_station_name[str_len] = '\0';
+   pf_get_mem (p_info, p_pos, str_len, p_ar_param->cm_initiator_station_name);
+   p_ar_param->cm_initiator_station_name[str_len] = '\0';
 }
 
 int pf_get_iocr_param (
@@ -432,9 +478,10 @@ int pf_get_iocr_param (
    uint32_t temp_u32;
    uint16_t temp_u16;
    uint16_t iy;
+   pf_iocr_param_t * p_param;
    bool too_many_resources_requested = false;
 
-   if (!(p_ar->nbr_iocrs < PNET_MAX_CR))
+   if (!(p_ar->io_ar->nbr_iocrs < PNET_MAX_CR))
    {
       LOG_ERROR (
          PF_RPC_LOG,
@@ -450,43 +497,42 @@ int pf_get_iocr_param (
       return -1;
    }
 
-   p_ar->iocrs[ix].param.iocr_type = pf_get_uint16 (p_info, p_pos);
-   p_ar->iocrs[ix].param.iocr_reference = pf_get_uint16 (p_info, p_pos);
-   p_ar->iocrs[ix].param.lt_field = pf_get_uint16 (p_info, p_pos);
+   p_param = &p_ar->io_ar->iocrs[ix].param;
+   p_param->iocr_type = pf_get_uint16 (p_info, p_pos);
+   p_param->iocr_reference = pf_get_uint16 (p_info, p_pos);
+   p_param->lt_field = pf_get_uint16 (p_info, p_pos);
    /* iocr_Properties */
    temp_u32 = pf_get_uint32 (p_info, p_pos);
-   p_ar->iocrs[ix].param.iocr_properties.rt_class =
-      pf_get_bits (temp_u32, 0, 4);
-   p_ar->iocrs[ix].param.iocr_properties.reserved_1 =
-      (pf_get_bits (temp_u32, 4, 9) != 0);
-   p_ar->iocrs[ix].param.iocr_properties.reserved_2 =
-      (pf_get_bits (temp_u32, 13, 11) != 0);
-   p_ar->iocrs[ix].param.iocr_properties.reserved_3 =
-      (pf_get_bits (temp_u32, 24, 8) != 0);
+   p_param->iocr_properties.rt_class = pf_get_bits (temp_u32, 0, 4);
+   p_param->iocr_properties.reserved_1 = (pf_get_bits (temp_u32, 4, 9) != 0);
+   p_param->iocr_properties.reserved_2 = (pf_get_bits (temp_u32, 13, 11) != 0);
+   p_param->iocr_properties.reserved_3 = (pf_get_bits (temp_u32, 24, 8) != 0);
 
-   p_ar->iocrs[ix].param.c_sdu_length = pf_get_uint16 (p_info, p_pos);
-   p_ar->iocrs[ix].param.frame_id = pf_get_uint16 (p_info, p_pos);
-   p_ar->iocrs[ix].param.send_clock_factor = pf_get_uint16 (p_info, p_pos);
-   p_ar->iocrs[ix].param.reduction_ratio = pf_get_uint16 (p_info, p_pos);
-   p_ar->iocrs[ix].param.phase = pf_get_uint16 (p_info, p_pos);
-   p_ar->iocrs[ix].param.sequence = pf_get_uint16 (p_info, p_pos);
-   p_ar->iocrs[ix].param.frame_send_offset = pf_get_uint32 (p_info, p_pos);
-   p_ar->iocrs[ix].param.watchdog_factor = pf_get_uint16 (p_info, p_pos);
-   p_ar->iocrs[ix].param.data_hold_factor = pf_get_uint16 (p_info, p_pos);
+   p_param->c_sdu_length = pf_get_uint16 (p_info, p_pos);
+   p_param->frame_id = pf_get_uint16 (p_info, p_pos);
+   p_param->send_clock_factor = pf_get_uint16 (p_info, p_pos);
+   p_param->reduction_ratio = pf_get_uint16 (p_info, p_pos);
+   p_param->phase = pf_get_uint16 (p_info, p_pos);
+   p_param->sequence = pf_get_uint16 (p_info, p_pos);
+   p_param->frame_send_offset =
+      pf_get_uint32 (p_info, p_pos);
+   p_param->watchdog_factor = pf_get_uint16 (p_info, p_pos);
+   p_param->data_hold_factor =
+      pf_get_uint16 (p_info, p_pos);
    /* iocr_tag_header */
    temp_u16 = pf_get_uint16 (p_info, p_pos);
-   p_ar->iocrs[ix].param.iocr_tag_header.vlan_id =
+   p_param->iocr_tag_header.vlan_id =
       pf_get_bits (temp_u16, 0, 11);
-   p_ar->iocrs[ix].param.iocr_tag_header.iocr_user_priority =
+   p_param->iocr_tag_header.iocr_user_priority =
       pf_get_bits (temp_u16, 13, 3);
 
    pf_get_mem (
       p_info,
       p_pos,
-      sizeof (p_ar->iocrs[ix].param.iocr_multicast_mac_add),
-      &p_ar->iocrs[ix].param.iocr_multicast_mac_add);
+      sizeof (p_param->iocr_multicast_mac_add),
+      &p_param->iocr_multicast_mac_add);
 
-   p_ar->iocrs[ix].param.nbr_apis = pf_get_uint16 (p_info, p_pos);
+   p_param->nbr_apis = pf_get_uint16 (p_info, p_pos);
 
    if (pf_cmdev_check_iocr_param (p_ar, p_result) != 0)
    {
@@ -494,19 +540,19 @@ int pf_get_iocr_param (
       return -1;
    }
 
-   if (p_ar->iocrs[ix].param.nbr_apis > PNET_MAX_API)
+   if (p_param->nbr_apis > PNET_MAX_API)
    {
       too_many_resources_requested = true;
    }
    if (!too_many_resources_requested)
    {
-      for (iy = 0; iy < p_ar->iocrs[ix].param.nbr_apis; iy++)
+      for (iy = 0; iy < p_param->nbr_apis; iy++)
       {
          if (
             pf_get_iocr_api_entry (
                p_info,
                p_pos,
-               &p_ar->iocrs[ix].param.apis[iy]) != 0)
+               &p_param->apis[iy]) != 0)
          {
             too_many_resources_requested = true;
          }
@@ -538,51 +584,47 @@ void pf_get_exp_api_module (
    uint16_t * p_pos,
    pf_ar_t * p_ar)
 {
-   uint16_t ix;
-   uint16_t iy;
-   uint32_t exp_api;
+   uint16_t n;
+   uint32_t api;
    uint16_t slot_number;
-   pf_exp_api_t * api;
-   pf_exp_api_t * this_api;
+   pf_exp_ident_t * exp_ident;
+   pf_exp_api_t * exp_api;
    pf_exp_module_t * module;
-   uint16_t nbr_exp_api;
+   uint16_t num_apis;
 
-   api = NULL;
-   module = NULL;
-   nbr_exp_api = pf_get_uint16 (p_info, p_pos); /* In this block */
-
-   for (ix = 0; ix < nbr_exp_api; ix++)
+   exp_ident = &p_ar->io_ar->exp_ident;
+   for (num_apis = pf_get_uint16 (p_info, p_pos); num_apis > 0; --num_apis)
    {
-      /* Get one module description */
-      exp_api = pf_get_uint32 (p_info, p_pos);
+      api = pf_get_uint32 (p_info, p_pos);
+      exp_api = NULL;
 
       /* Find the API if we are augmenting it */
-      for (iy = 0; iy < p_ar->exp_ident.nbr_apis; iy++)
+      for (n = 0; n < exp_ident->nbr_apis; ++n)
       {
-         this_api = &p_ar->exp_ident.api[iy];
-         if ((this_api->valid == true) && (this_api->api == exp_api))
+         if (exp_ident->api[n].valid && (exp_ident->api[n].api == api))
          {
-            api = this_api;
+            exp_api = &exp_ident->api[n];
+            break;
          }
       }
 
       /* If this is the first mention of this API */
-      if ((api == NULL) && (p_ar->exp_ident.nbr_apis < PNET_MAX_API))
+      if ((exp_api == NULL) && (exp_ident->nbr_apis < PNET_MAX_API))
       {
          /* Allocate a new API */
-         api = &p_ar->exp_ident.api[p_ar->exp_ident.nbr_apis];
-         p_ar->exp_ident.nbr_apis++;
+         exp_api = &exp_ident->api[exp_ident->nbr_apis];
+         ++exp_ident->nbr_apis;
 
-         api->api = exp_api;
-         api->nbr_modules = 0;
-         api->nbr_diff_modules = 0;
+         exp_api->api = api;
+         exp_api->nbr_modules = 0;
+         exp_api->nbr_diff_modules = 0;
       }
 
-      if (api == NULL)
+      if (exp_api == NULL)
       {
          /* This error condition is reported by caller. */
          p_info->result = PF_PARSE_OUT_OF_API_RESOURCES;
-         LOG_DEBUG (
+         LOG_ERROR (
             PNET_LOG,
             "BR(%d): Out of expected API resources\n",
             __LINE__);
@@ -592,10 +634,10 @@ void pf_get_exp_api_module (
          slot_number = pf_get_uint16 (p_info, p_pos);
 
          /* Get a new module. */
-         if (api->nbr_modules < PNET_MAX_SLOTS)
+         if (exp_api->nbr_modules < PNET_MAX_SLOTS)
          {
-            module = &api->module[api->nbr_modules];
-            api->nbr_modules++;
+            module = &exp_api->module[exp_api->nbr_modules];
+            ++exp_api->nbr_modules;
 
             module->slot_number = slot_number;
             module->ident_number = pf_get_uint32 (p_info, p_pos);
@@ -613,11 +655,11 @@ void pf_get_exp_api_module (
 
             if (module->nbr_submodules <= PNET_MAX_SUBSLOTS)
             {
-               for (iy = 0; iy < module->nbr_submodules; iy++)
+               for (n = 0; n < module->nbr_submodules; ++n)
                {
-                  pf_get_exp_submodule (p_info, p_pos, &module->submodule[iy]);
+                  pf_get_exp_submodule (p_info, p_pos, &module->submodule[n]);
                }
-               api->valid = true;
+               exp_api->valid = true;
             }
             else
             {
@@ -635,8 +677,8 @@ void pf_get_exp_api_module (
             p_info->result = PF_PARSE_OUT_OF_EXP_SUBMODULE_RESOURCES;
             LOG_ERROR (
                PNET_LOG,
-               "BR(%d): Too many modules used (not enough slots). Out of "
-               "expected module resources.\n",
+               "BR(%d): Too many modules used (not enough slots)."
+               " Out of expected module resources.\n",
                __LINE__);
          }
       }
@@ -651,30 +693,33 @@ void pf_get_alarm_cr_request (
    uint32_t temp_u32;
    uint16_t temp_u16;
 
-   p_ar->alarm_cr_request.alarm_cr_type = pf_get_uint16 (p_info, p_pos);
-   p_ar->alarm_cr_request.lt_field = pf_get_uint16 (p_info, p_pos);
+   p_ar->io_ar->alarm_cr_request.alarm_cr_type = pf_get_uint16 (p_info, p_pos);
+   p_ar->io_ar->alarm_cr_request.lt_field = pf_get_uint16 (p_info, p_pos);
    /* alarm_cr_properties */
    temp_u32 = pf_get_uint32 (p_info, p_pos);
-   p_ar->alarm_cr_request.alarm_cr_properties.priority =
+   p_ar->io_ar->alarm_cr_request.alarm_cr_properties.priority =
       (pf_get_bits (temp_u32, 0, 1) != 0);
-   p_ar->alarm_cr_request.alarm_cr_properties.transport_udp =
+   p_ar->io_ar->alarm_cr_request.alarm_cr_properties.transport_udp =
       (pf_get_bits (temp_u32, 1, 1) != 0);
 
-   p_ar->alarm_cr_request.rta_timeout_factor = pf_get_uint16 (p_info, p_pos);
-   p_ar->alarm_cr_request.rta_retries = pf_get_uint16 (p_info, p_pos);
-   p_ar->alarm_cr_request.local_alarm_reference = pf_get_uint16 (p_info, p_pos);
-   p_ar->alarm_cr_request.max_alarm_data_length = pf_get_uint16 (p_info, p_pos);
+   p_ar->io_ar->alarm_cr_request.rta_timeout_factor =
+      pf_get_uint16 (p_info, p_pos);
+   p_ar->io_ar->alarm_cr_request.rta_retries = pf_get_uint16 (p_info, p_pos);
+   p_ar->io_ar->alarm_cr_request.local_alarm_reference =
+      pf_get_uint16 (p_info, p_pos);
+   p_ar->io_ar->alarm_cr_request.max_alarm_data_length =
+      pf_get_uint16 (p_info, p_pos);
 
    temp_u16 = pf_get_uint16 (p_info, p_pos);
-   p_ar->alarm_cr_request.alarm_cr_tag_header_high.vlan_id =
+   p_ar->io_ar->alarm_cr_request.alarm_cr_tag_header_high.vlan_id =
       pf_get_bits (temp_u16, 0, 12);
-   p_ar->alarm_cr_request.alarm_cr_tag_header_high.alarm_user_priority =
+   p_ar->io_ar->alarm_cr_request.alarm_cr_tag_header_high.alarm_user_priority =
       pf_get_bits (temp_u16, 13, 3);
 
    temp_u16 = pf_get_uint16 (p_info, p_pos);
-   p_ar->alarm_cr_request.alarm_cr_tag_header_low.vlan_id =
+   p_ar->io_ar->alarm_cr_request.alarm_cr_tag_header_low.vlan_id =
       pf_get_bits (temp_u16, 0, 12);
-   p_ar->alarm_cr_request.alarm_cr_tag_header_low.alarm_user_priority =
+   p_ar->io_ar->alarm_cr_request.alarm_cr_tag_header_low.alarm_user_priority =
       pf_get_bits (temp_u16, 13, 3);
 }
 
@@ -684,17 +729,18 @@ void pf_get_ar_prm_server_request (
    uint16_t * p_pos,
    pf_ar_t * p_ar)
 {
-   pf_get_uuid (p_info, p_pos, &p_ar->prm_server.parameter_server_object_uuid);
+   pf_prm_server_t * p_prm_server = &p_ar->io_ar->prm_server;
+   pf_get_uuid (p_info, p_pos, &p_prm_server->parameter_server_object_uuid);
    /* parameter_server_properties - not used */
    (void)pf_get_uint32 (p_info, p_pos);
 
-   p_ar->prm_server.cm_initiator_activity_timeout_factor =
+   p_prm_server->cm_initiator_activity_timeout_factor =
       pf_get_uint16 (p_info, p_pos);
-   p_ar->prm_server.parameter_server_station_name_len =
+   p_prm_server->parameter_server_station_name_len =
       pf_get_uint16 (p_info, p_pos);
    if (
-      p_ar->prm_server.parameter_server_station_name_len >=
-      sizeof (p_ar->prm_server.parameter_server_station_name))
+      p_prm_server->parameter_server_station_name_len >=
+      sizeof (p_prm_server->parameter_server_station_name))
    {
       p_info->result = PF_PARSE_ERROR;
    }
@@ -703,10 +749,10 @@ void pf_get_ar_prm_server_request (
       pf_get_mem (
          p_info,
          p_pos,
-         p_ar->prm_server.parameter_server_station_name_len,
-         p_ar->prm_server.parameter_server_station_name);
-      p_ar->prm_server.parameter_server_station_name
-         [p_ar->prm_server.parameter_server_station_name_len] = '\0';
+         p_prm_server->parameter_server_station_name_len,
+         p_prm_server->parameter_server_station_name);
+      p_prm_server->parameter_server_station_name
+         [p_prm_server->parameter_server_station_name_len] = '\0';
       p_info->result = PF_PARSE_OK;
    }
 }
@@ -737,39 +783,83 @@ uint8_t pf_get_ir_info_request (
    pf_ar_t * p_ar)
 {
    uint16_t ix;
-   bool data4_is_zero = true;
+   bool node_is_zero = true;
 
-   pf_get_uuid (p_info, p_pos, &p_ar->ir_info.ir_data_uuid);
-   p_ar->ir_info.nbr_iocrs = pf_get_uint16 (p_info, p_pos);
+   pf_get_uuid (p_info, p_pos, &p_ar->io_ar->ir_info.ir_data_uuid);
+   p_ar->io_ar->ir_info.nbr_iocrs = pf_get_uint16 (p_info, p_pos);
 
-   for (ix = 0; ix < sizeof (p_ar->ir_info.ir_data_uuid.data4); ix++)
+   for (ix = 0; ix < sizeof (p_ar->io_ar->ir_info.ir_data_uuid.node); ix++)
    {
-      if (p_ar->ir_info.ir_data_uuid.data4[ix] != 0)
+      if (p_ar->io_ar->ir_info.ir_data_uuid.node[ix] != 0)
       {
-         data4_is_zero = false;
+         node_is_zero = false;
          break;
       }
    }
 
    /* PN-AL-Protocol (Mar24) Table 1322 states the UUID should not be zero */
    if (
-      p_ar->ir_info.ir_data_uuid.data1 == 0 &&
-      p_ar->ir_info.ir_data_uuid.data2 == 0 &&
-      p_ar->ir_info.ir_data_uuid.data3 == 0 &&
-      data4_is_zero)
+      p_ar->io_ar->ir_info.ir_data_uuid.time_low == 0 &&
+      p_ar->io_ar->ir_info.ir_data_uuid.time_mid == 0 &&
+      p_ar->io_ar->ir_info.ir_data_uuid.time_hi_and_version == 0 &&
+      p_ar->io_ar->ir_info.ir_data_uuid.clock_seq_hi_and_res == 0 &&
+      p_ar->io_ar->ir_info.ir_data_uuid.clock_seq_low == 0 &&
+      node_is_zero)
    {
       return PNET_ERROR_CODE_2_FAULTY_IR_INFO_WRONG_UUID;
    }
 
-   if (p_ar->ir_info.nbr_iocrs > PNET_MAX_DFP_IOCR)
+   if (p_ar->io_ar->ir_info.nbr_iocrs > PNET_MAX_DFP_IOCR)
    {
       return PNET_ERROR_CODE_2_FAULTY_IR_INFO_WRONG_NBR_IOCRS;
    }
 
-   for (ix = 0; ix < p_ar->ir_info.nbr_iocrs; ix++)
+   for (ix = 0; ix < p_ar->io_ar->ir_info.nbr_iocrs; ix++)
    {
-      pf_get_dfp_iocr (p_info, p_pos, &p_ar->ir_info.dfp_iocrs[ix]);
+      pf_get_dfp_iocr (p_info, p_pos, &p_ar->io_ar->ir_info.dfp_iocrs[ix]);
    }
+
+   return 0;
+}
+#endif
+
+#if PNET_OPTION_SR
+uint8_t pf_get_sr_info_request (
+   pf_get_info_t * p_info,
+   uint16_t * p_pos,
+   pf_ar_t * p_ar)
+{
+   uint8_t byte[2];
+   uint16_t rdhf;
+   uint8_t mode;
+
+   rdhf = pf_get_uint16 (p_info, p_pos);
+   byte[0] = pf_get_byte (p_info, p_pos);
+   byte[1] = pf_get_byte (p_info, p_pos);
+   (void)pf_get_uint16 (p_info, p_pos);
+
+   if (rdhf < PNET_MIN_RDHT)
+   {
+      return PNET_ERROR_CODE_2_FAULTY_SR_INFO_WRONG_RDHF;
+   }
+
+   mode = ((byte[0] & BIT (2)) >> 2);
+
+   if ((mode != 0) && !PNET_OPTION_DATA_INVALID_ON_BACKUP_AR)
+   {
+      return PNET_ERROR_CODE_2_FAULTY_SR_INFO_WRONG_MODE;
+   }
+
+   /* Reserved_1 and Reserved_2 must be 0:*/
+   if (((byte[0] & !(BIT (0) | BIT (2))) != 0) || (byte[1] != 0))
+   {
+      return PNET_ERROR_CODE_2_FAULTY_SR_INFO_WRONG_MODE;
+   }
+
+   p_ar->sr.info.redundancy_data_hold_factor = rdhf;
+   p_ar->sr.info.sr_properties.input_valid_on_backup = (byte[0] & BIT (0));
+   p_ar->sr.info.sr_properties.mode = mode;
+   p_ar->sr.info.valid = true;
 
    return 0;
 }
@@ -782,18 +872,18 @@ void pf_get_mcr_request (
    uint16_t ix,
    pf_ar_t * p_ar)
 {
-   p_ar->mcr_request[ix].iocr_reference = pf_get_uint16 (p_info, p_pos);
-   p_ar->mcr_request[ix].address_resolution_properties.protocol =
+   pf_multicast_cr_t * p_mcr_request = p_ar->io_ar->mcr_request + ix;
+   p_mcr_request->iocr_reference = pf_get_uint16 (p_info, p_pos);
+   p_mcr_request->address_resolution_properties.protocol =
       pf_get_byte (p_info, p_pos);
-   p_ar->mcr_request[ix].address_resolution_properties.resolution_factor =
+   p_mcr_request->address_resolution_properties.resolution_factor =
       pf_get_byte (p_info, p_pos);
-   p_ar->mcr_request[ix].mci_timeout_factor = pf_get_uint16 (p_info, p_pos);
-   p_ar->mcr_request[ix].length_provider_station_name =
-      pf_get_uint16 (p_info, p_pos);
+   p_mcr_request->mci_timeout_factor = pf_get_uint16 (p_info, p_pos);
+   p_mcr_request->length_provider_station_name = pf_get_uint16 (p_info, p_pos);
 
    if (
-      p_ar->mcr_request[ix].length_provider_station_name >=
-      sizeof (p_ar->mcr_request[ix].provider_station_name))
+      p_mcr_request->length_provider_station_name >=
+      sizeof (p_mcr_request->provider_station_name))
    {
       p_info->result = PF_PARSE_ERROR;
    }
@@ -802,10 +892,10 @@ void pf_get_mcr_request (
       pf_get_mem (
          p_info,
          p_pos,
-         p_ar->mcr_request[ix].length_provider_station_name,
-         p_ar->mcr_request[ix].provider_station_name);
-      p_ar->mcr_request[ix].provider_station_name
-         [p_ar->mcr_request[ix].length_provider_station_name] = '\0';
+         p_mcr_request->length_provider_station_name,
+         p_mcr_request->provider_station_name);
+      p_mcr_request->provider_station_name
+         [p_mcr_request->length_provider_station_name] = '\0';
       p_info->result = PF_PARSE_OK;
    }
 }
@@ -816,7 +906,7 @@ void pf_get_ar_rpc_request (
    uint16_t * p_pos,
    pf_ar_t * p_ar)
 {
-   p_ar->ar_rpc_request.initiator_rpc_server_port =
+   p_ar->io_ar->ar_rpc_request.initiator_rpc_server_port =
       pf_get_uint16 (p_info, p_pos);
 }
 
@@ -864,6 +954,28 @@ void pf_get_control (
    /* Command and properties are always Big-Endian on the wire!! */
    p_req->control_command = pf_get_uint16 (p_info, p_pos);
    p_req->control_block_properties = pf_get_uint16 (p_info, p_pos);
+}
+
+void pf_get_submodule_list (
+   pf_get_info_t * info,
+   uint16_t * pos,
+   pf_submodule_list_block_t * sm_list)
+{
+   uint16_t n, no_entries;
+
+   no_entries = pf_get_uint16 (info, pos);
+   if (no_entries >= NELEMENTS (sm_list->entry))
+   {
+      sm_list->number_of_entries = 0;
+      return;
+   }
+   sm_list->number_of_entries = no_entries;
+   for (n = 0; n < no_entries; ++n)
+   {
+      sm_list->entry[n].api = pf_get_uint32 (info, pos);
+      sm_list->entry[n].slot = pf_get_uint16 (info, pos);
+      sm_list->entry[n].subslot = pf_get_uint16 (info, pos);
+   }
 }
 
 int pf_get_ndr_data_req (
@@ -1028,20 +1140,40 @@ void pf_get_write_request (
    }
 }
 
-void pf_get_im_1 (pf_get_info_t * p_info, uint16_t * p_pos, pnet_im_1_t * p_im_1)
+void pf_get_im_1 (pf_get_info_t * info, uint16_t * pos, pnet_im_1_t * im1)
 {
-   pf_get_mem (
-      p_info,
-      p_pos,
-      sizeof (p_im_1->im_tag_function) - 1,
-      p_im_1->im_tag_function);
-   p_im_1->im_tag_function[sizeof (p_im_1->im_tag_function) - 1] = '\0';
-   pf_get_mem (
-      p_info,
-      p_pos,
-      sizeof (p_im_1->im_tag_location) - 1,
-      p_im_1->im_tag_location);
-   p_im_1->im_tag_location[sizeof (p_im_1->im_tag_location) - 1] = '\0';
+   size_t size;
+
+   size = (sizeof (im1->im_tag_function) - 1);
+   pf_get_mem (info, pos, size, im1->im_tag_function);
+   im1->im_tag_function[size] = '\0';
+
+   size = (sizeof (im1->im_tag_location) - 1);
+   pf_get_mem (info, pos, size, im1->im_tag_location);
+   im1->im_tag_location[size] = '\0';
+}
+
+void pf_get_im_2 (pf_get_info_t * info, uint16_t * pos, pnet_im_2_t * im2)
+{
+   size_t size;
+
+   size = (sizeof (im2->im_date) - 1);
+   pf_get_mem (info, pos, size, im2->im_date);
+   im2->im_date[size] = '\0';
+}
+
+void pf_get_im_3 (pf_get_info_t * info, uint16_t * pos, pnet_im_3_t * im3)
+{
+   size_t size;
+
+   size = (sizeof (im3->im_descriptor) - 1);
+   pf_get_mem (info, pos, size, im3->im_descriptor);
+   im3->im_descriptor[size] = '\0';
+}
+
+void pf_get_im_4 (pf_get_info_t * info, uint16_t * pos, pnet_im_4_t * im4)
+{
+   pf_get_mem (info, pos, sizeof (im4->im_signature), im4->im_signature);
 }
 
 void pf_get_alarm_fixed (
@@ -1273,3 +1405,224 @@ void pf_get_interface_adjust (
    temp = pf_get_uint32 (p_info, p_pos);
    *name_of_device_mode = pf_get_bits (temp, 0, 1);
 }
+
+#if PNET_OPTION_SNMP && PNET_OPTION_SECURITY_LEVEL_1
+void pf_get_community_name (
+   pf_get_info_t * p_get_info,
+   uint16_t * p_pos,
+   uint8_t max_community_name_len,
+   uint8_t * p_community_name)
+{
+   uint8_t len = pf_get_byte (p_get_info, p_pos);
+
+   if (p_get_info->result == PF_PARSE_OK && len <= max_community_name_len)
+   {
+      pf_get_mem (p_get_info, p_pos, len, p_community_name);
+      if (p_get_info->result == PF_PARSE_OK)
+      {
+         p_community_name[len] = '\0'; /* Terminate string */
+      }
+   }
+   else
+   {
+      p_get_info->result = PF_PARSE_ERROR;
+   }
+}
+
+void pf_get_cim_snmp_adjust (
+   pf_get_info_t * p_info,
+   uint16_t * p_pos,
+   pf_snmp_config_t * snmp_adjust)
+{
+   snmp_adjust->control_mode = pf_get_uint16 (p_info, p_pos);
+
+   pf_get_community_name (
+      p_info,
+      p_pos,
+      sizeof (snmp_adjust->ro_name.string) - 1,
+      (uint8_t *)&snmp_adjust->ro_name.string[0]);
+
+   pf_get_community_name (
+      p_info,
+      p_pos,
+      sizeof (snmp_adjust->rw_name.string) - 1,
+      (uint8_t *)&snmp_adjust->rw_name.string[0]);
+}
+#endif
+
+#if PNET_OPTION_MRP
+void pf_get_interface_mrp_data_check (
+   pf_get_info_t * p_info,
+   uint16_t * p_pos,
+   uint8_t max_instances,
+   pf_mrp_data_check_t * p_mrp_check)
+{
+   uint8_t i;
+   uint8_t n;
+   uint16_t temp_u32;
+   pf_block_header_t block_header;
+
+   *p_pos += 1; /* 1 byte padding */
+
+   n = pf_get_byte (p_info, p_pos);
+   if (n > max_instances)
+   {
+      p_info->result = PF_PARSE_ERROR;
+
+      LOG_WARNING (
+         PNET_LOG,
+         "BR(%d): Unsupported number of MRP DataCheck instances (%d)\n",
+         __LINE__,
+         n);
+      return;
+   }
+
+   p_mrp_check->nbr_instances = n;
+   for (i = 0; i < n; ++i)
+   {
+      pf_get_block_header (p_info, p_pos, &block_header);
+      if (
+         !PF_BLOCK_TYPE_EQ (block_header, MRP_INSTANCE_DATA_CHECK) ||
+         !PF_BLOCK_VERSION_EQ (block_header, 1, 0))
+      {
+         p_info->result = PF_PARSE_ERROR;
+
+         LOG_WARNING (
+            PNET_LOG,
+            "BR(%d): unexpected block type 0x%x v.%d.%d\n",
+            __LINE__,
+            block_header.block_type,
+            block_header.block_version_high,
+            block_header.block_version_low);
+         return;
+      }
+
+      ++(*p_pos); /* 1 byte padding */
+
+      p_mrp_check->instance[i].instance = pf_get_byte (p_info, p_pos);
+      pf_get_mem (p_info, p_pos, 16, p_mrp_check->instance[i].domain.data);
+
+      temp_u32 = pf_get_uint32 (p_info, p_pos);
+      p_mrp_check->instance[i].flags.redundance_mgr_diag =
+         pf_get_bits (temp_u32, 0, 1);
+      p_mrp_check->instance[i].flags.lldp_domain = pf_get_bits (temp_u32, 1, 1);
+   }
+}
+
+void pf_get_interface_mrp_data_adjust (
+   pf_get_info_t * p_info,
+   uint16_t * p_pos,
+   uint8_t max_instances,
+   pf_intf_mrp_data_adjust_t * p_mrp_adjust)
+{
+   uint8_t i;
+   uint8_t n;
+   pf_block_header_t block_header;
+   uint16_t block_end;
+   pf_mrp_instance_data_adjust_block_t * ida;
+
+   *p_pos += 1; /* 1 byte padding */
+
+   n = pf_get_byte (p_info, p_pos);
+   if (n > max_instances)
+   {
+      p_info->result = PF_PARSE_ERROR;
+
+      LOG_WARNING (
+         PNET_LOG,
+         "BR(%d): Unsupported number of MRP DataAdjust instances (%d)\n",
+         __LINE__,
+         n);
+      return;
+   }
+
+   p_mrp_adjust->nbr_instances = n;
+   for (i = 0; i < n; ++i)
+   {
+      pf_get_block_header (p_info, p_pos, &block_header);
+      if (
+         !PF_BLOCK_TYPE_EQ (block_header, MRP_INSTANCE_DATA_ADJUST) ||
+         !PF_BLOCK_VERSION_EQ (block_header, 1, 0))
+      {
+         p_info->result = PF_PARSE_ERROR;
+
+         LOG_WARNING (
+            PNET_LOG,
+            "BR(%d): unexpected block (0x%x v.%d.%d)\n",
+            __LINE__,
+            block_header.block_type,
+            block_header.block_version_high,
+            block_header.block_version_low);
+         return;
+      }
+
+      block_end = *p_pos + PF_BLOCK_DATA_LENGTH(block_header);
+      ida = (p_mrp_adjust->instance + i);
+
+      ++(*p_pos); /* 1 byte padding */
+
+      ida->instance = pf_get_byte (p_info, p_pos);
+      pf_get_mem (p_info, p_pos, 16, ida->domain.data);
+      ida->role = pf_get_uint16 (p_info, p_pos);
+
+      *p_pos += 2; /* 2 byte padding */
+      ida->domain_len = pf_get_byte (p_info, p_pos);
+      if ((ida->domain_len < 1) || (MRP_DOMAIN_NAME_LEN_MAX < ida->domain_len))
+      {
+         p_info->result = PF_PARSE_ERROR;
+
+         LOG_WARNING (
+            PNET_LOG,
+            "BR(%d): Invalid MRP_LengthOfDomainName (%d)\n",
+            __LINE__,
+            ida->domain_len);
+         return;
+      }
+      pf_get_mem (p_info, p_pos, ida->domain_len, ida->domain_name);
+
+      /* null terminate for debug purposes */
+      ida->domain_name[ida->domain_len] = 0;
+
+      /* Skip padding for 4 byte alignment. */
+      *p_pos = ((*p_pos + 3) & ~3);
+
+      /* check if optional sub elements are present */
+      while (*p_pos < block_end)
+      {
+         pf_get_block_header (p_info, p_pos, &block_header);
+
+         /* check for optional sub elements */
+         switch (block_header.block_type)
+         {
+         case PF_BT_MRP_CLIENT_PARAMS:
+            if (!PF_BLOCK_VERSION_EQ (block_header, 1, 0))
+            {
+               p_info->result = PF_PARSE_ERROR;
+
+               LOG_WARNING (
+                  PNET_LOG,
+                  "BR(%d): unknown MrpClientParams block version (v.%d.%d)\n",
+                  __LINE__,
+                  block_header.block_version_high,
+                  block_header.block_version_low);
+               return;
+            }
+
+            ida->client_params.link_down_T = pf_get_uint16 (p_info, p_pos);
+            ida->client_params.link_up_T = pf_get_uint16 (p_info, p_pos);
+            ida->client_params.link_nr_max = pf_get_uint16 (p_info, p_pos);
+            break;
+         default:
+            p_info->result = PF_PARSE_ERROR;
+
+            LOG_WARNING (
+               PNET_LOG,
+               "BR(%d): unexpected block type (0x%x)\n",
+               __LINE__,
+               block_header.block_type);
+            return;
+         }
+      }
+   }
+}
+#endif /* PNET_OPTION_MRP */

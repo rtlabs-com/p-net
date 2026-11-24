@@ -30,27 +30,33 @@
  * response message.
  */
 
-#cmakedefine01 PNET_OPTION_FAST_STARTUP
-
 #cmakedefine01 PNET_OPTION_PARAMETER_SERVER
 
 #cmakedefine01 PNET_OPTION_IR
 
 #cmakedefine01 PNET_OPTION_SR
 
+#cmakedefine01 PNET_OPTION_DATA_INVALID_ON_BACKUP_AR
+
 #cmakedefine01 PNET_OPTION_REDUNDANCY
 
 #cmakedefine01 PNET_OPTION_AR_VENDOR_BLOCKS
 
-#cmakedefine01 PNET_OPTION_RS
-
 #cmakedefine01 PNET_OPTION_MC_CR
-
-#cmakedefine01 PNET_OPTION_SRL
 
 #cmakedefine01 PNET_OPTION_SNMP
 
 #cmakedefine01 PNET_OPTION_DRIVER_ENABLE
+
+#cmakedefine01 PNET_OPTION_SECURITY_LEVEL_1
+
+#cmakedefine01 PNET_OPTION_MC_PRUNING
+
+#cmakedefine01 PNET_OPTION_MRP
+
+#cmakedefine01 PNET_OPTION_SHARED_DEVICE
+
+#cmakedefine01 PNET_OPTION_DR
 
 /**
  * Disable use of atomic operations (stdatomic.h).
@@ -72,8 +78,17 @@
  * Only a few of the defines are validated.
  */
 
-/** Number of connections. Must be > 0. "Automated RT Tester" uses 2 */
-#define PNET_MAX_AR               @PNET_MAX_AR@
+/** Number of I/O connections. Must be > 0. "Automated RT Tester" uses 2 */
+#define PNET_MAX_IO_AR            @PNET_MAX_IO_AR@
+
+/** Number of Device Access connections. */
+#define PNET_MAX_DA_AR            @PNET_MAX_DA_AR@
+
+/** Number of AR sets. */
+#define PNET_MAX_AR_SET           @PNET_MAX_AR_SET@
+
+/** Max AR set size. */
+#define PNET_MAX_AR_SET_SIZE      @PNET_MAX_AR_SET_SIZE@
 
 /** Number of Application Processes. Must be > 0. */
 #define PNET_MAX_API              @PNET_MAX_API@
@@ -81,7 +96,7 @@
 /** Per AR. 1 input and 1 output. */
 #define PNET_MAX_CR               @PNET_MAX_CR@
 
-/** Per API. Should be > 1 to allow at least one I/O module. */
+/** Should be > 1 to allow at least one I/O module. */
 #define PNET_MAX_SLOTS          @PNET_MAX_SLOTS@
 
 /** Per slot (3 needed for DAP). */
@@ -123,9 +138,6 @@
 
 #endif  /* PNET_OPTION_AR_VENDOR_BLOCKS */
 
-/** or 512 (bytes) */
-#define PNET_MAX_MAN_SPECIFIC_FAST_STARTUP_DATA_LENGTH @PNET_MAX_MAN_SPECIFIC_FAST_STARTUP_DATA_LENGTH@
-
 /** Max fragmented RPC request/response length */
 #define PNET_MAX_SESSION_BUFFER_SIZE @PNET_MAX_SESSION_BUFFER_SIZE@
 
@@ -138,6 +150,8 @@
 /** Max port description size, including termination  */
 #define PNET_MAX_PORT_DESCRIPTION_SIZE @PNET_MAX_PORT_DESCRIPTION_SIZE@
 
+/** Min redundancy data hold time (ms). Should be in the range [3, 200]. */
+#define PNET_MIN_RDHT @PNET_MIN_RDHT@
 
 /**
  * # Logging
@@ -159,6 +173,10 @@
 
 #ifndef PF_SNMP_LOG
 #define PF_SNMP_LOG             (LOG_STATE_@PF_SNMP_LOG@)
+#endif
+
+#ifndef PF_MRP_LOG
+#define PF_MRP_LOG              (LOG_STATE_@PF_MRP_LOG@)
 #endif
 
 #ifndef PF_CPM_LOG
@@ -191,6 +209,16 @@
 
 #ifndef PNET_LOG
 #define PNET_LOG                (LOG_STATE_@PNET_LOG@)
+#endif
+
+#if PNET_OPTION_SR &&                                                          \
+   (PNET_MAX_IO_AR < (PNET_MAX_AR_SET * PNET_MAX_AR_SET_SIZE))
+#error                                                                         \
+   "PNET_MAX_IO_AR must not be less than (PNET_MAX_AR_SET * PNET_MAX_AR_SET_SIZE)"
+#endif
+
+#if PNET_OPTION_DR && !PNET_OPTION_SR
+#error "PNET_OPTION_DR requires PNET_OPTION_SR"
 #endif
 
 #endif  /* PNET_OPTIONS_H */

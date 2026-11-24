@@ -133,7 +133,7 @@ int pf_cpm_create (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
       net->cpm_buf_lock = os_mutex_create();
    }
 
-   pf_cpm_set_state (&p_ar->iocrs[crep].cpm, PF_CPM_STATE_W_START);
+   pf_cpm_set_state (&p_ar->io_ar->iocrs[crep].cpm, PF_CPM_STATE_W_START);
    ret = net->cpm_drv->create (net, p_ar, crep);
    if (ret != 0)
    {
@@ -158,7 +158,7 @@ int pf_cpm_close_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
       p_ar->arep,
       crep);
 
-   pf_cpm_set_state (&p_ar->iocrs[crep].cpm, PF_CPM_STATE_W_START);
+   pf_cpm_set_state (&p_ar->io_ar->iocrs[crep].cpm, PF_CPM_STATE_W_START);
 
    ret = net->cpm_drv->close_req (net, p_ar, crep);
    if (ret == 0)
@@ -195,13 +195,24 @@ int pf_cpm_check_cycle (int32_t prev, uint16_t now)
 int pf_cpm_check_src_addr (const pf_cpm_t * p_cpm, const pnal_buf_t * p_buf)
 {
    int ret = -1;
+   uint16_t pos;
+   pf_get_info_t info =
+   {
+      .is_big_endian = true,
+      .p_frame = p_buf,
+      .p_array = NULL,
+      .len = pnal_buf_get_size (p_buf),
+      .result = PF_PARSE_OK,
+   };
 
    /* Payload contains [da], [sa], <etc> */
+   pos = sizeof (pnet_ethaddr_t); /* Skip dest addr */
    if (
-      memcmp (
-         &p_cpm->sa,
-         &((uint8_t *)p_buf->payload)[sizeof (pnet_ethaddr_t)],
-         sizeof (p_cpm->sa)) == 0)
+      pf_get_memcmp (
+         &info,
+         &pos,
+         sizeof (p_cpm->sa),
+         &p_cpm->sa) == 0)
    {
       ret = 0;
    }
@@ -216,7 +227,7 @@ int pf_cpm_activate_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
    pf_cpm_t * p_cpm;
    pf_iocr_t * p_iocr;
 
-   p_iocr = &p_ar->iocrs[crep];
+   p_iocr = &p_ar->io_ar->iocrs[crep];
    p_cpm = &p_iocr->cpm;
 
    LOG_DEBUG (
@@ -333,20 +344,24 @@ static int pf_cpm_get_ar_iocr_desc (
    int ret = -1;
    uint32_t crep;
    uint16_t iodata_ix;
-   pf_subslot_t * p_subslot = NULL;
+   pf_submodule_t * submodule = NULL;
    pf_ar_t * p_ar = NULL;
    pf_iocr_t * p_iocr = NULL;
    bool found = false;
 
    if (
-      pf_cmdev_get_subslot_full (net, api_id, slot_nbr, subslot_nbr, &p_subslot) ==
-      0)
+      pf_cmdev_get_submodule_full (
+         net,
+         api_id,
+         slot_nbr,
+         subslot_nbr,
+         &submodule) == 0)
    {
       if (
-         (p_subslot->ownsm_state == PF_OWNSM_STATE_IOC) ||
-         (p_subslot->ownsm_state == PF_OWNSM_STATE_IOS))
+         (submodule->ownsm_state == PF_OWNSM_STATE_IOC) ||
+         (submodule->ownsm_state == PF_OWNSM_STATE_IOS))
       {
-         p_ar = p_subslot->owner;
+         p_ar = submodule->owner;
       }
    }
 
@@ -360,13 +375,13 @@ static int pf_cpm_get_ar_iocr_desc (
        * Search the AR for an OUTPUT CR or an MC consumer CR containing the
        * sub-slot.
        */
-      for (crep = 0; ((found == false) && (crep < p_ar->nbr_iocrs)); crep++)
+      for (crep = 0; ((found == false) && (crep < p_ar->io_ar->nbr_iocrs)); crep++)
       {
          if (
-            (p_ar->iocrs[crep].param.iocr_type == PF_IOCR_TYPE_OUTPUT) ||
-            (p_ar->iocrs[crep].param.iocr_type == PF_IOCR_TYPE_MC_CONSUMER))
+            (p_ar->io_ar->iocrs[crep].param.iocr_type == PF_IOCR_TYPE_OUTPUT) ||
+            (p_ar->io_ar->iocrs[crep].param.iocr_type == PF_IOCR_TYPE_MC_CONSUMER))
          {
-            p_iocr = &p_ar->iocrs[crep];
+            p_iocr = &p_ar->io_ar->iocrs[crep];
             for (iodata_ix = 0;
                  ((found == false) && (iodata_ix < p_iocr->nbr_data_desc));
                  iodata_ix++)
@@ -439,8 +454,6 @@ int pf_cpm_get_data_and_iops (
             (*p_data_len < p_iodata->data_length) ||
             (*p_iops_len < p_iodata->iops_length))
          {
-            *p_data_len = 0;
-            *p_new_flag = false;
             LOG_ERROR (
                PF_CPM_LOG,
                "CPM(%d): Given data buffer size %u and IOPS buffer size "
@@ -453,6 +466,8 @@ int pf_cpm_get_data_and_iops (
                (unsigned)p_iodata->iops_length,
                slot_nbr,
                subslot_nbr);
+            *p_data_len = 0;
+            *p_new_flag = false;
          }
          else
          {
@@ -468,7 +483,15 @@ int pf_cpm_get_data_and_iops (
                *p_data_len,
                p_iops,
                *p_iops_len);
-
+#if PNET_OPTION_SR
+            if ((p_ar != NULL) && (p_ar->ar_set != NULL))
+            {
+               if (p_ar->ar_set->primary_ar == NULL)
+               {
+                  memset (p_iops, 0, *p_iops_len);
+               }
+            }
+#endif
             if (ret != 0)
             {
                *p_data_len = 0;
@@ -610,8 +633,9 @@ void pf_cpm_show (const pnet_t * net, const pf_cpm_t * p_cpm)
    printf ("   p_buffer_app       = %p\n", p_cpm->p_buffer_app);
    printf ("   p_buffer_cpm       = %p\n", p_cpm->p_buffer_cpm);
    printf (
-      "   p_buffer->len      = %u\n",
-      p_cpm->p_buffer_cpm ? ((pnal_buf_t *)(p_cpm->p_buffer_cpm))->len : 0);
+      "   p_buffer size      = %u\n",
+      p_cpm->p_buffer_cpm ? (unsigned)pnal_buf_get_size (p_cpm->p_buffer_cpm)
+                          : 0);
    printf ("   new_buf            = %u\n", (unsigned)p_cpm->new_buf);
    printf ("   ci_running         = %u\n", (unsigned)p_cpm->ci_running);
    printf (

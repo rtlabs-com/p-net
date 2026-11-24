@@ -27,6 +27,22 @@ extern "C" {
 void pf_cmpbe_show (const pf_ar_t * p_ar);
 
 /**
+ * Check whether a submodule is part of an ongoing PrmBegin-PrmEnd sequence.
+ *
+ * @param ar               In: The AR instance.
+ * @param api_id           In: The API.
+ * @param slot_nbr         In: The slot number.
+ * @param subslot_nbr      In: The subslot number.
+ * @return true if the submodule is being parameterized,
+ *         false if not.
+ */
+bool pf_cmpbe_prm_flag (
+   pf_ar_t const * ar,
+   uint32_t api_id,
+   uint16_t slot_nbr,
+   uint16_t subslot_nbr);
+
+/**
  * Handle CMDEV events.
  * @param p_ar             InOut: The AR instance.
  * @param event            In:    The new CMDEV state. Use PNET_EVENT_xxx, not
@@ -71,7 +87,23 @@ int pf_cmpbe_rm_dcontrol_ind (
    pnet_t * net,
    pf_ar_t * p_ar,
    pf_control_block_t * p_control_io,
-   pnet_result_t * p_result);
+   pf_submodule_list_block_t * p_sm_list,
+   pnet_result_t * p_result,
+   bool * p_set_state_prmend);
+
+/**
+ * Inform CMPBE that a parameter is written to a submodule via an AR.
+ *
+ * @param ar               InOut: The AR.
+ * @param api              In: The API.
+ * @param slot             In: The slot number.
+ * @param subslot          In: The subslot number.
+ */
+void pf_cmpbe_cm_write_ind (
+   pf_ar_t * ar,
+   uint32_t api,
+   uint16_t slot,
+   uint16_t subslot);
 
 #ifdef __cplusplus
 }

@@ -166,6 +166,7 @@ static uint16_t test_reads[] =
     0xf860,
     0xf870, 0xf871,
     0xf880, 0xf881, 0xf882, 0xf883, 0xf884, 0xf885, 0xf886, 0xf887, 0xf888, 0xf889,
+    0xf920,
     0xfbff,
 };
 
@@ -178,10 +179,14 @@ static uint16_t seq_nbr = 0;
 class CmrdrTest : public PnetIntegrationTest
 {
  protected:
-   void test_read (uint16_t idx)
+   void test_read_buf (
+      uint16_t idx,
+      uint16_t slot,
+      uint16_t subslot,
+      uint8_t * buffer,
+      size_t size)
    {
       pf_ar_t * p_ar;
-      uint8_t buffer[PF_FRAME_BUFFER_SIZE];
       uint16_t pos = 0;
 
       /* Send data to prevent timeout */
@@ -197,10 +202,10 @@ class CmrdrTest : public PnetIntegrationTest
       read_request.sequence_number = seq_nbr++;
       /* read_request.ar_uuid = NIL */
       read_request.api = 0;
-      read_request.slot_number = 1;
-      read_request.subslot_number = 1;
+      read_request.slot_number = slot;
+      read_request.subslot_number = subslot;
       read_request.index = idx;
-      read_request.record_data_length = 0;
+      read_request.record_data_length = size;
       // read_request.target_ar_uuid;   /* Only used if implicit AR */
 
       pf_cmrdr_rm_read_ind (
@@ -208,7 +213,7 @@ class CmrdrTest : public PnetIntegrationTest
          p_ar,
          &read_request,
          &read_status,
-         sizeof (buffer),
+         size,
          buffer,
          &pos);
 
@@ -217,6 +222,12 @@ class CmrdrTest : public PnetIntegrationTest
          TEST_TRACE ("Read failed for idx %#x\n", (unsigned)idx);
          appdata.read_fails++;
       }
+   }
+
+   void test_read (uint16_t idx, uint16_t slot, uint16_t subslot)
+   {
+      uint8_t buffer[PF_FRAME_BUFFER_SIZE];
+      test_read_buf (idx, slot, subslot, buffer, sizeof (buffer));
    }
 };
 
@@ -356,9 +367,9 @@ TEST_F (CmrdrTest, CmrdrRunTest)
    TEST_TRACE ("\nNow read all the records\n");
    for (ix = 0; ix < NELEMENTS (test_reads); ix++)
    {
-      test_read (test_reads[ix]);
+      test_read (test_reads[ix], 0x1, 0x1);
    }
-   EXPECT_EQ (appdata.read_fails, 61); // Currently expected number of fails.
+   EXPECT_EQ (appdata.read_fails, 62); // Currently expected number of fails.
 
    TEST_TRACE ("\nGenerating mock release request\n");
    mock_set_pnal_udp_recvfrom_buffer (release_req, sizeof (release_req));
@@ -480,9 +491,346 @@ TEST_F (CmrdrTest, CmrdrModDiffTest)
    /* Now read all the mod diff record */
    for (ix = 0; ix < NELEMENTS (test_mod_diff); ix++)
    {
-      test_read (test_mod_diff[ix]);
+      test_read (test_mod_diff[ix], 0x1, 0x1);
    }
    EXPECT_EQ (appdata.read_fails, 0);
+
+   TEST_TRACE ("\nGenerating mock release request\n");
+   mock_set_pnal_udp_recvfrom_buffer (release_req, sizeof (release_req));
+   run_stack (TEST_UDP_DELAY);
+   EXPECT_EQ (appdata.call_counters.release_calls, 1);
+   EXPECT_EQ (appdata.call_counters.state_calls, 5);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_ABORT);
+}
+
+static void test_cmrdr_parse_uint8_t (
+   uint8_t * buf,
+   uint16_t * p_pos,
+   uint8_t expected_value)
+{
+   EXPECT_EQ (*(uint8_t *)(buf + *p_pos), expected_value);
+   *p_pos += sizeof (uint8_t);
+}
+
+static void test_cmrdr_parse_uint16_t (
+   uint8_t * buf,
+   uint16_t * p_pos,
+   uint16_t expected_value)
+{
+   EXPECT_EQ (CC_FROM_BE16 (*(uint16_t *)(buf + *p_pos)), expected_value);
+   *p_pos += sizeof (uint16_t);
+}
+
+static void test_cmrdr_parse_uint32_t (
+   uint8_t * buf,
+   uint16_t * p_pos,
+   uint32_t expected_value)
+{
+   EXPECT_EQ (CC_FROM_BE32 (*(uint32_t *)(buf + *p_pos)), expected_value);
+   *p_pos += sizeof (uint32_t);
+}
+
+static void test_cmrdr_parse_bin (
+   uint8_t * buf,
+   uint16_t * p_pos,
+   const void * expected_value,
+   size_t size)
+{
+   EXPECT_EQ (memcmp (buf + *p_pos, expected_value, size), 0);
+   *p_pos += size;
+}
+
+static uint16_t test_cmrdr_parse_block_header_sans_length (
+   uint8_t * buf,
+   uint16_t * p_pos,
+   pf_block_type_values_t block_type,
+   uint8_t block_version_high,
+   uint8_t block_version_low)
+{
+   const uint32_t zero = 0;
+   uint16_t length_pos;
+
+   test_cmrdr_parse_uint16_t (buf, p_pos, block_type);
+   length_pos = *p_pos;
+   *p_pos += sizeof (uint16_t);
+   test_cmrdr_parse_uint8_t (buf, p_pos, block_version_high);
+   test_cmrdr_parse_uint8_t (buf, p_pos, block_version_low);
+
+   /* Padding */
+   test_cmrdr_parse_bin (buf, p_pos, &zero, 2);
+
+   return length_pos;
+}
+
+TEST_F (CmrdrTest, CmrdrPDPortDataRealExtended)
+{
+   const uint32_t zero = 0;
+   const uint32_t slot = 0x0000;
+   const uint32_t subslot = 0x8001;
+   const int loc_port_num = pf_port_dap_subslot_to_local_port (net, subslot);
+   int ret;
+   uint8_t buffer[PF_FRAME_BUFFER_SIZE];
+   uint16_t pos = 0;
+   uint16_t pos_full_block_length;
+   uint16_t pos_sub_block_length;
+   uint8_t length_own_port_id;
+   uint8_t padding;
+   uint16_t size_ownport;
+   uint16_t size_neighbors;
+   uint16_t size_full;
+   pnal_eth_status_t eth_status;
+   pf_lldp_peer_info_t fake_peer;
+   uint8_t * rsp;
+
+   TEST_TRACE ("\nGenerating mock connection request\n");
+   mock_set_pnal_udp_recvfrom_buffer (connect_req, sizeof (connect_req));
+   run_stack (TEST_UDP_DELAY);
+   EXPECT_EQ (appdata.call_counters.state_calls, 1);
+   EXPECT_EQ (appdata.call_counters.connect_calls, 1);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_STARTUP);
+   EXPECT_GT (mock_os_data.eth_send_count, 0);
+
+   TEST_TRACE ("\nGenerating mock parameter end request\n");
+   mock_set_pnal_udp_recvfrom_buffer (prm_end_req, sizeof (prm_end_req));
+   run_stack (TEST_UDP_DELAY);
+   EXPECT_EQ (appdata.call_counters.state_calls, 2);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_PRMEND);
+   EXPECT_EQ (appdata.call_counters.connect_calls, 1);
+
+   TEST_TRACE ("\nSimulate application calling APPL_RDY\n");
+   TEST_TRACE ("Line %d\n", __LINE__);
+   ret = pnet_application_ready (net, appdata.main_arep);
+   EXPECT_EQ (ret, 0);
+   EXPECT_EQ (appdata.call_counters.state_calls, 3);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_APPLRDY);
+
+   TEST_TRACE ("\nGenerating mock application ready response\n");
+   mock_set_pnal_udp_recvfrom_buffer (appl_rdy_rsp, sizeof (appl_rdy_rsp));
+   run_stack (TEST_UDP_DELAY);
+   EXPECT_EQ (appdata.call_counters.state_calls, 3);
+   EXPECT_EQ (appdata.cmdev_state, PNET_EVENT_APPLRDY);
+
+   TEST_TRACE ("\nNow read PDPortDataRealExtended from DAP port 1\n");
+   test_read_buf (
+      PF_IDX_SUB_PDPORTDATAREALEXT,
+      0x0,
+      0x8001,
+      buffer,
+      sizeof (buffer));
+   EXPECT_EQ (appdata.read_fails, 0); // Currently expected number of fails.
+
+   TEST_TRACE ("\nParse PDPortDataRealExtended response without neighbours\n");
+   /* 0-63: IODReadResHeader */
+   rsp = &buffer[64];
+
+   pos_full_block_length = test_cmrdr_parse_block_header_sans_length (
+      rsp,
+      &pos,
+      PF_BT_PDPORTDATAREALEXT,
+      PNET_BLOCK_VERSION_HIGH,
+      PNET_BLOCK_VERSION_LOW);
+
+   /* Slot, subslot */
+   test_cmrdr_parse_uint16_t (rsp, &pos, slot);
+   test_cmrdr_parse_uint16_t (rsp, &pos, subslot);
+
+   TEST_TRACE ("\n  Parse OwnPort\n");
+   pos_sub_block_length = test_cmrdr_parse_block_header_sans_length (
+      rsp,
+      &pos,
+      PF_BT_PDPORTOWNPORT,
+      PNET_BLOCK_VERSION_HIGH,
+      PNET_BLOCK_VERSION_LOW);
+
+   /* LengthOwnPortID */
+   length_own_port_id = *(uint8_t *)(rsp + pos);
+   test_cmrdr_parse_uint8_t (rsp, &pos, 8);
+   /* OwnPortID */
+   test_cmrdr_parse_bin (rsp, &pos, "port-001", length_own_port_id);
+   /* Padding */
+   padding = (sizeof (uint32_t) -
+              ((length_own_port_id + sizeof (uint8_t)) % sizeof (uint32_t))) &
+             0x3;
+   test_cmrdr_parse_bin (rsp, &pos, &zero, padding);
+   /* LineDelay (currently not measured) */
+   test_cmrdr_parse_uint32_t (rsp, &pos, zero);
+   /* MediaType (Copper cable) */
+   test_cmrdr_parse_uint32_t (rsp, &pos, PF_PD_MEDIATYPE_COPPER);
+   /* MulticastBoundary */
+   test_cmrdr_parse_uint32_t (rsp, &pos, zero);
+   /* MAUType + Extension */
+   eth_status = pf_pdport_get_eth_status_filtered_mau (net, loc_port_num);
+   test_cmrdr_parse_uint16_t (rsp, &pos, eth_status.operational_mau_type);
+   test_cmrdr_parse_uint16_t (rsp, &pos, eth_status.mau_type_extension);
+   /* LinkState */
+   test_cmrdr_parse_uint8_t (rsp, &pos, PF_PD_LINK_STATE_PORT_UNKNOWN);
+   test_cmrdr_parse_uint8_t (rsp, &pos, eth_status.running);
+   /* RTClass3_PortStatus */
+   test_cmrdr_parse_uint16_t (rsp, &pos, zero);
+
+   /* BlockLength */
+   size_ownport =
+      2 * sizeof (uint8_t) + /* BlockVersionHigh/Low */
+      sizeof (uint16_t) +    /* Padding */
+      sizeof (uint8_t) +
+      length_own_port_id +
+      padding +
+      3 * sizeof (uint32_t) +
+      4 * sizeof (uint16_t);
+   test_cmrdr_parse_uint16_t (rsp, &pos_sub_block_length, size_ownport);
+   TEST_TRACE ("\nValidate response length\n");
+   size_full =
+      2 * sizeof (uint8_t) + /* BlockVersionHigh/Low */
+      sizeof (uint16_t) +    /* Padding */
+      2 * sizeof (uint16_t) +
+      2 * sizeof (uint16_t) + /* BlockType + BlockLength */
+      size_ownport;
+   test_cmrdr_parse_uint16_t (rsp, &pos_full_block_length, size_full);
+
+
+   TEST_TRACE ("\nReceive LLDP frame from fake peer\n");
+   extern pf_lldp_peer_info_t fake_peer_info (void);
+   fake_peer = fake_peer_info();
+   pf_lldp_store_peer_info (net, loc_port_num, &fake_peer);
+
+   TEST_TRACE ("\nNow read PDPortDataRealExtended from DAP port 1 again\n");
+   test_read_buf (
+      PF_IDX_SUB_PDPORTDATAREALEXT,
+      0x0,
+      0x8001,
+      buffer,
+      sizeof (buffer));
+   EXPECT_EQ (appdata.read_fails, 0); // Currently expected number of fails.
+
+   TEST_TRACE ("\nParse PDPortDataRealExtended response with one neighbour\n");
+   /* 0-63: IODReadResHeader */
+   rsp = &buffer[64];
+   pos = 0;
+
+   pos_full_block_length = test_cmrdr_parse_block_header_sans_length (
+      rsp,
+      &pos,
+      PF_BT_PDPORTDATAREALEXT,
+      PNET_BLOCK_VERSION_HIGH,
+      PNET_BLOCK_VERSION_LOW);
+
+   /* Slot, subslot */
+   test_cmrdr_parse_uint16_t (rsp, &pos, slot);
+   test_cmrdr_parse_uint16_t (rsp, &pos, subslot);
+
+   TEST_TRACE ("\n  Parse OwnPort\n");
+   pos_sub_block_length = test_cmrdr_parse_block_header_sans_length (
+      rsp,
+      &pos,
+      PF_BT_PDPORTOWNPORT,
+      PNET_BLOCK_VERSION_HIGH,
+      PNET_BLOCK_VERSION_LOW);
+
+   /* LengthOwnPortID */
+   length_own_port_id = *(uint8_t *)(rsp + pos);
+   test_cmrdr_parse_uint8_t (rsp, &pos, 8);
+   /* OwnPortID */
+   test_cmrdr_parse_bin (rsp, &pos, "port-001", length_own_port_id);
+   /* Padding */
+   padding = (sizeof (uint32_t) -
+              ((length_own_port_id + sizeof (uint8_t)) % sizeof (uint32_t))) &
+             0x3;
+   test_cmrdr_parse_bin (rsp, &pos, &zero, padding);
+   /* LineDelay (currently not measured) */
+   test_cmrdr_parse_uint32_t (rsp, &pos, zero);
+   /* MediaType (Copper cable) */
+   test_cmrdr_parse_uint32_t (rsp, &pos, PF_PD_MEDIATYPE_COPPER);
+   /* MulticastBoundary */
+   test_cmrdr_parse_uint32_t (rsp, &pos, zero);
+   /* MAUType + Extension */
+   eth_status = pf_pdport_get_eth_status_filtered_mau (net, loc_port_num);
+   test_cmrdr_parse_uint16_t (rsp, &pos, eth_status.operational_mau_type);
+   test_cmrdr_parse_uint16_t (rsp, &pos, eth_status.mau_type_extension);
+   /* LinkState */
+   test_cmrdr_parse_uint8_t (rsp, &pos, PF_PD_LINK_STATE_PORT_UNKNOWN);
+   test_cmrdr_parse_uint8_t (rsp, &pos, eth_status.running);
+   /* RTClass3_PortStatus */
+   test_cmrdr_parse_uint16_t (rsp, &pos, zero);
+
+   /* BlockLength */
+   size_ownport =
+      2 * sizeof (uint8_t) + /* BlockVersionHigh/Low */
+      sizeof (uint16_t) +    /* Padding */
+      sizeof (uint8_t) +
+      length_own_port_id +
+      padding +
+      3 * sizeof (uint32_t) +
+      4 * sizeof (uint16_t);
+   test_cmrdr_parse_uint16_t (rsp, &pos_sub_block_length, size_ownport);
+
+   TEST_TRACE ("\n  Parse Neighbors\n");
+   pos_sub_block_length = test_cmrdr_parse_block_header_sans_length (
+      rsp,
+      &pos,
+      PF_BT_PDPORTNEIGHBOURS,
+      PNET_BLOCK_VERSION_HIGH,
+      PNET_BLOCK_VERSION_LOW);
+
+   /* NumberOfPeers */
+   test_cmrdr_parse_uint8_t (rsp, &pos, 1);
+   /* Padding */
+   test_cmrdr_parse_bin (rsp, &pos, &zero, sizeof (uint32_t) - sizeof (uint8_t));
+
+   /* Neighbour */
+   test_cmrdr_parse_uint32_t (rsp, &pos, fake_peer.line_delay);
+   test_cmrdr_parse_uint16_t (
+      rsp,
+      &pos,
+      fake_peer.phy_config.operational_mau_type);
+   test_cmrdr_parse_uint16_t (
+      rsp,
+      &pos,
+      fake_peer.mau_type_extension);
+   test_cmrdr_parse_bin (
+      rsp,
+      &pos,
+      &fake_peer.mac_address,
+      sizeof (pnet_ethaddr_t));
+
+   pf_lldp_station_name_t p_station_name;
+   pf_lldp_port_name_t p_port_name;
+   pf_lldp_get_peer_station_name (net, loc_port_num, &p_station_name);
+   pf_lldp_get_peer_port_name (net, loc_port_num, &p_port_name);
+
+   test_cmrdr_parse_uint8_t (rsp, &pos, p_port_name.len);
+   test_cmrdr_parse_bin (rsp, &pos, p_port_name.string, p_port_name.len);
+   test_cmrdr_parse_uint8_t (rsp, &pos, p_station_name.len);
+   test_cmrdr_parse_bin (rsp, &pos, p_station_name.string, p_station_name.len);
+   padding = (sizeof (uint32_t) -
+              (p_port_name.len + p_station_name.len) % sizeof (uint32_t)) &
+             0x3;
+
+   size_neighbors =
+      2 * sizeof (uint8_t) + /* BlockVersionHigh/Low */
+      sizeof (uint16_t) +    /* Padding */
+      sizeof (uint8_t) +
+      3 * sizeof (uint8_t) + /* Padding */
+      sizeof (uint32_t) +
+      2 * sizeof (uint16_t) +
+      sizeof (pnet_ethaddr_t) +
+      sizeof (uint8_t) +
+      p_port_name.len +
+      sizeof (uint8_t) +
+      p_station_name.len +
+      padding;
+   test_cmrdr_parse_uint16_t (rsp, &pos_sub_block_length, size_neighbors);
+
+   TEST_TRACE ("\nValidate response length\n");
+   size_full =
+      2 * sizeof (uint8_t) + /* BlockVersionHigh/Low */
+      sizeof (uint16_t) +    /* Padding */
+      2 * sizeof (uint16_t) +
+      2 * sizeof (uint16_t) + /* BlockType + BlockLength */
+      size_ownport +
+      2 * sizeof (uint16_t) + /* BlockType + BlockLength */
+      size_neighbors;
+   test_cmrdr_parse_uint16_t (rsp, &pos_full_block_length, size_full);
+
 
    TEST_TRACE ("\nGenerating mock release request\n");
    mock_set_pnal_udp_recvfrom_buffer (release_req, sizeof (release_req));

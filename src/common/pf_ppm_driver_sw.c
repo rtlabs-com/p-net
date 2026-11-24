@@ -44,7 +44,21 @@ static void pf_ppm_drv_sw_send (pnet_t * net, void * arg, uint32_t current_time)
    {
       /* Insert data, status etc. The in_length is the size of input to the
        * controller */
-      pf_ppm_finish_buffer (net, &p_arg->ppm, p_arg->in_length);
+      int error = pf_ppm_finish_buffer (net, &p_arg->ppm, p_arg->in_length);
+
+      if (error)
+      {
+         LOG_ERROR (
+            PF_PPM_LOG,
+            "PPM(%d): pf_ppm_finish_buffer failed for AREP %u CREP %" PRIu32
+            "\n",
+            __LINE__,
+            p_arg->p_ar->arep,
+            p_arg->crep);
+         /* Indidate error */
+         pf_ppm_state_ind (net, p_arg->p_ar, &p_arg->ppm, true);
+         return;
+      }
 
       /* Now send it */
       if (pf_eth_send_on_management_port (net, p_arg->ppm.p_send_buffer) > 0)
@@ -84,8 +98,8 @@ int pf_ppm_drv_sw_create (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
 int pf_ppm_drv_sw_activate_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
 {
    int ret = -1;
-   pf_iocr_t * p_iocr = &p_ar->iocrs[crep];
-   pf_ppm_t * p_ppm = &p_ar->iocrs[crep].ppm;
+   pf_iocr_t * p_iocr = &p_ar->io_ar->iocrs[crep];
+   pf_ppm_t * p_ppm = &p_ar->io_ar->iocrs[crep].ppm;
 
    LOG_DEBUG (
       PF_PPM_LOG,
@@ -108,7 +122,7 @@ int pf_ppm_drv_sw_activate_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
 
 int pf_ppm_drv_sw_close_req (pnet_t * net, pf_ar_t * p_ar, uint32_t crep)
 {
-   pf_ppm_t * p_ppm = &p_ar->iocrs[crep].ppm;
+   pf_ppm_t * p_ppm = &p_ar->io_ar->iocrs[crep].ppm;
 
    LOG_DEBUG (
       PF_PPM_LOG,

@@ -21,14 +21,6 @@ extern "C" {
 #endif
 
 /**
- * Initialize the CMSM-specific parts of an AR
- * @param p_ar             In:   The AR instance (not NULL)
- * @return  0  if the operation succeeded.
- *          -1 if an error occurred.
- */
-int pf_cmsm_activate (pf_ar_t * p_ar);
-
-/**
  * Handle incoming CMDEV events.
  * @param net              InOut: The p-net stack instance
  * @param p_ar             InOut: The AR instance, or NULL.
